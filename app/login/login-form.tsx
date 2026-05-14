@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
+import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
 import { dsBtnPrimary, dsInput } from "@/lib/ui/design-system";
 
 const loginInputClass = `mt-1 ${dsInput} dark:border-zinc-600 dark:bg-zinc-950 dark:text-zinc-50 dark:placeholder:text-zinc-500`;
@@ -11,19 +12,30 @@ const loginInputClass = `mt-1 ${dsInput} dark:border-zinc-600 dark:bg-zinc-950 d
 function safeRedirectTarget(raw: string | null): string {
   if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
   if (raw.startsWith("/login")) return "/dashboard";
+  const pathOnly = raw.split("?")[0] ?? raw;
+  if (isStagingPublicSlice() && isStagingBlockedPathname(pathOnly)) {
+    return "/dashboard?staging_unavailable=1";
+  }
   return raw;
 }
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login } = useAuth();
+  const { login, status } = useAuth();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (status !== "authenticated") return;
+    const target = safeRedirectTarget(searchParams.get("from"));
+    router.replace(target);
+    router.refresh();
+  }, [status, router, searchParams]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -111,7 +123,9 @@ export function LoginForm() {
           </button>
         </form>
 
-        <p className="mt-4 text-center text-[11px] text-zinc-500 dark:text-zinc-400">Ambiente demo · utenti mock</p>
+        <p className="mt-4 text-center text-[11px] text-zinc-500 dark:text-zinc-400">
+          {isStagingPublicSlice() ? "Staging pubblico · accesso controllato" : "Accesso riservato · credenziali fornite dall’amministratore"}
+        </p>
       </div>
     </div>
   );

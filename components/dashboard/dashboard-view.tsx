@@ -16,14 +16,28 @@ import { MezziServiceDemo } from "@/components/demo/mezzi-service-demo";
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { SistemaImpostazioniModal } from "@/components/dashboard/sistema-impostazioni-modal";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { isStagingPublicSlice } from "@/lib/env/staging-public";
+import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import { dsBtnSettings, dsPageToolbarBtn, dsStackPage, dsZDrawer } from "@/lib/ui/design-system";
 
 export function DashboardView() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const staging = isStagingPublicSlice();
+  const supabaseReady = isSupabasePublicEnvConfigured();
   const [sistemaOpen, setSistemaOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
+  const [stagingRouteHint, setStagingRouteHint] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("staging_unavailable") === "1") setStagingRouteHint(true);
+  }, [searchParams]);
+
+  function dismissStagingRouteHint() {
+    setStagingRouteHint(false);
+    router.replace(pathname, { scroll: false });
+  }
 
   useEffect(() => {
     if (searchParams.get("openSistema") === "1") {
@@ -53,8 +67,9 @@ export function DashboardView() {
       <PageHeader
         title="Dashboard"
         actions={
-          <>
-            <button
+          staging ? null : (
+            <>
+              <button
               type="button"
               onClick={() => setLogOpen(true)}
               className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
@@ -74,11 +89,31 @@ export function DashboardView() {
               </svg>
               Impostazioni
             </button>
-          </>
+            </>
+          )
         }
       />
 
       <div className={dsStackPage}>
+        {!supabaseReady ? (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+            Mancano <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/60">NEXT_PUBLIC_SUPABASE_URL</code> e/o{" "}
+            <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/60">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>: i dati da database non
+            funzioneranno finché non sono configurate nel deploy.
+          </div>
+        ) : null}
+
+        {stagingRouteHint ? (
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-50">
+            <p className="min-w-0 flex-1 leading-relaxed">
+              Il modulo richiesto non è ancora disponibile in questo ambiente di staging (solo sezioni principali attive).
+            </p>
+            <button type="button" className={erpBtnNeutral} onClick={() => dismissStagingRouteHint()}>
+              Chiudi
+            </button>
+          </div>
+        ) : null}
+
         <DashboardWelcome />
 
         <DashboardOperationalCards />
@@ -87,14 +122,16 @@ export function DashboardView() {
 
         <DashboardRecentFeeds />
 
-        <div className="mt-6 max-w-xl">
-          <MezziServiceDemo />
-        </div>
+        {staging ? null : (
+          <div className="mt-6 max-w-xl">
+            <MezziServiceDemo />
+          </div>
+        )}
       </div>
 
-      {sistemaOpen ? <SistemaImpostazioniModal open={sistemaOpen} onClose={() => setSistemaOpen(false)} /> : null}
+      {staging ? null : sistemaOpen ? <SistemaImpostazioniModal open={sistemaOpen} onClose={() => setSistemaOpen(false)} /> : null}
 
-      {logOpen ? (
+      {staging ? null : logOpen ? (
         <div
           className={`fixed inset-0 ${dsZDrawer} flex items-stretch justify-end bg-[var(--cab-overlay)] backdrop-blur-[1px]`}
           onMouseDown={(e) => {

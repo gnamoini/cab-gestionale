@@ -9,6 +9,7 @@ import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/componen
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
+import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 
 const SIDEBAR_COLLAPSED_KEY = "cab-sidebar-collapsed";
 
@@ -438,7 +439,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
 
-        <main className="gestionale-scrollbar flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        <main className="gestionale-scrollbar flex-1 overflow-auto p-4 md:p-6">
+          {!isSupabasePublicEnvConfigured() ? (
+            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
+              Configurazione server: impostare <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/60">NEXT_PUBLIC_SUPABASE_URL</code> e{" "}
+              <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/60">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> per il collegamento al database.
+            </div>
+          ) : null}
+          {children}
+        </main>
       </div>
     </div>
   );

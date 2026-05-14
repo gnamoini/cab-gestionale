@@ -19,6 +19,7 @@ import {
   type MagazzinoChangeLogEntry,
 } from "@/lib/magazzino/magazzino-change-log-storage";
 import { buildLavorazioniLogFocusHref, buildMagazzinoLogFocusHref } from "@/lib/navigation/dashboard-log-links";
+import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { dsSurfaceCard, dsTypoCardTitle } from "@/lib/ui/design-system";
 
 const LAVORAZIONI_LOG_STORAGE_KEY = "gestionale-lavorazioni-change-log-v1";
@@ -34,6 +35,7 @@ function sortByAtDesc<T extends { at: string }>(rows: T[]): T[] {
 
 export function DashboardRecentFeeds() {
   const router = useRouter();
+  const staging = isStagingPublicSlice();
   const [lav, setLav] = useState<LavorazioniLogEntry[]>([]);
   const [mag, setMag] = useState<MagazzinoChangeLogEntry[]>([]);
 
@@ -43,6 +45,7 @@ export function DashboardRecentFeeds() {
   }, []);
 
   useEffect(() => {
+    if (staging) return;
     refresh();
     const onVis = () => {
       if (document.visibilityState === "visible") refresh();
@@ -59,10 +62,12 @@ export function DashboardRecentFeeds() {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("storage", onStorage);
     };
-  }, [refresh]);
+  }, [refresh, staging]);
 
   const lavSlice = useMemo(() => sortByAtDesc(lav).slice(0, 8), [lav]);
   const magSlice = useMemo(() => sortByAtDesc(mag).slice(0, 8), [mag]);
+
+  if (staging) return null;
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
