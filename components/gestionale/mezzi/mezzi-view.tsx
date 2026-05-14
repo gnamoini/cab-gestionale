@@ -15,16 +15,9 @@ import {
   erpBtnSoftOrange,
   erpFocus,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import {
-  compareMezzi,
-  countDocumentiPerMezzo,
-  interventiUltimi12Mesi,
-  mediaGiorniFermoInterventi,
-  mezziConInterventiRecenti,
-  ultimoInterventoIso,
-} from "@/lib/mezzi/mezzi-helpers";
+import { compareMezzi, interventiUltimi12Mesi, mediaGiorniFermoInterventi, ultimoInterventoIso } from "@/lib/mezzi/mezzi-helpers";
 import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
-import { documentoRowToGestionale, logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { MEZZI_OGGI_DEMO, type MezzoGestito, type MezzoInterventoLavorazione, type MezziSortKey, type MezziSortPhase } from "@/lib/mezzi/types";
 import { dsPageToolbarBtn, dsStackPage, dsScrollbar, dsTable, dsTableHead, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 import {
@@ -43,7 +36,6 @@ import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import type { MezzoFilters, MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
 import {
-  useDocumentiListQuery,
   useLogListQuery,
   useMezziListQuery,
 } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -148,8 +140,6 @@ export function MezziView() {
   } = useMezziListQuery(serviceFilters);
 
   const { data: lavRows = [] } = useLavorazioniList({ includeMezzo: true });
-  const { data: docRowsAll = [] } = useDocumentiListQuery(undefined, { staleTime: 60_000 });
-
   const mezziUi = useMemo(() => mezzoRows.map(toMezzoUI), [mezzoRows]);
 
   const interventiByMezzoId = useMemo(() => {
@@ -200,18 +190,6 @@ export function MezziView() {
   }, [mezziFilterKey, listPageSize, resetPage]);
 
   const pagedSorted = useMemo(() => sliceItems(sorted), [sliceItems, sorted, page]);
-
-  const docsUiAll = useMemo(() => docRowsAll.map(documentoRowToGestionale), [docRowsAll]);
-
-  const kpiTotali = mezziUi.length;
-  const kpiConDocumenti = useMemo(
-    () => mezziUi.filter((m) => countDocumentiPerMezzo(m, docsUiAll) > 0).length,
-    [mezziUi, docsUiAll],
-  );
-  const kpiInterventi = useMemo(
-    () => mezziConInterventiRecenti(mezziUi, (m) => interventiByMezzoId.get(m.id) ?? [], MEZZI_OGGI_DEMO),
-    [mezziUi, interventiByMezzoId],
-  );
 
   const [hubMezzo, setHubMezzo] = useState<MezzoGestito | null>(null);
   const [storicoMezzo, setStoricoMezzo] = useState<MezzoGestito | null>(null);
@@ -408,21 +386,6 @@ export function MezziView() {
       />
 
       <div className={dsStackPage}>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nodi hub (anagrafica + flussi)</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">{kpiTotali}</p>
-          </div>
-          <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Con documenti collegati</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-orange-600 dark:text-orange-400">{kpiConDocumenti}</p>
-          </div>
-          <div className="rounded-xl border border-zinc-200 bg-white px-4 py-3 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Con intervento ultimi 12 mesi</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-700 dark:text-amber-300">{kpiInterventi}</p>
-          </div>
-        </div>
-
         <ShellCard title="Parco mezzi">
           <div className="mb-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between">
             <button

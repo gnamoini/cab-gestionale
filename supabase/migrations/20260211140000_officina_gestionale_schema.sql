@@ -1,28 +1,53 @@
 -- Gestionale officina — schema PostgreSQL Supabase (SQL Editor / migrazione)
+-- Idempotente: rieseguibile senza errori su oggetti già presenti
 -- Estensioni
 create extension if not exists pgcrypto;
 create extension if not exists pg_trgm;
 
 -- Enum
-create type public.ruolo_profile as enum ('admin', 'tecnico', 'viewer');
+do $$ begin
+  create type public.ruolo_profile as enum ('admin', 'tecnico', 'viewer');
+exception
+  when duplicate_object then null;
+end $$;
 
-create type public.stato_lavorazione as enum (
-  'bozza',
-  'in_coda',
-  'in_officina',
-  'in_attesa_ricambi',
-  'completata',
-  'consegnata',
-  'annullata'
-);
+do $$ begin
+  create type public.stato_lavorazione as enum (
+    'bozza',
+    'in_coda',
+    'in_officina',
+    'in_attesa_ricambi',
+    'completata',
+    'consegnata',
+    'annullata'
+  );
+exception
+  when duplicate_object then null;
+end $$;
 
-create type public.priorita_lavorazione as enum ('bassa', 'media', 'alta', 'urgente');
+do $$ begin
+  create type public.priorita_lavorazione as enum ('bassa', 'media', 'alta', 'urgente');
+exception
+  when duplicate_object then null;
+end $$;
 
-create type public.tipo_scheda_lavorazione as enum ('ingresso', 'intervento', 'ricambi');
+do $$ begin
+  create type public.tipo_scheda_lavorazione as enum ('ingresso', 'intervento', 'ricambi');
+exception
+  when duplicate_object then null;
+end $$;
 
-create type public.tipo_movimento_ricambio as enum ('entrata', 'uscita');
+do $$ begin
+  create type public.tipo_movimento_ricambio as enum ('entrata', 'uscita');
+exception
+  when duplicate_object then null;
+end $$;
 
-create type public.categoria_documento as enum ('listino', 'manuale', 'catalogo', 'altro');
+do $$ begin
+  create type public.categoria_documento as enum ('listino', 'manuale', 'catalogo', 'altro');
+exception
+  when duplicate_object then null;
+end $$;
 
 -- updated_at
 create or replace function public.set_updated_at()
@@ -36,7 +61,7 @@ end;
 $$;
 
 -- 1. profiles (id = auth.users.id, nessun default uuid)
-create table public.profiles (
+create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   nome text not null,
   ruolo public.ruolo_profile not null default 'tecnico',
@@ -45,12 +70,13 @@ create table public.profiles (
   constraint profiles_nome_chk check (char_length(trim(nome)) > 0)
 );
 
+drop trigger if exists trg_profiles_updated_at on public.profiles;
 create trigger trg_profiles_updated_at
 before update on public.profiles
 for each row execute function public.set_updated_at();
 
 -- 2. mezzi
-create table public.mezzi (
+create table if not exists public.mezzi (
   id uuid primary key default gen_random_uuid(),
   cliente text not null,
   utilizzatore text,
@@ -69,14 +95,15 @@ create table public.mezzi (
   constraint mezzi_anno_chk check (anno is null or (anno between 1950 and 2100))
 );
 
+drop trigger if exists trg_mezzi_updated_at on public.mezzi;
 create trigger trg_mezzi_updated_at
 before update on public.mezzi
 for each row execute function public.set_updated_at();
 
-create index idx_mezzi_cliente_trgm on public.mezzi using gin (cliente gin_trgm_ops);
+create index if not exists idx_mezzi_cliente_trgm on public.mezzi using gin (cliente gin_trgm_ops);
 
 -- 3. lavorazioni
-create table public.lavorazioni (
+create table if not exists public.lavorazioni (
   id uuid primary key default gen_random_uuid(),
   mezzo_id uuid not null references public.mezzi (id) on delete restrict,
   stato public.stato_lavorazione not null default 'in_coda',
@@ -92,14 +119,15 @@ create table public.lavorazioni (
   )
 );
 
+drop trigger if exists trg_lavorazioni_updated_at on public.lavorazioni;
 create trigger trg_lavorazioni_updated_at
 before update on public.lavorazioni
 for each row execute function public.set_updated_at();
 
-create index idx_lavorazioni_mezzo_id on public.lavorazioni (mezzo_id);
+create index if not exists idx_lavorazioni_mezzo_id on public.lavorazioni (mezzo_id);
 
 -- 4. scheda_lavorazione
-create table public.scheda_lavorazione (
+create table if not exists public.scheda_lavorazione (
   id uuid primary key default gen_random_uuid(),
   lavorazione_id uuid not null references public.lavorazioni (id) on delete cascade,
   tipo public.tipo_scheda_lavorazione not null,
@@ -109,14 +137,15 @@ create table public.scheda_lavorazione (
   constraint scheda_contenuto_obj_chk check (jsonb_typeof(contenuto) = 'object')
 );
 
+drop trigger if exists trg_scheda_lavorazione_updated_at on public.scheda_lavorazione;
 create trigger trg_scheda_lavorazione_updated_at
 before update on public.scheda_lavorazione
 for each row execute function public.set_updated_at();
 
-create index idx_scheda_lavorazione_contenuto_gin on public.scheda_lavorazione using gin (contenuto);
+create index if not exists idx_scheda_lavorazione_contenuto_gin on public.scheda_lavorazione using gin (contenuto);
 
 -- 5. magazzino_ricambi
-create table public.magazzino_ricambi (
+create table if not exists public.magazzino_ricambi (
   id uuid primary key default gen_random_uuid(),
   codice text not null,
   nome text not null,
@@ -132,14 +161,15 @@ create table public.magazzino_ricambi (
   constraint magazzino_ricambi_qta_chk check (quantita >= 0)
 );
 
+drop trigger if exists trg_magazzino_ricambi_updated_at on public.magazzino_ricambi;
 create trigger trg_magazzino_ricambi_updated_at
 before update on public.magazzino_ricambi
 for each row execute function public.set_updated_at();
 
-create index idx_magazzino_ricambi_nome_trgm on public.magazzino_ricambi using gin (nome gin_trgm_ops);
+create index if not exists idx_magazzino_ricambi_nome_trgm on public.magazzino_ricambi using gin (nome gin_trgm_ops);
 
 -- 6. movimenti_ricambi
-create table public.movimenti_ricambi (
+create table if not exists public.movimenti_ricambi (
   id uuid primary key default gen_random_uuid(),
   ricambio_id uuid not null references public.magazzino_ricambi (id) on delete restrict,
   lavorazione_id uuid references public.lavorazioni (id) on delete set null,
@@ -149,11 +179,11 @@ create table public.movimenti_ricambi (
   constraint movimenti_qta_chk check (quantita > 0)
 );
 
-create index idx_movimenti_ricambi_ricambio_id on public.movimenti_ricambi (ricambio_id);
-create index idx_movimenti_ricambi_lavorazione_id on public.movimenti_ricambi (lavorazione_id);
+create index if not exists idx_movimenti_ricambi_ricambio_id on public.movimenti_ricambi (ricambio_id);
+create index if not exists idx_movimenti_ricambi_lavorazione_id on public.movimenti_ricambi (lavorazione_id);
 
 -- 7. preventivi
-create table public.preventivi (
+create table if not exists public.preventivi (
   id uuid primary key default gen_random_uuid(),
   mezzo_id uuid not null references public.mezzi (id) on delete restrict,
   lavorazione_id uuid references public.lavorazioni (id) on delete set null,
@@ -167,14 +197,15 @@ create table public.preventivi (
   constraint preventivi_dettagli_obj_chk check (jsonb_typeof(dettagli) = 'object')
 );
 
+drop trigger if exists trg_preventivi_updated_at on public.preventivi;
 create trigger trg_preventivi_updated_at
 before update on public.preventivi
 for each row execute function public.set_updated_at();
 
-create index idx_preventivi_mezzo_id on public.preventivi (mezzo_id);
+create index if not exists idx_preventivi_mezzo_id on public.preventivi (mezzo_id);
 
 -- 8. documenti
-create table public.documenti (
+create table if not exists public.documenti (
   id uuid primary key default gen_random_uuid(),
   mezzo_id uuid references public.mezzi (id) on delete set null,
   marca text not null,
@@ -189,7 +220,7 @@ create table public.documenti (
 );
 
 -- 9. log_modifiche (append-only: no trigger updated_at)
-create table public.log_modifiche (
+create table if not exists public.log_modifiche (
   id uuid primary key default gen_random_uuid(),
   entita text not null,
   entita_id uuid not null,
@@ -201,4 +232,4 @@ create table public.log_modifiche (
   constraint log_azione_chk check (char_length(trim(azione)) > 0)
 );
 
-create index idx_log_modifiche_entita_entita_id_created_at on public.log_modifiche (entita, entita_id, created_at desc);
+create index if not exists idx_log_modifiche_entita_entita_id_created_at on public.log_modifiche (entita, entita_id, created_at desc);

@@ -1,4 +1,5 @@
 -- RLS + profili automatici (dopo 20260211140000_officina_gestionale_schema.sql)
+-- Idempotente: DROP POLICY IF EXISTS prima di ogni CREATE POLICY
 
 -- Ruolo corrente senza ricorsione RLS su profiles
 create or replace function public.current_profile_role()
@@ -59,150 +60,183 @@ alter table public.documenti enable row level security;
 alter table public.log_modifiche enable row level security;
 
 -- --- profiles ---
+drop policy if exists profiles_select_role on public.profiles;
 create policy profiles_select_role
 on public.profiles for select to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
 
+drop policy if exists profiles_update_admin on public.profiles;
 create policy profiles_update_admin
 on public.profiles for update to authenticated
 using (public.current_profile_role() = 'admin')
 with check (public.current_profile_role() = 'admin');
 
+drop policy if exists profiles_delete_admin on public.profiles;
 create policy profiles_delete_admin
 on public.profiles for delete to authenticated
 using (public.current_profile_role() = 'admin');
 
 -- --- mezzi ---
+drop policy if exists mezzi_select_role on public.mezzi;
 create policy mezzi_select_role
 on public.mezzi for select to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
 
+drop policy if exists mezzi_insert_priv on public.mezzi;
 create policy mezzi_insert_priv
 on public.mezzi for insert to authenticated
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists mezzi_update_priv on public.mezzi;
 create policy mezzi_update_priv
 on public.mezzi for update to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'))
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists mezzi_delete_priv on public.mezzi;
 create policy mezzi_delete_priv
 on public.mezzi for delete to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'));
 
 -- --- lavorazioni ---
+drop policy if exists lavorazioni_select_role on public.lavorazioni;
 create policy lavorazioni_select_role
 on public.lavorazioni for select to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
 
+drop policy if exists lavorazioni_insert_priv on public.lavorazioni;
 create policy lavorazioni_insert_priv
 on public.lavorazioni for insert to authenticated
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists lavorazioni_update_priv on public.lavorazioni;
 create policy lavorazioni_update_priv
 on public.lavorazioni for update to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'))
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists lavorazioni_delete_priv on public.lavorazioni;
 create policy lavorazioni_delete_priv
 on public.lavorazioni for delete to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'));
 
 -- --- scheda_lavorazione ---
+drop policy if exists scheda_lavorazione_select_role on public.scheda_lavorazione;
 create policy scheda_lavorazione_select_role
 on public.scheda_lavorazione for select to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
 
+drop policy if exists scheda_lavorazione_insert_priv on public.scheda_lavorazione;
 create policy scheda_lavorazione_insert_priv
 on public.scheda_lavorazione for insert to authenticated
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists scheda_lavorazione_update_priv on public.scheda_lavorazione;
 create policy scheda_lavorazione_update_priv
 on public.scheda_lavorazione for update to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'))
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists scheda_lavorazione_delete_priv on public.scheda_lavorazione;
 create policy scheda_lavorazione_delete_priv
 on public.scheda_lavorazione for delete to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'));
 
 -- --- magazzino_ricambi ---
+drop policy if exists magazzino_ricambi_select_role on public.magazzino_ricambi;
 create policy magazzino_ricambi_select_role
 on public.magazzino_ricambi for select to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
 
+drop policy if exists magazzino_ricambi_insert_priv on public.magazzino_ricambi;
 create policy magazzino_ricambi_insert_priv
 on public.magazzino_ricambi for insert to authenticated
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists magazzino_ricambi_update_priv on public.magazzino_ricambi;
 create policy magazzino_ricambi_update_priv
 on public.magazzino_ricambi for update to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'))
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists magazzino_ricambi_delete_priv on public.magazzino_ricambi;
 create policy magazzino_ricambi_delete_priv
 on public.magazzino_ricambi for delete to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'));
 
 -- --- movimenti_ricambi ---
+drop policy if exists movimenti_ricambi_select_role on public.movimenti_ricambi;
 create policy movimenti_ricambi_select_role
 on public.movimenti_ricambi for select to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
 
+drop policy if exists movimenti_ricambi_insert_priv on public.movimenti_ricambi;
 create policy movimenti_ricambi_insert_priv
 on public.movimenti_ricambi for insert to authenticated
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists movimenti_ricambi_update_priv on public.movimenti_ricambi;
 create policy movimenti_ricambi_update_priv
 on public.movimenti_ricambi for update to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'))
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists movimenti_ricambi_delete_priv on public.movimenti_ricambi;
 create policy movimenti_ricambi_delete_priv
 on public.movimenti_ricambi for delete to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'));
 
 -- --- preventivi ---
+drop policy if exists preventivi_select_role on public.preventivi;
 create policy preventivi_select_role
 on public.preventivi for select to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
 
+drop policy if exists preventivi_insert_priv on public.preventivi;
 create policy preventivi_insert_priv
 on public.preventivi for insert to authenticated
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists preventivi_update_priv on public.preventivi;
 create policy preventivi_update_priv
 on public.preventivi for update to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'))
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists preventivi_delete_priv on public.preventivi;
 create policy preventivi_delete_priv
 on public.preventivi for delete to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'));
 
 -- --- documenti ---
+drop policy if exists documenti_select_role on public.documenti;
 create policy documenti_select_role
 on public.documenti for select to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
 
+drop policy if exists documenti_insert_priv on public.documenti;
 create policy documenti_insert_priv
 on public.documenti for insert to authenticated
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists documenti_update_priv on public.documenti;
 create policy documenti_update_priv
 on public.documenti for update to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'))
 with check (public.current_profile_role() in ('admin', 'tecnico'));
 
+drop policy if exists documenti_delete_priv on public.documenti;
 create policy documenti_delete_priv
 on public.documenti for delete to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico'));
 
 -- --- log_modifiche (append-only: solo INSERT) ---
+drop policy if exists log_modifiche_select_role on public.log_modifiche;
 create policy log_modifiche_select_role
 on public.log_modifiche for select to authenticated
 using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
 
+drop policy if exists log_modifiche_insert_priv on public.log_modifiche;
 create policy log_modifiche_insert_priv
 on public.log_modifiche for insert to authenticated
 with check (public.current_profile_role() in ('admin', 'tecnico'));

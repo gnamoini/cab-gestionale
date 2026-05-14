@@ -121,7 +121,7 @@ export function prioritaLabel(p: string) {
 
 /** Classi layout pill tabella (colori da `*PillShellStyle` + inline style). */
 export function statoPillShellClass(): string {
-  return "relative inline-flex w-full min-w-[6.75rem] items-center rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-full min-w-[5.25rem] max-w-full items-center rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
 }
 
 export function statoPillShellStyle(hex: string | undefined): CSSProperties {
@@ -129,7 +129,7 @@ export function statoPillShellStyle(hex: string | undefined): CSSProperties {
 }
 
 export function prioritaPillShellClass(): string {
-  return "relative inline-flex w-full min-w-[5.75rem] items-center rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-full min-w-[4.5rem] max-w-full items-center rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
 }
 
 export function prioritaPillShellStyle(hex: string | undefined): CSSProperties {

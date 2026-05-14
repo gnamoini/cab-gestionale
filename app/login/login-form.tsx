@@ -37,6 +37,22 @@ export function LoginForm() {
     router.refresh();
   }, [status, router, searchParams]);
 
+  if (status === "loading") {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-100 px-4 text-sm text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+        Caricamento…
+      </div>
+    );
+  }
+
+  if (status === "authenticated") {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center bg-zinc-100 px-4 text-sm text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+        Reindirizzamento…
+      </div>
+    );
+  }
+
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);

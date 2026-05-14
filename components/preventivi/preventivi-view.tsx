@@ -140,7 +140,7 @@ function SortThPreventivo({
     icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
   }
   return (
-    <th className={`${dsTableThSticky} px-3 py-2 align-middle text-left ${thClassName ?? ""}`}>
+    <th className={`${dsTableThSticky} px-2 py-2 align-middle text-left ${thClassName ?? ""}`}>
       <button
         type="button"
         onClick={() => onSort(columnKey)}
@@ -902,7 +902,18 @@ export function PreventiviView() {
         </div>
 
         <div className={`${dsTableWrap} ${dsScrollbar}`}>
-          <table className={`${dsTable} min-w-[1180px] w-full table-fixed text-sm text-zinc-900 dark:text-zinc-100`}>
+          <table className={`${dsTable} w-full min-w-0 table-fixed text-sm text-zinc-900 dark:text-zinc-100`}>
+            <colgroup>
+              <col className="w-[5.25rem]" />
+              <col className="w-[5.75rem]" />
+              <col />
+              <col className="w-[16%]" />
+              <col className="w-[4.5rem]" />
+              <col className="w-[5.25rem]" />
+              <col className="w-[4.25rem]" />
+              <col className="w-[6.25rem]" />
+              <col className="w-[10.5rem]" />
+            </colgroup>
             <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
               <tr>
                 <SortThPreventivo
@@ -911,7 +922,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[5.5rem]"
+                  thClassName="w-[5.25rem] min-w-[5.25rem]"
                 />
                 <SortThPreventivo
                   label="Data"
@@ -919,7 +930,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[5.25rem]"
+                  thClassName="w-[5.75rem] min-w-[5.75rem]"
                 />
                 <SortThPreventivo
                   label="Cliente"
@@ -927,6 +938,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
+                  thClassName="border-l border-zinc-200/90 pl-3 dark:border-zinc-700/90"
                 />
                 <SortThPreventivo
                   label="Mezzo"
@@ -934,6 +946,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
+                  thClassName="w-[16%] max-w-[16%] px-2"
                 />
                 <SortThPreventivo
                   label="Targa"
@@ -941,7 +954,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[4.25rem]"
+                  thClassName="w-[4.5rem] min-w-[4.5rem] px-2"
                 />
                 <SortThPreventivo
                   label="Matricola"
@@ -949,7 +962,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[5.5rem]"
+                  thClassName="w-[5.25rem] min-w-[5.25rem] px-2"
                 />
                 <SortThPreventivo
                   label="Scud."
@@ -957,7 +970,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[4.5rem]"
+                  thClassName="w-[4.25rem] min-w-[4.25rem] px-2"
                 />
                 <SortThPreventivo
                   label="Totale"
@@ -965,17 +978,11 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[5.5rem]"
+                  thClassName="w-[6.25rem] min-w-[6.25rem]"
                 />
-                <SortThPreventivo
-                  label="Lav."
-                  columnKey="lavorazioneId"
-                  sortColumn={sortColumn}
-                  sortPhase={sortPhase}
-                  onSort={onSortMain}
-                  thClassName="w-[6.5rem]"
-                />
-                <th className="sticky top-0 z-10 w-[8.5rem] bg-zinc-50 px-3 py-2 text-right text-xs font-semibold uppercase text-zinc-500 shadow-[0_1px_0_0_rgb(228_228_231)] dark:bg-zinc-800/95 dark:text-zinc-400 dark:shadow-[0_1px_0_0_rgb(39_39_42)]">
+                <th
+                  className={`${dsTableThSticky} w-[10.5rem] min-w-[10.5rem] px-2 py-2 text-right align-middle text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}
+                >
                   Azioni
                 </th>
               </tr>
@@ -990,45 +997,48 @@ export function PreventiviView() {
                     key={p.id}
                     className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}
                   >
-                    <td className="px-3 align-middle font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">{p.numero}</td>
-                    <td className="px-3 align-middle tabular-nums text-zinc-600 dark:text-zinc-300">{fmtDataCreazioneTabella(p.dataCreazione)}</td>
-                    <td className="min-w-0 px-3 align-middle text-zinc-800 dark:text-zinc-100">
-                      <span className="line-clamp-2 break-words">{p.cliente || "—"}</span>
+                    <td className="whitespace-nowrap px-2 align-middle font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                      {p.numero}
                     </td>
-                    <td className="min-w-0 px-3 align-middle text-zinc-700 dark:text-zinc-200">
-                      <span className="line-clamp-2 break-words">{p.macchinaRiassunto || "—"}</span>
+                    <td className="whitespace-nowrap px-2 align-middle text-xs tabular-nums text-zinc-600 dark:text-zinc-300">
+                      {fmtDataCreazioneTabella(p.dataCreazione)}
                     </td>
-                    <td className="whitespace-nowrap px-3 align-middle font-mono text-xs text-zinc-600 dark:text-zinc-300">{p.targa || "—"}</td>
-                    <td className="min-w-0 px-3 align-middle font-mono text-xs text-zinc-600 dark:text-zinc-300">
+                    <td className="min-w-0 border-l border-zinc-200/90 px-3 align-middle text-zinc-800 dark:text-zinc-100 dark:border-zinc-700/90">
+                      <span className="line-clamp-2 break-words text-sm leading-snug">{p.cliente || "—"}</span>
+                    </td>
+                    <td className="min-w-0 max-w-[1px] px-2 align-middle text-zinc-700 dark:text-zinc-200">
+                      <span className="line-clamp-2 break-words text-xs leading-snug">{p.macchinaRiassunto || "—"}</span>
+                    </td>
+                    <td className="whitespace-nowrap px-2 align-middle font-mono text-[11px] text-zinc-600 dark:text-zinc-300">{p.targa || "—"}</td>
+                    <td className="min-w-0 px-2 align-middle font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
                       <span className="line-clamp-1">{p.matricola || "—"}</span>
                     </td>
-                    <td className="min-w-0 px-3 align-middle text-xs text-zinc-600 dark:text-zinc-300">
+                    <td className="min-w-0 px-2 align-middle text-[11px] text-zinc-600 dark:text-zinc-300">
                       <span className="line-clamp-1" title={p.nScuderia || undefined}>
                         {p.nScuderia || "—"}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-3 align-middle text-right tabular-nums font-medium text-zinc-800 dark:text-zinc-100">
+                    <td className="whitespace-nowrap px-2 align-middle text-right text-sm tabular-nums font-medium text-zinc-800 dark:text-zinc-100">
                       {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
                     </td>
-                    <td className="min-w-0 px-3 align-middle">
-                      {hrefLav ? (
-                        <>
+                    <td className="px-2 align-middle text-right">
+                      <div className="inline-flex shrink-0 flex-nowrap items-center justify-end gap-1">
+                        {hrefLav ? (
                           <Link
                             href={hrefLav}
-                            className="text-[11px] font-semibold text-orange-700 underline-offset-2 hover:underline dark:text-orange-300"
+                            className={`${dsBtnNeutral} inline-flex h-8 w-8 shrink-0 items-center justify-center p-0`}
+                            title={
+                              p.lavorazioneOrigine === "storico"
+                                ? "Apri lavorazione (storico)"
+                                : "Apri lavorazione in corso"
+                            }
+                            aria-label="Apri lavorazione collegata"
                           >
-                            Apri
+                            <svg className="h-4 w-4 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 0L21 3m0 0h-5.25M21 3v5.25" />
+                            </svg>
                           </Link>
-                          <div className="truncate text-[9px] leading-tight text-zinc-400" title={p.lavorazioneId}>
-                            {p.lavorazioneOrigine === "storico" ? "St." : "Att."} · {p.lavorazioneId}
-                          </div>
-                        </>
-                      ) : (
-                        <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Man.</span>
-                      )}
-                    </td>
-                    <td className="px-3 align-middle text-right">
-                      <div className="inline-flex shrink-0 flex-nowrap items-center justify-end gap-1.5">
+                        ) : null}
                         <button
                           type="button"
                           className={`${dsBtnNeutral} inline-flex h-8 w-8 shrink-0 items-center justify-center p-0`}
@@ -1105,7 +1115,10 @@ export function PreventiviView() {
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className={gestionaleLogPanelHeaderClass}>
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche preventivi</h2>
+              <div className="flex min-w-0 items-center gap-2">
+                <IconGestionaleLog className="h-5 w-5 shrink-0 text-[color:var(--cab-text-muted)]" />
+                <h2 className="min-w-0 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche preventivi</h2>
+              </div>
               <button type="button" onClick={() => setLogOpen(false)} className={dsBtnNeutral}>
                 Chiudi
               </button>

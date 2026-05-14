@@ -25,6 +25,7 @@ import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readabili
 import { prioritaDisplayColor, statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { isStatoLavorazioneChiusoDb } from "@/lib/lavorazioni/lavorazioni-report-adapter";
+import { durataMsStorico, formatDurataMs } from "@/lib/lavorazioni/duration";
 import { dsInput, dsLabel, dsPageToolbarBtn, dsStackPage, dsScrollbar, dsTable, dsTableRow, dsTableWrap, dsTableThSticky } from "@/lib/ui/design-system";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -60,6 +61,24 @@ function fmtDay(iso: string | null | undefined): string {
   } catch {
     return iso;
   }
+}
+
+function fmtDayCompact(iso: string | null | undefined): string {
+  if (!iso?.trim()) return "—";
+  try {
+    return new Date(iso).toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "2-digit" });
+  } catch {
+    return iso;
+  }
+}
+
+function fmtOreTotaliCell(row: LavorazioneListRow): string {
+  const ms = durataMsStorico(
+    (row.data_ingresso ?? row.created_at) as string,
+    (row.data_uscita ?? row.updated_at) as string,
+  );
+  if (ms <= 0) return "—";
+  return formatDurataMs(ms);
 }
 
 function macchinaLabel(row: LavorazioneListRow): string {
@@ -105,7 +124,7 @@ function todayYmd(): string {
 
 type SortPhase = "asc" | "desc" | "natural";
 type SortKeyAtt = "macchina" | "cliente" | "note" | "stato" | "priorita" | "ingresso";
-type SortKeyCh = "macchina" | "mezzoIdent" | "cliente" | "ingresso" | "uscita";
+type SortKeyCh = "macchina" | "mezzoIdent" | "cliente" | "ingresso" | "uscita" | "oreTotali";
 
 function cmpStr(a: string, b: string): number {
   return a.localeCompare(b, "it", { sensitivity: "base" });
@@ -135,6 +154,17 @@ function cmpCh(a: LavorazioneListRow, b: LavorazioneListRow, k: SortKeyCh, phase
     const db = new Date(b.data_ingresso ?? b.created_at).getTime();
     return t(da === db ? 0 : da < db ? -1 : 1);
   }
+  if (k === "oreTotali") {
+    const ra = durataMsStorico(
+      (a.data_ingresso ?? a.created_at) as string,
+      (a.data_uscita ?? a.updated_at) as string,
+    );
+    const rb = durataMsStorico(
+      (b.data_ingresso ?? b.created_at) as string,
+      (b.data_uscita ?? b.updated_at) as string,
+    );
+    return t(ra === rb ? 0 : ra < rb ? -1 : 1);
+  }
   const ua = new Date(a.data_uscita ?? a.updated_at).getTime();
   const ub = new Date(b.data_uscita ?? b.updated_at).getTime();
   return t(ua === ub ? 0 : ua < ub ? -1 : 1);
@@ -156,7 +186,7 @@ function SortTh({
   const on = sortColumn === columnKey;
   const arrow = !on || sortPhase === "natural" ? "" : sortPhase === "asc" ? " ↑" : " ↓";
   return (
-    <th className={`${dsTableThSticky} px-3 py-2 text-left text-xs font-semibold uppercase text-[color:var(--cab-text-muted)]`}>
+    <th className={`${dsTableThSticky} px-2 py-2 text-left text-xs font-semibold uppercase text-[color:var(--cab-text-muted)]`}>
       <button type="button" className={`inline-flex items-center gap-1 ${erpFocus}`} onClick={() => onSort(columnKey)}>
         {label}
         <span className="tabular-nums text-[10px] font-bold text-zinc-400">{arrow}</span>
@@ -550,8 +580,17 @@ export function LavorazioniView() {
 
           {loading ? <p className="text-sm text-zinc-500">Caricamento…</p> : null}
 
-          <div className={`lavorazioni-scroll-scope ${dsTableWrap} ${dsScrollbar} hidden md:block`}>
-            <table className={`${dsTable} min-w-[1280px] w-full table-fixed`}>
+          <div className={`lavorazioni-scroll-scope ${dsTableWrap} ${dsScrollbar} hidden max-w-full overflow-x-hidden md:block`}>
+            <table className={`${dsTable} w-full min-w-0 table-fixed`}>
+              <colgroup>
+                <col className="w-[17%]" />
+                <col className="w-[13%]" />
+                <col className="w-[19%]" />
+                <col className="w-[12%]" />
+                <col className="w-[11%]" />
+                <col className="w-[9%]" />
+                <col className="w-[19%]" />
+              </colgroup>
               <thead className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">
                 <tr>
                   <SortTh
@@ -596,7 +635,7 @@ export function LavorazioniView() {
                     sortPhase={sortPhaseA}
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <th className={`${dsTableThSticky} px-3 py-2 text-right text-xs font-semibold uppercase text-[color:var(--cab-text-muted)]`}>
+                  <th className={`${dsTableThSticky} px-2 py-2 text-right text-xs font-semibold uppercase text-[color:var(--cab-text-muted)]`}>
                     Azioni
                   </th>
                 </tr>
@@ -625,15 +664,17 @@ export function LavorazioniView() {
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        <td className="px-3 align-middle">
-                          <div className="font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchinaLabel(row)}</div>
-                          <div className="text-xs leading-snug text-zinc-500 dark:text-zinc-400">{mezzoIdent(row)}</div>
+                        <td className="min-w-0 px-2 align-middle">
+                          <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchinaLabel(row)}</div>
+                          <div className="truncate text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">{mezzoIdent(row)}</div>
                         </td>
-                        <td className="max-w-[220px] px-3 align-middle text-sm text-zinc-800 dark:text-zinc-100">{clienteLabel(row)}</td>
-                        <td className="max-w-[240px] px-3 align-middle text-sm text-zinc-600 dark:text-zinc-300">
+                        <td className="min-w-0 px-2 align-middle text-sm text-zinc-800 dark:text-zinc-100">
+                          <span className="line-clamp-2 break-words">{clienteLabel(row)}</span>
+                        </td>
+                        <td className="min-w-0 px-2 align-middle text-sm text-zinc-600 dark:text-zinc-300">
                           <span className="line-clamp-2">{(row.note ?? "").trim() || "—"}</span>
                         </td>
-                        <td className="px-3 align-middle text-sm">
+                        <td className="px-2 align-middle text-sm">
                           <InlineSelectField
                             shellClass={statoPillShellClass()}
                             shellStyle={readablePillStyleFromHex(statoThemeColor(row.stato))}
@@ -650,7 +691,7 @@ export function LavorazioniView() {
                             ))}
                           </InlineSelectField>
                         </td>
-                        <td className="px-3 align-middle text-sm">
+                        <td className="px-2 align-middle text-sm">
                           <InlineSelectField
                             shellClass={prioritaPillShellClass()}
                             shellStyle={readablePillStyleFromHex(prioHex(row.priorita))}
@@ -667,11 +708,11 @@ export function LavorazioniView() {
                             ))}
                           </InlineSelectField>
                         </td>
-                        <td className="px-3 align-middle text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
+                        <td className="whitespace-nowrap px-2 align-middle text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
                           {fmtDay(row.data_ingresso ?? row.created_at)}
                         </td>
-                        <td className="px-3 align-middle text-right">
-                          <div className="inline-flex max-w-[22rem] flex-wrap items-center justify-end gap-1.5">
+                        <td className="px-2 align-middle text-right">
+                          <div className="inline-flex max-w-full flex-wrap items-center justify-end gap-1">
                             <button
                               type="button"
                               className={`${erpBtnIcon} gap-1 px-2.5`}
@@ -868,8 +909,17 @@ export function LavorazioniView() {
             </label>
           </div>
 
-          <div className={`lavorazioni-scroll-scope ${dsTableWrap} ${dsScrollbar} hidden md:block`}>
-            <table className={`${dsTable} min-w-[1100px] w-full table-fixed`}>
+          <div className={`lavorazioni-scroll-scope ${dsTableWrap} ${dsScrollbar} hidden max-w-full overflow-x-hidden md:block`}>
+            <table className={`${dsTable} w-full min-w-0 table-fixed`}>
+              <colgroup>
+                <col className="w-[18%]" />
+                <col className="w-[16%]" />
+                <col className="w-[22%]" />
+                <col className="w-[8.5rem]" />
+                <col className="w-[8.5rem]" />
+                <col className="w-[6.5rem]" />
+                <col className="w-[11rem]" />
+              </colgroup>
               <thead className="text-xs font-semibold uppercase text-zinc-500 dark:text-zinc-400">
                 <tr>
                   <SortTh
@@ -880,7 +930,7 @@ export function LavorazioniView() {
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
                   <SortTh
-                    label="TARGA · MATRICOLA · SCUDERIA"
+                    label="Ident. mezzo"
                     columnKey="mezzoIdent"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
@@ -907,7 +957,14 @@ export function LavorazioniView() {
                     sortPhase={sortPhaseC}
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <th className={`${dsTableThSticky} px-3 py-2 text-right text-xs font-semibold uppercase text-[color:var(--cab-text-muted)]`}>
+                  <SortTh
+                    label="Ore"
+                    columnKey="oreTotali"
+                    sortColumn={sortColC}
+                    sortPhase={sortPhaseC}
+                    onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
+                  />
+                  <th className={`${dsTableThSticky} px-2 py-2 text-right text-xs font-semibold uppercase text-[color:var(--cab-text-muted)]`}>
                     Azioni
                   </th>
                 </tr>
@@ -915,7 +972,7 @@ export function LavorazioniView() {
               <tbody>
                 {pagedChiuse.length === 0 ? (
                   <tr className={dsTableRow}>
-                    <td colSpan={6} className="px-3 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                    <td colSpan={7} className="px-3 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
                       Nessun record in archivio con i filtri correnti.
                     </td>
                   </tr>
@@ -937,19 +994,30 @@ export function LavorazioniView() {
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        <td className="px-3 align-middle font-medium text-zinc-900 dark:text-zinc-100">{macchinaLabel(row)}</td>
-                        <td className="px-3 align-middle text-xs text-zinc-600 dark:text-zinc-300">{mezzoIdent(row)}</td>
-                        <td className="px-3 align-middle text-sm text-zinc-800 dark:text-zinc-100">{clienteLabel(row)}</td>
-                        <td className="px-3 align-middle text-sm tabular-nums text-zinc-700 dark:text-zinc-300">
-                          {fmtDay(row.data_ingresso ?? row.created_at)}
+                        <td className="min-w-0 px-2 align-middle text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">
+                          <span className="line-clamp-2 break-words">{macchinaLabel(row)}</span>
                         </td>
-                        <td className="px-3 align-middle text-sm tabular-nums text-zinc-700 dark:text-zinc-300">{fmtDay(row.data_uscita)}</td>
-                        <td className="px-3 align-middle text-right">
-                          <div className="inline-flex items-center justify-end gap-1.5">
-                            <button type="button" className={`${erpBtnIcon} px-2.5`} onClick={() => setHubOpenId(row.id)}>
+                        <td className="min-w-0 px-2 align-middle text-[11px] leading-tight text-zinc-600 dark:text-zinc-300">
+                          <span className="line-clamp-2 break-all">{mezzoIdent(row)}</span>
+                        </td>
+                        <td className="min-w-0 px-2 align-middle text-sm text-zinc-800 dark:text-zinc-100">
+                          <span className="line-clamp-2 break-words">{clienteLabel(row)}</span>
+                        </td>
+                        <td className="whitespace-nowrap px-2 align-middle text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {fmtDayCompact(row.data_ingresso ?? row.created_at)}
+                        </td>
+                        <td className="whitespace-nowrap px-2 align-middle text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {fmtDayCompact(row.data_uscita)}
+                        </td>
+                        <td className="whitespace-nowrap px-2 align-middle text-xs tabular-nums text-zinc-700 dark:text-zinc-300">
+                          {fmtOreTotaliCell(row)}
+                        </td>
+                        <td className="px-2 align-middle text-right">
+                          <div className="inline-flex items-center justify-end gap-1">
+                            <button type="button" className={`${erpBtnIcon} px-2`} onClick={() => setHubOpenId(row.id)}>
                               Hub
                             </button>
-                            <Link href={buildPreventiviArchivioFilterHref(row.id, orig)} className={`${erpBtnIcon} px-2.5 no-underline`}>
+                            <Link href={buildPreventiviArchivioFilterHref(row.id, orig)} className={`${erpBtnIcon} px-2 no-underline`}>
                               Prev.
                             </Link>
                           </div>

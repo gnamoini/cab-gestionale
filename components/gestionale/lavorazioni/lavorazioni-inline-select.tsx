@@ -16,7 +16,7 @@ export function TablePillReadonly({
   children: ReactNode;
 }) {
   return (
-    <div className={`${shellClass} min-w-0 max-w-[12rem]`} style={shellStyle} title={title}>
+    <div className={`${shellClass} min-w-0 max-w-[8.75rem]`} style={shellStyle} title={title}>
       <div className="relative flex min-h-8 w-full items-center rounded-[inherit] px-2 py-0.5">
         <span className="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight tracking-wide text-inherit">
           {children}
@@ -49,7 +49,7 @@ export function InlineSelectField({
 }) {
   return (
     <div
-      className={`${shellClass} group min-w-0 max-w-[12rem] ${disabled ? "opacity-60" : ""}`}
+      className={`${shellClass} group min-w-0 max-w-[8.75rem] ${disabled ? "opacity-60" : ""}`}
       style={shellStyle}
       title={title}
     >

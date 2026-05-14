@@ -47,7 +47,7 @@ import {
   formatMonthKeyIt,
 } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
-import { dsPageToolbarBtn, dsStackPage, dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { dsPageToolbarBtn, dsStackPage, dsScrollbar, dsTable, dsTableRow, dsTableWrap, dsBtnNeutral, gestionaleFilterChipClass } from "@/lib/ui/design-system";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -61,7 +61,6 @@ import {
   IconGestionaleLog,
   gestionaleLogPanelAsideClass,
   gestionaleLogPanelHeaderClass,
-  gestionaleLogScrollClass,
   gestionaleLogScrollEmbeddedClass,
   logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
@@ -1257,12 +1256,12 @@ export function MagazzinoView() {
               onClick={() => setSoloSottoScorta((v) => !v)}
               className={
                 soloSottoScorta
-                  ? `inline-flex items-center gap-2 rounded-lg border border-orange-400/80 bg-orange-50 px-2.5 py-2 text-xs font-medium text-orange-950 shadow-sm hover:bg-orange-100 hover:shadow-md hover:ring-2 hover:ring-orange-400/30 dark:border-orange-500/55 dark:bg-orange-950/45 dark:text-orange-50 dark:hover:bg-orange-950/65 dark:hover:ring-orange-500/35 ${erpFocus}`
-                  : `${erpBtnNeutral} gap-2`
+                  ? `${gestionaleFilterChipClass} border-orange-400/85 bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-orange-950 shadow-[0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,transparent)] dark:border-orange-500/55 dark:text-orange-50`
+                  : gestionaleFilterChipClass
               }
             >
               <span
-                className={`h-2 w-2 rounded-full ${
+                className={`h-2 w-2 shrink-0 rounded-full ${
                   soloSottoScorta ? "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.85)]" : "bg-zinc-400"
                 }`}
               />
@@ -1903,13 +1902,16 @@ export function MagazzinoView() {
             onMouseDown={(e) => e.stopPropagation()}
           >
             <div className={gestionaleLogPanelHeaderClass}>
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche</h2>
-              <button type="button" onClick={() => setLogOpen(false)} className={erpBtnNeutral}>
+              <div className="flex min-w-0 items-center gap-2">
+                <IconGestionaleLog className="h-5 w-5 shrink-0 text-[color:var(--cab-text-muted)]" />
+                <h2 className="min-w-0 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche magazzino</h2>
+              </div>
+              <button type="button" onClick={() => setLogOpen(false)} className={dsBtnNeutral}>
                 Chiudi
               </button>
             </div>
             <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
-              <div className={`${gestionaleLogScrollClass} min-h-0 flex-1`}>
+              <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
               {logEntries.length === 0 ? (
                 <GestionaleLogEmpty message="Nessuna modifica registrata in questa sessione." />
               ) : (

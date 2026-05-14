@@ -82,6 +82,10 @@ export const selectLavorazioniInline =
 export const gestionaleSelectFilterClass =
   `min-h-10 w-full min-w-0 cursor-pointer appearance-none rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} py-2.5 pl-9 pr-10 text-sm font-semibold leading-snug ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] ${gestionaleSelectChevronAccent}`;
 
+/** Pulsante / toggle filtro in riga con i select `gestionaleSelectFilterClass` (stessa altezza, raggio, peso tipografico). */
+export const gestionaleFilterChipClass =
+  `inline-flex min-h-10 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} px-3 py-2.5 text-sm font-semibold leading-snug ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] ${dsFocus}`;
+
 export const selectLavorazioniFilter = gestionaleSelectFilterClass;
 
 export const gestionaleSelectNativePlainClass =

@@ -17,7 +17,6 @@ import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { SistemaImpostazioniModal } from "@/components/dashboard/sistema-impostazioni-modal";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
-import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import { dsBtnSettings, dsPageToolbarBtn, dsStackPage, dsZDrawer } from "@/lib/ui/design-system";
 
 export function DashboardView() {
@@ -25,7 +24,6 @@ export function DashboardView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const staging = isStagingPublicSlice();
-  const supabaseReady = isSupabasePublicEnvConfigured();
   const [sistemaOpen, setSistemaOpen] = useState(false);
   const [logOpen, setLogOpen] = useState(false);
   const [stagingRouteHint, setStagingRouteHint] = useState(false);
@@ -40,11 +38,12 @@ export function DashboardView() {
   }
 
   useEffect(() => {
+    if (staging) return;
     if (searchParams.get("openSistema") === "1") {
       setSistemaOpen(true);
       router.replace(pathname, { scroll: false });
     }
-  }, [searchParams, pathname, router]);
+  }, [searchParams, pathname, router, staging]);
 
   useEffect(() => {
     if (!logOpen) return;
@@ -95,14 +94,6 @@ export function DashboardView() {
       />
 
       <div className={dsStackPage}>
-        {!supabaseReady ? (
-          <div className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-            Mancano <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/60">NEXT_PUBLIC_SUPABASE_URL</code> e/o{" "}
-            <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/60">NEXT_PUBLIC_SUPABASE_ANON_KEY</code>: i dati da database non
-            funzioneranno finché non sono configurate nel deploy.
-          </div>
-        ) : null}
-
         {stagingRouteHint ? (
           <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/35 dark:text-amber-50">
             <p className="min-w-0 flex-1 leading-relaxed">

@@ -47,13 +47,6 @@ type ThemeContextValue = {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-function flashThemeTransition() {
-  document.documentElement.classList.add("cab-theme-transition");
-  window.setTimeout(() => {
-    document.documentElement.classList.remove("cab-theme-transition");
-  }, 220);
-}
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [preference, setPreferenceState] = useState<ThemePreference>("system");
 
@@ -73,7 +66,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [preference]);
 
   const setPreference = useCallback((p: ThemePreference) => {
-    flashThemeTransition();
     setPreferenceState(p);
     try {
       if (p === "system") localStorage.removeItem(CAB_THEME_STORAGE_KEY);

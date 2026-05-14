@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -15,7 +15,7 @@ import type { BunderCommercialDocument, BunderDocKind } from "@/lib/bunder/types
 import { loadBunderDocuments, saveBunderDocuments } from "@/lib/bunder/bunder-storage";
 import { CAB_BUNDER_LOG_REFRESH } from "@/lib/sistema/cab-events";
 import { getMagazzinoReportSnapshot, subscribeMagazzinoReportSync } from "@/lib/magazzino/magazzino-report-sync";
-import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsPageToolbarBtn, dsStackPage, dsScrollbar, dsTable, dsTableHead, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsPageToolbarBtn, dsStackPage, dsScrollbar, dsTable, dsTableHead, dsTableRow, dsTableWrap, dsTableThSticky, dsFocus } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { erpBtnNuovaLavorazione, erpFocus, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -94,6 +94,95 @@ function parseMoney(s: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+type BunderSortPhase = "asc" | "desc" | "natural";
+type BunderSortKey =
+  | "numeroProgressivo"
+  | "kind"
+  | "aziendaDestinatario"
+  | "oggetto"
+  | "dataDocumento"
+  | "totale"
+  | "prodotti";
+
+function prodottiSortLabel(d: BunderCommercialDocument): string {
+  return d.righe
+    .map((r) => r.nome.trim())
+    .filter(Boolean)
+    .join(" ");
+}
+
+function compareBunder(
+  a: BunderCommercialDocument,
+  b: BunderCommercialDocument,
+  k: BunderSortKey,
+  phase: BunderSortPhase,
+): number {
+  if (phase === "natural") return 0;
+  const dir = phase === "desc" ? -1 : 1;
+  const t = (x: number) => x * dir;
+  switch (k) {
+    case "numeroProgressivo":
+      return t(a.numeroProgressivo.localeCompare(b.numeroProgressivo, "it", { numeric: true }));
+    case "kind":
+      return t(a.kind.localeCompare(b.kind, "it"));
+    case "aziendaDestinatario":
+      return t(a.aziendaDestinatario.localeCompare(b.aziendaDestinatario, "it", { sensitivity: "base" }));
+    case "oggetto":
+      return t(a.oggetto.localeCompare(b.oggetto, "it", { sensitivity: "base" }));
+    case "dataDocumento": {
+      const da = new Date(a.dataDocumento + "T12:00:00").getTime();
+      const db = new Date(b.dataDocumento + "T12:00:00").getTime();
+      return t(da === db ? 0 : da < db ? -1 : 1);
+    }
+    case "totale":
+      return t(totaleDocumento(a) - totaleDocumento(b));
+    case "prodotti":
+      return t(prodottiSortLabel(a).localeCompare(prodottiSortLabel(b), "it", { sensitivity: "base" }));
+    default:
+      return 0;
+  }
+}
+
+function SortThBunder({
+  label,
+  columnKey,
+  sortColumn,
+  sortPhase,
+  onSort,
+  thClassName,
+  align = "left",
+}: {
+  label: string;
+  columnKey: BunderSortKey;
+  sortColumn: BunderSortKey | null;
+  sortPhase: BunderSortPhase;
+  onSort: (k: BunderSortKey) => void;
+  thClassName?: string;
+  align?: "left" | "right";
+}) {
+  const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
+  let icon: ReactNode = <span className="opacity-40">↕</span>;
+  if (active) {
+    icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
+  }
+  const alignCls = align === "right" ? "text-right" : "text-left";
+  const btnJustify = align === "right" ? "justify-end" : "justify-start";
+  return (
+    <th className={`${dsTableThSticky} px-2 py-2 align-middle ${alignCls} sm:px-3 ${thClassName ?? ""}`}>
+      <button
+        type="button"
+        onClick={() => onSort(columnKey)}
+        className={`inline-flex w-full max-w-full items-center gap-1 ${btnJustify} text-xs font-semibold uppercase tracking-wide transition-colors duration-200 ease-out ${dsFocus} ${
+          active ? "text-[color:var(--cab-primary)]" : "text-[color:var(--cab-text-muted)] hover:text-[color:var(--cab-text)]"
+        }`}
+      >
+        <span className="truncate">{label}</span>
+        {icon}
+      </button>
+    </th>
+  );
+}
+
 export function BunderView() {
   const { authorName: autore } = useAuth();
   const authorTrim = autore.trim() || "Operatore";
@@ -116,6 +205,9 @@ export function BunderView() {
   const [filtroDataA, setFiltroDataA] = useState("");
   const [filtroMese, setFiltroMese] = useState("__tutti__");
   const [filtroAnno, setFiltroAnno] = useState("__tutti__");
+
+  const [bunderSortColumn, setBunderSortColumn] = useState<BunderSortKey | null>(null);
+  const [bunderSortPhase, setBunderSortPhase] = useState<BunderSortPhase>("natural");
 
   const [editor, setEditor] = useState<{ open: boolean; doc: BunderCommercialDocument | null }>({
     open: false,
@@ -271,10 +363,23 @@ export function BunderView() {
     search,
   ]);
 
+  const displayRows = useMemo(() => {
+    const list = [...filtered];
+    if (bunderSortColumn === null || bunderSortPhase === "natural") {
+      return list;
+    }
+    list.sort((a, b) => {
+      const c = compareBunder(a, b, bunderSortColumn, bunderSortPhase);
+      if (c !== 0) return c;
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+    });
+    return list;
+  }, [filtered, bunderSortColumn, bunderSortPhase]);
+
   const listPageSize = useResponsiveListPageSize();
   const bunderPagerDeps = useMemo(
     () =>
-      `${filtroTipo}|${filtroAzienda}|${filtroReferente}|${filtroProdotto}|${filtroCodice}|${filtroSettore}|${filtroAutore}|${filtroImin}|${filtroImax}|${filtroDataDa}|${filtroDataA}|${filtroMese}|${filtroAnno}|${search}|${filtered.length}`,
+      `${filtroTipo}|${filtroAzienda}|${filtroReferente}|${filtroProdotto}|${filtroCodice}|${filtroSettore}|${filtroAutore}|${filtroImin}|${filtroImax}|${filtroDataDa}|${filtroDataA}|${filtroMese}|${filtroAnno}|${search}|${displayRows.length}|${bunderSortColumn ?? ""}|${bunderSortPhase}`,
     [
       filtroTipo,
       filtroAzienda,
@@ -290,14 +395,16 @@ export function BunderView() {
       filtroMese,
       filtroAnno,
       search,
-      filtered.length,
+      displayRows.length,
+      bunderSortColumn,
+      bunderSortPhase,
     ],
   );
-  const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(filtered.length, listPageSize);
+  const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(displayRows.length, listPageSize);
   useEffect(() => {
     resetPage();
   }, [bunderPagerDeps, listPageSize, resetPage]);
-  const pagedFiltered = useMemo(() => sliceItems(filtered), [filtered, sliceItems, page]);
+  const pagedFiltered = useMemo(() => sliceItems(displayRows), [displayRows, sliceItems, page]);
 
   const {
     page: logPage,
@@ -366,6 +473,23 @@ export function BunderView() {
     setSearch("");
     setFiltroDraft({ ...DRAFT_EMPTY });
     setFiltriOpen(false);
+  }
+
+  function onSortBunder(k: BunderSortKey) {
+    if (bunderSortColumn !== k) {
+      setBunderSortColumn(k);
+      setBunderSortPhase("asc");
+      return;
+    }
+    if (bunderSortPhase === "asc") {
+      setBunderSortPhase("desc");
+    } else if (bunderSortPhase === "desc") {
+      setBunderSortColumn(null);
+      setBunderSortPhase("natural");
+    } else {
+      setBunderSortColumn(k);
+      setBunderSortPhase("asc");
+    }
   }
 
   function creaWizard() {
@@ -636,18 +760,77 @@ export function BunderView() {
         </div>
 
         <div className={`${dsTableWrap} ${dsScrollbar}`}>
-          <table className={`${dsTable} min-w-[1100px] w-full text-left text-xs text-zinc-900 dark:text-zinc-100`}>
-            <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead} text-[10px]`}>
+          <table className={`${dsTable} w-full min-w-0 table-fixed text-left text-sm text-zinc-900 dark:text-zinc-100`}>
+            <colgroup>
+              <col className="w-[7.5rem]" />
+              <col className="w-[9.5rem]" />
+              <col />
+              <col className="w-[22%]" />
+              <col className="w-[5.5rem]" />
+              <col className="w-[6.5rem]" />
+              <col className="w-[18%]" />
+              <col className="w-[12.5rem]" />
+            </colgroup>
+            <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
               <tr>
-                <th className="px-2 py-2">Numero</th>
-                <th className="px-2 py-2">Tipo</th>
-                <th className="px-2 py-2">Azienda</th>
-                <th className="px-2 py-2">Referente</th>
-                <th className="px-2 py-2">Oggetto</th>
-                <th className="px-2 py-2">Data</th>
-                <th className="px-2 py-2 text-right">Totale</th>
-                <th className="px-2 py-2">Prodotti</th>
-                <th className="px-2 py-2 text-right">Azioni</th>
+                <SortThBunder
+                  label="Numero"
+                  columnKey="numeroProgressivo"
+                  sortColumn={bunderSortColumn}
+                  sortPhase={bunderSortPhase}
+                  onSort={onSortBunder}
+                  thClassName="whitespace-nowrap"
+                />
+                <SortThBunder
+                  label="Tipo"
+                  columnKey="kind"
+                  sortColumn={bunderSortColumn}
+                  sortPhase={bunderSortPhase}
+                  onSort={onSortBunder}
+                />
+                <SortThBunder
+                  label="Azienda"
+                  columnKey="aziendaDestinatario"
+                  sortColumn={bunderSortColumn}
+                  sortPhase={bunderSortPhase}
+                  onSort={onSortBunder}
+                />
+                <SortThBunder
+                  label="Oggetto"
+                  columnKey="oggetto"
+                  sortColumn={bunderSortColumn}
+                  sortPhase={bunderSortPhase}
+                  onSort={onSortBunder}
+                />
+                <SortThBunder
+                  label="Data"
+                  columnKey="dataDocumento"
+                  sortColumn={bunderSortColumn}
+                  sortPhase={bunderSortPhase}
+                  onSort={onSortBunder}
+                  thClassName="whitespace-nowrap"
+                />
+                <SortThBunder
+                  label="Totale"
+                  columnKey="totale"
+                  sortColumn={bunderSortColumn}
+                  sortPhase={bunderSortPhase}
+                  onSort={onSortBunder}
+                  align="right"
+                  thClassName="whitespace-nowrap"
+                />
+                <SortThBunder
+                  label="Prodotti"
+                  columnKey="prodotti"
+                  sortColumn={bunderSortColumn}
+                  sortPhase={bunderSortPhase}
+                  onSort={onSortBunder}
+                />
+                <th
+                  className={`${dsTableThSticky} px-2 py-2 text-right align-middle text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)] sm:px-3`}
+                >
+                  Azioni
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -660,22 +843,23 @@ export function BunderView() {
                   .join(" · ");
                 const dataIt = new Date(d.dataDocumento + "T12:00:00").toLocaleDateString("it-IT");
                 return (
-                  <tr key={d.id} className={dsTableRow}>
-                    <td className="px-2 py-1.5 font-mono font-semibold">{d.numeroProgressivo}</td>
-                    <td className="px-2 py-1.5">{bunderKindLabel(d.kind)}</td>
-                    <td className="max-w-[10rem] truncate px-2 py-1.5" title={d.aziendaDestinatario}>
-                      {d.aziendaDestinatario}
+                  <tr key={d.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
+                    <td className="whitespace-nowrap px-2 py-2 align-middle font-mono text-xs font-semibold sm:px-3">{d.numeroProgressivo}</td>
+                    <td className="px-2 py-2 align-middle text-xs sm:px-3">{bunderKindLabel(d.kind)}</td>
+                    <td className="min-w-0 px-2 py-2 align-middle sm:px-3" title={d.aziendaDestinatario}>
+                      <span className="line-clamp-2 break-words text-sm">{d.aziendaDestinatario}</span>
                     </td>
-                    <td className="max-w-[8rem] truncate px-2 py-1.5">{d.referente}</td>
-                    <td className="max-w-[14rem] truncate px-2 py-1.5" title={d.oggetto}>
-                      {d.oggetto}
+                    <td className="min-w-0 max-w-[1px] px-2 py-2 align-middle sm:px-3" title={d.oggetto}>
+                      <span className="line-clamp-2 break-words text-sm">{d.oggetto}</span>
                     </td>
-                    <td className="px-2 py-1.5 tabular-nums text-zinc-600 dark:text-zinc-300">{dataIt}</td>
-                    <td className="px-2 py-1.5 text-right tabular-nums font-medium">{tot.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €</td>
-                    <td className="max-w-[12rem] truncate px-2 py-1.5 text-zinc-600 dark:text-zinc-300" title={prod}>
-                      {prod || "—"}
+                    <td className="whitespace-nowrap px-2 py-2 align-middle text-xs tabular-nums text-zinc-600 dark:text-zinc-300 sm:px-3">{dataIt}</td>
+                    <td className="whitespace-nowrap px-2 py-2 align-middle text-right text-sm tabular-nums font-medium sm:px-3">
+                      {tot.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
                     </td>
-                    <td className="px-2 py-1.5 text-right">
+                    <td className="min-w-0 px-2 py-2 align-middle text-xs text-zinc-600 dark:text-zinc-300 sm:px-3" title={prod}>
+                      <span className="line-clamp-2">{prod || "—"}</span>
+                    </td>
+                    <td className="px-2 py-2 align-middle text-right sm:px-3">
                       <div className="inline-flex flex-nowrap justify-end gap-1">
                         <button type="button" className={`${dsBtnNeutral} inline-flex h-8 w-8 items-center justify-center p-0`} title="Apri / modifica" aria-label="Apri modifica" onClick={() => setEditor({ open: true, doc: d })}>
                           <svg className="h-4 w-4 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -768,7 +952,10 @@ export function BunderView() {
         >
           <aside className={gestionaleLogPanelAsideClass} aria-label="Log modifiche BUNDER" onMouseDown={(e) => e.stopPropagation()}>
             <div className={gestionaleLogPanelHeaderClass}>
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche BUNDER</h2>
+              <div className="flex min-w-0 items-center gap-2">
+                <IconGestionaleLog className="h-5 w-5 shrink-0 text-[color:var(--cab-text-muted)]" />
+                <h2 className="min-w-0 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche BUNDER</h2>
+              </div>
               <button type="button" onClick={() => setLogOpen(false)} className={dsBtnNeutral}>
                 Chiudi
               </button>
