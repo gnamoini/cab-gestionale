@@ -46,7 +46,7 @@ const TONE_BADGE: Record<GestionaleLogEventTone, string> = {
   create:
     "border border-emerald-300/80 bg-emerald-100 text-emerald-950 dark:border-emerald-800/60 dark:bg-emerald-950/50 dark:text-emerald-50",
   update:
-    "border border-orange-300/80 bg-orange-100 text-orange-950 dark:border-orange-800/55 dark:bg-orange-950/45 dark:text-orange-50",
+    "border border-orange-400/75 bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] text-orange-950 dark:border-orange-700/55 dark:bg-orange-950/55 dark:text-orange-50",
   delete: "border border-red-300/80 bg-red-100 text-red-950 dark:border-red-900/55 dark:bg-red-950/45 dark:text-red-50",
   complete: "border border-sky-300/80 bg-sky-100 text-sky-950 dark:border-sky-900/55 dark:bg-sky-950/45 dark:text-sky-50",
   archive: "border border-zinc-300/80 bg-zinc-200 text-zinc-900 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100",
@@ -98,6 +98,9 @@ export function GestionaleLogChangeList({
 export const logEntryDismissBtnClass =
   "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-transparent text-sm font-semibold text-zinc-400 transition-colors hover:border-zinc-200 hover:bg-white hover:text-red-600 dark:hover:border-zinc-600 dark:hover:bg-zinc-900 dark:hover:text-red-400";
 
+const ANNULLATO_BADGE =
+  "border border-zinc-400/90 bg-zinc-200/95 text-zinc-900 dark:border-zinc-500 dark:bg-zinc-700 dark:text-zinc-50";
+
 export function GestionaleLogEntryFourLines({
   vm,
   onClick,
@@ -112,23 +115,45 @@ export function GestionaleLogEntryFourLines({
   /** Es. pulsante rimozione voce log (non interferisce con onClick sulla card). */
   trailing?: ReactNode;
 }) {
-  const cardClass = `relative rounded-xl border border-zinc-200/90 bg-zinc-50/40 pl-3.5 dark:border-zinc-700/90 dark:bg-zinc-800/30 ${TONE_BORDER[vm.tone]} border-l-[3px]`;
+  const voided = vm.annullato === true;
+  const cardClass = [
+    "relative rounded-xl border border-zinc-200/90 pl-3.5 dark:border-zinc-700/90",
+    voided ? "border-l-zinc-400 bg-zinc-100/50 opacity-90 dark:border-l-zinc-500 dark:bg-zinc-900/50" : `bg-zinc-50/40 dark:bg-zinc-800/30 ${TONE_BORDER[vm.tone]}`,
+    "border-l-[3px]",
+  ].join(" ");
 
-  const hover =
-    "transition-[border-color,box-shadow,background-color] duration-150 hover:border-orange-200/90 hover:bg-orange-50/45 hover:shadow-sm dark:hover:border-orange-900/50 dark:hover:bg-orange-950/25";
+  const hover = voided
+    ? "transition-[border-color,box-shadow,background-color] duration-150 hover:border-zinc-300/90 hover:bg-zinc-100/70 hover:shadow-sm dark:hover:border-zinc-600 dark:hover:bg-zinc-800/60"
+    : "transition-[border-color,box-shadow,background-color] duration-150 hover:border-orange-200/90 hover:bg-orange-50/45 hover:shadow-sm";
 
   const body = (
     <div className={`py-3 pr-3.5 ${trailing ? "pr-12" : ""}`}>
       <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Tipo modifica</p>
-      <div className="mt-0.5">
+      <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
         <span className={`inline-flex rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.08em] ${TONE_BADGE[vm.tone]}`}>
           {vm.tipoRiga}
         </span>
+        {voided ? (
+          <span
+            className={`inline-flex rounded-md px-2 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${ANNULLATO_BADGE}`}
+            title="Operazione annullata (storico conservato)"
+          >
+            Annullato
+          </span>
+        ) : null}
       </div>
       <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Oggetto</p>
-      <p className="mt-0.5 text-[14px] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">{vm.oggettoRiga}</p>
+      <p
+        className={`mt-0.5 text-[14px] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50 ${voided ? "line-through decoration-zinc-400/80 decoration-2" : ""}`}
+      >
+        {vm.oggettoRiga}
+      </p>
       <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Dettaglio</p>
-      <p className="mt-0.5 text-[13px] leading-relaxed text-zinc-700 dark:text-zinc-200 whitespace-pre-wrap break-words">{vm.modificaRiga}</p>
+      <p
+        className={`mt-0.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${voided ? "text-zinc-500 line-through decoration-zinc-400/70 decoration-2 dark:text-zinc-400" : "text-zinc-700 dark:text-zinc-200"}`}
+      >
+        {vm.modificaRiga}
+      </p>
       <p className="mt-3 text-[10px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">Autore e data</p>
       <p className="mt-0.5 border-t border-zinc-200/80 pt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500 tabular-nums dark:border-zinc-700/80 dark:text-zinc-400">
         {formatGestionaleLogMetaLine(vm.autore, vm.atIso)}

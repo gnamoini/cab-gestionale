@@ -251,7 +251,7 @@ export function BunderEditorModal({
           <div className="mt-4 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
             <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] font-bold uppercase tracking-wide text-zinc-500">Destinatario</p>
-              <button type="button" className={`text-xs font-semibold text-orange-700 underline-offset-2 hover:underline dark:text-orange-300 ${erpFocus}`} onClick={applicaStoricoCliente}>
+              <button type="button" className={`text-xs font-semibold text-orange-700 underline-offset-2 hover:underline ${erpFocus}`} onClick={applicaStoricoCliente}>
                 Applica dati da ultimo documento stessa azienda
               </button>
             </div>

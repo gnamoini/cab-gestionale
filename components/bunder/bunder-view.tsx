@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -15,10 +16,29 @@ import type { BunderCommercialDocument, BunderDocKind } from "@/lib/bunder/types
 import { loadBunderDocuments, saveBunderDocuments } from "@/lib/bunder/bunder-storage";
 import { CAB_BUNDER_LOG_REFRESH } from "@/lib/sistema/cab-events";
 import { getMagazzinoReportSnapshot, subscribeMagazzinoReportSync } from "@/lib/magazzino/magazzino-report-sync";
-import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsPageToolbarBtn, dsStackPage, dsScrollbar, dsTable, dsTableHead, dsTableRow, dsTableWrap, dsTableThSticky, dsFocus } from "@/lib/ui/design-system";
+import {
+  dsBtnNeutral,
+  dsBtnPrimary,
+  dsPageToolbarBtn,
+  dsStackPage,
+  dsScrollbar,
+  dsTable,
+  dsTableHead,
+  dsTableRow,
+  dsTableWrap,
+  dsTableThSticky,
+  dsFocus,
+  dsTableTdActions,
+  dsTableActionsGroup,
+  dsTableActionBtnPrimary,
+  dsTableActionBtnSecondary,
+  dsTableActionBtnDanger,
+  dsTableActionGlyph,
+  GESTIONALE_SEARCH_PLACEHOLDER,
+} from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import { erpBtnNuovaLavorazione, erpFocus, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpBtnNuovaLavorazione, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
@@ -604,37 +624,30 @@ export function BunderView() {
       <div className={dsStackPage}>
       <ShellCard className="overflow-hidden rounded-xl border-zinc-200/95 shadow-md dark:border-zinc-800">
         <div className="mb-3 flex flex-col gap-3 sm:mb-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <button type="button" className={`${erpBtnNuovaLavorazione} h-11 shrink-0 px-4`} onClick={() => setWizardOpen(true)}>
               Nuovo documento
             </button>
-            <div className="relative min-h-11 min-w-0 flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-zinc-400" aria-hidden>
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </span>
-              <input
-                type="search"
-                placeholder="Cerca numero, azienda, oggetto, codici, testi…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className={`${erpFocus} h-11 w-full rounded-lg border border-zinc-200 bg-white py-0 pl-10 pr-3 text-sm shadow-sm outline-none ring-orange-500/25 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-100`}
-              />
-            </div>
-            <div ref={filtriRef} className="relative shrink-0">
+            <GestionaleSearchField
+              wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+              placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Cerca documenti BUNDER"
+            />
+            <div ref={filtriRef} className="relative shrink-0 sm:ml-auto">
               <button
                 type="button"
                 onClick={() => (filtriOpen ? setFiltriOpen(false) : openFiltri())}
-                className={`${dsBtnNeutral} relative inline-flex h-11 min-w-[8.75rem] items-center justify-center gap-2 px-3 text-sm font-semibold`}
+                className={`${dsPageToolbarBtn} relative h-11 min-w-[8.75rem] shrink-0 gap-2 px-3 text-sm`}
                 aria-expanded={filtriOpen}
               >
                 Filtri
-                <svg className={`h-4 w-4 text-orange-600 transition-transform dark:text-orange-400 ${filtriOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <svg className={`h-4 w-4 shrink-0 text-[color:var(--cab-primary)] transition-transform ${filtriOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
                 {hasFiltriAvanzati || search.trim() ? (
-                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-orange-500 ring-2 ring-white dark:ring-zinc-950" aria-hidden />
+                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]" aria-hidden />
                 ) : null}
               </button>
               {filtriOpen ? (
@@ -752,7 +765,7 @@ export function BunderView() {
               <span className="font-semibold tabular-nums text-zinc-800 dark:text-zinc-100">{filtered.length}</span> documenti
             </span>
             {hasFiltriAvanzati || search.trim() ? (
-              <button type="button" className="font-semibold text-orange-700 underline-offset-2 hover:underline dark:text-orange-300" onClick={resetFiltriAll}>
+              <button type="button" className="font-semibold text-orange-700 underline-offset-2 hover:underline" onClick={resetFiltriAll}>
                 Azzera filtri
               </button>
             ) : null}
@@ -859,35 +872,35 @@ export function BunderView() {
                     <td className="min-w-0 px-2 py-2 align-middle text-xs text-zinc-600 dark:text-zinc-300 sm:px-3" title={prod}>
                       <span className="line-clamp-2">{prod || "—"}</span>
                     </td>
-                    <td className="px-2 py-2 align-middle text-right sm:px-3">
-                      <div className="inline-flex flex-nowrap justify-end gap-1">
-                        <button type="button" className={`${dsBtnNeutral} inline-flex h-8 w-8 items-center justify-center p-0`} title="Apri / modifica" aria-label="Apri modifica" onClick={() => setEditor({ open: true, doc: d })}>
-                          <svg className="h-4 w-4 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <td className={dsTableTdActions}>
+                      <div className={dsTableActionsGroup}>
+                        <button type="button" className={dsTableActionBtnPrimary} title="Apri / modifica" aria-label="Apri modifica" onClick={() => setEditor({ open: true, doc: d })}>
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
-                        <button type="button" className={`${dsBtnNeutral} inline-flex h-8 w-8 items-center justify-center p-0`} title="PDF" aria-label="Apri PDF" onClick={() => rowPdf(d)}>
-                          <svg className="h-4 w-4 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <button type="button" className={dsTableActionBtnSecondary} title="PDF" aria-label="Apri PDF" onClick={() => rowPdf(d)}>
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                           </svg>
                         </button>
-                        <button type="button" className={`${dsBtnNeutral} inline-flex h-8 w-8 items-center justify-center p-0`} title="Word" aria-label="Apri Word" onClick={() => rowWord(d)}>
-                          <svg className="h-4 w-4 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <button type="button" className={dsTableActionBtnSecondary} title="Word" aria-label="Apri Word" onClick={() => rowWord(d)}>
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
                         </button>
-                        <button type="button" className={`${dsBtnNeutral} inline-flex h-8 w-8 items-center justify-center p-0`} title="Duplica" aria-label="Duplica" onClick={() => duplica(d)}>
-                          <svg className="h-4 w-4 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <button type="button" className={dsTableActionBtnSecondary} title="Duplica" aria-label="Duplica" onClick={() => duplica(d)}>
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m0 4h6a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2v-6" />
                           </svg>
                         </button>
-                        <button type="button" className={`${dsBtnNeutral} inline-flex h-8 w-8 items-center justify-center p-0`} title="Crea nuovo da questo" aria-label="Crea nuovo da questo" onClick={() => nuovoDa(d)}>
-                          <svg className="h-4 w-4 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <button type="button" className={dsTableActionBtnSecondary} title="Crea nuovo da questo" aria-label="Crea nuovo da questo" onClick={() => nuovoDa(d)}>
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                           </svg>
                         </button>
-                        <button type="button" className={`${dsBtnDanger} inline-flex h-8 w-8 items-center justify-center p-0`} title="Elimina" aria-label="Elimina" onClick={() => elimina(d)}>
-                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <button type="button" className={dsTableActionBtnDanger} title="Elimina" aria-label="Elimina" onClick={() => elimina(d)}>
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>

@@ -1,23 +1,40 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import { dsInput, dsStickyToolbar, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
 
 function MezziFieldWrap({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <label className="flex min-w-0 flex-1 basis-[min(100%,10rem)] flex-col gap-1">
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{label}</span>
+    <label className="flex min-w-0 flex-1 flex-col gap-1">
+      <span className="text-[11px] font-medium text-[color:var(--cab-text-muted)]">{label}</span>
       {children}
     </label>
   );
 }
 
-const inputClass =
-  "h-10 w-full min-w-0 rounded-lg border border-zinc-600/90 bg-zinc-900 px-3 text-sm font-medium text-zinc-50 shadow-md shadow-black/25 outline-none ring-orange-500/25 placeholder:text-zinc-500 focus:border-orange-500/75 focus:ring-2 dark:placeholder:text-zinc-500 " + erpFocus;
+const filterTextInputClass = `${dsInput} min-h-10 py-2 text-sm font-semibold`;
 
-export type MezziFiltersProps = {
+export type MezziSearchBarProps = {
   search: string;
   onSearch: (v: string) => void;
+  /** Es. `min-w-0 flex-1` per allineamento toolbar */
+  wrapperClassName?: string;
+};
+
+export function MezziSearchBar({ search, onSearch, wrapperClassName = "" }: MezziSearchBarProps) {
+  return (
+    <GestionaleSearchField
+      wrapperClassName={wrapperClassName}
+      value={search}
+      onChange={(e) => onSearch(e.target.value)}
+      placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+      aria-label="Cerca mezzi"
+    />
+  );
+}
+
+export type MezziFilterFieldsProps = {
   filtroCliente: string;
   onFiltroCliente: (v: string) => void;
   filtroMarca: string;
@@ -28,11 +45,11 @@ export type MezziFiltersProps = {
   onFiltroTarga: (v: string) => void;
   filtroNumeroScuderia: string;
   onFiltroNumeroScuderia: (v: string) => void;
+  /** Se true, niente bordo superiore (il contenitore padre fornisce separazione). */
+  embedded?: boolean;
 };
 
-export function MezziFilters({
-  search,
-  onSearch,
+export function MezziFilterFields({
   filtroCliente,
   onFiltroCliente,
   filtroMarca,
@@ -43,32 +60,18 @@ export function MezziFilters({
   onFiltroTarga,
   filtroNumeroScuderia,
   onFiltroNumeroScuderia,
-}: MezziFiltersProps) {
+  embedded = false,
+}: MezziFilterFieldsProps) {
   return (
-    <div className="flex w-full min-w-0 flex-col gap-3">
-      <div className="relative min-h-10 min-w-0 w-full">
-        <span className="pointer-events-none absolute left-2.5 top-1/2 z-[1] -translate-y-1/2 text-zinc-400 dark:text-zinc-500" aria-hidden>
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </span>
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => onSearch(e.target.value)}
-          placeholder="Ricerca rapida (cliente, marca, modello, targa, matricola, scuderia…)"
-          className={`h-10 w-full rounded-lg border border-zinc-600/90 bg-zinc-900 py-2 pl-9 pr-3 text-sm font-medium text-zinc-50 shadow-md shadow-black/25 outline-none ring-orange-500/25 placeholder:text-zinc-500 focus:border-orange-500/75 focus:ring-2 dark:placeholder:text-zinc-500 ${erpFocus}`}
-          aria-label="Cerca mezzi"
-        />
-      </div>
-
-      <div className="flex w-full min-w-0 flex-wrap items-end gap-2 xl:gap-3">
+    <div className={embedded ? "" : "border-t border-[color:var(--cab-border)] pt-3"}>
+      <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Campi filtro</p>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <MezziFieldWrap label="Cliente">
           <input
             type="text"
             value={filtroCliente}
             onChange={(e) => onFiltroCliente(e.target.value)}
-            className={inputClass}
+            className={filterTextInputClass}
             placeholder="Contiene…"
             aria-label="Filtra cliente"
           />
@@ -78,7 +81,7 @@ export function MezziFilters({
             type="text"
             value={filtroMarca}
             onChange={(e) => onFiltroMarca(e.target.value)}
-            className={inputClass}
+            className={filterTextInputClass}
             placeholder="Contiene…"
             aria-label="Filtra marca"
           />
@@ -88,7 +91,7 @@ export function MezziFilters({
             type="text"
             value={filtroModello}
             onChange={(e) => onFiltroModello(e.target.value)}
-            className={inputClass}
+            className={filterTextInputClass}
             placeholder="Contiene…"
             aria-label="Filtra modello"
           />
@@ -98,7 +101,7 @@ export function MezziFilters({
             type="text"
             value={filtroTarga}
             onChange={(e) => onFiltroTarga(e.target.value)}
-            className={`${inputClass} font-mono`}
+            className={`${filterTextInputClass} font-mono`}
             placeholder="Contiene…"
             aria-label="Filtra targa"
           />
@@ -108,11 +111,52 @@ export function MezziFilters({
             type="text"
             value={filtroNumeroScuderia}
             onChange={(e) => onFiltroNumeroScuderia(e.target.value)}
-            className={`${inputClass} font-mono`}
+            className={`${filterTextInputClass} font-mono`}
             placeholder="Contiene…"
             aria-label="Filtra numero scuderia"
           />
         </MezziFieldWrap>
+      </div>
+    </div>
+  );
+}
+
+export type MezziFiltersProps = MezziSearchBarProps &
+  MezziFilterFieldsProps;
+
+/** Toolbar ricerca + campi filtro (stile allineato a Documenti / Preventivi). */
+export function MezziFilters(props: MezziFiltersProps) {
+  const {
+    search,
+    onSearch,
+    filtroCliente,
+    onFiltroCliente,
+    filtroMarca,
+    onFiltroMarca,
+    filtroModello,
+    onFiltroModello,
+    filtroTarga,
+    onFiltroTarga,
+    filtroNumeroScuderia,
+    onFiltroNumeroScuderia,
+  } = props;
+  return (
+    <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
+      <div className="flex flex-col gap-3">
+        <MezziSearchBar search={search} onSearch={onSearch} />
+        <MezziFilterFields
+          embedded={false}
+          filtroCliente={filtroCliente}
+          onFiltroCliente={onFiltroCliente}
+          filtroMarca={filtroMarca}
+          onFiltroMarca={onFiltroMarca}
+          filtroModello={filtroModello}
+          onFiltroModello={onFiltroModello}
+          filtroTarga={filtroTarga}
+          onFiltroTarga={onFiltroTarga}
+          filtroNumeroScuderia={filtroNumeroScuderia}
+          onFiltroNumeroScuderia={onFiltroNumeroScuderia}
+        />
       </div>
     </div>
   );

@@ -10,11 +10,14 @@ import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { PreventiviEditorModal } from "@/components/preventivi/preventivi-editor-modal";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { useAuth } from "@/context/auth-context";
 import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
 import { getMagazzinoReportSnapshot, subscribeMagazzinoReportSync } from "@/lib/magazzino/magazzino-report-sync";
 import { getMezziReportSnapshot, subscribeMezziReportSync } from "@/lib/mezzi/mezzi-report-sync";
 import { preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-hub-merge";
+import { modelliVisibiliPerMarca, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { buildNewPreventivoFromLavorazioneContext } from "@/lib/preventivi/generate-preventivo-from-lavorazione";
 import { buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
@@ -33,9 +36,31 @@ import {
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
 import { CAB_PREVENTIVI_LOG_REFRESH, CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
 import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase } from "@/lib/preventivi/types";
-import { dsBtnDanger, dsBtnNeutral, dsInput, dsPageToolbarBtn, dsStackPage, dsScrollbar, dsTable, dsTableHead, dsTableRow, dsTableWrap, dsTableThSticky, dsFocus } from "@/lib/ui/design-system";
+import {
+  dsBtnNeutral,
+  dsInput,
+  dsPageToolbarBtn,
+  dsStackPage,
+  dsStickyToolbar,
+  GESTIONALE_SEARCH_PLACEHOLDER,
+  dsScrollbar,
+  dsTable,
+  dsTableHead,
+  dsTableRow,
+  dsTableWrap,
+  dsTableThSticky,
+  dsFocus,
+  dsTableTdActions,
+  dsTableActionsGroup,
+  dsTableActionBtnPrimary,
+  dsTableActionBtnSecondary,
+  dsTableActionBtnDanger,
+  dsTableActionGlyph,
+} from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
+import { mergeUniqueSortedIt } from "@/lib/ui/merge-filter-options";
+import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { erpBtnNuovaLavorazione, erpFocus, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   GestionaleLogEmpty,
@@ -252,32 +277,53 @@ export function PreventiviView() {
   const filterOrig: PreventivoLavorazioneOrigine | null =
     filterOrigRaw === "attiva" || filterOrigRaw === "storico" ? filterOrigRaw : null;
 
-  const clientiPreventiviOpts = useMemo(() => {
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const listePrefs = useMemo(
+    () => migrateMezziListePrefs(settingsPayload?.resolved?.mezziListe ?? createMezziListePrefsDefault()),
+    [settingsPayload?.resolved?.mezziListe],
+  );
+
+  const clientiFromRows = useMemo(() => {
     const s = new Set<string>();
     for (const r of rows) {
       const c = r.cliente.trim();
       if (c) s.add(c);
     }
-    return [...s].sort((a, b) => a.localeCompare(b, "it"));
+    return [...s];
   }, [rows]);
 
-  const marchePvOpts = useMemo(() => {
+  const clientiPreventiviOpts = useMemo(
+    () => mergeUniqueSortedIt(listePrefs.clienti, clientiFromRows),
+    [listePrefs.clienti, clientiFromRows],
+  );
+
+  const marcheFromRows = useMemo(() => {
     const s = new Set<string>();
     for (const r of rows) {
       const c = r.marcaAttrezzatura.trim();
       if (c) s.add(c);
     }
-    return [...s].sort((a, b) => a.localeCompare(b, "it"));
+    return [...s];
   }, [rows]);
 
-  const modelliPvOpts = useMemo(() => {
+  const marchePvOpts = useMemo(
+    () => mergeUniqueSortedIt(listePrefs.marche, marcheFromRows),
+    [listePrefs.marche, marcheFromRows],
+  );
+
+  const modelliFromRows = useMemo(() => {
     const s = new Set<string>();
     for (const r of rows) {
       const c = r.modelloAttrezzatura.trim();
       if (c) s.add(c);
     }
-    return [...s].sort((a, b) => a.localeCompare(b, "it"));
+    return [...s];
   }, [rows]);
+
+  const modelliPvOpts = useMemo(
+    () => mergeUniqueSortedIt(listePrefs.modelli ?? [], modelliFromRows),
+    [listePrefs.modelli, modelliFromRows],
+  );
 
   const anniPreventiviOpts = useMemo(() => {
     const s = new Set<number>();
@@ -291,15 +337,15 @@ export function PreventiviView() {
   const modelliPvOptsByMarca = useMemo(() => {
     if (filtroMarcaPrev === "__tutti__") return modelliPvOpts;
     const mar = filtroMarcaPrev;
-    const s = new Set<string>();
+    const fromRows: string[] = [];
     for (const r of rows) {
       if (r.marcaAttrezzatura.trim() === mar) {
         const c = r.modelloAttrezzatura.trim();
-        if (c) s.add(c);
+        if (c) fromRows.push(c);
       }
     }
-    return [...s].sort((a, b) => a.localeCompare(b, "it"));
-  }, [rows, filtroMarcaPrev, modelliPvOpts]);
+    return mergeUniqueSortedIt(modelliVisibiliPerMarca(listePrefs, filtroMarcaPrev), fromRows);
+  }, [rows, filtroMarcaPrev, modelliPvOpts, listePrefs]);
 
   const filteredRows = useMemo(() => {
     let list = rows;
@@ -597,7 +643,7 @@ export function PreventiviView() {
 
   const bannerFilter =
     filterLavId && filterOrig ? (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50/80 px-3 py-2 text-sm text-orange-950 dark:border-orange-900/60 dark:bg-orange-950/35 dark:text-orange-100">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50/80 px-3 py-2 text-sm text-orange-950">
         <span>
           Filtro attivo: preventivi collegati alla lavorazione selezionata ({filterOrig === "attiva" ? "attiva" : "storico"}).
         </span>
@@ -608,7 +654,7 @@ export function PreventiviView() {
     ) : null;
 
   const bannerMezzo = filterMezzoRaw ? (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50/80 px-3 py-2 text-sm text-orange-950 dark:border-orange-900/60 dark:bg-orange-950/35 dark:text-orange-100">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50/80 px-3 py-2 text-sm text-orange-950">
       <span>Filtro attivo: preventivi collegati al mezzo selezionato.</span>
       <button type="button" className={dsBtnNeutral} onClick={clearMezzoFilter}>
         Rimuovi filtro
@@ -641,8 +687,9 @@ export function PreventiviView() {
       {bannerMezzo}
 
       <ShellCard className="overflow-hidden rounded-xl border-zinc-200/95 shadow-md dark:border-zinc-800">
+        <div className={`${dsStickyToolbar} -mx-1`}>
         <div className="mb-3 flex flex-col gap-3 sm:mb-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <button
               type="button"
               onClick={() =>
@@ -660,30 +707,23 @@ export function PreventiviView() {
               </span>
               Nuovo preventivo
             </button>
-            <div className="relative min-h-11 min-w-0 flex-1">
-              <span className="pointer-events-none absolute left-3 top-1/2 z-10 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" aria-hidden>
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </span>
-              <input
-                type="search"
-                placeholder="Numero, cliente, macchina, targa, matricola, scuderia…"
-                value={searchPreventivi}
-                onChange={(e) => setSearchPreventivi(e.target.value)}
-                className={`${dsInput} h-11 min-h-11 py-0 pl-10 pr-3 ${erpFocus}`}
-                autoComplete="off"
-              />
-            </div>
+            <GestionaleSearchField
+              wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+              placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+              value={searchPreventivi}
+              onChange={(e) => setSearchPreventivi(e.target.value)}
+              autoComplete="off"
+              aria-label="Cerca preventivi"
+            />
             <button
               type="button"
               onClick={() => setFiltriEspansi((open) => !open)}
-              className={`${dsPageToolbarBtn} relative h-11 min-w-[8.75rem] shrink-0 gap-2 px-3 text-sm`}
+              className={`${dsPageToolbarBtn} relative h-11 min-w-[8.25rem] shrink-0 gap-2 px-3 text-sm sm:ml-auto`}
               aria-expanded={filtriEspansi}
             >
               Filtri
               <svg
-                className={`h-4 w-4 shrink-0 text-orange-600 transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] dark:text-orange-400 ${filtriEspansi ? "rotate-180" : ""}`}
+                className={`h-4 w-4 shrink-0 text-[color:var(--cab-primary)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${filtriEspansi ? "rotate-180" : ""}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -694,7 +734,7 @@ export function PreventiviView() {
               </svg>
               {hasAdvancedPanelFilters ? (
                 <span
-                  className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-orange-500 ring-2 ring-white dark:ring-zinc-950"
+                  className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]"
                   title="Filtri avanzati attivi"
                   aria-hidden
                 ></span>
@@ -892,13 +932,14 @@ export function PreventiviView() {
             {searchPreventivi.trim() || hasAdvancedPanelFilters ? (
               <button
                 type="button"
-                className="font-semibold text-orange-700 underline-offset-2 hover:underline dark:text-orange-300"
+                className="font-semibold text-orange-700 underline-offset-2 hover:underline"
                 onClick={resetPreventiviPanelFilters}
               >
                 Azzera filtri
               </button>
             ) : null}
           </p>
+        </div>
         </div>
 
         <div className={`${dsTableWrap} ${dsScrollbar}`}>
@@ -1021,12 +1062,12 @@ export function PreventiviView() {
                     <td className="whitespace-nowrap px-2 align-middle text-right text-sm tabular-nums font-medium text-zinc-800 dark:text-zinc-100">
                       {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
                     </td>
-                    <td className="px-2 align-middle text-right">
-                      <div className="inline-flex shrink-0 flex-nowrap items-center justify-end gap-1">
+                    <td className={dsTableTdActions}>
+                      <div className={dsTableActionsGroup}>
                         {hrefLav ? (
                           <Link
                             href={hrefLav}
-                            className={`${dsBtnNeutral} inline-flex h-8 w-8 shrink-0 items-center justify-center p-0`}
+                            className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
                             title={
                               p.lavorazioneOrigine === "storico"
                                 ? "Apri lavorazione (storico)"
@@ -1034,41 +1075,41 @@ export function PreventiviView() {
                             }
                             aria-label="Apri lavorazione collegata"
                           >
-                            <svg className="h-4 w-4 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                            <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                               <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 0L21 3m0 0h-5.25M21 3v5.25" />
                             </svg>
                           </Link>
                         ) : null}
                         <button
                           type="button"
-                          className={`${dsBtnNeutral} inline-flex h-8 w-8 shrink-0 items-center justify-center p-0`}
+                          className={dsTableActionBtnPrimary}
                           onClick={() => apriModifica(p)}
                           title="Apri / modifica"
                           aria-label="Apri o modifica preventivo"
                         >
-                          <svg className="h-4 w-4 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
                         <button
                           type="button"
-                          className={`${dsBtnNeutral} inline-flex h-8 w-8 shrink-0 items-center justify-center p-0`}
+                          className={dsTableActionBtnSecondary}
                           onClick={() => openPreventivoPdfInNewTab(p, autore.trim() || "Operatore")}
                           title="Esporta PDF"
                           aria-label="Esporta PDF preventivo"
                         >
-                          <svg className="h-4 w-4 shrink-0 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                           </svg>
                         </button>
                         <button
                           type="button"
-                          className={`${dsBtnDanger} inline-flex h-8 w-8 shrink-0 items-center justify-center p-0`}
+                          className={dsTableActionBtnDanger}
                           onClick={() => onElimina(p)}
                           title="Elimina"
                           aria-label="Elimina preventivo"
                         >
-                          <svg className="h-4 w-4 shrink-0 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>

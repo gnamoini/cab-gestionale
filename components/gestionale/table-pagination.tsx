@@ -93,7 +93,7 @@ export function TablePagination({ page, pageCount, onPageChange, label, classNam
           <button
             key={p}
             type="button"
-            className={`${btn} ${erpFocus} ${p === page ? "border-orange-400 bg-orange-50 text-orange-900 dark:border-orange-600 dark:bg-orange-950/40 dark:text-orange-100" : ""}`}
+            className={`${btn} ${erpFocus} ${p === page ? "border-orange-400 bg-orange-50 text-orange-900" : ""}`}
             aria-current={p === page ? "page" : undefined}
             onClick={() => onPageChange(p)}
           >

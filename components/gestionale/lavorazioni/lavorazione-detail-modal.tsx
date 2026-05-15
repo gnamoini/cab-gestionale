@@ -158,7 +158,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
         type="button"
         key={id}
         onClick={() => setTab(id)}
-        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${on ? "border-orange-400/70 bg-orange-500/15 text-orange-900 dark:text-orange-100" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"} ${erpFocus}`}
+        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${on ? "border-orange-400/70 bg-orange-500/15 text-orange-900" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"} ${erpFocus}`}
       >
         {label}
       </button>

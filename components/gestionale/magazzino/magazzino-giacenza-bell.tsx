@@ -111,7 +111,7 @@ export function MagazzinoGiacenzaBell({
                           <td className="max-w-[280px] px-2 py-2 align-top">
                             <button
                               type="button"
-                              className={`w-full text-left font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:text-orange-700 hover:decoration-orange-400 dark:text-zinc-50 dark:decoration-zinc-600 dark:hover:text-orange-300 ${erpFocus}`}
+                              className={`w-full text-left font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:text-orange-700 hover:decoration-orange-400 dark:text-zinc-50 dark:decoration-zinc-600 ${erpFocus}`}
                               onClick={() => {
                                 close();
                                 onSelectRicambio(p.id);
@@ -136,9 +136,6 @@ export function MagazzinoGiacenzaBell({
                 </div>
               )}
             </div>
-            <p className="border-t border-zinc-100 px-4 py-2 text-[11px] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-              Clic su descrizione: chiude il pannello, evidenzia il ricambio in tabella e attiva il filtro «Sotto scorta minima».
-            </p>
           </div>
         </div>
       ) : null}

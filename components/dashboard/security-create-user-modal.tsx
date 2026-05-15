@@ -1,0 +1,150 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/context/toast-context";
+import { createUserByAdminAction } from "@/src/actions/admin-users";
+import { QK } from "@/src/lib/react-query/invalidate-related";
+import {
+  dsBtnGhost,
+  dsBtnPrimary,
+  dsInput,
+  dsModalBackdrop,
+  dsModalPanel,
+  dsSectionTitle,
+  gestionaleSelectNativePlainClass,
+} from "@/lib/ui/design-system";
+import type { RuoloProfile } from "@/src/types/supabase-tables";
+
+const RUOLI: { value: RuoloProfile; label: string }[] = [
+  { value: "admin", label: "Amministratore" },
+  { value: "tecnico", label: "Operativo (tecnico)" },
+  { value: "viewer", label: "Sola lettura" },
+];
+
+type Props = {
+  open: boolean;
+  onClose: () => void;
+};
+
+export function SecurityCreateUserModal({ open, onClose }: Props) {
+  const { push } = useToast();
+  const qc = useQueryClient();
+  const [nome, setNome] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [ruolo, setRuolo] = useState<RuoloProfile>("tecnico");
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setNome("");
+    setEmail("");
+    setPassword("");
+    setRuolo("tecnico");
+    setError(null);
+    setPending(false);
+  }, [open]);
+
+  if (!open) return null;
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setPending(true);
+    const res = await createUserByAdminAction({
+      nome: nome.trim(),
+      email: email.trim(),
+      password,
+      ruolo,
+    });
+    setPending(false);
+    if (!res.ok) {
+      setError(res.message);
+      return;
+    }
+    await Promise.all([
+      qc.invalidateQueries({ queryKey: QK.profiles }),
+      qc.invalidateQueries({ queryKey: QK.authUsers }),
+      qc.invalidateQueries({ queryKey: QK.userPermissions }),
+      qc.invalidateQueries({ queryKey: QK.authLogs }),
+    ]);
+    push("Utente creato correttamente. Può accedere con email e password impostate.", "success");
+    onClose();
+  }
+
+  return (
+    <div className={dsModalBackdrop} role="presentation">
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Chiudi" onClick={() => !pending && onClose()} />
+      <div className={`relative z-[1] ${dsModalPanel} max-h-[min(90dvh,32rem)] overflow-y-auto`} role="dialog" aria-modal="true" aria-labelledby="cab-create-user-title">
+        <h2 id="cab-create-user-title" className="text-base font-semibold text-[color:var(--cab-text)]">
+          Nuovo utente
+        </h2>
+        <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
+          Creazione tramite Supabase Auth e tabella <code className="rounded bg-[var(--cab-surface-2)] px-1">profiles</code>. Ruoli di
+          dominio (operatore, magazziniere, …) si allineano a <strong className="text-[color:var(--cab-text)]">tecnico</strong> /{" "}
+          <strong className="text-[color:var(--cab-text)]">viewer</strong> con permessi granulari sui moduli.
+        </p>
+
+        <form className="mt-4 flex flex-col gap-3" onSubmit={(ev) => void handleSubmit(ev)}>
+          <label className="block min-w-0">
+            <span className={dsSectionTitle}>Nome</span>
+            <input className={`${dsInput} mt-1 w-full`} value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" required disabled={pending} />
+          </label>
+          <label className="block min-w-0">
+            <span className={dsSectionTitle}>Email</span>
+            <input
+              className={`${dsInput} mt-1 w-full`}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="off"
+              required
+              disabled={pending}
+            />
+          </label>
+          <label className="block min-w-0">
+            <span className={dsSectionTitle}>Password</span>
+            <input
+              className={`${dsInput} mt-1 w-full`}
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={6}
+              disabled={pending}
+            />
+            <span className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]">Minimo 6 caratteri (requisito Supabase Auth).</span>
+          </label>
+          <label className="block min-w-0">
+            <span className={dsSectionTitle}>Ruolo profilo</span>
+            <select className={`${gestionaleSelectNativePlainClass} mt-1 w-full`} value={ruolo} onChange={(e) => setRuolo(e.target.value as RuoloProfile)} disabled={pending}>
+              {RUOLI.map((r) => (
+                <option key={r.value} value={r.value}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {error ? (
+            <p className="rounded-md border border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_8%,var(--cab-surface))] px-2 py-1.5 text-xs text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))]">
+              {error}
+            </p>
+          ) : null}
+
+          <div className="mt-1 flex flex-wrap justify-end gap-2">
+            <button type="button" className={dsBtnGhost} onClick={() => onClose()} disabled={pending}>
+              Annulla
+            </button>
+            <button type="submit" className={dsBtnPrimary} disabled={pending}>
+              {pending ? "Creazione…" : "Crea utente"}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

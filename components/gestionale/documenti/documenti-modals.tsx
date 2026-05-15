@@ -387,7 +387,7 @@ export function DocumentoInfoModal({
                   href={openHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-orange-600 underline decoration-orange-400/50 underline-offset-2 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300"
+                  className="font-medium text-orange-600 underline decoration-orange-400/50 underline-offset-2 hover:text-orange-700"
                 >
                   Apri in nuova scheda
                 </a>

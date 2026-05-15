@@ -20,7 +20,7 @@ import {
 const wrap = `${dsTableWrap} ${dsScrollbar}`;
 const tbodyTr = dsTableRow;
 const tdBase = dsTableTd;
-const thPos = dsTableThPos;
+const thPos = `${dsTableThPos} text-left pl-1.5 pr-0.5`;
 
 function fmtCmpLine(c: ReportRowCompare | undefined): string {
   if (!c) return "—";
@@ -113,7 +113,7 @@ export function ReportTopRicambi({ rows, showCompare }: { rows: TopRicambioRepor
           ) : (
             paged.map((r) => (
               <tr key={r.id} className={tbodyTr}>
-                <td className={`${tdBase} px-1.5 text-center text-xs tabular-nums text-[color:var(--cab-text-muted)]`}>{r.rank}</td>
+                <td className={`${tdBase} px-1.5 text-left text-xs tabular-nums text-[color:var(--cab-text-muted)]`}>{r.rank}</td>
                 <td className={`${tdBase} whitespace-nowrap font-mono text-xs text-[color:var(--cab-text)]`}>{r.codice}</td>
                 <td className={`${tdBase} min-w-0`}>
                   <Link href="/magazzino" className="line-clamp-2 font-medium text-[color:var(--cab-primary)] hover:underline">
@@ -320,7 +320,7 @@ export function ReportTopClienti({ rows, showCompare }: { rows: TopClienteReport
           ) : (
             paged.map((r) => (
               <tr key={r.cliente} className={tbodyTr}>
-                <td className={`${tdBase} px-1.5 text-center text-xs tabular-nums text-[color:var(--cab-text-muted)]`}>{r.rank}</td>
+                <td className={`${tdBase} px-1.5 text-left text-xs tabular-nums text-[color:var(--cab-text-muted)]`}>{r.rank}</td>
                 <td className={`${tdBase} min-w-0 font-medium`}>
                   <span className="line-clamp-2" title={r.cliente}>
                     {r.cliente}

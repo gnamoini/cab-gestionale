@@ -19,6 +19,8 @@ export type GestionaleLogViewModel = {
   modificaRiga: string;
   autore: string;
   atIso: string;
+  /** Voce magazzino annullata (undo scorta): solo presentazione UI. */
+  annullato?: boolean;
 };
 
 export type CampoChangeLike = { campo: string; prima: string; dopo: string };
@@ -30,6 +32,8 @@ export type MagazzinoLogEntryLike = {
   autore: string;
   at: string;
   changes: CampoChangeLike[];
+  /** Se true: modifica annullata in UI (es. undo scorta); la voce resta nello storico. */
+  annullato?: boolean;
 };
 
 export function gestionaleLogToneMagazzino(tipo: MagazzinoLogEntryLike["tipo"]): GestionaleLogEventTone {
@@ -215,6 +219,7 @@ function magazzinoTipoRiga(entry: MagazzinoLogEntryLike): string {
 }
 
 function magazzinoToneForEntry(entry: MagazzinoLogEntryLike): GestionaleLogEventTone {
+  if (entry.annullato) return "neutral";
   if (entry.tipo === "aggiunta") return "create";
   if (entry.tipo === "rimozione") return "delete";
   const label = magazzinoTipoRiga(entry);
@@ -286,6 +291,7 @@ export function buildMagazzinoGestionaleLogViewModel(entry: MagazzinoLogEntryLik
     modificaRiga,
     autore: entry.autore,
     atIso: entry.at,
+    annullato: entry.annullato === true,
   };
 }
 

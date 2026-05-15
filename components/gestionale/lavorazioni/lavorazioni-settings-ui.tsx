@@ -64,7 +64,7 @@ export function ColorSwatchButton({
           />
           <button
             type="button"
-            className="text-left text-xs font-medium text-orange-600 hover:underline dark:text-orange-400"
+            className="text-left text-xs font-medium text-orange-600 hover:underline"
             onClick={() => setOpen(false)}
           >
             Chiudi

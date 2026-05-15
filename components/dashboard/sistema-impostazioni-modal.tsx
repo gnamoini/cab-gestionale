@@ -1,8 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/auth-context";
+import { useToast } from "@/context/toast-context";
 import { LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import {
   DEFAULT_ADDETTI_LAVORAZIONI,
   DEFAULT_STATI_LAVORAZIONI,
@@ -15,26 +17,17 @@ import {
   syncAddettoColorMap,
 } from "@/lib/lavorazioni/addetto-colors-assign";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
-import { loadLavorazioniPrefs, saveLavorazioniPrefs } from "@/lib/lavorazioni/lavorazioni-prefs-storage";
 import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { MOCK_RICAMBI } from "@/lib/mock-data/magazzino";
-import {
-  loadMagazzinoMasterPrefs,
-  saveMagazzinoMasterPrefs,
-  type MagazzinoMasterPrefs,
-} from "@/lib/magazzino/magazzino-master-prefs-storage";
-import { getMezziListePrefsOrDefault, saveMezziListePrefs, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
+import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { appendDashboardSistemaLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
 import { AttrezzatureSettingsSection } from "@/components/dashboard/attrezzature-settings-section";
 import type { GestionaleLogEventTone } from "@/lib/gestionale-log/view-model";
-import {
-  loadSistemaPreventiviDefaults,
-  saveSistemaPreventiviDefaults,
-  type SistemaPreventiviDefaults,
-} from "@/lib/sistema/sistema-preventivi-defaults-storage";
+import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import {
   dispatchAddettoDisplayRename,
   dispatchLavorazioniPrefsRefresh,
@@ -42,9 +35,34 @@ import {
   dispatchMezziListeRefresh,
 } from "@/lib/sistema/cab-events";
 import { erpBtnNeutral, erpBtnSoftOrange } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { buildBulkRowsFromResolved, resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
+import { useCabAppSettingsPayloadQuery, useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
+import { mergeAppSettingsUpsertWithVersions } from "@/src/services/settings.service";
 
 function mergeMaster(a: string[], b: string[]) {
   return [...new Set([...a, ...b])].sort((x, y) => x.localeCompare(y, "it"));
+}
+
+function buildResolvedFromModalSnapshot(s: {
+  stati: StatoLavorazioneConfig[];
+  addetti: string[];
+  addettoColors: Record<string, string>;
+  prioritaColors: Partial<Record<PrioritaLav, string>>;
+  mag: MagazzinoMasterPrefs;
+  liste: MezziListePrefs;
+  eco: SistemaPreventiviDefaults;
+}): CabAppSettingsResolved {
+  return {
+    lavorazioni: {
+      stati: s.stati,
+      addetti: s.addetti,
+      addettoColors: s.addettoColors,
+      prioritaColors: s.prioritaColors,
+    },
+    mezziListe: migrateMezziListePrefs(s.liste),
+    magazzinoMaster: s.mag,
+    preventiviDefaults: s.eco,
+  };
 }
 
 function initialMasterFromProducts() {
@@ -133,13 +151,13 @@ function UnifiedStringList({
   return (
     <div className={SETTINGS_CARD}>
       <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">{title}</h3>
-      <input
-        type="search"
+      <GestionaleSearchField
+        wrapperClassName="mt-2 w-full"
         value={q}
         onChange={(e) => setQ(e.target.value)}
         placeholder="Filtra elenco…"
-        className={`${INPUT_ROW} mt-2 w-full`}
         autoComplete="off"
+        aria-label={`Filtra elenco: ${title}`}
       />
       <div className="mt-2 flex gap-1">
         <input
@@ -180,6 +198,26 @@ function UnifiedStringList({
 
 export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { authorName } = useAuth();
+  const { push } = useToast();
+  const settingsPayload = useCabAppSettingsPayloadQuery();
+  const resolvedSettings = settingsPayload.data?.resolved;
+  const settingsRows = settingsPayload.data?.rows ?? [];
+  const bulkSave = useSettingsBulkMutation();
+
+  const snapshotRef = useRef<{
+    stati: StatoLavorazioneConfig[];
+    addetti: string[];
+    addettoColors: Record<string, string>;
+    prioritaColors: Partial<Record<PrioritaLav, string>>;
+    mag: MagazzinoMasterPrefs;
+    liste: MezziListePrefs;
+    eco: SistemaPreventiviDefaults;
+  } | null>(null);
+
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** True dopo almeno un salvataggio riuscito in sessione; il toast viene mostrato solo alla chiusura del modal. */
+  const successfulSaveWhileOpenRef = useRef(false);
+
   const [section, setSection] = useState<SistemaSectionId>("op-addetti");
   const [navQ, setNavQ] = useState("");
 
@@ -197,26 +235,25 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
   const [lavPrefsHydrated, setLavPrefsHydrated] = useState(false);
 
   const baseM = useMemo(() => initialMasterFromProducts(), []);
-  const [mag, setMag] = useState<MagazzinoMasterPrefs>(() => {
-    const s = loadMagazzinoMasterPrefs();
-    return {
-      marche: s ? mergeMaster(s.marche, baseM.marche) : baseM.marche,
-      categorie: s ? mergeMaster(s.categorie, baseM.categorie) : baseM.categorie,
-      mezziCompatibili: s ? mergeMaster(s.mezziCompatibili, baseM.mezzi) : baseM.mezzi,
-      fornitori: s ? mergeMaster(s.fornitori ?? [], baseM.fornitori) : baseM.fornitori,
-    };
-  });
+  const [mag, setMag] = useState<MagazzinoMasterPrefs>(() => ({
+    marche: [...baseM.marche],
+    categorie: [...baseM.categorie],
+    mezziCompatibili: [...baseM.mezzi],
+    fornitori: [...baseM.fornitori],
+  }));
   const [magHydrated, setMagHydrated] = useState(false);
   const [nuovaMarca, setNuovaMarca] = useState("");
   const [nuovaCategoria, setNuovaCategoria] = useState("");
   const [nuovoFornitore, setNuovoFornitore] = useState("");
   const [nuovoCliente, setNuovoCliente] = useState("");
 
-  const [liste, setListe] = useState<MezziListePrefs>(() => getMezziListePrefsOrDefault());
+  const [liste, setListe] = useState<MezziListePrefs>(() => createMezziListePrefsDefault());
   const [mezziHydrated, setMezziHydrated] = useState(false);
 
-  const [eco, setEco] = useState<SistemaPreventiviDefaults>(() => loadSistemaPreventiviDefaults());
+  const [eco, setEco] = useState<SistemaPreventiviDefaults>(() => ({ costoOrarioDefault: 48 }));
   const [ecoHydrated, setEcoHydrated] = useState(false);
+
+  snapshotRef.current = { stati, addetti, addettoColors, prioritaColors, mag, liste, eco };
 
   const logDash = useCallback(
     (tone: GestionaleLogEventTone, tipoRiga: string, oggettoRiga: string, modificaRiga: string) => {
@@ -234,62 +271,109 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
 
   useEffect(() => {
     if (!open) return;
+    successfulSaveWhileOpenRef.current = false;
     setSection("op-addetti");
     setNavQ("");
     setLavPrefsHydrated(false);
-    const p = loadLavorazioniPrefs();
-    if (p?.stati?.length) setStati(normalizeStatiList(p.stati));
+    setMagHydrated(false);
+    setMezziHydrated(false);
+    setEcoHydrated(false);
+
+    const base = initialMasterFromProducts();
+    const r = resolvedSettings ?? resolveCabAppSettingsFromRows([], null);
+
+    if (r.lavorazioni.stati?.length) setStati(normalizeStatiList(r.lavorazioni.stati));
+    else setStati([...DEFAULT_STATI_LAVORAZIONI]);
     const nextAddetti =
-      p?.addetti?.length && p.addetti.some((a) => a.trim().length > 0)
-        ? p.addetti.map((a) => a.trim()).filter((a) => a.length > 0)
+      r.lavorazioni.addetti?.length && r.lavorazioni.addetti.some((a) => a.trim().length > 0)
+        ? r.lavorazioni.addetti.map((a) => a.trim()).filter((a) => a.length > 0)
         : [...DEFAULT_ADDETTI_LAVORAZIONI];
     setAddetti(nextAddetti);
-    setAddettoColors(syncAddettoColorMap(nextAddetti, p?.addettoColors));
-    setPrioritaColors(p?.prioritaColors ?? {});
-    setLavPrefsHydrated(true);
+    setAddettoColors(syncAddettoColorMap(nextAddetti, r.lavorazioni.addettoColors));
+    setPrioritaColors(r.lavorazioni.prioritaColors ?? {});
 
-    setMagHydrated(false);
-    const s = loadMagazzinoMasterPrefs();
-    const b = initialMasterFromProducts();
     setMag({
-      marche: s ? mergeMaster(s.marche, b.marche) : b.marche,
-      categorie: s ? mergeMaster(s.categorie, b.categorie) : b.categorie,
-      mezziCompatibili: s ? mergeMaster(s.mezziCompatibili, b.mezzi) : b.mezzi,
-      fornitori: s ? mergeMaster(s.fornitori ?? [], b.fornitori) : b.fornitori,
+      marche: mergeMaster(r.magazzinoMaster.marche, base.marche),
+      categorie: mergeMaster(r.magazzinoMaster.categorie, base.categorie),
+      mezziCompatibili: mergeMaster(r.magazzinoMaster.mezziCompatibili, base.mezzi),
+      fornitori: mergeMaster(r.magazzinoMaster.fornitori ?? [], base.fornitori),
     });
+    setListe(migrateMezziListePrefs(r.mezziListe));
+    setEco(r.preventiviDefaults);
+
+    setLavPrefsHydrated(true);
     setMagHydrated(true);
-
-    setMezziHydrated(false);
-    setListe(getMezziListePrefsOrDefault());
     setMezziHydrated(true);
-
-    setEcoHydrated(false);
-    setEco(loadSistemaPreventiviDefaults());
     setEcoHydrated(true);
-  }, [open]);
+  }, [open, resolvedSettings]);
 
   useEffect(() => {
-    if (!open || !lavPrefsHydrated) return;
-    saveLavorazioniPrefs({ stati, addetti, addettoColors, prioritaColors });
+    if (!open || !lavPrefsHydrated || !magHydrated || !mezziHydrated || !ecoHydrated) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      const s = snapshotRef.current;
+      if (!s) return;
+      const payload = mergeAppSettingsUpsertWithVersions(
+        buildBulkRowsFromResolved(buildResolvedFromModalSnapshot(s)),
+        settingsRows,
+      );
+      void bulkSave
+        .mutateAsync(payload)
+        .then(() => {
+          successfulSaveWhileOpenRef.current = true;
+          dispatchLavorazioniPrefsRefresh();
+          dispatchMagazzinoMasterRefresh();
+          dispatchMezziListeRefresh();
+        })
+        .catch(() => {});
+    }, 900);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, [
+    open,
+    lavPrefsHydrated,
+    magHydrated,
+    mezziHydrated,
+    ecoHydrated,
+    stati,
+    addetti,
+    addettoColors,
+    prioritaColors,
+    mag,
+    liste,
+    eco,
+    settingsRows,
+    bulkSave,
+  ]);
+
+  const flushSaveNow = useCallback(async () => {
+    const s = snapshotRef.current;
+    if (!s || !lavPrefsHydrated || !magHydrated || !mezziHydrated || !ecoHydrated) return;
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+      saveTimerRef.current = null;
+    }
+    const payload = buildBulkRowsFromResolved(buildResolvedFromModalSnapshot(s));
+    await bulkSave.mutateAsync(payload);
+    successfulSaveWhileOpenRef.current = true;
     dispatchLavorazioniPrefsRefresh();
-  }, [open, lavPrefsHydrated, stati, addetti, addettoColors, prioritaColors]);
-
-  useEffect(() => {
-    if (!open || !magHydrated) return;
-    saveMagazzinoMasterPrefs(mag);
     dispatchMagazzinoMasterRefresh();
-  }, [open, magHydrated, mag]);
-
-  useEffect(() => {
-    if (!open || !mezziHydrated) return;
-    saveMezziListePrefs(migrateMezziListePrefs(liste));
     dispatchMezziListeRefresh();
-  }, [open, mezziHydrated, liste]);
+  }, [bulkSave, lavPrefsHydrated, magHydrated, mezziHydrated, ecoHydrated, settingsRows]);
 
-  useEffect(() => {
-    if (!open || !ecoHydrated) return;
-    saveSistemaPreventiviDefaults(eco);
-  }, [open, ecoHydrated, eco]);
+  const handleRequestClose = useCallback(() => {
+    void flushSaveNow()
+      .catch(() => {})
+      .finally(() => {
+        if (successfulSaveWhileOpenRef.current) {
+          successfulSaveWhileOpenRef.current = false;
+          push("Impostazioni salvate", "success", 3400);
+        }
+        onClose();
+      });
+  }, [flushSaveNow, onClose, push]);
 
   const patchMag = useCallback((fn: (prev: MagazzinoMasterPrefs) => MagazzinoMasterPrefs) => {
     setMag(fn);
@@ -331,7 +415,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
   if (!open) return null;
 
   return (
-    <LavorazioniModalShell wide maxWidthClass="max-w-6xl" onRequestClose={onClose}>
+    <LavorazioniModalShell wide maxWidthClass="max-w-6xl" onRequestClose={handleRequestClose}>
       <div className="flex min-h-0 max-h-[min(92dvh,900px)] w-full min-w-0 flex-col overflow-hidden">
         <header className="shrink-0 border-b border-zinc-200 bg-zinc-50/90 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Impostazioni sistema</h2>
@@ -340,12 +424,12 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
         <div className="flex min-h-0 flex-1 overflow-hidden">
           <aside className="flex w-[15.5rem] shrink-0 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
             <div className="shrink-0 border-b border-zinc-100 p-2 dark:border-zinc-800">
-              <input
-                type="search"
+              <GestionaleSearchField
                 value={navQ}
                 onChange={(e) => setNavQ(e.target.value)}
                 placeholder="Cerca…"
-                className="w-full rounded-lg border border-zinc-200 bg-zinc-50 px-2 py-1.5 text-xs outline-none transition-shadow focus:border-orange-300 focus:ring-2 focus:ring-orange-500/25 dark:border-zinc-700 dark:bg-zinc-900"
+                autoComplete="off"
+                aria-label="Cerca nelle sezioni impostazioni"
               />
             </div>
             <nav className="gestionale-scrollbar flex-1 space-y-0.5 overflow-y-auto p-2" aria-label="Sezioni impostazioni">
@@ -368,7 +452,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
                     onClick={() => setSection(e.id)}
                     className={`flex w-full rounded-lg px-2.5 py-2 text-left text-xs font-semibold transition-colors ${
                       active
-                        ? "bg-orange-500 text-white shadow-sm dark:bg-orange-600"
+                        ? "bg-orange-500 text-white shadow-sm"
                         : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
                     }`}
                   >
@@ -480,7 +564,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
                 storicoStatoIds={storicoStatoIds}
                 attiviAddetti={attiviAddetti}
                 storicoAddetti={storicoAddetti}
-                onRequestClose={onClose}
+                onRequestClose={handleRequestClose}
               />
             ) : null}
 
@@ -608,7 +692,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
         </div>
 
         <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <button type="button" className={erpBtnNeutral} onClick={onClose}>
+          <button type="button" className={erpBtnNeutral} onClick={handleRequestClose}>
             Chiudi
           </button>
         </footer>

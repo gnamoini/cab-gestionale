@@ -4,6 +4,8 @@ import type { QueryClient } from "@tanstack/react-query";
 
 export const QK = {
   profiles: ["profiles"] as const,
+  /** Profili lista utenti (pagina Sicurezza / creazione utenti). */
+  authUsers: ["profiles", "auth-users-list"] as const,
   mezzi: ["mezzi"] as const,
   mezzoQueries: ["mezzoQueries"] as const,
   lavorazioniQueries: ["lavorazioniQueries"] as const,
@@ -13,6 +15,13 @@ export const QK = {
   preventivi: ["preventivi"] as const,
   documenti: ["documenti"] as const,
   log: ["log_modifiche"] as const,
+  settings: ["app_settings"] as const,
+  /** Storico modifiche `app_settings` (solo admin). */
+  settingsAudit: ["app_settings_audit"] as const,
+  /** Permessi granulari `user_permissions` (per sessione utente). */
+  userPermissions: ["user_permissions"] as const,
+  /** Log eventi autenticazione (`auth_logs`). */
+  authLogs: ["auth_logs"] as const,
 };
 
 export async function invalidateAfterMezzoMutations(qc: QueryClient) {

@@ -3,7 +3,7 @@ import { LoginForm } from "./login-form";
 
 function LoginFallback() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-100 text-sm text-zinc-500 dark:bg-zinc-950 dark:text-zinc-400">
+    <div className="flex min-h-dvh items-center justify-center bg-[var(--cab-bg-app)] px-4 text-sm text-[color:var(--cab-text-muted)]">
       Caricamento…
     </div>
   );

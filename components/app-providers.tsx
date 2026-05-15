@@ -3,15 +3,21 @@
 import { AuthProvider } from "@/context/auth-context";
 import { ThemeProvider } from "@/context/theme-context";
 import { ToastProvider } from "@/context/toast-context";
+import { SupabaseConfigurationBanner } from "@/components/supabase-configuration-banner";
 import { QueryProvider } from "@/src/providers/query-provider";
+import { AppSettingsRealtimeBridge } from "@/src/components/app-settings-realtime-bridge";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider>
       <ToastProvider>
-        <AuthProvider>
-          <QueryProvider>{children}</QueryProvider>
-        </AuthProvider>
+        <QueryProvider>
+          <AuthProvider>
+            <SupabaseConfigurationBanner />
+            <AppSettingsRealtimeBridge />
+            {children}
+          </AuthProvider>
+        </QueryProvider>
       </ToastProvider>
     </ThemeProvider>
   );

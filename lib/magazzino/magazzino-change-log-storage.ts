@@ -34,7 +34,8 @@ function normalizeEntry(raw: unknown): MagazzinoChangeLogEntry | null {
           };
         })
     : [];
-  return { id, tipo, ricambioId, ricambio, autore, at, riepilogo, changes };
+  const annullato = e.annullato === true;
+  return { id, tipo, ricambioId, ricambio, autore, at, riepilogo, changes, annullato };
 }
 
 export function loadMagazzinoChangeLog(): MagazzinoChangeLogEntry[] {

@@ -2,6 +2,10 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+html {
+  scrollbar-gutter: stable;
+}
+
 :root {
   /* — CAB design tokens (SaaS enterprise, light) — */
   --cab-bg-app: #f4f4f5;
@@ -54,8 +58,9 @@
   --cab-text-muted: #a1a1aa;
   --cab-border: rgb(39 39 42);
   --cab-border-strong: rgb(63 63 70);
-  --cab-primary: #fb923c;
-  --cab-primary-hover: #f97316;
+  /* Stesso arancio della light mode: CTA / primario identici in dark */
+  --cab-primary: #f97316;
+  --cab-primary-hover: #ea580c;
   --cab-success: #34d399;
   --cab-warning: #fbbf24;
   --cab-danger: #f87171;

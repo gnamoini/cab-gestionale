@@ -621,7 +621,7 @@ export function SettingsLavorazioniModal({
         aria-selected={active}
         className={`rounded-lg px-3 py-2 text-xs font-semibold transition-[background-color,color,box-shadow] duration-150 ${
           active
-            ? "bg-orange-500 text-white shadow-sm shadow-orange-500/25 ring-1 ring-orange-400/40 dark:bg-orange-600 dark:ring-orange-500/35"
+            ? "bg-orange-500 text-white shadow-sm shadow-orange-500/25 ring-1 ring-orange-400/40"
             : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/90"
         }`}
         onClick={() => setTab(id)}

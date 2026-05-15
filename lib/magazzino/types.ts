@@ -24,7 +24,12 @@ export interface RicambioMagazzino {
 export type SortKeyMagazzino =
   | "marca"
   | "codiceFornitoreOriginale"
+  | "descrizione"
   | "categoria"
+  | "compatibilitaMezzi"
   | "scorta"
+  | "scortaMinima"
+  | "dataUltimaModifica"
+  | "autoreUltimaModifica"
   | "prezzoVendita"
   | "consumoMedioMensile";

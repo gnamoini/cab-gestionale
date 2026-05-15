@@ -2,12 +2,17 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useCabAppSettingsPayloadQuery, type CabAppSettingsQueryPayload } from "@/src/hooks/gestionale/use-settings-queries";
 import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
-import { LAVORAZIONI_STATI_IN_CORSO } from "@/src/services/lavorazioni.service";
+import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
+import { normalizeHex } from "@/lib/lavorazioni/color-utils";
+import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
+import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
+import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsInput, dsLabel } from "@/lib/ui/design-system";
+import { dsInput, dsLabel, gestionaleSelectNativePlainClass } from "@/lib/ui/design-system";
 
 const PRIORITA_OPTS: PrioritaLavorazione[] = ["bassa", "media", "alta", "urgente"];
 
@@ -27,6 +32,30 @@ function todayYmd(): string {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Stati lavorazioni definiti esplicitamente in `app_settings` (modulo lavorazioni, key prefs).
+ * Nessun fallback a liste statiche: array vuoto se mancante o `stati` vuoto.
+ */
+function statiLavorazioniDaImpostazioni(payload: CabAppSettingsQueryPayload | undefined): StatoLavorazioneConfig[] {
+  if (!payload?.rows?.length) return [];
+  const row = payload.rows.find((r) => r.module === CAB_SETTINGS_MODULE.lavorazioni && r.key === CAB_SETTINGS_KEY.prefs);
+  if (!row?.value || typeof row.value !== "object") return [];
+  const raw = row.value as Record<string, unknown>;
+  const arr = raw.stati;
+  if (!Array.isArray(arr) || arr.length === 0) return [];
+  const out: StatoLavorazioneConfig[] = [];
+  for (const x of arr) {
+    if (!x || typeof x !== "object") continue;
+    const o = x as Record<string, unknown>;
+    const id = typeof o.id === "string" ? o.id.trim() : "";
+    if (!id) continue;
+    const label = typeof o.label === "string" && o.label.trim() ? o.label.trim() : id;
+    const nh = typeof o.color === "string" ? normalizeHex(o.color) : null;
+    out.push(nh ? { id, label, color: nh } : { id, label });
+  }
+  return out;
+}
+
 export function LavorazioneCreateModal({
   open,
   onClose,
@@ -41,27 +70,37 @@ export function LavorazioneCreateModal({
   onCreated?: (id: string) => void;
 }) {
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
+  const settingsQ = useCabAppSettingsPayloadQuery({ enabled: open });
   const create = useLavorazioneCreateMutation();
 
   const [mezzoId, setMezzoId] = useState("");
-  const [stato, setStato] = useState<StatoLavorazione>("bozza");
+  const [stato, setStato] = useState("");
   const [priorita, setPriorita] = useState<PrioritaLavorazione>("media");
   const [ingressoYmd, setIngressoYmd] = useState(todayYmd);
   const [note, setNote] = useState("");
 
+  const stati = useMemo(() => statiLavorazioniDaImpostazioni(settingsQ.data), [settingsQ.data]);
+
   useEffect(() => {
     if (!open) return;
     setMezzoId((defaultMezzoId ?? "").trim());
-    setStato("bozza");
+    setStato("");
     setPriorita("media");
     setIngressoYmd(todayYmd());
     setNote("");
   }, [open, defaultMezzoId]);
 
+  useEffect(() => {
+    if (!open || !stato) return;
+    if (!stati.some((s) => s.id === stato)) setStato("");
+  }, [open, stati, stato]);
+
   const mezziOpts = useMemo(() => {
     const rows = mezziQ.data ?? [];
     return [...rows].sort((a, b) => `${a.marca} ${a.modello}`.localeCompare(`${b.marca} ${b.modello}`, "it"));
   }, [mezziQ.data]);
+
+  const statoColore = stato ? readablePillStyleFromHex(statoDisplayColor(stato, stati)) : undefined;
 
   if (!open) return null;
 
@@ -72,10 +111,19 @@ export function LavorazioneCreateModal({
       window.alert("Devi essere autenticato per creare una lavorazione.");
       return;
     }
+    const sid = stato.trim();
+    if (!sid) {
+      window.alert("Seleziona uno stato tra quelli configurati in Impostazioni globali (modulo Lavorazioni).");
+      return;
+    }
+    if (stati.length === 0) {
+      window.alert("Nessuno stato configurato nelle impostazioni: non è possibile creare la lavorazione.");
+      return;
+    }
     try {
       const row = await create.mutateAsync({
         mezzo_id: mid,
-        stato,
+        stato: sid as StatoLavorazione,
         priorita,
         data_ingresso: ymdToIsoMidUtc(ingressoYmd),
         data_uscita: null,
@@ -89,6 +137,9 @@ export function LavorazioneCreateModal({
     }
   }
 
+  const settingsBlocking = settingsQ.isPending && !settingsQ.data;
+  const statoSelectDisabled = create.isPending || settingsBlocking || stati.length === 0;
+
   return (
     <LavorazioniModalShell wide onRequestClose={onClose}>
       <form onSubmit={onSubmit} className="flex max-h-[min(88dvh,720px)] flex-col overflow-hidden">
@@ -100,6 +151,9 @@ export function LavorazioneCreateModal({
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
           {mezziQ.isError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{mezziQ.error?.message ?? "Errore caricamento mezzi."}</p>
+          ) : null}
+          {settingsQ.isError ? (
+            <p className="text-sm text-red-600 dark:text-red-400">{settingsQ.error?.message ?? "Errore caricamento impostazioni."}</p>
           ) : null}
           {create.isError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{create.error?.message ?? "Creazione fallita."}</p>
@@ -125,21 +179,38 @@ export function LavorazioneCreateModal({
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block">
+            <div className="block min-w-0">
               <span className={dsLabel}>Stato iniziale</span>
-              <select
-                className={`${dsInput} mt-1 w-full capitalize`}
-                value={stato}
-                onChange={(e) => setStato(e.target.value as StatoLavorazione)}
-                disabled={create.isPending}
-              >
-                {LAVORAZIONI_STATI_IN_CORSO.map((s) => (
-                  <option key={s} value={s}>
-                    {s.replaceAll("_", " ")}
-                  </option>
-                ))}
-              </select>
-            </label>
+              {settingsBlocking ? (
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Caricamento impostazioni…</p>
+              ) : stati.length === 0 ? (
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">Nessuno stato configurato nelle impostazioni.</p>
+              ) : null}
+              <div className="mt-1 flex items-center gap-2">
+                {stato && stati.length > 0 ? (
+                  <span
+                    className="h-3.5 w-3.5 shrink-0 rounded-full border border-[color:var(--cab-border)] shadow-sm"
+                    style={statoColore}
+                    title="Colore stato (da impostazioni)"
+                    aria-hidden
+                  />
+                ) : null}
+                <select
+                  className={`min-w-0 flex-1 ${gestionaleSelectNativePlainClass}`}
+                  value={stato}
+                  onChange={(e) => setStato(e.target.value)}
+                  required
+                  disabled={statoSelectDisabled}
+                >
+                  <option value="">— Seleziona stato —</option>
+                  {stati.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <label className="block">
               <span className={dsLabel}>Priorità</span>
               <select
@@ -179,7 +250,11 @@ export function LavorazioneCreateModal({
           <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={create.isPending}>
             Annulla
           </button>
-          <button type="submit" className={erpBtnAccent} disabled={create.isPending || mezziQ.isLoading || !createdBy}>
+          <button
+            type="submit"
+            className={erpBtnAccent}
+            disabled={create.isPending || mezziQ.isLoading || !createdBy || !stato.trim() || stati.length === 0 || settingsBlocking}
+          >
             {create.isPending ? "Salvataggio…" : "Crea lavorazione"}
           </button>
         </footer>

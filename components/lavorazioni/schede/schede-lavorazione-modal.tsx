@@ -15,7 +15,7 @@ import {
   identificazionePartsFromSchedaIngresso,
 } from "@/lib/mezzi/identificazione-mezzo";
 import { migrateMezziListePrefs, modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
-import { getMezziListePrefsOrDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { findPreviousLavorazioneStessoMezzo } from "@/lib/schede/schede-duplicate-previous";
 import {
@@ -50,8 +50,9 @@ import { buildPreventiviArchivioFilterHref } from "@/lib/preventivi/preventivi-l
 import { Q_PREVENTIVI_NUOVO } from "@/lib/preventivi/preventivi-query";
 import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { writePendingPreventivoPayload } from "@/lib/preventivi/preventivi-session-bridge";
-import { CAB_MEZZI_LISTE_REFRESH, CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
+import { CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
 import { dsBadgeOk, dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import type {
   LavorazioneSchedeBundle,
   RigaAddettoOreScheda,
@@ -152,6 +153,8 @@ export function SchedeLavorazioneModal({
   onSchedaLog?: (ev: SchedaLogEv) => void;
 }) {
   const router = useRouter();
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const appSettings = settingsPayload?.resolved;
   const mezzo = useMemo(() => findMezzoForLavorazione(mezzi, lav), [mezzi, lav]);
   const identSubtitle = useMemo(
     () => formatIdentificazioneMezzoLine(identificazionePartsFromLavorazione(lav, mezzo)),
@@ -177,29 +180,25 @@ export function SchedeLavorazioneModal({
     [onSchedaLog],
   );
 
-  const [listeTick, setListeTick] = useState(0);
-  useEffect(() => {
-    function onL() {
-      setListeTick((t) => t + 1);
-    }
-    window.addEventListener(CAB_MEZZI_LISTE_REFRESH, onL);
-    return () => window.removeEventListener(CAB_MEZZI_LISTE_REFRESH, onL);
-  }, []);
+  const listePrefs = useMemo(
+    () => migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault()),
+    [appSettings?.mezziListe],
+  );
 
   const marcheGuidate = useMemo(() => {
-    const p = migrateMezziListePrefs(getMezziListePrefsOrDefault());
+    const p = listePrefs;
     const s = new Set<string>(p.marche);
     for (const m of mezzi) {
       const t = m.marca.trim();
       if (t) s.add(t);
     }
     return [...s].sort((a, b) => a.localeCompare(b, "it"));
-  }, [mezzi, listeTick]);
+  }, [mezzi, listePrefs]);
 
   const modelliForMarca = useCallback(
     (marca: string) => {
       const ma = marca.trim();
-      const p = migrateMezziListePrefs(getMezziListePrefsOrDefault());
+      const p = listePrefs;
       const fromPrefs = ma ? modelliVisibiliPerMarca(p, ma) : [...p.modelli];
       const set = new Set<string>(fromPrefs);
       for (const m of mezzi) {
@@ -207,7 +206,7 @@ export function SchedeLavorazioneModal({
       }
       return [...set].sort((a, b) => a.localeCompare(b, "it"));
     },
-    [mezzi, listeTick],
+    [mezzi, listePrefs],
   );
 
   useEffect(() => {
@@ -582,7 +581,7 @@ export function SchedeLavorazioneModal({
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Schede lavorazione</h2>
           <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">{identSubtitle}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-600 dark:text-zinc-300">
-            <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-800 dark:text-orange-200">
+            <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-800">
               Schede {nOk}/3
             </span>
             {lastUp ? (
@@ -599,7 +598,7 @@ export function SchedeLavorazioneModal({
             </span>
             <Link
               href={buildPreventiviArchivioFilterHref(lav.id, lavOrigine)}
-              className="font-semibold text-orange-700 underline-offset-2 hover:underline dark:text-orange-300"
+              className="font-semibold text-orange-700 underline-offset-2 hover:underline"
             >
               Apri archivio preventivi
             </Link>
@@ -1438,7 +1437,7 @@ function RicambiPanel({
                               <li key={p.id}>
                                 <button
                                   type="button"
-                                  className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-orange-50 dark:hover:bg-zinc-800"
+                                  className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-orange-50"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => {
                                     patchRighe(

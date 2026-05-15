@@ -10,8 +10,8 @@ import { maybeRecordLearningOnSave } from "@/lib/preventivi/trasforma-descrizion
 import type { PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
 import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 import { migrateMezziListePrefs, modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
-import { getMezziListePrefsOrDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { CAB_MEZZI_LISTE_REFRESH } from "@/lib/sistema/cab-events";
+import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 
 function cloneRecord(p: PreventivoRecord): PreventivoRecord {
   return JSON.parse(JSON.stringify(p)) as PreventivoRecord;
@@ -73,16 +73,13 @@ export function PreventiviEditorModal({
     draftRef.current = draft;
   }, [draft]);
 
-  const [listeTick, setListeTick] = useState(0);
-  useEffect(() => {
-    function onL() {
-      setListeTick((t) => t + 1);
-    }
-    window.addEventListener(CAB_MEZZI_LISTE_REFRESH, onL);
-    return () => window.removeEventListener(CAB_MEZZI_LISTE_REFRESH, onL);
-  }, []);
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const appSettings = settingsPayload?.resolved;
 
-  const prefsAtt = useMemo(() => migrateMezziListePrefs(getMezziListePrefsOrDefault()), [listeTick, open]);
+  const prefsAtt = useMemo(
+    () => migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault()),
+    [appSettings?.mezziListe, open],
+  );
 
   const totals = useMemo(() => {
     if (!draft) return { totaleRicambi: 0, totaleManodopera: 0, totaleFinale: 0 };
@@ -321,7 +318,7 @@ export function PreventiviEditorModal({
                       const marca = e.target.value;
                       setDraft((prev) => {
                         if (!prev) return prev;
-                        const p = migrateMezziListePrefs(getMezziListePrefsOrDefault());
+                        const p = prefsAtt;
                         const opts = marca.trim() ? modelliVisibiliPerMarca(p, marca) : [...p.modelli];
                         let modello = prev.modelloAttrezzatura;
                         if (modello.trim() && !opts.includes(modello.trim())) modello = "";

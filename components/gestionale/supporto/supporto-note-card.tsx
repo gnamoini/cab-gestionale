@@ -30,7 +30,7 @@ export function SupportoNoteCard({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0 flex-1 space-y-2">
             <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <p className="text-sm font-bold tracking-wide text-orange-700 dark:text-orange-300">[{authorDisplay}]</p>
+              <p className="text-sm font-bold tracking-wide text-orange-700">[{authorDisplay}]</p>
               {note.resolved ? (
                 <span className={dsBadgeOk} title="Segnalazione risolta">
                   Risolta

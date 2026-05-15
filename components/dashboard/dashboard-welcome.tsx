@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useAuth } from "@/context/auth-context";
+import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { dsSkeletonPulse, dsSurfaceCard, dsTypoBody, dsTypoPageTitle } from "@/lib/ui/design-system";
 
 function timeGreeting(hour: number): string {
@@ -25,7 +25,7 @@ export function DashboardWelcome() {
     const h = new Date().getHours();
     const g = timeGreeting(h);
     const w =
-      status === "authenticated" && authorName.trim()
+      isAuthSessionEstablished(status) && authorName.trim()
         ? authorName.trim().toUpperCase()
         : "TEAM CAB";
     return { greeting: g, who: w };

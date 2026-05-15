@@ -12,7 +12,6 @@ import { DashboardSistemaLogListEmbedded } from "@/components/dashboard/dashboar
 import { DashboardOperationalCards } from "@/components/dashboard/dashboard-operational-cards";
 import { DashboardQuickNav } from "@/components/dashboard/dashboard-quick-nav";
 import { DashboardRecentFeeds } from "@/components/dashboard/dashboard-recent-feeds";
-import { MezziServiceDemo } from "@/components/demo/mezzi-service-demo";
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { SistemaImpostazioniModal } from "@/components/dashboard/sistema-impostazioni-modal";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -113,11 +112,6 @@ export function DashboardView() {
 
         <DashboardRecentFeeds />
 
-        {staging ? null : (
-          <div className="mt-6 max-w-xl">
-            <MezziServiceDemo />
-          </div>
-        )}
       </div>
 
       {staging ? null : sistemaOpen ? <SistemaImpostazioniModal open={sistemaOpen} onClose={() => setSistemaOpen(false)} /> : null}

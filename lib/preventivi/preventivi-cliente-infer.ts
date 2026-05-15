@@ -1,8 +1,8 @@
 import type { PreventivoRecord } from "@/lib/preventivi/types";
-import { loadSistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
+import { getRuntimePreventiviDefaults } from "@/src/lib/app-settings/runtime-settings-cache";
 
 const DEFAULT_COSTO_ORARIO = () =>
-  typeof window !== "undefined" ? loadSistemaPreventiviDefaults().costoOrarioDefault : 48;
+  typeof window !== "undefined" ? getRuntimePreventiviDefaults().costoOrarioDefault : 48;
 
 function normCliente(c: string): string {
   return c.trim().toLowerCase();

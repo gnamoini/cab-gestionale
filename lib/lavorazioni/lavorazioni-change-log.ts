@@ -78,7 +78,7 @@ export function logTipoTextClass(tipo: LavorazioniLogTipo): string {
   if (tipo === "archiviazione") return "text-zinc-700 dark:text-zinc-300";
   if (tipo === "completata") return "text-sky-700 dark:text-sky-400";
   if (tipo === "riaperta") return "text-indigo-700 dark:text-indigo-400";
-  return "text-orange-700 dark:text-orange-400";
+  return "text-orange-700";
 }
 
 export function loadLavorazioniChangeLog(): LavorazioniLogEntry[] {

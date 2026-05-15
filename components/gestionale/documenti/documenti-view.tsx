@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { MOCK_DOCUMENTI } from "@/lib/mock-data/documenti";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
   appendDocumentiChangeLog,
@@ -20,7 +21,19 @@ import {
   FilterSelectWrap,
   selectLavorazioniFilter,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnDanger, dsBtnNeutral, dsInput, dsPageToolbarBtn, dsStackPage, dsStickyToolbar } from "@/lib/ui/design-system";
+import {
+  dsBtnNeutral,
+  dsInput,
+  dsPageToolbarBtn,
+  dsStackPage,
+  dsStickyToolbar,
+  GESTIONALE_SEARCH_PLACEHOLDER,
+  dsTableActionsGroupStart,
+  dsTableActionBtnPrimary,
+  dsTableActionBtnDanger,
+  dsTableActionBtnInfo,
+  dsTableActionGlyph,
+} from "@/lib/ui/design-system";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import {
   GestionaleLogEmpty,
@@ -51,10 +64,11 @@ import {
 } from "@/components/gestionale/documenti/documenti-helpers";
 import { DocumentoEditModal, DocumentoInfoModal, UploadDocumentoModal } from "@/components/gestionale/documenti/documenti-modals";
 import { buildDocumentiCatalogFromImpostazioni } from "@/lib/documenti/documenti-catalog";
-import { getMezziListePrefsOrDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { getMezziReportSnapshot, subscribeMezziReportSync } from "@/lib/mezzi/mezzi-report-sync";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { CAB_MEZZI_LISTE_REFRESH } from "@/lib/sistema/cab-events";
+import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 
@@ -181,7 +195,6 @@ function ArchiveDocRow({
   onApri: () => void;
 }) {
   const href = getDocumentApriHref(doc);
-  const iconAct = `${dsBtnNeutral} inline-flex h-8 w-8 shrink-0 items-center justify-center p-0`;
 
   return (
     <li
@@ -202,10 +215,10 @@ function ArchiveDocRow({
           {formatDocumentoRigaSintetica(doc)} · {labelCategoria(doc.categoria)} · {labelTipoFile(doc.tipoFile)}
         </p>
       </div>
-      <div className="flex shrink-0 items-center gap-1" onClick={(e) => e.stopPropagation()}>
+      <div className={`${dsTableActionsGroupStart} shrink-0`} onClick={(e) => e.stopPropagation()}>
         <button
           type="button"
-          className={`${iconAct} ${erpFocus}`}
+          className={dsTableActionBtnPrimary}
           title="Apri file"
           aria-label="Apri file"
           disabled={!href}
@@ -214,35 +227,35 @@ function ArchiveDocRow({
             else onApri();
           }}
         >
-          <svg className="h-4 w-4 opacity-85" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
           </svg>
         </button>
         <button
           type="button"
-          className={`${iconAct} ${erpFocus}`}
+          className={dsTableActionBtnInfo}
           title="Scheda documento"
           aria-label="Visualizza scheda documento"
           onClick={onInfo}
         >
-          <svg className="h-4 w-4 opacity-85" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
         </button>
-        <button type="button" className={`${iconAct} ${erpFocus}`} title="Modifica" aria-label="Modifica documento" onClick={onEdit}>
-          <svg className="h-4 w-4 opacity-85" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+        <button type="button" className={dsTableActionBtnPrimary} title="Modifica" aria-label="Modifica documento" onClick={onEdit}>
+          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
         </button>
         <button
           type="button"
-          className={`${dsBtnDanger} inline-flex h-8 w-8 shrink-0 items-center justify-center p-0 ${erpFocus}`}
+          className={dsTableActionBtnDanger}
           title="Elimina"
           aria-label="Elimina documento"
           onClick={onDelete}
         >
-          <svg className="h-4 w-4 opacity-90" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
           </svg>
         </button>
@@ -261,13 +274,14 @@ export function DocumentiView() {
   const searchParams = useSearchParams();
   const { authorName: author } = useAuth();
   const authorTrim = author.trim() || "Operatore";
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const appSettings = settingsPayload?.resolved;
   const [mezziSnap, setMezziSnap] = useState<MezzoGestito[]>(() => getMezziReportSnapshot());
-  const [listeRev, setListeRev] = useState(0);
 
   const catalog = useMemo(() => {
-    void listeRev;
-    return buildDocumentiCatalogFromImpostazioni(getMezziListePrefsOrDefault(), mezziSnap);
-  }, [mezziSnap, listeRev]);
+    const prefs = migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault());
+    return buildDocumentiCatalogFromImpostazioni(prefs, mezziSnap);
+  }, [appSettings?.mezziListe, mezziSnap]);
 
   const [docs, setDocs] = useState<DocumentoGestionale[]>(() => MOCK_DOCUMENTI.map((d) => resolveDocumentoApplicazione({ ...d })));
   const idSeq = useRef(maxDocNumericId(MOCK_DOCUMENTI));
@@ -326,14 +340,6 @@ export function DocumentiView() {
       document.body.style.paddingRight = prevPad;
     };
   }, [logOpen]);
-
-  useEffect(() => {
-    function onListe() {
-      setListeRev((n) => n + 1);
-    }
-    window.addEventListener(CAB_MEZZI_LISTE_REFRESH, onListe);
-    return () => window.removeEventListener(CAB_MEZZI_LISTE_REFRESH, onListe);
-  }, []);
 
   useEffect(() => {
     if (!toast) return;
@@ -690,21 +696,13 @@ export function DocumentiView() {
                 </svg>
                 Carica documento
               </button>
-              <div className="relative min-h-11 min-w-0 flex-1 sm:min-w-[12rem]">
-                <span className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[color:var(--cab-text-muted)]" aria-hidden>
-                  <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                </span>
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cerca per nome file, marca, modello…"
-                  className={`${dsInput} h-11 min-h-11 w-full py-0 pl-10 pr-3 text-sm ${erpFocus}`}
-                  aria-label="Cerca documenti"
-                />
-              </div>
+              <GestionaleSearchField
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+                aria-label="Cerca documenti"
+                wrapperClassName="flex-1 sm:min-w-[12rem]"
+              />
               <button
                 type="button"
                 onClick={() => setFiltriEspansi((o) => !o)}

@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { parseSessionCookie, SESSION_COOKIE_NAME } from "@/lib/auth/session";
 import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
+import { createSupabaseMiddlewareClient } from "@/src/lib/supabase/middleware-client";
 
 const LOGIN_PATH = "/login";
 
@@ -13,24 +13,37 @@ function isStaticAsset(pathname: string): boolean {
   return false;
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   if (isStaticAsset(pathname)) {
     return NextResponse.next();
   }
 
-  const raw = request.cookies.get(SESSION_COOKIE_NAME)?.value;
-  const session = parseSessionCookie(raw);
+  const { supabase, response } = createSupabaseMiddlewareClient(request);
 
-  if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
-    if (session) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+  if (!supabase) {
+    if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
+      return response;
     }
-    return NextResponse.next();
+    const url = request.nextUrl.clone();
+    url.pathname = LOGIN_PATH;
+    url.searchParams.set("from", pathname === "/" ? "/dashboard" : `${pathname}${request.nextUrl.search}`);
+    return NextResponse.redirect(url);
   }
 
-  if (!session) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
+    if (user) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+    return response;
+  }
+
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = LOGIN_PATH;
     const from = pathname === "/" ? "/dashboard" : `${pathname}${request.nextUrl.search}`;
@@ -45,7 +58,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

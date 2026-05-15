@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { gestionaleSelectNativePlainClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import type { RicambioFormState } from "@/lib/magazzino/form";
@@ -10,6 +10,7 @@ import {
   flattenCompatDaAttrezzature,
   migrateMezziListePrefs,
   modelliVisibiliPerMarca,
+  parseCompatMarcaModello,
 } from "@/lib/mezzi/attrezzature-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import {
@@ -27,10 +28,10 @@ const noSpinner =
   "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
 const stepperBtnMinus =
-  "flex h-9 w-9 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-800 shadow-sm outline-none transition-[background-color,border-color,box-shadow] duration-150 hover:border-zinc-300 hover:bg-zinc-100 hover:shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:border-zinc-500 dark:hover:bg-zinc-700 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-orange-400/55 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 active:bg-zinc-200/90 dark:active:bg-zinc-600 [-webkit-tap-highlight-color:transparent]";
+  "flex h-9 w-9 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-600 shadow-sm outline-none transition-[background-color,border-color,box-shadow,color] duration-150 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 hover:shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-orange-400/55 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 active:bg-zinc-200/90 dark:active:bg-zinc-600 [-webkit-tap-highlight-color:transparent]";
 
 const stepperBtnPlus =
-  "flex h-9 w-9 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-800 shadow-sm outline-none transition-[background-color,border-color,box-shadow] duration-150 hover:border-orange-200/90 hover:bg-orange-50/95 hover:shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 dark:hover:border-orange-800/60 dark:hover:bg-orange-950/50 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-orange-400/55 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 active:bg-orange-100/90 dark:active:bg-orange-950/70 [-webkit-tap-highlight-color:transparent]";
+  "flex h-9 w-9 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-800 shadow-sm outline-none transition-[background-color,border-color,box-shadow] duration-150 hover:border-orange-200/90 hover:bg-orange-50/95 hover:shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-orange-400/55 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 active:bg-orange-100/90 [-webkit-tap-highlight-color:transparent]";
 
 function StockStepper({
   value,
@@ -126,6 +127,7 @@ export function RicambioFormFields({
   attrezzatureListe,
   codiceOriginaleAvvisoDuplicato,
   relaxHtmlValidation = false,
+  autoFocusToken = 0,
 }: {
   form: RicambioFormState;
   setForm: SetForm;
@@ -137,6 +139,8 @@ export function RicambioFormFields({
   codiceOriginaleAvvisoDuplicato?: { existing: RicambioMagazzino; onVaiAlRicambio: () => void } | null;
   /** Se true: nessun `required` HTML (submit gestito lato applicazione). */
   relaxHtmlValidation?: boolean;
+  /** Incrementato a ogni apertura modal «Nuovo ricambio» per focus affidabile sul campo Marca. */
+  autoFocusToken?: number;
 }) {
   const [filtroMarcaCompat, setFiltroMarcaCompat] = useState("__tutti__");
   const prefsTree = useMemo(() => migrateMezziListePrefs(attrezzatureListe), [attrezzatureListe]);
@@ -148,13 +152,33 @@ export function RicambioFormFields({
   const marcaOpts = useMemo(() => mergeOptions(marcheOptions, form.marca), [marcheOptions, form.marca]);
   const catOpts = useMemo(() => mergeOptions(categorieOptions, form.categoria), [categorieOptions, form.categoria]);
   const mezziSel = useMemo(() => new Set(parseCompatInput(form.compatibilitaMezzi)), [form.compatibilitaMezzi]);
-  const mezziOptsSorted = useMemo(
-    () =>
-      [...new Set([...mezziOptions, ...lineeCompatFiltrate, ...parseCompatInput(form.compatibilitaMezzi)])].sort((a, b) =>
-        a.localeCompare(b, "it"),
-      ),
-    [mezziOptions, lineeCompatFiltrate, form.compatibilitaMezzi],
-  );
+  const mezziOptsSorted = useMemo(() => {
+    const base = [
+      ...new Set([...mezziOptions, ...lineeCompatFiltrate, ...parseCompatInput(form.compatibilitaMezzi)]),
+    ];
+    const cmp = (a: string, b: string) => a.localeCompare(b, "it");
+    const marcaForm = form.marca.trim();
+    if (!marcaForm) return base.sort(cmp);
+    const prio: string[] = [];
+    const rest: string[] = [];
+    for (const x of base) {
+      const { marca } = parseCompatMarcaModello(x);
+      if (marca.trim().localeCompare(marcaForm, "it", { sensitivity: "base" }) === 0) prio.push(x);
+      else rest.push(x);
+    }
+    prio.sort(cmp);
+    rest.sort(cmp);
+    return [...prio, ...rest];
+  }, [mezziOptions, lineeCompatFiltrate, form.compatibilitaMezzi, form.marca]);
+
+  const marcaSelectRef = useRef<HTMLSelectElement>(null);
+  useEffect(() => {
+    if (!relaxHtmlValidation || autoFocusToken <= 0) return;
+    const id = window.requestAnimationFrame(() => {
+      marcaSelectRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [autoFocusToken, relaxHtmlValidation]);
 
   function toggleMezzo(m: string) {
     setForm((f) => {
@@ -195,6 +219,8 @@ export function RicambioFormFields({
     <div className="flex flex-col gap-3">
       <RicambioField label="Marca *">
         <select
+          ref={marcaSelectRef}
+          data-magazzino-ricambio-marca-focus
           required={!relaxHtmlValidation}
           value={form.marca}
           onChange={(e) => setForm((f) => ({ ...f, marca: e.target.value }))}
@@ -253,7 +279,7 @@ export function RicambioFormFields({
             <button
               type="button"
               onClick={codiceOriginaleAvvisoDuplicato.onVaiAlRicambio}
-              className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-orange-300/80 bg-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all duration-150 hover:bg-orange-600 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/45 focus-visible:ring-offset-1 active:scale-[0.98] dark:border-orange-600/50 dark:focus-visible:ring-offset-zinc-900 sm:w-auto"
+              className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-orange-300/80 bg-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all duration-150 hover:bg-orange-600 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/45 focus-visible:ring-offset-1 active:scale-[0.98] sm:w-auto"
             >
               Vai al ricambio
             </button>

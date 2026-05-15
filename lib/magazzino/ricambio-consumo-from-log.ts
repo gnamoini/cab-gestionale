@@ -6,6 +6,7 @@ import { extractScortaDelta, monthKeyFromIso } from "@/lib/report/magazzino-log-
 
 /** Quantità uscita attribuibile a una riga di log (scarichi da scorta). */
 export function usciteQtyFromMagazzinoEntry(e: MagazzinoChangeLogEntry): number {
+  if (e.annullato) return 0;
   const d = extractScortaDelta(e);
   if (e.tipo === "rimozione") {
     return d != null && d < 0 ? -d : 1;

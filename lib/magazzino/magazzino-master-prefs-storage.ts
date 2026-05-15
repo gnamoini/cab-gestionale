@@ -1,5 +1,6 @@
 /** Anagrafiche magazzino (liste guidate) persistite in locale — condivise tra Magazzino e Impostazioni sistema. */
 
+/** @deprecated Persistenza spostata su `public.app_settings` (modulo `magazzino`, chiave `master`). */
 export const MAGAZZINO_MASTER_PREFS_KEY = "gestionale-magazzino-master-prefs-v1";
 
 export type MagazzinoMasterPrefs = {

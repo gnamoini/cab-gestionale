@@ -27,16 +27,28 @@ export function sortValueForKey(r: RicambioMagazzino, key: SortKeyMagazzino): st
       return r.prezzoVendita;
     case "scorta":
       return r.scorta;
+    case "scortaMinima":
+      return r.scortaMinima;
     case "marca":
       return r.marca.toLowerCase();
     case "categoria":
       return r.categoria.toLowerCase();
     case "codiceFornitoreOriginale":
       return r.codiceFornitoreOriginale.toLowerCase();
+    case "descrizione":
+      return r.descrizione.toLowerCase();
+    case "compatibilitaMezzi":
+      return r.compatibilitaMezzi.join(", ").toLowerCase();
+    case "dataUltimaModifica":
+      return r.dataUltimaModifica;
+    case "autoreUltimaModifica":
+      return r.autoreUltimaModifica.toLowerCase();
     case "consumoMedioMensile":
       return 0;
-    default:
-      return 0;
+    default: {
+      const _exhaustive: never = key;
+      return _exhaustive;
+    }
   }
 }
 

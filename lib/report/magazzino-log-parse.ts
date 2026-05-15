@@ -36,6 +36,7 @@ export function aggregateMagazzinoMonthFromLogs(
   };
 
   for (const e of magLog) {
+    if (e.annullato) continue;
     const mk = monthKeyFromIso(e.at);
     if (!mk) continue;
     const row = ensure(mk);

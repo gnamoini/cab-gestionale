@@ -10,8 +10,11 @@ export const Q_FOCUS_LAV_TITOLO = "focusLavTitolo";
 /** Query: focus ricambio in tabella magazzino. */
 export const Q_FOCUS_RICAMBIO = "focusRicambio";
 
-/** Query: evidenzia lavorazioni collegate a un mezzo (anagrafica id). */
+/** Query: evidenzia lavorazioni collegate a un mezzo (anagrafica id). Valori speciali es. `hub-lav-*`. */
 export const Q_FOCUS_MEZZO = "focusMezzo";
+
+/** Query: filtro contestuale lavorazioni per id mezzo anagrafica (URL “pulito” da Mezzi / dashboard). */
+export const Q_LAVORAZIONI_MEZZO_ID = "mezzoId";
 
 export function buildLavorazioniLogFocusHref(entry: LavorazioniLogEntry): string {
   const sp = new URLSearchParams();

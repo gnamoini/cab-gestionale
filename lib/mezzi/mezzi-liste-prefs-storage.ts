@@ -1,3 +1,7 @@
+/**
+ * @deprecated Persistenza spostata su `public.app_settings` (modulo `mezzi`, chiave `liste`).
+ * Le funzioni load/save restano come fallback finché il DB non è popolato o in assenza di permessi.
+ */
 import { MEZZI_INITIAL_LISTE, MOCK_MEZZI } from "@/lib/mock-data/mezzi";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import type { AttrezzaturaMarca, AttrezzaturaModello } from "@/lib/mezzi/attrezzature-prefs";
@@ -32,6 +36,11 @@ const defaultListe = (): MezziListePrefs => ({
   stati: [],
   attrezzature: undefined,
 });
+
+/** Solo default built-in (nessun localStorage) — utile per seed / merge server. */
+export function createMezziListePrefsDefault(): MezziListePrefs {
+  return migrateMezziListePrefs(defaultListe());
+}
 
 export function loadMezziListePrefs(): MezziListePrefs | null {
   if (typeof window === "undefined") return null;

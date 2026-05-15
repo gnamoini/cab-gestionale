@@ -1,6 +1,13 @@
+/**
+ * @deprecated Preferire `public.app_settings` (modulo `lavorazioni`, chiave `prefs`).
+ * Mantenuto come fallback offline / prima migrazione.
+ */
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 
-const STORAGE_KEY = "gestionale-lavorazioni-prefs-v1";
+/** @deprecated Chiave legacy; preferire `app_settings`. */
+export const LAVORAZIONI_PREFS_STORAGE_KEY = "gestionale-lavorazioni-prefs-v1";
+
+const STORAGE_KEY = LAVORAZIONI_PREFS_STORAGE_KEY;
 
 export type LavorazioniPersistedPrefs = {
   stati?: StatoLavorazioneConfig[];

@@ -117,3 +117,51 @@ export type LogModificaRow = {
   payload: unknown;
   created_at: string;
 };
+
+/** Tabella `app_settings` — configurazione globale (JSON per modulo/chiave). */
+export type AppSettingRow = {
+  id: string;
+  module: string;
+  key: string;
+  value: Record<string, unknown>;
+  updated_at: string;
+  updated_by: string | null;
+};
+
+/** Tabella `app_settings_audit` — storico UPDATE su `app_settings` (solo admin in lettura). */
+export type AppSettingsAuditRow = {
+  id: string;
+  module: string;
+  key: string;
+  old_value: Record<string, unknown>;
+  new_value: Record<string, unknown>;
+  updated_by: string | null;
+  updated_at: string;
+};
+
+/** Tabella `user_permissions` — permessi granulari per modulo. */
+export type UserPermissionRow = {
+  user_id: string;
+  module: string;
+  can_read: boolean;
+  can_write: boolean;
+  can_admin: boolean;
+};
+
+/** Tabella `auth_logs` — eventi autenticazione. */
+export type AuthLogAction = "login" | "logout" | "login_failed";
+
+export type AuthLogRow = {
+  id: string;
+  user_id: string | null;
+  email: string;
+  action: AuthLogAction;
+  ip: string | null;
+  user_agent: string | null;
+  created_at: string;
+};
+
+/** Riga `auth_logs` con join `profiles` (select PostgREST). */
+export type AuthLogWithProfileRow = AuthLogRow & {
+  profiles: { id: string; nome: string } | null;
+};

@@ -53,12 +53,10 @@ export function MezziHubDetailModal({
   mezzo,
   onClose,
   onEdit,
-  onOpenStoricoLavorazioni,
 }: {
   mezzo: MezzoGestito;
   onClose: () => void;
   onEdit: () => void;
-  onOpenStoricoLavorazioni: () => void;
 }) {
   const [tab, setTab] = useState<TabId>("panoramica");
 
@@ -165,7 +163,7 @@ export function MezziHubDetailModal({
         type="button"
         key={id}
         onClick={() => setTab(id)}
-        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${on ? "border-orange-400/70 bg-orange-500/15 text-orange-900 dark:text-orange-100" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"} ${erpFocus}`}
+        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${on ? "border-orange-400/70 bg-orange-500/15 text-orange-900" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"} ${erpFocus}`}
       >
         {label}
       </button>
@@ -277,15 +275,12 @@ export function MezziHubDetailModal({
                 <Link href={hrefDocumentiPerMezzo(mezzo)} className={`${erpBtnNeutral} inline-flex no-underline`} onClick={onClose}>
                   Apri documenti filtrati
                 </Link>
-                <Link href={hrefLavorazioniPerMezzo(mezzo)} className={`${erpBtnNeutral} inline-flex no-underline`} onClick={onClose}>
-                  Vai a lavorazioni
+                <Link href={hrefLavorazioniPerMezzo(mezzo)} className={`${erpBtnNeutral} inline-flex no-underline`} onClick={onClose} title="Apri la pagina Lavorazioni filtrata per questo mezzo">
+                  Lavorazioni
                 </Link>
                 <Link href={hrefPreventiviPerMezzo(mezzo)} className={`${erpBtnNeutral} inline-flex no-underline`} onClick={onClose}>
                   Vai a preventivi
                 </Link>
-                <button type="button" className={erpBtnSoftOrange} onClick={onOpenStoricoLavorazioni}>
-                  Timeline lavorazioni
-                </button>
               </div>
             </div>
           ) : null}
@@ -351,7 +346,7 @@ export function MezziHubDetailModal({
                       {ev.ref?.lavorazioneId && ev.ref.origine ? (
                         <Link
                           href={buildPreventiviArchivioFilterHref(ev.ref.lavorazioneId, ev.ref.origine)}
-                          className="text-xs font-medium text-orange-700 underline-offset-2 hover:underline dark:text-orange-300"
+                          className="text-xs font-medium text-orange-700 underline-offset-2 hover:underline"
                           onClick={onClose}
                         >
                           Preventivi collegati

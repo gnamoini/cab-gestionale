@@ -23,7 +23,7 @@ export function ReportYearlyForecastLineChart({
   const padL = 44;
   const padR = 16;
   const padT = 20;
-  const padB = 58;
+  const padB = 66;
   const innerW = W - padL - padR;
   const innerH = H - padT - padB;
 
@@ -83,7 +83,7 @@ export function ReportYearlyForecastLineChart({
       {solid.map((p) => {
         const { px } = xy(p);
         return (
-          <text key={`t-${p.kind}-${p.year}-${p.x}`} x={px} y={H - 8} textAnchor="middle" className="fill-zinc-600 dark:fill-zinc-300" style={{ fontSize: 13, fontWeight: 600 }}>
+          <text key={`t-${p.kind}-${p.year}-${p.x}`} x={px} y={H - 10} textAnchor="middle" className="fill-zinc-600 dark:fill-zinc-300" style={{ fontSize: 18, fontWeight: 700 }}>
             {p.kind === "history" ? String(p.year) : p.kind === "ytd" ? `${p.year}` : ""}
           </text>
         );
@@ -91,10 +91,10 @@ export function ReportYearlyForecastLineChart({
       {dashed.length >= 2 ? (
         <text
           x={xy(dashed[dashed.length - 1]!).px}
-          y={H - 8}
+          y={H - 10}
           textAnchor="middle"
-          className="fill-orange-600 dark:fill-orange-400"
-          style={{ fontSize: 11 }}
+          className="fill-orange-600"
+          style={{ fontSize: 14, fontWeight: 600 }}
         >
           stima
         </text>

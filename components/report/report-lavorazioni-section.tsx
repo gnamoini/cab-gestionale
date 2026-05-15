@@ -14,7 +14,7 @@ import {
   saveLavorazioniManualMonthMap,
   type LavorazioniManualMonthMap,
 } from "@/lib/report/lavorazioni-manual-storage";
-import { dsSectionTitle, dsSurfaceCard, dsTableRow, dsTableWrap, dsScrollbar, dsTypoSmall } from "@/lib/ui/design-system";
+import { dsSectionTitle, dsSurfaceCard, dsTableWrap, dsScrollbar, dsTypoSmall } from "@/lib/ui/design-system";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"] as const;
 
@@ -28,13 +28,14 @@ function cellInFilter(y: number, m0: number, r: DateRange): boolean {
   return cellStart.getTime() <= r.end.getTime() && cellEnd.getTime() >= r.start.getTime();
 }
 
-function heatClass(v: number, rowMax: number): string {
-  if (rowMax <= 0 || v <= 0) return "bg-[var(--cab-surface)] dark:bg-[var(--cab-bg-app)]";
+/** Intensità valore su sfondo nero uniforme (nessun bianco in cella). */
+function heatTextClass(v: number, rowMax: number): string {
+  if (rowMax <= 0 || v <= 0) return "text-zinc-500";
   const t = Math.min(1, v / rowMax);
-  if (t > 0.85) return "bg-orange-100/90 dark:bg-orange-950/35";
-  if (t > 0.65) return "bg-orange-50/80 dark:bg-orange-950/20";
-  if (t > 0.45) return "bg-zinc-50 dark:bg-zinc-900/40";
-  return "bg-white dark:bg-zinc-950";
+  if (t > 0.85) return "text-orange-300 font-semibold";
+  if (t > 0.65) return "text-orange-200/95";
+  if (t > 0.45) return "text-zinc-200";
+  return "text-zinc-400";
 }
 
 /** Scala colore e best/worst coerenti con il periodo selezionato (evita “celle a caso” al cambio range). */
@@ -159,13 +160,13 @@ export function ReportLavorazioniSection({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.55fr)]">
         <div className="min-w-0">
-          <div className={`${dsTableWrap} ${dsScrollbar}`}>
-            <table className="w-full min-w-[720px] border-collapse text-left text-sm text-[color:var(--cab-text)]">
-              <thead className="sticky top-0 z-10 bg-[color:color-mix(in_srgb,var(--cab-surface-2)_96%,transparent)] text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)] shadow-[inset_0_-1px_0_0_var(--cab-border)] backdrop-blur-sm sm:text-xs">
+          <div className={`${dsTableWrap} ${dsScrollbar} overflow-hidden rounded-[var(--ds-radius-xl)] border border-zinc-800 bg-black`}>
+            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-orange-500 text-white shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.12)]">
                 <tr className="h-14">
                   <th
                     scope="col"
-                    className="min-w-[3.5rem] border-b border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] px-2 py-2 text-center align-middle tabular-nums"
+                    className="min-w-[3.5rem] border-b border-orange-600/90 px-2 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-white sm:text-xs"
                   >
                     Anno
                   </th>
@@ -174,21 +175,21 @@ export function ReportLavorazioniSection({
                       key={`h-${mi}-${lab}`}
                       scope="col"
                       title={lab}
-                      className="min-w-[2.5rem] border-b border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] px-1 py-2 text-center align-middle"
+                      className="min-w-[2.5rem] border-b border-orange-600/90 px-1 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-white sm:text-xs"
                     >
                       {lab}
                     </th>
                   ))}
                   <th
                     scope="col"
-                    className="min-w-[3.5rem] border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface-2))] px-2 py-2 text-center align-middle text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text)]"
+                    className="min-w-[3.5rem] border-b border-orange-600/90 px-2 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-white sm:text-xs"
                   >
                     Totale
                   </th>
                   <th
                     scope="col"
                     title="Variazione percentuale rispetto all'anno precedente"
-                    className="min-w-[3.5rem] border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface-2))] px-2 py-2 text-center align-middle text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text)]"
+                    className="min-w-[3.5rem] border-b border-orange-600/90 px-2 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-white sm:text-xs"
                   >
                     Vs prec.
                   </th>
@@ -198,31 +199,31 @@ export function ReportLavorazioniSection({
                 {rows.map((row) => {
                   const hm = heatByYear.get(row.year)!;
                   return (
-                    <tr key={row.year} className={`h-12 ${dsTableRow}`}>
-                      <td className="border-r border-zinc-100 bg-zinc-50/80 px-2 py-2 text-center align-middle text-sm font-semibold tabular-nums text-zinc-900 dark:border-zinc-800 dark:bg-zinc-900/40 dark:text-zinc-50">
+                    <tr key={row.year} className="h-12 border-b border-zinc-800/90 transition-colors hover:bg-zinc-950">
+                      <td className="border-r border-zinc-800 bg-black px-2 py-2 text-center align-middle text-sm font-semibold tabular-nums text-zinc-100">
                         {row.year}
                       </td>
                       {row.months.map((v, mi) => {
                         const inF = cellInFilter(row.year, mi, filterRange);
-                        const heat = heatClass(v, hm.rowMax);
+                        const heatTxt = heatTextClass(v, hm.rowMax);
                         const isBest = inF && hm.bestMi === mi && v > 0;
                         const isWorst = inF && hm.worstMi === mi && v > 0 && hm.worstMi !== hm.bestMi;
                         return (
                           <td
                             key={`${row.year}-${mi}`}
-                            className={`border-r border-zinc-100 px-0.5 py-2 text-center align-middle text-sm tabular-nums leading-tight text-zinc-900 dark:border-zinc-800 dark:text-zinc-50 ${heat} ${
-                              isBest ? "ring-1 ring-inset ring-emerald-500/50" : ""
-                            } ${isWorst ? "ring-1 ring-inset ring-rose-500/45" : ""}`}
+                            className={`border-r border-zinc-800 bg-black px-0.5 py-2 text-center align-middle text-sm tabular-nums leading-tight ${heatTxt} ${
+                              isBest ? "ring-1 ring-inset ring-emerald-500/55" : ""
+                            } ${isWorst ? "ring-1 ring-inset ring-rose-500/50" : ""}`}
                             title={`${ymKey(row.year, mi)}: ${v}`}
                           >
                             <span className={inF ? "" : "opacity-40"}>{v > 0 ? v : "—"}</span>
                           </td>
                         );
                       })}
-                      <td className="border-l border-zinc-200 bg-orange-50/40 px-2 py-2 text-center align-middle text-sm font-semibold tabular-nums text-zinc-900 dark:border-zinc-800 dark:bg-orange-950/25 dark:text-zinc-50">
+                      <td className="border-l border-zinc-800 bg-black px-2 py-2 text-center align-middle text-sm font-semibold tabular-nums text-orange-200">
                         {row.total}
                       </td>
-                      <td className="border-l border-zinc-200 bg-orange-50/40 px-2 py-2 text-center align-middle text-sm font-semibold tabular-nums text-zinc-900 dark:border-zinc-800 dark:bg-orange-950/25 dark:text-zinc-50">
+                      <td className="border-l border-zinc-800 bg-black px-2 py-2 text-center align-middle text-sm font-semibold tabular-nums text-orange-200">
                         {row.growthVsPrevPct == null ? "—" : `${row.growthVsPrevPct > 0 ? "+" : ""}${row.growthVsPrevPct}%`}
                       </td>
                     </tr>

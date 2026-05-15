@@ -28,6 +28,14 @@ export function IconNavDashboard(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconNavSecurity(props: SVGProps<SVGSVGElement>) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+    </SvgIcon>
+  );
+}
+
 export function IconNavLavorazioni(props: SVGProps<SVGSVGElement>) {
   return (
     <SvgIcon {...props}>
@@ -109,6 +117,7 @@ export const GESTIONALE_NAV = [
   { href: "/bunder", label: "BUNDER", Icon: IconNavBunder },
   { href: "/report", label: "Report", Icon: IconNavReport },
   { href: "/supporto", label: "Supporto", Icon: IconNavSupporto },
+  { href: "/dashboard/security", label: "Sicurezza", Icon: IconNavSecurity },
 ] as const;
 
 export type GestionaleNavHref = (typeof GESTIONALE_NAV)[number]["href"];
@@ -121,18 +130,26 @@ export type GestionaleNavResolvedItem = {
   badge: string | null;
 };
 
-/** Nav risolta: in staging pubblico alcune voci sono disabilitate con badge. */
-export function resolveGestionaleNav(): GestionaleNavResolvedItem[] {
+export type ResolveGestionaleNavOptions = {
+  /** Se true, la voce non viene mostrata nel menu (oltre a staging disabled). */
+  hideHref?: (href: GestionaleNavHref) => boolean;
+};
+
+/** Nav risolta: in staging pubblico alcune voci sono disabilitate con badge; opzionale filtro permessi. */
+export function resolveGestionaleNav(opts?: ResolveGestionaleNavOptions): GestionaleNavResolvedItem[] {
   const staging = isStagingPublicSlice();
   const safe = new Set<string>(STAGING_SAFE_HREFS);
-  return GESTIONALE_NAV.map((item) => {
-    const disabled = staging && !safe.has(item.href);
-    return {
-      href: item.href,
-      label: item.label,
-      Icon: item.Icon,
-      disabled,
-      badge: disabled ? STAGING_MODULE_BADGE : null,
-    };
+  return GESTIONALE_NAV.flatMap((item) => {
+    if (opts?.hideHref?.(item.href)) return [];
+    const stagingDisabled = staging && !safe.has(item.href);
+    return [
+      {
+        href: item.href,
+        label: item.label,
+        Icon: item.Icon,
+        disabled: stagingDisabled,
+        badge: stagingDisabled ? STAGING_MODULE_BADGE : null,
+      },
+    ];
   });
 }

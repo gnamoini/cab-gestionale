@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { MezziFilters } from "@/components/gestionale/mezzi/mezzi-filters";
+import { MezziSearchBar, MezziFilterFields } from "@/components/gestionale/mezzi/mezzi-filters";
 import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-detail-modal";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -12,14 +12,14 @@ import {
   erpBtnAccent,
   erpBtnNeutral,
   erpBtnNuovaLavorazione,
-  erpBtnSoftOrange,
   erpFocus,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { compareMezzi, interventiUltimi12Mesi, mediaGiorniFermoInterventi, ultimoInterventoIso } from "@/lib/mezzi/mezzi-helpers";
+import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
+import { compareMezzi } from "@/lib/mezzi/mezzi-helpers";
 import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
-import { MEZZI_OGGI_DEMO, type MezzoGestito, type MezzoInterventoLavorazione, type MezziSortKey, type MezziSortPhase } from "@/lib/mezzi/types";
-import { dsPageToolbarBtn, dsStackPage, dsScrollbar, dsTable, dsTableHead, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
+import { dsInput, dsPageToolbarBtn, dsStackPage, dsStickyToolbar } from "@/lib/ui/design-system";
 import {
   GestionaleLogChangeList,
   GestionaleLogEmpty,
@@ -41,24 +41,7 @@ import {
 } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
-
-function formatItDateTime(iso: string) {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString("it-IT", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-function displayIdent(s: string) {
-  const t = s?.trim();
-  return t && t !== "—" ? t : "—";
-}
+import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 
 function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
   return a.id.localeCompare(b.id, "en");
@@ -73,25 +56,26 @@ function getEmptyNuovo() {
     targa: "",
     matricola: "",
     numeroScuderia: "",
-    anno: String(new Date().getFullYear()),
+    anno: "",
   };
 }
 
 function gestitoToForm(m: MezzoGestito) {
   return {
-    cliente: m.cliente,
-    utilizzatore: m.utilizzatore === "—" ? "" : m.utilizzatore,
-    marca: m.marca,
-    modello: m.modello === "—" ? "" : m.modello,
-    targa: m.targa === "—" ? "" : m.targa,
-    matricola: m.matricola === "—" ? "" : m.matricola,
-    numeroScuderia: m.numeroScuderia ?? "",
-    anno: String(m.anno),
+    cliente: m.cliente.trim(),
+    utilizzatore: m.utilizzatore === "—" ? "" : m.utilizzatore.trim(),
+    marca: m.marca.trim(),
+    modello: m.modello === "—" ? "" : m.modello.trim(),
+    targa: m.targa === "—" ? "" : m.targa.trim(),
+    matricola: m.matricola === "—" ? "" : m.matricola.trim(),
+    numeroScuderia: (m.numeroScuderia ?? "").trim(),
+    anno: m.anno != null ? String(m.anno) : "",
   };
 }
 
 function formToMezzoInsert(f: ReturnType<typeof getEmptyNuovo>): MezzoInsert {
-  const anno = Math.max(1980, Math.min(2035, parseInt(f.anno, 10) || new Date().getFullYear()));
+  const annoParsed = parseInt(f.anno, 10);
+  const anno = Math.max(1980, Math.min(2035, Number.isFinite(annoParsed) ? annoParsed : new Date().getFullYear()));
   return {
     cliente: f.cliente.trim(),
     utilizzatore: f.utilizzatore.trim() || null,
@@ -119,6 +103,7 @@ export function MezziView() {
   const [filtroModello, setFiltroModello] = useState("");
   const [filtroTarga, setFiltroTarga] = useState("");
   const [filtroNumeroScuderia, setFiltroNumeroScuderia] = useState("");
+  const [filtriEspansi, setFiltriEspansi] = useState(false);
 
   const serviceFilters = useMemo((): MezzoFilters => {
     return {
@@ -181,6 +166,14 @@ export function MezziView() {
     return rows;
   }, [mezziUi, sortColumn, sortPhase]);
 
+  const hasMezziFilters =
+    search.trim().length > 0 ||
+    filtroCliente.trim().length > 0 ||
+    filtroMarca.trim().length > 0 ||
+    filtroModello.trim().length > 0 ||
+    filtroTarga.trim().length > 0 ||
+    filtroNumeroScuderia.trim().length > 0;
+
   const listPageSize = useResponsiveListPageSize();
   const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(sorted.length, listPageSize);
   const mezziFilterKey = `${search}|${filtroCliente}|${filtroMarca}|${filtroModello}|${filtroTarga}|${filtroNumeroScuderia}|${sortColumn ?? ""}|${sortPhase}`;
@@ -192,8 +185,6 @@ export function MezziView() {
   const pagedSorted = useMemo(() => sliceItems(sorted), [sliceItems, sorted, page]);
 
   const [hubMezzo, setHubMezzo] = useState<MezzoGestito | null>(null);
-  const [storicoMezzo, setStoricoMezzo] = useState<MezzoGestito | null>(null);
-  const [storicoSortDesc, setStoricoSortDesc] = useState(true);
   const [nuovoOpen, setNuovoOpen] = useState(false);
   const [nuovoForm, setNuovoForm] = useState(getEmptyNuovo);
   const [editMezzo, setEditMezzo] = useState<MezzoGestito | null>(null);
@@ -237,7 +228,6 @@ export function MezziView() {
   const focusMezzoInTable = useCallback(
     (id: string) => {
       setHubMezzo(null);
-      setStoricoMezzo(null);
       setEditMezzo(null);
       setNuovoOpen(false);
       setFiltroCliente("");
@@ -246,6 +236,7 @@ export function MezziView() {
       setFiltroTarga("");
       setFiltroNumeroScuderia("");
       setSearch("");
+      setFiltriEspansi(false);
       setLogOpen(false);
       flashRow(id);
       requestAnimationFrame(() => {
@@ -257,13 +248,23 @@ export function MezziView() {
     [flashRow],
   );
 
+  function resetMezziToolbarFilters() {
+    setSearch("");
+    setFiltroCliente("");
+    setFiltroMarca("");
+    setFiltroModello("");
+    setFiltroTarga("");
+    setFiltroNumeroScuderia("");
+    setFiltriEspansi(false);
+  }
+
   useEffect(() => {
     return () => {
       if (flashClearRef.current) clearTimeout(flashClearRef.current);
     };
   }, []);
 
-  const anyOverlay = Boolean(hubMezzo || storicoMezzo || nuovoOpen || editMezzo || logOpen);
+  const anyOverlay = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen);
   useEffect(() => {
     const id = searchParams.get(Q_FOCUS_MEZZO)?.trim();
     if (!id) return;
@@ -295,7 +296,6 @@ export function MezziView() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       setHubMezzo(null);
-      setStoricoMezzo(null);
       setNuovoOpen(false);
       setEditMezzo(null);
       setLogOpen(false);
@@ -303,27 +303,6 @@ export function MezziView() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [anyOverlay]);
-
-  const storicoRows = useMemo(() => {
-    if (!storicoMezzo) return [];
-    const rows = [...(interventiByMezzoId.get(storicoMezzo.id) ?? [])];
-    rows.sort((a, b) => {
-      const ta = new Date(a.dataIngresso).getTime();
-      const tb = new Date(b.dataIngresso).getTime();
-      return storicoSortDesc ? tb - ta : ta - tb;
-    });
-    return rows;
-  }, [storicoMezzo, interventiByMezzoId, storicoSortDesc]);
-
-  const storicoRiepilogo = useMemo(() => {
-    if (!storicoMezzo) return null;
-    const rows = interventiByMezzoId.get(storicoMezzo.id) ?? [];
-    return {
-      n12: interventiUltimi12Mesi(rows, MEZZI_OGGI_DEMO),
-      mediaFermo: mediaGiorniFermoInterventi(rows),
-      ultimo: ultimoInterventoIso(rows),
-    };
-  }, [storicoMezzo, interventiByMezzoId]);
 
   function submitNuovo(e: React.FormEvent) {
     e.preventDefault();
@@ -387,36 +366,96 @@ export function MezziView() {
 
       <div className={dsStackPage}>
         <ShellCard title="Parco mezzi">
-          <div className="mb-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-nowrap sm:items-center sm:justify-between">
-            <button
-              type="button"
-              onClick={() => {
-                setNuovoForm(getEmptyNuovo());
-                setNuovoOpen(true);
-              }}
-              className={`${erpBtnNuovaLavorazione} shrink-0`}
-            >
-              <span className="text-lg font-bold leading-none" aria-hidden>
-                +
-              </span>
-              Nuovo mezzo
-            </button>
-          </div>
+          <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
+            <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNuovoForm(getEmptyNuovo());
+                    setNuovoOpen(true);
+                  }}
+                  className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
+                >
+                  <span className="text-lg font-bold leading-none" aria-hidden>
+                    +
+                  </span>
+                  Nuovo mezzo
+                </button>
+                <MezziSearchBar search={search} onSearch={setSearch} wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]" />
+                <button
+                  type="button"
+                  onClick={() => setFiltriEspansi((o) => !o)}
+                  className={`${dsPageToolbarBtn} relative h-11 min-w-[8.25rem] shrink-0 gap-2 px-3 text-sm sm:ml-auto`}
+                  aria-expanded={filtriEspansi}
+                >
+                  Filtri
+                  <svg
+                    className={`h-4 w-4 shrink-0 text-[color:var(--cab-primary)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${filtriEspansi ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                  {hasMezziFilters ? (
+                    <span
+                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]"
+                      title="Filtri attivi"
+                      aria-hidden
+                    />
+                  ) : null}
+                </button>
+              </div>
+              <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                  <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
+                    <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{sorted.length}</span>
+                    <span>risultat{sorted.length === 1 ? "o" : "i"}</span>
+                  </span>
+                  {hasMezziFilters ? (
+                    <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
+                      Filtri attivi
+                    </span>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <button type="button" className={dsPageToolbarBtn} onClick={() => setSearch("")}>
+                    Pulisci ricerca
+                  </button>
+                  <button type="button" className={dsPageToolbarBtn} onClick={resetMezziToolbarFilters}>
+                    Reimposta filtri
+                  </button>
+                </div>
+              </div>
+            </div>
 
-          <MezziFilters
-            search={search}
-            onSearch={setSearch}
-            filtroCliente={filtroCliente}
-            onFiltroCliente={setFiltroCliente}
-            filtroMarca={filtroMarca}
-            onFiltroMarca={setFiltroMarca}
-            filtroModello={filtroModello}
-            onFiltroModello={setFiltroModello}
-            filtroTarga={filtroTarga}
-            onFiltroTarga={setFiltroTarga}
-            filtroNumeroScuderia={filtroNumeroScuderia}
-            onFiltroNumeroScuderia={setFiltroNumeroScuderia}
-          />
+            <div
+              className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+                filtriEspansi ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              }`}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div className="border-t border-[color:var(--cab-border)] pt-3" aria-label="Filtri mezzi">
+                  <MezziFilterFields
+                    embedded
+                    filtroCliente={filtroCliente}
+                    onFiltroCliente={setFiltroCliente}
+                    filtroMarca={filtroMarca}
+                    onFiltroMarca={setFiltroMarca}
+                    filtroModello={filtroModello}
+                    onFiltroModello={setFiltroModello}
+                    filtroTarga={filtroTarga}
+                    onFiltroTarga={setFiltroTarga}
+                    filtroNumeroScuderia={filtroNumeroScuderia}
+                    onFiltroNumeroScuderia={setFiltroNumeroScuderia}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
 
           {mezziError ? (
             <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
@@ -440,7 +479,6 @@ export function MezziView() {
                 onSort={onSort}
                 flashRowId={flashRowId}
                 onHub={setHubMezzo}
-                onStorico={setStoricoMezzo}
               />
             )}
           </div>
@@ -461,11 +499,6 @@ export function MezziView() {
             setHubMezzo(null);
             setEditMezzo(h);
             setEditForm(gestitoToForm(h));
-          }}
-          onOpenStoricoLavorazioni={() => {
-            const h = hubMezzo;
-            setHubMezzo(null);
-            setStoricoMezzo(h);
           }}
         />
       ) : null}
@@ -523,113 +556,6 @@ export function MezziView() {
         </div>
       ) : null}
 
-      {storicoMezzo ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setStoricoMezzo(null);
-          }}
-        >
-          <div
-            className="flex max-h-[min(92vh,760px)] w-full max-w-4xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="mezzo-storico-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-              <h2 id="mezzo-storico-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Storico interventi —{" "}
-                {displayIdent(storicoMezzo.targa) !== "—"
-                  ? storicoMezzo.targa
-                  : [storicoMezzo.marca, displayIdent(storicoMezzo.modello)].filter((x) => x && x !== "—").join(" ") || "Mezzo"}
-              </h2>
-              <button type="button" className={erpBtnNeutral} onClick={() => setStoricoMezzo(null)}>
-                Chiudi
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-              {storicoRiepilogo ? (
-                <div className="mb-4 grid gap-2 rounded-lg border border-zinc-200 bg-zinc-50/80 p-3 text-xs dark:border-zinc-700 dark:bg-zinc-800/40 sm:grid-cols-3">
-                  <div>
-                    <p className="font-semibold uppercase tracking-wide text-zinc-500">Ultimi 12 mesi</p>
-                    <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">{storicoRiepilogo.n12}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold uppercase tracking-wide text-zinc-500">Media giorni fermo</p>
-                    <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
-                      {storicoRiepilogo.mediaFermo ?? "—"}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="font-semibold uppercase tracking-wide text-zinc-500">Ultimo intervento</p>
-                    <p className="mt-0.5 font-medium text-zinc-800 dark:text-zinc-200">
-                      {storicoRiepilogo.ultimo ? formatItDateTime(storicoRiepilogo.ultimo) : "—"}
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-semibold uppercase text-zinc-500">Ordina per data ingresso</span>
-                <button type="button" onClick={() => setStoricoSortDesc((v) => !v)} className={erpBtnNeutral}>
-                  {storicoSortDesc ? "Più recente prima" : "Più vecchio prima"}
-                </button>
-                <button type="button" className={`${erpBtnSoftOrange} ml-auto`} onClick={() => focusMezzoInTable(storicoMezzo.id)}>
-                  Vai al mezzo in tabella
-                </button>
-              </div>
-              <div className={`${dsTableWrap} ${dsScrollbar}`}>
-                <table className={`${dsTable} w-full min-w-[880px] text-left text-xs text-zinc-900 dark:text-zinc-100`}>
-                  <thead className={`border-b border-zinc-200 dark:border-zinc-700 ${dsTableHead}`}>
-                    <tr>
-                      <th className="px-2 py-2 font-semibold uppercase tracking-wide text-zinc-500">Ingresso</th>
-                      <th className="px-2 py-2 font-semibold uppercase tracking-wide text-zinc-500">Completamento</th>
-                      <th className="px-2 py-2 font-semibold uppercase tracking-wide text-zinc-500">Durata</th>
-                      <th className="px-2 py-2 font-semibold uppercase tracking-wide text-zinc-500">Tipo / note</th>
-                      <th className="px-2 py-2 font-semibold uppercase tracking-wide text-zinc-500">Priorità</th>
-                      <th className="px-2 py-2 font-semibold uppercase tracking-wide text-zinc-500">Stato</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {storicoRows.length === 0 ? (
-                      <tr className={dsTableRow}>
-                        <td colSpan={6} className="px-2 py-6 text-center text-zinc-500">
-                          Nessun intervento collegato in Lavorazioni.
-                        </td>
-                      </tr>
-                    ) : (
-                      storicoRows.map((r) => (
-                        <tr key={r.id} className={dsTableRow}>
-                          <td className="whitespace-nowrap px-2 py-2 align-top font-mono text-[11px]">
-                            <button
-                              type="button"
-                              className={`text-left font-medium text-orange-700 underline-offset-2 hover:underline dark:text-orange-300 ${erpFocus}`}
-                              onClick={() => focusMezzoInTable(storicoMezzo.id)}
-                            >
-                              {formatItDateTime(r.dataIngresso)}
-                            </button>
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 align-top font-mono text-[11px]">
-                            {r.dataCompletamento ? formatItDateTime(r.dataCompletamento) : "—"}
-                          </td>
-                          <td className="px-2 py-2 align-top tabular-nums">{r.durataGiorniLabel}</td>
-                          <td className="max-w-[260px] px-2 py-2 align-top">
-                            <div className="font-medium">{r.tipoIntervento}</div>
-                            <div className="mt-0.5 text-zinc-600 dark:text-zinc-400">{r.descrizione}</div>
-                          </td>
-                          <td className="px-2 py-2 align-top">{r.prioritaLabel}</td>
-                          <td className="px-2 py-2 align-top">{r.statoFinale}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
       {nuovoOpen ? (
         <div
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
@@ -654,7 +580,7 @@ export function MezziView() {
             </div>
             <form onSubmit={submitNuovo} className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-4">
-                <MezzoFormFields form={nuovoForm} setForm={setNuovoForm} />
+                <MezzoFormFields form={nuovoForm} setForm={setNuovoForm} variant="nuovo" />
               </div>
               <div className="shrink-0 border-t border-zinc-100 p-4 dark:border-zinc-800">
                 <button type="submit" disabled={createMut.isPending} className={`${erpBtnAccent} w-full disabled:opacity-60`}>
@@ -690,7 +616,7 @@ export function MezziView() {
             </div>
             <form onSubmit={submitEdit} className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-4">
-                <MezzoFormFields form={editForm} setForm={setEditForm} />
+                <MezzoFormFields form={editForm} setForm={setEditForm} variant="modifica" />
               </div>
               <div className="shrink-0 border-t border-zinc-100 p-4 dark:border-zinc-800">
                 <button type="submit" disabled={updateMut.isPending} className={`${erpBtnAccent} w-full disabled:opacity-60`}>
@@ -707,44 +633,135 @@ export function MezziView() {
 
 type MezzoForm = ReturnType<typeof getEmptyNuovo>;
 
+function sortedUniqueStrings(list: string[]): string[] {
+  return [...new Set(list.map((s) => s.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
+}
+
 function MezzoFormFields({
   form,
   setForm,
+  variant,
 }: {
   form: MezzoForm;
   setForm: React.Dispatch<React.SetStateAction<MezzoForm>>;
+  variant: "nuovo" | "modifica";
 }) {
-  const input =
-    "mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950";
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const liste = settingsPayload?.resolved.mezziListe;
+
+  const clientiBase = useMemo(() => sortedUniqueStrings(liste?.clienti ?? []), [liste]);
+  const marcheBase = useMemo(() => sortedUniqueStrings(liste?.marche ?? []), [liste]);
+
+  const clientiOpts = useMemo(() => {
+    if (variant === "nuovo") return clientiBase;
+    const c = form.cliente.trim();
+    if (c && !clientiBase.includes(c)) return [c, ...clientiBase];
+    return clientiBase;
+  }, [variant, clientiBase, form.cliente]);
+
+  const marcheOpts = useMemo(() => {
+    if (variant === "nuovo") return marcheBase;
+    const m = form.marca.trim();
+    if (m && !marcheBase.includes(m)) return [m, ...marcheBase];
+    return marcheBase;
+  }, [variant, marcheBase, form.marca]);
+
+  const modelliPerMarca = useMemo(() => {
+    if (!liste || !form.marca.trim()) return [] as string[];
+    return modelliVisibiliPerMarca(liste, form.marca.trim());
+  }, [liste, form.marca]);
+
+  const modelliOpts = useMemo(() => {
+    if (!form.marca.trim()) return [] as string[];
+    if (variant === "nuovo") return modelliPerMarca;
+    const mo = form.modello.trim();
+    if (mo && !modelliPerMarca.includes(mo)) return [mo, ...modelliPerMarca];
+    return modelliPerMarca;
+  }, [variant, form.marca, form.modello, modelliPerMarca]);
+
+  useEffect(() => {
+    if (!form.marca.trim() && form.modello.trim()) {
+      setForm((f) => ({ ...f, modello: "" }));
+    }
+  }, [form.marca, form.modello, setForm]);
+
+  useEffect(() => {
+    if (variant !== "nuovo" || !liste) return;
+    const allowed = modelliVisibiliPerMarca(liste, form.marca.trim());
+    const m = form.modello.trim();
+    if (m && form.marca.trim() && !allowed.includes(m)) {
+      setForm((f) => ({ ...f, modello: "" }));
+    }
+  }, [variant, liste, form.marca, form.modello, setForm]);
+
+  const selectClass = `mt-1 block w-full min-h-[2.75rem] py-0 ${dsInput}`;
+  const modelloDisabled = !form.marca.trim() || modelliOpts.length === 0;
+
+  const clienteValue = clientiOpts.find((x) => x === form.cliente.trim()) ?? "";
+  const marcaValue = marcheOpts.find((x) => x === form.marca.trim()) ?? "";
+  const modelloValue = modelloDisabled ? "" : (modelliOpts.find((x) => x === form.modello.trim()) ?? "");
+
+  if (!liste) {
+    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Caricamento impostazioni…</p>;
+  }
+
   return (
     <>
       <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
         Cliente *
-        <input
+        <select
           required
-          value={form.cliente}
+          value={clienteValue}
           onChange={(e) => setForm((f) => ({ ...f, cliente: e.target.value }))}
-          className={input}
-          placeholder="Ragione sociale o nome"
-        />
+          className={selectClass}
+        >
+          <option value="">Seleziona cliente</option>
+          {clientiOpts.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
         Utilizzatore
-        <input value={form.utilizzatore} onChange={(e) => setForm((f) => ({ ...f, utilizzatore: e.target.value }))} className={input} />
+        <input value={form.utilizzatore} onChange={(e) => setForm((f) => ({ ...f, utilizzatore: e.target.value }))} className={`${dsInput} mt-1`} />
       </label>
       <div className="grid grid-cols-2 gap-2">
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Marca *
-          <input
+          <select
             required
-            value={form.marca}
-            onChange={(e) => setForm((f) => ({ ...f, marca: e.target.value }))}
-            className={input}
-          />
+            value={marcaValue}
+            onChange={(e) => {
+              const marca = e.target.value;
+              setForm((f) => ({ ...f, marca, modello: "" }));
+            }}
+            className={selectClass}
+          >
+            <option value="">Seleziona marca</option>
+            {marcheOpts.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
         </label>
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Modello
-          <input value={form.modello} onChange={(e) => setForm((f) => ({ ...f, modello: e.target.value }))} className={input} />
+          <select
+            value={modelloValue}
+            onChange={(e) => setForm((f) => ({ ...f, modello: e.target.value }))}
+            disabled={modelloDisabled}
+            className={`${selectClass} disabled:cursor-not-allowed disabled:opacity-60`}
+          >
+            <option value="">{form.marca.trim() ? (modelliOpts.length ? "Seleziona modello" : "Nessun modello per questa marca") : "Seleziona prima la marca"}</option>
+            {modelliOpts.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -753,8 +770,7 @@ function MezzoFormFields({
           <input
             value={form.targa}
             onChange={(e) => setForm((f) => ({ ...f, targa: e.target.value }))}
-            className={`${input} font-mono`}
-            placeholder="—"
+            className={`${dsInput} mt-1 font-mono`}
           />
         </label>
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -763,7 +779,7 @@ function MezzoFormFields({
             required
             value={form.matricola}
             onChange={(e) => setForm((f) => ({ ...f, matricola: e.target.value }))}
-            className={`${input} font-mono`}
+            className={`${dsInput} mt-1 font-mono`}
           />
         </label>
       </div>
@@ -772,13 +788,19 @@ function MezzoFormFields({
         <input
           value={form.numeroScuderia}
           onChange={(e) => setForm((f) => ({ ...f, numeroScuderia: e.target.value }))}
-          className={`${input} font-mono`}
-          placeholder="—"
+          className={`${dsInput} mt-1 font-mono`}
         />
       </label>
       <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
         Anno
-        <input type="number" min={1980} max={2035} value={form.anno} onChange={(e) => setForm((f) => ({ ...f, anno: e.target.value }))} className={input} />
+        <input
+          type="number"
+          min={1980}
+          max={2035}
+          value={form.anno}
+          onChange={(e) => setForm((f) => ({ ...f, anno: e.target.value }))}
+          className={`${dsInput} mt-1`}
+        />
       </label>
     </>
   );

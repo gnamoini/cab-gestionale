@@ -3,7 +3,7 @@ import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortP
 import { MEZZI_OGGI_DEMO } from "@/lib/mezzi/types";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
-import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
+import { Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
 import { Q_PREVENTIVI_MEZZO } from "@/lib/preventivi/preventivi-query";
 
 export function mezzoMatchesSearch(m: MezzoGestito, q: string): boolean {
@@ -67,7 +67,7 @@ export function hrefDocumentiPerMezzo(m: MezzoGestito): string {
 
 export function hrefLavorazioniPerMezzo(m: MezzoGestito): string {
   const sp = new URLSearchParams();
-  sp.set(Q_FOCUS_MEZZO, m.id);
+  sp.set(Q_LAVORAZIONI_MEZZO_ID, m.id);
   return `/lavorazioni?${sp.toString()}`;
 }
 

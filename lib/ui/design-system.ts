@@ -64,6 +64,9 @@ export const dsBtnDanger = `inline-flex items-center justify-center gap-1.5 roun
 /** F — Input su sfondo chiaro (form gestionale) */
 export const dsInput = `w-full rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} px-3 py-2.5 text-sm ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-[color:var(--cab-text-muted)] hover:border-[color:var(--cab-border-strong)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] ${dsFocus}`;
 
+/** F — Campo ricerca toolbar (icona a sinistra, `min-h-11`, stessi token di `dsInput`). */
+export const dsSearchFieldInput = `w-full min-h-11 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} py-0 pl-10 pr-3 text-sm ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-[color:var(--cab-text-muted)] hover:border-[color:var(--cab-border-strong)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] ${dsFocus}`;
+
 export const dsTextarea = `${dsInput} min-h-[5.5rem] resize-y`;
 
 /** F — Login / campi su tema scuro */
@@ -73,8 +76,9 @@ export const dsInputAuth = `w-full rounded-[var(--ds-radius-lg)] border border-[
 const selectChevronWhite =
   "bg-[length:1.15rem] bg-[right_0.55rem_center] bg-no-repeat bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f4f4f5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E\")]";
 
+/** Chevron accent filtri — stesso stroke (#f97316) in light e dark (allineato alla light). */
 const gestionaleSelectChevronAccent =
-  "bg-[length:1.1rem] bg-[right_0.55rem_center] bg-no-repeat bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f97316'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E\")] dark:bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23fb923c'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E\")]";
+  "bg-[length:1.1rem] bg-[right_0.55rem_center] bg-no-repeat bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f97316'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E\")]";
 
 export const selectLavorazioniInline =
   `lavorazioni-select-dk min-w-0 max-w-[11rem] h-10 cursor-pointer appearance-none rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border-strong)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_92%,#000)] py-2 pl-7 pr-8 text-xs font-medium text-[color:var(--cab-text)] shadow-md shadow-black/25 outline-none transition-all duration-200 ease-out hover:border-[color:var(--cab-border)] hover:brightness-[1.05] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_30%,transparent)] ${selectChevronWhite}`;
@@ -122,6 +126,50 @@ export const dsTableTd = `px-2 py-2.5 align-middle text-sm sm:px-3 ${cabText}`;
 
 /** Empty state riga tabella */
 export const dsTableEmptyCell = `px-3 py-8 text-center text-sm ${cabTextMuted}`;
+
+/** G — Celle corpo compatte (non colonna azioni). */
+export const dsTableTdCompact = `px-2 py-1.5 align-middle text-sm ${cabText}`;
+
+/** G — Colonna azioni: padding ridotto, contenuto senza a capo. */
+export const dsTableTdActions = "whitespace-nowrap px-1 py-1.5 align-middle text-right";
+
+/** G — Gruppo pulsanti azione su una sola riga (scroll orizzontale se stretto). */
+export const dsTableActionsGroup =
+  "inline-flex max-w-none min-w-0 flex-nowrap items-center justify-end gap-0.5 overflow-x-auto gestionale-scrollbar";
+
+/** Gruppo azioni allineato a sinistra (card mobile / toolbar secondaria). */
+export const dsTableActionsGroupStart =
+  "inline-flex max-w-none min-w-0 flex-nowrap items-center justify-start gap-0.5 overflow-x-auto gestionale-scrollbar";
+
+/** G — Icone outline nelle azioni tabella (24×24, stroke 2). */
+export const dsTableActionGlyph = "h-4 w-4 shrink-0 opacity-90";
+
+const dsTableActionSqBase =
+  `inline-flex h-9 w-9 min-h-9 min-w-9 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border p-0 shadow-[var(--cab-shadow-sm)] outline-none transition-[background-color,border-color,box-shadow,color,opacity] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${dsFocus}`;
+
+/** Azione primaria su riga (es. + scorta, salva rapido). */
+export const dsTableActionBtnPrimary = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:var(--cab-primary)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))]`;
+
+/** Azione secondaria / info / link (icona). */
+export const dsTableActionBtnSecondary = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} text-[color:var(--cab-text-muted)] hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)]`;
+
+/** Info / dettagli (stessa scatola neutra della secondaria). */
+export const dsTableActionBtnInfo = dsTableActionBtnSecondary;
+
+/** Annulla / undo (stessa scatola neutra; distinzione per icona). */
+export const dsTableActionBtnUndo = dsTableActionBtnSecondary;
+
+/** Azione distruttiva (elimina). */
+export const dsTableActionBtnDanger = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-danger)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))]`;
+
+/** Azione testuale su una riga (Modifica, Hub, …) — no wrap. */
+export const dsTableActionTextBtn = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} px-2.5 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[var(--cab-hover)] ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
+
+/** Azione testuale primaria (Modifica, Apri hub, …). */
+export const dsTableActionTextBtnPrimary = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-2.5 text-xs font-semibold text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-150 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
+
+/** Azione testuale distruttiva. */
+export const dsTableActionTextBtnDanger = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] px-2.5 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))] ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
 
 /** H — Card statica */
 export const dsSurfaceCard = `rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} shadow-[var(--cab-shadow-sm)]`;
@@ -198,6 +246,12 @@ export const dsCardTitle = dsTypoCardTitle;
 
 /** Stack verticale sotto `PageHeader` */
 export const dsStackPage = "space-y-[length:var(--ds-space-xl)]";
+
+/** Larghezza massima contenuto liste gestionale (allineata tra moduli). */
+export const dsGestionaleContentMax = "mx-auto w-full max-w-[min(100%,96rem)]";
+
+/** Placeholder unificato campi ricerca liste; dettaglio in `aria-label` per modulo. */
+export const GESTIONALE_SEARCH_PLACEHOLDER = "Cerca…";
 
 /** Toolbar sticky interna */
 export const dsStickyToolbar = `sticky top-0 z-[5] rounded-[var(--ds-radius-xl)] ${cabBorder} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_94%,transparent)] px-[length:var(--ds-space-md)] py-[length:var(--ds-space-md)] shadow-[var(--cab-shadow-sm)] backdrop-blur-md sm:px-[length:var(--ds-space-lg)]`;

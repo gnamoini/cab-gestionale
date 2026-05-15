@@ -1,14 +1,35 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { resolveGestionaleNav } from "@/components/gestionale/gestionale-nav-config";
+import { useAuth } from "@/context/auth-context";
+import { buildEffectivePermissionsByModule } from "@/src/lib/permissions/effective-permissions";
+import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
+import { useUserPermissionsQuery } from "@/src/hooks/use-permissions";
 import { dsSurfaceCard, dsTypoCardTitle } from "@/lib/ui/design-system";
 
 export function DashboardQuickNav() {
   const pathname = usePathname();
-  const items = resolveGestionaleNav().filter((item) => item.href !== "/supporto");
+  const { user } = useAuth();
+  const permQ = useUserPermissionsQuery();
+  const permMap = useMemo(
+    () => buildEffectivePermissionsByModule(user?.ruolo, permQ.data),
+    [user?.ruolo, permQ.data],
+  );
+  const items = useMemo(
+    () =>
+      resolveGestionaleNav({
+        hideHref: (href) => {
+          const m = gestionaleNavHrefToModule(href);
+          if (!m) return false;
+          return !permMap[m].canRead;
+        },
+      }).filter((item) => item.href !== "/supporto" && item.href !== "/dashboard/security"),
+    [permMap],
+  );
 
   return (
     <section className={`${dsSurfaceCard} p-4 sm:p-5`}>

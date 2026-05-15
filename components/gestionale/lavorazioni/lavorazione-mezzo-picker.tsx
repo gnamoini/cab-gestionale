@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { formatIdentificazioneMezzoLine, mezzoMatchesSmartQuery, type MezzoIdentificazioneParts } from "@/lib/mezzi/identificazione-mezzo";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneAttiva } from "@/lib/lavorazioni/types";
-import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import { dsBtnNeutral } from "@/lib/ui/design-system";
 
 function summarizeMezzo(m: MezzoGestito): string {
   const parts: MezzoIdentificazioneParts = {
@@ -61,12 +62,13 @@ export function LavorazioneMezzoPicker({
         Cerca per targa, matricola, scuderia, cliente, marca o modello. Seleziona per compilare i campi, oppure inserisci una nuova macchina manualmente.
       </p>
       <div className="mt-2 flex flex-wrap gap-2">
-        <input
-          className={`${dsInput} min-w-[12rem] flex-1 !text-sm`}
+        <GestionaleSearchField
+          wrapperClassName="min-w-[12rem] flex-1"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Cerca mezzo…"
           disabled={manual}
+          aria-label="Cerca mezzo in archivio"
         />
         <button type="button" className={`${dsBtnNeutral} shrink-0 text-xs`} onClick={goManual}>
           + Nuova macchina manuale
@@ -81,7 +83,7 @@ export function LavorazioneMezzoPicker({
               <li key={m.id}>
                 <button
                   type="button"
-                  className="w-full rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-orange-500/10 dark:hover:bg-orange-950/40"
+                  className="w-full rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-orange-500/10"
                   onClick={() => applyMezzo(m)}
                 >
                   <span className="font-medium text-zinc-900 dark:text-zinc-50">{summarizeMezzo(m)}</span>
@@ -92,7 +94,7 @@ export function LavorazioneMezzoPicker({
         </ul>
       ) : null}
       {manual ? (
-        <p className="mt-2 text-[11px] font-medium text-orange-700 dark:text-orange-300">Modalità manuale: compila i campi sottostanti.</p>
+        <p className="mt-2 text-[11px] font-medium text-orange-700">Modalità manuale: compila i campi sottostanti.</p>
       ) : null}
     </div>
   );

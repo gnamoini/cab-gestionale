@@ -2,14 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useAuth } from "@/context/auth-context";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
+import { buildEffectivePermissionsByModule } from "@/src/lib/permissions/effective-permissions";
+import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
+import { useUserPermissionsQuery } from "@/src/hooks/use-permissions";
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
+import { dsPageToolbarBtn } from "@/lib/ui/design-system";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
-import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 
 const SIDEBAR_COLLAPSED_KEY = "cab-sidebar-collapsed";
 
@@ -20,7 +23,7 @@ const navLinkInactive =
   "text-zinc-600 hover:bg-zinc-100/95 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/90 dark:hover:text-zinc-100";
 
 const navLinkActive =
-  "bg-orange-500/[0.12] text-orange-700 before:absolute before:left-0 before:top-1/2 before:h-8 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-orange-500 dark:bg-orange-500/15 dark:text-orange-300";
+  "bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_22%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-8 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[var(--cab-primary)] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-card))] dark:text-orange-100 dark:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,transparent)]";
 
 function NavLink({
   href,
@@ -46,7 +49,7 @@ function NavLink({
     <span
       className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-200 ${
         active && !disabled
-          ? "bg-orange-500/20 text-orange-600 dark:text-orange-400"
+          ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-surface-2))] text-[color:var(--cab-primary)]"
           : "bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200 group-hover:text-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:group-hover:bg-zinc-700 dark:group-hover:text-zinc-200"
       } ${disabled ? "opacity-60" : ""}`}
       aria-hidden
@@ -107,7 +110,7 @@ function AccountMenu({ compact }: { compact?: boolean }) {
     window.location.assign("/login");
   }
 
-  const initial = (user?.nome?.trim()?.charAt(0) ?? user?.username?.trim()?.charAt(0) ?? "?").toUpperCase();
+  const initial = (user?.nome?.trim()?.charAt(0) ?? user?.email?.trim()?.charAt(0) ?? "?").toUpperCase();
   const label = status === "loading" ? "…" : user?.nome ?? "Account";
 
   return (
@@ -115,17 +118,17 @@ function AccountMenu({ compact }: { compact?: boolean }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`flex max-w-[14rem] items-center gap-2 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-left text-xs shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800 ${erpFocus} ${compact ? "min-h-11" : ""}`}
+        className={`${dsPageToolbarBtn} h-11 max-w-[14rem] justify-start gap-2 px-2.5 py-0 text-left text-xs ${erpFocus}`}
         aria-expanded={open}
         aria-haspopup="menu"
       >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500 text-[11px] font-bold text-white">
           {initial}
         </span>
-        <span className={`min-w-0 flex-1 truncate font-medium text-zinc-800 dark:text-zinc-100 ${compact ? "max-md:sr-only" : ""}`}>
+        <span className={`min-w-0 flex-1 truncate font-medium text-[color:var(--cab-text)] ${compact ? "max-md:sr-only" : ""}`}>
           {label}
         </span>
-        <span className="shrink-0 text-zinc-400 max-md:sr-only" aria-hidden>
+        <span className="shrink-0 text-[color:var(--cab-text-muted)] max-md:sr-only" aria-hidden>
           ▾
         </span>
       </button>
@@ -136,7 +139,7 @@ function AccountMenu({ compact }: { compact?: boolean }) {
         >
           <div className="border-b border-zinc-100 px-3 py-2 dark:border-zinc-800">
             <p className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-50">{user?.nome ?? "Utente"}</p>
-            <p className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{user?.username ? `@${user.username}` : ""}</p>
+            <p className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{user?.email ? user.email : ""}</p>
           </div>
           <button
             type="button"
@@ -169,12 +172,12 @@ function SidebarAccountFooter() {
     <div className="border-t border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-950/40">
       <div className="flex items-center gap-2">
         <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-xs font-bold text-white">
-          {(user?.nome?.trim()?.charAt(0) ?? user?.username?.trim()?.charAt(0) ?? "?").toUpperCase()}
+          {(user?.nome?.trim()?.charAt(0) ?? user?.email?.trim()?.charAt(0) ?? "?").toUpperCase()}
         </span>
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-50">{nome}</p>
-          {user?.username ? (
-            <p className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">@{user.username}</p>
+          {user?.email ? (
+            <p className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{user.email}</p>
           ) : null}
         </div>
       </div>
@@ -229,13 +232,15 @@ function MobileNavRow({
       onClick={onClose}
       className={`flex min-h-[3.25rem] items-center gap-3 rounded-xl px-3 text-base font-semibold ${
         active
-          ? "bg-orange-500/15 text-orange-800 dark:text-orange-200"
+          ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-card))] text-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_28%,transparent)] dark:text-orange-50"
           : "text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
       } ${erpFocus}`}
     >
       <span
         className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-          active ? "bg-orange-500/25 text-orange-700 dark:text-orange-300" : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+          active
+            ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-card))] text-[color:var(--cab-primary)]"
+            : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
         }`}
         aria-hidden
       >
@@ -249,18 +254,24 @@ function MobileNavRow({
 function MobileNavDrawer({
   open,
   onClose,
+  navItems,
 }: {
   open: boolean;
   onClose: () => void;
+  navItems: GestionaleNavResolvedItem[];
 }) {
   const pathname = usePathname();
 
   useEffect(() => {
     if (!open) return;
+    const sb = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
     const prev = document.body.style.overflow;
+    const prevPad = document.body.style.paddingRight;
     document.body.style.overflow = "hidden";
+    if (sb > 0) document.body.style.paddingRight = `${sb}px`;
     return () => {
       document.body.style.overflow = prev;
+      document.body.style.paddingRight = prevPad;
     };
   }, [open]);
 
@@ -305,7 +316,7 @@ function MobileNavDrawer({
           </button>
         </div>
         <nav className="gestionale-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3" aria-label="Sezioni principali">
-          {resolveGestionaleNav().map((item) => (
+          {navItems.map((item) => (
             <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} />
           ))}
         </nav>
@@ -317,6 +328,24 @@ function MobileNavDrawer({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const { user } = useAuth();
+  const permQ = useUserPermissionsQuery();
+  const permMap = useMemo(
+    () => buildEffectivePermissionsByModule(user?.ruolo, permQ.data),
+    [user?.ruolo, permQ.data],
+  );
+  const navItems = useMemo(
+    () =>
+      resolveGestionaleNav({
+        hideHref: (href) => {
+          if (href === "/dashboard/security") return user?.ruolo !== "admin";
+          const m = gestionaleNavHrefToModule(href);
+          if (!m) return false;
+          return !permMap[m].canRead;
+        },
+      }),
+    [permMap],
+  );
 
   useEffect(() => {
     try {
@@ -386,7 +415,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           className="gestionale-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3"
           aria-label="Sezioni principali"
         >
-          {resolveGestionaleNav().map((item) => (
+          {navItems.map((item) => (
             <NavLink
               key={item.href}
               href={item.href}
@@ -404,7 +433,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className={`flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${mainPad}`}>
-        <header className="sticky top-0 z-30 grid h-14 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_88%,transparent)] px-2 backdrop-blur-md sm:px-4 md:flex md:justify-between md:gap-3">
+        <header className="sticky top-0 z-30 grid h-14 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_88%,transparent)] px-3 backdrop-blur-md sm:px-4 md:flex md:justify-between md:gap-3 md:px-5">
           <button
             type="button"
             className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] md:hidden dark:border-[color:var(--cab-border-strong)] ${erpFocus}`}
@@ -431,21 +460,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <span className="truncate text-sm font-semibold text-[color:var(--cab-text)]">Manutenzione</span>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 justify-self-end md:ml-auto">
+          <div className="flex shrink-0 items-center gap-2 justify-self-end md:ml-auto md:items-center">
             <ThemeToggle />
             <AccountMenu compact />
           </div>
         </header>
 
-        <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} />
+        <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} />
 
-        <main className="gestionale-scrollbar flex-1 overflow-auto p-4 md:p-6">
-          {!isSupabasePublicEnvConfigured() ? (
-            <div className="mb-4 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-100">
-              Configurazione server: impostare <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/60">NEXT_PUBLIC_SUPABASE_URL</code> e{" "}
-              <code className="rounded bg-amber-100/80 px-1 dark:bg-amber-900/60">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> per il collegamento al database.
-            </div>
-          ) : null}
+        <main className="gestionale-scrollbar mx-auto w-full max-w-[min(100%,96rem)] flex-1 overflow-auto px-3 py-4 sm:px-4 md:px-5 md:py-5">
           {children}
         </main>
       </div>
