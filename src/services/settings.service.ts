@@ -6,6 +6,7 @@
  */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -125,6 +126,8 @@ export const settingsService = {
 
   async upsertSetting(input: AppSettingsUpsertInput): Promise<ServiceResult<AppSettingRow>> {
     try {
+      const allowed = await ensurePermission("manageSettings");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       return applyAppSettingsUpsert(c, input);
     } catch (e) {
@@ -135,6 +138,8 @@ export const settingsService = {
   async bulkUpsertSettings(inputs: AppSettingsUpsertInput[]): Promise<ServiceResult<AppSettingRow[]>> {
     try {
       if (inputs.length === 0) return success([]);
+      const allowed = await ensurePermission("manageSettings");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const out: AppSettingRow[] = [];
       for (const input of inputs) {

@@ -12,6 +12,7 @@ import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable,
 import { migrateMezziListePrefs, modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
 
 function cloneRecord(p: PreventivoRecord): PreventivoRecord {
   return JSON.parse(JSON.stringify(p)) as PreventivoRecord;
@@ -99,6 +100,8 @@ export function PreventiviEditorModal({
   }, [draft, applyTotals]);
 
   const marcheEditorOpts = prefsAtt.marche;
+  const utilizzatoriEditorOpts = prefsAtt.utilizzatori;
+  const cantieriEditorOpts = prefsAtt.cantieri;
   const modelliEditor = useMemo(
     () => modelliVisibiliPerMarca(prefsAtt, draft?.marcaAttrezzatura?.trim() || "__tutti__"),
     [prefsAtt, draft?.marcaAttrezzatura],
@@ -279,15 +282,11 @@ export function PreventiviEditorModal({
                 </label>
                 <label className="block text-xs">
                   <span className="text-zinc-500">Cantiere</span>
-                  <input className={`${dsInput} mt-1`} value={draft.cantiere} onChange={(e) => patch({ cantiere: e.target.value })} />
+                  <SettingsAutocompleteInput className="mt-1" value={draft.cantiere} onChange={(v) => patch({ cantiere: v })} options={cantieriEditorOpts} />
                 </label>
                 <label className="block text-xs">
                   <span className="text-zinc-500">Utilizzatore</span>
-                  <input
-                    className={`${dsInput} mt-1`}
-                    value={draft.utilizzatore}
-                    onChange={(e) => patch({ utilizzatore: e.target.value })}
-                  />
+                  <SettingsAutocompleteInput className="mt-1" value={draft.utilizzatore} onChange={(v) => patch({ utilizzatore: v })} options={utilizzatoriEditorOpts} />
                 </label>
               </div>
             </section>

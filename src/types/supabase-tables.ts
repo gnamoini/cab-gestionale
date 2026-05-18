@@ -1,6 +1,6 @@
 /** Tipi allineati allo schema PostgreSQL / Supabase (snake_case). */
 
-export type RuoloProfile = "admin" | "tecnico" | "viewer";
+export type RuoloProfile = "admin" | "operatore" | "ospite" | "tecnico" | "viewer";
 
 export type ProfileRow = {
   id: string;

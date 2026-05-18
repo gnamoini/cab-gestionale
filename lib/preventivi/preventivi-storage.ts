@@ -62,6 +62,7 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
     stato,
     lavorazioneId: String(o.lavorazioneId ?? ""),
     lavorazioneOrigine: o.lavorazioneOrigine === "storico" ? "storico" : "attiva",
+    lavorazioneTimestamp: typeof o.lavorazioneTimestamp === "string" ? o.lavorazioneTimestamp : undefined,
     cliente: String(o.cliente ?? ""),
     cantiere: String(o.cantiere ?? ""),
     utilizzatore: String(o.utilizzatore ?? ""),

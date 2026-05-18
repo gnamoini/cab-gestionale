@@ -1,4 +1,4 @@
-import type { LavorazioniLogChange, LavorazioniLogEntry, LavorazioniLogTipo } from "@/lib/lavorazioni/lavorazioni-change-log";
+import type { LavorazioniLogEntry, LavorazioniLogTipo } from "@/lib/lavorazioni/lavorazioni-change-log";
 
 export type GestionaleLogEventTone =
   | "create"
@@ -81,9 +81,31 @@ export function formatGestionaleLogMetaLine(autore: string, iso: string): string
   return `${a} • ${formatGestionaleLogDateTime(iso)}`;
 }
 
+/** Riga unica compatta per liste log (tipo, oggetto, dettaglio, autore, data). */
+export function formatGestionaleLogCompactLine(vm: GestionaleLogViewModel): string {
+  const tipo = safeStr(vm.tipoRiga).trim().toUpperCase() || "MODIFICA";
+  const oggetto = safeStr(vm.oggettoRiga).trim() || "—";
+  const modifica = safeStr(vm.modificaRiga).replace(/\s+/g, " ").trim() || "—";
+  const autore = formatLogAuthor(vm.autore);
+  const data = formatGestionaleLogDateTime(vm.atIso);
+  return `(${tipo}, ${oggetto}, ${modifica}, ${autore}, ${data})`;
+}
+
 export function safeStr(s: unknown): string {
   if (s === null || s === undefined) return "";
   return String(s);
+}
+
+export function isImageLogAction(action: string): action is "image_uploaded" | "image_deleted" {
+  return action === "image_uploaded" || action === "image_deleted";
+}
+
+export function imageLogTipoRiga(action: string): string {
+  return action === "image_deleted" ? "FOTO RIMOSSA" : "FOTO AGGIUNTA";
+}
+
+export function imageLogModificaRiga(action: string): string {
+  return action === "image_deleted" ? "Foto rimossa" : "Foto aggiunta";
 }
 
 /** Nome utente per riga 4: maiuscolo, mai vuoto. */
@@ -162,6 +184,9 @@ function sentenceForCampoChange(c: CampoChangeLike): string {
   }
   if (campo === "Addetto") {
     return `Addetto modificato da ${formatTitleCasePhrase(p)} a ${formatTitleCasePhrase(d)}`;
+  }
+  if (campo === "Foto") {
+    return d === "Foto rimossa" ? "Foto rimossa" : "Foto aggiunta";
   }
   if (campo === "Targa") {
     return `Targa modificata da ${formatTargaDisplay(p)} a ${formatTargaDisplay(d)}`;

@@ -4,13 +4,15 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { dsBadgeOk, dsFocus, dsSurfaceInteractiveKpi, dsSurfacePanel, dsTypoSmall } from "@/lib/ui/design-system";
 import { DashboardTasksPanel } from "@/components/dashboard/dashboard-tasks-panel";
-import { labelLavorazioneStatoDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
-import { MOCK_RICAMBI } from "@/lib/mock-data/magazzino";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
-import { LAVORAZIONI_STATI_IN_CORSO } from "@/src/services/lavorazioni.service";
+import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
+import { useMagazzinoListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { isDbStatoLavorazione, statoLavorazioneLabel } from "@/src/shared/selectors";
+import type { StatoLavorazione } from "@/src/types/supabase-tables";
 
 const cardClass = `${dsSurfaceInteractiveKpi} ${dsFocus}`;
 
@@ -21,9 +23,18 @@ function macchinaLabel(row: { mezzo: { marca: string; modello: string } | null }
 
 export function DashboardOperationalCards() {
   const staging = isStagingPublicSlice();
+  const globalOpts = useGlobalOptions({ debugTag: "DashboardOperationalCards" });
+  const magazzinoQ = useMagazzinoListQuery();
+  const statiInCorsoIds = useMemo(
+    () =>
+      globalOpts.lavorazioni.statiInCorso
+        .map((s) => s.id)
+        .filter((id): id is StatoLavorazione => isDbStatoLavorazione(id)),
+    [globalOpts.lavorazioni.statiInCorso],
+  );
   const lavFilters = useMemo(
-    () => ({ includeMezzo: true as const, stati_in: [...LAVORAZIONI_STATI_IN_CORSO] }),
-    [],
+    () => ({ includeMezzo: true as const, stati_in: statiInCorsoIds }),
+    [statiInCorsoIds],
   );
   const lavQuery = useLavorazioniList(lavFilters, { staleTime: 30_000 });
   const rows = lavQuery.data ?? [];
@@ -31,11 +42,11 @@ export function DashboardOperationalCards() {
 
   const magStats = useMemo(() => {
     if (staging) return { sotto: 0, cap: 0, tot: 0 };
-    const sotto = MOCK_RICAMBI.filter((p) => p.scorta < p.scortaMinima).length;
-    const cap = MOCK_RICAMBI.reduce((acc, r) => acc + capitaleImmobilizzato(r), 0);
-    const tot = MOCK_RICAMBI.length;
-    return { sotto, cap, tot };
-  }, [staging]);
+    const items = (magazzinoQ.data ?? []).map((row) => magazzinoRowToRicambioUI(row));
+    const sotto = items.filter((p) => p.scortaMinima > 0 && p.scorta < p.scortaMinima).length;
+    const cap = items.reduce((acc, r) => acc + capitaleImmobilizzato(r), 0);
+    return { sotto, cap, tot: items.length };
+  }, [staging, magazzinoQ.data]);
 
   const eur = useMemo(
     () =>
@@ -71,7 +82,9 @@ export function DashboardOperationalCards() {
                 <span>
                   <span className="font-medium text-[color:var(--cab-text)]">{formatTitleCasePhrase(macchinaLabel(r))}</span>
                   <span className="text-[color:var(--cab-text-muted)]"> — </span>
-                  <span className="text-[color:var(--cab-text-muted)]">{formatTitleCasePhrase(labelLavorazioneStatoDb(r.stato))}</span>
+                  <span className="text-[color:var(--cab-text-muted)]">
+                    {formatTitleCasePhrase(statoLavorazioneLabel(r.stato, globalOpts.lavorazioni.stati))}
+                  </span>
                 </span>
               </li>
             ))
@@ -92,7 +105,7 @@ export function DashboardOperationalCards() {
             </span>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-[color:var(--cab-text-muted)]">
-            Modulo non esposto nello staging pubblico: niente dati demo o locali.
+            Modulo non disponibile in questo ambiente.
           </p>
         </div>
       ) : (
@@ -115,7 +128,7 @@ export function DashboardOperationalCards() {
               </div>
               <div>
                 <p className="text-lg font-semibold tabular-nums text-[color:var(--cab-text)]">{magStats.tot}</p>
-                <p className={dsTypoSmall}>Articoli (anagrafica demo)</p>
+                <p className={dsTypoSmall}>Articoli in anagrafica</p>
               </div>
             </div>
           </div>
@@ -131,7 +144,7 @@ export function DashboardOperationalCards() {
         <div className="mt-3 min-h-0 flex-1">
           {staging ? (
             <p className="rounded-lg border border-dashed border-zinc-200 px-3 py-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-              Le attività rapide su dashboard non sono disponibili nello staging pubblico (dati solo locali).
+              Le attività rapide su dashboard non sono disponibili in questo ambiente.
             </p>
           ) : (
             <DashboardTasksPanel />

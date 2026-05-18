@@ -1,8 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/context/toast-context";
+import { PageHeader } from "@/components/gestionale/page-header";
+import { ShellCard } from "@/components/gestionale/shell-card";
 import { LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import {
@@ -20,12 +23,12 @@ import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
-import { MOCK_RICAMBI } from "@/lib/mock-data/magazzino";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { appendDashboardSistemaLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
 import { AttrezzatureSettingsSection } from "@/components/dashboard/attrezzature-settings-section";
+import { CloseButton } from "@/components/design-system";
 import type { GestionaleLogEventTone } from "@/lib/gestionale-log/view-model";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import {
@@ -37,27 +40,37 @@ import {
 import { erpBtnNeutral, erpBtnSoftOrange } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { buildBulkRowsFromResolved, resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
 import { useCabAppSettingsPayloadQuery, useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
+import { DEFAULT_STATI_LAVORAZIONI_DB } from "@/src/shared/selectors";
 import { mergeAppSettingsUpsertWithVersions } from "@/src/services/settings.service";
+import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
+import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
+import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
+import { usePermissions } from "@/src/hooks/use-permissions";
+import { dsBtnPrimary, dsStackPage } from "@/lib/ui/design-system";
 
 function mergeMaster(a: string[], b: string[]) {
   return [...new Set([...a, ...b])].sort((x, y) => x.localeCompare(y, "it"));
 }
 
-function buildResolvedFromModalSnapshot(s: {
+type SistemaSettingsSnapshot = {
   stati: StatoLavorazioneConfig[];
   addetti: string[];
   addettoColors: Record<string, string>;
   prioritaColors: Partial<Record<PrioritaLav, string>>;
+  prioritaDb: PrioritaLavorazione[];
   mag: MagazzinoMasterPrefs;
   liste: MezziListePrefs;
   eco: SistemaPreventiviDefaults;
-}): CabAppSettingsResolved {
+};
+
+function buildResolvedFromModalSnapshot(s: SistemaSettingsSnapshot): CabAppSettingsResolved {
   return {
     lavorazioni: {
       stati: s.stati,
       addetti: s.addetti,
       addettoColors: s.addettoColors,
       prioritaColors: s.prioritaColors,
+      prioritaDb: s.prioritaDb,
     },
     mezziListe: migrateMezziListePrefs(s.liste),
     magazzinoMaster: s.mag,
@@ -65,16 +78,51 @@ function buildResolvedFromModalSnapshot(s: {
   };
 }
 
-function initialMasterFromProducts() {
+function snapshotFromResolved(r: CabAppSettingsResolved): SistemaSettingsSnapshot {
+  const addetti =
+    r.lavorazioni.addetti?.length && r.lavorazioni.addetti.some((a) => a.trim().length > 0)
+      ? r.lavorazioni.addetti.map((a) => a.trim()).filter((a) => a.length > 0)
+      : [...DEFAULT_ADDETTI_LAVORAZIONI];
+  return {
+    stati: r.lavorazioni.stati?.length ? normalizeStatiList(r.lavorazioni.stati) : [...DEFAULT_STATI_LAVORAZIONI_DB],
+    addetti,
+    addettoColors: syncAddettoColorMap(addetti, r.lavorazioni.addettoColors),
+    prioritaColors: r.lavorazioni.prioritaColors ?? {},
+    prioritaDb: r.lavorazioni.prioritaDb?.length ? [...r.lavorazioni.prioritaDb] : [...DEFAULT_PRIORITA_LAVORAZIONI_DB],
+    mag: {
+      marche: [...r.magazzinoMaster.marche],
+      categorie: [...r.magazzinoMaster.categorie],
+      mezziCompatibili: [...r.magazzinoMaster.mezziCompatibili],
+      fornitori: [...(r.magazzinoMaster.fornitori ?? [])],
+    },
+    liste: migrateMezziListePrefs(r.mezziListe),
+    eco: { ...r.preventiviDefaults },
+  };
+}
+
+function snapshotKey(s: SistemaSettingsSnapshot): string {
+  return JSON.stringify(buildResolvedFromModalSnapshot(s));
+}
+
+function initialMasterFromProducts(
+  src: Array<{
+    marca: string;
+    categoria: string;
+    compatibilitaMezzi: string[];
+    fornitoreNonOriginale?: string;
+  }> = [],
+) {
   const marche = new Set<string>();
   const categorie = new Set<string>();
   const mezzi = new Set<string>();
   const fornitori = new Set<string>();
-  for (const r of MOCK_RICAMBI) {
-    marche.add(r.marca);
-    categorie.add(r.categoria);
-    r.compatibilitaMezzi.forEach((m) => mezzi.add(m));
-    if (r.fornitoreNonOriginale.trim()) fornitori.add(r.fornitoreNonOriginale.trim());
+  for (const r of src) {
+    if (r.marca?.trim()) marche.add(r.marca.trim());
+    if (r.categoria?.trim()) categorie.add(r.categoria.trim());
+    r.compatibilitaMezzi.forEach((m) => {
+      if (m.trim()) mezzi.add(m.trim());
+    });
+    if (r.fornitoreNonOriginale?.trim()) fornitori.add(r.fornitoreNonOriginale.trim());
   }
   return {
     marche: [...marche].sort((a, b) => a.localeCompare(b, "it")),
@@ -93,6 +141,8 @@ type SistemaSectionId =
   | "mag-categorie"
   | "mz-attrezzature"
   | "com-clienti"
+  | "com-utilizzatori"
+  | "com-cantieri"
   | "sys-economici";
 
 type NavEntry =
@@ -112,15 +162,17 @@ const NAV_STRUCTURE: NavEntry[] = [
   { kind: "item", id: "mz-attrezzature", label: "Attrezzature" },
   { kind: "group", label: "Commerciale" },
   { kind: "item", id: "com-clienti", label: "Clienti" },
+  { kind: "item", id: "com-utilizzatori", label: "Utilizzatori" },
+  { kind: "item", id: "com-cantieri", label: "Cantieri" },
   { kind: "group", label: "Sistema" },
   { kind: "item", id: "sys-economici", label: "Parametri economici" },
 ];
 
 const SETTINGS_CARD =
-  "rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900";
+  "w-full rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900";
 const LIST_UL =
-  "gestionale-scrollbar mt-3 max-h-[min(42vh,18rem)] divide-y divide-zinc-100 overflow-y-auto dark:divide-zinc-800";
-const LIST_LI = "flex min-h-[2.75rem] items-center justify-between gap-2 px-1 py-2";
+  "mt-3 divide-y divide-zinc-100 dark:divide-zinc-800";
+const LIST_LI = "flex min-h-[2.5rem] items-center justify-between gap-2 px-1 py-1.5";
 const INPUT_ROW =
   "min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-500/25 dark:border-zinc-700 dark:bg-zinc-950";
 
@@ -196,56 +248,62 @@ function UnifiedStringList({
   );
 }
 
-export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function SistemaImpostazioniWorkspace({
+  open = true,
+  onClose,
+  surface = "modal",
+}: {
+  open?: boolean;
+  onClose?: () => void;
+  surface?: "modal" | "page";
+}) {
   const { authorName } = useAuth();
   const { push } = useToast();
+  const { setOpen: setSettingsModalOpen } = useSettingsModalOpen();
   const settingsPayload = useCabAppSettingsPayloadQuery();
   const resolvedSettings = settingsPayload.data?.resolved;
   const settingsRows = settingsPayload.data?.rows ?? [];
   const bulkSave = useSettingsBulkMutation();
+  const pageMode = surface === "page";
 
-  const snapshotRef = useRef<{
-    stati: StatoLavorazioneConfig[];
-    addetti: string[];
-    addettoColors: Record<string, string>;
-    prioritaColors: Partial<Record<PrioritaLav, string>>;
-    mag: MagazzinoMasterPrefs;
-    liste: MezziListePrefs;
-    eco: SistemaPreventiviDefaults;
-  } | null>(null);
-
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** True dopo almeno un salvataggio riuscito in sessione; il toast viene mostrato solo alla chiusura del modal. */
-  const successfulSaveWhileOpenRef = useRef(false);
+  const snapshotRef = useRef<SistemaSettingsSnapshot | null>(null);
+  const savedSnapshotRef = useRef<SistemaSettingsSnapshot | null>(null);
+  /** Evita reset sezione/stato locale su refetch React Query mentre il modal resta aperto. */
+  const hydratedSessionRef = useRef(false);
+  const [savedSnapshotKey, setSavedSnapshotKey] = useState<string | null>(null);
 
   const [section, setSection] = useState<SistemaSectionId>("op-addetti");
   const [navQ, setNavQ] = useState("");
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [desktopNavOpen, setDesktopNavOpen] = useState(true);
 
   const attiveStatoIds = useMemo(() => new Set<string>(), []);
   const storicoStatoIds = useMemo(() => new Set<string>(), []);
   const attiviAddetti = useMemo(() => new Set<string>(), []);
   const storicoAddetti = useMemo(() => new Set<string>(), []);
 
-  const [stati, setStati] = useState<StatoLavorazioneConfig[]>(() => [...DEFAULT_STATI_LAVORAZIONI]);
+  const [stati, setStati] = useState<StatoLavorazioneConfig[]>(() => [...DEFAULT_STATI_LAVORAZIONI_DB]);
   const [addetti, setAddetti] = useState<string[]>(() => [...DEFAULT_ADDETTI_LAVORAZIONI]);
   const [addettoColors, setAddettoColors] = useState<Record<string, string>>(() =>
     syncAddettoColorMap([...DEFAULT_ADDETTI_LAVORAZIONI], undefined),
   );
   const [prioritaColors, setPrioritaColors] = useState<Partial<Record<PrioritaLav, string>>>({});
+  const [prioritaDb, setPrioritaDb] = useState<PrioritaLavorazione[]>(() => [...DEFAULT_PRIORITA_LAVORAZIONI_DB]);
   const [lavPrefsHydrated, setLavPrefsHydrated] = useState(false);
 
-  const baseM = useMemo(() => initialMasterFromProducts(), []);
   const [mag, setMag] = useState<MagazzinoMasterPrefs>(() => ({
-    marche: [...baseM.marche],
-    categorie: [...baseM.categorie],
-    mezziCompatibili: [...baseM.mezzi],
-    fornitori: [...baseM.fornitori],
+    marche: [],
+    categorie: [],
+    mezziCompatibili: [],
+    fornitori: [],
   }));
   const [magHydrated, setMagHydrated] = useState(false);
   const [nuovaMarca, setNuovaMarca] = useState("");
   const [nuovaCategoria, setNuovaCategoria] = useState("");
   const [nuovoFornitore, setNuovoFornitore] = useState("");
   const [nuovoCliente, setNuovoCliente] = useState("");
+  const [nuovoUtilizzatore, setNuovoUtilizzatore] = useState("");
+  const [nuovoCantiere, setNuovoCantiere] = useState("");
 
   const [liste, setListe] = useState<MezziListePrefs>(() => createMezziListePrefsDefault());
   const [mezziHydrated, setMezziHydrated] = useState(false);
@@ -253,7 +311,13 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
   const [eco, setEco] = useState<SistemaPreventiviDefaults>(() => ({ costoOrarioDefault: 48 }));
   const [ecoHydrated, setEcoHydrated] = useState(false);
 
-  snapshotRef.current = { stati, addetti, addettoColors, prioritaColors, mag, liste, eco };
+  snapshotRef.current = { stati, addetti, addettoColors, prioritaColors, prioritaDb, mag, liste, eco };
+  const currentSnapshotKey = useMemo(
+    () => snapshotKey({ stati, addetti, addettoColors, prioritaColors, prioritaDb, mag, liste, eco }),
+    [stati, addetti, addettoColors, prioritaColors, prioritaDb, mag, liste, eco],
+  );
+  const allHydrated = lavPrefsHydrated && magHydrated && mezziHydrated && ecoHydrated;
+  const isDirty = allHydrated && savedSnapshotKey != null && currentSnapshotKey !== savedSnapshotKey;
 
   const logDash = useCallback(
     (tone: GestionaleLogEventTone, tipoRiga: string, oggettoRiga: string, modificaRiga: string) => {
@@ -270,110 +334,137 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
   );
 
   useEffect(() => {
-    if (!open) return;
-    successfulSaveWhileOpenRef.current = false;
+    setSettingsModalOpen(open);
+    return () => setSettingsModalOpen(false);
+  }, [open, setSettingsModalOpen]);
+
+  useEffect(() => {
+    if (!open) {
+      hydratedSessionRef.current = false;
+      return;
+    }
     setSection("op-addetti");
     setNavQ("");
+    setMobileNavOpen(false);
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (hydratedSessionRef.current) return;
+    if (!resolvedSettings && settingsPayload.isPending) return;
+
+    hydratedSessionRef.current = true;
     setLavPrefsHydrated(false);
     setMagHydrated(false);
     setMezziHydrated(false);
     setEcoHydrated(false);
 
-    const base = initialMasterFromProducts();
     const r = resolvedSettings ?? resolveCabAppSettingsFromRows([], null);
+    const next = snapshotFromResolved(r);
+    savedSnapshotRef.current = next;
+    setSavedSnapshotKey(snapshotKey(next));
 
-    if (r.lavorazioni.stati?.length) setStati(normalizeStatiList(r.lavorazioni.stati));
-    else setStati([...DEFAULT_STATI_LAVORAZIONI]);
-    const nextAddetti =
-      r.lavorazioni.addetti?.length && r.lavorazioni.addetti.some((a) => a.trim().length > 0)
-        ? r.lavorazioni.addetti.map((a) => a.trim()).filter((a) => a.length > 0)
-        : [...DEFAULT_ADDETTI_LAVORAZIONI];
-    setAddetti(nextAddetti);
-    setAddettoColors(syncAddettoColorMap(nextAddetti, r.lavorazioni.addettoColors));
-    setPrioritaColors(r.lavorazioni.prioritaColors ?? {});
-
-    setMag({
-      marche: mergeMaster(r.magazzinoMaster.marche, base.marche),
-      categorie: mergeMaster(r.magazzinoMaster.categorie, base.categorie),
-      mezziCompatibili: mergeMaster(r.magazzinoMaster.mezziCompatibili, base.mezzi),
-      fornitori: mergeMaster(r.magazzinoMaster.fornitori ?? [], base.fornitori),
-    });
-    setListe(migrateMezziListePrefs(r.mezziListe));
-    setEco(r.preventiviDefaults);
+    setStati(next.stati);
+    setAddetti(next.addetti);
+    setAddettoColors(next.addettoColors);
+    setPrioritaColors(next.prioritaColors);
+    setPrioritaDb(next.prioritaDb);
+    setMag(next.mag);
+    setListe(next.liste);
+    setEco(next.eco);
 
     setLavPrefsHydrated(true);
     setMagHydrated(true);
     setMezziHydrated(true);
     setEcoHydrated(true);
-  }, [open, resolvedSettings]);
+  }, [open, resolvedSettings, settingsPayload.isPending]);
 
-  useEffect(() => {
-    if (!open || !lavPrefsHydrated || !magHydrated || !mezziHydrated || !ecoHydrated) return;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-      saveTimerRef.current = null;
-      const s = snapshotRef.current;
-      if (!s) return;
-      const payload = mergeAppSettingsUpsertWithVersions(
-        buildBulkRowsFromResolved(buildResolvedFromModalSnapshot(s)),
-        settingsRows,
-      );
-      void bulkSave
-        .mutateAsync(payload)
-        .then(() => {
-          successfulSaveWhileOpenRef.current = true;
-          dispatchLavorazioniPrefsRefresh();
-          dispatchMagazzinoMasterRefresh();
-          dispatchMezziListeRefresh();
-        })
-        .catch(() => {});
-    }, 900);
-    return () => {
-      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    };
-  }, [
-    open,
-    lavPrefsHydrated,
-    magHydrated,
-    mezziHydrated,
-    ecoHydrated,
-    stati,
-    addetti,
-    addettoColors,
-    prioritaColors,
-    mag,
-    liste,
-    eco,
-    settingsRows,
-    bulkSave,
-  ]);
-
-  const flushSaveNow = useCallback(async () => {
+  const saveNow = useCallback(async () => {
     const s = snapshotRef.current;
     if (!s || !lavPrefsHydrated || !magHydrated || !mezziHydrated || !ecoHydrated) return;
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-      saveTimerRef.current = null;
-    }
-    const payload = buildBulkRowsFromResolved(buildResolvedFromModalSnapshot(s));
+    const payload = mergeAppSettingsUpsertWithVersions(
+      buildBulkRowsFromResolved(buildResolvedFromModalSnapshot(s)),
+      settingsRows,
+    );
     await bulkSave.mutateAsync(payload);
-    successfulSaveWhileOpenRef.current = true;
+    savedSnapshotRef.current = s;
+    setSavedSnapshotKey(snapshotKey(s));
     dispatchLavorazioniPrefsRefresh();
     dispatchMagazzinoMasterRefresh();
     dispatchMezziListeRefresh();
   }, [bulkSave, lavPrefsHydrated, magHydrated, mezziHydrated, ecoHydrated, settingsRows]);
 
+  const applySnapshot = useCallback((s: SistemaSettingsSnapshot) => {
+    setLavPrefsHydrated(false);
+    setMagHydrated(false);
+    setMezziHydrated(false);
+    setEcoHydrated(false);
+    setStati(s.stati);
+    setAddetti(s.addetti);
+    setAddettoColors(s.addettoColors);
+    setPrioritaColors(s.prioritaColors);
+    setPrioritaDb(s.prioritaDb);
+    setMag(s.mag);
+    setListe(s.liste);
+    setEco(s.eco);
+    setLavPrefsHydrated(true);
+    setMagHydrated(true);
+    setMezziHydrated(true);
+    setEcoHydrated(true);
+  }, []);
+
+  const confirmDiscardChanges = useCallback(() => {
+    if (!isDirty) return true;
+    return window.confirm("Hai modifiche non salvate. Vuoi davvero uscire?");
+  }, [isDirty]);
+
   const handleRequestClose = useCallback(() => {
-    void flushSaveNow()
-      .catch(() => {})
-      .finally(() => {
-        if (successfulSaveWhileOpenRef.current) {
-          successfulSaveWhileOpenRef.current = false;
-          push("Impostazioni salvate", "success", 3400);
-        }
-        onClose();
-      });
-  }, [flushSaveNow, onClose, push]);
+    if (!confirmDiscardChanges()) return;
+    onClose?.();
+  }, [confirmDiscardChanges, onClose]);
+
+  const handleSaveNow = useCallback(() => {
+    void saveNow()
+      .then(() => push("Impostazioni salvate", "success", 3400))
+      .catch(() => push("Salvataggio impostazioni non riuscito", "error", 4200));
+  }, [saveNow, push]);
+
+  const handleCancelChanges = useCallback(() => {
+    const s = savedSnapshotRef.current;
+    if (!s) return;
+    if (isDirty && !window.confirm("Annullare tutte le modifiche non salvate?")) return;
+    applySnapshot(s);
+    setSavedSnapshotKey(snapshotKey(s));
+    push("Modifiche annullate", "info", 2600);
+  }, [applySnapshot, isDirty, push]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      e.preventDefault();
+      e.returnValue = "Hai modifiche non salvate. Vuoi davvero uscire?";
+    }
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [isDirty]);
+
+  useEffect(() => {
+    if (!isDirty) return;
+    function onDocumentClick(e: MouseEvent) {
+      const target = e.target;
+      if (!(target instanceof Element)) return;
+      const anchor = target.closest("a[href]");
+      if (!(anchor instanceof HTMLAnchorElement)) return;
+      if (anchor.target && anchor.target !== "_self") return;
+      if (anchor.origin !== window.location.origin) return;
+      if (anchor.pathname === window.location.pathname && anchor.search === window.location.search && anchor.hash === window.location.hash) return;
+      if (window.confirm("Hai modifiche non salvate. Vuoi davvero uscire?")) return;
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    document.addEventListener("click", onDocumentClick, true);
+    return () => document.removeEventListener("click", onDocumentClick, true);
+  }, [isDirty]);
 
   const patchMag = useCallback((fn: (prev: MagazzinoMasterPrefs) => MagazzinoMasterPrefs) => {
     setMag(fn);
@@ -387,6 +478,10 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
 
   const lavEmbeddedFocus =
     section === "op-addetti" ? "addetti" : section === "op-stati" ? "stati" : section === "op-priorita" ? "priorita" : null;
+  const activeSectionLabel = useMemo(() => {
+    const entry = NAV_STRUCTURE.find((e): e is Extract<NavEntry, { kind: "item" }> => e.kind === "item" && e.id === section);
+    return entry?.label ?? "Sezione";
+  }, [section]);
 
   const magAdd = (key: keyof MagazzinoMasterPrefs, raw: string, clear: () => void): boolean => {
     const t = raw.trim();
@@ -400,7 +495,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
     return true;
   };
 
-  const listeAdd = (key: "clienti", raw: string, clear: () => void): boolean => {
+  const listeAdd = (key: "clienti" | "utilizzatori" | "cantieri", raw: string, clear: () => void): boolean => {
     const t = raw.trim();
     if (!t) return false;
     if ((liste[key] as string[]).includes(t)) return false;
@@ -414,15 +509,140 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
 
   if (!open) return null;
 
-  return (
-    <LavorazioniModalShell wide maxWidthClass="max-w-6xl" onRequestClose={handleRequestClose}>
-      <div className="flex min-h-0 max-h-[min(92dvh,900px)] w-full min-w-0 flex-col overflow-hidden">
-        <header className="shrink-0 border-b border-zinc-200 bg-zinc-50/90 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Impostazioni sistema</h2>
+  const content = (
+      <div
+        className={`relative flex min-h-0 w-full min-w-0 flex-col ${
+          pageMode
+            ? "overflow-visible rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)]"
+            : "h-[calc(100dvh-1.5rem)] overflow-hidden sm:h-[min(88dvh,900px)]"
+        }`}
+      >
+        <header className={`${pageMode ? "hidden" : "shrink-0 border-b border-zinc-200 bg-[var(--cab-card)] px-3 py-2.5 dark:border-zinc-800 sm:px-4 sm:py-3"}`}>
+          <div className="flex min-w-0 items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                className={`${erpBtnNeutral} h-9 min-w-9 shrink-0 px-2 text-base md:hidden`}
+                onClick={() => setMobileNavOpen(true)}
+                aria-label="Apri sezioni impostazioni"
+                aria-expanded={mobileNavOpen}
+              >
+                ☰
+              </button>
+              <button
+                type="button"
+                className={`${erpBtnNeutral} hidden h-9 min-w-9 shrink-0 px-2 text-base md:inline-flex`}
+                onClick={() => setDesktopNavOpen((v) => !v)}
+                aria-label={desktopNavOpen ? "Comprimi sezioni impostazioni" : "Espandi sezioni impostazioni"}
+                aria-expanded={desktopNavOpen}
+              >
+                ☰
+              </button>
+              <div className="min-w-0">
+                <h2 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">Impostazioni globali</h2>
+                <p className="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-400">{activeSectionLabel}</p>
+              </div>
+            </div>
+            <CloseButton onClick={handleRequestClose} />
+          </div>
         </header>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <aside className="flex w-[15.5rem] shrink-0 flex-col border-r border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-950">
+        {mobileNavOpen && pageMode ? (
+          <aside className="m-3 rounded-xl border border-zinc-200 bg-[var(--cab-card)] shadow-sm dark:border-zinc-800 md:hidden" aria-label="Sezioni impostazioni">
+            <header className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
+              <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Sezioni</h3>
+              <CloseButton onClick={() => setMobileNavOpen(false)} />
+            </header>
+            <div className="border-b border-zinc-100 p-2 dark:border-zinc-800">
+              <GestionaleSearchField
+                value={navQ}
+                onChange={(e) => setNavQ(e.target.value)}
+                placeholder="Cerca…"
+                autoComplete="off"
+                aria-label="Cerca nelle sezioni impostazioni"
+              />
+            </div>
+            <nav className="space-y-1 p-2" aria-label="Sezioni impostazioni mobile">
+              {filteredNav.map((e, i) => {
+                if (e.kind === "group") {
+                  return (
+                    <p key={`pmg-${e.label}-${i}`} className="px-2 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 first:pt-0 dark:text-zinc-500">
+                      {e.label}
+                    </p>
+                  );
+                }
+                const active = section === e.id;
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => {
+                      setSection(e.id);
+                      setMobileNavOpen(false);
+                    }}
+                    className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold transition-colors ${
+                      active ? "bg-orange-500 text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
+                    }`}
+                  >
+                    {e.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </aside>
+        ) : null}
+
+        {mobileNavOpen && !pageMode ? (
+          <div className="absolute inset-0 z-20 bg-[var(--cab-overlay)] backdrop-blur-[1px] md:hidden" role="presentation" onMouseDown={(e) => {
+            if (e.target === e.currentTarget) setMobileNavOpen(false);
+          }}>
+            <aside className="flex h-full w-[min(82vw,20rem)] flex-col border-r border-zinc-200 bg-[var(--cab-card)] shadow-2xl dark:border-zinc-800" aria-label="Sezioni impostazioni">
+              <header className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
+                <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Sezioni</h3>
+                <CloseButton onClick={() => setMobileNavOpen(false)} />
+              </header>
+              <div className="shrink-0 border-b border-zinc-100 p-2 dark:border-zinc-800">
+                <GestionaleSearchField
+                  value={navQ}
+                  onChange={(e) => setNavQ(e.target.value)}
+                  placeholder="Cerca…"
+                  autoComplete="off"
+                  aria-label="Cerca nelle sezioni impostazioni"
+                />
+              </div>
+              <nav className="gestionale-scrollbar flex-1 space-y-1 overflow-y-auto p-2" aria-label="Sezioni impostazioni mobile">
+                {filteredNav.map((e, i) => {
+                  if (e.kind === "group") {
+                    return (
+                      <p key={`mg-${e.label}-${i}`} className="px-2 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 first:pt-0 dark:text-zinc-500">
+                        {e.label}
+                      </p>
+                    );
+                  }
+                  const active = section === e.id;
+                  return (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => {
+                        setSection(e.id);
+                        setMobileNavOpen(false);
+                      }}
+                      className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold transition-colors ${
+                        active ? "bg-orange-500 text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
+                      }`}
+                    >
+                      {e.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </aside>
+          </div>
+        ) : null}
+
+        <div className={pageMode ? "grid gap-4 p-3 md:grid-cols-[15rem_minmax(0,1fr)] md:p-4" : "flex min-h-0 flex-1 overflow-hidden"}>
+          <aside className={`${desktopNavOpen ? "md:flex" : "md:hidden"} hidden w-[13.75rem] shrink-0 flex-col border-r border-zinc-200 bg-[var(--cab-card)] dark:border-zinc-800 ${pageMode ? "md:sticky md:top-4 md:h-fit md:w-auto md:rounded-xl md:border md:shadow-sm" : ""}`}>
             <div className="shrink-0 border-b border-zinc-100 p-2 dark:border-zinc-800">
               <GestionaleSearchField
                 value={navQ}
@@ -432,7 +652,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
                 aria-label="Cerca nelle sezioni impostazioni"
               />
             </div>
-            <nav className="gestionale-scrollbar flex-1 space-y-0.5 overflow-y-auto p-2" aria-label="Sezioni impostazioni">
+            <nav className={`${pageMode ? "space-y-0.5 p-2" : "gestionale-scrollbar flex-1 space-y-0.5 overflow-y-auto p-2"}`} aria-label="Sezioni impostazioni">
               {filteredNav.map((e, i) => {
                 if (e.kind === "group") {
                   return (
@@ -450,7 +670,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
                     key={e.id}
                     type="button"
                     onClick={() => setSection(e.id)}
-                    className={`flex w-full rounded-lg px-2.5 py-2 text-left text-xs font-semibold transition-colors ${
+                    className={`flex w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition-colors ${
                       active
                         ? "bg-orange-500 text-white shadow-sm"
                         : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
@@ -463,13 +683,18 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
             </nav>
           </aside>
 
-          <div className="gestionale-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain bg-zinc-50/60 p-4 dark:bg-zinc-950/50">
+          <div className={pageMode ? "min-w-0 bg-transparent" : "gestionale-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain bg-zinc-50/60 p-2.5 [scrollbar-gutter:stable] dark:bg-zinc-950/50 sm:p-4"}>
             {lavEmbeddedFocus ? (
               <SettingsLavorazioniModal
                 layout="embedded"
                 embeddedFocus={lavEmbeddedFocus}
                 stati={stati}
+                prioritaDb={prioritaDb}
                 prioritaColors={prioritaColors}
+                onChangePrioritaDb={(next) => {
+                  setPrioritaDb(next);
+                  logDash("update", "AGGIORNAMENTO", "Impostazioni · Priorità", `Priorità attive: ${next.join(", ")}`);
+                }}
                 onChangePrioritaColor={(p, hex) => {
                   const nh = normalizeHex(hex);
                   if (!nh) return;
@@ -569,7 +794,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
             ) : null}
 
             {section === "mag-marche" ? (
-              <div className="mx-auto max-w-lg">
+              <div className="w-full">
                 <UnifiedStringList
                   title="Marche ricambi"
                   values={mag.marche}
@@ -590,7 +815,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
             ) : null}
 
             {section === "mag-fornitori" ? (
-              <div className="mx-auto max-w-lg">
+              <div className="w-full">
                 <UnifiedStringList
                   title="Fornitori alternativi"
                   values={mag.fornitori}
@@ -611,7 +836,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
             ) : null}
 
             {section === "mag-categorie" ? (
-              <div className="mx-auto max-w-lg">
+              <div className="w-full">
                 <UnifiedStringList
                   title="Categorie magazzino"
                   values={mag.categorie}
@@ -636,7 +861,7 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
             ) : null}
 
             {section === "com-clienti" ? (
-              <div className="mx-auto max-w-lg">
+              <div className="w-full">
                 <UnifiedStringList
                   title="Clienti"
                   values={liste.clienti}
@@ -656,8 +881,50 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
               </div>
             ) : null}
 
+            {section === "com-utilizzatori" ? (
+              <div className="w-full">
+                <UnifiedStringList
+                  title="Utilizzatori"
+                  values={liste.utilizzatori}
+                  nuovo={nuovoUtilizzatore}
+                  setNuovo={setNuovoUtilizzatore}
+                  placeholder="Nuovo utilizzatore"
+                  onAdd={(t) => {
+                    if (listeAdd("utilizzatori", t, () => setNuovoUtilizzatore(""))) {
+                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Commerciale · Utilizzatori", `Aggiunto «${t}»`);
+                    }
+                  }}
+                  onRemove={(m) => {
+                    setListe((prev) => ({ ...prev, utilizzatori: prev.utilizzatori.filter((x) => x !== m) }));
+                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Commerciale · Utilizzatori", `Rimosso «${m}»`);
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {section === "com-cantieri" ? (
+              <div className="w-full">
+                <UnifiedStringList
+                  title="Cantieri"
+                  values={liste.cantieri}
+                  nuovo={nuovoCantiere}
+                  setNuovo={setNuovoCantiere}
+                  placeholder="Nuovo cantiere"
+                  onAdd={(t) => {
+                    if (listeAdd("cantieri", t, () => setNuovoCantiere(""))) {
+                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Commerciale · Cantieri", `Aggiunto «${t}»`);
+                    }
+                  }}
+                  onRemove={(m) => {
+                    setListe((prev) => ({ ...prev, cantieri: prev.cantieri.filter((x) => x !== m) }));
+                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Commerciale · Cantieri", `Rimosso «${m}»`);
+                  }}
+                />
+              </div>
+            ) : null}
+
             {section === "sys-economici" ? (
-              <div className="mx-auto max-w-md">
+              <div className="w-full">
                 <div className={SETTINGS_CARD}>
                   <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
                     Parametri economici
@@ -690,13 +957,70 @@ export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onC
             ) : null}
           </div>
         </div>
-
-        <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <button type="button" className={erpBtnNeutral} onClick={handleRequestClose}>
-            Chiudi
-          </button>
-        </footer>
       </div>
+  );
+
+  if (pageMode) {
+    return (
+      <div className={dsStackPage}>
+        <PageHeader
+          title="Impostazioni"
+          actions={
+            <>
+              <button type="button" className={`${erpBtnNeutral} md:hidden`} onClick={() => setMobileNavOpen((v) => !v)}>
+                Sezioni
+              </button>
+              <button type="button" className={erpBtnNeutral} onClick={handleCancelChanges} disabled={!isDirty || bulkSave.isPending}>
+                Annulla modifiche
+              </button>
+              <button type="button" className={dsBtnPrimary} onClick={handleSaveNow} disabled={!isDirty || bulkSave.isPending}>
+                {bulkSave.isPending ? "Salvataggio…" : "Salva"}
+              </button>
+            </>
+          }
+        />
+        {content}
+      </div>
+    );
+  }
+
+  return (
+    <LavorazioniModalShell wide alignTop maxWidthClass="max-w-6xl" onRequestClose={handleRequestClose}>
+      {content}
     </LavorazioniModalShell>
   );
+}
+
+export function SistemaImpostazioniModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  return <SistemaImpostazioniWorkspace open={open} onClose={onClose} surface="modal" />;
+}
+
+export function SistemaImpostazioniPageView() {
+  const permissions = usePermissions();
+
+  if (permissions.isLoading) {
+    return (
+      <div className={dsStackPage}>
+        <PageHeader title="Impostazioni" description="Caricamento permessi…" />
+      </div>
+    );
+  }
+
+  if (!permissions.canManageSettings) {
+    return (
+      <div className={dsStackPage}>
+        <PageHeader title="Impostazioni" description="Area riservata agli amministratori." />
+        <ShellCard title="Accesso negato">
+          <p className="text-sm text-[color:var(--cab-text-muted)]">
+            Questa pagina è disponibile solo per utenti con ruolo <strong className="text-[color:var(--cab-text)]">admin</strong>.
+          </p>
+          <Link href="/dashboard" className={`mt-4 inline-flex ${erpBtnNeutral}`}>
+            Torna alla dashboard
+          </Link>
+        </ShellCard>
+      </div>
+    );
+  }
+
+  return <SistemaImpostazioniWorkspace surface="page" />;
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
@@ -56,6 +57,8 @@ export const magazzinoService = {
 
   async create(data: MagazzinoInsert): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
+      const allowed = await ensurePermission("editInventory");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: row, error } = await c.from("magazzino_ricambi").insert(data).select("*").single();
       if (error) return err(error.message);
@@ -69,6 +72,8 @@ export const magazzinoService = {
 
   async update(id: string, data: MagazzinoUpdate): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
+      const allowed = await ensurePermission("editInventory");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -89,6 +94,8 @@ export const magazzinoService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
+      const allowed = await ensurePermission("deleteRecords");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -110,6 +117,8 @@ export const magazzinoService = {
     windowMonths = 3,
   ): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
+      const allowed = await ensurePermission("editInventory");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const since = new Date();
       since.setMonth(since.getMonth() - Math.max(1, Math.min(windowMonths, 24)));

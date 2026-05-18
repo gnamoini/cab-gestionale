@@ -6,7 +6,6 @@ import type {
   MovimentoRicambioRow,
   PreventivoRow,
   SchedaLavorazioneRow,
-  TipoSchedaLavorazione,
 } from "@/src/types/supabase-tables";
 
 export type LavorazioneQueriesSnapshot = {
@@ -63,19 +62,6 @@ type LavorazioneHubCore = {
   documentiRows: DocumentoRow[];
   logRows: LogModificaRow[];
 };
-
-function labelTipoScheda(t: TipoSchedaLavorazione): string {
-  switch (t) {
-    case "ingresso":
-      return "Ingresso";
-    case "intervento":
-      return "Intervento";
-    case "ricambi":
-      return "Ricambi";
-    default:
-      return t;
-  }
-}
 
 function parseDayStart(iso: string): Date | null {
   const s = iso.trim();
@@ -135,93 +121,31 @@ function deriveKpi(core: LavorazioneHubCore): LavorazioneHubKpi {
 }
 
 function buildTimeline(core: LavorazioneHubCore): LavorazioneTimelineItem[] {
-  const lav = core.lavorazione;
   const items: LavorazioneTimelineItem[] = [];
 
-  items.push({
-    id: `lav-created-${lav.id}`,
-    kind: "lavorazione",
-    at: lav.created_at,
-    title: "Lavorazione creata",
-    subtitle: labelLavorazioneStatoDb(lav.stato),
-  });
-
-  const di = lav.data_ingresso?.trim();
-  if (di) {
-    items.push({
-      id: `lav-ingresso-${lav.id}`,
-      kind: "lavorazione",
-      at: di.length <= 10 ? `${di}T08:00:00` : di,
-      title: "Data ingresso officina",
-    });
-  }
-
-  const du = lav.data_uscita?.trim();
-  if (du) {
-    items.push({
-      id: `lav-uscita-${lav.id}`,
-      kind: "lavorazione",
-      at: du.length <= 10 ? `${du}T18:00:00` : du,
-      title: "Data uscita officina",
-    });
-  }
-
-  if (lav.updated_at !== lav.created_at) {
-    items.push({
-      id: `lav-updated-${lav.id}`,
-      kind: "lavorazione",
-      at: lav.updated_at,
-      title: "Lavorazione aggiornata",
-    });
-  }
-
-  for (const s of core.schedeRows) {
-    items.push({
-      id: `scheda-${s.id}`,
-      kind: "scheda",
-      at: s.created_at,
-      title: `Scheda · ${labelTipoScheda(s.tipo)}`,
-    });
-  }
-
-  for (const m of core.movimentiRows) {
-    items.push({
-      id: `mov-${m.id}`,
-      kind: "movimento",
-      at: m.created_at,
-      title: m.tipo === "entrata" ? "Entrata magazzino" : "Uscita magazzino",
-      subtitle: `${m.quantita} pz · ricambio ${m.ricambio_id.slice(0, 8)}…`,
-    });
-  }
-
-  for (const p of core.preventiviRows) {
-    items.push({
-      id: `pv-${p.id}`,
-      kind: "preventivo",
-      at: p.created_at,
-      title: "Preventivo",
-      subtitle: `${p.cliente} · € ${p.totale.toFixed(2)}`,
-    });
-  }
-
-  for (const d of core.documentiRows) {
-    items.push({
-      id: `doc-${d.id}`,
-      kind: "documento",
-      at: d.created_at,
-      title: `Documento · ${d.categoria}`,
-      subtitle: [d.marca, d.modello].filter(Boolean).join(" ") || undefined,
-    });
-  }
-
   for (const lg of core.logRows) {
-    items.push({
-      id: `log-${lg.id}`,
-      kind: "log",
-      at: lg.created_at,
-      title: `Registro · ${lg.azione}`,
-      subtitle: lg.autore_id ? `Utente ${lg.autore_id.slice(0, 8)}…` : undefined,
-    });
+    if (lg.azione !== "UPDATE") continue;
+    const payload = lg.payload as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null | undefined;
+    const before = payload?.before;
+    const after = payload?.after;
+    if (before?.stato !== after?.stato && typeof after?.stato === "string") {
+      items.push({
+        id: `stato-${lg.id}`,
+        kind: "log",
+        at: lg.created_at,
+        title: `Cambio stato · ${labelLavorazioneStatoDb(after.stato as LavorazioneRow["stato"])}`,
+        subtitle: lg.autore_id ? `Utente ${lg.autore_id.slice(0, 8)}…` : undefined,
+      });
+    }
+    if (before?.addetto !== after?.addetto && typeof after?.addetto === "string") {
+      items.push({
+        id: `addetto-${lg.id}`,
+        kind: "log",
+        at: lg.created_at,
+        title: `Cambio addetto · ${after.addetto}`,
+        subtitle: lg.autore_id ? `Utente ${lg.autore_id.slice(0, 8)}…` : undefined,
+      });
+    }
   }
 
   items.sort((a, b) => {

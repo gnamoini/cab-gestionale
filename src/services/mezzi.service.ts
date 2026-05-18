@@ -1,6 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow } from "@/src/types/supabase-tables";
@@ -65,6 +66,8 @@ export const mezziService = {
 
   async create(data: MezzoInsert): Promise<ServiceResult<MezzoRow>> {
     try {
+      const allowed = await ensurePermission("editVehicles");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: row, error } = await c.from("mezzi").insert(data).select("*").single();
       if (error) return err(error.message);
@@ -78,6 +81,8 @@ export const mezziService = {
 
   async update(id: string, data: MezzoUpdate): Promise<ServiceResult<MezzoRow>> {
     try {
+      const allowed = await ensurePermission("editVehicles");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("mezzi").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -98,6 +103,8 @@ export const mezziService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
+      const allowed = await ensurePermission("deleteRecords");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("mezzi").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);

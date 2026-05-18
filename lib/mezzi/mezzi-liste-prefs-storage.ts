@@ -2,7 +2,7 @@
  * @deprecated Persistenza spostata su `public.app_settings` (modulo `mezzi`, chiave `liste`).
  * Le funzioni load/save restano come fallback finché il DB non è popolato o in assenza di permessi.
  */
-import { MEZZI_INITIAL_LISTE, MOCK_MEZZI } from "@/lib/mock-data/mezzi";
+import { MEZZI_LISTE_DEFAULTS } from "@/lib/mezzi/mezzi-liste-defaults";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import type { AttrezzaturaMarca, AttrezzaturaModello } from "@/lib/mezzi/attrezzature-prefs";
 
@@ -10,6 +10,8 @@ export const MEZZI_LISTE_PREFS_KEY = "gestionale-mezzi-liste-prefs-v1";
 
 export type MezziListePrefs = {
   clienti: string[];
+  utilizzatori: string[];
+  cantieri: string[];
   marche: string[];
   /** Modelli mezzo (anagrafica / form) — denormalizzato da `attrezzature`. */
   modelli: string[];
@@ -19,20 +21,13 @@ export type MezziListePrefs = {
   attrezzature?: AttrezzaturaMarca[];
 };
 
-function defaultModelli(): string[] {
-  const s = new Set<string>();
-  for (const m of MOCK_MEZZI) {
-    const x = m.modello?.trim();
-    if (x) s.add(x);
-  }
-  return [...s].sort((a, b) => a.localeCompare(b, "it"));
-}
-
 const defaultListe = (): MezziListePrefs => ({
-  clienti: [...MEZZI_INITIAL_LISTE.clienti],
-  marche: [...MEZZI_INITIAL_LISTE.marche],
-  modelli: defaultModelli(),
-  tipiAttrezzatura: [...MEZZI_INITIAL_LISTE.tipiAttrezzatura],
+  clienti: [...MEZZI_LISTE_DEFAULTS.clienti],
+  utilizzatori: [],
+  cantieri: [],
+  marche: [...MEZZI_LISTE_DEFAULTS.marche],
+  modelli: [],
+  tipiAttrezzatura: [...MEZZI_LISTE_DEFAULTS.tipiAttrezzatura],
   stati: [],
   attrezzature: undefined,
 });
@@ -52,6 +47,8 @@ export function loadMezziListePrefs(): MezziListePrefs | null {
     const o = p as Record<string, unknown>;
     return {
       clienti: Array.isArray(o.clienti) ? (o.clienti as string[]).filter((x) => typeof x === "string") : [],
+      utilizzatori: Array.isArray(o.utilizzatori) ? (o.utilizzatori as string[]).filter((x) => typeof x === "string") : [],
+      cantieri: Array.isArray(o.cantieri) ? (o.cantieri as string[]).filter((x) => typeof x === "string") : [],
       marche: Array.isArray(o.marche) ? (o.marche as string[]).filter((x) => typeof x === "string") : [],
       modelli: Array.isArray(o.modelli) ? (o.modelli as string[]).filter((x) => typeof x === "string") : [],
       tipiAttrezzatura: Array.isArray(o.tipiAttrezzatura)
@@ -80,6 +77,8 @@ export function getMezziListePrefsOrDefault(): MezziListePrefs {
   const d = defaultListe();
   const merged: MezziListePrefs = {
     clienti: loaded.clienti.length ? loaded.clienti : d.clienti,
+    utilizzatori: loaded.utilizzatori?.length ? loaded.utilizzatori : d.utilizzatori,
+    cantieri: loaded.cantieri?.length ? loaded.cantieri : d.cantieri,
     marche: loaded.marche.length ? loaded.marche : d.marche,
     modelli: loaded.modelli?.length ? loaded.modelli : d.modelli,
     tipiAttrezzatura: loaded.tipiAttrezzatura.length ? loaded.tipiAttrezzatura : d.tipiAttrezzatura,

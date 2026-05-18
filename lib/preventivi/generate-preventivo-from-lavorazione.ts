@@ -102,6 +102,7 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     stato: "bozza",
     lavorazioneId: lav.id,
     lavorazioneOrigine: origine,
+    lavorazioneTimestamp: lav.dataIngresso || now,
     cliente,
     cantiere,
     utilizzatore,

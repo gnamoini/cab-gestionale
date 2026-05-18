@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
+import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
 import { MezziSearchBar, MezziFilterFields } from "@/components/gestionale/mezzi/mezzi-filters";
 import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-detail-modal";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
@@ -12,7 +13,6 @@ import {
   erpBtnAccent,
   erpBtnNeutral,
   erpBtnNuovaLavorazione,
-  erpFocus,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
 import { compareMezzi } from "@/lib/mezzi/mezzi-helpers";
@@ -20,17 +20,18 @@ import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb } from "@/li
 import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import { dsInput, dsPageToolbarBtn, dsStackPage, dsStickyToolbar } from "@/lib/ui/design-system";
+import { Drawer } from "@/components/design-system";
 import {
   GestionaleLogChangeList,
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
   IconGestionaleLog,
+  IconGestionaleUndo,
   buildMezziGestionaleLogViewModel,
-  gestionaleLogPanelAsideClass,
-  gestionaleLogPanelHeaderClass,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -41,7 +42,11 @@ import {
 } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
-import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { usePermissions } from "@/src/hooks/use-permissions";
+import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+import { logService } from "@/src/services/log.service";
+import { auditPayload, latestUndoableLog, pickExistingFields } from "@/lib/gestionale-log/undo";
 
 function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
   return a.id.localeCompare(b.id, "en");
@@ -93,6 +98,8 @@ function formToMezzoUpdate(f: ReturnType<typeof getEmptyNuovo>): MezzoUpdate {
 }
 
 export function MezziView() {
+  const permissions = usePermissions();
+  const canEditVehicles = permissions.canEditVehicles;
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -162,9 +169,18 @@ export function MezziView() {
 
   const sorted = useMemo(() => {
     const rows = [...mezziUi];
-    rows.sort((a, b) => compareMezzi(a, b, sortColumn, sortPhase, naturalMezziOrder));
+    rows.sort((a, b) =>
+      compareMezzi(
+        a,
+        b,
+        sortColumn,
+        sortPhase,
+        naturalMezziOrder,
+        (m) => interventiByMezzoId.get(m.id)?.[0]?.dataIngresso ?? "",
+      ),
+    );
     return rows;
-  }, [mezziUi, sortColumn, sortPhase]);
+  }, [interventiByMezzoId, mezziUi, sortColumn, sortPhase]);
 
   const hasMezziFilters =
     search.trim().length > 0 ||
@@ -192,6 +208,7 @@ export function MezziView() {
 
   const [logOpen, setLogOpen] = useState(false);
   const logQuery = useLogListQuery({ entita: "mezzi", limit: 250 }, { enabled: logOpen });
+  const undoableMezziLog = useMemo(() => latestUndoableLog(logQuery.data ?? [], "mezzi"), [logQuery.data]);
   const logEntriesUi = useMemo(() => (logQuery.data ?? []).map(logModificaRowToMezziHubLogEntry), [logQuery.data]);
 
   const {
@@ -275,21 +292,7 @@ export function MezziView() {
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, focusMezzoInTable]);
 
-  useEffect(() => {
-    if (!anyOverlay) return;
-    const gap = window.innerWidth - document.documentElement.clientWidth;
-    const prevHtml = document.documentElement.style.overflow;
-    const prevBody = document.body.style.overflow;
-    const prevPad = document.body.style.paddingRight;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
-    return () => {
-      document.documentElement.style.overflow = prevHtml;
-      document.body.style.overflow = prevBody;
-      document.body.style.paddingRight = prevPad;
-    };
-  }, [anyOverlay]);
+  useBodyScrollLock(anyOverlay);
 
   useEffect(() => {
     if (!anyOverlay) return;
@@ -306,6 +309,7 @@ export function MezziView() {
 
   function submitNuovo(e: React.FormEvent) {
     e.preventDefault();
+    if (!canEditVehicles) return;
     const marca = nuovoForm.marca.trim();
     const mat = nuovoForm.matricola.trim();
     if (!marca || !nuovoForm.cliente.trim() || !mat) {
@@ -324,6 +328,7 @@ export function MezziView() {
 
   function submitEdit(e: React.FormEvent) {
     e.preventDefault();
+    if (!canEditVehicles) return;
     if (!editMezzo) return;
     const marca = editForm.marca.trim();
     const mat = editForm.matricola.trim();
@@ -345,12 +350,59 @@ export function MezziView() {
     );
   }
 
+  async function undoUltimoMezzo() {
+    if (!canEditVehicles || !undoableMezziLog) return;
+    const payload = auditPayload(undoableMezziLog);
+    const before = payload.before;
+    if (!before) return;
+    if (!window.confirm("Annullare l'ultima azione reversibile sui mezzi?")) return;
+    const data = pickExistingFields<MezzoUpdate>(before, ["cliente", "utilizzatore", "marca", "modello", "targa", "matricola", "numero_scuderia", "anno"]);
+    try {
+      await updateMut.mutateAsync({ id: undoableMezziLog.entita_id, data });
+      const generatedUpdate = await logService.getByEntita("mezzi", undoableMezziLog.entita_id, 5);
+      const rollbackUpdateLog = generatedUpdate.success
+        ? generatedUpdate.data?.find((row) => row.id !== undoableMezziLog.id && row.azione === "UPDATE")
+        : null;
+      const undoLog = await logService.create({
+        entita: "mezzi",
+        entita_id: undoableMezziLog.entita_id,
+        azione: "UNDO",
+        autore_id: null,
+        payload: { reverted_log_id: undoableMezziLog.id, before: payload.after ?? null, after: before },
+      });
+      if (rollbackUpdateLog) {
+        await logService.markReverted(rollbackUpdateLog.id, {
+          undo_log_id: undoLog.success ? undoLog.data?.id : null,
+          permission: "editVehicles",
+        });
+      }
+      await logService.markReverted(undoableMezziLog.id, {
+        undo_log_id: undoLog.success ? undoLog.data?.id : null,
+        permission: "editVehicles",
+      });
+      await logQuery.refetch();
+      flashRow(undoableMezziLog.entita_id);
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Undo non riuscito.");
+    }
+  }
+
   return (
     <>
       <PageHeader
         title="Mezzi"
         actions={
           <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
+            <button
+              type="button"
+              onClick={() => void undoUltimoMezzo()}
+              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
+              title={undoableMezziLog ? "Annulla ultima azione" : "Nessuna azione reversibile"}
+              disabled={!canEditVehicles || !undoableMezziLog || updateMut.isPending}
+            >
+              <IconGestionaleUndo />
+              <span className="sr-only">Annulla ultima azione</span>
+            </button>
             <button
               type="button"
               onClick={() => setLogOpen(true)}
@@ -365,17 +417,20 @@ export function MezziView() {
       />
 
       <div className={dsStackPage}>
-        <ShellCard title="Parco mezzi">
+        <ShellCard>
           <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <button
                   type="button"
                   onClick={() => {
+                    if (!canEditVehicles) return;
                     setNuovoForm(getEmptyNuovo());
                     setNuovoOpen(true);
                   }}
                   className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
+                  disabled={!canEditVehicles}
+                  title={!canEditVehicles ? READONLY_PERMISSION_HINT : undefined}
                 >
                   <span className="text-lg font-bold leading-none" aria-hidden>
                     +
@@ -484,9 +539,7 @@ export function MezziView() {
           </div>
           {showPager ? (
             <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} />
-          ) : (
-            <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">{sorted.length} risultati</p>
-          )}
+          ) : null}
         </ShellCard>
       </div>
 
@@ -495,32 +548,18 @@ export function MezziView() {
           mezzo={hubMezzo}
           onClose={() => setHubMezzo(null)}
           onEdit={() => {
+            if (!canEditVehicles) return;
             const h = hubMezzo;
             setHubMezzo(null);
             setEditMezzo(h);
             setEditForm(gestitoToForm(h));
           }}
+          canEdit={canEditVehicles}
         />
       ) : null}
 
-      {logOpen ? (
-        <div
-          className="fixed inset-0 z-[55] flex items-stretch justify-end bg-black/30"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              setLogOpen(false);
-            }
-          }}
-        >
-          <aside className={gestionaleLogPanelAsideClass} aria-label="Log modifiche mezzi" onMouseDown={(e) => e.stopPropagation()}>
-            <div className={gestionaleLogPanelHeaderClass}>
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche</h2>
-              <button type="button" onClick={() => setLogOpen(false)} className={erpBtnNeutral}>
-                Chiudi
-              </button>
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+      <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche" ariaLabel="Log modifiche mezzi" lockScroll={false}>
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
               <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
                 {logQuery.isLoading ? (
                   <p className="text-sm text-zinc-500">Caricamento…</p>
@@ -548,13 +587,11 @@ export function MezziView() {
                   </GestionaleLogList>
                 )}
               </div>
-              {showLogPager ? (
-                <TablePagination page={logPage} pageCount={logPageCount} onPageChange={setLogPage} label={logPagerLabel} />
-              ) : null}
-            </div>
-          </aside>
+          {showLogPager ? (
+            <TablePagination page={logPage} pageCount={logPageCount} onPageChange={setLogPage} label={logPagerLabel} />
+          ) : null}
         </div>
-      ) : null}
+      </Drawer>
 
       {nuovoOpen ? (
         <div
@@ -646,10 +683,11 @@ function MezzoFormFields({
   setForm: React.Dispatch<React.SetStateAction<MezzoForm>>;
   variant: "nuovo" | "modifica";
 }) {
-  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
-  const liste = settingsPayload?.resolved.mezziListe;
+  const globalOpts = useGlobalOptions({ debugTag: "MezzoFormFields" });
+  const liste = globalOpts.mezziListe;
 
   const clientiBase = useMemo(() => sortedUniqueStrings(liste?.clienti ?? []), [liste]);
+  const utilizzatoriBase = useMemo(() => sortedUniqueStrings(liste?.utilizzatori ?? []), [liste]);
   const marcheBase = useMemo(() => sortedUniqueStrings(liste?.marche ?? []), [liste]);
 
   const clientiOpts = useMemo(() => {
@@ -701,7 +739,7 @@ function MezzoFormFields({
   const marcaValue = marcheOpts.find((x) => x === form.marca.trim()) ?? "";
   const modelloValue = modelloDisabled ? "" : (modelliOpts.find((x) => x === form.modello.trim()) ?? "");
 
-  if (!liste) {
+  if (globalOpts.isLoading) {
     return <p className="text-sm text-zinc-500 dark:text-zinc-400">Caricamento impostazioni…</p>;
   }
 
@@ -725,7 +763,12 @@ function MezzoFormFields({
       </label>
       <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
         Utilizzatore
-        <input value={form.utilizzatore} onChange={(e) => setForm((f) => ({ ...f, utilizzatore: e.target.value }))} className={`${dsInput} mt-1`} />
+        <SettingsAutocompleteInput
+          className="mt-1"
+          value={form.utilizzatore}
+          onChange={(value) => setForm((f) => ({ ...f, utilizzatore: value }))}
+          options={utilizzatoriBase}
+        />
       </label>
       <div className="grid grid-cols-2 gap-2">
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">

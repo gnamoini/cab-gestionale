@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { AuthError, Session, User } from "@supabase/supabase-js";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import { resolveSignInEmail } from "@/src/lib/auth/resolve-sign-in-email";
+import { normalizeRole } from "@/src/lib/auth/permissions";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { authLogsService } from "@/src/services/auth-logs.service";
@@ -89,8 +90,7 @@ async function loadPublicUserFromSessionUser(sessionUser: User): Promise<PublicA
     (typeof sessionUser.user_metadata?.nome === "string" ? sessionUser.user_metadata.nome.trim() : "") ||
     sessionUser.email?.split("@")[0]?.trim() ||
     "Utente";
-  const ruolo: RuoloProfile =
-    row?.ruolo === "admin" || row?.ruolo === "tecnico" || row?.ruolo === "viewer" ? row.ruolo : "tecnico";
+  const ruolo: RuoloProfile = normalizeRole(typeof row?.ruolo === "string" ? row.ruolo : null);
   return {
     id: sessionUser.id,
     email: sessionUser.email ?? "",
@@ -136,7 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: authUser.id,
           email: authUser.email ?? "",
           nome,
-          ruolo: "tecnico",
+          ruolo: "ospite",
         });
         setStatus("degraded");
       }

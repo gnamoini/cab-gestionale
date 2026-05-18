@@ -3,7 +3,20 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { memo } from "react";
-import { dsScrollbar, dsTable, dsTableRow, dsTableWrap, dsTableTdCompact, dsTableTdActions, dsTableActionsGroup, dsTableActionsGroupStart, dsTableActionBtnPrimary, dsTableActionBtnSecondary, dsTableActionGlyph } from "@/lib/ui/design-system";
+import {
+  dsScrollbar,
+  dsTable,
+  dsTableActionBtnInfo,
+  dsTableActionBtnSecondary,
+  dsTableActionGlyph,
+  dsTableActionsGroup,
+  dsTableActionsGroupStart,
+  dsTableHead,
+  dsTableRow,
+  dsTableTdActions,
+  dsTableTdCompact,
+  dsTableWrap,
+} from "@/lib/ui/design-system";
 import { hrefDocumentiPerMezzo, hrefLavorazioniPerMezzo, hrefPreventiviPerMezzo, ultimaLavorazioneLabel } from "@/lib/mezzi/mezzi-helpers";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 
@@ -51,34 +64,70 @@ function cellIdentValue(raw: string | undefined) {
   return t && t !== "—" ? t : "—";
 }
 
-function SortTh({
+function MezziSortBtn({
   label,
   columnKey,
   sortColumn,
   sortPhase,
   onSort,
+  buttonClassName = "",
+  labelClassName = "",
 }: {
   label: string;
   columnKey: MezziSortKey;
   sortColumn: MezziSortKey | null;
   sortPhase: MezziSortPhase;
   onSort: (k: MezziSortKey) => void;
+  buttonClassName?: string;
+  labelClassName?: string;
 }) {
   const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
   let icon: ReactNode = <span className="opacity-40">↕</span>;
   if (active) icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
   return (
-    <th className="border-b border-zinc-200 bg-zinc-50 px-3 py-2 align-middle dark:border-zinc-700 dark:bg-zinc-800/90">
-      <button
-        type="button"
-        onClick={() => onSort(columnKey)}
-        className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide ${
-          active ? "text-[color:var(--cab-primary)]" : "text-zinc-500 dark:text-zinc-400"
-        }`}
-      >
-        {label}
-        {icon}
-      </button>
+    <button
+      type="button"
+      onClick={() => onSort(columnKey)}
+      className={`inline-flex min-w-0 max-w-full items-center gap-1 text-xs font-semibold uppercase tracking-wide ${buttonClassName} ${
+        active ? "text-[color:var(--cab-primary)]" : "text-zinc-500 dark:text-zinc-400"
+      }`}
+    >
+      <span className={labelClassName || undefined}>{label}</span>
+      {icon}
+    </button>
+  );
+}
+
+function SortTh({
+  label,
+  columnKey,
+  sortColumn,
+  sortPhase,
+  onSort,
+  headerClassName = "",
+  buttonClassName = "",
+  labelClassName = "",
+}: {
+  label: string;
+  columnKey: MezziSortKey;
+  sortColumn: MezziSortKey | null;
+  sortPhase: MezziSortPhase;
+  onSort: (k: MezziSortKey) => void;
+  headerClassName?: string;
+  buttonClassName?: string;
+  labelClassName?: string;
+}) {
+  return (
+    <th className={`px-2.5 py-2 align-middle ${headerClassName}`}>
+      <MezziSortBtn
+        label={label}
+        columnKey={columnKey}
+        sortColumn={sortColumn}
+        sortPhase={sortPhase}
+        onSort={onSort}
+        buttonClassName={buttonClassName}
+        labelClassName={labelClassName}
+      />
     </th>
   );
 }
@@ -114,15 +163,16 @@ function MezzoRowInner({
       id={`mezzo-row-${m.id}`}
       className={[
         dsTableRow,
-        "bg-white dark:bg-zinc-900",
-        flash ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))]" : "",
+        flash
+          ? "bg-white/95 shadow-[inset_0_0_0_1px_rgba(228,228,231,0.95),0_0_20px_rgba(255,255,255,0.65)] transition-[background-color,box-shadow] duration-200 ease-out dark:bg-zinc-100/12 dark:shadow-[inset_0_0_0_1px_rgba(82,82,91,0.45),0_0_18px_rgba(255,255,255,0.06)]"
+          : "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      <td className={`${dsTableTdCompact} font-medium text-zinc-900 dark:text-zinc-50`}>{m.marca}</td>
+      <td className={`${dsTableTdCompact} font-medium`}>{m.marca}</td>
       <td className={`min-w-0 ${dsTableTdCompact}`}>
-        <div className="truncate font-medium text-zinc-900 dark:text-zinc-50">{cellIdentValue(m.modello)}</div>
+        <div className="break-words font-medium leading-snug">{cellIdentValue(m.modello)}</div>
         {m.hubSynthetic ? (
           <div className="mt-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Sintetico</div>
         ) : null}
@@ -130,14 +180,14 @@ function MezzoRowInner({
       <td className={cellIdent}>{cellIdentValue(m.targa)}</td>
       <td className={cellIdent}>{cellIdentValue(m.matricola)}</td>
       <td className={cellIdent}>{cellIdentValue(m.numeroScuderia)}</td>
-      <td className={`min-w-0 ${dsTableTdCompact} text-zinc-800 dark:text-zinc-200`}>
-        <div className="truncate font-medium">{m.cliente}</div>
-        <div className="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-400">{m.utilizzatore}</div>
+      <td className={`min-w-0 ${dsTableTdCompact}`}>
+        <div className="break-words font-medium leading-snug">{m.cliente}</div>
+        <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">{m.utilizzatore}</div>
       </td>
       <td className={`${dsTableTdCompact} whitespace-nowrap text-xs text-zinc-700 dark:text-zinc-300`}>{ultima}</td>
       <td className={dsTableTdActions}>
         <div className={dsTableActionsGroup}>
-          <button type="button" className={dsTableActionBtnPrimary} title="Scheda hub mezzo" aria-label="Scheda hub mezzo" onClick={() => onHub(m)}>
+          <button type="button" className={dsTableActionBtnInfo} title="Scheda hub mezzo" aria-label="Scheda hub mezzo" onClick={() => onHub(m)}>
             <IconInfo />
           </button>
           <Link
@@ -229,7 +279,7 @@ function MezzoMobileCard({
         </div>
       </dl>
       <div className={`mt-4 w-full min-w-0 ${dsTableActionsGroupStart}`}>
-        <button type="button" className={dsTableActionBtnPrimary} title="Scheda hub mezzo" aria-label="Scheda hub mezzo" onClick={() => onHub(m)}>
+        <button type="button" className={dsTableActionBtnInfo} title="Scheda hub mezzo" aria-label="Scheda hub mezzo" onClick={() => onHub(m)}>
           <IconInfo />
         </button>
         <Link href={hrefDocumentiPerMezzo(m)} className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`} title="Documenti" aria-label="Documenti">
@@ -252,23 +302,27 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
   return (
     <>
       <div className={`hidden ${dsTableWrap} ${dsScrollbar} md:block`}>
-        <table className={`${dsTable} min-w-[1040px] w-full table-fixed text-left text-[13px] leading-snug text-zinc-900 dark:text-zinc-100`}>
-          <thead>
+        <table className={`${dsTable} w-full min-w-0 table-fixed text-left text-[13px] leading-snug text-zinc-900 dark:text-zinc-100`}>
+          <colgroup>
+            <col className="w-[11%]" />
+            <col className="w-[15%]" />
+            <col className="w-[10%]" />
+            <col className="w-[13%]" />
+            <col className="w-[8%]" />
+            <col />
+            <col className="w-[10%]" />
+            <col className="w-[12rem]" />
+          </colgroup>
+          <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
             <tr>
               <SortTh label="Marca" columnKey="marca" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <th className="border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-400">
-                Modello
-              </th>
+              <SortTh label="Modello" columnKey="modello" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <SortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <SortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <th className="border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-400">
-                Scuderia
-              </th>
+              <SortTh label="Scuderia" columnKey="numeroScuderia" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <SortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <th className="border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-400">
-                Ultima lav.
-              </th>
-              <th className="border-b border-zinc-200 bg-zinc-50 px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700 dark:bg-zinc-800/90 dark:text-zinc-400">
+              <SortTh label="Ultima lav." columnKey="ultimaLavorazione" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+              <th className="px-2.5 py-2 text-right align-middle text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 Azioni
               </th>
             </tr>

@@ -10,7 +10,7 @@ import { ReportMagazzinoSection } from "@/components/report/report-magazzino-sec
 import { ReportRicambiConsumoSection } from "@/components/report/report-ricambi-consumo-section";
 import { ReportTopClienti, ReportTopMezzi } from "@/components/report/report-tops";
 import { buildReportModel } from "@/lib/report/build-report-model";
-import { endOfLocalDay, formatCompareLabel, startOfLocalDay, type ReportCompareMode, type ReportPeriodPreset } from "@/lib/report/date-ranges";
+import { endOfLocalDay, startOfLocalDay, type ReportCompareMode, type ReportPeriodPreset } from "@/lib/report/date-ranges";
 import { buildTopClientiPeriodo, buildTopMezziPeriodo, mergeTopClientiCompare, mergeTopMezziCompare } from "@/lib/report/report-classifiche";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { dsStackPage } from "@/lib/ui/design-system";
@@ -81,11 +81,24 @@ export function ReportAnalyticsView() {
     };
   }, [model, live]);
 
-  if (!mounted || !anchor || !model || !tops) {
+  if (!mounted || !anchor || live.isLoading || !model || !tops) {
     return (
       <div className={dsStackPage}>
-        <PageHeader title="REPORT" />
+        <PageHeader title="Report" />
         <ReportSkeleton />
+      </div>
+    );
+  }
+
+  if (live.isError) {
+    return (
+      <div className={dsStackPage}>
+        <PageHeader title="Report" />
+        <ShellCard title="Caricamento non riuscito">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            Impossibile caricare i dati del report. Riprova più tardi.
+          </p>
+        </ShellCard>
       </div>
     );
   }
@@ -100,13 +113,9 @@ export function ReportAnalyticsView() {
     }
   }
 
-  const kpiSubtitle = model.compareRange
-    ? `Periodo filtrato · ${formatCompareLabel(model.compareMode, model.range, model.compareRange)}`
-    : "Indicatori coerenti con il periodo selezionato (il capitale mostra lo snapshot attuale; il confronto usa la somma dei Δ capitale nel periodo).";
-
   return (
     <div className={dsStackPage}>
-      <PageHeader title="REPORT" />
+      <PageHeader title="Report" />
 
       <ReportControls
         preset={preset}
@@ -119,7 +128,7 @@ export function ReportAnalyticsView() {
         onCompareMode={setCompareMode}
       />
 
-      <ShellCard title="Indicatori periodo" subtitle={kpiSubtitle}>
+      <ShellCard title="Indicatori periodo">
         <ReportKpiGrid items={model.kpis} />
       </ShellCard>
 

@@ -99,21 +99,31 @@ export const lavorazioniModalSelectClass =
   `min-h-10 w-full min-w-0 cursor-pointer appearance-none rounded-[var(--ds-radius-lg)] ${cabBorder} ${cabSurface} py-2.5 pl-3 pr-10 text-sm font-medium leading-snug ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_50%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)]`;
 
 /** G — contenitore tabella (scrollbar: concatenare `dsScrollbar` dove serve) */
-export const dsTableWrap = `overflow-x-auto rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} shadow-[var(--cab-shadow-sm)]`;
+export const dsTableWrap = `max-w-full overflow-x-auto rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} shadow-[var(--cab-shadow-sm)]`;
 
-export const dsTable = `min-w-full border-collapse text-left text-sm ${cabText}`;
+/** Desktop ≥1280px: niente scroll orizzontale pagina; scroll interno solo sotto breakpoint. */
+export const dsTableWrapDesktopFit =
+  `max-w-full overflow-x-auto rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} shadow-[var(--cab-shadow-sm)] xl:overflow-x-hidden`;
+
+export const dsTable = `min-w-full border-collapse text-left text-[13px] leading-tight ${cabText}`;
+
+/** Tabella a larghezza fissa colonne — usare con `colgroup` percentuali (target 1366px). */
+export const dsTableFixed = `${dsTable} w-full table-fixed`;
+
+/** Cella testo troncato (descrizioni lunghe). */
+export const dsTableCellTruncate = "min-w-0 max-w-0 truncate";
 
 /** Intestazione tabella: applicare a `<thead>` o celle `<th>` insieme a `border-b` se serve */
-export const dsTableHead = `bg-[var(--cab-surface-2)] text-xs font-semibold uppercase tracking-wide ${cabTextMuted}`;
+export const dsTableHead = `bg-[var(--cab-surface-2)] text-[10px] font-semibold uppercase tracking-wide ${cabTextMuted}`;
 
 /** Riga corpo tabella standard */
-export const dsTableRow = `border-b ${cabBorder} transition-colors duration-150 ease-out hover:bg-[var(--cab-hover)]`;
+export const dsTableRow = `border-b ${cabBorder} transition-colors duration-150 ease-out hover:bg-[var(--cab-hover)] data-[selected=true]:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-card))]`;
 
 /** Cella `<th>` ordinabile (wrapper) — bottone interno in `ReportSortTh` */
-export const dsTableSortTh = `border-b ${cabBorder} bg-[var(--cab-surface-2)] px-2 py-2.5 align-middle text-xs font-semibold uppercase tracking-wide sm:px-3`;
+export const dsTableSortTh = `border-b ${cabBorder} bg-[var(--cab-surface-2)] px-2 py-2 align-middle text-[10px] font-semibold uppercase tracking-wide sm:px-2.5`;
 
 /** Celle `<th>` statiche (header tabella modali / report) */
-export const dsTableHeadCell = `border-b ${cabBorder} bg-[var(--cab-surface-2)] px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide ${cabTextMuted} sm:px-3 sm:py-2.5`;
+export const dsTableHeadCell = `border-b ${cabBorder} bg-[var(--cab-surface-2)] px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide ${cabTextMuted} sm:px-2.5`;
 
 /** Colonna indice / rank */
 export const dsTableThPos = `w-6 min-w-[1.5rem] max-w-[1.75rem] border-b ${cabBorder} bg-[var(--cab-surface-2)] px-0.5 py-2.5 text-center text-[10px] font-semibold uppercase tracking-wide ${cabTextMuted}`;
@@ -122,13 +132,13 @@ export const dsTableThPos = `w-6 min-w-[1.5rem] max-w-[1.75rem] border-b ${cabBo
 export const dsTableThCompare = `border-b ${cabBorder} bg-[var(--cab-surface-2)] px-2 py-2.5 text-right text-xs font-semibold uppercase tracking-wide ${cabTextMuted} sm:px-3`;
 
 /** Celle dati compatte (report / modali) */
-export const dsTableTd = `px-2 py-2.5 align-middle text-sm sm:px-3 ${cabText}`;
+export const dsTableTd = `px-2 py-2 align-middle text-[13px] sm:px-2.5 ${cabText}`;
 
 /** Empty state riga tabella */
 export const dsTableEmptyCell = `px-3 py-8 text-center text-sm ${cabTextMuted}`;
 
 /** G — Celle corpo compatte (non colonna azioni). */
-export const dsTableTdCompact = `px-2 py-1.5 align-middle text-sm ${cabText}`;
+export const dsTableTdCompact = `px-2 py-1.5 align-middle text-[13px] ${cabText}`;
 
 /** G — Colonna azioni: padding ridotto, contenuto senza a capo. */
 export const dsTableTdActions = "whitespace-nowrap px-1 py-1.5 align-middle text-right";
@@ -179,17 +189,17 @@ export const dsSurfacePanel = `flex min-h-[220px] flex-col rounded-[var(--ds-rad
 export const dsSurfaceInteractiveKpi = `group flex h-full min-h-[220px] flex-col rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabSurface} p-4 text-left shadow-[var(--cab-shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)] active:scale-[0.99] ${dsFocus}`;
 
 export const dsModalBackdrop =
-  "fixed inset-0 z-50 flex items-end justify-center bg-[var(--cab-overlay)] p-4 backdrop-blur-[2px] sm:items-center";
+  "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--cab-overlay)] p-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[2px] sm:items-center sm:p-4";
 
 export const dsModalPanel = `w-full max-w-lg rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} p-4 shadow-[var(--cab-shadow-md)]`;
 
 /** Modali Lavorazioni (sopra altri layer; z-index dedicato). */
 export const dsLavorazioniModalLayer =
-  "fixed inset-0 z-[100] flex items-end justify-center p-4 sm:items-center";
+  "fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:items-center sm:p-4";
 export const dsLavorazioniModalOverlay =
   "absolute inset-0 z-0 cursor-default border-0 bg-[var(--cab-overlay)] p-0 backdrop-blur-[3px]";
 export const dsLavorazioniModalDialog =
-  `relative z-[1] flex max-h-[min(92dvh,920px)] w-full min-h-0 flex-col overflow-hidden rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} shadow-2xl`;
+  `relative z-[1] flex max-h-[calc(100dvh-1.5rem)] w-full min-h-0 flex-col overflow-hidden rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} shadow-2xl sm:max-h-[min(92dvh,920px)]`;
 
 /** `<th>` sticky per tabelle principali (Preventivi / Lavorazioni / …). */
 export const dsTableThSticky =
@@ -248,7 +258,7 @@ export const dsCardTitle = dsTypoCardTitle;
 export const dsStackPage = "space-y-[length:var(--ds-space-xl)]";
 
 /** Larghezza massima contenuto liste gestionale (allineata tra moduli). */
-export const dsGestionaleContentMax = "mx-auto w-full max-w-[min(100%,96rem)]";
+export const dsGestionaleContentMax = "mx-auto w-full max-w-[min(100%,100rem)]";
 
 /** Placeholder unificato campi ricerca liste; dettaglio in `aria-label` per modulo. */
 export const GESTIONALE_SEARCH_PLACEHOLDER = "Cerca…";

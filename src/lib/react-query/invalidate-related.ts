@@ -6,6 +6,7 @@ export const QK = {
   profiles: ["profiles"] as const,
   /** Profili lista utenti (pagina Sicurezza / creazione utenti). */
   authUsers: ["profiles", "auth-users-list"] as const,
+  securityUsers: ["security-users"] as const,
   mezzi: ["mezzi"] as const,
   mezzoQueries: ["mezzoQueries"] as const,
   lavorazioniQueries: ["lavorazioniQueries"] as const,

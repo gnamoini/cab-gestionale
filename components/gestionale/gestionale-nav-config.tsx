@@ -107,6 +107,15 @@ export function IconNavSupporto(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconNavSettings(props: SVGProps<SVGSVGElement>) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" />
+      <path d="M19.4 15a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 01-2.83 2.83l-.06-.06A1.7 1.7 0 0015 19.36a1.7 1.7 0 00-1 .32 1.7 1.7 0 00-.7 1.52V21a2 2 0 01-4 0v-.1a1.7 1.7 0 00-1.12-1.58 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.7 1.7 0 003.64 15a1.7 1.7 0 00-.32-1 1.7 1.7 0 00-1.52-.7H1.7a2 2 0 010-4h.1a1.7 1.7 0 001.58-1.12 1.7 1.7 0 00-.34-1.87l-.06-.06a2 2 0 012.83-2.83l.06.06A1.7 1.7 0 007 3.64a1.7 1.7 0 001-.32 1.7 1.7 0 00.7-1.52V1.7a2 2 0 014 0v.1a1.7 1.7 0 001.12 1.58 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 012.83 2.83l-.06.06A1.7 1.7 0 0020.36 7c.1.35.1.72 0 1.07.2.1.43.16.68.16h.26a2 2 0 010 4h-.1a1.7 1.7 0 00-1.58 1.12c-.08.2-.15.42-.22.65z" />
+    </SvgIcon>
+  );
+}
+
 export const GESTIONALE_NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: IconNavDashboard },
   { href: "/lavorazioni", label: "Lavorazioni", Icon: IconNavLavorazioni },
@@ -117,6 +126,7 @@ export const GESTIONALE_NAV = [
   { href: "/bunder", label: "BUNDER", Icon: IconNavBunder },
   { href: "/report", label: "Report", Icon: IconNavReport },
   { href: "/supporto", label: "Supporto", Icon: IconNavSupporto },
+  { href: "/impostazioni", label: "Impostazioni", Icon: IconNavSettings },
   { href: "/dashboard/security", label: "Sicurezza", Icon: IconNavSecurity },
 ] as const;
 

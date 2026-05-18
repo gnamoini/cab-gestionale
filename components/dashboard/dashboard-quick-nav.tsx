@@ -27,7 +27,7 @@ export function DashboardQuickNav() {
           if (!m) return false;
           return !permMap[m].canRead;
         },
-      }).filter((item) => item.href !== "/supporto" && item.href !== "/dashboard/security"),
+      }).filter((item) => item.href !== "/supporto" && item.href !== "/dashboard/security" && item.href !== "/impostazioni"),
     [permMap],
   );
 

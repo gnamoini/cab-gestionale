@@ -1,7 +1,7 @@
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 
-export const MAGAZZINO_MOCK_USER = "Admin";
+const MAGAZZINO_DEFAULT_AUTHOR = "Operatore";
 
 /** Limita markup % nell'intervallo gestionale; non tronca i decimali. */
 export function clampMarkupPercentuale(n: number): number {
@@ -90,7 +90,7 @@ export function emptyRicambioForm(): RicambioFormState {
   });
 }
 
-export function ricambioFromForm(f: RicambioFormState, id?: string, autoreUltimaModifica = MAGAZZINO_MOCK_USER): RicambioMagazzino | null {
+export function ricambioFromForm(f: RicambioFormState, id?: string, autoreUltimaModifica = MAGAZZINO_DEFAULT_AUTHOR): RicambioMagazzino | null {
   if (
     !f.marca.trim() ||
     !f.codiceFornitoreOriginale.trim() ||
@@ -120,7 +120,7 @@ export function ricambioFormImportantWarnings(f: RicambioFormState): string[] {
 export function ricambioFromFormLenient(
   f: RicambioFormState,
   id?: string,
-  autoreUltimaModifica = MAGAZZINO_MOCK_USER,
+  autoreUltimaModifica = MAGAZZINO_DEFAULT_AUTHOR,
 ): RicambioMagazzino {
   const compat = parseCompatInput(f.compatibilitaMezzi);
   const ts = new Date().toISOString();
@@ -138,7 +138,7 @@ export function ricambioFromFormLenient(
     scorta: Math.max(0, parseFloat(f.scorta) || 0),
     scortaMinima: Math.max(0, parseFloat(f.scortaMinima) || 0),
     dataUltimaModifica: ts,
-    autoreUltimaModifica: autoreUltimaModifica.trim() || MAGAZZINO_MOCK_USER,
+    autoreUltimaModifica: autoreUltimaModifica.trim() || MAGAZZINO_DEFAULT_AUTHOR,
     prezzoFornitoreOriginale: listino,
     scontoFornitoreOriginale: Math.min(100, Math.max(0, parseFloat(f.scontoFornitoreOriginale) || 0)),
     markupPercentuale: markup,

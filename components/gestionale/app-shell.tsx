@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { CloseButton } from "@/components/design-system";
+import { PageLoadingOverlay } from "@/components/design-system/loading-indicator";
 import { useAuth } from "@/context/auth-context";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
-import { buildEffectivePermissionsByModule } from "@/src/lib/permissions/effective-permissions";
 import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
-import { useUserPermissionsQuery } from "@/src/hooks/use-permissions";
+import { canReadModule, hasPermission, normalizeRole } from "@/src/lib/auth/permissions";
+import { usePermissions } from "@/src/hooks/use-permissions";
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
@@ -188,9 +190,6 @@ function SidebarAccountFooter() {
       >
         Esci
       </button>
-      <p className="mt-2 text-center text-[10px] leading-snug text-zinc-400 dark:text-zinc-500">
-        {isStagingPublicSlice() ? "Staging pubblico · moduli limitati" : "Ambiente interno · verificare i dati"}
-      </p>
     </div>
   );
 }
@@ -199,10 +198,12 @@ function MobileNavRow({
   item,
   pathname,
   onClose,
+  onNavigate,
 }: {
   item: GestionaleNavResolvedItem;
   pathname: string;
   onClose: () => void;
+  onNavigate?: () => void;
 }) {
   const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
   const Icon = item.Icon;
@@ -229,7 +230,10 @@ function MobileNavRow({
   return (
     <Link
       href={item.href}
-      onClick={onClose}
+      onClick={() => {
+        onNavigate?.();
+        onClose();
+      }}
       className={`flex min-h-[3.25rem] items-center gap-3 rounded-xl px-3 text-base font-semibold ${
         active
           ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-card))] text-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_28%,transparent)] dark:text-orange-50"
@@ -255,10 +259,12 @@ function MobileNavDrawer({
   open,
   onClose,
   navItems,
+  onNavigate,
 }: {
   open: boolean;
   onClose: () => void;
   navItems: GestionaleNavResolvedItem[];
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -306,18 +312,11 @@ function MobileNavDrawer({
               <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">Manutenzione</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-zinc-200 bg-white text-base font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 ${erpFocus}`}
-            aria-label="Chiudi"
-          >
-            ×
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
         <nav className="gestionale-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3" aria-label="Sezioni principali">
           {navItems.map((item) => (
-            <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} />
+            <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} onNavigate={onNavigate} />
           ))}
         </nav>
       </div>
@@ -328,23 +327,23 @@ function MobileNavDrawer({
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [routeLoading, setRouteLoading] = useState(false);
   const { user } = useAuth();
-  const permQ = useUserPermissionsQuery();
-  const permMap = useMemo(
-    () => buildEffectivePermissionsByModule(user?.ruolo, permQ.data),
-    [user?.ruolo, permQ.data],
-  );
+  const pathname = usePathname();
+  const permissions = usePermissions();
+  const role = normalizeRole(user?.ruolo);
   const navItems = useMemo(
     () =>
       resolveGestionaleNav({
         hideHref: (href) => {
-          if (href === "/dashboard/security") return user?.ruolo !== "admin";
+          if (href === "/dashboard/security") return !hasPermission(role, "manageSecurity");
+          if (href === "/impostazioni") return !hasPermission(role, "manageSettings");
           const m = gestionaleNavHrefToModule(href);
           if (!m) return false;
-          return !permMap[m].canRead;
+          return !canReadModule(permissions.role, m);
         },
       }),
-    [permMap],
+    [permissions.role, role],
   );
 
   useEffect(() => {
@@ -354,6 +353,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       /* ignore */
     }
   }, []);
+
+  useEffect(() => {
+    setRouteLoading(false);
+    setMobileOpen(false);
+  }, [pathname]);
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((c) => {
@@ -424,6 +428,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               collapsed={collapsed}
               disabled={item.disabled}
               badge={item.badge}
+              onNavigate={() => setRouteLoading(true)}
             />
           ))}
         </nav>
@@ -445,6 +450,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <Link
             href="/dashboard"
+            onClick={() => setRouteLoading(true)}
             className={`${erpFocus} hidden min-w-0 items-center gap-2.5 rounded-lg py-1 pr-2 md:inline-flex`}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-xs font-bold text-white">
@@ -466,9 +472,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} />
+        <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} onNavigate={() => setRouteLoading(true)} />
+        <PageLoadingOverlay show={routeLoading} />
 
-        <main className="gestionale-scrollbar mx-auto w-full max-w-[min(100%,96rem)] flex-1 overflow-auto px-3 py-4 sm:px-4 md:px-5 md:py-5">
+        <main className="gestionale-scrollbar mx-auto w-full max-w-[min(100%,100rem)] flex-1 overflow-auto px-2 py-3 sm:px-3 md:px-4 md:py-4">
           {children}
         </main>
       </div>

@@ -1,7 +1,6 @@
-import { MOCK_MEZZI } from "@/lib/mock-data/mezzi";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
-let snapshot: MezzoGestito[] = MOCK_MEZZI.map((m) => ({ ...m }));
+let snapshot: MezzoGestito[] = [];
 const listeners = new Set<() => void>();
 
 export function setMezziReportSnapshot(next: MezzoGestito[]): void {

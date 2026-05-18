@@ -10,6 +10,7 @@ import {
   dispatchMezziListeRefresh,
 } from "@/lib/sistema/cab-events";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
 
@@ -47,6 +48,9 @@ function isOwnWrite(
 export function AppSettingsRealtimeBridge() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { isOpen: settingsModalOpen } = useSettingsModalOpen();
+  const settingsModalOpenRef = useRef(settingsModalOpen);
+  settingsModalOpenRef.current = settingsModalOpen;
   const userIdRef = useRef(user?.id);
   userIdRef.current = user?.id;
 
@@ -67,10 +71,11 @@ export function AppSettingsRealtimeBridge() {
     };
 
     const scheduleInvalidate = () => {
+      if (settingsModalOpenRef.current) return;
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
-        if (cancelled) return;
+        if (cancelled || settingsModalOpenRef.current) return;
         void qc.invalidateQueries({ queryKey: [...QK.settings] });
         dispatchSideEffects();
       }, 400);
@@ -89,6 +94,7 @@ export function AppSettingsRealtimeBridge() {
       recentFingerprints.set(fp, now);
 
       if (payload.eventType === "DELETE") {
+        if (settingsModalOpenRef.current) return;
         void qc.invalidateQueries({ queryKey: [...QK.settings] });
         dispatchSideEffects();
         return;

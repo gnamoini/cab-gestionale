@@ -1,6 +1,6 @@
 /** Modulo Lavorazioni — tipi dedicati (non dipendono dal vecchio union StatoLavorazione). */
 
-export type PrioritaLav = "alta" | "media" | "bassa";
+export type PrioritaLav = "urgente" | "alta" | "media" | "bassa";
 
 export interface StatoLavorazioneConfig {
   id: string;

@@ -1,6 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { CategoriaDocumento, DocumentoRow } from "@/src/types/supabase-tables";
@@ -63,6 +64,8 @@ export const documentiService = {
 
   async create(data: DocumentoInsert): Promise<ServiceResult<DocumentoRow>> {
     try {
+      const allowed = await ensurePermission("uploadDocuments");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const merged = mergeDocumentoMeta(data, { setUploadTimestamp: true }) as DocumentoInsert;
       const { data: row, error } = await c.from("documenti").insert(merged).select("*").single();
@@ -77,6 +80,8 @@ export const documentiService = {
 
   async update(id: string, data: DocumentoUpdate): Promise<ServiceResult<DocumentoRow>> {
     try {
+      const allowed = await ensurePermission("uploadDocuments");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("documenti").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -98,6 +103,8 @@ export const documentiService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
+      const allowed = await ensurePermission("deleteRecords");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("documenti").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);

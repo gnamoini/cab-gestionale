@@ -1,7 +1,6 @@
-import { MOCK_RICAMBI } from "@/lib/mock-data/magazzino";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 
-let snapshot: RicambioMagazzino[] = MOCK_RICAMBI.map((r) => ({ ...r }));
+let snapshot: RicambioMagazzino[] = [];
 const listeners = new Set<() => void>();
 
 export function setMagazzinoReportSnapshot(next: RicambioMagazzino[]): void {

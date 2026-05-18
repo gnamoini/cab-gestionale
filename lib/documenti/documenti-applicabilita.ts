@@ -1,4 +1,4 @@
-import type { CatalogMarca } from "@/lib/mock-data/documenti";
+import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import type { DocumentoAssocRef, DocumentoGestionale, DocumentoApplicabilita } from "@/lib/types/gestionale";
 
 export function allowedApplicabilitaForCategoria(

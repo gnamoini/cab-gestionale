@@ -1,8 +1,9 @@
 "use client";
 
 import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
-import { DEFAULT_ADDETTI_LAVORAZIONI, DEFAULT_STATI_LAVORAZIONI } from "@/lib/lavorazioni/constants";
+import { DEFAULT_ADDETTI_LAVORAZIONI } from "@/lib/lavorazioni/constants";
 import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
+import { DEFAULT_STATI_LAVORAZIONI_DB, migrateStatiConfigList } from "@/src/shared/selectors";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -10,6 +11,9 @@ import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-pref
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
+import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
+
+export const DEFAULT_PRIORITA_LAVORAZIONI_DB: PrioritaLavorazione[] = ["bassa", "media", "alta", "urgente"];
 
 export type CabAppSettingsResolved = {
   lavorazioni: {
@@ -17,6 +21,7 @@ export type CabAppSettingsResolved = {
     addetti: string[];
     addettoColors: Record<string, string>;
     prioritaColors: Partial<Record<PrioritaLav, string>>;
+    prioritaDb: PrioritaLavorazione[];
   };
   mezziListe: MezziListePrefs;
   magazzinoMaster: MagazzinoMasterPrefs;
@@ -28,11 +33,19 @@ const FALLBACK_PREVENTIVI: SistemaPreventiviDefaults = { costoOrarioDefault: 48 
 function defaultLavorazioni(): CabAppSettingsResolved["lavorazioni"] {
   const addetti = [...DEFAULT_ADDETTI_LAVORAZIONI];
   return {
-    stati: [...DEFAULT_STATI_LAVORAZIONI],
+    stati: [...DEFAULT_STATI_LAVORAZIONI_DB],
     addetti,
     addettoColors: syncAddettoColorMap(addetti, undefined),
     prioritaColors: {},
+    prioritaDb: [...DEFAULT_PRIORITA_LAVORAZIONI_DB],
   };
+}
+
+function parsePrioritaDb(raw: unknown): PrioritaLavorazione[] {
+  if (!Array.isArray(raw)) return [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
+  const allowed = new Set(DEFAULT_PRIORITA_LAVORAZIONI_DB);
+  const parsed = raw.filter((x): x is PrioritaLavorazione => typeof x === "string" && allowed.has(x as PrioritaLavorazione));
+  return parsed.length ? [...new Set(parsed)] : [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
 }
 
 function parseLavorazioniPayload(raw: unknown): CabAppSettingsResolved["lavorazioni"] {
@@ -40,7 +53,7 @@ function parseLavorazioniPayload(raw: unknown): CabAppSettingsResolved["lavorazi
   if (!raw || typeof raw !== "object") return base;
   const o = raw as Record<string, unknown>;
   if (Array.isArray(o.stati)) {
-    const stati = normalizeStatiList(o.stati as StatoLavorazioneConfig[]);
+    const stati = migrateStatiConfigList(normalizeStatiList(o.stati as StatoLavorazioneConfig[]));
     if (stati.length) base.stati = stati;
   }
   if (Array.isArray(o.addetti)) {
@@ -63,6 +76,7 @@ function parseLavorazioniPayload(raw: unknown): CabAppSettingsResolved["lavorazi
   if (o.prioritaColors && typeof o.prioritaColors === "object" && !Array.isArray(o.prioritaColors)) {
     base.prioritaColors = { ...base.prioritaColors, ...(o.prioritaColors as Partial<Record<PrioritaLav, string>>) };
   }
+  base.prioritaDb = parsePrioritaDb(o.prioritaDb);
   return base;
 }
 
@@ -72,6 +86,10 @@ function parseMezziListePayload(raw: unknown): MezziListePrefs {
   const o = raw as Record<string, unknown>;
   const out: MezziListePrefs = {
     clienti: Array.isArray(o.clienti) ? o.clienti.filter((x): x is string => typeof x === "string") : d.clienti,
+    utilizzatori: Array.isArray(o.utilizzatori)
+      ? o.utilizzatori.filter((x): x is string => typeof x === "string")
+      : d.utilizzatori,
+    cantieri: Array.isArray(o.cantieri) ? o.cantieri.filter((x): x is string => typeof x === "string") : d.cantieri,
     marche: Array.isArray(o.marche) ? o.marche.filter((x): x is string => typeof x === "string") : d.marche,
     modelli: Array.isArray(o.modelli) ? o.modelli.filter((x): x is string => typeof x === "string") : d.modelli,
     tipiAttrezzatura: Array.isArray(o.tipiAttrezzatura)
@@ -157,6 +175,7 @@ export function buildBulkRowsFromResolved(r: CabAppSettingsResolved): { module: 
         addetti: r.lavorazioni.addetti,
         addettoColors: r.lavorazioni.addettoColors,
         prioritaColors: r.lavorazioni.prioritaColors,
+        prioritaDb: r.lavorazioni.prioritaDb,
       },
     },
     {

@@ -1,10 +1,10 @@
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
 import type { DocumentoGestionale, DocumentoTipoFile } from "@/lib/types/gestionale";
-import type { MezziLogEntryLike } from "@/lib/gestionale-log/view-model";
+import { imageLogModificaRiga, isImageLogAction, type MezziLogEntryLike } from "@/lib/gestionale-log/view-model";
 import { diffMezzoChanges } from "@/lib/mezzi/mezzi-helpers";
 import type { DocumentoRow, LogModificaRow, MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import { MEZZI_OGGI_DEMO, type MezzoGestito } from "@/lib/mezzi/types";
+import type { MezzoGestito } from "@/lib/mezzi/types";
 
 function str(v: string | null | undefined, fallback = "—"): string {
   const t = v?.trim();
@@ -26,7 +26,7 @@ export function toMezzoUI(row: MezzoRow): MezzoGestito {
     anno: row.anno ?? new Date().getFullYear(),
     oreKm: 0,
     statoAttuale: "Operativo",
-    dataUltimaUscita: MEZZI_OGGI_DEMO,
+    dataUltimaUscita: row.updated_at?.slice(0, 10) || "—",
     note: "",
     priorita: "normale",
     hubSynthetic: false,
@@ -166,7 +166,10 @@ export function logModificaRowToMezziHubLogEntry(row: LogModificaRow): MezziHubL
   let tipo: MezziLogEntryLike["tipo"] = "update";
   const riepilogo = row.azione;
 
-  if (row.azione === "CREATE") {
+  if (isImageLogAction(row.azione)) {
+    tipo = "update";
+    changes = [{ campo: "Foto", prima: "—", dopo: imageLogModificaRiga(row.azione) }];
+  } else if (row.azione === "CREATE") {
     tipo = "aggiunta";
     if (p?.snapshot && typeof p.snapshot === "object") {
       mezzo = labelMezzoFromRow(p.snapshot as MezzoRow);

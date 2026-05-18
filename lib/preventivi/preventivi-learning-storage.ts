@@ -1,16 +1,19 @@
 import { PREVENTIVI_LEARNING_STORAGE_KEY } from "@/lib/preventivi/constants";
+import type { PreventivoRecord } from "@/lib/preventivi/types";
 
 export type PreventivoLearningStore = {
   version: 1;
   phraseMap: Record<string, string>;
   corrections: { fromNorm: string; to: string; at: string }[];
+  finalVersions: { preventivoId: string; fromNorm: string; to: string; at: string }[];
 };
 
 const MAX_CORRECTIONS = 120;
+const MAX_FINAL_VERSIONS = 80;
 const MAX_PHRASE_KEYS = 400;
 
 function defaultStore(): PreventivoLearningStore {
-  return { version: 1, phraseMap: {}, corrections: [] };
+  return { version: 1, phraseMap: {}, corrections: [], finalVersions: [] };
 }
 
 export function loadPreventiviLearning(): PreventivoLearningStore {
@@ -24,6 +27,7 @@ export function loadPreventiviLearning(): PreventivoLearningStore {
       version: 1,
       phraseMap: typeof p.phraseMap === "object" && p.phraseMap ? p.phraseMap : {},
       corrections: Array.isArray(p.corrections) ? p.corrections : [],
+      finalVersions: Array.isArray(p.finalVersions) ? p.finalVersions : [],
     };
   } catch {
     return defaultStore();
@@ -44,6 +48,7 @@ export function savePreventiviLearning(s: PreventivoLearningStore): void {
         ...s,
         phraseMap: trimmedMap,
         corrections: s.corrections.slice(0, MAX_CORRECTIONS),
+        finalVersions: s.finalVersions.slice(0, MAX_FINAL_VERSIONS),
       }),
     );
   } catch {
@@ -82,4 +87,19 @@ export function recordDescriptionCorrection(technicalSourceNorm: string, custome
   const phraseMap = { ...st.phraseMap, [fromNorm]: to };
   const corrections = [{ fromNorm, to, at: new Date().toISOString() }, ...st.corrections].slice(0, MAX_CORRECTIONS);
   savePreventiviLearning({ ...st, phraseMap, corrections });
+}
+
+export function recordApprovedPreventivoVersion(p: PreventivoRecord): void {
+  if (p.stato !== "approvato" && p.stato !== "convertito") return;
+  const fromNorm = normPhrase(p.descrizioneLavorazioniTecnicaSorgente).slice(0, 400);
+  const to = p.descrizioneLavorazioniCliente.trim();
+  if (!fromNorm || !to) return;
+  const st = loadPreventiviLearning();
+  const at = new Date().toISOString();
+  const phraseMap = { ...st.phraseMap, [fromNorm]: to };
+  const finalVersions = [
+    { preventivoId: p.id, fromNorm, to, at },
+    ...st.finalVersions.filter((x) => x.preventivoId !== p.id),
+  ].slice(0, MAX_FINAL_VERSIONS);
+  savePreventiviLearning({ ...st, phraseMap, finalVersions });
 }

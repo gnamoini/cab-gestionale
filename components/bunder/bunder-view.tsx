@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -21,6 +21,7 @@ import {
   dsBtnPrimary,
   dsPageToolbarBtn,
   dsStackPage,
+  dsStickyToolbar,
   dsScrollbar,
   dsTable,
   dsTableHead,
@@ -39,14 +40,14 @@ import {
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { erpBtnNuovaLavorazione, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { Drawer } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
-  gestionaleLogPanelAsideClass,
-  gestionaleLogPanelHeaderClass,
   gestionaleLogScrollEmbeddedClass,
   IconGestionaleLog,
+  IconGestionaleUndo,
   logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 
@@ -210,7 +211,6 @@ export function BunderView() {
   const [mag, setMag] = useState(() => (typeof window !== "undefined" ? getMagazzinoReportSnapshot() : []));
   const [search, setSearch] = useState("");
   const [filtriOpen, setFiltriOpen] = useState(false);
-  const filtriRef = useRef<HTMLDivElement>(null);
   const [filtroDraft, setFiltroDraft] = useState<FiltriDraft>(DRAFT_EMPTY);
   const [filtroTipo, setFiltroTipo] = useState<BunderDocKind | "__tutti__">("__tutti__");
   const [filtroAzienda, setFiltroAzienda] = useState("");
@@ -254,31 +254,6 @@ export function BunderView() {
   useEffect(() => {
     if (logOpen) setLogEntries(loadBunderChangeLog());
   }, [logOpen]);
-
-  useEffect(() => {
-    if (!logOpen) return;
-    const gap = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-    const ph = document.documentElement.style.overflow;
-    const pb = document.body.style.overflow;
-    const pp = document.body.style.paddingRight;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
-    return () => {
-      document.documentElement.style.overflow = ph;
-      document.body.style.overflow = pb;
-      document.body.style.paddingRight = pp;
-    };
-  }, [logOpen]);
-
-  useEffect(() => {
-    if (!filtriOpen) return;
-    function onDown(ev: MouseEvent) {
-      if (!filtriRef.current?.contains(ev.target as Node)) setFiltriOpen(false);
-    }
-    document.addEventListener("mousedown", onDown);
-    return () => document.removeEventListener("mousedown", onDown);
-  }, [filtriOpen]);
 
   const persist = useCallback((next: BunderCommercialDocument[]) => {
     setDocs(next);
@@ -605,9 +580,18 @@ export function BunderView() {
   return (
     <>
       <PageHeader
-        title="BUNDER"
+        title="Bunder"
         actions={
           <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
+            <button
+              type="button"
+              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
+              title="Nessuna azione reversibile"
+              disabled
+            >
+              <IconGestionaleUndo />
+              <span className="sr-only">Annulla ultima azione</span>
+            </button>
             <button
               type="button"
               onClick={() => setLogOpen(true)}
@@ -622,8 +606,9 @@ export function BunderView() {
       />
 
       <div className={dsStackPage}>
-      <ShellCard className="overflow-hidden rounded-xl border-zinc-200/95 shadow-md dark:border-zinc-800">
-        <div className="mb-3 flex flex-col gap-3 sm:mb-4">
+      <ShellCard>
+        <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <button type="button" className={`${erpBtnNuovaLavorazione} h-11 shrink-0 px-4`} onClick={() => setWizardOpen(true)}>
               Nuovo documento
@@ -635,11 +620,10 @@ export function BunderView() {
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Cerca documenti BUNDER"
             />
-            <div ref={filtriRef} className="relative shrink-0 sm:ml-auto">
               <button
                 type="button"
                 onClick={() => (filtriOpen ? setFiltriOpen(false) : openFiltri())}
-                className={`${dsPageToolbarBtn} relative h-11 min-w-[8.75rem] shrink-0 gap-2 px-3 text-sm`}
+                className={`${dsPageToolbarBtn} relative h-11 min-w-[8.25rem] shrink-0 gap-2 px-3 text-sm sm:ml-auto`}
                 aria-expanded={filtriOpen}
               >
                 Filtri
@@ -650,10 +634,37 @@ export function BunderView() {
                   <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]" aria-hidden />
                 ) : null}
               </button>
-              {filtriOpen ? (
-                <div className="absolute right-0 z-30 mt-1.5 max-h-[min(72vh,34rem)] w-[min(calc(100vw-1.5rem),22rem)] overflow-y-auto overscroll-contain rounded-xl border border-zinc-200 bg-white p-4 shadow-xl gestionale-scrollbar dark:border-zinc-700 dark:bg-zinc-950">
-                  <p className="mb-2 text-[10px] font-bold uppercase text-zinc-500">Filtri</p>
-                  <div className="grid gap-2">
+          </div>
+          <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
+                <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{filtered.length}</span>
+                <span>document{filtered.length === 1 ? "o" : "i"}</span>
+              </span>
+              {hasFiltriAvanzati || search.trim() ? (
+                <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
+                  Filtri attivi
+                </span>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <button type="button" className={dsPageToolbarBtn} onClick={() => setSearch("")}>
+                Pulisci ricerca
+              </button>
+              <button type="button" className={dsPageToolbarBtn} onClick={resetFiltriAll}>
+                Reimposta filtri
+              </button>
+            </div>
+          </div>
+        </div>
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            filtriOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          }`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            <div className="border-t border-[color:var(--cab-border)] pt-3" aria-label="Filtri Bunder">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                       Tipo
                       <select
@@ -747,32 +758,20 @@ export function BunderView() {
                       </select>
                     </label>
                   </div>
-                  <p className="mt-2 text-[10px] text-zinc-500">Filtri multipli in AND. La ricerca libera nella barra si somma ai filtri.</p>
-                  <div className="mt-3 flex gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-                    <button type="button" className={`${dsBtnNeutral} flex-1`} onClick={() => setFiltroDraft({ ...DRAFT_EMPTY })}>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button type="button" className={dsBtnNeutral} onClick={() => setFiltroDraft({ ...DRAFT_EMPTY })}>
                       Reimposta
                     </button>
-                    <button type="button" className={`${dsBtnPrimary} flex-1`} onClick={applyFiltri}>
+                    <button type="button" className={dsBtnPrimary} onClick={applyFiltri}>
                       Applica
                     </button>
                   </div>
-                </div>
-              ) : null}
             </div>
           </div>
-          <p className="flex flex-wrap items-baseline gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-            <span>
-              <span className="font-semibold tabular-nums text-zinc-800 dark:text-zinc-100">{filtered.length}</span> documenti
-            </span>
-            {hasFiltriAvanzati || search.trim() ? (
-              <button type="button" className="font-semibold text-orange-700 underline-offset-2 hover:underline" onClick={resetFiltriAll}>
-                Azzera filtri
-              </button>
-            ) : null}
-          </p>
+        </div>
         </div>
 
-        <div className={`${dsTableWrap} ${dsScrollbar}`}>
+        <div className={`mt-4 ${dsTableWrap} ${dsScrollbar}`}>
           <table className={`${dsTable} w-full min-w-0 table-fixed text-left text-sm text-zinc-900 dark:text-zinc-100`}>
             <colgroup>
               <col className="w-[7.5rem]" />
@@ -953,28 +952,9 @@ export function BunderView() {
         onSave={onSaveEdited}
       />
 
-      {logOpen ? (
-        <div
-          className="fixed inset-0 z-[55] flex items-stretch justify-end bg-black/30"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              setLogOpen(false);
-            }
-          }}
-        >
-          <aside className={gestionaleLogPanelAsideClass} aria-label="Log modifiche BUNDER" onMouseDown={(e) => e.stopPropagation()}>
-            <div className={gestionaleLogPanelHeaderClass}>
-              <div className="flex min-w-0 items-center gap-2">
-                <IconGestionaleLog className="h-5 w-5 shrink-0 text-[color:var(--cab-text-muted)]" />
-                <h2 className="min-w-0 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche BUNDER</h2>
-              </div>
-              <button type="button" onClick={() => setLogOpen(false)} className={dsBtnNeutral}>
-                Chiudi
-              </button>
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
-              <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
+      <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche BUNDER" ariaLabel="Log modifiche BUNDER">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
                 {logEntries.length === 0 ? (
                   <GestionaleLogEmpty message="Nessuna voce registrata." />
                 ) : (
@@ -1010,13 +990,11 @@ export function BunderView() {
                   </GestionaleLogList>
                 )}
               </div>
-              {showLogPager ? (
-                <TablePagination page={logPage} pageCount={logPageCount} onPageChange={setLogPage} label={logPagerLabel} />
-              ) : null}
-            </div>
-          </aside>
+          {showLogPager ? (
+            <TablePagination page={logPage} pageCount={logPageCount} onPageChange={setLogPage} label={logPagerLabel} />
+          ) : null}
         </div>
-      ) : null}
+      </Drawer>
     </>
   );
 }

@@ -1,4 +1,4 @@
-import type { CatalogMacchina, CatalogMarca } from "@/lib/mock-data/documenti";
+import type { CatalogMacchina, CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 

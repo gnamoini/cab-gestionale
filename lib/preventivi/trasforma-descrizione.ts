@@ -1,4 +1,4 @@
-import { lookupLearnedPhrase, recordDescriptionCorrection } from "@/lib/preventivi/preventivi-learning-storage";
+import { lookupLearnedPhrase, recordApprovedPreventivoVersion, recordDescriptionCorrection } from "@/lib/preventivi/preventivi-learning-storage";
 import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
@@ -9,23 +9,41 @@ function splitTechChunks(raw: string): string[] {
     .filter(Boolean);
 }
 
-function heuristicLine(chunk: string): string {
-  const low = chunk.toLowerCase();
-  if (/^(test|collaudo)/i.test(chunk.trim())) return "Collaudo funzionale finale attrezzatura";
-  if (/(perdit|perdite|circuito\s+idraul)/.test(low)) return "Verifica circuito idraulico e controllo perdite";
-  if (/(pompa)/.test(low) && /(cambio|sostitu|sostit)/.test(low)) return "Smontaggio e sostituzione pompa usurata";
-  if (/(cambio|sostitu|sostit|smont)/.test(low)) {
-    const rest = chunk.replace(/^(cambio|sostituzione|sostituire|smontaggio)\s+/i, "").trim();
-    return rest ? `Intervento di sostituzione: ${rest.charAt(0).toUpperCase() + rest.slice(1)}` : "Intervento di sostituzione componente";
-  }
-  if (/(controllo|verifica|ispezione)/.test(low)) return `Controllo e verifica: ${chunk.charAt(0).toUpperCase() + chunk.slice(1)}`;
-  return chunk.charAt(0).toUpperCase() + chunk.slice(1);
+function capitalizeSentence(chunk: string): string {
+  const clean = chunk.trim().replace(/\s+/g, " ");
+  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : clean;
 }
 
-function mapChunk(chunk: string): string {
+function heuristicLines(chunk: string): string[] {
+  const low = chunk.toLowerCase();
+  const clean = chunk.trim();
+  if (/^(test|collaudo)/i.test(clean)) return ["Collaudo funzionale finale attrezzatura"];
+  if (/(smontaggio|smontato|smontare)/.test(low) && /(gruppo|blocco|carter|supporto)/.test(low)) {
+    const gruppo = /(gruppo|blocco|carter|supporto)[\w\s-]*/i.exec(clean)?.[0]?.trim() || "gruppo operativo";
+    return [`Smontaggio ${gruppo} per accesso componente`];
+  }
+  if (/(rimontaggio|rimontato|rimontare)/.test(low) && /(gruppo|blocco|carter|supporto)/.test(low)) {
+    const gruppo = /(gruppo|blocco|carter|supporto)[\w\s-]*/i.exec(clean)?.[0]?.trim() || "gruppo operativo";
+    return [`Rimontaggio ${gruppo} e verifica funzionale`];
+  }
+  if (/(sensore|trasduttore|sonda)/.test(low) && /(cambio|sostitu|sostit|rimoz|install)/.test(low)) {
+    const componente = low.includes("trasduttore") ? "trasduttore" : low.includes("sonda") ? "sonda" : "sensore";
+    return [`Rimozione ${componente} guasto`, `Installazione nuovo ${componente}`];
+  }
+  if (/(perdit|perdite|circuito\s+idraul)/.test(low)) return ["Verifica circuito idraulico e controllo perdite"];
+  if (/(pompa)/.test(low) && /(cambio|sostitu|sostit)/.test(low)) return ["Smontaggio e sostituzione pompa usurata"];
+  if (/(cambio|sostitu|sostit|smont)/.test(low)) {
+    const rest = clean.replace(/^(cambio|sostituzione|sostituire|smontaggio)\s+/i, "").trim();
+    return [rest ? `Intervento di sostituzione: ${capitalizeSentence(rest)}` : "Intervento di sostituzione componente"];
+  }
+  if (/(controllo|verifica|ispezione)/.test(low)) return [`Controllo e verifica: ${capitalizeSentence(clean)}`];
+  return [capitalizeSentence(clean)];
+}
+
+function mapChunk(chunk: string): string[] {
   const learned = lookupLearnedPhrase(chunk);
-  if (learned) return learned;
-  return heuristicLine(chunk);
+  if (learned) return learned.split("\n").map((line) => line.replace(/^-\s*/, "").trim()).filter(Boolean);
+  return heuristicLines(chunk);
 }
 
 function hintsFromSimilarPreventivi(techNorm: string, targa: string, matricola: string, codiciRicambi: string[]): string[] {
@@ -73,7 +91,7 @@ export function trasformaDescrizioneLavorazioni(technicalRaw: string, ctx: { tar
   const techNorm = technicalRaw.trim().toLowerCase();
   const hints = hintsFromSimilarPreventivi(techNorm, ctx.targa, ctx.matricola, ctx.codiciRicambi);
   const chunks = splitTechChunks(technicalRaw);
-  const lines = chunks.map((c) => mapChunk(c));
+  const lines = chunks.flatMap((c) => mapChunk(c));
   const merged = [...hints, ...lines];
   const uniq: string[] = [];
   const u = new Set<string>();
@@ -87,9 +105,10 @@ export function trasformaDescrizioneLavorazioni(technicalRaw: string, ctx: { tar
 }
 
 export function maybeRecordLearningOnSave(prev: PreventivoRecord | null, next: PreventivoRecord): void {
-  if (next.descrizioneLavorazioniCliente === next.descrizioneGenerataAuto) return;
-  if (prev && next.descrizioneLavorazioniCliente === prev.descrizioneLavorazioniCliente) return;
   const tech = next.descrizioneLavorazioniTecnicaSorgente || prev?.descrizioneLavorazioniTecnicaSorgente || "";
   if (!tech.trim()) return;
-  recordDescriptionCorrection(tech, next.descrizioneLavorazioniCliente);
+  if (next.descrizioneLavorazioniCliente !== next.descrizioneGenerataAuto && (!prev || next.descrizioneLavorazioniCliente !== prev.descrizioneLavorazioniCliente)) {
+    recordDescriptionCorrection(tech, next.descrizioneLavorazioniCliente);
+  }
+  recordApprovedPreventivoVersion(next);
 }

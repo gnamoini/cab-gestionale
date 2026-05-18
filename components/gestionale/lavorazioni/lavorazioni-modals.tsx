@@ -50,19 +50,21 @@ function Field({
   );
 }
 
-const PRIORITA: PrioritaLav[] = ["alta", "media", "bassa"];
+const PRIORITA: PrioritaLav[] = ["urgente", "alta", "media", "bassa"];
 
 /** Scroll lock con scrollbar gutter; chiusura solo overlay (mousedown) o ESC. */
 export function LavorazioniModalShell({
   children,
   wide,
   maxWidthClass,
+  alignTop,
   onRequestClose,
 }: {
   children: React.ReactNode;
   wide?: boolean;
   /** Es. max-w-3xl — se assente con `wide` usa max-w-2xl. */
   maxWidthClass?: string;
+  alignTop?: boolean;
   onRequestClose: () => void;
 }) {
   useEffect(() => {
@@ -86,7 +88,7 @@ export function LavorazioniModalShell({
   }, [onRequestClose]);
 
   return (
-    <div className={dsLavorazioniModalLayer} role="presentation">
+    <div className={`${dsLavorazioniModalLayer} ${alignTop ? "sm:items-start sm:pt-6" : ""}`} role="presentation">
       <button
         type="button"
         className={dsLavorazioniModalOverlay}
@@ -565,6 +567,8 @@ export function SettingsLavorazioniModal({
   addetti,
   addettoColors,
   prioritaColors,
+  prioritaDb,
+  onChangePrioritaDb,
   onChangePrioritaColor,
   onAddAddetto,
   onRenameAddettoBlur,
@@ -587,6 +591,8 @@ export function SettingsLavorazioniModal({
   addetti: string[];
   addettoColors: Record<string, string>;
   prioritaColors: Partial<Record<PrioritaLav, string>>;
+  prioritaDb?: PrioritaLav[];
+  onChangePrioritaDb?: (next: PrioritaLav[]) => void;
   onChangePrioritaColor: (p: PrioritaLav, hex: string) => void;
   onAddAddetto: (name: string) => void;
   onRenameAddettoBlur: (previousName: string, nextName: string) => void;
@@ -664,10 +670,12 @@ export function SettingsLavorazioniModal({
         <div
           role="tabpanel"
           aria-label={tab === "stati" ? "Stati lavorazione" : tab === "priorita" ? "Priorità" : "Addetti"}
-          className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-zinc-50/50 p-4 dark:bg-zinc-950/50 [scrollbar-gutter:stable]"
+          className={`min-h-0 flex-1 overflow-x-hidden bg-zinc-50/50 p-3 dark:bg-zinc-950/50 sm:p-4 ${
+            lockedTab ? "overflow-visible" : "overflow-y-auto overscroll-contain [scrollbar-gutter:stable]"
+          }`}
         >
           {tab === "stati" ? (
-            <div className="mx-auto max-w-xl rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+            <div className={`${lockedTab ? "w-full" : "mx-auto max-w-xl"} rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900 sm:p-4`}>
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <input
                   className={`${dsInput} min-w-0 flex-1 sm:max-w-md`}
@@ -710,15 +718,31 @@ export function SettingsLavorazioniModal({
           ) : null}
 
           {tab === "priorita" ? (
-            <div className="mx-auto max-w-xl rounded-lg border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900">
+            <div className={`${lockedTab ? "w-full" : "mx-auto max-w-xl"} rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 sm:p-4`}>
               <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-                {PRIORITA.map((p) => {
+                {(onChangePrioritaDb ? PRIORITA : prioritaDb?.length ? prioritaDb : PRIORITA).map((p) => {
                   const hex = prioritaDisplayColor(p, prioritaColors);
+                  const active = (prioritaDb?.length ? prioritaDb : PRIORITA).includes(p);
                   return (
                     <li key={p} className="flex min-h-[2.75rem] flex-wrap items-center gap-2 py-2.5 first:pt-0 last:pb-0">
                       <span className="min-w-0 flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100">
                         {prioritaLabel(p)}
                       </span>
+                      {onChangePrioritaDb ? (
+                        <label className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                          <input
+                            type="checkbox"
+                            checked={active}
+                            onChange={(e) => {
+                              const next = e.target.checked
+                                ? [...new Set([...(prioritaDb ?? []), p])]
+                                : (prioritaDb ?? PRIORITA).filter((x) => x !== p);
+                              onChangePrioritaDb(next.length ? next : [p]);
+                            }}
+                          />
+                          Attiva
+                        </label>
+                      ) : null}
                       <span
                         className="inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-black/10"
                         style={prioritaBadgeStyle(hex)}
@@ -738,7 +762,7 @@ export function SettingsLavorazioniModal({
           ) : null}
 
           {tab === "addetti" ? (
-            <div className="mx-auto max-w-xl rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+            <div className={`${lockedTab ? "w-full" : "mx-auto max-w-xl"} rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900 sm:p-4`}>
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <input
                   className={`${dsInput} min-w-0 flex-1 sm:max-w-md`}

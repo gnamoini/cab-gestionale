@@ -6,6 +6,7 @@ import { ToastProvider } from "@/context/toast-context";
 import { SupabaseConfigurationBanner } from "@/components/supabase-configuration-banner";
 import { QueryProvider } from "@/src/providers/query-provider";
 import { AppSettingsRealtimeBridge } from "@/src/components/app-settings-realtime-bridge";
+import { SettingsModalOpenProvider } from "@/src/context/settings-modal-open-context";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
   return (
@@ -13,9 +14,11 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
       <ToastProvider>
         <QueryProvider>
           <AuthProvider>
-            <SupabaseConfigurationBanner />
-            <AppSettingsRealtimeBridge />
-            {children}
+            <SettingsModalOpenProvider>
+              <SupabaseConfigurationBanner />
+              <AppSettingsRealtimeBridge />
+              {children}
+            </SettingsModalOpenProvider>
           </AuthProvider>
         </QueryProvider>
       </ToastProvider>

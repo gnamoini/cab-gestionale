@@ -5,10 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
+import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
 import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/schede/schede-badges";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
 import { getMagazzinoReportSnapshot } from "@/lib/magazzino/magazzino-report-sync";
+import { documentoRowToGestionale, preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
   formatIdentificazioneMezzoLine,
   identificazionePartsFromLavorazione,
@@ -47,11 +51,16 @@ import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioniLogChange, LavorazioniLogTipo } from "@/lib/lavorazioni/lavorazioni-change-log";
 import { buildPreventiviArchivioFilterHref } from "@/lib/preventivi/preventivi-lavorazione-href";
+import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
 import { Q_PREVENTIVI_NUOVO } from "@/lib/preventivi/preventivi-query";
+import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { writePendingPreventivoPayload } from "@/lib/preventivi/preventivi-session-bridge";
+import type { PreventivoLavorazioneOrigine } from "@/lib/preventivi/types";
+import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
 import { dsBadgeOk, dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import type {
   LavorazioneSchedeBundle,
@@ -68,6 +77,7 @@ import type {
 type LavRow = LavorazioneAttiva | LavorazioneArchiviata;
 
 type Stage = { kind: "hub" } | { kind: "ingresso" } | { kind: "lavorazioni" } | { kind: "ricambi" };
+type HubTab = "schede" | "panoramica" | "preventivi" | "documenti" | "timeline" | "log";
 
 function fmtIt(iso: string): string {
   try {
@@ -94,6 +104,15 @@ function fmtItShort(iso: string): string {
     });
   } catch {
     return iso;
+  }
+}
+
+function formatAuditPayload(payload: unknown): string | null {
+  if (payload == null) return null;
+  try {
+    return JSON.stringify(payload, null, 2);
+  } catch {
+    return String(payload);
   }
 }
 
@@ -129,6 +148,8 @@ export function SchedeLavorazioneModal({
   open,
   onClose,
   lav,
+  origine,
+  initialTab = "schede",
   bundle,
   onPersist,
   attive,
@@ -142,6 +163,8 @@ export function SchedeLavorazioneModal({
   open: boolean;
   onClose: () => void;
   lav: LavRow;
+  origine?: PreventivoLavorazioneOrigine;
+  initialTab?: HubTab;
   bundle: LavorazioneSchedeBundle;
   onPersist: (next: LavorazioneSchedeBundle) => void;
   attive: LavorazioneAttiva[];
@@ -154,6 +177,8 @@ export function SchedeLavorazioneModal({
 }) {
   const router = useRouter();
   const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const hubQuery = useLavorazioneHub(lav.id);
+  const hubData = hubQuery.data;
   const appSettings = settingsPayload?.resolved;
   const mezzo = useMemo(() => findMezzoForLavorazione(mezzi, lav), [mezzi, lav]);
   const identSubtitle = useMemo(
@@ -161,10 +186,13 @@ export function SchedeLavorazioneModal({
     [lav, mezzo],
   );
   const [stage, setStage] = useState<Stage>({ kind: "hub" });
+  const [hubTab, setHubTab] = useState<HubTab>(initialTab);
   const [unsavedPanel, setUnsavedPanel] = useState<null | "ingresso" | "lav" | "ric">(null);
   const [draft, setDraft] = useState<LavorazioneSchedeBundle>(bundle);
   const draftRef = useRef(draft);
-  draftRef.current = draft;
+  useLayoutEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
   const [ingressoF, setIngressoF] = useState<SchedaIngressoFields | null>(null);
   const [lavDoc, setLavDoc] = useState<SchedaLavorazioniDoc | null>(null);
   const [ricDoc, setRicDoc] = useState<SchedaRicambiDoc | null>(null);
@@ -211,10 +239,14 @@ export function SchedeLavorazioneModal({
 
   useEffect(() => {
     if (!open) return;
-    setStage({ kind: "hub" });
-    setDraft(JSON.parse(JSON.stringify(bundle)) as LavorazioneSchedeBundle);
+    const t = window.setTimeout(() => {
+      setStage({ kind: "hub" });
+      setHubTab(initialTab);
+      setDraft(JSON.parse(JSON.stringify(bundle)) as LavorazioneSchedeBundle);
+    }, 0);
+    return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- evita reset hub dopo persist (es. «Crea nuova»)
-  }, [open, lav.id]);
+  }, [open, lav.id, initialTab]);
 
   const persist = useCallback(
     (b: LavorazioneSchedeBundle) => {
@@ -363,7 +395,7 @@ export function SchedeLavorazioneModal({
     });
   }
 
-  const lavOrigine = lav.id.startsWith("lav-arch-") ? ("storico" as const) : ("attiva" as const);
+  const lavOrigine = origine ?? (lav.id.startsWith("lav-arch-") ? ("storico" as const) : ("attiva" as const));
   const [pvTick, setPvTick] = useState(0);
   useEffect(() => {
     if (!open) return;
@@ -376,6 +408,14 @@ export function SchedeLavorazioneModal({
     if (!open || typeof window === "undefined") return [];
     return loadPreventivi().filter((p) => p.lavorazioneId === lav.id);
   }, [lav.id, pvTick, open]);
+
+  const preventiviHubUi = useMemo(() => {
+    return (hubData?.preventivi ?? []).map((row) => preventivoRowToRecordStub(row, null));
+  }, [hubData?.preventivi]);
+
+  const documentiHubUi = useMemo(() => {
+    return (hubData?.documenti ?? []).map(documentoRowToGestionale);
+  }, [hubData?.documenti]);
 
   function generaPreventivoDaHub() {
     writePendingPreventivoPayload({
@@ -573,12 +613,33 @@ export function SchedeLavorazioneModal({
     setStage({ kind: "ricambi" });
   }
 
+  const hubTabButton = (id: HubTab, label: string) => {
+    const active = hubTab === id;
+    return (
+      <button
+        type="button"
+        key={id}
+        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+          active
+            ? "border-orange-400/70 bg-orange-500/15 text-orange-900 dark:text-orange-100"
+            : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+        }`}
+        onClick={() => {
+          setStage({ kind: "hub" });
+          setHubTab(id);
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+
   return (
     <>
       <LavorazioniModalShell wide maxWidthClass="max-w-4xl" onRequestClose={onClose}>
         <div className="relative flex min-h-0 max-h-[min(92dvh,920px)] flex-1 flex-col">
         <div className="flex shrink-0 flex-col gap-1 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Schede lavorazione</h2>
+          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Dettaglio lavorazione</h2>
           <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">{identSubtitle}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-600 dark:text-zinc-300">
             <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-800">
@@ -605,14 +666,30 @@ export function SchedeLavorazioneModal({
           </div>
         </div>
 
+        <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/80">
+          {hubTabButton("schede", `Schede (${nOk}/3)`)}
+          {hubTabButton("panoramica", "Panoramica")}
+          {hubTabButton("preventivi", `Preventivi (${Math.max(preventiviCollegati.length, preventiviHubUi.length)})`)}
+          {hubTabButton("documenti", `Documenti (${documentiHubUi.length})`)}
+          {hubTabButton("timeline", `Timeline (${hubData?.timeline.length ?? 0})`)}
+          {hubTabButton("log", `Log (${hubData?.log.length ?? 0})`)}
+        </div>
+
         <div className={`min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar`}>
-          {stage.kind === "hub" ? (
+          {stage.kind === "hub" && hubTab === "schede" ? (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 <button type="button" className={dsBtnNeutral} onClick={duplicateIngressoPrev}>
                   Copia ingresso da intervento precedente (stesso mezzo)
                 </button>
               </div>
+              <RecordImageManager
+                scope="lavorazioni"
+                recordId={lav.id}
+                title="Foto lavorazione"
+                canEdit
+                onImageEvent={() => void hubQuery.refetch()}
+              />
               <SchedaSectionHub
                 title="Scheda ingresso"
                 stato={statoUiSchedaIngresso(hub)}
@@ -671,10 +748,163 @@ export function SchedeLavorazioneModal({
               />
               <div className="flex justify-end border-t border-zinc-100 pt-3 dark:border-zinc-800">
                 <button type="button" className={dsBtnPrimary} onClick={generaPreventivoDaHub}>
-                  Genera preventivo
+                  Crea preventivo
                 </button>
               </div>
             </div>
+          ) : null}
+
+          {stage.kind === "hub" && hubTab === "panoramica" ? (
+            <div className="space-y-4 text-sm">
+              {hubQuery.isError ? (
+                <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100">
+                  {hubQuery.error?.message ?? "Errore caricamento dettaglio lavorazione."}
+                </p>
+              ) : null}
+              {hubQuery.isLoading && !hubData ? <p className="text-sm text-zinc-500">Caricamento dettaglio…</p> : null}
+              <div className="grid gap-2 rounded-lg border border-zinc-200 bg-white p-3 text-xs dark:border-zinc-700 dark:bg-zinc-950/40 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Cliente</p>
+                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{lav.cliente || "—"}</p>
+                </div>
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Utilizzatore</p>
+                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{lav.utilizzatore || "—"}</p>
+                </div>
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Cantiere</p>
+                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{lav.cantiere || "—"}</p>
+                </div>
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Stato</p>
+                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">
+                    {"statoId" in lav ? lav.statoId : lav.statoFinaleId}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Priorità</p>
+                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">
+                    {"priorita" in lav ? lav.priorita : lav.prioritaFinale}
+                  </p>
+                </div>
+                <div>
+                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Addetto</p>
+                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{lav.addetto || "—"}</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+                <p className="text-[10px] font-bold uppercase text-zinc-500">Note operative</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">{lav.noteInterne || "—"}</p>
+              </div>
+            </div>
+          ) : null}
+
+          {stage.kind === "hub" && hubTab === "preventivi" ? (
+            <ul className="space-y-2">
+              {preventiviHubUi.length === 0 && preventiviCollegati.length === 0 ? (
+                <li className="text-sm text-zinc-500">Nessun preventivo collegato.</li>
+              ) : (
+                preventiviHubUi.map((p) => (
+                  <li
+                    key={p.id}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-semibold text-zinc-900 dark:text-zinc-50">{p.numero}</p>
+                      <p className="text-xs text-zinc-500">{p.cliente} · {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €</p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap gap-1">
+                      <button
+                        type="button"
+                        className={dsBtnNeutral}
+                        onClick={() => {
+                          const sp = new URLSearchParams();
+                          sp.set(Q_PREVENTIVI_OPEN, p.id);
+                          openUrlInNewTab(`/preventivi?${sp.toString()}`);
+                        }}
+                      >
+                        Dettaglio
+                      </button>
+                      <button type="button" className={dsBtnNeutral} onClick={() => openPreventivoPdfInNewTab(p, "Gestionale")}>
+                        PDF
+                      </button>
+                    </div>
+                  </li>
+                ))
+              )}
+            </ul>
+          ) : null}
+
+          {stage.kind === "hub" && hubTab === "documenti" ? (
+            <ul className="space-y-2">
+              {documentiHubUi.length === 0 ? (
+                <li className="text-sm text-zinc-500">Nessun documento sul mezzo collegato.</li>
+              ) : (
+                documentiHubUi.map((d) => {
+                  const href = getDocumentApriHref(d);
+                  return (
+                    <li
+                      key={d.id}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase text-zinc-500">{formatDocumentoRigaSintetica(d)}</p>
+                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{d.nome}</p>
+                      </div>
+                      {href ? (
+                        <button type="button" className={dsBtnNeutral} onClick={() => openUrlInNewTab(href)}>
+                          Apri
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })
+              )}
+            </ul>
+          ) : null}
+
+          {stage.kind === "hub" && hubTab === "timeline" ? (
+            <ul className="space-y-2">
+              {(hubData?.timeline.length ?? 0) === 0 ? (
+                <li className="text-sm text-zinc-500">Nessun evento in timeline.</li>
+              ) : (
+                hubData!.timeline.map((ev) => (
+                  <li key={ev.id} className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40">
+                    <p className="text-[11px] font-mono text-zinc-500">{fmtIt(ev.at)}</p>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{ev.title}</p>
+                    {ev.subtitle ? <p className="text-xs text-zinc-600 dark:text-zinc-400">{ev.subtitle}</p> : null}
+                  </li>
+                ))
+              )}
+            </ul>
+          ) : null}
+
+          {stage.kind === "hub" && hubTab === "log" ? (
+            <ul className="space-y-2">
+              {(hubData?.log.length ?? 0) === 0 ? (
+                <li className="text-sm text-zinc-500">Nessuna voce nel registro modifiche per questa lavorazione.</li>
+              ) : (
+                hubData!.log.map((lg) => {
+                  const payload = formatAuditPayload(lg.payload);
+                  return (
+                    <li key={lg.id} className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40">
+                      <div className="flex flex-wrap items-start justify-between gap-2">
+                        <div>
+                          <p className="text-[11px] font-mono text-zinc-500">{fmtIt(lg.created_at)}</p>
+                          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{lg.azione}</p>
+                        </div>
+                        <p className="text-xs text-zinc-600 dark:text-zinc-400">Autore: {lg.autore_id?.slice(0, 8) ?? "—"}</p>
+                      </div>
+                      {payload ? (
+                        <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-zinc-100 bg-white/70 p-2 text-[11px] leading-relaxed text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-300">
+                          {payload}
+                        </pre>
+                      ) : null}
+                    </li>
+                  );
+                })
+              )}
+            </ul>
           ) : null}
 
           {stage.kind === "ingresso" && hub.ingresso && ingressoF ? (
@@ -685,6 +915,8 @@ export function SchedeLavorazioneModal({
               marcheGuidate={marcheGuidate}
               modelliForMarca={modelliForMarca}
               addettiLista={addetti}
+              utilizzatoriLista={listePrefs.utilizzatori}
+              cantieriLista={listePrefs.cantieri}
               dataIngressoInputRef={ingressoPrimoCampoRef}
               onBack={tryIngressoBack}
               onDelete={() => deleteSchedaTipo("ingresso")}
@@ -929,6 +1161,8 @@ function IngressoPanel({
   marcheGuidate,
   modelliForMarca,
   addettiLista,
+  utilizzatoriLista,
+  cantieriLista,
   dataIngressoInputRef,
   onBack,
   onDelete,
@@ -940,6 +1174,8 @@ function IngressoPanel({
   marcheGuidate: string[];
   modelliForMarca: (marca: string) => string[];
   addettiLista: string[];
+  utilizzatoriLista: string[];
+  cantieriLista: string[];
   dataIngressoInputRef?: Ref<HTMLInputElement>;
   onBack: () => void;
   onDelete: () => void;
@@ -988,8 +1224,26 @@ function IngressoPanel({
           inputRef={dataIngressoInputRef}
         />
         {inp("cliente", "Cliente")}
-        {inp("cantiere", "Cantiere")}
-        {inp("utilizzatore", "Utilizzatore")}
+        <label className="block text-xs">
+          <span className="text-zinc-500">Cantiere</span>
+          <SettingsAutocompleteInput
+            className="mt-1"
+            value={fields.cantiere}
+            onChange={(v) => setFields({ ...fields, cantiere: v })}
+            options={cantieriLista}
+            disabled={ro}
+          />
+        </label>
+        <label className="block text-xs">
+          <span className="text-zinc-500">Utilizzatore</span>
+          <SettingsAutocompleteInput
+            className="mt-1"
+            value={fields.utilizzatore}
+            onChange={(v) => setFields({ ...fields, utilizzatore: v })}
+            options={utilizzatoriLista}
+            disabled={ro}
+          />
+        </label>
         {inp("tipoAttrezzatura", "Tipo attrezzatura")}
         <label className="block text-xs">
           <span className="text-zinc-500">Marca attrezzatura</span>

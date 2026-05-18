@@ -2,14 +2,15 @@ import { LAVORAZIONE_STATO_COMPLETATA_ID } from "@/lib/lavorazioni/constants";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 
-/** Priorità predefinite: rosso / giallo / verde (override da preferenze). */
+/** Priorità predefinite (override da Impostazioni globali). */
 export const PRIORITA_HEX_DEFAULT: Record<PrioritaLav, string> = {
+  urgente: "#b91c1c",
   alta: "#dc2626",
   media: "#ca8a04",
   bassa: "#16a34a",
 };
 
-/** Stati predefiniti — palette logica enterprise. */
+/** Stati predefiniti — palette logica enterprise (legacy + enum DB). */
 const STATO_HEX: Record<string, string> = {
   "lav-stato-accettazione": "#2563eb",
   "lav-stato-att-prev": "#ea580c",
@@ -17,6 +18,13 @@ const STATO_HEX: Record<string, string> = {
   "lav-stato-da-lavorare": "#52525b",
   "lav-stato-in-lavorazione": "#0284c7",
   [LAVORAZIONE_STATO_COMPLETATA_ID]: "#15803d",
+  bozza: "#52525b",
+  in_coda: "#ea580c",
+  in_officina: "#0284c7",
+  in_attesa_ricambi: "#7c3aed",
+  completata: "#15803d",
+  consegnata: "#059669",
+  annullata: "#b91c1c",
 };
 
 const STATO_CUSTOM_CYCLE = ["#6366f1", "#c2410c", "#0d9488", "#db2777", "#4f46e5", "#b45309"];

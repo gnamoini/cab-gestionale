@@ -65,6 +65,9 @@ export function openPreventivoPdfInNewTab(p: PreventivoRecord, autore: string): 
     { label: "Cliente", value: p.cliente || "—" },
     { label: "Cantiere", value: p.cantiere || "—" },
     { label: "Utilizzatore", value: p.utilizzatore || "—" },
+    ...(p.lavorazioneTimestamp
+      ? [{ label: "Timestamp lavorazione", value: new Date(p.lavorazioneTimestamp).toLocaleString("it-IT") }]
+      : []),
   ]);
 
   doc.setFont("helvetica", "bold");

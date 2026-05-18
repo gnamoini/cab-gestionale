@@ -3,6 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
+import { usePermissions } from "@/src/hooks/use-permissions";
 import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { authService } from "@/src/services/auth.service";
@@ -96,8 +97,9 @@ export function useSecurityProfilesQuery(enabled: boolean) {
  */
 export function useSecurityDashboardData(filters: SecurityDashboardFilters, opts?: { realtime?: boolean }) {
   const { status, user } = useAuth();
+  const permissions = usePermissions();
   const qc = useQueryClient();
-  const isAdmin = user?.ruolo === "admin";
+  const isAdmin = permissions.canManageSecurity;
   const realtime = !!opts?.realtime;
 
   const dateFromIso = filters.dateFromYmd ? localDayStartIso(filters.dateFromYmd) : null;

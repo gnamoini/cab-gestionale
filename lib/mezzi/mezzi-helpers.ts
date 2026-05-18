@@ -1,6 +1,5 @@
 import { documentoRelevantePerMezzo, preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-hub-merge";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
-import { MEZZI_OGGI_DEMO } from "@/lib/mezzi/types";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
@@ -83,6 +82,7 @@ export function compareMezzi(
   sortColumn: MezziSortKey | null,
   sortPhase: MezziSortPhase,
   naturalOrder: (x: MezzoGestito, y: MezzoGestito) => number,
+  ultimaSortValue?: (x: MezzoGestito) => string,
 ): number {
   if (sortPhase === "natural" || sortColumn === null) {
     return naturalOrder(a, b);
@@ -96,11 +96,20 @@ export function compareMezzi(
     case "marca":
       cmp = `${a.marca} ${a.modello}`.localeCompare(`${b.marca} ${b.modello}`, "it");
       break;
+    case "modello":
+      cmp = a.modello.localeCompare(b.modello, "it");
+      break;
     case "targa":
       cmp = a.targa.localeCompare(b.targa, "it");
       break;
     case "matricola":
       cmp = a.matricola.localeCompare(b.matricola, "it");
+      break;
+    case "numeroScuderia":
+      cmp = (a.numeroScuderia ?? "").localeCompare(b.numeroScuderia ?? "", "it", { numeric: true });
+      break;
+    case "ultimaLavorazione":
+      cmp = (ultimaSortValue?.(a) ?? "").localeCompare(ultimaSortValue?.(b) ?? "");
       break;
     default:
       cmp = 0;
@@ -113,7 +122,11 @@ function parseIso(s: string): number {
   return new Date(s).getTime();
 }
 
-export function interventiUltimi12Mesi(rows: MezzoInterventoLavorazione[], oggiIso = MEZZI_OGGI_DEMO): number {
+function oggiIsoDefault(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+export function interventiUltimi12Mesi(rows: MezzoInterventoLavorazione[], oggiIso = oggiIsoDefault()): number {
   const end = parseIso(oggiIso);
   const start = end - 365 * 86400000;
   return rows.filter((r) => {
@@ -152,8 +165,9 @@ export function frequenzaGuastiDaInterventi(rows: MezzoInterventoLavorazione[]):
 export function badgeAffidabilitaDaInterventi(
   m: MezzoGestito,
   rows: MezzoInterventoLavorazione[],
-  oggiIso = MEZZI_OGGI_DEMO,
+  oggiIso = oggiIsoDefault(),
 ): AffidabilitaBadge {
+  void oggiIso;
   const freq = frequenzaGuastiDaInterventi(rows);
   const media = mediaGiorniFermoInterventi(rows) ?? 0;
   if (freq === "ALTA" || media >= 14 || m.priorita === "alta") return "critico";
@@ -165,7 +179,7 @@ export function badgeAffidabilitaDaInterventi(
 export function mezziConInterventiRecenti(
   mezzi: MezzoGestito[],
   getRows: (m: MezzoGestito) => MezzoInterventoLavorazione[],
-  oggiIso = MEZZI_OGGI_DEMO,
+  oggiIso = oggiIsoDefault(),
 ): number {
   return mezzi.filter((m) => interventiUltimi12Mesi(getRows(m), oggiIso) > 0).length;
 }

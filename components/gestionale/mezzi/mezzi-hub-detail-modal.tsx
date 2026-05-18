@@ -17,6 +17,7 @@ import {
   buildMezziGestionaleLogViewModel,
 } from "@/components/gestionale/gestionale-log-ui";
 import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
+import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
 import { buildPreventiviArchivioFilterHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
 import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
@@ -32,8 +33,9 @@ import { useMezzoHub } from "@/src/hooks/gestionale/use-mezzo-hub";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
-type TabId = "panoramica" | "lavorazioni" | "timeline" | "preventivi" | "documenti" | "log";
+type TabId = "panoramica" | "foto" | "lavorazioni" | "timeline" | "preventivi" | "documenti" | "log";
 
 function fmtDt(iso: string) {
   try {
@@ -53,10 +55,12 @@ export function MezziHubDetailModal({
   mezzo,
   onClose,
   onEdit,
+  canEdit = true,
 }: {
   mezzo: MezzoGestito;
   onClose: () => void;
   onEdit: () => void;
+  canEdit?: boolean;
 }) {
   const [tab, setTab] = useState<TabId>("panoramica");
 
@@ -200,8 +204,8 @@ export function MezziHubDetailModal({
               type="button"
               className={erpBtnSoftOrange}
               onClick={onEdit}
-              disabled={Boolean(mezzo.hubSynthetic)}
-              title={mezzo.hubSynthetic ? "Registra il mezzo in anagrafica per abilitare la modifica" : undefined}
+              disabled={Boolean(mezzo.hubSynthetic) || !canEdit}
+              title={!canEdit ? READONLY_PERMISSION_HINT : mezzo.hubSynthetic ? "Registra il mezzo in anagrafica per abilitare la modifica" : undefined}
             >
               Modifica
             </button>
@@ -219,6 +223,7 @@ export function MezziHubDetailModal({
 
         <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-zinc-100 bg-zinc-50/50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/80">
           {tabBtn("panoramica", "Panoramica")}
+          {tabBtn("foto", "Foto")}
           {tabBtn("lavorazioni", `Lavorazioni (${interventi.length})`)}
           {tabBtn("timeline", `Timeline (${nTimeline})`)}
           {tabBtn("preventivi", `Preventivi (${nPv})`)}
@@ -283,6 +288,16 @@ export function MezziHubDetailModal({
                 </Link>
               </div>
             </div>
+          ) : null}
+
+          {tab === "foto" ? (
+            <RecordImageManager
+              scope="mezzi"
+              recordId={mezzo.id}
+              title="Foto mezzo"
+              canEdit={canEdit && !mezzo.hubSynthetic}
+              onImageEvent={() => void hubQuery.refetch()}
+            />
           ) : null}
 
           {tab === "lavorazioni" ? (

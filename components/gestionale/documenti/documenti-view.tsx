@@ -2,9 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { MOCK_DOCUMENTI } from "@/lib/mock-data/documenti";
+import { useQueryClient } from "@tanstack/react-query";
+import { documentiService } from "@/src/services/documenti.service";
+import { useDocumentiListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import {
+  gestionaleToDocumentoInsert,
+  gestionaleToDocumentoUpdate,
+  uploadDocumentoBlob,
+} from "@/lib/documenti/documenti-db-mapper";
+import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
@@ -22,7 +32,6 @@ import {
   selectLavorazioniFilter,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
-  dsBtnNeutral,
   dsInput,
   dsPageToolbarBtn,
   dsStackPage,
@@ -35,14 +44,14 @@ import {
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
+import { Drawer } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
-  gestionaleLogPanelAsideClass,
-  gestionaleLogPanelHeaderClass,
   gestionaleLogScrollEmbeddedClass,
   IconGestionaleLog,
+  IconGestionaleUndo,
   logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { buildModificaRigaFromChanges, type CampoChangeLike } from "@/lib/gestionale-log/view-model";
@@ -66,11 +75,12 @@ import { DocumentoEditModal, DocumentoInfoModal, UploadDocumentoModal } from "@/
 import { buildDocumentiCatalogFromImpostazioni } from "@/lib/documenti/documenti-catalog";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
-import { getMezziReportSnapshot, subscribeMezziReportSync } from "@/lib/mezzi/mezzi-report-sync";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
+import { usePermissions } from "@/src/hooks/use-permissions";
+import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
 /** Preferenza ultima azione “comprimi / espandi tutto” sull’albero documenti. */
 const DOCUMENTI_TREE_PREF_KEY = "cab-documenti-tree-pref";
@@ -119,13 +129,6 @@ function diffDocumentiMetadati(before: DocumentoGestionale, after: DocumentoGest
   push("Modello (legacy)", before.macchina, after.macchina);
   push("Dimensione (KB)", before.dimensioneKb, after.dimensioneKb);
   return out;
-}
-
-function maxDocNumericId(docs: DocumentoGestionale[]): number {
-  return docs.reduce((max, d) => {
-    const m = /^doc-(\d+)$/.exec(d.id);
-    return m ? Math.max(max, Number(m[1])) : max;
-  }, 0);
 }
 
 function DocGlyph({ doc }: { doc: DocumentoGestionale }) {
@@ -184,6 +187,8 @@ function ArchiveDocRow({
   onInfo,
   onToast,
   onApri,
+  canEdit,
+  canDelete,
 }: {
   doc: DocumentoGestionale;
   selected: boolean;
@@ -193,6 +198,8 @@ function ArchiveDocRow({
   onInfo: () => void;
   onToast: (s: string) => void;
   onApri: () => void;
+  canEdit: boolean;
+  canDelete: boolean;
 }) {
   const href = getDocumentApriHref(doc);
 
@@ -243,7 +250,7 @@ function ArchiveDocRow({
             <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
         </button>
-        <button type="button" className={dsTableActionBtnPrimary} title="Modifica" aria-label="Modifica documento" onClick={onEdit}>
+        <button type="button" className={dsTableActionBtnPrimary} title={canEdit ? "Modifica" : READONLY_PERMISSION_HINT} aria-label="Modifica documento" disabled={!canEdit} onClick={onEdit}>
           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
           </svg>
@@ -251,8 +258,9 @@ function ArchiveDocRow({
         <button
           type="button"
           className={dsTableActionBtnDanger}
-          title="Elimina"
+          title={canDelete ? "Elimina" : READONLY_PERMISSION_HINT}
           aria-label="Elimina documento"
+          disabled={!canDelete}
           onClick={onDelete}
         >
           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -272,19 +280,31 @@ function SubTreeHeading({ title }: { title: string }) {
 
 export function DocumentiView() {
   const searchParams = useSearchParams();
+  const qc = useQueryClient();
+  const permissions = usePermissions();
+  const canUploadDocuments = permissions.canUploadDocuments;
+  const canDeleteRecords = permissions.canDeleteRecords;
   const { authorName: author } = useAuth();
   const authorTrim = author.trim() || "Operatore";
   const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
   const appSettings = settingsPayload?.resolved;
-  const [mezziSnap, setMezziSnap] = useState<MezzoGestito[]>(() => getMezziReportSnapshot());
+  const mezziQuery = useMezziListQuery();
+  const documentiQuery = useDocumentiListQuery();
+  const mezziSnap = useMemo(() => (mezziQuery.data ?? []).map(toMezzoUI), [mezziQuery.data]);
+  const [docBusy, setDocBusy] = useState(false);
 
   const catalog = useMemo(() => {
     const prefs = migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault());
     return buildDocumentiCatalogFromImpostazioni(prefs, mezziSnap);
   }, [appSettings?.mezziListe, mezziSnap]);
 
-  const [docs, setDocs] = useState<DocumentoGestionale[]>(() => MOCK_DOCUMENTI.map((d) => resolveDocumentoApplicazione({ ...d })));
-  const idSeq = useRef(maxDocNumericId(MOCK_DOCUMENTI));
+  const docs = useMemo(
+    () =>
+      (documentiQuery.data ?? [])
+        .map(documentoRowToGestionale)
+        .map((d) => resolveDocumentoApplicazione({ ...d })),
+    [documentiQuery.data],
+  );
 
   const [search, setSearch] = useState("");
   const [filtroMarca, setFiltroMarca] = useState<string>("__tutti__");
@@ -310,10 +330,6 @@ export function DocumentiView() {
   const [logEntries, setLogEntries] = useState<DocumentiLogStored[]>(() => loadDocumentiChangeLog());
 
   useEffect(() => {
-    return subscribeMezziReportSync(() => setMezziSnap(getMezziReportSnapshot()));
-  }, []);
-
-  useEffect(() => {
     function onLogRefresh() {
       setLogEntries(loadDocumentiChangeLog());
     }
@@ -323,22 +339,6 @@ export function DocumentiView() {
 
   useEffect(() => {
     if (logOpen) setLogEntries(loadDocumentiChangeLog());
-  }, [logOpen]);
-
-  useEffect(() => {
-    if (!logOpen) return;
-    const gap = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-    const prevHtml = document.documentElement.style.overflow;
-    const prevBody = document.body.style.overflow;
-    const prevPad = document.body.style.paddingRight;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
-    return () => {
-      document.documentElement.style.overflow = prevHtml;
-      document.body.style.overflow = prevBody;
-      document.body.style.paddingRight = prevPad;
-    };
   }, [logOpen]);
 
   useEffect(() => {
@@ -510,73 +510,131 @@ export function DocumentiView() {
     setSortPhase(ph === "desc" ? "desc" : "asc");
   }, []);
 
-  const nextId = useCallback(() => {
-    idSeq.current += 1;
-    return `doc-${idSeq.current}`;
-  }, []);
+  const refreshDocumenti = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: QK.documenti });
+  }, [qc]);
 
   const handleUpload = useCallback(
-    (payload: Omit<DocumentoGestionale, "id">) => {
-      const id = nextId();
-      const row: DocumentoGestionale = { ...payload, id };
-      setDocs((prev) => [row, ...prev]);
-      appendDocumentiChangeLog({
-        tone: "create",
-        tipoRiga: "CARICAMENTO",
-        oggettoRiga: `Documento: ${row.nome}`,
-        modificaRiga: `Upload in archivio. Categoria: ${labelCategoria(row.categoria)}.`,
-        autore: authorTrim,
-        atIso: new Date().toISOString(),
-      });
+    async (payload: Omit<DocumentoGestionale, "id">) => {
+      if (!canUploadDocuments) return;
+      setDocBusy(true);
+      try {
+        let urlFile = payload.urlDocumento?.trim() ?? "";
+        if (payload.urlBlob?.trim()) {
+          const up = await uploadDocumentoBlob(payload.urlBlob, payload.nome || "documento");
+          if (!up.success || !up.data) {
+            setToast(up.error ?? "Caricamento file non riuscito.");
+            return;
+          }
+          urlFile = up.data;
+          try {
+            URL.revokeObjectURL(payload.urlBlob);
+          } catch {
+            /* ignore */
+          }
+        }
+        if (!urlFile) {
+          setToast("File non disponibile per il salvataggio.");
+          return;
+        }
+        const insert = gestionaleToDocumentoInsert(payload, urlFile);
+        const res = await documentiService.create(insert);
+        if (!res.success || !res.data) {
+          setToast(res.error ?? "Impossibile salvare il documento.");
+          return;
+        }
+        const row = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
+        appendDocumentiChangeLog({
+          tone: "create",
+          tipoRiga: "CARICAMENTO",
+          oggettoRiga: `Documento: ${row.nome}`,
+          modificaRiga: `Upload in archivio. Categoria: ${labelCategoria(row.categoria)}.`,
+          autore: authorTrim,
+          atIso: new Date().toISOString(),
+        });
+        refreshDocumenti();
+        setToast("Documento caricato.");
+      } finally {
+        setDocBusy(false);
+      }
     },
-    [nextId, authorTrim],
+    [authorTrim, refreshDocumenti, canUploadDocuments],
   );
 
   const handleSaveEdit = useCallback(
-    (next: DocumentoGestionale) => {
+    async (next: DocumentoGestionale) => {
+      if (!canUploadDocuments) return;
       const old = docs.find((d) => d.id === next.id);
-      if (old) {
-        const changes = diffDocumentiMetadati(old, next);
-        if (changes.length > 0) {
-          appendDocumentiChangeLog({
-            tone: "update",
-            tipoRiga: "MODIFICA",
-            oggettoRiga: `Documento: ${next.nome}`,
-            modificaRiga: buildModificaRigaFromChanges(changes),
-            autore: authorTrim,
-            atIso: new Date().toISOString(),
-          });
+      setDocBusy(true);
+      try {
+        const update = gestionaleToDocumentoUpdate(next);
+        const res = await documentiService.update(next.id, update);
+        if (!res.success || !res.data) {
+          setToast(res.error ?? "Impossibile aggiornare il documento.");
+          return;
         }
+        if (old) {
+          const saved = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
+          const changes = diffDocumentiMetadati(old, saved);
+          if (changes.length > 0) {
+            appendDocumentiChangeLog({
+              tone: "update",
+              tipoRiga: "MODIFICA",
+              oggettoRiga: `Documento: ${saved.nome}`,
+              modificaRiga: buildModificaRigaFromChanges(changes),
+              autore: authorTrim,
+              atIso: new Date().toISOString(),
+            });
+          }
+        }
+        refreshDocumenti();
+        setToast("Documento aggiornato.");
+      } finally {
+        setDocBusy(false);
       }
-      setDocs((prev) => prev.map((d) => (d.id === next.id ? next : d)));
     },
-    [docs, authorTrim],
+    [docs, authorTrim, refreshDocumenti, canUploadDocuments],
   );
 
-  const handleDelete = useCallback((victim: DocumentoGestionale) => {
-    const ok = window.confirm("Eliminare definitivamente questo documento?");
-    if (!ok) return;
-    appendDocumentiChangeLog({
-      tone: "delete",
-      tipoRiga: "ELIMINAZIONE",
-      oggettoRiga: `Documento: ${victim.nome}`,
-      modificaRiga: `Rimosso dall’archivio. Categoria: ${labelCategoria(victim.categoria)}.`,
-      autore: authorTrim,
-      atIso: new Date().toISOString(),
-    });
-    const blob = victim.urlBlob;
-    if (blob) {
+  const handleDelete = useCallback(
+    async (victim: DocumentoGestionale) => {
+      if (!canDeleteRecords) return;
+      const ok = window.confirm("Eliminare definitivamente questo documento?");
+      if (!ok) return;
+      setDocBusy(true);
       try {
-        URL.revokeObjectURL(blob);
-      } catch {
-        /* ignore */
+        const res = await documentiService.remove(victim.id);
+        if (!res.success) {
+          setToast(res.error ?? "Impossibile eliminare il documento.");
+          return;
+        }
+        appendDocumentiChangeLog({
+          tone: "delete",
+          tipoRiga: "ELIMINAZIONE",
+          oggettoRiga: `Documento: ${victim.nome}`,
+          modificaRiga: `Rimosso dall’archivio. Categoria: ${labelCategoria(victim.categoria)}.`,
+          autore: authorTrim,
+          atIso: new Date().toISOString(),
+        });
+        const blob = victim.urlBlob;
+        if (blob) {
+          try {
+            URL.revokeObjectURL(blob);
+          } catch {
+            /* ignore */
+          }
+        }
+        setSelectedDocId((cur) => (cur === victim.id ? null : cur));
+        setInfoDoc((d) => (d?.id === victim.id ? null : d));
+        setEditDoc((d) => (d?.id === victim.id ? null : d));
+        refreshDocumenti();
+        setToast("Documento eliminato.");
+      } finally {
+        setDocBusy(false);
       }
-    }
-    setDocs((prev) => prev.filter((d) => d.id !== victim.id));
-    setSelectedDocId((cur) => (cur === victim.id ? null : cur));
-    setInfoDoc((d) => (d?.id === victim.id ? null : d));
-    setEditDoc((d) => (d?.id === victim.id ? null : d));
-  }, [authorTrim]);
+    },
+    [authorTrim, refreshDocumenti, canDeleteRecords],
+  );
 
   function openDoc(doc: DocumentoGestionale) {
     const href = getDocumentApriHref(doc);
@@ -675,6 +733,15 @@ export function DocumentiView() {
           <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
             <button
               type="button"
+              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
+              title="Nessuna azione reversibile"
+              disabled
+            >
+              <IconGestionaleUndo />
+              <span className="sr-only">Annulla ultima azione</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setLogOpen(true)}
               className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
               title="Storico modifiche documenti (ultime 200)"
@@ -687,10 +754,17 @@ export function DocumentiView() {
       />
 
       <div className={dsStackPage}>
-        <div className={`${dsStickyToolbar} -mx-1`}>
+        <ShellCard>
+        <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
           <div className="flex flex-col gap-3">
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <button type="button" onClick={() => setUploadOpen(true)} className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}>
+              <button
+                type="button"
+                onClick={() => setUploadOpen(true)}
+                disabled={docBusy || documentiQuery.isLoading || !canUploadDocuments}
+                title={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}
+                className={`${erpBtnNuovaLavorazione} h-11 shrink-0 disabled:opacity-60`}
+              >
                 <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                 </svg>
@@ -742,16 +816,20 @@ export function DocumentiView() {
                   </span>
                 ) : null}
               </div>
-              {showDocPager ? (
-                <p className="max-w-full text-[11px] leading-snug text-[color:var(--cab-text-muted)] sm:max-w-[28rem] sm:text-right">
-                  L&apos;albero segue la pagina corrente; «Senza collocazione» elenca tutti i documenti filtrati senza anagrafica.
-                </p>
-              ) : null}
+              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                <button type="button" className={dsPageToolbarBtn} onClick={() => setSearch("")}>
+                  Pulisci ricerca
+                </button>
+                <button type="button" className={dsPageToolbarBtn} onClick={resetFiltri}>
+                  Reimposta filtri
+                </button>
+              </div>
             </div>
           </div>
+        </div>
 
           <div
-            className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`mt-3 grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               filtriEspansi ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
             }`}
           >
@@ -878,11 +956,9 @@ export function DocumentiView() {
               </div>
             </div>
           </div>
-        </div>
 
-        <section className="min-w-0" aria-label="Albero documenti">
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <h2 className="text-sm font-semibold text-[color:var(--cab-text)]">Elenco</h2>
+        <section className="mt-4 min-w-0" aria-label="Albero documenti">
+          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
             {sorted.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={collapseAllTreeGroups} className={`${dsPageToolbarBtn} h-9 px-3 text-xs`} title="Chiudi tutti i gruppi">
@@ -895,7 +971,13 @@ export function DocumentiView() {
             ) : null}
           </div>
           <div className="rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]">
-              {sorted.length === 0 ? (
+              {documentiQuery.isLoading ? (
+                <p className="p-8 text-center text-sm text-[color:var(--cab-text-muted)]">Caricamento documenti…</p>
+              ) : documentiQuery.isError ? (
+                <p className="p-8 text-center text-sm text-[color:var(--cab-danger)]">
+                  Impossibile caricare i documenti. Riprova più tardi.
+                </p>
+              ) : sorted.length === 0 ? (
                 <p className="p-8 text-center text-sm text-[color:var(--cab-text-muted)]">Nessun documento corrisponde ai filtri.</p>
               ) : (
                 <div className="divide-y divide-[color:var(--cab-border)]">
@@ -945,6 +1027,8 @@ export function DocumentiView() {
                                         onInfo={() => setInfoDoc(d)}
                                         onToast={setToast}
                                         onApri={() => openDoc(d)}
+                                        canEdit={canUploadDocuments}
+                                        canDelete={canDeleteRecords}
                                       />
                                     ))}
                                   </ul>
@@ -966,6 +1050,8 @@ export function DocumentiView() {
                                         onInfo={() => setInfoDoc(d)}
                                         onToast={setToast}
                                         onApri={() => openDoc(d)}
+                                        canEdit={canUploadDocuments}
+                                        canDelete={canDeleteRecords}
                                       />
                                     ))}
                                   </ul>
@@ -1023,6 +1109,8 @@ export function DocumentiView() {
                                                       onInfo={() => setInfoDoc(d)}
                                                       onToast={setToast}
                                                       onApri={() => openDoc(d)}
+                                                      canEdit={canUploadDocuments}
+                                                      canDelete={canDeleteRecords}
                                                     />
                                                   ))}
                                                 </ul>
@@ -1070,6 +1158,8 @@ export function DocumentiView() {
                                                               onInfo={() => setInfoDoc(d)}
                                                               onToast={setToast}
                                                               onApri={() => openDoc(d)}
+                                                              canEdit={canUploadDocuments}
+                                                              canDelete={canDeleteRecords}
                                                             />
                                                           ))}
                                                         </ul>
@@ -1111,6 +1201,8 @@ export function DocumentiView() {
                             onInfo={() => setInfoDoc(d)}
                             onToast={setToast}
                             onApri={() => openDoc(d)}
+                            canEdit={canUploadDocuments}
+                            canDelete={canDeleteRecords}
                           />
                         ))}
                       </ul>
@@ -1129,9 +1221,10 @@ export function DocumentiView() {
               />
             ) : null}
           </section>
+        </ShellCard>
       </div>
 
-      {uploadOpen ? (
+      {uploadOpen && canUploadDocuments ? (
         <UploadDocumentoModal catalog={catalog} mezzi={mezziSnap} onRequestClose={() => setUploadOpen(false)} onSubmit={handleUpload} />
       ) : null}
 
@@ -1148,34 +1241,14 @@ export function DocumentiView() {
         />
       ) : null}
 
-      {editDoc ? (
+      {editDoc && canUploadDocuments ? (
         <DocumentoEditModal key={editDoc.id} doc={editDoc} catalog={catalog} mezzi={mezziSnap} onRequestClose={() => setEditDoc(null)} onSave={handleSaveEdit} />
       ) : null}
 
-      {logOpen ? (
-        <div
-          className="fixed inset-0 z-[55] flex items-stretch justify-end bg-black/30"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              setLogOpen(false);
-            }
-          }}
-        >
-          <aside
-            className={gestionaleLogPanelAsideClass}
-            aria-label="Log modifiche documenti"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className={gestionaleLogPanelHeaderClass}>
-              <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche documenti</h2>
-              <button type="button" onClick={() => setLogOpen(false)} className={dsBtnNeutral}>
-                Chiudi
-              </button>
-            </div>
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
-              <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
-                {logEntries.length === 0 ? (
+      <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche documenti" ariaLabel="Log modifiche documenti">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
+            {logEntries.length === 0 ? (
                   <GestionaleLogEmpty message="Nessuna modifica registrata." />
                 ) : (
                   <GestionaleLogList>
@@ -1208,15 +1281,13 @@ export function DocumentiView() {
                       </li>
                     ))}
                   </GestionaleLogList>
-                )}
-              </div>
-              {showDocLogPager ? (
-                <TablePagination page={docLogPage} pageCount={docLogPageCount} onPageChange={setDocLogPage} label={docLogPagerLabel} />
-              ) : null}
-            </div>
-          </aside>
+            )}
+          </div>
+          {showDocLogPager ? (
+            <TablePagination page={docLogPage} pageCount={docLogPageCount} onPageChange={setDocLogPage} label={docLogPagerLabel} />
+          ) : null}
         </div>
-      ) : null}
+      </Drawer>
 
       {toast ? (
         <p

@@ -14,7 +14,7 @@ import {
   saveLavorazioniManualMonthMap,
   type LavorazioniManualMonthMap,
 } from "@/lib/report/lavorazioni-manual-storage";
-import { dsSectionTitle, dsSurfaceCard, dsTableWrap, dsScrollbar, dsTypoSmall } from "@/lib/ui/design-system";
+import { dsSectionTitle, dsSurfaceCard, dsTableHead, dsTableWrap, dsScrollbar, dsTypoSmall } from "@/lib/ui/design-system";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"] as const;
 
@@ -162,11 +162,11 @@ export function ReportLavorazioniSection({
         <div className="min-w-0">
           <div className={`${dsTableWrap} ${dsScrollbar} overflow-hidden rounded-[var(--ds-radius-xl)] border border-zinc-800 bg-black`}>
             <table className="w-full min-w-[720px] border-collapse text-left text-sm">
-              <thead className="sticky top-0 z-10 bg-orange-500 text-white shadow-[inset_0_-1px_0_0_rgba(0,0,0,0.12)]">
+              <thead className={`sticky top-0 z-10 ${dsTableHead}`}>
                 <tr className="h-14">
                   <th
                     scope="col"
-                    className="min-w-[3.5rem] border-b border-orange-600/90 px-2 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-white sm:text-xs"
+                    className="min-w-[3.5rem] border-b border-[color:var(--cab-border)] px-2 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide sm:text-xs"
                   >
                     Anno
                   </th>
@@ -175,21 +175,21 @@ export function ReportLavorazioniSection({
                       key={`h-${mi}-${lab}`}
                       scope="col"
                       title={lab}
-                      className="min-w-[2.5rem] border-b border-orange-600/90 px-1 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-white sm:text-xs"
+                      className="min-w-[2.5rem] border-b border-[color:var(--cab-border)] px-1 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide sm:text-xs"
                     >
                       {lab}
                     </th>
                   ))}
                   <th
                     scope="col"
-                    className="min-w-[3.5rem] border-b border-orange-600/90 px-2 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-white sm:text-xs"
+                    className="min-w-[3.5rem] border-b border-[color:var(--cab-border)] px-2 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide sm:text-xs"
                   >
                     Totale
                   </th>
                   <th
                     scope="col"
                     title="Variazione percentuale rispetto all'anno precedente"
-                    className="min-w-[3.5rem] border-b border-orange-600/90 px-2 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide text-white sm:text-xs"
+                    className="min-w-[3.5rem] border-b border-[color:var(--cab-border)] px-2 py-2 text-center align-middle text-[10px] font-bold uppercase tracking-wide sm:text-xs"
                   >
                     Vs prec.
                   </th>

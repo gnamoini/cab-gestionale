@@ -2,14 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadMagazzinoChangeLog, MAGAZZINO_CHANGE_LOG_STORAGE_KEY } from "@/lib/magazzino/magazzino-change-log-storage";
-import {
-  getMagazzinoReportSnapshot,
-  subscribeMagazzinoReportSync,
-} from "@/lib/magazzino/magazzino-report-sync";
+import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { splitLavorazioniListRowsForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
-import { getMezziReportSnapshot, subscribeMezziReportSync } from "@/lib/mezzi/mezzi-report-sync";
 import { LAVORAZIONI_CHANGE_LOG_STORAGE_KEY, loadLavorazioniChangeLog } from "@/lib/lavorazioni/lavorazioni-change-log";
+import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { subscribeReportDataRefresh } from "@/lib/report/report-broadcast";
+import { useMagazzinoListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 
 const LAV_LIST_FILTERS = { includeMezzo: true as const };
@@ -19,10 +17,10 @@ export function useReportLiveData() {
   const bump = useCallback(() => setTick((t) => t + 1), []);
 
   const lavQuery = useLavorazioniList(LAV_LIST_FILTERS, { staleTime: 30_000 });
+  const magQuery = useMagazzinoListQuery();
+  const mezziQuery = useMezziListQuery();
 
   useEffect(() => {
-    const u2 = subscribeMagazzinoReportSync(bump);
-    const u3 = subscribeMezziReportSync(bump);
     const u4 = subscribeReportDataRefresh(bump);
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
@@ -34,8 +32,6 @@ export function useReportLiveData() {
     window.addEventListener("storage", onStorage);
     document.addEventListener("visibilitychange", onVis);
     return () => {
-      u2();
-      u3();
       u4();
       window.removeEventListener("storage", onStorage);
       document.removeEventListener("visibilitychange", onVis);
@@ -44,14 +40,29 @@ export function useReportLiveData() {
 
   return useMemo(() => {
     const { attive, storico } = splitLavorazioniListRowsForReport(lavQuery.data ?? []);
+    const magazzino = (magQuery.data ?? []).map((row) => magazzinoRowToRicambioUI(row));
+    const mezzi = (mezziQuery.data ?? []).map(toMezzoUI);
     return {
       attive,
       storico,
-      magazzino: getMagazzinoReportSnapshot(),
-      mezzi: getMezziReportSnapshot(),
+      magazzino,
+      mezzi,
       magLog: loadMagazzinoChangeLog(),
       lavLog: loadLavorazioniChangeLog(),
+      isLoading: lavQuery.isLoading || magQuery.isLoading || mezziQuery.isLoading,
+      isError: lavQuery.isError || magQuery.isError || mezziQuery.isError,
       tick,
     };
-  }, [tick, lavQuery.data]);
+  }, [
+    tick,
+    lavQuery.data,
+    lavQuery.isLoading,
+    lavQuery.isError,
+    magQuery.data,
+    magQuery.isLoading,
+    magQuery.isError,
+    mezziQuery.data,
+    mezziQuery.isLoading,
+    mezziQuery.isError,
+  ]);
 }

@@ -5,6 +5,7 @@ import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { buildEffectivePermissionsByModule, type EffectiveModulePermission } from "@/src/lib/permissions/effective-permissions";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
+import { hasPermission, normalizeRole } from "@/src/lib/auth/permissions";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { permissionsService } from "@/src/services/permissions.service";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
@@ -31,26 +32,56 @@ export function useUserPermissionsQuery(): UseQueryResult<UserPermissionRow[], E
   });
 }
 
-/**
- * Permessi effettivi per un modulo ERP (ruolo + righe `user_permissions`).
- * Allineato a `buildEffectivePermissionsByModule` / logica `user_effective_can`:
- * finché le righe non sono ancora arrivate da React Query, si applica il fallback ruolo
- * (admin/tecnico/viewer), senza forzare `canWrite: false` durante il fetch.
- */
+export type GlobalPermissions = {
+  role: ReturnType<typeof normalizeRole>;
+  isAdmin: boolean;
+  isOperatore: boolean;
+  isOspite: boolean;
+  canEditInventory: boolean;
+  canManageUsers: boolean;
+  canManageSecurity: boolean;
+  canManageSettings: boolean;
+  canEditWorkOrders: boolean;
+  canEditVehicles: boolean;
+  canUploadDocuments: boolean;
+  canDeleteRecords: boolean;
+  canViewReports: boolean;
+  canViewAuditLogs: boolean;
+  isLoading: boolean;
+};
+
+export function usePermissions(): GlobalPermissions;
 export function usePermissions(module: GestionalePermissionModule): EffectiveModulePermission & {
   isLoading: boolean;
-} {
+};
+export function usePermissions(module?: GestionalePermissionModule): GlobalPermissions | (EffectiveModulePermission & { isLoading: boolean }) {
   const { user, status } = useAuth();
-  const q = useUserPermissionsQuery();
   const ruolo = user?.ruolo;
-  const map = buildEffectivePermissionsByModule(ruolo, q.data);
+  const isLoading = status === "loading";
+
+  if (!module) {
+    const role = normalizeRole(ruolo);
+    return {
+      role,
+      isAdmin: role === "admin",
+      isOperatore: role === "operatore",
+      isOspite: role === "ospite",
+      canEditInventory: hasPermission(role, "editInventory"),
+      canManageUsers: hasPermission(role, "manageUsers"),
+      canManageSecurity: hasPermission(role, "manageSecurity"),
+      canManageSettings: hasPermission(role, "manageSettings"),
+      canEditWorkOrders: hasPermission(role, "editWorkOrders"),
+      canEditVehicles: hasPermission(role, "editVehicles"),
+      canUploadDocuments: hasPermission(role, "uploadDocuments"),
+      canDeleteRecords: hasPermission(role, "deleteRecords"),
+      canViewReports: hasPermission(role, "viewReports"),
+      canViewAuditLogs: hasPermission(role, "viewAuditLogs"),
+      isLoading,
+    };
+  }
+
+  const map = buildEffectivePermissionsByModule(ruolo, undefined);
   const row = map[module];
-  const permissionsRowsStillLoading =
-    isAuthSessionEstablished(status) &&
-    !!user?.id &&
-    q.data === undefined &&
-    (q.isPending || q.isFetching);
-  const isLoading = status === "loading" || permissionsRowsStillLoading;
   return { ...row, isLoading };
 }
 

@@ -1,6 +1,3 @@
-/** Data di riferimento demo (coerente con mock) — non usare new Date() in render. */
-export const MEZZI_OGGI_DEMO = "2026-05-11";
-
 export type MezzoPriorita = "normale" | "media" | "alta";
 
 /** Opzionale: collegamento esplicito a riga lavorazione (id). */
@@ -30,7 +27,7 @@ export type MezzoGestito = {
   hubSynthetic?: boolean;
 };
 
-export type MezziSortKey = "cliente" | "marca" | "targa" | "matricola";
+export type MezziSortKey = "cliente" | "marca" | "modello" | "targa" | "matricola" | "numeroScuderia" | "ultimaLavorazione";
 
 export type MezziSortPhase = "natural" | "asc" | "desc";
 

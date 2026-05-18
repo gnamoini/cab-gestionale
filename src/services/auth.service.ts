@@ -2,6 +2,7 @@
 
 import type { User } from "@/src/lib/supabase/browser-client";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { ProfileRow } from "@/src/types/supabase-tables";
@@ -52,6 +53,8 @@ export const authService = {
 
   async create(data: SignUpInput): Promise<ServiceResult<User>> {
     try {
+      const allowed = await ensurePermission("manageUsers");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await getClient();
       const { data: res, error } = await sb.auth.signUp({
         email: data.email,
@@ -76,6 +79,8 @@ export const authService = {
 
   async update(id: string, data: ProfileUpdate): Promise<ServiceResult<ProfileRow>> {
     try {
+      const allowed = await ensurePermission("manageUsers");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await getClient();
       const { data: before, error: e0 } = await sb.from("profiles").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -96,6 +101,8 @@ export const authService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
+      const allowed = await ensurePermission("manageUsers");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await getClient();
       const { data: existing, error: readErr } = await sb.from("profiles").select("*").eq("id", id).maybeSingle();
       if (readErr) return err(readErr.message);

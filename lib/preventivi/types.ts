@@ -29,6 +29,7 @@ export type PreventivoRecord = {
   stato: PreventivoStato;
   lavorazioneId: string;
   lavorazioneOrigine: PreventivoLavorazioneOrigine;
+  lavorazioneTimestamp?: string;
   cliente: string;
   cantiere: string;
   utilizzatore: string;

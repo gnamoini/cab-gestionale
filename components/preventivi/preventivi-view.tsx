@@ -12,6 +12,8 @@ import { TablePagination } from "@/components/gestionale/table-pagination";
 import { PreventiviEditorModal } from "@/components/preventivi/preventivi-editor-modal";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { useAuth } from "@/context/auth-context";
+import { usePermissions } from "@/src/hooks/use-permissions";
+import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
 import { getMagazzinoReportSnapshot, subscribeMagazzinoReportSync } from "@/lib/magazzino/magazzino-report-sync";
 import { getMezziReportSnapshot, subscribeMezziReportSync } from "@/lib/mezzi/mezzi-report-sync";
@@ -30,6 +32,7 @@ import {
   type PreventiviLogStored,
 } from "@/lib/preventivi/preventivi-change-log-storage";
 import {
+  appendPreventivo,
   deletePreventivo,
   loadPreventivi,
 } from "@/lib/preventivi/preventivi-storage";
@@ -48,7 +51,6 @@ import {
   dsTableHead,
   dsTableRow,
   dsTableWrap,
-  dsTableThSticky,
   dsFocus,
   dsTableTdActions,
   dsTableActionsGroup,
@@ -62,14 +64,14 @@ import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-siz
 import { mergeUniqueSortedIt } from "@/lib/ui/merge-filter-options";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { erpBtnNuovaLavorazione, erpFocus, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { Drawer } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
-  gestionaleLogPanelAsideClass,
-  gestionaleLogPanelHeaderClass,
   gestionaleLogScrollEmbeddedClass,
   IconGestionaleLog,
+  IconGestionaleUndo,
   logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 
@@ -165,7 +167,7 @@ function SortThPreventivo({
     icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
   }
   return (
-    <th className={`${dsTableThSticky} px-2 py-2 align-middle text-left ${thClassName ?? ""}`}>
+    <th className={`px-2.5 py-2 text-left align-middle ${thClassName ?? ""}`}>
       <button
         type="button"
         onClick={() => onSort(columnKey)}
@@ -181,6 +183,9 @@ function SortThPreventivo({
 }
 
 export function PreventiviView() {
+  const permissions = usePermissions();
+  const canEditWorkOrders = permissions.canEditWorkOrders;
+  const canDeleteRecords = permissions.canDeleteRecords;
   const router = useRouter();
   const searchParams = useSearchParams();
   const { authorName: autore } = useAuth();
@@ -224,7 +229,8 @@ export function PreventiviView() {
   }, []);
 
   useEffect(() => {
-    reload();
+    const t = window.setTimeout(() => reload(), 0);
+    return () => window.clearTimeout(t);
   }, [reload]);
 
   useEffect(() => {
@@ -236,23 +242,9 @@ export function PreventiviView() {
   }, []);
 
   useEffect(() => {
-    if (logOpen) setLogEntries(loadPreventiviChangeLog());
-  }, [logOpen]);
-
-  useEffect(() => {
     if (!logOpen) return;
-    const gap = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-    const prevHtml = document.documentElement.style.overflow;
-    const prevBody = document.body.style.overflow;
-    const prevPad = document.body.style.paddingRight;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
-    return () => {
-      document.documentElement.style.overflow = prevHtml;
-      document.body.style.overflow = prevBody;
-      document.body.style.paddingRight = prevPad;
-    };
+    const t = window.setTimeout(() => setLogEntries(loadPreventiviChangeLog()), 0);
+    return () => window.clearTimeout(t);
   }, [logOpen]);
 
   useEffect(() => {
@@ -491,7 +483,7 @@ export function PreventiviView() {
   useEffect(() => {
     resetPage();
   }, [preventiviPagerDeps, listPageSize, resetPage]);
-  const pagedRows = useMemo(() => sliceItems(sortedRows), [sliceItems, sortedRows, page]);
+  const pagedRows = useMemo(() => sliceItems(sortedRows), [sliceItems, sortedRows]);
 
   const {
     page: logPage,
@@ -505,7 +497,7 @@ export function PreventiviView() {
   useEffect(() => {
     resetLogPage();
   }, [logOpen, logEntries.length, listPageSize, resetLogPage]);
-  const pagedLogEntries = useMemo(() => sliceLogEntries(logEntries), [logEntries, sliceLogEntries, logPage]);
+  const pagedLogEntries = useMemo(() => sliceLogEntries(logEntries), [logEntries, sliceLogEntries]);
 
   function onSortMain(k: PreventivoSortKey) {
     if (sortColumn !== k) {
@@ -588,9 +580,9 @@ export function PreventiviView() {
   useEffect(() => {
     if (pendingHandledRef.current) return;
     const nuovo = searchParams.get(Q_PREVENTIVI_NUOVO);
+    if (nuovo !== "1") return;
     const pending = readAndClearPendingPreventivoPayload();
     if (!pending) return;
-    if (nuovo !== "1") return;
     pendingHandledRef.current = true;
     const mezzo = findMezzoForLavorazione(mezziSnap, pending.lav);
     const rec = buildNewPreventivoFromLavorazioneContext({
@@ -601,9 +593,23 @@ export function PreventiviView() {
       magazzino: magSnap,
       autore: autore.trim() || "Operatore",
     });
-    setEditor({ open: true, record: rec, isNew: true });
+    const u = autore.trim() || "Operatore";
+    appendPreventivo(rec);
+    appendPreventiviChangeLog({
+      tone: "create",
+      tipoRiga: "CREAZIONE PREVENTIVO AUTOMATICA",
+      oggettoRiga: `Preventivo ${rec.numero}`,
+      modificaRiga: `Generato da lavorazione ${rec.lavorazioneId} con ${rec.righeRicambi.length} ricambi e ${rec.manodopera.oreTotali} ore manodopera. Cliente: ${rec.cliente || "—"}.`,
+      autore: u,
+      atIso: rec.dataCreazione,
+    });
+    window.setTimeout(() => {
+      setRows((prev) => [rec, ...prev.filter((p) => p.id !== rec.id)]);
+      setEditor({ open: true, record: rec, isNew: false });
+    }, 0);
     const sp = new URLSearchParams(searchParams.toString());
     sp.delete(Q_PREVENTIVI_NUOVO);
+    sp.set(Q_PREVENTIVI_OPEN, rec.id);
     const q = sp.toString();
     router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
   }, [searchParams, router, mezziSnap, magSnap, autore]);
@@ -623,10 +629,12 @@ export function PreventiviView() {
   }, [searchParams, rows, router]);
 
   function apriModifica(p: PreventivoRecord) {
+    if (!canEditWorkOrders) return;
     setEditor({ open: true, record: p, isNew: false });
   }
 
   function onElimina(p: PreventivoRecord) {
+    if (!canDeleteRecords) return;
     if (!window.confirm(`Eliminare il preventivo ${p.numero}?`)) return;
     const u = autore.trim() || "Operatore";
     appendPreventiviChangeLog({
@@ -670,6 +678,15 @@ export function PreventiviView() {
           <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
             <button
               type="button"
+              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
+              title="Nessuna azione reversibile"
+              disabled
+            >
+              <IconGestionaleUndo />
+              <span className="sr-only">Annulla ultima azione</span>
+            </button>
+            <button
+              type="button"
               onClick={() => setLogOpen(true)}
               className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
               title="Storico modifiche preventivi (ultime 200)"
@@ -686,21 +703,23 @@ export function PreventiviView() {
       {bannerFilter}
       {bannerMezzo}
 
-      <ShellCard className="overflow-hidden rounded-xl border-zinc-200/95 shadow-md dark:border-zinc-800">
-        <div className={`${dsStickyToolbar} -mx-1`}>
-        <div className="mb-3 flex flex-col gap-3 sm:mb-4">
+      <ShellCard>
+        <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
+        <div className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <button
               type="button"
               onClick={() =>
+                canEditWorkOrders &&
                 setEditor({
                   open: true,
                   record: buildEmptyManualPreventivo(autore.trim() || "Operatore"),
                   isNew: true,
                 })
               }
-              className={`${erpBtnNuovaLavorazione} h-11 shrink-0 px-4 sm:min-w-[11rem]`}
-              title="Crea un preventivo senza collegamento a lavorazione"
+              className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
+              disabled={!canEditWorkOrders}
+              title={canEditWorkOrders ? "Crea un preventivo senza collegamento a lavorazione" : READONLY_PERMISSION_HINT}
             >
               <span className="text-base font-semibold leading-none" aria-hidden>
                 +
@@ -742,14 +761,37 @@ export function PreventiviView() {
             </button>
           </div>
 
+          <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
+                <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{sortedRows.length}</span>
+                <span>risultat{sortedRows.length === 1 ? "o" : "i"}</span>
+              </span>
+              {(searchPreventivi.trim() || hasAdvancedPanelFilters || filterLavId || filterMezzoRaw) ? (
+                <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
+                  Filtri attivi
+                </span>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+              <button type="button" className={dsPageToolbarBtn} onClick={() => setSearchPreventivi("")}>
+                Pulisci ricerca
+              </button>
+              <button type="button" className={dsPageToolbarBtn} onClick={resetPreventiviPanelFilters}>
+                Reimposta filtri
+              </button>
+            </div>
+          </div>
+        </div>
+        </div>
+
           <div
-            className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            className={`mt-3 grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
               filtriEspansi ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
             }`}
           >
             <div className="min-h-0 overflow-hidden">
               <div className="border-t border-zinc-200 pt-3 dark:border-zinc-800" aria-label="Filtri preventivi">
-                <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Campi filtro</p>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
                     Cliente
@@ -911,9 +953,6 @@ export function PreventiviView() {
                     </select>
                   </label>
                 </div>
-                <p className="mt-3 text-[10px] leading-relaxed text-zinc-500 dark:text-zinc-400">
-                  Intervallo date, mese e anno si combinano: un preventivo deve soddisfarli tutti se valorizzati.
-                </p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <button type="button" className={dsBtnNeutral} onClick={resetPreventiviFiltriAvanzati}>
                     Reimposta campi
@@ -922,27 +961,8 @@ export function PreventiviView() {
               </div>
             </div>
           </div>
-          <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400">
-            <span>
-              <span className="tabular-nums font-semibold text-zinc-700 dark:text-zinc-200">{sortedRows.length}</span> risultati
-              {filterLavId && filterOrig ? " · filtro lavorazione" : ""}
-              {filterMezzoRaw ? " · filtro mezzo" : ""}
-              {searchPreventivi.trim() || hasAdvancedPanelFilters ? " · filtri attivi" : ""}
-            </span>
-            {searchPreventivi.trim() || hasAdvancedPanelFilters ? (
-              <button
-                type="button"
-                className="font-semibold text-orange-700 underline-offset-2 hover:underline"
-                onClick={resetPreventiviPanelFilters}
-              >
-                Azzera filtri
-              </button>
-            ) : null}
-          </p>
-        </div>
-        </div>
 
-        <div className={`${dsTableWrap} ${dsScrollbar}`}>
+        <div className={`mt-4 ${dsTableWrap} ${dsScrollbar}`}>
           <table className={`${dsTable} w-full min-w-0 table-fixed text-sm text-zinc-900 dark:text-zinc-100`}>
             <colgroup>
               <col className="w-[5.25rem]" />
@@ -1022,14 +1042,21 @@ export function PreventiviView() {
                   thClassName="w-[6.25rem] min-w-[6.25rem]"
                 />
                 <th
-                  className={`${dsTableThSticky} w-[10.5rem] min-w-[10.5rem] px-2 py-2 text-right align-middle text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}
+                  className="w-[10.5rem] min-w-[10.5rem] px-2.5 py-2 text-right align-middle text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
                 >
                   Azioni
                 </th>
               </tr>
             </thead>
             <tbody>
-              {pagedRows.map((p) => {
+              {pagedRows.length === 0 ? (
+                <tr className={dsTableRow}>
+                  <td colSpan={9} className="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                    Nessun preventivo in archivio.
+                  </td>
+                </tr>
+              ) : (
+              pagedRows.map((p) => {
                 const hrefLav = p.lavorazioneId.trim()
                   ? buildPreventiviLavorazioneFocusHref(p.lavorazioneId, p.lavorazioneOrigine)
                   : null;
@@ -1084,7 +1111,8 @@ export function PreventiviView() {
                           type="button"
                           className={dsTableActionBtnPrimary}
                           onClick={() => apriModifica(p)}
-                          title="Apri / modifica"
+                          disabled={!canEditWorkOrders}
+                          title={canEditWorkOrders ? "Apri / modifica" : READONLY_PERMISSION_HINT}
                           aria-label="Apri o modifica preventivo"
                         >
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -1106,7 +1134,8 @@ export function PreventiviView() {
                           type="button"
                           className={dsTableActionBtnDanger}
                           onClick={() => onElimina(p)}
-                          title="Elimina"
+                          disabled={!canDeleteRecords}
+                          title={canDeleteRecords ? "Elimina" : READONLY_PERMISSION_HINT}
                           aria-label="Elimina preventivo"
                         >
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -1117,21 +1146,16 @@ export function PreventiviView() {
                     </td>
                   </tr>
                 );
-              })}
+              })
+              )}
             </tbody>
           </table>
         </div>
         {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
-        {sortedRows.length === 0 ? (
-          <p className="px-4 py-6 text-sm text-zinc-500 dark:text-zinc-400">
-            Nessun preventivo in archivio. Usa «Nuovo preventivo» per un preventivo manuale, oppure «Genera preventivo» dalle schede di una
-            lavorazione per una bozza precompilata.
-          </p>
-        ) : null}
       </ShellCard>
 
       <PreventiviEditorModal
-        open={editor.open}
+        open={editor.open && canEditWorkOrders}
         record={editor.record}
         isNew={editor.isNew}
         autore={autore.trim() || "Operatore"}
@@ -1140,33 +1164,10 @@ export function PreventiviView() {
       />
       </div>
 
-      {logOpen ? (
-        <div
-          className="fixed inset-0 z-[55] flex items-stretch justify-end bg-black/30"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              setLogOpen(false);
-            }
-          }}
-        >
-          <aside
-            className={gestionaleLogPanelAsideClass}
-            aria-label="Log modifiche preventivi"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className={gestionaleLogPanelHeaderClass}>
-              <div className="flex min-w-0 items-center gap-2">
-                <IconGestionaleLog className="h-5 w-5 shrink-0 text-[color:var(--cab-text-muted)]" />
-                <h2 className="min-w-0 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">Log modifiche preventivi</h2>
-              </div>
-              <button type="button" onClick={() => setLogOpen(false)} className={dsBtnNeutral}>
-                Chiudi
-              </button>
-            </div>
-            <div className={`flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3`}>
-              <div className={gestionaleLogScrollEmbeddedClass}>
-              {logEntries.length === 0 ? (
+      <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche preventivi" ariaLabel="Log modifiche preventivi">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+          <div className={gestionaleLogScrollEmbeddedClass}>
+            {logEntries.length === 0 ? (
                 <GestionaleLogEmpty message="Nessuna modifica registrata." />
               ) : (
                 <>
@@ -1201,15 +1202,13 @@ export function PreventiviView() {
                     ))}
                   </GestionaleLogList>
                 </>
-              )}
-              </div>
-              {showLogPager ? (
-                <TablePagination page={logPage} pageCount={logPageCount} onPageChange={setLogPage} label={logPagerLabel} />
-              ) : null}
-            </div>
-          </aside>
+            )}
+          </div>
+          {showLogPager ? (
+            <TablePagination page={logPage} pageCount={logPageCount} onPageChange={setLogPage} label={logPagerLabel} />
+          ) : null}
         </div>
-      ) : null}
+      </Drawer>
     </>
   );
 }

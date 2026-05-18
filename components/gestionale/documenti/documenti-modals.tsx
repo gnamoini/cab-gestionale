@@ -3,7 +3,7 @@
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import type { CatalogMarca } from "@/lib/mock-data/documenti";
+import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import { mezziForMarcaModello } from "@/lib/documenti/documenti-catalog";
 import {
   allowedApplicabilitaForCategoria,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/documenti/documenti-applicabilita";
 import type { DocumentoGestionale, DocumentoTipoFile, DocumentoApplicabilita } from "@/lib/types/gestionale";
 import { erpBtnAccent, erpBtnNeutral, FilterSelectWrap, selectLavorazioniFilter } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { CloseButton } from "@/components/design-system";
 import { useAuth } from "@/context/auth-context";
 import {
   extractFileExtension,
@@ -88,9 +89,7 @@ function DocumentiModalShell({
           <h2 id="documenti-modal-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
             {title}
           </h2>
-          <button type="button" onClick={onRequestClose} className={erpBtnNeutral} aria-label="Chiudi">
-            Chiudi
-          </button>
+          <CloseButton onClick={onRequestClose} />
         </div>
         {children}
       </div>

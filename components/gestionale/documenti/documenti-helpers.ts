@@ -1,4 +1,5 @@
-import type { CatalogMacchina, CatalogMarca } from "@/lib/mock-data/documenti";
+import type { CatalogMacchina, CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
+import { resolveDocumentoFileUrl } from "@/lib/documenti/documenti-db-mapper";
 import { mezziForMarcaModello } from "@/lib/documenti/documenti-catalog";
 import {
   formatDocumentoRigaSintetica,
@@ -292,7 +293,7 @@ export function getDocumentApriHref(doc: DocumentoGestionale): string | null {
   const blob = doc.urlBlob?.trim();
   if (blob && /^blob:/i.test(blob)) return blob;
   const ext = doc.urlDocumento?.trim();
-  if (ext && /^https?:\/\//i.test(ext)) return ext;
+  if (ext) return resolveDocumentoFileUrl({ url_file: ext }, doc);
   return null;
 }
 

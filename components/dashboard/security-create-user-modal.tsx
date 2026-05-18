@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/context/toast-context";
 import { createUserByAdminAction } from "@/src/actions/admin-users";
+import { CloseButton } from "@/components/design-system";
 import { QK } from "@/src/lib/react-query/invalidate-related";
+import { APP_ROLES, roleLabel, type AppRole } from "@/src/lib/auth/permissions";
 import {
   dsBtnGhost,
   dsBtnPrimary,
@@ -14,13 +16,8 @@ import {
   dsSectionTitle,
   gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
-import type { RuoloProfile } from "@/src/types/supabase-tables";
 
-const RUOLI: { value: RuoloProfile; label: string }[] = [
-  { value: "admin", label: "Amministratore" },
-  { value: "tecnico", label: "Operativo (tecnico)" },
-  { value: "viewer", label: "Sola lettura" },
-];
+const RUOLI: { value: AppRole; label: string }[] = APP_ROLES.map((role) => ({ value: role, label: roleLabel(role) }));
 
 type Props = {
   open: boolean;
@@ -33,7 +30,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
   const [nome, setNome] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [ruolo, setRuolo] = useState<RuoloProfile>("tecnico");
+  const [ruolo, setRuolo] = useState<AppRole>("operatore");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -42,7 +39,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
     setNome("");
     setEmail("");
     setPassword("");
-    setRuolo("tecnico");
+    setRuolo("operatore");
     setError(null);
     setPending(false);
   }, [open]);
@@ -67,6 +64,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
     await Promise.all([
       qc.invalidateQueries({ queryKey: QK.profiles }),
       qc.invalidateQueries({ queryKey: QK.authUsers }),
+      qc.invalidateQueries({ queryKey: QK.securityUsers }),
       qc.invalidateQueries({ queryKey: QK.userPermissions }),
       qc.invalidateQueries({ queryKey: QK.authLogs }),
     ]);
@@ -76,15 +74,17 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
 
   return (
     <div className={dsModalBackdrop} role="presentation">
-      <button type="button" className="absolute inset-0 cursor-default" aria-label="Chiudi" onClick={() => !pending && onClose()} />
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="chiudi" onClick={() => !pending && onClose()} />
       <div className={`relative z-[1] ${dsModalPanel} max-h-[min(90dvh,32rem)] overflow-y-auto`} role="dialog" aria-modal="true" aria-labelledby="cab-create-user-title">
-        <h2 id="cab-create-user-title" className="text-base font-semibold text-[color:var(--cab-text)]">
-          Nuovo utente
-        </h2>
+        <div className="flex items-start justify-between gap-3">
+          <h2 id="cab-create-user-title" className="text-base font-semibold text-[color:var(--cab-text)]">
+            Nuovo utente
+          </h2>
+          <CloseButton onClick={() => !pending && onClose()} disabled={pending} />
+        </div>
         <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
-          Creazione tramite Supabase Auth e tabella <code className="rounded bg-[var(--cab-surface-2)] px-1">profiles</code>. Ruoli di
-          dominio (operatore, magazziniere, …) si allineano a <strong className="text-[color:var(--cab-text)]">tecnico</strong> /{" "}
-          <strong className="text-[color:var(--cab-text)]">viewer</strong> con permessi granulari sui moduli.
+          Creazione tramite Supabase Auth e tabella <code className="rounded bg-[var(--cab-surface-2)] px-1">profiles</code>. Ruoli
+          ufficiali: admin, operatore e ospite.
         </p>
 
         <form className="mt-4 flex flex-col gap-3" onSubmit={(ev) => void handleSubmit(ev)}>
@@ -120,7 +120,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
           </label>
           <label className="block min-w-0">
             <span className={dsSectionTitle}>Ruolo profilo</span>
-            <select className={`${gestionaleSelectNativePlainClass} mt-1 w-full`} value={ruolo} onChange={(e) => setRuolo(e.target.value as RuoloProfile)} disabled={pending}>
+            <select className={`${gestionaleSelectNativePlainClass} mt-1 w-full`} value={ruolo} onChange={(e) => setRuolo(e.target.value as AppRole)} disabled={pending}>
               {RUOLI.map((r) => (
                 <option key={r.value} value={r.value}>
                   {r.label}

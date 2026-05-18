@@ -10,6 +10,16 @@ function timeGreeting(hour: number): string {
   return "Buonasera";
 }
 
+/** Nome utente in forma leggibile (es. «GIORGIO» → «Giorgio», «mario rossi» → «Mario Rossi»). */
+function formatDisplayName(raw: string): string {
+  return raw
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toLocaleUpperCase("it-IT") + part.slice(1).toLocaleLowerCase("it-IT"))
+    .join(" ");
+}
+
 export function DashboardWelcome() {
   const { status, authorName } = useAuth();
   const [mounted, setMounted] = useState(false);
@@ -26,8 +36,8 @@ export function DashboardWelcome() {
     const g = timeGreeting(h);
     const w =
       isAuthSessionEstablished(status) && authorName.trim()
-        ? authorName.trim().toUpperCase()
-        : "TEAM CAB";
+        ? formatDisplayName(authorName)
+        : "Team CAB";
     return { greeting: g, who: w };
   }, [mounted, status, authorName]);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneRow, MezzoRow, PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
@@ -32,10 +33,21 @@ export type LavorazioneFilters = {
   /** Range opzionale su `data_uscita`. */
   data_uscita_da?: string;
   data_uscita_a?: string;
+  data_uscita_is_null?: boolean;
 };
 
 export type LavorazioneInsert = Omit<LavorazioneRow, "id" | "created_at" | "updated_at">;
 export type LavorazioneUpdate = Partial<LavorazioneInsert>;
+
+type LavorazioniFilterQuery = {
+  in(column: string, values: readonly unknown[]): LavorazioniFilterQuery;
+  eq(column: string, value: unknown): LavorazioniFilterQuery;
+  ilike(column: string, pattern: string): LavorazioniFilterQuery;
+  gte(column: string, value: string): LavorazioniFilterQuery;
+  lte(column: string, value: string): LavorazioniFilterQuery;
+  is(column: string, value: null): LavorazioniFilterQuery;
+  not(column: string, operator: string, value: unknown): LavorazioniFilterQuery;
+};
 
 function embedMezzo(raw: unknown): MezzoRow | null {
   if (raw == null) return null;
@@ -58,19 +70,22 @@ function endOfDayIso(dateDay: string): string {
 }
 
 /** Filtri server-side condivisi tra query con/senza join `mezzi`. */
-function applyLavorazioniListFilters(q: any, filters?: LavorazioneFilters) {
+function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuery>(q: TQuery, filters?: LavorazioneFilters): TQuery {
   if (!filters) return q;
-  if (filters.stati_in?.length) q = q.in("stato", filters.stati_in);
-  if (filters.mezzo_id) q = q.eq("mezzo_id", filters.mezzo_id);
-  if (filters.stato) q = q.eq("stato", filters.stato);
-  if (filters.priorita) q = q.eq("priorita", filters.priorita);
+  let query: LavorazioniFilterQuery = q;
+  if (filters.stati_in?.length) query = query.in("stato", filters.stati_in);
+  if (filters.mezzo_id) query = query.eq("mezzo_id", filters.mezzo_id);
+  if (filters.stato) query = query.eq("stato", filters.stato);
+  if (filters.priorita) query = query.eq("priorita", filters.priorita);
   const search = filters.search?.trim();
-  if (search) q = q.ilike("note", `%${escapeIlikeToken(search)}%`);
-  if (filters.data_ingresso_da?.trim()) q = q.gte("data_ingresso", filters.data_ingresso_da.trim());
-  if (filters.data_ingresso_a?.trim()) q = q.lte("data_ingresso", endOfDayIso(filters.data_ingresso_a));
-  if (filters.data_uscita_da?.trim()) q = q.gte("data_uscita", filters.data_uscita_da.trim());
-  if (filters.data_uscita_a?.trim()) q = q.lte("data_uscita", endOfDayIso(filters.data_uscita_a));
-  return q;
+  if (search) query = query.ilike("note", `%${escapeIlikeToken(search)}%`);
+  if (filters.data_ingresso_da?.trim()) query = query.gte("data_ingresso", filters.data_ingresso_da.trim());
+  if (filters.data_ingresso_a?.trim()) query = query.lte("data_ingresso", endOfDayIso(filters.data_ingresso_a));
+  if (filters.data_uscita_da?.trim()) query = query.gte("data_uscita", filters.data_uscita_da.trim());
+  if (filters.data_uscita_a?.trim()) query = query.lte("data_uscita", endOfDayIso(filters.data_uscita_a));
+  if (filters.data_uscita_is_null === true) query = query.is("data_uscita", null);
+  if (filters.data_uscita_is_null === false) query = query.not("data_uscita", "is", null);
+  return query as TQuery;
 }
 
 export const lavorazioniService = {
@@ -116,6 +131,8 @@ export const lavorazioniService = {
 
   async create(data: LavorazioneInsert): Promise<ServiceResult<LavorazioneRow>> {
     try {
+      const allowed = await ensurePermission("editWorkOrders");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const { data: row, error } = await sb.from("lavorazioni").insert(data).select("*").single();
       if (error) return err(error.message);
@@ -129,6 +146,8 @@ export const lavorazioniService = {
 
   async update(id: string, data: LavorazioneUpdate): Promise<ServiceResult<LavorazioneRow>> {
     try {
+      const allowed = await ensurePermission("editWorkOrders");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const { data: before, error: e0 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
@@ -149,6 +168,8 @@ export const lavorazioniService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
+      const allowed = await ensurePermission("deleteRecords");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const { data: existing, error: e0 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);

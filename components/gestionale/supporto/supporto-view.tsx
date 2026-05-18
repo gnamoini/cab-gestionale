@@ -82,7 +82,7 @@ export function SupportoView() {
 
   return (
     <>
-      <PageHeader title="SUPPORTO" />
+      <PageHeader title="Supporto" />
 
       <div className={dsStackPage}>
         <ShellCard>

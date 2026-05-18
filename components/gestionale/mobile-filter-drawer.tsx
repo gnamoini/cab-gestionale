@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { CloseButton } from "@/components/design-system";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 
@@ -63,9 +64,7 @@ export function MobileFilterDrawer({
           <h2 id="cab-filter-drawer-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
             {title}
           </h2>
-          <button type="button" onClick={onClose} className={`${dsBtnNeutral} min-h-11 px-3 ${erpFocus}`}>
-            Chiudi
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
         <div className="gestionale-scrollbar min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">{children}</div>
         <div className="flex shrink-0 flex-col gap-2 border-t border-zinc-100 p-4 dark:border-zinc-800">
