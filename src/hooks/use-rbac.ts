@@ -15,6 +15,7 @@ import {
   type PermissionKey,
   type RbacSection,
 } from "@/lib/auth/rbac";
+import { hasCapability, type Capability } from "@/lib/rbac";
 
 export function useRbac() {
   const { user, status } = useAuth();
@@ -32,6 +33,7 @@ export function useRbac() {
     isLoading,
     clientLavorazioniLoading: clientLav.isLoading,
     hasPermission: (permission: PermissionKey) => hasPermission(user, permission),
+    hasCapability: (capability: Capability) => hasCapability(user, capability),
     canRead: (section: RbacSection) => canRead(user, section),
     canWrite: (section: RbacSection) => canWrite(user, section),
     canDelete: (section: RbacSection) => canDelete(user, section),
@@ -44,10 +46,13 @@ export function useRbac() {
       denyUnless(canRead(user, section), onDenied),
     assertWrite: (section: RbacSection) => assertAllowed(canWrite(user, section)),
     isAdmin: role === "admin",
-    isOperatore: role === "operatore",
-    isOspite: role === "ospite",
+    isManager: role === "manager",
+    isOperatore: role === "operatore" || role === "manager",
+    isGuest: role === "guest",
+    /** @deprecated Usare isGuest */
+    isOspite: role === "guest",
     isCliente: role === "cliente",
-    isReadOnly: role === "ospite" || role === "cliente",
+    isReadOnly: role === "guest" || role === "cliente",
   };
 }
 

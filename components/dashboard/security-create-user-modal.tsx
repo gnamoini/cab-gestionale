@@ -84,7 +84,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
         </div>
         <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
           Creazione tramite Supabase Auth e tabella <code className="rounded bg-[var(--cab-surface-2)] px-1">profiles</code>. Ruoli
-          ufficiali: admin, operatore e ospite.
+          ufficiali: admin, manager, operatore, cliente e guest.
         </p>
 
         <form className="mt-4 flex flex-col gap-3" onSubmit={(ev) => void handleSubmit(ev)}>

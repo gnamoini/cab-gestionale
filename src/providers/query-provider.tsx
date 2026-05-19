@@ -4,8 +4,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider, type QueryCacheNotifyEvent } from "@tanstack/react-query";
 import { useToast } from "@/context/toast-context";
 
+import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
+
+const ROLE_DENIED_MESSAGE = RBAC_DENIED_MESSAGE;
+
 function permissionLikely(msg: string): boolean {
-  return /\b(401|403)\b|permesso|negato|\brls\b|unauthor|forbidden|jwt|sessione|non autenticat|not authorized/i.test(msg);
+  return /\b(401|403)\b|permesso|negato|\brls\b|unauthor|forbidden|jwt|sessione|non autenticat|not authorized|policy|insufficient/i.test(msg);
 }
 
 function QueryErrorToasts({ client }: { client: QueryClient }) {
@@ -28,7 +32,7 @@ function QueryErrorToasts({ client }: { client: QueryClient }) {
       if (q.state.status !== "error" || !q.state.error) return;
       const msg = q.state.error instanceof Error ? q.state.error.message : String(q.state.error);
       if (!permissionLikely(msg)) return;
-      maybePush(`q:${JSON.stringify(q.queryKey)}`, "Accesso ai dati negato o permessi insufficienti. Verifica la sessione o i permessi sul database.");
+      maybePush(`q:${JSON.stringify(q.queryKey)}`, ROLE_DENIED_MESSAGE);
     };
 
     const uq = client.getQueryCache().subscribe(onQuery);
@@ -38,7 +42,7 @@ function QueryErrorToasts({ client }: { client: QueryClient }) {
       if (m.state.status !== "error" || !m.state.error) return;
       const msg = m.state.error instanceof Error ? m.state.error.message : String(m.state.error);
       if (!permissionLikely(msg)) return;
-      maybePush(`m:${String(m.options.mutationKey ?? "mutation")}`, "Operazione non consentita o permessi insufficienti.");
+      maybePush(`m:${String(m.options.mutationKey ?? "mutation")}`, ROLE_DENIED_MESSAGE);
     });
 
     return () => {

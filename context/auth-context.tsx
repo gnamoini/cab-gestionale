@@ -140,7 +140,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           id: authUser.id,
           email: authUser.email ?? "",
           nome,
-          ruolo: "ospite",
+          ruolo: "guest",
         });
         setStatus("degraded");
       }

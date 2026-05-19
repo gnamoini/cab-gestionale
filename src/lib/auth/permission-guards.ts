@@ -7,10 +7,11 @@ import {
   userHasClientLavorazioniAccess,
 } from "@/lib/lavorazioni/client-portal-access";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
 import { canRead, canWrite, canDelete, hasPermission, type PermissionKey, type RbacSection } from "@/lib/auth/rbac";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 
-const DENIED_MESSAGE = "Permesso richiesto.";
+const DENIED_MESSAGE = RBAC_DENIED_MESSAGE;
 const CLIENT_DENIED = "Accesso al portale lavorazioni clienti non autorizzato.";
 
 export async function getCurrentRoleForPermissionCheck(): Promise<string | null> {

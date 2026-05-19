@@ -1,3 +1,5 @@
+-- RBAC capability refactor: rbac_has_capability + policy unificate.
+
 -- =============================================================================
 -- RBAC CORE — capability model (single source of truth PostgreSQL)
 -- Ruoli: admin | manager | operatore | cliente | guest
@@ -601,3 +603,212 @@ grant execute on function public.rbac_lavorazione_visible_to_cliente(uuid) to au
 grant execute on function public.rbac_can_read_lavorazione_row(uuid) to authenticated;
 grant execute on function public.rbac_can_read_log_row(text, uuid) to authenticated;
 grant execute on function public.user_effective_can(text, text) to authenticated;
+
+-- Drop policy applicative legacy
+do $$
+declare r record;
+begin
+  for r in
+    select schemaname, tablename, policyname
+    from pg_policies
+    where schemaname = 'public'
+      and tablename in (
+        'profiles', 'mezzi', 'lavorazioni', 'scheda_lavorazione',
+        'magazzino_ricambi', 'movimenti_ricambi', 'preventivi', 'documenti',
+        'log_modifiche', 'segnalazioni', 'app_settings', 'app_settings_audit',
+        'user_permissions', 'auth_logs'
+      )
+  loop
+    execute format('drop policy if exists %I on %I.%I', r.policyname, r.schemaname, r.tablename);
+  end loop;
+end $$;
+
+do $$
+declare r record;
+begin
+  for r in select policyname from pg_policies where schemaname = 'storage' and tablename = 'objects'
+  loop
+    execute format('drop policy if exists %I on storage.objects', r.policyname);
+  end loop;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- Policy pattern: capability-centric
+-- ---------------------------------------------------------------------------
+
+-- profiles
+create policy cap_profiles_select on public.profiles for select to authenticated
+using (public.rbac_can_read_row('profiles', id));
+create policy cap_profiles_insert on public.profiles for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_security'));
+create policy cap_profiles_update on public.profiles for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_security'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_security'));
+create policy cap_profiles_delete on public.profiles for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_security'));
+
+-- mezzi
+create policy cap_mezzi_select on public.mezzi for select to authenticated
+using (public.rbac_can_read_row('mezzi', id));
+create policy cap_mezzi_insert on public.mezzi for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_mezzi_update on public.mezzi for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_mezzi_delete on public.mezzi for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+-- lavorazioni
+create policy cap_lavorazioni_select on public.lavorazioni for select to authenticated
+using (public.rbac_can_read_row('lavorazioni', id));
+create policy cap_lavorazioni_insert on public.lavorazioni for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_lavorazioni_update on public.lavorazioni for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_lavorazioni_delete on public.lavorazioni for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+-- scheda_lavorazione
+create policy cap_scheda_select on public.scheda_lavorazione for select to authenticated
+using (public.rbac_can_read_row('scheda_lavorazione', id));
+create policy cap_scheda_insert on public.scheda_lavorazione for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_scheda_update on public.scheda_lavorazione for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_scheda_delete on public.scheda_lavorazione for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+-- magazzino
+create policy cap_magazzino_select on public.magazzino_ricambi for select to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_read_operational'));
+create policy cap_magazzino_insert on public.magazzino_ricambi for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_magazzino_update on public.magazzino_ricambi for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_magazzino_delete on public.magazzino_ricambi for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+create policy cap_movimenti_select on public.movimenti_ricambi for select to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_read_operational'));
+create policy cap_movimenti_insert on public.movimenti_ricambi for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_movimenti_update on public.movimenti_ricambi for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_movimenti_delete on public.movimenti_ricambi for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+-- preventivi
+create policy cap_preventivi_select on public.preventivi for select to authenticated
+using (public.rbac_can_read_row('preventivi', id));
+create policy cap_preventivi_insert on public.preventivi for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_preventivi_update on public.preventivi for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_preventivi_delete on public.preventivi for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+-- documenti
+create policy cap_documenti_select on public.documenti for select to authenticated
+using (public.rbac_can_read_row('documenti', id));
+create policy cap_documenti_insert on public.documenti for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_documenti_update on public.documenti for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_documenti_delete on public.documenti for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+-- log_modifiche (append-only)
+drop policy if exists rbac_log_modifiche_update on public.log_modifiche;
+drop policy if exists log_modifiche_update_priv on public.log_modifiche;
+
+create policy cap_log_select on public.log_modifiche for select to authenticated
+using (public.rbac_can_read_log(entita, entita_id));
+create policy cap_log_insert on public.log_modifiche for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_log_delete on public.log_modifiche for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_security'));
+
+-- segnalazioni
+create policy cap_segnalazioni_select on public.segnalazioni for select to authenticated
+using (deleted_at is null and public.rbac_has_capability(public.rbac_auth_uid(), 'can_read_operational'));
+create policy cap_segnalazioni_insert on public.segnalazioni for insert to authenticated
+with check (
+  public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational')
+  and created_by = public.rbac_auth_uid()
+);
+create policy cap_segnalazioni_update on public.segnalazioni for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+-- app_settings
+create policy cap_app_settings_select on public.app_settings for select to authenticated
+using (public.rbac_can_read_app_settings(module));
+create policy cap_app_settings_insert on public.app_settings for insert to authenticated
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_settings'));
+create policy cap_app_settings_update on public.app_settings for update to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_settings'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_settings'));
+create policy cap_app_settings_delete on public.app_settings for delete to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_settings'));
+
+-- security tables
+create policy cap_user_permissions on public.user_permissions for all to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_security'))
+with check (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_security'));
+
+create policy cap_auth_logs_select on public.auth_logs for select to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_security'));
+
+drop policy if exists auth_logs_insert_login on public.auth_logs;
+create policy auth_logs_insert_login on public.auth_logs for insert to authenticated
+with check (action = 'login' and user_id = public.rbac_auth_uid());
+drop policy if exists auth_logs_insert_logout on public.auth_logs;
+create policy auth_logs_insert_logout on public.auth_logs for insert to authenticated
+with check (action = 'logout' and user_id = public.rbac_auth_uid());
+drop policy if exists auth_logs_insert_failed_anon on public.auth_logs;
+create policy auth_logs_insert_failed_anon on public.auth_logs for insert to anon
+with check (action = 'login_failed' and user_id is null);
+drop policy if exists auth_logs_insert_failed_auth on public.auth_logs;
+create policy auth_logs_insert_failed_auth on public.auth_logs for insert to authenticated
+with check (action = 'login_failed' and user_id is null);
+
+create policy cap_app_settings_audit_select on public.app_settings_audit for select to authenticated
+using (public.rbac_has_capability(public.rbac_auth_uid(), 'can_manage_security'));
+
+-- storage
+create policy cap_storage_images_select on storage.objects for select to authenticated
+using (bucket_id = 'images' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_read_operational'));
+create policy cap_storage_images_insert on storage.objects for insert to authenticated
+with check (bucket_id = 'images' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_storage_images_update on storage.objects for update to authenticated
+using (bucket_id = 'images' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (bucket_id = 'images' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_storage_images_delete on storage.objects for delete to authenticated
+using (bucket_id = 'images' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+create policy cap_storage_documenti_select on storage.objects for select to authenticated
+using (bucket_id = 'documenti' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_read_operational'));
+create policy cap_storage_documenti_insert on storage.objects for insert to authenticated
+with check (bucket_id = 'documenti' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_storage_documenti_update on storage.objects for update to authenticated
+using (bucket_id = 'documenti' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'))
+with check (bucket_id = 'documenti' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+create policy cap_storage_documenti_delete on storage.objects for delete to authenticated
+using (bucket_id = 'documenti' and public.rbac_has_capability(public.rbac_auth_uid(), 'can_write_operational'));
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.proname = 'rbac_has_capability'
+  ) then
+    raise exception 'rbac_has_capability mancante';
+  end if;
+  raise notice 'RBAC capability refactor OK';
+end $$;

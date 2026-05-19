@@ -2,9 +2,11 @@
 
 export type RuoloUtente =
   | "admin"
+  | "manager"
   | "operatore"
-  | "ospite"
   | "cliente"
+  | "guest"
+  | "ospite"
   | "magazziniere"
   | "commerciale";
 
