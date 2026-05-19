@@ -23,19 +23,11 @@ export type ProfileRow = {
   updated_at: string;
 };
 
-export type StatoLavorazione =
-  | "bozza"
-  | "in_coda"
-  | "in_officina"
-  | "in_attesa_ricambi"
-  | "completata"
-  | "consegnata"
-  | "annullata"
-  | "custom_1"
-  | "custom_2"
-  | "custom_3";
+/** Slug stato lavorazione (colonna TEXT — configurato in app_settings). */
+export type StatoLavorazione = string;
 
-export type PrioritaLavorazione = "bassa" | "media" | "alta" | "urgente";
+/** Slug priorità lavorazione (colonna TEXT — configurato in app_settings). */
+export type PrioritaLavorazione = string;
 
 export type TipoSchedaLavorazione = "ingresso" | "intervento" | "ricambi";
 
@@ -70,6 +62,9 @@ export type LavorazioneRow = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  /** Portale clienti: archiviata manualmente (indipendente dallo stato). */
+  archived?: boolean;
+  archived_at?: string | null;
 };
 
 /** Tabella `scheda_lavorazione` (schede di lavorazione). */

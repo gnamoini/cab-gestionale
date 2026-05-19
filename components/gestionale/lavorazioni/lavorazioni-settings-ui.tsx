@@ -5,7 +5,7 @@ import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
-import { STATO_LAVORAZIONE_COMPLETATA_DB } from "@/src/shared/selectors";
+import { STATO_LAVORAZIONE_COMPLETATA_ID } from "@/lib/lavorazioni/stati-dynamic";
 
 export function ColorSwatchButton({
   value,
@@ -79,7 +79,9 @@ export function StatoSettingsList({
   stati,
   onChangeLabel,
   onChangeStatoColor,
+  onChangeStatoClosed,
   onRemove,
+  onReorder,
   attiviStatoIds,
   storicoStatoIds,
   inputClass,
@@ -87,21 +89,48 @@ export function StatoSettingsList({
   stati: StatoLavorazioneConfig[];
   onChangeLabel: (id: string, label: string) => void;
   onChangeStatoColor: (id: string, hex: string) => void;
+  onChangeStatoClosed?: (id: string, closed: boolean) => void;
   onRemove: (id: string) => void;
+  onReorder?: (fromIndex: number, toIndex: number) => void;
   attiviStatoIds: Set<string>;
   storicoStatoIds: Set<string>;
   inputClass: string;
 }) {
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+
   return (
     <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-      {stati.map((s) => {
+      {stati.map((s, index) => {
         const inUse = attiviStatoIds.has(s.id) || storicoStatoIds.has(s.id);
-        const canDelete = s.id !== STATO_LAVORAZIONE_COMPLETATA_DB && !inUse;
+        const canDelete = s.id !== STATO_LAVORAZIONE_COMPLETATA_ID && !inUse;
         const displayHex = statoDisplayColor(s.id, stati);
         return (
-          <li key={s.id} className="flex min-h-[2.75rem] flex-wrap items-center gap-2 py-2.5 first:pt-0 last:pb-0">
+          <li
+            key={s.id}
+            draggable={!!onReorder}
+            onDragStart={() => setDragIndex(index)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={() => {
+              if (dragIndex == null || dragIndex === index || !onReorder) return;
+              onReorder(dragIndex, index);
+              setDragIndex(null);
+            }}
+            onDragEnd={() => setDragIndex(null)}
+            className={`flex min-h-[2.75rem] flex-wrap items-center gap-2 py-2.5 first:pt-0 last:pb-0 ${
+              dragIndex === index ? "opacity-60" : ""
+            }`}
+          >
+            {onReorder ? (
+              <span
+                className="cursor-grab select-none px-1 text-zinc-400 active:cursor-grabbing"
+                title="Trascina per riordinare"
+                aria-hidden
+              >
+                ⋮⋮
+              </span>
+            ) : null}
             <input
-              className={`${inputClass} min-w-0 flex-1 basis-[12rem] text-sm`}
+              className={`${inputClass} min-w-0 flex-1 basis-[10rem] text-sm`}
               value={s.label}
               onChange={(e) => onChangeLabel(s.id, e.target.value)}
               aria-label="Nome stato"
@@ -111,6 +140,16 @@ export function StatoSettingsList({
               ariaLabel={`Colore stato ${s.label || s.id}`}
               onChange={(hex) => onChangeStatoColor(s.id, hex)}
             />
+            {onChangeStatoClosed ? (
+              <label className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+                <input
+                  type="checkbox"
+                  checked={s.closed === true}
+                  onChange={(e) => onChangeStatoClosed(s.id, e.target.checked)}
+                />
+                Archiviato
+              </label>
+            ) : null}
             <button
               type="button"
               disabled={!canDelete}

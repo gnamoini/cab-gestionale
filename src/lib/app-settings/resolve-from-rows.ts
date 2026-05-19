@@ -2,8 +2,7 @@
 
 import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
 import { DEFAULT_ADDETTI_LAVORAZIONI } from "@/lib/lavorazioni/constants";
-import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
-import { DEFAULT_STATI_LAVORAZIONI_DB, migrateStatiConfigList } from "@/src/shared/selectors";
+import { DEFAULT_STATI_LAVORAZIONI_WORKFLOW, normalizeStatiList } from "@/lib/lavorazioni/stati-dynamic";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { parseScontoRicambiByCliente } from "@/lib/mezzi/cliente-commerciale";
@@ -34,7 +33,7 @@ const FALLBACK_PREVENTIVI: SistemaPreventiviDefaults = { costoOrarioDefault: 48 
 function defaultLavorazioni(): CabAppSettingsResolved["lavorazioni"] {
   const addetti = [...DEFAULT_ADDETTI_LAVORAZIONI];
   return {
-    stati: [...DEFAULT_STATI_LAVORAZIONI_DB],
+    stati: [...DEFAULT_STATI_LAVORAZIONI_WORKFLOW],
     addetti,
     addettoColors: syncAddettoColorMap(addetti, undefined),
     prioritaColors: {},
@@ -54,7 +53,7 @@ function parseLavorazioniPayload(raw: unknown): CabAppSettingsResolved["lavorazi
   if (!raw || typeof raw !== "object") return base;
   const o = raw as Record<string, unknown>;
   if (Array.isArray(o.stati)) {
-    const stati = migrateStatiConfigList(normalizeStatiList(o.stati as StatoLavorazioneConfig[]));
+    const stati = normalizeStatiList(o.stati as StatoLavorazioneConfig[]);
     if (stati.length) base.stati = stati;
   }
   if (Array.isArray(o.addetti)) {

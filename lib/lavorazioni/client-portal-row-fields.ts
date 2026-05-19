@@ -120,3 +120,41 @@ export function buildClientPortalRowFields(
     addetto: clientPortalAddettoLabel(row, schedeStore, logs, addettiGlobali),
   };
 }
+
+export function clientPortalDataCompletamentoLabel(row: LavorazioneListRow): string {
+  const iso = row.archived_at?.trim() || row.data_uscita?.trim() || row.updated_at;
+  if (!iso) return "—";
+  try {
+    return new Date(iso).toLocaleString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+/** Haystack per ricerca globale portale clienti. */
+export function clientPortalRowSearchHaystack(fields: ClientPortalRowFields): string {
+  return [
+    fields.cliente,
+    fields.cantiere,
+    fields.utilizzatore,
+    fields.attrezzatura,
+    fields.targa,
+    fields.matricola,
+    fields.nScuderia,
+    fields.addetto,
+  ]
+    .join(" ")
+    .toLowerCase();
+}
+
+export function clientPortalRowMatchesSearch(fields: ClientPortalRowFields, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return clientPortalRowSearchHaystack(fields).includes(q);
+}

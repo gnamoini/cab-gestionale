@@ -188,6 +188,9 @@ export const dsSurfacePanel = `flex min-h-[220px] flex-col rounded-[var(--ds-rad
 
 export const dsSurfaceInteractiveKpi = `group flex h-full min-h-[220px] flex-col rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabSurface} p-4 text-left shadow-[var(--cab-shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)] active:scale-[0.99] ${dsFocus}`;
 
+/** Tile navigazione rapida dashboard — una sola superficie per cella (no card annidate). */
+export const dsSurfaceQuickNavTile = `group relative flex min-h-[5.75rem] flex-col items-start gap-2.5 rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} p-4 text-left shadow-[var(--cab-shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_24%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)] active:scale-[0.99] ${dsFocus}`;
+
 export const dsModalBackdrop =
   "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--cab-overlay)] p-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[2px] sm:items-center sm:p-4";
 

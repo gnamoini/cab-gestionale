@@ -45,7 +45,12 @@ import {
 import { erpBtnNeutral, erpBtnSoftOrange } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { buildBulkRowsFromResolved, resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
 import { useCabAppSettingsPayloadQuery, useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
-import { DEFAULT_STATI_LAVORAZIONI_DB, STATO_LAVORAZIONE_COMPLETATA_DB, statiEnumDisponibiliDaAggiungere } from "@/src/shared/selectors";
+import {
+  addStatoFromLabel,
+  DEFAULT_STATI_LAVORAZIONI_DB,
+  reorderStatiList,
+  STATO_LAVORAZIONE_COMPLETATA_DB,
+} from "@/src/shared/selectors";
 import { useLavorazioniStatiInUsoQuery } from "@/src/hooks/gestionale/use-lavorazioni-stati-in-uso";
 import { mergeAppSettingsUpsertWithVersions } from "@/src/services/settings.service";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
@@ -439,11 +444,6 @@ function SistemaImpostazioniWorkspace({
   const allHydrated = lavPrefsHydrated && magHydrated && mezziHydrated && ecoHydrated;
   const isDirty = allHydrated && savedSnapshotKey != null && currentSnapshotKey !== savedSnapshotKey;
 
-  const statiDisponibiliDaAggiungere = useMemo(
-    () => statiEnumDisponibiliDaAggiungere(stati),
-    [stati],
-  );
-
   const logDash = useCallback(
     (tone: GestionaleLogEventTone, tipoRiga: string, oggettoRiga: string, modificaRiga: string) => {
       appendDashboardSistemaLog({
@@ -456,6 +456,19 @@ function SistemaImpostazioniWorkspace({
       });
     },
     [authorName],
+  );
+
+  const handleAddStatoFromLabel = useCallback(
+    (label: string) => {
+      const next = addStatoFromLabel(stati, label);
+      if (!next) {
+        window.alert("Stato già presente o nome non valido.");
+        return;
+      }
+      setStati(next);
+      logDash("create", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Aggiunto stato «${label.trim()}»`);
+    },
+    [stati, logDash],
   );
 
   useEffect(() => {
@@ -824,7 +837,7 @@ function SistemaImpostazioniWorkspace({
                 layout="embedded"
                 embeddedFocus={lavEmbeddedFocus}
                 stati={stati}
-                statiDisponibiliDaAggiungere={statiDisponibiliDaAggiungere}
+                onAddStatoFromLabel={handleAddStatoFromLabel}
                 prioritaDb={prioritaDb}
                 prioritaColors={prioritaColors}
                 onChangePrioritaDb={(next) => {
@@ -837,18 +850,6 @@ function SistemaImpostazioniWorkspace({
                   setPrioritaColors((prev) => ({ ...prev, [p]: nh }));
                   logDash("update", "AGGIORNAMENTO", "Impostazioni · Priorità", `Colore aggiornato per «${p}»`);
                 }}
-                onAddStato={(pick) => {
-                  if (stati.some((s) => s.id === pick.id)) return;
-                  setStati((prev) => [
-                    ...prev,
-                    {
-                      id: pick.id,
-                      label: pick.label,
-                      color: pick.color ?? statoThemeColor(pick.id),
-                    },
-                  ]);
-                  logDash("create", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Aggiunto stato «${pick.label}»`);
-                }}
                 onChangeStatoLabel={(id, label) => setStati((prev) => prev.map((s) => (s.id === id ? { ...s, label } : s)))}
                 onChangeStatoColor={(id, hex) => {
                   const nh = normalizeHex(hex);
@@ -857,6 +858,10 @@ function SistemaImpostazioniWorkspace({
                   setStati((prev) => prev.map((s) => (s.id === id ? { ...s, color: nh } : s)));
                   logDash("update", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Colore stato aggiornato per «${nome}»`);
                 }}
+                onChangeStatoClosed={(id, closed) =>
+                  setStati((prev) => prev.map((s) => (s.id === id ? { ...s, closed } : s)))
+                }
+                onReorderStato={(from, to) => setStati((prev) => reorderStatiList(prev, from, to))}
                 onRemoveStato={(id) => {
                   if (id === STATO_LAVORAZIONE_COMPLETATA_DB) {
                     window.alert("Lo stato «Completata» non può essere eliminato.");

@@ -604,11 +604,12 @@ export type SettingsLavorazioniTab = SettingsTab;
 
 export function SettingsLavorazioniModal({
   stati,
-  statiDisponibiliDaAggiungere,
-  onAddStato,
+  onAddStatoFromLabel,
   onChangeStatoLabel,
   onChangeStatoColor,
+  onChangeStatoClosed,
   onRemoveStato,
+  onReorderStato,
   addetti,
   addettoColors,
   prioritaColors,
@@ -629,17 +630,17 @@ export function SettingsLavorazioniModal({
   embeddedFocus = null,
 }: {
   stati: StatoLavorazioneConfig[];
-  /** Enum DB non ancora nella lista configurata. */
-  statiDisponibiliDaAggiungere: StatoLavorazioneConfig[];
-  onAddStato: (stato: StatoLavorazioneConfig) => void;
+  onAddStatoFromLabel: (label: string) => void;
   onChangeStatoLabel: (id: string, label: string) => void;
   onChangeStatoColor: (id: string, hex: string) => void;
+  onChangeStatoClosed?: (id: string, closed: boolean) => void;
   onRemoveStato: (id: string) => void;
+  onReorderStato?: (fromIndex: number, toIndex: number) => void;
   addetti: string[];
   addettoColors: Record<string, string>;
   prioritaColors: Partial<Record<PrioritaLav, string>>;
-  prioritaDb?: PrioritaLav[];
-  onChangePrioritaDb?: (next: PrioritaLav[]) => void;
+  prioritaDb?: string[];
+  onChangePrioritaDb?: (next: string[]) => void;
   onChangePrioritaColor: (p: PrioritaLav, hex: string) => void;
   onAddAddetto: (name: string) => void;
   onRenameAddettoBlur: (previousName: string, nextName: string) => void;
@@ -655,10 +656,11 @@ export function SettingsLavorazioniModal({
   embeddedFocus?: SettingsLavorazioniTab | null;
 }) {
   const [tab, setTab] = useState<SettingsTab>("stati");
-  const [selectedStatoId, setSelectedStatoId] = useState("");
+  const [nuovoStato, setNuovoStato] = useState("");
   const [nuovoAddetto, setNuovoAddetto] = useState("");
 
   const lockedTab = layout === "embedded" && embeddedFocus ? embeddedFocus : null;
+  const settingsTabPanelClass = lockedTab ? "w-full space-y-4" : "mx-auto w-full max-w-xl space-y-4";
 
   useEffect(() => {
     if (lockedTab) setTab(lockedTab);
@@ -722,46 +724,47 @@ export function SettingsLavorazioniModal({
           }`}
         >
           {tab === "stati" ? (
-            <div className={`${lockedTab ? "w-full" : "mx-auto max-w-xl"} rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900 sm:p-4`}>
-              {statiDisponibiliDaAggiungere.length > 0 ? (
-                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                  <select
-                    className={`${dsInput} min-w-0 flex-1 sm:max-w-md`}
-                    value={selectedStatoId}
-                    onChange={(e) => setSelectedStatoId(e.target.value)}
-                    aria-label="Stato da aggiungere"
-                  >
-                    <option value="">Seleziona stato da aggiungere…</option>
-                    {statiDisponibiliDaAggiungere.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label} ({s.id})
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    className={erpBtnSoftOrange}
-                    disabled={!selectedStatoId}
-                    onClick={() => {
-                      const pick = statiDisponibiliDaAggiungere.find((s) => s.id === selectedStatoId);
-                      if (!pick) return;
-                      onAddStato(pick);
-                      setSelectedStatoId("");
-                    }}
-                  >
-                    Aggiungi stato
-                  </button>
-                </div>
-              ) : (
-                <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
-                  Tutti gli stati disponibili sono già configurati.
-                </p>
-              )}
+            <div className={settingsTabPanelClass}>
+              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                <input
+                  className={`${dsInput} min-w-0 flex-1 sm:max-w-md`}
+                  value={nuovoStato}
+                  placeholder="Nuovo stato (es. Diagnosi, Attesa ricambi…)"
+                  aria-label="Nome nuovo stato"
+                  onChange={(e) => setNuovoStato(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== "Enter") return;
+                    e.preventDefault();
+                    const t = nuovoStato.trim();
+                    if (!t) return;
+                    onAddStatoFromLabel(t);
+                    setNuovoStato("");
+                  }}
+                />
+                <button
+                  type="button"
+                  className={erpBtnSoftOrange}
+                  disabled={!nuovoStato.trim()}
+                  onClick={() => {
+                    const t = nuovoStato.trim();
+                    if (!t) return;
+                    onAddStatoFromLabel(t);
+                    setNuovoStato("");
+                  }}
+                >
+                  Aggiungi
+                </button>
+              </div>
+              <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+                Scrivi liberamente il nome dello stato. Trascina ⋮⋮ per riordinare il workflow. Gli stati «Archiviato» compaiono nello storico.
+              </p>
               <StatoSettingsList
                 stati={stati}
                 onChangeLabel={onChangeStatoLabel}
                 onChangeStatoColor={onChangeStatoColor}
+                onChangeStatoClosed={onChangeStatoClosed}
                 onRemove={onRemoveStato}
+                onReorder={onReorderStato}
                 attiviStatoIds={attiviStatoIds}
                 storicoStatoIds={storicoStatoIds}
                 inputClass={dsInput}
@@ -770,10 +773,11 @@ export function SettingsLavorazioniModal({
           ) : null}
 
           {tab === "priorita" ? (
-            <div className={`${lockedTab ? "w-full" : "mx-auto max-w-xl"} rounded-lg border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900 sm:p-4`}>
+            <div className={settingsTabPanelClass}>
               <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
                 {(onChangePrioritaDb ? PRIORITA : prioritaDb?.length ? prioritaDb : PRIORITA).map((p) => {
-                  const hex = prioritaDisplayColor(p, prioritaColors);
+                  const pl = p as PrioritaLav;
+                  const hex = prioritaDisplayColor(pl, prioritaColors);
                   const active = (prioritaDb?.length ? prioritaDb : PRIORITA).includes(p);
                   return (
                     <li key={p} className="flex min-h-[2.75rem] flex-wrap items-center gap-2 py-2.5 first:pt-0 last:pb-0">
@@ -804,7 +808,7 @@ export function SettingsLavorazioniModal({
                       <ColorSwatchButton
                         value={hex}
                         ariaLabel={`Colore priorità ${prioritaLabel(p)}`}
-                        onChange={(h) => onChangePrioritaColor(p, h)}
+                        onChange={(h) => onChangePrioritaColor(pl, h)}
                       />
                     </li>
                   );
@@ -814,7 +818,7 @@ export function SettingsLavorazioniModal({
           ) : null}
 
           {tab === "addetti" ? (
-            <div className={`${lockedTab ? "w-full" : "mx-auto max-w-xl"} rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900 sm:p-4`}>
+            <div className={settingsTabPanelClass}>
               <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
                 <input
                   className={`${dsInput} min-w-0 flex-1 sm:max-w-md`}

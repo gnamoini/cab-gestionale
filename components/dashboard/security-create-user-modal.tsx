@@ -65,6 +65,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
       qc.invalidateQueries({ queryKey: QK.profiles }),
       qc.invalidateQueries({ queryKey: QK.authUsers }),
       qc.invalidateQueries({ queryKey: QK.securityUsers }),
+      qc.invalidateQueries({ queryKey: QK.securityUsersPermissions }),
       qc.invalidateQueries({ queryKey: QK.userPermissions }),
       qc.invalidateQueries({ queryKey: QK.authLogs }),
     ]);

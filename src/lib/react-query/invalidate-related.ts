@@ -7,6 +7,8 @@ export const QK = {
   /** Profili lista utenti (pagina Sicurezza / creazione utenti). */
   authUsers: ["profiles", "auth-users-list"] as const,
   securityUsers: ["security-users"] as const,
+  /** Utenti + permessi portale clienti (pagina Sicurezza unificata). */
+  securityUsersPermissions: ["security-users-permissions"] as const,
   mezzi: ["mezzi"] as const,
   mezzoQueries: ["mezzoQueries"] as const,
   lavorazioniQueries: ["lavorazioniQueries"] as const,
@@ -46,6 +48,8 @@ export async function invalidateAfterLavorazioneMutations(qc: QueryClient) {
   await Promise.all([
     qc.invalidateQueries({ queryKey: QK.mezzoQueries }),
     qc.invalidateQueries({ queryKey: QK.lavorazioniQueries }),
+    qc.invalidateQueries({ queryKey: QK.clientLavorazioniList }),
+    qc.invalidateQueries({ queryKey: QK.clientLavorazioniDetail }),
     qc.invalidateQueries({ queryKey: QK.schede }),
     qc.invalidateQueries({ queryKey: QK.movimenti }),
     qc.invalidateQueries({ queryKey: QK.preventivi }),

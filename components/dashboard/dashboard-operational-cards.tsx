@@ -11,8 +11,7 @@ import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapte
 import { useMagazzinoListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
-import { isDbStatoLavorazione, statoLavorazioneLabel } from "@/src/shared/selectors";
-import type { StatoLavorazione } from "@/src/types/supabase-tables";
+import { statoLavorazioneLabel } from "@/src/shared/selectors";
 
 const cardClass = `${dsSurfaceInteractiveKpi} ${dsFocus}`;
 
@@ -25,16 +24,12 @@ export function DashboardOperationalCards() {
   const staging = isStagingPublicSlice();
   const globalOpts = useGlobalOptions({ debugTag: "DashboardOperationalCards" });
   const magazzinoQ = useMagazzinoListQuery();
-  const statiInCorsoIds = useMemo(
-    () =>
-      globalOpts.lavorazioni.statiInCorso
-        .map((s) => s.id)
-        .filter((id): id is StatoLavorazione => isDbStatoLavorazione(id)),
-    [globalOpts.lavorazioni.statiInCorso],
-  );
   const lavFilters = useMemo(
-    () => ({ includeMezzo: true as const, stati_in: statiInCorsoIds }),
-    [statiInCorsoIds],
+    () => ({
+      includeMezzo: true as const,
+      archived: false as const,
+    }),
+    [],
   );
   const lavQuery = useLavorazioniList(lavFilters, { staleTime: 30_000 });
   const rows = lavQuery.data ?? [];

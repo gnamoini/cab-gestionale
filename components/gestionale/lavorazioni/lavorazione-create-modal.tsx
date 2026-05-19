@@ -15,8 +15,8 @@ import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { loadLavorazioneSchedeStore, saveLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
 import { newSchedaMeta } from "@/lib/schede/schede-ui";
-import { isDbStatoLavorazione } from "@/src/shared/selectors";
-import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
+import { isStatoInConfig, resolveDefaultLavorazioneStatoId } from "@/src/shared/selectors";
+import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleSettingsSelect } from "@/components/gestionale/gestionale-settings-select";
@@ -102,10 +102,19 @@ function schedaFieldsFromMezzo(m: MezzoGestito): SchedaIngressoFields {
 
 function FormSection({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="space-y-2 border-b border-zinc-100 pb-3 last:border-b-0 dark:border-zinc-800">
-      <h3 className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{title}</h3>
-      <div className="space-y-2">{children}</div>
+    <section className="space-y-3 border-b border-[color:var(--cab-border)] pb-4 last:border-b-0">
+      <h3 className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{title}</h3>
+      <div className="space-y-3">{children}</div>
     </section>
+  );
+}
+
+function FormField({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <label className={`block min-w-0 ${className}`.trim()}>
+      <span className={dsLabel}>{label}</span>
+      <div className="mt-1">{children}</div>
+    </label>
   );
 }
 
@@ -195,7 +204,7 @@ export function LavorazioneCreateModal({
     setFields(emptyIngresso(addetto0));
     setMezzoId((defaultMezzoId ?? "").trim());
     setCreaNuovoMezzo(false);
-    setStato(defaultAccettazioneStato?.id ?? "");
+    setStato(defaultAccettazioneStato?.id ?? resolveDefaultLavorazioneStatoId(stati));
     setPriorita(prioritaOpts.includes("media") ? "media" : (prioritaOpts[0] ?? "media"));
     setMezzoHint(null);
   }, [open, defaultMezzoId, prioritaOpts, addettiOpts, defaultAccettazioneStato?.id]);
@@ -221,8 +230,8 @@ export function LavorazioneCreateModal({
       window.alert("Devi essere autenticato per creare una lavorazione.");
       return;
     }
-    const sid = stato.trim() || defaultAccettazioneStato?.id?.trim() || "";
-    if (!sid || !isDbStatoLavorazione(sid)) {
+    const sid = stato.trim() || defaultAccettazioneStato?.id?.trim() || resolveDefaultLavorazioneStatoId(stati);
+    if (!sid || !isStatoInConfig(sid, stati)) {
       window.alert("Seleziona uno stato tra quelli configurati in Impostazioni globali.");
       return;
     }
@@ -266,7 +275,7 @@ export function LavorazioneCreateModal({
 
       const row = await create.mutateAsync({
         mezzo_id: finalMezzoId,
-        stato: sid as StatoLavorazione,
+        stato: sid,
         priorita,
         data_ingresso: ymdToIsoMidUtc(ymd),
         data_uscita: null,
@@ -319,11 +328,10 @@ export function LavorazioneCreateModal({
           ) : null}
 
           <FormSection title="Ingresso">
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Data ingresso *
+            <FormField label="Data ingresso *">
               <input
                 type="date"
-                className={fieldClass}
+                className={dsInput}
                 value={itDateToYmd(fields.dataIngresso)}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -334,11 +342,10 @@ export function LavorazioneCreateModal({
                 disabled={pending}
                 required
               />
-            </label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="block min-w-0">
-                <span className={dsLabel}>Stato iniziale</span>
-                <div className="mt-1 flex items-center gap-2">
+            </FormField>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <FormField label="Stato iniziale">
+                <div className="flex min-h-10 items-center gap-2">
                   {stato && stati.length > 0 ? (
                     <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[color:var(--cab-border)]" style={statoColore} aria-hidden />
                   ) : null}
@@ -352,11 +359,10 @@ export function LavorazioneCreateModal({
                     required
                   />
                 </div>
-              </div>
-              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Priorità
+              </FormField>
+              <FormField label="Priorità">
                 <GestionaleSettingsSelect
-                  className="mt-1 capitalize"
+                  className="capitalize"
                   ariaLabel="Priorità"
                   value={priorita}
                   onChange={(v) => setPriorita(v as PrioritaLavorazione)}
@@ -364,7 +370,16 @@ export function LavorazioneCreateModal({
                   disabled={pending}
                   required
                 />
-              </label>
+              </FormField>
+              <FormField label="Addetto" className="sm:col-span-2 lg:col-span-1">
+                <GestionaleSettingsSelect
+                  ariaLabel="Addetto accettazione"
+                  value={fields.addettoAccettazione}
+                  onChange={(v) => patch({ addettoAccettazione: v })}
+                  options={addettiOpts}
+                  disabled={pending}
+                />
+              </FormField>
             </div>
           </FormSection>
 
@@ -466,10 +481,6 @@ export function LavorazioneCreateModal({
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Note
               <textarea className={`${dsInput} mt-1 min-h-[56px] w-full resize-y`} value={fields.noteIntervento} onChange={(e) => patch({ noteIntervento: e.target.value })} disabled={pending} rows={2} />
-            </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Addetto
-              <GestionaleSettingsSelect className="mt-1" ariaLabel="Addetto accettazione" value={fields.addettoAccettazione} onChange={(v) => patch({ addettoAccettazione: v })} options={addettiOpts} disabled={pending} />
             </label>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Richiedente

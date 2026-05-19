@@ -5,31 +5,27 @@ import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { usePermissions } from "@/src/hooks/use-permissions";
-import { APP_ROLES, roleLabel, type AppRole } from "@/src/lib/auth/permissions";
+import { roleLabel } from "@/src/lib/auth/permissions";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { TablePagination } from "@/components/gestionale/table-pagination";
-import { SecurityCreateUserModal } from "@/components/dashboard/security-create-user-modal";
-import { ClientLavorazioniAccessPanel } from "@/components/dashboard/client-lavorazioni-access-panel";
+import { SecurityUsersPermissionsPanel } from "@/components/dashboard/security/security-users-permissions-panel";
+import { SecurityRoleBadge } from "@/components/dashboard/security/security-role-badge";
 import { Drawer } from "@/components/design-system";
 import {
-  listUsersByAdminAction,
-  resetGlobalChangeLogsByAdminAction,
-  updateUserRoleByAdminAction,
-  type SecurityUserAdminRow,
-} from "@/src/actions/admin-users";
+  type SecurityUserPermissionRow,
+} from "@/src/actions/security-users-permissions";
+import { resetGlobalChangeLogsByAdminAction } from "@/src/actions/admin-users";
+import { useSecurityUsersPermissionsQuery } from "@/src/hooks/use-security-users-permissions-query";
 import {
-  dsBtnGhost,
   dsBtnDanger,
+  dsBtnGhost,
   dsBtnNeutral,
-  dsBtnPrimary,
   dsInput,
   dsPageToolbarBtn,
   dsScrollbar,
   dsSectionTitle,
   dsStackPage,
-  dsStickyToolbar,
   dsSurfaceInteractiveKpi,
   dsTable,
   dsTableEmptyCell,
@@ -39,12 +35,9 @@ import {
   dsTableWrap,
   gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
-import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useSecurityDashboardData, useSecurityProfilesQuery } from "@/src/hooks/use-security-dashboard-data";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { AuthLogWithProfileRow, LogModificaRow } from "@/src/types/supabase-tables";
-
-type UserSortKey = "nome" | "lastSignInAt";
 
 type UserActivityRow =
   | {
@@ -91,12 +84,6 @@ function truncateUa(ua: string | null, max = 72): string {
   return `${t.slice(0, max - 1)}…`;
 }
 
-function roleToneClass(role: AppRole): string {
-  if (role === "admin") return "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/35 dark:text-red-200 dark:ring-red-900/60";
-  if (role === "operatore") return "bg-orange-50 text-orange-700 ring-orange-200 dark:bg-orange-950/35 dark:text-orange-200 dark:ring-orange-900/60";
-  return "bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700";
-}
-
 function fmtNullableWhen(iso: string | null): string {
   return iso ? fmtWhen(iso) : "—";
 }
@@ -109,14 +96,6 @@ function payloadDetail(payload: unknown): string {
   if ("before" in o || "after" in o) return "Modifica dati";
   if ("snapshot" in o) return "Snapshot record";
   return "Evento registrato";
-}
-
-function UserRoleBadge({ role }: { role: AppRole }) {
-  return (
-    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${roleToneClass(role)}`}>
-      {roleLabel(role)}
-    </span>
-  );
 }
 
 function LogTable({ rows, columns }: { rows: AuthLogWithProfileRow[]; columns: "login" | "failed" }) {
@@ -211,20 +190,6 @@ function LastAccessTable({
   );
 }
 
-function useSecurityUsers(enabled: boolean) {
-  return useQuery({
-    queryKey: QK.securityUsers,
-    enabled,
-    staleTime: 120_000,
-    refetchOnWindowFocus: false,
-    queryFn: async () => {
-      const res = await listUsersByAdminAction();
-      if (!res.ok) throw new Error(res.message);
-      return res.users;
-    },
-  });
-}
-
 function useUserActivity(userId: string | null, enabled: boolean) {
   return useQuery({
     queryKey: [...QK.log, "user-activity", userId ?? "none"],
@@ -309,7 +274,7 @@ function UserDetailDrawer({
   open,
   onClose,
 }: {
-  user: SecurityUserAdminRow | null;
+  user: SecurityUserPermissionRow | null;
   open: boolean;
   onClose: () => void;
 }) {
@@ -325,7 +290,7 @@ function UserDetailDrawer({
                 <h3 className="truncate text-base font-semibold text-[color:var(--cab-text)]">{user.nome}</h3>
                 <p className="mt-0.5 truncate text-xs text-[color:var(--cab-text-muted)]">{user.email || "Email non disponibile"}</p>
               </div>
-              <UserRoleBadge role={user.ruolo} />
+              <SecurityRoleBadge role={user.ruolo} />
             </div>
             <dl className="mt-3 grid gap-2 text-xs">
               <div className="flex justify-between gap-3">
@@ -378,16 +343,13 @@ function UserDetailDrawer({
 }
 
 export function SecurityDashboardView() {
-  const { user, refresh } = useAuth();
+  const { user } = useAuth();
   const permissions = usePermissions();
   const isAdmin = permissions.canManageSecurity;
   const securityAccessLoggedRef = useRef(false);
   const [range, setRange] = useState(defaultRange);
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
-  const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
-  const [userSort, setUserSort] = useState<UserSortKey>("nome");
   const [realtime, setRealtime] = useState(false);
-  const [createUserOpen, setCreateUserOpen] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [resettingLogs, setResettingLogs] = useState(false);
   const queryClient = useQueryClient();
@@ -403,58 +365,13 @@ export function SecurityDashboardView() {
 
   const profilesQ = useSecurityProfilesQuery(!!isAdmin);
   const dash = useSecurityDashboardData(filters, { realtime });
-  const usersQ = useSecurityUsers(!!isAdmin);
+  const usersQ = useSecurityUsersPermissionsQuery(!!isAdmin);
   const recentActivityQ = useRecentSystemActivity(!!isAdmin);
 
-  const filteredUsers = useMemo(() => {
-    const base = usersQ.data ?? [];
-    const filtered = roleFilter === "all" ? base : base.filter((u) => u.ruolo === roleFilter);
-    return [...filtered].sort((a, b) => {
-      if (userSort === "lastSignInAt") {
-        const av = a.lastSignInAt ?? "";
-        const bv = b.lastSignInAt ?? "";
-        if (av !== bv) return av < bv ? 1 : -1;
-      }
-      return a.nome.localeCompare(b.nome, "it");
-    });
-  }, [usersQ.data, roleFilter, userSort]);
-  const {
-    page: usersPage,
-    setPage: setUsersPage,
-    pageCount: usersPageCount,
-    sliceItems: sliceUsers,
-    showPager: showUsersPager,
-    label: usersPagerLabel,
-    resetPage: resetUsersPage,
-  } = useClientPagination(filteredUsers.length, 12);
-  const pagedUsers = useMemo(() => sliceUsers(filteredUsers), [filteredUsers, sliceUsers]);
   const selectedUser = useMemo(
-    () => (usersQ.data ?? []).find((u) => u.id === selectedUserId) ?? null,
-    [usersQ.data, selectedUserId],
+    () => usersQ.users.find((u) => u.id === selectedUserId) ?? null,
+    [usersQ.users, selectedUserId],
   );
-
-  useEffect(() => {
-    resetUsersPage();
-  }, [roleFilter, userSort, usersQ.data?.length, resetUsersPage]);
-
-  async function handleRoleChange(target: SecurityUserAdminRow, role: AppRole) {
-    if (target.ruolo === role) return;
-    const res = await updateUserRoleByAdminAction({ userId: target.id, role });
-    if (!res.ok) {
-      window.alert(res.message);
-      return;
-    }
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: QK.securityUsers }),
-      queryClient.invalidateQueries({ queryKey: QK.authUsers }),
-      queryClient.invalidateQueries({ queryKey: QK.profiles }),
-      queryClient.invalidateQueries({ queryKey: QK.log }),
-      queryClient.invalidateQueries({ queryKey: QK.userPermissions }),
-    ]);
-    if (target.id === user?.id) {
-      await refresh();
-    }
-  }
 
   async function handleResetChangeLogs() {
     if (!window.confirm("Resettare il log modifiche globale? L'azione è irreversibile e non elimina utenti o dati operativi.")) return;
@@ -507,13 +424,10 @@ export function SecurityDashboardView() {
   if (!isAdmin) {
     return (
       <div className={dsStackPage}>
-        <PageHeader title="Sicurezza" description="Monitoraggio accessi e autenticazioni." />
+        <PageHeader title="Sicurezza" />
         <ShellCard title="Accesso negato">
           <p className="text-sm text-[color:var(--cab-text-muted)]">
-            Questa area è riservata agli utenti con ruolo <strong className="text-[color:var(--cab-text)]">admin</strong> su{" "}
-            <code className="rounded bg-[var(--cab-surface-2)] px-1">profiles</code> (allineato a RLS e permessi sistema). I permessi
-            granulari <code className="rounded bg-[var(--cab-surface-2)] px-1">user_permissions</code> non estendono la visibilità dei log
-            di autenticazione agli altri ruoli.
+            Questa area è riservata agli amministratori. Operatore e altri ruoli non possono accedere alla gestione sicurezza.
           </p>
           <Link href="/dashboard" className={`mt-4 inline-flex ${dsBtnNeutral}`}>
             Torna alla dashboard
@@ -532,11 +446,10 @@ export function SecurityDashboardView() {
     <div className={dsStackPage}>
       <PageHeader
         title="Sicurezza"
-        description="Login, logout, tentativi falliti e ultimo accesso per utente. Dati da auth_logs con join profili."
         actions={
           <>
             <button type="button" className={dsPageToolbarBtn} onClick={() => void logsQuery.refetch()} disabled={logsQuery.isFetching}>
-              {logsQuery.isFetching ? "Aggiornamento…" : "Aggiorna"}
+              {logsQuery.isFetching ? "Aggiornamento…" : "Aggiorna log"}
             </button>
             <button type="button" className={dsBtnDanger} onClick={() => void handleResetChangeLogs()} disabled={resettingLogs}>
               {resettingLogs ? "Reset…" : "Resetta log modifiche"}
@@ -548,11 +461,14 @@ export function SecurityDashboardView() {
                 checked={realtime}
                 onChange={(e) => setRealtime(e.target.checked)}
               />
-              Live (Realtime)
+              Live
             </label>
           </>
         }
       />
+
+      <SecurityUsersPermissionsPanel readOnly={!isAdmin} onOpenDetail={setSelectedUserId} />
+      <UserDetailDrawer user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUserId(null)} />
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className={dsSurfaceInteractiveKpi}>
@@ -574,131 +490,6 @@ export function SecurityDashboardView() {
           <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">Max 2500 eventi, ordinati dal più recente.</p>
         </div>
       </div>
-
-      <SecurityCreateUserModal open={createUserOpen} onClose={() => setCreateUserOpen(false)} />
-      <UserDetailDrawer user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUserId(null)} />
-
-      <ClientLavorazioniAccessPanel />
-
-      <ShellCard title="Utenti registrati">
-        <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <button type="button" className={`h-11 shrink-0 ${dsBtnPrimary}`} onClick={() => setCreateUserOpen(true)}>
-              Nuovo utente
-            </button>
-            <label className="block min-w-[12rem]">
-              <span className={dsSectionTitle}>Ruolo</span>
-              <select
-                className={`${gestionaleSelectNativePlainClass} mt-1 w-full`}
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value as "all" | AppRole)}
-              >
-                <option value="all">Tutti i ruoli</option>
-                {APP_ROLES.map((role) => (
-                  <option key={role} value={role}>
-                    {roleLabel(role)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block min-w-[12rem]">
-              <span className={dsSectionTitle}>Ordina per</span>
-              <select className={`${gestionaleSelectNativePlainClass} mt-1 w-full`} value={userSort} onChange={(e) => setUserSort(e.target.value as UserSortKey)}>
-                <option value="nome">Nome</option>
-                <option value="lastSignInAt">Ultimo accesso</option>
-              </select>
-            </label>
-            <button type="button" className={`${dsPageToolbarBtn} h-11 sm:ml-auto`} onClick={() => void usersQ.refetch()} disabled={usersQ.isFetching}>
-              {usersQ.isFetching ? "Aggiornamento…" : "Aggiorna utenti"}
-            </button>
-          </div>
-          <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
-                <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{filteredUsers.length}</span>
-                <span>utent{filteredUsers.length === 1 ? "e" : "i"}</span>
-              </span>
-              {roleFilter !== "all" ? (
-                <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
-                  Filtri attivi
-                </span>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-              <button type="button" className={dsPageToolbarBtn} onClick={() => setRoleFilter("all")}>
-                Reimposta filtri
-              </button>
-            </div>
-          </div>
-        </div>
-        </div>
-
-        {usersQ.isError ? (
-          <p className="mt-4 text-sm text-[color:var(--cab-danger)]">{usersQ.error.message}</p>
-        ) : usersQ.isLoading ? (
-          <p className="mt-4 text-sm text-[color:var(--cab-text-muted)]">Caricamento utenti…</p>
-        ) : filteredUsers.length === 0 ? (
-          <div className={`mt-4 ${dsTableWrap} ${dsScrollbar}`}>
-            <table className={dsTable}>
-              <tbody>
-                <tr>
-                  <td className={dsTableEmptyCell}>Nessun utente trovato.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <>
-            <div className={`mt-4 ${dsTableWrap} max-h-[min(32rem,64vh)] ${dsScrollbar}`}>
-              <table className={`${dsTable} text-xs`}>
-                <thead>
-                  <tr>
-                    <th className={dsTableHeadCell}>Nome</th>
-                    <th className={dsTableHeadCell}>Email</th>
-                    <th className={dsTableHeadCell}>Ruolo</th>
-                    <th className={dsTableHeadCell}>Creato</th>
-                    <th className={dsTableHeadCell}>Ultimo accesso</th>
-                    <th className={dsTableHeadCell}>Azioni</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {pagedUsers.map((row) => (
-                    <tr key={row.id} className={dsTableRow}>
-                      <td className={`${dsTableTd} font-medium text-[color:var(--cab-text)]`}>{row.nome}</td>
-                      <td className={dsTableTd}>{row.email || "—"}</td>
-                      <td className={dsTableTd}>
-                        <select
-                          className={`${gestionaleSelectNativePlainClass} min-w-[8rem] py-1 text-xs`}
-                          value={row.ruolo}
-                          onChange={(e) => void handleRoleChange(row, e.target.value as AppRole)}
-                          aria-label={`Cambia ruolo ${row.nome}`}
-                        >
-                          {APP_ROLES.map((role) => (
-                            <option key={role} value={role}>
-                              {roleLabel(role)}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className={`${dsTableTd} whitespace-nowrap tabular-nums`}>{fmtNullableWhen(row.createdAt)}</td>
-                      <td className={`${dsTableTd} whitespace-nowrap tabular-nums`}>{fmtNullableWhen(row.lastSignInAt)}</td>
-                      <td className={dsTableTd}>
-                        <button type="button" className={dsBtnGhost} onClick={() => setSelectedUserId(row.id)}>
-                          Dettaglio
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {showUsersPager ? (
-              <TablePagination page={usersPage} pageCount={usersPageCount} onPageChange={setUsersPage} label={usersPagerLabel} />
-            ) : null}
-          </>
-        )}
-      </ShellCard>
 
       <ShellCard title="Ultime azioni / modifiche" subtitle="Ultimi 50 eventi dal registro audit del sistema.">
         {recentActivityQ.isLoading ? (

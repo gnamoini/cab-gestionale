@@ -9,19 +9,16 @@ import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "lavorazioni";
 
-/** Stati considerati «in corso». */
-export const LAVORAZIONI_STATI_IN_CORSO: StatoLavorazione[] = [
-  "bozza",
-  "in_coda",
-  "in_officina",
-  "in_attesa_ricambi",
-  "custom_1",
-  "custom_2",
-  "custom_3",
+/** Fallback stati «in corso» (senza settings). */
+export const LAVORAZIONI_STATI_IN_CORSO: string[] = [
+  "accettazione",
+  "diagnosi",
+  "in_lavorazione",
+  "attesa_ricambi",
 ];
 
-/** Stati chiusi / archivio. */
-export const LAVORAZIONI_STATI_CHIUSE: StatoLavorazione[] = ["completata", "consegnata", "annullata"];
+/** Fallback stati chiusi / archivio. */
+export const LAVORAZIONI_STATI_CHIUSE: string[] = ["completata", "consegnata", "annullata"];
 
 export type LavorazioneListRow = LavorazioneRow & { mezzo: MezzoRow | null };
 
@@ -42,6 +39,8 @@ export type LavorazioneFilters = {
   data_uscita_da?: string;
   data_uscita_a?: string;
   data_uscita_is_null?: boolean;
+  /** Portale / storico: false = in corso, true = archivio. */
+  archived?: boolean;
 };
 
 export type LavorazioneInsert = Omit<LavorazioneRow, "id" | "created_at" | "updated_at">;
@@ -93,6 +92,8 @@ function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuery>(q: T
   if (filters.data_uscita_a?.trim()) query = query.lte("data_uscita", endOfDayIso(filters.data_uscita_a));
   if (filters.data_uscita_is_null === true) query = query.is("data_uscita", null);
   if (filters.data_uscita_is_null === false) query = query.not("data_uscita", "is", null);
+  if (filters.archived === true) query = query.eq("archived", true);
+  if (filters.archived === false) query = query.eq("archived", false);
   return query as TQuery;
 }
 
@@ -188,7 +189,7 @@ export const lavorazioniService = {
       if (e0) return err(e0.message);
       const { data: row, error } = await sb
         .from("lavorazioni")
-        .update({ stato, data_uscita: null })
+        .update({ stato, data_uscita: null, archived: false, archived_at: null })
         .eq("id", id)
         .select("*")
         .single();
@@ -204,6 +205,57 @@ export const lavorazioniService = {
     } catch (e) {
       return serviceFailFromError(e);
     }
+  },
+
+  /** Conclude e archivia: stato completata, archived=true, archived_at e data_uscita. Idempotente se già archiviata. */
+  async conclude(id: string): Promise<ServiceResult<LavorazioneRow>> {
+    try {
+      const allowed = await ensurePermission("editWorkOrders");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+      const sb = await c();
+      const { data: before, error: e0 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
+      if (e0) return err(e0.message);
+      if (!before) return err("Lavorazione non trovata");
+      const b = before as LavorazioneRow;
+      if (b.archived === true) return success(b);
+
+      const now = new Date().toISOString();
+      const patch = {
+        stato: "completata" as StatoLavorazione,
+        archived: true,
+        archived_at: now,
+        data_uscita: b.data_uscita?.trim() ? b.data_uscita : now,
+      };
+      const { data: row, error } = await sb
+        .from("lavorazioni")
+        .update(patch)
+        .eq("id", id)
+        .eq("archived", false)
+        .select("*")
+        .maybeSingle();
+      if (error) return err(error.message);
+      if (!row) {
+        const { data: current, error: e1 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
+        if (e1) return err(e1.message);
+        if (current && (current as LavorazioneRow).archived === true) return success(current as LavorazioneRow);
+        return err("Conclusione non riuscita.");
+      }
+      const r = row as LavorazioneRow;
+      await writeModificaLog(sb, {
+        entita: ENTITA,
+        entita_id: id,
+        azione: "UPDATE",
+        payload: auditDiff(before, r),
+      });
+      return success(r);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  /** @deprecated Usare `conclude`. */
+  async archive(id: string): Promise<ServiceResult<LavorazioneRow>> {
+    return this.conclude(id);
   },
 
   async remove(id: string): Promise<ServiceResult<null>> {
@@ -226,14 +278,13 @@ export const lavorazioniService = {
   async getStatiInUso(): Promise<ServiceResult<{ attivi: StatoLavorazione[]; storico: StatoLavorazione[] }>> {
     try {
       const sb = await c();
-      const { data, error } = await sb.from("lavorazioni").select("stato");
+      const { data, error } = await sb.from("lavorazioni").select("stato, archived");
       if (error) return err(error.message);
-      const chiusiSet = new Set<string>(LAVORAZIONI_STATI_CHIUSE);
       const attiviSet = new Set<StatoLavorazione>();
       const storicoSet = new Set<StatoLavorazione>();
       for (const row of data ?? []) {
         const s = row.stato as StatoLavorazione;
-        if (chiusiSet.has(s)) storicoSet.add(s);
+        if (row.archived === true) storicoSet.add(s);
         else attiviSet.add(s);
       }
       return success({ attivi: [...attiviSet], storico: [...storicoSet] });

@@ -9,7 +9,7 @@ const STALE_MS = 15_000;
 export function useClientLavorazioniListQuery(enabled: boolean) {
   return useServiceQuery(
     [...QK.clientLavorazioniList] as const,
-    () => clientLavorazioniService.listInCorso(),
+    () => clientLavorazioniService.list(),
     { enabled, staleTime: STALE_MS },
   );
 }

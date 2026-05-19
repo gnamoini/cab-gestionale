@@ -3,22 +3,8 @@ import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { StatoLavorazione } from "@/src/types/supabase-tables";
 
-const STORICO_STATI = new Set<StatoLavorazione>(["completata", "consegnata", "annullata"]);
-
-const STATO_LABEL: Record<StatoLavorazione, string> = {
-  bozza: "Bozza",
-  in_coda: "In coda",
-  in_officina: "In officina",
-  in_attesa_ricambi: "In attesa ricambi",
-  completata: "Completata",
-  consegnata: "Consegnata",
-  annullata: "Annullata",
-  custom_1: "Stato personalizzato 1",
-  custom_2: "Stato personalizzato 2",
-  custom_3: "Stato personalizzato 3",
-};
+const STORICO_STATI = new Set<string>(["completata", "consegnata", "annullata"]);
 
 function prioritaIt(p: string): string {
   if (p === "alta") return "Alta";
@@ -37,11 +23,11 @@ function giorniTra(isoIn: string, isoOut: string | null): { label: string; num: 
   return { label: `${rounded} giorni`, num: g };
 }
 
-export function labelLavorazioneStatoDb(stato: StatoLavorazione): string {
-  return STATO_LABEL[stato] ?? stato;
+export function labelLavorazioneStatoDb(stato: string): string {
+  return stato.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function isLavorazioneStoricoDb(stato: StatoLavorazione): boolean {
+export function isLavorazioneStoricoDb(stato: string): boolean {
   return STORICO_STATI.has(stato);
 }
 

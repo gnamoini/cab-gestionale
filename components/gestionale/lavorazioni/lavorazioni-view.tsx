@@ -11,6 +11,7 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioneCreateModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
+import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
 import { SchedeLavorazioneModal } from "@/components/lavorazioni/schede/schede-lavorazione-modal";
 import { InlineSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
@@ -30,7 +31,7 @@ import { getOrCreateBundle, loadLavorazioneSchedeStore, saveLavorazioneSchedeSto
 import { countSchedePresenti, newSchedaMeta } from "@/lib/schede/schede-ui";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
-import { isDbStatoLavorazione, statoLavorazioneLabel } from "@/src/shared/selectors";
+import { isStatoInConfig, resolveDefaultLavorazioneStatoId, statoLavorazioneLabel } from "@/src/shared/selectors";
 import {
   dsInput,
   dsPageToolbarBtn,
@@ -77,10 +78,11 @@ import {
   type LavorazioneUpdate,
 } from "@/src/services/lavorazioni.service";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
-import { useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
+import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import { useAuth } from "@/context/auth-context";
+import { useToast } from "@/context/toast-context";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import {
@@ -97,6 +99,12 @@ import {
   statoPillShellClass,
   statoPillShellClassDynamic,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+
+function archivioMonthKey(row: LavorazioneListRow): string | null {
+  const iso = row.archived_at?.trim() || row.data_uscita?.trim();
+  if (!iso || iso.length < 7) return null;
+  return iso.slice(0, 7);
+}
 
 function fmtDay(iso: string | null | undefined): string {
   if (!iso?.trim()) return "—";
@@ -471,6 +479,7 @@ export function LavorazioniView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, authorName } = useAuth();
+  const { push: pushToast } = useToast();
   const permissions = usePermissions();
   const canEditWorkOrders = permissions.canEditWorkOrders;
   const canDeleteRecords = permissions.canDeleteRecords;
@@ -484,11 +493,7 @@ export function LavorazioniView() {
     () => globalOpts.lavorazioni.statiInCorso.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.statiInCorso],
   );
-  const statiAttiveOpts = useMemo(() => {
-    const completata = statiOpts.find((s) => s.id === "completata");
-    if (!completata || statiInCorsoOpts.some((s) => s.id === completata.id)) return statiInCorsoOpts;
-    return [...statiInCorsoOpts, completata];
-  }, [statiInCorsoOpts, statiOpts]);
+  const statiAttiveOpts = statiOpts;
   const statiChiusiOpts = useMemo(
     () => globalOpts.lavorazioni.statiChiusi.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.statiChiusi],
@@ -520,6 +525,7 @@ export function LavorazioniView() {
   const updateMezzo = useMezzoUpdateMutation();
   const removeLav = useLavorazioneRemoveMutation();
   const restoreLav = useLavorazioneRestoreMutation();
+  const concludeLav = useLavorazioneConcludeMutation();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [schedeRow, setSchedeRow] = useState<{ row: LavorazioneListRow; origine: "attiva" | "storico"; initialTab?: "schede" | "panoramica" } | null>(null);
@@ -581,43 +587,19 @@ export function LavorazioniView() {
   const [sortPhaseC, setSortPhaseC] = useState<SortPhase>("natural");
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
+  const [concludiConfirmRow, setConcludiConfirmRow] = useState<LavorazioneListRow | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [navMezzoFilter, setNavMezzoFilter] = useState<MezzoGestito | null>(null);
   const [navBulkFlashIds, setNavBulkFlashIds] = useState<Set<string>>(() => new Set());
   const navFlashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const uscitaRange = useMemo((): Pick<LavorazioneFilters, "data_uscita_da" | "data_uscita_a"> => {
-    if (meseYyyyMm === "__tutti__") return {};
-    const [yStr, mStr] = meseYyyyMm.split("-");
-    const y = Number(yStr);
-    const m = Number(mStr);
-    if (!Number.isFinite(y) || !Number.isFinite(m)) return {};
-    const last = new Date(y, m, 0).getDate();
-    const mm = String(m).padStart(2, "0");
-    return {
-      data_uscita_da: `${y}-${mm}-01`,
-      data_uscita_a: `${y}-${mm}-${String(last).padStart(2, "0")}`,
-    };
-  }, [meseYyyyMm]);
-
   const mezzoFilterPart = useMemo((): Pick<LavorazioneFilters, "mezzo_id"> | Record<string, never> => {
     return navMezzoFilter?.id ? { mezzo_id: navMezzoFilter.id } : {};
   }, [navMezzoFilter?.id]);
 
-  const statiInCorsoIds = useMemo(
-    () =>
-      globalOpts.lavorazioni.statiInCorso
-        .map((s) => s.id)
-        .filter((id): id is StatoLavorazione => isDbStatoLavorazione(id)),
-    [globalOpts.lavorazioni.statiInCorso],
-  );
-
   const statiChiusiIds = useMemo(
-    () =>
-      globalOpts.lavorazioni.statiChiusi
-        .map((s) => s.id)
-        .filter((id): id is StatoLavorazione => isDbStatoLavorazione(id)),
+    () => globalOpts.lavorazioni.statiChiusi.map((s) => s.id).filter(Boolean),
     [globalOpts.lavorazioni.statiChiusi],
   );
 
@@ -625,21 +607,18 @@ export function LavorazioniView() {
     (): LavorazioneFilters => ({
       includeMezzo: true,
       ...mezzoFilterPart,
-      stati_in: [...statiInCorsoIds, "completata" as StatoLavorazione],
-      data_uscita_is_null: true,
+      archived: false,
     }),
-    [mezzoFilterPart, statiInCorsoIds],
+    [mezzoFilterPart],
   );
 
   const filtersChiuse = useMemo(
     (): LavorazioneFilters => ({
       includeMezzo: true,
       ...mezzoFilterPart,
-      stati_in: statiChiusiIds,
-      data_uscita_is_null: false,
-      ...uscitaRange,
+      archived: true,
     }),
-    [mezzoFilterPart, statiChiusiIds, uscitaRange],
+    [mezzoFilterPart],
   );
 
   const attiveQuery = useLavorazioniList(filtersAttive, { staleTime: 30_000 });
@@ -690,15 +669,16 @@ export function LavorazioniView() {
     return chiuseRows.filter((row) => {
       if (!lavRowMatchesGlobalSearch(row, storicoSearchApplied)) return false;
       if (filtroStatoArchivio !== "__tutti__" && row.stato !== filtroStatoArchivio) return false;
+      if (meseYyyyMm !== "__tutti__" && archivioMonthKey(row) !== meseYyyyMm) return false;
       return true;
     });
-  }, [chiuseRows, storicoSearchApplied, filtroStatoArchivio]);
+  }, [chiuseRows, storicoSearchApplied, filtroStatoArchivio, meseYyyyMm]);
 
   const mesiChiuse = useMemo(() => {
     const s = new Set<string>();
     for (const r of chiuseRows) {
-      const du = r.data_uscita?.trim();
-      if (du && du.length >= 7) s.add(du.slice(0, 7));
+      const key = archivioMonthKey(r);
+      if (key) s.add(key);
     }
     return [...s].sort((a, b) => b.localeCompare(a, "it"));
   }, [chiuseRows]);
@@ -715,7 +695,7 @@ export function LavorazioniView() {
   const createdBy = user?.id ?? null;
 
   const mutErr = updateLav.isError ? updateLav.error?.message : removeLav.isError ? removeLav.error?.message : null;
-  const mutPending = updateLav.isPending || removeLav.isPending || restoreLav.isPending;
+  const mutPending = updateLav.isPending || removeLav.isPending || restoreLav.isPending || concludeLav.isPending;
 
   const onStatoRow = useCallback(
     (row: LavorazioneListRow, next: string) => {
@@ -831,16 +811,28 @@ export function LavorazioniView() {
     [removeLav],
   );
 
-  function submitConcludiLavorazione(row: LavorazioneListRow) {
-    if (row.stato !== "completata") return;
-    updateLav.mutate(
-      { id: row.id, data: { stato: "completata", data_uscita: new Date().toISOString() } },
-      {
-        onSuccess: () => {
-          flashRow(row.id);
-        },
+  function openConcludiConfirm(row: LavorazioneListRow) {
+    if (!canEditWorkOrders || row.stato !== "completata" || row.archived === true) return;
+    setConcludiConfirmRow(row);
+  }
+
+  function confirmConcludiLavorazione() {
+    const row = concludiConfirmRow;
+    if (!row || !canEditWorkOrders) return;
+    concludeLav.mutate(row.id, {
+      onSuccess: () => {
+        pushToast("Lavorazione conclusa e archiviata.", "success");
+        setConcludiConfirmRow(null);
+        if (schedeRow?.row.id === row.id && schedeRow.origine === "attiva") {
+          setSchedeRow(null);
+        }
+        flashRow(row.id);
+        void lavModificheLogQuery.refetch();
       },
-    );
+      onError: (err) => {
+        pushToast(err.message ?? "Conclusione non riuscita.", "error");
+      },
+    });
   }
 
   function submitRipristinaInLavorazione(row: LavorazioneListRow) {
@@ -850,15 +842,16 @@ export function LavorazioniView() {
     );
     if (!ok) return;
     const preferred =
-      statiInCorsoOpts.find((s) => s.id === "in_officina") ??
-      statiInCorsoOpts.find((s) => s.id === "bozza") ??
+      statiInCorsoOpts.find((s) => s.id === "in_lavorazione") ??
+      statiInCorsoOpts.find((s) => s.id === "accettazione") ??
       statiInCorsoOpts[0];
-    if (!preferred || !isDbStatoLavorazione(preferred.id)) {
+    const restoreStato = preferred?.id ?? resolveDefaultLavorazioneStatoId(globalOpts.lavorazioni.stati);
+    if (!restoreStato || !isStatoInConfig(restoreStato, globalOpts.lavorazioni.stati)) {
       window.alert("Nessuno stato attivo configurato per ripristinare la lavorazione.");
       return;
     }
     restoreLav.mutate(
-      { id: row.id, stato: preferred.id },
+      { id: row.id, stato: restoreStato },
       {
         onSuccess: () => {
           flashRow(row.id);
@@ -1586,8 +1579,8 @@ export function LavorazioniView() {
                               className={`${dsTableActionBtnSecondary} ${lavTableActionCompact}`}
                               title={row.stato === "completata" ? "Concludi lavorazione" : "Concludi disponibile solo con stato completata"}
                               aria-label="Concludi lavorazione"
-                              disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata"}
-                              onClick={() => submitConcludiLavorazione(row)}
+                              disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true}
+                              onClick={() => openConcludiConfirm(row)}
                             >
                               <IconCloseWork />
                             </button>
@@ -1691,7 +1684,7 @@ export function LavorazioniView() {
                     </InlineSelectField>
                   </div>
                   <div className={`mt-3 w-full min-w-0 ${dsTableActionsGroupStart}`}>
-                    <button type="button" className={dsTableActionBtnSecondary} title={row.stato === "completata" ? "Concludi lavorazione" : "Concludi disponibile solo con stato completata"} aria-label="Concludi lavorazione" disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata"} onClick={() => submitConcludiLavorazione(row)}>
+                    <button type="button" className={dsTableActionBtnSecondary} title={row.stato === "completata" ? "Concludi lavorazione" : "Concludi disponibile solo con stato completata"} aria-label="Concludi lavorazione" disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true} onClick={() => openConcludiConfirm(row)}>
                       <IconCloseWork />
                     </button>
                     {canDeleteLavorazioneAttiva(row) ? (
@@ -2141,6 +2134,15 @@ export function LavorazioniView() {
           setSchedeStore(loadLavorazioneSchedeStore());
           flashRow(id);
         }}
+      />
+
+      <LavorazioneConcludiConfirmDialog
+        open={concludiConfirmRow != null}
+        pending={concludeLav.isPending}
+        onCancel={() => {
+          if (!concludeLav.isPending) setConcludiConfirmRow(null);
+        }}
+        onConfirm={confirmConcludiLavorazione}
       />
 
     </>

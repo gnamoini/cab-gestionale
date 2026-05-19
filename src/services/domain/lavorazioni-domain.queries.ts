@@ -42,6 +42,7 @@ export function stableLavorazioniFiltersKey(filters: LavorazioneFilters | undefi
     di1: (filters.data_ingresso_a ?? "").trim(),
     du0: (filters.data_uscita_da ?? "").trim(),
     du1: (filters.data_uscita_a ?? "").trim(),
+    ar: filters.archived === true ? 1 : filters.archived === false ? 0 : -1,
   });
 }
 

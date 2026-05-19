@@ -7,6 +7,8 @@ export interface StatoLavorazioneConfig {
   label: string;
   /** Colore badge / pill (#rrggbb). Opzionale: se assente si usa il tema predefinito per id. */
   color?: string;
+  /** Se true: stato archiviato/chiuso (storico lavorazioni). */
+  closed?: boolean;
 }
 
 /** Record in tabella principale (non archiviato). */

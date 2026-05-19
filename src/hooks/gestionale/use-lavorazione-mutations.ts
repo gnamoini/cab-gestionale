@@ -49,6 +49,20 @@ export function useLavorazioneRestoreMutation() {
   );
 }
 
+export function useLavorazioneConcludeMutation() {
+  const queryClient = useQueryClient();
+  return useServiceMutation((id: string) => lavorazioniService.conclude(id), {
+    onSettled: async () => {
+      await invalidateAfterLavorazioneMutations(queryClient);
+    },
+  });
+}
+
+/** @deprecated Usare `useLavorazioneConcludeMutation`. */
+export function useLavorazioneArchiveMutation() {
+  return useLavorazioneConcludeMutation();
+}
+
 export type LavorazioneUpdatePayload = { id: string; data: LavorazioneUpdate };
 
 /** Tipo inferito per `onSuccess` UI (creazione). */
