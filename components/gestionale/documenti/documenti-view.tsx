@@ -14,6 +14,7 @@ import {
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -50,8 +51,6 @@ import {
   GestionaleLogEntryFourLines,
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
-  IconGestionaleLog,
-  IconGestionaleUndo,
   logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { buildModificaRigaFromChanges, type CampoChangeLike } from "@/lib/gestionale-log/view-model";
@@ -730,26 +729,12 @@ export function DocumentiView() {
       <PageHeader
         title="Documenti"
         actions={
-          <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
-            <button
-              type="button"
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="Nessuna azione reversibile"
-              disabled
-            >
-              <IconGestionaleUndo />
-              <span className="sr-only">Annulla ultima azione</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogOpen(true)}
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="Storico modifiche documenti (ultime 200)"
-            >
-              <IconGestionaleLog />
-              <span className="sr-only">Log modifiche</span>
-            </button>
-          </div>
+          <GestionalePageToolbarActions
+            canUndo={false}
+            undoDisabled
+            onOpenLog={() => setLogOpen(true)}
+            logTitle="Storico modifiche documenti (ultime 200)"
+          />
         }
       />
 

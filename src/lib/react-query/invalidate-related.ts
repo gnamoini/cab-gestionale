@@ -21,8 +21,14 @@ export const QK = {
   settingsAudit: ["app_settings_audit"] as const,
   /** Permessi granulari `user_permissions` (per sessione utente). */
   userPermissions: ["user_permissions"] as const,
+  /** Portale lavorazioni clienti — accesso sessione. */
+  clientLavorazioniAccess: ["client_lavorazioni_access"] as const,
+  clientLavorazioniList: ["client_lavorazioni_list"] as const,
+  clientLavorazioniDetail: ["client_lavorazioni_detail"] as const,
   /** Log eventi autenticazione (`auth_logs`). */
   authLogs: ["auth_logs"] as const,
+  /** Segnalazioni condivise (modulo Supporto). */
+  segnalazioni: ["segnalazioni"] as const,
 };
 
 export async function invalidateAfterMezzoMutations(qc: QueryClient) {

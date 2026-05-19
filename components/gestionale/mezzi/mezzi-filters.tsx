@@ -3,6 +3,8 @@
 import type { ReactNode } from "react";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { dsInput, dsStickyToolbar, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
+import type { UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
+import { gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 
 function MezziFieldWrap({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -45,6 +47,8 @@ export type MezziFilterFieldsProps = {
   onFiltroTarga: (v: string) => void;
   filtroNumeroScuderia: string;
   onFiltroNumeroScuderia: (v: string) => void;
+  filtroUltimaLav: import("@/lib/mezzi/mezzi-helpers").UltimaLavorazioneFilter;
+  onFiltroUltimaLav: (v: import("@/lib/mezzi/mezzi-helpers").UltimaLavorazioneFilter) => void;
   /** Se true, niente bordo superiore (il contenitore padre fornisce separazione). */
   embedded?: boolean;
 };
@@ -60,12 +64,14 @@ export function MezziFilterFields({
   onFiltroTarga,
   filtroNumeroScuderia,
   onFiltroNumeroScuderia,
+  filtroUltimaLav,
+  onFiltroUltimaLav,
   embedded = false,
 }: MezziFilterFieldsProps) {
   return (
     <div className={embedded ? "" : "border-t border-[color:var(--cab-border)] pt-3"}>
       <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Campi filtro</p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <MezziFieldWrap label="Cliente">
           <input
             type="text"
@@ -116,6 +122,20 @@ export function MezziFilterFields({
             aria-label="Filtra numero scuderia"
           />
         </MezziFieldWrap>
+        <MezziFieldWrap label="Ultima lavorazione">
+          <select
+            value={filtroUltimaLav}
+            onChange={(e) => onFiltroUltimaLav(e.target.value as UltimaLavorazioneFilter)}
+            className={`${filterTextInputClass} ${gestionaleSelectFilterClass}`}
+            aria-label="Filtra per ultima lavorazione"
+          >
+            <option value="">Tutti</option>
+            <option value="con">Con lavorazione</option>
+            <option value="senza">Senza lavorazione</option>
+            <option value="recenti12m">Ultimi 12 mesi</option>
+            <option value="oltre12m">Oltre 12 mesi</option>
+          </select>
+        </MezziFieldWrap>
       </div>
     </div>
   );
@@ -139,6 +159,8 @@ export function MezziFilters(props: MezziFiltersProps) {
     onFiltroTarga,
     filtroNumeroScuderia,
     onFiltroNumeroScuderia,
+    filtroUltimaLav,
+    onFiltroUltimaLav,
   } = props;
   return (
     <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
@@ -156,6 +178,8 @@ export function MezziFilters(props: MezziFiltersProps) {
           onFiltroTarga={onFiltroTarga}
           filtroNumeroScuderia={filtroNumeroScuderia}
           onFiltroNumeroScuderia={onFiltroNumeroScuderia}
+          filtroUltimaLav={filtroUltimaLav}
+          onFiltroUltimaLav={onFiltroUltimaLav}
         />
       </div>
     </div>

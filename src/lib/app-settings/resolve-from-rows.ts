@@ -6,6 +6,7 @@ import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
 import { DEFAULT_STATI_LAVORAZIONI_DB, migrateStatiConfigList } from "@/src/shared/selectors";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+import { parseScontoRicambiByCliente } from "@/lib/mezzi/cliente-commerciale";
 import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
@@ -97,6 +98,9 @@ function parseMezziListePayload(raw: unknown): MezziListePrefs {
       : d.tipiAttrezzatura,
     stati: Array.isArray(o.stati) ? o.stati.filter((x): x is string => typeof x === "string") : d.stati,
     attrezzature: Array.isArray(o.attrezzature) ? (o.attrezzature as MezziListePrefs["attrezzature"]) : d.attrezzature,
+    telai: Array.isArray(o.telai) ? (o.telai as MezziListePrefs["telai"]) : d.telai,
+    tipiTelaio: Array.isArray(o.tipiTelaio) ? o.tipiTelaio.filter((x): x is string => typeof x === "string") : d.tipiTelaio,
+    scontoRicambiByCliente: parseScontoRicambiByCliente(o.scontoRicambiByCliente),
   };
   return migrateMezziListePrefs(out);
 }

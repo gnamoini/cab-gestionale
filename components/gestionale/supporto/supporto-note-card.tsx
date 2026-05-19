@@ -1,6 +1,6 @@
 "use client";
 
-import type { SupportoNote } from "@/lib/supporto/supporto-notes-storage";
+import type { SupportoNote } from "@/lib/supporto/supporto-note-types";
 import { formatSupportoNoteDateTime } from "@/lib/supporto/supporto-notes-format";
 import { dsBadgeOk, dsBtnIcon } from "@/lib/ui/design-system";
 
@@ -8,10 +8,12 @@ export function SupportoNoteCard({
   note,
   onDelete,
   onToggleResolved,
+  disabled,
 }: {
   note: SupportoNote;
   onDelete: (id: string) => void;
   onToggleResolved: (id: string, resolved: boolean) => void;
+  disabled?: boolean;
 }) {
   const authorDisplay = note.autore.trim().toUpperCase();
 
@@ -49,6 +51,7 @@ export function SupportoNoteCard({
                 className="h-4 w-4 rounded border-zinc-300 text-orange-600 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-900"
                 checked={note.resolved}
                 onChange={(e) => onToggleResolved(note.id, e.target.checked)}
+                disabled={disabled}
                 aria-label="Segna come risolta"
               />
               <span>Risolta</span>
@@ -56,7 +59,8 @@ export function SupportoNoteCard({
             <button
               type="button"
               onClick={handleDelete}
-              className={`${dsBtnIcon} text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400`}
+              disabled={disabled}
+              className={`${dsBtnIcon} text-zinc-500 hover:text-red-600 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-red-400`}
               title="Elimina nota"
               aria-label="Elimina nota"
             >

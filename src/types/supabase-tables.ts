@@ -1,11 +1,22 @@
 /** Tipi allineati allo schema PostgreSQL / Supabase (snake_case). */
 
-export type RuoloProfile = "admin" | "operatore" | "ospite" | "tecnico" | "viewer";
+export type RuoloUtente =
+  | "admin"
+  | "operatore"
+  | "ospite"
+  | "cliente"
+  | "magazziniere"
+  | "commerciale";
+
+/** @deprecated Usare `RuoloUtente`. */
+export type RuoloProfile = RuoloUtente;
 
 export type ProfileRow = {
   id: string;
   nome: string;
-  ruolo: RuoloProfile;
+  ruolo: RuoloUtente;
+  /** Etichetta cliente (mezzi.cliente) per utenti ruolo=cliente. */
+  cliente_ref?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -17,7 +28,10 @@ export type StatoLavorazione =
   | "in_attesa_ricambi"
   | "completata"
   | "consegnata"
-  | "annullata";
+  | "annullata"
+  | "custom_1"
+  | "custom_2"
+  | "custom_3";
 
 export type PrioritaLavorazione = "bassa" | "media" | "alta" | "urgente";
 
@@ -34,9 +48,11 @@ export type MezzoRow = {
   marca: string;
   modello: string;
   targa: string | null;
-  matricola: string;
+  matricola: string | null;
   numero_scuderia: string | null;
+  tipo_attrezzatura: string | null;
   anno: number | null;
+  meta: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 };
@@ -73,6 +89,7 @@ export type MagazzinoRicambioRow = {
   costo: number | null;
   prezzo_vendita: number | null;
   consumo_medio_mensile: number | null;
+  meta: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
@@ -163,5 +180,24 @@ export type AuthLogRow = {
 
 /** Riga `auth_logs` con join `profiles` (select PostgREST). */
 export type AuthLogWithProfileRow = AuthLogRow & {
+  profiles: { id: string; nome: string } | null;
+};
+
+export type SegnalazioneStato = "attiva" | "risolta";
+
+export type SegnalazioneRow = {
+  id: string;
+  created_at: string;
+  created_by: string;
+  tipo: string;
+  messaggio: string;
+  entita_tipo: string | null;
+  entita_id: string | null;
+  stato: SegnalazioneStato;
+  deleted_at: string | null;
+};
+
+/** Riga `segnalazioni` con join autore (`profiles`). */
+export type SegnalazioneWithProfileRow = SegnalazioneRow & {
   profiles: { id: string; nome: string } | null;
 };

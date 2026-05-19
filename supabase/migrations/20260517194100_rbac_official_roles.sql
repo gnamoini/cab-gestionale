@@ -1,30 +1,11 @@
--- RBAC ufficiale: admin / operatore / ospite.
--- Mantiene RLS semplice: admin totale, operatore operativo, ospite sola lettura.
+-- RBAC ufficiale su public.ruolo_utente: admin / operatore / ospite / cliente.
+-- Enum ospite/cliente aggiunti in 20260517194000 (transazione separata).
 
-do $$
-begin
-  if exists (
-    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
-    where t.typname = 'ruolo_profile' and e.enumlabel = 'tecnico'
-  ) and not exists (
-    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
-    where t.typname = 'ruolo_profile' and e.enumlabel = 'operatore'
-  ) then
-    alter type public.ruolo_profile rename value 'tecnico' to 'operatore';
-  end if;
+update public.profiles
+set ruolo = 'ospite'::public.ruolo_utente
+where ruolo = 'sola_lettura'::public.ruolo_utente;
 
-  if exists (
-    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
-    where t.typname = 'ruolo_profile' and e.enumlabel = 'viewer'
-  ) and not exists (
-    select 1 from pg_enum e join pg_type t on t.oid = e.enumtypid
-    where t.typname = 'ruolo_profile' and e.enumlabel = 'ospite'
-  ) then
-    alter type public.ruolo_profile rename value 'viewer' to 'ospite';
-  end if;
-end $$;
-
-alter table public.profiles alter column ruolo set default 'operatore'::public.ruolo_profile;
+alter table public.profiles alter column ruolo set default 'operatore'::public.ruolo_utente;
 
 create or replace function public.handle_new_user()
 returns trigger
@@ -36,18 +17,18 @@ declare
   v_nome text;
   v_app_nome text;
   v_app_ruolo text;
-  v_ruolo public.ruolo_profile := 'operatore'::public.ruolo_profile;
+  v_ruolo public.ruolo_utente := 'operatore'::public.ruolo_utente;
 begin
   v_app_nome := nullif(trim(coalesce(new.raw_app_meta_data ->> 'cab_nome', '')), '');
   v_nome := coalesce(v_app_nome, nullif(trim(split_part(coalesce(new.email, ''), '@', 1)), ''), 'utente');
   v_app_ruolo := nullif(trim(coalesce(new.raw_app_meta_data ->> 'cab_ruolo', '')), '');
 
-  if v_app_ruolo in ('admin', 'operatore', 'ospite') then
-    v_ruolo := v_app_ruolo::public.ruolo_profile;
+  if v_app_ruolo in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale') then
+    v_ruolo := v_app_ruolo::public.ruolo_utente;
   elsif v_app_ruolo = 'tecnico' then
-    v_ruolo := 'operatore'::public.ruolo_profile;
-  elsif v_app_ruolo = 'viewer' then
-    v_ruolo := 'ospite'::public.ruolo_profile;
+    v_ruolo := 'operatore'::public.ruolo_utente;
+  elsif v_app_ruolo in ('viewer', 'sola_lettura') then
+    v_ruolo := 'ospite'::public.ruolo_utente;
   end if;
 
   insert into public.profiles (id, nome, ruolo)
@@ -100,10 +81,10 @@ begin
     return false;
   end if;
 
-  if v_role in ('ospite', 'viewer') then
+  if v_role in ('ospite', 'cliente', 'sola_lettura') then
     return p_op = 'read';
   end if;
-  if v_role in ('operatore', 'tecnico') then
+  if v_role in ('operatore', 'magazziniere', 'commerciale') then
     return p_op in ('read', 'write');
   end if;
   return false;
@@ -117,7 +98,7 @@ grant execute on function public.user_effective_can(text, text) to authenticated
 drop policy if exists profiles_select_role on public.profiles;
 create policy profiles_select_role
 on public.profiles for select to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale'));
 
 drop policy if exists profiles_update_admin on public.profiles;
 create policy profiles_update_admin
@@ -130,111 +111,111 @@ create policy profiles_delete_admin
 on public.profiles for delete to authenticated
 using (public.current_profile_role() = 'admin');
 
--- Helper policy: read all, write admin+operatore, delete solo admin.
+-- Helper policy: read all, write admin+operatore (+ ruoli operativi), delete solo admin.
 drop policy if exists mezzi_select_role on public.mezzi;
 create policy mezzi_select_role on public.mezzi for select to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale'));
 drop policy if exists mezzi_insert_priv on public.mezzi;
 create policy mezzi_insert_priv on public.mezzi for insert to authenticated
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists mezzi_update_priv on public.mezzi;
 create policy mezzi_update_priv on public.mezzi for update to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'tecnico'))
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+using (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'))
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists mezzi_delete_priv on public.mezzi;
 create policy mezzi_delete_priv on public.mezzi for delete to authenticated
 using (public.current_profile_role() = 'admin');
 
 drop policy if exists lavorazioni_select_role on public.lavorazioni;
 create policy lavorazioni_select_role on public.lavorazioni for select to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale'));
 drop policy if exists lavorazioni_insert_priv on public.lavorazioni;
 create policy lavorazioni_insert_priv on public.lavorazioni for insert to authenticated
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists lavorazioni_update_priv on public.lavorazioni;
 create policy lavorazioni_update_priv on public.lavorazioni for update to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'tecnico'))
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+using (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'))
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists lavorazioni_delete_priv on public.lavorazioni;
 create policy lavorazioni_delete_priv on public.lavorazioni for delete to authenticated
 using (public.current_profile_role() = 'admin');
 
 drop policy if exists scheda_lavorazione_select_role on public.scheda_lavorazione;
 create policy scheda_lavorazione_select_role on public.scheda_lavorazione for select to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale'));
 drop policy if exists scheda_lavorazione_insert_priv on public.scheda_lavorazione;
 create policy scheda_lavorazione_insert_priv on public.scheda_lavorazione for insert to authenticated
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists scheda_lavorazione_update_priv on public.scheda_lavorazione;
 create policy scheda_lavorazione_update_priv on public.scheda_lavorazione for update to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'tecnico'))
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+using (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'))
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists scheda_lavorazione_delete_priv on public.scheda_lavorazione;
 create policy scheda_lavorazione_delete_priv on public.scheda_lavorazione for delete to authenticated
 using (public.current_profile_role() = 'admin');
 
 drop policy if exists magazzino_ricambi_select_role on public.magazzino_ricambi;
 create policy magazzino_ricambi_select_role on public.magazzino_ricambi for select to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale'));
 drop policy if exists magazzino_ricambi_insert_priv on public.magazzino_ricambi;
 create policy magazzino_ricambi_insert_priv on public.magazzino_ricambi for insert to authenticated
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists magazzino_ricambi_update_priv on public.magazzino_ricambi;
 create policy magazzino_ricambi_update_priv on public.magazzino_ricambi for update to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'tecnico'))
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+using (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'))
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists magazzino_ricambi_delete_priv on public.magazzino_ricambi;
 create policy magazzino_ricambi_delete_priv on public.magazzino_ricambi for delete to authenticated
 using (public.current_profile_role() = 'admin');
 
 drop policy if exists movimenti_ricambi_select_role on public.movimenti_ricambi;
 create policy movimenti_ricambi_select_role on public.movimenti_ricambi for select to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale'));
 drop policy if exists movimenti_ricambi_insert_priv on public.movimenti_ricambi;
 create policy movimenti_ricambi_insert_priv on public.movimenti_ricambi for insert to authenticated
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists movimenti_ricambi_update_priv on public.movimenti_ricambi;
 create policy movimenti_ricambi_update_priv on public.movimenti_ricambi for update to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'tecnico'))
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+using (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'))
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists movimenti_ricambi_delete_priv on public.movimenti_ricambi;
 create policy movimenti_ricambi_delete_priv on public.movimenti_ricambi for delete to authenticated
 using (public.current_profile_role() = 'admin');
 
 drop policy if exists preventivi_select_role on public.preventivi;
 create policy preventivi_select_role on public.preventivi for select to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale'));
 drop policy if exists preventivi_insert_priv on public.preventivi;
 create policy preventivi_insert_priv on public.preventivi for insert to authenticated
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists preventivi_update_priv on public.preventivi;
 create policy preventivi_update_priv on public.preventivi for update to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'tecnico'))
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+using (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'))
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists preventivi_delete_priv on public.preventivi;
 create policy preventivi_delete_priv on public.preventivi for delete to authenticated
 using (public.current_profile_role() = 'admin');
 
 drop policy if exists documenti_select_role on public.documenti;
 create policy documenti_select_role on public.documenti for select to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale'));
 drop policy if exists documenti_insert_priv on public.documenti;
 create policy documenti_insert_priv on public.documenti for insert to authenticated
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists documenti_update_priv on public.documenti;
 create policy documenti_update_priv on public.documenti for update to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'tecnico'))
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+using (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'))
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 drop policy if exists documenti_delete_priv on public.documenti;
 create policy documenti_delete_priv on public.documenti for delete to authenticated
 using (public.current_profile_role() = 'admin');
 
 drop policy if exists log_modifiche_select_role on public.log_modifiche;
 create policy log_modifiche_select_role on public.log_modifiche for select to authenticated
-using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale'));
 drop policy if exists log_modifiche_insert_priv on public.log_modifiche;
 create policy log_modifiche_insert_priv on public.log_modifiche for insert to authenticated
-with check (public.current_profile_role() in ('admin', 'operatore', 'tecnico'));
+with check (public.current_profile_role() in ('admin', 'operatore', 'magazziniere', 'commerciale'));
 
 -- auth_logs: lettura solo admin, insert invariato per flussi login/logout.
 drop policy if exists auth_logs_select on public.auth_logs;
@@ -263,3 +244,6 @@ drop policy if exists app_settings_delete_admin on public.app_settings;
 create policy app_settings_delete_admin
 on public.app_settings for delete to authenticated
 using (public.current_profile_role() = 'admin');
+
+-- Enum legacy non più referenziato dal codice applicativo.
+drop type if exists public.ruolo_profile;

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { LAVORAZIONE_STATO_COMPLETATA_ID } from "@/lib/lavorazioni/constants";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import { STATO_LAVORAZIONE_COMPLETATA_DB } from "@/src/shared/selectors";
 
 export function ColorSwatchButton({
   value,
@@ -96,7 +96,7 @@ export function StatoSettingsList({
     <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
       {stati.map((s) => {
         const inUse = attiviStatoIds.has(s.id) || storicoStatoIds.has(s.id);
-        const canDelete = s.id !== LAVORAZIONE_STATO_COMPLETATA_ID && !inUse;
+        const canDelete = s.id !== STATO_LAVORAZIONE_COMPLETATA_DB && !inUse;
         const displayHex = statoDisplayColor(s.id, stati);
         return (
           <li key={s.id} className="flex min-h-[2.75rem] flex-wrap items-center gap-2 py-2.5 first:pt-0 last:pb-0">

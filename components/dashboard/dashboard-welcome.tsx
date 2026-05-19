@@ -2,22 +2,13 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
+import { formatUserDisplayName } from "@/src/lib/auth/resolve-user-display-name";
 import { dsSkeletonPulse, dsSurfaceCard, dsTypoBody, dsTypoPageTitle } from "@/lib/ui/design-system";
 
 function timeGreeting(hour: number): string {
   if (hour >= 5 && hour < 12) return "Buongiorno";
   if (hour >= 12 && hour < 18) return "Buon pomeriggio";
   return "Buonasera";
-}
-
-/** Nome utente in forma leggibile (es. «GIORGIO» → «Giorgio», «mario rossi» → «Mario Rossi»). */
-function formatDisplayName(raw: string): string {
-  return raw
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toLocaleUpperCase("it-IT") + part.slice(1).toLocaleLowerCase("it-IT"))
-    .join(" ");
 }
 
 export function DashboardWelcome() {
@@ -36,7 +27,7 @@ export function DashboardWelcome() {
     const g = timeGreeting(h);
     const w =
       isAuthSessionEstablished(status) && authorName.trim()
-        ? formatDisplayName(authorName)
+        ? formatUserDisplayName(authorName)
         : "Team CAB";
     return { greeting: g, who: w };
   }, [mounted, status, authorName]);

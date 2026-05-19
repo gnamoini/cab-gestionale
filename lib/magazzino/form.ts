@@ -1,5 +1,6 @@
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { isValueInListOptions } from "@/lib/ui/list-select-utils";
 
 const MAGAZZINO_DEFAULT_AUTHOR = "Operatore";
 
@@ -78,7 +79,7 @@ export function emptyRicambioForm(): RicambioFormState {
     categoria: "",
     compatibilitaMezzi: "",
     scorta: "0",
-    scortaMinima: "2",
+    scortaMinima: "0",
     prezzoFornitoreOriginale: "0",
     scontoFornitoreOriginale: "0",
     markupPercentuale: "45",
@@ -175,4 +176,28 @@ export function toFormDraft(r: RicambioMagazzino): RicambioFormState {
     prezzoFornitoreNonOriginale: String(r.prezzoFornitoreNonOriginale),
     scontoFornitoreNonOriginale: String(r.scontoFornitoreNonOriginale),
   });
+}
+
+export type RicambioListFieldOptions = {
+  marche: readonly string[];
+  categorie: readonly string[];
+  mezziCompatibili: readonly string[];
+};
+
+/** Validazione valori da elenchi globali (marca, categoria, compatibilità). */
+export function validateRicambioListFields(
+  f: RicambioFormState,
+  opts: RicambioListFieldOptions,
+): string | null {
+  if (!f.marca.trim()) return "Seleziona una marca.";
+  if (!isValueInListOptions(f.marca, opts.marche)) return "Seleziona una marca esistente.";
+  if (!f.categoria.trim()) return "Seleziona una categoria.";
+  if (!isValueInListOptions(f.categoria, opts.categorie)) return "Seleziona una categoria esistente.";
+  const compat = parseCompatInput(f.compatibilitaMezzi);
+  if (compat.length === 0) return "Seleziona almeno una compatibilità mezzo.";
+  const invalid = compat.filter((x) => !isValueInListOptions(x, opts.mezziCompatibili));
+  if (invalid.length > 0) {
+    return `Compatibilità non valida: seleziona solo valori dall'elenco (${invalid[0]}).`;
+  }
+  return null;
 }

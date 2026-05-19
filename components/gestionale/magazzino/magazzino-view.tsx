@@ -35,9 +35,11 @@ import {
   ricambioFromForm,
   ricambioFromFormLenient,
   toFormDraft,
+  validateRicambioListFields,
   type RicambioFormState,
 } from "@/lib/magazzino/form";
-import { latestUndoableScortaEntryForRicambio, parseScortaChange } from "@/lib/magazzino/magazzino-scorta-undo";
+import { latestUndoableScortaEntryForRicambio, parseScortaChange, entryMatchesMagazzinoUndoScope, type MagazzinoUndoScope } from "@/lib/magazzino/magazzino-scorta-undo";
+import { useUndoSessionId } from "@/lib/gestionale-log/use-undo-session-id";
 import {
   analyzeArchiveDuplicateCodes,
   findFirstDuplicateByCodiceOriginale,
@@ -63,6 +65,9 @@ import {
   dsTableWrap,
   dsBtnNeutral,
   dsBtnGhost,
+  dsBtnPrimary,
+  dsBtnSoftOrange,
+  dsFocus,
   dsZModalHigh,
   gestionaleFilterChipClass,
   dsTableTdActions,
@@ -76,6 +81,7 @@ import {
   dsTableTdCompact,
 } from "@/lib/ui/design-system";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { Drawer } from "@/components/design-system";
@@ -88,8 +94,6 @@ import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
-  IconGestionaleLog,
-  IconGestionaleUndo,
   gestionaleLogScrollEmbeddedClass,
   logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
@@ -306,11 +310,10 @@ function computeRiepilogo(changes: CampoChange[]): string {
 }
 
 /** Stile interazioni ERP uniforme (hover / active / ring) */
-const erpFocus =
-  "outline-none transition-all duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-orange-400/45 focus-visible:ring-offset-1 dark:focus-visible:ring-offset-zinc-900";
-const erpBtnNeutral = `inline-flex items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-xs font-medium text-zinc-700 shadow-sm hover:bg-zinc-50 hover:shadow-md hover:ring-1 hover:ring-zinc-200/75 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 dark:hover:ring-zinc-600/45 ${erpFocus}`;
-const erpBtnAccent = `inline-flex items-center justify-center gap-2 rounded-lg border border-orange-400/70 bg-orange-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 hover:shadow-md hover:ring-2 hover:ring-orange-400/35 ${erpFocus}`;
-const erpBtnSoftOrange = `inline-flex items-center justify-center rounded-lg border border-orange-200 bg-orange-50 px-2.5 py-1.5 text-xs font-medium text-orange-900 shadow-sm hover:bg-orange-100 hover:shadow-md hover:ring-1 hover:ring-orange-200/75 ${erpFocus}`;
+const erpFocus = dsFocus;
+const erpBtnNeutral = dsBtnNeutral;
+const erpBtnAccent = dsBtnPrimary;
+const erpBtnSoftOrange = dsBtnSoftOrange;
 function IconInfoMagazzino({ className = dsTableActionGlyph }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -463,7 +466,19 @@ function ArchiveDupRicambioRow({
 }
 
 export function MagazzinoView() {
-  const { authorName } = useAuth();
+  const { authorName, user } = useAuth();
+  const undoSessionId = useUndoSessionId();
+  const magUndoScope = useMemo((): MagazzinoUndoScope | null => {
+    if (!user?.id || !undoSessionId) return null;
+    return { userId: user.id, sessionId: undoSessionId };
+  }, [user?.id, undoSessionId]);
+
+  function magazzinoLogScopeFields(): Pick<MagazzinoLogEntry, "autoreUserId" | "undoSessionId"> {
+    return {
+      autoreUserId: user?.id,
+      undoSessionId: undoSessionId || undefined,
+    };
+  }
   const settingsPayload = useCabAppSettingsPayloadQuery();
   const appSettings = settingsPayload.data?.resolved;
   const settingsRows = settingsPayload.data?.rows ?? [];
@@ -526,6 +541,8 @@ export function MagazzinoView() {
 
   const [detail, setDetail] = useState<{ id: string; mode: "info" | "edit" } | null>(null);
   const [editDraft, setEditDraft] = useState<RicambioFormState | null>(null);
+  const [newListFieldInvalid, setNewListFieldInvalid] = useState(false);
+  const [editListFieldInvalid, setEditListFieldInvalid] = useState(false);
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -548,9 +565,13 @@ export function MagazzinoView() {
   const undoableMagazzinoLog = useMemo(
     () =>
       logEntries.find(
-        (entry) => entry.tipo === "update" && !entry.annullato && entry.changes.some((ch) => CAMPO_KEY_BY_LABEL.has(ch.campo)),
+        (entry) =>
+          entry.tipo === "update" &&
+          !entry.annullato &&
+          entryMatchesMagazzinoUndoScope(entry, magUndoScope) &&
+          entry.changes.some((ch) => CAMPO_KEY_BY_LABEL.has(ch.campo)),
       ) ?? null,
-    [logEntries],
+    [logEntries, magUndoScope],
   );
 
   const listPageSize = useResponsiveListPageSize();
@@ -649,6 +670,7 @@ export function MagazzinoView() {
       at: new Date().toISOString(),
       changes,
       riepilogo,
+      ...magazzinoLogScopeFields(),
     };
     applyLogEntry(entry);
   }
@@ -695,6 +717,7 @@ export function MagazzinoView() {
       at: new Date().toISOString(),
       changes,
       riepilogo,
+      ...magazzinoLogScopeFields(),
     };
     applyLogEntry(entry);
   }
@@ -873,6 +896,11 @@ export function MagazzinoView() {
     return mergeMasterWithRows(masterMezzi, fromRows);
   }, [masterMezzi, prodotti]);
 
+  const mezziCompatOptions = useMemo(() => {
+    const fromAttrezzature = flattenCompatDaAttrezzature(migrateMezziListePrefs(mezziListePrefs));
+    return [...new Set([...mezzi, ...fromAttrezzature])].sort((a, b) => a.localeCompare(b, "it"));
+  }, [mezzi, mezziListePrefs]);
+
   const sottoScortaTotale = useMemo(
     () => prodotti.filter((p) => p.scorta < p.scortaMinima).length,
     [prodotti],
@@ -910,7 +938,7 @@ export function MagazzinoView() {
   const canUndoScortaById = useMemo(() => {
     const m = new Map<string, boolean>();
     for (const p of prodotti) {
-      const e = latestUndoableScortaEntryForRicambio(logEntries, p.id);
+      const e = latestUndoableScortaEntryForRicambio(logEntries, p.id, magUndoScope);
       if (!e) {
         m.set(p.id, false);
         continue;
@@ -919,7 +947,7 @@ export function MagazzinoView() {
       m.set(p.id, Boolean(parsed && p.scorta === parsed.dopo));
     }
     return m;
-  }, [prodotti, logEntries]);
+  }, [prodotti, logEntries, magUndoScope]);
 
   const filteredSorted = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -1029,7 +1057,7 @@ export function MagazzinoView() {
   function undoLastScorta(id: string) {
     if (!magCanCreateRicambio) return;
     flushPendingLog();
-    const entry = latestUndoableScortaEntryForRicambio(logEntries, id);
+    const entry = latestUndoableScortaEntryForRicambio(logEntries, id, magUndoScope);
     if (!entry) {
       window.alert("Nessuna modifica di scorta annullabile per questo ricambio.");
       return;
@@ -1081,12 +1109,24 @@ export function MagazzinoView() {
     setDupCheckModalOpen(false);
     setNewIncompleteOpen(false);
     setNewIncompleteList([]);
+    setNewListFieldInvalid(false);
     setNewForm(emptyRicambioForm());
     setNewRicambioFocusToken((t) => t + 1);
     setNewOpen(true);
   }
 
   async function finalizeNewRicambio() {
+    const listErr = validateRicambioListFields(newForm, {
+      marche,
+      categorie,
+      mezziCompatibili: mezziCompatOptions,
+    });
+    if (listErr) {
+      setNewListFieldInvalid(true);
+      window.alert(listErr);
+      return;
+    }
+    setNewListFieldInvalid(false);
     const r = ricambioFromFormLenient(newForm, undefined, authorName);
     if (findFirstDuplicateByCodiceOriginale(prodotti, newForm.codiceFornitoreOriginale)) {
       return;
@@ -1130,6 +1170,7 @@ export function MagazzinoView() {
   function startEditFromInfo() {
     if (!magCanCreateRicambio) return;
     if (!detailRicambio) return;
+    setEditListFieldInvalid(false);
     setEditDraft(toFormDraft(detailRicambio));
     setDetail({ id: detailRicambio.id, mode: "edit" });
   }
@@ -1144,9 +1185,23 @@ export function MagazzinoView() {
     e.preventDefault();
     if (!magCanCreateRicambio) return;
     if (!detail || detail.mode !== "edit" || !editDraft) return;
+    const listErr = validateRicambioListFields(editDraft, {
+      marche,
+      categorie,
+      mezziCompatibili: mezziCompatOptions,
+    });
+    if (listErr) {
+      setEditListFieldInvalid(true);
+      window.alert(listErr);
+      return;
+    }
+    setEditListFieldInvalid(false);
     const before = prodotti.find((p) => p.id === detail.id);
     const next = ricambioFromForm(editDraft, detail.id, authorName);
-    if (!next || !before) return;
+    if (!next || !before) {
+      window.alert("Compila tutti i campi obbligatori.");
+      return;
+    }
     const changes = diffRicambi(before, next);
     const updated = await magazzinoService.update(detail.id, ricambioUiToMagazzinoUpdate(next));
     if (!updated.success || !updated.data) {
@@ -1255,33 +1310,21 @@ export function MagazzinoView() {
       <PageHeader
         title="Magazzino ricambi"
         actions={
-          <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
-            <MagazzinoGiacenzaBell
-              count={sottoScortaTotale}
-              items={sottoScortaList}
-              onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
-              triggerClassName={`${dsPageToolbarBtn} shrink-0`}
-            />
-            <button
-              type="button"
-              onClick={() => void undoUltimoMagazzino()}
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title={undoableMagazzinoLog ? "Annulla ultima azione" : "Nessuna azione reversibile"}
-              disabled={!magCanCreateRicambio || !undoableMagazzinoLog}
-            >
-              <IconGestionaleUndo />
-              <span className="sr-only">Annulla ultima azione</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogOpen(true)}
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="Storico modifiche"
-            >
-              <IconGestionaleLog />
-              <span className="sr-only">Log modifiche</span>
-            </button>
-          </div>
+          <GestionalePageToolbarActions
+            leading={
+              <MagazzinoGiacenzaBell
+                count={sottoScortaTotale}
+                items={sottoScortaList}
+                onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
+                triggerClassName={`${dsPageToolbarBtn} shrink-0`}
+              />
+            }
+            canUndo={Boolean(undoableMagazzinoLog)}
+            undoDisabled={!magCanCreateRicambio}
+            onUndo={() => void undoUltimoMagazzino()}
+            onOpenLog={() => setLogOpen(true)}
+            logTitle="Storico modifiche magazzino"
+          />
         }
       />
 
@@ -1852,6 +1895,7 @@ export function MagazzinoView() {
                         }
                       : null
                   }
+                  listFieldForceInvalid={newListFieldInvalid}
                 />
               </div>
               <div className="shrink-0 space-y-2 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -2077,6 +2121,7 @@ export function MagazzinoView() {
                         categorieOptions={categorie}
                         mezziOptions={mezzi}
                         attrezzatureListe={mezziListePrefs}
+                        listFieldForceInvalid={editListFieldInvalid}
                       />
                       {detailRicambio ? (
                         <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">

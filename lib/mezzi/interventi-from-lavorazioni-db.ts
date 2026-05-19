@@ -15,6 +15,9 @@ const STATO_LABEL: Record<StatoLavorazione, string> = {
   completata: "Completata",
   consegnata: "Consegnata",
   annullata: "Annullata",
+  custom_1: "Stato personalizzato 1",
+  custom_2: "Stato personalizzato 2",
+  custom_3: "Stato personalizzato 3",
 };
 
 function prioritaIt(p: string): string {

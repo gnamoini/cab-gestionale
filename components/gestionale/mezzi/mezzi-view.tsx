@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
+import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
 import { MezziSearchBar, MezziFilterFields } from "@/components/gestionale/mezzi/mezzi-filters";
 import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-detail-modal";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
@@ -15,7 +17,9 @@ import {
   erpBtnNuovaLavorazione,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
-import { compareMezzi } from "@/lib/mezzi/mezzi-helpers";
+import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
+import { mezzoFormToMeta, metaToMezzoFormFields } from "@/lib/mezzi/mezzi-meta";
+import { compareMezzi, mezzoMatchesUltimaLavFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
 import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
@@ -26,8 +30,6 @@ import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
-  IconGestionaleLog,
-  IconGestionaleUndo,
   buildMezziGestionaleLogViewModel,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
@@ -37,16 +39,19 @@ import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import type { MezzoFilters, MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
 import {
-  useLogListQuery,
   useMezziListQuery,
 } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { useMezzoRemoveMutation } from "@/src/hooks/gestionale/use-mezzo-remove-mutation";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { logService } from "@/src/services/log.service";
-import { auditPayload, latestUndoableLog, pickExistingFields } from "@/lib/gestionale-log/undo";
+import { auditPayload, pickExistingFields } from "@/lib/gestionale-log/undo";
+import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
+import { useAuth } from "@/context/auth-context";
 
 function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
   return a.id.localeCompare(b.id, "en");
@@ -55,26 +60,43 @@ function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
 function getEmptyNuovo() {
   return {
     cliente: "",
+    cantiere: "",
     utilizzatore: "",
+    tipoAttrezzatura: "",
     marca: "",
     modello: "",
-    targa: "",
     matricola: "",
     numeroScuderia: "",
+    oreLavoro: "",
+    tipoTelaio: "",
+    marcaTelaio: "",
+    modelloTelaio: "",
+    targa: "",
+    km: "",
     anno: "",
   };
 }
 
 function gestitoToForm(m: MezzoGestito) {
+  const metaFields = metaToMezzoFormFields({
+    cantiere: m.cantiere,
+    tipoTelaio: m.tipoTelaio,
+    marcaTelaio: m.marcaTelaio,
+    modelloTelaio: m.modelloTelaio,
+    oreLavoro: m.oreKm,
+    km: m.km,
+  });
   return {
     cliente: m.cliente.trim(),
     utilizzatore: m.utilizzatore === "—" ? "" : m.utilizzatore.trim(),
     marca: m.marca.trim(),
     modello: m.modello === "—" ? "" : m.modello.trim(),
     targa: m.targa === "—" ? "" : m.targa.trim(),
-    matricola: m.matricola === "—" ? "" : m.matricola.trim(),
+    matricola: m.matricola === "Non assegnata" || m.matricola === "—" ? "" : m.matricola.trim(),
     numeroScuderia: (m.numeroScuderia ?? "").trim(),
+    tipoAttrezzatura: m.tipoAttrezzatura === "—" ? "" : m.tipoAttrezzatura.trim(),
     anno: m.anno != null ? String(m.anno) : "",
+    ...metaFields,
   };
 }
 
@@ -87,9 +109,11 @@ function formToMezzoInsert(f: ReturnType<typeof getEmptyNuovo>): MezzoInsert {
     marca: f.marca.trim(),
     modello: f.modello.trim() || "—",
     targa: f.targa.trim() || null,
-    matricola: f.matricola.trim() || "—",
+    matricola: f.matricola.trim() || null,
     numero_scuderia: f.numeroScuderia.trim() || null,
+    tipo_attrezzatura: f.tipoAttrezzatura.trim() || null,
     anno,
+    meta: mezzoFormToMeta(f) as Record<string, unknown>,
   };
 }
 
@@ -99,6 +123,7 @@ function formToMezzoUpdate(f: ReturnType<typeof getEmptyNuovo>): MezzoUpdate {
 
 export function MezziView() {
   const permissions = usePermissions();
+  const { user } = useAuth();
   const canEditVehicles = permissions.canEditVehicles;
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -110,6 +135,7 @@ export function MezziView() {
   const [filtroModello, setFiltroModello] = useState("");
   const [filtroTarga, setFiltroTarga] = useState("");
   const [filtroNumeroScuderia, setFiltroNumeroScuderia] = useState("");
+  const [filtroUltimaLav, setFiltroUltimaLav] = useState<UltimaLavorazioneFilter>("");
   const [filtriEspansi, setFiltriEspansi] = useState(false);
 
   const serviceFilters = useMemo((): MezzoFilters => {
@@ -167,8 +193,15 @@ export function MezziView() {
     [sortColumn, sortPhase],
   );
 
+  const filteredMezzi = useMemo(() => {
+    if (!filtroUltimaLav) return mezziUi;
+    return mezziUi.filter((m) =>
+      mezzoMatchesUltimaLavFilter(interventiByMezzoId.get(m.id) ?? [], filtroUltimaLav),
+    );
+  }, [mezziUi, interventiByMezzoId, filtroUltimaLav]);
+
   const sorted = useMemo(() => {
-    const rows = [...mezziUi];
+    const rows = [...filteredMezzi];
     rows.sort((a, b) =>
       compareMezzi(
         a,
@@ -180,7 +213,7 @@ export function MezziView() {
       ),
     );
     return rows;
-  }, [interventiByMezzoId, mezziUi, sortColumn, sortPhase]);
+  }, [filteredMezzi, interventiByMezzoId, sortColumn, sortPhase]);
 
   const hasMezziFilters =
     search.trim().length > 0 ||
@@ -188,11 +221,12 @@ export function MezziView() {
     filtroMarca.trim().length > 0 ||
     filtroModello.trim().length > 0 ||
     filtroTarga.trim().length > 0 ||
-    filtroNumeroScuderia.trim().length > 0;
+    filtroNumeroScuderia.trim().length > 0 ||
+    Boolean(filtroUltimaLav);
 
   const listPageSize = useResponsiveListPageSize();
   const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(sorted.length, listPageSize);
-  const mezziFilterKey = `${search}|${filtroCliente}|${filtroMarca}|${filtroModello}|${filtroTarga}|${filtroNumeroScuderia}|${sortColumn ?? ""}|${sortPhase}`;
+  const mezziFilterKey = `${search}|${filtroCliente}|${filtroMarca}|${filtroModello}|${filtroTarga}|${filtroNumeroScuderia}|${filtroUltimaLav}|${sortColumn ?? ""}|${sortPhase}`;
 
   useEffect(() => {
     resetPage();
@@ -207,8 +241,7 @@ export function MezziView() {
   const [editForm, setEditForm] = useState(() => getEmptyNuovo());
 
   const [logOpen, setLogOpen] = useState(false);
-  const logQuery = useLogListQuery({ entita: "mezzi", limit: 250 }, { enabled: logOpen });
-  const undoableMezziLog = useMemo(() => latestUndoableLog(logQuery.data ?? [], "mezzi"), [logQuery.data]);
+  const { undoable: undoableMezziLog, logQuery } = useUndoableLog("mezzi");
   const logEntriesUi = useMemo(() => (logQuery.data ?? []).map(logModificaRowToMezziHubLogEntry), [logQuery.data]);
 
   const {
@@ -232,6 +265,7 @@ export function MezziView() {
 
   const createMut = useMezzoCreateMutation();
   const updateMut = useMezzoUpdateMutation();
+  const removeMut = useMezzoRemoveMutation();
 
   const flashRow = useCallback((id: string) => {
     if (flashClearRef.current) clearTimeout(flashClearRef.current);
@@ -272,7 +306,27 @@ export function MezziView() {
     setFiltroModello("");
     setFiltroTarga("");
     setFiltroNumeroScuderia("");
+    setFiltroUltimaLav("");
     setFiltriEspansi(false);
+  }
+
+  function handleDeleteMezzo(m: MezzoGestito) {
+    if (!canEditVehicles || m.hubSynthetic) return;
+    const label = `${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim();
+    if (
+      !window.confirm(
+        `Eliminare definitivamente il mezzo «${label || m.id.slice(0, 8)}»?\n\nL'operazione non è reversibile. Mezzi con lavorazioni o preventivi collegati non possono essere eliminati.`,
+      )
+    ) {
+      return;
+    }
+    removeMut.mutate(m.id, {
+      onSuccess: () => {
+        setHubMezzo(null);
+        setEditMezzo(null);
+      },
+      onError: (err) => window.alert(err.message),
+    });
   }
 
   useEffect(() => {
@@ -311,9 +365,8 @@ export function MezziView() {
     e.preventDefault();
     if (!canEditVehicles) return;
     const marca = nuovoForm.marca.trim();
-    const mat = nuovoForm.matricola.trim();
-    if (!marca || !nuovoForm.cliente.trim() || !mat) {
-      window.alert("Compila almeno cliente, marca e matricola.");
+    if (!marca || !nuovoForm.cliente.trim()) {
+      window.alert("Compila almeno cliente e marca attrezzatura.");
       return;
     }
     createMut.mutate(formToMezzoInsert(nuovoForm), {
@@ -331,9 +384,8 @@ export function MezziView() {
     if (!canEditVehicles) return;
     if (!editMezzo) return;
     const marca = editForm.marca.trim();
-    const mat = editForm.matricola.trim();
-    if (!marca || !editForm.cliente.trim() || !mat) {
-      window.alert("Compila almeno cliente, marca e matricola.");
+    if (!marca || !editForm.cliente.trim()) {
+      window.alert("Compila almeno cliente e marca attrezzatura.");
       return;
     }
     const id = editMezzo.id;
@@ -356,7 +408,18 @@ export function MezziView() {
     const before = payload.before;
     if (!before) return;
     if (!window.confirm("Annullare l'ultima azione reversibile sui mezzi?")) return;
-    const data = pickExistingFields<MezzoUpdate>(before, ["cliente", "utilizzatore", "marca", "modello", "targa", "matricola", "numero_scuderia", "anno"]);
+    const data = pickExistingFields<MezzoUpdate>(before, [
+      "cliente",
+      "utilizzatore",
+      "marca",
+      "modello",
+      "targa",
+      "matricola",
+      "numero_scuderia",
+      "tipo_attrezzatura",
+      "anno",
+      "meta",
+    ]);
     try {
       await updateMut.mutateAsync({ id: undoableMezziLog.entita_id, data });
       const generatedUpdate = await logService.getByEntita("mezzi", undoableMezziLog.entita_id, 5);
@@ -367,17 +430,23 @@ export function MezziView() {
         entita: "mezzi",
         entita_id: undoableMezziLog.entita_id,
         azione: "UNDO",
-        autore_id: null,
-        payload: { reverted_log_id: undoableMezziLog.id, before: payload.after ?? null, after: before },
+        autore_id: user?.id ?? null,
+        payload: withUndoSessionPayload({
+          reverted_log_id: undoableMezziLog.id,
+          before: payload.after ?? null,
+          after: before,
+        }),
       });
       if (rollbackUpdateLog) {
         await logService.markReverted(rollbackUpdateLog.id, {
           undo_log_id: undoLog.success ? undoLog.data?.id : null,
+          reverted_by: user?.id ?? null,
           permission: "editVehicles",
         });
       }
       await logService.markReverted(undoableMezziLog.id, {
         undo_log_id: undoLog.success ? undoLog.data?.id : null,
+        reverted_by: user?.id ?? null,
         permission: "editVehicles",
       });
       await logQuery.refetch();
@@ -392,27 +461,14 @@ export function MezziView() {
       <PageHeader
         title="Mezzi"
         actions={
-          <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
-            <button
-              type="button"
-              onClick={() => void undoUltimoMezzo()}
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title={undoableMezziLog ? "Annulla ultima azione" : "Nessuna azione reversibile"}
-              disabled={!canEditVehicles || !undoableMezziLog || updateMut.isPending}
-            >
-              <IconGestionaleUndo />
-              <span className="sr-only">Annulla ultima azione</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogOpen(true)}
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="Storico modifiche anagrafica mezzi"
-            >
-              <IconGestionaleLog />
-              <span className="sr-only">Log modifiche</span>
-            </button>
-          </div>
+          <GestionalePageToolbarActions
+            canUndo={Boolean(undoableMezziLog)}
+            undoDisabled={!canEditVehicles}
+            undoPending={updateMut.isPending}
+            onUndo={() => void undoUltimoMezzo()}
+            onOpenLog={() => setLogOpen(true)}
+            logTitle="Storico modifiche anagrafica mezzi"
+          />
         }
       />
 
@@ -477,6 +533,16 @@ export function MezziView() {
                   ) : null}
                 </div>
                 <div className="flex flex-wrap items-center gap-2 sm:justify-end">
+                  <button
+                    type="button"
+                    className={dsPageToolbarBtn}
+                    onClick={() => {
+                      setSortColumn("ultimaLavorazione");
+                      setSortPhase("desc");
+                    }}
+                  >
+                    Ultima lav. ↓
+                  </button>
                   <button type="button" className={dsPageToolbarBtn} onClick={() => setSearch("")}>
                     Pulisci ricerca
                   </button>
@@ -506,6 +572,8 @@ export function MezziView() {
                     onFiltroTarga={setFiltroTarga}
                     filtroNumeroScuderia={filtroNumeroScuderia}
                     onFiltroNumeroScuderia={setFiltroNumeroScuderia}
+                    filtroUltimaLav={filtroUltimaLav}
+                    onFiltroUltimaLav={setFiltroUltimaLav}
                   />
                 </div>
               </div>
@@ -534,6 +602,7 @@ export function MezziView() {
                 onSort={onSort}
                 flashRowId={flashRowId}
                 onHub={setHubMezzo}
+                onDelete={canEditVehicles ? handleDeleteMezzo : undefined}
               />
             )}
           </div>
@@ -555,6 +624,7 @@ export function MezziView() {
             setEditForm(gestitoToForm(h));
           }}
           canEdit={canEditVehicles}
+          onDelete={canEditVehicles ? () => handleDeleteMezzo(hubMezzo) : undefined}
         />
       ) : null}
 
@@ -616,8 +686,8 @@ export function MezziView() {
               </button>
             </div>
             <form onSubmit={submitNuovo} className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-4">
-                <MezzoFormFields form={nuovoForm} setForm={setNuovoForm} variant="nuovo" />
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+                <MezzoFormFields form={nuovoForm} setForm={setNuovoForm} />
               </div>
               <div className="shrink-0 border-t border-zinc-100 p-4 dark:border-zinc-800">
                 <button type="submit" disabled={createMut.isPending} className={`${erpBtnAccent} w-full disabled:opacity-60`}>
@@ -652,8 +722,8 @@ export function MezziView() {
               </button>
             </div>
             <form onSubmit={submitEdit} className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-4">
-                <MezzoFormFields form={editForm} setForm={setEditForm} variant="modifica" />
+              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+                <MezzoFormFields form={editForm} setForm={setEditForm} />
               </div>
               <div className="shrink-0 border-t border-zinc-100 p-4 dark:border-zinc-800">
                 <button type="submit" disabled={updateMut.isPending} className={`${erpBtnAccent} w-full disabled:opacity-60`}>
@@ -674,70 +744,52 @@ function sortedUniqueStrings(list: string[]): string[] {
   return [...new Set(list.map((s) => s.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
 }
 
+function MezzoFormSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2 border-b border-zinc-100 pb-3 last:border-b-0 dark:border-zinc-800">
+      <h3 className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{title}</h3>
+      <div className="space-y-2">{children}</div>
+    </section>
+  );
+}
+
 function MezzoFormFields({
   form,
   setForm,
-  variant,
 }: {
   form: MezzoForm;
   setForm: React.Dispatch<React.SetStateAction<MezzoForm>>;
-  variant: "nuovo" | "modifica";
 }) {
   const globalOpts = useGlobalOptions({ debugTag: "MezzoFormFields" });
   const liste = globalOpts.mezziListe;
 
   const clientiBase = useMemo(() => sortedUniqueStrings(liste?.clienti ?? []), [liste]);
+  const cantieriBase = useMemo(() => sortedUniqueStrings(liste?.cantieri ?? []), [liste]);
   const utilizzatoriBase = useMemo(() => sortedUniqueStrings(liste?.utilizzatori ?? []), [liste]);
-  const marcheBase = useMemo(() => sortedUniqueStrings(liste?.marche ?? []), [liste]);
+  const tipiAttBase = useMemo(() => sortedUniqueStrings(liste?.tipiAttrezzatura ?? []), [liste]);
+  const tipiTelaioBase = useMemo(() => sortedUniqueStrings(liste?.tipiTelaio ?? []), [liste]);
+  const marcheAttBase = useMemo(() => (liste ? marcheFromHierarchyTree(liste, "attrezzature") : []), [liste]);
+  const marcheTelaioBase = useMemo(() => (liste ? marcheFromHierarchyTree(liste, "telai") : []), [liste]);
 
-  const clientiOpts = useMemo(() => {
-    if (variant === "nuovo") return clientiBase;
-    const c = form.cliente.trim();
-    if (c && !clientiBase.includes(c)) return [c, ...clientiBase];
-    return clientiBase;
-  }, [variant, clientiBase, form.cliente]);
-
-  const marcheOpts = useMemo(() => {
-    if (variant === "nuovo") return marcheBase;
-    const m = form.marca.trim();
-    if (m && !marcheBase.includes(m)) return [m, ...marcheBase];
-    return marcheBase;
-  }, [variant, marcheBase, form.marca]);
-
-  const modelliPerMarca = useMemo(() => {
+  const modelliAtt = useMemo(() => {
     if (!liste || !form.marca.trim()) return [] as string[];
     return modelliVisibiliPerMarca(liste, form.marca.trim());
   }, [liste, form.marca]);
 
-  const modelliOpts = useMemo(() => {
-    if (!form.marca.trim()) return [] as string[];
-    if (variant === "nuovo") return modelliPerMarca;
-    const mo = form.modello.trim();
-    if (mo && !modelliPerMarca.includes(mo)) return [mo, ...modelliPerMarca];
-    return modelliPerMarca;
-  }, [variant, form.marca, form.modello, modelliPerMarca]);
+  const modelliTelaio = useMemo(() => {
+    if (!liste || !form.marcaTelaio.trim()) return [] as string[];
+    return modelliVisibiliPerMarcaHierarchy(liste, "telai", form.marcaTelaio.trim());
+  }, [liste, form.marcaTelaio]);
 
   useEffect(() => {
-    if (!form.marca.trim() && form.modello.trim()) {
-      setForm((f) => ({ ...f, modello: "" }));
-    }
+    if (!form.marca.trim() && form.modello.trim()) setForm((f) => ({ ...f, modello: "" }));
   }, [form.marca, form.modello, setForm]);
 
   useEffect(() => {
-    if (variant !== "nuovo" || !liste) return;
-    const allowed = modelliVisibiliPerMarca(liste, form.marca.trim());
-    const m = form.modello.trim();
-    if (m && form.marca.trim() && !allowed.includes(m)) {
-      setForm((f) => ({ ...f, modello: "" }));
-    }
-  }, [variant, liste, form.marca, form.modello, setForm]);
+    if (!form.marcaTelaio.trim() && form.modelloTelaio.trim()) setForm((f) => ({ ...f, modelloTelaio: "" }));
+  }, [form.marcaTelaio, form.modelloTelaio, setForm]);
 
-  const selectClass = `mt-1 block w-full min-h-[2.75rem] py-0 ${dsInput}`;
-  const modelloDisabled = !form.marca.trim() || modelliOpts.length === 0;
-
-  const clienteValue = clientiOpts.find((x) => x === form.cliente.trim()) ?? "";
-  const marcaValue = marcheOpts.find((x) => x === form.marca.trim()) ?? "";
-  const modelloValue = modelloDisabled ? "" : (modelliOpts.find((x) => x === form.modello.trim()) ?? "");
+  const fieldClass = `mt-1 block w-full ${dsInput}`;
 
   if (globalOpts.isLoading) {
     return <p className="text-sm text-zinc-500 dark:text-zinc-400">Caricamento impostazioni…</p>;
@@ -745,106 +797,91 @@ function MezzoFormFields({
 
   return (
     <>
-      <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Cliente *
-        <select
-          required
-          value={clienteValue}
-          onChange={(e) => setForm((f) => ({ ...f, cliente: e.target.value }))}
-          className={selectClass}
-        >
-          <option value="">Seleziona cliente</option>
-          {clientiOpts.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Utilizzatore
-        <SettingsAutocompleteInput
-          className="mt-1"
-          value={form.utilizzatore}
-          onChange={(value) => setForm((f) => ({ ...f, utilizzatore: value }))}
-          options={utilizzatoriBase}
-        />
-      </label>
-      <div className="grid grid-cols-2 gap-2">
+      <MezzoFormSection title="Cliente">
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-          Marca *
-          <select
-            required
-            value={marcaValue}
-            onChange={(e) => {
-              const marca = e.target.value;
-              setForm((f) => ({ ...f, marca, modello: "" }));
-            }}
-            className={selectClass}
-          >
-            <option value="">Seleziona marca</option>
-            {marcheOpts.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
+          Cliente *
+          <GestionaleListSelect className={fieldClass} value={form.cliente} onChange={(v) => setForm((f) => ({ ...f, cliente: v }))} options={clientiBase} required />
         </label>
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-          Modello
-          <select
-            value={modelloValue}
-            onChange={(e) => setForm((f) => ({ ...f, modello: e.target.value }))}
-            disabled={modelloDisabled}
-            className={`${selectClass} disabled:cursor-not-allowed disabled:opacity-60`}
-          >
-            <option value="">{form.marca.trim() ? (modelliOpts.length ? "Seleziona modello" : "Nessun modello per questa marca") : "Seleziona prima la marca"}</option>
-            {modelliOpts.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-          Targa
-          <input
-            value={form.targa}
-            onChange={(e) => setForm((f) => ({ ...f, targa: e.target.value }))}
-            className={`${dsInput} mt-1 font-mono`}
-          />
+          Cantiere
+          <SettingsAutocompleteInput className="mt-1" value={form.cantiere} onChange={(v) => setForm((f) => ({ ...f, cantiere: v }))} options={cantieriBase} />
         </label>
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-          Matricola *
-          <input
-            required
-            value={form.matricola}
-            onChange={(e) => setForm((f) => ({ ...f, matricola: e.target.value }))}
-            className={`${dsInput} mt-1 font-mono`}
-          />
+          Utilizzatore
+          <SettingsAutocompleteInput className="mt-1" value={form.utilizzatore} onChange={(v) => setForm((f) => ({ ...f, utilizzatore: v }))} options={utilizzatoriBase} />
         </label>
-      </div>
-      <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        N. scuderia
-        <input
-          value={form.numeroScuderia}
-          onChange={(e) => setForm((f) => ({ ...f, numeroScuderia: e.target.value }))}
-          className={`${dsInput} mt-1 font-mono`}
-        />
-      </label>
-      <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        Anno
-        <input
-          type="number"
-          min={1980}
-          max={2035}
-          value={form.anno}
-          onChange={(e) => setForm((f) => ({ ...f, anno: e.target.value }))}
-          className={`${dsInput} mt-1`}
-        />
-      </label>
+      </MezzoFormSection>
+
+      <MezzoFormSection title="Attrezzatura">
+        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          Tipo attrezzatura
+          <SettingsAutocompleteInput className="mt-1" value={form.tipoAttrezzatura} onChange={(v) => setForm((f) => ({ ...f, tipoAttrezzatura: v }))} options={tipiAttBase} />
+        </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Marca *
+            <GestionaleListSelect className={fieldClass} value={form.marca} onChange={(marca) => setForm((f) => ({ ...f, marca, modello: "" }))} options={marcheAttBase} required />
+          </label>
+          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Modello
+            <GestionaleListSelect
+              className={fieldClass}
+              value={form.modello}
+              onChange={(modello) => setForm((f) => ({ ...f, modello }))}
+              options={modelliAtt}
+              disabled={!form.marca.trim()}
+              placeholder={form.marca.trim() ? (modelliAtt.length ? "Seleziona modello" : "Nessun modello") : "Seleziona marca"}
+            />
+          </label>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Matricola
+            <input value={form.matricola} onChange={(e) => setForm((f) => ({ ...f, matricola: e.target.value }))} className={`${dsInput} mt-1 font-mono`} placeholder="Opzionale" />
+          </label>
+          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            N. scuderia
+            <input value={form.numeroScuderia} onChange={(e) => setForm((f) => ({ ...f, numeroScuderia: e.target.value }))} className={`${dsInput} mt-1 font-mono`} />
+          </label>
+        </div>
+        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          Ore lavoro
+          <input type="number" min={0} step={1} value={form.oreLavoro} onChange={(e) => setForm((f) => ({ ...f, oreLavoro: e.target.value }))} className={`${dsInput} mt-1`} />
+        </label>
+      </MezzoFormSection>
+
+      <MezzoFormSection title="Telaio">
+        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          Tipo telaio
+          <SettingsAutocompleteInput className="mt-1" value={form.tipoTelaio} onChange={(v) => setForm((f) => ({ ...f, tipoTelaio: v }))} options={tipiTelaioBase} />
+        </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Marca
+            <GestionaleListSelect className={fieldClass} value={form.marcaTelaio} onChange={(v) => setForm((f) => ({ ...f, marcaTelaio: v, modelloTelaio: "" }))} options={marcheTelaioBase} />
+          </label>
+          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Modello
+            <GestionaleListSelect
+              className={fieldClass}
+              value={form.modelloTelaio}
+              onChange={(v) => setForm((f) => ({ ...f, modelloTelaio: v }))}
+              options={modelliTelaio}
+              disabled={!form.marcaTelaio.trim()}
+            />
+          </label>
+        </div>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            Targa
+            <input value={form.targa} onChange={(e) => setForm((f) => ({ ...f, targa: e.target.value }))} className={`${dsInput} mt-1 font-mono`} />
+          </label>
+          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+            KM
+            <input type="number" min={0} step={1} value={form.km} onChange={(e) => setForm((f) => ({ ...f, km: e.target.value }))} className={`${dsInput} mt-1`} />
+          </label>
+        </div>
+      </MezzoFormSection>
     </>
   );
 }

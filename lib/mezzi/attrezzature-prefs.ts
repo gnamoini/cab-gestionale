@@ -35,14 +35,23 @@ function withoutLegacyStatiMezzo(liste: MezziListePrefs): MezziListePrefs {
   return { ...liste, stati: [] };
 }
 
+function ensureTelaiTree(liste: MezziListePrefs): MezziListePrefs {
+  return {
+    ...liste,
+    tipiTelaio: [...(liste.tipiTelaio ?? [])],
+    telai: Array.isArray(liste.telai) ? liste.telai : [],
+  };
+}
+
 export function migrateMezziListePrefs(liste: MezziListePrefs): MezziListePrefs {
-  if (liste.attrezzature && liste.attrezzature.length > 0) {
-    return withoutLegacyStatiMezzo(syncFlatFromTree(liste));
+  const base = ensureTelaiTree(liste);
+  if (base.attrezzature && base.attrezzature.length > 0) {
+    return withoutLegacyStatiMezzo(syncFlatFromTree(base));
   }
-  const marche = [...liste.marche].filter((m) => m.trim());
-  const modelli = [...(liste.modelli ?? [])].filter((m) => m.trim());
+  const marche = [...base.marche].filter((m) => m.trim());
+  const modelli = [...(base.modelli ?? [])].filter((m) => m.trim());
   if (marche.length === 0 && modelli.length === 0) {
-    return withoutLegacyStatiMezzo({ ...liste, attrezzature: [] });
+    return withoutLegacyStatiMezzo({ ...base, attrezzature: [] });
   }
   if (marche.length === 0 && modelli.length > 0) {
     const attrezzature: AttrezzaturaMarca[] = [
@@ -52,7 +61,7 @@ export function migrateMezziListePrefs(liste: MezziListePrefs): MezziListePrefs 
         modelli: modelli.map((nome, j) => ({ id: `mig-mod-${slug(nome, j)}`, nome })),
       },
     ];
-    return withoutLegacyStatiMezzo(syncFlatFromTree({ ...liste, attrezzature }));
+    return withoutLegacyStatiMezzo(syncFlatFromTree({ ...base, attrezzature }));
   }
   const attrezzature: AttrezzaturaMarca[] = marche.map((nome, idx) => ({
     id: `mig-marca-${slug(nome, idx)}`,
@@ -65,7 +74,7 @@ export function migrateMezziListePrefs(liste: MezziListePrefs): MezziListePrefs 
       modelli: modelli.map((nome, j) => ({ id: `mig-mod-${slug(nome, j)}`, nome })),
     };
   }
-  return withoutLegacyStatiMezzo(syncFlatFromTree({ ...liste, attrezzature }));
+  return withoutLegacyStatiMezzo(syncFlatFromTree({ ...base, attrezzature }));
 }
 
 function syncFlatFromTree(liste: MezziListePrefs): MezziListePrefs {

@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import { CloseButton } from "@/components/design-system";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnNeutral } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
 
 type MobileFilterDrawerProps = {
   open: boolean;
@@ -37,7 +37,13 @@ export function MobileFilterDrawer({
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      const target = e.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) return;
+      }
+      onClose();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -79,7 +85,7 @@ export function MobileFilterDrawer({
               onApply?.();
               onClose();
             }}
-            className={`min-h-11 w-full justify-center rounded-lg border border-orange-400/80 bg-orange-500 px-4 text-sm font-semibold text-white shadow-sm hover:bg-orange-600 ${erpFocus}`}
+            className={`${dsBtnPrimary} min-h-11 w-full justify-center ${erpFocus}`}
           >
             {applyLabel}
           </button>

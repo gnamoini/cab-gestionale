@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { IconGestionaleLog, IconGestionaleUndo } from "@/components/gestionale/gestionale-log-ui";
+import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { DashboardSistemaLogListEmbedded } from "@/components/dashboard/dashboard-sistema-log-section";
 import { DashboardOperationalCards } from "@/components/dashboard/dashboard-operational-cards";
 import { DashboardQuickNav } from "@/components/dashboard/dashboard-quick-nav";
@@ -12,7 +12,7 @@ import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { Drawer } from "@/components/design-system";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
-import { dsPageToolbarBtn, dsStackPage } from "@/lib/ui/design-system";
+import { dsStackPage } from "@/lib/ui/design-system";
 
 export function DashboardView() {
   const router = useRouter();
@@ -36,26 +36,12 @@ export function DashboardView() {
         title="Dashboard"
         actions={
           staging ? null : (
-            <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
-              <button
-                type="button"
-                className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-                title="Nessuna azione reversibile"
-                disabled
-              >
-                <IconGestionaleUndo />
-                <span className="sr-only">Annulla ultima azione</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setLogOpen(true)}
-                className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-                title="Storico modifiche dashboard"
-              >
-                <IconGestionaleLog />
-                <span className="sr-only">Log modifiche</span>
-              </button>
-            </div>
+            <GestionalePageToolbarActions
+              canUndo={false}
+              undoDisabled
+              onOpenLog={() => setLogOpen(true)}
+              logTitle="Storico modifiche dashboard"
+            />
           )
         }
       />

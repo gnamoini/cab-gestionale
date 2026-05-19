@@ -1,6 +1,6 @@
-import { DEFAULT_STATI_LAVORAZIONI } from "@/lib/lavorazioni/constants";
+import { DEFAULT_STATI_LAVORAZIONI_DB } from "@/src/shared/selectors";
 
-const DEFAULT_ORDER_IDS: readonly string[] = DEFAULT_STATI_LAVORAZIONI.map((s) => s.id);
+const DEFAULT_ORDER_IDS: readonly string[] = DEFAULT_STATI_LAVORAZIONI_DB.map((s) => s.id);
 
 /** Ordine workflow: usa l’ordine corrente degli stati in impostazioni se fornito. */
 export function statoWorkflowOrderIndex(statoId: string, orderIds?: readonly string[]): number {

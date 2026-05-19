@@ -60,6 +60,8 @@ export function buildSchedaIngressoFieldsFromContext(
     descrizioneAnomalia: lav.noteInterne?.trim() ?? "",
     livelloCarburante: "",
     addettoAccettazione: lav.addetto?.trim() || addettiDefault,
+    richiedente: "",
+    noteIntervento: "",
   };
 }
 

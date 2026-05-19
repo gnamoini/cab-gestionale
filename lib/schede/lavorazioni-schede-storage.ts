@@ -22,6 +22,7 @@ export function saveLavorazioneSchedeStore(store: LavorazioneSchedeStore): void 
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(LAVORAZIONI_SCHEDE_STORAGE_KEY, JSON.stringify(store));
+    window.dispatchEvent(new CustomEvent("gestionale-schede-store-changed"));
   } catch {
     /* quota */
   }

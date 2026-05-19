@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { gestionaleSelectNativePlainClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { useEffect, useMemo, useState } from "react";
+import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import type { RicambioFormState } from "@/lib/magazzino/form";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-import {
+import { isValueInListOptions } from "@/lib/ui/list-select-utils";import {
   compatLabelMarcaModello,
   flattenCompatDaAttrezzature,
   migrateMezziListePrefs,
@@ -19,6 +19,7 @@ import {
   parseCompatInput,
   syncPrezzoVenditaInForm,
 } from "@/lib/magazzino/form";
+import { dsBtnPrimary } from "@/lib/ui/design-system";
 
 const inputBase =
   "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-orange-500/25 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950";
@@ -112,12 +113,6 @@ export function RicambioField({
 
 type SetForm = React.Dispatch<React.SetStateAction<RicambioFormState>>;
 
-function mergeOptions(base: string[], current: string): string[] {
-  const s = new Set(base);
-  if (current.trim()) s.add(current.trim());
-  return Array.from(s).sort((a, b) => a.localeCompare(b, "it"));
-}
-
 export function RicambioFormFields({
   form,
   setForm,
@@ -128,6 +123,7 @@ export function RicambioFormFields({
   codiceOriginaleAvvisoDuplicato,
   relaxHtmlValidation = false,
   autoFocusToken = 0,
+  listFieldForceInvalid = false,
 }: {
   form: RicambioFormState;
   setForm: SetForm;
@@ -141,27 +137,31 @@ export function RicambioFormFields({
   relaxHtmlValidation?: boolean;
   /** Incrementato a ogni apertura modal «Nuovo ricambio» per focus affidabile sul campo Marca. */
   autoFocusToken?: number;
+  /** Evidenzia errori elenco dopo submit fallito. */
+  listFieldForceInvalid?: boolean;
 }) {
   const [filtroMarcaCompat, setFiltroMarcaCompat] = useState("__tutti__");
   const prefsTree = useMemo(() => migrateMezziListePrefs(attrezzatureListe), [attrezzatureListe]);
   const marcheAttrezzatura = useMemo(() => [...prefsTree.marche], [prefsTree.marche]);
-  const lineeCompatFiltrate = useMemo(() => {
-    if (filtroMarcaCompat === "__tutti__") return flattenCompatDaAttrezzature(prefsTree);
-    return modelliVisibiliPerMarca(prefsTree, filtroMarcaCompat).map((mod) => compatLabelMarcaModello(filtroMarcaCompat, mod));
-  }, [prefsTree, filtroMarcaCompat]);
-  const marcaOpts = useMemo(() => mergeOptions(marcheOptions, form.marca), [marcheOptions, form.marca]);
-  const catOpts = useMemo(() => mergeOptions(categorieOptions, form.categoria), [categorieOptions, form.categoria]);
+  const lineeCompatGlobali = useMemo(() => flattenCompatDaAttrezzature(prefsTree), [prefsTree]);
+  const mezziCompatOptions = useMemo(() => {
+    const base = [...new Set([...mezziOptions, ...lineeCompatGlobali])];
+    return base.sort((a, b) => a.localeCompare(b, "it"));
+  }, [mezziOptions, lineeCompatGlobali]);
   const mezziSel = useMemo(() => new Set(parseCompatInput(form.compatibilitaMezzi)), [form.compatibilitaMezzi]);
   const mezziOptsSorted = useMemo(() => {
-    const base = [
-      ...new Set([...mezziOptions, ...lineeCompatFiltrate, ...parseCompatInput(form.compatibilitaMezzi)]),
-    ];
     const cmp = (a: string, b: string) => a.localeCompare(b, "it");
+    const visible =
+      filtroMarcaCompat === "__tutti__"
+        ? mezziCompatOptions
+        : modelliVisibiliPerMarca(prefsTree, filtroMarcaCompat).map((mod) =>
+            compatLabelMarcaModello(filtroMarcaCompat, mod),
+          );
     const marcaForm = form.marca.trim();
-    if (!marcaForm) return base.sort(cmp);
+    if (!marcaForm) return [...visible].sort(cmp);
     const prio: string[] = [];
     const rest: string[] = [];
-    for (const x of base) {
+    for (const x of visible) {
       const { marca } = parseCompatMarcaModello(x);
       if (marca.trim().localeCompare(marcaForm, "it", { sensitivity: "base" }) === 0) prio.push(x);
       else rest.push(x);
@@ -169,13 +169,17 @@ export function RicambioFormFields({
     prio.sort(cmp);
     rest.sort(cmp);
     return [...prio, ...rest];
-  }, [mezziOptions, lineeCompatFiltrate, form.compatibilitaMezzi, form.marca]);
+  }, [mezziCompatOptions, prefsTree, filtroMarcaCompat, form.marca]);
 
-  const marcaSelectRef = useRef<HTMLSelectElement>(null);
+  const invalidCompat = useMemo(() => {
+    const selected = parseCompatInput(form.compatibilitaMezzi);
+    return selected.filter((x) => !isValueInListOptions(x, mezziCompatOptions));
+  }, [form.compatibilitaMezzi, mezziCompatOptions]);
+
   useEffect(() => {
     if (!relaxHtmlValidation || autoFocusToken <= 0) return;
     const id = window.requestAnimationFrame(() => {
-      marcaSelectRef.current?.focus();
+      document.getElementById("magazzino-ricambio-marca")?.focus();
     });
     return () => window.cancelAnimationFrame(id);
   }, [autoFocusToken, relaxHtmlValidation]);
@@ -218,23 +222,17 @@ export function RicambioFormFields({
   return (
     <div className="flex flex-col gap-3">
       <RicambioField label="Marca *">
-        <select
-          ref={marcaSelectRef}
-          data-magazzino-ricambio-marca-focus
-          required={!relaxHtmlValidation}
+        <GestionaleListSelect
+          id="magazzino-ricambio-marca"
           value={form.marca}
-          onChange={(e) => setForm((f) => ({ ...f, marca: e.target.value }))}
-          className={gestionaleSelectNativePlainClass}
-        >
-          <option value="" disabled={!relaxHtmlValidation}>
-            Seleziona marca
-          </option>
-          {marcaOpts.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
+          onChange={(marca) => setForm((f) => ({ ...f, marca }))}
+          options={marcheOptions}
+          required
+          strictFromList
+          placeholder="Cerca o seleziona marca…"
+          forceInvalid={listFieldForceInvalid}
+          invalidMessage="Seleziona una marca esistente"
+        />
       </RicambioField>
       <RicambioField label="Codice fornitore originale *">
         <input
@@ -279,7 +277,7 @@ export function RicambioFormFields({
             <button
               type="button"
               onClick={codiceOriginaleAvvisoDuplicato.onVaiAlRicambio}
-              className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-orange-300/80 bg-orange-500 px-3 py-2 text-xs font-semibold text-white shadow-sm transition-all duration-150 hover:bg-orange-600 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400/45 focus-visible:ring-offset-1 active:scale-[0.98] sm:w-auto"
+              className={`${dsBtnPrimary} mt-3 w-full sm:w-auto`}
             >
               Vai al ricambio
             </button>
@@ -303,32 +301,25 @@ export function RicambioFormFields({
         />
       </RicambioField>
       <RicambioField label="Categoria *">
-        <select
-          required={!relaxHtmlValidation}
+        <GestionaleListSelect
           value={form.categoria}
-          onChange={(e) => setForm((f) => ({ ...f, categoria: e.target.value }))}
-          className={gestionaleSelectNativePlainClass}
-        >
-          <option value="" disabled={!relaxHtmlValidation}>
-            Seleziona categoria
-          </option>
-          {catOpts.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
-      </RicambioField>
-      <RicambioField label="Compatibilità mezzi *">
+          onChange={(categoria) => setForm((f) => ({ ...f, categoria }))}
+          options={categorieOptions}
+          required
+          strictFromList
+          placeholder="Cerca o seleziona categoria…"
+          forceInvalid={listFieldForceInvalid}
+          invalidMessage="Seleziona una categoria esistente"
+        />
+      </RicambioField>      <RicambioField label="Compatibilità mezzi *">
         <div className="mb-2">
           <span className="mb-1 block text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Marca attrezzatura</span>
           <select
             value={filtroMarcaCompat}
             onChange={(e) => setFiltroMarcaCompat(e.target.value)}
-            className={gestionaleSelectNativePlainClass}
+            className={inputBase}
             aria-label="Filtra compatibilità per marca"
-          >
-            <option value="__tutti__">Tutte le marche</option>
+          >            <option value="__tutti__">Tutte le marche</option>
             {marcheAttrezzatura.map((m) => (
               <option key={m} value={m}>
                 {m}
@@ -364,8 +355,14 @@ export function RicambioFormFields({
         <p className="mt-1 text-[11px] text-zinc-500">
           {mezziSel.size > 0 ? `${mezziSel.size} mezz${mezziSel.size === 1 ? "o" : "i"} selezionati` : "Nessuna selezione"}
         </p>
-      </RicambioField>
-      <div className="grid grid-cols-2 gap-2">
+        {(listFieldForceInvalid && mezziSel.size === 0) || invalidCompat.length > 0 ? (
+          <p className="mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]">
+            {invalidCompat.length > 0
+              ? "Seleziona solo compatibilità dall'elenco configurato."
+              : "Seleziona almeno una compatibilità mezzo."}
+          </p>
+        ) : null}
+      </RicambioField>      <div className="grid grid-cols-2 gap-2">
         <div>
           <span className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Scorta</span>
           <div className="mt-1">

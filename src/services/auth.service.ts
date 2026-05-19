@@ -27,6 +27,8 @@ async function getClient() {
 export const authService = {
   async getAll(filters?: ProfileFilters): Promise<ServiceResult<ProfileRow[]>> {
     try {
+      const allowed = await ensurePermission("manageUsers");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await getClient();
       let q = sb.from("profiles").select("*").order("nome", { ascending: true });
       if (filters?.ruolo) q = q.eq("ruolo", filters.ruolo);
@@ -41,6 +43,8 @@ export const authService = {
 
   async getById(id: string): Promise<ServiceResult<ProfileRow>> {
     try {
+      const allowed = await ensurePermission("manageUsers");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await getClient();
       const { data, error } = await sb.from("profiles").select("*").eq("id", id).maybeSingle();
       if (error) return err(error.message);

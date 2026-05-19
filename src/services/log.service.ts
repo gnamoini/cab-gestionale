@@ -73,14 +73,25 @@ export const logService = {
       if (e0) return err(e0.message);
       if (!before) return err("Voce log non trovata");
       const payload = before.payload && typeof before.payload === "object" ? (before.payload as Record<string, unknown>) : {};
-      const nextPayload = {
-        ...payload,
+      const revertPayload = {
+        reverted_log_id: id,
         reverted: true,
         reverted_at: new Date().toISOString(),
         reverted_by: input.reverted_by ?? null,
         undo_log_id: input.undo_log_id ?? null,
+        previous_payload: payload,
       };
-      const { data, error } = await c.from("log_modifiche").update({ payload: nextPayload }).eq("id", id).select("*").single();
+      const { data, error } = await c
+        .from("log_modifiche")
+        .insert({
+          entita: before.entita,
+          entita_id: before.entita_id,
+          azione: "reverted",
+          autore_id: input.reverted_by ?? null,
+          payload: revertPayload,
+        })
+        .select("*")
+        .single();
       if (error) return err(error.message);
       return success(data as LogModificaRow);
     } catch (e) {

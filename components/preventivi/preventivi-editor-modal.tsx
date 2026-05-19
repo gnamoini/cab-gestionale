@@ -10,8 +10,13 @@ import { maybeRecordLearningOnSave } from "@/lib/preventivi/trasforma-descrizion
 import type { PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
 import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 import { migrateMezziListePrefs, modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
+import { marcheFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
+import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
+import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
 import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
 
 function cloneRecord(p: PreventivoRecord): PreventivoRecord {
@@ -40,6 +45,7 @@ export function PreventiviEditorModal({
   open,
   record,
   isNew,
+  isRollbackDraft = false,
   autore,
   onClose,
   onSaved,
@@ -47,6 +53,7 @@ export function PreventiviEditorModal({
   open: boolean;
   record: PreventivoRecord | null;
   isNew: boolean;
+  isRollbackDraft?: boolean;
   autore: string;
   onClose: () => void;
   onSaved: () => void;
@@ -99,13 +106,10 @@ export function PreventiviEditorModal({
     return JSON.stringify(applyTotals(cur)) !== JSON.stringify(applyTotals(base));
   }, [draft, applyTotals]);
 
-  const marcheEditorOpts = prefsAtt.marche;
+  const marcheEditorOpts = useMemo(() => marcheFromHierarchyTree(prefsAtt, "attrezzature"), [prefsAtt]);
   const utilizzatoriEditorOpts = prefsAtt.utilizzatori;
   const cantieriEditorOpts = prefsAtt.cantieri;
-  const modelliEditor = useMemo(
-    () => modelliVisibiliPerMarca(prefsAtt, draft?.marcaAttrezzatura?.trim() || "__tutti__"),
-    [prefsAtt, draft?.marcaAttrezzatura],
-  );
+  const clientiEditorOpts = prefsAtt.clienti;
 
   function requestClose() {
     if (!isDirty) {
@@ -118,6 +122,27 @@ export function PreventiviEditorModal({
 
   function patch(p: Partial<PreventivoRecord>) {
     setDraft((prev) => (prev ? applyTotals({ ...prev, ...p }) : prev));
+  }
+
+  function applyClienteScontoRighe(clienteNome: string) {
+    const trimmed = clienteNome.trim();
+    if (!trimmed) return;
+    const defaultSconto = getScontoRicambiCliente(prefsAtt, trimmed);
+    const infer = inferEconomiciClientePreventivi(
+      trimmed,
+      loadPreventivi(),
+      draftRef.current?.id,
+      defaultSconto,
+    );
+    setDraft((prev) => {
+      if (!prev) return prev;
+      const righeRicambi = prev.righeRicambi.map((r) => {
+        if ((r.scontoPercent ?? 0) > 0) return r;
+        const sconto = infer.scontoRigaForCodice(r.codiceOE);
+        return sconto > 0 ? { ...r, scontoPercent: sconto } : r;
+      });
+      return applyTotals({ ...prev, righeRicambi });
+    });
   }
 
   function patchRiga(id: string, patchRow: Partial<PreventivoRigaRicambio>) {
@@ -217,6 +242,16 @@ export function PreventiviEditorModal({
         autore: u,
         atIso: now,
       });
+    } else if (isRollbackDraft) {
+      upsertPreventivo(next);
+      appendPreventiviChangeLog({
+        tone: "create",
+        tipoRiga: "CREAZIONE PREVENTIVO",
+        oggettoRiga: `Preventivo ${next.numero}`,
+        modificaRiga: `Generato da lavorazione ${next.lavorazioneId} con ${next.righeRicambi.length} ricambi e ${next.manodopera.oreTotali} ore manodopera. Cliente: ${next.cliente || "—"}.`,
+        autore: u,
+        atIso: now,
+      });
     } else {
       upsertPreventivo(next);
       const base = baseline;
@@ -242,17 +277,14 @@ export function PreventiviEditorModal({
   if (!open || !draft) return null;
 
   return (
-    <LavorazioniModalShell wide maxWidthClass="max-w-5xl" onRequestClose={requestClose}>
+    <LavorazioniModalShell
+      wide
+      maxWidthClass="max-w-5xl"
+      onRequestClose={requestClose}
+      title={isNew ? "Nuovo preventivo" : `Preventivo ${draft.numero}`}
+      subtitle="Il sistema propone testi e importi: tutto è modificabile prima del salvataggio."
+    >
       <div className="relative flex max-h-[min(92dvh,900px)] min-h-0 flex-1 flex-col">
-        <div className="shrink-0 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-            {isNew ? "Nuovo preventivo" : `Preventivo ${draft.numero}`}
-          </h2>
-          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-            Il sistema propone testi e importi: tutto è modificabile prima del salvataggio.
-          </p>
-        </div>
-
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar">
           <div className="space-y-6">
             <section className="rounded-xl border border-zinc-200 bg-zinc-50/40 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
@@ -278,7 +310,15 @@ export function PreventiviEditorModal({
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <label className="block text-xs sm:col-span-1">
                   <span className="text-zinc-500">Cliente</span>
-                  <input className={`${dsInput} mt-1`} value={draft.cliente} onChange={(e) => patch({ cliente: e.target.value })} />
+                  <GestionaleListSelect
+                    className="mt-1"
+                    value={draft.cliente}
+                    onChange={(v) => {
+                      patch({ cliente: v });
+                      applyClienteScontoRighe(v);
+                    }}
+                    options={clientiEditorOpts}
+                  />
                 </label>
                 <label className="block text-xs">
                   <span className="text-zinc-500">Cantiere</span>
@@ -310,15 +350,14 @@ export function PreventiviEditorModal({
                 </label>
                 <label className="block text-xs">
                   <span className="text-zinc-500">Marca attrezzatura</span>
-                  <select
-                    className={`${dsInput} mt-1`}
+                  <GestionaleListSelect
+                    className="mt-1"
                     value={draft.marcaAttrezzatura}
-                    onChange={(e) => {
-                      const marca = e.target.value;
+                    onChange={(marca) => {
                       setDraft((prev) => {
                         if (!prev) return prev;
                         const p = prefsAtt;
-                        const opts = marca.trim() ? modelliVisibiliPerMarca(p, marca) : [...p.modelli];
+                        const opts = marca.trim() ? modelliVisibiliPerMarca(p, marca) : [];
                         let modello = prev.modelloAttrezzatura;
                         if (modello.trim() && !opts.includes(modello.trim())) modello = "";
                         const macchinaRiassunto = [marca, modello].filter(Boolean).join(" ").trim();
@@ -330,25 +369,15 @@ export function PreventiviEditorModal({
                         });
                       });
                     }}
-                  >
-                    <option value="">—</option>
-                    {marcheEditorOpts.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                    {draft.marcaAttrezzatura.trim() && !marcheEditorOpts.includes(draft.marcaAttrezzatura.trim()) ? (
-                      <option value={draft.marcaAttrezzatura}>{draft.marcaAttrezzatura} (salvato)</option>
-                    ) : null}
-                  </select>
+                    options={marcheEditorOpts}
+                  />
                 </label>
                 <label className="block text-xs sm:col-span-2">
                   <span className="text-zinc-500">Modello</span>
-                  <select
-                    className={`${dsInput} mt-1`}
+                  <GestionaleListSelect
+                    className="mt-1"
                     value={draft.modelloAttrezzatura}
-                    onChange={(e) => {
-                      const modello = e.target.value;
+                    onChange={(modello) => {
                       setDraft((prev) => {
                         if (!prev) return prev;
                         const macchinaRiassunto = [prev.marcaAttrezzatura, modello].filter(Boolean).join(" ").trim();
@@ -359,17 +388,9 @@ export function PreventiviEditorModal({
                         });
                       });
                     }}
-                  >
-                    <option value="">—</option>
-                    {modelliEditor.map((m) => (
-                      <option key={m} value={m}>
-                        {m}
-                      </option>
-                    ))}
-                    {draft.modelloAttrezzatura.trim() && !modelliEditor.includes(draft.modelloAttrezzatura.trim()) ? (
-                      <option value={draft.modelloAttrezzatura}>{draft.modelloAttrezzatura} (salvato)</option>
-                    ) : null}
-                  </select>
+                    options={draft.marcaAttrezzatura.trim() ? modelliVisibiliPerMarca(prefsAtt, draft.marcaAttrezzatura.trim()) : []}
+                    disabled={!draft.marcaAttrezzatura.trim()}
+                  />
                 </label>
               </div>
             </section>

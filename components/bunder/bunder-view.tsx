@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { BunderEditorModal } from "@/components/bunder/bunder-editor-modal";
@@ -46,8 +47,6 @@ import {
   GestionaleLogEntryFourLines,
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
-  IconGestionaleLog,
-  IconGestionaleUndo,
   logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 
@@ -582,26 +581,12 @@ export function BunderView() {
       <PageHeader
         title="Bunder"
         actions={
-          <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
-            <button
-              type="button"
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="Nessuna azione reversibile"
-              disabled
-            >
-              <IconGestionaleUndo />
-              <span className="sr-only">Annulla ultima azione</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogOpen(true)}
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="Log modifiche BUNDER"
-            >
-              <IconGestionaleLog />
-              <span className="sr-only">Log modifiche</span>
-            </button>
-          </div>
+          <GestionalePageToolbarActions
+            canUndo={false}
+            undoDisabled
+            onOpenLog={() => setLogOpen(true)}
+            logTitle="Log modifiche BUNDER"
+          />
         }
       />
 

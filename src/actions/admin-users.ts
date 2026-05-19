@@ -2,7 +2,7 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
-import { APP_ROLES, normalizeRole, type AppRole } from "@/src/lib/auth/permissions";
+import { APP_ROLES, resolveRole, hasPermission, type AppRole } from "@/lib/auth/rbac";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
@@ -44,7 +44,7 @@ function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
-async function assertAdminCaller(): Promise<
+export async function assertAdminCaller(): Promise<
   | { ok: true; callerId: string; callerName: string; serviceKey: string; url: string }
   | { ok: false; message: string }
 > {
@@ -69,7 +69,7 @@ async function assertAdminCaller(): Promise<
 
   const { data: prof, error: profErr } = await sbUser.from("profiles").select("nome, ruolo").eq("id", caller.id).maybeSingle();
   if (profErr) return { ok: false, message: profErr.message };
-  if (normalizeRole(prof?.ruolo) !== "admin") {
+  if (!hasPermission(prof?.ruolo, "manageUsers")) {
     return { ok: false, message: "Operazione riservata agli amministratori." };
   }
 
@@ -129,7 +129,7 @@ function userRowFrom(profile: ProfileRow | undefined, authUser?: { id: string; e
     id: profile?.id ?? authUser?.id ?? "",
     nome,
     email: authUser?.email ?? "",
-    ruolo: normalizeRole(profile?.ruolo),
+    ruolo: resolveRole(profile?.ruolo),
     createdAt: authUser?.created_at ?? profile?.created_at ?? null,
     lastSignInAt: authUser?.last_sign_in_at ?? null,
   };
@@ -143,7 +143,7 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
   const nome = input.nome?.trim() ?? "";
   const email = input.email?.trim().toLowerCase() ?? "";
   const password = input.password ?? "";
-  const ruolo = normalizeRole(input.ruolo);
+  const ruolo = resolveRole(input.ruolo);
 
   if (!nome) return { ok: false, message: "Il nome è obbligatorio." };
   if (!email || !isValidEmail(email)) return { ok: false, message: "Email non valida." };
@@ -236,7 +236,7 @@ export async function listUsersByAdminAction(): Promise<ListUsersByAdminResult> 
 
 export async function updateUserRoleByAdminAction(input: { userId: string; role: AppRole }): Promise<UpdateUserRoleByAdminResult> {
   const userId = input.userId?.trim();
-  const nextRole = normalizeRole(input.role);
+  const nextRole = resolveRole(input.role);
   if (!userId) return { ok: false, message: "Utente non valido." };
   if (!APP_ROLES.includes(nextRole)) return { ok: false, message: "Ruolo non valido." };
 
@@ -248,7 +248,7 @@ export async function updateUserRoleByAdminAction(input: { userId: string; role:
   if (beforeErr) return { ok: false, message: beforeErr.message };
   if (!before) return { ok: false, message: "Profilo non trovato." };
   const authBefore = await admin.auth.admin.getUserById(userId).catch(() => null);
-  const previousRole = normalizeRole((before as ProfileRow).ruolo);
+  const previousRole = resolveRole((before as ProfileRow).ruolo);
   if (previousRole === nextRole) return { ok: true, user: userRowFrom(before as ProfileRow) };
 
   const { data: updated, error: updateErr } = await admin

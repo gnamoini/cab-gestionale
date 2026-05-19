@@ -10,8 +10,9 @@ export const GESTIONALE_PERMISSION_MODULES = [
 
 export type GestionalePermissionModule = (typeof GESTIONALE_PERMISSION_MODULES)[number];
 
-/** Percorsi nav → modulo permessi (null = solo fallback ruolo, tipicamente read+ per interni). */
+/** Percorsi nav → modulo permessi (null = sezione senza modulo ERP dedicato). */
 export function gestionaleNavHrefToModule(href: string): GestionalePermissionModule | null {
+  if (href.startsWith("/lavorazioni-clienti")) return null;
   if (href.startsWith("/magazzino")) return "magazzino";
   if (href.startsWith("/preventivi")) return "preventivi";
   if (href.startsWith("/lavorazioni")) return "lavorazioni";

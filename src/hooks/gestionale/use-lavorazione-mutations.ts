@@ -37,6 +37,18 @@ export function useLavorazioneRemoveMutation() {
   });
 }
 
+export function useLavorazioneRestoreMutation() {
+  const queryClient = useQueryClient();
+  return useServiceMutation(
+    ({ id, stato }: { id: string; stato: LavorazioneRow["stato"] }) => lavorazioniService.restore(id, stato),
+    {
+      onSettled: async () => {
+        await invalidateAfterLavorazioneMutations(queryClient);
+      },
+    },
+  );
+}
+
 export type LavorazioneUpdatePayload = { id: string; data: LavorazioneUpdate };
 
 /** Tipo inferito per `onSuccess` UI (creazione). */

@@ -16,14 +16,16 @@ import {
   statiLavorazioniRapidiOptions,
 } from "@/src/shared/selectors";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
+import type { CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
 import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
+import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
+import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 
 export type GlobalOptionsSlice = {
   isLoading: boolean;
   isError: boolean;
   error: Error | null;
-  source: "app_settings" | "unavailable";
+  source: "app_settings" | "fallback" | "unavailable";
   lavorazioni: {
     stati: StatoLavorazioneConfig[];
     statiInCorso: StatoLavorazioneConfig[];
@@ -40,28 +42,39 @@ export type GlobalOptionsSlice = {
   preventiviDefaults: SistemaPreventiviDefaults;
 };
 
-function emptySlice(): GlobalOptionsSlice {
-  const mezziListe = createMezziListePrefsDefault();
+function sliceFromResolved(resolved: CabAppSettingsResolved, source: GlobalOptionsSlice["source"]): GlobalOptionsSlice {
+  const stati = buildStatiLavorazioniOptions(resolved.lavorazioni.stati);
+  const statiInCorso = statiLavorazioniInCorsoOptions(stati);
+  const statiChiusi = statiLavorazioniChiusiOptions(stati);
+  const statiRapidi = statiLavorazioniRapidiOptions(stati);
+  const mezziListe = migrateMezziListePrefs(resolved.mezziListe);
+
   return {
-    isLoading: true,
+    isLoading: false,
     isError: false,
     error: null,
-    source: "unavailable",
+    source,
     lavorazioni: {
-      stati: [],
-      statiInCorso: [],
-      statiChiusi: [],
-      statiRapidi: [],
-      addetti: [],
-      addettoColors: {},
-      prioritaColors: {},
-      prioritaDb: [],
-      prioritaLegacy: [],
+      stati,
+      statiInCorso,
+      statiChiusi,
+      statiRapidi,
+      addetti: resolved.lavorazioni.addetti,
+      addettoColors: resolved.lavorazioni.addettoColors,
+      prioritaColors: resolved.lavorazioni.prioritaColors,
+      prioritaDb: resolved.lavorazioni.prioritaDb.length ? resolved.lavorazioni.prioritaDb : DEFAULT_PRIORITA_LAVORAZIONI_DB,
+      prioritaLegacy: resolved.lavorazioni.prioritaDb.filter(
+        (p): p is PrioritaLav => p === "urgente" || p === "alta" || p === "media" || p === "bassa",
+      ),
     },
     mezziListe,
-    magazzinoMaster: { marche: [], categorie: [], mezziCompatibili: [], fornitori: [] },
-    preventiviDefaults: { costoOrarioDefault: 48 },
+    magazzinoMaster: resolved.magazzinoMaster,
+    preventiviDefaults: resolved.preventiviDefaults,
   };
+}
+
+function emptySlice(): GlobalOptionsSlice {
+  return sliceFromResolved(resolveCabAppSettingsFallback(), "fallback");
 }
 
 /**
@@ -74,65 +87,37 @@ export function useGlobalOptions(options?: { enabled?: boolean; debugTag?: strin
   const tag = options?.debugTag ?? "useGlobalOptions";
 
   return useMemo(() => {
-    if (!enabled) return { ...emptySlice(), isLoading: false, source: "unavailable" };
+    if (!enabled) return { ...emptySlice(), source: "unavailable" as const };
+
+    const fallbackResolved = resolved ?? resolveCabAppSettingsFallback();
 
     if (q.isPending && !resolved) {
-      debugSelectOptions(tag, { status: "loading", source: "app_settings" });
-      return { ...emptySlice(), isLoading: true };
+      debugSelectOptions(tag, { status: "loading", source: "fallback" });
+      return { ...sliceFromResolved(fallbackResolved, "fallback"), isLoading: true };
     }
 
     if (q.isError && !resolved) {
-      debugSelectOptions(tag, { status: "error", message: q.error?.message });
+      debugSelectOptions(tag, { status: "error", message: q.error?.message, source: "fallback" });
       return {
-        ...emptySlice(),
+        ...sliceFromResolved(fallbackResolved, "fallback"),
         isLoading: false,
         isError: true,
         error: q.error ?? new Error("Impostazioni non disponibili"),
       };
     }
 
-    if (!resolved) {
-      debugSelectOptions(tag, { status: "empty", source: "unavailable" });
-      return { ...emptySlice(), isLoading: false, source: "unavailable" };
-    }
-
-    const stati = buildStatiLavorazioniOptions(resolved.lavorazioni.stati);
-    const statiInCorso = statiLavorazioniInCorsoOptions(stati);
-    const statiChiusi = statiLavorazioniChiusiOptions(stati);
-    const statiRapidi = statiLavorazioniRapidiOptions(stati);
-    const mezziListe = migrateMezziListePrefs(resolved.mezziListe);
-
     debugSelectOptions(tag, {
       status: "ready",
-      source: "app_settings",
-      statiCount: stati.length,
-      addettiCount: resolved.lavorazioni.addetti.length,
-      clientiCount: mezziListe.clienti.length,
-      utilizzatoriCount: mezziListe.utilizzatori.length,
-      cantieriCount: mezziListe.cantieri.length,
-      marcheCount: mezziListe.marche.length,
+      source: resolved ? "app_settings" : "fallback",
+      statiCount: fallbackResolved.lavorazioni.stati.length,
+      addettiCount: fallbackResolved.lavorazioni.addetti.length,
+      clientiCount: fallbackResolved.mezziListe.clienti.length,
+      utilizzatoriCount: fallbackResolved.mezziListe.utilizzatori.length,
+      cantieriCount: fallbackResolved.mezziListe.cantieri.length,
+      marcheCount: fallbackResolved.mezziListe.marche.length,
     });
 
-    return {
-      isLoading: false,
-      isError: false,
-      error: null,
-      source: "app_settings",
-      lavorazioni: {
-        stati,
-        statiInCorso,
-        statiChiusi,
-        statiRapidi,
-        addetti: resolved.lavorazioni.addetti,
-        addettoColors: resolved.lavorazioni.addettoColors,
-        prioritaColors: resolved.lavorazioni.prioritaColors,
-        prioritaDb: resolved.lavorazioni.prioritaDb.length ? resolved.lavorazioni.prioritaDb : DEFAULT_PRIORITA_LAVORAZIONI_DB,
-        prioritaLegacy: resolved.lavorazioni.prioritaDb.filter((p): p is PrioritaLav => p === "urgente" || p === "alta" || p === "media" || p === "bassa"),
-      },
-      mezziListe,
-      magazzinoMaster: resolved.magazzinoMaster,
-      preventiviDefaults: resolved.preventiviDefaults,
-    };
+    return sliceFromResolved(fallbackResolved, resolved ? "app_settings" : "fallback");
   }, [enabled, q.isPending, q.isError, q.error, resolved, tag]);
 }
 
@@ -164,6 +149,16 @@ export const useUtilizzatoriOptions = () => {
     () => ({
       ...g,
       options: g.mezziListe.utilizzatori,
+    }),
+    [g],
+  );
+};
+export const useTipiTelaioOptions = () => {
+  const g = useGlobalOptions({ debugTag: "useTipiTelaioOptions" });
+  return useMemo(
+    () => ({
+      ...g,
+      options: g.mezziListe.tipiTelaio ?? [],
     }),
     [g],
   );

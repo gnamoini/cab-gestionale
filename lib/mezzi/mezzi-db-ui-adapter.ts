@@ -2,6 +2,7 @@ import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
 import type { DocumentoGestionale, DocumentoTipoFile } from "@/lib/types/gestionale";
 import { imageLogModificaRiga, isImageLogAction, type MezziLogEntryLike } from "@/lib/gestionale-log/view-model";
 import { diffMezzoChanges } from "@/lib/mezzi/mezzi-helpers";
+import { parseMezzoMeta } from "@/lib/mezzi/mezzi-meta";
 import type { DocumentoRow, LogModificaRow, MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -11,8 +12,14 @@ function str(v: string | null | undefined, fallback = "—"): string {
   return t && t.length > 0 ? t : fallback;
 }
 
+function matricolaUi(v: string | null | undefined): string {
+  const t = v?.trim();
+  return t && t.length > 0 ? t : "Non assegnata";
+}
+
 /** Campi UI non presenti su DB: valori di default stabili. */
 export function toMezzoUI(row: MezzoRow): MezzoGestito {
+  const meta = parseMezzoMeta(row.meta);
   return {
     id: row.id,
     cliente: row.cliente,
@@ -20,11 +27,16 @@ export function toMezzoUI(row: MezzoRow): MezzoGestito {
     marca: row.marca,
     modello: row.modello,
     targa: str(row.targa, "—"),
-    matricola: row.matricola,
+    matricola: matricolaUi(row.matricola),
     numeroScuderia: row.numero_scuderia?.trim() || undefined,
-    tipoAttrezzatura: "—",
+    tipoAttrezzatura: str(row.tipo_attrezzatura, "—"),
+    cantiere: meta.cantiere,
+    tipoTelaio: meta.tipoTelaio,
+    marcaTelaio: meta.marcaTelaio,
+    modelloTelaio: meta.modelloTelaio,
     anno: row.anno ?? new Date().getFullYear(),
-    oreKm: 0,
+    oreKm: meta.oreLavoro ?? 0,
+    km: meta.km,
     statoAttuale: "Operativo",
     dataUltimaUscita: row.updated_at?.slice(0, 10) || "—",
     note: "",
@@ -157,8 +169,6 @@ function labelMezzoFromRow(r: MezzoRow): string {
   if (t) return t;
   return r.id.length >= 8 ? r.id.slice(0, 8) : r.id;
 }
-
-/** Voce log anagrafica mezzi da `log_modifiche` (payload audit CREATE/UPDATE/DELETE). */
 export function logModificaRowToMezziHubLogEntry(row: LogModificaRow): MezziHubLogEntry {
   const p = row.payload as { snapshot?: unknown; before?: unknown; after?: unknown } | null | undefined;
   let mezzo = row.entita_id.length >= 8 ? row.entita_id.slice(0, 8) : row.entita_id;

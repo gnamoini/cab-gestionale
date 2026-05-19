@@ -27,7 +27,7 @@ alter table public.app_settings enable row level security;
 drop policy if exists app_settings_select_auth on public.app_settings;
 create policy app_settings_select_auth
 on public.app_settings for select to authenticated
-using (public.current_profile_role() in ('admin', 'tecnico', 'viewer'));
+using (public.current_profile_role() in ('admin', 'operatore', 'sola_lettura', 'magazziniere', 'commerciale'));
 
 drop policy if exists app_settings_insert_admin on public.app_settings;
 create policy app_settings_insert_admin

@@ -14,8 +14,14 @@ export type MezzoGestito = {
   /** N. scuderia / postazione flotta (opzionale, usato in ricerca e identificazione). */
   numeroScuderia?: string;
   tipoAttrezzatura: string;
+  /** Da meta impostazioni / anagrafica estesa. */
+  cantiere?: string;
+  tipoTelaio?: string;
+  marcaTelaio?: string;
+  modelloTelaio?: string;
   anno: number;
   oreKm: number;
+  km?: number;
   statoAttuale: string;
   dataUltimaUscita: string;
   note: string;

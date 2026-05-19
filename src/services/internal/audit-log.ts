@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@/src/lib/supabase/browser-client";
+import { getOrCreateUndoSessionId } from "@/lib/gestionale-log/undo-session";
 
-export type AuditAzione = "CREATE" | "UPDATE" | "DELETE";
+export type AuditAzione = "CREATE" | "UPDATE" | "DELETE" | "RESTORE";
 
 export type AuditPayload = unknown;
 
@@ -10,6 +11,19 @@ export function auditSnapshot(row: unknown): AuditPayload {
 
 export function auditDiff(before: unknown, after: unknown): AuditPayload {
   return { before, after };
+}
+
+function enrichPayloadWithUndoSession(payload: AuditPayload | undefined): AuditPayload | null {
+  if (typeof window === "undefined") return payload ?? null;
+  const sessionId = getOrCreateUndoSessionId();
+  if (!sessionId) return payload ?? null;
+  const base =
+    payload != null && typeof payload === "object" && !Array.isArray(payload)
+      ? { ...(payload as Record<string, unknown>) }
+      : payload != null
+        ? { data: payload }
+        : {};
+  return { ...base, undo_session_id: sessionId };
 }
 
 export async function writeModificaLog(
@@ -34,6 +48,6 @@ export async function writeModificaLog(
     entita_id: input.entita_id,
     azione: input.azione,
     autore_id: autore,
-    payload: input.payload ?? null,
+    payload: enrichPayloadWithUndoSession(input.payload),
   });
 }

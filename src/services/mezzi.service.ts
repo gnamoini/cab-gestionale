@@ -1,7 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
+import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow } from "@/src/types/supabase-tables";
@@ -28,9 +28,36 @@ async function sb() {
   return getBrowserSupabase();
 }
 
+async function countMezzoDependencies(id: string): Promise<ServiceResult<MezzoDependencies>> {
+  try {
+    const c = await sb();
+    const [lavRes, pvRes] = await Promise.all([
+      c.from("lavorazioni").select("*", { count: "exact", head: true }).eq("mezzo_id", id),
+      c.from("preventivi").select("*", { count: "exact", head: true }).eq("mezzo_id", id),
+    ]);
+    if (lavRes.error) return err(lavRes.error.message);
+    if (pvRes.error) return err(pvRes.error.message);
+    return success({
+      lavorazioni: lavRes.count ?? 0,
+      preventivi: pvRes.count ?? 0,
+    });
+  } catch (e) {
+    return serviceFailFromError(e);
+  }
+}
+
+export type MezzoDependencies = {
+  lavorazioni: number;
+  preventivi: number;
+};
+
 export const mezziService = {
+  countDependencies: countMezzoDependencies,
+
   async getAll(filters?: MezzoFilters): Promise<ServiceResult<MezzoRow[]>> {
     try {
+      const allowed = await ensureSectionRead("mezzi");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       let q = c.from("mezzi").select("*").order("created_at", { ascending: false });
       if (filters?.cliente?.trim()) q = q.ilike("cliente", `%${filters.cliente.trim()}%`);
@@ -54,6 +81,8 @@ export const mezziService = {
 
   async getById(id: string): Promise<ServiceResult<MezzoRow>> {
     try {
+      const allowed = await ensureSectionRead("mezzi");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.from("mezzi").select("*").eq("id", id).maybeSingle();
       if (error) return err(error.message);
@@ -103,9 +132,16 @@ export const mezziService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensurePermission("deleteRecords");
+      const allowed = await ensurePermission("editVehicles");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
+      const deps = await countMezzoDependencies(id);
+      if (!deps.success || !deps.data) return err(deps.error ?? "Verifica dipendenze fallita.");
+      if (deps.data.lavorazioni > 0 || deps.data.preventivi > 0) {
+        return err(
+          `Impossibile eliminare: collegati ${deps.data.lavorazioni} lavorazioni e ${deps.data.preventivi} preventivi.`,
+        );
+      }
       const { data: existing, error: e0 } = await c.from("mezzi").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       if (existing) {

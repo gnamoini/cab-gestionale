@@ -1,8 +1,25 @@
 "use client";
 
-import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import {
+  IMAGE_STORAGE_SCOPES,
+  STORAGE_LIMITS,
+  type ImageStorageScope,
+} from "@/src/lib/storage/storage-config";
+import {
+  buildImageStoragePath,
+  imageStoragePrefix,
+  normalizeStorageObjectPath,
+  sanitizeStorageFileName,
+} from "@/src/lib/storage/storage-paths";
+import {
+  STORAGE_BUCKETS,
+  storageCreateSignedUrl,
+  storageList,
+  storageRemove,
+  storageUpload,
+} from "@/src/services/storage.service";
 
-export type ImageScope = "mezzi" | "magazzino" | "lavorazioni";
+export type ImageScope = ImageStorageScope;
 
 export type StoredImage = {
   name: string;
@@ -11,23 +28,14 @@ export type StoredImage = {
   createdAt: string | null;
 };
 
-const BUCKET = "images";
-export const MAX_IMAGES_PER_RECORD = 10;
+export const MAX_IMAGES_PER_RECORD = STORAGE_LIMITS.imagesMaxPerRecord;
 const MAX_SIDE = 1600;
 const JPEG_QUALITY = 0.82;
 
-function safeFileName(name: string): string {
-  const base = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9._-]+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
-  return base || "image.jpg";
-}
+export { IMAGE_STORAGE_SCOPES };
 
 export function imagePrefix(scope: ImageScope, recordId: string): string {
-  return `${scope}/${recordId}`;
+  return imageStoragePrefix(scope, recordId);
 }
 
 async function compressImage(file: File): Promise<Blob> {
@@ -48,23 +56,20 @@ async function compressImage(file: File): Promise<Blob> {
 }
 
 export async function listStoredImages(scope: ImageScope, recordId: string): Promise<StoredImage[]> {
-  const supabase = getBrowserSupabase();
-  const prefix = imagePrefix(scope, recordId);
-  const { data, error } = await supabase.storage.from(BUCKET).list(prefix, {
+  const prefix = imageStoragePrefix(scope, recordId);
+  const files = await storageList(STORAGE_BUCKETS.images, prefix, {
     limit: 20,
     sortBy: { column: "created_at", order: "desc" },
   });
-  if (error) throw new Error(error.message);
-  const files = (data ?? []).filter((item) => item.name && item.name !== ".emptyFolderPlaceholder");
+
   const signed = await Promise.all(
     files.map(async (item) => {
-      const path = `${prefix}/${item.name}`;
-      const { data: urlData, error: urlError } = await supabase.storage.from(BUCKET).createSignedUrl(path, 60 * 60);
-      if (urlError) throw new Error(urlError.message);
+      const path = normalizeStorageObjectPath(`${prefix}/${item.name}`);
+      const signedUrl = await storageCreateSignedUrl(STORAGE_BUCKETS.images, path, 60 * 60);
       return {
         name: item.name,
         path,
-        signedUrl: urlData.signedUrl,
+        signedUrl,
         createdAt: item.created_at ?? null,
       };
     }),
@@ -73,24 +78,20 @@ export async function listStoredImages(scope: ImageScope, recordId: string): Pro
 }
 
 export async function uploadStoredImage(scope: ImageScope, recordId: string, file: File): Promise<{ name: string; path: string }> {
-  const supabase = getBrowserSupabase();
   const existing = await listStoredImages(scope, recordId);
   if (existing.length >= MAX_IMAGES_PER_RECORD) {
     throw new Error(`Limite massimo ${MAX_IMAGES_PER_RECORD} immagini raggiunto`);
   }
   const body = await compressImage(file);
-  const name = `${Date.now()}-${safeFileName(file.name).replace(/\.[^.]+$/, "")}.jpg`;
-  const path = `${imagePrefix(scope, recordId)}/${name}`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, body, {
+  const name = `${Date.now()}-${sanitizeStorageFileName(file.name, "image").replace(/\.[^.]+$/, "")}.jpg`;
+  const path = buildImageStoragePath(scope, recordId, name);
+  await storageUpload(STORAGE_BUCKETS.images, path, body, {
     contentType: "image/jpeg",
     upsert: false,
   });
-  if (error) throw new Error(error.message);
   return { name, path };
 }
 
 export async function deleteStoredImage(path: string): Promise<void> {
-  const supabase = getBrowserSupabase();
-  const { error } = await supabase.storage.from(BUCKET).remove([path]);
-  if (error) throw new Error(error.message);
+  await storageRemove(STORAGE_BUCKETS.images, [path]);
 }

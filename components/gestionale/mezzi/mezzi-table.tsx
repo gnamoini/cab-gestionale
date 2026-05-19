@@ -8,6 +8,7 @@ import {
   dsTable,
   dsTableActionBtnInfo,
   dsTableActionBtnSecondary,
+  dsTableActionBtnDanger,
   dsTableActionGlyph,
   dsTableActionsGroup,
   dsTableActionsGroupStart,
@@ -61,7 +62,17 @@ function IconClipboardList({ className = dsTableActionGlyph }: { className?: str
 
 function cellIdentValue(raw: string | undefined) {
   const t = raw?.trim();
-  return t && t !== "—" ? t : "—";
+  if (!t || t === "—") return "—";
+  if (t === "Non assegnata") return "Non assegnata";
+  return t;
+}
+
+function IconTrash({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
 }
 
 function MezziSortBtn({
@@ -141,6 +152,7 @@ export type MezziTableProps = {
   onSort: (k: MezziSortKey) => void;
   flashRowId: string | null;
   onHub: (m: MezzoGestito) => void;
+  onDelete?: (m: MezzoGestito) => void;
 };
 
 function MezzoRowInner({
@@ -149,12 +161,14 @@ function MezzoRowInner({
   inOff: _inOff,
   flash,
   onHub,
+  onDelete,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
   inOff: boolean;
   flash: boolean;
   onHub: (m: MezzoGestito) => void;
+  onDelete?: (m: MezzoGestito) => void;
 }) {
   const ultima = ultimaLavorazioneLabel(interventi);
   void _inOff;
@@ -214,6 +228,11 @@ function MezzoRowInner({
           >
             <IconClipboardList />
           </Link>
+          {onDelete && !m.hubSynthetic ? (
+            <button type="button" className={dsTableActionBtnDanger} title="Elimina mezzo" aria-label="Elimina mezzo" onClick={() => onDelete(m)}>
+              <IconTrash />
+            </button>
+          ) : null}
         </div>
       </td>
     </tr>
@@ -226,12 +245,14 @@ function MezzoMobileCard({
   inOff: _inOff,
   flash,
   onHub,
+  onDelete,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
   inOff: boolean;
   flash: boolean;
   onHub: (m: MezzoGestito) => void;
+  onDelete?: (m: MezzoGestito) => void;
 }) {
   const ultima = ultimaLavorazioneLabel(interventi);
   void _inOff;
@@ -291,6 +312,11 @@ function MezzoMobileCard({
         <Link href={hrefPreventiviPerMezzo(m)} className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`} title="Preventivi" aria-label="Preventivi">
           <IconClipboardList />
         </Link>
+        {onDelete && !m.hubSynthetic ? (
+          <button type="button" className={dsTableActionBtnDanger} title="Elimina mezzo" aria-label="Elimina mezzo" onClick={() => onDelete(m)}>
+            <IconTrash />
+          </button>
+        ) : null}
       </div>
     </div>
   );
@@ -298,7 +324,7 @@ function MezzoMobileCard({
 
 const MezzoRow = memo(MezzoRowInner);
 
-export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, sortPhase, onSort, flashRowId, onHub }: MezziTableProps) {
+export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, sortPhase, onSort, flashRowId, onHub, onDelete }: MezziTableProps) {
   return (
     <>
       <div className={`hidden ${dsTableWrap} ${dsScrollbar} md:block`}>
@@ -343,6 +369,7 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
                   inOff={inOfficina(m)}
                   flash={flashRowId === m.id}
                   onHub={onHub}
+                  onDelete={onDelete}
                 />
               ))
             )}
@@ -364,6 +391,7 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
               inOff={inOfficina(m)}
               flash={flashRowId === m.id}
               onHub={onHub}
+              onDelete={onDelete}
             />
           ))
         )}

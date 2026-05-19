@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { PreventiviEditorModal } from "@/components/preventivi/preventivi-editor-modal";
@@ -19,12 +20,13 @@ import { getMagazzinoReportSnapshot, subscribeMagazzinoReportSync } from "@/lib/
 import { getMezziReportSnapshot, subscribeMezziReportSync } from "@/lib/mezzi/mezzi-report-sync";
 import { preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-hub-merge";
 import { modelliVisibiliPerMarca, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+import { marcheFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { buildNewPreventivoFromLavorazioneContext } from "@/lib/preventivi/generate-preventivo-from-lavorazione";
 import { buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
 import { Q_PREVENTIVI_LAV, Q_PREVENTIVI_LAV_ORIG, Q_PREVENTIVI_MEZZO, Q_PREVENTIVI_NUOVO, Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
-import { readAndClearPendingPreventivoPayload } from "@/lib/preventivi/preventivi-session-bridge";
+import { readAndClearPendingPreventivoPayload, markEphemeralPreventivoDraft, clearEphemeralPreventivoDraft, readEphemeralPreventivoDraftId } from "@/lib/preventivi/preventivi-session-bridge";
 import {
   appendPreventiviChangeLog,
   loadPreventiviChangeLog,
@@ -61,7 +63,6 @@ import {
 } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import { mergeUniqueSortedIt } from "@/lib/ui/merge-filter-options";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { erpBtnNuovaLavorazione, erpFocus, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { Drawer } from "@/components/design-system";
@@ -70,8 +71,6 @@ import {
   GestionaleLogEntryFourLines,
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
-  IconGestionaleLog,
-  IconGestionaleUndo,
   logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 
@@ -194,10 +193,16 @@ export function PreventiviView() {
   const [magSnap, setMagSnap] = useState(() => getMagazzinoReportSnapshot());
   const [sortColumn, setSortColumn] = useState<PreventivoSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<PreventivoSortPhase>("natural");
-  const [editor, setEditor] = useState<{ open: boolean; record: PreventivoRecord | null; isNew: boolean }>({
+  const [editor, setEditor] = useState<{
+    open: boolean;
+    record: PreventivoRecord | null;
+    isNew: boolean;
+    isRollbackDraft: boolean;
+  }>({
     open: false,
     record: null,
     isNew: false,
+    isRollbackDraft: false,
   });
   const [searchPreventivi, setSearchPreventivi] = useState("");
   const [filtriEspansi, setFiltriEspansi] = useState(false);
@@ -215,6 +220,8 @@ export function PreventiviView() {
   const [importoMinStr, setImportoMinStr] = useState("");
   const [importoMaxStr, setImportoMaxStr] = useState("");
   const pendingHandledRef = useRef(false);
+  const rollbackDraftIdRef = useRef<string | null>(null);
+  const draftConfirmedRef = useRef(false);
   const [logOpen, setLogOpen] = useState(false);
   const [logEntries, setLogEntries] = useState<PreventiviLogStored[]>(() => loadPreventiviChangeLog());
 
@@ -263,6 +270,36 @@ export function PreventiviView() {
     return subscribeMagazzinoReportSync(() => setMagSnap(getMagazzinoReportSnapshot()));
   }, []);
 
+  function closeEditor() {
+    const rollbackId = rollbackDraftIdRef.current;
+    if (rollbackId && !draftConfirmedRef.current) {
+      deletePreventivo(rollbackId);
+      reload();
+    }
+    rollbackDraftIdRef.current = null;
+    draftConfirmedRef.current = false;
+    clearEphemeralPreventivoDraft();
+    setEditor({ open: false, record: null, isNew: false, isRollbackDraft: false });
+  }
+
+  function onEditorSaved() {
+    draftConfirmedRef.current = true;
+    rollbackDraftIdRef.current = null;
+    clearEphemeralPreventivoDraft();
+    reload();
+  }
+
+  useEffect(() => {
+    const orphanId = readEphemeralPreventivoDraftId();
+    if (!orphanId) return;
+    const openId = searchParams.get(Q_PREVENTIVI_OPEN)?.trim();
+    const nuovo = searchParams.get(Q_PREVENTIVI_NUOVO);
+    if (openId === orphanId || nuovo === "1") return;
+    deletePreventivo(orphanId);
+    clearEphemeralPreventivoDraft();
+    reload();
+  }, [searchParams, reload]);
+
   const filterLavId = searchParams.get(Q_PREVENTIVI_LAV)?.trim() || "";
   const filterOrigRaw = searchParams.get(Q_PREVENTIVI_LAV_ORIG)?.trim() || "";
   const filterMezzoRaw = searchParams.get(Q_PREVENTIVI_MEZZO)?.trim() || "";
@@ -275,47 +312,14 @@ export function PreventiviView() {
     [settingsPayload?.resolved?.mezziListe],
   );
 
-  const clientiFromRows = useMemo(() => {
-    const s = new Set<string>();
-    for (const r of rows) {
-      const c = r.cliente.trim();
-      if (c) s.add(c);
-    }
-    return [...s];
-  }, [rows]);
-
   const clientiPreventiviOpts = useMemo(
-    () => mergeUniqueSortedIt(listePrefs.clienti, clientiFromRows),
-    [listePrefs.clienti, clientiFromRows],
+    () => [...listePrefs.clienti].sort((a, b) => a.localeCompare(b, "it")),
+    [listePrefs.clienti],
   );
 
-  const marcheFromRows = useMemo(() => {
-    const s = new Set<string>();
-    for (const r of rows) {
-      const c = r.marcaAttrezzatura.trim();
-      if (c) s.add(c);
-    }
-    return [...s];
-  }, [rows]);
+  const marchePvOpts = useMemo(() => marcheFromHierarchyTree(listePrefs, "attrezzature"), [listePrefs]);
 
-  const marchePvOpts = useMemo(
-    () => mergeUniqueSortedIt(listePrefs.marche, marcheFromRows),
-    [listePrefs.marche, marcheFromRows],
-  );
-
-  const modelliFromRows = useMemo(() => {
-    const s = new Set<string>();
-    for (const r of rows) {
-      const c = r.modelloAttrezzatura.trim();
-      if (c) s.add(c);
-    }
-    return [...s];
-  }, [rows]);
-
-  const modelliPvOpts = useMemo(
-    () => mergeUniqueSortedIt(listePrefs.modelli ?? [], modelliFromRows),
-    [listePrefs.modelli, modelliFromRows],
-  );
+  const modelliPvOpts = useMemo(() => modelliVisibiliPerMarca(listePrefs, "__tutti__"), [listePrefs]);
 
   const anniPreventiviOpts = useMemo(() => {
     const s = new Set<number>();
@@ -328,16 +332,8 @@ export function PreventiviView() {
 
   const modelliPvOptsByMarca = useMemo(() => {
     if (filtroMarcaPrev === "__tutti__") return modelliPvOpts;
-    const mar = filtroMarcaPrev;
-    const fromRows: string[] = [];
-    for (const r of rows) {
-      if (r.marcaAttrezzatura.trim() === mar) {
-        const c = r.modelloAttrezzatura.trim();
-        if (c) fromRows.push(c);
-      }
-    }
-    return mergeUniqueSortedIt(modelliVisibiliPerMarca(listePrefs, filtroMarcaPrev), fromRows);
-  }, [rows, filtroMarcaPrev, modelliPvOpts, listePrefs]);
+    return modelliVisibiliPerMarca(listePrefs, filtroMarcaPrev);
+  }, [filtroMarcaPrev, modelliPvOpts, listePrefs]);
 
   const filteredRows = useMemo(() => {
     let list = rows;
@@ -593,19 +589,13 @@ export function PreventiviView() {
       magazzino: magSnap,
       autore: autore.trim() || "Operatore",
     });
-    const u = autore.trim() || "Operatore";
     appendPreventivo(rec);
-    appendPreventiviChangeLog({
-      tone: "create",
-      tipoRiga: "CREAZIONE PREVENTIVO AUTOMATICA",
-      oggettoRiga: `Preventivo ${rec.numero}`,
-      modificaRiga: `Generato da lavorazione ${rec.lavorazioneId} con ${rec.righeRicambi.length} ricambi e ${rec.manodopera.oreTotali} ore manodopera. Cliente: ${rec.cliente || "—"}.`,
-      autore: u,
-      atIso: rec.dataCreazione,
-    });
+    markEphemeralPreventivoDraft(rec.id);
+    rollbackDraftIdRef.current = rec.id;
+    draftConfirmedRef.current = false;
     window.setTimeout(() => {
       setRows((prev) => [rec, ...prev.filter((p) => p.id !== rec.id)]);
-      setEditor({ open: true, record: rec, isNew: false });
+      setEditor({ open: true, record: rec, isNew: false, isRollbackDraft: true });
     }, 0);
     const sp = new URLSearchParams(searchParams.toString());
     sp.delete(Q_PREVENTIVI_NUOVO);
@@ -619,7 +609,7 @@ export function PreventiviView() {
     if (!openId) return;
     const rec = rows.find((r) => r.id === openId);
     const t = window.setTimeout(() => {
-      if (rec) setEditor({ open: true, record: rec, isNew: false });
+      if (rec) setEditor({ open: true, record: rec, isNew: false, isRollbackDraft: false });
       const sp = new URLSearchParams(searchParams.toString());
       sp.delete(Q_PREVENTIVI_OPEN);
       const q = sp.toString();
@@ -630,7 +620,7 @@ export function PreventiviView() {
 
   function apriModifica(p: PreventivoRecord) {
     if (!canEditWorkOrders) return;
-    setEditor({ open: true, record: p, isNew: false });
+    setEditor({ open: true, record: p, isNew: false, isRollbackDraft: false });
   }
 
   function onElimina(p: PreventivoRecord) {
@@ -675,26 +665,12 @@ export function PreventiviView() {
       <PageHeader
         title="Preventivi"
         actions={
-          <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5">
-            <button
-              type="button"
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="Nessuna azione reversibile"
-              disabled
-            >
-              <IconGestionaleUndo />
-              <span className="sr-only">Annulla ultima azione</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setLogOpen(true)}
-              className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="Storico modifiche preventivi (ultime 200)"
-            >
-              <IconGestionaleLog />
-              <span className="sr-only">Log modifiche</span>
-            </button>
-          </div>
+          <GestionalePageToolbarActions
+            canUndo={false}
+            undoDisabled
+            onOpenLog={() => setLogOpen(true)}
+            logTitle="Storico modifiche preventivi (ultime 200)"
+          />
         }
       />
 
@@ -715,6 +691,7 @@ export function PreventiviView() {
                   open: true,
                   record: buildEmptyManualPreventivo(autore.trim() || "Operatore"),
                   isNew: true,
+                  isRollbackDraft: false,
                 })
               }
               className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
@@ -1158,13 +1135,20 @@ export function PreventiviView() {
         open={editor.open && canEditWorkOrders}
         record={editor.record}
         isNew={editor.isNew}
+        isRollbackDraft={editor.isRollbackDraft}
         autore={autore.trim() || "Operatore"}
-        onClose={() => setEditor({ open: false, record: null, isNew: false })}
-        onSaved={reload}
+        onClose={closeEditor}
+        onSaved={onEditorSaved}
       />
       </div>
 
-      <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche preventivi" ariaLabel="Log modifiche preventivi">
+      <Drawer
+        open={logOpen}
+        onClose={() => setLogOpen(false)}
+        title="Log modifiche preventivi"
+        ariaLabel="Log modifiche preventivi"
+        lockScroll={!(editor.open && canEditWorkOrders)}
+      >
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
           <div className={gestionaleLogScrollEmbeddedClass}>
             {logEntries.length === 0 ? (

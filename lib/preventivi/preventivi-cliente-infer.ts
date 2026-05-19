@@ -4,6 +4,11 @@ import { getRuntimePreventiviDefaults } from "@/src/lib/app-settings/runtime-set
 const DEFAULT_COSTO_ORARIO = () =>
   typeof window !== "undefined" ? getRuntimePreventiviDefaults().costoOrarioDefault : 48;
 
+function clampScontoRicambi(n: number): number {
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(100, Math.max(0, Math.round(n * 10) / 10));
+}
+
 function normCliente(c: string): string {
   return c.trim().toLowerCase();
 }
@@ -47,12 +52,13 @@ function meanManodoperaSconto(list: PreventivoRecord[], maxN: number): number {
 
 /**
  * Parametri economici da preventivi precedenti dello stesso cliente.
- * Priorità: ultimo cronologicamente; se un campo è assente/0 si integra con media ultimi (max 5); default sistema.
+ * Priorità sconto riga: codice ultimo preventivo → media storica → sconto anagrafica cliente.
  */
 export function inferEconomiciClientePreventivi(
   cliente: string,
   tutti: PreventivoRecord[],
   excludeId?: string,
+  defaultScontoRicambiCliente = 0,
 ): {
   costoOrario: number;
   manodoperaScontoPercent: number;
@@ -66,13 +72,14 @@ export function inferEconomiciClientePreventivi(
   const meanCosto = meanCostoOrario(cur, 5);
   const meanScontoMan = meanManodoperaSconto(cur, 5);
   const meanRighe = meanScontoRigheRecenti(cur, 5);
+  const defaultSconto = clampScontoRicambi(defaultScontoRicambiCliente);
 
   if (cur.length === 0) {
     return {
       costoOrario: DEFAULT_COSTO_ORARIO(),
       manodoperaScontoPercent: 0,
       noteFinaliTipiche: "",
-      scontoRigaForCodice: () => 0,
+      scontoRigaForCodice: () => defaultSconto,
     };
   }
 
@@ -94,7 +101,8 @@ export function inferEconomiciClientePreventivi(
   function scontoRigaForCodice(codiceOE: string): number {
     const k = codiceOE.trim().toLowerCase();
     if (k && mapCodiceSconto.has(k)) return mapCodiceSconto.get(k)!;
-    return Math.min(100, Math.max(0, meanRighe));
+    if (meanRighe > 0) return Math.min(100, Math.max(0, meanRighe));
+    return defaultSconto;
   }
 
   return { costoOrario, manodoperaScontoPercent, noteFinaliTipiche, scontoRigaForCodice };

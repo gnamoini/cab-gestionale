@@ -1,7 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
+import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneRow, MezzoRow, PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
@@ -10,7 +10,15 @@ import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 const ENTITA = "lavorazioni";
 
 /** Stati considerati «in corso». */
-export const LAVORAZIONI_STATI_IN_CORSO: StatoLavorazione[] = ["bozza", "in_coda", "in_officina", "in_attesa_ricambi"];
+export const LAVORAZIONI_STATI_IN_CORSO: StatoLavorazione[] = [
+  "bozza",
+  "in_coda",
+  "in_officina",
+  "in_attesa_ricambi",
+  "custom_1",
+  "custom_2",
+  "custom_3",
+];
 
 /** Stati chiusi / archivio. */
 export const LAVORAZIONI_STATI_CHIUSE: StatoLavorazione[] = ["completata", "consegnata", "annullata"];
@@ -91,6 +99,8 @@ function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuery>(q: T
 export const lavorazioniService = {
   async getAll(filters?: LavorazioneFilters): Promise<ServiceResult<LavorazioneListRow[]>> {
     try {
+      const allowed = await ensureSectionRead("lavorazioni");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       if (filters?.includeMezzo) {
         let q = sb.from("lavorazioni").select("*, mezzi(*)").order("created_at", { ascending: false });
@@ -119,6 +129,8 @@ export const lavorazioniService = {
 
   async getById(id: string): Promise<ServiceResult<LavorazioneRow>> {
     try {
+      const allowed = await ensureSectionRead("lavorazioni");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const { data, error } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
       if (error) return err(error.message);
@@ -166,6 +178,34 @@ export const lavorazioniService = {
     }
   },
 
+  /** Ripristina lavorazione archiviata tra le attive (log dedicato RESTORE). */
+  async restore(id: string, stato: StatoLavorazione): Promise<ServiceResult<LavorazioneRow>> {
+    try {
+      const allowed = await ensurePermission("editWorkOrders");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+      const sb = await c();
+      const { data: before, error: e0 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
+      if (e0) return err(e0.message);
+      const { data: row, error } = await sb
+        .from("lavorazioni")
+        .update({ stato, data_uscita: null })
+        .eq("id", id)
+        .select("*")
+        .single();
+      if (error) return err(error.message);
+      const r = row as LavorazioneRow;
+      await writeModificaLog(sb, {
+        entita: ENTITA,
+        entita_id: id,
+        azione: "RESTORE",
+        payload: auditDiff(before, r),
+      });
+      return success(r);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
       const allowed = await ensurePermission("deleteRecords");
@@ -177,6 +217,26 @@ export const lavorazioniService = {
       const { error } = await sb.from("lavorazioni").delete().eq("id", id);
       if (error) return err(error.message);
       return success(null);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  /** Stati effettivamente usati su lavorazioni (per guard delete in impostazioni). */
+  async getStatiInUso(): Promise<ServiceResult<{ attivi: StatoLavorazione[]; storico: StatoLavorazione[] }>> {
+    try {
+      const sb = await c();
+      const { data, error } = await sb.from("lavorazioni").select("stato");
+      if (error) return err(error.message);
+      const chiusiSet = new Set<string>(LAVORAZIONI_STATI_CHIUSE);
+      const attiviSet = new Set<StatoLavorazione>();
+      const storicoSet = new Set<StatoLavorazione>();
+      for (const row of data ?? []) {
+        const s = row.stato as StatoLavorazione;
+        if (chiusiSet.has(s)) storicoSet.add(s);
+        else attiviSet.add(s);
+      }
+      return success({ attivi: [...attiviSet], storico: [...storicoSet] });
     } catch (e) {
       return serviceFailFromError(e);
     }

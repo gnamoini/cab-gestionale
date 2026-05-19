@@ -1,9 +1,9 @@
-import { DEFAULT_STATI_LAVORAZIONI } from "@/lib/lavorazioni/constants";
 import { durataMsStorico } from "@/lib/lavorazioni/duration";
 import { isCompletataForReport, isStatoLavorazioneChiusoDb } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { labelLavorazioneStatoDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import type { MezzoGestito, MezzoInterventoLavorazione } from "@/lib/mezzi/types";
+import { migrateStatoConfigId } from "@/src/shared/selectors";
 import type { StatoLavorazione } from "@/src/types/supabase-tables";
 
 type LavSnapshot = { attive: LavorazioneAttiva[]; storico: LavorazioneArchiviata[] };
@@ -64,9 +64,8 @@ export function lavorazioneMatchesMezzo(
 }
 
 function labelStato(statoId: string): string {
-  const legacy = DEFAULT_STATI_LAVORAZIONI.find((s) => s.id === statoId)?.label;
-  if (legacy) return legacy;
-  return labelLavorazioneStatoDb(statoId as StatoLavorazione);
+  const dbId = migrateStatoConfigId(statoId);
+  return labelLavorazioneStatoDb(dbId as StatoLavorazione);
 }
 
 function prioritaIt(p: string): string {

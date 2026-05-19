@@ -116,9 +116,22 @@ export function IconNavSettings(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconNavLavorazioniClient(props: SVGProps<SVGSVGElement>) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M9 12h6M9 16h4" />
+      <path d="M7 4h7l3 3v13H7V4Z" strokeLinejoin="round" />
+      <path d="M14 4v4h4" />
+      <circle cx="17" cy="17" r="3" />
+      <path d="M17 15.5v3M15.5 17h3" strokeWidth="1.4" />
+    </SvgIcon>
+  );
+}
+
 export const GESTIONALE_NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: IconNavDashboard },
   { href: "/lavorazioni", label: "Lavorazioni", Icon: IconNavLavorazioni },
+  { href: "/lavorazioni-clienti", label: "Lavorazioni (Clienti)", Icon: IconNavLavorazioniClient },
   { href: "/preventivi", label: "Preventivi", Icon: IconNavPreventivi },
   { href: "/documenti", label: "Documenti", Icon: IconNavDocumenti },
   { href: "/magazzino", label: "Magazzino", Icon: IconNavMagazzino },

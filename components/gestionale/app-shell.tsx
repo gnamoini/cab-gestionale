@@ -8,12 +8,13 @@ import { PageLoadingOverlay } from "@/components/design-system/loading-indicator
 import { useAuth } from "@/context/auth-context";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
-import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
-import { canReadModule, hasPermission, normalizeRole } from "@/src/lib/auth/permissions";
-import { usePermissions } from "@/src/hooks/use-permissions";
+import { CLIENTE_HOME_PATH, shouldHideNavHref, isClienteRole } from "@/lib/auth/rbac";
+import { useRbac } from "@/src/hooks/use-rbac";
+import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
+import { isNavTargetCurrent, ROUTE_LOADING_FAILSAFE_MS } from "@/src/lib/navigation/route-transition";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 
 const SIDEBAR_COLLAPSED_KEY = "cab-sidebar-collapsed";
@@ -42,10 +43,10 @@ function NavLink({
   collapsed: boolean;
   disabled?: boolean;
   badge?: string | null;
-  onNavigate?: () => void;
+  onNavigate?: (href: string) => void;
 }) {
   const pathname = usePathname();
-  const active = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+  const active = isNavTargetCurrent(pathname, href);
 
   const iconWrap = (
     <span
@@ -83,7 +84,7 @@ function NavLink({
     <Link
       href={href}
       title={collapsed ? label : undefined}
-      onClick={onNavigate}
+      onClick={() => onNavigate?.(href)}
       className={`${navLinkBase} ${active ? navLinkActive : navLinkInactive} ${collapsed ? "justify-center px-2" : ""} ${erpFocus}`}
     >
       {iconWrap}
@@ -203,9 +204,9 @@ function MobileNavRow({
   item: GestionaleNavResolvedItem;
   pathname: string;
   onClose: () => void;
-  onNavigate?: () => void;
+  onNavigate?: (href: string) => void;
 }) {
-  const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+  const active = isNavTargetCurrent(pathname, item.href);
   const Icon = item.Icon;
   if (item.disabled) {
     return (
@@ -231,7 +232,7 @@ function MobileNavRow({
     <Link
       href={item.href}
       onClick={() => {
-        onNavigate?.();
+        onNavigate?.(item.href);
         onClose();
       }}
       className={`flex min-h-[3.25rem] items-center gap-3 rounded-xl px-3 text-base font-semibold ${
@@ -264,7 +265,7 @@ function MobileNavDrawer({
   open: boolean;
   onClose: () => void;
   navItems: GestionaleNavResolvedItem[];
-  onNavigate?: () => void;
+  onNavigate?: (href: string) => void;
 }) {
   const pathname = usePathname();
 
@@ -284,7 +285,13 @@ function MobileNavDrawer({
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      const target = e.target;
+      if (target instanceof HTMLElement) {
+        const tag = target.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) return;
+      }
+      onClose();
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
@@ -330,20 +337,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [routeLoading, setRouteLoading] = useState(false);
   const { user } = useAuth();
   const pathname = usePathname();
-  const permissions = usePermissions();
-  const role = normalizeRole(user?.ruolo);
+  const rbac = useRbac();
+  const clientLavAccess = useClientLavorazioniAccess();
+  const clienteOnly = isClienteRole(user);
+  const homePath = clienteOnly ? CLIENTE_HOME_PATH : "/dashboard";
   const navItems = useMemo(
     () =>
       resolveGestionaleNav({
-        hideHref: (href) => {
-          if (href === "/dashboard/security") return !hasPermission(role, "manageSecurity");
-          if (href === "/impostazioni") return !hasPermission(role, "manageSettings");
-          const m = gestionaleNavHrefToModule(href);
-          if (!m) return false;
-          return !canReadModule(permissions.role, m);
-        },
+        hideHref: (href) =>
+          shouldHideNavHref(user, href, {
+            clientLavorazioniAllowed: clientLavAccess.allowed,
+            clientLavorazioniLoading: clientLavAccess.isLoading,
+          }),
       }),
-    [permissions.role, role],
+    [user, clientLavAccess.allowed, clientLavAccess.isLoading],
   );
 
   useEffect(() => {
@@ -358,6 +365,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setRouteLoading(false);
     setMobileOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    if (!routeLoading) return;
+    const timeoutId = window.setTimeout(() => setRouteLoading(false), ROUTE_LOADING_FAILSAFE_MS);
+    return () => window.clearTimeout(timeoutId);
+  }, [routeLoading]);
+
+  const beginRouteTransition = useCallback(
+    (href: string) => {
+      if (isNavTargetCurrent(pathname, href)) {
+        setRouteLoading(false);
+        return;
+      }
+      setRouteLoading(true);
+    },
+    [pathname],
+  );
+
+  const onHeaderHomeClick = useCallback(() => {
+    if (isNavTargetCurrent(pathname, homePath)) {
+      setRouteLoading(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+    beginRouteTransition(homePath);
+  }, [beginRouteTransition, pathname, homePath]);
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((c) => {
@@ -428,7 +461,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               collapsed={collapsed}
               disabled={item.disabled}
               badge={item.badge}
-              onNavigate={() => setRouteLoading(true)}
+              onNavigate={beginRouteTransition}
             />
           ))}
         </nav>
@@ -449,8 +482,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
 
           <Link
-            href="/dashboard"
-            onClick={() => setRouteLoading(true)}
+            href={homePath}
+            onClick={onHeaderHomeClick}
             className={`${erpFocus} hidden min-w-0 items-center gap-2.5 rounded-lg py-1 pr-2 md:inline-flex`}
           >
             <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-xs font-bold text-white">
@@ -472,7 +505,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} onNavigate={() => setRouteLoading(true)} />
+        <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} onNavigate={beginRouteTransition} />
         <PageLoadingOverlay show={routeLoading} />
 
         <main className="gestionale-scrollbar mx-auto w-full max-w-[min(100%,100rem)] flex-1 overflow-auto px-2 py-3 sm:px-3 md:px-4 md:py-4">

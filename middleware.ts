@@ -1,7 +1,20 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
+import { isStagingPublicSlice, isStagingBlockedPathname } from "@/lib/env/staging-public";
 import { createSupabaseMiddlewareClient } from "@/src/lib/supabase/middleware-client";
+import {
+  CLIENT_LAVORAZIONI_SETTINGS_KEY,
+  CLIENT_LAVORAZIONI_SETTINGS_MODULE,
+  parseClientPortalAccess,
+} from "@/lib/lavorazioni/client-portal-access";
+import {
+  ACCESS_DENIED_PATH,
+  canAccessPage,
+  defaultHomePathForRole,
+  hasPermission,
+  pathnameToSection,
+  resolveClientLavorazioniPortalAccess,
+} from "@/lib/auth/rbac";
 
 const LOGIN_PATH = "/login";
 
@@ -38,7 +51,9 @@ export async function middleware(request: NextRequest) {
 
   if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
     if (user) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      const { data: prof } = await supabase.from("profiles").select("ruolo").eq("id", user.id).maybeSingle();
+      const home = defaultHomePathForRole(prof?.ruolo ?? null);
+      return NextResponse.redirect(new URL(home, request.url));
     }
     return response;
   }
@@ -55,6 +70,30 @@ export async function middleware(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.searchParams.set("staging_unavailable", "1");
+    return NextResponse.redirect(url);
+  }
+
+  const { data: prof } = await supabase.from("profiles").select("ruolo").eq("id", user.id).maybeSingle();
+  const role = prof?.ruolo ?? null;
+
+  let clientLavorazioniAllowed = hasPermission(role, "viewClientLavorazioni");
+  if (!clientLavorazioniAllowed && pathnameToSection(pathname) === "lavorazioni_clienti") {
+    const { data: row } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
+      .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
+      .maybeSingle();
+    const settings = parseClientPortalAccess(row?.value);
+    clientLavorazioniAllowed = resolveClientLavorazioniPortalAccess(role, user.id, settings.enabledUserIds);
+  }
+
+  const section = pathnameToSection(pathname);
+  if (section && !canAccessPage(role, pathname, { clientLavorazioniAllowed })) {
+    const url = request.nextUrl.clone();
+    url.pathname = ACCESS_DENIED_PATH;
+    url.searchParams.set("from", defaultHomePathForRole(role));
+    url.searchParams.set("denied", section);
     return NextResponse.redirect(url);
   }
 

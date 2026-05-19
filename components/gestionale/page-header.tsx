@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from "react";
 import { dsPageDesc, dsPageTitle } from "@/lib/ui/design-system";
+import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
 
 export const PageHeader = memo(function PageHeader({
   title,
@@ -17,11 +18,7 @@ export const PageHeader = memo(function PageHeader({
           <h1 className={dsPageTitle}>{title}</h1>
           {description ? <p className={dsPageDesc}>{description}</p> : null}
         </div>
-        {actions ? (
-          <div className="flex min-w-0 max-w-full shrink-0 flex-nowrap items-center justify-start gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch] sm:justify-end">
-            {actions}
-          </div>
-        ) : null}
+        {actions ? <div className={gestionalePageToolbarActionsClass}>{actions}</div> : null}
       </div>
     </header>
   );

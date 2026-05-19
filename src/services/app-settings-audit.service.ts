@@ -1,6 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { AppSettingsAuditRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -19,6 +20,8 @@ export type AppSettingsAuditListParams = {
 export const appSettingsAuditService = {
   async list(params: AppSettingsAuditListParams = {}): Promise<ServiceResult<AppSettingsAuditRow[]>> {
     try {
+      const allowed = await ensurePermission("manageSecurity");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = getBrowserSupabase();
       const limit = Math.min(Math.max(params.limit ?? 200, 1), 2000);
       let q = c

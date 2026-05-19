@@ -124,6 +124,11 @@ export function statoPillShellClass(): string {
   return "relative inline-flex w-full min-w-[5.25rem] max-w-full items-center rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
 }
 
+/** Pill stato a larghezza dinamica (fit-content, senza troncamento). */
+export function statoPillShellClassDynamic(): string {
+  return "relative inline-flex w-fit max-w-none items-center rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
+}
+
 export function statoPillShellStyle(hex: string | undefined): CSSProperties {
   return pillStyleFromHex(hex);
 }

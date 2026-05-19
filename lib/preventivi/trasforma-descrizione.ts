@@ -1,10 +1,17 @@
 import { lookupLearnedPhrase, recordApprovedPreventivoVersion, recordDescriptionCorrection } from "@/lib/preventivi/preventivi-learning-storage";
-import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
+import {
+  collectContextualSnippets,
+  dedupeDescriptionLines,
+  sortDescriptionLinesOperational,
+  stripProvenanceLabel,
+  type DescrizionePreventivoContext,
+} from "@/lib/preventivi/preventivi-descrizione-aggregator";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
 function splitTechChunks(raw: string): string[] {
   return raw
     .split(/[+;,\n\r]+/g)
+    .map((s) => stripProvenanceLabel(s))
     .map((s) => s.trim())
     .filter(Boolean);
 }
@@ -16,92 +23,76 @@ function capitalizeSentence(chunk: string): string {
 
 function heuristicLines(chunk: string): string[] {
   const low = chunk.toLowerCase();
-  const clean = chunk.trim();
-  if (/^(test|collaudo)/i.test(clean)) return ["Collaudo funzionale finale attrezzatura"];
-  if (/(smontaggio|smontato|smontare)/.test(low) && /(gruppo|blocco|carter|supporto)/.test(low)) {
-    const gruppo = /(gruppo|blocco|carter|supporto)[\w\s-]*/i.exec(clean)?.[0]?.trim() || "gruppo operativo";
-    return [`Smontaggio ${gruppo} per accesso componente`];
+  const clean = stripProvenanceLabel(chunk);
+
+  if (/^(test|collaudo)/i.test(clean)) return ["Collaudo funzionale e verifica operativa"];
+  if (/(smontaggio|smontato|smontare)/.test(low) && /(gruppo|blocco|carter|supporto|filtrante|pompa)/.test(low)) {
+    const gruppo = /(gruppo|blocco|carter|supporto|pompa|filtrante)[\w\s-]*/i.exec(clean)?.[0]?.trim() || "gruppo operativo";
+    return [`Smontaggio ${gruppo.toLowerCase()} per accesso al componente`];
   }
-  if (/(rimontaggio|rimontato|rimontare)/.test(low) && /(gruppo|blocco|carter|supporto)/.test(low)) {
-    const gruppo = /(gruppo|blocco|carter|supporto)[\w\s-]*/i.exec(clean)?.[0]?.trim() || "gruppo operativo";
-    return [`Rimontaggio ${gruppo} e verifica funzionale`];
+  if (/(rimontaggio|rimontato|rimontare)/.test(low) && /(gruppo|blocco|carter|supporto|filtrante|pompa)/.test(low)) {
+    const gruppo = /(gruppo|blocco|carter|supporto|pompa|filtrante)[\w\s-]*/i.exec(clean)?.[0]?.trim() || "gruppo operativo";
+    return [`Rimontaggio ${gruppo.toLowerCase()} e verifica funzionale`];
+  }
+  if (/(pulizia|lavaggio)/.test(low) && /(circuito|filtro|serbatoio)/.test(low)) {
+    return ["Pulizia circuito e componenti interessati"];
   }
   if (/(sensore|trasduttore|sonda)/.test(low) && /(cambio|sostitu|sostit|rimoz|install)/.test(low)) {
     const componente = low.includes("trasduttore") ? "trasduttore" : low.includes("sonda") ? "sonda" : "sensore";
-    return [`Rimozione ${componente} guasto`, `Installazione nuovo ${componente}`];
+    return [`Sostituzione ${componente} e ripristino funzionalità`];
   }
-  if (/(perdit|perdite|circuito\s+idraul)/.test(low)) return ["Verifica circuito idraulico e controllo perdite"];
-  if (/(pompa)/.test(low) && /(cambio|sostitu|sostit)/.test(low)) return ["Smontaggio e sostituzione pompa usurata"];
+  if (/(perdit|perdite|circuito\s+idraul)/.test(low)) return ["Verifica circuito idraulico, individuazione perdite e ripristino tenuta"];
+  if (/(pompa)/.test(low) && /(cambio|sostitu|sostit)/.test(low)) return ["Smontaggio e sostituzione pompa, controllo circuito e collaudo"];
   if (/(cambio|sostitu|sostit|smont)/.test(low)) {
     const rest = clean.replace(/^(cambio|sostituzione|sostituire|smontaggio)\s+/i, "").trim();
-    return [rest ? `Intervento di sostituzione: ${capitalizeSentence(rest)}` : "Intervento di sostituzione componente"];
+    return [rest ? `Intervento di sostituzione ${rest.toLowerCase()}` : "Intervento di sostituzione componente"];
   }
-  if (/(controllo|verifica|ispezione)/.test(low)) return [`Controllo e verifica: ${capitalizeSentence(clean)}`];
+  if (/(controllo|verifica|ispezione)/.test(low)) {
+    const rest = clean.replace(/^(controllo|verifica|ispezione)\s*(e\s+verifica)?\s*:?\s*/i, "").trim();
+    return [rest ? `Controllo e verifica ${rest.toLowerCase()}` : "Controllo e verifica componenti"];
+  }
   return [capitalizeSentence(clean)];
 }
 
 function mapChunk(chunk: string): string[] {
   const learned = lookupLearnedPhrase(chunk);
-  if (learned) return learned.split("\n").map((line) => line.replace(/^-\s*/, "").trim()).filter(Boolean);
+  if (learned) {
+    return learned
+      .split("\n")
+      .map((line) => stripProvenanceLabel(line.replace(/^-\s*/, "")))
+      .filter(Boolean);
+  }
   return heuristicLines(chunk);
 }
 
-function hintsFromSimilarPreventivi(techNorm: string, targa: string, matricola: string, codiciRicambi: string[]): string[] {
-  const hints: string[] = [];
-  const seen = new Set<string>();
-  const all = loadPreventivi();
-  const scored = all
-    .map((p) => {
-      let sc = 0;
-      if (targa && p.targa && p.targa.toLowerCase() === targa.toLowerCase()) sc += 40;
-      if (matricola && p.matricola && p.matricola.toLowerCase() === matricola.toLowerCase()) sc += 40;
-      const pcodes = p.righeRicambi.map((r) => r.codiceOE.toLowerCase()).filter(Boolean);
-      for (const c of codiciRicambi) {
-        if (c && pcodes.some((x) => x.includes(c) || c.includes(x))) sc += 8;
-      }
-      if (techNorm.length > 12 && p.descrizioneLavorazioniTecnicaSorgente) {
-        const a = techNorm.slice(0, 60);
-        const b = p.descrizioneLavorazioniTecnicaSorgente.toLowerCase().slice(0, 60);
-        if (a && b && (a.includes(b) || b.includes(a))) sc += 15;
-      }
-      return { p, sc };
-    })
-    .filter((x) => x.sc >= 25)
-    .sort((a, b) => b.sc - a.sc)
-    .slice(0, 3);
+function mergePrimaryWithContext(primaryLines: string[], contextLines: string[], sparsePrimary: boolean): string[] {
+  const merged = [...primaryLines];
+  const maxContext = sparsePrimary ? 8 : 4;
 
-  for (const { p } of scored) {
-    const lines = p.descrizioneLavorazioniCliente
-      .split("\n")
-      .map((l) => l.replace(/^-\s*/, "").trim())
-      .filter(Boolean);
-    for (const line of lines.slice(0, 4)) {
-      const k = line.toLowerCase();
-      if (!seen.has(k)) {
-        seen.add(k);
-        hints.push(`Dal precedente intervento simile: ${line}`);
-      }
-    }
+  for (const ctxLine of contextLines.slice(0, maxContext)) {
+    merged.push(ctxLine);
   }
-  return hints.slice(0, 6);
+
+  return dedupeDescriptionLines(merged);
 }
 
 /** Trasforma note tecniche in elenco professionale per il cliente. */
-export function trasformaDescrizioneLavorazioni(technicalRaw: string, ctx: { targa: string; matricola: string; codiciRicambi: string[] }): string {
+export function trasformaDescrizioneLavorazioni(technicalRaw: string, ctx: DescrizionePreventivoContext): string {
   const techNorm = technicalRaw.trim().toLowerCase();
-  const hints = hintsFromSimilarPreventivi(techNorm, ctx.targa, ctx.matricola, ctx.codiciRicambi);
-  const chunks = splitTechChunks(technicalRaw);
-  const lines = chunks.flatMap((c) => mapChunk(c));
-  const merged = [...hints, ...lines];
-  const uniq: string[] = [];
-  const u = new Set<string>();
-  for (const m of merged) {
-    const k = m.toLowerCase();
-    if (u.has(k)) continue;
-    u.add(k);
-    uniq.push(m);
-  }
-  return uniq.map((l) => (l.startsWith("-") ? l : `- ${l}`)).join("\n");
+  const primaryChunks = splitTechChunks(technicalRaw);
+  const sparsePrimary =
+    primaryChunks.length <= 1 &&
+    (techNorm.length < 28 || /^(intervento di manutenzione|controllo generale)/i.test(techNorm));
+
+  const primaryLines = dedupeDescriptionLines(primaryChunks.flatMap((c) => mapChunk(c)));
+
+  const contextSnippets = collectContextualSnippets(ctx, techNorm);
+  const contextLines = dedupeDescriptionLines(contextSnippets.flatMap((c) => mapChunk(c)));
+
+  const merged = mergePrimaryWithContext(primaryLines, contextLines, sparsePrimary);
+  const ordered = sortDescriptionLinesOperational(merged);
+
+  return ordered.map((l) => (l.startsWith("-") ? l : `- ${l}`)).join("\n");
 }
 
 export function maybeRecordLearningOnSave(prev: PreventivoRecord | null, next: PreventivoRecord): void {
@@ -112,3 +103,5 @@ export function maybeRecordLearningOnSave(prev: PreventivoRecord | null, next: P
   }
   recordApprovedPreventivoVersion(next);
 }
+
+export type { DescrizionePreventivoContext };

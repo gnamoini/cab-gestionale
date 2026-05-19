@@ -20,7 +20,7 @@ grant insert, update, delete on table public.app_settings to authenticated;
 insert into public.profiles (id, nome, ruolo)
 select u.id,
   coalesce(nullif(trim(split_part(coalesce(u.email, ''), '@', 1)), ''), 'utente'),
-  'tecnico'::public.ruolo_profile
+  'operatore'::public.ruolo_utente
 from auth.users u
 where not exists (select 1 from public.profiles p where p.id = u.id)
 on conflict (id) do nothing;

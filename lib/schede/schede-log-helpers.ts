@@ -28,6 +28,8 @@ const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
   descrizioneAnomalia: "Descrizione anomalia",
   livelloCarburante: "Livello carburante",
   addettoAccettazione: "Addetto accettazione",
+  richiedente: "Richiedente",
+  noteIntervento: "Note",
 };
 
 export function diffSchedaIngressoCampi(

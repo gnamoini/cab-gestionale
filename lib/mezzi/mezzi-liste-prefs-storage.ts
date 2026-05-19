@@ -19,6 +19,12 @@ export type MezziListePrefs = {
   stati: string[];
   /** Gerarchia marche → modelli attrezzature (fonte di verità). */
   attrezzature?: AttrezzaturaMarca[];
+  /** Gerarchia marche → modelli telaio. */
+  telai?: AttrezzaturaMarca[];
+  /** Tipi telaio (elenco piatto). */
+  tipiTelaio?: string[];
+  /** Chiave normalizzata cliente → sconto ricambi % (0–100). */
+  scontoRicambiByCliente?: Record<string, number>;
 };
 
 const defaultListe = (): MezziListePrefs => ({
@@ -28,8 +34,10 @@ const defaultListe = (): MezziListePrefs => ({
   marche: [...MEZZI_LISTE_DEFAULTS.marche],
   modelli: [],
   tipiAttrezzatura: [...MEZZI_LISTE_DEFAULTS.tipiAttrezzatura],
+  tipiTelaio: [],
   stati: [],
   attrezzature: undefined,
+  telai: [],
 });
 
 /** Solo default built-in (nessun localStorage) — utile per seed / merge server. */
@@ -54,8 +62,10 @@ export function loadMezziListePrefs(): MezziListePrefs | null {
       tipiAttrezzatura: Array.isArray(o.tipiAttrezzatura)
         ? (o.tipiAttrezzatura as string[]).filter((x) => typeof x === "string")
         : [],
+      tipiTelaio: Array.isArray(o.tipiTelaio) ? (o.tipiTelaio as string[]).filter((x) => typeof x === "string") : [],
       stati: Array.isArray(o.stati) ? (o.stati as string[]).filter((x) => typeof x === "string") : [],
       attrezzature: normalizeAttrezzatureRaw(o.attrezzature),
+      telai: normalizeAttrezzatureRaw(o.telai),
     };
   } catch {
     return null;
@@ -82,9 +92,11 @@ export function getMezziListePrefsOrDefault(): MezziListePrefs {
     marche: loaded.marche.length ? loaded.marche : d.marche,
     modelli: loaded.modelli?.length ? loaded.modelli : d.modelli,
     tipiAttrezzatura: loaded.tipiAttrezzatura.length ? loaded.tipiAttrezzatura : d.tipiAttrezzatura,
+    tipiTelaio: loaded.tipiTelaio?.length ? loaded.tipiTelaio : d.tipiTelaio,
     /** Legacy “stati mezzo”: non più usati in UI; manteniamo array vuoto. */
     stati: [],
     attrezzature: loaded.attrezzature,
+    telai: loaded.telai,
   };
   return migrateMezziListePrefs(merged);
 }

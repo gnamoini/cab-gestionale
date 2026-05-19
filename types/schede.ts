@@ -45,6 +45,10 @@ export type SchedaIngressoFields = {
   descrizioneAnomalia: string;
   livelloCarburante: string;
   addettoAccettazione: string;
+  /** Richiedente intervento (testo libero). */
+  richiedente: string;
+  /** Note operative aggiuntive (distinte da descrizione anomalia). */
+  noteIntervento: string;
 };
 
 export type SchedaIngressoDoc = SchedaMeta & {

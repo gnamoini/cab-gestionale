@@ -7,6 +7,10 @@ import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import type { PreventivoManodopera, PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
+import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
+import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 
 export function buildNewPreventivoFromLavorazioneContext(opts: {
   lav: LavorazioneAttiva | LavorazioneArchiviata;
@@ -34,11 +38,24 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
 
   const techParts =
     lavScheda?.campi?.righe?.map((r) => r.lavorazioniEffettuate?.trim()).filter(Boolean) ?? ([] as string[]);
+  const anomaliaIngresso = ing?.descrizioneAnomalia?.trim() ?? "";
+  if (anomaliaIngresso && !techParts.some((p) => p.toLowerCase().includes(anomaliaIngresso.toLowerCase().slice(0, 24)))) {
+    techParts.unshift(anomaliaIngresso);
+  }
   const technicalBlob =
     techParts.join("\n").trim() || lav.noteInterne.trim() || "Intervento di manutenzione e controllo generale.";
 
   const codiciRicambi = (ricScheda?.campi.righe ?? []).map((r) => r.codice.trim()).filter(Boolean);
-  const autoCliente = trasformaDescrizioneLavorazioni(technicalBlob, { targa, matricola, codiciRicambi });
+  const autoCliente = trasformaDescrizioneLavorazioni(technicalBlob, {
+    lavorazioneId: lav.id,
+    cliente,
+    targa,
+    matricola,
+    marcaAttrezzatura,
+    modelloAttrezzatura,
+    macchinaRiassunto,
+    codiciRicambi,
+  });
 
   const righeRicambiRaw: PreventivoRigaRicambio[] = (ricScheda?.campi.righe ?? []).map((r) => {
     const mag = r.ricambioId ? magazzino.find((x) => x.id === r.ricambioId) : undefined;
@@ -58,7 +75,9 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
   });
 
   const tuttiPv = loadPreventivi();
-  const infer = inferEconomiciClientePreventivi(cliente, tuttiPv);
+  const mezziListe = migrateMezziListePrefs(getRuntimeCabAppSettings()?.mezziListe ?? createMezziListePrefsDefault());
+  const defaultSconto = getScontoRicambiCliente(mezziListe, cliente);
+  const infer = inferEconomiciClientePreventivi(cliente, tuttiPv, undefined, defaultSconto);
   const righeRicambi: PreventivoRigaRicambio[] = righeRicambiRaw.map((r) => ({
     ...r,
     scontoPercent: infer.scontoRigaForCodice(r.codiceOE),

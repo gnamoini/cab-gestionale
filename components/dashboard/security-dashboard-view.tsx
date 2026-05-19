@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { SecurityCreateUserModal } from "@/components/dashboard/security-create-user-modal";
+import { ClientLavorazioniAccessPanel } from "@/components/dashboard/client-lavorazioni-access-panel";
 import { Drawer } from "@/components/design-system";
 import {
   listUsersByAdminAction,
@@ -576,6 +577,8 @@ export function SecurityDashboardView() {
 
       <SecurityCreateUserModal open={createUserOpen} onClose={() => setCreateUserOpen(false)} />
       <UserDetailDrawer user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUserId(null)} />
+
+      <ClientLavorazioniAccessPanel />
 
       <ShellCard title="Utenti registrati">
         <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>

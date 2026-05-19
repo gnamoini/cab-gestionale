@@ -9,7 +9,7 @@ set search_path = public
 as $$
 declare
   v_nome text;
-  v_ruolo public.ruolo_profile;
+  v_ruolo public.ruolo_utente := 'operatore'::public.ruolo_utente;
   v_app_nome text;
   v_app_ruolo text;
 begin
@@ -24,10 +24,10 @@ begin
   end if;
 
   v_app_ruolo := lower(nullif(trim(coalesce(new.raw_app_meta_data->>'cab_ruolo', '')), ''));
-  if v_app_ruolo in ('admin', 'tecnico', 'viewer') then
-    v_ruolo := v_app_ruolo::public.ruolo_profile;
-  else
-    v_ruolo := 'tecnico'::public.ruolo_profile;
+  if v_app_ruolo in ('admin', 'operatore', 'ospite', 'cliente', 'magazziniere', 'commerciale', 'sola_lettura') then
+    v_ruolo := v_app_ruolo::public.ruolo_utente;
+  elsif v_app_ruolo in ('tecnico', 'viewer') then
+    v_ruolo := case when v_app_ruolo = 'tecnico' then 'operatore' else 'sola_lettura' end::public.ruolo_utente;
   end if;
 
   insert into public.profiles (id, nome, ruolo)

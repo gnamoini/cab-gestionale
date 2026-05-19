@@ -1,7 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
+import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
@@ -30,6 +30,8 @@ function num(v: unknown): number {
 export const magazzinoService = {
   async getAll(filters?: MagazzinoFilters): Promise<ServiceResult<MagazzinoRicambioRow[]>> {
     try {
+      const allowed = await ensureSectionRead("magazzino");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       let q = c.from("magazzino_ricambi").select("*").order("codice", { ascending: true });
       if (filters?.codice?.trim()) q = q.ilike("codice", `%${filters.codice.trim()}%`);
@@ -45,6 +47,8 @@ export const magazzinoService = {
 
   async getById(id: string): Promise<ServiceResult<MagazzinoRicambioRow>> {
     try {
+      const allowed = await ensureSectionRead("magazzino");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
       if (error) return err(error.message);

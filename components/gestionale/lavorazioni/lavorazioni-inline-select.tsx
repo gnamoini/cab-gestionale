@@ -9,18 +9,22 @@ export function TablePillReadonly({
   shellStyle,
   title,
   children,
+  fitContent = false,
 }: {
   shellClass: string;
   shellStyle?: CSSProperties;
   title?: string;
   children: ReactNode;
+  fitContent?: boolean;
 }) {
+  const widthClass = fitContent ? "w-fit max-w-none" : "min-w-0 max-w-[8.75rem]";
+  const textClass = fitContent
+    ? "min-w-0 flex-1 whitespace-nowrap text-[11px] font-semibold leading-tight tracking-wide text-inherit"
+    : "min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight tracking-wide text-inherit";
   return (
-    <div className={`${shellClass} min-w-0 max-w-[8.75rem]`} style={shellStyle} title={title}>
+    <div className={`${shellClass} ${widthClass}`} style={shellStyle} title={title}>
       <div className="relative flex min-h-8 w-full items-center rounded-[inherit] px-2 py-0.5">
-        <span className="min-w-0 flex-1 truncate text-[11px] font-semibold leading-tight tracking-wide text-inherit">
-          {children}
-        </span>
+        <span className={textClass}>{children}</span>
       </div>
     </div>
   );
@@ -35,6 +39,7 @@ export function InlineSelectField({
   onChange,
   ariaLabel,
   disabled,
+  wide = false,
   children,
 }: {
   shellClass: string;
@@ -45,17 +50,23 @@ export function InlineSelectField({
   ariaLabel: string;
   /** Disabilita il select (es. durante mutazioni in corso). */
   disabled?: boolean;
+  /** Larghezza maggiore per label stato lunghe (senza troncamento). */
+  wide?: boolean;
   children: ReactNode;
 }) {
+  const widthClass = wide ? "w-fit max-w-none" : "min-w-0 max-w-[8.75rem]";
+  const pillInnerClass = wide
+    ? `${selectPillInner} whitespace-nowrap pr-8`
+    : selectPillInner;
   return (
     <div
-      className={`${shellClass} group min-w-0 max-w-[8.75rem] ${disabled ? "opacity-60" : ""}`}
+      className={`${shellClass} group ${widthClass} ${disabled ? "opacity-60" : ""}`}
       style={shellStyle}
       title={title}
     >
       <div className="relative flex min-h-8 w-full items-stretch rounded-[inherit]">
         <select
-          className={selectPillInner}
+          className={pillInnerClass}
           value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-label={ariaLabel}

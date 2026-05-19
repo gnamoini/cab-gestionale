@@ -4,8 +4,8 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { buildEffectivePermissionsByModule, type EffectiveModulePermission } from "@/src/lib/permissions/effective-permissions";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
-import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
-import { hasPermission, normalizeRole } from "@/src/lib/auth/permissions";
+import { navHrefToSection, canWriteAnyOperational, resolveRole } from "@/lib/auth/rbac";
+import { useRbac } from "@/src/hooks/use-rbac";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { permissionsService } from "@/src/services/permissions.service";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
@@ -33,7 +33,7 @@ export function useUserPermissionsQuery(): UseQueryResult<UserPermissionRow[], E
 }
 
 export type GlobalPermissions = {
-  role: ReturnType<typeof normalizeRole>;
+  role: ReturnType<typeof resolveRole>;
   isAdmin: boolean;
   isOperatore: boolean;
   isOspite: boolean;
@@ -55,27 +55,27 @@ export function usePermissions(module: GestionalePermissionModule): EffectiveMod
   isLoading: boolean;
 };
 export function usePermissions(module?: GestionalePermissionModule): GlobalPermissions | (EffectiveModulePermission & { isLoading: boolean }) {
+  const rbac = useRbac();
   const { user, status } = useAuth();
   const ruolo = user?.ruolo;
   const isLoading = status === "loading";
 
   if (!module) {
-    const role = normalizeRole(ruolo);
     return {
-      role,
-      isAdmin: role === "admin",
-      isOperatore: role === "operatore",
-      isOspite: role === "ospite",
-      canEditInventory: hasPermission(role, "editInventory"),
-      canManageUsers: hasPermission(role, "manageUsers"),
-      canManageSecurity: hasPermission(role, "manageSecurity"),
-      canManageSettings: hasPermission(role, "manageSettings"),
-      canEditWorkOrders: hasPermission(role, "editWorkOrders"),
-      canEditVehicles: hasPermission(role, "editVehicles"),
-      canUploadDocuments: hasPermission(role, "uploadDocuments"),
-      canDeleteRecords: hasPermission(role, "deleteRecords"),
-      canViewReports: hasPermission(role, "viewReports"),
-      canViewAuditLogs: hasPermission(role, "viewAuditLogs"),
+      role: rbac.role,
+      isAdmin: rbac.isAdmin,
+      isOperatore: rbac.isOperatore,
+      isOspite: rbac.isOspite,
+      canEditInventory: rbac.hasPermission("editInventory"),
+      canManageUsers: rbac.hasPermission("manageUsers"),
+      canManageSecurity: rbac.hasPermission("manageSecurity"),
+      canManageSettings: rbac.hasPermission("manageSettings"),
+      canEditWorkOrders: rbac.hasPermission("editWorkOrders"),
+      canEditVehicles: rbac.hasPermission("editVehicles"),
+      canUploadDocuments: rbac.hasPermission("uploadDocuments"),
+      canDeleteRecords: rbac.hasPermission("deleteRecords"),
+      canViewReports: rbac.hasPermission("viewReports"),
+      canViewAuditLogs: rbac.hasPermission("viewAuditLogs"),
       isLoading,
     };
   }
@@ -85,12 +85,16 @@ export function usePermissions(module?: GestionalePermissionModule): GlobalPermi
   return { ...row, isLoading };
 }
 
-/** Lettura nav: href senza modulo dedicato → accesso consentito (interno). */
+/** Lettura nav: usa matrice RBAC centralizzata. */
 export function useNavHrefPermission(href: string): { canRead: boolean; canWrite: boolean; isLoading: boolean } {
-  const mod = gestionaleNavHrefToModule(href);
-  if (!mod) {
-    return { canRead: true, canWrite: true, isLoading: false };
+  const rbac = useRbac();
+  const section = navHrefToSection(href);
+  if (!section) {
+    return { canRead: true, canWrite: canWriteAnyOperational(rbac.user), isLoading: rbac.isLoading };
   }
-  const p = usePermissions(mod);
-  return { canRead: p.canRead, canWrite: p.canWrite, isLoading: p.isLoading };
+  return {
+    canRead: rbac.canRead(section),
+    canWrite: rbac.canWrite(section),
+    isLoading: rbac.isLoading,
+  };
 }

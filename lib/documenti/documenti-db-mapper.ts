@@ -1,12 +1,12 @@
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import type { DocumentoInsert, DocumentoUpdate } from "@/src/services/documenti.service";
 import type { CategoriaDocumento, DocumentoRow } from "@/src/types/supabase-tables";
-import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
+import { mapStorageError } from "@/src/lib/storage/storage-errors";
+import { buildDocumentoStoragePath, sanitizeStorageFileName } from "@/src/lib/storage/storage-paths";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
+import { STORAGE_BUCKETS, storageGetPublicUrl, storageUpload } from "@/src/services/storage.service";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
-
-const DOCUMENTI_STORAGE_BUCKET = "documenti";
 
 const UI_TO_DB_CATEGORIA: Record<DocumentoGestionale["categoria"], CategoriaDocumento> = {
   listini: "listino",
@@ -14,11 +14,6 @@ const UI_TO_DB_CATEGORIA: Record<DocumentoGestionale["categoria"], CategoriaDocu
   cataloghi: "catalogo",
   altro: "altro",
 };
-
-function sanitizeFileName(name: string): string {
-  const base = name.trim().replace(/[/\\?%*:|"<>]/g, "-") || "documento";
-  return base.slice(0, 180);
-}
 
 export function gestionaleToDocumentoInsert(
   doc: Omit<DocumentoGestionale, "id">,
@@ -64,7 +59,9 @@ export async function uploadDocumentoBlob(
     const res = await fetch(blobUrl);
     if (!res.ok) return err("Impossibile leggere il file caricato.");
     const blob = await res.blob();
-    const file = new File([blob], sanitizeFileName(fileName), { type: blob.type || "application/octet-stream" });
+    const file = new File([blob], sanitizeStorageFileName(fileName, "documento"), {
+      type: blob.type || "application/octet-stream",
+    });
     return uploadDocumentoFile(file);
   } catch (e) {
     return serviceFailFromError(e);
@@ -75,19 +72,18 @@ export async function uploadDocumentoFile(file: File): Promise<ServiceResult<str
   try {
     const allowed = await ensurePermission("uploadDocuments");
     if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
-    const c = await getBrowserSupabase();
-    const path = `${crypto.randomUUID()}/${sanitizeFileName(file.name)}`;
-    const { error } = await c.storage.from(DOCUMENTI_STORAGE_BUCKET).upload(path, file, {
+
+    const path = buildDocumentoStoragePath(file.name);
+    await storageUpload(STORAGE_BUCKETS.documenti, path, file, {
       cacheControl: "3600",
       upsert: false,
     });
-    if (error) return err(error.message);
-    const { data } = c.storage.from(DOCUMENTI_STORAGE_BUCKET).getPublicUrl(path);
-    const url = data.publicUrl?.trim();
+
+    const url = storageGetPublicUrl(STORAGE_BUCKETS.documenti, path);
     if (!url) return err("URL file non disponibile dopo il caricamento.");
     return success(url);
   } catch (e) {
-    return serviceFailFromError(e);
+    return err(mapStorageError(e, STORAGE_BUCKETS.documenti));
   }
 }
 
@@ -99,11 +95,5 @@ export function resolveDocumentoFileUrl(row: Pick<DocumentoRow, "url_file">, doc
   if (!raw) return null;
   if (/^https?:\/\//i.test(raw)) return raw;
   if (/^blob:/i.test(raw)) return raw;
-  try {
-    const c = getBrowserSupabase();
-    const { data } = c.storage.from(DOCUMENTI_STORAGE_BUCKET).getPublicUrl(raw.replace(/^\//, ""));
-    return data.publicUrl || null;
-  } catch {
-    return null;
-  }
+  return storageGetPublicUrl(STORAGE_BUCKETS.documenti, raw);
 }

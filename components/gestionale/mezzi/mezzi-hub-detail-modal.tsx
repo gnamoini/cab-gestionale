@@ -32,7 +32,7 @@ import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useMezzoHub } from "@/src/hooks/gestionale/use-mezzo-hub";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import { dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap, dsBtnDanger } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
 type TabId = "panoramica" | "foto" | "lavorazioni" | "timeline" | "preventivi" | "documenti" | "log";
@@ -55,11 +55,13 @@ export function MezziHubDetailModal({
   mezzo,
   onClose,
   onEdit,
+  onDelete,
   canEdit = true,
 }: {
   mezzo: MezzoGestito;
   onClose: () => void;
   onEdit: () => void;
+  onDelete?: () => void;
   canEdit?: boolean;
 }) {
   const [tab, setTab] = useState<TabId>("panoramica");
@@ -209,6 +211,11 @@ export function MezziHubDetailModal({
             >
               Modifica
             </button>
+            {onDelete && !mezzo.hubSynthetic ? (
+              <button type="button" className={dsBtnDanger} onClick={onDelete} disabled={!canEdit}>
+                Elimina
+              </button>
+            ) : null}
             <button type="button" className={erpBtnNeutral} onClick={onClose}>
               Chiudi
             </button>

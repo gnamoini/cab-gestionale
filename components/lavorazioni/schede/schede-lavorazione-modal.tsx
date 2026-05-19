@@ -8,9 +8,12 @@ import { flushSync } from "react-dom";
 import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
+import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
 import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
 import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/schede/schede-badges";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { getMagazzinoReportSnapshot } from "@/lib/magazzino/magazzino-report-sync";
 import { documentoRowToGestionale, preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
@@ -18,7 +21,11 @@ import {
   identificazionePartsFromLavorazione,
   identificazionePartsFromSchedaIngresso,
 } from "@/lib/mezzi/identificazione-mezzo";
-import { migrateMezziListePrefs, modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
+import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+import {
+  marcheFromHierarchyTree,
+  modelliVisibiliPerMarcaHierarchy,
+} from "@/lib/mezzi/hierarchy-list-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { findPreviousLavorazioneStessoMezzo } from "@/lib/schede/schede-duplicate-previous";
@@ -59,9 +66,11 @@ import { writePendingPreventivoPayload } from "@/lib/preventivi/preventivi-sessi
 import type { PreventivoLavorazioneOrigine } from "@/lib/preventivi/types";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
-import { dsBadgeOk, dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { dsBadgeOk, dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { usePermissions } from "@/src/hooks/use-permissions";
+import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import type {
   LavorazioneSchedeBundle,
   RigaAddettoOreScheda,
@@ -137,6 +146,89 @@ function assertItalianDay(label: string, value: string): boolean {
   return true;
 }
 
+function normalizeOreText(raw: string): string {
+  const t = raw.trim().replace(",", ".");
+  if (!t) return "";
+  const n = Number.parseFloat(t);
+  if (!Number.isFinite(n) || n < 0) return raw.trim();
+  return String(Math.round(n * 1000) / 1000);
+}
+
+/** Ore decimali libere da tastiera; frecce native con step 1. */
+function SchedaOreTextInput({
+  label,
+  value,
+  onChange,
+  readOnly = false,
+  className = "",
+}: {
+  label?: string;
+  value: string;
+  onChange: (next: string) => void;
+  readOnly?: boolean;
+  className?: string;
+}) {
+  const field = (
+    <input
+      type="number"
+      step={1}
+      min={0}
+      inputMode="decimal"
+      className={`${dsInput} mt-1 ${className}`.trim()}
+      readOnly={readOnly}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onBlur={(e) => onChange(normalizeOreText(e.target.value))}
+    />
+  );
+  if (!label) return field;
+  return (
+    <label className="block text-xs">
+      <span className="text-zinc-500">{label}</span>
+      {field}
+    </label>
+  );
+}
+
+function SchedaOreNumberInput({
+  value,
+  onChange,
+  readOnly = false,
+  className = "",
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  readOnly?: boolean;
+  className?: string;
+}) {
+  const [text, setText] = useState(() => (Number.isFinite(value) ? String(value) : "0"));
+  useEffect(() => {
+    setText(Number.isFinite(value) ? String(value) : "0");
+  }, [value]);
+  return (
+    <input
+      type="number"
+      step={1}
+      min={0}
+      inputMode="decimal"
+      readOnly={readOnly}
+      className={className}
+      value={text}
+      onChange={(e) => {
+        setText(e.target.value);
+        const n = Number.parseFloat(e.target.value.replace(",", "."));
+        if (Number.isFinite(n) && n >= 0) onChange(Math.round(n * 1000) / 1000);
+      }}
+      onBlur={() => {
+        const n = Number.parseFloat(text.replace(",", "."));
+        const next = Number.isFinite(n) && n >= 0 ? Math.round(n * 1000) / 1000 : 0;
+        setText(String(next));
+        onChange(next);
+      }}
+    />
+  );
+}
+
 type SchedaLogEv = {
   tipo: LavorazioniLogTipo;
   schedaOggetto: string;
@@ -159,6 +251,7 @@ export function SchedeLavorazioneModal({
   currentUser,
   schedeStore,
   onSchedaLog,
+  onIngressoCommitted,
 }: {
   open: boolean;
   onClose: () => void;
@@ -174,8 +267,10 @@ export function SchedeLavorazioneModal({
   currentUser: string;
   schedeStore: Record<string, LavorazioneSchedeBundle>;
   onSchedaLog?: (ev: SchedaLogEv) => void;
+  onIngressoCommitted?: (campi: SchedaIngressoFields) => void | Promise<void>;
 }) {
   const router = useRouter();
+  const { canEditWorkOrders } = usePermissions();
   const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
   const hubQuery = useLavorazioneHub(lav.id);
   const hubData = hubQuery.data;
@@ -213,28 +308,21 @@ export function SchedeLavorazioneModal({
     [appSettings?.mezziListe],
   );
 
-  const marcheGuidate = useMemo(() => {
-    const p = listePrefs;
-    const s = new Set<string>(p.marche);
-    for (const m of mezzi) {
-      const t = m.marca.trim();
-      if (t) s.add(t);
-    }
-    return [...s].sort((a, b) => a.localeCompare(b, "it"));
-  }, [mezzi, listePrefs]);
+  const marcheGuidate = useMemo(
+    () => marcheFromHierarchyTree(listePrefs, "attrezzature"),
+    [listePrefs],
+  );
+
+  const marcheTelaioGuidate = useMemo(() => marcheFromHierarchyTree(listePrefs, "telai"), [listePrefs]);
 
   const modelliForMarca = useCallback(
-    (marca: string) => {
-      const ma = marca.trim();
-      const p = listePrefs;
-      const fromPrefs = ma ? modelliVisibiliPerMarca(p, ma) : [...p.modelli];
-      const set = new Set<string>(fromPrefs);
-      for (const m of mezzi) {
-        if (m.marca.trim() === ma && m.modello.trim()) set.add(m.modello.trim());
-      }
-      return [...set].sort((a, b) => a.localeCompare(b, "it"));
-    },
-    [mezzi, listePrefs],
+    (marca: string) => modelliVisibiliPerMarcaHierarchy(listePrefs, "attrezzature", marca),
+    [listePrefs],
+  );
+
+  const modelliForMarcaTelaio = useCallback(
+    (marca: string) => modelliVisibiliPerMarcaHierarchy(listePrefs, "telai", marca),
+    [listePrefs],
   );
 
   useEffect(() => {
@@ -257,6 +345,7 @@ export function SchedeLavorazioneModal({
   );
 
   function deleteSchedaTipo(tipo: SchedaTipo) {
+    if (!canEditWorkOrders) return;
     if (!window.confirm("Confermi eliminazione scheda?")) return;
     const base = draftRef.current;
     const label =
@@ -275,6 +364,7 @@ export function SchedeLavorazioneModal({
   }
 
   function startCreate(tipo: SchedaTipo) {
+    if (!canEditWorkOrders) return;
     const u = currentUser.trim() || "Operatore";
     if (tipo === "ingresso") {
       const campi = buildSchedaIngressoFieldsFromContext(lav, mezzo, addetti[0] ?? "");
@@ -465,6 +555,7 @@ export function SchedeLavorazioneModal({
       updatedBy: u,
     };
     persist({ ...draftRef.current, ingresso: nextDoc });
+    void onIngressoCommitted?.(ig);
     return true;
   }
 
@@ -679,7 +770,13 @@ export function SchedeLavorazioneModal({
           {stage.kind === "hub" && hubTab === "schede" ? (
             <div className="space-y-4">
               <div className="flex flex-wrap gap-2">
-                <button type="button" className={dsBtnNeutral} onClick={duplicateIngressoPrev}>
+                <button
+                  type="button"
+                  className={dsBtnNeutral}
+                  disabled={!canEditWorkOrders}
+                  title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : undefined}
+                  onClick={duplicateIngressoPrev}
+                >
                   Copia ingresso da intervento precedente (stesso mezzo)
                 </button>
               </div>
@@ -687,13 +784,14 @@ export function SchedeLavorazioneModal({
                 scope="lavorazioni"
                 recordId={lav.id}
                 title="Foto lavorazione"
-                canEdit
+                canEdit={canEditWorkOrders}
                 onImageEvent={() => void hubQuery.refetch()}
               />
               <SchedaSectionHub
                 title="Scheda ingresso"
                 stato={statoUiSchedaIngresso(hub)}
                 doc={hub.ingresso}
+                canEdit={canEditWorkOrders}
                 onApri={apriSchedaIngresso}
                 onCrea={() => startCreate("ingresso")}
                 onPdf={() => {
@@ -714,6 +812,7 @@ export function SchedeLavorazioneModal({
                 title="Scheda lavorazioni"
                 stato={statoUiSchedaLavorazioni(hub)}
                 doc={hub.lavorazioni}
+                canEdit={canEditWorkOrders}
                 onApri={apriSchedaLavorazioni}
                 onCrea={() => startCreate("lavorazioni")}
                 onPdf={() => {
@@ -732,6 +831,7 @@ export function SchedeLavorazioneModal({
                 title="Scheda ricambi utilizzati"
                 stato={statoUiSchedaRicambi(hub)}
                 doc={hub.ricambi}
+                canEdit={canEditWorkOrders}
                 onApri={apriSchedaRicambi}
                 onCrea={() => startCreate("ricambi")}
                 onPdf={() => {
@@ -747,7 +847,13 @@ export function SchedeLavorazioneModal({
                 onElimina={hub.ricambi ? () => deleteSchedaTipo("ricambi") : undefined}
               />
               <div className="flex justify-end border-t border-zinc-100 pt-3 dark:border-zinc-800">
-                <button type="button" className={dsBtnPrimary} onClick={generaPreventivoDaHub}>
+                <button
+                  type="button"
+                  className={dsBtnPrimary}
+                  disabled={!canEditWorkOrders}
+                  title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : undefined}
+                  onClick={generaPreventivoDaHub}
+                >
                   Crea preventivo
                 </button>
               </div>
@@ -912,8 +1018,13 @@ export function SchedeLavorazioneModal({
               doc={hub.ingresso}
               fields={ingressoF}
               setFields={setIngressoF}
+              clientiLista={listePrefs.clienti}
+              tipiAttrezzaturaLista={listePrefs.tipiAttrezzatura}
               marcheGuidate={marcheGuidate}
               modelliForMarca={modelliForMarca}
+              tipiTelaioLista={listePrefs.tipiTelaio ?? []}
+              marcheTelaioGuidate={marcheTelaioGuidate}
+              modelliForMarcaTelaio={modelliForMarcaTelaio}
               addettiLista={addetti}
               utilizzatoriLista={listePrefs.utilizzatori}
               cantieriLista={listePrefs.cantieri}
@@ -1023,6 +1134,7 @@ function SchedaSectionHub({
   title,
   stato,
   doc,
+  canEdit = true,
   onApri,
   onCrea,
   onPdf,
@@ -1031,6 +1143,7 @@ function SchedaSectionHub({
   title: string;
   stato: ReturnType<typeof statoUiSchedaIngresso>;
   doc: SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc | null;
+  canEdit?: boolean;
   onApri: () => void;
   onCrea: () => void;
   onPdf: () => void;
@@ -1054,11 +1167,23 @@ function SchedaSectionHub({
         <div className="flex flex-wrap gap-2">
           <div className="flex w-[8.75rem] shrink-0 justify-stretch">
             {!doc ? (
-              <button type="button" className={`${dsBtnPrimary} w-full min-w-0`} onClick={onCrea}>
+              <button
+                type="button"
+                className={`${dsBtnPrimary} w-full min-w-0`}
+                disabled={!canEdit}
+                title={!canEdit ? READONLY_PERMISSION_HINT : undefined}
+                onClick={onCrea}
+              >
                 Crea nuova
               </button>
             ) : onElimina ? (
-              <button type="button" className={`${dsBtnDanger} w-full min-w-0`} onClick={onElimina}>
+              <button
+                type="button"
+                className={`${dsBtnDanger} w-full min-w-0`}
+                disabled={!canEdit}
+                title={!canEdit ? READONLY_PERMISSION_HINT : undefined}
+                onClick={onElimina}
+              >
                 Elimina
               </button>
             ) : null}
@@ -1158,8 +1283,13 @@ function IngressoPanel({
   doc,
   fields,
   setFields,
+  clientiLista,
+  tipiAttrezzaturaLista,
   marcheGuidate,
   modelliForMarca,
+  tipiTelaioLista,
+  marcheTelaioGuidate,
+  modelliForMarcaTelaio,
   addettiLista,
   utilizzatoriLista,
   cantieriLista,
@@ -1171,8 +1301,13 @@ function IngressoPanel({
   doc: SchedaIngressoDoc;
   fields: SchedaIngressoFields;
   setFields: (f: SchedaIngressoFields) => void;
+  clientiLista: string[];
+  tipiAttrezzaturaLista: string[];
   marcheGuidate: string[];
   modelliForMarca: (marca: string) => string[];
+  tipiTelaioLista: string[];
+  marcheTelaioGuidate: string[];
+  modelliForMarcaTelaio: (marca: string) => string[];
   addettiLista: string[];
   utilizzatoriLista: string[];
   cantieriLista: string[];
@@ -1184,6 +1319,7 @@ function IngressoPanel({
   const ro = doc.sorgente === "file_esterno";
   const grid = "grid gap-3 sm:grid-cols-2";
   const modelliOpts = modelliForMarca(fields.marcaAttrezzatura);
+  const modelliTelaioOpts = modelliForMarcaTelaio(fields.marcaTelaio);
   const inp = (k: keyof SchedaIngressoFields, label: string) => (
     <label className="block text-xs" key={String(k)}>
       <span className="text-zinc-500">{label}</span>
@@ -1223,7 +1359,16 @@ function IngressoPanel({
           readOnly={ro}
           inputRef={dataIngressoInputRef}
         />
-        {inp("cliente", "Cliente")}
+        <label className="block text-xs">
+          <span className="text-zinc-500">Cliente</span>
+          <SettingsAutocompleteInput
+            className="mt-1"
+            value={fields.cliente}
+            onChange={(v) => setFields({ ...fields, cliente: v })}
+            options={clientiLista}
+            disabled={ro}
+          />
+        </label>
         <label className="block text-xs">
           <span className="text-zinc-500">Cantiere</span>
           <SettingsAutocompleteInput
@@ -1244,31 +1389,33 @@ function IngressoPanel({
             disabled={ro}
           />
         </label>
-        {inp("tipoAttrezzatura", "Tipo attrezzatura")}
+        <label className="block text-xs">
+          <span className="text-zinc-500">Tipo attrezzatura</span>
+          <SettingsAutocompleteInput
+            className="mt-1"
+            value={fields.tipoAttrezzatura}
+            onChange={(v) => setFields({ ...fields, tipoAttrezzatura: v })}
+            options={tipiAttrezzaturaLista}
+            disabled={ro}
+          />
+        </label>
         <label className="block text-xs">
           <span className="text-zinc-500">Marca attrezzatura</span>
           {ro ? (
             <input className={`${dsInput} mt-1`} readOnly value={fields.marcaAttrezzatura} />
           ) : (
-            <>
-              <input
-                className={`${dsInput} mt-1`}
-                list="scheda-ingresso-marche"
-                value={fields.marcaAttrezzatura}
-                onChange={(e) =>
-                  setFields({
-                    ...fields,
-                    marcaAttrezzatura: e.target.value,
-                    modelloAttrezzatura: "",
-                  })
-                }
-              />
-              <datalist id="scheda-ingresso-marche">
-                {marcheGuidate.map((m) => (
-                  <option key={m} value={m} />
-                ))}
-              </datalist>
-            </>
+            <GestionaleListSelect
+              className="mt-1"
+              value={fields.marcaAttrezzatura}
+              onChange={(v) =>
+                setFields({
+                  ...fields,
+                  marcaAttrezzatura: v,
+                  modelloAttrezzatura: "",
+                })
+              }
+              options={marcheGuidate}
+            />
           )}
         </label>
         <label className="block text-xs">
@@ -1276,27 +1423,66 @@ function IngressoPanel({
           {ro ? (
             <input className={`${dsInput} mt-1`} readOnly value={fields.modelloAttrezzatura} />
           ) : (
-            <>
-              <input
-                className={`${dsInput} mt-1`}
-                list="scheda-ingresso-modelli"
-                value={fields.modelloAttrezzatura}
-                onChange={(e) => setFields({ ...fields, modelloAttrezzatura: e.target.value })}
-              />
-              <datalist id="scheda-ingresso-modelli">
-                {modelliOpts.map((m) => (
-                  <option key={m} value={m} />
-                ))}
-              </datalist>
-            </>
+            <GestionaleListSelect
+              className="mt-1"
+              value={fields.modelloAttrezzatura}
+              onChange={(v) => setFields({ ...fields, modelloAttrezzatura: v })}
+              options={modelliOpts}
+              disabled={!fields.marcaAttrezzatura.trim()}
+            />
           )}
         </label>
         {inp("matricola", "Matricola")}
         {inp("nScuderia", "N. scuderia")}
-        {inp("oreLavoro", "Ore lavoro")}
-        {inp("tipoTelaio", "Tipo telaio")}
-        {inp("marcaTelaio", "Marca telaio")}
-        {inp("modelloTelaio", "Modello telaio")}
+        <SchedaOreTextInput
+          label="Ore lavoro"
+          value={fields.oreLavoro}
+          onChange={(v) => setFields({ ...fields, oreLavoro: v })}
+          readOnly={ro}
+        />
+        <label className="block text-xs">
+          <span className="text-zinc-500">Tipo telaio</span>
+          <SettingsAutocompleteInput
+            className="mt-1"
+            value={fields.tipoTelaio}
+            onChange={(v) => setFields({ ...fields, tipoTelaio: v })}
+            options={tipiTelaioLista}
+            disabled={ro}
+          />
+        </label>
+        <label className="block text-xs">
+          <span className="text-zinc-500">Marca telaio</span>
+          {ro ? (
+            <input className={`${dsInput} mt-1`} readOnly value={fields.marcaTelaio} />
+          ) : (
+            <GestionaleListSelect
+              className="mt-1"
+              value={fields.marcaTelaio}
+              onChange={(v) =>
+                setFields({
+                  ...fields,
+                  marcaTelaio: v,
+                  modelloTelaio: "",
+                })
+              }
+              options={marcheTelaioGuidate}
+            />
+          )}
+        </label>
+        <label className="block text-xs">
+          <span className="text-zinc-500">Modello telaio</span>
+          {ro ? (
+            <input className={`${dsInput} mt-1`} readOnly value={fields.modelloTelaio} />
+          ) : (
+            <GestionaleListSelect
+              className="mt-1"
+              value={fields.modelloTelaio}
+              onChange={(v) => setFields({ ...fields, modelloTelaio: v })}
+              options={modelliTelaioOpts}
+              disabled={!fields.marcaTelaio.trim()}
+            />
+          )}
+        </label>
         {inp("targa", "Targa")}
         {inp("km", "KM")}
         {inp("livelloCarburante", "Livello carburante")}
@@ -1330,6 +1516,16 @@ function IngressoPanel({
           onChange={(e) => setFields({ ...fields, descrizioneAnomalia: e.target.value })}
         />
       </label>
+      <label className="block text-xs">
+        <span className="text-zinc-500">Note</span>
+        <textarea
+          className={`${dsInput} mt-1 min-h-[4rem]`}
+          readOnly={ro}
+          value={fields.noteIntervento ?? ""}
+          onChange={(e) => setFields({ ...fields, noteIntervento: e.target.value })}
+        />
+      </label>
+      {inp("richiedente", "Richiedente")}
     </div>
   );
 }
@@ -1452,14 +1648,10 @@ function LavorazioniPanel({
                               ))}
                             </select>
                           </div>
-                          <input
-                            type="number"
-                            min={0}
-                            step={1}
+                          <SchedaOreNumberInput
                             className={`${dsInput} !py-1.5 !text-xs w-20`}
-                            value={Number.isFinite(a.oreImpiegate) ? Math.round(a.oreImpiegate) : 0}
-                            onChange={(e) => {
-                              const v = Math.max(0, Math.round(Number.parseFloat(e.target.value) || 0));
+                            value={Number.isFinite(a.oreImpiegate) ? a.oreImpiegate : 0}
+                            onChange={(v) => {
                               const next = [...(r.addettiAssegnati ?? [])];
                               next[idx] = { ...next[idx]!, oreImpiegate: v };
                               patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
@@ -1565,6 +1757,52 @@ function RicambiPanel({
   const ro = doc.sorgente === "file_esterno";
   const prodotti = getMagazzinoReportSnapshot();
   const [acRowId, setAcRowId] = useState<string | null>(null);
+  const [magSearch, setMagSearch] = useState("");
+  const [magSearchOpen, setMagSearchOpen] = useState(false);
+
+  const magSearchHits = useMemo(() => {
+    const q = magSearch.trim().toLowerCase();
+    if (q.length < 1) return [];
+    return prodotti
+      .filter((p) => {
+        const d = (p.descrizione ?? "").toLowerCase();
+        const c = (p.codiceFornitoreOriginale ?? "").toLowerCase();
+        return d.includes(q) || c.includes(q) || q.split(/\s+/).every((w) => w && (d.includes(w) || c.includes(w)));
+      })
+      .slice(0, 16);
+  }, [magSearch, prodotti]);
+
+  useEffect(() => {
+    if (!magSearchOpen) return;
+    function onDoc(ev: MouseEvent) {
+      const t = ev.target;
+      if (t instanceof Element && t.closest("[data-ricambi-mag-search='1']")) return;
+      setMagSearchOpen(false);
+    }
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [magSearchOpen]);
+
+  function addRicambioFromMag(p: RicambioMagazzino) {
+    if (doc.campi.righe.some((r) => r.ricambioId === p.id)) {
+      window.alert("Ricambio già presente in scheda.");
+      return;
+    }
+    patchRighe([
+      ...doc.campi.righe,
+      {
+        id: newRigaId(),
+        ricambioId: p.id,
+        ricambioNome: p.descrizione ?? "",
+        codice: p.codiceFornitoreOriginale ?? "",
+        quantita: 1,
+        addetto: lav.addetto,
+        dataUtilizzo: todayItDate(),
+      },
+    ]);
+    setMagSearch("");
+    setMagSearchOpen(false);
+  }
 
   useEffect(() => {
     if (!acRowId) return;
@@ -1651,6 +1889,45 @@ function RicambiPanel({
         Identificazione:{" "}
         <span className="font-medium text-zinc-800 dark:text-zinc-100">{identLine}</span>
       </p>
+      {!ro ? (
+        <div className="relative max-w-xl" data-ricambi-mag-search="1">
+          <GestionaleSearchField
+            wrapperClassName="w-full"
+            placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+            value={magSearch}
+            onChange={(e) => {
+              setMagSearch(e.target.value);
+              setMagSearchOpen(true);
+            }}
+            onFocus={() => setMagSearchOpen(true)}
+            autoComplete="off"
+            aria-label="Cerca ricambio in magazzino per nome o codice"
+          />
+          {magSearchOpen && magSearch.trim() && magSearchHits.length > 0 ? (
+            <ul className="absolute left-0 right-0 top-full z-[90] mt-1 max-h-52 overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 text-[11px] shadow-lg dark:border-zinc-600 dark:bg-zinc-900">
+              {magSearchHits.map((p) => (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    className="flex w-full flex-col px-3 py-2 text-left hover:bg-orange-50 dark:hover:bg-orange-950/30"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => addRicambioFromMag(p)}
+                  >
+                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{p.descrizione || "—"}</span>
+                    <span className="text-zinc-500">
+                      {p.codiceFornitoreOriginale || "—"} · {p.marca || "—"}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : magSearchOpen && magSearch.trim().length >= 1 && magSearchHits.length === 0 ? (
+            <p className="absolute left-0 right-0 top-full z-[90] mt-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[11px] text-zinc-500 shadow-lg dark:border-zinc-600 dark:bg-zinc-900">
+              Nessun ricambio trovato.
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       <div className={`${dsTableWrap} ${dsScrollbar}`}>
         <table className={`${dsTable} text-xs`}>
           <thead>

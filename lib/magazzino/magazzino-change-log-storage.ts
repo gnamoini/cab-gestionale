@@ -7,6 +7,10 @@ export const MAGAZZINO_CHANGE_LOG_MAX = 100;
 export type MagazzinoChangeLogEntry = MagazzinoLogEntryLike & {
   id: string;
   ricambioId: string;
+  /** Utente che ha eseguito l'azione (undo per-utente). */
+  autoreUserId?: string;
+  /** Sessione undo browser (undo per-sessione). */
+  undoSessionId?: string;
 };
 
 function normalizeEntry(raw: unknown): MagazzinoChangeLogEntry | null {
@@ -35,7 +39,9 @@ function normalizeEntry(raw: unknown): MagazzinoChangeLogEntry | null {
         })
     : [];
   const annullato = e.annullato === true;
-  return { id, tipo, ricambioId, ricambio, autore, at, riepilogo, changes, annullato };
+  const autoreUserId = typeof e.autoreUserId === "string" && e.autoreUserId.trim() ? e.autoreUserId.trim() : undefined;
+  const undoSessionId = typeof e.undoSessionId === "string" && e.undoSessionId.trim() ? e.undoSessionId.trim() : undefined;
+  return { id, tipo, ricambioId, ricambio, autore, at, riepilogo, changes, annullato, autoreUserId, undoSessionId };
 }
 
 export function loadMagazzinoChangeLog(): MagazzinoChangeLogEntry[] {

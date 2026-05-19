@@ -2,11 +2,17 @@ import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cli
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import { loadPreventivi, nextPreventivoId, nextPreventivoNumero } from "@/lib/preventivi/preventivi-storage";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
+import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
+import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 
 /** Bozza vuota senza lavorazione collegata (salvataggio alla prima conferma in modale). */
-export function buildEmptyManualPreventivo(autore: string): PreventivoRecord {
+export function buildEmptyManualPreventivo(autore: string, cliente = ""): PreventivoRecord {
   const tutti = loadPreventivi();
-  const infer = inferEconomiciClientePreventivi("", tutti);
+  const mezziListe = migrateMezziListePrefs(getRuntimeCabAppSettings()?.mezziListe ?? createMezziListePrefsDefault());
+  const defaultSconto = getScontoRicambiCliente(mezziListe, cliente);
+  const infer = inferEconomiciClientePreventivi(cliente, tutti, undefined, defaultSconto);
   const now = new Date().toISOString();
   const draft: PreventivoRecord = {
     id: nextPreventivoId(),

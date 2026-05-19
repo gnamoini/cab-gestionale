@@ -9,6 +9,7 @@ import {
   type ImageScope,
   type StoredImage,
 } from "@/lib/media/image-storage";
+import { prefetchStorageBuckets } from "@/src/services/storage.service";
 import { dsBtnDanger, dsBtnNeutral, dsScrollbar } from "@/lib/ui/design-system";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { logService } from "@/src/services/log.service";
@@ -72,6 +73,10 @@ export function RecordImageManager({
       setLoading(false);
     }
   }, [recordId, scope]);
+
+  useEffect(() => {
+    void prefetchStorageBuckets();
+  }, []);
 
   useEffect(() => {
     const t = window.setTimeout(() => void refresh(), 0);

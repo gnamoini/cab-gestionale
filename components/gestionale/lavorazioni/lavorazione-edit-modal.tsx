@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
 import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnDanger, dsInput, dsLabel } from "@/lib/ui/design-system";
@@ -13,21 +15,32 @@ import { dsBtnDanger, dsInput, dsLabel } from "@/lib/ui/design-system";
 export function LavorazioneEditModal({
   row,
   onClose,
+  onBack,
   canDelete,
   onDelete,
 }: {
   row: LavorazioneListRow;
   onClose: () => void;
+  onBack?: () => void;
   canDelete?: boolean;
   onDelete?: () => void;
 }) {
   const update = useLavorazioneUpdateMutation();
   const updateMezzo = useMezzoUpdateMutation();
   const globalOpts = useGlobalOptions({ debugTag: "LavorazioneEditModal" });
+  const clientiOpts = globalOpts.mezziListe.clienti;
+  const marcheOpts = useMemo(
+    () => marcheFromHierarchyTree(globalOpts.mezziListe, "attrezzature"),
+    [globalOpts.mezziListe],
+  );
   const [cliente, setCliente] = useState(() => row.mezzo?.cliente?.trim() ?? "");
   const [utilizzatore, setUtilizzatore] = useState(() => row.mezzo?.utilizzatore?.trim() ?? "");
   const [marca, setMarca] = useState(() => row.mezzo?.marca?.trim() ?? "");
   const [modello, setModello] = useState(() => row.mezzo?.modello?.trim() ?? "");
+  const modelliOpts = useMemo(
+    () => modelliVisibiliPerMarcaHierarchy(globalOpts.mezziListe, "attrezzature", marca),
+    [globalOpts.mezziListe, marca],
+  );
   const [targa, setTarga] = useState(() => row.mezzo?.targa?.trim() ?? "");
   const [matricola, setMatricola] = useState(() => row.mezzo?.matricola?.trim() ?? "");
   const [numeroScuderia, setNumeroScuderia] = useState(() => row.mezzo?.numero_scuderia?.trim() ?? "");
@@ -62,13 +75,13 @@ export function LavorazioneEditModal({
   }
 
   return (
-    <LavorazioniModalShell onRequestClose={onClose}>
+    <LavorazioniModalShell
+      onRequestClose={onClose}
+      onBack={onBack}
+      title="Dettagli macchina"
+      subtitle="Modifica controllata di anagrafica mezzo e note lavorazione."
+    >
       <form onSubmit={onSubmit} className="flex max-h-[min(88dvh,720px)] flex-col overflow-hidden">
-        <header className="shrink-0 border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Dettagli macchina</h2>
-          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">Modifica controllata di anagrafica mezzo e note lavorazione.</p>
-        </header>
-
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
           {update.isError || updateMezzo.isError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{update.error?.message ?? updateMezzo.error?.message ?? "Aggiornamento fallito."}</p>
@@ -77,7 +90,14 @@ export function LavorazioneEditModal({
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className={dsLabel}>Cliente</span>
-              <input className={`${dsInput} mt-1 w-full`} value={cliente} onChange={(e) => setCliente(e.target.value)} disabled={update.isPending || updateMezzo.isPending} required />
+              <GestionaleListSelect
+                className="mt-1 w-full"
+                value={cliente}
+                onChange={setCliente}
+                options={clientiOpts}
+                disabled={update.isPending || updateMezzo.isPending}
+                required
+              />
             </label>
             <label className="block">
               <span className={dsLabel}>Utilizzatore</span>
@@ -91,11 +111,28 @@ export function LavorazioneEditModal({
             </label>
             <label className="block">
               <span className={dsLabel}>Marca attrezzatura</span>
-              <input className={`${dsInput} mt-1 w-full`} value={marca} onChange={(e) => setMarca(e.target.value)} disabled={update.isPending || updateMezzo.isPending} required />
+              <GestionaleListSelect
+                className="mt-1 w-full"
+                value={marca}
+                onChange={(v) => {
+                  setMarca(v);
+                  setModello("");
+                }}
+                options={marcheOpts}
+                disabled={update.isPending || updateMezzo.isPending}
+                required
+              />
             </label>
             <label className="block">
               <span className={dsLabel}>Modello attrezzatura</span>
-              <input className={`${dsInput} mt-1 w-full`} value={modello} onChange={(e) => setModello(e.target.value)} disabled={update.isPending || updateMezzo.isPending} required />
+              <GestionaleListSelect
+                className="mt-1 w-full"
+                value={modello}
+                onChange={setModello}
+                options={modelliOpts}
+                disabled={update.isPending || updateMezzo.isPending || !marca.trim()}
+                required
+              />
             </label>
             <label className="block">
               <span className={dsLabel}>Targa</span>

@@ -147,6 +147,25 @@ export function ultimoInterventoIso(rows: MezzoInterventoLavorazione[]): string 
   return rows[0]!.dataIngresso;
 }
 
+export type UltimaLavorazioneFilter = "" | "con" | "senza" | "recenti12m" | "oltre12m";
+
+export function mezzoMatchesUltimaLavFilter(
+  interventi: MezzoInterventoLavorazione[],
+  filtro: UltimaLavorazioneFilter,
+): boolean {
+  if (!filtro) return true;
+  const iso = ultimoInterventoIso(interventi);
+  if (filtro === "senza") return !iso;
+  if (filtro === "con") return Boolean(iso);
+  if (!iso) return false;
+  const t = parseIso(iso);
+  if (Number.isNaN(t)) return false;
+  const start12m = parseIso(oggiIsoDefault()) - 365 * 86400000;
+  if (filtro === "recenti12m") return t >= start12m;
+  if (filtro === "oltre12m") return t < start12m;
+  return true;
+}
+
 export type FrequenzaGuasti = "BASSA" | "MEDIA" | "ALTA";
 
 export type AffidabilitaBadge = "affidabile" | "attenzione" | "critico";
@@ -186,15 +205,20 @@ export function mezziConInterventiRecenti(
 
 const MEZZO_LOG_FIELDS: { key: keyof MezzoGestito; label: string }[] = [
   { key: "cliente", label: "Cliente" },
+  { key: "cantiere", label: "Cantiere" },
   { key: "utilizzatore", label: "Utilizzatore" },
+  { key: "tipoAttrezzatura", label: "Tipo attrezzatura" },
   { key: "marca", label: "Marca" },
   { key: "modello", label: "Modello" },
-  { key: "targa", label: "Targa" },
   { key: "matricola", label: "Matricola" },
   { key: "numeroScuderia", label: "N. scuderia" },
-  { key: "tipoAttrezzatura", label: "Tipo attrezzatura" },
+  { key: "tipoTelaio", label: "Tipo telaio" },
+  { key: "marcaTelaio", label: "Marca telaio" },
+  { key: "modelloTelaio", label: "Modello telaio" },
+  { key: "targa", label: "Targa" },
   { key: "anno", label: "Anno" },
-  { key: "oreKm", label: "Ore / km" },
+  { key: "oreKm", label: "Ore lavoro" },
+  { key: "km", label: "KM" },
   { key: "dataUltimaUscita", label: "Ultima uscita" },
   { key: "note", label: "Note" },
   { key: "priorita", label: "Priorità" },

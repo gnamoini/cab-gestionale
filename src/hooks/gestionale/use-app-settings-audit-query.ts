@@ -2,6 +2,7 @@
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
+import { hasPermission } from "@/lib/auth/rbac";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import {
   appSettingsAuditService,
@@ -27,7 +28,7 @@ export function useAppSettingsAuditQuery(
       if (!r.success) throw new Error(r.error ?? "Errore lettura audit impostazioni");
       return r.data ?? [];
     },
-    enabled: user?.ruolo === "admin",
+    enabled: hasPermission(user, "manageSecurity"),
     staleTime: 60_000,
     gcTime: 300_000,
   });

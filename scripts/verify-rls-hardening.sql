@@ -1,0 +1,56 @@
+-- Verifica RLS hardening (eseguire con: npx supabase db execute --linked --file scripts/verify-rls-hardening.sql)
+
+-- 1) Tutte le tabelle applicative con RLS attivo
+select c.relname as table_name, c.relrowsecurity as rls_enabled
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public'
+  and c.relkind = 'r'
+  and c.relname in (
+    'profiles', 'mezzi', 'lavorazioni', 'scheda_lavorazione',
+    'magazzino_ricambi', 'movimenti_ricambi', 'preventivi', 'documenti',
+    'log_modifiche', 'app_settings', 'app_settings_audit', 'user_permissions',
+    'auth_logs', 'segnalazioni'
+  )
+order by c.relname;
+
+-- 2) Conteggio policy per tabella
+select schemaname, tablename, count(*) as policy_count
+from pg_policies
+where schemaname = 'public'
+  and tablename in (
+    'profiles', 'mezzi', 'lavorazioni', 'scheda_lavorazione',
+    'magazzino_ricambi', 'movimenti_ricambi', 'preventivi', 'documenti',
+    'log_modifiche', 'app_settings', 'user_permissions', 'auth_logs', 'segnalazioni'
+  )
+group by schemaname, tablename
+order by tablename;
+
+-- 3) Helper RBAC presenti
+select proname
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and proname like 'rbac_%'
+order by proname;
+
+-- 4) Colonna cliente_ref su profiles
+select column_name, data_type
+from information_schema.columns
+where table_schema = 'public'
+  and table_name = 'profiles'
+  and column_name = 'cliente_ref';
+
+-- 5) View lavorazioni_clienti
+select table_name, is_insertable_into
+from information_schema.views
+where table_schema = 'public'
+  and table_name = 'lavorazioni_clienti';
+
+-- 6) Revoke anon (privilegi residui)
+select grantee, table_name, privilege_type
+from information_schema.role_table_grants
+where table_schema = 'public'
+  and grantee = 'anon'
+  and table_name in ('lavorazioni', 'mezzi', 'profiles', 'magazzino_ricambi')
+order by table_name, privilege_type;

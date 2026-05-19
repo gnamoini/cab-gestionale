@@ -21,6 +21,7 @@ import {
   prioritaBadgeStyle,
   prioritaLabel,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { CloseButton } from "@/components/design-system/close-button";
 import {
   dsInput,
   dsLavorazioniModalDialog,
@@ -28,6 +29,7 @@ import {
   dsLavorazioniModalOverlay,
   dsLabel,
 } from "@/lib/ui/design-system";
+import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -50,22 +52,62 @@ function Field({
   );
 }
 
-const PRIORITA: PrioritaLav[] = ["urgente", "alta", "media", "bassa"];
+const PRIORITA: PrioritaLav[] = orderPrioritaList(["bassa", "media", "alta", "urgente"]) as PrioritaLav[];
 
-/** Scroll lock con scrollbar gutter; chiusura solo overlay (mousedown) o ESC. */
+export function LavorazioniModalHeader({
+  title,
+  subtitle,
+  onRequestClose,
+  onBack,
+}: {
+  title: string;
+  subtitle?: string;
+  onRequestClose: () => void;
+  onBack?: () => void;
+}) {
+  return (
+    <header className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="min-w-0 flex-1">
+        {onBack ? (
+          <button
+            type="button"
+            className={`${erpBtnNeutral} mb-2 px-2 py-1 text-xs`}
+            onClick={onBack}
+          >
+            ← Torna indietro
+          </button>
+        ) : null}
+        <h2 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
+        {subtitle ? <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p> : null}
+      </div>
+      <CloseButton onClick={onRequestClose} className="shrink-0" />
+    </header>
+  );
+}
+
+/** Scroll lock con scrollbar gutter; chiusura overlay, ESC o pulsante X. */
 export function LavorazioniModalShell({
   children,
   wide,
   maxWidthClass,
   alignTop,
   onRequestClose,
+  title,
+  subtitle,
+  onBack,
+  header,
 }: {
   children: React.ReactNode;
   wide?: boolean;
-  /** Es. max-w-3xl — se assente con `wide` usa max-w-2xl. */
   maxWidthClass?: string;
   alignTop?: boolean;
   onRequestClose: () => void;
+  /** Se impostato, mostra header standard con titolo e X. */
+  title?: string;
+  subtitle?: string;
+  onBack?: () => void;
+  /** Header custom (ignora title/subtitle se fornito). */
+  header?: React.ReactNode;
 }) {
   useEffect(() => {
     const sb = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
@@ -99,10 +141,12 @@ export function LavorazioniModalShell({
         }}
       />
       <div
-        className={`${dsLavorazioniModalDialog} ${maxWidthClass ?? (wide ? "max-w-2xl" : "max-w-lg")}`}
+        className={`${dsLavorazioniModalDialog} flex max-h-[min(92dvh,900px)] flex-col overflow-hidden ${maxWidthClass ?? (wide ? "max-w-2xl" : "max-w-lg")}`}
         role="dialog"
         aria-modal="true"
+        onMouseDown={(e) => e.stopPropagation()}
       >
+        {header ?? (title ? <LavorazioniModalHeader title={title} subtitle={subtitle} onRequestClose={onRequestClose} onBack={onBack} /> : null)}
         {children}
       </div>
     </div>
@@ -560,6 +604,7 @@ export type SettingsLavorazioniTab = SettingsTab;
 
 export function SettingsLavorazioniModal({
   stati,
+  statiDisponibiliDaAggiungere,
   onAddStato,
   onChangeStatoLabel,
   onChangeStatoColor,
@@ -584,7 +629,9 @@ export function SettingsLavorazioniModal({
   embeddedFocus = null,
 }: {
   stati: StatoLavorazioneConfig[];
-  onAddStato: (label: string) => void;
+  /** Enum DB non ancora nella lista configurata. */
+  statiDisponibiliDaAggiungere: StatoLavorazioneConfig[];
+  onAddStato: (stato: StatoLavorazioneConfig) => void;
   onChangeStatoLabel: (id: string, label: string) => void;
   onChangeStatoColor: (id: string, hex: string) => void;
   onRemoveStato: (id: string) => void;
@@ -608,7 +655,7 @@ export function SettingsLavorazioniModal({
   embeddedFocus?: SettingsLavorazioniTab | null;
 }) {
   const [tab, setTab] = useState<SettingsTab>("stati");
-  const [nuovoStato, setNuovoStato] = useState("");
+  const [selectedStatoId, setSelectedStatoId] = useState("");
   const [nuovoAddetto, setNuovoAddetto] = useState("");
 
   const lockedTab = layout === "embedded" && embeddedFocus ? embeddedFocus : null;
@@ -627,7 +674,7 @@ export function SettingsLavorazioniModal({
         aria-selected={active}
         className={`rounded-lg px-3 py-2 text-xs font-semibold transition-[background-color,color,box-shadow] duration-150 ${
           active
-            ? "bg-orange-500 text-white shadow-sm shadow-orange-500/25 ring-1 ring-orange-400/40"
+            ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:brightness-[1.06] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]"
             : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/90"
         }`}
         onClick={() => setTab(id)}
@@ -676,35 +723,40 @@ export function SettingsLavorazioniModal({
         >
           {tab === "stati" ? (
             <div className={`${lockedTab ? "w-full" : "mx-auto max-w-xl"} rounded-lg border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900 sm:p-4`}>
-              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                <input
-                  className={`${dsInput} min-w-0 flex-1 sm:max-w-md`}
-                  placeholder="Nuovo stato"
-                  value={nuovoStato}
-                  onChange={(e) => setNuovoStato(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const label = nuovoStato.trim();
-                      if (!label) return;
-                      onAddStato(label);
-                      setNuovoStato("");
-                    }
-                  }}
-                />
-                <button
-                  type="button"
-                  className={erpBtnSoftOrange}
-                  onClick={() => {
-                    const label = nuovoStato.trim();
-                    if (!label) return;
-                    onAddStato(label);
-                    setNuovoStato("");
-                  }}
-                >
-                  Aggiungi stato
-                </button>
-              </div>
+              {statiDisponibiliDaAggiungere.length > 0 ? (
+                <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+                  <select
+                    className={`${dsInput} min-w-0 flex-1 sm:max-w-md`}
+                    value={selectedStatoId}
+                    onChange={(e) => setSelectedStatoId(e.target.value)}
+                    aria-label="Stato da aggiungere"
+                  >
+                    <option value="">Seleziona stato da aggiungere…</option>
+                    {statiDisponibiliDaAggiungere.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.label} ({s.id})
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className={erpBtnSoftOrange}
+                    disabled={!selectedStatoId}
+                    onClick={() => {
+                      const pick = statiDisponibiliDaAggiungere.find((s) => s.id === selectedStatoId);
+                      if (!pick) return;
+                      onAddStato(pick);
+                      setSelectedStatoId("");
+                    }}
+                  >
+                    Aggiungi stato
+                  </button>
+                </div>
+              ) : (
+                <p className="mb-4 text-xs text-zinc-500 dark:text-zinc-400">
+                  Tutti gli stati disponibili sono già configurati.
+                </p>
+              )}
               <StatoSettingsList
                 stati={stati}
                 onChangeLabel={onChangeStatoLabel}

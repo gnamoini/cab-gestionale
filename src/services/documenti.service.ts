@@ -1,7 +1,7 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
+import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { CategoriaDocumento, DocumentoRow } from "@/src/types/supabase-tables";
@@ -37,6 +37,8 @@ async function sb() {
 export const documentiService = {
   async getAll(filters?: DocumentiFilters): Promise<ServiceResult<DocumentoRow[]>> {
     try {
+      const allowed = await ensureSectionRead("documenti");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       let q = c.from("documenti").select("*").order("created_at", { ascending: false });
       if (filters?.mezzo_id) q = q.eq("mezzo_id", filters.mezzo_id);
@@ -52,6 +54,8 @@ export const documentiService = {
 
   async getById(id: string): Promise<ServiceResult<DocumentoRow>> {
     try {
+      const allowed = await ensureSectionRead("documenti");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.from("documenti").select("*").eq("id", id).maybeSingle();
       if (error) return err(error.message);

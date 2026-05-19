@@ -5,12 +5,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { AuthError, Session, User } from "@supabase/supabase-js";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import { resolveSignInEmail } from "@/src/lib/auth/resolve-sign-in-email";
-import { normalizeRole } from "@/src/lib/auth/permissions";
+import { resolveFormattedUserDisplayName } from "@/src/lib/auth/resolve-user-display-name";
+import { resolveRole } from "@/lib/auth/rbac";
+import { beginUndoSession, resetUndoSession } from "@/lib/gestionale-log/undo-session";
+import { notifyUndoSessionChanged } from "@/lib/gestionale-log/use-undo-session-id";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { authLogsService } from "@/src/services/auth-logs.service";
 import type { PublicAuthUser } from "@/src/types/auth-user";
-import type { RuoloProfile } from "@/src/types/supabase-tables";
+import type { RuoloUtente } from "@/src/types/supabase-tables";
 
 export type AuthStatus = "loading" | "authenticated" | "anonymous" | "degraded";
 
@@ -84,13 +87,14 @@ async function loadPublicUserFromSessionUser(sessionUser: User): Promise<PublicA
   if (error) {
     console.warn("[auth] profilo non leggibile:", error.message);
   }
-  const nomeFromProfile = typeof row?.nome === "string" ? row.nome.trim() : "";
-  const nome =
-    nomeFromProfile ||
-    (typeof sessionUser.user_metadata?.nome === "string" ? sessionUser.user_metadata.nome.trim() : "") ||
-    sessionUser.email?.split("@")[0]?.trim() ||
-    "Utente";
-  const ruolo: RuoloProfile = normalizeRole(typeof row?.ruolo === "string" ? row.ruolo : null);
+  const nome = resolveFormattedUserDisplayName({
+    email: sessionUser.email,
+    profileNome: row?.nome,
+    userMetadata: { ...sessionUser.app_metadata, ...sessionUser.user_metadata },
+  });
+  const ruoloFromProfile = typeof row?.ruolo === "string" ? row.ruolo : null;
+  /** Sicurezza: ruolo SOLO da DB (`profiles`). Mai da JWT metadata (escalation). */
+  const ruolo = resolveRole(ruoloFromProfile) as RuoloUtente;
   return {
     id: sessionUser.id,
     email: sessionUser.email ?? "",
@@ -128,10 +132,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus("authenticated");
       } catch (e) {
         console.warn("[auth] applicazione sessione fallita (stato degraded):", e);
-        const nome =
-          (typeof authUser.user_metadata?.nome === "string" ? authUser.user_metadata.nome.trim() : "") ||
-          authUser.email?.split("@")[0]?.trim() ||
-          "Utente";
+        const nome = resolveFormattedUserDisplayName({
+          email: authUser.email,
+          userMetadata: { ...authUser.app_metadata, ...authUser.user_metadata },
+        });
         setUser({
           id: authUser.id,
           email: authUser.email ?? "",
@@ -241,6 +245,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
           if (event === "SIGNED_IN" && session?.user) {
             authLogsService.logLoginFireAndForget(session.user.id, session.user.email ?? "");
+            beginUndoSession();
+            notifyUndoSessionChanged();
+          }
+          if (event === "SIGNED_OUT") {
+            resetUndoSession();
+            notifyUndoSessionChanged();
           }
           void applySession(session);
         });
@@ -296,6 +306,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           };
         }
         await applyAuthUser(session.user);
+        beginUndoSession();
+        notifyUndoSessionChanged();
         void queryClient.invalidateQueries({ queryKey: [...QK.userPermissions] });
         return { ok: true as const };
       } catch (e) {
@@ -330,6 +342,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     lastStableUserRef.current = null;
     setStatus("anonymous");
+    resetUndoSession();
+    notifyUndoSessionChanged();
     void queryClient.invalidateQueries({ queryKey: [...QK.userPermissions] });
   }, [queryClient]);
 

@@ -1,5 +1,5 @@
 -- Permessi granulari per modulo (ERP multi-utente).
--- Fallback ruolo se assente riga in user_permissions: admin = tutto; tecnico = read+write; viewer = read-only.
+-- Fallback ruolo se assente riga in user_permissions: admin = tutto; operatore = read+write; ospite = read-only.
 -- RLS su app_settings basata su public.user_effective_can(module, op).
 
 create table if not exists public.user_permissions (
@@ -78,10 +78,10 @@ begin
     return false;
   end if;
 
-  if v_role = 'viewer' then
+  if v_role in ('ospite', 'sola_lettura') then
     return p_op = 'read';
   end if;
-  if v_role = 'tecnico' then
+  if v_role in ('operatore', 'magazziniere', 'commerciale') then
     return p_op in ('read', 'write');
   end if;
   return false;

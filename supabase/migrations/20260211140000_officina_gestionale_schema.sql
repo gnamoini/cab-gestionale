@@ -4,12 +4,7 @@
 create extension if not exists pgcrypto;
 create extension if not exists pg_trgm;
 
--- Enum
-do $$ begin
-  create type public.ruolo_profile as enum ('admin', 'tecnico', 'viewer');
-exception
-  when duplicate_object then null;
-end $$;
+-- Enum (ruolo: vedi 20260211120000_officina_gestionale_core.sql → public.ruolo_utente)
 
 do $$ begin
   create type public.stato_lavorazione as enum (
@@ -60,11 +55,11 @@ begin
 end;
 $$;
 
--- 1. profiles (id = auth.users.id, nessun default uuid)
+-- 1. profiles (id = auth.users.id) — tabella creata in 20260211120000 con ruolo_utente
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
   nome text not null,
-  ruolo public.ruolo_profile not null default 'tecnico',
+  ruolo public.ruolo_utente not null default 'operatore',
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint profiles_nome_chk check (char_length(trim(nome)) > 0)

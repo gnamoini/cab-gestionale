@@ -10,8 +10,6 @@ import { LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/ge
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import {
   DEFAULT_ADDETTI_LAVORAZIONI,
-  DEFAULT_STATI_LAVORAZIONI,
-  LAVORAZIONE_STATO_COMPLETATA_ID,
 } from "@/lib/lavorazioni/constants";
 import {
   assignColorForNewAddetto,
@@ -25,9 +23,16 @@ import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import {
+  clampScontoRicambiPercent,
+  getScontoRicambiCliente,
+  registerClienteInListe,
+  removeScontoRicambiCliente,
+  setScontoRicambiCliente,
+} from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { appendDashboardSistemaLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
-import { AttrezzatureSettingsSection } from "@/components/dashboard/attrezzature-settings-section";
+import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
 import { CloseButton } from "@/components/design-system";
 import type { GestionaleLogEventTone } from "@/lib/gestionale-log/view-model";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
@@ -40,7 +45,8 @@ import {
 import { erpBtnNeutral, erpBtnSoftOrange } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { buildBulkRowsFromResolved, resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
 import { useCabAppSettingsPayloadQuery, useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
-import { DEFAULT_STATI_LAVORAZIONI_DB } from "@/src/shared/selectors";
+import { DEFAULT_STATI_LAVORAZIONI_DB, STATO_LAVORAZIONE_COMPLETATA_DB, statiEnumDisponibiliDaAggiungere } from "@/src/shared/selectors";
+import { useLavorazioniStatiInUsoQuery } from "@/src/hooks/gestionale/use-lavorazioni-stati-in-uso";
 import { mergeAppSettingsUpsertWithVersions } from "@/src/services/settings.service";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
@@ -139,10 +145,15 @@ type SistemaSectionId =
   | "mag-marche"
   | "mag-fornitori"
   | "mag-categorie"
-  | "mz-attrezzature"
-  | "com-clienti"
-  | "com-utilizzatori"
-  | "com-cantieri"
+  | "cli-cliente"
+  | "cli-cantiere"
+  | "cli-utilizzatore"
+  | "att-tipo"
+  | "att-marca"
+  | "att-modello"
+  | "tel-tipo"
+  | "tel-marca"
+  | "tel-modello"
   | "sys-economici";
 
 type NavEntry =
@@ -158,12 +169,18 @@ const NAV_STRUCTURE: NavEntry[] = [
   { kind: "item", id: "mag-marche", label: "Marche ricambi" },
   { kind: "item", id: "mag-fornitori", label: "Fornitori alternativi" },
   { kind: "item", id: "mag-categorie", label: "Categorie" },
-  { kind: "group", label: "Mezzi" },
-  { kind: "item", id: "mz-attrezzature", label: "Attrezzature" },
-  { kind: "group", label: "Commerciale" },
-  { kind: "item", id: "com-clienti", label: "Clienti" },
-  { kind: "item", id: "com-utilizzatori", label: "Utilizzatori" },
-  { kind: "item", id: "com-cantieri", label: "Cantieri" },
+  { kind: "group", label: "Cliente" },
+  { kind: "item", id: "cli-cliente", label: "Cliente" },
+  { kind: "item", id: "cli-cantiere", label: "Cantiere" },
+  { kind: "item", id: "cli-utilizzatore", label: "Utilizzatore" },
+  { kind: "group", label: "Attrezzatura" },
+  { kind: "item", id: "att-tipo", label: "Tipo attrezzatura" },
+  { kind: "item", id: "att-marca", label: "Marca" },
+  { kind: "item", id: "att-modello", label: "Modello" },
+  { kind: "group", label: "Telaio" },
+  { kind: "item", id: "tel-tipo", label: "Tipo telaio" },
+  { kind: "item", id: "tel-marca", label: "Marca" },
+  { kind: "item", id: "tel-modello", label: "Modello" },
   { kind: "group", label: "Sistema" },
   { kind: "item", id: "sys-economici", label: "Parametri economici" },
 ];
@@ -175,6 +192,98 @@ const LIST_UL =
 const LIST_LI = "flex min-h-[2.5rem] items-center justify-between gap-2 px-1 py-1.5";
 const INPUT_ROW =
   "min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-500/25 dark:border-zinc-700 dark:bg-zinc-950";
+
+function ClientiCommercialiList({
+  liste,
+  setListe,
+  nuovo,
+  setNuovo,
+  onAdd,
+  onRemove,
+}: {
+  liste: MezziListePrefs;
+  setListe: React.Dispatch<React.SetStateAction<MezziListePrefs>>;
+  nuovo: string;
+  setNuovo: (v: string) => void;
+  onAdd: (trimmed: string) => void;
+  onRemove: (nome: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const filtered = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    if (!t) return [...liste.clienti];
+    return liste.clienti.filter((v) => v.toLowerCase().includes(t));
+  }, [liste.clienti, q]);
+
+  return (
+    <div className={SETTINGS_CARD}>
+      <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">Clienti</h3>
+      <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+        Sconto ricambi % applicato automaticamente nei preventivi (solo ricambi, non manodopera).
+      </p>
+      <GestionaleSearchField
+        wrapperClassName="mt-2 w-full"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Filtra elenco…"
+        autoComplete="off"
+        aria-label="Filtra clienti"
+      />
+      <div className="mt-2 flex gap-1">
+        <input
+          value={nuovo}
+          onChange={(e) => setNuovo(e.target.value)}
+          placeholder="Nuovo cliente"
+          className={INPUT_ROW}
+        />
+        <button
+          type="button"
+          className={`${erpBtnSoftOrange} shrink-0 px-2.5 text-xs`}
+          onClick={() => {
+            const t = nuovo.trim();
+            if (!t) return;
+            onAdd(t);
+          }}
+        >
+          Aggiungi
+        </button>
+      </div>
+      <ul className={LIST_UL}>
+        {filtered.map((nome) => {
+          const sconto = getScontoRicambiCliente(liste, nome);
+          return (
+            <li key={nome} className={`${LIST_LI} flex-wrap`}>
+              <span className="min-w-0 flex-1 truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">{nome}</span>
+              <label className="flex shrink-0 items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                Sconto ricambi %
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.1}
+                  value={sconto}
+                  onChange={(e) => {
+                    const n = clampScontoRicambiPercent(Number(e.target.value));
+                    setListe((prev) => setScontoRicambiCliente(prev, nome, n));
+                  }}
+                  className="w-16 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-950"
+                  aria-label={`Sconto ricambi per ${nome}`}
+                />
+              </label>
+              <button
+                type="button"
+                className="shrink-0 text-xs font-medium text-red-600 hover:underline dark:text-red-400"
+                onClick={() => onRemove(nome)}
+              >
+                Elimina
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 function UnifiedStringList({
   title,
@@ -264,6 +373,7 @@ function SistemaImpostazioniWorkspace({
   const resolvedSettings = settingsPayload.data?.resolved;
   const settingsRows = settingsPayload.data?.rows ?? [];
   const bulkSave = useSettingsBulkMutation();
+  const statiInUsoQ = useLavorazioniStatiInUsoQuery({ enabled: open });
   const pageMode = surface === "page";
 
   const snapshotRef = useRef<SistemaSettingsSnapshot | null>(null);
@@ -272,13 +382,21 @@ function SistemaImpostazioniWorkspace({
   const hydratedSessionRef = useRef(false);
   const [savedSnapshotKey, setSavedSnapshotKey] = useState<string | null>(null);
 
-  const [section, setSection] = useState<SistemaSectionId>("op-addetti");
+  const [section, setSection] = useState<SistemaSectionId>(() => (surface === "page" ? "cli-cliente" : "op-addetti"));
   const [navQ, setNavQ] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopNavOpen, setDesktopNavOpen] = useState(true);
 
-  const attiveStatoIds = useMemo(() => new Set<string>(), []);
-  const storicoStatoIds = useMemo(() => new Set<string>(), []);
+  const attiveStatoIds = useMemo(() => {
+    const d = statiInUsoQ.data;
+    if (!d) return new Set<string>();
+    return new Set(d.attivi);
+  }, [statiInUsoQ.data]);
+  const storicoStatoIds = useMemo(() => {
+    const d = statiInUsoQ.data;
+    if (!d) return new Set<string>();
+    return new Set(d.storico);
+  }, [statiInUsoQ.data]);
   const attiviAddetti = useMemo(() => new Set<string>(), []);
   const storicoAddetti = useMemo(() => new Set<string>(), []);
 
@@ -304,6 +422,8 @@ function SistemaImpostazioniWorkspace({
   const [nuovoCliente, setNuovoCliente] = useState("");
   const [nuovoUtilizzatore, setNuovoUtilizzatore] = useState("");
   const [nuovoCantiere, setNuovoCantiere] = useState("");
+  const [nuovoTipoAttrezzatura, setNuovoTipoAttrezzatura] = useState("");
+  const [nuovoTipoTelaio, setNuovoTipoTelaio] = useState("");
 
   const [liste, setListe] = useState<MezziListePrefs>(() => createMezziListePrefsDefault());
   const [mezziHydrated, setMezziHydrated] = useState(false);
@@ -318,6 +438,11 @@ function SistemaImpostazioniWorkspace({
   );
   const allHydrated = lavPrefsHydrated && magHydrated && mezziHydrated && ecoHydrated;
   const isDirty = allHydrated && savedSnapshotKey != null && currentSnapshotKey !== savedSnapshotKey;
+
+  const statiDisponibiliDaAggiungere = useMemo(
+    () => statiEnumDisponibiliDaAggiungere(stati),
+    [stati],
+  );
 
   const logDash = useCallback(
     (tone: GestionaleLogEventTone, tipoRiga: string, oggettoRiga: string, modificaRiga: string) => {
@@ -343,10 +468,16 @@ function SistemaImpostazioniWorkspace({
       hydratedSessionRef.current = false;
       return;
     }
-    setSection("op-addetti");
+    setSection(pageMode ? "cli-cliente" : "op-addetti");
     setNavQ("");
     setMobileNavOpen(false);
   }, [open]);
+
+  useEffect(() => {
+    if (pageMode) {
+      hydratedSessionRef.current = false;
+    }
+  }, [pageMode]);
 
   useEffect(() => {
     if (!open) return;
@@ -495,12 +626,16 @@ function SistemaImpostazioniWorkspace({
     return true;
   };
 
-  const listeAdd = (key: "clienti" | "utilizzatori" | "cantieri", raw: string, clear: () => void): boolean => {
+  const listeAdd = (
+    key: "clienti" | "utilizzatori" | "cantieri" | "tipiAttrezzatura" | "tipiTelaio",
+    raw: string,
+    clear: () => void,
+  ): boolean => {
     const t = raw.trim();
     if (!t) return false;
-    if ((liste[key] as string[]).includes(t)) return false;
+    if (((liste[key] as string[] | undefined) ?? []).includes(t)) return false;
     setListe((prev) => {
-      const cur = prev[key] as string[];
+      const cur = (prev[key] as string[] | undefined) ?? [];
       return { ...prev, [key]: [...cur, t].sort((a, b) => a.localeCompare(b, "it")) };
     });
     clear();
@@ -581,7 +716,7 @@ function SistemaImpostazioniWorkspace({
                       setMobileNavOpen(false);
                     }}
                     className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold transition-colors ${
-                      active ? "bg-orange-500 text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
+                      active ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:brightness-[1.06]" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
                     }`}
                   >
                     {e.label}
@@ -629,7 +764,7 @@ function SistemaImpostazioniWorkspace({
                         setMobileNavOpen(false);
                       }}
                       className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold transition-colors ${
-                        active ? "bg-orange-500 text-white shadow-sm" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
+                        active ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:brightness-[1.06]" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
                       }`}
                     >
                       {e.label}
@@ -672,7 +807,7 @@ function SistemaImpostazioniWorkspace({
                     onClick={() => setSection(e.id)}
                     className={`flex w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition-colors ${
                       active
-                        ? "bg-orange-500 text-white shadow-sm"
+                        ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:brightness-[1.06]"
                         : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
                     }`}
                   >
@@ -689,6 +824,7 @@ function SistemaImpostazioniWorkspace({
                 layout="embedded"
                 embeddedFocus={lavEmbeddedFocus}
                 stati={stati}
+                statiDisponibiliDaAggiungere={statiDisponibiliDaAggiungere}
                 prioritaDb={prioritaDb}
                 prioritaColors={prioritaColors}
                 onChangePrioritaDb={(next) => {
@@ -701,16 +837,17 @@ function SistemaImpostazioniWorkspace({
                   setPrioritaColors((prev) => ({ ...prev, [p]: nh }));
                   logDash("update", "AGGIORNAMENTO", "Impostazioni · Priorità", `Colore aggiornato per «${p}»`);
                 }}
-                onAddStato={(label) => {
-                  const t = label.trim();
-                  if (!t) return;
-                  setStati((prev) => {
-                    let n = 1;
-                    while (prev.some((s) => s.id === `lav-stato-custom-${n}`)) n += 1;
-                    const id = `lav-stato-custom-${n}`;
-                    return [...prev, { id, label: t, color: statoThemeColor(id) }];
-                  });
-                  logDash("create", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Aggiunto stato «${t}»`);
+                onAddStato={(pick) => {
+                  if (stati.some((s) => s.id === pick.id)) return;
+                  setStati((prev) => [
+                    ...prev,
+                    {
+                      id: pick.id,
+                      label: pick.label,
+                      color: pick.color ?? statoThemeColor(pick.id),
+                    },
+                  ]);
+                  logDash("create", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Aggiunto stato «${pick.label}»`);
                 }}
                 onChangeStatoLabel={(id, label) => setStati((prev) => prev.map((s) => (s.id === id ? { ...s, label } : s)))}
                 onChangeStatoColor={(id, hex) => {
@@ -721,8 +858,8 @@ function SistemaImpostazioniWorkspace({
                   logDash("update", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Colore stato aggiornato per «${nome}»`);
                 }}
                 onRemoveStato={(id) => {
-                  if (id === LAVORAZIONE_STATO_COMPLETATA_ID) {
-                    window.alert("Lo stato «Compl.» (completata) non può essere eliminato.");
+                  if (id === STATO_LAVORAZIONE_COMPLETATA_DB) {
+                    window.alert("Lo stato «Completata» non può essere eliminato.");
                     return;
                   }
                   if (attiveStatoIds.has(id)) {
@@ -856,32 +993,120 @@ function SistemaImpostazioniWorkspace({
               </div>
             ) : null}
 
-            {section === "mz-attrezzature" ? (
-              <AttrezzatureSettingsSection liste={liste} setListe={setListe} logDash={logDash} />
-            ) : null}
-
-            {section === "com-clienti" ? (
+            {section === "att-tipo" ? (
               <div className="w-full">
                 <UnifiedStringList
-                  title="Clienti"
-                  values={liste.clienti}
-                  nuovo={nuovoCliente}
-                  setNuovo={setNuovoCliente}
-                  placeholder="Nuovo cliente"
+                  title="Tipo attrezzatura"
+                  values={liste.tipiAttrezzatura}
+                  nuovo={nuovoTipoAttrezzatura}
+                  setNuovo={setNuovoTipoAttrezzatura}
+                  placeholder="Nuovo tipo attrezzatura"
                   onAdd={(t) => {
-                    if (listeAdd("clienti", t, () => setNuovoCliente(""))) {
-                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Commerciale · Clienti", `Aggiunto «${t}»`);
+                    if (listeAdd("tipiAttrezzatura", t, () => setNuovoTipoAttrezzatura(""))) {
+                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Attrezzatura · Tipo", `Aggiunto «${t}»`);
                     }
                   }}
                   onRemove={(m) => {
-                    setListe((prev) => ({ ...prev, clienti: prev.clienti.filter((x) => x !== m) }));
+                    setListe((prev) => ({ ...prev, tipiAttrezzatura: prev.tipiAttrezzatura.filter((x) => x !== m) }));
+                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Attrezzatura · Tipo", `Rimosso «${m}»`);
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {section === "att-marca" ? (
+              <HierarchyTreeSettingsSection
+                treeKey="attrezzature"
+                variant="marca"
+                liste={liste}
+                setListe={setListe}
+                logDash={logDash}
+                logLabel="Attrezzatura · Marca"
+              />
+            ) : null}
+
+            {section === "att-modello" ? (
+              <HierarchyTreeSettingsSection
+                treeKey="attrezzature"
+                variant="modello"
+                liste={liste}
+                setListe={setListe}
+                logDash={logDash}
+                logLabel="Attrezzatura · Modello"
+              />
+            ) : null}
+
+            {section === "tel-tipo" ? (
+              <div className="w-full">
+                <UnifiedStringList
+                  title="Tipo telaio"
+                  values={liste.tipiTelaio ?? []}
+                  nuovo={nuovoTipoTelaio}
+                  setNuovo={setNuovoTipoTelaio}
+                  placeholder="Nuovo tipo telaio"
+                  onAdd={(t) => {
+                    if (listeAdd("tipiTelaio", t, () => setNuovoTipoTelaio(""))) {
+                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Telaio · Tipo", `Aggiunto «${t}»`);
+                    }
+                  }}
+                  onRemove={(m) => {
+                    setListe((prev) => ({
+                      ...prev,
+                      tipiTelaio: (prev.tipiTelaio ?? []).filter((x) => x !== m),
+                    }));
+                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Telaio · Tipo", `Rimosso «${m}»`);
+                  }}
+                />
+              </div>
+            ) : null}
+
+            {section === "tel-marca" ? (
+              <HierarchyTreeSettingsSection
+                treeKey="telai"
+                variant="marca"
+                liste={liste}
+                setListe={setListe}
+                logDash={logDash}
+                logLabel="Telaio · Marca"
+              />
+            ) : null}
+
+            {section === "tel-modello" ? (
+              <HierarchyTreeSettingsSection
+                treeKey="telai"
+                variant="modello"
+                liste={liste}
+                setListe={setListe}
+                logDash={logDash}
+                logLabel="Telaio · Modello"
+              />
+            ) : null}
+
+            {section === "cli-cliente" ? (
+              <div className="w-full">
+                <ClientiCommercialiList
+                  liste={liste}
+                  setListe={setListe}
+                  nuovo={nuovoCliente}
+                  setNuovo={setNuovoCliente}
+                  onAdd={(t) => {
+                    if (liste.clienti.includes(t)) return;
+                    setListe((prev) => registerClienteInListe(prev, t));
+                    setNuovoCliente("");
+                    logDash("create", "AGGIORNAMENTO", "Impostazioni · Commerciale · Clienti", `Aggiunto «${t}»`);
+                  }}
+                  onRemove={(m) => {
+                    setListe((prev) => {
+                      const next = removeScontoRicambiCliente(prev, m);
+                      return { ...next, clienti: next.clienti.filter((x) => x !== m) };
+                    });
                     logDash("delete", "AGGIORNAMENTO", "Impostazioni · Commerciale · Clienti", `Rimosso «${m}»`);
                   }}
                 />
               </div>
             ) : null}
 
-            {section === "com-utilizzatori" ? (
+            {section === "cli-utilizzatore" ? (
               <div className="w-full">
                 <UnifiedStringList
                   title="Utilizzatori"
@@ -902,7 +1127,7 @@ function SistemaImpostazioniWorkspace({
               </div>
             ) : null}
 
-            {section === "com-cantieri" ? (
+            {section === "cli-cantiere" ? (
               <div className="w-full">
                 <UnifiedStringList
                   title="Cantieri"

@@ -1,5 +1,5 @@
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
-import { LAVORAZIONE_STATO_COMPLETATA_ID } from "@/lib/lavorazioni/constants";
+import { STATO_LAVORAZIONE_COMPLETATA_DB } from "@/src/shared/selectors";
 import type { LavorazioniManualMonthMap } from "@/lib/report/lavorazioni-manual-storage";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"] as const;
@@ -27,7 +27,7 @@ function countFromSystem(storico: LavorazioneArchiviata[], attive: LavorazioneAt
     bump(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
   }
   for (const x of attive) {
-    if (x.statoId !== LAVORAZIONE_STATO_COMPLETATA_ID || !x.dataCompletamento) continue;
+    if (x.statoId !== STATO_LAVORAZIONE_COMPLETATA_DB || !x.dataCompletamento) continue;
     const d = new Date(x.dataCompletamento);
     if (Number.isNaN(d.getTime())) continue;
     bump(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
