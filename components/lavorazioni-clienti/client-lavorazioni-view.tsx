@@ -290,13 +290,7 @@ function MobileCards({
               <p className="truncate text-base font-semibold text-zinc-900 dark:text-zinc-50">{fields.attrezzatura}</p>
               <MezzoIdentStack targa={fields.targa} matricola={fields.matricola} nScuderia={fields.nScuderia} />
             </div>
-            {variant === "archive" ? (
-              <span className="shrink-0 text-[11px] tabular-nums text-zinc-600 dark:text-zinc-300">
-                {clientPortalDataCompletamentoLabel(row)}
-              </span>
-            ) : (
-              <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
-            )}
+            <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
           </div>
           <div className="mt-2 grid gap-1 text-xs text-zinc-600 dark:text-zinc-300">
             <p>
