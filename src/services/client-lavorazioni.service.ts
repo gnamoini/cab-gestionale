@@ -1,6 +1,7 @@
 "use client";
 
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
+import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { ensureClientLavorazioniAccess } from "@/src/lib/auth/permission-guards";
 import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
@@ -50,11 +51,9 @@ function mapListRows(
 /** Stesse regole della pagina Lavorazioni principale: solo `archived`, nessun filtro su stato. */
 async function fetchLavorazioniByArchived(archived: boolean): Promise<ServiceResult<LavorazioneListRow[]>> {
   const sb = await getBrowserSupabase();
-  const { data, error } = await sb
-    .from("lavorazioni")
-    .select("*, mezzi(*)")
-    .eq("archived", archived)
-    .order("created_at", { ascending: false });
+  const { data, error } = await applyLavorazioniNotDeletedFilter(
+    sb.from("lavorazioni").select("*, mezzi(*)").eq("archived", archived).order("created_at", { ascending: false }),
+  );
   if (error) return err(error.message);
   const settingsStati = clientPortalSettingsStati();
   const raw = (data ?? []) as Array<LavorazioneRow & { mezzi?: unknown; archived?: boolean }>;
@@ -102,7 +101,7 @@ export const clientLavorazioniService = {
       if (!id) return err("Lavorazione non valida.");
 
       const sb = await getBrowserSupabase();
-      const { data, error } = await sb.from("lavorazioni").select("*, mezzi(*)").eq("id", id).maybeSingle();
+      const { data, error } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*, mezzi(*)").eq("id", id)).maybeSingle();
       if (error) return err(error.message);
       if (!data) return err("Lavorazione non trovata.");
 

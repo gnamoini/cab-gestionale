@@ -23,6 +23,19 @@ function cloneRecord(p: PreventivoRecord): PreventivoRecord {
   return JSON.parse(JSON.stringify(p)) as PreventivoRecord;
 }
 
+const ORE_MIN = 0.01;
+
+function parseOreManodoperaInput(raw: string): number {
+  const v = parseFloat(raw.replace(",", "."));
+  if (!Number.isFinite(v)) return ORE_MIN;
+  return Math.max(ORE_MIN, Math.round(v * 100) / 100);
+}
+
+function sumOreRigheAddetti(righe: readonly { ore: number }[]): number {
+  const sum = righe.reduce((s, x) => s + (Number.isFinite(x.ore) ? x.ore : 0), 0);
+  return Math.max(ORE_MIN, Math.round(sum * 100) / 100);
+}
+
 function fmtEuro(n: number): string {
   return `${n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 }
@@ -184,7 +197,7 @@ export function PreventiviEditorModal({
     setDraft((prev) => {
       if (!prev) return prev;
       const righeAddetti = prev.manodopera.righeAddetti.map((r, i) => (i === idx ? { ...r, ...patchRow } : r));
-      const oreTotali = Math.max(1, Math.round(righeAddetti.reduce((s, x) => s + (Number.isFinite(x.ore) ? x.ore : 0), 0) * 100) / 100);
+      const oreTotali = sumOreRigheAddetti(righeAddetti);
       return applyTotals({
         ...prev,
         manodopera: { ...prev.manodopera, righeAddetti, oreTotali },
@@ -196,7 +209,7 @@ export function PreventiviEditorModal({
     setDraft((prev) => {
       if (!prev) return prev;
       const righeAddetti = [...prev.manodopera.righeAddetti, { addetto: "", ore: 1 }];
-      const oreTotali = Math.max(1, Math.round(righeAddetti.reduce((s, x) => s + (Number.isFinite(x.ore) ? x.ore : 0), 0) * 100) / 100);
+      const oreTotali = sumOreRigheAddetti(righeAddetti);
       return applyTotals({ ...prev, manodopera: { ...prev.manodopera, righeAddetti, oreTotali } });
     });
   }
@@ -211,7 +224,7 @@ export function PreventiviEditorModal({
           manodopera: { ...prev.manodopera, righeAddetti: [{ addetto: "Officina", ore: 1 }], oreTotali: 1 },
         });
       }
-      const oreTotali = Math.max(1, Math.round(righeAddetti.reduce((s, x) => s + (Number.isFinite(x.ore) ? x.ore : 0), 0) * 100) / 100);
+      const oreTotali = sumOreRigheAddetti(righeAddetti);
       return applyTotals({ ...prev, manodopera: { ...prev.manodopera, righeAddetti, oreTotali } });
     });
   }
@@ -282,7 +295,6 @@ export function PreventiviEditorModal({
       maxWidthClass="max-w-5xl"
       onRequestClose={requestClose}
       title={isNew ? "Nuovo preventivo" : `Preventivo ${draft.numero}`}
-      subtitle="Il sistema propone testi e importi: tutto è modificabile prima del salvataggio."
     >
       <div className="relative flex max-h-[min(92dvh,900px)] min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar">
@@ -539,7 +551,7 @@ export function PreventiviEditorModal({
               </div>
               <div className="mt-3 space-y-2">
                 {draft.manodopera.righeAddetti.map((a, idx) => (
-                  <div key={`${idx}-${a.addetto}`} className="flex flex-wrap items-end gap-2">
+                  <div key={`${idx}-${a.addetto}`} className="flex flex-wrap gap-2">
                     <label className="block min-w-[10rem] flex-1 text-xs">
                       <span className="text-zinc-500">Addetto</span>
                       <input
@@ -548,20 +560,28 @@ export function PreventiviEditorModal({
                         onChange={(e) => patchAddettoRow(idx, { addetto: e.target.value })}
                       />
                     </label>
-                    <label className="block w-28 text-xs">
-                      <span className="text-zinc-500">Ore</span>
-                      <input
-                        className={`${dsInput} mt-1 text-right tabular-nums`}
-                        type="number"
-                        min={1}
-                        step={1}
-                        value={a.ore}
-                        onChange={(e) => patchAddettoRow(idx, { ore: Math.max(1, Math.round(parseFloat(e.target.value) || 0)) })}
-                      />
-                    </label>
-                    <button type="button" className={`${dsBtnDanger} mb-0.5 px-2 py-1 text-xs`} onClick={() => removeAddettoRow(idx)}>
-                      ✕
-                    </button>
+                    <div className="flex items-end gap-2">
+                      <label className="block w-28 text-xs">
+                        <span className="text-zinc-500">Ore</span>
+                        <input
+                          className={`${dsInput} mt-1 text-right tabular-nums`}
+                          type="number"
+                          min={ORE_MIN}
+                          step={0.01}
+                          inputMode="decimal"
+                          value={a.ore}
+                          onChange={(e) => patchAddettoRow(idx, { ore: parseOreManodoperaInput(e.target.value) })}
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className={`${dsBtnDanger} h-[2.625rem] w-10 shrink-0 px-0 text-sm leading-none`}
+                        onClick={() => removeAddettoRow(idx)}
+                        aria-label="Rimuovi riga addetto"
+                      >
+                        ✕
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

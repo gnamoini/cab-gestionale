@@ -5,6 +5,7 @@ import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-g
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneRow, MezzoRow, PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
+import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "lavorazioni";
@@ -78,8 +79,8 @@ function endOfDayIso(dateDay: string): string {
 
 /** Filtri server-side condivisi tra query con/senza join `mezzi`. */
 function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuery>(q: TQuery, filters?: LavorazioneFilters): TQuery {
-  if (!filters) return q;
-  let query: LavorazioniFilterQuery = q;
+  let query: LavorazioniFilterQuery = applyLavorazioniNotDeletedFilter(q);
+  if (!filters) return query as TQuery;
   if (filters.stati_in?.length) query = query.in("stato", filters.stati_in);
   if (filters.mezzo_id) query = query.eq("mezzo_id", filters.mezzo_id);
   if (filters.stato) query = query.eq("stato", filters.stato);
@@ -133,7 +134,7 @@ export const lavorazioniService = {
       const allowed = await ensureSectionRead("lavorazioni");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
-      const { data, error } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (error) return err(error.message);
       if (!data) return err("Lavorazione non trovata");
       return success(data as LavorazioneRow);
@@ -162,9 +163,13 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
-      const { data: before, error: e0 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
+      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
-      const { data: row, error } = await sb.from("lavorazioni").update(data).eq("id", id).select("*").single();
+      const { data: row, error } = await applyLavorazioniNotDeletedFilter(
+        sb.from("lavorazioni").update(data).eq("id", id),
+      )
+        .select("*")
+        .single();
       if (error) return err(error.message);
       const r = row as LavorazioneRow;
       await writeModificaLog(sb, {
@@ -185,12 +190,11 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
-      const { data: before, error: e0 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
+      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
-      const { data: row, error } = await sb
-        .from("lavorazioni")
-        .update({ stato, data_uscita: null, archived: false, archived_at: null })
-        .eq("id", id)
+      const { data: row, error } = await applyLavorazioniNotDeletedFilter(
+        sb.from("lavorazioni").update({ stato, data_uscita: null, archived: false, archived_at: null }).eq("id", id),
+      )
         .select("*")
         .single();
       if (error) return err(error.message);
@@ -213,7 +217,7 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
-      const { data: before, error: e0 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
+      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
       if (!before) return err("Lavorazione non trovata");
       const b = before as LavorazioneRow;
@@ -226,16 +230,14 @@ export const lavorazioniService = {
         archived_at: now,
         data_uscita: b.data_uscita?.trim() ? b.data_uscita : now,
       };
-      const { data: row, error } = await sb
-        .from("lavorazioni")
-        .update(patch)
-        .eq("id", id)
-        .eq("archived", false)
+      const { data: row, error } = await applyLavorazioniNotDeletedFilter(
+        sb.from("lavorazioni").update(patch).eq("id", id).eq("archived", false),
+      )
         .select("*")
         .maybeSingle();
       if (error) return err(error.message);
       if (!row) {
-        const { data: current, error: e1 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
+        const { data: current, error: e1 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
         if (e1) return err(e1.message);
         if (current && (current as LavorazioneRow).archived === true) return success(current as LavorazioneRow);
         return err("Conclusione non riuscita.");
@@ -263,11 +265,16 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("deleteRecords");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
-      const { data: existing, error: e0 } = await sb.from("lavorazioni").select("*").eq("id", id).maybeSingle();
+      const { data: existing, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
-      if (existing) await writeModificaLog(sb, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(existing) });
-      const { error } = await sb.from("lavorazioni").delete().eq("id", id);
+      if (!existing) return err("Lavorazione non trovata");
+      const now = new Date().toISOString();
+      const { data: row, error } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").update({ deleted_at: now }).eq("id", id))
+        .select("*")
+        .maybeSingle();
       if (error) return err(error.message);
+      if (!row) return err("Lavorazione non trovata");
+      await writeModificaLog(sb, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(row) });
       return success(null);
     } catch (e) {
       return serviceFailFromError(e);
@@ -278,7 +285,7 @@ export const lavorazioniService = {
   async getStatiInUso(): Promise<ServiceResult<{ attivi: StatoLavorazione[]; storico: StatoLavorazione[] }>> {
     try {
       const sb = await c();
-      const { data, error } = await sb.from("lavorazioni").select("stato, archived");
+      const { data, error } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("stato, archived"));
       if (error) return err(error.message);
       const attiviSet = new Set<StatoLavorazione>();
       const storicoSet = new Set<StatoLavorazione>();

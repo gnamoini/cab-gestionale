@@ -5,11 +5,10 @@ import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-se
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import type { RicambioFormState } from "@/lib/magazzino/form";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-import { isValueInListOptions } from "@/lib/ui/list-select-utils";import {
-  compatLabelMarcaModello,
-  flattenCompatDaAttrezzature,
+import { isValueInListOptions } from "@/lib/ui/list-select-utils";
+import {
+  compatLabelsPerMarche,
   migrateMezziListePrefs,
-  modelliVisibiliPerMarca,
   parseCompatMarcaModello,
 } from "@/lib/mezzi/attrezzature-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -104,10 +103,10 @@ export function RicambioField({
   children: React.ReactNode;
 }) {
   return (
-    <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-      {label}
-      <div className="mt-1">{children}</div>
-    </label>
+    <div className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+      <span className="block">{label}</span>
+      <div className="mt-1 font-normal">{children}</div>
+    </div>
   );
 }
 
@@ -118,6 +117,7 @@ export function RicambioFormFields({
   setForm,
   marcheOptions,
   categorieOptions,
+  fornitoriOptions,
   mezziOptions,
   attrezzatureListe,
   codiceOriginaleAvvisoDuplicato,
@@ -129,6 +129,7 @@ export function RicambioFormFields({
   setForm: SetForm;
   marcheOptions: string[];
   categorieOptions: string[];
+  fornitoriOptions: string[];
   mezziOptions: string[];
   attrezzatureListe: MezziListePrefs;
   /** Avviso sotto il campo codice OE (es. nuovo ricambio con codice già in archivio) */
@@ -140,25 +141,26 @@ export function RicambioFormFields({
   /** Evidenzia errori elenco dopo submit fallito. */
   listFieldForceInvalid?: boolean;
 }) {
-  const [filtroMarcaCompat, setFiltroMarcaCompat] = useState("__tutti__");
+  const [marcheFiltroCompat, setMarcheFiltroCompat] = useState<Set<string>>(() => new Set());
   const prefsTree = useMemo(() => migrateMezziListePrefs(attrezzatureListe), [attrezzatureListe]);
   const marcheAttrezzatura = useMemo(() => [...prefsTree.marche], [prefsTree.marche]);
-  const lineeCompatGlobali = useMemo(() => flattenCompatDaAttrezzature(prefsTree), [prefsTree]);
+  const lineeCompatGlobali = useMemo(() => compatLabelsPerMarche(prefsTree, []), [prefsTree]);
   const mezziCompatOptions = useMemo(() => {
     const base = [...new Set([...mezziOptions, ...lineeCompatGlobali])];
     return base.sort((a, b) => a.localeCompare(b, "it"));
   }, [mezziOptions, lineeCompatGlobali]);
   const mezziSel = useMemo(() => new Set(parseCompatInput(form.compatibilitaMezzi)), [form.compatibilitaMezzi]);
+  const marcheFiltroList = useMemo(() => Array.from(marcheFiltroCompat).sort((a, b) => a.localeCompare(b, "it")), [marcheFiltroCompat]);
   const mezziOptsSorted = useMemo(() => {
     const cmp = (a: string, b: string) => a.localeCompare(b, "it");
-    const visible =
-      filtroMarcaCompat === "__tutti__"
-        ? mezziCompatOptions
-        : modelliVisibiliPerMarca(prefsTree, filtroMarcaCompat).map((mod) =>
-            compatLabelMarcaModello(filtroMarcaCompat, mod),
-          );
+    const fromTree = compatLabelsPerMarche(prefsTree, marcheFiltroList);
+    const visible = [...new Set([...fromTree, ...mezziCompatOptions.filter((x) => {
+      if (marcheFiltroList.length === 0) return true;
+      const { marca } = parseCompatMarcaModello(x);
+      return marcheFiltroList.some((m) => m.localeCompare(marca, "it", { sensitivity: "base" }) === 0);
+    })])].sort(cmp);
     const marcaForm = form.marca.trim();
-    if (!marcaForm) return [...visible].sort(cmp);
+    if (!marcaForm) return visible;
     const prio: string[] = [];
     const rest: string[] = [];
     for (const x of visible) {
@@ -169,7 +171,19 @@ export function RicambioFormFields({
     prio.sort(cmp);
     rest.sort(cmp);
     return [...prio, ...rest];
-  }, [mezziCompatOptions, prefsTree, filtroMarcaCompat, form.marca]);
+  }, [mezziCompatOptions, prefsTree, marcheFiltroList, form.marca]);
+
+  const mezziOptsGrouped = useMemo(() => {
+    const byMarca = new Map<string, string[]>();
+    for (const line of mezziOptsSorted) {
+      const { marca } = parseCompatMarcaModello(line);
+      const key = marca.trim() || "Altro";
+      const bucket = byMarca.get(key) ?? [];
+      bucket.push(line);
+      byMarca.set(key, bucket);
+    }
+    return Array.from(byMarca.entries()).sort(([a], [b]) => a.localeCompare(b, "it"));
+  }, [mezziOptsSorted]);
 
   const invalidCompat = useMemo(() => {
     const selected = parseCompatInput(form.compatibilitaMezzi);
@@ -184,6 +198,15 @@ export function RicambioFormFields({
     return () => window.cancelAnimationFrame(id);
   }, [autoFocusToken, relaxHtmlValidation]);
 
+  function toggleMarcaFiltro(marca: string) {
+    setMarcheFiltroCompat((prev) => {
+      const next = new Set(prev);
+      if (next.has(marca)) next.delete(marca);
+      else next.add(marca);
+      return next;
+    });
+  }
+
   function toggleMezzo(m: string) {
     setForm((f) => {
       const cur = new Set(parseCompatInput(f.compatibilitaMezzi));
@@ -192,6 +215,35 @@ export function RicambioFormFields({
       const joined = Array.from(cur).sort((a, b) => a.localeCompare(b, "it")).join(", ");
       return { ...f, compatibilitaMezzi: joined };
     });
+  }
+
+  function setVisibleMezziSelected(selected: boolean) {
+    setForm((f) => {
+      const cur = new Set(parseCompatInput(f.compatibilitaMezzi));
+      for (const m of mezziOptsSorted) {
+        if (selected) cur.add(m);
+        else cur.delete(m);
+      }
+      const joined = Array.from(cur).sort((a, b) => a.localeCompare(b, "it")).join(", ");
+      return { ...f, compatibilitaMezzi: joined };
+    });
+  }
+
+  function renderMezzoCheckbox(line: string) {
+    return (
+      <label
+        key={line}
+        className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-white dark:hover:bg-zinc-800/80"
+      >
+        <input
+          type="checkbox"
+          className="mt-0.5 rounded border-zinc-300 text-orange-600 focus:ring-orange-500"
+          checked={mezziSel.has(line)}
+          onChange={() => toggleMezzo(line)}
+        />
+        <span className="leading-snug text-zinc-800 dark:text-zinc-200">{line}</span>
+      </label>
+    );
   }
 
   function bumpScorta(field: "scorta" | "scortaMinima", delta: number) {
@@ -311,49 +363,91 @@ export function RicambioFormFields({
           forceInvalid={listFieldForceInvalid}
           invalidMessage="Seleziona una categoria esistente"
         />
-      </RicambioField>      <RicambioField label="Compatibilità mezzi *">
+      </RicambioField>
+      <RicambioField label="Compatibilità mezzi *">
         <div className="mb-2">
-          <span className="mb-1 block text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Marca attrezzatura</span>
-          <select
-            value={filtroMarcaCompat}
-            onChange={(e) => setFiltroMarcaCompat(e.target.value)}
-            className={inputBase}
-            aria-label="Filtra compatibilità per marca"
-          >            <option value="__tutti__">Tutte le marche</option>
-            {marcheAttrezzatura.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
-            ))}
-          </select>
-          <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-            Seleziona prima la marca, poi spunta i modelli compatibili (etichetta salvata come «Marca — Modello»).
-          </p>
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+            <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Marche attrezzatura</span>
+            {marcheFiltroList.length > 0 ? (
+              <button
+                type="button"
+                className="text-[11px] font-medium text-[color:var(--cab-primary)] hover:underline"
+                onClick={() => setMarcheFiltroCompat(new Set())}
+              >
+                Mostra tutte
+              </button>
+            ) : null}
+          </div>
+          <div className="max-h-28 overflow-y-auto rounded-lg border border-zinc-200 bg-zinc-50/50 px-2 py-2 dark:border-zinc-700 dark:bg-zinc-900/40">
+            {marcheAttrezzatura.length === 0 ? (
+              <p className="px-1 text-[11px] text-zinc-500">Configura marche in Impostazioni sistema → Attrezzature.</p>
+            ) : (
+              <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+                {marcheAttrezzatura.map((marca) => (
+                  <label
+                    key={marca}
+                    className="inline-flex cursor-pointer items-center gap-1.5 rounded-md px-1 py-0.5 text-xs hover:bg-white dark:hover:bg-zinc-800/80"
+                  >
+                    <input
+                      type="checkbox"
+                      className="rounded border-zinc-300 text-orange-600 focus:ring-orange-500"
+                      checked={marcheFiltroCompat.has(marca)}
+                      onChange={() => toggleMarcaFiltro(marca)}
+                    />
+                    <span className="text-zinc-800 dark:text-zinc-200">{marca}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-        <div className="max-h-40 overflow-y-auto rounded-lg border border-zinc-200 bg-zinc-50/50 px-2 py-2 dark:border-zinc-700 dark:bg-zinc-900/40">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+          <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Modelli</span>
+          {mezziOptsSorted.length > 0 ? (
+            <span className="flex gap-2 text-[11px] font-medium">
+              <button
+                type="button"
+                className="text-[color:var(--cab-primary)] hover:underline"
+                onClick={() => setVisibleMezziSelected(true)}
+              >
+                Seleziona tutti
+              </button>
+              <button
+                type="button"
+                className="text-[color:var(--cab-primary)] hover:underline"
+                onClick={() => setVisibleMezziSelected(false)}
+              >
+                Rimuovi tutti
+              </button>
+            </span>
+          ) : null}
+        </div>
+        <div className="max-h-48 overflow-y-auto rounded-lg border border-zinc-200 bg-zinc-50/50 px-2 py-2 dark:border-zinc-700 dark:bg-zinc-900/40">
           {mezziOptsSorted.length === 0 ? (
-            <p className="px-1 text-[11px] text-zinc-500">Configura marche e modelli in Impostazioni sistema → Attrezzature.</p>
-          ) : (
-            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-              {mezziOptsSorted.map((m) => (
-                <label
-                  key={m}
-                  className="flex cursor-pointer items-start gap-2 rounded-md px-1.5 py-1 text-xs hover:bg-white dark:hover:bg-zinc-800/80"
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-0.5 rounded border-zinc-300 text-orange-600 focus:ring-orange-500"
-                    checked={mezziSel.has(m)}
-                    onChange={() => toggleMezzo(m)}
-                  />
-                  <span className="leading-snug text-zinc-800 dark:text-zinc-200">{m}</span>
-                </label>
+            <p className="px-1 text-[11px] text-zinc-500">
+              {marcheFiltroList.length > 0
+                ? "Nessun modello per le marche selezionate."
+                : "Configura marche e modelli in Impostazioni sistema → Attrezzature."}
+            </p>
+          ) : mezziOptsGrouped.length > 1 ? (
+            <div className="space-y-2">
+              {mezziOptsGrouped.map(([marca, lines]) => (
+                <div key={marca}>
+                  <p className="mb-1 px-1 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    {marca}
+                  </p>
+                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">{lines.map((line) => renderMezzoCheckbox(line))}</div>
+                </div>
               ))}
             </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">{mezziOptsSorted.map((line) => renderMezzoCheckbox(line))}</div>
           )}
         </div>
         <p className="mt-1 text-[11px] text-zinc-500">
-          {mezziSel.size > 0 ? `${mezziSel.size} mezz${mezziSel.size === 1 ? "o" : "i"} selezionati` : "Nessuna selezione"}
+          {mezziSel.size > 0
+            ? `${mezziSel.size} compatibilità selezionate${marcheFiltroList.length > 0 ? ` · filtro: ${marcheFiltroList.join(", ")}` : ""}`
+            : "Nessuna selezione"}
         </p>
         {(listFieldForceInvalid && mezziSel.size === 0) || invalidCompat.length > 0 ? (
           <p className="mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]">
@@ -362,7 +456,8 @@ export function RicambioFormFields({
               : "Seleziona almeno una compatibilità mezzo."}
           </p>
         ) : null}
-      </RicambioField>      <div className="grid grid-cols-2 gap-2">
+      </RicambioField>
+      <div className="grid grid-cols-2 gap-2">
         <div>
           <span className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">Scorta</span>
           <div className="mt-1">
@@ -443,10 +538,12 @@ export function RicambioFormFields({
       </RicambioField>
       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Alternativo</p>
       <RicambioField label="Fornitore non originale">
-        <input
+        <GestionaleListSelect
           value={form.fornitoreNonOriginale}
-          onChange={(e) => setForm((f) => ({ ...f, fornitoreNonOriginale: e.target.value }))}
-          className={inputBase}
+          onChange={(fornitoreNonOriginale) => setForm((f) => ({ ...f, fornitoreNonOriginale }))}
+          options={fornitoriOptions}
+          strictFromList={false}
+          placeholder="Cerca o seleziona fornitore…"
         />
       </RicambioField>
       <RicambioField label="Codice alternativo">

@@ -130,7 +130,7 @@ export function LavorazioniModalShell({
   }, [onRequestClose]);
 
   return (
-    <div className={`${dsLavorazioniModalLayer} ${alignTop ? "sm:items-start sm:pt-6" : ""}`} role="presentation">
+    <div className={`${dsLavorazioniModalLayer} ${alignTop ? "!items-start pt-6" : ""}`} role="presentation">
       <button
         type="button"
         className={dsLavorazioniModalOverlay}

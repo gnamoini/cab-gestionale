@@ -16,6 +16,7 @@ export type GestionaleListSelectProps = {
   disabled?: boolean;
   required?: boolean;
   placeholder?: string;
+  /** Solo layout sul wrapper (es. `mt-1 w-full`); non passare `dsInput` — lo stile è sul campo interno. */
   className?: string;
   id?: string;
   /** Se true, il valore deve appartenere all'elenco (validazione submit/blur). */
@@ -100,7 +101,7 @@ export function GestionaleListSelect({
   };
 
   return (
-    <div ref={wrapRef} className={`relative ${className}`}>
+    <div ref={wrapRef} className={`relative w-full ${className}`.trim()}>
       <input
         id={inputId}
         className={`${dsInput}${showInvalid ? " border-[color:color-mix(in_srgb,var(--cab-danger)_55%,var(--cab-border))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-danger)_28%,transparent)]" : ""}`}

@@ -138,8 +138,6 @@ export function ReportAnalyticsView() {
         anchor={anchor}
         filterRange={model.range}
         compareDetail={model.compareDetail}
-        histRev={histRev}
-        onHistRev={() => setHistRev((v) => v + 1)}
       />
 
       <ReportMagazzinoSection

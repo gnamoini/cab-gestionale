@@ -1,6 +1,4 @@
-import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
-import { STATO_LAVORAZIONE_COMPLETATA_DB } from "@/src/shared/selectors";
-import type { LavorazioniManualMonthMap } from "@/lib/report/lavorazioni-manual-storage";
+import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"] as const;
 
@@ -17,17 +15,11 @@ function ym(y: number, m0: string): string {
   return `${y}-${m0}`;
 }
 
-function countFromSystem(storico: LavorazioneArchiviata[], attive: LavorazioneAttiva[]): Map<string, number> {
+function countFromSystem(storico: LavorazioneArchiviata[]): Map<string, number> {
   const map = new Map<string, number>();
   const bump = (key: string) => map.set(key, (map.get(key) ?? 0) + 1);
   for (const x of storico) {
     if (!x.dataCompletamento) continue;
-    const d = new Date(x.dataCompletamento);
-    if (Number.isNaN(d.getTime())) continue;
-    bump(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-  }
-  for (const x of attive) {
-    if (x.statoId !== STATO_LAVORAZIONE_COMPLETATA_DB || !x.dataCompletamento) continue;
     const d = new Date(x.dataCompletamento);
     if (Number.isNaN(d.getTime())) continue;
     bump(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
@@ -37,14 +29,11 @@ function countFromSystem(storico: LavorazioneArchiviata[], attive: LavorazioneAt
 
 export function buildLavorazioniYearMatrix(
   storico: LavorazioneArchiviata[],
-  attive: LavorazioneAttiva[],
-  manual: LavorazioniManualMonthMap,
   anchor: Date,
 ): { rows: LavorazioniYearRow[]; monthLabels: readonly string[]; hasAnyData: boolean } {
-  const sys = countFromSystem(storico, attive);
+  const sys = countFromSystem(storico);
   const years = new Set<number>();
   for (const k of sys.keys()) years.add(Number(k.slice(0, 4)));
-  for (const k of Object.keys(manual)) years.add(Number(k.slice(0, 4)));
   const yEnd = anchor.getFullYear();
   years.add(yEnd);
   for (let y = 2023; y <= yEnd; y++) years.add(y);
@@ -53,12 +42,11 @@ export function buildLavorazioniYearMatrix(
 
   const rows: LavorazioniYearRow[] = [];
   let prevTotal: number | null = null;
-  let hasAny = Object.keys(manual).length > 0;
+  let hasAny = false;
 
   for (const year of sortedYears) {
     const months = Array.from({ length: 12 }, (_, mi) => {
       const key = ym(year, String(mi + 1).padStart(2, "0"));
-      if (Object.prototype.hasOwnProperty.call(manual, key)) return manual[key] ?? 0;
       const v = sys.get(key) ?? 0;
       if (v > 0) hasAny = true;
       return v;

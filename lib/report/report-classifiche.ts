@@ -1,4 +1,3 @@
-import { isCompletataForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -181,7 +180,7 @@ function collectLavorazioniRefs(attive: LavorazioneAttiva[], storico: Lavorazion
       id: x.id,
       cliente: x.cliente,
       ingresso: x.dataIngresso,
-      completamento: isCompletataForReport(x.statoId) ? x.dataCompletamento : null,
+      completamento: null,
     });
   }
   return out;

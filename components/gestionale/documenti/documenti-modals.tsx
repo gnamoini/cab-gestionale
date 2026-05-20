@@ -69,7 +69,7 @@ function DocumentiModalShell({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {

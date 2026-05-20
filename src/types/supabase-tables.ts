@@ -65,6 +65,8 @@ export type LavorazioneRow = {
   /** Portale clienti: archiviata manualmente (indipendente dallo stato). */
   archived?: boolean;
   archived_at?: string | null;
+  /** Eliminazione logica: esclusa da liste operative e statistiche. */
+  deleted_at?: string | null;
 };
 
 /** Tabella `scheda_lavorazione` (schede di lavorazione). */

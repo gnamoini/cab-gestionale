@@ -5,7 +5,7 @@ import { dsPageToolbarBtn } from "@/lib/ui/design-system";
 import { IconGestionaleLog, IconGestionaleUndo } from "@/components/gestionale/gestionale-log-ui";
 
 export const gestionalePageToolbarActionsClass =
-  "flex min-w-0 max-w-full shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto pb-0.5 [-webkit-overflow-scrolling:touch]";
+  "flex min-w-0 max-w-full shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]";
 
 export function GestionalePageToolbarActions({
   leading,

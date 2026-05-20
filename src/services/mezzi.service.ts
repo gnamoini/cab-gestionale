@@ -32,7 +32,7 @@ async function countMezzoDependencies(id: string): Promise<ServiceResult<MezzoDe
   try {
     const c = await sb();
     const [lavRes, pvRes] = await Promise.all([
-      c.from("lavorazioni").select("*", { count: "exact", head: true }).eq("mezzo_id", id),
+      c.from("lavorazioni").select("*", { count: "exact", head: true }).eq("mezzo_id", id).is("deleted_at", null),
       c.from("preventivi").select("*", { count: "exact", head: true }).eq("mezzo_id", id),
     ]);
     if (lavRes.error) return err(lavRes.error.message);

@@ -141,13 +141,16 @@ export function StatoSettingsList({
               onChange={(hex) => onChangeStatoColor(s.id, hex)}
             />
             {onChangeStatoClosed ? (
-              <label className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-zinc-400">
+              <label
+                className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-zinc-400"
+                title="Solo workflow visuale (dropdown/filtri). L'archivio lavorazioni usa il campo archived in database."
+              >
                 <input
                   type="checkbox"
                   checked={s.closed === true}
                   onChange={(e) => onChangeStatoClosed(s.id, e.target.checked)}
                 />
-                Archiviato
+                Stato finale workflow
               </label>
             ) : null}
             <button

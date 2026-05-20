@@ -1,19 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { ReportYearlyForecastLineChart } from "@/components/report/report-charts";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/report/report-buttons";
 import type { ReportCompareDetail } from "@/lib/report/build-report-model";
 import { deltaPct } from "@/lib/report/date-ranges";
 import type { DateRange } from "@/lib/report/date-ranges";
 import { endOfLocalDay, startOfLocalDay } from "@/lib/report/date-ranges";
 import { buildLavorazioniYearMatrix, yearlyForecastLineModel, type LavorazioniYearRow } from "@/lib/report/lavorazioni-year-matrix";
-import {
-  loadLavorazioniManualMonthMap,
-  saveLavorazioniManualMonthMap,
-  type LavorazioniManualMonthMap,
-} from "@/lib/report/lavorazioni-manual-storage";
 import { dsSectionTitle, dsSurfaceCard, dsTableHead, dsTableWrap, dsScrollbar, dsTypoSmall } from "@/lib/ui/design-system";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"] as const;
@@ -78,21 +72,16 @@ export function ReportLavorazioniSection({
   anchor,
   filterRange,
   compareDetail,
-  histRev,
-  onHistRev,
 }: {
   attive: LavorazioneAttiva[];
   storico: LavorazioneArchiviata[];
   anchor: Date;
   filterRange: DateRange;
   compareDetail: ReportCompareDetail | null;
-  histRev: number;
-  onHistRev: () => void;
 }) {
-  const manual = useMemo(() => loadLavorazioniManualMonthMap(), [histRev]);
   const { rows, monthLabels, hasAnyData } = useMemo(
-    () => buildLavorazioniYearMatrix(storico, attive, manual, anchor),
-    [storico, attive, manual, anchor],
+    () => buildLavorazioniYearMatrix(storico, anchor),
+    [storico, anchor],
   );
   const forecast = useMemo(() => yearlyForecastLineModel(rows, anchor), [rows, anchor]);
 
@@ -102,26 +91,15 @@ export function ReportLavorazioniSection({
     return m;
   }, [rows, filterRange]);
 
-  const [open, setOpen] = useState(false);
-  const [y, setY] = useState(String(anchor.getFullYear()));
-  const [m, setM] = useState(String(anchor.getMonth() + 1).padStart(2, "0"));
-  const [n, setN] = useState("0");
-
-  function saveManual() {
-    const key = `${y}-${m.padStart(2, "0")}`;
-    const val = Math.max(0, Math.round(Number(n) || 0));
-    const next: LavorazioniManualMonthMap = { ...manual, [key]: val };
-    saveLavorazioniManualMonthMap(next);
-    onHistRev();
-    setOpen(false);
-  }
+  const inCorsoCount = attive.length;
+  const archiviateCount = storico.length;
 
   const cmpLine =
     compareDetail != null ? (
       <div className="mb-3 rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-200">
         <span className="font-semibold text-zinc-900 dark:text-zinc-50">Confronto periodo</span>
         {" · "}
-        Completate: {compareDetail.completedCur} vs {compareDetail.completedPrev} (
+        Archiviate nel periodo: {compareDetail.completedCur} vs {compareDetail.completedPrev} (
         {fmtPct(deltaPct(compareDetail.completedCur, compareDetail.completedPrev))}
         {compareDetail.completedCur - compareDetail.completedPrev !== 0 ? (
           <span className="tabular-nums">
@@ -137,24 +115,22 @@ export function ReportLavorazioniSection({
 
   return (
     <div className={`${dsSurfaceCard} p-4`}>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className={dsSectionTitle}>Andamento lavorazioni</h2>
-          <p className={dsTypoSmall}>
-            Completate per mese (storico + completate in attive). Valori manuali sostituiscono il conteggio automatico.
-          </p>
-        </div>
-        <button type="button" onClick={() => setOpen(true)} className={`${erpBtnNeutral} shrink-0 sm:text-sm`}>
-          Gestisci storico
-        </button>
+      <div className="mb-4">
+        <h2 className={dsSectionTitle}>Andamento lavorazioni</h2>
+        <p className={dsTypoSmall}>
+          Solo lavorazioni reali (escluse eliminate):{" "}
+          <span className="font-medium">{inCorsoCount}</span> in corso,{" "}
+          <span className="font-medium">{archiviateCount}</span> archiviate. Chiusure mensili = lavorazioni
+          archiviate per data di conclusione.
+        </p>
       </div>
 
       {cmpLine}
 
       {!hasAnyData ? (
         <p className="mb-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
-          Nessun dato disponibile: non risultano lavorazioni completate nello storico. Usa &quot;Gestisci storico&quot; per
-          inserire i dati passati.
+          Nessun dato disponibile: non risultano lavorazioni archiviate con data di chiusura. Le lavorazioni in corso
+          contribuiscono agli ingressi ma non alle chiusure mensili finché non vengono concluse.
         </p>
       ) : null}
 
@@ -249,13 +225,16 @@ export function ReportLavorazioniSection({
               <ul className="mt-3 space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
                 <li>
                   <span className="inline-block h-0.5 w-6 rounded-full bg-sky-500 align-middle" /> Storico annuale
-                  (chiusure totali)
+                  (archiviate)
                 </li>
                 <li>
                   <span className="inline-block h-0.5 w-6 rounded-full bg-sky-500 align-middle" /> Anno in corso (YTD)
                 </li>
                 <li>
-                  <span className="inline-block h-0.5 w-6 rounded-full bg-orange-500 align-middle" style={{ borderStyle: "dashed" }} />{" "}
+                  <span
+                    className="inline-block h-0.5 w-6 rounded-full bg-orange-500 align-middle"
+                    style={{ borderStyle: "dashed" }}
+                  />{" "}
                   Previsione fine anno (regressione pesata + ritmo corrente)
                 </li>
               </ul>
@@ -273,67 +252,6 @@ export function ReportLavorazioniSection({
           )}
         </div>
       </div>
-
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-4 sm:items-center"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
-        >
-          <div
-            className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Storico manuale lavorazioni</h3>
-            <p className="mt-1 text-xs text-zinc-500">
-              Imposta il numero di <span className="font-medium">lavorazioni completate</span> per anno/mese. Il valore
-              sostituisce il conteggio automatico per quel mese.
-            </p>
-            <div className="mt-4 grid grid-cols-3 gap-2">
-              <label className="text-xs text-zinc-600 dark:text-zinc-400">
-                Anno
-                <input
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-                  value={y}
-                  onChange={(e) => setY(e.target.value)}
-                />
-              </label>
-              <label className="text-xs text-zinc-600 dark:text-zinc-400">
-                Mese
-                <select
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-                  value={m}
-                  onChange={(e) => setM(e.target.value)}
-                >
-                  {MONTHS.map((lab, i) => (
-                    <option key={lab} value={String(i + 1).padStart(2, "0")}>
-                      {lab}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className="text-xs text-zinc-600 dark:text-zinc-400">
-                N° completate
-                <input
-                  className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-2 text-sm dark:border-zinc-700 dark:bg-zinc-950"
-                  inputMode="numeric"
-                  value={n}
-                  onChange={(e) => setN(e.target.value)}
-                />
-              </label>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className={erpBtnNeutral} onClick={() => setOpen(false)}>
-                Annulla
-              </button>
-              <button type="button" className={erpBtnAccent} onClick={saveManual}>
-                Salva
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

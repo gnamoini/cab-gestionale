@@ -665,7 +665,7 @@ export function MezziView() {
 
       {nuovoOpen ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setNuovoOpen(false);
           }}
@@ -701,7 +701,7 @@ export function MezziView() {
 
       {editMezzo ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setEditMezzo(null);
           }}
@@ -789,7 +789,7 @@ function MezzoFormFields({
     if (!form.marcaTelaio.trim() && form.modelloTelaio.trim()) setForm((f) => ({ ...f, modelloTelaio: "" }));
   }, [form.marcaTelaio, form.modelloTelaio, setForm]);
 
-  const fieldClass = `mt-1 block w-full ${dsInput}`;
+  const listSelectWrapClass = "mt-1 w-full";
 
   if (globalOpts.isLoading) {
     return <p className="text-sm text-zinc-500 dark:text-zinc-400">Caricamento impostazioni…</p>;
@@ -800,7 +800,7 @@ function MezzoFormFields({
       <MezzoFormSection title="Cliente">
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Cliente *
-          <GestionaleListSelect className={fieldClass} value={form.cliente} onChange={(v) => setForm((f) => ({ ...f, cliente: v }))} options={clientiBase} required />
+          <GestionaleListSelect className={listSelectWrapClass} value={form.cliente} onChange={(v) => setForm((f) => ({ ...f, cliente: v }))} options={clientiBase} required />
         </label>
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Cantiere
@@ -820,12 +820,12 @@ function MezzoFormFields({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Marca *
-            <GestionaleListSelect className={fieldClass} value={form.marca} onChange={(marca) => setForm((f) => ({ ...f, marca, modello: "" }))} options={marcheAttBase} required />
+            <GestionaleListSelect className={listSelectWrapClass} value={form.marca} onChange={(marca) => setForm((f) => ({ ...f, marca, modello: "" }))} options={marcheAttBase} required />
           </label>
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Modello
             <GestionaleListSelect
-              className={fieldClass}
+              className={listSelectWrapClass}
               value={form.modello}
               onChange={(modello) => setForm((f) => ({ ...f, modello }))}
               options={modelliAtt}
@@ -837,7 +837,7 @@ function MezzoFormFields({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Matricola
-            <input value={form.matricola} onChange={(e) => setForm((f) => ({ ...f, matricola: e.target.value }))} className={`${dsInput} mt-1 font-mono`} placeholder="Opzionale" />
+            <input value={form.matricola} onChange={(e) => setForm((f) => ({ ...f, matricola: e.target.value }))} className={`${dsInput} mt-1 font-mono`} />
           </label>
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             N. scuderia
@@ -858,12 +858,12 @@ function MezzoFormFields({
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Marca
-            <GestionaleListSelect className={fieldClass} value={form.marcaTelaio} onChange={(v) => setForm((f) => ({ ...f, marcaTelaio: v, modelloTelaio: "" }))} options={marcheTelaioBase} />
+            <GestionaleListSelect className={listSelectWrapClass} value={form.marcaTelaio} onChange={(v) => setForm((f) => ({ ...f, marcaTelaio: v, modelloTelaio: "" }))} options={marcheTelaioBase} />
           </label>
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Modello
             <GestionaleListSelect
-              className={fieldClass}
+              className={listSelectWrapClass}
               value={form.modelloTelaio}
               onChange={(v) => setForm((f) => ({ ...f, modelloTelaio: v }))}
               options={modelliTelaio}

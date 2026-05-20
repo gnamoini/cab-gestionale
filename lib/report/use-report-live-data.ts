@@ -4,12 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { loadMagazzinoChangeLog, MAGAZZINO_CHANGE_LOG_STORAGE_KEY } from "@/lib/magazzino/magazzino-change-log-storage";
 import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { splitLavorazioniListRowsForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
-import { LAVORAZIONI_CHANGE_LOG_STORAGE_KEY, loadLavorazioniChangeLog } from "@/lib/lavorazioni/lavorazioni-change-log";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { subscribeReportDataRefresh } from "@/lib/report/report-broadcast";
 import { useMagazzinoListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 
+/** Tutte le lavorazioni non eliminate (in corso + archiviate); split report su `archived`. */
 const LAV_LIST_FILTERS = { includeMezzo: true as const };
 
 export function useReportLiveData() {
@@ -24,7 +24,7 @@ export function useReportLiveData() {
     const u4 = subscribeReportDataRefresh(bump);
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
-      if (e.key === MAGAZZINO_CHANGE_LOG_STORAGE_KEY || e.key === LAVORAZIONI_CHANGE_LOG_STORAGE_KEY) bump();
+      if (e.key === MAGAZZINO_CHANGE_LOG_STORAGE_KEY) bump();
     };
     const onVis = () => {
       if (document.visibilityState === "visible") bump();
@@ -48,7 +48,6 @@ export function useReportLiveData() {
       magazzino,
       mezzi,
       magLog: loadMagazzinoChangeLog(),
-      lavLog: loadLavorazioniChangeLog(),
       isLoading: lavQuery.isLoading || magQuery.isLoading || mezziQuery.isLoading,
       isError: lavQuery.isError || magQuery.isError || mezziQuery.isError,
       tick,

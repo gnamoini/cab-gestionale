@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
 import { GestionaleLogEmpty, GestionaleLogList } from "@/components/gestionale/gestionale-log-ui";
-import { isStatoLavorazioneChiusoDb } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import { buildPreventiviArchivioFilterHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
 import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
@@ -169,7 +168,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -254,7 +253,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                 <Link
                   href={buildPreventiviArchivioFilterHref(
                     hub.lavorazioneId,
-                    isStatoLavorazioneChiusoDb(hub.lavorazione.stato) ? "storico" : "attiva",
+                    hub.lavorazione.archived === true ? "storico" : "attiva",
                   )}
                   className={`${erpBtnSoftOrange} inline-flex no-underline`}
                   onClick={onClose}

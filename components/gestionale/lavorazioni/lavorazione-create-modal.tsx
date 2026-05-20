@@ -303,7 +303,8 @@ export function LavorazioneCreateModal({
   }
 
   const pending = create.isPending || createMezzo.isPending;
-  const fieldClass = `mt-1 block w-full ${dsInput}`;
+  const inputFieldClass = `mt-1 block w-full ${dsInput}`;
+  const listSelectWrapClass = "mt-1 w-full";
 
   return (
     <LavorazioniModalShell
@@ -386,7 +387,7 @@ export function LavorazioneCreateModal({
           <FormSection title="Cliente">
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Cliente *
-              <GestionaleListSelect className={fieldClass} value={fields.cliente} onChange={(v) => patch({ cliente: v })} options={liste.clienti} disabled={pending} required />
+              <GestionaleListSelect className={listSelectWrapClass} value={fields.cliente} onChange={(v) => patch({ cliente: v })} options={liste.clienti} disabled={pending} required />
             </label>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Cantiere
@@ -407,7 +408,7 @@ export function LavorazioneCreateModal({
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 Marca *
                 <GestionaleListSelect
-                  className={fieldClass}
+                  className={listSelectWrapClass}
                   value={fields.marcaAttrezzatura}
                   onChange={(v) => patch({ marcaAttrezzatura: v, modelloAttrezzatura: "" })}
                   options={marcheAtt}
@@ -417,7 +418,7 @@ export function LavorazioneCreateModal({
               </label>
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 Modello
-                <GestionaleListSelect className={fieldClass} value={fields.modelloAttrezzatura} onChange={(v) => patch({ modelloAttrezzatura: v })} options={modelliAtt} disabled={pending || !fields.marcaAttrezzatura.trim()} />
+                <GestionaleListSelect className={listSelectWrapClass} value={fields.modelloAttrezzatura} onChange={(v) => patch({ modelloAttrezzatura: v })} options={modelliAtt} disabled={pending || !fields.marcaAttrezzatura.trim()} />
               </label>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -432,7 +433,7 @@ export function LavorazioneCreateModal({
             </div>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Ore lavoro
-              <input type="number" min={0} className={fieldClass} value={fields.oreLavoro} onChange={(e) => patch({ oreLavoro: e.target.value })} disabled={pending} />
+              <input type="number" min={0} className={inputFieldClass} value={fields.oreLavoro} onChange={(e) => patch({ oreLavoro: e.target.value })} disabled={pending} />
             </label>
           </FormSection>
 
@@ -444,11 +445,11 @@ export function LavorazioneCreateModal({
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 Marca
-                <GestionaleListSelect className={fieldClass} value={fields.marcaTelaio} onChange={(v) => patch({ marcaTelaio: v, modelloTelaio: "" })} options={marcheTel} disabled={pending} />
+                <GestionaleListSelect className={listSelectWrapClass} value={fields.marcaTelaio} onChange={(v) => patch({ marcaTelaio: v, modelloTelaio: "" })} options={marcheTel} disabled={pending} />
               </label>
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 Modello
-                <GestionaleListSelect className={fieldClass} value={fields.modelloTelaio} onChange={(v) => patch({ modelloTelaio: v })} options={modelliTel} disabled={pending || !fields.marcaTelaio.trim()} />
+                <GestionaleListSelect className={listSelectWrapClass} value={fields.modelloTelaio} onChange={(v) => patch({ modelloTelaio: v })} options={modelliTel} disabled={pending || !fields.marcaTelaio.trim()} />
               </label>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -458,7 +459,7 @@ export function LavorazioneCreateModal({
               </label>
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 KM
-                <input type="number" min={0} className={fieldClass} value={fields.km} onChange={(e) => patch({ km: e.target.value })} disabled={pending} />
+                <input type="number" min={0} className={inputFieldClass} value={fields.km} onChange={(e) => patch({ km: e.target.value })} disabled={pending} />
               </label>
             </div>
           </FormSection>
@@ -484,7 +485,7 @@ export function LavorazioneCreateModal({
             </label>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Richiedente
-              <input className={fieldClass} value={fields.richiedente} onChange={(e) => patch({ richiedente: e.target.value })} disabled={pending} placeholder="Nome libero" />
+              <input className={inputFieldClass} value={fields.richiedente} onChange={(e) => patch({ richiedente: e.target.value })} disabled={pending} placeholder="Nome libero" />
             </label>
           </FormSection>
 

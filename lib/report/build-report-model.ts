@@ -1,4 +1,3 @@
-import { isCompletataForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
@@ -75,20 +74,16 @@ function countOpenedInRange(attive: LavorazioneAttiva[], storico: LavorazioneArc
   return n;
 }
 
-function countCompletedInRange(attive: LavorazioneAttiva[], storico: LavorazioneArchiviata[], r: DateRange): number {
+/** Chiusure = lavorazioni archiviate con data chiusura nel periodo. */
+function countCompletedInRange(_attive: LavorazioneAttiva[], storico: LavorazioneArchiviata[], r: DateRange): number {
   let n = 0;
   for (const x of storico) {
     if (x.dataCompletamento && isoInRange(x.dataCompletamento, r)) n += 1;
   }
-  for (const x of attive) {
-    if (isCompletataForReport(x.statoId) && x.dataCompletamento && isoInRange(x.dataCompletamento, r)) {
-      n += 1;
-    }
-  }
   return n;
 }
 
-function avgCloseDays(storico: LavorazioneArchiviata[], attive: LavorazioneAttiva[], r: DateRange): number {
+function avgCloseDays(storico: LavorazioneArchiviata[], _attive: LavorazioneAttiva[], r: DateRange): number {
   const vals: number[] = [];
   const ms = (a: string, b: string) => {
     const t0 = new Date(a).getTime();
@@ -98,12 +93,6 @@ function avgCloseDays(storico: LavorazioneArchiviata[], attive: LavorazioneAttiv
   };
   for (const x of storico) {
     if (!x.dataCompletamento || !isoInRange(x.dataCompletamento, r)) continue;
-    const g = ms(x.dataIngresso, x.dataCompletamento);
-    if (g > 0) vals.push(g);
-  }
-  for (const x of attive) {
-    if (!isCompletataForReport(x.statoId) || !x.dataCompletamento) continue;
-    if (!isoInRange(x.dataCompletamento, r)) continue;
     const g = ms(x.dataIngresso, x.dataCompletamento);
     if (g > 0) vals.push(g);
   }
@@ -253,13 +242,13 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
 
   const pctChiusSuIngressi = opened > 0 ? Math.round((completed / opened) * 1000) / 10 : null;
   const lavSubParts = [
-    `Chiuse ${completed}${pctChiusSuIngressi != null ? ` (${pctChiusSuIngressi}% degli ingressi)` : ""}`,
-    tempoMedio > 0 ? `Tempo medio chiusura ${tempoMedio} gg` : "Tempo medio chiusura —",
+    `Archiviate ${completed}${pctChiusSuIngressi != null ? ` (${pctChiusSuIngressi}% degli ingressi)` : ""}`,
+    tempoMedio > 0 ? `Tempo medio archivio ${tempoMedio} gg` : "Tempo medio archivio —",
   ];
   const lavCompareRows: KpiCompareRow[] | null = compareRange
     ? [
         { label: "Ingressi", deltaAbs: dOpened.abs, deltaPct: dOpened.pct },
-        { label: "Chiuse", deltaAbs: dCompleted.abs, deltaPct: dCompleted.pct },
+        { label: "Archiviate", deltaAbs: dCompleted.abs, deltaPct: dCompleted.pct },
         { label: "Tempo medio", deltaAbs: dTempo.abs, deltaPct: dTempo.pct, invert: true },
       ]
     : null;

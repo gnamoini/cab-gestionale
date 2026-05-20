@@ -49,7 +49,6 @@ export function DashboardRecentFeeds() {
     <div className="grid gap-4 lg:grid-cols-2">
       <section className={`flex min-h-[280px] flex-col ${dsSurfaceCard} p-4 sm:p-5`}>
         <h2 className={dsTypoCardTitle}>Ultime modifiche lavorazioni</h2>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Log centralizzato condiviso · aggiornamento realtime</p>
         <div className={`${gestionaleLogScrollEmbeddedClass} mt-3 max-h-[min(360px,52vh)] min-h-0 flex-1 pr-1`}>
           {lavLogsQ.isLoading ? (
             <p className="text-sm text-zinc-500">Caricamento log…</p>
@@ -73,7 +72,6 @@ export function DashboardRecentFeeds() {
 
       <section className={`flex min-h-[280px] flex-col ${dsSurfaceCard} p-4 sm:p-5`}>
         <h2 className={dsTypoCardTitle}>Ultime modifiche ricambi</h2>
-        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">Log centralizzato condiviso · aggiornamento realtime</p>
         <div className={`${gestionaleLogScrollEmbeddedClass} mt-3 max-h-[min(360px,52vh)] min-h-0 flex-1 pr-1`}>
           {magLogsQ.isLoading ? (
             <p className="text-sm text-zinc-500">Caricamento log…</p>

@@ -75,7 +75,8 @@ export function normalizeStatiList(stati: StatoLavorazioneConfig[]): StatoLavora
       id,
       label,
       ...(nh ? { color: nh } : def?.color ? { color: def.color } : {}),
-      ...(raw.closed === true || def?.closed ? { closed: true } : {}),
+      /** Solo se esplicitamente true in settings: mai re-inferire da default (evita loop archivio/stati). */
+      ...(raw.closed === true ? { closed: true } : {}),
     });
   }
   return out;

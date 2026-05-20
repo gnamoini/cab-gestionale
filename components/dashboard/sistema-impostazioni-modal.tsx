@@ -57,7 +57,13 @@ import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context"
 import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { usePermissions } from "@/src/hooks/use-permissions";
-import { dsBtnPrimary, dsStackPage } from "@/lib/ui/design-system";
+import {
+  dsBtnPrimary,
+  dsFocus,
+  dsStackPage,
+  dsTypoSmall,
+  gestionaleSelectFilterClass,
+} from "@/lib/ui/design-system";
 
 function mergeMaster(a: string[], b: string[]) {
   return [...new Set([...a, ...b])].sort((x, y) => x.localeCompare(y, "it"));
@@ -77,7 +83,7 @@ type SistemaSettingsSnapshot = {
 function buildResolvedFromModalSnapshot(s: SistemaSettingsSnapshot): CabAppSettingsResolved {
   return {
     lavorazioni: {
-      stati: s.stati,
+      stati: normalizeStatiList(s.stati),
       addetti: s.addetti,
       addettoColors: s.addettoColors,
       prioritaColors: s.prioritaColors,
@@ -189,6 +195,137 @@ const NAV_STRUCTURE: NavEntry[] = [
   { kind: "group", label: "Sistema" },
   { kind: "item", id: "sys-economici", label: "Parametri economici" },
 ];
+
+const SETTINGS_NAV_ITEM_COUNT = NAV_STRUCTURE.filter((e) => e.kind === "item").length;
+
+function SettingsNavMenuList({
+  filteredNav,
+  section,
+  onPickSection,
+}: {
+  filteredNav: NavEntry[];
+  section: SistemaSectionId;
+  onPickSection: (id: SistemaSectionId) => void;
+}) {
+  return (
+    <nav className="gestionale-scrollbar max-h-[min(60vh,22rem)] space-y-1 overflow-y-auto p-2" aria-label="Elenco sezioni impostazioni">
+      {filteredNav.map((e, i) => {
+        if (e.kind === "group") {
+          return (
+            <p
+              key={`nav-g-${e.label}-${i}`}
+              className={`${dsTypoSmall} px-2 pt-2 pb-0.5 font-bold uppercase tracking-wider text-[color:var(--cab-text-muted)] first:pt-0`}
+            >
+              {e.label}
+            </p>
+          );
+        }
+        const active = section === e.id;
+        return (
+          <button
+            key={e.id}
+            type="button"
+            onClick={() => onPickSection(e.id)}
+            className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-medium transition-colors ${
+              active
+                ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] font-semibold text-[color:var(--cab-text)]"
+                : "text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]"
+            }`}
+          >
+            {e.label}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+function SettingsMobileSectionPicker({
+  open,
+  activeLabel,
+  onToggle,
+  onClose,
+  filteredNav,
+  section,
+  onPickSection,
+  navQ,
+  setNavQ,
+}: {
+  open: boolean;
+  activeLabel: string;
+  onToggle: () => void;
+  onClose: () => void;
+  filteredNav: NavEntry[];
+  section: SistemaSectionId;
+  onPickSection: (id: SistemaSectionId) => void;
+  navQ: string;
+  setNavQ: (v: string) => void;
+}) {
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (ev: MouseEvent) => {
+      if (rootRef.current?.contains(ev.target as Node)) return;
+      onClose();
+    };
+    document.addEventListener("mousedown", onDoc, true);
+    return () => document.removeEventListener("mousedown", onDoc, true);
+  }, [open, onClose]);
+
+  return (
+    <div ref={rootRef} className="relative w-full md:hidden">
+      <button
+        type="button"
+        className={`${gestionaleSelectFilterClass} relative block truncate text-left ${open ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]" : ""} ${dsFocus}`}
+        onClick={onToggle}
+        aria-expanded={open}
+        aria-controls="settings-mobile-nav-panel"
+        aria-haspopup="listbox"
+        aria-label={`Sezione impostazioni: ${activeLabel}. Apri elenco (${SETTINGS_NAV_ITEM_COUNT} sezioni).`}
+      >
+        <svg
+          className="pointer-events-none absolute left-2.5 top-1/2 h-[1.1rem] w-[1.1rem] -translate-y-1/2 text-[color:var(--cab-text-muted)]"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          aria-hidden
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <span className="sr-only">Sezione: </span>
+        {activeLabel}
+      </button>
+
+      {open ? (
+        <div
+          id="settings-mobile-nav-panel"
+          role="listbox"
+          className="absolute left-0 right-0 top-full z-[var(--ds-z-dropdown,50)] mt-1 overflow-hidden rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-lg"
+        >
+          <div className="border-b border-[color:var(--cab-border)] p-2">
+            <GestionaleSearchField
+              value={navQ}
+              onChange={(e) => setNavQ(e.target.value)}
+              placeholder="Cerca sezione…"
+              autoComplete="off"
+              aria-label="Cerca nelle sezioni impostazioni"
+            />
+          </div>
+          <SettingsNavMenuList
+            filteredNav={filteredNav}
+            section={section}
+            onPickSection={(id) => {
+              onPickSection(id);
+              onClose();
+            }}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 const SETTINGS_CARD =
   "w-full rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900";
@@ -695,51 +832,6 @@ function SistemaImpostazioniWorkspace({
           </div>
         </header>
 
-        {mobileNavOpen && pageMode ? (
-          <aside className="m-3 rounded-xl border border-zinc-200 bg-[var(--cab-card)] shadow-sm dark:border-zinc-800 md:hidden" aria-label="Sezioni impostazioni">
-            <header className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
-              <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Sezioni</h3>
-              <CloseButton onClick={() => setMobileNavOpen(false)} />
-            </header>
-            <div className="border-b border-zinc-100 p-2 dark:border-zinc-800">
-              <GestionaleSearchField
-                value={navQ}
-                onChange={(e) => setNavQ(e.target.value)}
-                placeholder="Cerca…"
-                autoComplete="off"
-                aria-label="Cerca nelle sezioni impostazioni"
-              />
-            </div>
-            <nav className="space-y-1 p-2" aria-label="Sezioni impostazioni mobile">
-              {filteredNav.map((e, i) => {
-                if (e.kind === "group") {
-                  return (
-                    <p key={`pmg-${e.label}-${i}`} className="px-2 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 first:pt-0 dark:text-zinc-500">
-                      {e.label}
-                    </p>
-                  );
-                }
-                const active = section === e.id;
-                return (
-                  <button
-                    key={e.id}
-                    type="button"
-                    onClick={() => {
-                      setSection(e.id);
-                      setMobileNavOpen(false);
-                    }}
-                    className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold transition-colors ${
-                      active ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:brightness-[1.06]" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
-                    }`}
-                  >
-                    {e.label}
-                  </button>
-                );
-              })}
-            </nav>
-          </aside>
-        ) : null}
-
         {mobileNavOpen && !pageMode ? (
           <div className="absolute inset-0 z-20 bg-[var(--cab-overlay)] backdrop-blur-[1px] md:hidden" role="presentation" onMouseDown={(e) => {
             if (e.target === e.currentTarget) setMobileNavOpen(false);
@@ -859,7 +951,14 @@ function SistemaImpostazioniWorkspace({
                   logDash("update", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Colore stato aggiornato per «${nome}»`);
                 }}
                 onChangeStatoClosed={(id, closed) =>
-                  setStati((prev) => prev.map((s) => (s.id === id ? { ...s, closed } : s)))
+                  setStati((prev) =>
+                    prev.map((s) => {
+                      if (s.id !== id) return s;
+                      if (closed) return { ...s, closed: true };
+                      const { closed: _omit, ...rest } = s;
+                      return rest;
+                    }),
+                  )
                 }
                 onReorderStato={(from, to) => setStati((prev) => reorderStatiList(prev, from, to))}
                 onRemoveStato={(id) => {
@@ -1195,11 +1294,21 @@ function SistemaImpostazioniWorkspace({
       <div className={dsStackPage}>
         <PageHeader
           title="Impostazioni"
+          belowTitle={
+            <SettingsMobileSectionPicker
+              open={mobileNavOpen}
+              activeLabel={activeSectionLabel}
+              onToggle={() => setMobileNavOpen((v) => !v)}
+              onClose={() => setMobileNavOpen(false)}
+              filteredNav={filteredNav}
+              section={section}
+              onPickSection={setSection}
+              navQ={navQ}
+              setNavQ={setNavQ}
+            />
+          }
           actions={
             <>
-              <button type="button" className={`${erpBtnNeutral} md:hidden`} onClick={() => setMobileNavOpen((v) => !v)}>
-                Sezioni
-              </button>
               <button type="button" className={erpBtnNeutral} onClick={handleCancelChanges} disabled={!isDirty || bulkSave.isPending}>
                 Annulla modifiche
               </button>

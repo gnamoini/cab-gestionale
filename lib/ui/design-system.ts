@@ -188,17 +188,20 @@ export const dsSurfacePanel = `flex min-h-[220px] flex-col rounded-[var(--ds-rad
 
 export const dsSurfaceInteractiveKpi = `group flex h-full min-h-[220px] flex-col rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabSurface} p-4 text-left shadow-[var(--cab-shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)] active:scale-[0.99] ${dsFocus}`;
 
-/** Tile navigazione rapida dashboard — una sola superficie per cella (no card annidate). */
-export const dsSurfaceQuickNavTile = `group relative flex min-h-[5.75rem] flex-col items-start gap-2.5 rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} p-4 text-left shadow-[var(--cab-shadow-sm)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_24%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)] active:scale-[0.99] ${dsFocus}`;
+/** Tile interna navigazione rapida (dentro `dsSurfaceCard` principale). */
+export const dsSurfaceQuickNavTile = `group flex min-h-[5.5rem] flex-col items-center justify-center gap-2 rounded-[var(--ds-radius-xl)] border px-3 py-3.5 text-center transition-all duration-200 hover:-translate-y-0.5 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] hover:shadow-[var(--cab-shadow-md)] active:scale-[0.98] border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] text-[color:var(--cab-text)]`;
+
+/** Tile disabilitata (staging) — stesso layout centrato della quick nav. */
+export const dsSurfaceQuickNavTileDisabled = `group flex min-h-[5.5rem] cursor-not-allowed flex-col items-center justify-center gap-2 rounded-[var(--ds-radius-xl)] border border-dashed px-3 py-3.5 text-center opacity-70 ${cabBorder}`;
 
 export const dsModalBackdrop =
-  "fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--cab-overlay)] p-2 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur-[2px] sm:items-center sm:p-4";
+  "fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[var(--cab-overlay)] p-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-[2px]";
 
 export const dsModalPanel = `w-full max-w-lg rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} p-4 shadow-[var(--cab-shadow-md)]`;
 
 /** Modali Lavorazioni (sopra altri layer; z-index dedicato). */
 export const dsLavorazioniModalLayer =
-  "fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto p-2 pt-[max(0.75rem,env(safe-area-inset-top))] sm:items-center sm:p-4";
+  "fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4 pt-[max(1rem,env(safe-area-inset-top))]";
 export const dsLavorazioniModalOverlay =
   "absolute inset-0 z-0 cursor-default border-0 bg-[var(--cab-overlay)] p-0 backdrop-blur-[3px]";
 export const dsLavorazioniModalDialog =
@@ -251,6 +254,11 @@ export const dsTypoCaption = `text-[11px] leading-snug ${cabTextMuted}`;
 /** @deprecated alias — usare `dsTypoPageTitle` */
 export const dsPageTitle = dsTypoPageTitle;
 export const dsPageDesc = `mt-1 max-w-2xl ${dsTypoSmall}`;
+
+/** Griglia intestazione pagina: titolo e azioni sulla stessa riga; descrizione opzionale sotto il titolo. */
+export const dsPageHeaderGrid =
+  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 sm:gap-x-[length:var(--ds-space-lg)]";
+
 export const dsLabel = dsTypoSmall + " font-medium";
 
 /** Alias espliciti sezione / card */

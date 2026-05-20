@@ -8,10 +8,16 @@ import {
   resolveGestionaleNav,
   type GestionaleNavHref,
 } from "@/components/gestionale/gestionale-nav-config";
+import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { useAuth } from "@/context/auth-context";
 import { shouldHideNavHref } from "@/lib/auth/rbac";
+import {
+  dsSurfaceCard,
+  dsSurfaceQuickNavTile,
+  dsSurfaceQuickNavTileDisabled,
+  dsTypoCardTitle,
+} from "@/lib/ui/design-system";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
-import { dsSurfaceQuickNavTile, dsTypoCardTitle, dsTypoSmall } from "@/lib/ui/design-system";
 import { isNavTargetCurrent } from "@/src/lib/navigation/route-transition";
 
 const QUICK_NAV_DESC: Partial<Record<GestionaleNavHref, string>> = {
@@ -27,7 +33,15 @@ const QUICK_NAV_DESC: Partial<Record<GestionaleNavHref, string>> = {
 
 function tileActiveClass(active: boolean): string {
   if (!active) return "";
-  return "border-[color:color-mix(in_srgb,var(--cab-primary)_32%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-card))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_22%,transparent),var(--cab-shadow-sm)] before:absolute before:left-0 before:top-3 before:bottom-3 before:w-[3px] before:rounded-r before:bg-[var(--cab-primary)]";
+  return "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-card))] shadow-[var(--cab-shadow-sm)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)]";
+}
+
+function tileIconClass(active: boolean): string {
+  return `flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border transition-colors duration-200 ${
+    active
+      ? "border-[color:color-mix(in_srgb,var(--cab-primary)_40%,var(--cab-border))] bg-[var(--cab-card)] text-[color:var(--cab-primary)]"
+      : "border-[color:var(--cab-border)] bg-[var(--cab-card)] text-[color:var(--cab-text-muted)] group-hover:border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] group-hover:text-[color:var(--cab-primary)]"
+  }`;
 }
 
 function QuickNavTile({
@@ -49,19 +63,16 @@ function QuickNavTile({
 }) {
   if (disabled) {
     return (
-      <div
-        className={`${dsSurfaceQuickNavTile} cursor-not-allowed border-dashed opacity-75`}
-        aria-disabled
-      >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[color:color-mix(in_srgb,var(--cab-surface-2)_85%,var(--cab-card))] text-[color:var(--cab-text-muted)]">
+      <div className={dsSurfaceQuickNavTileDisabled} aria-disabled title={badge ?? undefined}>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_80%,var(--cab-card))] text-[color:var(--cab-text-muted)]">
           <Icon className="h-5 w-5" />
         </span>
-        <div className="min-w-0 space-y-0.5">
-          <span className="block text-sm font-semibold text-[color:var(--cab-text-muted)]">{label}</span>
-          <span className="block text-xs leading-snug text-[color:var(--cab-text-muted)]">{description}</span>
+        <div className="flex min-w-0 flex-col items-center gap-0.5 text-center">
+          <span className="text-xs font-semibold leading-tight text-[color:var(--cab-text-muted)]">{label}</span>
+          <span className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">{description}</span>
         </div>
         {badge ? (
-          <span className="absolute right-3 top-3 rounded bg-[color:color-mix(in_srgb,var(--cab-text-muted)_14%,var(--cab-surface))] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+          <span className="rounded bg-[color:color-mix(in_srgb,var(--cab-text-muted)_14%,var(--cab-surface))] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
             {badge}
           </span>
         ) : null}
@@ -72,28 +83,21 @@ function QuickNavTile({
   return (
     <Link
       href={href}
-      className={`${dsSurfaceQuickNavTile} ${tileActiveClass(active)}`}
+      className={`${dsSurfaceQuickNavTile} ${tileActiveClass(active)} ${erpFocus}`}
       aria-current={active ? "page" : undefined}
     >
-      <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 ${
-          active
-            ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_24%,var(--cab-card))] text-[color:var(--cab-primary)]"
-            : "bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] text-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,var(--cab-text))] group-hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-card))] group-hover:text-[color:var(--cab-primary)]"
-        }`}
-        aria-hidden
-      >
+      <span className={tileIconClass(active)} aria-hidden>
         <Icon className="h-5 w-5" />
       </span>
-      <div className="min-w-0 space-y-0.5 pr-6">
+      <div className="flex min-w-0 flex-col items-center gap-0.5 px-1 text-center">
         <span
-          className={`block text-sm font-semibold leading-snug ${
+          className={`text-xs font-semibold leading-tight ${
             active ? "text-[color:var(--cab-primary)]" : "text-[color:var(--cab-text)]"
           }`}
         >
           {label}
         </span>
-        <span className="block text-xs leading-snug text-[color:var(--cab-text-muted)]">{description}</span>
+        <span className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">{description}</span>
       </div>
     </Link>
   );
@@ -122,16 +126,11 @@ export function DashboardQuickNav() {
   );
 
   return (
-    <section aria-labelledby="dashboard-quick-nav-title">
-      <div className="mb-4">
-        <h2 id="dashboard-quick-nav-title" className={dsTypoCardTitle}>
-          Navigazione rapida
-        </h2>
-        <p className={`${dsTypoSmall} mt-1 text-[color:var(--cab-text-muted)]`}>
-          Accesso diretto ai moduli principali del gestionale
-        </p>
-      </div>
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <section className={`${dsSurfaceCard} p-4 sm:p-5`} aria-labelledby="dashboard-quick-nav-title">
+      <h2 id="dashboard-quick-nav-title" className={dsTypoCardTitle}>
+        Navigazione rapida
+      </h2>
+      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => {
           const active = isNavTargetCurrent(pathname, item.href);
           const description = QUICK_NAV_DESC[item.href] ?? "Apri modulo";

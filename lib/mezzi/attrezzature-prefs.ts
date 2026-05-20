@@ -110,6 +110,23 @@ export function modelliVisibiliPerMarca(liste: MezziListePrefs, marcaNome: strin
   return [...new Set(hit.modelli.map((x) => x.nome.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
 }
 
+/** Etichette «Marca — Modello» per le marche indicate; array vuoto = tutte le combinazioni configurate. */
+export function compatLabelsPerMarche(liste: MezziListePrefs, marcheSelezionate: readonly string[]): string[] {
+  const marche = [...new Set(marcheSelezionate.map((m) => m.trim()).filter(Boolean))];
+  if (marche.length === 0) return flattenCompatDaAttrezzature(liste);
+  const p = migrateMezziListePrefs(liste);
+  const marcheSet = new Set(marche);
+  const out: string[] = [];
+  for (const m of p.attrezzature ?? []) {
+    if (!marcheSet.has(m.nome.trim())) continue;
+    for (const mod of m.modelli) {
+      const line = compatLabelMarcaModello(m.nome, mod.nome);
+      if (line.trim()) out.push(line);
+    }
+  }
+  return [...new Set(out)].sort((a, b) => a.localeCompare(b, "it"));
+}
+
 export function aggiungiMarca(liste: MezziListePrefs, nome: string): MezziListePrefs {
   const t = nome.trim();
   if (!t) return liste;

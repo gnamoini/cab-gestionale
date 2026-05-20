@@ -1,5 +1,4 @@
 import { durataMsStorico } from "@/lib/lavorazioni/duration";
-import { isCompletataForReport, isStatoLavorazioneChiusoDb } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { labelLavorazioneStatoDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import type { MezzoGestito, MezzoInterventoLavorazione } from "@/lib/mezzi/types";
@@ -76,7 +75,7 @@ function prioritaIt(p: string): string {
 }
 
 export function mezzoHaLavorazioneAttiva(m: MezzoGestito, attive: LavorazioneAttiva[]): boolean {
-  return attive.some((lav) => !isStatoLavorazioneChiusoDb(lav.statoId) && !isCompletataForReport(lav.statoId) && lavorazioneMatchesMezzo(m, lav));
+  return attive.some((lav) => lavorazioneMatchesMezzo(m, lav));
 }
 
 function giorniTra(isoIn: string, isoOut: string | null): { label: string; num: number } {
@@ -115,7 +114,6 @@ export function interventiMezzoDaLavorazioni(
 
   for (const lav of attive) {
     if (!lavorazioneMatchesMezzo(m, lav)) continue;
-    if (isStatoLavorazioneChiusoDb(lav.statoId) || isCompletataForReport(lav.statoId)) continue;
     const completed = lav.dataCompletamento;
     const dur = completed ? giorniTra(lav.dataIngresso, completed) : { label: "In corso", num: 0 };
     out.push({

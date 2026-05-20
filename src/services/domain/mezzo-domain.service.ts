@@ -7,7 +7,6 @@ import {
 } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
   interventiMezzoDaLavorazioniDb,
-  isLavorazioneStoricoDb,
   labelLavorazioneStatoDb,
   mezzoHaLavorazioneAttivaDb,
 } from "@/lib/mezzi/interventi-from-lavorazioni-db";
@@ -102,7 +101,7 @@ function buildTimeline(core: MezzoHubCore): MezzoTimelineItem[] {
       subtitle: (lav.note ?? "").trim() || undefined,
       ref: {
         lavorazioneId: lav.id,
-        origine: isLavorazioneStoricoDb(lav.stato) ? "storico" : "attiva",
+        origine: lav.archived === true ? "storico" : "attiva",
       },
     });
   }

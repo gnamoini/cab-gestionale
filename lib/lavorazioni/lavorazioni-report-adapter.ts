@@ -1,17 +1,18 @@
 import { LAVORAZIONE_STATO_COMPLETATA_ID } from "@/lib/lavorazioni/constants";
 import { meseCompletamentoFromIso } from "@/lib/lavorazioni/duration";
+import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import { LAVORAZIONI_STATI_CHIUSE, type LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
+import type { LavorazioneRow, PrioritaLavorazione } from "@/src/types/supabase-tables";
 
 const CHIUSE = new Set<string>(LAVORAZIONI_STATI_CHIUSE);
 
-/** True se lo stato DB indica lavorazione chiusa / archivio. */
+/** UI legacy: stato DB considerato chiuso (non usare per split report). */
 export function isStatoLavorazioneChiusoDb(stato: string): boolean {
   return CHIUSE.has(stato);
 }
 
-/** Compatibilità report: legacy «Compl.» o enum DB `completata`. */
+/** UI legacy: stato «completata» (non usare per KPI chiusure report). */
 export function isCompletataForReport(statoId: string): boolean {
   return statoId === LAVORAZIONE_STATO_COMPLETATA_ID || statoId === "completata";
 }
@@ -26,7 +27,22 @@ function prioritaToLav(p: PrioritaLavorazione): PrioritaLav {
   return "alta";
 }
 
-function macchinaClienteUtil(row: LavorazioneListRow): { macchina: string; cliente: string; utilizzatore: string; targa: string; matricola: string; nScuderia: string } {
+/** ISO chiusura/archivio per statistiche (solo lavorazioni archiviate). */
+export function lavorazioneReportClosureIso(
+  row: Pick<LavorazioneRow, "archived_at" | "data_uscita" | "updated_at">,
+): string | null {
+  const iso = row.archived_at?.trim() || row.data_uscita?.trim() || row.updated_at?.trim();
+  return iso && iso.length > 0 ? iso : null;
+}
+
+function macchinaClienteUtil(row: LavorazioneListRow): {
+  macchina: string;
+  cliente: string;
+  utilizzatore: string;
+  targa: string;
+  matricola: string;
+  nScuderia: string;
+} {
   const m = row.mezzo;
   const macchina = m ? `${m.marca} ${m.modello}`.trim() : "—";
   return {
@@ -65,7 +81,7 @@ export function lavorazioneListRowToAttiva(row: LavorazioneListRow): Lavorazione
 /** Riga lista DB → shape legacy `LavorazioneArchiviata`. */
 export function lavorazioneListRowToArchiviata(row: LavorazioneListRow): LavorazioneArchiviata {
   const a = lavorazioneListRowToAttiva(row);
-  const fine = row.data_uscita?.trim() ? row.data_uscita! : row.updated_at;
+  const fine = lavorazioneReportClosureIso(row) ?? row.updated_at;
   return {
     id: a.id,
     macchina: a.macchina,
@@ -85,6 +101,10 @@ export function lavorazioneListRowToArchiviata(row: LavorazioneListRow): Lavoraz
   };
 }
 
+/**
+ * Report: distingue in corso (`archived=false`) vs archiviate (`archived=true`).
+ * Esclude righe con `deleted_at` (defense in depth oltre a RLS/query).
+ */
 export function splitLavorazioniListRowsForReport(rows: LavorazioneListRow[]): {
   attive: LavorazioneAttiva[];
   storico: LavorazioneArchiviata[];
@@ -92,7 +112,8 @@ export function splitLavorazioniListRowsForReport(rows: LavorazioneListRow[]): {
   const attive: LavorazioneAttiva[] = [];
   const storico: LavorazioneArchiviata[] = [];
   for (const r of rows) {
-    if (isStatoLavorazioneChiusoDb(r.stato)) storico.push(lavorazioneListRowToArchiviata(r));
+    if (r.deleted_at) continue;
+    if (isLavorazioneArchived(r)) storico.push(lavorazioneListRowToArchiviata(r));
     else attive.push(lavorazioneListRowToAttiva(r));
   }
   return { attive, storico };

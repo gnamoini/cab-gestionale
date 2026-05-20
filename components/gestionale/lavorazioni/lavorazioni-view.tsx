@@ -23,7 +23,6 @@ import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readabili
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import { isStatoLavorazioneChiusoDb } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import { durataMsStorico, formatDurataMs } from "@/lib/lavorazioni/duration";
 import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
 import { lavRowIngressoInRange, lavRowMatchesGlobalSearch } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";

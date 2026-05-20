@@ -1,10 +1,9 @@
+import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
 import { durataMsStorico } from "@/lib/lavorazioni/duration";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-
-const STORICO_STATI = new Set<string>(["completata", "consegnata", "annullata"]);
 
 function prioritaIt(p: string): string {
   if (p === "alta") return "Alta";
@@ -27,8 +26,9 @@ export function labelLavorazioneStatoDb(stato: string): string {
   return stato.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-export function isLavorazioneStoricoDb(stato: string): boolean {
-  return STORICO_STATI.has(stato);
+/** @deprecated Usare `isLavorazioneArchived(row)` — l'archivio non dipende dallo stato. */
+export function isLavorazioneStoricoDb(_stato: string): boolean {
+  return false;
 }
 
 export function interventiMezzoDaLavorazioniDb(
@@ -41,7 +41,7 @@ export function interventiMezzoDaLavorazioniDb(
     const ing = row.data_ingresso?.trim() ? row.data_ingresso : row.created_at;
     const fin = row.data_uscita;
     const statoLabel = labelLavorazioneStatoDb(row.stato);
-    if (STORICO_STATI.has(row.stato)) {
+    if (isLavorazioneArchived(row)) {
       const { label, num } = giorniTra(ing, fin);
       out.push({
         id: row.id,
@@ -83,7 +83,7 @@ export function interventiMezzoDaLavorazioniDb(
 
 export function mezzoHaLavorazioneAttivaDb(m: MezzoGestito, rows: LavorazioneListRow[]): boolean {
   return rows.some((row) => {
-    if (STORICO_STATI.has(row.stato)) return false;
+    if (isLavorazioneArchived(row)) return false;
     return lavorazioneMatchesMezzo(m, lavRowToMatchShape(row));
   });
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import type { QueryClient } from "@tanstack/react-query";
 
 export const QK = {
@@ -56,6 +57,7 @@ export async function invalidateAfterLavorazioneMutations(qc: QueryClient) {
     qc.invalidateQueries({ queryKey: QK.documenti }),
     qc.invalidateQueries({ queryKey: QK.log }),
   ]);
+  bumpReportDataRefresh();
 }
 
 export async function invalidateAfterMagazzinoOrMovimenti(qc: QueryClient) {

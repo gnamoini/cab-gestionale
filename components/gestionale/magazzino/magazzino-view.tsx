@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CloseButton } from "@/components/design-system/close-button";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { RicambioFormFields } from "@/components/gestionale/magazzino/ricambio-form-fields";
@@ -888,6 +889,11 @@ export function MagazzinoView() {
   const categorie = useMemo(
     () => mergeMasterWithRows(masterCategorie, prodotti.map((p) => p.categoria)),
     [masterCategorie, prodotti],
+  );
+
+  const fornitori = useMemo(
+    () => mergeMasterWithRows(masterFornitori, prodotti.map((p) => p.fornitoreNonOriginale)),
+    [masterFornitori, prodotti],
   );
 
   const mezzi = useMemo(() => {
@@ -1853,7 +1859,7 @@ export function MagazzinoView() {
 
       {newOpen ? (
         <div
-          className="fixed inset-0 z-[60] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               e.preventDefault();
@@ -1872,9 +1878,7 @@ export function MagazzinoView() {
               <h2 id="new-ricambio-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 Nuovo ricambio
               </h2>
-              <button type="button" onClick={() => setNewOpen(false)} className={erpBtnNeutral}>
-                Chiudi
-              </button>
+              <CloseButton onClick={() => setNewOpen(false)} />
             </div>
             <form onSubmit={submitNew} className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
@@ -1883,6 +1887,7 @@ export function MagazzinoView() {
                   setForm={setNewForm}
                   marcheOptions={marche}
                   categorieOptions={categorie}
+                  fornitoriOptions={fornitori}
                   mezziOptions={mezzi}
                   attrezzatureListe={mezziListePrefs}
                   relaxHtmlValidation
@@ -1915,7 +1920,7 @@ export function MagazzinoView() {
 
       {newIncompleteOpen ? (
         <div
-          className={`fixed inset-0 ${dsZModalHigh} flex items-end justify-center bg-black/45 p-4 sm:items-center`}
+          className={`fixed inset-0 ${dsZModalHigh} flex items-center justify-center bg-black/45 p-4`}
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               e.preventDefault();
@@ -1964,7 +1969,7 @@ export function MagazzinoView() {
 
       {detail && detailRicambio ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               e.preventDefault();
@@ -1983,9 +1988,7 @@ export function MagazzinoView() {
               <h2 id="detail-ricambio-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 {detail.mode === "info" ? "Scheda ricambio" : "Modifica ricambio"}
               </h2>
-              <button type="button" onClick={closeDetail} className={erpBtnNeutral}>
-                Chiudi
-              </button>
+              <CloseButton onClick={closeDetail} />
             </div>
 
             {detail.mode === "info" ? (
@@ -2119,6 +2122,7 @@ export function MagazzinoView() {
                         setForm={setEditForm}
                         marcheOptions={marche}
                         categorieOptions={categorie}
+                        fornitoriOptions={fornitori}
                         mezziOptions={mezzi}
                         attrezzatureListe={mezziListePrefs}
                         listFieldForceInvalid={editListFieldInvalid}
@@ -2230,7 +2234,7 @@ export function MagazzinoView() {
 
       {dupCheckModalOpen ? (
         <div
-          className="fixed inset-0 z-[56] flex items-end justify-center bg-black/40 p-4 sm:items-center"
+          className="fixed inset-0 z-[56] flex items-center justify-center bg-black/40 p-4"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               e.preventDefault();
@@ -2249,9 +2253,7 @@ export function MagazzinoView() {
               <h2 id="dup-magazzino-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 Codici duplicati in archivio
               </h2>
-              <button type="button" onClick={() => setDupCheckModalOpen(false)} className={erpBtnNeutral}>
-                Chiudi
-              </button>
+              <CloseButton onClick={() => setDupCheckModalOpen(false)} />
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
               {archivioDupCodeGroups.length === 0 ? (
