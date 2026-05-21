@@ -1,5 +1,6 @@
 "use client";
 
+import { syncClientPortalAfterGestionaleChange } from "@/lib/lavorazioni/client-portal-invalidate";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -26,8 +27,11 @@ export const QK = {
   userPermissions: ["user_permissions"] as const,
   /** Portale lavorazioni clienti — accesso sessione. */
   clientLavorazioniAccess: ["client_lavorazioni_access"] as const,
+  /** @deprecated Lista condivisa via lavorazioniQueries — non invalidare separatamente. */
   clientLavorazioniList: ["client_lavorazioni_list"] as const,
   clientLavorazioniDetail: ["client_lavorazioni_detail"] as const,
+  clientLavorazioneDocuments: ["client_lavorazione_documents"] as const,
+  clientLavorazionePhotos: ["client_lavorazione_photos"] as const,
   /** Log eventi autenticazione (`auth_logs`). */
   authLogs: ["auth_logs"] as const,
   /** Note condivise (modulo Supporto). */
@@ -45,20 +49,18 @@ export async function invalidateAfterMezzoMutations(qc: QueryClient) {
     qc.invalidateQueries({ queryKey: QK.documenti }),
     qc.invalidateQueries({ queryKey: QK.log }),
   ]);
+  await syncClientPortalAfterGestionaleChange(qc);
 }
 
 export async function invalidateAfterLavorazioneMutations(qc: QueryClient) {
   await Promise.all([
     qc.invalidateQueries({ queryKey: QK.mezzoQueries }),
     qc.invalidateQueries({ queryKey: QK.lavorazioniQueries }),
-    qc.invalidateQueries({ queryKey: QK.clientLavorazioniList }),
-    qc.invalidateQueries({ queryKey: QK.clientLavorazioniDetail }),
-    qc.invalidateQueries({ queryKey: QK.schede }),
     qc.invalidateQueries({ queryKey: QK.movimenti }),
     qc.invalidateQueries({ queryKey: QK.preventivi }),
     qc.invalidateQueries({ queryKey: QK.documenti }),
-    qc.invalidateQueries({ queryKey: QK.log }),
   ]);
+  await syncClientPortalAfterGestionaleChange(qc);
   bumpReportDataRefresh();
 }
 

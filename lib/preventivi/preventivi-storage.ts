@@ -1,8 +1,16 @@
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import { dispatchPreventiviRefresh } from "@/lib/sistema/cab-events";
 import { PREVENTIVI_MAX, PREVENTIVI_STORAGE_KEY } from "@/lib/preventivi/constants";
+import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
+import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
-import type { PreventivoManodopera, PreventivoRecord, PreventivoRigaRicambio, PreventivoStato } from "@/lib/preventivi/types";
+import type {
+  PreventivoManodopera,
+  PreventivoRecord,
+  PreventivoRigaRicambio,
+  PreventivoRigaRicambioTipo,
+  PreventivoStato,
+} from "@/lib/preventivi/types";
 
 function nextId(): string {
   return `prev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -25,6 +33,10 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
       quantita: Math.max(0.01, Number(r.quantita) || 0),
       prezzoUnitario: Math.max(0, Number(r.prezzoUnitario) || 0),
       scontoPercent: Math.min(100, Math.max(0, Number(r.scontoPercent) || 0)),
+      tipo:
+        r.tipo === "materiali_consumo" || r.tipo === "standard"
+          ? (r.tipo as PreventivoRigaRicambioTipo)
+          : undefined,
     };
   });
 
@@ -60,6 +72,7 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
     dataCreazione: String(o.dataCreazione ?? new Date().toISOString()),
     aggiornatoAt: String(o.aggiornatoAt ?? new Date().toISOString()),
     stato,
+    tipoDocumento: normalizePreventivoTipoDocumento(o.tipoDocumento),
     lavorazioneId: String(o.lavorazioneId ?? ""),
     lavorazioneOrigine: o.lavorazioneOrigine === "storico" ? "storico" : "attiva",
     lavorazioneTimestamp: typeof o.lavorazioneTimestamp === "string" ? o.lavorazioneTimestamp : undefined,
@@ -77,14 +90,18 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
     descrizioneGenerataAuto: String(o.descrizioneGenerataAuto ?? ""),
     righeRicambi,
     manodopera,
+    sanificazionePrezzo: Math.max(0, Number(o.sanificazionePrezzo) || 0),
+    collaudoPrezzo: Math.max(0, Number(o.collaudoPrezzo) || 0),
     noteFinali: String(o.noteFinali ?? ""),
     totaleRicambi: 0,
     totaleManodopera: 0,
+    totaleSmaltimento: 0,
     totaleFinale: 0,
     createdBy: String(o.createdBy ?? ""),
     lastEditedBy: String(o.lastEditedBy ?? ""),
   };
-  return { ...base, ...calcolaTotaliPreventivo(base) };
+  const strutturato = ensurePreventivoStruttura(base);
+  return { ...strutturato, ...calcolaTotaliPreventivo(strutturato) };
 }
 
 export function nextPreventivoNumero(existing: PreventivoRecord[]): string {

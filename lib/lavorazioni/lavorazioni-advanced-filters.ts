@@ -180,7 +180,7 @@ function dayEndMs(ymd: string): number {
 
 export function lavRowCompletamentoInRange(row: LavorazioneListRow, daYmd: string, aYmd: string): boolean {
   if (!daYmd.trim() && !aYmd.trim()) return true;
-  const raw = row.data_uscita?.trim();
+  const raw = row.archived_at?.trim() || row.data_uscita?.trim();
   if (!raw) return false;
   const t = new Date(raw).getTime();
   if (!Number.isFinite(t)) return false;
@@ -194,6 +194,8 @@ export function lavRowCompletamentoInRange(row: LavorazioneListRow, daYmd: strin
   }
   return true;
 }
+
+export type LavorazioniListFilterVariant = "in_corso" | "archivio";
 
 function listFilterMatches(selected: string, actual: string): boolean {
   const s = selected.trim();
@@ -223,6 +225,7 @@ export function lavRowMatchesAdvancedFilters(
   f: LavorazioniAdvancedFilters,
   schedeStore: LavorazioneSchedeStore | undefined,
   defaultAddetto: string,
+  variant?: LavorazioniListFilterVariant,
 ): boolean {
   const entity = rowEntityFields(row, schedeStore, defaultAddetto);
 
@@ -236,7 +239,7 @@ export function lavRowMatchesAdvancedFilters(
   if (f.stato !== FILTER_ALL && row.stato !== f.stato) return false;
 
   if (!lavRowIngressoInRange(row, f.ingressoDa, f.ingressoA)) return false;
-  if (!lavRowCompletamentoInRange(row, f.completamentoDa, f.completamentoA)) return false;
+  if (variant !== "in_corso" && !lavRowCompletamentoInRange(row, f.completamentoDa, f.completamentoA)) return false;
 
   return true;
 }

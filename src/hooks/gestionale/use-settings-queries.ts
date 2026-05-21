@@ -29,17 +29,22 @@ async function fetchCabAppSettingsPayload(): Promise<CabAppSettingsQueryPayload>
 }
 
 /** Impostazioni globali: righe DB + oggetto risolto (OCC su `rows[].updated_at`). */
-export function useCabAppSettingsPayloadQuery(options?: { enabled?: boolean }): UseQueryResult<CabAppSettingsQueryPayload, Error> {
+export function useCabAppSettingsPayloadQuery(options?: {
+  enabled?: boolean;
+  /** Combobox globali: elenco sempre aggiornato (default 30s). */
+  staleTime?: number;
+}): UseQueryResult<CabAppSettingsQueryPayload, Error> {
   const enabled = (options?.enabled ?? true) && isSupabasePublicEnvConfigured();
   const q = useQuery({
     queryKey: [...QK.settings, "payload"] as const,
     queryFn: fetchCabAppSettingsPayload,
     enabled,
-    staleTime: Number.POSITIVE_INFINITY,
+    staleTime: options?.staleTime ?? 30_000,
     gcTime: 86_400_000,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchInterval: 45_000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
     retry: 1,
   });
   useLayoutEffect(() => {

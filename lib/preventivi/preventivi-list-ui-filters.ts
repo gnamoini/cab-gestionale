@@ -5,6 +5,7 @@ import {
   preventivoStatoLabel,
   type PreventiviAdvancedFilters,
 } from "@/lib/preventivi/preventivi-advanced-filters";
+import { preventivoTipoDocumentoLabel } from "@/lib/preventivi/preventivi-tipo-documento";
 import { filterListSelectSuggestions } from "@/lib/ui/list-select-utils";
 
 export type PreventiviPageFilters = PreventiviAdvancedFilters & {
@@ -27,6 +28,9 @@ export function preventivoRowSearchHaystack(row: PreventivoRecord): string {
     row.lavorazioneId,
     row.stato,
     preventivoStatoLabel(row.stato),
+    row.tipoDocumento,
+    preventivoTipoDocumentoLabel(row.tipoDocumento),
+    preventivoTipoDocumentoLabel(row.tipoDocumento, "short"),
     row.descrizioneLavorazioniCliente,
   ]
     .filter((s) => typeof s === "string" && s.trim().length > 0)
@@ -65,7 +69,7 @@ export function buildPreventiviSearchSuggestions(
 
   for (const r of rows) {
     if (q && !preventivoRowSearchHaystack(r).includes(q)) continue;
-    push(`${r.numero} · ${r.cliente || "—"}`);
+    push(`${r.numero} · ${preventivoTipoDocumentoLabel(r.tipoDocumento, "short")} · ${r.cliente || "—"}`);
     if (r.macchinaRiassunto.trim()) push(`${r.numero} · ${r.macchinaRiassunto.trim()}`);
     if (labels.length >= limit * 2) break;
   }

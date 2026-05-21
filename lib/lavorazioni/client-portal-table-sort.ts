@@ -1,9 +1,6 @@
 import type { ClientPortalRowBundle } from "@/lib/lavorazioni/client-portal-list-filters";
-import { lavorazioneOreLavoroSortMs } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { GlobalTableSortPhase } from "@/lib/ui/global-table";
-import type { LavorazioneSchedeStore } from "@/types/schede";
-
 export type ClientPortalSortKey =
   | "ingresso"
   | "cliente"
@@ -14,7 +11,6 @@ export type ClientPortalSortKey =
   | "stato"
   | "priorita"
   | "completamento"
-  | "oreTotali"
   | "addetto";
 
 function cmpStr(a: string, b: string): number {
@@ -34,7 +30,6 @@ function cmpBundle(
   phase: Exclude<GlobalTableSortPhase, "natural">,
   variant: "active" | "archive",
   statoOrderIds: readonly string[],
-  schedeStore?: LavorazioneSchedeStore,
 ): number {
   const dir = phase === "desc" ? -1 : 1;
   const t = (x: number) => x * dir;
@@ -82,11 +77,6 @@ function cmpBundle(
       const ub = new Date(rb.archived_at ?? rb.data_uscita ?? rb.updated_at).getTime();
       return t(ua === ub ? 0 : ua < ub ? -1 : 1);
     }
-    case "oreTotali": {
-      const oa = lavorazioneOreLavoroSortMs(ra, schedeStore);
-      const ob = lavorazioneOreLavoroSortMs(rb, schedeStore);
-      return t(oa === ob ? 0 : oa < ob ? -1 : 1);
-    }
     default:
       return 0;
   }
@@ -98,7 +88,6 @@ export function sortClientPortalBundles(
   sortPhase: GlobalTableSortPhase,
   variant: "active" | "archive",
   statoOrderIds: readonly string[],
-  schedeStore?: LavorazioneSchedeStore,
 ): ClientPortalRowBundle[] {
   const rows = [...bundles];
   rows.sort((a, b) => {
@@ -108,7 +97,7 @@ export function sortClientPortalBundles(
       if (db !== da) return db - da;
       return b.row.id.localeCompare(a.row.id);
     }
-    const p = cmpBundle(a, b, sortColumn, sortPhase, variant, statoOrderIds, schedeStore);
+    const p = cmpBundle(a, b, sortColumn, sortPhase, variant, statoOrderIds);
     if (p !== 0) return p;
     return b.row.id.localeCompare(a.row.id);
   });

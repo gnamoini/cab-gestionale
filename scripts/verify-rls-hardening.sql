@@ -10,7 +10,7 @@ where n.nspname = 'public'
     'profiles', 'mezzi', 'lavorazioni', 'scheda_lavorazione',
     'magazzino_ricambi', 'movimenti_ricambi', 'preventivi', 'documenti',
     'log_modifiche', 'app_settings', 'app_settings_audit', 'user_permissions',
-    'auth_logs', 'segnalazioni'
+    'auth_logs', 'segnalazioni', 'support_notes', 'lavorazione_documents'
   )
 order by c.relname;
 
@@ -21,7 +21,8 @@ where schemaname = 'public'
   and tablename in (
     'profiles', 'mezzi', 'lavorazioni', 'scheda_lavorazione',
     'magazzino_ricambi', 'movimenti_ricambi', 'preventivi', 'documenti',
-    'log_modifiche', 'app_settings', 'user_permissions', 'auth_logs', 'segnalazioni'
+    'log_modifiche', 'app_settings', 'user_permissions', 'auth_logs', 'segnalazioni',
+    'support_notes', 'lavorazione_documents'
   )
 group by schemaname, tablename
 order by tablename;

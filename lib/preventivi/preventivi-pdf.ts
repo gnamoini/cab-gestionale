@@ -1,169 +1,191 @@
 "use client";
 
-import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
+import {
+  PDF_MARGIN_L,
+  PDF_MARGIN_R,
+  PDF_PREVENTIVO_IVA_PERCENT,
+  PDF_SECTION_CONTENT_GAP,
+  PDF_SECTION_GAP,
+  buildAnagraficaPdfFields,
+  buildAttrezzaturaPdfFields,
+  buildTelaioPdfFields,
+  drawPdfFieldGrid,
+  drawPdfPageFooters,
+  drawPdfSectionTitle,
+  drawPdfTotalsSummary,
+  drawPreventivoPdfHeader,
+  ensurePdfSpace,
+  fmtDateIt,
+  fmtEuroPdf,
+  getAutoTableFinalY,
+  pdfAdvanceSection,
+  pdfPreventivoVoceTableColumns,
+  pdfTableDefaults,
+} from "@/lib/pdf/preventivo-pdf-layout";
+import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import {
-  formatIdentificazioneMezzoLine,
-  type MezzoIdentificazioneParts,
-} from "@/lib/mezzi/identificazione-mezzo";
-import { drawPdfLabelValueLines } from "@/lib/pdf/jspdf-label-lines";
+import { buildPreventivoOutputRighe } from "@/lib/preventivi/preventivi-struttura";
 import { totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
+import { buildPreventivoPdfDownloadFileName } from "@/lib/preventivi/preventivo-pdf-filename";
+import {
+  PREVENTIVO_SMALTIMENTO_DESCRIZIONE,
+  PREVENTIVO_SMALTIMENTO_PERCENT,
+} from "@/lib/preventivi/preventivi-voci-standard";
+import { preventivoTipoDocumentoLabel } from "@/lib/preventivi/preventivi-tipo-documento";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
-function fmtGenIt(): string {
-  return new Date().toLocaleString("it-IT", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function buildManodoperaPdfRows(
+  righe: ReturnType<typeof buildPreventivoOutputRighe>,
+): string[][] {
+  const body: string[][] = [];
+  const manRow = righe.find((r) => r.sezione === "manodopera");
+  const collRow = righe.find((r) => r.sezione === "collaudo");
+
+  if (manRow && manRow.sezione === "manodopera") {
+    body.push([
+      "Manodopera",
+      String(manRow.quantita),
+      fmtEuroPdf(manRow.prezzoUnitario),
+      fmtEuroPdf(manRow.totale),
+    ]);
+  }
+  if (collRow && collRow.sezione === "collaudo") {
+    body.push([
+      collRow.descrizione,
+      String(collRow.quantita),
+      fmtEuroPdf(collRow.prezzoUnitario),
+      fmtEuroPdf(collRow.totale),
+    ]);
+  }
+
+  return body;
 }
 
 export function openPreventivoPdfInNewTab(p: PreventivoRecord, autore: string): void {
-  const ts = fmtGenIt();
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
+  const righe = buildPreventivoOutputRighe(p);
+  const tipoUpper = preventivoTipoDocumentoLabel(p.tipoDocumento).toUpperCase();
+  const operatore = p.lastEditedBy?.trim() || autore.trim() || "Operatore";
 
-  doc.setFillColor(234, 88, 12);
-  doc.rect(0, 0, pageW, 16, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text("CAB GESTIONALE", pageW / 2, 10, { align: "center" });
+  const totaleRicambi = p.totaleRicambi;
+  const totaleManodopera = p.totaleManodopera;
+  const totaleSmaltimento = p.totaleSmaltimento ?? 0;
+  const totaleNetto = p.totaleFinale;
+  const importoIva = Math.round(totaleNetto * (PDF_PREVENTIVO_IVA_PERCENT / 100) * 100) / 100;
+  const totaleConIva = Math.round((totaleNetto + importoIva) * 100) / 100;
 
-  doc.setTextColor(24, 24, 27);
-  doc.setFontSize(16);
-  doc.text("PREVENTIVO", 14, 26);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(63, 63, 70);
-  const parts: MezzoIdentificazioneParts = {
-    targa: p.targa,
-    matricola: p.matricola,
-    nScuderia: p.nScuderia,
-    marcaAttrezzatura: p.marcaAttrezzatura,
-    modelloAttrezzatura: p.modelloAttrezzatura,
-    cliente: p.cliente,
-    cantiere: p.cantiere,
-    utilizzatore: p.utilizzatore,
-  };
-  const ident = formatIdentificazioneMezzoLine(parts);
-  const headLines = [`Numero: ${p.numero}`, `Data: ${new Date(p.dataCreazione).toLocaleDateString("it-IT")}`, ident].join(" · ");
-  const hl = doc.splitTextToSize(headLines, pageW - 28);
-  doc.text(hl, 14, 34);
-  let y = 36 + hl.length * 4.5;
-
-  doc.setFontSize(8.5);
-  doc.setTextColor(113, 113, 122);
-  doc.text(`Generato il ${ts} · Operatore: ${autore.trim() || "—"}`, 14, Math.max(y, 48));
-  y = Math.max(y, 52) + 4;
-
-  y = drawPdfLabelValueLines(doc, y, pageW, [
-    { label: "Cliente", value: p.cliente || "—" },
-    { label: "Cantiere", value: p.cantiere || "—" },
-    { label: "Utilizzatore", value: p.utilizzatore || "—" },
-    ...(p.lavorazioneTimestamp
-      ? [{ label: "Timestamp lavorazione", value: new Date(p.lavorazioneTimestamp).toLocaleString("it-IT") }]
-      : []),
-  ]);
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(11);
-  doc.setTextColor(24, 24, 27);
-  doc.text("Lavorazioni", 14, y);
-  y += 6;
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(24, 24, 27);
-  const lavLines = doc.splitTextToSize(p.descrizioneLavorazioniCliente || "—", pageW - 28);
-  doc.text(lavLines, 14, y);
-  y += lavLines.length * 4.8 + 6;
-
-  const ricBody = p.righeRicambi.map((r) => {
-    const net = totaleNettoRigaRicambio(r);
-    return [
-      r.codiceOE,
-      r.descrizione,
-      String(r.quantita),
-      `${r.prezzoUnitario.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €`,
-      `${(r.scontoPercent ?? 0).toLocaleString("it-IT", { maximumFractionDigits: 1 })} %`,
-      `${net.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €`,
-    ];
+  let y = drawPreventivoPdfHeader(doc, pageW, tipoUpper, {
+    numero: p.numero.trim() || undefined,
+    data: p.dataCreazione ? fmtDateIt(p.dataCreazione) : undefined,
+    operatore,
   });
+  y = pdfAdvanceSection(y);
+
+  const anagrafica = buildAnagraficaPdfFields(p);
+  if (anagrafica.length) {
+    y = ensurePdfSpace(doc, y, 28);
+    y = drawPdfSectionTitle(doc, y, pageW, "Dati anagrafici");
+    y = drawPdfFieldGrid(doc, y, pageW, anagrafica);
+    y = pdfAdvanceSection(y);
+  }
+
+  const attrezzatura = buildAttrezzaturaPdfFields(p);
+  const telaio = buildTelaioPdfFields(p);
+  if (attrezzatura.length) {
+    y = ensurePdfSpace(doc, y, 28);
+    y = drawPdfSectionTitle(doc, y, pageW, "Attrezzatura");
+    y = drawPdfFieldGrid(doc, y, pageW, attrezzatura);
+    y = pdfAdvanceSection(y);
+  }
+  if (telaio.length) {
+    y = ensurePdfSpace(doc, y, 22);
+    y = drawPdfSectionTitle(doc, y, pageW, "Telaio");
+    y = drawPdfFieldGrid(doc, y, pageW, telaio);
+    y = pdfAdvanceSection(y);
+  }
+
+  const manBody = buildManodoperaPdfRows(righe);
+  y = ensurePdfSpace(doc, y, 26);
+  y = drawPdfSectionTitle(doc, y, pageW, "Manodopera");
+  y += PDF_SECTION_CONTENT_GAP;
   autoTable(doc, {
     startY: y,
-    head: [["Codice OE", "Descrizione", "Qtà", "Prezzo unit.", "Sconto %", "Totale netto"]],
-    body: ricBody.length ? ricBody : [["—", "—", "—", "—", "—", "—"]],
-    styles: { fontSize: 8.5, cellPadding: 1.6 },
-    headStyles: { fillColor: [250, 250, 250], textColor: [39, 39, 42], fontStyle: "bold" },
-    margin: { left: 14, right: 14 },
-    theme: "plain",
+    head: pdfPreventivoVoceTableColumns.head,
+    body: manBody.length ? manBody : [["Nessuna manodopera indicata", "—", "—", "—"]],
+    columnStyles: pdfPreventivoVoceTableColumns.columnStyles,
+    ...pdfTableDefaults,
   });
-  y = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 20;
-  y += 8;
+  y = pdfAdvanceSection(getAutoTableFinalY(doc, y + 12));
 
-  const addettiLine =
-    p.manodopera.righeAddetti.length > 0
-      ? p.manodopera.righeAddetti.map((a) => `${a.addetto} (${a.ore} h)`).join(", ")
-      : "—";
-  y = drawPdfLabelValueLines(doc, y, pageW, [
-    { label: "Manodopera — Ore totali", value: String(p.manodopera.oreTotali) },
-    { label: "Manodopera — Addetti", value: addettiLine },
-    {
-      label: "Manodopera — Costo orario",
-      value: `${p.manodopera.costoOrario.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €`,
-    },
-    ...(p.manodopera.scontoPercent > 0
-      ? [{ label: "Manodopera — Sconto %", value: `${p.manodopera.scontoPercent} %` }]
-      : []),
-    {
-      label: "Manodopera — Totale",
-      value: `${p.totaleManodopera.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €`,
-    },
-  ]);
+  const ricBody = righe
+    .filter((r) => r.sezione === "ricambi")
+    .map((entry) => {
+      const r = entry.riga;
+      const net = totaleNettoRigaRicambio(r);
+      return [
+        r.codiceOE || "—",
+        r.descrizione,
+        String(r.quantita),
+        fmtEuroPdf(r.prezzoUnitario),
+        r.scontoPercent > 0
+          ? `${r.scontoPercent.toLocaleString("it-IT", { maximumFractionDigits: 1 })} %`
+          : "—",
+        fmtEuroPdf(net),
+      ];
+    });
 
-  y = drawPdfLabelValueLines(doc, y, pageW, [
-    {
-      label: "Totale ricambi",
-      value: `${p.totaleRicambi.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €`,
+  y = ensurePdfSpace(doc, y, 26);
+  y = drawPdfSectionTitle(doc, y, pageW, "Ricambi utilizzati");
+  y += PDF_SECTION_CONTENT_GAP;
+  autoTable(doc, {
+    startY: y,
+    head: [["Codice", "Descrizione", "Qtà", "Prezzo unit.", "Sconto", "Totale"]],
+    body: ricBody.length ? ricBody : [["—", "Nessun ricambio", "—", "—", "—", "—"]],
+    columnStyles: {
+      0: { cellWidth: 22 },
+      1: { cellWidth: "auto" as const },
+      2: { cellWidth: 12, halign: "center" },
+      3: { cellWidth: 24, halign: "right" },
+      4: { cellWidth: 16, halign: "center" },
+      5: { cellWidth: 28, halign: "right" },
     },
-    {
-      label: "Totale manodopera",
-      value: `${p.totaleManodopera.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €`,
-    },
-    {
-      label: "Totale finale",
-      value: `${p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €`,
-    },
-  ]);
+    ...pdfTableDefaults,
+  });
+  y = pdfAdvanceSection(getAutoTableFinalY(doc, y + 12));
+
+  const summaryLines: { label: string; value: string; primary?: boolean; muted?: boolean }[] = [
+    { label: "Totale ricambi", value: fmtEuroPdf(totaleRicambi) },
+    { label: "Totale manodopera", value: fmtEuroPdf(totaleManodopera) },
+  ];
+  if (totaleSmaltimento > 0) {
+    summaryLines.push({
+      label: `${PREVENTIVO_SMALTIMENTO_DESCRIZIONE} (${PREVENTIVO_SMALTIMENTO_PERCENT}%)`,
+      value: fmtEuroPdf(totaleSmaltimento),
+    });
+  }
+  summaryLines.push(
+    { label: "TOTALE NETTO (senza IVA)", value: fmtEuroPdf(totaleNetto), primary: true },
+    { label: `IVA (${PDF_PREVENTIVO_IVA_PERCENT}%)`, value: fmtEuroPdf(importoIva), muted: true },
+    { label: "Totale con IVA", value: fmtEuroPdf(totaleConIva), muted: true },
+  );
+
+  y = drawPdfTotalsSummary(doc, y, pageW, summaryLines);
 
   if (p.noteFinali.trim()) {
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    doc.setTextColor(24, 24, 27);
-    doc.text("Note", 14, y);
+    y = ensurePdfSpace(doc, y, 22);
+    y = drawPdfSectionTitle(doc, y, pageW, "Note");
+    y += PDF_SECTION_CONTENT_GAP;
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    const nLines = doc.splitTextToSize(p.noteFinali, pageW - 28);
-    doc.text(nLines, 14, y + 5);
+    doc.setFontSize(8.5);
+    doc.setTextColor(63, 63, 70);
+    const noteLines = doc.splitTextToSize(p.noteFinali.trim(), pageW - PDF_MARGIN_L - PDF_MARGIN_R) as string[];
+    doc.text(noteLines, PDF_MARGIN_L, y);
   }
 
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i += 1) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(113, 113, 122);
-    doc.text(
-      `${p.numero} · Pag. ${i}/${pageCount} · ${ts}`,
-      14,
-      doc.internal.pageSize.getHeight() - 8,
-    );
-  }
+  drawPdfPageFooters(doc, p.numero);
 
-  const blob = doc.output("blob");
-  const url = URL.createObjectURL(blob);
-  openUrlInNewTab(url, { revokeBlobUrlAfterMs: 120_000 });
+  const fileName = buildPreventivoPdfDownloadFileName(p);
+  void openPdfBlobInNewTab(doc.output("blob"), fileName);
 }

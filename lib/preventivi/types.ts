@@ -2,6 +2,10 @@ export type PreventivoStato = "bozza" | "inviato" | "approvato" | "rifiutato" | 
 
 export type PreventivoLavorazioneOrigine = "attiva" | "storico";
 
+export type PreventivoTipoDocumento = "preventivo" | "consuntivo";
+
+export type PreventivoRigaRicambioTipo = "standard" | "materiali_consumo";
+
 export type PreventivoRigaRicambio = {
   id: string;
   ricambioId: string | null;
@@ -11,6 +15,8 @@ export type PreventivoRigaRicambio = {
   prezzoUnitario: number;
   /** Sconto percentuale sulla riga (0–100). */
   scontoPercent: number;
+  /** Default `standard`; `materiali_consumo` = voce fissa qty 1. */
+  tipo?: PreventivoRigaRicambioTipo;
 };
 
 export type PreventivoManodopera = {
@@ -27,6 +33,8 @@ export type PreventivoRecord = {
   dataCreazione: string;
   aggiornatoAt: string;
   stato: PreventivoStato;
+  /** Default storico: `preventivo`. */
+  tipoDocumento: PreventivoTipoDocumento;
   lavorazioneId: string;
   lavorazioneOrigine: PreventivoLavorazioneOrigine;
   lavorazioneTimestamp?: string;
@@ -46,9 +54,15 @@ export type PreventivoRecord = {
   descrizioneGenerataAuto: string;
   righeRicambi: PreventivoRigaRicambio[];
   manodopera: PreventivoManodopera;
+  /** Voce obbligatoria qty 1 — prezzo opzionale. */
+  sanificazionePrezzo?: number;
+  /** Collaudo funzionale — qty 1, prezzo manuale. */
+  collaudoPrezzo?: number;
   noteFinali: string;
   totaleRicambi: number;
   totaleManodopera: number;
+  /** 1% sul netto (senza contributo smaltimento), ricalcolato automaticamente. */
+  totaleSmaltimento?: number;
   totaleFinale: number;
   createdBy: string;
   lastEditedBy: string;

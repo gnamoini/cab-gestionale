@@ -2,6 +2,8 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
 import { nextPreventivoId, nextPreventivoNumero, loadPreventivi } from "@/lib/preventivi/preventivi-storage";
+import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
+import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
 import { trasformaDescrizioneLavorazioni } from "@/lib/preventivi/trasforma-descrizione";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import type { PreventivoManodopera, PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
@@ -119,6 +121,7 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     dataCreazione: now,
     aggiornatoAt: now,
     stato: "bozza",
+    tipoDocumento: PREVENTIVO_TIPO_DOCUMENTO_DEFAULT,
     lavorazioneId: lav.id,
     lavorazioneOrigine: origine,
     lavorazioneTimestamp: lav.dataIngresso || now,
@@ -136,15 +139,18 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     descrizioneGenerataAuto: autoCliente,
     righeRicambi,
     manodopera,
+    sanificazionePrezzo: 0,
+    collaudoPrezzo: 0,
     noteFinali,
     totaleRicambi: 0,
     totaleManodopera: 0,
+    totaleSmaltimento: 0,
     totaleFinale: 0,
     createdBy: autore,
     lastEditedBy: autore,
   };
-  const tot = calcolaTotaliPreventivo(draft);
-  return { ...draft, ...tot };
+  const strutturato = ensurePreventivoStruttura(draft);
+  return { ...strutturato, ...calcolaTotaliPreventivo(strutturato) };
 }
 
 export { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";

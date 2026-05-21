@@ -1,4 +1,10 @@
-import { lookupLearnedPhrase, recordApprovedPreventivoVersion, recordDescriptionCorrection } from "@/lib/preventivi/preventivi-learning-storage";
+import { lookupLearnedPhrase, recordPreventivoDescriptionLearning } from "@/lib/preventivi/preventivi-learning-storage";
+import {
+  adaptLineFromPattern,
+  lookupSimilarFullDescription,
+  lookupSimilarLineForChunk,
+  polishDescrizioneLine,
+} from "@/lib/preventivi/preventivi-descrizione-quality";
 import {
   collectContextualSnippets,
   dedupeDescriptionLines,
@@ -6,6 +12,7 @@ import {
   stripProvenanceLabel,
   type DescrizionePreventivoContext,
 } from "@/lib/preventivi/preventivi-descrizione-aggregator";
+import { pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
 function splitTechChunks(raw: string): string[] {
@@ -17,8 +24,7 @@ function splitTechChunks(raw: string): string[] {
 }
 
 function capitalizeSentence(chunk: string): string {
-  const clean = chunk.trim().replace(/\s+/g, " ");
-  return clean ? clean.charAt(0).toUpperCase() + clean.slice(1) : clean;
+  return polishDescrizioneLine(chunk);
 }
 
 function heuristicLines(chunk: string): string[] {
@@ -54,20 +60,23 @@ function heuristicLines(chunk: string): string[] {
   return [capitalizeSentence(clean)];
 }
 
-function mapChunk(chunk: string): string[] {
+function mapChunk(chunk: string, ctx: DescrizionePreventivoContext): string[] {
+  const similarLine = lookupSimilarLineForChunk(chunk, ctx);
+  if (similarLine) return [adaptLineFromPattern(similarLine, chunk)];
+
   const learned = lookupLearnedPhrase(chunk);
   if (learned) {
     return learned
       .split("\n")
-      .map((line) => stripProvenanceLabel(line.replace(/^-\s*/, "")))
+      .map((line) => adaptLineFromPattern(stripProvenanceLabel(line.replace(/^-\s*/, "")), chunk))
       .filter(Boolean);
   }
-  return heuristicLines(chunk);
+  return heuristicLines(chunk).map((line) => polishDescrizioneLine(line));
 }
 
 function mergePrimaryWithContext(primaryLines: string[], contextLines: string[], sparsePrimary: boolean): string[] {
   const merged = [...primaryLines];
-  const maxContext = sparsePrimary ? 8 : 4;
+  const maxContext = sparsePrimary ? 6 : 3;
 
   for (const ctxLine of contextLines.slice(0, maxContext)) {
     merged.push(ctxLine);
@@ -76,32 +85,44 @@ function mergePrimaryWithContext(primaryLines: string[], contextLines: string[],
   return dedupeDescriptionLines(merged);
 }
 
+function formatClienteLines(lines: string[]): string {
+  const testo = lines.map((l) => polishDescrizioneLine(l)).filter(Boolean).map((l) => (l.startsWith("-") ? l : `- ${l}`)).join("\n");
+  return pulisciDescrizioneLavorazioniSpecifiche(testo);
+}
+
 /** Trasforma note tecniche in elenco professionale per il cliente. */
 export function trasformaDescrizioneLavorazioni(technicalRaw: string, ctx: DescrizionePreventivoContext): string {
+  const fullSimilar = lookupSimilarFullDescription(technicalRaw, ctx);
+  if (fullSimilar) {
+    const lines = fullSimilar
+      .split(/\n+/)
+      .map((l) => l.replace(/^-\s*/, "").trim())
+      .filter(Boolean)
+      .map((l) => polishDescrizioneLine(l));
+    return formatClienteLines(lines);
+  }
+
   const techNorm = technicalRaw.trim().toLowerCase();
   const primaryChunks = splitTechChunks(technicalRaw);
   const sparsePrimary =
     primaryChunks.length <= 1 &&
     (techNorm.length < 28 || /^(intervento di manutenzione|controllo generale)/i.test(techNorm));
 
-  const primaryLines = dedupeDescriptionLines(primaryChunks.flatMap((c) => mapChunk(c)));
+  const primaryLines = dedupeDescriptionLines(primaryChunks.flatMap((c) => mapChunk(c, ctx)));
 
   const contextSnippets = collectContextualSnippets(ctx, techNorm);
-  const contextLines = dedupeDescriptionLines(contextSnippets.flatMap((c) => mapChunk(c)));
+  const contextLines = dedupeDescriptionLines(
+    contextSnippets.flatMap((c) => mapChunk(c, ctx)).slice(0, sparsePrimary ? 4 : 2),
+  );
 
   const merged = mergePrimaryWithContext(primaryLines, contextLines, sparsePrimary);
   const ordered = sortDescriptionLinesOperational(merged);
 
-  return ordered.map((l) => (l.startsWith("-") ? l : `- ${l}`)).join("\n");
+  return formatClienteLines(ordered);
 }
 
 export function maybeRecordLearningOnSave(prev: PreventivoRecord | null, next: PreventivoRecord): void {
-  const tech = next.descrizioneLavorazioniTecnicaSorgente || prev?.descrizioneLavorazioniTecnicaSorgente || "";
-  if (!tech.trim()) return;
-  if (next.descrizioneLavorazioniCliente !== next.descrizioneGenerataAuto && (!prev || next.descrizioneLavorazioniCliente !== prev.descrizioneLavorazioniCliente)) {
-    recordDescriptionCorrection(tech, next.descrizioneLavorazioniCliente);
-  }
-  recordApprovedPreventivoVersion(next);
+  recordPreventivoDescriptionLearning(next);
 }
 
 export type { DescrizionePreventivoContext };

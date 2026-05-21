@@ -1,5 +1,5 @@
 import type { LavorazioneSchedeBundle } from "@/types/schede";
-import type { MagazzinoRicambioRow, MovimentoRicambioRow } from "@/src/types/supabase-tables";
+import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import { oreTotaliFromBundleLavorazioni } from "@/lib/lavorazioni/ore-totali-scheda";
 
 export type LavorazioneCostoBreakdown = {
@@ -9,30 +9,19 @@ export type LavorazioneCostoBreakdown = {
   ricambiTotale: number;
   costoTotale: number;
   righeRicambi: number;
-  fonteOre: "scheda_lavorazioni" | "scheda_ingresso" | "nessuna";
+  fonteOre: "scheda_lavorazioni" | "nessuna";
 };
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-function parseOreIngresso(raw: string | undefined): number {
-  const t = raw?.trim().replace(",", ".") ?? "";
-  if (!t) return 0;
-  const n = parseFloat(t);
-  return Number.isFinite(n) && n >= 0 ? round2(n) : 0;
-}
-
+/** Solo ore dalla scheda lavorazioni (addetti × ore impiegate). */
 export function oreTotaliForCost(bundle: LavorazioneSchedeBundle): { ore: number; fonte: LavorazioneCostoBreakdown["fonteOre"] } {
   const fromLav = oreTotaliFromBundleLavorazioni(bundle);
-  if (fromLav !== null && fromLav > 0) {
-    return { ore: fromLav, fonte: "scheda_lavorazioni" };
+  if (fromLav !== null) {
+    return { ore: fromLav > 0 ? fromLav : 0, fonte: "scheda_lavorazioni" };
   }
-  const fromIng = parseOreIngresso(bundle.ingresso?.campi.oreLavoro);
-  if (fromIng > 0) {
-    return { ore: fromIng, fonte: "scheda_ingresso" };
-  }
-  if (fromLav !== null) return { ore: 0, fonte: "scheda_lavorazioni" };
   return { ore: 0, fonte: "nessuna" };
 }
 
@@ -60,46 +49,24 @@ function ricambiTotaleDaScheda(
   return { totale: round2(totale), righe: count };
 }
 
-/** Fallback: movimenti uscita collegati alla lavorazione. */
-function ricambiTotaleDaMovimenti(
-  movimenti: readonly MovimentoRicambioRow[],
-  magazzinoById: ReadonlyMap<string, MagazzinoRicambioRow>,
-): number {
-  let totale = 0;
-  for (const m of movimenti) {
-    if (m.tipo !== "uscita") continue;
-    const qty = Number.isFinite(m.quantita) && m.quantita > 0 ? m.quantita : 0;
-    if (qty <= 0) continue;
-    totale += qty * costoUnitarioAcquisto(magazzinoById.get(m.ricambio_id));
-  }
-  return round2(totale);
-}
-
 export function computeLavorazioneCosto(input: {
   bundle: LavorazioneSchedeBundle;
   costoOrario: number;
   magazzinoById: ReadonlyMap<string, MagazzinoRicambioRow>;
-  movimentiUscita?: readonly MovimentoRicambioRow[];
 }): LavorazioneCostoBreakdown {
   const hourly = Number.isFinite(input.costoOrario) && input.costoOrario > 0 ? input.costoOrario : 0;
   const { ore, fonte } = oreTotaliForCost(input.bundle);
   const manodoperaTotale = round2(ore * hourly);
 
   const daScheda = ricambiTotaleDaScheda(input.bundle, input.magazzinoById);
-  let ricambiTotale = daScheda.totale;
-  let righeRicambi = daScheda.righe;
-  if (ricambiTotale <= 0 && (input.movimentiUscita?.length ?? 0) > 0) {
-    ricambiTotale = ricambiTotaleDaMovimenti(input.movimentiUscita ?? [], input.magazzinoById);
-    righeRicambi = input.movimentiUscita?.filter((m) => m.tipo === "uscita").length ?? 0;
-  }
 
   return {
     oreTotali: ore,
     costoOrario: hourly,
     manodoperaTotale,
-    ricambiTotale,
-    costoTotale: round2(manodoperaTotale + ricambiTotale),
-    righeRicambi,
+    ricambiTotale: daScheda.totale,
+    costoTotale: round2(manodoperaTotale + daScheda.totale),
+    righeRicambi: daScheda.righe,
     fonteOre: fonte,
   };
 }

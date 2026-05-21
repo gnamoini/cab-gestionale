@@ -204,9 +204,9 @@ export function LavorazioniClienteUtilStack({
   return (
     <div className="min-w-0 leading-tight">
       <div className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">{cliente}</div>
-      <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">
-        {utilizzatore !== "—" ? utilizzatore : "—"}
-      </div>
+      {utilizzatore.trim() ? (
+        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{utilizzatore}</div>
+      ) : null}
     </div>
   );
 }
@@ -226,7 +226,7 @@ export function LavorazioniMezzoIdentStack({
       <div className="truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">{targa}</div>
       <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{matricola}</div>
       {nScuderia && nScuderia !== "—" ? (
-        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">Scud. {nScuderia}</div>
+        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">N. {nScuderia}</div>
       ) : null}
     </div>
   );

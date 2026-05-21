@@ -6,8 +6,11 @@ import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestional
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
-import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
+import {
+  GlobalHierarchyMarcaSelect,
+  GlobalHierarchyModelloSelect,
+  GlobalSettingsListSelect,
+} from "@/components/gestionale/global-input";
 import { MezziSearchBar, MezziFilterFields } from "@/components/gestionale/mezzi/mezzi-filters";
 import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-detail-modal";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
@@ -801,37 +804,37 @@ function MezzoFormFields({
       <MezzoFormSection title="Cliente">
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Cliente *
-          <GestionaleListSelect className={listSelectWrapClass} value={form.cliente} onChange={(v) => setForm((f) => ({ ...f, cliente: v }))} options={clientiBase} required />
+          <GlobalSettingsListSelect listKey="mezzi:clienti" className={listSelectWrapClass} value={form.cliente} onChange={(v) => setForm((f) => ({ ...f, cliente: v }))} required aria-label="Cliente" />
         </label>
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Cantiere
-          <SettingsAutocompleteInput className="mt-1" value={form.cantiere} onChange={(v) => setForm((f) => ({ ...f, cantiere: v }))} options={cantieriBase} />
+          <GlobalSettingsListSelect listKey="mezzi:cantieri" className="mt-1" value={form.cantiere} onChange={(v) => setForm((f) => ({ ...f, cantiere: v }))} aria-label="Cantiere" />
         </label>
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Utilizzatore
-          <SettingsAutocompleteInput className="mt-1" value={form.utilizzatore} onChange={(v) => setForm((f) => ({ ...f, utilizzatore: v }))} options={utilizzatoriBase} />
+          <GlobalSettingsListSelect listKey="mezzi:utilizzatori" className="mt-1" value={form.utilizzatore} onChange={(v) => setForm((f) => ({ ...f, utilizzatore: v }))} aria-label="Utilizzatore" />
         </label>
       </MezzoFormSection>
 
       <MezzoFormSection title="Attrezzatura">
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Tipo attrezzatura
-          <SettingsAutocompleteInput className="mt-1" value={form.tipoAttrezzatura} onChange={(v) => setForm((f) => ({ ...f, tipoAttrezzatura: v }))} options={tipiAttBase} />
+          <GlobalSettingsListSelect listKey="mezzi:tipiAttrezzatura" className="mt-1" value={form.tipoAttrezzatura} onChange={(v) => setForm((f) => ({ ...f, tipoAttrezzatura: v }))} aria-label="Tipo attrezzatura" />
         </label>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Marca *
-            <GestionaleListSelect className={listSelectWrapClass} value={form.marca} onChange={(marca) => setForm((f) => ({ ...f, marca, modello: "" }))} options={marcheAttBase} required />
+            <GlobalHierarchyMarcaSelect tree="attrezzature" className={listSelectWrapClass} value={form.marca} onChange={(marca) => setForm((f) => ({ ...f, marca, modello: "" }))} required aria-label="Marca attrezzatura" />
           </label>
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Modello
-            <GestionaleListSelect
+            <GlobalHierarchyModelloSelect
+              tree="attrezzature"
+              marcaNome={form.marca}
               className={listSelectWrapClass}
               value={form.modello}
               onChange={(modello) => setForm((f) => ({ ...f, modello }))}
-              options={modelliAtt}
-              disabled={!form.marca.trim()}
-              placeholder={form.marca.trim() ? (modelliAtt.length ? "Seleziona modello" : "Nessun modello") : "Seleziona marca"}
+              aria-label="Modello attrezzatura"
             />
           </label>
         </div>
@@ -854,21 +857,22 @@ function MezzoFormFields({
       <MezzoFormSection title="Telaio">
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Tipo telaio
-          <SettingsAutocompleteInput className="mt-1" value={form.tipoTelaio} onChange={(v) => setForm((f) => ({ ...f, tipoTelaio: v }))} options={tipiTelaioBase} />
+          <GlobalSettingsListSelect listKey="mezzi:tipiTelaio" className="mt-1" value={form.tipoTelaio} onChange={(v) => setForm((f) => ({ ...f, tipoTelaio: v }))} aria-label="Tipo telaio" />
         </label>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Marca
-            <GestionaleListSelect className={listSelectWrapClass} value={form.marcaTelaio} onChange={(v) => setForm((f) => ({ ...f, marcaTelaio: v, modelloTelaio: "" }))} options={marcheTelaioBase} />
+            <GlobalHierarchyMarcaSelect tree="telai" className={listSelectWrapClass} value={form.marcaTelaio} onChange={(v) => setForm((f) => ({ ...f, marcaTelaio: v, modelloTelaio: "" }))} aria-label="Marca telaio" />
           </label>
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Modello
-            <GestionaleListSelect
+            <GlobalHierarchyModelloSelect
+              tree="telai"
+              marcaNome={form.marcaTelaio}
               className={listSelectWrapClass}
               value={form.modelloTelaio}
               onChange={(v) => setForm((f) => ({ ...f, modelloTelaio: v }))}
-              options={modelliTelaio}
-              disabled={!form.marcaTelaio.trim()}
+              aria-label="Modello telaio"
             />
           </label>
         </div>

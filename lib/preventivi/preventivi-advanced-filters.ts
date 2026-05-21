@@ -1,4 +1,5 @@
-import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
+import type { PreventivoRecord, PreventivoStato, PreventivoTipoDocumento } from "@/lib/preventivi/types";
+import { PREVENTIVO_TIPI_DOCUMENTO } from "@/lib/preventivi/preventivi-tipo-documento";
 import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { marcheFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
@@ -12,6 +13,7 @@ export type PreventiviAdvancedFilters = {
   marca: string;
   modello: string;
   stato: string;
+  tipoDocumento: string;
   dataCreazioneDa: string;
   dataCreazioneA: string;
 };
@@ -23,6 +25,7 @@ export const PREVENTIVI_ADVANCED_FILTERS_EMPTY: PreventiviAdvancedFilters = {
   marca: FILTER_ALL,
   modello: FILTER_ALL,
   stato: FILTER_ALL,
+  tipoDocumento: FILTER_ALL,
   dataCreazioneDa: "",
   dataCreazioneA: "",
 };
@@ -36,6 +39,9 @@ export type PreventiviFilterCatalog = {
   marche: string[];
   modelliByMarca: Record<string, string[]>;
 };
+
+export const PREVENTIVO_TIPI_DOCUMENTO_FILTER: readonly { id: PreventivoTipoDocumento; label: string }[] =
+  PREVENTIVO_TIPI_DOCUMENTO;
 
 export const PREVENTIVO_STATI: readonly { id: PreventivoStato; label: string }[] = [
   { id: "bozza", label: "Bozza" },
@@ -163,6 +169,7 @@ export function preventiviAdvancedFiltersActive(f: PreventiviAdvancedFilters): b
     (f.marca.trim() !== "" && f.marca !== FILTER_ALL) ||
     (f.modello.trim() !== "" && f.modello !== FILTER_ALL) ||
     (f.stato.trim() !== "" && f.stato !== FILTER_ALL) ||
+    (f.tipoDocumento.trim() !== "" && f.tipoDocumento !== FILTER_ALL) ||
     f.dataCreazioneDa.trim() !== "" ||
     f.dataCreazioneA.trim() !== ""
   );
@@ -178,6 +185,7 @@ export function preventiviRowMatchesAdvancedFilters(
   if (!listFilterMatches(f.marca, row.marcaAttrezzatura)) return false;
   if (!listFilterMatches(f.modello, row.modelloAttrezzatura)) return false;
   if (f.stato !== FILTER_ALL && row.stato !== f.stato) return false;
+  if (f.tipoDocumento !== FILTER_ALL && row.tipoDocumento !== f.tipoDocumento) return false;
   if (!preventiviRowDataCreazioneInRange(row, f.dataCreazioneDa, f.dataCreazioneA)) return false;
   return true;
 }

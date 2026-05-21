@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
+import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import type { RicambioFormState } from "@/lib/magazzino/form";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -272,22 +272,22 @@ export function RicambioFormFields({
     form.prezzoVendita,
   ]);
 
+  const fieldsOptional = relaxHtmlValidation;
+
   return (
     <GestionaleFormFocusScope className="flex flex-col gap-3">
-      <RicambioField label="Marca *">
-        <GestionaleListSelect
+      <RicambioField label={fieldsOptional ? "Marca" : "Marca *"}>
+        <GlobalSettingsListSelect
+          listKey="magazzino:marche"
           id="magazzino-ricambio-marca"
           value={form.marca}
           onChange={(marca) => setForm((f) => ({ ...f, marca }))}
-          options={marcheOptions}
-          required
-          strictFromList
+          required={!fieldsOptional}
           placeholder="Cerca o seleziona marca…"
-          forceInvalid={listFieldForceInvalid}
-          invalidMessage="Seleziona una marca esistente"
+          aria-label="Marca ricambio"
         />
       </RicambioField>
-      <RicambioField label="Codice fornitore originale *">
+      <RicambioField label={fieldsOptional ? "Codice fornitore originale" : "Codice fornitore originale *"}>
         <input
           required={!relaxHtmlValidation}
           value={form.codiceFornitoreOriginale}
@@ -337,7 +337,7 @@ export function RicambioFormFields({
           </div>
         ) : null}
       </RicambioField>
-      <RicambioField label="Descrizione *">
+      <RicambioField label={fieldsOptional ? "Descrizione" : "Descrizione *"}>
         <input
           required={!relaxHtmlValidation}
           value={form.descrizione}
@@ -353,19 +353,17 @@ export function RicambioFormFields({
           className={inputBase}
         />
       </RicambioField>
-      <RicambioField label="Categoria *">
-        <GestionaleListSelect
+      <RicambioField label={fieldsOptional ? "Categoria" : "Categoria *"}>
+        <GlobalSettingsListSelect
+          listKey="magazzino:categorie"
           value={form.categoria}
           onChange={(categoria) => setForm((f) => ({ ...f, categoria }))}
-          options={categorieOptions}
-          required
-          strictFromList
+          required={!fieldsOptional}
           placeholder="Cerca o seleziona categoria…"
-          forceInvalid={listFieldForceInvalid}
-          invalidMessage="Seleziona una categoria esistente"
+          aria-label="Categoria ricambio"
         />
       </RicambioField>
-      <RicambioField label="Compatibilità mezzi *">
+      <RicambioField label={fieldsOptional ? "Compatibilità mezzi" : "Compatibilità mezzi *"}>
         <div className="mb-2">
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <span className="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Marche attrezzatura</span>
@@ -450,7 +448,7 @@ export function RicambioFormFields({
             ? `${mezziSel.size} compatibilità selezionate${marcheFiltroList.length > 0 ? ` · filtro: ${marcheFiltroList.join(", ")}` : ""}`
             : "Nessuna selezione"}
         </p>
-        {(listFieldForceInvalid && mezziSel.size === 0) || invalidCompat.length > 0 ? (
+        {!fieldsOptional && ((listFieldForceInvalid && mezziSel.size === 0) || invalidCompat.length > 0) ? (
           <p className="mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]">
             {invalidCompat.length > 0
               ? "Seleziona solo compatibilità dall'elenco configurato."
@@ -539,12 +537,12 @@ export function RicambioFormFields({
       </RicambioField>
       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Alternativo</p>
       <RicambioField label="Fornitore non originale">
-        <GestionaleListSelect
+        <GlobalSettingsListSelect
+          listKey="magazzino:fornitori"
           value={form.fornitoreNonOriginale}
           onChange={(fornitoreNonOriginale) => setForm((f) => ({ ...f, fornitoreNonOriginale }))}
-          options={fornitoriOptions}
-          strictFromList={false}
           placeholder="Cerca o seleziona fornitore…"
+          aria-label="Fornitore non originale"
         />
       </RicambioField>
       <RicambioField label="Codice alternativo">

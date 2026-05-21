@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
+import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
 import { GlobalFilterDateField } from "@/components/gestionale/global-input/global-date-picker";
 import {
   LavorazioniFilterField,
@@ -11,6 +12,7 @@ import {
 import {
   FILTER_ALL,
   PREVENTIVO_STATI,
+  PREVENTIVO_TIPI_DOCUMENTO_FILTER,
   type PreventiviAdvancedFilters,
   type PreventiviFilterCatalog,
 } from "@/lib/preventivi/preventivi-advanced-filters";
@@ -43,6 +45,14 @@ export function PreventiviAdvancedFilterPanel({
     [],
   );
 
+  const tipoDocumentoItems = useMemo(
+    () => [
+      { value: FILTER_ALL, label: "Tutti i tipi" },
+      ...PREVENTIVO_TIPI_DOCUMENTO_FILTER.map((t) => ({ value: t.id, label: t.label })),
+    ],
+    [],
+  );
+
   return (
     <div className="space-y-3" aria-label="Filtri avanzati preventivi">
       <LavorazioniFilterGroup title="Data creazione">
@@ -64,37 +74,34 @@ export function PreventiviAdvancedFilterPanel({
 
       <LavorazioniFilterGroup title="Anagrafica">
         <LavorazioniFilterField label="Cliente">
-          <GlobalSelect
+          <GlobalSettingsListSelect
+            listKey="mezzi:clienti"
             value={filters.cliente}
             onChange={(v) => onChange({ cliente: v })}
-            options={catalog.clienti}
             placeholder="Cerca e seleziona…"
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
             variant="filter"
             aria-label="Filtra cliente preventivi"
           />
         </LavorazioniFilterField>
         <LavorazioniFilterField label="Cantiere">
-          <GlobalSelect
+          <GlobalSettingsListSelect
+            listKey="mezzi:cantieri"
             value={filters.cantiere}
             onChange={(v) => onChange({ cantiere: v })}
-            options={catalog.cantieri}
             placeholder="Cerca e seleziona…"
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
             variant="filter"
             aria-label="Filtra cantiere preventivi"
           />
         </LavorazioniFilterField>
         <LavorazioniFilterField label="Utilizzatore">
-          <GlobalSelect
+          <GlobalSettingsListSelect
+            listKey="mezzi:utilizzatori"
             value={filters.utilizzatore}
             onChange={(v) => onChange({ utilizzatore: v })}
-            options={catalog.utilizzatori}
             placeholder="Cerca e seleziona…"
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
             variant="filter"
             aria-label="Filtra utilizzatore preventivi"
           />
@@ -108,6 +115,17 @@ export function PreventiviAdvancedFilterPanel({
             strictFromList
             variant="filter"
             aria-label="Filtra stato preventivo"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Tipo documento">
+          <GlobalSelect
+            items={tipoDocumentoItems}
+            value={filters.tipoDocumento}
+            onChange={(v) => onChange({ tipoDocumento: v })}
+            inputClassName={gestionaleFilterFieldInputClass}
+            strictFromList
+            variant="filter"
+            aria-label="Filtra tipo documento preventivo o consuntivo"
           />
         </LavorazioniFilterField>
       </LavorazioniFilterGroup>

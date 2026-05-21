@@ -13,9 +13,11 @@ import { buildLavorazioneAttivitaFeed } from "@/lib/lavorazioni/lavorazione-atti
 import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { useAuth } from "@/context/auth-context";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
-import { buildPreventiviArchivioFilterHref } from "@/lib/preventivi/preventivi-lavorazione-href";
+import {
+  buildPreventiviArchivioFilterHref,
+  buildPreventiviOpenHrefForRecord,
+} from "@/lib/preventivi/preventivi-lavorazione-href";
 import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
-import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import { documentoRowToGestionale, preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -366,11 +368,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                         <button
                           type="button"
                           className={erpBtnNeutral}
-                          onClick={() => {
-                            const sp = new URLSearchParams();
-                            sp.set(Q_PREVENTIVI_OPEN, p.id);
-                            openUrlInNewTab(`/preventivi?${sp.toString()}`);
-                          }}
+                          onClick={() => openUrlInNewTab(buildPreventiviOpenHrefForRecord(p))}
                         >
                           Dettaglio
                         </button>

@@ -19,12 +19,26 @@ import { LavorazioneCreateModal } from "@/components/gestionale/lavorazioni/lavo
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
 import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
 import { SchedeLavorazioneModal } from "@/components/lavorazioni/schede/schede-lavorazione-modal";
-import { InlineSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { InlineSelectField, type TablePillOption } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import {
+  formatLavorazioneMobileIdentLine,
+  LavMobileInlineField,
+  LavorazioneMobileCardFooter,
+  LavorazioneMobileCardHeader,
+  LavorazioneMobileUltimaModifica,
+  LavorazioneMobileCardShell,
+  LavorazioneMobileStatusSlot,
+  LavorazioneMobileControlsPanel,
+  LavorazioneMobileMetaGrid,
+  LavorazioneMobileMetaItem,
+  LavorazioneMobileNote,
+} from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { Q_FOCUS_LAV_ROW, Q_FOCUS_MEZZO, Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
+import { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
@@ -32,6 +46,8 @@ import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { durataMsStorico, formatDurataMs } from "@/lib/lavorazioni/duration";
 import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
+import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { resolveLavorazioneUltimaModifica } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { lavRowMatchesPageFilters, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import {
   buildLavorazioniFilterCatalog,
@@ -42,7 +58,14 @@ import {
   type LavorazioniAdvancedFilters,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
-import { getOrCreateBundle, loadLavorazioneSchedeStore, saveLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
+import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
+import { persistSchedeBundle, persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
+import { useSchedeStoreQuery } from "@/src/hooks/use-schede-store-query";
+import {
+  CAB_ADDETTO_DISPLAY_RENAME,
+  type CabAddettoRenameDetail,
+} from "@/lib/sistema/cab-events";
+import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { countSchedePresenti, newSchedaMeta } from "@/lib/schede/schede-ui";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
@@ -60,8 +83,6 @@ import {
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import {
-  CardMobile,
-  CardMobileActions,
   Drawer,
   PageToolbar,
   PageToolbarActions,
@@ -114,6 +135,7 @@ import {
   statoPillShellClass,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
+  LavorazioniClienteUtilStack,
   LavorazioneIngressoDateCell,
   LavorazioneIngressoDateCellFromIso,
   lavTableActionBtnDanger,
@@ -177,7 +199,9 @@ function clienteLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeSt
 }
 
 function utilizzatoreLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  return schedeStore?.[row.id]?.ingresso?.campi.utilizzatore?.trim() || row.mezzo?.utilizzatore?.trim() || "—";
+  return (
+    schedeStore?.[row.id]?.ingresso?.campi.utilizzatore?.trim() || row.mezzo?.utilizzatore?.trim() || ""
+  );
 }
 
 function cantiereLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
@@ -197,39 +221,6 @@ function addettoSelectValue(label: string, addetti: string[]): string {
   if (addetti.includes(label)) return label;
   if (label === "—") return "";
   return label;
-}
-
-function addettoTablePillOptions(label: string, addetti: string[]): { value: string; label: string }[] {
-  const inList = addetti.includes(label);
-  const items: { value: string; label: string }[] = [{ value: "", label: "—" }];
-  if (!inList && label !== "—") items.push({ value: label, label });
-  for (const a of addetti) items.push({ value: a, label: a });
-  return items;
-}
-
-function AddettoSelectOptions({ label, addetti }: { label: string; addetti: string[] }) {
-  return (
-    <>
-      {addettoTablePillOptions(label, addetti).map((o) => (
-        <option key={o.value || "__vuoto__"} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </>
-  );
-}
-
-const lavMobileFieldLabelClass =
-  "w-[5.5rem] shrink-0 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
-
-/** Riga mobile card: etichetta a sinistra, select pill a destra (larghezza uniforme). */
-function LavMobileInlineField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="flex min-w-0 items-center gap-2">
-      <span className={lavMobileFieldLabelClass}>{label}</span>
-      <div className="min-w-0 flex-1">{children}</div>
-    </label>
-  );
 }
 
 function schedeCountForRow(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore): number {
@@ -272,10 +263,7 @@ function ClienteUtilizzatoreCell({
   const cliente = clienteLabel(row, schedeStore);
   const utilizzatore = utilizzatoreLabel(row, schedeStore);
   return (
-    <div className="min-w-0 leading-tight">
-      <div className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">{cliente}</div>
-      <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{utilizzatore !== "—" ? utilizzatore : "—"}</div>
-    </div>
+    <LavorazioniClienteUtilStack cliente={cliente} utilizzatore={utilizzatore} />
   );
 }
 
@@ -292,7 +280,7 @@ function MezzoIdentStackCell({
       <div className="truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">{p.targa}</div>
       <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{p.matricola}</div>
       {p.scuderia ? (
-        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">Scud. {p.scuderia}</div>
+        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">N. {p.scuderia}</div>
       ) : null}
     </div>
   );
@@ -573,6 +561,11 @@ export function LavorazioniView() {
     [globalOpts.lavorazioni.prioritaDb],
   );
 
+  const tablePillOptions = useMemo(
+    () => buildLavorazioniPillOptionsFromGlobal(globalOpts),
+    [globalOpts],
+  );
+
   const statoPillWrapStyle = useMemo(
     () =>
       lavTablePillWrapStyleFromLabels(
@@ -639,7 +632,17 @@ export function LavorazioniView() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [schedeRow, setSchedeRow] = useState<{ row: LavorazioneListRow; origine: "attiva" | "storico"; initialTab?: "schede" | "panoramica" } | null>(null);
-  const [schedeStore, setSchedeStore] = useState(() => loadLavorazioneSchedeStore());
+  const { store: schedeStore, invalidate: invalidateSchedeStore } = useSchedeStoreQuery();
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent<CabAddettoRenameDetail>).detail;
+      if (!d?.previousName || !d?.nextName) return;
+      invalidateSchedeStore();
+    };
+    window.addEventListener(CAB_ADDETTO_DISPLAY_RENAME, handler);
+    return () => window.removeEventListener(CAB_ADDETTO_DISPLAY_RENAME, handler);
+  }, [invalidateSchedeStore]);
 
   const SEARCH_DEBOUNCE_MS = 320;
 
@@ -831,7 +834,8 @@ export function LavorazioniView() {
       const clean = next.trim();
       if (!clean || !globalOpts.lavorazioni.addetti.includes(clean)) return;
       const beforeAddetto = addettoLabel(row, schedeStore, defaultAddetto);
-      setSchedeStore((prev) => {
+      {
+        const prev = schedeStore;
         const current = getOrCreateBundle(prev, row.id);
         const ingresso = current.ingresso ?? {
           ...newSchedaMeta("ingresso", authorName),
@@ -876,9 +880,8 @@ export function LavorazioniView() {
             },
           },
         };
-        saveLavorazioneSchedeStore(updated);
-        return updated;
-      });
+        void persistSchedeStore(updated, row.id).then(() => invalidateSchedeStore());
+      }
       void logService.create({
         entita: "lavorazioni",
         entita_id: row.id,
@@ -1139,8 +1142,7 @@ export function LavorazioniView() {
   }, [searchParams, pathname, router, focusLavorazioneInTable]);
 
   async function syncIngressoToBackend(row: LavorazioneListRow, campi: SchedaIngressoFields) {
-    const noteParts = [campi.noteIntervento?.trim(), campi.descrizioneAnomalia?.trim()].filter(Boolean);
-    const note = noteParts.length ? noteParts.join("\n\n") : null;
+    const note = campi.noteIntervento?.trim() || null;
     const parsedIngresso = parseItalianDayToIso(campi.dataIngresso.trim());
     const lavPatch: { note?: string | null; data_ingresso?: string } = {};
     if (note !== (row.note ?? "").trim()) lavPatch.note = note;
@@ -1232,24 +1234,25 @@ export function LavorazioniView() {
           : null;
       }
       if (typeof before.addetto === "string") {
-        setSchedeStore((prev) => {
+        {
+          const prev = schedeStore;
           const current = getOrCreateBundle(prev, undoableLavLog.entita_id);
-          if (!current.ingresso) return prev;
-          const updated = {
-            ...prev,
-            [undoableLavLog.entita_id]: {
-              ...current,
-              ingresso: {
-                ...current.ingresso,
-                updatedAt: new Date().toISOString(),
-                updatedBy: authorName.trim() || "Operatore",
-                campi: { ...current.ingresso.campi, addettoAccettazione: before.addetto as string },
+          if (current.ingresso) {
+            const updated = {
+              ...prev,
+              [undoableLavLog.entita_id]: {
+                ...current,
+                ingresso: {
+                  ...current.ingresso,
+                  updatedAt: new Date().toISOString(),
+                  updatedBy: authorName.trim() || "Operatore",
+                  campi: { ...current.ingresso.campi, addettoAccettazione: before.addetto as string },
+                },
               },
-            },
-          };
-          saveLavorazioneSchedeStore(updated);
-          return updated;
-        });
+            };
+            void persistSchedeStore(updated, undoableLavLog.entita_id).then(() => invalidateSchedeStore());
+          }
+        }
       }
       const undoLog = await logService.create({
         entita: "lavorazioni",
@@ -1531,13 +1534,14 @@ export function LavorazioniView() {
                           <MezzoIdentStackCell row={row} schedeStore={schedeStore} />
                         </td>
                         <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-                          <span className="line-clamp-2">{(row.note ?? "").trim() || "—"}</span>
+                          <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
                         </td>
                         <td className={lavTableTdPill}>
                           <div className={lavTableTdPillWrap} style={statoPillWrapStyle}>
                           <InlineSelectField
                             tablePill
                             tablePillWidth={lavTablePillFillClass}
+                            tablePillOptions={tablePillOptions.stati(statiRapidiOpts)}
                             shellClass={statoPillShellClass()}
                             shellStyle={readablePillStyleFromHex(statoDisplayColor(row.stato, statiOpts))}
                             value={row.stato}
@@ -1546,11 +1550,7 @@ export function LavorazioniView() {
                             disabled={mutPending || loading || !canEditWorkOrders}
                             title={statoLavorazioneLabel(row.stato, statiOpts)}
                           >
-                            {statiRapidiOpts.map((s) => (
-                              <option key={s.id} value={s.id}>
-                                {statoLavorazioneLabel(s.id, statiOpts)}
-                              </option>
-                            ))}
+                            <option value={row.stato}>{statoLavorazioneLabel(row.stato, statiOpts)}</option>
                           </InlineSelectField>
                           </div>
                         </td>
@@ -1559,6 +1559,7 @@ export function LavorazioniView() {
                           <InlineSelectField
                             tablePill
                             tablePillWidth={lavTablePillFillClass}
+                            tablePillOptions={tablePillOptions.priorita(prioritaOpts)}
                             shellClass={prioritaPillShellClass()}
                             shellStyle={readablePillStyleFromHex(prioColor(row.priorita))}
                             value={row.priorita}
@@ -1567,11 +1568,7 @@ export function LavorazioniView() {
                             disabled={mutPending || loading || !canEditWorkOrders}
                             title={prioritaLabel(row.priorita)}
                           >
-                            {prioritaOpts.map((p) => (
-                              <option key={p} value={p}>
-                                {prioritaLabel(p)}
-                              </option>
-                            ))}
+                            <option value={row.priorita}>{prioritaLabel(row.priorita)}</option>
                           </InlineSelectField>
                           </div>
                         </td>
@@ -1584,7 +1581,7 @@ export function LavorazioniView() {
                               <InlineSelectField
                                 tablePill
                                 tablePillWidth={lavTablePillFillClass}
-                                tablePillOptions={addettoTablePillOptions(addetto, addetti)}
+                                tablePillOptions={tablePillOptions.addetto(addetto)}
                                 shellClass={addettoPillShellClass()}
                                 shellStyle={addettoPillShellStyle(globalOpts.lavorazioni.addettoColors[addetto])}
                                 value={addettoSelectValue(addetto, addetti)}
@@ -1593,7 +1590,7 @@ export function LavorazioniView() {
                                 disabled={mutPending || loading || !canEditWorkOrders || addetti.length === 0}
                                 title={addetto}
                               >
-                                <AddettoSelectOptions label={addetto} addetti={addetti} />
+                                <option value={addettoSelectValue(addetto, addetti)}>{addetto}</option>
                               </InlineSelectField>
                             );
                           })()}
@@ -1653,7 +1650,7 @@ export function LavorazioniView() {
                   })}
           </GestionaleListTable>
 
-          <div className="mt-4 space-y-3 md:hidden">
+          <div className="mt-4 space-y-2 md:hidden">
             {pagedAttive.length === 0 ? (
               <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
                 {hasPageClientFilters || navMezzoFilter
@@ -1661,80 +1658,93 @@ export function LavorazioniView() {
                   : "Nessuna lavorazione in corso."}
               </p>
             ) : (
-              pagedAttive.map((row) => (
-                <CardMobile key={row.id}>
-                  <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{macchinaLabel(row, schedeStore)}</p>
-                  <MezzoIdentStackCell row={row} schedeStore={schedeStore} />
-                  <div className="mt-2 grid gap-1 text-xs text-zinc-600 dark:text-zinc-300">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ingresso</span>
-                      <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
-                    </div>
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Cliente:</span> {clienteLabel(row, schedeStore)}</p>
-                    <p className="text-[11px] text-zinc-500">{utilizzatoreLabel(row, schedeStore)}</p>
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Cantiere:</span> {cantiereLabel(row, schedeStore)}</p>
-                  </div>
-                  <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{(row.note ?? "").trim() || "—"}</p>
-                  <div className="mt-3 flex flex-col gap-2">
-                    <LavMobileInlineField label="Stato">
+              pagedAttive.map((row) => {
+                const macchina = macchinaLabel(row, schedeStore);
+                const utilizzatore = utilizzatoreLabel(row, schedeStore);
+                return (
+                <LavorazioneMobileCardShell key={row.id}>
+                  <LavorazioneMobileCardHeader
+                    macchina={macchina}
+                    identLine={formatLavorazioneMobileIdentLine(mezzoIdentParts(row, schedeStore))}
+                    ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
+                    statusSlot={
+                      <LavorazioneMobileStatusSlot>
+                        <InlineSelectField
+                          tablePill
+                          tablePillWidth={lavTablePillFillClass}
+                          tablePillOptions={tablePillOptions.stati(statiRapidiOpts)}
+                          shellClass={statoPillShellClass()}
+                          shellStyle={readablePillStyleFromHex(statoDisplayColor(row.stato, statiOpts))}
+                          value={row.stato}
+                          onChange={(v) => onStatoRow(row, v)}
+                          ariaLabel={`Stato — ${macchina}`}
+                          disabled={mutPending || loading || !canEditWorkOrders}
+                          title={statoLavorazioneLabel(row.stato, statiOpts)}
+                        >
+                          <option value={row.stato}>{statoLavorazioneLabel(row.stato, statiOpts)}</option>
+                        </InlineSelectField>
+                      </LavorazioneMobileStatusSlot>
+                    }
+                  />
+                  <LavorazioneMobileMetaGrid>
+                    <LavorazioneMobileMetaItem label="Cliente" value={clienteLabel(row, schedeStore)} />
+                    <LavorazioneMobileMetaItem label="Cantiere" value={cantiereLabel(row, schedeStore)} />
+                    {utilizzatore ? (
+                      <LavorazioneMobileMetaItem
+                        label="Utilizzatore"
+                        value={utilizzatore}
+                        className="col-span-2"
+                      />
+                    ) : null}
+                  </LavorazioneMobileMetaGrid>
+                  <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
+                  <LavorazioneMobileControlsPanel>
+                    <LavMobileInlineField label="Priorità" layout="stack">
                       <InlineSelectField
-                        fullWidth
-                        wide
-                        shellClass={statoPillShellClass()}
-                        shellStyle={readablePillStyleFromHex(statoDisplayColor(row.stato, statiOpts))}
-                        value={row.stato}
-                        onChange={(v) => onStatoRow(row, v)}
-                        ariaLabel={`Stato — ${macchinaLabel(row, schedeStore)}`}
-                        disabled={mutPending || loading || !canEditWorkOrders}
-                        title={statoLavorazioneLabel(row.stato, statiOpts)}
-                      >
-                        {statiRapidiOpts.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {statoLavorazioneLabel(s.id, statiOpts)}
-                          </option>
-                        ))}
-                      </InlineSelectField>
-                    </LavMobileInlineField>
-                    <LavMobileInlineField label="Priorità">
-                      <InlineSelectField
-                        fullWidth
+                        tablePill
+                        tablePillWidth={lavTablePillFillClass}
+                        tablePillOptions={tablePillOptions.priorita(prioritaOpts)}
                         shellClass={prioritaPillShellClass()}
                         shellStyle={readablePillStyleFromHex(prioColor(row.priorita))}
                         value={row.priorita}
                         onChange={(v) => onPrioritaRow(row, v)}
-                        ariaLabel={`Priorità — ${macchinaLabel(row, schedeStore)}`}
+                        ariaLabel={`Priorità — ${macchina}`}
                         disabled={mutPending || loading || !canEditWorkOrders}
                         title={prioritaLabel(row.priorita)}
                       >
-                        {prioritaOpts.map((p) => (
-                          <option key={p} value={p}>
-                            {prioritaLabel(p)}
-                          </option>
-                        ))}
+                        <option value={row.priorita}>{prioritaLabel(row.priorita)}</option>
                       </InlineSelectField>
                     </LavMobileInlineField>
-                    <LavMobileInlineField label="Addetto">
+                    <LavMobileInlineField label="Addetto" layout="stack">
                       {(() => {
                         const addetto = addettoLabel(row, schedeStore, defaultAddetto);
                         const addetti = globalOpts.lavorazioni.addetti;
                         return (
                           <InlineSelectField
-                            fullWidth
+                            tablePill
+                            tablePillWidth={lavTablePillFillClass}
+                            tablePillOptions={tablePillOptions.addetto(addetto)}
                             shellClass={addettoPillShellClass()}
                             shellStyle={addettoPillShellStyle(globalOpts.lavorazioni.addettoColors[addetto])}
                             value={addettoSelectValue(addetto, addetti)}
                             onChange={(v) => onAddettoRow(row, v)}
-                            ariaLabel={`Addetto — ${macchinaLabel(row, schedeStore)}`}
+                            ariaLabel={`Addetto — ${macchina}`}
                             disabled={mutPending || loading || !canEditWorkOrders || addetti.length === 0}
                             title={addetto}
                           >
-                            <AddettoSelectOptions label={addetto} addetti={addetti} />
+                            <option value={addettoSelectValue(addetto, addetti)}>{addetto}</option>
                           </InlineSelectField>
                         );
                       })()}
                     </LavMobileInlineField>
-                  </div>
-                  <CardMobileActions>
+                  </LavorazioneMobileControlsPanel>
+                  <LavorazioneMobileCardFooter
+                    meta={
+                      <LavorazioneMobileUltimaModifica
+                        info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id])}
+                      />
+                    }
+                  >
                     <button type="button" className={dsTableActionBtnSecondary} title={row.stato === "completata" ? "Concludi lavorazione" : "Concludi disponibile solo con stato completata"} aria-label="Concludi lavorazione" disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true} onClick={() => openConcludiConfirm(row)}>
                       <IconCloseWork />
                     </button>
@@ -1766,9 +1776,10 @@ export function LavorazioniView() {
                         {schedeCountForRow(row, schedeStore)}/3
                       </span>
                     </button>
-                  </CardMobileActions>
-                </CardMobile>
-              ))
+                  </LavorazioneMobileCardFooter>
+                </LavorazioneMobileCardShell>
+              );
+              })
             )}
           </div>
 
@@ -1913,7 +1924,7 @@ export function LavorazioniView() {
                           <MezzoIdentStackCell row={row} schedeStore={schedeStore} />
                         </td>
                         <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-                          <span className="line-clamp-2">{(row.note ?? "").trim() || "—"}</span>
+                          <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
                         </td>
                         <td className={lavTableTdCenter}>
                           <LavorazioneIngressoDateCellFromIso iso={dataCompletamentoIso(row)} align="center" />
@@ -1928,6 +1939,16 @@ export function LavorazioniView() {
                         </td>
                         <td className={lavTableTdAzioni}>
                           <div className={lavTableActionsRow}>
+                            <button
+                              type="button"
+                              className={lavTableActionBtnDanger}
+                              title="Ripristina lavorazione"
+                              aria-label="Ripristina lavorazione"
+                              disabled={!canEditWorkOrders || mutPending || loading}
+                              onClick={() => submitRipristinaInLavorazione(row)}
+                            >
+                              <IconRipristinaDaArchivio />
+                            </button>
                             <button type="button" className={lavTableActionBtnInfo} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}>
                               <IconInfo />
                             </button>
@@ -1943,9 +1964,6 @@ export function LavorazioniView() {
                                 {schedeCountForRow(row, schedeStore)}/3
                               </span>
                             </button>
-                            <button type="button" className={lavTableActionBtnSecondary} title="Ripristina in lavorazione" aria-label="Ripristina in lavorazione" disabled={!canEditWorkOrders || mutPending || loading} onClick={() => submitRipristinaInLavorazione(row)}>
-                              <IconRipristinaDaArchivio />
-                            </button>
                           </div>
                         </td>
                       </tr>
@@ -1953,7 +1971,7 @@ export function LavorazioniView() {
                   })}
           </GestionaleListTable>
 
-          <div className="mt-4 space-y-3 md:hidden">
+          <div className="mt-4 space-y-2 md:hidden">
             {pagedChiuse.length === 0 ? (
               <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
                 {hasPageClientFilters || navMezzoFilter
@@ -1963,31 +1981,65 @@ export function LavorazioniView() {
             ) : (
               pagedChiuse.map((row) => {
               const telaio = telaioLabel(row, schedeStore);
+              const macchina = macchinaLabel(row, schedeStore);
+              const utilizzatore = utilizzatoreLabel(row, schedeStore);
+              const identBase = formatLavorazioneMobileIdentLine(mezzoIdentParts(row, schedeStore));
+              const identLine =
+                telaio !== "—"
+                  ? [identBase, `Telaio: ${telaio}`].filter(Boolean).join(" · ") || null
+                  : identBase;
               return (
-                <CardMobile key={row.id}>
-                  <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{macchinaLabel(row, schedeStore)}</p>
-                  {telaio !== "—" ? <p className="text-xs text-zinc-500">Telaio: {telaio}</p> : null}
-                  <MezzoIdentStackCell row={row} schedeStore={schedeStore} />
-                  <div className="mt-2 grid gap-1 text-xs text-zinc-600 dark:text-zinc-300">
-                    <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ingresso</span>
-                      <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
-                    </div>
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Completamento:</span> {fmtDay(dataCompletamentoIso(row))}</p>
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Cliente:</span> {clienteLabel(row, schedeStore)}</p>
-                    <p className="pl-0 text-[11px] text-zinc-500">{utilizzatoreLabel(row, schedeStore)}</p>
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Cantiere:</span> {cantiereLabel(row, schedeStore)}</p>
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Ore lavoro:</span> {oreLavoroLabel(row, schedeStore)}</p>
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Addetto:</span> {addettoLabel(row, schedeStore, defaultAddetto)}</p>
-                  </div>
-                  <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{(row.note ?? "").trim() || "—"}</p>
-                  <CardMobileActions>
-                    <button type="button" className={dsTableActionBtnInfo} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}>
+                <LavorazioneMobileCardShell key={row.id}>
+                  <LavorazioneMobileCardHeader
+                    macchina={macchina}
+                    identLine={identLine}
+                    ingresso={
+                      <div className="text-right [&_div]:text-right">
+                        <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
+                      </div>
+                    }
+                    secondaryDate={{ label: "Completamento", value: fmtDay(dataCompletamentoIso(row)) }}
+                  />
+                  <LavorazioneMobileMetaGrid>
+                    <LavorazioneMobileMetaItem label="Cliente" value={clienteLabel(row, schedeStore)} />
+                    <LavorazioneMobileMetaItem label="Cantiere" value={cantiereLabel(row, schedeStore)} />
+                    <LavorazioneMobileMetaItem label="Ore lavoro" value={oreLavoroLabel(row, schedeStore)} />
+                    <LavorazioneMobileMetaItem
+                      label="Addetto"
+                      value={addettoLabel(row, schedeStore, defaultAddetto)}
+                    />
+                    {utilizzatore ? (
+                      <LavorazioneMobileMetaItem
+                        label="Utilizzatore"
+                        value={utilizzatore}
+                        className="col-span-2"
+                      />
+                    ) : null}
+                  </LavorazioneMobileMetaGrid>
+                  <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
+                  <LavorazioneMobileCardFooter
+                    meta={
+                      <LavorazioneMobileUltimaModifica
+                        info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id])}
+                      />
+                    }
+                  >
+                    <button
+                      type="button"
+                      className={lavTableActionBtnDanger}
+                      title="Ripristina lavorazione"
+                      aria-label="Ripristina lavorazione"
+                      disabled={!canEditWorkOrders || mutPending || loading}
+                      onClick={() => submitRipristinaInLavorazione(row)}
+                    >
+                      <IconRipristinaDaArchivio />
+                    </button>
+                    <button type="button" className={lavTableActionBtnInfo} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}>
                       <IconInfo />
                     </button>
                     <button
                       type="button"
-                      className={`${dsTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
+                      className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
                       title="Apri schede lavorazione"
                       aria-label="Apri schede lavorazione"
                       onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "schede" })}
@@ -1997,11 +2049,8 @@ export function LavorazioniView() {
                         {schedeCountForRow(row, schedeStore)}/3
                       </span>
                     </button>
-                    <button type="button" className={dsTableActionBtnSecondary} title="Ripristina in lavorazione" aria-label="Ripristina in lavorazione" disabled={!canEditWorkOrders || mutPending || loading} onClick={() => submitRipristinaInLavorazione(row)}>
-                      <IconRipristinaDaArchivio />
-                    </button>
-                  </CardMobileActions>
-                </CardMobile>
+                  </LavorazioneMobileCardFooter>
+                </LavorazioneMobileCardShell>
               );
             })
             )}
@@ -2059,11 +2108,8 @@ export function LavorazioniView() {
           initialTab={schedeRow.initialTab}
           bundle={getOrCreateBundle(schedeStore, schedeRow.row.id)}
           onPersist={(next) => {
-            setSchedeStore((prev) => {
-              const updated = { ...prev, [next.lavorazioneId]: next };
-              saveLavorazioneSchedeStore(updated);
-              return updated;
-            });
+            const updated = { ...schedeStore, [next.lavorazioneId]: next };
+            void persistSchedeBundle(next).then(() => invalidateSchedeStore());
           }}
           onIngressoCommitted={async (campi) => {
             if (!schedeRow) return;
@@ -2086,8 +2132,12 @@ export function LavorazioniView() {
         open={createOpen}
         onClose={() => setCreateOpen(false)}
         createdBy={createdBy}
+        mezzi={mezziCatalog}
+        schedeStore={schedeStore}
+        attive={attiveLegacyRows}
+        storico={storicoLegacyRows}
         onCreated={(id) => {
-          setSchedeStore(loadLavorazioneSchedeStore());
+          invalidateSchedeStore();
           flashRow(id);
         }}
       />

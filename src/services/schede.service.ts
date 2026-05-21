@@ -15,7 +15,12 @@ export type SchedaFilters = {
 };
 
 export type SchedaInsert = Omit<SchedaLavorazioneRow, "id" | "created_at" | "updated_at">;
-export type SchedaUpdate = Partial<Pick<SchedaLavorazioneRow, "tipo" | "contenuto">>;
+export type SchedaUpdate = Partial<Pick<SchedaLavorazioneRow, "tipo" | "contenuto">> & {
+  updated_at?: string;
+};
+
+export const SCHEDA_CONCURRENCY_CONFLICT =
+  "Un altro utente ha aggiornato questa scheda. Ricarica e riprova.";
 
 async function sb() {
   return getBrowserSupabase();
@@ -70,8 +75,13 @@ export const schedeService = {
       const c = await sb();
       const { data: before, error: e0 } = await c.from("scheda_lavorazione").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
-      const { data: row, error } = await c.from("scheda_lavorazione").update(data).eq("id", id).select("*").single();
-      if (error) return err(error.message);
+      let q = c.from("scheda_lavorazione").update(data).eq("id", id);
+      if (data.updated_at) q = q.eq("updated_at", data.updated_at);
+      const { data: row, error } = await q.select("*").single();
+      if (error) {
+        if (error.code === "PGRST116") return err(SCHEDA_CONCURRENCY_CONFLICT);
+        return err(error.message);
+      }
       const r = row as SchedaLavorazioneRow;
       await writeModificaLog(c, {
         entita: ENTITA,

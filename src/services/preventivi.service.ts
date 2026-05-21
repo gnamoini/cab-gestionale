@@ -110,8 +110,14 @@ export const preventiviService = {
       const base = { ...(before as PreventivoRow), ...data };
       const merged =
         data.dettagli !== undefined ? (mergePreventivoPayload(base) as PreventivoRow) : base;
-      const { data: row, error } = await c.from("preventivi").update(merged).eq("id", id).select("*").single();
-      if (error) return err(error.message);
+      let q = c.from("preventivi").update(merged).eq("id", id);
+      const expectedAt = (data as { updated_at?: string }).updated_at;
+      if (expectedAt) q = q.eq("updated_at", expectedAt);
+      const { data: row, error } = await q.select("*").single();
+      if (error) {
+        if (error.code === "PGRST116") return err("Un altro utente ha aggiornato questo preventivo. Ricarica e riprova.");
+        return err(error.message);
+      }
       const r = row as PreventivoRow;
       await writeModificaLog(c, {
         entita: ENTITA,

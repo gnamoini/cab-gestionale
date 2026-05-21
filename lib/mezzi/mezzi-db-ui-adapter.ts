@@ -1,3 +1,4 @@
+import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
 import type { DocumentoGestionale, DocumentoTipoFile } from "@/lib/types/gestionale";
 import { imageLogModificaRiga, isImageLogAction, type MezziLogEntryLike } from "@/lib/gestionale-log/view-model";
@@ -137,6 +138,7 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
     dataCreazione: row.created_at,
     aggiornatoAt: row.updated_at,
     stato,
+    tipoDocumento: normalizePreventivoTipoDocumento(det.tipoDocumento),
     lavorazioneId: row.lavorazione_id ?? "",
     lavorazioneOrigine: (det.lavorazioneOrigine === "storico" ? "storico" : "attiva") as PreventivoRecord["lavorazioneOrigine"],
     cliente: row.cliente,

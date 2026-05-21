@@ -118,19 +118,29 @@ export function useSecurityDashboardData(filters: SecurityDashboardFilters, opts
 
   useEffect(() => {
     if (!realtime || !isAdmin || !isSupabasePublicEnvConfigured()) return;
-    const sb = getBrowserSupabase();
-    const channel = sb
-      .channel("cab-auth-logs-security-rt")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "auth_logs" },
-        () => {
+    let cancelled = false;
+    let activeChannel: Awaited<
+      ReturnType<typeof import("@/lib/realtime/postgres-changes-channel").subscribePostgresChangesChannel>
+    >["channel"] | null = null;
+
+    void (async () => {
+      const { subscribePostgresChangesChannel } = await import("@/lib/realtime/postgres-changes-channel");
+      const sb = getBrowserSupabase();
+      const { channel } = await subscribePostgresChangesChannel(sb, {
+        channelName: "cab-auth-logs-security-rt",
+        tables: [{ table: "auth_logs", event: "INSERT" }],
+        onPayload: () => {
           void qc.invalidateQueries({ queryKey: [...QK.authLogs] });
         },
-      )
-      .subscribe();
+        logPrefix: "[auth_logs rt]",
+      });
+      if (!cancelled) activeChannel = channel;
+    })();
+
     return () => {
-      void sb.removeChannel(channel);
+      cancelled = true;
+      const sb = getBrowserSupabase();
+      if (activeChannel) void sb.removeChannel(activeChannel);
     };
   }, [realtime, isAdmin, qc]);
 

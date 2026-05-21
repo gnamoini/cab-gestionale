@@ -30,15 +30,15 @@ function SupportoNoteActions({
           type="button"
           onClick={onStartEdit}
           disabled={disabled}
-          className="rounded-lg border border-zinc-200 px-3 py-2 text-xs font-medium text-orange-700 hover:bg-orange-50 disabled:opacity-50 dark:border-zinc-700 dark:text-orange-400 dark:hover:bg-zinc-900"
+          className="rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-orange-700 hover:bg-orange-50 disabled:opacity-50 dark:border-zinc-700 dark:text-orange-400 dark:hover:bg-zinc-900"
         >
           Modifica
         </button>
       ) : null}
-      <label className="flex cursor-pointer items-center gap-2 rounded-md border border-zinc-200 px-3 py-2 text-xs text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
+      <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-zinc-200 px-2 py-1 text-[11px] text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
         <input
           type="checkbox"
-          className="h-4 w-4 rounded border-zinc-300 text-orange-600 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-900"
+          className="h-3.5 w-3.5 rounded border-zinc-300 text-orange-600 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-900"
           checked={note.resolved}
           onChange={(e) => onToggleResolved(note.id, e.target.checked)}
           disabled={disabled || !canEdit || editing}
@@ -55,7 +55,7 @@ function SupportoNoteActions({
           title="Elimina nota"
           aria-label="Elimina nota"
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -119,51 +119,51 @@ export function SupportoNoteCard({
   return (
     <li>
       <article
-        className={`flex flex-col rounded-xl border border-zinc-200/90 bg-white p-4 shadow-sm transition-[border-color,box-shadow,background-color] duration-150 hover:border-zinc-300/90 hover:shadow-md dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:border-zinc-600 ${
+        className={`flex flex-col rounded-lg border border-zinc-200/90 bg-white px-3 py-2 shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-zinc-300/90 dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:border-zinc-600 ${
           note.resolved ? "opacity-90" : ""
         }`}
       >
-        <div className="min-w-0 flex-1 space-y-2">
-          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <p className="text-sm font-bold tracking-wide text-orange-700">[{authorDisplay}]</p>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            <p className="text-xs font-bold tracking-wide text-orange-700">[{authorDisplay}]</p>
             {note.resolved ? (
-              <span className={dsBadgeOk} title="Nota risolta">
+              <span className={`${dsBadgeOk} text-[10px] py-0`} title="Nota risolta">
                 Risolta
               </span>
             ) : null}
+            <p className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400">{formatSupportoNoteDateTime(note.at)}</p>
           </div>
-          <p className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">{formatSupportoNoteDateTime(note.at)}</p>
           {editing ? (
-            <div className="space-y-2">
+            <div className="space-y-1.5 pt-0.5">
               <textarea
-                rows={4}
+                rows={3}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 disabled={disabled}
-                className={dsTextarea}
+                className={`${dsTextarea} text-sm`}
                 aria-label="Modifica testo nota"
               />
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5">
                 <button
                   type="button"
                   onClick={handleSaveEdit}
                   disabled={disabled || !draft.trim()}
-                  className="rounded-lg bg-orange-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
+                  className="rounded-md bg-orange-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
                 >
-                  Salva modifica
+                  Salva
                 </button>
                 <button
                   type="button"
                   onClick={cancelEdit}
                   disabled={disabled}
-                  className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
+                  className="rounded-md border border-zinc-200 px-2.5 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
                 >
                   Annulla
                 </button>
               </div>
             </div>
           ) : (
-            <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-zinc-800 dark:text-zinc-100">
+            <p className="whitespace-pre-wrap break-words text-sm leading-snug text-zinc-800 dark:text-zinc-100">
               {note.body}
             </p>
           )}
@@ -181,7 +181,7 @@ export function SupportoNoteCard({
                 onStartEdit={startEdit}
               />
             </CardMobileActions>
-            <div className="mt-3 hidden flex-col items-end gap-2 md:flex">
+            <div className="mt-1.5 hidden flex-col items-end gap-1 md:flex">
               <SupportoNoteActions
                 note={note}
                 canEdit={canEdit}

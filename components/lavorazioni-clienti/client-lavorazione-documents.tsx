@@ -1,14 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { LavorazioniModalShell, LavorazioniModalTitleBar } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import {
-  LAVORAZIONE_DOCUMENT_SLOTS,
-  lavorazioneDocumentByTipo,
-} from "@/lib/lavorazioni/lavorazione-documents";
+import { CLIENT_PORTAL_DOCUMENT_SLOTS } from "@/lib/lavorazioni/client-portal-documents";
+import { lavorazioneDocumentByTipo } from "@/lib/lavorazioni/lavorazione-documents";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
-import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
+import { useClientLavorazioneDocumentsQuery } from "@/src/hooks/gestionale/use-client-lavorazione-media-queries";
 import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
 
 function IconPdf() {
@@ -75,38 +72,16 @@ export function ClientLavorazioneDocumentsPanel({
   /** Senza card esterna (es. dentro pannello Documenti unificato). */
   embedded?: boolean;
 }) {
-  const [rows, setRows] = useState<LavorazioneDocumentRow[]>([]);
-  const [urls, setUrls] = useState<Record<string, string>>({});
-  const [loading, setLoading] = useState(true);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await lavorazioneDocumentsService.listWithUrls(lavorazioneId);
-      if (res.success) {
-        const data = res.data ?? [];
-        setRows(data);
-        const map: Record<string, string> = {};
-        for (const r of data) map[r.tipo] = r.signedUrl;
-        setUrls(map);
-      } else {
-        setRows([]);
-        setUrls({});
-      }
-    } finally {
-      setLoading(false);
-    }
-  }, [lavorazioneId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const docsQ = useClientLavorazioneDocumentsQuery(lavorazioneId);
+  const loading = docsQ.isLoading && docsQ.data == null;
+  const rows = docsQ.data?.rows ?? [];
+  const urls = docsQ.data?.urls ?? {};
 
   if (loading) return <p className="text-sm text-zinc-500">Caricamento documenti…</p>;
 
   const body = (
     <div className="space-y-2">
-      {LAVORAZIONE_DOCUMENT_SLOTS.map((slot) => (
+      {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
         <ClientDocumentRow
           key={slot.tipo}
           label={slot.label}

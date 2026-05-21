@@ -35,7 +35,7 @@ function PreventivoIdentCell({ p }: { p: PreventivoRecord }) {
       <div className="truncate font-mono text-xs font-medium text-zinc-800 dark:text-zinc-100">{targa}</div>
       <div className="truncate font-mono text-[10px] text-zinc-500 dark:text-zinc-400">{matricola}</div>
       {scuderia ? (
-        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">Scud. {scuderia}</div>
+        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">N. {scuderia}</div>
       ) : null}
     </div>
   );

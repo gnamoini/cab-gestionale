@@ -2,15 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { computeLavorazioneCosto, type LavorazioneCostoBreakdown } from "@/lib/lavorazioni/lavorazione-costo";
-import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
-import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/src/hooks/use-lavorazione-schede-store-sync";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { magazzinoService } from "@/src/services/magazzino.service";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { useMovimentiByLavorazione, usePreventiviByLavorazione } from "@/src/services/domain/lavorazioni-domain.queries";
-import { preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
@@ -27,9 +23,6 @@ export function useLavorazioneCosto(
     enabled,
     staleTime: 30_000,
   });
-  const movQ = useMovimentiByLavorazione(enabled ? id : undefined);
-  const pvQ = usePreventiviByLavorazione(enabled ? id : undefined);
-
   const [schedeTick, setSchedeTick] = useState(0);
   useEffect(() => {
     if (!enabled) return;
@@ -44,40 +37,17 @@ export function useLavorazioneCosto(
     return map;
   }, [magQ.data]);
 
-  const preventiviUi = useMemo((): PreventivoRecord[] => {
-    return (pvQ.data ?? []).map((row) => preventivoRowToRecordStub(row, null));
-  }, [pvQ.data]);
-
   return useMemo(() => {
     void schedeTick;
     if (!enabled || !bundle) return null;
 
     const defaultOrario = settingsQ.data?.resolved?.preventiviDefaults?.costoOrarioDefault;
-    const baseOrario = typeof defaultOrario === "number" && defaultOrario > 0 ? defaultOrario : 48;
-
-    const cliente = opts.cliente?.trim() ?? bundle.ingresso?.campi.cliente?.trim() ?? "";
-    const costoOrario =
-      cliente.length > 0 && preventiviUi.length > 0
-        ? inferEconomiciClientePreventivi(cliente, preventiviUi).costoOrario
-        : baseOrario;
-
-    const uscite = (movQ.data ?? []).filter((m) => m.lavorazione_id === id && m.tipo === "uscita");
+    const costoOrario = typeof defaultOrario === "number" && defaultOrario > 0 ? defaultOrario : 48;
 
     return computeLavorazioneCosto({
       bundle,
       costoOrario,
       magazzinoById,
-      movimentiUscita: uscite,
     });
-  }, [
-    enabled,
-    bundle,
-    schedeTick,
-    settingsQ.data,
-    magazzinoById,
-    movQ.data,
-    preventiviUi,
-    opts.cliente,
-    id,
-  ]);
+  }, [enabled, bundle, schedeTick, settingsQ.data, magazzinoById]);
 }

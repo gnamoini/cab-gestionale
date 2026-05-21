@@ -42,8 +42,9 @@ select count(*) as storage_policy_count
 from pg_policies
 where schemaname = 'storage' and tablename = 'objects';
 
--- Smoke test capability mapping
+-- Smoke test capability mapping (operatore_settings atteso true dopo 20260521120000)
 select
   public.rbac_has_capability((select id from public.profiles where ruolo = 'admin' limit 1), 'can_manage_settings') as admin_settings,
+  public.rbac_has_capability((select id from public.profiles where ruolo = 'manager' limit 1), 'can_manage_settings') as manager_settings,
   public.rbac_has_capability((select id from public.profiles where ruolo = 'operatore' limit 1), 'can_write_operational') as operatore_write,
   public.rbac_has_capability((select id from public.profiles where ruolo = 'operatore' limit 1), 'can_manage_settings') as operatore_settings;

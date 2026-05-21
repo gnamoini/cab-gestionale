@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
+import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
 import { GlobalFilterDateField } from "@/components/gestionale/global-input/global-date-picker";
 import {
   LavorazioniFilterField,
@@ -96,49 +97,45 @@ export function LavorazioniAdvancedFilterPanel({
 
       <LavorazioniFilterGroup title="Filtri entità">
         <LavorazioniFilterField label="Cliente">
-          <GlobalSelect
+          <GlobalSettingsListSelect
+            listKey="mezzi:clienti"
             value={filters.cliente}
             onChange={(v) => onChange({ cliente: v })}
-            options={catalog.clienti}
             placeholder="Cerca e seleziona…"
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
             variant="filter"
             aria-label="Filtra cliente"
           />
         </LavorazioniFilterField>
         <LavorazioniFilterField label="Cantiere">
-          <GlobalSelect
+          <GlobalSettingsListSelect
+            listKey="mezzi:cantieri"
             value={filters.cantiere}
             onChange={(v) => onChange({ cantiere: v })}
-            options={catalog.cantieri}
             placeholder="Cerca e seleziona…"
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
             variant="filter"
             aria-label="Filtra cantiere"
           />
         </LavorazioniFilterField>
         <LavorazioniFilterField label="Utilizzatore">
-          <GlobalSelect
+          <GlobalSettingsListSelect
+            listKey="mezzi:utilizzatori"
             value={filters.utilizzatore}
             onChange={(v) => onChange({ utilizzatore: v })}
-            options={catalog.utilizzatori}
             placeholder="Cerca e seleziona…"
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
             variant="filter"
             aria-label="Filtra utilizzatore"
           />
         </LavorazioniFilterField>
         <LavorazioniFilterField label="Addetto">
-          <GlobalSelect
+          <GlobalSettingsListSelect
+            listKey="lavorazioni:addetti"
             value={filters.addetto === FILTER_ALL ? "" : filters.addetto}
             onChange={(v) => onChange({ addetto: v.trim() ? v : FILTER_ALL })}
-            options={catalog.addetti}
             placeholder="Tutti gli addetti — cerca…"
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
             variant="filter"
             aria-label="Filtra addetto"
           />

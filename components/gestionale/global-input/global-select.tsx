@@ -2,29 +2,31 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
-  globalInputDropdownOptionClass,
-  globalInputDropdownPanel,
+  autocompleteCommitFromSearchText,
+  autocompleteDisplayValue,
+  autocompleteFuzzySuggestion,
+  autocompleteIsValid,
+  autocompleteItemSuggestions,
+  autocompleteShowAddPanel,
+  autocompleteStringSuggestions,
+  type AutocompleteDataMode,
+} from "@/lib/global-autocomplete/engine";
+import {
+  globalAutocompleteAddBtnClass,
+  globalAutocompleteDropdownPanel,
+  globalAutocompleteOptionClass,
+  globalAutocompleteOptionPillClass,
   globalInputEmptyMessage,
   globalInputFieldDefault,
   globalInputFieldFilter,
   globalInputInvalidRing,
 } from "@/lib/ui/global-input";
-import {
-  filterItemSelectSuggestions,
-  findItemByLabel,
-  findItemByValue,
-  isValueInItems,
-  type ListSelectItem,
-} from "@/lib/ui/list-select-items";
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
-import {
-  filterListSelectSuggestions,
-  findExactListOption,
-  isValueInListOptions,
-  normListSelectValue,
-} from "@/lib/ui/list-select-utils";
+import type { ListSelectItem } from "@/lib/ui/list-select-items";
+import { normListSelectValue } from "@/lib/ui/list-select-utils";
+import type { CSSProperties } from "react";
 
-export type GlobalSelectOption = ListSelectItem;
+export type GlobalSelectOption = ListSelectItem & { pillStyle?: CSSProperties };
 
 type GlobalSelectBaseProps = {
   disabled?: boolean;
@@ -40,6 +42,12 @@ type GlobalSelectBaseProps = {
   onValidityChange?: (valid: boolean) => void;
   isLoading?: boolean;
   emptyMessage?: string;
+  allowAdd?: boolean;
+  canAdd?: boolean;
+  addPending?: boolean;
+  onAddToList?: (value: string) => void | Promise<void>;
+  /** Opzioni con pill colorate (stile stato lavorazione). */
+  coloredOptions?: boolean;
   "aria-label"?: string;
 };
 
@@ -67,6 +75,9 @@ function fieldClassForVariant(
   return variant === "filter" ? globalInputFieldFilter : globalInputFieldDefault;
 }
 
+/** @deprecated Usare `GlobalAutocompleteCombobox` — alias di `GlobalSelect`. */
+export const GlobalAutocompleteCombobox = GlobalSelect;
+
 export function GlobalSelect(props: GlobalSelectProps) {
   const {
     value,
@@ -84,12 +95,18 @@ export function GlobalSelect(props: GlobalSelectProps) {
     onValidityChange,
     isLoading = false,
     emptyMessage = globalInputEmptyMessage,
+    allowAdd = false,
+    canAdd = true,
+    addPending = false,
+    onAddToList,
+    coloredOptions = false,
     "aria-label": ariaLabel,
   } = props;
 
   const itemsMode = "items" in props && props.items != null;
-  const items = itemsMode ? props.items : undefined;
-  const options = !itemsMode ? props.options : undefined;
+  const mode: AutocompleteDataMode = itemsMode ? "items" : "strings";
+  const items = itemsMode ? props.items : [];
+  const options = !itemsMode ? props.options : [];
 
   const autoId = useId();
   const inputId = idProp ?? autoId;
@@ -102,45 +119,55 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [touched, setTouched] = useState(false);
-  const [query, setQuery] = useState("");
+  const [searchText, setSearchText] = useState("");
   const [focused, setFocused] = useState(false);
 
-  const selectedItem = useMemo(
-    () => (items ? findItemByValue(value, items) : null),
-    [items, value],
+  const engineInput = useMemo(
+    () => ({
+      mode,
+      value,
+      searchText,
+      focused,
+      open,
+      options,
+      items,
+    }),
+    [mode, value, searchText, focused, open, options, items],
   );
 
-  const displayValue = useMemo(() => {
-    if (itemsMode) {
-      if (focused) return query;
-      return selectedItem?.label ?? "";
-    }
-    return value;
-  }, [itemsMode, focused, query, selectedItem, value]);
+  const displayValue = useMemo(() => autocompleteDisplayValue(engineInput), [engineInput]);
 
-  const stringSuggestions = useMemo(() => {
-    if (!options) return [];
-    return filterListSelectSuggestions(focused ? query : value, options);
-  }, [options, focused, query, value]);
+  const suggestions = useMemo(() => {
+    if (itemsMode) return autocompleteItemSuggestions(engineInput);
+    return autocompleteStringSuggestions(engineInput);
+  }, [engineInput, itemsMode]);
 
-  const itemSuggestions = useMemo(() => {
-    if (!items) return [];
-    return filterItemSelectSuggestions(focused ? query : selectedItem?.label ?? "", items);
-  }, [items, focused, query, selectedItem]);
+  const addCandidate = focused ? searchText.trim() : "";
 
-  const suggestions = itemsMode ? itemSuggestions : stringSuggestions;
+  const fuzzySuggestion = useMemo(
+    () => autocompleteFuzzySuggestion(addCandidate, mode, options, items),
+    [addCandidate, mode, options, items],
+  );
 
-  const isValid = useMemo(() => {
-    if (!strictFromList) return true;
-    if (!value.trim()) return !required;
-    if (itemsMode && items) return isValueInItems(value, items);
-    if (options) return isValueInListOptions(value, options);
-    return true;
-  }, [strictFromList, value, required, itemsMode, items, options]);
+  const showAddPanel = autocompleteShowAddPanel({
+    allowAdd,
+    canAdd,
+    hasOnAdd: Boolean(onAddToList),
+    open,
+    disabled: Boolean(disabled),
+    isLoading,
+    searchText,
+    suggestionCount: suggestions.length,
+  });
+
+  const isValid = useMemo(
+    () => autocompleteIsValid(value, Boolean(required), strictFromList, mode, options, items),
+    [value, required, strictFromList, mode, options, items],
+  );
 
   const showInvalid = (touched || forceInvalid) && !isValid;
   const showDropdown = open && !disabled && !isLoading;
-  const listEmpty = !isLoading && suggestions.length === 0;
+  const listEmpty = !isLoading && suggestions.length === 0 && !showAddPanel && addCandidate.length > 0;
 
   useEffect(() => {
     onValidityChange?.(isValid);
@@ -152,47 +179,51 @@ export function GlobalSelect(props: GlobalSelectProps) {
         setOpen(false);
         setActiveIndex(-1);
         setFocused(false);
-        setQuery("");
+        setSearchText("");
       }
     };
     document.addEventListener("mousedown", onDocDown);
     return () => document.removeEventListener("mousedown", onDocDown);
   }, []);
 
+  const closeAndReset = useCallback(() => {
+    setOpen(false);
+    setActiveIndex(-1);
+    setFocused(false);
+    setSearchText("");
+  }, []);
+
   const selectString = useCallback(
     (option: string, advanceFocus = true) => {
       if (blurTimer.current) clearTimeout(blurTimer.current);
       onChange(option);
-      setOpen(false);
-      setActiveIndex(-1);
+      closeAndReset();
       setTouched(true);
-      setQuery("");
-      setFocused(false);
       if (advanceFocus) scheduleFocusNextGestionaleField(inputRef.current);
     },
-    [onChange],
+    [onChange, closeAndReset],
   );
 
   const selectItem = useCallback(
     (item: ListSelectItem, advanceFocus = true) => {
       if (blurTimer.current) clearTimeout(blurTimer.current);
       onChange(item.value);
-      setOpen(false);
-      setActiveIndex(-1);
+      closeAndReset();
       setTouched(true);
-      setQuery("");
-      setFocused(false);
       if (advanceFocus) scheduleFocusNextGestionaleField(inputRef.current);
     },
-    [onChange],
+    [onChange, closeAndReset],
   );
+
+  const runAdd = useCallback(async () => {
+    if (!onAddToList || !addCandidate || addPending) return;
+    await onAddToList(addCandidate);
+    closeAndReset();
+  }, [addCandidate, addPending, onAddToList, closeAndReset]);
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
-      setOpen(false);
-      setActiveIndex(-1);
-      setFocused(false);
-      setQuery("");
+      closeAndReset();
       return;
     }
     if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
@@ -221,21 +252,17 @@ export function GlobalSelect(props: GlobalSelectProps) {
       else selectString(suggestions[idx] as string);
       return;
     }
-    if (itemsMode && items && query.trim()) {
-      const byLabel = findItemByLabel(query, items);
-      if (byLabel) {
-        selectItem(byLabel);
-        return;
-      }
+    if (showAddPanel && onAddToList) {
+      void runAdd();
+      return;
     }
-    if (options) {
-      const exact = findExactListOption(itemsMode ? query : value, options);
-      if (exact) {
-        selectString(exact);
-        return;
-      }
+    const committed = autocompleteCommitFromSearchText(searchText, mode, options, items, strictFromList);
+    if (committed) {
+      onChange(committed);
+      closeAndReset();
+      setTouched(true);
+      scheduleFocusNextGestionaleField(inputRef.current);
     }
-    scheduleFocusNextGestionaleField(inputRef.current);
   };
 
   const commitBlur = () => {
@@ -243,24 +270,24 @@ export function GlobalSelect(props: GlobalSelectProps) {
     setActiveIndex(-1);
     setTouched(true);
     setFocused(false);
-    if (!strictFromList) {
-      setQuery("");
-      return;
+    const committed = autocompleteCommitFromSearchText(searchText, mode, options, items, strictFromList);
+    if (committed && committed !== value) onChange(committed);
+    else if (strictFromList && !committed && searchText.trim() && !value.trim()) onChange("");
+    setSearchText("");
+  };
+
+  const fuzzyLabel =
+    itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object"
+      ? (fuzzySuggestion as ListSelectItem).label
+      : typeof fuzzySuggestion === "string"
+        ? fuzzySuggestion
+        : null;
+
+  const optionBtnClass = (active: boolean, selected: boolean, pillStyle?: CSSProperties) => {
+    if (coloredOptions && pillStyle) {
+      return globalAutocompleteOptionPillClass(active, selected, pillStyle);
     }
-    if (itemsMode && items) {
-      if (query.trim()) {
-        const byLabel = findItemByLabel(query, items);
-        if (byLabel) onChange(byLabel.value);
-        else if (!value.trim()) onChange("");
-      }
-      setQuery("");
-      return;
-    }
-    if (options && value.trim()) {
-      const exact = findExactListOption(value, options);
-      if (exact && exact !== value) onChange(exact);
-    }
-    setQuery("");
+    return globalAutocompleteOptionClass(active, selected);
   };
 
   return (
@@ -277,16 +304,20 @@ export function GlobalSelect(props: GlobalSelectProps) {
         className={`${fieldClass}${showInvalid ? globalInputInvalidRing : ""}`}
         value={displayValue}
         onChange={(e) => {
-          const next = e.target.value;
-          if (itemsMode) setQuery(next);
-          else onChange(next);
+          setSearchText(e.target.value);
           setOpen(true);
           setActiveIndex(-1);
         }}
         onFocus={() => {
           setFocused(true);
           setOpen(true);
-          if (itemsMode) setQuery(selectedItem?.label ?? "");
+          setSearchText("");
+        }}
+        onClick={() => {
+          if (!open) {
+            setOpen(true);
+            setSearchText("");
+          }
         }}
         onBlur={() => {
           blurTimer.current = setTimeout(commitBlur, 120);
@@ -297,26 +328,27 @@ export function GlobalSelect(props: GlobalSelectProps) {
         placeholder={placeholder}
         autoComplete="off"
         role="combobox"
-        aria-expanded={showDropdown && (suggestions.length > 0 || listEmpty)}
+        aria-expanded={showDropdown && (suggestions.length > 0 || listEmpty || showAddPanel)}
         aria-controls={listboxId}
         aria-invalid={showInvalid || undefined}
         aria-autocomplete="list"
-        aria-busy={isLoading || undefined}
+        aria-busy={isLoading || addPending || undefined}
       />
       {showDropdown && suggestions.length > 0 ? (
-        <ul id={listboxId} role="listbox" className={globalInputDropdownPanel}>
+        <ul id={listboxId} role="listbox" className={`${globalAutocompleteDropdownPanel} p-1`}>
           {suggestions.map((entry, idx) => {
             const active = idx === activeIndex;
             if (itemsMode) {
-              const item = entry as ListSelectItem;
+              const item = entry as GlobalSelectOption;
               const selected = item.value === value;
               return (
-                <li key={item.value} role="presentation">
+                <li key={item.value} role="presentation" className="py-0.5">
                   <button
                     type="button"
                     role="option"
                     aria-selected={selected}
-                    className={globalInputDropdownOptionClass(active, selected)}
+                    style={coloredOptions ? item.pillStyle : undefined}
+                    className={optionBtnClass(active, selected, item.pillStyle)}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       if (blurTimer.current) clearTimeout(blurTimer.current);
@@ -332,12 +364,12 @@ export function GlobalSelect(props: GlobalSelectProps) {
             const option = entry as string;
             const selected = normListSelectValue(option) === normListSelectValue(value);
             return (
-              <li key={option} role="presentation">
+              <li key={option} role="presentation" className="py-0.5">
                 <button
                   type="button"
                   role="option"
                   aria-selected={selected}
-                  className={globalInputDropdownOptionClass(active, selected)}
+                  className={optionBtnClass(active, selected)}
                   onMouseDown={(e) => {
                     e.preventDefault();
                     if (blurTimer.current) clearTimeout(blurTimer.current);
@@ -352,11 +384,56 @@ export function GlobalSelect(props: GlobalSelectProps) {
           })}
         </ul>
       ) : null}
-      {showDropdown && listEmpty ? (
+      {showDropdown && showAddPanel ? (
+        <div
+          id={listboxId}
+          role="listbox"
+          className={`${globalAutocompleteDropdownPanel} px-3 py-2.5`}
+        >
+          <p className="text-xs text-[color:var(--cab-text-muted)]">
+            {fuzzyLabel ? (
+              <>
+                Forse cercavi:{" "}
+                <button
+                  type="button"
+                  className="font-semibold text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (blurTimer.current) clearTimeout(blurTimer.current);
+                    if (itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object") {
+                      selectItem(fuzzySuggestion as ListSelectItem, false);
+                    } else if (typeof fuzzySuggestion === "string") {
+                      selectString(fuzzySuggestion, false);
+                    }
+                  }}
+                >
+                  {fuzzyLabel}
+                </button>
+              </>
+            ) : (
+              <span className="font-medium">{emptyMessage}</span>
+            )}
+          </p>
+          <button
+            type="button"
+            className={globalAutocompleteAddBtnClass}
+            disabled={addPending}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              if (blurTimer.current) clearTimeout(blurTimer.current);
+              void runAdd();
+            }}
+          >
+            <span aria-hidden>+</span>
+            {addPending ? "Aggiunta in corso…" : "Aggiungi all'elenco"}
+          </button>
+        </div>
+      ) : null}
+      {showDropdown && listEmpty && !showAddPanel ? (
         <div
           id={listboxId}
           role="status"
-          className={`${globalInputDropdownPanel} px-3 py-2.5 text-xs font-medium text-[color:var(--cab-text-muted)]`}
+          className={`${globalAutocompleteDropdownPanel} px-3 py-2.5 text-xs font-medium text-[color:var(--cab-text-muted)]`}
         >
           {emptyMessage}
         </div>

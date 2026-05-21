@@ -9,6 +9,7 @@ import {
   lavorazioneDocumentByTipo,
 } from "@/lib/lavorazioni/lavorazione-documents";
 import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
+import { syncClientPortalAfterGestionaleChange } from "@/lib/lavorazioni/client-portal-invalidate";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
 import type { LavorazioneDocumentRow, LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
@@ -145,6 +146,7 @@ export function LavorazioneDocumentsManager({
 
   const invalidate = useCallback(() => {
     void qc.invalidateQueries({ queryKey: lavorazioniDomainQueryKeys.lavorazionePdfs(lavorazioneId) });
+    void syncClientPortalAfterGestionaleChange(qc);
     onDocumentEvent?.();
   }, [qc, lavorazioneId, onDocumentEvent]);
 

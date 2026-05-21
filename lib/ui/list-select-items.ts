@@ -1,5 +1,6 @@
 import {
   filterListSelectSuggestions,
+  findBestFuzzyListOption,
   findExactListOption,
   isValueInListOptions,
   normListSelectValue,
@@ -9,24 +10,34 @@ import {
 
 export type ListSelectItem = { value: string; label: string };
 
+const BROWSE_ITEMS_CAP = 200;
+
 export function filterItemSelectSuggestions(
   query: string,
   items: readonly ListSelectItem[],
-  limit = 12,
+  limit?: number,
 ): ListSelectItem[] {
   const q = query.trim();
   if (!q) {
-    return [...items].slice(0, limit);
+    const cap = limit ?? BROWSE_ITEMS_CAP;
+    return [...items].slice(0, cap);
   }
-  return [...items]
+  const ranked = [...items]
     .map((item) => ({ item, score: scoreListSelectOption(query, item.label) }))
     .filter((x) => x.score > 0)
     .sort(
       (a, b) =>
         b.score - a.score || a.item.label.localeCompare(b.item.label, "it"),
-    )
-    .slice(0, limit)
-    .map((x) => x.item);
+    );
+  const cap = limit ?? ranked.length;
+  return ranked.slice(0, cap).map((x) => x.item);
+}
+
+export function findBestFuzzyListItem(query: string, items: readonly ListSelectItem[]): ListSelectItem | null {
+  const labels = items.map((i) => i.label);
+  const best = findBestFuzzyListOption(query, labels);
+  if (!best) return null;
+  return items.find((i) => normListSelectValue(i.label) === normListSelectValue(best)) ?? null;
 }
 
 export function findItemByValue(

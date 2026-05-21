@@ -19,10 +19,11 @@ export function useSupportNotesQuery(): UseQueryResult<SupportoNote[], Error> {
       return (r.data ?? []).map(mapSupportNoteToSupportoNote);
     },
     enabled: isSupabasePublicEnvConfigured() && isAuthSessionEstablished(status) && !!user?.id,
-    staleTime: 30_000,
+    staleTime: 8_000,
     gcTime: 300_000,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+    refetchInterval: 25_000,
     retry: 2,
   });
 }

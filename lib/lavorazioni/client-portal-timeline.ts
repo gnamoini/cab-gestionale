@@ -46,7 +46,6 @@ const INGRESSO_LABELS: { key: keyof SchedaIngressoFields; label: string; multili
   { key: "targa", label: "Targa" },
   { key: "matricola", label: "Matricola" },
   { key: "nScuderia", label: "N. scuderia" },
-  { key: "oreLavoro", label: "Ore lavoro" },
   { key: "tipoTelaio", label: "Tipo telaio" },
   { key: "marcaTelaio", label: "Marca telaio" },
   { key: "modelloTelaio", label: "Modello telaio" },
@@ -153,13 +152,6 @@ export function buildClientTimelineEvents(
         id: `stato-${lg.id}`,
         at: lg.created_at,
         title: `Stato · ${statoLabel}`,
-      });
-    }
-    if (before?.addetto !== after?.addetto && typeof after?.addetto === "string") {
-      items.push({
-        id: `addetto-${lg.id}`,
-        at: lg.created_at,
-        title: `Addetto · ${after.addetto}`,
       });
     }
   }

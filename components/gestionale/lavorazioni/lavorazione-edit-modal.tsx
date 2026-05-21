@@ -1,15 +1,16 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
-import { useGlobalOptions } from "@/src/hooks/use-global-options";
-import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
-import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
+import {
+  GlobalHierarchyMarcaSelect,
+  GlobalHierarchyModelloSelect,
+  GlobalSettingsListSelect,
+} from "@/components/gestionale/global-input";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnDanger, dsInput, dsLabel } from "@/lib/ui/design-system";
 
@@ -28,20 +29,10 @@ export function LavorazioneEditModal({
 }) {
   const update = useLavorazioneUpdateMutation();
   const updateMezzo = useMezzoUpdateMutation();
-  const globalOpts = useGlobalOptions({ debugTag: "LavorazioneEditModal" });
-  const clientiOpts = globalOpts.mezziListe.clienti;
-  const marcheOpts = useMemo(
-    () => marcheFromHierarchyTree(globalOpts.mezziListe, "attrezzature"),
-    [globalOpts.mezziListe],
-  );
   const [cliente, setCliente] = useState(() => row.mezzo?.cliente?.trim() ?? "");
   const [utilizzatore, setUtilizzatore] = useState(() => row.mezzo?.utilizzatore?.trim() ?? "");
   const [marca, setMarca] = useState(() => row.mezzo?.marca?.trim() ?? "");
   const [modello, setModello] = useState(() => row.mezzo?.modello?.trim() ?? "");
-  const modelliOpts = useMemo(
-    () => modelliVisibiliPerMarcaHierarchy(globalOpts.mezziListe, "attrezzature", marca),
-    [globalOpts.mezziListe, marca],
-  );
   const [targa, setTarga] = useState(() => row.mezzo?.targa?.trim() ?? "");
   const [matricola, setMatricola] = useState(() => row.mezzo?.matricola?.trim() ?? "");
   const [numeroScuderia, setNumeroScuderia] = useState(() => row.mezzo?.numero_scuderia?.trim() ?? "");
@@ -91,48 +82,53 @@ export function LavorazioneEditModal({
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className={dsLabel}>Cliente</span>
-              <GestionaleListSelect
+              <GlobalSettingsListSelect
+                listKey="mezzi:clienti"
                 className="mt-1 w-full"
                 value={cliente}
                 onChange={setCliente}
-                options={clientiOpts}
                 disabled={update.isPending || updateMezzo.isPending}
                 required
+                aria-label="Cliente"
               />
             </label>
             <label className="block">
               <span className={dsLabel}>Utilizzatore</span>
-              <SettingsAutocompleteInput
+              <GlobalSettingsListSelect
+                listKey="mezzi:utilizzatori"
                 className="mt-1"
                 value={utilizzatore}
                 onChange={setUtilizzatore}
-                options={globalOpts.mezziListe.utilizzatori}
                 disabled={update.isPending || updateMezzo.isPending}
+                aria-label="Utilizzatore"
               />
             </label>
             <label className="block">
               <span className={dsLabel}>Marca attrezzatura</span>
-              <GestionaleListSelect
+              <GlobalHierarchyMarcaSelect
+                tree="attrezzature"
                 className="mt-1 w-full"
                 value={marca}
                 onChange={(v) => {
                   setMarca(v);
                   setModello("");
                 }}
-                options={marcheOpts}
                 disabled={update.isPending || updateMezzo.isPending}
                 required
+                aria-label="Marca attrezzatura"
               />
             </label>
             <label className="block">
               <span className={dsLabel}>Modello attrezzatura</span>
-              <GestionaleListSelect
+              <GlobalHierarchyModelloSelect
+                tree="attrezzature"
+                marcaNome={marca}
                 className="mt-1 w-full"
                 value={modello}
                 onChange={setModello}
-                options={modelliOpts}
-                disabled={update.isPending || updateMezzo.isPending || !marca.trim()}
+                disabled={update.isPending || updateMezzo.isPending}
                 required
+                aria-label="Modello attrezzatura"
               />
             </label>
             <label className="block">

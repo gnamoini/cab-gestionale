@@ -3,6 +3,11 @@
 import { useMemo } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import {
+  GlobalHierarchyMarcaSelect,
+  GlobalHierarchyModelloSelect,
+} from "@/components/gestionale/global-input/global-settings-list-select";
+import { useGlobalListOptions } from "@/src/hooks/use-global-list-options";
+import {
   LavorazioniFilterField,
   LavorazioniFilterGroup,
   gestionaleFilterFieldInputClass,
@@ -22,55 +27,38 @@ export function MagazzinoAdvancedFilterPanel({
   onChange: (patch: Partial<MagazzinoAdvancedFilters>) => void;
   catalog: MagazzinoFilterCatalog;
 }) {
-  const modelloOptions = useMemo(() => {
-    if (filters.compatMarca === FILTER_ALL || !filters.compatMarca.trim()) {
-      const all = new Set<string>();
-      for (const list of Object.values(catalog.compatModelliByMarca)) {
-        for (const m of list) all.add(m);
-      }
-      return [...all].sort((a, b) => a.localeCompare(b, "it"));
-    }
-    return catalog.compatModelliByMarca[filters.compatMarca] ?? [];
-  }, [catalog.compatModelliByMarca, filters.compatMarca]);
-
+  const categoriaList = useGlobalListOptions("magazzino:categorie");
   const categoriaItems = useMemo(
     () => [
       { value: FILTER_ALL, label: "Tutte le categorie" },
-      ...catalog.categorie.map((c) => ({ value: c, label: c })),
+      ...categoriaList.options.map((c) => ({ value: c, label: c })),
     ],
-    [catalog.categorie],
+    [categoriaList.options],
   );
 
   return (
     <div className="space-y-3" aria-label="Filtri avanzati magazzino">
       <LavorazioniFilterGroup title="Compatibilità attrezzatura">
         <LavorazioniFilterField label="Marca (compatibilità)">
-          <GlobalSelect
+          <GlobalHierarchyMarcaSelect
+            tree="attrezzature"
             value={filters.compatMarca === FILTER_ALL ? "" : filters.compatMarca}
             onChange={(v) => {
               const compatMarca = v.trim() ? v : FILTER_ALL;
               onChange({ compatMarca, compatModello: FILTER_ALL });
             }}
-            options={catalog.compatMarche}
-            placeholder="Cerca e seleziona…"
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
-            variant="filter"
             aria-label="Filtra marca compatibilità"
           />
         </LavorazioniFilterField>
         <LavorazioniFilterField label="Modello (compatibilità)">
-          <GlobalSelect
+          <GlobalHierarchyModelloSelect
+            tree="attrezzature"
+            marcaNome={filters.compatMarca === FILTER_ALL ? "" : filters.compatMarca}
             value={filters.compatModello === FILTER_ALL ? "" : filters.compatModello}
             onChange={(v) => onChange({ compatModello: v.trim() ? v : FILTER_ALL })}
-            options={modelloOptions}
-            placeholder={
-              filters.compatMarca === FILTER_ALL ? "Seleziona prima la marca" : "Cerca e seleziona…"
-            }
             inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
             disabled={filters.compatMarca === FILTER_ALL}
-            variant="filter"
             aria-label="Filtra modello compatibilità"
           />
         </LavorazioniFilterField>

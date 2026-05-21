@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { invalidateClientPortalQueries } from "@/lib/lavorazioni/client-portal-invalidate";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 
 /** Intervallo polling di fallback quando Realtime non è connesso (ms). */
@@ -20,17 +21,15 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
   {
     table: "lavorazioni",
     invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniList });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniDetail });
+      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
+      void invalidateClientPortalQueries(qc);
     },
   },
   {
     table: "lavorazione_documents",
     invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniList });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniDetail });
+      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
+      void invalidateClientPortalQueries(qc);
     },
   },
   {
@@ -39,8 +38,7 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
       void qc.invalidateQueries({ queryKey: QK.mezzi });
       void qc.invalidateQueries({ queryKey: QK.mezzoQueries });
       void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniList });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniDetail });
+      void invalidateClientPortalQueries(qc);
     },
   },
   {
@@ -63,6 +61,7 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
     invalidate: (qc) => {
       void qc.invalidateQueries({ queryKey: QK.preventivi });
       void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries });
+      void invalidateClientPortalQueries(qc);
     },
   },
   {
@@ -77,16 +76,14 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
     invalidate: (qc) => {
       void qc.invalidateQueries({ queryKey: QK.schede });
       void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniList });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniDetail });
+      void invalidateClientPortalQueries(qc);
     },
   },
   {
     table: "log_modifiche",
     invalidate: (qc) => {
       void qc.invalidateQueries({ queryKey: QK.log });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniList });
-      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniDetail });
+      void invalidateClientPortalQueries(qc);
     },
   },
   {

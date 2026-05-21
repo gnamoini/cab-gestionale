@@ -65,6 +65,17 @@ as $$
   select public.rbac_role();
 $$;
 
+-- Compatibilità SQL legacy (policy pre-capability). Preferire rbac_role().
+create or replace function public.current_profile_role()
+returns text
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.rbac_role();
+$$;
+
 -- ---------------------------------------------------------------------------
 -- FUNZIONE CENTRALE: rbac_has_capability(user_id, capability)
 -- ---------------------------------------------------------------------------
@@ -97,7 +108,7 @@ begin
     when 'can_write_operational' then
       return v_role in ('manager', 'operatore');
     when 'can_manage_settings' then
-      return false;
+      return v_role in ('manager', 'operatore');
     when 'can_manage_security' then
       return false;
     when 'can_access_client_area' then
@@ -576,6 +587,7 @@ grant execute on function public.rbac_auth_uid() to authenticated;
 grant execute on function public.rbac_role_for_user(uuid) to authenticated;
 grant execute on function public.rbac_role() to authenticated;
 grant execute on function public.rbac_normalized_role() to authenticated;
+grant execute on function public.current_profile_role() to authenticated;
 grant execute on function public.rbac_has_capability(uuid, text) to authenticated;
 grant execute on function public.rbac_can_read_operational() to authenticated;
 grant execute on function public.rbac_can_write_operational() to authenticated;

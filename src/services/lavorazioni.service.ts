@@ -6,6 +6,7 @@ import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog, type AuditLogContext } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneRow, MezzoRow, PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
+import { fetchLavorazioniListAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
@@ -48,22 +49,6 @@ export type LavorazioneFilters = {
 export type LavorazioneInsert = Omit<LavorazioneRow, "id" | "created_at" | "updated_at">;
 export type LavorazioneUpdate = Partial<LavorazioneInsert>;
 
-type LavorazioniFilterQuery = {
-  in(column: string, values: readonly unknown[]): LavorazioniFilterQuery;
-  eq(column: string, value: unknown): LavorazioniFilterQuery;
-  ilike(column: string, pattern: string): LavorazioniFilterQuery;
-  gte(column: string, value: string): LavorazioniFilterQuery;
-  lte(column: string, value: string): LavorazioniFilterQuery;
-  is(column: string, value: null): LavorazioniFilterQuery;
-  not(column: string, operator: string, value: unknown): LavorazioniFilterQuery;
-};
-
-function embedMezzo(raw: unknown): MezzoRow | null {
-  if (raw == null) return null;
-  if (Array.isArray(raw)) return (raw[0] as MezzoRow) ?? null;
-  return raw as MezzoRow;
-}
-
 async function c() {
   return getBrowserSupabase();
 }
@@ -90,66 +75,9 @@ async function oggettoContextForLavorazione(
   return auditContext(oggetto);
 }
 
-function escapeIlikeToken(raw: string): string {
-  return raw.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
-}
-
-function endOfDayIso(dateDay: string): string {
-  const t = dateDay.trim();
-  if (!t) return t;
-  return t.length <= 10 ? `${t}T23:59:59.999Z` : t;
-}
-
-/** Filtri server-side condivisi tra query con/senza join `mezzi`. */
-function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuery>(q: TQuery, filters?: LavorazioneFilters): TQuery {
-  let query: LavorazioniFilterQuery = applyLavorazioniNotDeletedFilter(q);
-  if (!filters) return query as TQuery;
-  if (filters.stati_in?.length) query = query.in("stato", filters.stati_in);
-  if (filters.mezzo_id) query = query.eq("mezzo_id", filters.mezzo_id);
-  if (filters.stato) query = query.eq("stato", filters.stato);
-  if (filters.priorita) query = query.eq("priorita", filters.priorita);
-  const search = filters.search?.trim();
-  if (search) query = query.ilike("note", `%${escapeIlikeToken(search)}%`);
-  if (filters.data_ingresso_da?.trim()) query = query.gte("data_ingresso", filters.data_ingresso_da.trim());
-  if (filters.data_ingresso_a?.trim()) query = query.lte("data_ingresso", endOfDayIso(filters.data_ingresso_a));
-  if (filters.data_uscita_da?.trim()) query = query.gte("data_uscita", filters.data_uscita_da.trim());
-  if (filters.data_uscita_a?.trim()) query = query.lte("data_uscita", endOfDayIso(filters.data_uscita_a));
-  if (filters.data_uscita_is_null === true) query = query.is("data_uscita", null);
-  if (filters.data_uscita_is_null === false) query = query.not("data_uscita", "is", null);
-  if (filters.archived === true) query = query.eq("archived", true);
-  if (filters.archived === false) query = query.eq("archived", false);
-  return query as TQuery;
-}
-
 export const lavorazioniService = {
   async getAll(filters?: LavorazioneFilters): Promise<ServiceResult<LavorazioneListRow[]>> {
-    try {
-      const allowed = await ensureSectionRead("lavorazioni");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
-      const sb = await c();
-      if (filters?.includeMezzo) {
-        let q = sb.from("lavorazioni").select("*, mezzi(*)").order("created_at", { ascending: false });
-        q = applyLavorazioniListFilters(q, filters);
-        const { data, error } = await q;
-        if (error) return err(error.message);
-        const raw = (data ?? []) as Array<LavorazioneRow & { mezzi?: unknown }>;
-        const rows: LavorazioneListRow[] = raw.map((row) => {
-          const { mezzi: em, ...rest } = row;
-          return { ...(rest as LavorazioneRow), mezzo: embedMezzo(em) };
-        });
-        return success(rows);
-      }
-
-      let q = sb.from("lavorazioni").select("*").order("created_at", { ascending: false });
-      q = applyLavorazioniListFilters(q, filters);
-      const { data, error } = await q;
-      if (error) return err(error.message);
-      const raw = (data ?? []) as LavorazioneRow[];
-      const rows: LavorazioneListRow[] = raw.map((row) => ({ ...row, mezzo: null }));
-      return success(rows);
-    } catch (e) {
-      return serviceFailFromError(e);
-    }
+    return fetchLavorazioniListAuthorized(filters);
   },
 
   async getById(id: string): Promise<ServiceResult<LavorazioneRow>> {
@@ -298,9 +226,7 @@ export const lavorazioniService = {
       const { lavorazioneDocumentsService } = await import("@/src/services/lavorazione-documents.service");
       await lavorazioneDocumentsService.purgeForLavorazione(id);
       const now = new Date().toISOString();
-      const { error } = await applyLavorazioniNotDeletedFilter(
-        sb.from("lavorazioni").update({ deleted_at: now }).eq("id", id),
-      );
+      const { error } = await sb.rpc("soft_delete_lavorazione", { p_lavorazione_id: id });
       if (error) return err(error.message);
       const deleted = existing as LavorazioneRow;
       const ctx = await oggettoContextForLavorazione(sb, deleted);

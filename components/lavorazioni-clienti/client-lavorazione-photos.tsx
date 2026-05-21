@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { listStoredImages, type StoredImage } from "@/lib/media/image-storage";
+import { useClientLavorazionePhotosQuery } from "@/src/hooks/gestionale/use-client-lavorazione-media-queries";
+import type { StoredImage } from "@/lib/media/image-storage";
 
 const DEFAULT_MAX = 5;
 
@@ -56,7 +57,6 @@ export function ClientLavorazionePhotoStrip({
   lazy?: boolean;
   sizeClass?: string;
 }) {
-  const [images, setImages] = useState<StoredImage[]>([]);
   const [preview, setPreview] = useState<StoredImage | null>(null);
   const [loaded, setLoaded] = useState(!lazy);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -81,21 +81,8 @@ export function ClientLavorazionePhotoStrip({
     return () => obs.disconnect();
   }, [lazy]);
 
-  useEffect(() => {
-    if (!loaded || !lavorazioneId.trim()) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const all = await listStoredImages("lavorazioni", lavorazioneId);
-        if (!cancelled) setImages(all.slice(0, max));
-      } catch {
-        if (!cancelled) setImages([]);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [loaded, lavorazioneId, max]);
+  const photosQ = useClientLavorazionePhotosQuery(lavorazioneId, { max, enabled: loaded });
+  const images = photosQ.data ?? [];
 
   if (!loaded) {
     return <div ref={rootRef} className="h-10 w-8 shrink-0" aria-hidden />;
@@ -122,25 +109,10 @@ export function ClientLavorazionePhotoGallery({
   lavorazioneId: string;
   max?: number;
 }) {
-  const [images, setImages] = useState<StoredImage[]>([]);
-  const [loading, setLoading] = useState(true);
   const [preview, setPreview] = useState<StoredImage | null>(null);
-
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const all = await listStoredImages("lavorazioni", lavorazioneId);
-      setImages(all.slice(0, max));
-    } catch {
-      setImages([]);
-    } finally {
-      setLoading(false);
-    }
-  }, [lavorazioneId, max]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
+  const photosQ = useClientLavorazionePhotosQuery(lavorazioneId, { max });
+  const loading = photosQ.isLoading && photosQ.data == null;
+  const images = photosQ.data ?? [];
 
   if (loading) return <p className="text-sm text-zinc-500">Caricamento foto…</p>;
   if (images.length === 0) return null;

@@ -2,7 +2,7 @@ import { Q_FOCUS_LAV_ROW, Q_FOCUS_LAV_TARGET } from "@/lib/navigation/dashboard-
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import type { PreventivoLavorazioneOrigine } from "@/lib/preventivi/types";
+import type { PreventivoLavorazioneOrigine, PreventivoRecord } from "@/lib/preventivi/types";
 import { Q_PREVENTIVI_LAV, Q_PREVENTIVI_LAV_ORIG, Q_PREVENTIVI_MEZZO, Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 
 /** Link alla pagina Lavorazioni con focus sulla riga (attiva o storico). */
@@ -29,6 +29,26 @@ export function preventiviMezzoFilterId(lav: LavorazioneAttiva | LavorazioneArch
   const nm = normMezzoKey(lav.matricola);
   if (nm && nm !== "—") return `m:${nm}`;
   return `hub-lav-${lav.id}`;
+}
+
+/** Filtro mezzo + apertura editor da record preventivo (affidabile senza snapshot lavorazioni). */
+export function buildPreventiviOpenHrefForRecord(p: Pick<PreventivoRecord, "id" | "targa" | "matricola" | "lavorazioneId">): string {
+  const sp = new URLSearchParams();
+  const nt = normMezzoKey(p.targa ?? "");
+  if (nt && nt !== "—") {
+    sp.set(Q_PREVENTIVI_MEZZO, `t:${nt}`);
+  } else {
+    const nm = normMezzoKey(p.matricola ?? "");
+    if (nm && nm !== "—") {
+      sp.set(Q_PREVENTIVI_MEZZO, `m:${nm}`);
+    } else if (p.lavorazioneId?.trim()) {
+      sp.set(Q_PREVENTIVI_MEZZO, `hub-lav-${p.lavorazioneId.trim()}`);
+    } else {
+      sp.set(Q_PREVENTIVI_MEZZO, `hub-pv-${p.id}`);
+    }
+  }
+  sp.set(Q_PREVENTIVI_OPEN, p.id.trim());
+  return `/preventivi?${sp.toString()}`;
 }
 
 /** Pagina Preventivi: filtro macchina + apertura/evidenziazione del preventivo selezionato. */

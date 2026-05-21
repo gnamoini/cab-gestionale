@@ -9,12 +9,26 @@
 const DEFAULT_BLOCKED_MSG =
   "Impossibile aprire il file in una nuova scheda. Consenti i pop-up per questo sito oppure verifica che il documento sia valido.";
 
-function tryOpenViaTemporaryAnchor(url: string): void {
+function scheduleBlobUrlRevoke(url: string, revokeAfterMs?: number): void {
+  if (revokeAfterMs == null || revokeAfterMs <= 0 || !url.startsWith("blob:")) return;
+  window.setTimeout(() => {
+    try {
+      URL.revokeObjectURL(url);
+    } catch {
+      /* ignore */
+    }
+  }, revokeAfterMs);
+}
+
+function tryOpenViaTemporaryAnchor(url: string, downloadFileName?: string): void {
   if (typeof document === "undefined") return;
   const a = document.createElement("a");
   a.href = url;
   a.target = "_blank";
   a.rel = "noopener noreferrer";
+  if (downloadFileName?.trim()) {
+    a.download = downloadFileName.trim();
+  }
   a.style.display = "none";
   document.body.appendChild(a);
   a.click();
@@ -23,7 +37,12 @@ function tryOpenViaTemporaryAnchor(url: string): void {
 
 export function openUrlInNewTab(
   url: string,
-  options?: { revokeBlobUrlAfterMs?: number; blockedMessage?: string; invalidMessage?: string },
+  options?: {
+    revokeBlobUrlAfterMs?: number;
+    blockedMessage?: string;
+    invalidMessage?: string;
+    downloadFileName?: string;
+  },
 ): boolean {
   if (typeof window === "undefined") return false;
 
@@ -34,17 +53,9 @@ export function openUrlInNewTab(
   }
 
   const revokeAfter = options?.revokeBlobUrlAfterMs;
+  const downloadFileName = options?.downloadFileName?.trim();
 
-  const scheduleRevoke = () => {
-    if (revokeAfter == null || revokeAfter <= 0 || !trimmed.startsWith("blob:")) return;
-    window.setTimeout(() => {
-      try {
-        URL.revokeObjectURL(trimmed);
-      } catch {
-        /* ignore */
-      }
-    }, revokeAfter);
-  };
+  const scheduleRevoke = () => scheduleBlobUrlRevoke(trimmed, revokeAfter);
 
   const win = window.open(trimmed, "_blank");
   if (win) {
@@ -57,17 +68,18 @@ export function openUrlInNewTab(
     return true;
   }
 
-  /** Fallback sincrono: alcuni browser bloccano `window.open` ma consentono navigazione da `<a target=_blank>`. */
-  try {
-    tryOpenViaTemporaryAnchor(trimmed);
-  } catch {
-    /* ignore */
+  /**
+   * In Chromium `window.open` può restituire `null` anche con scheda aperta: niente fallback
+   * `<a target=_blank>` (genererebbe una seconda scheda). Fallback solo per download esplicito.
+   */
+  if (downloadFileName) {
+    try {
+      tryOpenViaTemporaryAnchor(trimmed, downloadFileName);
+    } catch {
+      /* ignore */
+    }
   }
 
-  /**
-   * Non mostrare alert qui: `null` non implica sempre popup bloccato (es. bug/feature con argomenti legacy).
-   * Se anche il fallback fallisce, l’utente non vede una nuova scheda ma non riceve un falso errore.
-   */
   scheduleRevoke();
   return true;
 }

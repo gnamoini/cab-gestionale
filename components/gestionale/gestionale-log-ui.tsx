@@ -47,6 +47,29 @@ export function IconGestionaleUndo(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+/** Icona “aggiorna / ricarica” (stroke 2, toolbar e filtri). */
+export function IconGestionaleRefresh(props: SVGProps<SVGSVGElement>) {
+  const { className, ...rest } = props;
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className ?? "h-4 w-4 shrink-0 opacity-90"}
+      aria-hidden
+      {...rest}
+    >
+      <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+      <path d="M21 21v-5h-5" />
+    </svg>
+  );
+}
+
 export const gestionaleLogScrollClass =
   "gestionale-scrollbar min-h-0 flex-1 overflow-y-scroll overscroll-contain [scrollbar-gutter:stable]";
 

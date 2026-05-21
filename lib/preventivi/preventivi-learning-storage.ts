@@ -34,6 +34,13 @@ export function loadPreventiviLearning(): PreventivoLearningStore {
   }
 }
 
+function mirrorLearningToSettings(s: PreventivoLearningStore): void {
+  if (typeof window === "undefined") return;
+  void import("@/lib/preventivi/preventivi-learning-sync").then(({ mirrorPreventiviLearningToSettings }) => {
+    mirrorPreventiviLearningToSettings(s);
+  });
+}
+
 export function savePreventiviLearning(s: PreventivoLearningStore): void {
   if (typeof window === "undefined") return;
   try {
@@ -54,6 +61,7 @@ export function savePreventiviLearning(s: PreventivoLearningStore): void {
   } catch {
     /* ignore */
   }
+  mirrorLearningToSettings(s);
 }
 
 export function normPhrase(s: string): string {
@@ -89,6 +97,20 @@ export function recordDescriptionCorrection(technicalSourceNorm: string, custome
   savePreventiviLearning({ ...st, phraseMap, corrections });
 }
 
+function splitTechChunks(raw: string): string[] {
+  return raw
+    .split(/[+;,\n\r]+/g)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function splitClienteLines(raw: string): string[] {
+  return raw
+    .split(/\n+/)
+    .map((l) => l.replace(/^-\s*/, "").trim())
+    .filter(Boolean);
+}
+
 export function recordApprovedPreventivoVersion(p: PreventivoRecord): void {
   if (p.stato !== "approvato" && p.stato !== "convertito") return;
   const fromNorm = normPhrase(p.descrizioneLavorazioniTecnicaSorgente).slice(0, 400);
@@ -96,10 +118,55 @@ export function recordApprovedPreventivoVersion(p: PreventivoRecord): void {
   if (!fromNorm || !to) return;
   const st = loadPreventiviLearning();
   const at = new Date().toISOString();
-  const phraseMap = { ...st.phraseMap, [fromNorm]: to };
+  let phraseMap = { ...st.phraseMap, [fromNorm]: to };
+
+  const techChunks = splitTechChunks(p.descrizioneLavorazioniTecnicaSorgente);
+  const clientLines = splitClienteLines(p.descrizioneLavorazioniCliente);
+  for (let i = 0; i < techChunks.length; i++) {
+    const chunk = techChunks[i]!;
+    const line = clientLines[i] ?? clientLines[clientLines.length - 1];
+    if (!line) continue;
+    const ck = normPhrase(chunk);
+    if (ck.length >= 6) phraseMap = { ...phraseMap, [ck]: line };
+  }
+
   const finalVersions = [
     { preventivoId: p.id, fromNorm, to, at },
     ...st.finalVersions.filter((x) => x.preventivoId !== p.id),
   ].slice(0, MAX_FINAL_VERSIONS);
   savePreventiviLearning({ ...st, phraseMap, finalVersions });
+}
+
+function recordLineLevelPhraseMap(p: PreventivoRecord): void {
+  const techChunks = splitTechChunks(p.descrizioneLavorazioniTecnicaSorgente);
+  const clientLines = splitClienteLines(p.descrizioneLavorazioniCliente);
+  if (techChunks.length === 0 || clientLines.length === 0) return;
+
+  const st = loadPreventiviLearning();
+  let phraseMap = { ...st.phraseMap };
+  let changed = false;
+  for (let i = 0; i < techChunks.length; i++) {
+    const chunk = techChunks[i]!;
+    const line = clientLines[i] ?? clientLines[clientLines.length - 1];
+    if (!line) continue;
+    const ck = normPhrase(chunk);
+    if (ck.length < 6) continue;
+    if (phraseMap[ck] !== line) {
+      phraseMap = { ...phraseMap, [ck]: line };
+      changed = true;
+    }
+  }
+  if (changed) savePreventiviLearning({ ...st, phraseMap });
+}
+
+/** Apprendimento anche da preventivi salvati con testo rivisto rispetto alla bozza auto. */
+export function recordPreventivoDescriptionLearning(p: PreventivoRecord): void {
+  const tech = p.descrizioneLavorazioniTecnicaSorgente.trim();
+  const cliente = p.descrizioneLavorazioniCliente.trim();
+  if (!tech || !cliente) return;
+  if (cliente !== p.descrizioneGenerataAuto) {
+    recordDescriptionCorrection(tech, cliente);
+    recordLineLevelPhraseMap(p);
+  }
+  recordApprovedPreventivoVersion(p);
 }

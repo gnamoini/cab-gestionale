@@ -1,5 +1,10 @@
 "use client";
 
+import {
+  completionSortKey,
+  fetchLavorazioniListAuthorized,
+  ingressoSortKey,
+} from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { ensureClientLavorazioniAccess } from "@/src/lib/auth/permission-guards";
@@ -23,43 +28,6 @@ function clientPortalSettingsStati() {
   return resolved.lavorazioni.stati;
 }
 
-function completionSortKey(row: LavorazioneListRow): string {
-  return row.archived_at?.trim() || row.data_uscita?.trim() || row.updated_at || row.created_at || "";
-}
-
-function ingressoSortKey(row: LavorazioneListRow): string {
-  return row.data_ingresso?.trim() || row.created_at || "";
-}
-
-function mapListRows(
-  raw: Array<LavorazioneRow & { mezzi?: unknown; archived?: boolean }>,
-  settingsStati: ReturnType<typeof clientPortalSettingsStati>,
-): LavorazioneListRow[] {
-  return raw.map((row) => {
-    const { mezzi: em, ...rest } = row;
-    return sanitizeClientLavorazioneRow(
-      {
-        ...(rest as LavorazioneRow),
-        archived: rest.archived === true,
-        mezzo: embedMezzo(em),
-      } as LavorazioneListRow,
-      settingsStati,
-    );
-  });
-}
-
-/** Stesse regole della pagina Lavorazioni principale: solo `archived`, nessun filtro su stato. */
-async function fetchLavorazioniByArchived(archived: boolean): Promise<ServiceResult<LavorazioneListRow[]>> {
-  const sb = await getBrowserSupabase();
-  const { data, error } = await applyLavorazioniNotDeletedFilter(
-    sb.from("lavorazioni").select("*, mezzi(*)").eq("archived", archived).order("created_at", { ascending: false }),
-  );
-  if (error) return err(error.message);
-  const settingsStati = clientPortalSettingsStati();
-  const raw = (data ?? []) as Array<LavorazioneRow & { mezzi?: unknown; archived?: boolean }>;
-  return success(mapListRows(raw, settingsStati));
-}
-
 export type ClientLavorazioniListPayload = {
   inCorso: LavorazioneListRow[];
   archivio: LavorazioneListRow[];
@@ -72,14 +40,15 @@ export type ClientLavorazioneDetail = {
 
 /** Portale clienti: sola lettura, specchio live della gestione officina. */
 export const clientLavorazioniService = {
+  /** @deprecated Usare useClientLavorazioniInCorsoQuery + useClientLavorazioniArchivioQuery (cache condivisa). */
   async list(): Promise<ServiceResult<ClientLavorazioniListPayload>> {
     try {
       const allowed = await ensureClientLavorazioniAccess();
       if (!allowed.success) return err(allowed.error ?? "Accesso negato.");
 
       const [inCorsoRes, archivioRes] = await Promise.all([
-        fetchLavorazioniByArchived(false),
-        fetchLavorazioniByArchived(true),
+        fetchLavorazioniListAuthorized({ archived: false, includeMezzo: true }),
+        fetchLavorazioniListAuthorized({ archived: true, includeMezzo: true }),
       ]);
       if (!inCorsoRes.success) return err(inCorsoRes.error ?? "Errore caricamento lavorazioni in corso.");
       if (!archivioRes.success) return err(archivioRes.error ?? "Errore caricamento archivio.");

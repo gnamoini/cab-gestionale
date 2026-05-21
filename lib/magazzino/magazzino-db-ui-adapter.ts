@@ -7,6 +7,13 @@ import {
 import type { MagazzinoInsert, MagazzinoUpdate } from "@/src/services/magazzino.service";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isMagazzinoUuid(id: string): boolean {
+  return UUID_RE.test(id.trim());
+}
+
 function num(v: unknown, fallback = 0): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : fallback;
@@ -20,6 +27,7 @@ export function magazzinoRowToRicambioUI(row: MagazzinoRicambioRow, autore = "Si
     listino > 0 ? Math.round(((vendita - listino) / listino) * 1000) / 10 : 0;
   const meta = parseMagazzinoRicambioMeta(row.meta ?? {});
   const fromMeta = metaFieldsToRicambioUi(meta);
+  const autoreSalvato = meta.autoreUltimaModifica?.trim();
 
   return {
     id: row.id,
@@ -32,7 +40,7 @@ export function magazzinoRowToRicambioUI(row: MagazzinoRicambioRow, autore = "Si
     scorta: Math.max(0, Math.round(num(row.quantita, 0))),
     scortaMinima: fromMeta.scortaMinima,
     dataUltimaModifica: row.updated_at ?? row.created_at,
-    autoreUltimaModifica: autore,
+    autoreUltimaModifica: autoreSalvato || autore,
     prezzoFornitoreOriginale: listino,
     scontoFornitoreOriginale: fromMeta.scontoFornitoreOriginale,
     markupPercentuale: markup,
@@ -46,7 +54,7 @@ export function magazzinoRowToRicambioUI(row: MagazzinoRicambioRow, autore = "Si
 
 /** Modello UI → insert Supabase. */
 export function ricambioUiToMagazzinoInsert(r: RicambioMagazzino): MagazzinoInsert {
-  return {
+  const row: MagazzinoInsert = {
     codice: r.codiceFornitoreOriginale.trim(),
     nome: r.descrizione.trim(),
     marca: r.marca.trim() || null,
@@ -56,6 +64,10 @@ export function ricambioUiToMagazzinoInsert(r: RicambioMagazzino): MagazzinoInse
     consumo_medio_mensile: null,
     meta: ricambioUiToMagazzinoMeta(r) as Record<string, unknown>,
   };
+  if (isMagazzinoUuid(r.id)) {
+    return { ...row, id: r.id } as MagazzinoInsert & { id: string };
+  }
+  return row;
 }
 
 export function ricambioUiToMagazzinoUpdate(r: RicambioMagazzino): MagazzinoUpdate {

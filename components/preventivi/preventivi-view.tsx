@@ -11,10 +11,12 @@ import {
   GlobalTableSortTh,
 } from "@/components/gestionale/global-table";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { IconNavLavorazioni } from "@/components/gestionale/gestionale-nav-config";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { PreventiviEditorModal } from "@/components/preventivi/preventivi-editor-modal";
+import { PreventivoEliminaConfirmDialog } from "@/components/preventivi/preventivo-elimina-confirm-dialog";
 import { PreventiviAdvancedFilterPanel } from "@/components/preventivi/preventivi-advanced-filter-panel";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { useAuth } from "@/context/auth-context";
@@ -52,11 +54,18 @@ import {
   type PreventiviLogStored,
 } from "@/lib/preventivi/preventivi-change-log-storage";
 import {
-  appendPreventivo,
-  deletePreventivo,
-  loadPreventivi,
-} from "@/lib/preventivi/preventivi-storage";
+  appendPreventivoSynced,
+  persistPreventivoRecord,
+  removePreventivoRecord,
+} from "@/lib/preventivi/preventivi-sync-adapter";
+import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
+import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useToast } from "@/context/toast-context";
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
+import {
+  preventivoTipoDocumentoBadgeClass,
+  preventivoTipoDocumentoLabel,
+} from "@/lib/preventivi/preventivi-tipo-documento";
 import { CAB_PREVENTIVI_LOG_REFRESH, CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
 import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase } from "@/lib/preventivi/types";
 import {
@@ -151,7 +160,10 @@ export function PreventiviView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { authorName: autore } = useAuth();
-  const [rows, setRows] = useState<PreventivoRecord[]>(() => loadPreventivi());
+  const { push: pushToast } = useToast();
+  const { records: rows, refetch: refetchPreventivi } = usePreventiviRecordsQuery();
+  const mezziListQ = useMezziListQuery();
+  const mezziRows = mezziListQ.data ?? [];
   const [mezziSnap, setMezziSnap] = useState(() => getMezziReportSnapshot());
   const [magSnap, setMagSnap] = useState(() => getMagazzinoReportSnapshot());
   const [sortColumn, setSortColumn] = useState<PreventivoSortKey | null>(null);
@@ -197,6 +209,8 @@ export function PreventiviView() {
   const draftConfirmedRef = useRef(false);
   const [logOpen, setLogOpen] = useState(false);
   const [logEntries, setLogEntries] = useState<PreventiviLogStored[]>(() => loadPreventiviChangeLog());
+  const [eliminaConfirmRecord, setEliminaConfirmRecord] = useState<PreventivoRecord | null>(null);
+  const [eliminaPending, setEliminaPending] = useState(false);
 
   useEffect(() => {
     if (searchParams.get(Q_PREVENTIVI_NUOVO) !== "1") {
@@ -205,13 +219,8 @@ export function PreventiviView() {
   }, [searchParams]);
 
   const reload = useCallback(() => {
-    setRows(loadPreventivi());
-  }, []);
-
-  useEffect(() => {
-    const t = window.setTimeout(() => reload(), 0);
-    return () => window.clearTimeout(t);
-  }, [reload]);
+    void refetchPreventivi();
+  }, [refetchPreventivi]);
 
   useEffect(() => {
     function onLogRefresh() {
@@ -246,8 +255,7 @@ export function PreventiviView() {
   function closeEditor() {
     const rollbackId = rollbackDraftIdRef.current;
     if (rollbackId && !draftConfirmedRef.current) {
-      deletePreventivo(rollbackId);
-      reload();
+      void removePreventivoRecord(rollbackId).then(() => reload());
     }
     rollbackDraftIdRef.current = null;
     draftConfirmedRef.current = false;
@@ -268,9 +276,10 @@ export function PreventiviView() {
     const openId = searchParams.get(Q_PREVENTIVI_OPEN)?.trim();
     const nuovo = searchParams.get(Q_PREVENTIVI_NUOVO);
     if (openId === orphanId || nuovo === "1") return;
-    deletePreventivo(orphanId);
-    clearEphemeralPreventivoDraft();
-    reload();
+    void removePreventivoRecord(orphanId).then(() => {
+      clearEphemeralPreventivoDraft();
+      reload();
+    });
   }, [searchParams, reload]);
 
   const filterLavId = searchParams.get(Q_PREVENTIVI_LAV)?.trim() || "";
@@ -321,10 +330,26 @@ export function PreventiviView() {
         const { attive, storico } = getLavorazioniMezziSnapshot();
         const lav = [...storico, ...attive].find((l) => l.id === lavId);
         if (lav) {
-          const synth = mezzoFromLavorazione(lav);
-          list = list.filter((r) => preventivoMatchesMezzo(synth, r));
+          list = list.filter((r) => preventivoMatchesMezzo(mezzoFromLavorazione(lav), r));
         } else {
-          list = [];
+          const seed =
+            (focusPreventivoId ? rows.find((r) => r.id === focusPreventivoId) : undefined) ??
+            rows.find((r) => r.lavorazioneId === lavId);
+          if (seed) {
+            const nt = normMezzoKey(seed.targa);
+            if (nt && nt !== "—") {
+              list = list.filter((r) => normMezzoKey(r.targa) === nt);
+            } else {
+              const nm = normMezzoKey(seed.matricola);
+              if (nm && nm !== "—") {
+                list = list.filter((r) => normMezzoKey(r.matricola) === nm);
+              } else {
+                list = list.filter((r) => r.lavorazioneId === lavId);
+              }
+            }
+          } else {
+            list = list.filter((r) => r.lavorazioneId === lavId);
+          }
         }
       } else {
         const mezzo = mezziSnap.find((m) => m.id === filterMezzoRaw);
@@ -333,8 +358,14 @@ export function PreventiviView() {
       }
     }
     list = list.filter((r) => preventivoRowMatchesPageFilters(r, pageFilters));
+    if (focusPreventivoId) {
+      const focused = rows.find((r) => r.id === focusPreventivoId);
+      if (focused && !list.some((r) => r.id === focusPreventivoId)) {
+        list = [focused, ...list];
+      }
+    }
     return list;
-  }, [rows, filterLavId, filterOrig, filterMezzoRaw, pageFilters, mezziSnap]);
+  }, [rows, filterLavId, filterOrig, filterMezzoRaw, pageFilters, mezziSnap, focusPreventivoId]);
 
   const sortedRows = useMemo(() => {
     const list = [...filteredRows];
@@ -443,14 +474,18 @@ export function PreventiviView() {
       magazzino: magSnap,
       autore: autore.trim() || "Operatore",
     });
-    appendPreventivo(rec);
-    markEphemeralPreventivoDraft(rec.id);
-    rollbackDraftIdRef.current = rec.id;
-    draftConfirmedRef.current = false;
-    window.setTimeout(() => {
-      setRows((prev) => [rec, ...prev.filter((p) => p.id !== rec.id)]);
-      setEditor({ open: true, record: rec, isNew: false, isRollbackDraft: true });
-    }, 0);
+    void appendPreventivoSynced(rec, mezziRows).then((res) => {
+      if (!res.ok) {
+        pushToast(res.error, "error", 5000);
+        return;
+      }
+      const saved = res.record;
+      markEphemeralPreventivoDraft(saved.id);
+      rollbackDraftIdRef.current = saved.id;
+      draftConfirmedRef.current = false;
+      reload();
+      setEditor({ open: true, record: saved, isNew: false, isRollbackDraft: true });
+    });
     const sp = new URLSearchParams(searchParams.toString());
     sp.delete(Q_PREVENTIVI_NUOVO);
     sp.set(Q_PREVENTIVI_OPEN, rec.id);
@@ -468,24 +503,33 @@ export function PreventiviView() {
     const openId = focusPreventivoId;
     if (!openId) return;
     const rec = rows.find((r) => r.id === openId);
+    if (!rec) return;
+    const visible = filteredRows.some((r) => r.id === openId);
+    if (!visible && filterMezzoRaw) return;
     const t = window.setTimeout(() => {
-      if (rec) setEditor({ open: true, record: rec, isNew: false, isRollbackDraft: false });
+      setEditor({ open: true, record: rec, isNew: false, isRollbackDraft: false });
       const sp = new URLSearchParams(searchParams.toString());
       sp.delete(Q_PREVENTIVI_OPEN);
       const q = sp.toString();
       router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
     }, 350);
     return () => window.clearTimeout(t);
-  }, [focusPreventivoId, searchParams, rows, router]);
+  }, [focusPreventivoId, searchParams, rows, router, filteredRows, filterMezzoRaw]);
 
   function apriModifica(p: PreventivoRecord) {
     if (!canEditWorkOrders) return;
     setEditor({ open: true, record: p, isNew: false, isRollbackDraft: false });
   }
 
-  function onElimina(p: PreventivoRecord) {
+  function openEliminaConfirm(p: PreventivoRecord) {
     if (!canDeleteRecords) return;
-    if (!window.confirm(`Eliminare il preventivo ${p.numero}?`)) return;
+    setEliminaConfirmRecord(p);
+  }
+
+  async function confirmEliminaPreventivo() {
+    const p = eliminaConfirmRecord;
+    if (!p || !canDeleteRecords || eliminaPending) return;
+    setEliminaPending(true);
     const u = autore.trim() || "Operatore";
     appendPreventiviChangeLog({
       tone: "delete",
@@ -495,7 +539,13 @@ export function PreventiviView() {
       autore: u,
       atIso: new Date().toISOString(),
     });
-    deletePreventivo(p.id);
+    const res = await removePreventivoRecord(p.id);
+    setEliminaPending(false);
+    if (!res.ok) {
+      pushToast(res.error, "error", 5000);
+      return;
+    }
+    setEliminaConfirmRecord(null);
     reload();
   }
 
@@ -614,6 +664,7 @@ export function PreventiviView() {
           colgroup={
             <>
               <col className="w-[5.25rem]" />
+              <col className="w-[4.5rem]" />
               <col className="w-[5.75rem]" />
               <col className="w-[12%]" />
               <col className="w-[10%]" />
@@ -636,6 +687,9 @@ export function PreventiviView() {
                   onSort={onSortMain}
                   thClassName="w-[5.25rem] min-w-[5.25rem]"
                 />
+                <th className="w-[4.5rem] min-w-[4.5rem] px-2 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  Tipo
+                </th>
                 <GlobalTableSortTh
                   label="Data"
                   columnKey="dataCreazione"
@@ -713,7 +767,7 @@ export function PreventiviView() {
           }
           empty={pagedRows.length === 0}
           emptyMessage="Nessun preventivo in archivio."
-          colSpan={11}
+          colSpan={12}
         >
               {pagedRows.map((p) => {
                 const hrefLav = p.lavorazioneId.trim()
@@ -730,6 +784,11 @@ export function PreventiviView() {
                   >
                     <td className={`whitespace-nowrap ${prevTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
                       {p.numero}
+                    </td>
+                    <td className={`whitespace-nowrap ${prevTableTd} px-2`}>
+                      <span className={preventivoTipoDocumentoBadgeClass(p.tipoDocumento)} title={preventivoTipoDocumentoLabel(p.tipoDocumento)}>
+                        {preventivoTipoDocumentoLabel(p.tipoDocumento, "short")}
+                      </span>
                     </td>
                     <td className={`whitespace-nowrap ${prevTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
                       {fmtDataCreazioneTabella(p.dataCreazione)}
@@ -771,9 +830,7 @@ export function PreventiviView() {
                             }
                             aria-label="Apri lavorazione collegata"
                           >
-                            <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 0L21 3m0 0h-5.25M21 3v5.25" />
-                            </svg>
+                            <IconNavLavorazioni className={dsTableActionGlyph} strokeWidth={2} />
                           </Link>
                         ) : null}
                         <button
@@ -802,7 +859,7 @@ export function PreventiviView() {
                         <button
                           type="button"
                           className={dsTableActionBtnDanger}
-                          onClick={() => onElimina(p)}
+                          onClick={() => openEliminaConfirm(p)}
                           disabled={!canDeleteRecords}
                           title={canDeleteRecords ? "Elimina" : READONLY_PERMISSION_HINT}
                           aria-label="Elimina preventivo"
@@ -839,7 +896,12 @@ export function PreventiviView() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="font-mono text-xs font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">{p.numero}</p>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-mono text-xs font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">{p.numero}</p>
+                        <span className={preventivoTipoDocumentoBadgeClass(p.tipoDocumento)}>
+                          {preventivoTipoDocumentoLabel(p.tipoDocumento, "short")}
+                        </span>
+                      </div>
                       <p className="mt-1 text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
                         {p.cliente || "—"}
                       </p>
@@ -850,6 +912,12 @@ export function PreventiviView() {
                     </p>
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                    <div>
+                      <dt className="text-zinc-500 dark:text-zinc-400">Tipo</dt>
+                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">
+                        {preventivoTipoDocumentoLabel(p.tipoDocumento)}
+                      </dd>
+                    </div>
                     <div>
                       <dt className="text-zinc-500 dark:text-zinc-400">Data</dt>
                       <dd className="font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
@@ -889,9 +957,7 @@ export function PreventiviView() {
                         }
                         aria-label="Apri lavorazione collegata"
                       >
-                        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 0L21 3m0 0h-5.25M21 3v5.25" />
-                        </svg>
+                        <IconNavLavorazioni className={dsTableActionGlyph} strokeWidth={2} />
                       </Link>
                     ) : null}
                     <button
@@ -920,7 +986,7 @@ export function PreventiviView() {
                     <button
                       type="button"
                       className={dsTableActionBtnDanger}
-                      onClick={() => onElimina(p)}
+                      onClick={() => openEliminaConfirm(p)}
                       disabled={!canDeleteRecords}
                       title={canDeleteRecords ? "Elimina" : READONLY_PERMISSION_HINT}
                       aria-label="Elimina preventivo"
@@ -945,10 +1011,27 @@ export function PreventiviView() {
         isNew={editor.isNew}
         isRollbackDraft={editor.isRollbackDraft}
         autore={autore.trim() || "Operatore"}
+        mezziRows={mezziRows}
         onClose={closeEditor}
         onSaved={onEditorSaved}
+        onSaveError={(msg) => {
+          if (msg.includes("altro utente")) pushToast(msg, "warning", 5200);
+          else pushToast(msg, "error", 5000);
+        }}
       />
       </div>
+
+      <PreventivoEliminaConfirmDialog
+        open={eliminaConfirmRecord != null}
+        record={eliminaConfirmRecord}
+        pending={eliminaPending}
+        onCancel={() => {
+          if (!eliminaPending) setEliminaConfirmRecord(null);
+        }}
+        onConfirm={() => {
+          void confirmEliminaPreventivo();
+        }}
+      />
 
       <Drawer
         open={logOpen}

@@ -22,6 +22,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { getMagazzinoReportSnapshot, setMagazzinoReportSnapshot } from "@/lib/magazzino/magazzino-report-sync";
 import { MAGAZZINO_PRODOTTI_REFRESH_EVENT } from "@/lib/magazzino/magazzino-prodotti-refresh-event";
+import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { flattenCompatDaAttrezzature, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
@@ -33,7 +34,6 @@ import {
 import {
   emptyRicambioForm,
   formatMarkupDisplay,
-  ricambioFormImportantWarnings,
   ricambioFromForm,
   ricambioFromFormLenient,
   toFormDraft,
@@ -66,7 +66,6 @@ import {
   dsBtnSoftOrange,
   dsFocus,
   dsZModalHigh,
-  gestionaleFilterChipClass,
   dsTableTdActions,
   dsTableActionsGroup,
   dsTableActionBtnPrimary,
@@ -562,6 +561,7 @@ export function MagazzinoView() {
 
   const [newOpen, setNewOpen] = useState(false);
   const [newRicambioFocusToken, setNewRicambioFocusToken] = useState(0);
+  const [newRicambioDraftId, setNewRicambioDraftId] = useState<string | null>(null);
   const [newForm, setNewForm] = useState<RicambioFormState>(emptyRicambioForm());
   const [dupCheckModalOpen, setDupCheckModalOpen] = useState(false);
   const [newIncompleteOpen, setNewIncompleteOpen] = useState(false);
@@ -624,13 +624,13 @@ export function MagazzinoView() {
 
   useEffect(() => {
     if (!magazzinoListQ.data) return;
-    const mapped = magazzinoListQ.data.map((row) => magazzinoRowToRicambioUI(row, authorName));
+    const mapped = magazzinoListQ.data.map((row) => magazzinoRowToRicambioUI(row));
     setProdotti(mapped);
     const order = new Map<string, number>();
     mapped.forEach((r, i) => order.set(r.id, i));
     orderMapRef.current = order;
     nextOrderRef.current = mapped.length;
-  }, [magazzinoListQ.data, authorName]);
+  }, [magazzinoListQ.data]);
 
   const setEditForm = useCallback<Dispatch<SetStateAction<RicambioFormState>>>((action) => {
     setEditDraft((prev) => {
@@ -863,30 +863,66 @@ export function MagazzinoView() {
   }, [appSettings, prodotti]);
 
   const magMasterSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const settingsRowsRef = useRef(settingsRows);
+  settingsRowsRef.current = settingsRows;
+  const lastSyncedMagMasterSigRef = useRef<string | null>(null);
+
+  const magMasterPayloadSig = useCallback(
+    () =>
+      JSON.stringify({
+        marche: masterMarche,
+        categorie: masterCategorie,
+        mezziCompatibili: masterMezzi,
+        fornitori: masterFornitori,
+      }),
+    [masterMarche, masterCategorie, masterMezzi, masterFornitori],
+  );
+
   useEffect(() => {
     if (!masterPrefsHydrated || !magPerm.canWrite) return;
+    const sig = magMasterPayloadSig();
+    if (sig === lastSyncedMagMasterSigRef.current) return;
+
     if (magMasterSaveTimer.current) clearTimeout(magMasterSaveTimer.current);
     magMasterSaveTimer.current = setTimeout(() => {
       magMasterSaveTimer.current = null;
-      const masterRow = settingsRows.find(
+      const masterRow = settingsRowsRef.current.find(
         (r) => r.module === CAB_SETTINGS_MODULE.magazzino && r.key === CAB_SETTINGS_KEY.master,
       );
-      void upsertMagazzinoMaster.mutateAsync({
-        module: CAB_SETTINGS_MODULE.magazzino,
-        key: CAB_SETTINGS_KEY.master,
-        value: {
-          marche: masterMarche,
-          categorie: masterCategorie,
-          mezziCompatibili: masterMezzi,
-          fornitori: masterFornitori,
-        },
-        expectedUpdatedAt: masterRow?.updated_at,
+      const serverVal = masterRow?.value as
+        | { marche?: string[]; categorie?: string[]; mezziCompatibili?: string[]; fornitori?: string[] }
+        | undefined;
+      const serverSig = JSON.stringify({
+        marche: serverVal?.marche ?? [],
+        categorie: serverVal?.categorie ?? [],
+        mezziCompatibili: serverVal?.mezziCompatibili ?? [],
+        fornitori: serverVal?.fornitori ?? [],
       });
+      if (sig === serverSig) {
+        lastSyncedMagMasterSigRef.current = sig;
+        return;
+      }
+      suppressSettingsRemoteNotify(6000);
+      void upsertMagazzinoMaster
+        .mutateAsync({
+          module: CAB_SETTINGS_MODULE.magazzino,
+          key: CAB_SETTINGS_KEY.master,
+          value: {
+            marche: masterMarche,
+            categorie: masterCategorie,
+            mezziCompatibili: masterMezzi,
+            fornitori: masterFornitori,
+          },
+          expectedUpdatedAt: masterRow?.updated_at,
+        })
+        .then(() => {
+          lastSyncedMagMasterSigRef.current = sig;
+        });
     }, 900);
     return () => {
       if (magMasterSaveTimer.current) clearTimeout(magMasterSaveTimer.current);
     };
-  }, [masterMarche, masterCategorie, masterMezzi, masterFornitori, masterPrefsHydrated, magPerm.canWrite, settingsRows, upsertMagazzinoMaster]);
+  }, [masterPrefsHydrated, magPerm.canWrite, magMasterPayloadSig, masterMarche, masterCategorie, masterMezzi, masterFornitori, upsertMagazzinoMaster]);
 
   useEffect(() => {
     setLogEntries(loadMagazzinoChangeLog());
@@ -1069,7 +1105,7 @@ export function MagazzinoView() {
     );
     const next = touch({ ...row, scorta: dopo });
     setProdotti((prev) => prev.map((p) => (p.id === id ? next : p)));
-    void magazzinoService.update(id, { quantita: dopo }).then((res) => {
+    void magazzinoService.update(id, ricambioUiToMagazzinoUpdate(next)).then((res) => {
       if (!res.success) window.alert(res.error ?? "Aggiornamento scorta non riuscito.");
       else void queryClient.invalidateQueries({ queryKey: [...QK.magazzino] });
     });
@@ -1133,23 +1169,14 @@ export function MagazzinoView() {
     setNewIncompleteList([]);
     setNewListFieldInvalid(false);
     setNewForm(emptyRicambioForm());
+    setNewRicambioDraftId(crypto.randomUUID());
     setNewRicambioFocusToken((t) => t + 1);
     setNewOpen(true);
   }
 
   async function finalizeNewRicambio() {
-    const listErr = validateRicambioListFields(newForm, {
-      marche,
-      categorie,
-      mezziCompatibili: mezziCompatOptions,
-    });
-    if (listErr) {
-      setNewListFieldInvalid(true);
-      window.alert(listErr);
-      return;
-    }
     setNewListFieldInvalid(false);
-    const r = ricambioFromFormLenient(newForm, undefined, authorName);
+    const r = ricambioFromFormLenient(newForm, newRicambioDraftId ?? undefined, authorName);
     if (findFirstDuplicateByCodiceOriginale(prodotti, newForm.codiceFornitoreOriginale)) {
       return;
     }
@@ -1162,6 +1189,7 @@ export function MagazzinoView() {
     registerOrderIndex(ui.id);
     setProdotti((prev) => [ui, ...prev]);
     setNewForm(emptyRicambioForm());
+    setNewRicambioDraftId(null);
     setNewOpen(false);
     setNewIncompleteOpen(false);
     setNewIncompleteList([]);
@@ -1173,13 +1201,7 @@ export function MagazzinoView() {
   function submitNew(e: React.FormEvent) {
     e.preventDefault();
     if (nuovoCodiceBloccaSalvataggio) return;
-    const warnings = ricambioFormImportantWarnings(newForm);
-    if (warnings.length) {
-      setNewIncompleteList(warnings);
-      setNewIncompleteOpen(true);
-      return;
-    }
-    finalizeNewRicambio();
+    void finalizeNewRicambio();
   }
 
   const detailRicambio = detail ? prodotti.find((p) => p.id === detail.id) : undefined;
@@ -1413,38 +1435,38 @@ export function MagazzinoView() {
             }
             filtersExpanded={filtriEspansi}
             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
-            filtersActive={hasAdvancedPanelFilters}
+            filtersActive={hasAdvancedPanelFilters || soloSottoScorta}
             filtersPanel={
-              <>
-                <MagazzinoAdvancedFilterPanel
-                  filters={advancedFilters}
-                  onChange={patchAdvancedFilters}
-                  catalog={filterCatalog}
-                />
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSoloSottoScorta((v) => !v)}
-                    className={
-                      soloSottoScorta
-                        ? `${gestionaleFilterChipClass} border-orange-400/85 bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] font-semibold text-orange-900 shadow-[0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,transparent)] dark:text-orange-100`
-                        : gestionaleFilterChipClass
-                    }
-                  >
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${
-                        soloSottoScorta ? "bg-orange-500 shadow-[0_0_8px_rgba(249,115,22,0.85)]" : "bg-zinc-400"
-                      }`}
-                    />
-                    Sotto scorta minima
-                  </button>
-                </div>
-              </>
+              <MagazzinoAdvancedFilterPanel
+                filters={advancedFilters}
+                onChange={patchAdvancedFilters}
+                catalog={filterCatalog}
+              />
             }
             meta={
               <>
                 <PageToolbarResultCount count={filteredSorted.length} filtersActive={hasMagazzinoFilters} />
                 <PageToolbarActions>
+                  <button
+                    type="button"
+                    aria-pressed={soloSottoScorta}
+                    onClick={() => setSoloSottoScorta((v) => !v)}
+                    className={
+                      soloSottoScorta
+                        ? `${dsPageToolbarBtn} border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
+                        : dsPageToolbarBtn
+                    }
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                        soloSottoScorta
+                          ? "bg-[var(--cab-primary)]"
+                          : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
+                      }`}
+                      aria-hidden
+                    />
+                    Sotto scorta minima
+                  </button>
                   <button type="button" className={dsPageToolbarBtn} onClick={resetMagazzinoRicerca}>
                     Pulisci ricerca
                   </button>
@@ -1833,6 +1855,7 @@ export function MagazzinoView() {
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               e.preventDefault();
+              setNewRicambioDraftId(null);
               setNewOpen(false);
             }
           }}
@@ -1848,7 +1871,10 @@ export function MagazzinoView() {
               <h2 id="new-ricambio-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 Nuovo ricambio
               </h2>
-              <CloseButton onClick={() => setNewOpen(false)} />
+              <CloseButton onClick={() => {
+                setNewRicambioDraftId(null);
+                setNewOpen(false);
+              }} />
             </div>
             <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNew} className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
@@ -1872,6 +1898,17 @@ export function MagazzinoView() {
                   }
                   listFieldForceInvalid={newListFieldInvalid}
                 />
+                {newRicambioDraftId ? (
+                  <RecordImageManager
+                    scope="magazzino"
+                    recordId={newRicambioDraftId}
+                    title="Foto ricambio"
+                    canEdit={magCanCreateRicambio}
+                    onImageEvent={(ev) =>
+                      logImageEvent(ev, ricambioFromFormLenient(newForm, newRicambioDraftId, authorName))
+                    }
+                  />
+                ) : null}
               </div>
               <div className="shrink-0 space-y-2 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
                 <button

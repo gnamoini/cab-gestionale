@@ -8,8 +8,11 @@ import { flushSync } from "react-dom";
 import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
 import { LavorazioniModalShell, LavorazioniModalTitleBar } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
-import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
+import {
+  GlobalHierarchyMarcaSelect,
+  GlobalHierarchyModelloSelect,
+  GlobalSettingsListSelect,
+} from "@/components/gestionale/global-input";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
 import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
 import { useLavorazioneCosto } from "@/src/hooks/gestionale/use-lavorazione-costo";
@@ -31,7 +34,12 @@ import {
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { findPreviousLavorazioneStessoMezzo } from "@/lib/schede/schede-duplicate-previous";
+import {
+  findLastSchedaIngressoForIdent,
+  hasSchedaIngressoIdentLookup,
+  mergeSchedaIngressoFields,
+} from "@/lib/schede/scheda-ingresso-reuse";
+import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import {
   diffSchedaIngressoCampi,
   diffSchedaLavorazioniDoc,
@@ -63,13 +71,13 @@ import type { LavorazioniLogChange, LavorazioniLogTipo } from "@/lib/lavorazioni
 import { LavorazionePreventiviHubList } from "@/components/lavorazioni/schede/lavorazione-preventivi-hub-list";
 import {
   buildPreventiviArchivioFilterHref,
-  buildPreventiviMacchinaOpenHref,
+  buildPreventiviOpenHrefForRecord,
 } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { mergePreventiviPerMacchina, mezzoPerFiltroPreventivi } from "@/lib/preventivi/preventivi-per-macchina";
 import { Q_PREVENTIVI_NUOVO } from "@/lib/preventivi/preventivi-query";
 import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { writePendingPreventivoPayload } from "@/lib/preventivi/preventivi-session-bridge";
-import type { PreventivoLavorazioneOrigine } from "@/lib/preventivi/types";
+import type { PreventivoLavorazioneOrigine, PreventivoRecord } from "@/lib/preventivi/types";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
 import {
@@ -77,6 +85,7 @@ import {
   dsBtnDanger,
   dsBtnNeutral,
   dsBtnPrimary,
+  dsBtnSoftOrange,
   dsInput,
   dsScrollbar,
   dsTable,
@@ -120,6 +129,16 @@ type HubTabInput = HubTab | "timeline" | "log";
 function normalizeHubTab(tab: HubTabInput | undefined): HubTab {
   if (tab === "timeline" || tab === "log") return "attivita";
   return tab ?? "schede";
+}
+
+function IconCopiaIngressoPrecedente({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <rect x="8" y="8" width="12" height="14" rx="1.5" stroke="currentColor" strokeWidth="1.75" />
+      <path d="M6 6h10a2 2 0 0 1 2 2v10" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+      <path d="M12 12v5M9.5 14.5H14.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
 }
 
 function fmtIt(iso: string): string {
@@ -174,6 +193,74 @@ function assertItalianDay(label: string, value: string): boolean {
 function panoramicaDisplayValue(value: string | undefined | null): string {
   const t = value?.trim();
   return t || "—";
+}
+
+function PanoramicaNoteOperativeEditor({
+  value,
+  canEdit,
+  saving,
+  onSave,
+}: {
+  value: string;
+  canEdit: boolean;
+  saving: boolean;
+  onSave: (note: string) => void | Promise<void>;
+}) {
+  const [text, setText] = useState(value);
+  const [dirty, setDirty] = useState(false);
+
+  useEffect(() => {
+    setText(value);
+    setDirty(false);
+  }, [value]);
+
+  if (!canEdit) {
+    return (
+      <p className="mt-1 whitespace-pre-wrap text-xs leading-snug text-[color:var(--cab-text)]">
+        {panoramicaDisplayValue(value)}
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-1 space-y-2">
+      <textarea
+        className={`${dsInput} min-h-[5.5rem] w-full resize-none overflow-y-auto text-xs leading-snug`}
+        value={text}
+        onChange={(e) => {
+          setText(e.target.value);
+          setDirty(true);
+        }}
+        rows={4}
+        aria-label="Note operative"
+        disabled={saving}
+        placeholder="Note intervento visibili in elenco lavorazioni…"
+      />
+      {dirty ? (
+        <div className="flex flex-wrap justify-end gap-2">
+          <button
+            type="button"
+            className={dsBtnNeutral}
+            disabled={saving}
+            onClick={() => {
+              setText(value);
+              setDirty(false);
+            }}
+          >
+            Annulla
+          </button>
+          <button
+            type="button"
+            className={dsBtnPrimary}
+            disabled={saving}
+            onClick={() => void onSave(text)}
+          >
+            {saving ? "Salvataggio…" : "Salva note"}
+          </button>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 function PanoramicaField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
@@ -342,6 +429,7 @@ export function SchedeLavorazioneModal({
   const [stage, setStage] = useState<Stage>({ kind: "hub" });
   const [hubTab, setHubTab] = useState<HubTab>(initialTab);
   const [unsavedPanel, setUnsavedPanel] = useState<null | "ingresso" | "lav" | "ric">(null);
+  const [panoramicaNoteSaving, setPanoramicaNoteSaving] = useState(false);
   const [draft, setDraft] = useState<LavorazioneSchedeBundle>(bundle);
   const draftRef = useRef(draft);
   useLayoutEffect(() => {
@@ -528,19 +616,22 @@ export function SchedeLavorazioneModal({
   }
 
   function duplicateIngressoPrev() {
-    const prev = findPreviousLavorazioneStessoMezzo(lav, lav.id, attive, storico);
-    if (!prev) {
-      window.alert("Nessuna lavorazione precedente trovata per lo stesso mezzo (targa / matricola / etichetta).");
-      return;
-    }
-    const bPrev = getOrCreateBundle(schedeStore, prev.id).ingresso;
-    if (!bPrev || bPrev.sorgente === "file_esterno") {
-      window.alert("La lavorazione precedente non ha una scheda ingresso compilabile da copiare.");
+    const match = findLastSchedaIngressoForIdent(
+      lav.targa,
+      lav.matricola,
+      mezzi,
+      schedeStore,
+      attive,
+      storico,
+      { excludeLavorazioneId: lav.id },
+    );
+    if (!match) {
+      window.alert("Nessuna scheda ingresso precedente trovata per questo mezzo (targa o matricola).");
       return;
     }
     const u = currentUser.trim() || "Operatore";
     const now = new Date().toISOString();
-    const campi = { ...bPrev.campi };
+    const campi = { ...match.campi };
     baselineIngressoJson.current = JSON.stringify(campi);
     const doc: SchedaIngressoDoc = {
       ...newSchedaMeta("ingresso", u),
@@ -585,9 +676,9 @@ export function SchedeLavorazioneModal({
     return mergePreventiviPerMacchina(loadPreventivi(), hubData?.preventivi, mezzoFiltroPreventivi);
   }, [open, hubData?.preventivi, mezzoFiltroPreventivi, pvTick]);
 
-  function apriPreventivoNeiPreventivi(p: { id: string }) {
+  function apriPreventivoNeiPreventivi(p: PreventivoRecord) {
     onClose();
-    router.push(buildPreventiviMacchinaOpenHref(lav, mezzo, p.id));
+    router.push(buildPreventiviOpenHrefForRecord(p));
   }
 
   const documentiHubUi = useMemo(() => {
@@ -610,11 +701,93 @@ export function SchedeLavorazioneModal({
     if (ig && ig.sorgente !== "file_esterno") return ig.campi;
     return buildSchedaIngressoFieldsFromContext(lav, mezzo, lav.addetto.trim() || addetti[0] || "");
   }, [hub.ingresso, lav, mezzo, addetti]);
+
+  const panoramicaNoteValue = useMemo(
+    () => panoramicaCampi.noteIntervento?.trim() || lav.noteInterne?.trim() || "",
+    [panoramicaCampi.noteIntervento, lav.noteInterne],
+  );
+
   const costoLavorazione = useLavorazioneCosto(lav.id, draft, {
     enabled: open,
     cliente: lav.cliente,
   });
   const nOk = countSchedePresenti(hub);
+
+  const hubLastIngressoMatch = useMemo(
+    () =>
+      findLastSchedaIngressoForIdent(lav.targa, lav.matricola, mezzi, schedeStore, attive, storico, {
+        excludeLavorazioneId: lav.id,
+      }),
+    [lav.targa, lav.matricola, lav.id, mezzi, schedeStore, attive, storico],
+  );
+
+  const commitPanoramicaNote = useCallback(
+    async (noteIntervento: string) => {
+      if (!canEditWorkOrders) return;
+      const trimmed = noteIntervento.trim();
+      if (trimmed === panoramicaNoteValue) return;
+
+      setPanoramicaNoteSaving(true);
+      try {
+        const campi: SchedaIngressoFields = { ...panoramicaCampi, noteIntervento: trimmed };
+        const now = new Date().toISOString();
+        const u = currentUser.trim() || "Operatore";
+        const base = draftRef.current.ingresso;
+
+        if (base?.sorgente === "file_esterno") {
+          await onIngressoCommitted?.(campi);
+          return;
+        }
+
+        if (base) {
+          const changes = diffSchedaIngressoCampi(base.campi, campi);
+          if (changes.length) {
+            emitLog({
+              tipo: "aggiornamento",
+              schedaOggetto: SCHEDA_INGRESSO_LABEL,
+              riepilogo: "Note operative aggiornate",
+              changes,
+            });
+          }
+          const nextDoc: SchedaIngressoDoc = {
+            ...base,
+            campi,
+            updatedAt: now,
+            updatedBy: u,
+          };
+          persist({ ...draftRef.current, ingresso: nextDoc });
+        } else {
+          const nextDoc: SchedaIngressoDoc = {
+            ...newSchedaMeta("ingresso", u),
+            tipo: "ingresso",
+            campi,
+          };
+          emitLog({
+            tipo: "creazione",
+            schedaOggetto: SCHEDA_INGRESSO_LABEL,
+            riepilogo: "Scheda ingresso creata (note operative)",
+            changes: [],
+          });
+          persist({ ...draftRef.current, ingresso: nextDoc });
+        }
+
+        await onIngressoCommitted?.(campi);
+      } catch {
+        window.alert("Salvataggio note non riuscito. Riprova.");
+      } finally {
+        setPanoramicaNoteSaving(false);
+      }
+    },
+    [
+      canEditWorkOrders,
+      panoramicaNoteValue,
+      panoramicaCampi,
+      currentUser,
+      persist,
+      emitLog,
+      onIngressoCommitted,
+    ],
+  );
 
   function commitIngressoSave(): boolean {
     const ig = ingressoF;
@@ -845,17 +1018,16 @@ export function SchedeLavorazioneModal({
         <div className={`min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar`}>
           {stage.kind === "hub" && hubTab === "schede" ? (
             <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  className={dsBtnNeutral}
+              {hubLastIngressoMatch ? (
+                <CopiaUltimaSchedaIngressoBanner
+                  visible
+                  highlight={false}
+                  updatedAt={hubLastIngressoMatch.updatedAt}
                   disabled={!canEditWorkOrders}
-                  title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : undefined}
-                  onClick={duplicateIngressoPrev}
-                >
-                  Copia ingresso da intervento precedente (stesso mezzo)
-                </button>
-              </div>
+                  disabledTitle={READONLY_PERMISSION_HINT}
+                  onCopy={duplicateIngressoPrev}
+                />
+              ) : null}
               <SchedaSectionHub
                 title="Scheda ingresso"
                 stato={statoUiSchedaIngresso(hub)}
@@ -940,9 +1112,14 @@ export function SchedeLavorazioneModal({
               <div className="space-y-2">
                 <div className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)]/60 px-2.5 py-2">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Note operative</p>
-                  <p className="mt-1 whitespace-pre-wrap text-xs leading-snug text-[color:var(--cab-text)]">
-                    {panoramicaDisplayValue(lav.noteInterne)}
-                  </p>
+                  <PanoramicaNoteOperativeEditor
+                    value={panoramicaNoteValue}
+                    canEdit={canEditWorkOrders}
+                    saving={panoramicaNoteSaving}
+                    onSave={async (note) => {
+                      await commitPanoramicaNote(note);
+                    }}
+                  />
                 </div>
                 <PanoramicaSection title="Lavorazione">
                   <PanoramicaField
@@ -1045,6 +1222,12 @@ export function SchedeLavorazioneModal({
               doc={hub.ingresso}
               fields={ingressoF}
               setFields={setIngressoF}
+              mezzi={mezzi}
+              schedeStore={schedeStore}
+              attive={attive}
+              storico={storico}
+              excludeLavorazioneId={lav.id}
+              canEdit={canEditWorkOrders}
               clientiLista={listePrefs.clienti}
               tipiAttrezzaturaLista={listePrefs.tipiAttrezzatura}
               marcheGuidate={marcheGuidate}
@@ -1381,6 +1564,12 @@ function IngressoPanel({
   doc,
   fields,
   setFields,
+  mezzi,
+  schedeStore,
+  attive,
+  storico,
+  excludeLavorazioneId,
+  canEdit,
   clientiLista,
   tipiAttrezzaturaLista,
   marcheGuidate,
@@ -1399,6 +1588,12 @@ function IngressoPanel({
   doc: SchedaIngressoDoc;
   fields: SchedaIngressoFields;
   setFields: (f: SchedaIngressoFields) => void;
+  mezzi: MezzoGestito[];
+  schedeStore: Record<string, LavorazioneSchedeBundle>;
+  attive: LavorazioneAttiva[];
+  storico: LavorazioneArchiviata[];
+  excludeLavorazioneId: string;
+  canEdit: boolean;
   clientiLista: string[];
   tipiAttrezzaturaLista: string[];
   marcheGuidate: string[];
@@ -1418,6 +1613,44 @@ function IngressoPanel({
   const grid = "grid gap-3 sm:grid-cols-2";
   const modelliOpts = modelliForMarca(fields.marcaAttrezzatura);
   const modelliTelaioOpts = modelliForMarcaTelaio(fields.marcaTelaio);
+  const [reuseHighlight, setReuseHighlight] = useState(false);
+  const reuseHighlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const lastIngressoMatch = useMemo(() => {
+    if (!hasSchedaIngressoIdentLookup(fields.targa, fields.matricola)) return null;
+    return findLastSchedaIngressoForIdent(
+      fields.targa,
+      fields.matricola,
+      mezzi,
+      schedeStore,
+      attive,
+      storico,
+      { excludeLavorazioneId },
+    );
+  }, [fields.targa, fields.matricola, mezzi, schedeStore, attive, storico, excludeLavorazioneId]);
+
+  const pulseReuseBanner = useCallback(() => {
+    if (reuseHighlightTimer.current) clearTimeout(reuseHighlightTimer.current);
+    setReuseHighlight(true);
+    reuseHighlightTimer.current = setTimeout(() => setReuseHighlight(false), 4500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (reuseHighlightTimer.current) clearTimeout(reuseHighlightTimer.current);
+    };
+  }, []);
+
+  const onIdentBlur = useCallback(() => {
+    if (lastIngressoMatch) pulseReuseBanner();
+  }, [lastIngressoMatch, pulseReuseBanner]);
+
+  const copyLastIngresso = useCallback(() => {
+    if (!lastIngressoMatch || ro) return;
+    setFields(mergeSchedaIngressoFields(fields, lastIngressoMatch.campi));
+    setReuseHighlight(false);
+  }, [fields, lastIngressoMatch, ro, setFields]);
+
   const inp = (k: keyof SchedaIngressoFields, label: string) => (
     <label className="block text-xs" key={String(k)}>
       <span className="text-zinc-500">{label}</span>
@@ -1426,6 +1659,7 @@ function IngressoPanel({
         readOnly={ro}
         value={fields[k]}
         onChange={(e) => setFields({ ...fields, [k]: e.target.value })}
+        onBlur={k === "targa" || k === "matricola" ? onIdentBlur : undefined}
       />
     </label>
   );
@@ -1449,6 +1683,14 @@ function IngressoPanel({
         </div>
       </div>
       <p className="text-xs text-zinc-500">Autore ultima modifica: {doc.updatedBy}</p>
+      <CopiaUltimaSchedaIngressoBanner
+        visible={Boolean(lastIngressoMatch) && !ro}
+        highlight={reuseHighlight}
+        updatedAt={lastIngressoMatch?.updatedAt}
+        disabled={!canEdit || ro}
+        disabledTitle={READONLY_PERMISSION_HINT}
+        onCopy={copyLastIngresso}
+      />
       <div className={grid}>
         <SchedaDayField
           label="Data ingresso *"
@@ -1459,42 +1701,46 @@ function IngressoPanel({
         />
         <label className="block text-xs">
           <span className="text-zinc-500">Cliente</span>
-          <SettingsAutocompleteInput
+          <GlobalSettingsListSelect
+            listKey="mezzi:clienti"
             className="mt-1"
             value={fields.cliente}
             onChange={(v) => setFields({ ...fields, cliente: v })}
-            options={clientiLista}
             disabled={ro}
+            aria-label="Cliente"
           />
         </label>
         <label className="block text-xs">
           <span className="text-zinc-500">Cantiere</span>
-          <SettingsAutocompleteInput
+          <GlobalSettingsListSelect
+            listKey="mezzi:cantieri"
             className="mt-1"
             value={fields.cantiere}
             onChange={(v) => setFields({ ...fields, cantiere: v })}
-            options={cantieriLista}
             disabled={ro}
+            aria-label="Cantiere"
           />
         </label>
         <label className="block text-xs">
           <span className="text-zinc-500">Utilizzatore</span>
-          <SettingsAutocompleteInput
+          <GlobalSettingsListSelect
+            listKey="mezzi:utilizzatori"
             className="mt-1"
             value={fields.utilizzatore}
             onChange={(v) => setFields({ ...fields, utilizzatore: v })}
-            options={utilizzatoriLista}
             disabled={ro}
+            aria-label="Utilizzatore"
           />
         </label>
         <label className="block text-xs">
           <span className="text-zinc-500">Tipo attrezzatura</span>
-          <SettingsAutocompleteInput
+          <GlobalSettingsListSelect
+            listKey="mezzi:tipiAttrezzatura"
             className="mt-1"
             value={fields.tipoAttrezzatura}
             onChange={(v) => setFields({ ...fields, tipoAttrezzatura: v })}
-            options={tipiAttrezzaturaLista}
             disabled={ro}
+            aria-label="Tipo attrezzatura"
           />
         </label>
         <label className="block text-xs">
@@ -1502,7 +1748,8 @@ function IngressoPanel({
           {ro ? (
             <input className={`${dsInput} mt-1`} readOnly value={fields.marcaAttrezzatura} />
           ) : (
-            <GestionaleListSelect
+            <GlobalHierarchyMarcaSelect
+              tree="attrezzature"
               className="mt-1"
               value={fields.marcaAttrezzatura}
               onChange={(v) =>
@@ -1512,7 +1759,7 @@ function IngressoPanel({
                   modelloAttrezzatura: "",
                 })
               }
-              options={marcheGuidate}
+              aria-label="Marca attrezzatura"
             />
           )}
         </label>
@@ -1521,12 +1768,13 @@ function IngressoPanel({
           {ro ? (
             <input className={`${dsInput} mt-1`} readOnly value={fields.modelloAttrezzatura} />
           ) : (
-            <GestionaleListSelect
+            <GlobalHierarchyModelloSelect
+              tree="attrezzature"
+              marcaNome={fields.marcaAttrezzatura}
               className="mt-1"
               value={fields.modelloAttrezzatura}
               onChange={(v) => setFields({ ...fields, modelloAttrezzatura: v })}
-              options={modelliOpts}
-              disabled={!fields.marcaAttrezzatura.trim()}
+              aria-label="Modello attrezzatura"
             />
           )}
         </label>
@@ -1540,12 +1788,13 @@ function IngressoPanel({
         />
         <label className="block text-xs">
           <span className="text-zinc-500">Tipo telaio</span>
-          <SettingsAutocompleteInput
+          <GlobalSettingsListSelect
+            listKey="mezzi:tipiTelaio"
             className="mt-1"
             value={fields.tipoTelaio}
             onChange={(v) => setFields({ ...fields, tipoTelaio: v })}
-            options={tipiTelaioLista}
             disabled={ro}
+            aria-label="Tipo telaio"
           />
         </label>
         <label className="block text-xs">
@@ -1553,7 +1802,8 @@ function IngressoPanel({
           {ro ? (
             <input className={`${dsInput} mt-1`} readOnly value={fields.marcaTelaio} />
           ) : (
-            <GestionaleListSelect
+            <GlobalHierarchyMarcaSelect
+              tree="telai"
               className="mt-1"
               value={fields.marcaTelaio}
               onChange={(v) =>
@@ -1563,7 +1813,7 @@ function IngressoPanel({
                   modelloTelaio: "",
                 })
               }
-              options={marcheTelaioGuidate}
+              aria-label="Marca telaio"
             />
           )}
         </label>
@@ -1572,12 +1822,13 @@ function IngressoPanel({
           {ro ? (
             <input className={`${dsInput} mt-1`} readOnly value={fields.modelloTelaio} />
           ) : (
-            <GestionaleListSelect
+            <GlobalHierarchyModelloSelect
+              tree="telai"
+              marcaNome={fields.marcaTelaio}
               className="mt-1"
               value={fields.modelloTelaio}
               onChange={(v) => setFields({ ...fields, modelloTelaio: v })}
-              options={modelliTelaioOpts}
-              disabled={!fields.marcaTelaio.trim()}
+              aria-label="Modello telaio"
             />
           )}
         </label>
@@ -1730,22 +1981,19 @@ function LavorazioniPanel({
                       {(r.addettiAssegnati ?? []).map((a, idx) => (
                         <div key={`${r.id}-a-${idx}`} className="flex flex-wrap items-end gap-1">
                           <div className="min-w-[9rem] flex-1">
-                            <select
-                              className={`${dsInput} !py-1.5 !text-xs`}
+                            <GlobalSettingsListSelect
+                              listKey="lavorazioni:addetti"
+                              className="w-full"
+                              inputClassName={`${dsInput} !py-1.5 !text-xs`}
                               value={a.addetto}
-                              onChange={(e) => {
+                              onChange={(v) => {
                                 const next = [...(r.addettiAssegnati ?? [])];
-                                next[idx] = { ...next[idx]!, addetto: e.target.value };
+                                next[idx] = { ...next[idx]!, addetto: v };
                                 patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
                               }}
-                            >
-                              <option value="">Seleziona addetto…</option>
-                              {addettiLista.map((n) => (
-                                <option key={n} value={n}>
-                                  {n}
-                                </option>
-                              ))}
-                            </select>
+                              placeholder="Seleziona addetto…"
+                              aria-label="Addetto riga lavorazione"
+                            />
                           </div>
                           <SchedaOreNumberInput
                             className={`${dsInput} !py-1.5 !text-xs w-20`}

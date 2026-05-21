@@ -75,8 +75,20 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     timers.current.delete(id);
   }, []);
 
+  const recentPushRef = useRef<Map<string, number>>(new Map());
+  const DEDUP_MS = 3000;
+
   const push = useCallback(
     (message: string, tone: CabToastTone = "info", durationMs = 4200) => {
+      const now = Date.now();
+      const dedupKey = `${tone}:${message}`;
+      const last = recentPushRef.current.get(dedupKey);
+      if (last != null && now - last < DEDUP_MS) return;
+      recentPushRef.current.set(dedupKey, now);
+      for (const [k, t] of recentPushRef.current) {
+        if (now - t > DEDUP_MS * 2) recentPushRef.current.delete(k);
+      }
+
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const duration = Math.max(1800, Math.min(durationMs, 12000));
       setToasts((prev) => [...prev, { id, message, tone, duration }].slice(-5));

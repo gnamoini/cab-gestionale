@@ -17,6 +17,28 @@ export const globalInputDropdownPanel = [
   "origin-top transition-[opacity,transform] duration-150 ease-out",
 ].join(" ");
 
+/** Dropdown autocomplete — stesso chrome del menu pill stato. */
+export const globalAutocompleteDropdownPanel = [
+  "absolute left-0 right-0 top-full",
+  globalInputZDropdown,
+  "mt-1.5 max-h-52 overflow-y-auto",
+  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border-strong)]",
+  "bg-[var(--cab-card)]",
+  "shadow-[0_12px_32px_rgba(0,0,0,0.5),0_4px_12px_rgba(0,0,0,0.38)]",
+  "ring-1 ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)]",
+  "gestionale-scrollbar",
+  "origin-top transition-[opacity,transform] duration-150 ease-out",
+].join(" ");
+
+/** Menu portal per `GlobalFixedListPillSelect` (elenchi fissi senza ricerca). */
+export const globalFixedListPillMenuPanel = [
+  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border-strong)]",
+  "bg-[var(--cab-card)] p-1",
+  "shadow-[0_12px_32px_rgba(0,0,0,0.5),0_4px_12px_rgba(0,0,0,0.38)]",
+  "ring-1 ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)]",
+  "gestionale-scrollbar",
+].join(" ");
+
 export const globalInputDropdownOptionBase =
   "block w-full px-3 py-2.5 text-left text-xs font-medium transition-colors";
 
@@ -29,6 +51,40 @@ export function globalInputDropdownOptionClass(active: boolean, selected?: boole
   }
   return `${globalInputDropdownOptionBase} text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]`;
 }
+
+const autocompleteOptionBase =
+  "w-full cursor-pointer rounded-md border px-2 py-1.5 text-center text-[13px] font-medium leading-tight tracking-wide transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] outline-none";
+
+export function globalAutocompleteOptionClass(active: boolean, selected?: boolean): string {
+  if (active) {
+    return `${autocompleteOptionBase} ring-2 ring-inset ring-white/35`;
+  }
+  if (selected) {
+    return `${autocompleteOptionBase} ring-2 ring-inset ring-white/25 shadow-sm`;
+  }
+  return `${autocompleteOptionBase} border-[color:rgba(255,255,255,0.22)] bg-[var(--cab-surface-2)] text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]`;
+}
+
+export function globalAutocompleteOptionPillClass(
+  active: boolean,
+  selected: boolean,
+  _pillStyle?: import("react").CSSProperties,
+): string {
+  const ring = active
+    ? "ring-2 ring-inset ring-white/35"
+    : selected
+      ? "ring-2 ring-inset ring-white/25 shadow-sm"
+      : "";
+  return `${autocompleteOptionBase} border-[color:rgba(255,255,255,0.22)] ${ring}`;
+}
+
+export const globalAutocompleteAddBtnClass = [
+  "mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed",
+  "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))]",
+  "bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))]",
+  "px-3 py-2 text-xs font-semibold text-[color:var(--cab-primary)]",
+  "transition hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))]",
+].join(" ");
 
 export const globalInputFieldDefault = dsInput;
 

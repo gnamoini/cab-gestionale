@@ -8,6 +8,7 @@ import { GestionaleSearchField } from "@/components/gestionale/gestionale-search
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { buildLavorazioniFilterCatalog } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import { CardMobile, CardMobileActions, PageToolbar, PageToolbarActions, PageToolbarResultCount } from "@/components/design-system";
+import { IconGestionaleRefresh } from "@/components/gestionale/gestionale-log-ui";
 import { ClientLavorazioneIngressoDialog } from "@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog";
 import { ClientLavorazioneDocumentsDialog } from "@/components/lavorazioni-clienti/client-lavorazione-documents";
 import {
@@ -73,10 +74,7 @@ import {
   useLavorazioniListTableColStyles,
   type LavorazioniListTableColStyles,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
-import {
-  lavorazioneDataCompletamentoIso,
-  lavorazioneOreLavoroLabel,
-} from "@/lib/lavorazioni/lavorazioni-list-table-display";
+import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
@@ -93,8 +91,9 @@ import {
   dsTypoSectionTitle,
   GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
-import { useClientLavorazioniListQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
+import { useClientLavorazioniArchivioQuery, useClientLavorazioniInCorsoQuery, useClientPortalQueryOpts } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useClientLavorazioniRefresh } from "@/src/hooks/use-client-lavorazioni-refresh";
 import { useLavorazioneSchedeStoreSync } from "@/src/hooks/use-lavorazione-schede-store-sync";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
@@ -199,8 +198,8 @@ function RowActions({
       <Link
         href={clientLavorazioniDetailPath(rowId)}
         className={`${lavTableActionBtnInfo} no-underline`}
-        title="Timeline e dettaglio"
-        aria-label="Timeline e dettaglio"
+        title="Informazioni e avanzamento"
+        aria-label="Informazioni e avanzamento"
         onClick={(e) => e.stopPropagation()}
       >
         <IconInfo />
@@ -222,7 +221,6 @@ function DesktopTable({
   onIngresso,
   onQr,
   onDocuments,
-  schedeStore,
 }: {
   bundles: RowBundle[];
   variant: "active" | "archive";
@@ -236,7 +234,6 @@ function DesktopTable({
   onIngresso: (row: LavorazioneListRow) => void;
   onQr: (row: LavorazioneListRow) => void;
   onDocuments: (row: LavorazioneListRow) => void;
-  schedeStore: LavorazioneSchedeStore;
 }) {
   const colgroup =
     variant === "active" ? (
@@ -260,7 +257,6 @@ function DesktopTable({
         <col className={lavTableColAttrezzaturaClass} />
         <col className={lavTableColIdentificazioneClass} />
         <col className={lavTableColNoteClass} />
-        <col style={colStyles.archivioMiddleColStyle} />
         <col style={colStyles.archivioMiddleColStyle} />
         <col style={colStyles.addettoPillColStyle} />
         <col className={lavTableColAzioniClass} />
@@ -290,7 +286,6 @@ function DesktopTable({
         <GlobalTableSortTh label="Identificazione" columnKey="mezzoIdent" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Note" columnKey="note" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Completamento" columnKey="completamento" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
-        <GlobalTableSortTh label="Ore lavoro" columnKey="oreTotali" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
         <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
         <GestionaleListTableActionsHead />
       </>
@@ -303,7 +298,7 @@ function DesktopTable({
       headRow={headRow}
       empty={bundles.length === 0}
       emptyMessage={emptyMessage}
-      colSpan={10}
+      colSpan={variant === "active" ? 10 : 9}
     >
       {bundles.map(({ row, fields }) => (
         <tr key={row.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
@@ -339,12 +334,9 @@ function DesktopTable({
               </td>
             </>
           ) : (
-            <>
-              <td className={lavTableTdCenter}>
-                <LavorazioneIngressoDateCellFromIso iso={lavorazioneDataCompletamentoIso(row)} align="center" />
-              </td>
-              <td className={lavTableTdCenter}>{lavorazioneOreLavoroLabel(row, schedeStore)}</td>
-            </>
+            <td className={lavTableTdCenter}>
+              <LavorazioneIngressoDateCellFromIso iso={lavorazioneDataCompletamentoIso(row)} align="center" />
+            </td>
           )}
           <td className={lavTableTdPill}>
             <div className={lavTableTdPillWrap} style={colStyles.addettoPillWrapStyle}>
@@ -372,7 +364,6 @@ function MobileCards({
   variant,
   statiOpts,
   prioritaColors,
-  schedeStore,
   emptyMessage,
   onIngresso,
   onQr,
@@ -382,7 +373,6 @@ function MobileCards({
   variant: "active" | "archive";
   statiOpts: { id: string; label: string; color?: string }[];
   prioritaColors: Record<string, string | undefined>;
-  schedeStore: LavorazioneSchedeStore;
   emptyMessage: string;
   onIngresso: (row: LavorazioneListRow) => void;
   onQr: (row: LavorazioneListRow) => void;
@@ -420,12 +410,6 @@ function MobileCards({
             <p>
               <span className="font-semibold uppercase tracking-wide text-zinc-500">Cantiere:</span> {fields.cantiere}
             </p>
-            {variant === "archive" ? (
-              <p>
-                <span className="font-semibold uppercase tracking-wide text-zinc-500">Ore lavoro:</span>{" "}
-                {lavorazioneOreLavoroLabel(row, schedeStore)}
-              </p>
-            ) : null}
             <p>
               <span className="font-semibold uppercase tracking-wide text-zinc-500">Addetto:</span> {fields.addetto}
             </p>
@@ -471,8 +455,8 @@ function MobileCards({
             <Link
               href={clientLavorazioniDetailPath(row.id)}
               className={`${lavTableActionBtnInfo} no-underline`}
-              title="Timeline e dettaglio"
-              aria-label="Timeline e dettaglio"
+              title="Informazioni e avanzamento"
+              aria-label="Informazioni e avanzamento"
             >
               <IconInfo />
             </Link>
@@ -485,13 +469,11 @@ function MobileCards({
 
 function LavorazioniSection({
   title,
-  subtitle,
   bundles,
   variant,
   statiOpts,
   colStyles,
   prioritaColors,
-  schedeStore,
   emptyDefault,
   filtersActive,
   sortColumn,
@@ -502,13 +484,11 @@ function LavorazioniSection({
   onDocuments,
 }: {
   title: string;
-  subtitle?: string;
   bundles: RowBundle[];
   variant: "active" | "archive";
   statiOpts: { id: string; label: string; color?: string }[];
   colStyles: LavorazioniListTableColStyles;
   prioritaColors: Record<string, string | undefined>;
-  schedeStore: LavorazioneSchedeStore;
   emptyDefault: string;
   filtersActive: boolean;
   sortColumn: ClientPortalSortKey | null;
@@ -524,7 +504,6 @@ function LavorazioniSection({
     <section className="space-y-3">
       <div>
         <h2 className={dsTypoSectionTitle}>{title}</h2>
-        {subtitle ? <p className="mt-0.5 text-xs text-[color:var(--cab-text-muted)]">{subtitle}</p> : null}
       </div>
       <DesktopTable
         bundles={bundles}
@@ -532,7 +511,6 @@ function LavorazioniSection({
         statiOpts={statiOpts}
         colStyles={colStyles}
         prioritaColors={prioritaColors}
-        schedeStore={schedeStore}
         emptyMessage={emptyMessage}
         sortColumn={sortColumn}
         sortPhase={sortPhase}
@@ -546,7 +524,6 @@ function LavorazioniSection({
         variant={variant}
         statiOpts={statiOpts}
         prioritaColors={prioritaColors}
-        schedeStore={schedeStore}
         emptyMessage={emptyMessage}
         onIngresso={onIngresso}
         onQr={onQr}
@@ -584,8 +561,17 @@ export function ClientLavorazioniView() {
   const colStyles = useLavorazioniListTableColStyles(statiOpts, prioritaOpts, addettiGlobali);
   const prioritaColors = globalOpts.lavorazioni.prioritaColors;
   const schedeStore = useLavorazioneSchedeStoreSync();
-  const listQ = useClientLavorazioniListQuery(access.allowed);
-  const logsQ = useLogListQuery({ entita: "lavorazioni", limit: 500 }, { enabled: access.allowed, staleTime: 15_000 });
+  const clientPortalOpts = useClientPortalQueryOpts();
+  const inCorsoQ = useClientLavorazioniInCorsoQuery(access.allowed);
+  const archivioQ = useClientLavorazioniArchivioQuery(access.allowed);
+  const logsQ = useLogListQuery(
+    { entita: "lavorazioni", limit: 500 },
+    {
+      enabled: access.allowed,
+      ...clientPortalOpts,
+    },
+  );
+  const { refresh: refreshClientData, busy: refreshBusy } = useClientLavorazioniRefresh(inCorsoQ, archivioQ, logsQ);
 
   const logsByLav = useMemo(() => {
     const map = new Map<string, NonNullable<typeof logsQ.data>>();
@@ -631,13 +617,13 @@ export function ClientLavorazioniView() {
   const filtersActive = clientPortalFiltersActive(filters);
 
   const allInCorsoBundles = useMemo(
-    () => buildRowBundles(listQ.data?.inCorso ?? [], schedeStore, logsByLav, addettiGlobali),
-    [listQ.data?.inCorso, schedeStore, logsByLav, addettiGlobali],
+    () => buildRowBundles(inCorsoQ.data ?? [], schedeStore, logsByLav, addettiGlobali),
+    [inCorsoQ.data, schedeStore, logsByLav, addettiGlobali],
   );
 
   const allArchivioBundles = useMemo(
-    () => buildRowBundles(listQ.data?.archivio ?? [], schedeStore, logsByLav, addettiGlobali),
-    [listQ.data?.archivio, schedeStore, logsByLav, addettiGlobali],
+    () => buildRowBundles(archivioQ.data ?? [], schedeStore, logsByLav, addettiGlobali),
+    [archivioQ.data, schedeStore, logsByLav, addettiGlobali],
   );
 
   const defaultAddetto = addettiGlobali[0] ?? "";
@@ -648,25 +634,25 @@ export function ClientLavorazioniView() {
   }, [allInCorsoBundles, allArchivioBundles, schedeStore, addettiGlobali, defaultAddetto]);
 
   const inCorsoBundles = useMemo(
-    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, defaultAddetto),
+    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, defaultAddetto, "in_corso"),
     [allInCorsoBundles, filters, schedeStore, defaultAddetto],
   );
 
   const archivioBundles = useMemo(
-    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, defaultAddetto),
+    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, defaultAddetto, "archivio"),
     [allArchivioBundles, filters, schedeStore, defaultAddetto],
   );
 
   const sortedInCorsoBundles = useMemo(
     () =>
-      sortClientPortalBundles(inCorsoBundles, sortInCorsoCol, sortInCorsoPhase, "active", statoOrderIds, schedeStore),
-    [inCorsoBundles, sortInCorsoCol, sortInCorsoPhase, statoOrderIds, schedeStore],
+      sortClientPortalBundles(inCorsoBundles, sortInCorsoCol, sortInCorsoPhase, "active", statoOrderIds),
+    [inCorsoBundles, sortInCorsoCol, sortInCorsoPhase, statoOrderIds],
   );
 
   const sortedArchivioBundles = useMemo(
     () =>
-      sortClientPortalBundles(archivioBundles, sortArchivioCol, sortArchivioPhase, "archive", statoOrderIds, schedeStore),
-    [archivioBundles, sortArchivioCol, sortArchivioPhase, statoOrderIds, schedeStore],
+      sortClientPortalBundles(archivioBundles, sortArchivioCol, sortArchivioPhase, "archive", statoOrderIds),
+    [archivioBundles, sortArchivioCol, sortArchivioPhase, statoOrderIds],
   );
 
   const onSortInCorso = useCallback(
@@ -727,8 +713,11 @@ export function ClientLavorazioniView() {
     );
   }
 
+  const listLoading = inCorsoQ.isLoading || archivioQ.isLoading;
+  const listError = inCorsoQ.error ?? archivioQ.error;
+
   let bodyContent: ReactNode;
-  if (listQ.isLoading) {
+  if (listLoading) {
     bodyContent = <p className="text-sm text-zinc-500">Caricamento…</p>;
   } else {
     bodyContent = (
@@ -736,13 +725,11 @@ export function ClientLavorazioniView() {
         {showInCorso ? (
           <LavorazioniSection
             title="Lavorazioni in corso"
-            subtitle="Specchio live della gestione officina — sola consultazione"
             bundles={sortedInCorsoBundles}
             variant="active"
             statiOpts={statiOpts}
             colStyles={colStyles}
             prioritaColors={prioritaColors}
-            schedeStore={schedeStore}
             emptyDefault="Nessuna lavorazione in corso."
             filtersActive={filtersActive}
             sortColumn={sortInCorsoCol}
@@ -756,13 +743,11 @@ export function ClientLavorazioniView() {
         {showArchivio ? (
           <LavorazioniSection
             title="Lavorazioni completate"
-            subtitle="Archivio — visibile dopo archiviazione dalla pagina Lavorazioni"
             bundles={sortedArchivioBundles}
             variant="archive"
             statiOpts={statiOpts}
             colStyles={colStyles}
             prioritaColors={prioritaColors}
-            schedeStore={schedeStore}
             emptyDefault="Nessuna lavorazione in archivio."
             filtersActive={filtersActive}
             sortColumn={sortArchivioCol}
@@ -782,9 +767,9 @@ export function ClientLavorazioniView() {
       <PageHeader title="Lavorazioni (Clienti)" />
 
       <div className={dsStackPage}>
-        {listQ.isError ? (
+        {listError ? (
           <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100">
-            {listQ.error?.message ?? "Errore caricamento."}
+            {listError.message ?? "Errore caricamento."}
           </div>
         ) : null}
 
@@ -822,6 +807,16 @@ export function ClientLavorazioniView() {
             <>
               <PageToolbarResultCount count={totalResults} filtersActive={filtersActive} />
               <PageToolbarActions>
+                <button
+                  type="button"
+                  className={dsPageToolbarBtn}
+                  onClick={() => void refreshClientData()}
+                  disabled={refreshBusy}
+                  aria-busy={refreshBusy}
+                >
+                  <IconGestionaleRefresh className={refreshBusy ? "animate-spin" : undefined} />
+                  {refreshBusy ? "Aggiornamento…" : "Aggiorna"}
+                </button>
                 <button type="button" className={dsPageToolbarBtn} onClick={resetRicerca}>
                   Pulisci ricerca
                 </button>

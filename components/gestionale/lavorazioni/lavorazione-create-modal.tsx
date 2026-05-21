@@ -1,9 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
-import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
 import { findMezzoByTargaOrMatricola } from "@/lib/mezzi/find-mezzo-by-ident";
 import { mezzoFormToMeta } from "@/lib/mezzi/mezzi-meta";
 import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
@@ -13,16 +12,28 @@ import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { loadLavorazioneSchedeStore, saveLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
+import { loadLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
+import { persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
 import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId } from "@/src/shared/selectors";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
-import type { SchedaIngressoFields } from "@/types/schede";
+import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import {
+  findLastSchedaIngressoForIdent,
+  hasSchedaIngressoIdentLookup,
+  mergeSchedaIngressoFields,
+} from "@/lib/schede/scheda-ingresso-reuse";
+import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
+import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleSettingsSelect } from "@/components/gestionale/gestionale-settings-select";
-import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
-import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
+import {
+  GlobalHierarchyMarcaSelect,
+  GlobalHierarchyModelloSelect,
+  GlobalSelect,
+  GlobalSettingsListSelect,
+} from "@/components/gestionale/global-input";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { GlobalDatePicker } from "@/components/gestionale/global-input";
 import { dsInput, dsLabel } from "@/lib/ui/design-system";
@@ -126,12 +137,20 @@ export function LavorazioneCreateModal({
   defaultMezzoId,
   createdBy,
   onCreated,
+  mezzi = [],
+  schedeStore = {},
+  attive = [],
+  storico = [],
 }: {
   open: boolean;
   onClose: () => void;
   defaultMezzoId?: string | null;
   createdBy: string | null;
   onCreated?: (id: string) => void;
+  mezzi?: readonly MezzoGestito[];
+  schedeStore?: LavorazioneSchedeStore;
+  attive?: readonly LavorazioneAttiva[];
+  storico?: readonly LavorazioneArchiviata[];
 }) {
   const globalOpts = useGlobalOptions({ enabled: open, debugTag: "LavorazioneCreateModal" });
   const create = useLavorazioneCreateMutation();
@@ -140,7 +159,6 @@ export function LavorazioneCreateModal({
 
   const liste = globalOpts.mezziListe;
   const stati = globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata");
-  const statiSelectOpts = stati.map((s) => ({ value: s.id, label: s.label }));
   const defaultAccettazioneStato = stati.find((s) => {
     const hay = `${s.id} ${s.label}`.toLowerCase();
     return hay.includes("accettazione");
@@ -158,17 +176,20 @@ export function LavorazioneCreateModal({
   const [stato, setStato] = useState("");
   const [priorita, setPriorita] = useState<PrioritaLavorazione>("media");
   const [mezzoHint, setMezzoHint] = useState<string | null>(null);
+  const [reuseHighlight, setReuseHighlight] = useState(false);
+  const reuseHighlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const marcheAtt = useMemo(() => marcheFromHierarchyTree(liste, "attrezzature"), [liste]);
-  const marcheTel = useMemo(() => marcheFromHierarchyTree(liste, "telai"), [liste]);
-  const modelliAtt = useMemo(
-    () => modelliVisibiliPerMarcaHierarchy(liste, "attrezzature", fields.marcaAttrezzatura),
-    [liste, fields.marcaAttrezzatura],
-  );
-  const modelliTel = useMemo(
-    () => modelliVisibiliPerMarcaHierarchy(liste, "telai", fields.marcaTelaio),
-    [liste, fields.marcaTelaio],
-  );
+  const lastIngressoMatch = useMemo(() => {
+    if (!hasSchedaIngressoIdentLookup(fields.targa, fields.matricola)) return null;
+    return findLastSchedaIngressoForIdent(
+      fields.targa,
+      fields.matricola,
+      mezziUi.length > 0 ? mezziUi : mezzi,
+      schedeStore,
+      attive,
+      storico,
+    );
+  }, [fields.targa, fields.matricola, mezziUi, mezzi, schedeStore, attive, storico]);
 
   const patch = useCallback((p: Partial<SchedaIngressoFields>) => {
     setFields((f) => ({ ...f, ...p }));
@@ -186,10 +207,34 @@ export function LavorazioneCreateModal({
     [addettiOpts, fields.addettoAccettazione],
   );
 
+  const pulseReuseBanner = useCallback(() => {
+    if (reuseHighlightTimer.current) clearTimeout(reuseHighlightTimer.current);
+    setReuseHighlight(true);
+    reuseHighlightTimer.current = setTimeout(() => setReuseHighlight(false), 4500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (reuseHighlightTimer.current) clearTimeout(reuseHighlightTimer.current);
+    };
+  }, []);
+
   const lookupIdent = useCallback(() => {
     const hit = findMezzoByTargaOrMatricola(mezziUi, fields.targa, fields.matricola);
     if (hit) {
       applyMezzo(hit);
+      if (
+        findLastSchedaIngressoForIdent(
+          fields.targa,
+          fields.matricola,
+          mezziUi,
+          schedeStore,
+          attive,
+          storico,
+        )
+      ) {
+        pulseReuseBanner();
+      }
       return;
     }
     setMezzoId("");
@@ -197,8 +242,27 @@ export function LavorazioneCreateModal({
     if (fields.targa.trim() || fields.matricola.trim()) {
       setCreaNuovoMezzo(true);
       setMezzoHint("Nessun mezzo corrispondente: puoi crearne uno nuovo dai dati inseriti.");
+      if (
+        findLastSchedaIngressoForIdent(
+          fields.targa,
+          fields.matricola,
+          mezziUi,
+          schedeStore,
+          attive,
+          storico,
+        )
+      ) {
+        pulseReuseBanner();
+      }
     }
-  }, [applyMezzo, fields.matricola, fields.targa, mezziUi]);
+  }, [applyMezzo, attive, fields.matricola, fields.targa, mezziUi, pulseReuseBanner, schedeStore, storico]);
+
+  const copyLastIngresso = useCallback(() => {
+    if (!lastIngressoMatch) return;
+    setFields((f) => mergeSchedaIngressoFields(f, lastIngressoMatch.campi));
+    setReuseHighlight(false);
+    setMezzoHint("Dati copiati dall’ultima scheda ingresso dello stesso mezzo. Verifica e completa i campi.");
+  }, [lastIngressoMatch]);
 
   useEffect(() => {
     if (!open) return;
@@ -209,6 +273,7 @@ export function LavorazioneCreateModal({
     setStato(defaultAccettazioneStato?.id ?? resolveDefaultLavorazioneStatoId(stati));
     setPriorita(prioritaOpts.includes("media") ? "media" : (prioritaOpts[0] ?? "media"));
     setMezzoHint(null);
+    setReuseHighlight(false);
   }, [open, defaultMezzoId, prioritaOpts, addettiOpts, defaultAccettazioneStato?.id]);
 
   useEffect(() => {
@@ -247,7 +312,7 @@ export function LavorazioneCreateModal({
     }
 
     const ymd = itDateToYmd(fields.dataIngresso) || new Date().toISOString().slice(0, 10);
-    const noteBlob = [fields.descrizioneAnomalia.trim(), fields.noteIntervento.trim()].filter(Boolean).join("\n\n");
+    const noteBlob = fields.noteIntervento.trim() || null;
 
     try {
       let finalMezzoId = mezzoId.trim();
@@ -296,7 +361,7 @@ export function LavorazioneCreateModal({
         lavorazioni: null,
         ricambi: null,
       };
-      saveLavorazioneSchedeStore(store);
+      void persistSchedeStore(store, row.id);
       onCreated?.(row.id);
       onClose();
     } catch {
@@ -349,9 +414,9 @@ export function LavorazioneCreateModal({
                   <GestionaleSettingsSelect
                     className="min-w-0 flex-1"
                     ariaLabel="Stato iniziale"
+                    listKey="lavorazioni:stati"
                     value={stato}
                     onChange={setStato}
-                    options={statiSelectOpts}
                     disabled={pending || globalOpts.isLoading}
                     required
                   />
@@ -361,19 +426,19 @@ export function LavorazioneCreateModal({
                 <GestionaleSettingsSelect
                   className="capitalize"
                   ariaLabel="Priorità"
+                  listKey="lavorazioni:priorita"
                   value={priorita}
                   onChange={(v) => setPriorita(v as PrioritaLavorazione)}
-                  options={prioritaOpts}
                   disabled={pending}
                   required
                 />
               </FormField>
               <FormField label="Addetto" className="sm:col-span-2 lg:col-span-1">
-                <GestionaleSettingsSelect
-                  ariaLabel="Addetto accettazione"
+                <GlobalSettingsListSelect
+                  listKey="lavorazioni:addetti"
+                  aria-label="Addetto accettazione"
                   value={fields.addettoAccettazione}
                   onChange={(v) => patch({ addettoAccettazione: v })}
-                  options={addettiOpts}
                   disabled={pending}
                 />
               </FormField>
@@ -383,38 +448,47 @@ export function LavorazioneCreateModal({
           <FormSection title="Cliente">
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Cliente *
-              <GestionaleListSelect className={listSelectWrapClass} value={fields.cliente} onChange={(v) => patch({ cliente: v })} options={liste.clienti} disabled={pending} required />
+              <GlobalSettingsListSelect listKey="mezzi:clienti" className={listSelectWrapClass} value={fields.cliente} onChange={(v) => patch({ cliente: v })} disabled={pending} required aria-label="Cliente" />
             </label>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Cantiere
-              <SettingsAutocompleteInput className="mt-1" value={fields.cantiere} onChange={(v) => patch({ cantiere: v })} options={liste.cantieri} disabled={pending} />
+              <GlobalSettingsListSelect listKey="mezzi:cantieri" className="mt-1" value={fields.cantiere} onChange={(v) => patch({ cantiere: v })} disabled={pending} aria-label="Cantiere" />
             </label>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Utilizzatore
-              <SettingsAutocompleteInput className="mt-1" value={fields.utilizzatore} onChange={(v) => patch({ utilizzatore: v })} options={liste.utilizzatori} disabled={pending} />
+              <GlobalSettingsListSelect listKey="mezzi:utilizzatori" className="mt-1" value={fields.utilizzatore} onChange={(v) => patch({ utilizzatore: v })} disabled={pending} aria-label="Utilizzatore" />
             </label>
           </FormSection>
 
           <FormSection title="Attrezzatura">
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Tipo attrezzatura
-              <SettingsAutocompleteInput className="mt-1" value={fields.tipoAttrezzatura} onChange={(v) => patch({ tipoAttrezzatura: v })} options={liste.tipiAttrezzatura} disabled={pending} />
+              <GlobalSettingsListSelect listKey="mezzi:tipiAttrezzatura" className="mt-1" value={fields.tipoAttrezzatura} onChange={(v) => patch({ tipoAttrezzatura: v })} disabled={pending} aria-label="Tipo attrezzatura" />
             </label>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 Marca *
-                <GestionaleListSelect
+                <GlobalHierarchyMarcaSelect
+                  tree="attrezzature"
                   className={listSelectWrapClass}
                   value={fields.marcaAttrezzatura}
                   onChange={(v) => patch({ marcaAttrezzatura: v, modelloAttrezzatura: "" })}
-                  options={marcheAtt}
                   disabled={pending}
                   required
+                  aria-label="Marca attrezzatura"
                 />
               </label>
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 Modello
-                <GestionaleListSelect className={listSelectWrapClass} value={fields.modelloAttrezzatura} onChange={(v) => patch({ modelloAttrezzatura: v })} options={modelliAtt} disabled={pending || !fields.marcaAttrezzatura.trim()} />
+                <GlobalHierarchyModelloSelect
+                  tree="attrezzature"
+                  marcaNome={fields.marcaAttrezzatura}
+                  className={listSelectWrapClass}
+                  value={fields.modelloAttrezzatura}
+                  onChange={(v) => patch({ modelloAttrezzatura: v })}
+                  disabled={pending}
+                  aria-label="Modello attrezzatura"
+                />
               </label>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -427,6 +501,13 @@ export function LavorazioneCreateModal({
                 <input className={`${dsInput} mt-1 font-mono`} value={fields.nScuderia} onChange={(e) => patch({ nScuderia: e.target.value })} disabled={pending} />
               </label>
             </div>
+            <CopiaUltimaSchedaIngressoBanner
+              visible={Boolean(lastIngressoMatch)}
+              highlight={reuseHighlight}
+              updatedAt={lastIngressoMatch?.updatedAt}
+              disabled={pending}
+              onCopy={copyLastIngresso}
+            />
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Ore lavoro
               <input type="number" min={0} className={inputFieldClass} value={fields.oreLavoro} onChange={(e) => patch({ oreLavoro: e.target.value })} disabled={pending} />
@@ -436,16 +517,16 @@ export function LavorazioneCreateModal({
           <FormSection title="Telaio">
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Tipo telaio
-              <SettingsAutocompleteInput className="mt-1" value={fields.tipoTelaio} onChange={(v) => patch({ tipoTelaio: v })} options={liste.tipiTelaio ?? []} disabled={pending} />
+              <GlobalSettingsListSelect listKey="mezzi:tipiTelaio" className="mt-1" value={fields.tipoTelaio} onChange={(v) => patch({ tipoTelaio: v })} disabled={pending} aria-label="Tipo telaio" />
             </label>
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 Marca
-                <GestionaleListSelect className={listSelectWrapClass} value={fields.marcaTelaio} onChange={(v) => patch({ marcaTelaio: v, modelloTelaio: "" })} options={marcheTel} disabled={pending} />
+                <GlobalHierarchyMarcaSelect tree="telai" className={listSelectWrapClass} value={fields.marcaTelaio} onChange={(v) => patch({ marcaTelaio: v, modelloTelaio: "" })} disabled={pending} aria-label="Marca telaio" />
               </label>
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 Modello
-                <GestionaleListSelect className={listSelectWrapClass} value={fields.modelloTelaio} onChange={(v) => patch({ modelloTelaio: v })} options={modelliTel} disabled={pending || !fields.marcaTelaio.trim()} />
+                <GlobalHierarchyModelloSelect tree="telai" marcaNome={fields.marcaTelaio} className={listSelectWrapClass} value={fields.modelloTelaio} onChange={(v) => patch({ modelloTelaio: v })} disabled={pending} aria-label="Modello telaio" />
               </label>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -463,12 +544,14 @@ export function LavorazioneCreateModal({
           <FormSection title="Intervento">
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
               Carburante
-              <SettingsAutocompleteInput
+              <GlobalSelect
                 className="mt-1"
                 value={fields.livelloCarburante}
                 onChange={(v) => patch({ livelloCarburante: v })}
                 options={["Vuoto", "1/4", "1/2", "3/4", "Pieno"]}
                 disabled={pending}
+                allowAdd={false}
+                aria-label="Livello carburante"
               />
             </label>
             <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">

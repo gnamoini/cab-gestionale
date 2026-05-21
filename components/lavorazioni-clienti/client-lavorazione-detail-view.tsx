@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
+import { IconGestionaleRefresh } from "@/components/gestionale/gestionale-log-ui";
 import { IconBack, IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
+import { ClientLavorazioneInformazioniPanel } from "@/components/lavorazioni-clienti/client-lavorazione-informazioni-panel";
 import { ClientLavorazioneMediaPanel } from "@/components/lavorazioni-clienti/client-lavorazione-media-panel";
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
 import {
@@ -19,6 +21,7 @@ import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readabili
 import { dsBtnNeutral, dsPageToolbarBtn, dsStackPage } from "@/lib/ui/design-system";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useClientLavorazioneDetailQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
+import { useClientLavorazioniRefresh } from "@/src/hooks/use-client-lavorazioni-refresh";
 import { useLavorazioneSchedeStoreSync } from "@/src/hooks/use-lavorazione-schede-store-sync";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { resolveStatoToDbEnum, statoLavorazioneLabel } from "@/src/shared/selectors";
@@ -38,6 +41,8 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
   const detail = detailQ.data;
   const row = detail?.row;
   const logs = detail?.logs ?? [];
+
+  const { refresh: refreshClientData, busy: refreshBusy } = useClientLavorazioniRefresh(detailQ);
 
   const ref = lavorazioneRefLabel(lavorazioneId);
 
@@ -123,6 +128,16 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
             </Link>
             <button
               type="button"
+              className={`${dsPageToolbarBtn} shrink-0`}
+              onClick={() => void refreshClientData()}
+              disabled={refreshBusy}
+              aria-busy={refreshBusy}
+            >
+              <IconGestionaleRefresh className={refreshBusy ? "animate-spin" : undefined} />
+              {refreshBusy ? "Aggiornamento…" : "Aggiorna"}
+            </button>
+            <button
+              type="button"
               className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
               title="QR lavorazione"
               aria-label="QR lavorazione"
@@ -137,15 +152,25 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
 
       <div className={dsStackPage}>
         <ShellCard>
-          <ClientLavorazioneTimelinePanel
-            row={row}
-            schedeStore={schedeStore}
-            logs={logs}
-            addettiGlobali={addettiGlobali}
-            statiOpts={statiOpts}
-            statoLabel={statoLabel}
-            statoStyle={statoStyle}
-          />
+          <div className="space-y-6">
+            <ClientLavorazioneInformazioniPanel
+              row={row}
+              schedeStore={schedeStore}
+              logs={logs}
+              addettiGlobali={addettiGlobali}
+              onRefresh={() => void refreshClientData()}
+              refreshBusy={refreshBusy}
+            />
+            <ClientLavorazioneTimelinePanel
+              row={row}
+              schedeStore={schedeStore}
+              logs={logs}
+              addettiGlobali={addettiGlobali}
+              statiOpts={statiOpts}
+              statoLabel={statoLabel}
+              statoStyle={statoStyle}
+            />
+          </div>
         </ShellCard>
 
         <ClientLavorazioneMediaPanel lavorazioneId={row.id} />

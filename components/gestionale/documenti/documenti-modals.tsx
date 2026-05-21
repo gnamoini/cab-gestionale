@@ -10,7 +10,7 @@ import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestional
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { CloseButton } from "@/components/design-system";
-import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
+import { GlobalHierarchyMarcaSelect, GlobalHierarchyModelloSelect } from "@/components/gestionale/global-input";
 import { DocumentoFileDropzone } from "@/components/gestionale/documenti/documento-file-dropzone";
 import { useAuth } from "@/context/auth-context";
 import {
@@ -278,32 +278,28 @@ export function UploadDocumentoModal({
 
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
-            <GestionaleListSelect
+            <GlobalHierarchyMarcaSelect
               className={listSelectWrapClass}
+              tree="attrezzature"
               value={marca}
               onChange={(v) => {
                 setMarca(v);
                 setModello("");
               }}
-              options={marcheOptions}
-              strictFromList={marca.trim().length > 0}
-              forceInvalid={marcaInvalid}
-              placeholder="Cerca marca… (puoi lasciare vuoto)"
+              aria-label="Marca documento"
             />
           </label>
           {applicabilita === "modello" ? (
             <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Modello
-              <GestionaleListSelect
+              <GlobalHierarchyModelloSelect
                 className={listSelectWrapClass}
+                tree="attrezzature"
+                marcaNome={marca}
                 value={modello}
                 onChange={setModello}
-                options={modelliOptions}
                 required
-                disabled={!marca.trim()}
-                forceInvalid={modelloInvalid}
-                invalidMessage="Seleziona un modello dalla lista"
-                placeholder="Cerca modello…"
+                aria-label="Modello documento"
               />
             </label>
           ) : null}
@@ -499,30 +495,28 @@ export function DocumentoEditModal({
 
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
-            <GestionaleListSelect
+            <GlobalHierarchyMarcaSelect
               className={listSelectWrapClass}
+              tree="attrezzature"
               value={marca}
               onChange={(v) => {
                 setMarca(v);
                 setModello("");
               }}
-              options={marcheOptions}
-              strictFromList={marca.trim().length > 0}
-              forceInvalid={marcaInvalid}
-              placeholder="Cerca marca… (puoi lasciare vuoto)"
+              aria-label="Marca documento"
             />
           </label>
           {applicabilita === "modello" && marca.trim() ? (
             <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Modello
-              <GestionaleListSelect
+              <GlobalHierarchyModelloSelect
                 className={listSelectWrapClass}
+                tree="attrezzature"
+                marcaNome={marca}
                 value={modello}
                 onChange={setModello}
-                options={modelliOptions}
                 required
-                disabled={!marca.trim()}
-                forceInvalid={modelloInvalid}
+                aria-label="Modello documento"
               />
             </label>
           ) : null}

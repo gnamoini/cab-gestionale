@@ -11,19 +11,15 @@ import {
   GESTIONALE_REALTIME_TABLES,
   invalidateAllGestionaleOperationalQueries,
 } from "@/lib/realtime/gestionale-realtime-config";
+import {
+  postgresChangeFingerprint,
+  subscribePostgresChangesChannel,
+  type PostgresChangePayload,
+} from "@/lib/realtime/postgres-changes-channel";
+import { broadcastGestionaleInvalidate, subscribeGestionaleBroadcast } from "@/lib/sync/cab-realtime-broadcast";
+import { emitCabSyncFromPostgresChange } from "@/lib/sync/cab-sync-bus";
+import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
-}
-
-function eventFingerprint(table: string, payload: { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> }): string {
-  const n = payload.new;
-  const o = payload.old;
-  const id = (n?.id ?? o?.id ?? "") as string;
-  const ts = (n?.updated_at ?? n?.created_at ?? o?.updated_at ?? o?.created_at ?? "") as string;
-  return `${table}:${payload.eventType}:${id}:${ts}`;
-}
 
 /**
  * Bridge Realtime globale: invalida cache React Query su cambi DB condivisi.
@@ -32,9 +28,7 @@ function eventFingerprint(table: string, payload: { eventType: string; new?: Rec
 export function GestionaleRealtimeBridge() {
   const qc = useQueryClient();
   const { user, status } = useAuth();
-  const userIdRef = useRef(user?.id);
-  userIdRef.current = user?.id;
-
+  const { setGestionaleStatus } = useRealtimeStatus();
   const authReady = isAuthSessionEstablished(status) && !!user?.id;
 
   useEffect(() => {
@@ -43,7 +37,7 @@ export function GestionaleRealtimeBridge() {
     let cancelled = false;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-    let activeChannel: ReturnType<ReturnType<typeof getBrowserSupabase>["channel"]> | null = null;
+    let activeChannel: Awaited<ReturnType<typeof subscribePostgresChangesChannel>>["channel"] | null = null;
     const pendingTables = new Set<string>();
     const recentFingerprints = new Map<string, number>();
     const PRUNE_MS = 5000;
@@ -56,6 +50,7 @@ export function GestionaleRealtimeBridge() {
         const spec = GESTIONALE_REALTIME_TABLES.find((s) => s.table === table);
         spec?.invalidate(qc);
       }
+      broadcastGestionaleInvalidate(tables);
     };
 
     const scheduleInvalidate = (table: string) => {
@@ -67,10 +62,10 @@ export function GestionaleRealtimeBridge() {
       }, GESTIONALE_REALTIME_DEBOUNCE_MS);
     };
 
-    const onPayload = (table: string, payload: { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
+    const onPayload = (table: string, payload: PostgresChangePayload) => {
       if (cancelled) return;
 
-      const fp = eventFingerprint(table, payload);
+      const fp = postgresChangeFingerprint(table, payload);
       const now = Date.now();
       for (const [k, t] of recentFingerprints) {
         if (now - t > PRUNE_MS) recentFingerprints.delete(k);
@@ -78,11 +73,13 @@ export function GestionaleRealtimeBridge() {
       if (recentFingerprints.has(fp)) return;
       recentFingerprints.set(fp, now);
 
+      emitCabSyncFromPostgresChange(table, payload);
       scheduleInvalidate(table);
     };
 
     const startPollingFallback = () => {
       if (pollTimer) return;
+      setGestionaleStatus("polling");
       pollTimer = setInterval(() => {
         if (cancelled) return;
         invalidateAllGestionaleOperationalQueries(qc);
@@ -96,56 +93,35 @@ export function GestionaleRealtimeBridge() {
       }
     };
 
+    const unsubBroadcast = subscribeGestionaleBroadcast((tables) => {
+      if (cancelled) return;
+      for (const table of tables) scheduleInvalidate(table);
+    });
+
     void (async () => {
       const sb = getBrowserSupabase();
+      const tables = GESTIONALE_REALTIME_TABLES.map((s) => ({ table: s.table }));
 
-      for (let attempt = 0; attempt < GESTIONALE_REALTIME_RETRY_ATTEMPTS && !cancelled; attempt++) {
-        const channelName = `cab-gestionale-rt-${attempt}-${Date.now()}`;
-        let channel = sb.channel(channelName);
+      const { channel, subscribed } = await subscribePostgresChangesChannel(sb, {
+        channelName: "cab-gestionale-rt",
+        tables,
+        onPayload,
+        retryAttempts: GESTIONALE_REALTIME_RETRY_ATTEMPTS,
+        logPrefix: "[gestionale rt]",
+        onStatusChange: (s) => setGestionaleStatus(s === "connected" ? "connected" : "polling"),
+        onPollingFallback: () => {
+          if (!cancelled) {
+            console.warn(`[gestionale rt] subscription non disponibile: fallback polling ${GESTIONALE_REALTIME_POLL_MS}ms`);
+            startPollingFallback();
+          }
+        },
+      });
 
-        for (const spec of GESTIONALE_REALTIME_TABLES) {
-          channel = channel.on(
-            "postgres_changes",
-            { event: "*", schema: "public", table: spec.table },
-            (payload) =>
-              onPayload(spec.table, payload as { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> }),
-          );
-        }
-
-        const subscribed = await Promise.race([
-          new Promise<boolean>((resolve) => {
-            channel.subscribe((st, err) => {
-              if (st === "SUBSCRIBED") {
-                resolve(true);
-                return;
-              }
-              if (st === "CHANNEL_ERROR" || st === "TIMED_OUT" || st === "CLOSED") {
-                console.warn("[gestionale rt] subscribe:", st, err?.message ?? "");
-                resolve(false);
-              }
-            });
-          }),
-          new Promise<boolean>((resolve) => {
-            setTimeout(() => resolve(false), 8000);
-          }),
-        ]);
-
-        if (subscribed) {
-          activeChannel = channel;
-          stopPollingFallback();
-          return;
-        }
-
-        try {
-          await sb.removeChannel(channel);
-        } catch {
-          /* ignore */
-        }
-        await delay(1000 * 2 ** attempt);
-      }
-
-      if (!cancelled) {
-        console.warn(`[gestionale rt] subscription non disponibile: fallback polling ${GESTIONALE_REALTIME_POLL_MS}ms`);
+      if (subscribed) {
+        activeChannel = channel;
+        stopPollingFallback();
+        setGestionaleStatus("connected");
+      } else if (!cancelled) {
         startPollingFallback();
       }
     })();
@@ -154,14 +130,16 @@ export function GestionaleRealtimeBridge() {
       cancelled = true;
       if (debounceTimer) clearTimeout(debounceTimer);
       stopPollingFallback();
+      unsubBroadcast();
       pendingTables.clear();
+      setGestionaleStatus("idle");
       const sb = getBrowserSupabase();
       if (activeChannel) {
         void sb.removeChannel(activeChannel);
         activeChannel = null;
       }
     };
-  }, [authReady, qc, user?.id]);
+  }, [authReady, qc, setGestionaleStatus, user?.id]);
 
   return null;
 }

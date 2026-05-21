@@ -82,7 +82,7 @@ export function buildClientVisibleNotes(row: LavorazioneRow): ClientVisibleNote[
   return [{ text: note }];
 }
 
-/** Timeline cliente: solo cambi stato, addetto e ripristino. */
+/** Timeline cliente: solo cambi stato e ripristino. */
 export function buildClientTimeline(
   logs: readonly LogModificaRow[],
   statiOpts: { id: string; label: string; color?: string }[] = [],
@@ -110,14 +110,6 @@ export function buildClientTimeline(
         kind: "log",
         at: lg.created_at,
         title: `Stato · ${statoLabel}`,
-      });
-    }
-    if (before?.addetto !== after?.addetto && typeof after?.addetto === "string") {
-      items.push({
-        id: `addetto-${lg.id}`,
-        kind: "log",
-        at: lg.created_at,
-        title: `Addetto · ${after.addetto}`,
       });
     }
   }

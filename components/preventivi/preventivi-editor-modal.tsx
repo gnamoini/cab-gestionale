@@ -2,13 +2,43 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { ensurePreventivoStruttura, partitionRigheRicambi, pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
 import { calcolaTotaliPreventivo, totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
+import {
+  PREVENTIVO_COLLAUDO_DESCRIZIONE,
+  PREVENTIVO_MATERIALI_CONSUMO_DESCRIZIONE,
+  PREVENTIVO_RIGA_MATERIALI_ID,
+  PREVENTIVO_SANIFICAZIONE_DESCRIZIONE,
+  PREVENTIVO_SMALTIMENTO_DESCRIZIONE,
+  PREVENTIVO_SMALTIMENTO_PERCENT,
+} from "@/lib/preventivi/preventivi-voci-standard";
 import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
 import { appendPreventiviChangeLog } from "@/lib/preventivi/preventivi-change-log-storage";
-import { appendPreventivo, upsertPreventivo } from "@/lib/preventivi/preventivi-storage";
+import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
+import type { MezzoRow } from "@/src/types/supabase-tables";
 import { maybeRecordLearningOnSave } from "@/lib/preventivi/trasforma-descrizione";
 import type { PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
-import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import {
+  PREVENTIVO_TIPI_DOCUMENTO,
+  preventivoTipoDocumentoLabel,
+} from "@/lib/preventivi/preventivi-tipo-documento";
+import type { PreventivoTipoDocumento } from "@/lib/preventivi/types";
+import {
+  dsBtnDanger,
+  dsBtnNeutral,
+  dsBtnPrimary,
+  dsInput,
+  dsScrollbar,
+  dsSegmentedBtnOff,
+  dsSegmentedBtnOn,
+  dsSegmentedWrap,
+  dsTable,
+  dsTableActionBtnDanger,
+  dsTableActionGlyph,
+  dsTableHeadCell,
+  dsTableRow,
+  dsTableWrap,
+} from "@/lib/ui/design-system";
 import { migrateMezziListePrefs, modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
 import { marcheFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -16,14 +46,25 @@ import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
 import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
-import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
+import {
+  GlobalHierarchyMarcaSelect,
+  GlobalHierarchyModelloSelect,
+  GlobalSettingsListSelect,
+} from "@/components/gestionale/global-input";
+import { GlobalDatePickerYmd } from "@/components/gestionale/global-input";
+import { dateInputValueToIso, isoToDateInputValue, localCalendarDayIsoFromIso } from "@/lib/lavorazioni/date-day-only";
 
 function cloneRecord(p: PreventivoRecord): PreventivoRecord {
   return JSON.parse(JSON.stringify(p)) as PreventivoRecord;
 }
 
 const ORE_MIN = 0.01;
+
+const preventivoIntestazioneSegmentWrap = `${dsSegmentedWrap} mt-1 w-full gap-0.5 p-0.5`;
+const preventivoIntestazioneSegmentOn = `${dsSegmentedBtnOn} flex-1 px-2.5 py-1 text-xs`;
+const preventivoIntestazioneSegmentOff = `${dsSegmentedBtnOff} flex-1 px-2.5 py-1 text-xs`;
+const preventivoManodoperaRowGrid =
+  "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7.5rem_2.25rem] sm:items-end sm:gap-2";
 
 function parseOreManodoperaInput(raw: string): number {
   const v = parseFloat(raw.replace(",", "."));
@@ -40,18 +81,16 @@ function fmtEuro(n: number): string {
   return `${n.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 }
 
-function fmtDayIt(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("it-IT", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
+const preventivoSanificazioneEditorLine = `- ${PREVENTIVO_SANIFICAZIONE_DESCRIZIONE};`;
+
+function composeLavorazioniClienteEditorText(specifiche: string): string {
+  const rest = specifiche.trim();
+  if (!rest) return preventivoSanificazioneEditorLine;
+  return `${preventivoSanificazioneEditorLine}\n${rest}`;
+}
+
+function extractLavorazioniClienteSpecifiche(composed: string): string {
+  return pulisciDescrizioneLavorazioniSpecifiche(composed);
 }
 
 export function PreventiviEditorModal({
@@ -60,21 +99,30 @@ export function PreventiviEditorModal({
   isNew,
   isRollbackDraft = false,
   autore,
+  mezziRows,
   onClose,
   onSaved,
+  onSaveError,
 }: {
   open: boolean;
   record: PreventivoRecord | null;
   isNew: boolean;
   isRollbackDraft?: boolean;
   autore: string;
+  mezziRows: readonly MezzoRow[];
   onClose: () => void;
   onSaved: () => void;
+  onSaveError?: (message: string) => void;
 }) {
   const baselineRef = useRef<PreventivoRecord | null>(null);
   const draftRef = useRef<PreventivoRecord | null>(null);
   const [draft, setDraft] = useState<PreventivoRecord | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+
+  const applyTotals = useCallback((d: PreventivoRecord): PreventivoRecord => {
+    const s = ensurePreventivoStruttura(d);
+    return { ...s, ...calcolaTotaliPreventivo(s) };
+  }, []);
 
   useEffect(() => {
     if (!open || !record) {
@@ -84,11 +132,11 @@ export function PreventiviEditorModal({
       setUnsavedExitOpen(false);
       return;
     }
-    const c = cloneRecord(record);
-    baselineRef.current = cloneRecord(record);
+    const c = applyTotals(cloneRecord(record));
+    baselineRef.current = applyTotals(cloneRecord(record));
     draftRef.current = c;
     setDraft(c);
-  }, [open, record]);
+  }, [open, record, applyTotals]);
 
   useLayoutEffect(() => {
     draftRef.current = draft;
@@ -103,14 +151,16 @@ export function PreventiviEditorModal({
   );
 
   const totals = useMemo(() => {
-    if (!draft) return { totaleRicambi: 0, totaleManodopera: 0, totaleFinale: 0 };
+    if (!draft) {
+      return { totaleRicambi: 0, totaleManodopera: 0, totaleSmaltimento: 0, totaleFinale: 0 };
+    }
     return calcolaTotaliPreventivo(draft);
   }, [draft]);
 
-  const applyTotals = useCallback((d: PreventivoRecord): PreventivoRecord => {
-    const t = calcolaTotaliPreventivo(d);
-    return { ...d, ...t };
-  }, []);
+  const ricambiPart = useMemo(
+    () => (draft ? partitionRigheRicambi(draft.righeRicambi) : { standard: [], materialiConsumo: null }),
+    [draft],
+  );
 
   const isDirty = useMemo(() => {
     const cur = draft;
@@ -169,27 +219,31 @@ export function PreventiviEditorModal({
   function addRiga() {
     setDraft((prev) => {
       if (!prev) return prev;
+      const { standard, materialiConsumo } = partitionRigheRicambi(prev.righeRicambi);
       const id = `prr-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
-      const righeRicambi = [
-        ...prev.righeRicambi,
-        {
-          id,
-          ricambioId: null,
-          codiceOE: "",
-          descrizione: "",
-          quantita: 1,
-          prezzoUnitario: 0,
-          scontoPercent: 0,
-        },
-      ];
+      const nuova: PreventivoRigaRicambio = {
+        id,
+        ricambioId: null,
+        codiceOE: "",
+        descrizione: "",
+        quantita: 1,
+        prezzoUnitario: 0,
+        scontoPercent: 0,
+        tipo: "standard",
+      };
+      const righeRicambi = materialiConsumo ? [...standard, nuova, materialiConsumo] : [...standard, nuova];
       return applyTotals({ ...prev, righeRicambi });
     });
   }
 
   function removeRiga(id: string) {
+    if (id === PREVENTIVO_RIGA_MATERIALI_ID) return;
     setDraft((prev) => {
       if (!prev) return prev;
-      return applyTotals({ ...prev, righeRicambi: prev.righeRicambi.filter((r) => r.id !== id) });
+      const { standard, materialiConsumo } = partitionRigheRicambi(prev.righeRicambi);
+      const nextStandard = standard.filter((r) => r.id !== id);
+      const righeRicambi = materialiConsumo ? [...nextStandard, materialiConsumo] : nextStandard;
+      return applyTotals({ ...prev, righeRicambi });
     });
   }
 
@@ -229,7 +283,7 @@ export function PreventiviEditorModal({
     });
   }
 
-  function onSalva() {
+  async function onSalva() {
     const cur = draftRef.current;
     if (!cur) return;
     const now = new Date().toISOString();
@@ -241,47 +295,54 @@ export function PreventiviEditorModal({
     });
     const baseline = baselineRef.current;
     maybeRecordLearningOnSave(baseline, next);
+
+    const res = await persistPreventivoRecord(next, mezziRows, {
+      expectedUpdatedAt: !isNew ? baseline?.aggiornatoAt : undefined,
+    });
+    if (!res.ok) {
+      onSaveError?.(res.error);
+      return;
+    }
+
+    const saved = res.record;
     if (isNew) {
-      appendPreventivo(next);
       appendPreventiviChangeLog({
         tone: "create",
         tipoRiga: "CREAZIONE PREVENTIVO",
-        oggettoRiga: `Preventivo ${next.numero}`,
-        modificaRiga: `Cliente: ${next.cliente || "—"}. Totale ${next.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €. ${
-          next.lavorazioneId.trim()
-            ? `Lavorazione ${next.lavorazioneId} (${next.lavorazioneOrigine}).`
+        oggettoRiga: `Preventivo ${saved.numero}`,
+        modificaRiga: `Cliente: ${saved.cliente || "—"}. Totale ${saved.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €. ${
+          saved.lavorazioneId.trim()
+            ? `Lavorazione ${saved.lavorazioneId} (${saved.lavorazioneOrigine}).`
             : "Preventivo manuale (nessuna lavorazione collegata)."
         }`,
         autore: u,
         atIso: now,
       });
     } else if (isRollbackDraft) {
-      upsertPreventivo(next);
       appendPreventiviChangeLog({
         tone: "create",
         tipoRiga: "CREAZIONE PREVENTIVO",
-        oggettoRiga: `Preventivo ${next.numero}`,
-        modificaRiga: `Generato da lavorazione ${next.lavorazioneId} con ${next.righeRicambi.length} ricambi e ${next.manodopera.oreTotali} ore manodopera. Cliente: ${next.cliente || "—"}.`,
+        oggettoRiga: `Preventivo ${saved.numero}`,
+        modificaRiga: `Generato da lavorazione ${saved.lavorazioneId} con ${saved.righeRicambi.length} ricambi e ${saved.manodopera.oreTotali} ore manodopera. Cliente: ${saved.cliente || "—"}.`,
         autore: u,
         atIso: now,
       });
     } else {
-      upsertPreventivo(next);
       const base = baseline;
       const changed =
-        !base || JSON.stringify(applyTotals(cloneRecord(base))) !== JSON.stringify(applyTotals(cloneRecord(next)));
+        !base || JSON.stringify(applyTotals(cloneRecord(base))) !== JSON.stringify(applyTotals(cloneRecord(saved)));
       if (changed) {
         appendPreventiviChangeLog({
           tone: "update",
           tipoRiga: "AGGIORNAMENTO PREVENTIVO",
-          oggettoRiga: `Preventivo ${next.numero}`,
+          oggettoRiga: `Preventivo ${saved.numero}`,
           modificaRiga: "Salvate modifiche a intestazione, righe ricambi/manodopera, totali o note.",
           autore: u,
           atIso: now,
         });
       }
     }
-    baselineRef.current = cloneRecord(next);
+    baselineRef.current = cloneRecord(saved);
     setUnsavedExitOpen(false);
     onSaved();
     onClose();
@@ -294,7 +355,11 @@ export function PreventiviEditorModal({
       wide
       maxWidthClass="max-w-5xl"
       onRequestClose={requestClose}
-      title={isNew ? "Nuovo preventivo" : `Preventivo ${draft.numero}`}
+      title={
+        isNew
+          ? `Nuovo ${preventivoTipoDocumentoLabel(draft.tipoDocumento).toLowerCase()}`
+          : `${preventivoTipoDocumentoLabel(draft.tipoDocumento)} ${draft.numero}`
+      }
     >
       <div className="relative flex max-h-[min(92dvh,900px)] min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar">
@@ -303,14 +368,45 @@ export function PreventiviEditorModal({
               <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 Intestazione
               </h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <label className="block text-xs">
                   <span className="text-zinc-500">Numero</span>
-                  <input className={`${dsInput} mt-1`} readOnly value={draft.numero} />
+                  <input className={`${dsInput} mt-1 tabular-nums`} readOnly value={draft.numero} />
+                </label>
+                <label className="block text-xs">
+                  <span className="text-zinc-500">Tipo documento</span>
+                  <div role="tablist" aria-label="Tipo documento" className={preventivoIntestazioneSegmentWrap}>
+                    {PREVENTIVO_TIPI_DOCUMENTO.map((t) => {
+                      const active = draft.tipoDocumento === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          className={active ? preventivoIntestazioneSegmentOn : preventivoIntestazioneSegmentOff}
+                          onClick={() => patch({ tipoDocumento: t.id as PreventivoTipoDocumento })}
+                        >
+                          {t.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </label>
                 <label className="block text-xs">
                   <span className="text-zinc-500">Data creazione</span>
-                  <input className={`${dsInput} mt-1`} readOnly value={fmtDayIt(draft.dataCreazione)} />
+                  <div className="mt-1">
+                    <GlobalDatePickerYmd
+                      variant="default"
+                      valueYmd={isoToDateInputValue(draft.dataCreazione)}
+                      onChangeYmd={(ymd) => {
+                        if (!ymd.trim()) return;
+                        const r = dateInputValueToIso(ymd);
+                        if (r.ok) patch({ dataCreazione: r.iso });
+                      }}
+                      aria-label="Data creazione"
+                    />
+                  </div>
                 </label>
               </div>
             </section>
@@ -322,23 +418,24 @@ export function PreventiviEditorModal({
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <label className="block text-xs sm:col-span-1">
                   <span className="text-zinc-500">Cliente</span>
-                  <GestionaleListSelect
+                  <GlobalSettingsListSelect
+                    listKey="mezzi:clienti"
                     className="mt-1"
                     value={draft.cliente}
                     onChange={(v) => {
                       patch({ cliente: v });
                       applyClienteScontoRighe(v);
                     }}
-                    options={clientiEditorOpts}
+                    aria-label="Cliente"
                   />
                 </label>
                 <label className="block text-xs">
                   <span className="text-zinc-500">Cantiere</span>
-                  <SettingsAutocompleteInput className="mt-1" value={draft.cantiere} onChange={(v) => patch({ cantiere: v })} options={cantieriEditorOpts} />
+                  <GlobalSettingsListSelect listKey="mezzi:cantieri" className="mt-1" value={draft.cantiere} onChange={(v) => patch({ cantiere: v })} aria-label="Cantiere" />
                 </label>
                 <label className="block text-xs">
                   <span className="text-zinc-500">Utilizzatore</span>
-                  <SettingsAutocompleteInput className="mt-1" value={draft.utilizzatore} onChange={(v) => patch({ utilizzatore: v })} options={utilizzatoriEditorOpts} />
+                  <GlobalSettingsListSelect listKey="mezzi:utilizzatori" className="mt-1" value={draft.utilizzatore} onChange={(v) => patch({ utilizzatore: v })} aria-label="Utilizzatore" />
                 </label>
               </div>
             </section>
@@ -362,7 +459,8 @@ export function PreventiviEditorModal({
                 </label>
                 <label className="block text-xs">
                   <span className="text-zinc-500">Marca attrezzatura</span>
-                  <GestionaleListSelect
+                  <GlobalHierarchyMarcaSelect
+                    tree="attrezzature"
                     className="mt-1"
                     value={draft.marcaAttrezzatura}
                     onChange={(marca) => {
@@ -381,12 +479,14 @@ export function PreventiviEditorModal({
                         });
                       });
                     }}
-                    options={marcheEditorOpts}
+                    aria-label="Marca attrezzatura"
                   />
                 </label>
                 <label className="block text-xs sm:col-span-2">
                   <span className="text-zinc-500">Modello</span>
-                  <GestionaleListSelect
+                  <GlobalHierarchyModelloSelect
+                    tree="attrezzature"
+                    marcaNome={draft.marcaAttrezzatura}
                     className="mt-1"
                     value={draft.modelloAttrezzatura}
                     onChange={(modello) => {
@@ -400,8 +500,7 @@ export function PreventiviEditorModal({
                         });
                       });
                     }}
-                    options={draft.marcaAttrezzatura.trim() ? modelliVisibiliPerMarca(prefsAtt, draft.marcaAttrezzatura.trim()) : []}
-                    disabled={!draft.marcaAttrezzatura.trim()}
+                    aria-label="Modello attrezzatura"
                   />
                 </label>
               </div>
@@ -409,21 +508,147 @@ export function PreventiviEditorModal({
 
             <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
               <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Lavorazioni (testo cliente)
+                Lavorazioni
               </h3>
-              <textarea
-                className={`${dsInput} mt-3 min-h-[8rem] resize-y`}
-                value={draft.descrizioneLavorazioniCliente}
-                onChange={(e) => patch({ descrizioneLavorazioniCliente: e.target.value })}
-              />
+              <label className="mt-3 block text-xs">
+                <span className="text-zinc-500">Lavorazioni specifiche (testo cliente)</span>
+                <textarea
+                  className={`${dsInput} mt-1 min-h-[7rem] resize-y`}
+                  value={composeLavorazioniClienteEditorText(draft.descrizioneLavorazioniCliente)}
+                  onChange={(e) =>
+                    patch({ descrizioneLavorazioniCliente: extractLavorazioniClienteSpecifiche(e.target.value) })
+                  }
+                />
+              </label>
               <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
-                Le modifiche qui vengono memorizzate come riferimento per preventivi futuri simili.
+                Le modifiche al testo allenano il modello per preventivi simili futuri.
               </p>
             </section>
 
             <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ricambi</h3>
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Manodopera</h3>
+                <button type="button" className={dsBtnNeutral} onClick={addAddettoRow}>
+                  Aggiungi addetto
+                </button>
+              </div>
+
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                <label className="block text-xs">
+                  <span className="text-zinc-500">Costo orario (€/h)</span>
+                  <input
+                    className={`${dsInput} mt-1 text-right tabular-nums`}
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={draft.manodopera.costoOrario}
+                    onChange={(e) => {
+                      const v = Math.max(0, parseFloat(e.target.value) || 0);
+                      setDraft((prev) =>
+                        prev
+                          ? applyTotals({
+                              ...prev,
+                              manodopera: { ...prev.manodopera, costoOrario: v },
+                            })
+                          : prev,
+                      );
+                    }}
+                  />
+                </label>
+                <label className="block text-xs">
+                  <span className="text-zinc-500">Ore totali</span>
+                  <input
+                    className={`${dsInput} mt-1 text-right tabular-nums`}
+                    readOnly
+                    value={String(draft.manodopera.oreTotali)}
+                    aria-label="Ore totali calcolate"
+                  />
+                </label>
+                <label className="block text-xs">
+                  <span className="text-zinc-500">Importo manodopera</span>
+                  <input
+                    className={`${dsInput} mt-1 text-right tabular-nums font-medium`}
+                    readOnly
+                    value={fmtEuro(totals.totaleManodopera)}
+                    aria-label="Importo manodopera calcolato"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50/40 dark:border-zinc-700 dark:bg-zinc-950/30">
+                <div
+                  className={`${preventivoManodoperaRowGrid} hidden border-b border-zinc-200/80 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700/80 sm:grid`}
+                >
+                  <span>Addetto</span>
+                  <span className="text-right">Ore</span>
+                  <span className="sr-only">Azioni</span>
+                </div>
+                <div className="divide-y divide-zinc-200/80 dark:divide-zinc-700/80">
+                  {draft.manodopera.righeAddetti.map((a, idx) => (
+                    <div key={`${idx}-${a.addetto}`} className={`${preventivoManodoperaRowGrid} px-3 py-2.5`}>
+                      <label className="block min-w-0 text-xs">
+                        <span className="text-zinc-500 sm:sr-only">Addetto</span>
+                        <input
+                          className={`${dsInput} mt-1 sm:mt-0`}
+                          value={a.addetto}
+                          onChange={(e) => patchAddettoRow(idx, { addetto: e.target.value })}
+                          placeholder="Nome addetto"
+                          aria-label={`Addetto riga ${idx + 1}`}
+                        />
+                      </label>
+                      <label className="block text-xs">
+                        <span className="text-zinc-500 sm:sr-only">Ore</span>
+                        <input
+                          className={`${dsInput} mt-1 text-right tabular-nums sm:mt-0`}
+                          type="number"
+                          min={ORE_MIN}
+                          step={0.01}
+                          inputMode="decimal"
+                          value={a.ore}
+                          onChange={(e) => patchAddettoRow(idx, { ore: parseOreManodoperaInput(e.target.value) })}
+                          aria-label={`Ore addetto riga ${idx + 1}`}
+                        />
+                      </label>
+                      <div className="flex items-end justify-end">
+                        <button
+                          type="button"
+                          className={dsTableActionBtnDanger}
+                          onClick={() => removeAddettoRow(idx)}
+                          title="Rimuovi addetto"
+                          aria-label={`Rimuovi addetto riga ${idx + 1}`}
+                        >
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-700">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                  <span className="font-medium text-zinc-700 dark:text-zinc-200">{PREVENTIVO_COLLAUDO_DESCRIZIONE}</span>
+                  <span className="text-zinc-500">Qtà: 1</span>
+                  <label className="flex items-center gap-2 sm:ml-auto">
+                    <span className="whitespace-nowrap text-zinc-500">Prezzo (€)</span>
+                    <input
+                      className={`${dsInput} w-28 text-right tabular-nums`}
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={draft.collaudoPrezzo ?? 0}
+                      onChange={(e) => patch({ collaudoPrezzo: Math.max(0, parseFloat(e.target.value) || 0) })}
+                    />
+                  </label>
+                </div>
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ricambi utilizzati</h3>
                 <button type="button" className={dsBtnNeutral} onClick={addRiga}>
                   Aggiungi riga
                 </button>
@@ -442,7 +667,7 @@ export function PreventiviEditorModal({
                     </tr>
                   </thead>
                   <tbody>
-                    {draft.righeRicambi.map((r) => (
+                    {ricambiPart.standard.map((r) => (
                       <tr key={r.id} className={dsTableRow}>
                         <td className="px-2 py-1.5 align-top">
                           <input className={dsInput} value={r.codiceOE} onChange={(e) => patchRiga(r.id, { codiceOE: e.target.value })} />
@@ -496,95 +721,38 @@ export function PreventiviEditorModal({
                   </tbody>
                 </table>
               </div>
-            </section>
-
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Manodopera</h3>
-                <button type="button" className={dsBtnNeutral} onClick={addAddettoRow}>
-                  Aggiungi addetto
-                </button>
-              </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Costo orario (€)</span>
-                  <input
-                    className={`${dsInput} mt-1 text-right tabular-nums`}
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    value={draft.manodopera.costoOrario}
-                    onChange={(e) => {
-                      const v = Math.max(0, parseFloat(e.target.value) || 0);
-                      setDraft((prev) =>
-                        prev
-                          ? applyTotals({
-                              ...prev,
-                              manodopera: { ...prev.manodopera, costoOrario: v },
-                            })
-                          : prev,
-                      );
-                    }}
-                  />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Sconto % manodopera</span>
-                  <input
-                    className={`${dsInput} mt-1 text-right tabular-nums`}
-                    type="number"
-                    min={0}
-                    max={100}
-                    step={0.5}
-                    value={draft.manodopera.scontoPercent ?? 0}
-                    onChange={(e) => {
-                      const v = Math.min(100, Math.max(0, parseFloat(e.target.value) || 0));
-                      setDraft((prev) =>
-                        prev ? applyTotals({ ...prev, manodopera: { ...prev.manodopera, scontoPercent: v } }) : prev,
-                      );
-                    }}
-                  />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Ore totali (calcolate)</span>
-                  <input className={`${dsInput} mt-1 text-right tabular-nums`} readOnly value={String(draft.manodopera.oreTotali)} />
-                </label>
-              </div>
-              <div className="mt-3 space-y-2">
-                {draft.manodopera.righeAddetti.map((a, idx) => (
-                  <div key={`${idx}-${a.addetto}`} className="flex flex-wrap gap-2">
-                    <label className="block min-w-[10rem] flex-1 text-xs">
-                      <span className="text-zinc-500">Addetto</span>
+              {ricambiPart.materialiConsumo ? (
+                <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-700 dark:bg-zinc-950/40">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    Materiali di consumo
+                  </p>
+                  <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end">
+                    <p className="text-sm text-zinc-800 dark:text-zinc-100">{PREVENTIVO_MATERIALI_CONSUMO_DESCRIZIONE}</p>
+                    <label className="block text-xs">
+                      <span className="text-zinc-500">Qtà</span>
+                      <input className={`${dsInput} mt-1 w-20 text-right tabular-nums`} readOnly value="1" />
+                    </label>
+                    <label className="block text-xs">
+                      <span className="text-zinc-500">Prezzo (€)</span>
                       <input
-                        className={`${dsInput} mt-1`}
-                        value={a.addetto}
-                        onChange={(e) => patchAddettoRow(idx, { addetto: e.target.value })}
+                        className={`${dsInput} mt-1 w-28 text-right tabular-nums`}
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={ricambiPart.materialiConsumo.prezzoUnitario}
+                        onChange={(e) =>
+                          patchRiga(ricambiPart.materialiConsumo!.id, {
+                            prezzoUnitario: Math.max(0, parseFloat(e.target.value) || 0),
+                          })
+                        }
                       />
                     </label>
-                    <div className="flex items-end gap-2">
-                      <label className="block w-28 text-xs">
-                        <span className="text-zinc-500">Ore</span>
-                        <input
-                          className={`${dsInput} mt-1 text-right tabular-nums`}
-                          type="number"
-                          min={ORE_MIN}
-                          step={0.01}
-                          inputMode="decimal"
-                          value={a.ore}
-                          onChange={(e) => patchAddettoRow(idx, { ore: parseOreManodoperaInput(e.target.value) })}
-                        />
-                      </label>
-                      <button
-                        type="button"
-                        className={`${dsBtnDanger} h-[2.625rem] w-10 shrink-0 px-0 text-sm leading-none`}
-                        onClick={() => removeAddettoRow(idx)}
-                        aria-label="Rimuovi riga addetto"
-                      >
-                        ✕
-                      </button>
-                    </div>
                   </div>
-                ))}
-              </div>
+                  <p className="mt-2 text-right text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-100">
+                    Totale: {fmtEuro(totaleNettoRigaRicambio(ricambiPart.materialiConsumo))}
+                  </p>
+                </div>
+              ) : null}
             </section>
 
             <section className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
@@ -597,6 +765,16 @@ export function PreventiviEditorModal({
                 <p className="mt-1 flex justify-between text-zinc-600 dark:text-zinc-300">
                   <span>Totale manodopera</span>
                   <span className="tabular-nums font-medium">{fmtEuro(totals.totaleManodopera)}</span>
+                </p>
+                <p className="mt-1 flex justify-between text-zinc-600 dark:text-zinc-300">
+                  <span>{PREVENTIVO_COLLAUDO_DESCRIZIONE}</span>
+                  <span className="tabular-nums font-medium">{fmtEuro(draft.collaudoPrezzo ?? 0)}</span>
+                </p>
+                <p className="mt-1 flex justify-between text-zinc-600 dark:text-zinc-300">
+                  <span>
+                    {PREVENTIVO_SMALTIMENTO_DESCRIZIONE} ({PREVENTIVO_SMALTIMENTO_PERCENT}% netto)
+                  </span>
+                  <span className="tabular-nums font-medium">{fmtEuro(totals.totaleSmaltimento)}</span>
                 </p>
                 <p className="mt-2 flex justify-between border-t border-zinc-100 pt-2 text-base font-semibold text-zinc-900 dark:border-zinc-800 dark:text-zinc-50">
                   <span>Totale finale</span>

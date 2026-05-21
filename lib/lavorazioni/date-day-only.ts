@@ -63,3 +63,15 @@ export function parseOptionalDateInputValue(value: string): { ok: true; iso: str
   if (!s) return { ok: true, iso: null };
   return dateInputValueToIso(s);
 }
+
+/** ISO a mezzogiorno locale per il giorno di calendario (filtri, ordinamenti, date picker). */
+export function localCalendarDayIsoFromDate(d: Date = new Date()): string {
+  const r = dateInputValueToIso(isoToDateInputValue(d.toISOString()));
+  return r.ok ? r.iso : d.toISOString();
+}
+
+export function localCalendarDayIsoFromIso(iso: string, fallback?: string): string {
+  const r = dateInputValueToIso(isoToDateInputValue(iso));
+  if (r.ok) return r.iso;
+  return localCalendarDayIsoFromDate(fallback ? new Date(fallback) : new Date());
+}

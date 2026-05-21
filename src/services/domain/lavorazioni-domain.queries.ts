@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { fetchLavorazioniListAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
 import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { documentiService } from "@/src/services/documenti.service";
@@ -61,7 +62,7 @@ type LavListOpts = Omit<
 /** Lista lavorazioni con filtri opzionali (chiave cache derivata da `stableLavorazioniFiltersKey`). */
 export function useLavorazioniList(filters?: LavorazioneFilters, options?: LavListOpts) {
   const fk = stableLavorazioniFiltersKey(filters);
-  return useServiceQuery(lavorazioniDomainQueryKeys.list(fk), () => lavorazioniService.getAll(filters), {
+  return useServiceQuery(lavorazioniDomainQueryKeys.list(fk), () => fetchLavorazioniListAuthorized(filters), {
     staleTime: LA_STALE_MS,
     enabled: options?.enabled !== false,
     ...options,

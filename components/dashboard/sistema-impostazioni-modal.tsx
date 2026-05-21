@@ -402,7 +402,7 @@ function ClientiCommercialiList({
                   type="number"
                   min={0}
                   max={100}
-                  step={0.1}
+                  step={1}
                   value={sconto}
                   onChange={(e) => {
                     const n = clampScontoRicambiPercent(Number(e.target.value));
@@ -652,10 +652,10 @@ function SistemaImpostazioniWorkspace({
       buildBulkRowsFromResolved(buildResolvedFromModalSnapshot(s)),
       settingsRows,
     );
-    suppressSettingsRemoteNotify();
+    suppressSettingsRemoteNotify(8000);
     await bulkSave.mutateAsync(payload);
     appendDashboardSettingsSavedLog(authorName);
-    suppressSettingsRemoteNotify();
+    suppressSettingsRemoteNotify(8000);
     savedSnapshotRef.current = s;
     setSavedSnapshotKey(snapshotKey(s));
     dispatchLavorazioniPrefsRefresh();
@@ -1291,7 +1291,7 @@ export function SistemaImpostazioniPageView() {
   if (!permissions.canManageSettings) {
     return (
       <div className={dsStackPage}>
-        <PageHeader title="Impostazioni" description="Area riservata agli amministratori." />
+        <PageHeader title="Impostazioni" description="Non hai i permessi per modificare le impostazioni globali." />
         <ShellCard title="Accesso negato">
           <p className="text-sm text-[color:var(--cab-text-muted)]">
             Questa pagina è disponibile solo per utenti con ruolo <strong className="text-[color:var(--cab-text)]">admin</strong>.

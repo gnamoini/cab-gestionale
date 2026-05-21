@@ -6,7 +6,9 @@ import { ToastProvider } from "@/context/toast-context";
 import { SupabaseConfigurationBanner } from "@/components/supabase-configuration-banner";
 import { QueryProvider } from "@/src/providers/query-provider";
 import { AppSettingsRealtimeBridge } from "@/src/components/app-settings-realtime-bridge";
+import { CabLegacyPrefsSyncBridge } from "@/src/components/cab-legacy-prefs-sync-bridge";
 import { GestionaleRealtimeBridge } from "@/src/components/gestionale-realtime-bridge";
+import { RealtimeStatusProvider } from "@/src/context/realtime-status-context";
 import { SettingsModalOpenProvider } from "@/src/context/settings-modal-open-context";
 
 export function AppProviders({ children }: { children: React.ReactNode }) {
@@ -14,14 +16,17 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
     <ThemeProvider>
       <ToastProvider>
         <QueryProvider>
-          <AuthProvider>
-            <SettingsModalOpenProvider>
-              <SupabaseConfigurationBanner />
-              <AppSettingsRealtimeBridge />
-              <GestionaleRealtimeBridge />
-              {children}
-            </SettingsModalOpenProvider>
-          </AuthProvider>
+          <RealtimeStatusProvider>
+            <AuthProvider>
+              <SettingsModalOpenProvider>
+                <SupabaseConfigurationBanner />
+                <AppSettingsRealtimeBridge />
+                <GestionaleRealtimeBridge />
+                <CabLegacyPrefsSyncBridge />
+                {children}
+              </SettingsModalOpenProvider>
+            </AuthProvider>
+          </RealtimeStatusProvider>
         </QueryProvider>
       </ToastProvider>
     </ThemeProvider>

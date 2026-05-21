@@ -186,7 +186,7 @@ export function SupportoView() {
                     : "Nessuna nota da mostrare."}
             </p>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-2">
               {pagedNotes.map((note) => (
                 <SupportoNoteCard
                   key={note.id}

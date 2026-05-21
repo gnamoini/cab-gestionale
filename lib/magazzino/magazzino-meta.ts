@@ -10,6 +10,8 @@ export type MagazzinoRicambioMeta = {
   codiceFornitoreNonOriginale?: string;
   prezzoFornitoreNonOriginale?: number;
   scontoFornitoreNonOriginale?: number;
+  /** Nome operatore che ha effettuato l'ultima modifica ai dati ricambio. */
+  autoreUltimaModifica?: string;
 };
 
 function num(v: unknown, fallback = 0): number {
@@ -41,6 +43,7 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
     codiceFornitoreNonOriginale: str(m.codiceFornitoreNonOriginale) || undefined,
     prezzoFornitoreNonOriginale: num(m.prezzoFornitoreNonOriginale, NaN) || undefined,
     scontoFornitoreNonOriginale: num(m.scontoFornitoreNonOriginale, NaN) || undefined,
+    autoreUltimaModifica: str(m.autoreUltimaModifica) || undefined,
   };
 }
 
@@ -56,6 +59,7 @@ export function ricambioUiToMagazzinoMeta(r: RicambioMagazzino): MagazzinoRicamb
     codiceFornitoreNonOriginale: r.codiceFornitoreNonOriginale.trim() || undefined,
     prezzoFornitoreNonOriginale: r.prezzoFornitoreNonOriginale > 0 ? r.prezzoFornitoreNonOriginale : undefined,
     scontoFornitoreNonOriginale: r.scontoFornitoreNonOriginale > 0 ? r.scontoFornitoreNonOriginale : undefined,
+    autoreUltimaModifica: r.autoreUltimaModifica.trim() || undefined,
   };
 }
 

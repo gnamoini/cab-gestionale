@@ -20,7 +20,6 @@ const INGRESSO_FIELD_LABELS: { key: keyof SchedaIngressoFields; label: string }[
   { key: "modelloAttrezzatura", label: "Modello attrezzatura" },
   { key: "matricola", label: "Matricola" },
   { key: "nScuderia", label: "N. scuderia" },
-  { key: "oreLavoro", label: "Ore lavoro" },
   { key: "tipoTelaio", label: "Tipo telaio" },
   { key: "marcaTelaio", label: "Marca telaio" },
   { key: "modelloTelaio", label: "Modello telaio" },
