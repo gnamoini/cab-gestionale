@@ -31,11 +31,16 @@ function logEntitaForScope(scope: ImageScope): string {
   return "mezzi";
 }
 
-function IconCamera() {
+function IconFoto() {
   return (
-    <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.4-2h5.2L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
-      <path d="M12 15.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="1.8" />
+    <svg className="h-5 w-5 shrink-0 text-sky-600 dark:text-sky-400" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.4-2h5.2L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path d="M12 15.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="1.6" />
     </svg>
   );
 }
@@ -147,28 +152,37 @@ export function RecordImageManager({
   const uploadTitle = limitReached ? `Limite massimo ${maxImages} immagini raggiunto` : "Aggiungi foto";
 
   return (
-    <section className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">{title}</p>
-          <p className="text-[11px] text-zinc-500">{loading ? "Caricamento..." : `${images.length}/${maxImages} immagini`}</p>
+    <section className="rounded-lg border border-zinc-100 bg-white/80 px-3 py-2.5 dark:border-zinc-700/80 dark:bg-zinc-900/50">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex min-w-0 items-start gap-2">
+          <IconFoto />
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">{title}</p>
+            <p className="mt-0.5 text-[11px] text-zinc-500">
+              {loading ? "Caricamento..." : `${images.length}/${maxImages} immagini`}
+            </p>
+          </div>
         </div>
-        <label className={`${dsBtnNeutral} ${canUpload ? "cursor-pointer" : "cursor-not-allowed opacity-55"}`} title={uploadTitle}>
-          <IconCamera />
-          <span>Aggiungi foto</span>
-          <input
-            id={inputId}
-            type="file"
-            accept="image/*"
-            className="sr-only"
-            disabled={!canUpload}
-            onChange={(e) => {
-              const file = e.currentTarget.files?.[0];
-              e.currentTarget.value = "";
-              void onFile(file);
-            }}
-          />
-        </label>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <label
+            className={`${dsBtnNeutral} ${canUpload ? "cursor-pointer" : "cursor-not-allowed opacity-55"}`}
+            title={uploadTitle}
+          >
+            Aggiungi foto
+            <input
+              id={inputId}
+              type="file"
+              accept="image/*"
+              className="sr-only"
+              disabled={!canUpload}
+              onChange={(e) => {
+                const file = e.currentTarget.files?.[0];
+                e.currentTarget.value = "";
+                void onFile(file);
+              }}
+            />
+          </label>
+        </div>
       </div>
       {error ? (
         <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
@@ -176,7 +190,7 @@ export function RecordImageManager({
         </p>
       ) : null}
       {images.length > 0 ? (
-        <div className={`mt-3 flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}`}>
+        <div className={`mt-2.5 flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}`}>
           {images.map((img) => (
             <div key={img.path} className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
               <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} title="Apri foto">
@@ -198,7 +212,7 @@ export function RecordImageManager({
           ))}
         </div>
       ) : (
-        <p className="mt-3 text-xs text-zinc-500">Nessuna foto caricata.</p>
+        <p className="mt-2.5 text-[11px] text-zinc-500">Nessuna foto caricata.</p>
       )}
       {preview ? (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4" onMouseDown={() => setPreview(null)}>

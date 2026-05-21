@@ -51,7 +51,6 @@ export type LavorazioneHubData = {
   documenti: DocumentoRow[];
   log: LogModificaRow[];
   kpi: LavorazioneHubKpi;
-  timeline: LavorazioneTimelineItem[];
 };
 
 type LavorazioneHubCore = {
@@ -120,44 +119,6 @@ function deriveKpi(core: LavorazioneHubCore): LavorazioneHubKpi {
   };
 }
 
-function buildTimeline(core: LavorazioneHubCore): LavorazioneTimelineItem[] {
-  const items: LavorazioneTimelineItem[] = [];
-
-  for (const lg of core.logRows) {
-    if (lg.azione !== "UPDATE") continue;
-    const payload = lg.payload as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null | undefined;
-    const before = payload?.before;
-    const after = payload?.after;
-    if (before?.stato !== after?.stato && typeof after?.stato === "string") {
-      items.push({
-        id: `stato-${lg.id}`,
-        kind: "log",
-        at: lg.created_at,
-        title: `Cambio stato · ${labelLavorazioneStatoDb(after.stato as LavorazioneRow["stato"])}`,
-        subtitle: lg.autore_id ? `Utente ${lg.autore_id.slice(0, 8)}…` : undefined,
-      });
-    }
-    if (before?.addetto !== after?.addetto && typeof after?.addetto === "string") {
-      items.push({
-        id: `addetto-${lg.id}`,
-        kind: "log",
-        at: lg.created_at,
-        title: `Cambio addetto · ${after.addetto}`,
-        subtitle: lg.autore_id ? `Utente ${lg.autore_id.slice(0, 8)}…` : undefined,
-      });
-    }
-  }
-
-  items.sort((a, b) => {
-    const tb = new Date(b.at).getTime();
-    const ta = new Date(a.at).getTime();
-    if (tb !== ta) return tb - ta;
-    return b.id.localeCompare(a.id);
-  });
-
-  return items;
-}
-
 function assembleHub(core: LavorazioneHubCore): LavorazioneHubData {
   return {
     lavorazioneId: core.lavorazione.id,
@@ -168,7 +129,6 @@ function assembleHub(core: LavorazioneHubCore): LavorazioneHubData {
     documenti: core.documentiRows,
     log: core.logRows,
     kpi: deriveKpi(core),
-    timeline: buildTimeline(core),
   };
 }
 
@@ -186,9 +146,4 @@ export const lavorazioniDomainService = {
     return deriveKpi(core);
   },
 
-  composeTimeline(snapshot: LavorazioneQueriesSnapshot): LavorazioneTimelineItem[] | null {
-    const core = toCore(snapshot);
-    if (!core) return null;
-    return buildTimeline(core);
-  },
 };

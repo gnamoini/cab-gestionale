@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo } from "react";
-import { dsBadgeOk, dsFocus, dsSurfaceInteractiveKpi, dsSurfacePanel, dsTypoSmall } from "@/lib/ui/design-system";
+import { dsFocus, dsSurfaceInteractiveKpi, dsSurfacePanel, dsTypoSmall } from "@/lib/ui/design-system";
 import { DashboardTasksPanel } from "@/components/dashboard/dashboard-tasks-panel";
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
@@ -11,9 +11,13 @@ import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapte
 import { useMagazzinoListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 
 const cardClass = `${dsSurfaceInteractiveKpi} ${dsFocus}`;
+
+const kpiCardBadgeClass =
+  "rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[color:color-mix(in_srgb,var(--cab-primary)_95%,var(--cab-text))]";
 
 function macchinaLabel(row: { mezzo: { marca: string; modello: string } | null }): string {
   const m = row.mezzo;
@@ -58,9 +62,7 @@ export function DashboardOperationalCards() {
       <Link href="/lavorazioni" className={cardClass} aria-label="Apri lavorazioni attive">
         <div className="flex items-start justify-between gap-2">
           <h2 className={`${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-primary)]`}>Lavorazioni attive</h2>
-          <span className="rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[color:color-mix(in_srgb,var(--cab-primary)_95%,var(--cab-text))]">
-            Operativo
-          </span>
+          <span className={kpiCardBadgeClass}>Operativo</span>
         </div>
         <p className="mt-3 text-3xl font-semibold tabular-nums text-[color:var(--cab-text)]">{rows.length}</p>
         <ul className="mt-4 flex-1 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--cab-text-muted)_35%,var(--cab-text))]">
@@ -73,7 +75,11 @@ export function DashboardOperationalCards() {
           ) : (
             preview.map((r) => (
               <li key={r.id} className="flex gap-2 leading-snug">
-                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--cab-primary)]" aria-hidden />
+                <span
+                  className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: statoDisplayColor(r.stato, globalOpts.lavorazioni.stati) }}
+                  aria-hidden
+                />
                 <span>
                   <span className="font-medium text-[color:var(--cab-text)]">{formatTitleCasePhrase(macchinaLabel(r))}</span>
                   <span className="text-[color:var(--cab-text-muted)]"> — </span>
@@ -107,9 +113,7 @@ export function DashboardOperationalCards() {
         <Link href="/magazzino" className={cardClass} aria-label="Apri magazzino">
           <div className="flex items-start justify-between gap-2">
             <h2 className={`${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-primary)]`}>Magazzino / giacenze</h2>
-            <span className="rounded-full bg-[color:color-mix(in_srgb,var(--cab-text-muted)_12%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[color:var(--cab-text-muted)]">
-              Stock
-            </span>
+            <span className={kpiCardBadgeClass}>Stock</span>
           </div>
           <div className="mt-3 space-y-2">
             <div>
@@ -134,7 +138,7 @@ export function DashboardOperationalCards() {
       <div className={`${dsSurfacePanel} md:col-span-2 xl:col-span-1`}>
         <div className="flex items-start justify-between gap-2">
           <h2 className={`${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-primary)]`}>Cose da fare</h2>
-          <span className={dsBadgeOk}>Note</span>
+          <span className={kpiCardBadgeClass}>Note</span>
         </div>
         <div className="mt-3 min-h-0 flex-1">
           {staging ? (

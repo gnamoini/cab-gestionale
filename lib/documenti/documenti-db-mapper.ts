@@ -19,7 +19,8 @@ export function gestionaleToDocumentoInsert(
   doc: Omit<DocumentoGestionale, "id">,
   urlFile: string,
 ): DocumentoInsert {
-  const marca = (doc.marcaKey ?? doc.marca).trim() || "—";
+  const marcaRaw = (doc.marcaKey ?? doc.marca).trim();
+  const marca = marcaRaw && marcaRaw !== "—" ? marcaRaw : "—";
   const modello =
     doc.applicabilita === "marca"
       ? null
@@ -27,7 +28,7 @@ export function gestionaleToDocumentoInsert(
         ? (doc.modelloKey ?? doc.macchina)!.trim()
         : null;
   return {
-    mezzo_id: doc.mezzoId?.trim() || null,
+    mezzo_id: null,
     marca,
     modello,
     categoria: UI_TO_DB_CATEGORIA[doc.categoria] ?? "altro",
@@ -38,7 +39,7 @@ export function gestionaleToDocumentoInsert(
       autoreCaricamento: doc.autoreCaricamento?.trim() || undefined,
       dimensioneKb: doc.dimensioneKb,
       applicabilita: doc.applicabilita,
-      marcaKey: doc.marcaKey,
+      marcaKey: marcaRaw && marcaRaw !== "—" ? marcaRaw : undefined,
       modelloKey: doc.modelloKey,
       fileEstensione: doc.fileEstensione,
       uploadedAt: doc.caricatoIl || new Date().toISOString(),

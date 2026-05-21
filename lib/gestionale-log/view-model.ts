@@ -1,5 +1,19 @@
 import type { LavorazioniLogEntry, LavorazioniLogTipo } from "@/lib/lavorazioni/lavorazioni-change-log";
 
+function toBulletModificaRiga(lines: string[]): string {
+  if (!lines.length) return "—";
+  return lines.map((l) => `• ${l.replace(/^•\s*/, "").trim()}`).join("\n");
+}
+
+export function parseModificheLines(modificaRiga: string): string[] {
+  const raw = safeStr(modificaRiga).trim();
+  if (!raw || raw === "—") return [];
+  return raw
+    .split(/\n+/)
+    .map((line) => line.replace(/^•\s*/, "").trim())
+    .filter(Boolean);
+}
+
 export type GestionaleLogEventTone =
   | "create"
   | "update"
@@ -76,9 +90,14 @@ export function formatGestionaleLogDateTime(iso: string): string {
   }
 }
 
+/** Autore in riga meta (casing naturale, non tutto maiuscolo). */
+export function formatLogAuthorDisplay(name: string): string {
+  const t = safeStr(name).trim();
+  return t || "Sistema";
+}
+
 export function formatGestionaleLogMetaLine(autore: string, iso: string): string {
-  const a = formatLogAuthor(autore);
-  return `${a} • ${formatGestionaleLogDateTime(iso)}`;
+  return `${formatLogAuthorDisplay(autore)} • ${formatGestionaleLogDateTime(iso)}`;
 }
 
 /** Riga unica compatta per liste log (tipo, oggetto, dettaglio, autore, data). */
@@ -101,11 +120,11 @@ export function isImageLogAction(action: string): action is "image_uploaded" | "
 }
 
 export function imageLogTipoRiga(action: string): string {
-  return action === "image_deleted" ? "FOTO RIMOSSA" : "FOTO AGGIUNTA";
+  return action === "image_deleted" ? "ELIMINAZIONE FILE" : "CARICAMENTO FILE";
 }
 
 export function imageLogModificaRiga(action: string): string {
-  return action === "image_deleted" ? "Foto rimossa" : "Foto aggiunta";
+  return action === "image_deleted" ? "Foto eliminata" : "Foto caricata";
 }
 
 /** Nome utente per riga 4: maiuscolo, mai vuoto. */
@@ -177,10 +196,13 @@ function sentenceForCampoChange(c: CampoChangeLike): string {
     return `Scorta aggiornata da ${p} a ${d}`;
   }
   if (campo === "Stato") {
-    return `Stato cambiato da ${formatStatoDisplay(p)} a ${formatStatoDisplay(d)}`;
+    return `Stato modificato da “${formatStatoDisplay(p)}” a “${formatStatoDisplay(d)}”`;
   }
   if (campo === "Priorità") {
-    return `Priorità modificata da ${formatTitleCasePhrase(p)} a ${formatTitleCasePhrase(d)}`;
+    return `Priorità modificata da “${formatTitleCasePhrase(p)}” a “${formatTitleCasePhrase(d)}”`;
+  }
+  if (campo === "Ore lavoro" || campo === "Ore Lavoro") {
+    return `Ore lavoro aggiornate da ${p} a ${d}`;
   }
   if (campo === "Addetto") {
     return `Addetto modificato da ${formatTitleCasePhrase(p)} a ${formatTitleCasePhrase(d)}`;
@@ -208,7 +230,7 @@ function sentenceForCampoChange(c: CampoChangeLike): string {
 
 export function buildModificaRigaFromChanges(changes: CampoChangeLike[]): string {
   if (!changes.length) return "—";
-  return changes.map(sentenceForCampoChange).join("\n");
+  return toBulletModificaRiga(changes.map(sentenceForCampoChange));
 }
 
 /** Rimuove prefisso autore dal vecchio riepilogo (solo testo residuo). */
@@ -229,18 +251,9 @@ export function stripAutoreFromRiepilogo(riepilogo: string, autore: string): str
 }
 
 function magazzinoTipoRiga(entry: MagazzinoLogEntryLike): string {
-  if (entry.tipo === "aggiunta") return "CREAZIONE";
-  if (entry.tipo === "rimozione") return "RIMOZIONE";
-  const sc = entry.changes.find((c) => safeStr(c.campo).trim().toLowerCase() === "scorta");
-  if (sc) {
-    const a = Number.parseInt(safeStr(sc.prima).trim(), 10);
-    const b = Number.parseInt(safeStr(sc.dopo).trim(), 10);
-    if (!Number.isNaN(a) && !Number.isNaN(b)) {
-      if (b > a) return "ENTRATA";
-      if (b < a) return "USCITA";
-    }
-  }
-  return "MODIFICA";
+  if (entry.tipo === "aggiunta") return "CREAZIONE RICAMBIO";
+  if (entry.tipo === "rimozione") return "ELIMINAZIONE RICAMBIO";
+  return "AGGIORNAMENTO RICAMBIO";
 }
 
 function magazzinoToneForEntry(entry: MagazzinoLogEntryLike): GestionaleLogEventTone {
@@ -263,24 +276,25 @@ export type MezziLogEntryLike = {
 };
 
 function mezziTipoRiga(tipo: MezziLogEntryLike["tipo"]): string {
-  if (tipo === "aggiunta") return "CREAZIONE";
-  if (tipo === "rimozione") return "RIMOZIONE";
-  return "MODIFICA";
+  if (tipo === "aggiunta") return "CREAZIONE MEZZO";
+  if (tipo === "rimozione") return "ELIMINAZIONE MEZZO";
+  return "AGGIORNAMENTO MEZZO";
 }
 
 export function buildMezziGestionaleLogViewModel(entry: MezziLogEntryLike): GestionaleLogViewModel {
   const tone = gestionaleLogToneMagazzino(entry.tipo);
   const tipoRiga = mezziTipoRiga(entry.tipo);
-  const oggettoRiga = `Mezzo: ${formatTitleCasePhrase(entry.mezzo)}`;
+  const oggettoRiga = formatTitleCasePhrase(entry.mezzo);
   let modificaRiga: string;
   if (entry.tipo === "aggiunta") {
-    modificaRiga = "Nuovo mezzo registrato in anagrafica";
+    modificaRiga = toBulletModificaRiga(["Nuovo mezzo registrato in anagrafica"]);
   } else if (entry.tipo === "rimozione") {
-    modificaRiga = "Mezzo rimosso dall'anagrafica";
+    modificaRiga = toBulletModificaRiga(["Mezzo rimosso dall'anagrafica"]);
   } else if (entry.changes.length) {
-    modificaRiga = entry.changes.map(sentenceForCampoChange).join("\n");
+    modificaRiga = buildModificaRigaFromChanges(entry.changes);
   } else {
-    modificaRiga = stripAutoreFromRiepilogo(entry.riepilogo, entry.autore) || "—";
+    const fb = stripAutoreFromRiepilogo(entry.riepilogo, entry.autore);
+    modificaRiga = fb ? toBulletModificaRiga([fb]) : "—";
   }
   return {
     tone,
@@ -295,18 +309,18 @@ export function buildMezziGestionaleLogViewModel(entry: MezziLogEntryLike): Gest
 export function buildMagazzinoGestionaleLogViewModel(entry: MagazzinoLogEntryLike): GestionaleLogViewModel {
   const tipoRiga = magazzinoTipoRiga(entry);
   const tone = magazzinoToneForEntry(entry);
-  const oggettoRiga = `Ricambio: ${formatTitleCasePhrase(entry.ricambio)}`;
+  const oggettoRiga = formatTitleCasePhrase(entry.ricambio);
 
   let modificaRiga: string;
   if (entry.tipo === "aggiunta") {
-    modificaRiga = "Nuovo articolo inserito in Magazzino";
+    modificaRiga = toBulletModificaRiga(["Nuovo articolo inserito in magazzino"]);
   } else if (entry.tipo === "rimozione") {
-    modificaRiga = "Articolo rimosso dal Magazzino";
+    modificaRiga = toBulletModificaRiga(["Articolo rimosso dal magazzino"]);
   } else if (entry.changes.length) {
-    modificaRiga = entry.changes.map(sentenceForCampoChange).join("\n");
+    modificaRiga = buildModificaRigaFromChanges(entry.changes);
   } else {
     const fb = stripAutoreFromRiepilogo(entry.riepilogo, entry.autore);
-    modificaRiga = fb || "—";
+    modificaRiga = fb ? toBulletModificaRiga([fb]) : "—";
   }
 
   return {
@@ -323,27 +337,26 @@ export function buildMagazzinoGestionaleLogViewModel(entry: MagazzinoLogEntryLik
 function lavorazioniTipoRiga(tipo: LavorazioniLogTipo): string {
   switch (tipo) {
     case "creazione":
-      return "CREAZIONE";
+      return "CREAZIONE LAVORAZIONE";
     case "completata":
-      return "COMPLETATA";
+      return "AGGIORNAMENTO LAVORAZIONE";
     case "archiviazione":
-      return "ARCHIVIATA";
+      return "ARCHIVIAZIONE LAVORAZIONE";
     case "eliminazione":
-      return "ELIMINAZIONE";
+      return "ELIMINAZIONE LAVORAZIONE";
     case "riaperta":
-      return "RIAPERTA";
+      return "RIPRISTINO LAVORAZIONE";
     case "aggiornamento":
     default:
-      return "AGGIORNAMENTO";
+      return "AGGIORNAMENTO LAVORAZIONE";
   }
 }
 
 function formatLavorazioneOggettoLine(titolo: string): string {
   const t = safeStr(titolo).trim();
-  if (!t) return "Lavorazione: —";
+  if (!t) return "—";
   const parts = t.split("—").map((x) => formatTitleCasePhrase(x.trim()));
-  const inner = parts.join(" — ");
-  return `Lavorazione: ${inner}`;
+  return parts.join(" — ");
 }
 
 export function buildLavorazioniGestionaleLogViewModel(entry: LavorazioniLogEntry): GestionaleLogViewModel {
@@ -354,18 +367,18 @@ export function buildLavorazioniGestionaleLogViewModel(entry: LavorazioniLogEntr
 
   let modificaRiga: string;
   if (entry.tipo === "creazione" && schedaOggetto) {
-    modificaRiga = entry.riepilogo.trim() || "Scheda creata";
+    modificaRiga = toBulletModificaRiga([entry.riepilogo.trim() || "Scheda creata"]);
   } else if (entry.tipo === "creazione") {
-    modificaRiga = "Nuova lavorazione registrata";
+    modificaRiga = toBulletModificaRiga(["Creata nuova lavorazione"]);
   } else if (entry.tipo === "archiviazione") {
-    modificaRiga = "Spostata nello Storico";
+    modificaRiga = toBulletModificaRiga(["Spostata in archivio"]);
   } else if (entry.tipo === "eliminazione" && schedaOggetto) {
-    modificaRiga = entry.riepilogo.trim() || "Scheda eliminata";
+    modificaRiga = toBulletModificaRiga([entry.riepilogo.trim() || "Scheda eliminata"]);
   } else if (entry.changes.length) {
-    modificaRiga = entry.changes.map(sentenceForCampoChange).join("\n");
+    modificaRiga = buildModificaRigaFromChanges(entry.changes);
   } else {
     const stripped = stripAutoreFromRiepilogo(entry.riepilogo, entry.autore);
-    modificaRiga = stripped || "—";
+    modificaRiga = stripped ? toBulletModificaRiga([stripped]) : "—";
   }
 
   return {

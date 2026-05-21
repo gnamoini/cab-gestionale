@@ -18,6 +18,15 @@ export {
 } from "./page-toolbar";
 export { FiltersBar, type FiltersBarProps } from "./filters-bar";
 export { DataTable, type DataTableProps } from "./data-table";
+export {
+  GlobalTable,
+  GlobalTableSortTh,
+  GlobalTableHeadLabel,
+  GlobalTableHead,
+  type GlobalTableProps,
+  type GlobalTableSortPhase,
+} from "@/components/gestionale/global-table";
+export { CardMobile, CardMobileActions, dsCardMobileShell } from "./card-mobile-actions";
 export { Modal, type ModalProps } from "./modal";
 export { Drawer, type DrawerProps } from "./drawer";
 export { LogEntry, LogEntryRenderer, type LogEntryProps } from "./log-entry";

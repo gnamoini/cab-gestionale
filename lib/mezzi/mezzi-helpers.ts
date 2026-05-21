@@ -61,7 +61,11 @@ export function ultimaLavorazioneLabel(rows: MezzoInterventoLavorazione[]): stri
 }
 
 export function hrefDocumentiPerMezzo(m: MezzoGestito): string {
-  return `/documenti?mezzoId=${encodeURIComponent(m.id)}`;
+  const sp = new URLSearchParams();
+  if (m.marca.trim()) sp.set("marca", m.marca.trim());
+  if (m.modello.trim()) sp.set("modello", m.modello.trim());
+  const q = sp.toString();
+  return q ? `/documenti?${q}` : "/documenti";
 }
 
 export function hrefLavorazioniPerMezzo(m: MezzoGestito): string {

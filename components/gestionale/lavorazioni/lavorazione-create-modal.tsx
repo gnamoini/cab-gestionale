@@ -18,11 +18,13 @@ import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId } from "@/src/shared/selectors";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
+import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleSettingsSelect } from "@/components/gestionale/gestionale-settings-select";
 import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
 import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { GlobalDatePicker } from "@/components/gestionale/global-input";
 import { dsInput, dsLabel } from "@/lib/ui/design-system";
 
 function todayItDate(): string {
@@ -314,7 +316,7 @@ export function LavorazioneCreateModal({
       title="Scheda di ingresso"
       subtitle="Nuova lavorazione — compila i dati di accettazione mezzo."
     >
-      <form onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
           {globalOpts.isError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{globalOpts.error?.message ?? "Errore impostazioni."}</p>
@@ -330,18 +332,12 @@ export function LavorazioneCreateModal({
 
           <FormSection title="Ingresso">
             <FormField label="Data ingresso *">
-              <input
-                type="date"
-                className={dsInput}
-                value={itDateToYmd(fields.dataIngresso)}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  if (!v) return;
-                  const [y, m, d] = v.split("-");
-                  patch({ dataIngresso: `${d}/${m}/${y}` });
-                }}
-                disabled={pending}
+              <GlobalDatePicker
+                value={fields.dataIngresso}
+                onChange={(v) => patch({ dataIngresso: v })}
+                inputClassName={dsInput}
                 required
+                disabled={pending}
               />
             </FormField>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">

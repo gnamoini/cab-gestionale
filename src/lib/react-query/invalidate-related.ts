@@ -30,7 +30,9 @@ export const QK = {
   clientLavorazioniDetail: ["client_lavorazioni_detail"] as const,
   /** Log eventi autenticazione (`auth_logs`). */
   authLogs: ["auth_logs"] as const,
-  /** Segnalazioni condivise (modulo Supporto). */
+  /** Note condivise (modulo Supporto). */
+  supportNotes: ["support_notes"] as const,
+  /** @deprecated Usare `supportNotes` — tabella legacy `segnalazioni`. */
   segnalazioni: ["segnalazioni"] as const,
 };
 

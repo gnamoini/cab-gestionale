@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
 import { IconGestionaleLog, IconGestionaleUndo } from "@/components/gestionale/gestionale-log-ui";
 
+/** Toolbar azioni header: wrap interno se molti pulsanti; il blocco va sotto il titolo quando manca spazio (PageHeader). */
 export const gestionalePageToolbarActionsClass =
-  "flex min-w-0 max-w-full shrink-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto [-webkit-overflow-scrolling:touch]";
+  "flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2";
 
 export function GestionalePageToolbarActions({
   leading,

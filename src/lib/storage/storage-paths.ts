@@ -44,3 +44,18 @@ export function buildDocumentoStoragePath(fileName: string): string {
   const safeName = sanitizeStorageFileName(fileName, "documento");
   return normalizeStorageObjectPath(`${id}/${safeName}`);
 }
+
+export const LAVORAZIONE_DOCUMENT_FILE_NAMES = {
+  preventivo_upload: "preventivo.pdf",
+  ddt: "ddt.pdf",
+} as const;
+
+export type LavorazioneDocumentStorageTipo = keyof typeof LAVORAZIONE_DOCUMENT_FILE_NAMES;
+
+export function buildLavorazioneDocumentStoragePath(
+  lavorazioneId: string,
+  tipo: LavorazioneDocumentStorageTipo,
+): string {
+  assertValidRecordId(lavorazioneId, "lavorazione");
+  return normalizeStorageObjectPath(`lavorazioni/${lavorazioneId.trim()}/${LAVORAZIONE_DOCUMENT_FILE_NAMES[tipo]}`);
+}

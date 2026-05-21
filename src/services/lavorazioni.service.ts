@@ -2,7 +2,8 @@
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
-import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-log-oggetto";
+import { auditContext, auditDiff, auditSnapshot, writeModificaLog, type AuditLogContext } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneRow, MezzoRow, PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
@@ -65,6 +66,28 @@ function embedMezzo(raw: unknown): MezzoRow | null {
 
 async function c() {
   return getBrowserSupabase();
+}
+
+async function oggettoContextForLavorazione(
+  sb: Awaited<ReturnType<typeof c>>,
+  row: LavorazioneRow,
+): Promise<AuditLogContext | undefined> {
+  if (!row.mezzo_id?.trim()) return undefined;
+  const { data } = await sb
+    .from("mezzi")
+    .select("cliente, marca, modello, tipo_attrezzatura")
+    .eq("id", row.mezzo_id)
+    .maybeSingle();
+  if (!data) return undefined;
+  const m = data as MezzoRow;
+  const oggetto = formatLavorazioneLogOggettoLabel({
+    cliente: m.cliente,
+    marca: m.marca,
+    modello: m.modello,
+    tipoAttrezzatura: m.tipo_attrezzatura,
+  });
+  if (oggetto === "—") return undefined;
+  return auditContext(oggetto);
 }
 
 function escapeIlikeToken(raw: string): string {
@@ -151,7 +174,8 @@ export const lavorazioniService = {
       const { data: row, error } = await sb.from("lavorazioni").insert(data).select("*").single();
       if (error) return err(error.message);
       const r = row as LavorazioneRow;
-      await writeModificaLog(sb, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r) });
+      const ctx = await oggettoContextForLavorazione(sb, r);
+      await writeModificaLog(sb, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, ctx) });
       return success(r);
     } catch (e) {
       return serviceFailFromError(e);
@@ -172,11 +196,12 @@ export const lavorazioniService = {
         .single();
       if (error) return err(error.message);
       const r = row as LavorazioneRow;
+      const ctx = await oggettoContextForLavorazione(sb, r);
       await writeModificaLog(sb, {
         entita: ENTITA,
         entita_id: id,
         azione: "UPDATE",
-        payload: auditDiff(before, r),
+        payload: auditDiff(before, r, ctx),
       });
       return success(r);
     } catch (e) {
@@ -199,11 +224,12 @@ export const lavorazioniService = {
         .single();
       if (error) return err(error.message);
       const r = row as LavorazioneRow;
+      const ctx = await oggettoContextForLavorazione(sb, r);
       await writeModificaLog(sb, {
         entita: ENTITA,
         entita_id: id,
         azione: "RESTORE",
-        payload: auditDiff(before, r),
+        payload: auditDiff(before, r, ctx),
       });
       return success(r);
     } catch (e) {
@@ -243,11 +269,12 @@ export const lavorazioniService = {
         return err("Conclusione non riuscita.");
       }
       const r = row as LavorazioneRow;
+      const ctx = await oggettoContextForLavorazione(sb, r);
       await writeModificaLog(sb, {
         entita: ENTITA,
         entita_id: id,
         azione: "UPDATE",
-        payload: auditDiff(before, r),
+        payload: auditDiff(before, r, ctx),
       });
       return success(r);
     } catch (e) {
@@ -268,13 +295,21 @@ export const lavorazioniService = {
       const { data: existing, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
       if (!existing) return err("Lavorazione non trovata");
+      const { lavorazioneDocumentsService } = await import("@/src/services/lavorazione-documents.service");
+      await lavorazioneDocumentsService.purgeForLavorazione(id);
       const now = new Date().toISOString();
-      const { data: row, error } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").update({ deleted_at: now }).eq("id", id))
-        .select("*")
-        .maybeSingle();
+      const { error } = await applyLavorazioniNotDeletedFilter(
+        sb.from("lavorazioni").update({ deleted_at: now }).eq("id", id),
+      );
       if (error) return err(error.message);
-      if (!row) return err("Lavorazione non trovata");
-      await writeModificaLog(sb, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(row) });
+      const deleted = existing as LavorazioneRow;
+      const ctx = await oggettoContextForLavorazione(sb, deleted);
+      await writeModificaLog(sb, {
+        entita: ENTITA,
+        entita_id: id,
+        azione: "DELETE",
+        payload: auditSnapshot({ ...deleted, deleted_at: now }, ctx),
+      });
       return success(null);
     } catch (e) {
       return serviceFailFromError(e);

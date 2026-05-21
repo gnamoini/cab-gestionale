@@ -18,6 +18,7 @@ import {
   parseCompatInput,
   syncPrezzoVenditaInForm,
 } from "@/lib/magazzino/form";
+import { GestionaleFormFocusScope } from "@/components/gestionale/gestionale-form-focus-scope";
 import { dsBtnPrimary } from "@/lib/ui/design-system";
 
 const inputBase =
@@ -272,7 +273,7 @@ export function RicambioFormFields({
   ]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <GestionaleFormFocusScope className="flex flex-col gap-3">
       <RicambioField label="Marca *">
         <GestionaleListSelect
           id="magazzino-ricambio-marca"
@@ -586,6 +587,6 @@ export function RicambioFormFields({
         markupPct={previewLineari.markupPct}
         prezzoVendita={previewLineari.prezzoVendita}
       />
-    </div>
+    </GestionaleFormFocusScope>
   );
 }

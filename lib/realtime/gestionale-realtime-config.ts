@@ -26,6 +26,14 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
     },
   },
   {
+    table: "lavorazione_documents",
+    invalidate: (qc) => {
+      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries });
+      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniList });
+      void qc.invalidateQueries({ queryKey: QK.clientLavorazioniDetail });
+    },
+  },
+  {
     table: "mezzi",
     invalidate: (qc) => {
       void qc.invalidateQueries({ queryKey: QK.mezzi });
@@ -82,8 +90,15 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
     },
   },
   {
+    table: "support_notes",
+    invalidate: (qc) => {
+      void qc.invalidateQueries({ queryKey: QK.supportNotes });
+    },
+  },
+  {
     table: "segnalazioni",
     invalidate: (qc) => {
+      void qc.invalidateQueries({ queryKey: QK.supportNotes });
       void qc.invalidateQueries({ queryKey: QK.segnalazioni });
     },
   },

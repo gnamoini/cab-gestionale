@@ -53,6 +53,19 @@ export function removeDashboardSistemaLogEntryById(id: string): void {
   saveDashboardSistemaLog(next);
   dispatchDashboardSistemaLogRefresh();
 }
+/** Unica voce log dashboard dopo salvataggio riuscito delle Impostazioni (non durante edit locali). */
+export function appendDashboardSettingsSavedLog(autore: string): void {
+  const name = autore.trim() || "Operatore";
+  appendDashboardSistemaLog({
+    tone: "update",
+    tipoRiga: "MODIFICA IMPOSTAZIONI",
+    oggettoRiga: "Impostazioni globali",
+    modificaRiga: `• ${name} ha salvato le modifiche alle impostazioni`,
+    autore: name,
+    atIso: new Date().toISOString(),
+  });
+}
+
 export function appendDashboardSistemaLog(entry: GestionaleLogViewModel): void {
   const prev = loadDashboardSistemaLog();
   const row: DashboardSistemaLogStored = { ...entry, id: nextId() };
@@ -61,9 +74,9 @@ export function appendDashboardSistemaLog(entry: GestionaleLogViewModel): void {
     last &&
     last.tipoRiga === row.tipoRiga &&
     last.oggettoRiga === row.oggettoRiga &&
-    last.modificaRiga === row.modificaRiga &&
     last.autore === row.autore &&
-    Math.abs(new Date(row.atIso).getTime() - new Date(last.atIso).getTime()) < 900
+    Math.abs(new Date(row.atIso).getTime() - new Date(last.atIso).getTime()) < 900 &&
+    (last.oggettoRiga === "Impostazioni" || last.modificaRiga === row.modificaRiga)
   ) {
     return;
   }

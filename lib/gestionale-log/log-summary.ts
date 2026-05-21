@@ -1,0 +1,402 @@
+import {
+  formatStatoDisplay,
+  formatTitleCasePhrase,
+  imageLogModificaRiga,
+  isImageLogAction,
+  parseModificheLines,
+  safeStr,
+  type GestionaleLogEventTone,
+} from "@/lib/gestionale-log/view-model";
+import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-log-oggetto";
+
+/** Summary persistito in `log_modifiche.payload.summary` (generato al write). */
+export type LogModificaSummary = {
+  tipoRiga: string;
+  oggettoRiga: string;
+  modifiche: string[];
+  tone: GestionaleLogEventTone;
+};
+
+export type AuditLogContext = {
+  /** Etichetta oggetto pre-calcolata (es. "Mario Rossi — Bobcat E35"). */
+  oggetto?: string;
+};
+
+const SKIP_DIFF_KEYS = new Set([
+  "updated_at",
+  "created_at",
+  "created_by",
+  "id",
+  "deleted_at",
+  "undo_session_id",
+]);
+
+const FIELD_LABELS: Record<string, string> = {
+  stato: "Stato",
+  priorita: "Priorità",
+  priorita_lavorazione: "Priorità",
+  note: "Note",
+  quantita: "Quantità",
+  scorta: "Scorta",
+  nome: "Nome",
+  codice: "Codice",
+  marca: "Marca",
+  modello: "Modello",
+  cliente: "Cliente",
+  utilizzatore: "Utilizzatore",
+  targa: "Targa",
+  matricola: "Matricola",
+  categoria: "Categoria",
+  costo: "Costo",
+  prezzo_vendita: "Prezzo vendita",
+  consumo_medio_mensile: "Consumo medio",
+  data_ingresso: "Data ingresso",
+  data_uscita: "Data uscita",
+  archived: "Archivio",
+  archived_at: "Data archivio",
+  mezzo_id: "Mezzo collegato",
+  lavorazione_id: "Lavorazione collegata",
+  totale: "Totale",
+  dettagli: "Dettagli preventivo",
+  url_file: "File",
+  contenuto: "Contenuto scheda",
+  tipo: "Tipo",
+  numero_scuderia: "N. scuderia",
+  tipo_attrezzatura: "Tipo attrezzatura",
+  anno: "Anno",
+  meta: "Dati aggiuntivi",
+};
+
+function humanFieldLabel(key: string): string {
+  const k = key.trim();
+  if (FIELD_LABELS[k]) return FIELD_LABELS[k]!;
+  return k
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function joinOggetto(parts: string[]): string {
+  return parts.map((p) => safeStr(p).trim()).filter((p) => p && p !== "—").join(" — ") || "—";
+}
+
+function pickStr(obj: Record<string, unknown>, keys: string[]): string {
+  for (const k of keys) {
+    const v = obj[k];
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return "";
+}
+
+function nestedMezzo(obj: Record<string, unknown>): Record<string, unknown> | null {
+  const m = obj.mezzo ?? obj.mezzi;
+  if (m && typeof m === "object" && !Array.isArray(m)) return m as Record<string, unknown>;
+  if (Array.isArray(m) && m[0] && typeof m[0] === "object") return m[0] as Record<string, unknown>;
+  return null;
+}
+
+function recordFromPayload(payload: unknown): Record<string, unknown> | null {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const p = payload as Record<string, unknown>;
+  const ctx = p.context;
+  if (ctx && typeof ctx === "object" && !Array.isArray(ctx)) {
+    const oggetto = (ctx as Record<string, unknown>).oggetto;
+    if (typeof oggetto === "string" && oggetto.trim()) {
+      return { __oggetto: oggetto.trim() };
+    }
+  }
+  const after = p.after;
+  if (after && typeof after === "object" && !Array.isArray(after)) return after as Record<string, unknown>;
+  const snap = p.snapshot;
+  if (snap && typeof snap === "object" && !Array.isArray(snap)) return snap as Record<string, unknown>;
+  const before = p.before;
+  if (before && typeof before === "object" && !Array.isArray(before)) return before as Record<string, unknown>;
+  return null;
+}
+
+export function entityKindLabel(entita: string): string {
+  switch (entita) {
+    case "lavorazioni":
+      return "LAVORAZIONE";
+    case "magazzino_ricambi":
+      return "RICAMBIO";
+    case "movimenti_ricambi":
+      return "MOVIMENTO MAGAZZINO";
+    case "mezzi":
+      return "MEZZO";
+    case "preventivi":
+      return "PREVENTIVO";
+    case "documenti":
+      return "DOCUMENTO";
+    case "scheda_lavorazione":
+      return "SCHEDA LAVORAZIONE";
+    case "profiles":
+      return "PROFILO UTENTE";
+    case "security":
+      return "SICUREZZA";
+    default:
+      return entita.replace(/_/g, " ").toUpperCase();
+  }
+}
+
+export function tipoRigaFromAzione(entita: string, azione: string): string {
+  if (isImageLogAction(azione)) return "CARICAMENTO FILE";
+  const u = safeStr(azione).toUpperCase();
+  const kind = entityKindLabel(entita);
+  if (u === "CREATE") return `CREAZIONE ${kind}`;
+  if (u === "UPDATE") return `AGGIORNAMENTO ${kind}`;
+  if (u === "DELETE") return `ELIMINAZIONE ${kind}`;
+  if (u === "RESTORE") return `RIPRISTINO ${kind}`;
+  if (u === "REVERTED" || u === "UNDO") return "ANNULLAMENTO";
+  if (u.includes("ARCHIV")) return `ARCHIVIAZIONE ${kind}`;
+  if (u.includes("IMPOSTAZION") || entita === "app_settings") return "MODIFICA IMPOSTAZIONI";
+  if (u.includes("PREVENTIV")) return `GENERAZIONE ${kind}`;
+  if (u.includes("LOGIN") || u.includes("ACCESS")) return "ACCESSO";
+  return `AGGIORNAMENTO ${kind}`;
+}
+
+export function toneFromAzione(azione: string, annullato?: boolean): GestionaleLogEventTone {
+  if (annullato) return "neutral";
+  if (isImageLogAction(azione)) return azione === "image_deleted" ? "delete" : "create";
+  const u = safeStr(azione).toUpperCase();
+  if (u === "CREATE" || u === "RESTORE") return "create";
+  if (u === "DELETE") return "delete";
+  if (u.includes("ARCHIV") || u === "CONCLUDE") return "archive";
+  if (u.includes("COMPLET")) return "complete";
+  return "update";
+}
+
+function buildOggettoFromRecord(entita: string, raw: Record<string, unknown>): string {
+  if (typeof raw.__oggetto === "string") return raw.__oggetto;
+
+  const mezzo = nestedMezzo(raw);
+
+  switch (entita) {
+    case "lavorazioni": {
+      if (mezzo) {
+        const oggetto = formatLavorazioneLogOggettoLabel({
+          cliente: pickStr(mezzo, ["cliente"]),
+          marca: pickStr(mezzo, ["marca"]),
+          modello: pickStr(mezzo, ["modello"]),
+          tipoAttrezzatura: pickStr(mezzo, ["tipo_attrezzatura"]),
+        });
+        if (oggetto !== "—") return oggetto;
+      }
+      return "Lavorazione";
+    }
+    case "magazzino_ricambi": {
+      const nome = pickStr(raw, ["nome", "descrizione", "codice"]);
+      const marca = pickStr(raw, ["marca"]);
+      return joinOggetto([formatTitleCasePhrase(marca), formatTitleCasePhrase(nome)]);
+    }
+    case "mezzi": {
+      const cliente = formatTitleCasePhrase(pickStr(raw, ["cliente"]));
+      const ident = pickStr(raw, ["targa"]) || pickStr(raw, ["matricola"]) || pickStr(raw, ["codice"]);
+      return joinOggetto([cliente, ident ? ident.toUpperCase() : ""]);
+    }
+    case "preventivi": {
+      const det = raw.dettagli;
+      const detObj = det && typeof det === "object" && !Array.isArray(det) ? (det as Record<string, unknown>) : {};
+      const numero =
+        pickStr(detObj, ["numero"]) ||
+        (typeof raw.numero === "string" ? raw.numero : "") ||
+        `PV-${pickStr(raw, ["id"]).slice(0, 8)}`;
+      return joinOggetto([formatTitleCasePhrase(pickStr(raw, ["cliente"])), numero]);
+    }
+    case "documenti": {
+      const meta = raw.meta;
+      const metaObj = meta && typeof meta === "object" && !Array.isArray(meta) ? (meta as Record<string, unknown>) : {};
+      const nome = pickStr(metaObj, ["nome"]) || pickStr(raw, ["url_file"]).split("/").pop() || "Documento";
+      const cat = pickStr(raw, ["categoria"]);
+      return joinOggetto([nome, formatTitleCasePhrase(cat)]);
+    }
+    case "scheda_lavorazione":
+      return `Scheda · ${pickStr(raw, ["tipo"]) || "lavorazione"}`;
+    case "profiles":
+      return formatTitleCasePhrase(pickStr(raw, ["nome", "email"]) || "Utente");
+    default:
+      return joinOggetto([pickStr(raw, ["nome", "codice", "descrizione", "marca"])]);
+  }
+}
+
+function formatValueForField(key: string, value: unknown): string {
+  if (value === null || value === undefined) return "—";
+  if (typeof value === "boolean") return value ? "Sì" : "No";
+  if (key === "stato") return formatStatoDisplay(String(value));
+  if (key === "priorita" || key === "priorita_lavorazione") return formatTitleCasePhrase(String(value));
+  if (typeof value === "object") return "aggiornato";
+  const s = String(value).trim();
+  return s.length > 120 ? `${s.slice(0, 117)}…` : s || "—";
+}
+
+export type PayloadFieldChange = { key: string; before: unknown; after: unknown };
+
+/** Campi modificati da payload audit `{ before, after }`. */
+export function extractPayloadFieldChanges(payload: unknown): PayloadFieldChange[] {
+  if (payload == null || typeof payload !== "object" || Array.isArray(payload)) return [];
+  const p = payload as Record<string, unknown>;
+  const before = p.before;
+  const after = p.after;
+  if (!before || !after || typeof before !== "object" || typeof after !== "object") return [];
+  const b = before as Record<string, unknown>;
+  const a = after as Record<string, unknown>;
+  const keys = new Set([...Object.keys(b), ...Object.keys(a)]);
+  const changes: PayloadFieldChange[] = [];
+  for (const k of keys) {
+    if (SKIP_DIFF_KEYS.has(k)) continue;
+    if (JSON.stringify(b[k]) === JSON.stringify(a[k])) continue;
+    changes.push({ key: k, before: b[k], after: a[k] });
+    if (changes.length >= 12) break;
+  }
+  return changes;
+}
+
+export function modificaLineForFieldChange(change: PayloadFieldChange): string {
+  return humanChangeSentence(change.key, change.before, change.after);
+}
+
+function humanChangeSentence(key: string, before: unknown, after: unknown): string {
+  const label = humanFieldLabel(key);
+  const p = formatValueForField(key, before);
+  const d = formatValueForField(key, after);
+
+  if (key === "quantita" || key === "scorta") {
+    const a = Number(before);
+    const b = Number(after);
+    if (!Number.isNaN(a) && !Number.isNaN(b)) {
+      if (b > a) return `Quantità aumentata da ${a} a ${b}`;
+      if (b < a) return `Quantità diminuita da ${a} a ${b}`;
+    }
+    return `Quantità aggiornata da ${p} a ${d}`;
+  }
+  if (key === "stato") return `Stato modificato da “${p}” a “${d}”`;
+  if (key === "priorita" || key === "priorita_lavorazione") return `Priorità modificata da “${p}” a “${d}”`;
+  if (key === "archived") return after ? "Spostata in archivio" : "Ripristinata tra le attive";
+  if (before == null || before === "" || before === "—") return `${label} impostato a “${d}”`;
+  if (after == null || after === "" || after === "—") return `${label} rimosso`;
+  return `${label} modificato da “${p}” a “${d}”`;
+}
+
+function diffToModifiche(payload: Record<string, unknown>): string[] {
+  return extractPayloadFieldChanges(payload).map(modificaLineForFieldChange);
+}
+
+function defaultModificheForCreate(entita: string, azione: string, record: Record<string, unknown> | null): string[] {
+  const u = safeStr(azione).toUpperCase();
+  if (u === "DELETE") return ["Record eliminato dal sistema"];
+  if (u === "RESTORE") return ["Record ripristinato"];
+  if (isImageLogAction(azione)) return [imageLogModificaRiga(azione)];
+
+  if (u === "CREATE") {
+    switch (entita) {
+      case "lavorazioni": {
+        const lines = ["Creata nuova lavorazione"];
+        const stato = pickStr(record ?? {}, ["stato"]);
+        if (stato) lines.push(`Stato iniziale: ${formatStatoDisplay(stato)}`);
+        return lines;
+      }
+      case "magazzino_ricambi":
+        return ["Nuovo articolo inserito in magazzino"];
+      case "mezzi":
+        return ["Nuovo mezzo registrato in anagrafica"];
+      case "preventivi":
+        return ["Creato nuovo preventivo"];
+      case "documenti":
+        return ["Documento caricato"];
+      case "scheda_lavorazione":
+        return ["Creata nuova scheda di lavorazione"];
+      default:
+        return ["Record creato"];
+    }
+  }
+  return ["Modifica registrata"];
+}
+
+/** Genera summary leggibile da riga audit (write-time o read-time fallback). */
+export function buildLogModificaSummary(input: {
+  entita: string;
+  entita_id: string;
+  azione: string;
+  payload?: unknown;
+  annullato?: boolean;
+}): LogModificaSummary {
+  const payload =
+    input.payload != null && typeof input.payload === "object" && !Array.isArray(input.payload)
+      ? (input.payload as Record<string, unknown>)
+      : null;
+
+  const existing = payload?.summary;
+  if (existing && typeof existing === "object" && !Array.isArray(existing)) {
+    const s = existing as Record<string, unknown>;
+    const tipoRiga = typeof s.tipoRiga === "string" ? s.tipoRiga : "";
+    const oggettoRiga = typeof s.oggettoRiga === "string" ? s.oggettoRiga : "";
+    const modifiche = Array.isArray(s.modifiche) ? s.modifiche.filter((x) => typeof x === "string") : [];
+    if (tipoRiga && oggettoRiga && modifiche.length) {
+      let resolvedOggetto = oggettoRiga;
+      if (input.entita === "lavorazioni" && resolvedOggetto === "Lavorazione") {
+        const record = recordFromPayload(payload);
+        if (record) {
+          const rebuilt = buildOggettoFromRecord(input.entita, record);
+          if (rebuilt !== "Lavorazione") resolvedOggetto = rebuilt;
+        }
+      }
+      return {
+        tipoRiga,
+        oggettoRiga: resolvedOggetto,
+        modifiche,
+        tone: toneFromAzione(input.azione, input.annullato),
+      };
+    }
+  }
+
+  if (typeof payload?.compact === "string" && payload.compact.trim()) {
+    const compact = payload.compact.trim();
+    return {
+      tipoRiga: tipoRigaFromAzione(input.entita, input.azione),
+      oggettoRiga: buildOggettoFromRecord(input.entita, recordFromPayload(payload) ?? {}),
+      modifiche: [compact],
+      tone: toneFromAzione(input.azione, input.annullato),
+    };
+  }
+
+  const record = payload ? recordFromPayload(payload) : null;
+  const oggettoRiga = record ? buildOggettoFromRecord(input.entita, record) : "—";
+  let modifiche = payload ? diffToModifiche(payload) : [];
+
+  if (modifiche.length === 0) {
+    modifiche = defaultModificheForCreate(input.entita, input.azione, record);
+  }
+
+  return {
+    tipoRiga: input.annullato ? "OPERAZIONE ANNULLATA" : tipoRigaFromAzione(input.entita, input.azione),
+    oggettoRiga,
+    modifiche,
+    tone: toneFromAzione(input.azione, input.annullato),
+  };
+}
+
+export function modificheToModificaRiga(modifiche: string[]): string {
+  return modifiche.map((m) => `• ${m.replace(/^•\s*/, "")}`).join("\n");
+}
+
+export { parseModificheLines };
+
+export function auditContext(oggetto: string): AuditLogContext {
+  return { oggetto: oggetto.trim() };
+}
+
+export function mergePayloadWithSummary(
+  payload: unknown,
+  summary: LogModificaSummary,
+): Record<string, unknown> {
+  const base =
+    payload != null && typeof payload === "object" && !Array.isArray(payload)
+      ? { ...(payload as Record<string, unknown>) }
+      : payload != null
+        ? { data: payload }
+        : {};
+  return {
+    ...base,
+    summary,
+    compact: modificheToModificaRiga(summary.modifiche).replace(/\n/g, " · "),
+  };
+}

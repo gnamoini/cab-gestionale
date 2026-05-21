@@ -5,6 +5,7 @@
 
 .lavorazioni-select-dk {
   color-scheme: dark;
+  border-radius: inherit;
 }
 
 .lavorazioni-select-dk option,

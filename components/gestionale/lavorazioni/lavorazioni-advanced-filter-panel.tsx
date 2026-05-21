@@ -1,0 +1,218 @@
+"use client";
+
+import { useMemo } from "react";
+import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
+import { GlobalFilterDateField } from "@/components/gestionale/global-input/global-date-picker";
+import {
+  LavorazioniFilterField,
+  LavorazioniFilterGroup,
+  gestionaleFilterFieldInputClass,
+} from "@/components/gestionale/lavorazioni/lavorazioni-filter-fields";
+import {
+  FILTER_ALL,
+  type LavorazioniAdvancedFilters,
+  type LavorazioniFilterCatalog,
+  type LavorazioniSectionFilter,
+} from "@/lib/lavorazioni/lavorazioni-advanced-filters";
+import { statoLavorazioneLabel } from "@/src/shared/selectors";
+
+export function LavorazioniAdvancedFilterPanel({
+  filters,
+  onChange,
+  catalog,
+  statiOpts,
+  showSectionFilter = false,
+}: {
+  filters: LavorazioniAdvancedFilters;
+  onChange: (patch: Partial<LavorazioniAdvancedFilters>) => void;
+  catalog: LavorazioniFilterCatalog;
+  statiOpts: { id: string; label: string }[];
+  /** Portale clienti: filtra in corso / archivio / entrambi. */
+  showSectionFilter?: boolean;
+}) {
+  const modelloOptions = useMemo(() => {
+    if (filters.marca === FILTER_ALL || !filters.marca.trim()) {
+      const all = new Set<string>();
+      for (const list of Object.values(catalog.modelliByMarca)) {
+        for (const m of list) all.add(m);
+      }
+      return [...all].sort((a, b) => a.localeCompare(b, "it"));
+    }
+    return catalog.modelliByMarca[filters.marca] ?? [];
+  }, [catalog.modelliByMarca, filters.marca]);
+
+  const statoItems = useMemo(
+    () => [
+      { value: FILTER_ALL, label: "Tutti gli stati" },
+      ...statiOpts.map((s) => ({
+        value: s.id,
+        label: statoLavorazioneLabel(s.id, statiOpts),
+      })),
+    ],
+    [statiOpts],
+  );
+
+  const sectionItems = useMemo(
+    () => [
+      { value: "", label: "In corso e completate" },
+      { value: "in_corso", label: "Solo in corso" },
+      { value: "archivio", label: "Solo completate" },
+    ],
+    [],
+  );
+
+  return (
+    <div className="space-y-3" aria-label="Filtri avanzati">
+      <LavorazioniFilterGroup title="Filtri temporali">
+        <LavorazioniFilterField label="Data ingresso da">
+          <GlobalFilterDateField
+            valueYmd={filters.ingressoDa}
+            onChangeYmd={(v) => onChange({ ingressoDa: v })}
+            aria-label="Data ingresso da"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Data ingresso a">
+          <GlobalFilterDateField
+            valueYmd={filters.ingressoA}
+            onChangeYmd={(v) => onChange({ ingressoA: v })}
+            aria-label="Data ingresso a"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Data completamento da">
+          <GlobalFilterDateField
+            valueYmd={filters.completamentoDa}
+            onChangeYmd={(v) => onChange({ completamentoDa: v })}
+            aria-label="Data completamento da"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Data completamento a">
+          <GlobalFilterDateField
+            valueYmd={filters.completamentoA}
+            onChangeYmd={(v) => onChange({ completamentoA: v })}
+            aria-label="Data completamento a"
+          />
+        </LavorazioniFilterField>
+      </LavorazioniFilterGroup>
+
+      <LavorazioniFilterGroup title="Filtri entità">
+        <LavorazioniFilterField label="Cliente">
+          <GlobalSelect
+            value={filters.cliente}
+            onChange={(v) => onChange({ cliente: v })}
+            options={catalog.clienti}
+            placeholder="Cerca e seleziona…"
+            inputClassName={gestionaleFilterFieldInputClass}
+            strictFromList
+            variant="filter"
+            aria-label="Filtra cliente"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Cantiere">
+          <GlobalSelect
+            value={filters.cantiere}
+            onChange={(v) => onChange({ cantiere: v })}
+            options={catalog.cantieri}
+            placeholder="Cerca e seleziona…"
+            inputClassName={gestionaleFilterFieldInputClass}
+            strictFromList
+            variant="filter"
+            aria-label="Filtra cantiere"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Utilizzatore">
+          <GlobalSelect
+            value={filters.utilizzatore}
+            onChange={(v) => onChange({ utilizzatore: v })}
+            options={catalog.utilizzatori}
+            placeholder="Cerca e seleziona…"
+            inputClassName={gestionaleFilterFieldInputClass}
+            strictFromList
+            variant="filter"
+            aria-label="Filtra utilizzatore"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Addetto">
+          <GlobalSelect
+            value={filters.addetto === FILTER_ALL ? "" : filters.addetto}
+            onChange={(v) => onChange({ addetto: v.trim() ? v : FILTER_ALL })}
+            options={catalog.addetti}
+            placeholder="Tutti gli addetti — cerca…"
+            inputClassName={gestionaleFilterFieldInputClass}
+            strictFromList
+            variant="filter"
+            aria-label="Filtra addetto"
+          />
+        </LavorazioniFilterField>
+        {showSectionFilter ? (
+          <LavorazioniFilterField label="Elenco">
+            <GlobalSelect
+              items={sectionItems}
+              value={filters.section}
+              onChange={(v) => onChange({ section: v as LavorazioniSectionFilter })}
+              inputClassName={gestionaleFilterFieldInputClass}
+              strictFromList
+              variant="filter"
+              aria-label="Filtra in corso o archivio"
+            />
+          </LavorazioniFilterField>
+        ) : (
+          <LavorazioniFilterField label="Stato">
+            <GlobalSelect
+              items={statoItems}
+              value={filters.stato}
+              onChange={(v) => onChange({ stato: v })}
+              inputClassName={gestionaleFilterFieldInputClass}
+              strictFromList
+              variant="filter"
+              aria-label="Filtra stato"
+            />
+          </LavorazioniFilterField>
+        )}
+      </LavorazioniFilterGroup>
+
+      <LavorazioniFilterGroup title="Filtri tecnici">
+        <LavorazioniFilterField label="Marca">
+          <GlobalSelect
+            value={filters.marca === FILTER_ALL ? "" : filters.marca}
+            onChange={(v) => {
+              const marca = v.trim() ? v : FILTER_ALL;
+              onChange({ marca, modello: FILTER_ALL });
+            }}
+            options={catalog.marche}
+            placeholder="Cerca e seleziona…"
+            inputClassName={gestionaleFilterFieldInputClass}
+            strictFromList
+            variant="filter"
+            aria-label="Filtra marca"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Modello">
+          <GlobalSelect
+            value={filters.modello === FILTER_ALL ? "" : filters.modello}
+            onChange={(v) => onChange({ modello: v.trim() ? v : FILTER_ALL })}
+            options={modelloOptions}
+            placeholder={filters.marca === FILTER_ALL ? "Seleziona prima la marca" : "Cerca e seleziona…"}
+            inputClassName={gestionaleFilterFieldInputClass}
+            strictFromList
+            disabled={filters.marca === FILTER_ALL}
+            variant="filter"
+            aria-label="Filtra modello"
+          />
+        </LavorazioniFilterField>
+        {showSectionFilter ? (
+          <LavorazioniFilterField label="Stato">
+            <GlobalSelect
+              items={statoItems}
+              value={filters.stato}
+              onChange={(v) => onChange({ stato: v })}
+              inputClassName={gestionaleFilterFieldInputClass}
+              strictFromList
+              variant="filter"
+              aria-label="Filtra stato"
+            />
+          </LavorazioniFilterField>
+        ) : null}
+      </LavorazioniFilterGroup>
+    </div>
+  );
+}

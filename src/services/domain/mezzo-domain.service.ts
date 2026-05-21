@@ -10,6 +10,7 @@ import {
   labelLavorazioneStatoDb,
   mezzoHaLavorazioneAttivaDb,
 } from "@/lib/mezzi/interventi-from-lavorazioni-db";
+import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import type { MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
@@ -112,7 +113,10 @@ function buildTimeline(core: MezzoHubCore): MezzoTimelineItem[] {
       kind: "log",
       at: log.created_at,
       title: `Anagrafica · ${log.azione}`,
-      subtitle: log.autore_id ? `Utente ${log.autore_id.slice(0, 8)}…` : undefined,
+      subtitle: (() => {
+        const autore = logAutoreLabel(log, null, "");
+        return autore !== "Sistema" ? autore : undefined;
+      })(),
     });
   }
 

@@ -3,11 +3,16 @@
 import { useMemo } from "react";
 import type { UseQueryOptions } from "@tanstack/react-query";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
+import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { documentiService } from "@/src/services/documenti.service";
+import { mezziService } from "@/src/services/mezzi.service";
+import { err, success } from "@/src/services/service-result";
 import { lavorazioniService, type LavorazioneFilters, type LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { logService } from "@/src/services/log.service";
 import { movimentiService } from "@/src/services/movimenti.service";
 import { preventiviService } from "@/src/services/preventivi.service";
+import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
 import { schedeService } from "@/src/services/schede.service";
 
 /** Prefisso stabile per query atomi dominio lavorazioni (invalidazione globale). */
@@ -18,9 +23,11 @@ export const lavorazioniDomainQueryKeys = {
   schede: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "schede", lavorazioneId] as const,
   movimenti: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "movimenti", lavorazioneId] as const,
   preventivi: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "preventivi", lavorazioneId] as const,
-  documenti: (lavorazioneId: string, mezzoId: string) =>
-    [...lavorazioniDomainQueryKeys.root, "documenti", lavorazioneId, mezzoId] as const,
+  documenti: (lavorazioneId: string, marca: string, modello: string) =>
+    [...lavorazioniDomainQueryKeys.root, "documenti", lavorazioneId, marca, modello] as const,
   log: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "log", lavorazioneId] as const,
+  lavorazionePdfs: (lavorazioneId: string) =>
+    [...lavorazioniDomainQueryKeys.root, "lavorazionePdfs", lavorazioneId] as const,
 };
 
 const LA_STALE_MS = 30_000;
@@ -108,17 +115,33 @@ export function usePreventiviByLavorazione(lavorazioneId: string | undefined) {
 }
 
 /**
- * Documenti del mezzo associato alla lavorazione (il modello `documenti` non ha `lavorazione_id`).
- * Si aggancia a `useLavorazioneBase` per ottenere `mezzo_id`.
+ * Documenti archivio compatibili con marca/modello del mezzo della lavorazione.
  */
 export function useDocumentiByLavorazione(lavorazioneId: string | undefined) {
   const id = lavIdOrEmpty(lavorazioneId);
   const base = useLavorazioneBase(lavorazioneId);
   const mezzoId = base.data?.mezzo_id?.trim() ?? "";
-  return useServiceQuery(lavorazioniDomainQueryKeys.documenti(id, mezzoId || "__pending__"), () => documentiService.getAll({ mezzo_id: mezzoId }), {
-    enabled: id.length > 0 && base.isSuccess && mezzoId.length > 0,
-    staleTime: LA_STALE_MS,
-  });
+  return useServiceQuery(
+    lavorazioniDomainQueryKeys.documenti(id, mezzoId || "__pending__", "__pending__"),
+    async () => {
+      if (!mezzoId) return success([]);
+      const mezzoRes = await mezziService.getById(mezzoId);
+      if (!mezzoRes.success || !mezzoRes.data) return err(mezzoRes.error ?? "Mezzo non trovato");
+      const mezzoG = toMezzoUI(mezzoRes.data);
+      const marca = mezzoG.marca.trim();
+      if (!marca) return success([]);
+      const res = await documentiService.getAll({ marca });
+      if (!res.success) return res;
+      const filtered = (res.data ?? []).filter((row) =>
+        documentoMatchesMarcaModello(documentoRowToGestionale(row), mezzoG.marca, mezzoG.modello),
+      );
+      return success(filtered);
+    },
+    {
+      enabled: id.length > 0 && base.isSuccess,
+      staleTime: LA_STALE_MS,
+    },
+  );
 }
 
 /** Log modifiche entità `lavorazioni`. */
@@ -128,4 +151,14 @@ export function useLogByLavorazione(lavorazioneId: string | undefined) {
     enabled: id.length > 0,
     staleTime: LA_STALE_MS,
   });
+}
+
+/** PDF preventivo esterno + DDT (`lavorazione_documents`). */
+export function useLavorazionePdfsByLavorazione(lavorazioneId: string | undefined) {
+  const id = lavIdOrEmpty(lavorazioneId);
+  return useServiceQuery(
+    lavorazioniDomainQueryKeys.lavorazionePdfs(id),
+    () => lavorazioneDocumentsService.listByLavorazione(id),
+    { enabled: id.length > 0, staleTime: LA_STALE_MS },
+  );
 }

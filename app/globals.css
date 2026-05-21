@@ -216,6 +216,22 @@ html.dark select option {
   .gestionale-scrollbar::-webkit-scrollbar-thumb:hover {
     background-color: var(--cab-scrollbar-thumb-hover);
   }
+
+  /**
+   * Titolo pagina allineato ai pulsanti toolbar: la scatola di layout usa cap/ex,
+   * senza contare discendenti (g, p, y…) per il centraggio verticale.
+   */
+  .cab-page-title-box {
+    line-height: 1;
+    text-box-trim: trim-both;
+    text-box-edge: cap ex;
+  }
+
+  @supports not (text-box-trim: trim-both) {
+    .cab-page-title-box {
+      margin-bottom: -0.14em;
+    }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

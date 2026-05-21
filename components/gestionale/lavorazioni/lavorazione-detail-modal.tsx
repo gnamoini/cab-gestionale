@@ -4,7 +4,15 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
-import { GestionaleLogEmpty, GestionaleLogList } from "@/components/gestionale/gestionale-log-ui";
+import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
+import { LavorazioneAttivitaPanel } from "@/components/lavorazioni/lavorazione-attivita-panel";
+import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
+import { useLavorazioneCosto } from "@/src/hooks/gestionale/use-lavorazione-costo";
+import { useLavorazioneSchedeStoreSync } from "@/src/hooks/use-lavorazione-schede-store-sync";
+import { buildLavorazioneAttivitaFeed } from "@/lib/lavorazioni/lavorazione-attivita-feed";
+import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
+import { useAuth } from "@/context/auth-context";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { buildPreventiviArchivioFilterHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
 import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
@@ -18,9 +26,10 @@ import {
   erpBtnNeutral,
   erpBtnSoftOrange,
   erpFocus,
+  prioritaLabel,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 
-type TabId = "panoramica" | "schede" | "movimenti" | "preventivi" | "documenti" | "log" | "timeline";
+type TabId = "panoramica" | "schede" | "movimenti" | "preventivi" | "documenti" | "attivita";
 
 function fmtDt(iso: string) {
   try {
@@ -47,8 +56,42 @@ function fmtDay(iso: string | null | undefined) {
 
 export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazioneId: string; onClose: () => void }) {
   const [tab, setTab] = useState<TabId>("panoramica");
+  const { authorName, user } = useAuth();
+  const globalOpts = useGlobalOptions({ debugTag: "LavorazioneDetailModal" });
+  const statiOpts = useMemo(
+    () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
+    [globalOpts.lavorazioni.stati],
+  );
+  const schedeStore = useLavorazioneSchedeStoreSync();
+  const schedeBundle = useMemo(
+    () => getOrCreateBundle(schedeStore, lavorazioneId),
+    [schedeStore, lavorazioneId],
+  );
   const hubQuery = useLavorazioneHub(lavorazioneId);
   const hub = hubQuery.data;
+  const costoLavorazione = useLavorazioneCosto(lavorazioneId, schedeBundle, {
+    enabled: Boolean(hub),
+    cliente: schedeBundle.ingresso?.campi.cliente,
+  });
+
+  const attivitaFeedInput = useMemo(() => {
+    if (!hub) return null;
+    return {
+      logRows: hub.log,
+      schedeRows: hub.schede,
+      movimentiRows: hub.movimenti,
+      preventiviRows: hub.preventivi,
+      documentiRows: hub.documenti,
+      lavorazione: hub.lavorazione,
+      statiOpts,
+      resolveAutore: (row: (typeof hub.log)[number]) => logAutoreLabel(row, user?.id ?? null, authorName),
+    };
+  }, [hub, statiOpts, user?.id, authorName]);
+
+  const attivitaCount = useMemo(
+    () => (attivitaFeedInput ? buildLavorazioneAttivitaFeed(attivitaFeedInput).length : 0),
+    [attivitaFeedInput],
+  );
 
   useEffect(() => {
     setTab("panoramica");
@@ -122,34 +165,6 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
   }, [lavorazioneId, documentiUi.length, listPageSize, resetDocPage]);
   const pagedDoc = useMemo(() => sliceDoc(documentiUi), [documentiUi, sliceDoc, docPage]);
 
-  const {
-    page: logPage,
-    setPage: setLogPage,
-    pageCount: logPageCount,
-    sliceItems: sliceLog,
-    showPager: showLogPager,
-    label: logPagerLabel,
-    resetPage: resetLogPage,
-  } = useClientPagination(hub?.log.length ?? 0, listPageSize);
-  useEffect(() => {
-    resetLogPage();
-  }, [lavorazioneId, hub?.log.length, listPageSize, resetLogPage]);
-  const pagedLog = useMemo(() => sliceLog(hub?.log ?? []), [hub?.log, sliceLog, logPage]);
-
-  const {
-    page: tlPage,
-    setPage: setTlPage,
-    pageCount: tlPageCount,
-    sliceItems: sliceTl,
-    showPager: showTlPager,
-    label: tlPagerLabel,
-    resetPage: resetTlPage,
-  } = useClientPagination(hub?.timeline.length ?? 0, listPageSize);
-  useEffect(() => {
-    resetTlPage();
-  }, [lavorazioneId, hub?.timeline.length, listPageSize, resetTlPage]);
-  const pagedTl = useMemo(() => sliceTl(hub?.timeline ?? []), [hub?.timeline, sliceTl, tlPage]);
-
   const tabBtn = (id: TabId, label: string) => {
     const on = tab === id;
     return (
@@ -210,8 +225,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
           {tabBtn("movimenti", `Movimenti (${hub?.kpi.countMovimenti ?? 0})`)}
           {tabBtn("preventivi", `Preventivi (${hub?.kpi.countPreventivi ?? 0})`)}
           {tabBtn("documenti", `Documenti (${hub?.kpi.countDocumenti ?? 0})`)}
-          {tabBtn("timeline", `Timeline (${hub?.timeline.length ?? 0})`)}
-          {tabBtn("log", `Log (${hub?.kpi.countLog ?? 0})`)}
+          {tabBtn("attivita", `Attività (${attivitaCount})`)}
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
@@ -226,7 +240,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                 </div>
                 <div>
                   <p className="font-semibold uppercase tracking-wide text-zinc-500">Priorità</p>
-                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{hub.kpi.priorita}</p>
+                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{prioritaLabel(hub.kpi.priorita)}</p>
                 </div>
                 <div>
                   <p className="font-semibold uppercase tracking-wide text-zinc-500">Giorni apertura</p>
@@ -261,6 +275,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                   Preventivi collegati
                 </Link>
               </div>
+              <LavorazioneCostoDiscreto costo={costoLavorazione} />
             </div>
           ) : null}
 
@@ -410,48 +425,11 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
             </>
           ) : null}
 
-          {tab === "timeline" ? (
-            <>
-              {pagedTl.length === 0 ? (
-                <p className="text-sm text-zinc-500">Nessun evento in timeline.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {pagedTl.map((ev) => (
-                    <li
-                      key={ev.id}
-                      className="flex flex-col gap-1 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
-                    >
-                      <p className="text-[11px] font-mono text-zinc-500">{fmtDt(ev.at)}</p>
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{ev.title}</p>
-                      {ev.subtitle ? <p className="text-xs text-zinc-600 dark:text-zinc-400">{ev.subtitle}</p> : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {showTlPager ? <TablePagination page={tlPage} pageCount={tlPageCount} onPageChange={setTlPage} label={tlPagerLabel} /> : null}
-            </>
-          ) : null}
-
-          {tab === "log" ? (
+          {tab === "attivita" ? (
             hubQuery.isLoading && !hub ? (
-              <p className="text-sm text-zinc-500">Caricamento log…</p>
-            ) : (hub?.log.length ?? 0) === 0 ? (
-              <GestionaleLogEmpty message="Nessuna voce nel registro modifiche per questa lavorazione." />
+              <p className="text-sm text-zinc-500">Caricamento attività…</p>
             ) : (
-              <>
-                <GestionaleLogList>
-                  {pagedLog.map((lg) => (
-                    <li key={lg.id} className="list-none rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40">
-                      <p className="text-[11px] font-mono text-zinc-500">{fmtDt(lg.created_at)}</p>
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{lg.azione}</p>
-                      <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                        Autore: {lg.autore_id?.slice(0, 8) ?? "—"}…
-                      </p>
-                    </li>
-                  ))}
-                </GestionaleLogList>
-                {showLogPager ? <TablePagination page={logPage} pageCount={logPageCount} onPageChange={setLogPage} label={logPagerLabel} /> : null}
-              </>
+              <LavorazioneAttivitaPanel feedInput={attivitaFeedInput} />
             )
           ) : null}
         </div>

@@ -40,7 +40,9 @@ import {
 } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import { erpBtnNuovaLavorazione, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
+import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { Drawer } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
@@ -652,18 +654,20 @@ export function BunderView() {
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                       Tipo
-                      <select
-                        className={`${gestionaleSelectFilterClass} mt-1 w-full`}
-                        value={filtroDraft.tipo}
-                        onChange={(e) => setFiltroDraft((f) => ({ ...f, tipo: e.target.value as FiltriDraft["tipo"] }))}
-                      >
-                        <option value="__tutti__">Tutti</option>
-                        {BUNDER_DOC_KIND_OPTIONS.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="mt-1">
+                        <GlobalSelect
+                          variant="filter"
+                          inputClassName={globalInputFieldFilter}
+                          items={[
+                            { value: "__tutti__", label: "Tutti" },
+                            ...BUNDER_DOC_KIND_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
+                          ]}
+                          value={filtroDraft.tipo}
+                          onChange={(v) => setFiltroDraft((f) => ({ ...f, tipo: v as FiltriDraft["tipo"] }))}
+                          strictFromList
+                          aria-label="Filtra tipo documento"
+                        />
+                      </div>
                     </label>
                     <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                       Azienda (contiene)
@@ -687,18 +691,20 @@ export function BunderView() {
                     </label>
                     <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                       Creato da
-                      <select
-                        className={`${gestionaleSelectFilterClass} mt-1 w-full`}
-                        value={filtroDraft.autore}
-                        onChange={(e) => setFiltroDraft((f) => ({ ...f, autore: e.target.value }))}
-                      >
-                        <option value="">Tutti</option>
-                        {autoriOpts.map((a) => (
-                          <option key={a} value={a}>
-                            {a}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="mt-1">
+                        <GlobalSelect
+                          variant="filter"
+                          inputClassName={globalInputFieldFilter}
+                          items={[
+                            { value: "", label: "Tutti" },
+                            ...autoriOpts.map((a) => ({ value: a, label: a })),
+                          ]}
+                          value={filtroDraft.autore}
+                          onChange={(v) => setFiltroDraft((f) => ({ ...f, autore: v }))}
+                          strictFromList
+                          aria-label="Filtra autore"
+                        />
+                      </div>
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
@@ -713,34 +719,61 @@ export function BunderView() {
                     <div className="grid grid-cols-2 gap-2">
                       <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                         Data da
-                        <input type="date" className={`${gestionaleSelectFilterClass} mt-1 w-full`} value={filtroDraft.dataDa} onChange={(e) => setFiltroDraft((f) => ({ ...f, dataDa: e.target.value }))} />
+                        <div className="mt-1">
+                          <GlobalDatePickerYmd
+                            valueYmd={filtroDraft.dataDa}
+                            onChangeYmd={(v) => setFiltroDraft((f) => ({ ...f, dataDa: v }))}
+                            aria-label="Data da"
+                          />
+                        </div>
                       </label>
                       <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                         Data a
-                        <input type="date" className={`${gestionaleSelectFilterClass} mt-1 w-full`} value={filtroDraft.dataA} onChange={(e) => setFiltroDraft((f) => ({ ...f, dataA: e.target.value }))} />
+                        <div className="mt-1">
+                          <GlobalDatePickerYmd
+                            valueYmd={filtroDraft.dataA}
+                            onChangeYmd={(v) => setFiltroDraft((f) => ({ ...f, dataA: v }))}
+                            aria-label="Data a"
+                          />
+                        </div>
                       </label>
                     </div>
                     <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                       Mese
-                      <select className={`${gestionaleSelectFilterClass} mt-1 w-full`} value={filtroDraft.mese} onChange={(e) => setFiltroDraft((f) => ({ ...f, mese: e.target.value }))}>
-                        <option value="__tutti__">Tutti</option>
-                        {Array.from({ length: 12 }, (_, i) => (
-                          <option key={i + 1} value={String(i + 1)}>
-                            {i + 1}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="mt-1">
+                        <GlobalSelect
+                          variant="filter"
+                          inputClassName={globalInputFieldFilter}
+                          items={[
+                            { value: "__tutti__", label: "Tutti" },
+                            ...Array.from({ length: 12 }, (_, i) => ({
+                              value: String(i + 1),
+                              label: String(i + 1),
+                            })),
+                          ]}
+                          value={filtroDraft.mese}
+                          onChange={(v) => setFiltroDraft((f) => ({ ...f, mese: v }))}
+                          strictFromList
+                          aria-label="Filtra mese"
+                        />
+                      </div>
                     </label>
                     <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                       Anno
-                      <select className={`${gestionaleSelectFilterClass} mt-1 w-full`} value={filtroDraft.anno} onChange={(e) => setFiltroDraft((f) => ({ ...f, anno: e.target.value }))}>
-                        <option value="__tutti__">Tutti</option>
-                        {anniOpts.map((y) => (
-                          <option key={y} value={String(y)}>
-                            {y}
-                          </option>
-                        ))}
-                      </select>
+                      <div className="mt-1">
+                        <GlobalSelect
+                          variant="filter"
+                          inputClassName={globalInputFieldFilter}
+                          items={[
+                            { value: "__tutti__", label: "Tutti" },
+                            ...anniOpts.map((y) => ({ value: String(y), label: String(y) })),
+                          ]}
+                          value={filtroDraft.anno}
+                          onChange={(v) => setFiltroDraft((f) => ({ ...f, anno: v }))}
+                          strictFromList
+                          aria-label="Filtra anno"
+                        />
+                      </div>
                     </label>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
@@ -908,13 +941,17 @@ export function BunderView() {
             <p className="mt-1 text-xs text-zinc-500">Seleziona il tipo. Il testo e le righe saranno generate con impostazione professionale; potrai modificarle nell&apos;editor.</p>
             <label className="mt-4 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Tipo
-              <select className={`${gestionaleSelectFilterClass} mt-1 w-full`} value={wizardKind} onChange={(e) => setWizardKind(e.target.value as BunderDocKind)}>
-                {BUNDER_DOC_KIND_OPTIONS.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-1">
+                <GlobalSelect
+                  variant="filter"
+                  inputClassName={globalInputFieldFilter}
+                  items={BUNDER_DOC_KIND_OPTIONS.map((o) => ({ value: o.id, label: o.label }))}
+                  value={wizardKind}
+                  onChange={(v) => setWizardKind(v as BunderDocKind)}
+                  strictFromList
+                  aria-label="Tipo nuovo documento"
+                />
+              </div>
             </label>
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" className={dsBtnNeutral} onClick={() => setWizardOpen(false)}>

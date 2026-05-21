@@ -31,10 +31,10 @@ import {
   setScontoRicambiCliente,
 } from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
-import { appendDashboardSistemaLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
+import { appendDashboardSettingsSavedLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
+import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
 import { CloseButton } from "@/components/design-system";
-import type { GestionaleLogEventTone } from "@/lib/gestionale-log/view-model";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import {
   dispatchAddettoDisplayRename,
@@ -581,20 +581,6 @@ function SistemaImpostazioniWorkspace({
   const allHydrated = lavPrefsHydrated && magHydrated && mezziHydrated && ecoHydrated;
   const isDirty = allHydrated && savedSnapshotKey != null && currentSnapshotKey !== savedSnapshotKey;
 
-  const logDash = useCallback(
-    (tone: GestionaleLogEventTone, tipoRiga: string, oggettoRiga: string, modificaRiga: string) => {
-      appendDashboardSistemaLog({
-        tone,
-        tipoRiga: tipoRiga.toUpperCase(),
-        oggettoRiga,
-        modificaRiga,
-        autore: authorName.trim() || "Operatore",
-        atIso: new Date().toISOString(),
-      });
-    },
-    [authorName],
-  );
-
   const handleAddStatoFromLabel = useCallback(
     (label: string) => {
       const next = addStatoFromLabel(stati, label);
@@ -603,9 +589,8 @@ function SistemaImpostazioniWorkspace({
         return;
       }
       setStati(next);
-      logDash("create", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Aggiunto stato «${label.trim()}»`);
     },
-    [stati, logDash],
+    [stati],
   );
 
   useEffect(() => {
@@ -667,13 +652,16 @@ function SistemaImpostazioniWorkspace({
       buildBulkRowsFromResolved(buildResolvedFromModalSnapshot(s)),
       settingsRows,
     );
+    suppressSettingsRemoteNotify();
     await bulkSave.mutateAsync(payload);
+    appendDashboardSettingsSavedLog(authorName);
+    suppressSettingsRemoteNotify();
     savedSnapshotRef.current = s;
     setSavedSnapshotKey(snapshotKey(s));
     dispatchLavorazioniPrefsRefresh();
     dispatchMagazzinoMasterRefresh();
     dispatchMezziListeRefresh();
-  }, [bulkSave, lavPrefsHydrated, magHydrated, mezziHydrated, ecoHydrated, settingsRows]);
+  }, [bulkSave, lavPrefsHydrated, magHydrated, mezziHydrated, ecoHydrated, settingsRows, authorName]);
 
   const applySnapshot = useCallback((s: SistemaSettingsSnapshot) => {
     setLavPrefsHydrated(false);
@@ -934,13 +922,11 @@ function SistemaImpostazioniWorkspace({
                 prioritaColors={prioritaColors}
                 onChangePrioritaDb={(next) => {
                   setPrioritaDb(next);
-                  logDash("update", "AGGIORNAMENTO", "Impostazioni · Priorità", `Priorità attive: ${next.join(", ")}`);
                 }}
                 onChangePrioritaColor={(p, hex) => {
                   const nh = normalizeHex(hex);
                   if (!nh) return;
                   setPrioritaColors((prev) => ({ ...prev, [p]: nh }));
-                  logDash("update", "AGGIORNAMENTO", "Impostazioni · Priorità", `Colore aggiornato per «${p}»`);
                 }}
                 onChangeStatoLabel={(id, label) => setStati((prev) => prev.map((s) => (s.id === id ? { ...s, label } : s)))}
                 onChangeStatoColor={(id, hex) => {
@@ -948,7 +934,6 @@ function SistemaImpostazioniWorkspace({
                   if (!nh) return;
                   const nome = stati.find((s) => s.id === id)?.label ?? id;
                   setStati((prev) => prev.map((s) => (s.id === id ? { ...s, color: nh } : s)));
-                  logDash("update", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Colore stato aggiornato per «${nome}»`);
                 }}
                 onChangeStatoClosed={(id, closed) =>
                   setStati((prev) =>
@@ -976,7 +961,6 @@ function SistemaImpostazioniWorkspace({
                   }
                   const nome = stati.find((s) => s.id === id)?.label ?? id;
                   setStati((prev) => prev.filter((s) => s.id !== id));
-                  logDash("delete", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Rimosso stato «${nome}»`);
                 }}
                 addetti={addetti}
                 addettoColors={addettoColors}
@@ -989,7 +973,6 @@ function SistemaImpostazioniWorkspace({
                   }
                   setAddetti((prev) => [...prev, t]);
                   setAddettoColors((prev) => assignColorForNewAddetto(prev, t));
-                  logDash("create", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Aggiunto addetto ${t.toUpperCase()}`);
                 }}
                 onRenameAddettoBlur={(previousName, nextName) => {
                   const t = nextName.trim();
@@ -1001,18 +984,11 @@ function SistemaImpostazioniWorkspace({
                   setAddetti((prev) => prev.map((a) => (a === previousName ? t : a)));
                   setAddettoColors((prev) => renameAddettoInColorMap(prev, previousName, t));
                   dispatchAddettoDisplayRename({ previousName, nextName: t });
-                  logDash(
-                    "update",
-                    "AGGIORNAMENTO",
-                    "Impostazioni · Lavorazioni",
-                    `Rinominato addetto da «${previousName}» a «${t}»`,
-                  );
                 }}
                 onChangeAddettoColor={(nome, hex) => {
                   const nh = normalizeHex(hex);
                   if (!nh) return;
                   setAddettoColors((prev) => ({ ...prev, [nome]: nh }));
-                  logDash("update", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Colore addetto aggiornato per «${nome}»`);
                 }}
                 onRemoveAddetto={(name) => {
                   const inUse = attiviAddetti.has(name) || storicoAddetti.has(name);
@@ -1024,7 +1000,6 @@ function SistemaImpostazioniWorkspace({
                   }
                   setAddetti((prev) => prev.filter((a) => a !== name));
                   setAddettoColors((prev) => removeAddettoFromColorMap(prev, name));
-                  logDash("delete", "AGGIORNAMENTO", "Impostazioni · Lavorazioni", `Rimosso addetto «${name}»`);
                 }}
                 attiviStatoIds={attiveStatoIds}
                 storicoStatoIds={storicoStatoIds}
@@ -1044,12 +1019,10 @@ function SistemaImpostazioniWorkspace({
                   placeholder="Nuova marca"
                   onAdd={(t) => {
                     if (magAdd("marche", t, () => setNuovaMarca(""))) {
-                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Magazzino · Marche", `Aggiunto «${t}»`);
                     }
                   }}
                   onRemove={(m) => {
                     patchMag((prev) => ({ ...prev, marche: prev.marche.filter((x) => x !== m) }));
-                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Magazzino · Marche", `Rimosso «${m}»`);
                   }}
                 />
               </div>
@@ -1065,12 +1038,10 @@ function SistemaImpostazioniWorkspace({
                   placeholder="Nuovo fornitore"
                   onAdd={(t) => {
                     if (magAdd("fornitori", t, () => setNuovoFornitore(""))) {
-                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Magazzino · Fornitori", `Aggiunto «${t}»`);
                     }
                   }}
                   onRemove={(m) => {
                     patchMag((prev) => ({ ...prev, fornitori: prev.fornitori.filter((x) => x !== m) }));
-                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Magazzino · Fornitori", `Rimosso «${m}»`);
                   }}
                 />
               </div>
@@ -1086,12 +1057,10 @@ function SistemaImpostazioniWorkspace({
                   placeholder="Nuova categoria"
                   onAdd={(t) => {
                     if (magAdd("categorie", t, () => setNuovaCategoria(""))) {
-                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Magazzino · Categorie", `Aggiunto «${t}»`);
                     }
                   }}
                   onRemove={(m) => {
                     patchMag((prev) => ({ ...prev, categorie: prev.categorie.filter((x) => x !== m) }));
-                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Magazzino · Categorie", `Rimosso «${m}»`);
                   }}
                 />
               </div>
@@ -1107,12 +1076,10 @@ function SistemaImpostazioniWorkspace({
                   placeholder="Nuovo tipo attrezzatura"
                   onAdd={(t) => {
                     if (listeAdd("tipiAttrezzatura", t, () => setNuovoTipoAttrezzatura(""))) {
-                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Attrezzatura · Tipo", `Aggiunto «${t}»`);
                     }
                   }}
                   onRemove={(m) => {
                     setListe((prev) => ({ ...prev, tipiAttrezzatura: prev.tipiAttrezzatura.filter((x) => x !== m) }));
-                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Attrezzatura · Tipo", `Rimosso «${m}»`);
                   }}
                 />
               </div>
@@ -1124,8 +1091,6 @@ function SistemaImpostazioniWorkspace({
                 variant="marca"
                 liste={liste}
                 setListe={setListe}
-                logDash={logDash}
-                logLabel="Attrezzatura · Marca"
               />
             ) : null}
 
@@ -1135,8 +1100,6 @@ function SistemaImpostazioniWorkspace({
                 variant="modello"
                 liste={liste}
                 setListe={setListe}
-                logDash={logDash}
-                logLabel="Attrezzatura · Modello"
               />
             ) : null}
 
@@ -1150,7 +1113,6 @@ function SistemaImpostazioniWorkspace({
                   placeholder="Nuovo tipo telaio"
                   onAdd={(t) => {
                     if (listeAdd("tipiTelaio", t, () => setNuovoTipoTelaio(""))) {
-                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Telaio · Tipo", `Aggiunto «${t}»`);
                     }
                   }}
                   onRemove={(m) => {
@@ -1158,7 +1120,6 @@ function SistemaImpostazioniWorkspace({
                       ...prev,
                       tipiTelaio: (prev.tipiTelaio ?? []).filter((x) => x !== m),
                     }));
-                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Telaio · Tipo", `Rimosso «${m}»`);
                   }}
                 />
               </div>
@@ -1170,8 +1131,6 @@ function SistemaImpostazioniWorkspace({
                 variant="marca"
                 liste={liste}
                 setListe={setListe}
-                logDash={logDash}
-                logLabel="Telaio · Marca"
               />
             ) : null}
 
@@ -1181,8 +1140,6 @@ function SistemaImpostazioniWorkspace({
                 variant="modello"
                 liste={liste}
                 setListe={setListe}
-                logDash={logDash}
-                logLabel="Telaio · Modello"
               />
             ) : null}
 
@@ -1197,14 +1154,12 @@ function SistemaImpostazioniWorkspace({
                     if (liste.clienti.includes(t)) return;
                     setListe((prev) => registerClienteInListe(prev, t));
                     setNuovoCliente("");
-                    logDash("create", "AGGIORNAMENTO", "Impostazioni · Commerciale · Clienti", `Aggiunto «${t}»`);
                   }}
                   onRemove={(m) => {
                     setListe((prev) => {
                       const next = removeScontoRicambiCliente(prev, m);
                       return { ...next, clienti: next.clienti.filter((x) => x !== m) };
                     });
-                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Commerciale · Clienti", `Rimosso «${m}»`);
                   }}
                 />
               </div>
@@ -1220,12 +1175,10 @@ function SistemaImpostazioniWorkspace({
                   placeholder="Nuovo utilizzatore"
                   onAdd={(t) => {
                     if (listeAdd("utilizzatori", t, () => setNuovoUtilizzatore(""))) {
-                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Commerciale · Utilizzatori", `Aggiunto «${t}»`);
                     }
                   }}
                   onRemove={(m) => {
                     setListe((prev) => ({ ...prev, utilizzatori: prev.utilizzatori.filter((x) => x !== m) }));
-                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Commerciale · Utilizzatori", `Rimosso «${m}»`);
                   }}
                 />
               </div>
@@ -1241,12 +1194,10 @@ function SistemaImpostazioniWorkspace({
                   placeholder="Nuovo cantiere"
                   onAdd={(t) => {
                     if (listeAdd("cantieri", t, () => setNuovoCantiere(""))) {
-                      logDash("create", "AGGIORNAMENTO", "Impostazioni · Commerciale · Cantieri", `Aggiunto «${t}»`);
                     }
                   }}
                   onRemove={(m) => {
                     setListe((prev) => ({ ...prev, cantieri: prev.cantieri.filter((x) => x !== m) }));
-                    logDash("delete", "AGGIORNAMENTO", "Impostazioni · Commerciale · Cantieri", `Rimosso «${m}»`);
                   }}
                 />
               </div>
@@ -1270,14 +1221,6 @@ function SistemaImpostazioniWorkspace({
                         if (!Number.isFinite(v) || v <= 0) return;
                         setEco({ costoOrarioDefault: Math.round(v * 100) / 100 });
                       }}
-                      onBlur={() =>
-                        logDash(
-                          "update",
-                          "AGGIORNAMENTO",
-                          "Impostazioni · Preventivi",
-                          `Costo manodopera default: ${eco.costoOrarioDefault.toLocaleString("it-IT")} €/h`,
-                        )
-                      }
                       className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm tabular-nums dark:border-zinc-700 dark:bg-zinc-950"
                     />
                   </label>

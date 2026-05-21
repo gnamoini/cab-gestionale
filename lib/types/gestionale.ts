@@ -93,8 +93,10 @@ export interface DocumentoAssocRef {
   macchinaId: string;
 }
 
-/** Dove vale il documento (gerarchia: marca → modello → mezzo). */
-export type DocumentoApplicabilita = "marca" | "modello" | "macchina";
+/** Dove vale il documento: intera marca o modello specifico. */
+export type DocumentoApplicabilita = "marca" | "modello";
+/** @deprecated Solo lettura legacy DB; non usare in UI nuova. */
+export type DocumentoApplicabilitaLegacy = DocumentoApplicabilita | "macchina";
 
 export interface DocumentoGestionale {
   id: string;
@@ -116,9 +118,9 @@ export interface DocumentoGestionale {
   applicabilita?: DocumentoApplicabilita;
   /** Marca (testo, allineato a Impostazioni → Mezzi → Marche). */
   marcaKey?: string;
-  /** Modello (testo, allineato a Impostazioni → Modelli). Obbligatorio se applicabilità modello o macchina. */
+  /** Modello (testo, allineato a Impostazioni → Modelli). Obbligatorio se applicabilità «modello». */
   modelloKey?: string;
-  /** Id mezzo anagrafica (`MezzoGestito.id`) se applicabilità macchina. */
+  /** @deprecated Non più usato: i documenti non si legano al singolo mezzo. */
   mezzoId?: string;
   /** Destinazioni archivio legacy (multi‑modello). Se presente e `applicabilita` assente, viene migrato. */
   associazioni?: DocumentoAssocRef[];

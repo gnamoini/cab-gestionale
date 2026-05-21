@@ -1,6 +1,7 @@
 "use client";
 
 import type { InputHTMLAttributes } from "react";
+import { chainGestionaleEnterKeyDown } from "@/lib/ui/gestionale-focus-navigation";
 import { dsSearchFieldInput } from "@/lib/ui/design-system";
 
 export function IconGestionaleSearchMagnifier({ className = "h-4 w-4" }: { className?: string }) {
@@ -19,13 +20,23 @@ export type GestionaleSearchFieldProps = Omit<InputHTMLAttributes<HTMLInputEleme
   wrapperClassName?: string;
 };
 
-export function GestionaleSearchField({ className = "", wrapperClassName = "", ...rest }: GestionaleSearchFieldProps) {
+export function GestionaleSearchField({
+  className = "",
+  wrapperClassName = "",
+  onKeyDown,
+  ...rest
+}: GestionaleSearchFieldProps) {
   return (
     <div className={`relative min-h-11 min-w-0 w-full ${wrapperClassName}`.trim()}>
       <span className={iconWrapClass} aria-hidden>
         <IconGestionaleSearchMagnifier />
       </span>
-      <input type="search" className={`${dsSearchFieldInput} ${className}`.trim()} {...rest} />
+      <input
+        type="search"
+        className={`${dsSearchFieldInput} ${className}`.trim()}
+        onKeyDown={(e) => chainGestionaleEnterKeyDown(e, onKeyDown)}
+        {...rest}
+      />
     </div>
   );
 }

@@ -58,6 +58,8 @@ export type PreventivoSortKey =
   | "numero"
   | "dataCreazione"
   | "cliente"
+  | "cantiere"
+  | "utilizzatore"
   | "macchinaRiassunto"
   | "targa"
   | "matricola"

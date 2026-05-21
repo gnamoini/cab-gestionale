@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { memo } from "react";
+import { CardMobile, CardMobileActions } from "@/components/design-system";
 import {
   dsScrollbar,
   dsTable,
@@ -11,7 +12,6 @@ import {
   dsTableActionBtnDanger,
   dsTableActionGlyph,
   dsTableActionsGroup,
-  dsTableActionsGroupStart,
   dsTableHead,
   dsTableRow,
   dsTableTdActions,
@@ -184,6 +184,10 @@ function MezzoRowInner({
         .filter(Boolean)
         .join(" ")}
     >
+      <td className={`min-w-0 ${dsTableTdCompact}`}>
+        <div className="break-words font-medium leading-snug">{m.cliente}</div>
+        <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">{m.utilizzatore}</div>
+      </td>
       <td className={`${dsTableTdCompact} font-medium`}>{m.marca}</td>
       <td className={`min-w-0 ${dsTableTdCompact}`}>
         <div className="break-words font-medium leading-snug">{cellIdentValue(m.modello)}</div>
@@ -194,10 +198,6 @@ function MezzoRowInner({
       <td className={cellIdent}>{cellIdentValue(m.targa)}</td>
       <td className={cellIdent}>{cellIdentValue(m.matricola)}</td>
       <td className={cellIdent}>{cellIdentValue(m.numeroScuderia)}</td>
-      <td className={`min-w-0 ${dsTableTdCompact}`}>
-        <div className="break-words font-medium leading-snug">{m.cliente}</div>
-        <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">{m.utilizzatore}</div>
-      </td>
       <td className={`${dsTableTdCompact} whitespace-nowrap text-xs text-zinc-700 dark:text-zinc-300`}>{ultima}</td>
       <td className={dsTableTdActions}>
         <div className={dsTableActionsGroup}>
@@ -257,14 +257,9 @@ function MezzoMobileCard({
   const ultima = ultimaLavorazioneLabel(interventi);
   void _inOff;
   return (
-    <div
+    <CardMobile
       id={`mezzo-row-${m.id}`}
-      className={[
-        "rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90",
-        flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className={flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]" : ""}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
@@ -277,6 +272,11 @@ function MezzoMobileCard({
         </div>
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div className="col-span-2">
+          <dt className="text-zinc-500 dark:text-zinc-400">Cliente / Utilizzatore</dt>
+          <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{m.cliente}</dd>
+          <dd className="text-xs text-zinc-600 dark:text-zinc-300">{m.utilizzatore}</dd>
+        </div>
         <div>
           <dt className="text-zinc-500 dark:text-zinc-400">Targa</dt>
           <dd className="font-mono text-[13px] font-medium tabular-nums text-zinc-600 dark:text-zinc-400">{cellIdentValue(m.targa)}</dd>
@@ -290,16 +290,11 @@ function MezzoMobileCard({
           <dd className="font-mono text-[13px] font-medium tabular-nums text-zinc-600 dark:text-zinc-400">{cellIdentValue(m.numeroScuderia)}</dd>
         </div>
         <div className="col-span-2">
-          <dt className="text-zinc-500 dark:text-zinc-400">Cliente / Utilizzatore</dt>
-          <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{m.cliente}</dd>
-          <dd className="text-xs text-zinc-600 dark:text-zinc-300">{m.utilizzatore}</dd>
-        </div>
-        <div className="col-span-2">
           <dt className="text-zinc-500 dark:text-zinc-400">Ultima lav.</dt>
           <dd className="text-xs font-medium text-zinc-800 dark:text-zinc-200">{ultima}</dd>
         </div>
       </dl>
-      <div className={`mt-4 w-full min-w-0 ${dsTableActionsGroupStart}`}>
+      <CardMobileActions>
         <button type="button" className={dsTableActionBtnInfo} title="Scheda hub mezzo" aria-label="Scheda hub mezzo" onClick={() => onHub(m)}>
           <IconInfo />
         </button>
@@ -317,8 +312,8 @@ function MezzoMobileCard({
             <IconTrash />
           </button>
         ) : null}
-      </div>
-    </div>
+      </CardMobileActions>
+    </CardMobile>
   );
 }
 
@@ -330,23 +325,23 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
       <div className={`hidden ${dsTableWrap} ${dsScrollbar} md:block`}>
         <table className={`${dsTable} w-full min-w-0 table-fixed text-left text-[13px] leading-snug text-zinc-900 dark:text-zinc-100`}>
           <colgroup>
-            <col className="w-[11%]" />
-            <col className="w-[15%]" />
+            <col className="w-[12%]" />
             <col className="w-[10%]" />
-            <col className="w-[13%]" />
-            <col className="w-[8%]" />
-            <col />
+            <col className="w-[14%]" />
             <col className="w-[10%]" />
+            <col className="w-[12%]" />
+            <col className="w-[7%]" />
+            <col className="w-[9%]" />
             <col className="w-[12rem]" />
           </colgroup>
           <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
             <tr>
+              <SortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <SortTh label="Marca" columnKey="marca" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <SortTh label="Modello" columnKey="modello" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <SortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <SortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <SortTh label="Scuderia" columnKey="numeroScuderia" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <SortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <SortTh label="Ultima lav." columnKey="ultimaLavorazione" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
               <th className="px-2.5 py-2 text-right align-middle text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
                 Azioni

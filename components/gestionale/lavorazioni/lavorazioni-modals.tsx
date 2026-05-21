@@ -21,14 +21,15 @@ import {
   prioritaBadgeStyle,
   prioritaLabel,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { CloseButton } from "@/components/design-system/close-button";
 import {
   dsInput,
   dsLavorazioniModalDialog,
   dsLavorazioniModalLayer,
-  dsLavorazioniModalOverlay,
   dsLabel,
 } from "@/lib/ui/design-system";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -54,19 +55,23 @@ function Field({
 
 const PRIORITA: PrioritaLav[] = orderPrioritaList(["bassa", "media", "alta", "urgente"]) as PrioritaLav[];
 
+const LAV_MODAL_TITLE_ID = "lav-modal-title";
+
 export function LavorazioniModalHeader({
   title,
   subtitle,
   onRequestClose,
   onBack,
+  titleId = LAV_MODAL_TITLE_ID,
 }: {
   title: string;
   subtitle?: string;
   onRequestClose: () => void;
   onBack?: () => void;
+  titleId?: string;
 }) {
   return (
-    <header className="flex shrink-0 items-start justify-between gap-2 border-b border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+    <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
       <div className="min-w-0 flex-1">
         {onBack ? (
           <button
@@ -77,15 +82,44 @@ export function LavorazioniModalHeader({
             ← Torna indietro
           </button>
         ) : null}
-        <h2 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">{title}</h2>
-        {subtitle ? <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</p> : null}
+        <h2 id={titleId} className="truncate text-sm font-semibold text-[color:var(--cab-text)]">
+          {title}
+        </h2>
+        {subtitle ? <p className="mt-0.5 text-xs text-[color:var(--cab-text-muted)]">{subtitle}</p> : null}
       </div>
       <CloseButton onClick={onRequestClose} className="shrink-0" />
     </header>
   );
 }
 
-/** Scroll lock con scrollbar gutter; chiusura overlay, ESC o pulsante X. */
+/** Barra titolo custom con pulsante X (allineata al design system modale). */
+export function LavorazioniModalTitleBar({
+  title,
+  titleId,
+  onRequestClose,
+  children,
+}: {
+  title?: string;
+  titleId?: string;
+  onRequestClose: () => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
+      <div className="min-w-0 flex-1">
+        {title ? (
+          <h2 id={titleId} className="text-sm font-semibold text-[color:var(--cab-text)]">
+            {title}
+          </h2>
+        ) : null}
+        {children}
+      </div>
+      <CloseButton onClick={onRequestClose} className="shrink-0" />
+    </header>
+  );
+}
+
+/** Chiusura: click fuori, ESC, X in header; scroll lock come `Modal` globale. */
 export function LavorazioniModalShell({
   children,
   wide,
@@ -96,6 +130,7 @@ export function LavorazioniModalShell({
   subtitle,
   onBack,
   header,
+  titleId,
 }: {
   children: React.ReactNode;
   wide?: boolean;
@@ -108,18 +143,12 @@ export function LavorazioniModalShell({
   onBack?: () => void;
   /** Header custom (ignora title/subtitle se fornito). */
   header?: React.ReactNode;
+  /** Id titolo per `aria-labelledby` (default se `title` è impostato). */
+  titleId?: string;
 }) {
-  useEffect(() => {
-    const sb = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-    const prevOverflow = document.body.style.overflow;
-    const prevPr = document.body.style.paddingRight;
-    document.body.style.overflow = "hidden";
-    if (sb > 0) document.body.style.paddingRight = `${sb}px`;
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.body.style.paddingRight = prevPr;
-    };
-  }, []);
+  useBodyScrollLock(true);
+
+  const labelledBy = title ? (titleId ?? LAV_MODAL_TITLE_ID) : titleId;
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -130,23 +159,24 @@ export function LavorazioniModalShell({
   }, [onRequestClose]);
 
   return (
-    <div className={`${dsLavorazioniModalLayer} ${alignTop ? "!items-start pt-6" : ""}`} role="presentation">
-      <button
-        type="button"
-        className={dsLavorazioniModalOverlay}
-        aria-label="Chiudi finestra"
-        onMouseDown={(e) => {
+    <div
+      className={`${dsLavorazioniModalLayer} ${alignTop ? "!items-start" : ""}`}
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
           e.preventDefault();
           onRequestClose();
-        }}
-      />
+        }
+      }}
+    >
       <div
         className={`${dsLavorazioniModalDialog} flex max-h-[min(92dvh,900px)] flex-col overflow-hidden ${maxWidthClass ?? (wide ? "max-w-2xl" : "max-w-lg")}`}
         role="dialog"
         aria-modal="true"
+        aria-labelledby={labelledBy}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {header ?? (title ? <LavorazioniModalHeader title={title} subtitle={subtitle} onRequestClose={onRequestClose} onBack={onBack} /> : null)}
+        {header ?? (title ? <LavorazioniModalHeader title={title} subtitle={subtitle} onRequestClose={onRequestClose} onBack={onBack} titleId={labelledBy} /> : null)}
         {children}
       </div>
     </div>
@@ -201,12 +231,10 @@ export function EditLavorazioneModal({
   }
 
   return (
-    <LavorazioniModalShell wide onRequestClose={onRequestClose}>
-      <div className="flex shrink-0 items-center border-b border-[color:var(--cab-border)] px-4 py-3">
-        <h2 className="text-sm font-semibold text-[color:var(--cab-text)]">{title}</h2>
-      </div>
-      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
+    <LavorazioniModalShell wide onRequestClose={onRequestClose} titleId="lav-edit-modal-title">
+      <LavorazioniModalTitleBar title={title} titleId="lav-edit-modal-title" onRequestClose={onRequestClose} />
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
           <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
             <SectionTitle>Mezzo</SectionTitle>
             <div className="grid gap-3 sm:grid-cols-12">
@@ -437,11 +465,9 @@ export function NewLavorazioneModal({
   }
 
   return (
-    <LavorazioniModalShell wide onRequestClose={onRequestClose}>
-      <div className="flex shrink-0 items-center border-b border-[color:var(--cab-border)] px-4 py-3">
-        <h2 className="text-sm font-semibold text-[color:var(--cab-text)]">Nuova lavorazione</h2>
-      </div>
-      <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+    <LavorazioniModalShell wide onRequestClose={onRequestClose} titleId="lav-new-modal-title">
+      <LavorazioniModalTitleBar title="Nuova lavorazione" titleId="lav-new-modal-title" onRequestClose={onRequestClose} />
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
           <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
             <SectionTitle>Mezzo</SectionTitle>

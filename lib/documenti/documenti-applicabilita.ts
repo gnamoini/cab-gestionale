@@ -1,44 +1,71 @@
 import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import type { DocumentoAssocRef, DocumentoGestionale, DocumentoApplicabilita } from "@/lib/types/gestionale";
 
+/** Tutte le categorie supportano marca intera o modello specifico. */
 export function allowedApplicabilitaForCategoria(
-  c: DocumentoGestionale["categoria"],
+  _c: DocumentoGestionale["categoria"],
 ): DocumentoApplicabilita[] {
-  switch (c) {
-    case "listini":
-      return ["marca"];
-    case "cataloghi":
-      return ["marca", "modello"];
-    case "manuali":
-      return ["modello", "macchina"];
-    default:
-      return ["marca", "modello", "macchina"];
-  }
+  return ["marca", "modello"];
 }
 
 export function defaultApplicabilitaForCategoria(c: DocumentoGestionale["categoria"]): DocumentoApplicabilita {
-  const a = allowedApplicabilitaForCategoria(c);
-  return a[0]!;
+  if (c === "listini" || c === "cataloghi") return "marca";
+  return "modello";
+}
+
+function inferApplicabilitaFromRow(doc: DocumentoGestionale, marcaNome: string, modelloLegacy: string): DocumentoApplicabilita {
+  if (doc.categoria === "listini") return "marca";
+  const hasModel = modelloLegacy.length > 0 && modelloLegacy !== "—";
+  if (doc.categoria === "cataloghi") return hasModel ? "modello" : "marca";
+  if (doc.categoria === "manuali") return hasModel ? "modello" : "marca";
+  return hasModel ? "modello" : "marca";
+}
+
+const MARCA_NON_ASSEGNATA = new Set(["", "—", "-", "n/a", "na"]);
+
+function marcaAssegnataText(raw: string): boolean {
+  const t = raw.trim().toLowerCase();
+  return t.length > 0 && !MARCA_NON_ASSEGNATA.has(t);
 }
 
 /** Risolve applicabilità e chiavi testuali (marca / modello) con fallback legacy. */
 export function resolveDocumentoApplicazione(doc: DocumentoGestionale, catalog?: CatalogMarca[]): DocumentoGestionale {
-  if (doc.applicabilita && doc.marcaKey?.trim()) {
-    const mk = doc.marcaKey.trim();
-    const mod = doc.modelloKey?.trim() ?? "";
+  const marcaNome = (doc.marcaKey ?? doc.marca).trim() || doc.marca?.trim() || "";
+  const modelloLegacy = (doc.modelloKey ?? doc.macchina).trim();
+
+  if (!marcaAssegnataText(marcaNome)) {
     return {
       ...doc,
       applicabilita: doc.applicabilita,
-      marcaKey: mk,
-      modelloKey: doc.applicabilita === "marca" ? undefined : mod || undefined,
-      mezzoId: doc.applicabilita === "macchina" ? doc.mezzoId?.trim() || undefined : undefined,
-      marca: mk,
-      macchina: doc.applicabilita === "marca" ? "—" : mod || doc.macchina,
+      marcaKey: undefined,
+      modelloKey: undefined,
+      mezzoId: undefined,
+      marca: "",
+      macchina: "—",
     };
   }
 
-  const marcaNome = doc.marca?.trim() || "";
-  const modelloLegacy = doc.macchina?.trim() || "";
+  let applicabilita = doc.applicabilita;
+  const legacyApp = (doc as { applicabilita?: string }).applicabilita;
+  if (legacyApp === "macchina") {
+    applicabilita = modelloLegacy && modelloLegacy !== "—" ? "modello" : "marca";
+  }
+
+  if (applicabilita && marcaNome) {
+    const mk = marcaNome;
+    const mod = applicabilita === "marca" ? undefined : modelloLegacy || undefined;
+    return {
+      ...doc,
+      applicabilita,
+      marcaKey: mk,
+      modelloKey: mod,
+      mezzoId: undefined,
+      marca: mk,
+      macchina: applicabilita === "marca" ? "—" : mod ?? "—",
+    };
+  }
+
+  const inferred = inferApplicabilitaFromRow(doc, marcaNome, modelloLegacy);
 
   if (doc.categoria === "listini") {
     return {
@@ -77,14 +104,15 @@ export function resolveDocumentoApplicazione(doc: DocumentoGestionale, catalog?:
   }
 
   if (doc.categoria === "manuali") {
+    const hasModel = modelloLegacy.length > 0 && modelloLegacy !== "—";
     return {
       ...doc,
-      applicabilita: "modello",
+      applicabilita: hasModel ? "modello" : inferred,
       marcaKey: marcaNome,
-      modelloKey: modelloLegacy || marcaNome,
+      modelloKey: hasModel ? modelloLegacy : undefined,
       mezzoId: undefined,
       marca: marcaNome,
-      macchina: modelloLegacy || "—",
+      macchina: hasModel ? modelloLegacy : "—",
     };
   }
 
@@ -96,7 +124,7 @@ export function resolveDocumentoApplicazione(doc: DocumentoGestionale, catalog?:
     if (mar && mac) {
       return {
         ...doc,
-        applicabilita: doc.associazioni!.length > 1 ? "modello" : "modello",
+        applicabilita: "modello",
         marcaKey: mar.nome,
         modelloKey: mac.nome,
         mezzoId: undefined,
@@ -106,12 +134,15 @@ export function resolveDocumentoApplicazione(doc: DocumentoGestionale, catalog?:
     }
   }
 
+  const hasModel = modelloLegacy.length > 0 && modelloLegacy !== "—";
   return {
     ...doc,
-    applicabilita: "modello",
+    applicabilita: inferred,
     marcaKey: marcaNome || "—",
-    modelloKey: modelloLegacy || "—",
+    modelloKey: hasModel ? modelloLegacy : undefined,
     mezzoId: undefined,
+    marca: marcaNome || "—",
+    macchina: hasModel ? modelloLegacy : "—",
   };
 }
 
@@ -121,8 +152,6 @@ export function labelApplicabilitaBreve(a: DocumentoApplicabilita): string {
       return "MARCA";
     case "modello":
       return "MODELLO";
-    case "macchina":
-      return "MACCHINA";
     default:
       return a;
   }
@@ -140,14 +169,10 @@ export function formatDocumentoRigaSintetica(doc: DocumentoGestionale): string {
           : "ALTRO";
   const r = resolveDocumentoApplicazione(doc);
   const m = r.marcaKey?.trim() || r.marca.trim();
+  if (!marcaAssegnataText(m)) return `${cat} — Senza marca`;
   if (r.applicabilita === "marca") return `${cat} — ${m}`;
-  if (r.applicabilita === "modello") {
-    const mod = r.modelloKey?.trim() || r.macchina.trim();
-    return `${cat} — ${m} ${mod}`.replace(/\s+/g, " ").trim();
-  }
-  const mezzo = r.mezzoId ? ` · mezzo ${r.mezzoId}` : "";
   const mod = r.modelloKey?.trim() || r.macchina.trim();
-  return `${cat} — ${m} ${mod}${mezzo}`.replace(/\s+/g, " ").trim();
+  return `${cat} — ${m} ${mod}`.replace(/\s+/g, " ").trim();
 }
 
 export function legacyAssocRefs(doc: DocumentoGestionale, catalog: CatalogMarca[]): DocumentoAssocRef[] {

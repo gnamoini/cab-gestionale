@@ -2,7 +2,10 @@
 
 import { useMemo } from "react";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
+import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { documentiService } from "@/src/services/documenti.service";
+import { err, success } from "@/src/services/service-result";
 import {
   lavorazioniDomainQueryKeys,
   stableLavorazioniFiltersKey,
@@ -18,7 +21,7 @@ export const mezzoDomainQueryKeys = {
   root: ["mezzoQueries"] as const,
   base: (mezzoId: string) => [...mezzoDomainQueryKeys.root, "base", mezzoId] as const,
   preventivi: (mezzoId: string) => [...mezzoDomainQueryKeys.root, "preventivi", mezzoId] as const,
-  documenti: (mezzoId: string) => [...mezzoDomainQueryKeys.root, "documenti", mezzoId] as const,
+  documenti: (mezzoId: string, marca: string) => [...mezzoDomainQueryKeys.root, "documenti", mezzoId, marca] as const,
   log: (mezzoId: string) => [...mezzoDomainQueryKeys.root, "log", mezzoId] as const,
   movimenti: (mezzoId: string, lavorazioneIdsKey: string) =>
     [...mezzoDomainQueryKeys.root, "movimenti", mezzoId, lavorazioneIdsKey] as const,
@@ -59,13 +62,29 @@ export function useMezzoPreventivi(mezzoId: string | undefined) {
   });
 }
 
-/** Documenti collegati al mezzo. */
+/** Documenti compatibili con marca/modello del mezzo (non per singola targa/matricola). */
 export function useMezzoDocumenti(mezzoId: string | undefined) {
   const id = mezzoIdOrEmpty(mezzoId);
-  return useServiceQuery(mezzoDomainQueryKeys.documenti(id), () => documentiService.getAll({ mezzo_id: id }), {
-    enabled: id.length > 0,
-    staleTime: MEZZO_ATOMIC_STALE_MS,
-  });
+  const base = useMezzoBase(mezzoId);
+  const marca = base.data?.marca?.trim() ?? "";
+  const modello = base.data?.modello?.trim() ?? "";
+  return useServiceQuery(
+    mezzoDomainQueryKeys.documenti(id, marca || "__pending__"),
+    async () => {
+      if (!base.data) return err("Mezzo non trovato");
+      const mezzoG = toMezzoUI(base.data);
+      const res = await documentiService.getAll({ marca: mezzoG.marca });
+      if (!res.success) return res;
+      const filtered = (res.data ?? []).filter((row) =>
+        documentoMatchesMarcaModello(documentoRowToGestionale(row), mezzoG.marca, mezzoG.modello),
+      );
+      return success(filtered);
+    },
+    {
+      enabled: id.length > 0 && base.isSuccess && marca.length > 0,
+      staleTime: MEZZO_ATOMIC_STALE_MS,
+    },
+  );
 }
 
 /** Log modifiche anagrafica (`entita = mezzi`). */

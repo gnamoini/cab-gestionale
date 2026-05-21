@@ -1,3 +1,4 @@
+import { formatClientPortalAttrezzatura } from "@/lib/lavorazioni/client-portal-attrezzatura-format";
 import { parseMezzoMeta } from "@/lib/mezzi/mezzi-meta";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -60,9 +61,10 @@ export function latestAddettoFromLogs(logs: readonly LogModificaRow[]): string {
 export function buildClientIngressoSummary(row: LavorazioneListRow): ClientIngressoSummary {
   const m = row.mezzo;
   const meta = parseMezzoMeta(m?.meta);
-  const tipo = m?.tipo_attrezzatura?.trim();
-  const attParts = [tipo, m?.marca, m?.modello].filter((x) => x && String(x).trim() && String(x).trim() !== "—");
-  const attrezzatura = attParts.join(" · ") || "—";
+  const attrezzatura = formatClientPortalAttrezzatura({
+    marca: m?.marca,
+    modello: m?.modello,
+  });
   const targa = m?.targa?.trim();
   const attDisplay = targa && targa !== "—" ? `${attrezzatura} (${targa})` : attrezzatura;
 

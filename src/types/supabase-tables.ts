@@ -69,6 +69,18 @@ export type LavorazioneRow = {
   deleted_at?: string | null;
 };
 
+/** PDF allegato lavorazione (`lavorazione_documents`). */
+export type LavorazioneDocumentTipo = "preventivo_upload" | "ddt";
+
+export type LavorazioneDocumentRow = {
+  lavorazione_id: string;
+  tipo: LavorazioneDocumentTipo;
+  storage_path: string;
+  filename: string;
+  uploaded_at: string;
+  uploaded_by: string | null;
+};
+
 /** Tabella `scheda_lavorazione` (schede di lavorazione). */
 export type SchedaLavorazioneRow = {
   id: string;
@@ -134,6 +146,11 @@ export type LogModificaRow = {
   created_at: string;
 };
 
+/** `log_modifiche` con join autore (`profiles`). */
+export type LogModificaWithProfileRow = LogModificaRow & {
+  profiles: { id: string; nome: string } | null;
+};
+
 /** Tabella `app_settings` — configurazione globale (JSON per modulo/chiave). */
 export type AppSettingRow = {
   id: string;
@@ -179,6 +196,22 @@ export type AuthLogRow = {
 
 /** Riga `auth_logs` con join `profiles` (select PostgREST). */
 export type AuthLogWithProfileRow = AuthLogRow & {
+  profiles: { id: string; nome: string } | null;
+};
+
+/** Riga `support_notes` — note condivise pagina Supporto. */
+export type SupportNoteRow = {
+  id: string;
+  content: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  resolved_at: string | null;
+  deleted_at: string | null;
+};
+
+/** `support_notes` con join autore (`profiles`). */
+export type SupportNoteWithProfileRow = SupportNoteRow & {
   profiles: { id: string; nome: string } | null;
 };
 

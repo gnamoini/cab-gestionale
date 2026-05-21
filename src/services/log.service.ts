@@ -1,11 +1,15 @@
 "use client";
 
+import { buildLogModificaSummary, mergePayloadWithSummary } from "@/lib/gestionale-log/log-summary";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import type { PermissionKey } from "@/src/lib/auth/permissions";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
-import type { LogModificaRow } from "@/src/types/supabase-tables";
+import type { LogModificaRow, LogModificaWithProfileRow } from "@/src/types/supabase-tables";
+
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+
+const LOG_MODIFICHE_SELECT = "*, profiles!log_modifiche_autore_id_fkey(id,nome)";
 
 export type LogFilters = {
   entita?: string;
@@ -20,23 +24,23 @@ async function sb() {
 }
 
 export const logService = {
-  async getAll(filters?: LogFilters): Promise<ServiceResult<LogModificaRow[]>> {
+  async getAll(filters?: LogFilters): Promise<ServiceResult<LogModificaWithProfileRow[]>> {
     try {
       const c = await sb();
-      let q = c.from("log_modifiche").select("*").order("created_at", { ascending: false });
+      let q = c.from("log_modifiche").select(LOG_MODIFICHE_SELECT).order("created_at", { ascending: false });
       if (filters?.entita) q = q.eq("entita", filters.entita);
       if (filters?.entita_id) q = q.eq("entita_id", filters.entita_id);
       if (filters?.limit != null) q = q.limit(Math.min(Math.max(filters.limit, 1), 500));
       const { data, error } = await q;
       if (error) return err(error.message);
-      return success((data ?? []) as LogModificaRow[]);
+      return success((data ?? []) as LogModificaWithProfileRow[]);
     } catch (e) {
       return serviceFailFromError(e);
     }
   },
 
   /** Cronologia per una singola entità (append + query). */
-  async getByEntita(entita: string, entita_id: string, limit = 200): Promise<ServiceResult<LogModificaRow[]>> {
+  async getByEntita(entita: string, entita_id: string, limit = 200): Promise<ServiceResult<LogModificaWithProfileRow[]>> {
     return logService.getAll({ entita, entita_id, limit });
   },
 
@@ -56,7 +60,14 @@ export const logService = {
   async create(data: LogInsert): Promise<ServiceResult<LogModificaRow>> {
     try {
       const c = await sb();
-      const { data: row, error } = await c.from("log_modifiche").insert(data).select("*").single();
+      const summary = buildLogModificaSummary({
+        entita: data.entita,
+        entita_id: data.entita_id,
+        azione: data.azione,
+        payload: data.payload,
+      });
+      const payload = mergePayloadWithSummary(data.payload, summary);
+      const { data: row, error } = await c.from("log_modifiche").insert({ ...data, payload }).select("*").single();
       if (error) return err(error.message);
       return success(row as LogModificaRow);
     } catch (e) {

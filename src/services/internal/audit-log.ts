@@ -1,16 +1,26 @@
 import type { SupabaseClient } from "@/src/lib/supabase/browser-client";
+import {
+  auditContext,
+  buildLogModificaSummary,
+  mergePayloadWithSummary,
+  type AuditLogContext,
+} from "@/lib/gestionale-log/log-summary";
 import { getOrCreateUndoSessionId } from "@/lib/gestionale-log/undo-session";
 
 export type AuditAzione = "CREATE" | "UPDATE" | "DELETE" | "RESTORE";
 
 export type AuditPayload = unknown;
 
-export function auditSnapshot(row: unknown): AuditPayload {
-  return { snapshot: row };
+export function auditSnapshot(row: unknown, context?: AuditLogContext): AuditPayload {
+  const base = { snapshot: row };
+  if (context?.oggetto) return { ...base, context };
+  return base;
 }
 
-export function auditDiff(before: unknown, after: unknown): AuditPayload {
-  return { before, after };
+export function auditDiff(before: unknown, after: unknown, context?: AuditLogContext): AuditPayload {
+  const base = { before, after };
+  if (context?.oggetto) return { ...base, context };
+  return base;
 }
 
 function enrichPayloadWithUndoSession(payload: AuditPayload | undefined): AuditPayload | null {
@@ -43,11 +53,23 @@ export async function writeModificaLog(
   }
   if (!autore) return;
 
+  const enriched = enrichPayloadWithUndoSession(input.payload);
+  const summary = buildLogModificaSummary({
+    entita: input.entita,
+    entita_id: input.entita_id,
+    azione: input.azione,
+    payload: enriched,
+  });
+  const payload = mergePayloadWithSummary(enriched, summary);
+
   await client.from("log_modifiche").insert({
     entita: input.entita,
     entita_id: input.entita_id,
     azione: input.azione,
     autore_id: autore,
-    payload: enrichPayloadWithUndoSession(input.payload),
+    payload,
   });
 }
+
+export { auditContext };
+export type { AuditLogContext } from "@/lib/gestionale-log/log-summary";

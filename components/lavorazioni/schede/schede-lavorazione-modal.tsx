@@ -1,21 +1,24 @@
 "use client";
 
-import type { Ref } from "react";
+import type { ReactNode, Ref } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
-import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { LavorazioniModalShell, LavorazioniModalTitleBar } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
 import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
-import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
+import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
+import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
+import { useLavorazioneCosto } from "@/src/hooks/gestionale/use-lavorazione-costo";
 import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/schede/schede-badges";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { getMagazzinoReportSnapshot } from "@/lib/magazzino/magazzino-report-sync";
-import { documentoRowToGestionale, preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
   formatIdentificazioneMezzoLine,
   identificazionePartsFromLavorazione,
@@ -57,16 +60,41 @@ import {
 import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioniLogChange, LavorazioniLogTipo } from "@/lib/lavorazioni/lavorazioni-change-log";
-import { buildPreventiviArchivioFilterHref } from "@/lib/preventivi/preventivi-lavorazione-href";
-import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
+import { LavorazionePreventiviHubList } from "@/components/lavorazioni/schede/lavorazione-preventivi-hub-list";
+import {
+  buildPreventiviArchivioFilterHref,
+  buildPreventiviMacchinaOpenHref,
+} from "@/lib/preventivi/preventivi-lavorazione-href";
+import { mergePreventiviPerMacchina, mezzoPerFiltroPreventivi } from "@/lib/preventivi/preventivi-per-macchina";
 import { Q_PREVENTIVI_NUOVO } from "@/lib/preventivi/preventivi-query";
-import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { writePendingPreventivoPayload } from "@/lib/preventivi/preventivi-session-bridge";
 import type { PreventivoLavorazioneOrigine } from "@/lib/preventivi/types";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
-import { dsBadgeOk, dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
+import {
+  dsBadgeOk,
+  dsBtnDanger,
+  dsBtnNeutral,
+  dsBtnPrimary,
+  dsInput,
+  dsScrollbar,
+  dsTable,
+  dsTableActionGlyph,
+  dsSchedaHubBtn,
+  dsSchedaHubBtnDanger,
+  dsSchedaHubBtnPrimary,
+  dsTableHeadCell,
+  dsTableRow,
+  dsTableWrap,
+  GESTIONALE_SEARCH_PLACEHOLDER,
+} from "@/lib/ui/design-system";
+import { LavorazioneAttivitaPanel } from "@/components/lavorazioni/lavorazione-attivita-panel";
+import { buildLavorazioneAttivitaFeed } from "@/lib/lavorazioni/lavorazione-attivita-feed";
+import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
+import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
+import { useAuth } from "@/context/auth-context";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { usePermissions } from "@/src/hooks/use-permissions";
@@ -86,7 +114,13 @@ import type {
 type LavRow = LavorazioneAttiva | LavorazioneArchiviata;
 
 type Stage = { kind: "hub" } | { kind: "ingresso" } | { kind: "lavorazioni" } | { kind: "ricambi" };
-type HubTab = "schede" | "panoramica" | "preventivi" | "documenti" | "timeline" | "log";
+type HubTab = "schede" | "panoramica" | "preventivi" | "documenti" | "attivita";
+type HubTabInput = HubTab | "timeline" | "log";
+
+function normalizeHubTab(tab: HubTabInput | undefined): HubTab {
+  if (tab === "timeline" || tab === "log") return "attivita";
+  return tab ?? "schede";
+}
 
 function fmtIt(iso: string): string {
   try {
@@ -116,15 +150,6 @@ function fmtItShort(iso: string): string {
   }
 }
 
-function formatAuditPayload(payload: unknown): string | null {
-  if (payload == null) return null;
-  try {
-    return JSON.stringify(payload, null, 2);
-  } catch {
-    return String(payload);
-  }
-}
-
 function todayItDate(): string {
   return new Date().toLocaleDateString("it-IT", {
     day: "2-digit",
@@ -144,6 +169,33 @@ function assertItalianDay(label: string, value: string): boolean {
     return false;
   }
   return true;
+}
+
+function panoramicaDisplayValue(value: string | undefined | null): string {
+  const t = value?.trim();
+  return t || "—";
+}
+
+function PanoramicaField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[9px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{label}</dt>
+      <dd
+        className={`mt-0.5 text-xs font-semibold leading-tight text-[color:var(--cab-text)] ${mono ? "font-mono tabular-nums" : ""}`}
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
+function PanoramicaSection({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)]">
+      <h3 className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-primary)]">{title}</h3>
+      <dl className="mt-1.5 grid gap-x-3 gap-y-2 sm:grid-cols-3">{children}</dl>
+    </section>
+  );
 }
 
 function normalizeOreText(raw: string): string {
@@ -241,7 +293,7 @@ export function SchedeLavorazioneModal({
   onClose,
   lav,
   origine,
-  initialTab = "schede",
+  initialTab: initialTabProp = "schede",
   bundle,
   onPersist,
   attive,
@@ -257,7 +309,7 @@ export function SchedeLavorazioneModal({
   onClose: () => void;
   lav: LavRow;
   origine?: PreventivoLavorazioneOrigine;
-  initialTab?: HubTab;
+  initialTab?: HubTabInput;
   bundle: LavorazioneSchedeBundle;
   onPersist: (next: LavorazioneSchedeBundle) => void;
   attive: LavorazioneAttiva[];
@@ -270,10 +322,17 @@ export function SchedeLavorazioneModal({
   onIngressoCommitted?: (campi: SchedaIngressoFields) => void | Promise<void>;
 }) {
   const router = useRouter();
+  const { authorName, user } = useAuth();
   const { canEditWorkOrders } = usePermissions();
+  const globalOpts = useGlobalOptions({ debugTag: "SchedeLavorazioneModal" });
+  const statiOpts = useMemo(
+    () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
+    [globalOpts.lavorazioni.stati],
+  );
   const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
   const hubQuery = useLavorazioneHub(lav.id);
   const hubData = hubQuery.data;
+  const initialTab = normalizeHubTab(initialTabProp);
   const appSettings = settingsPayload?.resolved;
   const mezzo = useMemo(() => findMezzoForLavorazione(mezzi, lav), [mezzi, lav]);
   const identSubtitle = useMemo(
@@ -323,6 +382,26 @@ export function SchedeLavorazioneModal({
   const modelliForMarcaTelaio = useCallback(
     (marca: string) => modelliVisibiliPerMarcaHierarchy(listePrefs, "telai", marca),
     [listePrefs],
+  );
+
+  const attivitaFeedInput = useMemo(() => {
+    if (!hubData) return null;
+    return {
+      logRows: hubData.log,
+      schedeRows: hubData.schede,
+      movimentiRows: hubData.movimenti,
+      preventiviRows: hubData.preventivi,
+      documentiRows: hubData.documenti,
+      lavorazione: hubData.lavorazione,
+      statiOpts,
+      resolveAutore: (row: (typeof hubData.log)[number]) =>
+        logAutoreLabel(row, user?.id ?? null, authorName),
+    };
+  }, [hubData, statiOpts, user?.id, authorName]);
+
+  const attivitaCount = useMemo(
+    () => (attivitaFeedInput ? buildLavorazioneAttivitaFeed(attivitaFeedInput).length : 0),
+    [attivitaFeedInput],
   );
 
   useEffect(() => {
@@ -499,9 +578,17 @@ export function SchedeLavorazioneModal({
     return loadPreventivi().filter((p) => p.lavorazioneId === lav.id);
   }, [lav.id, pvTick, open]);
 
-  const preventiviHubUi = useMemo(() => {
-    return (hubData?.preventivi ?? []).map((row) => preventivoRowToRecordStub(row, null));
-  }, [hubData?.preventivi]);
+  const mezzoFiltroPreventivi = useMemo(() => mezzoPerFiltroPreventivi(lav, mezzi), [lav, mezzi]);
+
+  const preventiviPerMacchina = useMemo(() => {
+    if (!open || typeof window === "undefined") return [];
+    return mergePreventiviPerMacchina(loadPreventivi(), hubData?.preventivi, mezzoFiltroPreventivi);
+  }, [open, hubData?.preventivi, mezzoFiltroPreventivi, pvTick]);
+
+  function apriPreventivoNeiPreventivi(p: { id: string }) {
+    onClose();
+    router.push(buildPreventiviMacchinaOpenHref(lav, mezzo, p.id));
+  }
 
   const documentiHubUi = useMemo(() => {
     return (hubData?.documenti ?? []).map(documentoRowToGestionale);
@@ -518,12 +605,16 @@ export function SchedeLavorazioneModal({
   }
 
   const hub = draft;
+  const panoramicaCampi = useMemo((): SchedaIngressoFields => {
+    const ig = hub.ingresso;
+    if (ig && ig.sorgente !== "file_esterno") return ig.campi;
+    return buildSchedaIngressoFieldsFromContext(lav, mezzo, lav.addetto.trim() || addetti[0] || "");
+  }, [hub.ingresso, lav, mezzo, addetti]);
+  const costoLavorazione = useLavorazioneCosto(lav.id, draft, {
+    enabled: open,
+    cliente: lav.cliente,
+  });
   const nOk = countSchedePresenti(hub);
-  const lastUp = useMemo(() => {
-    const ts = [hub.ingresso?.updatedAt, hub.lavorazioni?.updatedAt, hub.ricambi?.updatedAt].filter(Boolean) as string[];
-    if (!ts.length) return null;
-    return ts.sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0]!;
-  }, [hub]);
 
   function commitIngressoSave(): boolean {
     const ig = ingressoF;
@@ -727,43 +818,28 @@ export function SchedeLavorazioneModal({
 
   return (
     <>
-      <LavorazioniModalShell wide maxWidthClass="max-w-4xl" onRequestClose={onClose}>
+      <LavorazioniModalShell wide maxWidthClass="max-w-4xl" onRequestClose={onClose} titleId="schede-lav-detail-title">
         <div className="relative flex min-h-0 max-h-[min(92dvh,920px)] flex-1 flex-col">
-        <div className="flex shrink-0 flex-col gap-1 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-          <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Dettaglio lavorazione</h2>
-          <p className="text-xs leading-relaxed text-zinc-600 dark:text-zinc-300">{identSubtitle}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-zinc-600 dark:text-zinc-300">
-            <span className="rounded-full bg-orange-500/10 px-2 py-0.5 font-semibold text-orange-800">
-              Schede {nOk}/3
-            </span>
-            {lastUp ? (
-              <span>
-                Ultimo aggiornamento: <span className="font-medium text-zinc-800 dark:text-zinc-100">{fmtIt(lastUp)}</span>
-              </span>
-            ) : (
-              <span>Nessuna scheda ancora registrata</span>
-            )}
-          </div>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-zinc-600 dark:text-zinc-300">
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 font-semibold text-zinc-800 dark:bg-zinc-800 dark:text-zinc-100">
+        <LavorazioniModalTitleBar title="Dettaglio lavorazione" titleId="schede-lav-detail-title" onRequestClose={onClose}>
+          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-[color:var(--cab-text-muted)]">
+            <span className="rounded-full bg-[color:color-mix(in_srgb,var(--cab-surface-2)_80%,var(--cab-card))] px-2 py-0.5 font-semibold text-[color:var(--cab-text)]">
               Preventivi collegati: {preventiviCollegati.length}
             </span>
             <Link
               href={buildPreventiviArchivioFilterHref(lav.id, lavOrigine)}
-              className="font-semibold text-orange-700 underline-offset-2 hover:underline"
+              className="font-semibold text-orange-700 underline-offset-2 hover:underline dark:text-orange-400"
             >
               Apri archivio preventivi
             </Link>
           </div>
-        </div>
+        </LavorazioniModalTitleBar>
 
         <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/80">
-          {hubTabButton("schede", `Schede (${nOk}/3)`)}
           {hubTabButton("panoramica", "Panoramica")}
-          {hubTabButton("preventivi", `Preventivi (${Math.max(preventiviCollegati.length, preventiviHubUi.length)})`)}
+          {hubTabButton("schede", `Schede (${nOk}/3)`)}
+          {hubTabButton("preventivi", `Preventivi (${preventiviPerMacchina.length})`)}
           {hubTabButton("documenti", `Documenti (${documentiHubUi.length})`)}
-          {hubTabButton("timeline", `Timeline (${hubData?.timeline.length ?? 0})`)}
-          {hubTabButton("log", `Log (${hubData?.log.length ?? 0})`)}
+          {hubTabButton("attivita", `Attività (${attivitaCount})`)}
         </div>
 
         <div className={`min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar`}>
@@ -780,13 +856,6 @@ export function SchedeLavorazioneModal({
                   Copia ingresso da intervento precedente (stesso mezzo)
                 </button>
               </div>
-              <RecordImageManager
-                scope="lavorazioni"
-                recordId={lav.id}
-                title="Foto lavorazione"
-                canEdit={canEditWorkOrders}
-                onImageEvent={() => void hubQuery.refetch()}
-              />
               <SchedaSectionHub
                 title="Scheda ingresso"
                 stato={statoUiSchedaIngresso(hub)}
@@ -806,7 +875,6 @@ export function SchedeLavorazioneModal({
                     autore: currentUser,
                   });
                 }}
-                onElimina={hub.ingresso ? () => deleteSchedaTipo("ingresso") : undefined}
               />
               <SchedaSectionHub
                 title="Scheda lavorazioni"
@@ -854,6 +922,7 @@ export function SchedeLavorazioneModal({
                   title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : undefined}
                   onClick={generaPreventivoDaHub}
                 >
+                  <IconBtnPreventivo />
                   Crea preventivo
                 </button>
               </div>
@@ -861,156 +930,114 @@ export function SchedeLavorazioneModal({
           ) : null}
 
           {stage.kind === "hub" && hubTab === "panoramica" ? (
-            <div className="space-y-4 text-sm">
+            <div className="space-y-2 text-sm">
               {hubQuery.isError ? (
                 <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100">
                   {hubQuery.error?.message ?? "Errore caricamento dettaglio lavorazione."}
                 </p>
               ) : null}
               {hubQuery.isLoading && !hubData ? <p className="text-sm text-zinc-500">Caricamento dettaglio…</p> : null}
-              <div className="grid gap-2 rounded-lg border border-zinc-200 bg-white p-3 text-xs dark:border-zinc-700 dark:bg-zinc-950/40 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Cliente</p>
-                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{lav.cliente || "—"}</p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Utilizzatore</p>
-                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{lav.utilizzatore || "—"}</p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Cantiere</p>
-                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{lav.cantiere || "—"}</p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Stato</p>
-                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">
-                    {"statoId" in lav ? lav.statoId : lav.statoFinaleId}
+              <div className="space-y-2">
+                <div className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)]/60 px-2.5 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Note operative</p>
+                  <p className="mt-1 whitespace-pre-wrap text-xs leading-snug text-[color:var(--cab-text)]">
+                    {panoramicaDisplayValue(lav.noteInterne)}
                   </p>
                 </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Priorità</p>
-                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">
-                    {"priorita" in lav ? lav.priorita : lav.prioritaFinale}
-                  </p>
-                </div>
-                <div>
-                  <p className="font-semibold uppercase tracking-wide text-zinc-500">Addetto</p>
-                  <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{lav.addetto || "—"}</p>
-                </div>
-              </div>
-              <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-                <p className="text-[10px] font-bold uppercase text-zinc-500">Note operative</p>
-                <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">{lav.noteInterne || "—"}</p>
+                <PanoramicaSection title="Lavorazione">
+                  <PanoramicaField
+                    label="Stato"
+                    value={statoLavorazioneLabel(
+                      "statoId" in lav ? lav.statoId : lav.statoFinaleId,
+                      statiOpts,
+                    )}
+                  />
+                  <PanoramicaField
+                    label="Priorità"
+                    value={prioritaLabel("priorita" in lav ? lav.priorita : lav.prioritaFinale)}
+                  />
+                  <PanoramicaField label="Addetto" value={panoramicaDisplayValue(lav.addetto)} />
+                </PanoramicaSection>
+                <PanoramicaSection title="Cliente">
+                  <PanoramicaField label="Cliente" value={panoramicaDisplayValue(lav.cliente)} />
+                  <PanoramicaField label="Cantiere" value={panoramicaDisplayValue(lav.cantiere)} />
+                  <PanoramicaField label="Utilizzatore" value={panoramicaDisplayValue(lav.utilizzatore)} />
+                </PanoramicaSection>
+                <PanoramicaSection title="Identificazione">
+                  <PanoramicaField label="Targa" value={panoramicaDisplayValue(panoramicaCampi.targa || lav.targa)} mono />
+                  <PanoramicaField
+                    label="Matricola"
+                    value={panoramicaDisplayValue(panoramicaCampi.matricola || lav.matricola)}
+                    mono
+                  />
+                  <PanoramicaField
+                    label="Scuderia"
+                    value={panoramicaDisplayValue(panoramicaCampi.nScuderia || lav.nScuderia)}
+                    mono
+                  />
+                </PanoramicaSection>
+                <PanoramicaSection title="Attrezzatura">
+                  <PanoramicaField label="Tipo" value={panoramicaDisplayValue(panoramicaCampi.tipoAttrezzatura)} />
+                  <PanoramicaField label="Marca" value={panoramicaDisplayValue(panoramicaCampi.marcaAttrezzatura)} />
+                  <PanoramicaField label="Modello" value={panoramicaDisplayValue(panoramicaCampi.modelloAttrezzatura)} />
+                </PanoramicaSection>
+                <PanoramicaSection title="Telaio">
+                  <PanoramicaField label="Tipo" value={panoramicaDisplayValue(panoramicaCampi.tipoTelaio)} />
+                  <PanoramicaField label="Marca" value={panoramicaDisplayValue(panoramicaCampi.marcaTelaio)} />
+                  <PanoramicaField label="Modello" value={panoramicaDisplayValue(panoramicaCampi.modelloTelaio)} />
+                </PanoramicaSection>
+                <LavorazioneCostoDiscreto costo={costoLavorazione} variant="section" />
               </div>
             </div>
           ) : null}
 
           {stage.kind === "hub" && hubTab === "preventivi" ? (
-            <ul className="space-y-2">
-              {preventiviHubUi.length === 0 && preventiviCollegati.length === 0 ? (
-                <li className="text-sm text-zinc-500">Nessun preventivo collegato.</li>
-              ) : (
-                preventiviHubUi.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-50">{p.numero}</p>
-                      <p className="text-xs text-zinc-500">{p.cliente} · {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €</p>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-1">
-                      <button
-                        type="button"
-                        className={dsBtnNeutral}
-                        onClick={() => {
-                          const sp = new URLSearchParams();
-                          sp.set(Q_PREVENTIVI_OPEN, p.id);
-                          openUrlInNewTab(`/preventivi?${sp.toString()}`);
-                        }}
-                      >
-                        Dettaglio
-                      </button>
-                      <button type="button" className={dsBtnNeutral} onClick={() => openPreventivoPdfInNewTab(p, "Gestionale")}>
-                        PDF
-                      </button>
-                    </div>
-                  </li>
-                ))
-              )}
-            </ul>
+            <LavorazionePreventiviHubList rows={preventiviPerMacchina} onApriNeiPreventivi={apriPreventivoNeiPreventivi} />
           ) : null}
 
           {stage.kind === "hub" && hubTab === "documenti" ? (
-            <ul className="space-y-2">
-              {documentiHubUi.length === 0 ? (
-                <li className="text-sm text-zinc-500">Nessun documento sul mezzo collegato.</li>
-              ) : (
-                documentiHubUi.map((d) => {
-                  const href = getDocumentApriHref(d);
-                  return (
-                    <li
-                      key={d.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase text-zinc-500">{formatDocumentoRigaSintetica(d)}</p>
-                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{d.nome}</p>
-                      </div>
-                      {href ? (
-                        <button type="button" className={dsBtnNeutral} onClick={() => openUrlInNewTab(href)}>
-                          Apri
-                        </button>
-                      ) : null}
-                    </li>
-                  );
-                })
-              )}
-            </ul>
+            <div className="space-y-4">
+              <LavorazioneMediaPanel
+                lavorazioneId={lav.id}
+                canEdit={canEditWorkOrders}
+                onImageEvent={() => void hubQuery.refetch()}
+                onDocumentEvent={() => void hubQuery.refetch()}
+              />
+              <div>
+                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
+                  Archivio mezzo
+                </p>
+                <ul className="space-y-2">
+                  {documentiHubUi.length === 0 ? (
+                    <li className="text-sm text-zinc-500">Nessun documento sul mezzo collegato.</li>
+                  ) : (
+                    documentiHubUi.map((d) => {
+                      const href = getDocumentApriHref(d);
+                      return (
+                        <li
+                          key={d.id}
+                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
+                        >
+                          <div className="min-w-0">
+                            <p className="text-[11px] font-semibold uppercase text-zinc-500">{formatDocumentoRigaSintetica(d)}</p>
+                            <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{d.nome}</p>
+                          </div>
+                          {href ? (
+                            <button type="button" className={dsBtnNeutral} onClick={() => openUrlInNewTab(href)}>
+                              Apri
+                            </button>
+                          ) : null}
+                        </li>
+                      );
+                    })
+                  )}
+                </ul>
+              </div>
+            </div>
           ) : null}
 
-          {stage.kind === "hub" && hubTab === "timeline" ? (
-            <ul className="space-y-2">
-              {(hubData?.timeline.length ?? 0) === 0 ? (
-                <li className="text-sm text-zinc-500">Nessun evento in timeline.</li>
-              ) : (
-                hubData!.timeline.map((ev) => (
-                  <li key={ev.id} className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40">
-                    <p className="text-[11px] font-mono text-zinc-500">{fmtIt(ev.at)}</p>
-                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{ev.title}</p>
-                    {ev.subtitle ? <p className="text-xs text-zinc-600 dark:text-zinc-400">{ev.subtitle}</p> : null}
-                  </li>
-                ))
-              )}
-            </ul>
-          ) : null}
-
-          {stage.kind === "hub" && hubTab === "log" ? (
-            <ul className="space-y-2">
-              {(hubData?.log.length ?? 0) === 0 ? (
-                <li className="text-sm text-zinc-500">Nessuna voce nel registro modifiche per questa lavorazione.</li>
-              ) : (
-                hubData!.log.map((lg) => {
-                  const payload = formatAuditPayload(lg.payload);
-                  return (
-                    <li key={lg.id} className="rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40">
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
-                          <p className="text-[11px] font-mono text-zinc-500">{fmtIt(lg.created_at)}</p>
-                          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{lg.azione}</p>
-                        </div>
-                        <p className="text-xs text-zinc-600 dark:text-zinc-400">Autore: {lg.autore_id?.slice(0, 8) ?? "—"}</p>
-                      </div>
-                      {payload ? (
-                        <pre className="mt-2 max-h-48 overflow-auto rounded-md border border-zinc-100 bg-white/70 p-2 text-[11px] leading-relaxed text-zinc-700 dark:border-zinc-800 dark:bg-zinc-950/40 dark:text-zinc-300">
-                          {payload}
-                        </pre>
-                      ) : null}
-                    </li>
-                  );
-                })
-              )}
-            </ul>
+          {stage.kind === "hub" && hubTab === "attivita" ? (
+            <LavorazioneAttivitaPanel feedInput={attivitaFeedInput} />
           ) : null}
 
           {stage.kind === "ingresso" && hub.ingresso && ingressoF ? (
@@ -1130,6 +1157,27 @@ export function SchedeLavorazioneModal({
   );
 }
 
+function IconBtnPlus({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  );
+}
+
+/** Documento con righe — allineato alle icone PDF/Modifica del hub. */
+function IconBtnPreventivo({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+      />
+    </svg>
+  );
+}
+
 function SchedaSectionHub({
   title,
   stato,
@@ -1164,36 +1212,75 @@ function SchedaSectionHub({
             ) : null}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="flex w-[8.75rem] shrink-0 justify-stretch">
-            {!doc ? (
+        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:ms-auto sm:w-auto">
+          {!doc ? (
+            <button
+              type="button"
+              className={dsBtnPrimary}
+              disabled={!canEdit}
+              title={!canEdit ? READONLY_PERMISSION_HINT : undefined}
+              onClick={onCrea}
+            >
+              <IconBtnPlus />
+              Crea nuova
+            </button>
+          ) : (
+            <>
+              {onElimina ? (
+                <button
+                  type="button"
+                  className={dsSchedaHubBtnDanger}
+                  disabled={!canEdit}
+                  title={!canEdit ? READONLY_PERMISSION_HINT : "Elimina scheda"}
+                  aria-label="Elimina scheda"
+                  onClick={onElimina}
+                >
+                  <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                    />
+                  </svg>
+                  Elimina
+                </button>
+              ) : null}
               <button
                 type="button"
-                className={`${dsBtnPrimary} w-full min-w-0`}
-                disabled={!canEdit}
-                title={!canEdit ? READONLY_PERMISSION_HINT : undefined}
-                onClick={onCrea}
+                className={dsSchedaHubBtn}
+                disabled={!doc}
+                title="Esporta PDF"
+                aria-label="Esporta PDF scheda"
+                onClick={onPdf}
               >
-                Crea nuova
+                <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                  />
+                </svg>
+                PDF
               </button>
-            ) : onElimina ? (
               <button
                 type="button"
-                className={`${dsBtnDanger} w-full min-w-0`}
+                className={dsSchedaHubBtnPrimary}
                 disabled={!canEdit}
-                title={!canEdit ? READONLY_PERMISSION_HINT : undefined}
-                onClick={onElimina}
+                title={!canEdit ? READONLY_PERMISSION_HINT : "Modifica scheda"}
+                aria-label="Modifica scheda"
+                onClick={onApri}
               >
-                Elimina
+                <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                  />
+                </svg>
+                Modifica
               </button>
-            ) : null}
-          </div>
-          <button type="button" className={dsBtnNeutral} disabled={!doc} onClick={onApri}>
-            Apri scheda
-          </button>
-          <button type="button" className={dsBtnNeutral} disabled={!doc} onClick={onPdf}>
-            PDF
-          </button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -1276,6 +1363,17 @@ function SchedaDayField({
         </button>
       </div>
     </label>
+  );
+}
+
+function SchedaEditorBottomSave({ readOnly, onSave }: { readOnly: boolean; onSave: () => void }) {
+  if (readOnly) return null;
+  return (
+    <div className="flex justify-end border-t border-zinc-100 pt-3 dark:border-zinc-800">
+      <button type="button" className={dsBtnPrimary} onClick={onSave}>
+        Salva scheda
+      </button>
+    </div>
   );
 }
 
@@ -1526,6 +1624,7 @@ function IngressoPanel({
         />
       </label>
       {inp("richiedente", "Richiedente")}
+      <SchedaEditorBottomSave readOnly={ro} onSave={onSave} />
     </div>
   );
 }
@@ -1727,6 +1826,7 @@ function LavorazioniPanel({
           + Aggiungi riga lavorazione
         </button>
       ) : null}
+      <SchedaEditorBottomSave readOnly={ro} onSave={onSave} />
     </div>
   );
 }
@@ -2117,6 +2217,7 @@ function RicambiPanel({
           + Aggiungi riga ricambio
         </button>
       ) : null}
+      <SchedaEditorBottomSave readOnly={ro} onSave={onSave} />
     </div>
   );
 }

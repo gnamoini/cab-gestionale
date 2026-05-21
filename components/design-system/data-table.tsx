@@ -1,36 +1,29 @@
 "use client";
 
 import type { ReactNode } from "react";
-import {
-  dsScrollbar,
-  dsTable,
-  dsTableEmptyCell,
-  dsTableFixed,
-  dsTableHead,
-  dsTableRow,
-  dsTableWrapDesktopFit,
-} from "@/lib/ui/design-system";
+import { GlobalTable } from "@/components/gestionale/global-table/global-table";
 
 export type DataTableProps = {
   children: ReactNode;
-  /** Intestazione `<thead>` completa. */
+  /** Celle `<th>` della riga header (il componente aggiunge `<thead><tr>`). */
   head: ReactNode;
-  /** Usa layout `table-fixed` (consigliato con `<colgroup>`). */
+  colgroup?: ReactNode;
   fixed?: boolean;
   className?: string;
   wrapClassName?: string;
-  /** Messaggio se `empty` e nessuna riga nel body. */
   empty?: boolean;
   emptyMessage?: string;
   colSpan?: number;
 };
 
 /**
- * Contenitore tabella unificato: compatto, scroll orizzontale solo sotto xl, token globali.
+ * @deprecated Preferire `GlobalTable` da `@/components/gestionale/global-table`.
+ * Wrapper sottile per API legacy (`head` = celle th).
  */
 export function DataTable({
   children,
   head,
+  colgroup,
   fixed = true,
   className = "",
   wrapClassName = "",
@@ -38,24 +31,19 @@ export function DataTable({
   emptyMessage = "Nessun risultato.",
   colSpan = 1,
 }: DataTableProps) {
-  const tableClass = fixed ? dsTableFixed : dsTable;
   return (
-    <div className={`${dsTableWrapDesktopFit} ${dsScrollbar} ${wrapClassName}`.trim()}>
-      <table className={`${tableClass} ${className}`.trim()}>
-        {head}
-        <tbody>
-          {empty ? (
-            <tr className={dsTableRow}>
-              <td colSpan={colSpan} className={dsTableEmptyCell}>
-                {emptyMessage}
-              </td>
-            </tr>
-          ) : (
-            children
-          )}
-        </tbody>
-      </table>
-    </div>
+    <GlobalTable
+      headRow={head}
+      colgroup={colgroup}
+      fixed={fixed}
+      className={className}
+      wrapClassName={wrapClassName}
+      empty={empty}
+      emptyMessage={emptyMessage}
+      colSpan={colSpan}
+    >
+      {children}
+    </GlobalTable>
   );
 }
 
@@ -66,7 +54,11 @@ export {
   dsTableTdCompact,
   dsTableTdActions,
   dsTableActionsGroup,
+  dsTableActionsGroupEnd,
   dsTableActionsGroupStart,
+  dsTableActionBadge,
+  dsTableActionBtnWithBadge,
+  dsTableThActions,
   dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
   dsTableActionBtnDanger,

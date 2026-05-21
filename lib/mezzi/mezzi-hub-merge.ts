@@ -1,4 +1,4 @@
-import { resolveDocumentoApplicazione } from "@/lib/documenti/documenti-applicabilita";
+import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -25,7 +25,8 @@ function lavSynthKey(lav: LavorazioneAttiva | LavorazioneArchiviata): string {
   return `id:${lav.id}`;
 }
 
-function mezzoFromLavorazione(lav: LavorazioneAttiva | LavorazioneArchiviata): MezzoGestito {
+/** Mezzo sintetico per filtri hub quando l'anagrafica non è collegata. */
+export function mezzoFromLavorazione(lav: LavorazioneAttiva | LavorazioneArchiviata): MezzoGestito {
   const { marca, modello } = splitMarcaModello(lav.macchina);
   const ing = lav.dataIngresso.slice(0, 10);
   return {
@@ -77,15 +78,7 @@ export function preventivoMatchesMezzo(m: MezzoGestito, pv: PreventivoRecord): b
 }
 
 export function documentoRelevantePerMezzo(doc: DocumentoGestionale, m: MezzoGestito): boolean {
-  const r = resolveDocumentoApplicazione(doc);
-  if (r.applicabilita === "macchina" && r.mezzoId === m.id) return true;
-  const mar = norm(r.marcaKey ?? r.marca);
-  const mod = norm(r.modelloKey ?? r.macchina);
-  if (!mar || mar === "—") return false;
-  if (norm(m.marca) !== mar) return false;
-  if (r.applicabilita === "marca") return true;
-  if (!mod || mod === "—") return false;
-  return norm(m.modello) === mod;
+  return documentoMatchesMarcaModello(doc, m.marca, m.modello);
 }
 
 function mezzoFromPreventivo(pv: PreventivoRecord): MezzoGestito {
@@ -112,38 +105,15 @@ function mezzoFromPreventivo(pv: PreventivoRecord): MezzoGestito {
   };
 }
 
-function mezzoFromDocumento(doc: DocumentoGestionale): MezzoGestito | null {
-  const r = resolveDocumentoApplicazione(doc);
-  if (r.applicabilita !== "macchina" || !r.mezzoId?.trim()) return null;
-  const ing = doc.caricatoIl.slice(0, 10);
-  return {
-    id: r.mezzoId.trim(),
-    cliente: "—",
-    utilizzatore: "—",
-    marca: (r.marcaKey ?? r.marca).trim() || "—",
-    modello: (r.modelloKey ?? r.macchina).trim() || "—",
-    targa: "—",
-    matricola: "—",
-    tipoAttrezzatura: "—",
-    anno: 0,
-    oreKm: 0,
-    statoAttuale: "Solo documenti",
-    dataUltimaUscita: ing,
-    note: `Documento collegato (${doc.nome}).`,
-    priorita: "normale",
-    hubSynthetic: true,
-  };
-}
-
 /**
- * Unisce anagrafica mezzi con veicoli emersi solo da lavorazioni, preventivi o documenti (nessun duplicato se già coperto da match).
+ * Unisce anagrafica mezzi con veicoli emersi solo da lavorazioni o preventivi (nessun duplicato se già coperto da match).
  */
 export function mergeMezziHubRows(
   baseMezzi: MezzoGestito[],
   attive: LavorazioneAttiva[],
   storico: LavorazioneArchiviata[],
   preventivi: PreventivoRecord[],
-  documenti: DocumentoGestionale[],
+  _documenti: DocumentoGestionale[],
 ): MezzoGestito[] {
   const rows: MezzoGestito[] = baseMezzi.map((m) => ({ ...m }));
 
@@ -164,19 +134,6 @@ export function mergeMezziHubRows(
   for (const pv of preventivi) {
     if (rows.some((m) => preventivoMatchesMezzo(m, pv))) continue;
     rows.push(mezzoFromPreventivo(pv));
-  }
-
-  const seenDocMezzo = new Set<string>();
-  for (const doc of documenti) {
-    const r = resolveDocumentoApplicazione(doc);
-    if (r.applicabilita !== "macchina" || !r.mezzoId?.trim()) continue;
-    const mid = r.mezzoId.trim();
-    if (rows.some((m) => m.id === mid)) continue;
-    if (seenDocMezzo.has(mid)) continue;
-    const stub = mezzoFromDocumento(doc);
-    if (!stub) continue;
-    seenDocMezzo.add(mid);
-    rows.push(stub);
   }
 
   return rows;

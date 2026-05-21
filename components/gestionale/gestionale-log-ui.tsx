@@ -116,7 +116,7 @@ export function GestionaleLogEntryFourLines({
 }
 
 export const GestionaleLogList = memo(function GestionaleLogList({ children }: { children: ReactNode }) {
-  return <ul className="list-none space-y-1.5 text-sm">{children}</ul>;
+  return <ul className="list-none space-y-2 text-sm">{children}</ul>;
 });
 
 export const GestionaleLogEmpty = memo(function GestionaleLogEmpty({ message }: { message: string }) {

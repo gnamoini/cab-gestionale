@@ -11,7 +11,6 @@ import {
   rinominaMarcaHierarchy,
   rinominaModelloHierarchy,
 } from "@/lib/mezzi/hierarchy-list-prefs";
-import type { GestionaleLogEventTone } from "@/lib/gestionale-log/view-model";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { erpBtnNeutral, erpBtnSoftOrange, erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -20,23 +19,17 @@ const PANEL = "w-full rounded-xl border border-zinc-200 bg-white shadow-sm dark:
 const INPUT =
   "min-h-10 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-500/25 dark:border-zinc-700 dark:bg-zinc-950";
 
-type LogFn = (tone: GestionaleLogEventTone, tipoRiga: string, oggetto: string, dettaglio: string) => void;
-
 export function HierarchyTreeSettingsSection({
   treeKey,
   variant,
   liste,
   setListe,
-  logDash,
-  logLabel,
 }: {
   treeKey: HierarchyTreeKey;
   /** "marca" = gestione marche; "modello" = gerarchia modelli sotto marca. */
   variant: "marca" | "modello";
   liste: MezziListePrefs;
   setListe: Dispatch<SetStateAction<MezziListePrefs>>;
-  logDash: LogFn;
-  logLabel: string;
 }) {
   const tree = useMemo(() => getHierarchyTree(liste, treeKey), [liste, treeKey]);
   const [nuovaMarca, setNuovaMarca] = useState("");
@@ -51,35 +44,28 @@ export function HierarchyTreeSettingsSection({
       if (m.nome.toLowerCase().includes(t)) return true;
       return m.modelli.some((mod) => mod.nome.toLowerCase().includes(t));
     });
-  }, [tree, q]);
+  }, [q, tree]);
 
-  function setModelDraft(marcaId: string, v: string) {
-    setNuovoModelloByMarca((prev) => ({ ...prev, [marcaId]: v }));
-  }
-
-  function toggleMarcaExpand(marcaId: string) {
+  function toggleMarcaExpand(id: string) {
     setExpandedMarcaIds((prev) => {
       const n = new Set(prev);
-      if (n.has(marcaId)) n.delete(marcaId);
-      else n.add(marcaId);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
       return n;
     });
   }
 
+  function setModelDraft(marcaId: string, value: string) {
+    setNuovoModelloByMarca((prev) => ({ ...prev, [marcaId]: value }));
+  }
+
   return (
-    <div className="w-full space-y-2.5">
-      <GestionaleSearchField
-        wrapperClassName="w-full"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Cerca in elenco…"
-        autoComplete="off"
-        aria-label={`Filtra ${logLabel}`}
-      />
+    <div className="w-full space-y-3">
+      <GestionaleSearchField value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cerca marca o modello…" autoComplete="off" />
 
       {variant === "marca" ? (
-        <div className={`${PANEL} p-2.5 sm:p-3`}>
-          <div className="flex flex-col gap-2 sm:flex-row">
+        <div className={PANEL}>
+          <div className="flex flex-col gap-2 border-b border-zinc-100 p-3 dark:border-zinc-800 sm:flex-row">
             <input
               className={INPUT}
               value={nuovaMarca}
@@ -95,7 +81,6 @@ export function HierarchyTreeSettingsSection({
                 if (!t) return;
                 setListe((prev) => aggiungiMarcaHierarchy(prev, treeKey, t));
                 setNuovaMarca("");
-                logDash("create", "AGGIORNAMENTO", `Impostazioni · ${logLabel}`, `Aggiunta marca «${t}»`);
               }}
             >
               Aggiungi
@@ -134,7 +119,6 @@ export function HierarchyTreeSettingsSection({
                       const t = e.target.value.trim();
                       if (!t || t === m.nome) return;
                       setListe((prev) => rinominaMarcaHierarchy(prev, treeKey, m.id, t));
-                      logDash("create", "AGGIORNAMENTO", `Impostazioni · ${logLabel}`, `Marca rinominata «${m.nome}» → «${t}»`);
                     }}
                     aria-label={`Nome marca ${m.nome}`}
                     readOnly={variant === "modello"}
@@ -151,7 +135,6 @@ export function HierarchyTreeSettingsSection({
                           n.delete(m.id);
                           return n;
                         });
-                        logDash("delete", "AGGIORNAMENTO", `Impostazioni · ${logLabel}`, `Rimossa marca «${m.nome}»`);
                       }}
                     >
                       Elimina
@@ -176,7 +159,6 @@ export function HierarchyTreeSettingsSection({
                               const t = e.target.value.trim();
                               if (!t || t === mod.nome) return;
                               setListe((prev) => rinominaModelloHierarchy(prev, treeKey, m.id, mod.id, t));
-                              logDash("create", "AGGIORNAMENTO", `Impostazioni · ${logLabel}`, `Modello «${mod.nome}» → «${t}» (${m.nome})`);
                             }}
                             aria-label={`Modello sotto ${m.nome}`}
                           />
@@ -186,7 +168,6 @@ export function HierarchyTreeSettingsSection({
                             onClick={() => {
                               if (!window.confirm(`Rimuovere il modello «${mod.nome}»?`)) return;
                               setListe((prev) => eliminaModelloHierarchy(prev, treeKey, m.id, mod.id));
-                              logDash("delete", "AGGIORNAMENTO", `Impostazioni · ${logLabel}`, `Rimosso modello «${mod.nome}» (${m.nome})`);
                             }}
                           >
                             Elimina
@@ -210,7 +191,6 @@ export function HierarchyTreeSettingsSection({
                           if (!t) return;
                           setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, m.id, t));
                           setModelDraft(m.id, "");
-                          logDash("create", "AGGIORNAMENTO", `Impostazioni · ${logLabel}`, `Aggiunto modello «${t}» (${m.nome})`);
                         }}
                       >
                         Aggiungi

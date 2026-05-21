@@ -2,6 +2,10 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import {
+  GestionaleSortTh,
+  type GestionaleSortPhase,
+} from "@/components/gestionale/global-table";
+import {
   dsFocus,
   dsBtnNeutral,
   dsBtnPrimary,
@@ -9,7 +13,6 @@ import {
   dsBtnSoftOrange,
   dsBtnIcon,
   dsBtnSubtle,
-  dsTableThSticky,
   gestionaleSelectFilterClass,
   gestionaleSelectNativePlainClass,
   lavorazioniModalSelectClass,
@@ -31,71 +34,41 @@ export { gestionaleSelectFilterClass, gestionaleSelectNativePlainClass, lavorazi
 /** @deprecated Usa `gestionaleSelectFilterClass` */
 export const selectLavorazioniFilter = gestionaleSelectFilterClass;
 
-export function SortThMain({
-  label,
-  columnKey,
-  sortColumn,
-  sortPhase,
-  onSort,
-}: {
+/** @deprecated Usare `GlobalTableSortTh` da `@/components/gestionale/global-table`. */
+export function SortThMain(props: {
   label: string;
   columnKey: SortKeyLavorazione;
   sortColumn: SortKeyLavorazione | null;
   sortPhase: SortPhaseLav;
   onSort: (k: SortKeyLavorazione) => void;
 }) {
-  const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
-  let icon: ReactNode = <span className="opacity-40">↕</span>;
-  if (active) {
-    icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
-  }
   return (
-    <th className={`${dsTableThSticky} px-3 py-2 text-left align-middle`}>
-      <button
-        type="button"
-        onClick={() => onSort(columnKey)}
-        className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide transition-colors duration-200 ease-out ${dsFocus} ${
-          active ? "text-[color:var(--cab-primary)]" : "text-[color:var(--cab-text-muted)] hover:text-[color:var(--cab-text)]"
-        }`}
-      >
-        {label}
-        {icon}
-      </button>
-    </th>
+    <GestionaleSortTh
+      label={props.label}
+      columnKey={props.columnKey}
+      sortColumn={props.sortColumn}
+      sortPhase={props.sortPhase as GestionaleSortPhase}
+      onSort={props.onSort}
+    />
   );
 }
 
-export function SortThStorico({
-  label,
-  columnKey,
-  sortColumn,
-  sortPhase,
-  onSort,
-}: {
+/** @deprecated Usare `GlobalTableSortTh` da `@/components/gestionale/global-table`. */
+export function SortThStorico(props: {
   label: string;
   columnKey: SortKeyStorico;
   sortColumn: SortKeyStorico | null;
   sortPhase: SortPhaseLav;
   onSort: (k: SortKeyStorico) => void;
 }) {
-  const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
-  let icon: ReactNode = <span className="opacity-40">↕</span>;
-  if (active) {
-    icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
-  }
   return (
-    <th className={`${dsTableThSticky} px-3 py-2 text-left align-middle`}>
-      <button
-        type="button"
-        onClick={() => onSort(columnKey)}
-        className={`inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide transition-colors duration-200 ease-out ${dsFocus} ${
-          active ? "text-[color:var(--cab-primary)]" : "text-[color:var(--cab-text-muted)] hover:text-[color:var(--cab-text)]"
-        }`}
-      >
-        {label}
-        {icon}
-      </button>
-    </th>
+    <GestionaleSortTh
+      label={props.label}
+      columnKey={props.columnKey}
+      sortColumn={props.sortColumn}
+      sortPhase={props.sortPhase as GestionaleSortPhase}
+      onSort={props.onSort}
+    />
   );
 }
 
@@ -121,12 +94,12 @@ export function prioritaLabel(p: string) {
 
 /** Classi layout pill tabella (colori da `*PillShellStyle` + inline style). */
 export function statoPillShellClass(): string {
-  return "relative inline-flex w-full min-w-[5.25rem] max-w-full items-center rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
 }
 
 /** Pill stato a larghezza dinamica (fit-content, senza troncamento). */
 export function statoPillShellClassDynamic(): string {
-  return "relative inline-flex w-fit max-w-none items-center rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-fit max-w-full min-w-0 items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
 }
 
 export function statoPillShellStyle(hex: string | undefined): CSSProperties {
@@ -134,7 +107,7 @@ export function statoPillShellStyle(hex: string | undefined): CSSProperties {
 }
 
 export function prioritaPillShellClass(): string {
-  return "relative inline-flex w-full min-w-[4.5rem] max-w-full items-center rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
 }
 
 export function prioritaPillShellStyle(hex: string | undefined): CSSProperties {
@@ -142,7 +115,12 @@ export function prioritaPillShellStyle(hex: string | undefined): CSSProperties {
 }
 
 export function addettoPillShellClass(): string {
-  return "relative inline-flex w-full min-w-[6.5rem] items-center rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
+}
+
+/** Pill addetto tabella: larghezza al contenuto (come stato). */
+export function addettoPillShellClassDynamic(): string {
+  return statoPillShellClassDynamic();
 }
 
 export function addettoPillShellStyle(hex: string | undefined): CSSProperties {

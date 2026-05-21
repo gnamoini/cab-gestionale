@@ -10,75 +10,102 @@ import {
   type SupportoNotesFilterKey,
 } from "@/components/gestionale/supporto/supporto-notes-filter";
 import { useAuth } from "@/context/auth-context";
+import { useToast } from "@/context/toast-context";
 import { denyUnless } from "@/lib/auth/guard-action";
-import { supportoNoteToStato } from "@/lib/supporto/segnalazioni-mapper";
+import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { dsStackPage } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import {
-  useCreateSegnalazioneMutation,
-  useDeleteSegnalazioneMutation,
-  useSetSegnalazioneStatoMutation,
-} from "@/src/hooks/use-segnalazioni-mutations";
-import { useSegnalazioniQuery } from "@/src/hooks/use-segnalazioni-query";
+  useCreateSupportNoteMutation,
+  useDeleteSupportNoteMutation,
+  useSetSupportNoteResolvedMutation,
+  useUpdateSupportNoteContentMutation,
+} from "@/src/hooks/use-support-notes-mutations";
+import { useSupportNotesQuery } from "@/src/hooks/use-support-notes-query";
 
 export function SupportoView() {
   const { authorName, user } = useAuth();
+  const { push } = useToast();
   const rbac = useRbac();
-  const notesQ = useSegnalazioniQuery();
-  const createM = useCreateSegnalazioneMutation();
-  const deleteM = useDeleteSegnalazioneMutation();
-  const statoM = useSetSegnalazioneStatoMutation();
+  const notesQ = useSupportNotesQuery();
+  const createM = useCreateSupportNoteMutation();
+  const updateM = useUpdateSupportNoteContentMutation();
+  const deleteM = useDeleteSupportNoteMutation();
+  const resolvedM = useSetSupportNoteResolvedMutation();
   const [filter, setFilter] = useState<SupportoNotesFilterKey>("all");
   const [actionError, setActionError] = useState<string | null>(null);
 
   const notes = notesQ.data ?? [];
   const loading = notesQ.isLoading;
-  const mutating = createM.isPending || deleteM.isPending || statoM.isPending;
+  const mutating = createM.isPending || updateM.isPending || deleteM.isPending || resolvedM.isPending;
+  const canWrite = rbac.canWrite("supporto");
+  const supabaseReady = isSupabasePublicEnvConfigured();
 
   const addNote = useCallback(
     async (body: string) => {
-      if (!denyUnless(rbac.canWrite("supporto"), setActionError)) return;
+      if (!denyUnless(canWrite, setActionError)) return;
       if (!user?.id) return;
       setActionError(null);
       try {
-        await createM.mutateAsync({
-          messaggio: body,
-          created_by: user.id,
-        });
+        await createM.mutateAsync({ content: body, created_by: user.id });
+        push("Nota salvata", "success", 3200);
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : "Impossibile salvare la segnalazione.");
+        const msg = e instanceof Error ? e.message : "Impossibile salvare la nota.";
+        setActionError(msg);
+        push(msg, "error", 4200);
       }
     },
-    [createM, rbac, user?.id],
+    [canWrite, createM, push, user?.id],
+  );
+
+  const updateNote = useCallback(
+    async (id: string, content: string, expectedUpdatedAt: string) => {
+      if (!denyUnless(canWrite, setActionError)) return;
+      setActionError(null);
+      try {
+        await updateM.mutateAsync({ id, content, expectedUpdatedAt });
+        push("Nota aggiornata", "success", 3000);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Impossibile aggiornare la nota.";
+        setActionError(msg);
+        if (!msg.includes("altro utente")) push(msg, "error", 4200);
+      }
+    },
+    [canWrite, push, updateM],
   );
 
   const deleteNote = useCallback(
     async (id: string) => {
-      if (!denyUnless(rbac.canWrite("supporto"), setActionError)) return;
+      if (!denyUnless(canWrite, setActionError)) return;
       setActionError(null);
       try {
         await deleteM.mutateAsync(id);
+        push("Nota eliminata", "info", 3000);
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : "Impossibile eliminare la segnalazione.");
+        const msg = e instanceof Error ? e.message : "Impossibile eliminare la nota.";
+        setActionError(msg);
+        push(msg, "error", 4200);
       }
     },
-    [deleteM, rbac],
+    [canWrite, deleteM, push],
   );
 
   const toggleResolved = useCallback(
     async (id: string, resolved: boolean) => {
-      if (!denyUnless(rbac.canWrite("supporto"), setActionError)) return;
+      if (!denyUnless(canWrite, setActionError)) return;
       setActionError(null);
       try {
-        await statoM.mutateAsync({ id, stato: supportoNoteToStato(resolved) });
+        await resolvedM.mutateAsync({ id, resolved });
       } catch (e) {
-        setActionError(e instanceof Error ? e.message : "Impossibile aggiornare lo stato.");
+        const msg = e instanceof Error ? e.message : "Impossibile aggiornare lo stato.";
+        setActionError(msg);
+        push(msg, "error", 4200);
       }
     },
-    [statoM, rbac],
+    [canWrite, push, resolvedM],
   );
 
   const filtered = useMemo(() => {
@@ -108,11 +135,19 @@ export function SupportoView() {
       <PageHeader title="Supporto" />
 
       <div className={dsStackPage}>
+        {!supabaseReady ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+            Database non configurato: le note non possono essere salvate in modo condiviso. Verifica le variabili Supabase
+            pubbliche.
+          </p>
+        ) : null}
+
         <ShellCard>
           <SupportoNoteForm
             authorName={authorName}
             onAdd={addNote}
-            disabled={loading || mutating || !user?.id || !rbac.canWrite("supporto")}
+            saving={createM.isPending}
+            disabled={loading || mutating || !user?.id || !canWrite || !supabaseReady}
           />
         </ShellCard>
 
@@ -131,18 +166,19 @@ export function SupportoView() {
           <SupportoNotesFilter value={filter} onChange={setFilter} />
           <p className="text-xs tabular-nums text-zinc-500 dark:text-zinc-400">
             {filtered.length} {filtered.length === 1 ? "nota" : "note"}
+            {mutating && !createM.isPending ? " · sincronizzazione…" : null}
           </p>
         </div>
 
         <div>
           {loading ? (
             <p className="rounded-lg border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-              Caricamento…
+              Caricamento note…
             </p>
           ) : filtered.length === 0 ? (
             <p className="rounded-lg border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
               {notes.length === 0
-                ? "Nessuna nota ancora. Aggiungi la prima segnalazione qui sopra."
+                ? "Nessuna nota ancora. Aggiungi la prima nota qui sopra."
                 : filter === "open"
                   ? "Nessuna nota aperta con i filtri attuali."
                   : filter === "resolved"
@@ -155,6 +191,8 @@ export function SupportoView() {
                 <SupportoNoteCard
                   key={note.id}
                   note={note}
+                  canEdit={canWrite}
+                  onUpdate={updateNote}
                   onDelete={deleteNote}
                   onToggleResolved={toggleResolved}
                   disabled={mutating}

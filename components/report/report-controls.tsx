@@ -1,8 +1,9 @@
 "use client";
 
 import type { ReportCompareMode, ReportPeriodPreset } from "@/lib/report/date-ranges";
-import { gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsInput, dsSurfaceCard, dsTypoSmall } from "@/lib/ui/design-system";
+import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
+import { dsSurfaceCard, dsTypoSmall } from "@/lib/ui/design-system";
 
 export function ReportControls({
   preset,
@@ -60,16 +61,20 @@ export function ReportControls({
           <label htmlFor="report-compare" className={`${dsTypoSmall} font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}>
             Confronto periodi
           </label>
-          <select
+          <GlobalSelect
             id="report-compare"
+            variant="filter"
+            inputClassName={`${globalInputFieldFilter} h-10 max-w-md lg:max-w-none`}
+            items={[
+              { value: "none", label: "Nessuno" },
+              { value: "prev_period", label: "Periodo precedente" },
+              { value: "prev_year", label: "Stesso periodo anno precedente" },
+            ]}
             value={compareMode}
-            onChange={(e) => onCompareMode(e.target.value as ReportCompareMode)}
-            className={`${gestionaleSelectFilterClass} h-10 w-full max-w-md lg:max-w-none`}
-          >
-            <option value="none">Nessuno</option>
-            <option value="prev_period">Periodo precedente</option>
-            <option value="prev_year">Stesso periodo anno precedente</option>
-          </select>
+            onChange={(v) => onCompareMode(v as ReportCompareMode)}
+            strictFromList
+            aria-label="Confronto periodi"
+          />
         </div>
       </div>
 
@@ -77,16 +82,15 @@ export function ReportControls({
         <div className="mt-4 flex flex-wrap gap-3 border-t border-[color:var(--cab-border)] pt-4">
           <label className={`block ${dsTypoSmall} text-[color:var(--cab-text)]`}>
             Da
-            <input
-              type="date"
-              value={customFrom}
-              onChange={(e) => onCustomFrom(e.target.value)}
-              className={`${dsInput} mt-1 block max-w-[11rem]`}
-            />
+            <div className="mt-1 max-w-[11rem]">
+              <GlobalDatePickerYmd valueYmd={customFrom} onChangeYmd={onCustomFrom} aria-label="Periodo da" />
+            </div>
           </label>
           <label className={`block ${dsTypoSmall} text-[color:var(--cab-text)]`}>
             A
-            <input type="date" value={customTo} onChange={(e) => onCustomTo(e.target.value)} className={`${dsInput} mt-1 block max-w-[11rem]`} />
+            <div className="mt-1 max-w-[11rem]">
+              <GlobalDatePickerYmd valueYmd={customTo} onChangeYmd={onCustomTo} aria-label="Periodo a" />
+            </div>
           </label>
         </div>
       ) : null}

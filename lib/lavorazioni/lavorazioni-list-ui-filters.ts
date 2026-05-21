@@ -1,44 +1,77 @@
 import { labelLavorazioneStatoDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
+import {
+  lavRowMatchesAdvancedFilters,
+  type LavorazioniAdvancedFilters,
+} from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LavorazioneSchedeStore } from "@/types/schede";
 
-function macchinaLabel(row: LavorazioneListRow): string {
+/** @deprecated Usare `LavorazioniAdvancedFilters` + `search` separato. */
+export type LavPageFilters = LavorazioniAdvancedFilters & {
+  search: string;
+};
+
+function macchinaFromRow(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
+  const ing = schedeStore?.[row.id]?.ingresso?.campi;
+  if (ing?.marcaAttrezzatura?.trim() || ing?.modelloAttrezzatura?.trim()) {
+    return [ing.marcaAttrezzatura, ing.modelloAttrezzatura].filter(Boolean).join(" ").trim();
+  }
   const m = row.mezzo;
-  return m ? `${m.marca} ${m.modello}`.trim() : "—";
+  return m ? `${m.marca} ${m.modello}`.trim() : "";
 }
 
-function clienteLabel(row: LavorazioneListRow): string {
-  return row.mezzo?.cliente?.trim() || "—";
-}
-
-function mezzoIdent(row: LavorazioneListRow): string {
+/** Testo indicizzato per ricerca globale (DB + schede ingresso/lavorazioni). */
+export function lavRowSearchHaystack(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
+  const ing = schedeStore?.[row.id]?.ingresso?.campi;
+  const lav = schedeStore?.[row.id]?.lavorazioni?.campi;
   const m = row.mezzo;
-  const t = m?.targa?.trim() || "—";
-  const mat = m?.matricola?.trim() || "—";
-  const sc = m?.numero_scuderia?.trim() || "—";
-  return `${t} · ${mat} · ${sc}`;
-}
 
-/** Testo indicizzato per ricerca globale (note, mezzo, cliente, identificativi, stato). */
-export function lavRowSearchHaystack(row: LavorazioneListRow): string {
+  const lavRigheText =
+    lav?.righe
+      .flatMap((r) => [r.lavorazioniEffettuate, ...r.addettiAssegnati.map((a) => a.addetto)])
+      .join(" ") ?? "";
+
   return [
     (row.note ?? "").trim(),
-    macchinaLabel(row),
-    clienteLabel(row),
-    mezzoIdent(row),
+    macchinaFromRow(row, schedeStore),
+    ing?.cliente?.trim() || m?.cliente?.trim() || "",
+    ing?.utilizzatore?.trim() || m?.utilizzatore?.trim() || "",
+    ing?.cantiere?.trim() || "",
+    ing?.targa?.trim() || m?.targa?.trim() || "",
+    ing?.matricola?.trim() || m?.matricola?.trim() || "",
+    ing?.nScuderia?.trim() || m?.numero_scuderia?.trim() || "",
+    ing?.marcaAttrezzatura,
+    ing?.modelloAttrezzatura,
+    ing?.descrizioneAnomalia,
+    ing?.noteIntervento,
+    ing?.addettoAccettazione,
+    ing?.richiedente,
+    ing?.tipoTelaio,
+    ing?.marcaTelaio,
+    ing?.modelloTelaio,
+    lavRigheText,
     row.id,
     row.stato,
     labelLavorazioneStatoDb(row.stato),
     row.priorita ?? "",
     row.mezzo_id ?? "",
+    row.data_ingresso ?? "",
+    row.data_uscita ?? "",
+    row.created_at,
   ]
+    .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
     .join(" ")
     .toLowerCase();
 }
 
-export function lavRowMatchesGlobalSearch(row: LavorazioneListRow, query: string): boolean {
+export function lavRowMatchesGlobalSearch(
+  row: LavorazioneListRow,
+  query: string,
+  schedeStore?: LavorazioneSchedeStore,
+): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
-  return lavRowSearchHaystack(row).includes(q);
+  return lavRowSearchHaystack(row, schedeStore).includes(q);
 }
 
 function dayStartMs(ymd: string): number {
@@ -69,4 +102,16 @@ export function lavRowIngressoInRange(row: LavorazioneListRow, daYmd: string, aY
     if (Number.isFinite(d1) && t > d1) return false;
   }
   return true;
+}
+
+/** Ricerca libera + filtri avanzati — in corso e archivio. */
+export function lavRowMatchesPageFilters(
+  row: LavorazioneListRow,
+  filters: LavPageFilters,
+  schedeStore: LavorazioneSchedeStore | undefined,
+  defaultAddetto: string,
+): boolean {
+  if (!lavRowMatchesGlobalSearch(row, filters.search, schedeStore)) return false;
+  const { search: _s, ...advanced } = filters;
+  return lavRowMatchesAdvancedFilters(row, advanced, schedeStore, defaultAddetto);
 }

@@ -64,12 +64,26 @@ function guessTipoFile(url: string): DocumentoTipoFile {
 export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale {
   const meta = row.meta ?? {};
   const nome = typeof meta.nome === "string" && meta.nome.trim() ? meta.nome.trim() : row.url_file.split("/").pop() ?? "Documento";
-  const applicabilita = row.mezzo_id ? ("macchina" as const) : undefined;
+  const marcaDb = row.marca?.trim() ?? "";
+  const senzaMarca = !marcaDb || marcaDb === "—";
+  const metaApp = meta.applicabilita;
+  let applicabilita: DocumentoGestionale["applicabilita"] | undefined;
+  if (!senzaMarca) {
+    if (metaApp === "marca" || metaApp === "modello") {
+      applicabilita = metaApp;
+    } else if (metaApp === "macchina") {
+      applicabilita = row.modello?.trim() ? "modello" : "marca";
+    } else if (row.modello?.trim()) {
+      applicabilita = "modello";
+    } else {
+      applicabilita = "marca";
+    }
+  }
   return {
     id: row.id,
     nome,
     categoria: CAT_MAP[row.categoria] ?? "altro",
-    marca: row.marca,
+    marca: senzaMarca ? "" : row.marca,
     macchina: row.modello ?? "—",
     tipoFile: guessTipoFile(row.url_file),
     autoreCaricamento: typeof meta.autoreCaricamento === "string" ? meta.autoreCaricamento : "—",
@@ -78,9 +92,16 @@ export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale
     caricatoIl: row.created_at,
     dimensioneKb: typeof meta.dimensioneKb === "number" ? meta.dimensioneKb : 0,
     applicabilita,
-    marcaKey: row.marca,
-    modelloKey: row.modello ?? undefined,
-    mezzoId: row.mezzo_id ?? undefined,
+    marcaKey:
+      senzaMarca
+        ? undefined
+        : typeof meta.marcaKey === "string" && meta.marcaKey.trim() && meta.marcaKey.trim() !== "—"
+          ? meta.marcaKey.trim()
+          : row.marca,
+    modelloKey:
+      typeof meta.modelloKey === "string" && meta.modelloKey.trim()
+        ? meta.modelloKey.trim()
+        : row.modello?.trim() || undefined,
     urlDocumento: row.url_file,
   };
 }

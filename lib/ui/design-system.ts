@@ -9,7 +9,7 @@
  * D — Icon: `dsBtnIcon`
  * E — Select / dropdown nativi: `gestionaleSelectFilterClass`, …
  * F — Input / textarea: `dsInput`, `dsTextarea`, `dsInputAuth`
- * G — Tabella: `dsTableWrap`, `dsTable`, `dsTableHead`, `dsTableRow`, `dsTableSortTh`, …
+ * G — Tabella liste: master **Lavorazioni** — `GestionaleListTable` + `@/lib/ui/gestionale-list-table` (token); primitivi in `@/lib/ui/global-table`
  * H — Card / KPI: `dsSurfaceCard`, `dsSurfaceInteractiveKpi`
  * I — Modale: `dsModalBackdrop`, `dsModalPanel`, `dsLavorazioniModalLayer`, …
  * J — Badge: `dsBadgeNeutral`, …
@@ -18,6 +18,12 @@
  * M — Z-index / layer: `dsZHeader`, `dsZDrawer`, `dsZModal`, `dsZModalHigh`, `dsZToast`
  * N — Skeleton: `dsSkeletonLine`, `dsSkeletonBlock`
  */
+
+import {
+  globalTableEmptyCell,
+  globalTableRow,
+  globalTableWrap,
+} from "@/lib/ui/global-table";
 
 const cabText = "text-[color:var(--cab-text)]";
 const cabTextMuted = "text-[color:var(--cab-text-muted)]";
@@ -98,8 +104,8 @@ export const gestionaleSelectNativePlainClass =
 export const lavorazioniModalSelectClass =
   `min-h-10 w-full min-w-0 cursor-pointer appearance-none rounded-[var(--ds-radius-lg)] ${cabBorder} ${cabSurface} py-2.5 pl-3 pr-10 text-sm font-medium leading-snug ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow,background-color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_50%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)]`;
 
-/** G — contenitore tabella (scrollbar: concatenare `dsScrollbar` dove serve) */
-export const dsTableWrap = `max-w-full overflow-x-auto rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} shadow-[var(--cab-shadow-sm)]`;
+/** G — contenitore tabella liste (alias token globale; preferire `<GlobalTable>`) */
+export const dsTableWrap = globalTableWrap;
 
 /** Desktop ≥1280px: niente scroll orizzontale pagina; scroll interno solo sotto breakpoint. */
 export const dsTableWrapDesktopFit =
@@ -116,11 +122,11 @@ export const dsTableCellTruncate = "min-w-0 max-w-0 truncate";
 /** Intestazione tabella: applicare a `<thead>` o celle `<th>` insieme a `border-b` se serve */
 export const dsTableHead = `bg-[var(--cab-surface-2)] text-[10px] font-semibold uppercase tracking-wide ${cabTextMuted}`;
 
-/** Riga corpo tabella standard */
-export const dsTableRow = `border-b ${cabBorder} transition-colors duration-150 ease-out hover:bg-[var(--cab-hover)] data-[selected=true]:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-card))]`;
+/** Riga corpo tabella standard (alias token globale) */
+export const dsTableRow = globalTableRow;
 
-/** Cella `<th>` ordinabile (wrapper) — bottone interno in `ReportSortTh` */
-export const dsTableSortTh = `border-b ${cabBorder} bg-[var(--cab-surface-2)] px-2 py-2 align-middle text-[10px] font-semibold uppercase tracking-wide sm:px-2.5`;
+/** @deprecated Preferire `GlobalTableSortTh` da `@/components/gestionale/global-table`. */
+export const dsTableSortTh = `border-b ${cabBorder} bg-[var(--cab-surface-2)] px-2.5 py-2 align-middle text-xs font-semibold uppercase tracking-wide`;
 
 /** Celle `<th>` statiche (header tabella modali / report) */
 export const dsTableHeadCell = `border-b ${cabBorder} bg-[var(--cab-surface-2)] px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide ${cabTextMuted} sm:px-2.5`;
@@ -134,28 +140,53 @@ export const dsTableThCompare = `border-b ${cabBorder} bg-[var(--cab-surface-2)]
 /** Celle dati compatte (report / modali) */
 export const dsTableTd = `px-2 py-2 align-middle text-[13px] sm:px-2.5 ${cabText}`;
 
-/** Empty state riga tabella */
-export const dsTableEmptyCell = `px-3 py-8 text-center text-sm ${cabTextMuted}`;
+/** Empty state riga tabella (alias token globale) */
+export const dsTableEmptyCell = globalTableEmptyCell;
 
 /** G — Celle corpo compatte (non colonna azioni). */
 export const dsTableTdCompact = `px-2 py-1.5 align-middle text-[13px] ${cabText}`;
 
-/** G — Colonna azioni: padding ridotto, contenuto senza a capo. */
-export const dsTableTdActions = "whitespace-nowrap px-1 py-1.5 align-middle text-right";
+/** G — Colonna azioni tabella (celle `<td>` / header `<th>` statico). */
+export const dsTableTdActions = "whitespace-nowrap px-2 py-1 align-middle text-center";
 
-/** G — Gruppo pulsanti azione su una sola riga (scroll orizzontale se stretto). */
+/** G — Header colonna Azioni (etichetta statica). */
+export const dsTableThActions = "whitespace-nowrap px-2 py-2 align-middle text-center";
+
+/** Altezza fissa riga pulsanti azione (36px, allineata alle pill `min-h-8`). */
+export const dsTableActionsRowHeight = "h-9 min-h-9 max-h-9";
+
+/** G — Gruppo pulsanti azione tabella (preset ufficiale Lavorazioni). */
 export const dsTableActionsGroup =
-  "inline-flex max-w-none min-w-0 flex-nowrap items-center justify-end gap-0.5 overflow-x-auto gestionale-scrollbar";
+  `inline-flex ${dsTableActionsRowHeight} w-max max-w-none flex-nowrap items-stretch justify-center gap-1`;
 
-/** Gruppo azioni allineato a sinistra (card mobile / toolbar secondaria). */
+/** Gruppo azioni allineato a destra (card mobile / toolbar). */
+export const dsTableActionsGroupEnd =
+  `inline-flex ${dsTableActionsRowHeight} w-max max-w-none flex-nowrap items-stretch justify-end gap-1`;
+
+/** Gruppo azioni allineato a sinistra (toolbar secondaria). */
 export const dsTableActionsGroupStart =
-  "inline-flex max-w-none min-w-0 flex-nowrap items-center justify-start gap-0.5 overflow-x-auto gestionale-scrollbar";
+  `inline-flex ${dsTableActionsRowHeight} w-max max-w-none flex-nowrap items-stretch justify-start gap-1`;
+
+/** Footer azioni card mobile: wrap, stesso `gap-1` / `items-stretch` del gruppo tabella. */
+export const dsCardMobileActionsGroup =
+  "inline-flex max-w-full min-w-0 flex-wrap items-stretch justify-end gap-1";
+
+/** Shell card stack sotto breakpoint `md` (contenuto + footer azioni). */
+export const dsCardMobileShell =
+  "flex flex-col rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90";
 
 /** G — Icone outline nelle azioni tabella (24×24, stroke 2). */
 export const dsTableActionGlyph = "h-4 w-4 shrink-0 opacity-90";
 
 const dsTableActionSqBase =
-  `inline-flex h-9 w-9 min-h-9 min-w-9 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border p-0 shadow-[var(--cab-shadow-sm)] outline-none transition-[background-color,border-color,box-shadow,color,opacity] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 ${dsFocus}`;
+  `inline-flex ${dsTableActionsRowHeight} w-9 min-w-9 shrink-0 items-center justify-center rounded-lg border-2 p-0 shadow-[var(--cab-shadow-sm)] outline-none transition-[background-color,border-color,box-shadow,color,opacity] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 box-border ${dsFocus}`;
+
+/** Pulsante azione con badge contatore (es. schede 1/3) — aggiungere `dsTableActionBadge` come figlio. */
+export const dsTableActionBtnWithBadge = "relative";
+
+/** Badge angolo su pulsante azione tabella. */
+export const dsTableActionBadge =
+  "pointer-events-none absolute right-0 top-0 rounded-full border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-0.5 text-[8px] font-bold leading-3 text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]";
 
 /** Azione primaria su riga (es. + scorta, salva rapido). */
 export const dsTableActionBtnPrimary = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:var(--cab-primary)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))]`;
@@ -172,14 +203,23 @@ export const dsTableActionBtnUndo = dsTableActionBtnSecondary;
 /** Azione distruttiva (elimina). */
 export const dsTableActionBtnDanger = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-danger)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))]`;
 
-/** Azione testuale su una riga (Modifica, Hub, …) — no wrap. */
+/** Azione testuale su una riga (tabella, toolbar compatta) — `h-9`. */
 export const dsTableActionTextBtn = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} px-2.5 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[var(--cab-hover)] ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
 
-/** Azione testuale primaria (Modifica, Apri hub, …). */
+/** Azione testuale primaria (tabella) — `h-9`. */
 export const dsTableActionTextBtnPrimary = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-2.5 text-xs font-semibold text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-150 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
 
-/** Azione testuale distruttiva. */
+/** Azione testuale distruttiva (tabella) — `h-9`. */
 export const dsTableActionTextBtnDanger = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] px-2.5 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))] ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
+
+/** Hub schede (PDF / Modifica / Elimina): stessa silhouette di `dsBtnPrimary` («Crea nuova»). */
+const dsSchedaHubBtnBase = `inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--ds-radius-lg)] px-4 py-2.5 text-sm font-semibold shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-150 ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
+
+export const dsSchedaHubBtn = `${dsSchedaHubBtnBase} border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} ${cabText} hover:bg-[var(--cab-hover)]`;
+
+export const dsSchedaHubBtnPrimary = `${dsSchedaHubBtnBase} border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:var(--cab-primary)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))]`;
+
+export const dsSchedaHubBtnDanger = `${dsSchedaHubBtnBase} border border-[color:color-mix(in_srgb,var(--cab-danger)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))]`;
 
 /** H — Card statica */
 export const dsSurfaceCard = `rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} shadow-[var(--cab-shadow-sm)]`;
@@ -199,11 +239,11 @@ export const dsModalBackdrop =
 
 export const dsModalPanel = `w-full max-w-lg rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} p-4 shadow-[var(--cab-shadow-md)]`;
 
-/** Modali Lavorazioni (sopra altri layer; z-index dedicato). */
+/** Modali Lavorazioni (sopra altri layer; stesso overlay/click-outside del `Modal` globale). */
 export const dsLavorazioniModalLayer =
-  "fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto p-4 pt-[max(1rem,env(safe-area-inset-top))]";
-export const dsLavorazioniModalOverlay =
-  "absolute inset-0 z-0 cursor-default border-0 bg-[var(--cab-overlay)] p-0 backdrop-blur-[3px]";
+  "fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[var(--cab-overlay)] p-4 pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-[2px]";
+/** @deprecated — overlay integrato in `dsLavorazioniModalLayer`; non usare più. */
+export const dsLavorazioniModalOverlay = "hidden";
 export const dsLavorazioniModalDialog =
   `relative z-[1] flex max-h-[calc(100dvh-1.5rem)] w-full min-h-0 flex-col overflow-hidden rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} shadow-2xl sm:max-h-[min(92dvh,920px)]`;
 
@@ -253,11 +293,20 @@ export const dsTypoCaption = `text-[11px] leading-snug ${cabTextMuted}`;
 
 /** @deprecated alias — usare `dsTypoPageTitle` */
 export const dsPageTitle = dsTypoPageTitle;
+
+/** Allineamento titolo header con azioni (esclude discendenti dal box di layout). */
+export const dsPageTitleToolbarAlign = "cab-page-title-box";
 export const dsPageDesc = `mt-1 max-w-2xl ${dsTypoSmall}`;
 
-/** Griglia intestazione pagina: titolo e azioni sulla stessa riga; descrizione opzionale sotto il titolo. */
-export const dsPageHeaderGrid =
-  "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 sm:gap-x-[length:var(--ds-space-lg)]";
+/**
+ * Riga titolo + azioni header: stessa riga su desktop; wrap automatico quando lo spazio non basta
+ * (azioni sotto il titolo, mai sovrapposte).
+ */
+export const dsPageHeaderTopRow =
+  "flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-x-[length:var(--ds-space-lg)] sm:gap-y-3";
+
+/** @deprecated alias — usare `dsPageHeaderTopRow` */
+export const dsPageHeaderGrid = dsPageHeaderTopRow;
 
 export const dsLabel = dsTypoSmall + " font-medium";
 
@@ -275,7 +324,7 @@ export const dsGestionaleContentMax = "mx-auto w-full max-w-[min(100%,100rem)]";
 export const GESTIONALE_SEARCH_PLACEHOLDER = "Cerca…";
 
 /** Toolbar sticky interna */
-export const dsStickyToolbar = `sticky top-0 z-[5] rounded-[var(--ds-radius-xl)] ${cabBorder} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_94%,transparent)] px-[length:var(--ds-space-md)] py-[length:var(--ds-space-md)] shadow-[var(--cab-shadow-sm)] backdrop-blur-md sm:px-[length:var(--ds-space-lg)]`;
+export const dsStickyToolbar = `sticky top-0 z-[5] rounded-[var(--ds-radius-xl)] ${cabBorder} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_94%,transparent)] p-[length:var(--ds-space-md)] shadow-[var(--cab-shadow-sm)] backdrop-blur-md sm:p-[length:var(--ds-space-lg)]`;
 
 /** Spacing utility (gap / padding) */
 export const dsGapXs = "gap-[length:var(--ds-space-xs)]";
@@ -287,4 +336,8 @@ export const dsGap2xl = "gap-[length:var(--ds-space-2xl)]";
 export const dsPadPage = "p-[length:var(--ds-space-lg)] md:p-[length:var(--ds-space-xl)]";
 
 export const selectPillInner =
-  "lavorazioni-select-dk flex min-h-8 w-full min-w-0 flex-1 cursor-pointer appearance-none items-center bg-transparent py-1 pl-2 pr-8 text-[11px] font-semibold leading-tight tracking-wide text-inherit outline-none transition-[background-color,color] duration-150 hover:bg-white/[0.06] focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] focus-visible:ring-offset-0 rounded-[inherit]";
+  "lavorazioni-select-dk flex min-h-8 w-full min-w-0 flex-1 cursor-pointer appearance-none items-center truncate bg-transparent py-1 pl-2 pr-8 text-[11px] font-semibold leading-tight tracking-wide text-inherit outline-none transition-[background-color,color] duration-150 hover:bg-white/[0.06] focus-visible:outline-none rounded-[inherit]";
+
+/** Pill tabella (Stato / Priorità / Addetto): testo centrato, padding simmetrico per il chevron. */
+export const selectPillInnerTable =
+  "lavorazioni-select-dk flex min-h-8 w-full min-w-0 flex-1 cursor-pointer appearance-none items-center whitespace-nowrap bg-transparent py-1 pl-8 pr-8 text-center text-[13px] font-medium leading-tight tracking-wide text-inherit outline-none transition-[background-color,color] duration-150 hover:bg-white/[0.06] focus-visible:outline-none rounded-[inherit]";

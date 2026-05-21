@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { gestionaleSelectNativePlainClass } from "@/lib/ui/design-system";
+import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 
 export type GestionaleSettingsSelectProps = {
   value: string;
@@ -29,9 +29,7 @@ function normalizeOptions(
   return options as { value: string; label: string }[];
 }
 
-/**
- * Select uniforme per elenchi da Impostazioni globali (loading / empty coerenti).
- */
+/** Select impostazioni — combobox globale con loading / empty coerenti. */
 export function GestionaleSettingsSelect({
   value,
   onChange,
@@ -44,41 +42,31 @@ export function GestionaleSettingsSelect({
   ariaLabel,
   id,
   className = "",
-  children,
 }: GestionaleSettingsSelectProps) {
   const opts = normalizeOptions(options);
-  const blocked = disabled || isLoading;
+  const items = [{ value: "", label: placeholder }, ...opts];
   const showEmpty = !isLoading && opts.length === 0;
 
   return (
-    <div className="min-w-0">
-      {isLoading ? (
-        <p className="mb-1 text-xs text-[color:var(--cab-text-muted)]" role="status">
-          Caricamento elenco…
-        </p>
-      ) : null}
+    <div className={`min-w-0 ${className}`.trim()}>
       {showEmpty ? (
         <p className="mb-1 text-xs text-amber-800 dark:text-amber-300" role="status">
           {emptyMessage}
         </p>
       ) : null}
-      <select
+      <GlobalSelect
         id={id}
-        aria-label={ariaLabel}
-        className={`${gestionaleSelectNativePlainClass} w-full ${className}`.trim()}
+        items={items}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={blocked || showEmpty}
+        onChange={onChange}
+        disabled={disabled || showEmpty}
         required={required}
-      >
-        <option value="">{placeholder}</option>
-        {opts.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-        {children}
-      </select>
+        isLoading={isLoading}
+        emptyMessage={emptyMessage}
+        aria-label={ariaLabel}
+        strictFromList
+        placeholder={placeholder}
+      />
     </div>
   );
 }

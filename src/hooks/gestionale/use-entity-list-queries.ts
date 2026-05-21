@@ -18,7 +18,7 @@ import { mezziService, type MezzoFilters } from "@/src/services/mezzi.service";
 import { movimentiService, type MovimentiFilters } from "@/src/services/movimenti.service";
 import { preventiviService, type PreventiviFilters } from "@/src/services/preventivi.service";
 import { schedeService, type SchedaFilters } from "@/src/services/schede.service";
-import type { DocumentoRow, LogModificaRow, MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
+import type { DocumentoRow, LogModificaWithProfileRow, MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
 
 type RqOpts<T> = Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" | "queryFn">;
 
@@ -42,7 +42,7 @@ export function useDocumentiListQuery(filters?: DocumentiFilters, options?: RqOp
   return useServiceQuery([...QK.documenti, filters ?? null] as const, () => documentiService.getAll(filters), options);
 }
 
-export function useLogListQuery(filters?: LogFilters, options?: RqOpts<LogModificaRow[]>) {
+export function useLogListQuery(filters?: LogFilters, options?: RqOpts<LogModificaWithProfileRow[]>) {
   return useServiceQuery([...QK.log, filters ?? null] as const, () => logService.getAll(filters), options);
 }
 

@@ -3,8 +3,13 @@
 import "./lavorazioni-scroll.css";
 import "./lavorazioni-select-theme.css";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  GestionaleListTable,
+  GestionaleListTableActionsHead,
+  GlobalTableSortTh,
+} from "@/components/gestionale/global-table";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -12,6 +17,7 @@ import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioneCreateModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
+import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
 import { SchedeLavorazioneModal } from "@/components/lavorazioni/schede/schede-lavorazione-modal";
 import { InlineSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
@@ -22,10 +28,20 @@ import { Q_FOCUS_LAV_ROW, Q_FOCUS_MEZZO, Q_LAVORAZIONI_MEZZO_ID } from "@/lib/na
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
+import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { durataMsStorico, formatDurataMs } from "@/lib/lavorazioni/duration";
 import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
-import { lavRowIngressoInRange, lavRowMatchesGlobalSearch } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
+import { lavRowMatchesPageFilters, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
+import {
+  buildLavorazioniFilterCatalog,
+  loadGestionaleAdvancedFiltersPersisted,
+  LAVORAZIONI_ADVANCED_FILTERS_EMPTY,
+  lavorazioniAdvancedFiltersActive,
+  saveGestionaleAdvancedFiltersPersisted,
+  type LavorazioniAdvancedFilters,
+} from "@/lib/lavorazioni/lavorazioni-advanced-filters";
+import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { getOrCreateBundle, loadLavorazioneSchedeStore, saveLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
 import { countSchedePresenti, newSchedaMeta } from "@/lib/schede/schede-ui";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -35,22 +51,22 @@ import {
   dsInput,
   dsPageToolbarBtn,
   dsStackPage,
-  dsStickyToolbar,
-  dsScrollbar,
   GESTIONALE_SEARCH_PLACEHOLDER,
-  dsTable,
-  dsTableHead,
   dsTableRow,
-  dsTableWrap,
-  dsTableTdActions,
-  dsTableActionsGroupStart,
   dsTableActionBtnDanger,
   dsTableActionBtnInfo,
   dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
-import { Drawer } from "@/components/design-system";
+import {
+  CardMobile,
+  CardMobileActions,
+  Drawer,
+  PageToolbar,
+  PageToolbarActions,
+  PageToolbarResultCount,
+} from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
@@ -61,10 +77,10 @@ import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
 import { logService } from "@/src/services/log.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import {
-  buildLogModificheGestionaleViewModel,
+  buildLogModificheDisplayEntries,
   logAutoreLabel,
 } from "@/lib/gestionale-log/log-modifiche-view-model";
-import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import { lavorazioneLogOggettoFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import { auditPayload, pickExistingFields } from "@/lib/gestionale-log/undo";
 import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -96,14 +112,36 @@ import {
   addettoPillShellClass,
   addettoPillShellStyle,
   statoPillShellClass,
-  statoPillShellClassDynamic,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-
-function archivioMonthKey(row: LavorazioneListRow): string | null {
-  const iso = row.archived_at?.trim() || row.data_uscita?.trim();
-  if (!iso || iso.length < 7) return null;
-  return iso.slice(0, 7);
-}
+import {
+  LavorazioneIngressoDateCell,
+  LavorazioneIngressoDateCellFromIso,
+  lavTableActionBtnDanger,
+  lavTableActionBtnInfo,
+  lavTableActionBtnPrimary,
+  lavTableActionBtnSecondary,
+  dsTableActionBadge,
+  dsTableActionBtnWithBadge,
+  lavTableActionsRow,
+  lavTableTd,
+  lavTableArchivioMiddleColStyle,
+  lavTableColAttrezzaturaClass,
+  lavTableColAzioniClass,
+  lavTableColCantiereClass,
+  lavTableColClienteClass,
+  lavTableColIdentificazioneClass,
+  lavTableColIngressoClass,
+  lavTableColNoteClass,
+  lavTablePillColStyleFromLabels,
+  lavTablePillColWidthRem,
+  lavTablePillTextClass,
+  lavTableTdPill,
+  lavTableTdAzioni,
+  lavTableTdCenter,
+  lavTablePillWrapStyleFromLabels,
+  lavTableTdPillWrap,
+  lavTableThAzioni,
+} from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 
 function fmtDay(iso: string | null | undefined): string {
   if (!iso?.trim()) return "—";
@@ -114,9 +152,6 @@ function fmtDay(iso: string | null | undefined): string {
   }
 }
 
-function logModificaRowToGestionaleVm(r: LogModificaRow, autore: string): GestionaleLogViewModel {
-  return buildLogModificheGestionaleViewModel(r, autore);
-}
 
 function fmtOreTotaliCell(row: LavorazioneListRow): string {
   const ms = durataMsStorico(
@@ -158,6 +193,45 @@ function addettoLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeSto
   );
 }
 
+function addettoSelectValue(label: string, addetti: string[]): string {
+  if (addetti.includes(label)) return label;
+  if (label === "—") return "";
+  return label;
+}
+
+function addettoTablePillOptions(label: string, addetti: string[]): { value: string; label: string }[] {
+  const inList = addetti.includes(label);
+  const items: { value: string; label: string }[] = [{ value: "", label: "—" }];
+  if (!inList && label !== "—") items.push({ value: label, label });
+  for (const a of addetti) items.push({ value: a, label: a });
+  return items;
+}
+
+function AddettoSelectOptions({ label, addetti }: { label: string; addetti: string[] }) {
+  return (
+    <>
+      {addettoTablePillOptions(label, addetti).map((o) => (
+        <option key={o.value || "__vuoto__"} value={o.value}>
+          {o.label}
+        </option>
+      ))}
+    </>
+  );
+}
+
+const lavMobileFieldLabelClass =
+  "w-[5.5rem] shrink-0 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
+
+/** Riga mobile card: etichetta a sinistra, select pill a destra (larghezza uniforme). */
+function LavMobileInlineField({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <label className="flex min-w-0 items-center gap-2">
+      <span className={lavMobileFieldLabelClass}>{label}</span>
+      <div className="min-w-0 flex-1">{children}</div>
+    </label>
+  );
+}
+
 function schedeCountForRow(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore): number {
   return countSchedePresenti(getOrCreateBundle(schedeStore, row.id));
 }
@@ -166,30 +240,27 @@ type MezzoIdentParts = { targa: string; matricola: string; scuderia: string };
 
 function mezzoIdentParts(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): MezzoIdentParts {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
+  const scuderiaIngresso = ing?.nScuderia?.trim() ?? "";
   if (ing) {
     return {
       targa: ing.targa?.trim() || "—",
       matricola: ing.matricola?.trim() || "—",
-      scuderia: ing.nScuderia?.trim() || "—",
+      scuderia: scuderiaIngresso,
     };
   }
   const m = row.mezzo;
   return {
     targa: m?.targa?.trim() || "—",
     matricola: m?.matricola?.trim() || "—",
-    scuderia: m?.numero_scuderia?.trim() || "—",
+    scuderia: "",
   };
 }
 
 function mezzoIdent(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const p = mezzoIdentParts(row, schedeStore);
-  return `${p.targa} · ${p.matricola} · ${p.scuderia}`;
+  const base = `${p.targa} · ${p.matricola}`;
+  return p.scuderia ? `${base} · ${p.scuderia}` : base;
 }
-
-const lavTableTd = "px-1.5 py-1 align-middle";
-const lavTableActionCompact = "!h-8 !w-8 !min-h-8 !min-w-8";
-/** Gruppo azioni tabella senza scroll orizzontale interno. */
-const lavTableActionsRow = "inline-flex min-w-0 max-w-full flex-nowrap items-center justify-end gap-0 overflow-hidden";
 
 function ClienteUtilizzatoreCell({
   row,
@@ -220,7 +291,9 @@ function MezzoIdentStackCell({
     <div className="min-w-0 leading-tight">
       <div className="truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">{p.targa}</div>
       <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{p.matricola}</div>
-      <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">Scud. {p.scuderia}</div>
+      {p.scuderia ? (
+        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">Scud. {p.scuderia}</div>
+      ) : null}
     </div>
   );
 }
@@ -242,8 +315,8 @@ function dataCompletamentoIso(row: LavorazioneListRow): string {
   return (row.data_uscita ?? row.updated_at) as string;
 }
 
-function canDeleteLavorazioneAttiva(_row: LavorazioneListRow): boolean {
-  return true;
+function canDeleteLavorazioneAttiva(row: LavorazioneListRow, canDelete: boolean): boolean {
+  return canDelete && row.archived !== true;
 }
 
 function IconCloseWork({ className = dsTableActionGlyph }: { className?: string }) {
@@ -251,6 +324,23 @@ function IconCloseWork({ className = dsTableActionGlyph }: { className?: string 
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M5 12.5 10 17 19 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M4 20h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+/** Ripristina lavorazione dall'archivio verso «in corso». */
+function IconRipristinaDaArchivio({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M5 8h14v10a2 2 0 01-2 2H7a2 2 0 01-2-2V8z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="M5 8h14" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M12 11v5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M9.5 13.5 12 11l2.5 2.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -361,6 +451,7 @@ function cmpAtt(
   phase: SortPhase,
   schedeStore: LavorazioneSchedeStore,
   fallbackAddetto: string,
+  statoOrderIds: readonly string[],
 ): number {
   const dir = phase === "desc" ? -1 : 1;
   const t = (x: number) => x * dir;
@@ -370,7 +461,11 @@ function cmpAtt(
   if (k === "utilizzatore") return t(cmpStr(utilizzatoreLabel(a, schedeStore), utilizzatoreLabel(b, schedeStore)));
   if (k === "cantiere") return t(cmpStr(cantiereLabel(a, schedeStore), cantiereLabel(b, schedeStore)));
   if (k === "note") return t(cmpStr((a.note ?? "").trim(), (b.note ?? "").trim()));
-  if (k === "stato") return t(cmpStr(a.stato, b.stato));
+  if (k === "stato") {
+    return t(
+      statoWorkflowOrderIndex(a.stato, statoOrderIds) - statoWorkflowOrderIndex(b.stato, statoOrderIds),
+    );
+  }
   if (k === "priorita") return t(comparePrioritaLavorazione(a.priorita, b.priorita));
   if (k === "addetto") return t(cmpStr(addettoLabel(a, schedeStore, fallbackAddetto), addettoLabel(b, schedeStore, fallbackAddetto)));
   const da = new Date(a.data_ingresso ?? a.created_at).getTime();
@@ -414,31 +509,6 @@ function cmpCh(
   const ua = new Date(dataCompletamentoIso(a)).getTime();
   const ub = new Date(dataCompletamentoIso(b)).getTime();
   return t(ua === ub ? 0 : ua < ub ? -1 : 1);
-}
-
-function SortTh({
-  label,
-  columnKey,
-  sortColumn,
-  sortPhase,
-  onSort,
-}: {
-  label: string;
-  columnKey: string;
-  sortColumn: string | null;
-  sortPhase: SortPhase;
-  onSort: (k: string) => void;
-}) {
-  const on = sortColumn === columnKey;
-  const arrow = !on || sortPhase === "natural" ? "" : sortPhase === "asc" ? " ↑" : " ↓";
-  return (
-    <th className="px-1.5 py-1.5 text-left align-middle text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-      <button type="button" className={`inline-flex items-center gap-0.5 ${erpFocus}`} onClick={() => onSort(columnKey)}>
-        {label.toUpperCase()}
-        <span className="tabular-nums text-[10px] font-bold text-zinc-400">{arrow}</span>
-      </button>
-    </th>
-  );
 }
 
 /** Placeholder anagrafica quando il filtro arriva da URL ma il mezzo non è ancora nello snapshot locale. */
@@ -488,15 +558,12 @@ export function LavorazioniView() {
     () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.stati],
   );
+  const statoOrderIds = useMemo(() => statiOpts.map((s) => s.id), [statiOpts]);
   const statiInCorsoOpts = useMemo(
     () => globalOpts.lavorazioni.statiInCorso.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.statiInCorso],
   );
   const statiAttiveOpts = statiOpts;
-  const statiChiusiOpts = useMemo(
-    () => globalOpts.lavorazioni.statiChiusi.filter((s) => s.id !== "annullata"),
-    [globalOpts.lavorazioni.statiChiusi],
-  );
   const statiRapidiOpts = useMemo(
     () => globalOpts.lavorazioni.statiRapidi.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.statiRapidi],
@@ -505,6 +572,50 @@ export function LavorazioniView() {
     () => orderPrioritaList(globalOpts.lavorazioni.prioritaDb),
     [globalOpts.lavorazioni.prioritaDb],
   );
+
+  const statoPillWrapStyle = useMemo(
+    () =>
+      lavTablePillWrapStyleFromLabels(
+        statiOpts.map((s) => statoLavorazioneLabel(s.id, statiOpts)),
+      ),
+    [statiOpts],
+  );
+  const prioritaPillWrapStyle = useMemo(
+    () => lavTablePillWrapStyleFromLabels(prioritaOpts.map((p) => prioritaLabel(p))),
+    [prioritaOpts],
+  );
+  const addettoPillWrapStyle = useMemo(
+    () => lavTablePillWrapStyleFromLabels(["—", ...globalOpts.lavorazioni.addetti]),
+    [globalOpts.lavorazioni.addetti],
+  );
+
+  const statoPillColStyle = useMemo(
+    () => lavTablePillColStyleFromLabels(statiOpts.map((s) => statoLavorazioneLabel(s.id, statiOpts))),
+    [statiOpts],
+  );
+  const prioritaPillColStyle = useMemo(
+    () => lavTablePillColStyleFromLabels(prioritaOpts.map((p) => prioritaLabel(p))),
+    [prioritaOpts],
+  );
+  const addettoPillColStyle = useMemo(
+    () => lavTablePillColStyleFromLabels(["—", ...globalOpts.lavorazioni.addetti]),
+    [globalOpts.lavorazioni.addetti],
+  );
+
+  const statoColRem = useMemo(
+    () => lavTablePillColWidthRem(statiOpts.map((s) => statoLavorazioneLabel(s.id, statiOpts))),
+    [statiOpts],
+  );
+  const prioritaColRem = useMemo(
+    () => lavTablePillColWidthRem(prioritaOpts.map((p) => prioritaLabel(p))),
+    [prioritaOpts],
+  );
+  const archivioMiddleColStyle = useMemo(
+    () => lavTableArchivioMiddleColStyle(statoColRem, prioritaColRem),
+    [statoColRem, prioritaColRem],
+  );
+
+  const lavTablePillFillClass = "w-full min-w-0";
 
   const mezziCatalog = useMemo(() => {
     return [...(mezziListQ.data ?? []).map(toMezzoUI)].sort((a, b) =>
@@ -537,47 +648,29 @@ export function LavorazioniView() {
   const searchInputRef = useRef(searchInput);
   searchInputRef.current = searchInput;
 
-  const [storicoSearchInput, setStoricoSearchInput] = useState("");
-  const [storicoSearchApplied, setStoricoSearchApplied] = useState("");
-  const storicoSearchInputRef = useRef(storicoSearchInput);
-  storicoSearchInputRef.current = storicoSearchInput;
-
   useEffect(() => {
     const t = window.setTimeout(() => setSearchApplied(searchInput.trim()), SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(t);
   }, [searchInput]);
 
-  useEffect(() => {
-    const t = window.setTimeout(() => setStoricoSearchApplied(storicoSearchInput.trim()), SEARCH_DEBOUNCE_MS);
-    return () => window.clearTimeout(t);
-  }, [storicoSearchInput]);
-
-  const flushAttiveSearch = useCallback(() => {
+  const flushPageSearch = useCallback(() => {
     setSearchApplied(searchInputRef.current.trim());
   }, []);
 
-  const flushStoricoSearch = useCallback(() => {
-    setStoricoSearchApplied(storicoSearchInputRef.current.trim());
-  }, []);
-
-  const [meseYyyyMm, setMeseYyyyMm] = useState("__tutti__");
   const [filtriAttiviEspansi, setFiltriAttiviEspansi] = useState(false);
-  const [filtriStoricoEspansi, setFiltriStoricoEspansi] = useState(false);
   const [lavLogOpen, setLavLogOpen] = useState(false);
 
-  const [filtroStatoAttive, setFiltroStatoAttive] = useState<string>("__tutti__");
-  const [filtroPrioritaAttive, setFiltroPrioritaAttive] = useState<string>("__tutti__");
-  const [filtroIngressoDa, setFiltroIngressoDa] = useState("");
-  const [filtroIngressoA, setFiltroIngressoA] = useState("");
+  const [advancedFilters, setAdvancedFilters] = useState<LavorazioniAdvancedFilters>(
+    () => loadGestionaleAdvancedFiltersPersisted() ?? LAVORAZIONI_ADVANCED_FILTERS_EMPTY,
+  );
 
-  useEffect(() => {
-    if (filtroPrioritaAttive === "__tutti__") return;
-    if (!prioritaOpts.includes(filtroPrioritaAttive as PrioritaLavorazione)) {
-      setFiltroPrioritaAttive("__tutti__");
-    }
-  }, [filtroPrioritaAttive, prioritaOpts]);
-
-  const [filtroStatoArchivio, setFiltroStatoArchivio] = useState<string>("__tutti__");
+  const patchAdvancedFilters = useCallback((patch: Partial<LavorazioniAdvancedFilters>) => {
+    setAdvancedFilters((prev) => {
+      const next = { ...prev, ...patch, section: "" as const };
+      saveGestionaleAdvancedFiltersPersisted(next);
+      return next;
+    });
+  }, []);
 
   const [sortColA, setSortColA] = useState<SortKeyAtt | null>(null);
   const [sortPhaseA, setSortPhaseA] = useState<SortPhase>("natural");
@@ -587,6 +680,7 @@ export function LavorazioniView() {
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const [concludiConfirmRow, setConcludiConfirmRow] = useState<LavorazioneListRow | null>(null);
+  const [eliminaConfirmRow, setEliminaConfirmRow] = useState<LavorazioneListRow | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [navMezzoFilter, setNavMezzoFilter] = useState<MezzoGestito | null>(null);
@@ -629,6 +723,31 @@ export function LavorazioniView() {
   const chiuseRows = chiuseQuery.data ?? [];
   const defaultAddetto = globalOpts.lavorazioni.addetti[0] ?? "";
 
+  const pageFilters = useMemo(
+    (): LavPageFilters => ({
+      search: searchApplied,
+      ...advancedFilters,
+    }),
+    [searchApplied, advancedFilters],
+  );
+
+  const rowMatchesPageFilters = useCallback(
+    (row: LavorazioneListRow) => lavRowMatchesPageFilters(row, pageFilters, schedeStore, defaultAddetto),
+    [pageFilters, schedeStore, defaultAddetto],
+  );
+
+  const filterCatalog = useMemo(
+    () =>
+      buildLavorazioniFilterCatalog(
+        [...attiveRows, ...chiuseRows],
+        schedeStore,
+        globalOpts.lavorazioni.addetti,
+        mezziCatalog,
+        defaultAddetto,
+      ),
+    [attiveRows, chiuseRows, schedeStore, globalOpts.lavorazioni.addetti, mezziCatalog, defaultAddetto],
+  );
+
   const openDetailById = useCallback(
     (id: string) => {
       const active = attiveRows.find((row) => row.id === id);
@@ -652,35 +771,15 @@ export function LavorazioniView() {
     [chiuseRows, defaultAddetto],
   );
 
-  const attiveRowsFiltered = useMemo(() => {
-    return attiveRows.filter((row) => {
-      if (!lavRowMatchesGlobalSearch(row, searchApplied)) return false;
-      if (filtroStatoAttive !== "__tutti__" && row.stato !== filtroStatoAttive) return false;
-      if (filtroPrioritaAttive !== "__tutti__" && row.priorita !== filtroPrioritaAttive) return false;
-      if (filtroIngressoDa.trim() || filtroIngressoA.trim()) {
-        if (!lavRowIngressoInRange(row, filtroIngressoDa, filtroIngressoA)) return false;
-      }
-      return true;
-    });
-  }, [attiveRows, searchApplied, filtroStatoAttive, filtroPrioritaAttive, filtroIngressoDa, filtroIngressoA]);
+  const attiveRowsFiltered = useMemo(
+    () => attiveRows.filter(rowMatchesPageFilters),
+    [attiveRows, rowMatchesPageFilters],
+  );
 
-  const chiuseRowsFiltered = useMemo(() => {
-    return chiuseRows.filter((row) => {
-      if (!lavRowMatchesGlobalSearch(row, storicoSearchApplied)) return false;
-      if (filtroStatoArchivio !== "__tutti__" && row.stato !== filtroStatoArchivio) return false;
-      if (meseYyyyMm !== "__tutti__" && archivioMonthKey(row) !== meseYyyyMm) return false;
-      return true;
-    });
-  }, [chiuseRows, storicoSearchApplied, filtroStatoArchivio, meseYyyyMm]);
-
-  const mesiChiuse = useMemo(() => {
-    const s = new Set<string>();
-    for (const r of chiuseRows) {
-      const key = archivioMonthKey(r);
-      if (key) s.add(key);
-    }
-    return [...s].sort((a, b) => b.localeCompare(a, "it"));
-  }, [chiuseRows]);
+  const chiuseRowsFiltered = useMemo(
+    () => chiuseRows.filter(rowMatchesPageFilters),
+    [chiuseRows, rowMatchesPageFilters],
+  );
 
   const flashRow = useCallback((id: string) => {
     if (flashClearRef.current) clearTimeout(flashClearRef.current);
@@ -795,20 +894,27 @@ export function LavorazioniView() {
     [authorName, canEditWorkOrders, defaultAddetto, flashRow, globalOpts.lavorazioni.addetti, schedeStore, user?.id],
   );
 
-  const onDeleteRow = useCallback(
-    (row: LavorazioneListRow) => {
-      const ok = window.confirm(
-        `Eliminare definitivamente la lavorazione «${macchinaLabel(row)}»? L’operazione non è annullabile.`,
-      );
-      if (!ok) return;
-      removeLav.mutate(row.id, {
-        onSuccess: () => {
-          setSchedeRow((cur) => (cur?.row.id === row.id ? null : cur));
-        },
-      });
-    },
-    [removeLav],
-  );
+  function openEliminaConfirm(row: LavorazioneListRow) {
+    if (!canDeleteRecords || row.archived === true) return;
+    setEliminaConfirmRow(row);
+  }
+
+  function confirmEliminaLavorazione() {
+    const row = eliminaConfirmRow;
+    if (!row || !canDeleteRecords) return;
+    removeLav.mutate(row.id, {
+      onSuccess: () => {
+        pushToast("Lavorazione eliminata.", "success");
+        setEliminaConfirmRow(null);
+        setSchedeRow((cur) => (cur?.row.id === row.id ? null : cur));
+        flashRow(row.id);
+        void lavModificheLogQuery.refetch();
+      },
+      onError: (err) => {
+        pushToast(err.message ?? "Eliminazione non riuscita.", "error");
+      },
+    });
+  }
 
   function openConcludiConfirm(row: LavorazioneListRow) {
     if (!canEditWorkOrders || row.stato !== "completata" || row.archived === true) return;
@@ -866,17 +972,6 @@ export function LavorazioniView() {
       if (navFlashClearRef.current) clearTimeout(navFlashClearRef.current);
     };
   }, []);
-
-  useEffect(() => {
-    const id = searchParams.get(Q_FOCUS_LAV_ROW)?.trim();
-    if (!id) return;
-    const t = window.setTimeout(() => {
-      openDetailById(id);
-      flashRow(id);
-      router.replace(pathname, { scroll: false });
-    }, 80);
-    return () => window.clearTimeout(t);
-  }, [searchParams, pathname, router, flashRow, openDetailById]);
 
   useEffect(() => {
     const rawFocus = searchParams.get(Q_FOCUS_MEZZO)?.trim();
@@ -943,7 +1038,7 @@ export function LavorazioniView() {
         if (tb !== ta) return tb - ta;
         return b.id.localeCompare(a.id);
       }
-      const p = cmpAtt(a, b, sortColA, sortPhaseA, schedeStore, defaultAddetto);
+      const p = cmpAtt(a, b, sortColA, sortPhaseA, schedeStore, defaultAddetto, statoOrderIds);
       if (p !== 0) return p;
       const ta = new Date(a.created_at).getTime();
       const tb = new Date(b.created_at).getTime();
@@ -951,7 +1046,7 @@ export function LavorazioniView() {
       return b.id.localeCompare(a.id);
     });
     return rows;
-  }, [attiveRowsFiltered, sortColA, sortPhaseA, schedeStore, defaultAddetto]);
+  }, [attiveRowsFiltered, sortColA, sortPhaseA, schedeStore, defaultAddetto, statoOrderIds]);
 
   const sortedChiuse = useMemo(() => {
     const rows = [...chiuseRowsFiltered];
@@ -985,17 +1080,7 @@ export function LavorazioniView() {
   } = useClientPagination(sortedAttive.length, listPageSize);
   useEffect(() => {
     resetPageA();
-  }, [
-    filtersAttive,
-    attiveRowsFiltered.length,
-    searchApplied,
-    filtroStatoAttive,
-    filtroPrioritaAttive,
-    filtroIngressoDa,
-    filtroIngressoA,
-    listPageSize,
-    resetPageA,
-  ]);
+  }, [filtersAttive, attiveRowsFiltered.length, searchApplied, advancedFilters, listPageSize, resetPageA]);
   const pagedAttive = useMemo(() => sliceA(sortedAttive), [sortedAttive, sliceA, pageA]);
 
   const {
@@ -1009,8 +1094,49 @@ export function LavorazioniView() {
   } = useClientPagination(sortedChiuse.length, listPageSize);
   useEffect(() => {
     resetPageC();
-  }, [filtersChiuse, chiuseRowsFiltered.length, storicoSearchApplied, filtroStatoArchivio, listPageSize, resetPageC]);
+  }, [filtersChiuse, chiuseRowsFiltered.length, searchApplied, listPageSize, resetPageC]);
   const pagedChiuse = useMemo(() => sliceC(sortedChiuse), [sortedChiuse, sliceC, pageC]);
+
+  const focusLavorazioneInTable = useCallback(
+    (id: string) => {
+      setLavLogOpen(false);
+
+      const scrollToRow = (elementId: string) => {
+        window.setTimeout(() => {
+          document.getElementById(elementId)?.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 120);
+      };
+
+      const idxA = sortedAttive.findIndex((r) => r.id === id);
+      if (idxA >= 0) {
+        setPageA(Math.floor(idxA / listPageSize) + 1);
+        flashRow(id);
+        scrollToRow(`lavorazioni-row-${id}`);
+        return;
+      }
+
+      const idxC = sortedChiuse.findIndex((r) => r.id === id);
+      if (idxC >= 0) {
+        setPageC(Math.floor(idxC / listPageSize) + 1);
+        flashRow(id);
+        scrollToRow(`lavorazioni-storico-row-${id}`);
+        return;
+      }
+
+      flashRow(id);
+    },
+    [flashRow, listPageSize, setPageA, setPageC, sortedAttive, sortedChiuse],
+  );
+
+  useEffect(() => {
+    const id = searchParams.get(Q_FOCUS_LAV_ROW)?.trim();
+    if (!id) return;
+    const t = window.setTimeout(() => {
+      focusLavorazioneInTable(id);
+      router.replace(pathname, { scroll: false });
+    }, 80);
+    return () => window.clearTimeout(t);
+  }, [searchParams, pathname, router, focusLavorazioneInTable]);
 
   async function syncIngressoToBackend(row: LavorazioneListRow, campi: SchedaIngressoFields) {
     const noteParts = [campi.noteIntervento?.trim(), campi.descrizioneAnomalia?.trim()].filter(Boolean);
@@ -1044,48 +1170,47 @@ export function LavorazioniView() {
     }
   }
 
-  function resetStoricoFilters() {
-    setStoricoSearchInput("");
-    setStoricoSearchApplied("");
-    setMeseYyyyMm("__tutti__");
-    setFiltroStatoArchivio("__tutti__");
-    setFiltriStoricoEspansi(false);
-  }
-
-  function resetRicercaAttive() {
+  function resetRicercaPagina() {
     setSearchInput("");
     setSearchApplied("");
   }
 
-  function resetFiltriAttive() {
-    setFiltroStatoAttive("__tutti__");
-    setFiltroPrioritaAttive("__tutti__");
-    setFiltroIngressoDa("");
-    setFiltroIngressoA("");
+  function resetFiltriPagina() {
+    setAdvancedFilters(LAVORAZIONI_ADVANCED_FILTERS_EMPTY);
+    saveGestionaleAdvancedFiltersPersisted(LAVORAZIONI_ADVANCED_FILTERS_EMPTY);
     setNavMezzoFilter(null);
     setFiltriAttiviEspansi(false);
-    resetRicercaAttive();
+    resetRicercaPagina();
   }
 
-  const logPanelItems = useMemo(() => {
-    return (lavModificheLogQuery.data ?? []).map((row) => ({ id: row.id, row }));
-  }, [lavModificheLogQuery.data]);
+  const lavorazioniById = useMemo(() => {
+    const map = new Map<string, LavorazioneListRow>();
+    for (const row of attiveRows) map.set(row.id, row);
+    for (const row of chiuseRows) map.set(row.id, row);
+    return map;
+  }, [attiveRows, chiuseRows]);
 
-  const logVmList = useMemo((): GestionaleLogViewModel[] => {
-    return logPanelItems.map((item) =>
-      logModificaRowToGestionaleVm(item.row, logAutoreLabel(item.row, user?.id ?? null, authorName)),
-    );
-  }, [logPanelItems, user?.id, authorName]);
+  const logDisplayEntries = useMemo(
+    () =>
+      buildLogModificheDisplayEntries(
+        lavModificheLogQuery.data ?? [],
+        (row) => logAutoreLabel(row, user?.id ?? null, authorName),
+        {
+          resolveOggetto: (row) => {
+            if (row.entita !== "lavorazioni") return undefined;
+            const lav = lavorazioniById.get(row.entita_id);
+            if (!lav) return undefined;
+            return lavorazioneLogOggettoFromListRow(lav, schedeStore);
+          },
+        },
+      ),
+    [lavModificheLogQuery.data, user?.id, authorName, lavorazioniById, schedeStore],
+  );
 
-  const hasAttiveClientFilters =
-    searchApplied.trim().length > 0 ||
-    filtroStatoAttive !== "__tutti__" ||
-    filtroPrioritaAttive !== "__tutti__" ||
-    Boolean(filtroIngressoDa.trim()) ||
-    Boolean(filtroIngressoA.trim());
+  const hasPageClientFilters =
+    searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
 
-  const hasStoricoClientFilters =
-    storicoSearchApplied.trim().length > 0 || filtroStatoArchivio !== "__tutti__" || meseYyyyMm !== "__tutti__";
+  const totalFilteredCount = attiveRowsFiltered.length + chiuseRowsFiltered.length;
 
   const loading = attiveQuery.isLoading || chiuseQuery.isLoading;
   const loadErr = attiveQuery.isError ? attiveQuery.error?.message : chiuseQuery.isError ? chiuseQuery.error?.message : null;
@@ -1202,283 +1327,179 @@ export function LavorazioniView() {
         ) : null}
 
         <ShellCard>
-          <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <button
-                  type="button"
-                  onClick={() => setCreateOpen(true)}
-                  className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
-                  disabled={mutPending || !createdBy || !canEditWorkOrders}
-                  title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : !createdBy ? "Accedi per creare una lavorazione." : undefined}
-                >
-                  + Nuova lavorazione
-                </button>
-                <GestionaleSearchField
-                  id="lavorazioni-search-attive"
-                  value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      flushAttiveSearch();
-                    }
-                  }}
-                  placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-                  aria-label="Cerca tra lavorazioni in corso"
-                  wrapperClassName="flex-1 sm:min-w-[12rem]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setFiltriAttiviEspansi((o) => !o)}
-                  className={`${dsPageToolbarBtn} relative h-11 min-w-[8.25rem] shrink-0 gap-2 px-3 text-sm sm:ml-auto`}
-                  aria-expanded={filtriAttiviEspansi}
-                >
-                  Filtri
-                  <svg
-                    className={`h-4 w-4 shrink-0 text-[color:var(--cab-primary)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${filtriAttiviEspansi ? "rotate-180" : ""}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                  {hasAttiveClientFilters || navMezzoFilter ? (
-                    <span
-                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]"
-                      title="Filtri attivi"
-                      aria-hidden
-                    />
-                  ) : null}
-                </button>
-              </div>
-              <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
+          <section aria-label="Azioni e filtri lavorazioni (in corso e archivio)">
+          <PageToolbar
+            primaryAction={
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
+                disabled={mutPending || !createdBy || !canEditWorkOrders}
+                title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : !createdBy ? "Accedi per creare una lavorazione." : undefined}
+              >
+                + Nuova lavorazione
+              </button>
+            }
+            search={
+              <GestionaleSearchField
+                id="lavorazioni-search"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    flushPageSearch();
+                  }
+                }}
+                placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+                aria-label="Cerca in lavorazioni in corso e archivio"
+                wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+              />
+            }
+            filtersExpanded={filtriAttiviEspansi}
+            onFiltersToggle={() => setFiltriAttiviEspansi((o) => !o)}
+            filtersActive={hasPageClientFilters || Boolean(navMezzoFilter)}
+            filtersPanel={
+              <LavorazioniAdvancedFilterPanel
+                filters={advancedFilters}
+                onChange={patchAdvancedFilters}
+                catalog={filterCatalog}
+                statiOpts={statiOpts}
+              />
+            }
+            meta={
+              <>
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  {mutPending ? <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Salvataggio in corso…</span> : null}
+                  {mutPending ? (
+                    <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Salvataggio in corso…</span>
+                  ) : null}
                   {!createdBy ? (
                     <span className="text-xs text-amber-800 dark:text-amber-200">Accedi per registrare nuove lavorazioni.</span>
                   ) : null}
-                  <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
-                    <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{sortedAttive.length}</span>
-                    <span>risultat{sortedAttive.length === 1 ? "o" : "i"}</span>
-                  </span>
-                  {hasAttiveClientFilters || navMezzoFilter ? (
-                    <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
-                      Filtri attivi
+                  <PageToolbarResultCount
+                    count={totalFilteredCount}
+                    filtersActive={hasPageClientFilters || Boolean(navMezzoFilter)}
+                  />
+                  {hasPageClientFilters || navMezzoFilter ? (
+                    <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                      {attiveRowsFiltered.length} in corso · {chiuseRowsFiltered.length} in archivio
                     </span>
                   ) : null}
                 </div>
-                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                  <button type="button" className={dsPageToolbarBtn} onClick={resetRicercaAttive}>
+                <PageToolbarActions>
+                  <button type="button" className={dsPageToolbarBtn} onClick={resetRicercaPagina}>
                     Pulisci ricerca
                   </button>
-                  <button type="button" className={dsPageToolbarBtn} onClick={resetFiltriAttive}>
+                  <button type="button" className={dsPageToolbarBtn} onClick={resetFiltriPagina}>
                     Reimposta filtri
                   </button>
-                </div>
-              </div>
-            </div>
+                </PageToolbarActions>
+              </>
+            }
+          />
+          </section>
+        </ShellCard>
 
-            <div
-              className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                filtriAttiviEspansi ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-              }`}
-            >
-              <div className="min-h-0 overflow-hidden">
-                <div className="border-t border-[color:var(--cab-border)] pt-3" aria-label="Filtri lavorazioni in corso">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-                      Mezzo
-                      <FilterSelectWrap>
-                        <select
-                          className={gestionaleSelectFilterClass}
-                          value={navMezzoFilter?.id ?? "__tutti__"}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            if (v === "__tutti__") setNavMezzoFilter(null);
-                            else {
-                              const hit = mezziCatalog.find((m) => m.id === v);
-                              if (hit) setNavMezzoFilter(hit);
-                            }
-                          }}
-                          aria-label="Filtra per mezzo"
-                        >
-                          <option value="__tutti__">Tutti i mezzi</option>
-                          {navMezzoFilter?.id && !mezziCatalog.some((m) => m.id === navMezzoFilter.id) ? (
-                            <option value={navMezzoFilter.id}>
-                              {navMezzoFilterBadgeLabel(navMezzoFilter)} (da collegamento)
-                            </option>
-                          ) : null}
-                          {mezziCatalog.map((m) => (
-                            <option key={m.id} value={m.id}>
-                              {navMezzoFilterBadgeLabel(m)} — {m.marca} {m.modello}
-                            </option>
-                          ))}
-                        </select>
-                      </FilterSelectWrap>
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-                      Stato
-                      <FilterSelectWrap>
-                        <select
-                          className={selectLavorazioniFilter}
-                          value={filtroStatoAttive}
-                          onChange={(e) => setFiltroStatoAttive(e.target.value)}
-                          aria-label="Filtra per stato"
-                        >
-                          <option value="__tutti__">Tutti gli stati</option>
-                          {statiAttiveOpts.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {statoLavorazioneLabel(s.id, statiOpts)}
-                            </option>
-                          ))}
-                        </select>
-                      </FilterSelectWrap>
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-                      Priorità
-                      <FilterSelectWrap>
-                        <select
-                          className={selectLavorazioniFilter}
-                          value={filtroPrioritaAttive}
-                          onChange={(e) => setFiltroPrioritaAttive(e.target.value)}
-                          aria-label="Filtra per priorità"
-                        >
-                          <option value="__tutti__">Tutte</option>
-                          {prioritaOpts.map((p) => (
-                            <option key={p} value={p}>
-                              {prioritaLabel(p)}
-                            </option>
-                          ))}
-                        </select>
-                      </FilterSelectWrap>
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-                      Ingresso da
-                      <input
-                        type="date"
-                        className={dsInput}
-                        value={filtroIngressoDa}
-                        onChange={(e) => setFiltroIngressoDa(e.target.value)}
-                        aria-label="Data ingresso da"
-                      />
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-                      Ingresso a
-                      <input
-                        type="date"
-                        className={dsInput}
-                        value={filtroIngressoA}
-                        onChange={(e) => setFiltroIngressoA(e.target.value)}
-                        aria-label="Data ingresso a"
-                      />
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
+        <ShellCard>
           {loading ? <p className="text-sm text-zinc-500">Caricamento…</p> : null}
 
-          <div className={`mt-4 hidden ${dsTableWrap} ${dsScrollbar} lavorazioni-scroll-scope max-w-full overflow-x-hidden md:block`}>
-            <table className={`${dsTable} w-full table-fixed`}>
-              <colgroup>
-                <col className="w-[6.5%]" />
-                <col className="w-[13%]" />
-                <col className="w-[9%]" />
-                <col className="w-[12%]" />
-                <col className="w-[9%]" />
-                <col className="w-[12%]" />
-                <col className="w-[8%]" />
-                <col className="w-[9%]" />
-                <col className="w-[9.5%]" />
-              </colgroup>
-              <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
-                <tr>
-                  <SortTh
-                    label="Data ingresso"
+          <GestionaleListTable
+            visibilityClass="hidden md:block"
+            colgroup={
+              <>
+                <col className={lavTableColIngressoClass} />
+                <col className={lavTableColClienteClass} />
+                <col className={lavTableColCantiereClass} />
+                <col className={lavTableColAttrezzaturaClass} />
+                <col className={lavTableColIdentificazioneClass} />
+                <col className={lavTableColNoteClass} />
+                <col style={statoPillColStyle} />
+                <col style={prioritaPillColStyle} />
+                <col style={addettoPillColStyle} />
+                <col className={lavTableColAzioniClass} />
+              </>
+            }
+            headRow={
+              <>
+                  <GlobalTableSortTh
+                    label="Ingresso"
                     columnKey="ingresso"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
+                    align="left"
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <SortTh
-                    label="Cliente / Util."
+                  <GlobalTableSortTh
+                    label="Cliente"
                     columnKey="cliente"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Cantiere"
                     columnKey="cantiere"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Attrezzatura"
                     columnKey="macchina"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <SortTh
-                    label="Targa / Matr. / Scud."
+                  <GlobalTableSortTh
+                    label="Identificazione"
                     columnKey="mezzoIdent"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Note"
                     columnKey="note"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Stato"
                     columnKey="stato"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
+                    align="center"
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Priorità"
                     columnKey="priorita"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
+                    align="center"
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Addetto"
                     columnKey="addetto"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
+                    align="center"
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
-                  <th className="px-1.5 py-1.5 text-right align-middle text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                    AZIONI
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedAttive.length === 0 ? (
-                  <tr className={dsTableRow}>
-                    <td colSpan={10} className="px-3 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                      {hasAttiveClientFilters
-                        ? "Nessuna lavorazione corrisponde alla ricerca o ai filtri selezionati."
-                        : navMezzoFilter
-                          ? "Nessuna lavorazione in corso per il mezzo filtrato."
-                          : "Nessuna lavorazione in corso."}
-                    </td>
-                  </tr>
-                ) : (
-                  pagedAttive.map((row) => {
+                  <GestionaleListTableActionsHead />
+              </>
+            }
+            empty={pagedAttive.length === 0}
+            emptyMessage={
+              hasPageClientFilters || navMezzoFilter
+                ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
+                : "Nessuna lavorazione in corso."
+            }
+            colSpan={10}
+          >
+                  {pagedAttive.map((row) => {
                     const flash = flashRowId === row.id || navBulkFlashIds.has(row.id);
                     return (
                       <tr
@@ -1494,8 +1515,8 @@ export function LavorazioniView() {
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        <td className={`${lavTableTd} whitespace-nowrap text-xs tabular-nums text-zinc-700 dark:text-zinc-300`}>
-                          {fmtDay(row.data_ingresso ?? row.created_at)}
+                        <td className={lavTableTd}>
+                          <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
                         </td>
                         <td className={lavTableTd}>
                           <ClienteUtilizzatoreCell row={row} schedeStore={schedeStore} />
@@ -1512,10 +1533,12 @@ export function LavorazioniView() {
                         <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
                           <span className="line-clamp-2">{(row.note ?? "").trim() || "—"}</span>
                         </td>
-                        <td className={lavTableTd}>
+                        <td className={lavTableTdPill}>
+                          <div className={lavTableTdPillWrap} style={statoPillWrapStyle}>
                           <InlineSelectField
-                            wide
-                            shellClass={statoPillShellClassDynamic()}
+                            tablePill
+                            tablePillWidth={lavTablePillFillClass}
+                            shellClass={statoPillShellClass()}
                             shellStyle={readablePillStyleFromHex(statoDisplayColor(row.stato, statiOpts))}
                             value={row.stato}
                             onChange={(v) => onStatoRow(row, v)}
@@ -1529,9 +1552,13 @@ export function LavorazioniView() {
                               </option>
                             ))}
                           </InlineSelectField>
+                          </div>
                         </td>
-                        <td className={lavTableTd}>
+                        <td className={lavTableTdPill}>
+                          <div className={lavTableTdPillWrap} style={prioritaPillWrapStyle}>
                           <InlineSelectField
+                            tablePill
+                            tablePillWidth={lavTablePillFillClass}
                             shellClass={prioritaPillShellClass()}
                             shellStyle={readablePillStyleFromHex(prioColor(row.priorita))}
                             value={row.priorita}
@@ -1546,36 +1573,37 @@ export function LavorazioniView() {
                               </option>
                             ))}
                           </InlineSelectField>
+                          </div>
                         </td>
-                        <td className={lavTableTd}>
-                          <InlineSelectField
-                            shellClass={addettoPillShellClass()}
-                            shellStyle={addettoPillShellStyle(globalOpts.lavorazioni.addettoColors[addettoLabel(row, schedeStore, defaultAddetto)])}
-                            value={
-                              globalOpts.lavorazioni.addetti.includes(addettoLabel(row, schedeStore, defaultAddetto))
-                                ? addettoLabel(row, schedeStore, defaultAddetto)
-                                : ""
-                            }
-                            onChange={(v) => onAddettoRow(row, v)}
-                            ariaLabel={`Addetto — ${macchinaLabel(row, schedeStore)}`}
-                            disabled={mutPending || loading || !canEditWorkOrders || globalOpts.lavorazioni.addetti.length === 0}
-                            title={addettoLabel(row, schedeStore, defaultAddetto)}
-                          >
-                            <option value="" disabled>
-                              —
-                            </option>
-                            {globalOpts.lavorazioni.addetti.map((a) => (
-                              <option key={a} value={a}>
-                                {a}
-                              </option>
-                            ))}
-                          </InlineSelectField>
+                        <td className={lavTableTdPill}>
+                          <div className={lavTableTdPillWrap} style={addettoPillWrapStyle}>
+                          {(() => {
+                            const addetto = addettoLabel(row, schedeStore, defaultAddetto);
+                            const addetti = globalOpts.lavorazioni.addetti;
+                            return (
+                              <InlineSelectField
+                                tablePill
+                                tablePillWidth={lavTablePillFillClass}
+                                tablePillOptions={addettoTablePillOptions(addetto, addetti)}
+                                shellClass={addettoPillShellClass()}
+                                shellStyle={addettoPillShellStyle(globalOpts.lavorazioni.addettoColors[addetto])}
+                                value={addettoSelectValue(addetto, addetti)}
+                                onChange={(v) => onAddettoRow(row, v)}
+                                ariaLabel={`Addetto — ${macchinaLabel(row, schedeStore)}`}
+                                disabled={mutPending || loading || !canEditWorkOrders || addetti.length === 0}
+                                title={addetto}
+                              >
+                                <AddettoSelectOptions label={addetto} addetti={addetti} />
+                              </InlineSelectField>
+                            );
+                          })()}
+                          </div>
                         </td>
-                        <td className={`${dsTableTdActions} overflow-hidden !px-0.5`}>
+                        <td className={lavTableTdAzioni}>
                           <div className={lavTableActionsRow}>
                             <button
                               type="button"
-                              className={`${dsTableActionBtnSecondary} ${lavTableActionCompact}`}
+                              className={lavTableActionBtnSecondary}
                               title={row.stato === "completata" ? "Concludi lavorazione" : "Concludi disponibile solo con stato completata"}
                               aria-label="Concludi lavorazione"
                               disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true}
@@ -1583,21 +1611,21 @@ export function LavorazioniView() {
                             >
                               <IconCloseWork />
                             </button>
-                            {canDeleteLavorazioneAttiva(row) ? (
+                            {canDeleteLavorazioneAttiva(row, canDeleteRecords) ? (
                               <button
                                 type="button"
-                                className={`${dsTableActionBtnDanger} ${lavTableActionCompact}`}
+                                className={lavTableActionBtnDanger}
                                 title="Elimina"
                                 aria-label="Elimina"
                                 disabled={mutPending || loading || !canDeleteRecords}
-                                onClick={() => onDeleteRow(row)}
+                                onClick={() => openEliminaConfirm(row)}
                               >
                                 <IconTrash />
                               </button>
                             ) : null}
                             <button
                               type="button"
-                              className={`${dsTableActionBtnInfo} ${lavTableActionCompact}`}
+                              className={lavTableActionBtnInfo}
                               title="Apri dettaglio lavorazione"
                               aria-label="Apri dettaglio lavorazione"
                               disabled={mutPending}
@@ -1607,14 +1635,14 @@ export function LavorazioniView() {
                             </button>
                             <button
                               type="button"
-                              className={`${dsTableActionBtnPrimary} ${lavTableActionCompact} relative`}
+                              className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
                               title="Apri schede lavorazione"
                               aria-label="Apri schede lavorazione"
                               disabled={mutPending}
                               onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "schede" })}
                             >
                               <IconSchede />
-                              <span className="pointer-events-none absolute right-0 top-0 rounded-full border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-0.5 text-[8px] font-bold leading-3 text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]" aria-hidden>
+                              <span className={dsTableActionBadge} aria-hidden>
                                 {schedeCountForRow(row, schedeStore)}/3
                               </span>
                             </button>
@@ -1622,78 +1650,102 @@ export function LavorazioniView() {
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                  })}
+          </GestionaleListTable>
 
           <div className="mt-4 space-y-3 md:hidden">
             {pagedAttive.length === 0 ? (
               <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                {hasAttiveClientFilters
-                  ? "Nessuna lavorazione corrisponde alla ricerca o ai filtri selezionati."
-                  : navMezzoFilter
-                    ? "Nessuna lavorazione in corso per il mezzo filtrato."
-                    : "Nessuna lavorazione in corso."}
+                {hasPageClientFilters || navMezzoFilter
+                  ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
+                  : "Nessuna lavorazione in corso."}
               </p>
             ) : (
               pagedAttive.map((row) => (
-                <div key={row.id} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+                <CardMobile key={row.id}>
                   <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{macchinaLabel(row, schedeStore)}</p>
                   <MezzoIdentStackCell row={row} schedeStore={schedeStore} />
                   <div className="mt-2 grid gap-1 text-xs text-zinc-600 dark:text-zinc-300">
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Ingresso:</span> {fmtDay(row.data_ingresso ?? row.created_at)}</p>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ingresso</span>
+                      <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
+                    </div>
                     <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Cliente:</span> {clienteLabel(row, schedeStore)}</p>
                     <p className="text-[11px] text-zinc-500">{utilizzatoreLabel(row, schedeStore)}</p>
                     <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Cantiere:</span> {cantiereLabel(row, schedeStore)}</p>
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Addetto:</span> {addettoLabel(row, schedeStore, defaultAddetto)}</p>
                   </div>
                   <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{(row.note ?? "").trim() || "—"}</p>
-                  <div className="mt-3 flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Stato</span>
-                    <InlineSelectField
-                      shellClass={statoPillShellClassDynamic()}
-                      shellStyle={readablePillStyleFromHex(statoDisplayColor(row.stato, statiOpts))}
-                      value={row.stato}
-                      onChange={(v) => onStatoRow(row, v)}
-                      ariaLabel={`Stato — ${macchinaLabel(row)}`}
-                      disabled={mutPending || loading || !canEditWorkOrders}
-                    >
-                      {statiRapidiOpts.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {statoLavorazioneLabel(s.id, statiOpts)}
-                        </option>
-                      ))}
-                    </InlineSelectField>
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Priorità</span>
-                    <InlineSelectField
-                      shellClass={prioritaPillShellClass()}
-                      shellStyle={readablePillStyleFromHex(prioColor(row.priorita))}
-                      value={row.priorita}
-                      onChange={(v) => onPrioritaRow(row, v)}
-                      ariaLabel={`Priorità — ${macchinaLabel(row)}`}
-                      disabled={mutPending || loading || !canEditWorkOrders}
-                    >
-                      {prioritaOpts.map((p) => (
-                        <option key={p} value={p}>
-                          {prioritaLabel(p)}
-                        </option>
-                      ))}
-                    </InlineSelectField>
+                  <div className="mt-3 flex flex-col gap-2">
+                    <LavMobileInlineField label="Stato">
+                      <InlineSelectField
+                        fullWidth
+                        wide
+                        shellClass={statoPillShellClass()}
+                        shellStyle={readablePillStyleFromHex(statoDisplayColor(row.stato, statiOpts))}
+                        value={row.stato}
+                        onChange={(v) => onStatoRow(row, v)}
+                        ariaLabel={`Stato — ${macchinaLabel(row, schedeStore)}`}
+                        disabled={mutPending || loading || !canEditWorkOrders}
+                        title={statoLavorazioneLabel(row.stato, statiOpts)}
+                      >
+                        {statiRapidiOpts.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {statoLavorazioneLabel(s.id, statiOpts)}
+                          </option>
+                        ))}
+                      </InlineSelectField>
+                    </LavMobileInlineField>
+                    <LavMobileInlineField label="Priorità">
+                      <InlineSelectField
+                        fullWidth
+                        shellClass={prioritaPillShellClass()}
+                        shellStyle={readablePillStyleFromHex(prioColor(row.priorita))}
+                        value={row.priorita}
+                        onChange={(v) => onPrioritaRow(row, v)}
+                        ariaLabel={`Priorità — ${macchinaLabel(row, schedeStore)}`}
+                        disabled={mutPending || loading || !canEditWorkOrders}
+                        title={prioritaLabel(row.priorita)}
+                      >
+                        {prioritaOpts.map((p) => (
+                          <option key={p} value={p}>
+                            {prioritaLabel(p)}
+                          </option>
+                        ))}
+                      </InlineSelectField>
+                    </LavMobileInlineField>
+                    <LavMobileInlineField label="Addetto">
+                      {(() => {
+                        const addetto = addettoLabel(row, schedeStore, defaultAddetto);
+                        const addetti = globalOpts.lavorazioni.addetti;
+                        return (
+                          <InlineSelectField
+                            fullWidth
+                            shellClass={addettoPillShellClass()}
+                            shellStyle={addettoPillShellStyle(globalOpts.lavorazioni.addettoColors[addetto])}
+                            value={addettoSelectValue(addetto, addetti)}
+                            onChange={(v) => onAddettoRow(row, v)}
+                            ariaLabel={`Addetto — ${macchinaLabel(row, schedeStore)}`}
+                            disabled={mutPending || loading || !canEditWorkOrders || addetti.length === 0}
+                            title={addetto}
+                          >
+                            <AddettoSelectOptions label={addetto} addetti={addetti} />
+                          </InlineSelectField>
+                        );
+                      })()}
+                    </LavMobileInlineField>
                   </div>
-                  <div className={`mt-3 w-full min-w-0 ${dsTableActionsGroupStart}`}>
+                  <CardMobileActions>
                     <button type="button" className={dsTableActionBtnSecondary} title={row.stato === "completata" ? "Concludi lavorazione" : "Concludi disponibile solo con stato completata"} aria-label="Concludi lavorazione" disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true} onClick={() => openConcludiConfirm(row)}>
                       <IconCloseWork />
                     </button>
-                    {canDeleteLavorazioneAttiva(row) ? (
+                    {canDeleteLavorazioneAttiva(row, canDeleteRecords) ? (
                       <button
                         type="button"
                         className={dsTableActionBtnDanger}
                         title="Elimina"
                         aria-label="Elimina"
                         disabled={mutPending || loading || !canDeleteRecords}
-                        onClick={() => onDeleteRow(row)}
+                        onClick={() => openEliminaConfirm(row)}
                       >
                         <IconTrash />
                       </button>
@@ -1701,14 +1753,21 @@ export function LavorazioniView() {
                     <button type="button" className={dsTableActionBtnInfo} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" disabled={mutPending} onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "panoramica" })}>
                       <IconInfo />
                     </button>
-                    <button type="button" className={`${dsTableActionBtnPrimary} relative`} title="Apri schede lavorazione" aria-label="Apri schede lavorazione" disabled={mutPending} onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "schede" })}>
+                    <button
+                      type="button"
+                      className={`${dsTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
+                      title="Apri schede lavorazione"
+                      aria-label="Apri schede lavorazione"
+                      disabled={mutPending}
+                      onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "schede" })}
+                    >
                       <IconSchede />
-                      <span className="pointer-events-none absolute right-0 top-0 rounded-full border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-0.5 text-[8px] font-bold leading-3 text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]" aria-hidden>
+                      <span className={dsTableActionBadge} aria-hidden>
                         {schedeCountForRow(row, schedeStore)}/3
                       </span>
                     </button>
-                  </div>
-                </div>
+                  </CardMobileActions>
+                </CardMobile>
               ))
             )}
           </div>
@@ -1717,228 +1776,108 @@ export function LavorazioniView() {
         </ShellCard>
 
         <ShellCard title="Archivio lavorazioni">
-          <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <button
-                  type="button"
-                  onClick={() => setCreateOpen(true)}
-                  className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
-                  disabled={mutPending || !createdBy || !canEditWorkOrders}
-                  title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : !createdBy ? "Accedi per creare una lavorazione." : undefined}
-                >
-                  + Nuova lavorazione
-                </button>
-                <GestionaleSearchField
-                  id="lavorazioni-storico-search"
-                  value={storicoSearchInput}
-                  onChange={(e) => setStoricoSearchInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      flushStoricoSearch();
-                    }
-                  }}
-                  placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-                  aria-label="Cerca in archivio lavorazioni"
-                  wrapperClassName="flex-1 sm:min-w-[12rem]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setFiltriStoricoEspansi((o) => !o)}
-                  className={`${dsPageToolbarBtn} relative h-11 min-w-[8.25rem] shrink-0 gap-2 px-3 text-sm sm:ml-auto`}
-                  aria-expanded={filtriStoricoEspansi}
-                >
-                  Filtri
-                  <svg
-                    className={`h-4 w-4 shrink-0 text-[color:var(--cab-primary)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${filtriStoricoEspansi ? "rotate-180" : ""}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                  {hasStoricoClientFilters ? (
-                    <span
-                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]"
-                      title="Filtri attivi"
-                      aria-hidden
-                    />
-                  ) : null}
-                </button>
-              </div>
-              <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
-                    <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{sortedChiuse.length}</span>
-                    <span>risultat{sortedChiuse.length === 1 ? "o" : "i"}</span>
-                  </span>
-                  {hasStoricoClientFilters ? (
-                    <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
-                      Filtri attivi
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                  <button
-                    type="button"
-                    className={dsPageToolbarBtn}
-                    onClick={() => {
-                      setStoricoSearchInput("");
-                      setStoricoSearchApplied("");
-                    }}
-                  >
-                    Pulisci ricerca
-                  </button>
-                  <button type="button" className={dsPageToolbarBtn} onClick={resetStoricoFilters}>
-                    Reimposta filtri
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                filtriStoricoEspansi ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-              }`}
-            >
-              <div className="min-h-0 overflow-hidden">
-                <div className="border-t border-[color:var(--cab-border)] pt-3" aria-label="Filtri archivio lavorazioni">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-                      Stato archivio
-                      <FilterSelectWrap>
-                        <select
-                          className={selectLavorazioniFilter}
-                          value={filtroStatoArchivio}
-                          onChange={(e) => setFiltroStatoArchivio(e.target.value)}
-                          aria-label="Filtra archivio per stato"
-                        >
-                          <option value="__tutti__">Tutti gli stati</option>
-                          {statiChiusiOpts.map((s) => (
-                            <option key={s.id} value={s.id}>
-                              {statoLavorazioneLabel(s.id, statiOpts)}
-                            </option>
-                          ))}
-                        </select>
-                      </FilterSelectWrap>
-                    </label>
-                    <label className="flex min-w-0 flex-col gap-1 text-xs text-zinc-600 dark:text-zinc-400">
-                      Mese uscita
-                      <FilterSelectWrap>
-                        <select className={selectLavorazioniFilter} value={meseYyyyMm} onChange={(e) => setMeseYyyyMm(e.target.value)}>
-                          <option value="__tutti__">Tutti</option>
-                          {mesiChiuse.map((m) => (
-                            <option key={m} value={m}>
-                              {m}
-                            </option>
-                          ))}
-                        </select>
-                      </FilterSelectWrap>
-                    </label>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className={`mt-4 hidden ${dsTableWrap} ${dsScrollbar} lavorazioni-scroll-scope max-w-full overflow-x-hidden md:block`}>
-            <table className={`${dsTable} w-full table-fixed`}>
-              <colgroup>
-                <col className="w-[6.5%]" />
-                <col className="w-[13%]" />
-                <col className="w-[9%]" />
-                <col className="w-[12%]" />
-                <col className="w-[9%]" />
-                <col className="w-[11%]" />
-                <col className="w-[9%]" />
-                <col className="w-[7%]" />
-                <col className="w-[9%]" />
-                <col className="w-[9.5%]" />
-              </colgroup>
-              <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
-                <tr>
-                  <SortTh
-                    label="Data ingresso"
+          <GestionaleListTable
+            visibilityClass="hidden md:block"
+            colgroup={
+              <>
+                <col className={lavTableColIngressoClass} />
+                <col className={lavTableColClienteClass} />
+                <col className={lavTableColCantiereClass} />
+                <col className={lavTableColAttrezzaturaClass} />
+                <col className={lavTableColIdentificazioneClass} />
+                <col className={lavTableColNoteClass} />
+                <col style={archivioMiddleColStyle} />
+                <col style={archivioMiddleColStyle} />
+                <col style={addettoPillColStyle} />
+                <col className={lavTableColAzioniClass} />
+              </>
+            }
+            headRow={
+              <>
+                  <GlobalTableSortTh
+                    label="Ingresso"
                     columnKey="ingresso"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
+                    align="left"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <SortTh
-                    label="Cliente / Util."
+                  <GlobalTableSortTh
+                    label="Cliente"
                     columnKey="cliente"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
+                    align="left"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Cantiere"
                     columnKey="cantiere"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
+                    align="left"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Attrezzatura"
                     columnKey="macchina"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
+                    align="left"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <SortTh
-                    label="Targa / Matr. / Scud."
+                  <GlobalTableSortTh
+                    label="Identificazione"
                     columnKey="mezzoIdent"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
+                    align="left"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Note"
                     columnKey="note"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
+                    align="left"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <SortTh
-                    label="Data completamento"
+                  <GlobalTableSortTh
+                    label="Completamento"
                     columnKey="completamento"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
+                    align="center"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Ore lavoro"
                     columnKey="oreTotali"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
+                    align="center"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <SortTh
+                  <GlobalTableSortTh
                     label="Addetto"
                     columnKey="addetto"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
+                    align="center"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
-                  <th className="px-1.5 py-1.5 text-right align-middle text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                    AZIONI
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {pagedChiuse.length === 0 ? (
-                  <tr className={dsTableRow}>
-                    <td colSpan={10} className="px-3 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                      {hasStoricoClientFilters
-                        ? "Nessun record corrisponde alla ricerca o allo stato selezionato (nel periodo scelto)."
-                        : "Nessun record in archivio con i filtri correnti."}
-                    </td>
-                  </tr>
-                ) : (
-                  pagedChiuse.map((row) => {
+                  <GestionaleListTableActionsHead />
+              </>
+            }
+            empty={pagedChiuse.length === 0}
+            emptyMessage={
+              hasPageClientFilters || navMezzoFilter
+                ? "Nessun record in archivio corrisponde alla ricerca o ai filtri selezionati."
+                : "Nessun record in archivio."
+            }
+            colSpan={10}
+          >
+                  {pagedChiuse.map((row) => {
                     const flash = flashRowId === row.id || navBulkFlashIds.has(row.id);
                     const telaio = telaioLabel(row, schedeStore);
                     return (
@@ -1955,8 +1894,8 @@ export function LavorazioniView() {
                           .filter(Boolean)
                           .join(" ")}
                       >
-                        <td className={`${lavTableTd} whitespace-nowrap text-xs tabular-nums text-zinc-700 dark:text-zinc-300`}>
-                          {fmtDay(row.data_ingresso ?? row.created_at)}
+                        <td className={lavTableTd}>
+                          <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
                         </td>
                         <td className={lavTableTd}>
                           <ClienteUtilizzatoreCell row={row} schedeStore={schedeStore} />
@@ -1976,56 +1915,64 @@ export function LavorazioniView() {
                         <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
                           <span className="line-clamp-2">{(row.note ?? "").trim() || "—"}</span>
                         </td>
-                        <td className={`${lavTableTd} whitespace-nowrap text-xs tabular-nums text-zinc-700 dark:text-zinc-300`}>
-                          {fmtDay(dataCompletamentoIso(row))}
+                        <td className={lavTableTdCenter}>
+                          <LavorazioneIngressoDateCellFromIso iso={dataCompletamentoIso(row)} align="center" />
                         </td>
-                        <td className={`${lavTableTd} whitespace-nowrap text-xs tabular-nums text-zinc-700 dark:text-zinc-300`}>
-                          {oreLavoroLabel(row, schedeStore)}
+                        <td className={lavTableTdCenter}>{oreLavoroLabel(row, schedeStore)}</td>
+                        <td className={lavTableTdPill}>
+                          <div className={lavTableTdPillWrap} style={addettoPillWrapStyle}>
+                            <span className={`whitespace-nowrap ${lavTablePillTextClass} text-zinc-800 dark:text-zinc-100`}>
+                              {addettoLabel(row, schedeStore, defaultAddetto)}
+                            </span>
+                          </div>
                         </td>
-                        <td className={`${lavTableTd} min-w-0 text-sm text-zinc-700 dark:text-zinc-200`}>
-                          <span className="line-clamp-2 break-words">{addettoLabel(row, schedeStore, defaultAddetto)}</span>
-                        </td>
-                        <td className={`${dsTableTdActions} overflow-hidden !px-0.5`}>
+                        <td className={lavTableTdAzioni}>
                           <div className={lavTableActionsRow}>
-                            <button type="button" className={`${dsTableActionBtnInfo} ${lavTableActionCompact}`} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}>
+                            <button type="button" className={lavTableActionBtnInfo} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}>
                               <IconInfo />
                             </button>
-                            <button type="button" className={`${dsTableActionBtnPrimary} ${lavTableActionCompact} relative`} title="Apri schede lavorazione" aria-label="Apri schede lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "schede" })}>
+                            <button
+                              type="button"
+                              className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
+                              title="Apri schede lavorazione"
+                              aria-label="Apri schede lavorazione"
+                              onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "schede" })}
+                            >
                               <IconSchede />
-                              <span className="pointer-events-none absolute right-0 top-0 rounded-full border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-0.5 text-[8px] font-bold leading-3 text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]" aria-hidden>
+                              <span className={dsTableActionBadge} aria-hidden>
                                 {schedeCountForRow(row, schedeStore)}/3
                               </span>
                             </button>
-                            <button type="button" className={`${dsTableActionBtnSecondary} ${lavTableActionCompact}`} title="Ripristina in lavorazione" aria-label="Ripristina in lavorazione" disabled={!canEditWorkOrders || mutPending || loading} onClick={() => submitRipristinaInLavorazione(row)}>
-                              <IconCloseWork />
+                            <button type="button" className={lavTableActionBtnSecondary} title="Ripristina in lavorazione" aria-label="Ripristina in lavorazione" disabled={!canEditWorkOrders || mutPending || loading} onClick={() => submitRipristinaInLavorazione(row)}>
+                              <IconRipristinaDaArchivio />
                             </button>
                           </div>
                         </td>
                       </tr>
                     );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
+                  })}
+          </GestionaleListTable>
 
           <div className="mt-4 space-y-3 md:hidden">
             {pagedChiuse.length === 0 ? (
               <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                {hasStoricoClientFilters
-                  ? "Nessun record corrisponde alla ricerca o allo stato selezionato (nel periodo scelto)."
-                  : "Nessun record in archivio con i filtri correnti."}
+                {hasPageClientFilters || navMezzoFilter
+                  ? "Nessun record in archivio corrisponde alla ricerca o ai filtri selezionati."
+                  : "Nessun record in archivio."}
               </p>
             ) : (
               pagedChiuse.map((row) => {
               const telaio = telaioLabel(row, schedeStore);
               return (
-                <div key={row.id} className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900/90">
+                <CardMobile key={row.id}>
                   <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{macchinaLabel(row, schedeStore)}</p>
                   {telaio !== "—" ? <p className="text-xs text-zinc-500">Telaio: {telaio}</p> : null}
                   <MezzoIdentStackCell row={row} schedeStore={schedeStore} />
                   <div className="mt-2 grid gap-1 text-xs text-zinc-600 dark:text-zinc-300">
-                    <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Ingresso:</span> {fmtDay(row.data_ingresso ?? row.created_at)}</p>
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ingresso</span>
+                      <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
+                    </div>
                     <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Completamento:</span> {fmtDay(dataCompletamentoIso(row))}</p>
                     <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Cliente:</span> {clienteLabel(row, schedeStore)}</p>
                     <p className="pl-0 text-[11px] text-zinc-500">{utilizzatoreLabel(row, schedeStore)}</p>
@@ -2034,21 +1981,27 @@ export function LavorazioniView() {
                     <p><span className="font-semibold uppercase tracking-wide text-zinc-500">Addetto:</span> {addettoLabel(row, schedeStore, defaultAddetto)}</p>
                   </div>
                   <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{(row.note ?? "").trim() || "—"}</p>
-                  <div className={`mt-3 w-full min-w-0 ${dsTableActionsGroupStart}`}>
+                  <CardMobileActions>
                     <button type="button" className={dsTableActionBtnInfo} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}>
                       <IconInfo />
                     </button>
-                    <button type="button" className={`${dsTableActionBtnPrimary} relative`} title="Apri schede lavorazione" aria-label="Apri schede lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "schede" })}>
+                    <button
+                      type="button"
+                      className={`${dsTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
+                      title="Apri schede lavorazione"
+                      aria-label="Apri schede lavorazione"
+                      onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "schede" })}
+                    >
                       <IconSchede />
-                      <span className="pointer-events-none absolute right-0 top-0 rounded-full border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-0.5 text-[8px] font-bold leading-3 text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]" aria-hidden>
+                      <span className={dsTableActionBadge} aria-hidden>
                         {schedeCountForRow(row, schedeStore)}/3
                       </span>
                     </button>
                     <button type="button" className={dsTableActionBtnSecondary} title="Ripristina in lavorazione" aria-label="Ripristina in lavorazione" disabled={!canEditWorkOrders || mutPending || loading} onClick={() => submitRipristinaInLavorazione(row)}>
-                      <IconCloseWork />
+                      <IconRipristinaDaArchivio />
                     </button>
-                  </div>
-                </div>
+                  </CardMobileActions>
+                </CardMobile>
               );
             })
             )}
@@ -2074,13 +2027,17 @@ export function LavorazioniView() {
               <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
                 {lavModificheLogQuery.isLoading ? (
                   <p className="text-sm text-zinc-500 dark:text-zinc-400">Caricamento log…</p>
-                ) : logVmList.length === 0 ? (
+                ) : logDisplayEntries.length === 0 ? (
                   <GestionaleLogEmpty message="Nessuna voce di log da mostrare." />
                 ) : (
                   <GestionaleLogList>
-                    {logPanelItems.map((item, i) => (
-                      <li key={item.id} className="list-none">
-                        <GestionaleLogEntryFourLines vm={logVmList[i]!} />
+                    {logDisplayEntries.map((entry) => (
+                      <li key={entry.id} className="list-none">
+                        <GestionaleLogEntryFourLines
+                          vm={entry.vm}
+                          onClick={() => focusLavorazioneInTable(entry.row.entita_id)}
+                          title="Vai alla riga in tabella"
+                        />
                       </li>
                     ))}
                   </GestionaleLogList>
@@ -2142,6 +2099,15 @@ export function LavorazioniView() {
           if (!concludeLav.isPending) setConcludiConfirmRow(null);
         }}
         onConfirm={confirmConcludiLavorazione}
+      />
+
+      <LavorazioneEliminaConfirmDialog
+        open={eliminaConfirmRow != null}
+        pending={removeLav.isPending}
+        onCancel={() => {
+          if (!removeLav.isPending) setEliminaConfirmRow(null);
+        }}
+        onConfirm={confirmEliminaLavorazione}
       />
 
     </>

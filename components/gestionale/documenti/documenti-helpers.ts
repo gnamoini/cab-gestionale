@@ -1,6 +1,5 @@
 import type { CatalogMacchina, CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import { resolveDocumentoFileUrl } from "@/lib/documenti/documenti-db-mapper";
-import { mezziForMarcaModello } from "@/lib/documenti/documenti-catalog";
 import {
   formatDocumentoRigaSintetica,
   labelApplicabilitaBreve,
@@ -93,6 +92,25 @@ export function formatLinkedDestinations(
 export type DocumentiSortKey = "nome" | "marca" | "macchina" | "caricatoIl" | "categoria";
 export type DocumentiSortPhase = "natural" | "asc" | "desc";
 
+const MARCA_NON_ASSEGNATA_SENTINELS = new Set(["", "—", "-", "n/a", "na"]);
+
+/** True se il documento non ha una marca valida (vuota o segnaposto). */
+export function documentoHaMarcaAssegnata(doc: DocumentoGestionale): boolean {
+  const r = resolveDocumentoApplicazione(doc);
+  const m = (r.marcaKey ?? r.marca).trim().toLowerCase();
+  return m.length > 0 && !MARCA_NON_ASSEGNATA_SENTINELS.has(m);
+}
+
+export function documentoSenzaMarca(doc: DocumentoGestionale): boolean {
+  return !documentoHaMarcaAssegnata(doc);
+}
+
+function compareSenzaMarcaPrima(a: DocumentoGestionale, b: DocumentoGestionale): number {
+  const sa = documentoSenzaMarca(a) ? 0 : 1;
+  const sb = documentoSenzaMarca(b) ? 0 : 1;
+  return sa - sb;
+}
+
 export function compareDocs(
   a: DocumentoGestionale,
   b: DocumentoGestionale,
@@ -101,6 +119,8 @@ export function compareDocs(
 ): number {
   const ra = resolveDocumentoApplicazione(a);
   const rb = resolveDocumentoApplicazione(b);
+  const senzaMarcaCmp = compareSenzaMarcaPrima(a, b);
+  if (senzaMarcaCmp !== 0) return senzaMarcaCmp;
   if (phase === "natural" || key === null) {
     const m = (ra.marcaKey ?? ra.marca).localeCompare(rb.marcaKey ?? rb.marca, "it");
     if (m !== 0) return m;
@@ -125,9 +145,24 @@ export function compareDocs(
   }
 }
 
-export type ArchiveDocMezzoNode = { mezzo: MezzoGestito; files: DocumentoGestionale[] };
-export type ArchiveDocModelloNode = { modello: CatalogMacchina; files: DocumentoGestionale[]; mezzi: ArchiveDocMezzoNode[] };
+export type ArchiveDocModelloNode = { modello: CatalogMacchina; files: DocumentoGestionale[] };
 export type ArchiveDocMarcaNode = { marca: CatalogMarca; filesMarca: DocumentoGestionale[]; modelli: ArchiveDocModelloNode[] };
+
+/** Conteggio documenti per id marca (da elenco filtrato, non paginato). */
+export function buildDocumentiCountByMarcaId(
+  docs: DocumentoGestionale[],
+  catalog: CatalogMarca[],
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const m of catalog) counts.set(m.id, 0);
+  for (const d of docs) {
+    if (documentoSenzaMarca(d)) continue;
+    const r = resolveDocumentoApplicazione(d);
+    const mar = catalog.find((m) => sameMarca(m.nome, r.marcaKey ?? r.marca));
+    if (mar) counts.set(mar.id, (counts.get(mar.id) ?? 0) + 1);
+  }
+  return counts;
+}
 
 /** Solo presentazione UI: listini di marca vs altri documenti con applicabilità «marca». */
 export function partitionMarcaLevelDocs(filesMarca: DocumentoGestionale[]): {
@@ -154,8 +189,9 @@ function sameModello(a: string, b: string): boolean {
 export function documentoCollocatoInCatalogo(
   doc: DocumentoGestionale,
   catalog: CatalogMarca[],
-  mezzi: MezzoGestito[],
+  _mezzi: MezzoGestito[],
 ): boolean {
+  if (documentoSenzaMarca(doc)) return false;
   const r = resolveDocumentoApplicazione(doc);
   const marcaNome = (r.marcaKey ?? r.marca).trim();
   const mar = catalog.find((m) => sameMarca(m.nome, marcaNome));
@@ -166,21 +202,13 @@ export function documentoCollocatoInCatalogo(
     if (!modNome || modNome === "—") return false;
     return mar.macchine.some((mac) => sameModello(mac.nome, modNome));
   }
-  if (r.applicabilita === "macchina") {
-    const id = r.mezzoId?.trim();
-    if (!id) return false;
-    const mz = mezzi.find((z) => z.id === id);
-    if (!mz) return false;
-    if (!sameMarca(mz.marca, marcaNome)) return false;
-    return mar.macchine.some((mac) => sameModello(mac.nome, mz.modello));
-  }
   return false;
 }
 
-/** Albero: marca → (documenti globali marca) → modello → (documenti modello) → mezzo → (documenti macchina). */
+/** Albero: marca → (documenti intera marca) → modello → (documenti modello). */
 export function buildDocumentiViewTree(
   catalog: CatalogMarca[],
-  mezzi: MezzoGestito[],
+  _mezzi: MezzoGestito[],
   sortedDocs: DocumentoGestionale[],
   sortColumn: DocumentiSortKey | null,
   sortPhase: DocumentiSortPhase,
@@ -191,6 +219,7 @@ export function buildDocumentiViewTree(
     const modelli: ArchiveDocModelloNode[] = [];
 
     for (const d of sortedDocs) {
+      if (documentoSenzaMarca(d)) continue;
       const r = resolveDocumentoApplicazione(d);
       if (r.applicabilita === "marca" && sameMarca(r.marcaKey ?? r.marca, marca.nome)) filesMarca.push(d);
     }
@@ -199,6 +228,7 @@ export function buildDocumentiViewTree(
     for (const mac of marca.macchine) {
       const filesModello: DocumentoGestionale[] = [];
       for (const d of sortedDocs) {
+        if (documentoSenzaMarca(d)) continue;
         const r = resolveDocumentoApplicazione(d);
         if (r.applicabilita !== "modello") continue;
         if (!sameMarca(r.marcaKey ?? r.marca, marca.nome)) continue;
@@ -207,23 +237,10 @@ export function buildDocumentiViewTree(
       }
       filesModello.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase));
 
-      const mezziList = mezziForMarcaModello(mezzi, marca.nome, mac.nome);
-      const mezziNodes: ArchiveDocMezzoNode[] = mezziList.map((mz) => {
-        const files: DocumentoGestionale[] = [];
-        for (const d of sortedDocs) {
-          const r = resolveDocumentoApplicazione(d);
-          if (r.applicabilita !== "macchina") continue;
-          if (r.mezzoId && r.mezzoId === mz.id) files.push(d);
-        }
-        files.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase));
-        return { mezzo: mz, files };
-      });
-
-      if (filesModello.length > 0 || mezziList.length > 0) {
+      if (filesModello.length > 0) {
         modelli.push({
           modello: mac,
           files: filesModello,
-          mezzi: mezziNodes,
         });
       }
     }
@@ -240,7 +257,6 @@ export function docMatchesFilters(
   opts: {
     filtroMarca: string;
     filtroModello: string;
-    filtroMezzoId: string;
     filtroCategoria: DocumentoGestionale["categoria"] | "__tutti__";
     filtroTipo: DocumentoTipoFile | "__tutti__";
   },
@@ -250,6 +266,8 @@ export function docMatchesFilters(
   if (opts.filtroCategoria !== "__tutti__" && doc.categoria !== opts.filtroCategoria) return false;
   if (opts.filtroTipo !== "__tutti__" && doc.tipoFile !== opts.filtroTipo) return false;
 
+  if (documentoSenzaMarca(doc)) return true;
+
   if (opts.filtroMarca !== "__tutti__") {
     const mar = catalog.find((m) => m.id === opts.filtroMarca);
     if (!mar || !sameMarca(r.marcaKey ?? r.marca, mar.nome)) return false;
@@ -258,10 +276,9 @@ export function docMatchesFilters(
     const mar = opts.filtroMarca !== "__tutti__" ? catalog.find((m) => m.id === opts.filtroMarca) : null;
     const modelliScope = mar?.macchine ?? catalog.flatMap((m) => m.macchine);
     const mac = modelliScope.find((x) => x.id === opts.filtroModello);
-    if (!mac || !sameModello(r.modelloKey ?? r.macchina, mac.nome)) return false;
-  }
-  if (opts.filtroMezzoId !== "__tutti__") {
-    if (r.applicabilita !== "macchina" || r.mezzoId !== opts.filtroMezzoId) return false;
+    if (!mac) return false;
+    if (r.applicabilita === "marca") return true;
+    if (!sameModello(r.modelloKey ?? r.macchina, mac.nome)) return false;
   }
   return true;
 }
@@ -276,7 +293,7 @@ export function docMatchesSearch(doc: DocumentoGestionale, catalog: CatalogMarca
     doc.nome,
     r.marcaKey ?? r.marca,
     r.modelloKey ?? r.macchina,
-    r.mezzoId ?? "",
+    documentoSenzaMarca(doc) ? "senza marca" : "",
     labelCategoria(doc.categoria),
     labelTipoFile(doc.tipoFile),
     labelApplicabilitaBreve(r.applicabilita!),

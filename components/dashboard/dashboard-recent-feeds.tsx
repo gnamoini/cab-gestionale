@@ -10,8 +10,8 @@ import {
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import {
+  buildLogModificheDisplayEntries,
   buildLogModificheFocusHref,
-  buildLogModificheGestionaleViewModel,
   logAutoreLabel,
 } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
@@ -28,19 +28,27 @@ export function DashboardRecentFeeds() {
   const magLogsQ = useLogListQuery({ entita: "magazzino_ricambi", limit: 12 }, { enabled: !staging, staleTime: 15_000 });
 
   const lavSlice = useMemo(() => {
-    return (lavLogsQ.data ?? []).slice(0, 8).map((row) => ({
-      row,
-      vm: buildLogModificheGestionaleViewModel(row, logAutoreLabel(row, user?.id ?? null, authorName)),
-      href: buildLogModificheFocusHref(row),
-    }));
+    return buildLogModificheDisplayEntries(lavLogsQ.data ?? [], (row) =>
+      logAutoreLabel(row, user?.id ?? null, authorName),
+    )
+      .slice(0, 8)
+      .map((entry) => ({
+        id: entry.id,
+        vm: entry.vm,
+        href: buildLogModificheFocusHref(entry.row),
+      }));
   }, [authorName, lavLogsQ.data, user?.id]);
 
   const magSlice = useMemo(() => {
-    return (magLogsQ.data ?? []).slice(0, 8).map((row) => ({
-      row,
-      vm: buildLogModificheGestionaleViewModel(row, logAutoreLabel(row, user?.id ?? null, authorName)),
-      href: buildLogModificheFocusHref(row),
-    }));
+    return buildLogModificheDisplayEntries(magLogsQ.data ?? [], (row) =>
+      logAutoreLabel(row, user?.id ?? null, authorName),
+    )
+      .slice(0, 8)
+      .map((entry) => ({
+        id: entry.id,
+        vm: entry.vm,
+        href: buildLogModificheFocusHref(entry.row),
+      }));
   }, [authorName, magLogsQ.data, user?.id]);
 
   if (staging) return null;
@@ -56,8 +64,8 @@ export function DashboardRecentFeeds() {
             <GestionaleLogEmpty message="Nessuna modifica registrata. Le operazioni su Lavorazioni compaiono qui automaticamente." />
           ) : (
             <GestionaleLogList>
-              {lavSlice.map(({ row, vm, href }) => (
-                <li key={row.id} className="list-none">
+              {lavSlice.map(({ id, vm, href }) => (
+                <li key={id} className="list-none">
                   <GestionaleLogEntryFourLines
                     vm={vm}
                     onClick={href ? () => router.push(href) : undefined}
@@ -79,8 +87,8 @@ export function DashboardRecentFeeds() {
             <GestionaleLogEmpty message="Nessuna modifica registrata. Le operazioni su Magazzino compaiono qui automaticamente." />
           ) : (
             <GestionaleLogList>
-              {magSlice.map(({ row, vm, href }) => (
-                <li key={row.id} className="list-none">
+              {magSlice.map(({ id, vm, href }) => (
+                <li key={id} className="list-none">
                   <GestionaleLogEntryFourLines
                     vm={vm}
                     onClick={href ? () => router.push(href) : undefined}

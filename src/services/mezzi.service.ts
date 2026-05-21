@@ -2,12 +2,18 @@
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
-import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "mezzi";
+
+function oggettoMezzo(r: MezzoRow) {
+  const ident = r.targa?.trim() || r.matricola?.trim() || "";
+  const parts = [r.cliente?.trim(), ident].filter(Boolean);
+  return parts.length ? auditContext(parts.join(" — ")) : undefined;
+}
 
 export type MezzoFilters = {
   cliente?: string;
@@ -101,7 +107,7 @@ export const mezziService = {
       const { data: row, error } = await c.from("mezzi").insert(data).select("*").single();
       if (error) return err(error.message);
       const r = row as MezzoRow;
-      await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r) });
+      await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoMezzo(r)) });
       return success(r);
     } catch (e) {
       return serviceFailFromError(e);
@@ -122,7 +128,7 @@ export const mezziService = {
         entita: ENTITA,
         entita_id: id,
         azione: "UPDATE",
-        payload: auditDiff(before, r),
+        payload: auditDiff(before, r, oggettoMezzo(r)),
       });
       return success(r);
     } catch (e) {
@@ -149,7 +155,7 @@ export const mezziService = {
           entita: ENTITA,
           entita_id: id,
           azione: "DELETE",
-          payload: auditSnapshot(existing),
+          payload: auditSnapshot(existing as MezzoRow, oggettoMezzo(existing as MezzoRow)),
         });
       }
       const { error } = await c.from("mezzi").delete().eq("id", id);

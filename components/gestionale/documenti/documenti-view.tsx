@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { documentiService } from "@/src/services/documenti.service";
@@ -25,20 +25,21 @@ import {
   type DocumentiLogStored,
 } from "@/lib/documenti/documenti-change-log-storage";
 import { CAB_DOCUMENTI_LOG_REFRESH } from "@/lib/sistema/cab-events";
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import {
   erpBtnNeutral,
   erpBtnNuovaLavorazione,
   erpFocus,
-  FilterSelectWrap,
   selectLavorazioniFilter,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import {
   dsInput,
   dsPageToolbarBtn,
   dsStackPage,
   dsStickyToolbar,
   GESTIONALE_SEARCH_PLACEHOLDER,
-  dsTableActionsGroupStart,
+  dsTableActionsGroupEnd,
   dsTableActionBtnPrimary,
   dsTableActionBtnDanger,
   dsTableActionBtnInfo,
@@ -56,11 +57,13 @@ import {
 import { buildModificaRigaFromChanges, type CampoChangeLike } from "@/lib/gestionale-log/view-model";
 import { useAuth } from "@/context/auth-context";
 import {
+  buildDocumentiCountByMarcaId,
   buildDocumentiViewTree,
   compareDocs,
   docMatchesFilters,
   docMatchesSearch,
   documentoCollocatoInCatalogo,
+  documentoSenzaMarca,
   formatDocumentoRigaSintetica,
   getDocumentApriHref,
   labelCategoria,
@@ -123,7 +126,6 @@ function diffDocumentiMetadati(before: DocumentoGestionale, after: DocumentoGest
   push("Ambito", before.applicabilita ?? "", after.applicabilita ?? "");
   push("Marca (assegnazione)", before.marcaKey ?? before.marca, after.marcaKey ?? after.marca);
   push("Modello (assegnazione)", before.modelloKey ?? before.macchina, after.modelloKey ?? after.macchina);
-  push("Id mezzo", before.mezzoId ?? "", after.mezzoId ?? "");
   push("Marca (legacy)", before.marca, after.marca);
   push("Modello (legacy)", before.macchina, after.macchina);
   push("Dimensione (KB)", before.dimensioneKb, after.dimensioneKb);
@@ -201,71 +203,117 @@ function ArchiveDocRow({
   canDelete: boolean;
 }) {
   const href = getDocumentApriHref(doc);
+  const stop = (e: MouseEvent) => e.stopPropagation();
+  const senzaMarca = documentoSenzaMarca(doc);
+
+  const handleEditClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!canEdit) return;
+    if (!window.confirm(`Modificare i metadati di «${doc.nome}»?`)) return;
+    onEdit();
+  };
+
+  const handleDeleteClick = (e: MouseEvent) => {
+    e.stopPropagation();
+    if (!canDelete) return;
+    onDelete();
+  };
+
+  const actionButtons = (
+    <>
+      <button
+        type="button"
+        className={dsTableActionBtnPrimary}
+        title="Apri file"
+        aria-label="Apri file"
+        disabled={!href}
+        onClick={() => {
+          if (!href) onToast("File non disponibile");
+          else onApri();
+        }}
+      >
+        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className={dsTableActionBtnInfo}
+        title="Scheda documento"
+        aria-label="Visualizza scheda documento"
+        onClick={onInfo}
+      >
+        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className={dsTableActionBtnPrimary}
+        title={canEdit ? "Modifica" : READONLY_PERMISSION_HINT}
+        aria-label="Modifica documento"
+        disabled={!canEdit}
+        onClick={handleEditClick}
+      >
+        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        className={dsTableActionBtnDanger}
+        title={canDelete ? "Elimina" : READONLY_PERMISSION_HINT}
+        aria-label="Elimina documento"
+        disabled={!canDelete}
+        onClick={handleDeleteClick}
+      >
+        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </button>
+    </>
+  );
 
   return (
     <li
       id={`documento-row-${doc.id}`}
       role="option"
       aria-selected={selected}
-      className={`group flex cursor-pointer items-center gap-2.5 border-b border-[color:var(--cab-border)] px-2.5 py-2 transition-[background-color] duration-150 last:border-b-0 ${
-        selected
-          ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]"
-          : "hover:bg-[var(--cab-hover)]"
-      }`}
+      className={`group flex w-full cursor-pointer flex-col gap-2 border-b border-[color:var(--cab-border)] px-2.5 py-2 transition-[background-color] duration-150 last:border-b-0 md:flex-row md:items-center md:justify-between md:gap-3 ${
+        senzaMarca
+          ? "border-l-4 border-l-[color:var(--cab-warning)] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-surface))]"
+          : selected
+            ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]"
+            : "hover:bg-[var(--cab-hover)]"
+      } ${selected && !senzaMarca ? "ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]" : ""}`}
       onClick={onSelect}
     >
-      <DocGlyph doc={doc} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-[color:var(--cab-text)]">{doc.nome}</p>
-        <p className="mt-0.5 truncate text-[11px] text-[color:var(--cab-text-muted)]">
-          {formatDocumentoRigaSintetica(doc)} · {labelCategoria(doc.categoria)} · {labelTipoFile(doc.tipoFile)}
-        </p>
+      <div className="flex min-w-0 flex-1 items-center gap-2.5">
+        <DocGlyph doc={doc} />
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
+            <p className="truncate text-sm font-semibold text-[color:var(--cab-text)]">{doc.nome}</p>
+            {senzaMarca ? (
+              <span
+                className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[color:color-mix(in_srgb,var(--cab-warning)_22%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-warning)_50%,var(--cab-border))]"
+                title="Assegna una marca per collocare il documento nell'archivio"
+              >
+                <span aria-hidden>⚠️</span>
+                Senza marca
+              </span>
+            ) : null}
+          </div>
+          <p className="mt-0.5 truncate text-[11px] text-[color:var(--cab-text-muted)]">
+            {formatDocumentoRigaSintetica(doc)} · {labelCategoria(doc.categoria)} · {labelTipoFile(doc.tipoFile)}
+          </p>
+        </div>
       </div>
-      <div className={`${dsTableActionsGroupStart} shrink-0`} onClick={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          className={dsTableActionBtnPrimary}
-          title="Apri file"
-          aria-label="Apri file"
-          disabled={!href}
-          onClick={() => {
-            if (!href) onToast("File non disponibile");
-            else onApri();
-          }}
-        >
-          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className={dsTableActionBtnInfo}
-          title="Scheda documento"
-          aria-label="Visualizza scheda documento"
-          onClick={onInfo}
-        >
-          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-          </svg>
-        </button>
-        <button type="button" className={dsTableActionBtnPrimary} title={canEdit ? "Modifica" : READONLY_PERMISSION_HINT} aria-label="Modifica documento" disabled={!canEdit} onClick={onEdit}>
-          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-        </button>
-        <button
-          type="button"
-          className={dsTableActionBtnDanger}
-          title={canDelete ? "Elimina" : READONLY_PERMISSION_HINT}
-          aria-label="Elimina documento"
-          disabled={!canDelete}
-          onClick={onDelete}
-        >
-          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-        </button>
+      <div
+        className={`${dsTableActionsGroupEnd} w-full shrink-0 justify-end pt-2 md:ml-auto md:w-auto md:pt-0`}
+        onClick={stop}
+      >
+        {actionButtons}
       </div>
     </li>
   );
@@ -308,7 +356,6 @@ export function DocumentiView() {
   const [search, setSearch] = useState("");
   const [filtroMarca, setFiltroMarca] = useState<string>("__tutti__");
   const [filtroModello, setFiltroModello] = useState<string>("__tutti__");
-  const [filtroMezzoId, setFiltroMezzoId] = useState<string>("__tutti__");
   const [filtroCategoria, setFiltroCategoria] = useState<DocumentoGestionale["categoria"] | "__tutti__">("__tutti__");
   const [filtriEspansi, setFiltriEspansi] = useState(false);
 
@@ -317,7 +364,6 @@ export function DocumentiView() {
 
   const [expandedMarche, setExpandedMarche] = useState<Set<string>>(() => new Set());
   const [expandedModelli, setExpandedModelli] = useState<Set<string>>(() => new Set());
-  const [expandedMezzi, setExpandedMezzi] = useState<Set<string>>(() => new Set());
   const documentiMarcheInitDone = useRef(false);
 
   const [uploadOpen, setUploadOpen] = useState(false);
@@ -352,18 +398,22 @@ export function DocumentiView() {
   }, [searchParams]);
 
   useEffect(() => {
+    const marcaQ = searchParams.get("marca")?.trim();
+    const modelloQ = searchParams.get("modello")?.trim();
     const mid = searchParams.get("mezzoId")?.trim();
-    if (!mid) return;
-    setFiltroMezzoId(mid);
-    const mezzo = mezziSnap.find((m) => m.id === mid);
-    if (!mezzo) return;
-    const mar = catalog.find((c) => c.nome.trim().toLowerCase() === mezzo.marca.trim().toLowerCase());
+    const mezzo = mid ? mezziSnap.find((m) => m.id === mid) : null;
+    const marcaNome = marcaQ || mezzo?.marca?.trim() || "";
+    const modelloNome = modelloQ || mezzo?.modello?.trim() || "";
+    if (!marcaNome) return;
+    const mar = catalog.find((c) => c.nome.trim().toLowerCase() === marcaNome.toLowerCase());
     if (!mar) return;
+    setFiltroMarca(mar.id);
     setExpandedMarche((p) => new Set(p).add(mar.id));
-    const mac = mar.macchine.find((x) => x.nome.trim().toLowerCase() === mezzo.modello.trim().toLowerCase());
+    if (!modelloNome) return;
+    const mac = mar.macchine.find((x) => x.nome.trim().toLowerCase() === modelloNome.toLowerCase());
     if (!mac) return;
+    setFiltroModello(mac.id);
     setExpandedModelli((p) => new Set(p).add(`${mar.id}::${mac.id}`));
-    setExpandedMezzi((p) => new Set(p).add(`${mar.id}::${mac.id}::${mezzo.id}`));
   }, [searchParams, mezziSnap, catalog]);
 
   useEffect(() => {
@@ -382,23 +432,29 @@ export function DocumentiView() {
         docMatchesFilters(d, catalog, {
           filtroMarca,
           filtroModello,
-          filtroMezzoId,
           filtroCategoria,
           filtroTipo: "__tutti__",
         }) && docMatchesSearch(d, catalog, q),
     );
-  }, [docs, catalog, search, filtroMarca, filtroModello, filtroMezzoId, filtroCategoria]);
+  }, [docs, catalog, search, filtroMarca, filtroModello, filtroCategoria]);
 
-  const sorted = useMemo(() => {
-    const rows = [...filtered];
+  const documentiSenzaMarca = useMemo(() => {
+    const rows = filtered.filter(documentoSenzaMarca);
+    rows.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase));
+    return rows;
+  }, [filtered, sortColumn, sortPhase]);
+
+  const documentiConMarca = useMemo(() => {
+    const rows = filtered.filter((d) => !documentoSenzaMarca(d));
     rows.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase));
     return rows;
   }, [filtered, sortColumn, sortPhase]);
 
   const listPageSize = useResponsiveListPageSize();
   const docListDeps = useMemo(
-    () => `${search}|${filtroMarca}|${filtroModello}|${filtroMezzoId}|${filtroCategoria}|${sortColumn ?? ""}|${sortPhase}|${sorted.length}`,
-    [search, filtroMarca, filtroModello, filtroMezzoId, filtroCategoria, sortColumn, sortPhase, sorted.length],
+    () =>
+      `${search}|${filtroMarca}|${filtroModello}|${filtroCategoria}|${sortColumn ?? ""}|${sortPhase}|${documentiConMarca.length}|${documentiSenzaMarca.length}`,
+    [search, filtroMarca, filtroModello, filtroCategoria, sortColumn, sortPhase, documentiConMarca.length, documentiSenzaMarca.length],
   );
   const {
     page: docPage,
@@ -408,11 +464,11 @@ export function DocumentiView() {
     showPager: showDocPager,
     label: docPagerLabel,
     resetPage: resetDocPage,
-  } = useClientPagination(sorted.length, listPageSize);
+  } = useClientPagination(documentiConMarca.length, listPageSize);
   useEffect(() => {
     resetDocPage();
   }, [docListDeps, listPageSize, resetDocPage]);
-  const sortedPaged = useMemo(() => sliceSortedDocs(sorted), [sorted, sliceSortedDocs, docPage]);
+  const sortedPaged = useMemo(() => sliceSortedDocs(documentiConMarca), [documentiConMarca, sliceSortedDocs, docPage]);
 
   const {
     page: docLogPage,
@@ -428,19 +484,35 @@ export function DocumentiView() {
   }, [logOpen, logEntries.length, listPageSize, resetDocLogPage]);
   const pagedDocLogEntries = useMemo(() => sliceDocLogEntries(logEntries), [logEntries, sliceDocLogEntries, docLogPage]);
 
+  const documentiCountByMarcaId = useMemo(
+    () => buildDocumentiCountByMarcaId(documentiConMarca, catalog),
+    [documentiConMarca, catalog],
+  );
+
   const tree = useMemo(
     () => buildDocumentiViewTree(catalog, mezziSnap, sortedPaged, sortColumn, sortPhase),
     [catalog, mezziSnap, sortedPaged, sortColumn, sortPhase],
   );
 
   const documentiSenzaCollocazione = useMemo(
-    () => sorted.filter((d) => !documentoCollocatoInCatalogo(d, catalog, mezziSnap)),
-    [sorted, catalog, mezziSnap],
+    () =>
+      documentiConMarca.filter(
+        (d) => !documentoCollocatoInCatalogo(d, catalog, mezziSnap),
+      ),
+    [documentiConMarca, catalog, mezziSnap],
   );
 
+  const hasDocumentiInLista = documentiSenzaMarca.length > 0 || documentiConMarca.length > 0;
+
   useEffect(() => {
-    if (selectedDocId && !sortedPaged.some((d) => d.id === selectedDocId)) setSelectedDocId(null);
-  }, [sortedPaged, selectedDocId]);
+    if (
+      selectedDocId &&
+      !documentiSenzaMarca.some((d) => d.id === selectedDocId) &&
+      !sortedPaged.some((d) => d.id === selectedDocId)
+    ) {
+      setSelectedDocId(null);
+    }
+  }, [sortedPaged, documentiSenzaMarca, selectedDocId]);
 
   const didAutoExpandTree = useRef(false);
   useEffect(() => {
@@ -451,19 +523,14 @@ export function DocumentiView() {
       return;
     }
     const modKeys = new Set<string>();
-    const mezKeys = new Set<string>();
     for (const { marca, modelli } of tree) {
       for (const mod of modelli) {
         const mk = `${marca.id}::${mod.modello.id}`;
-        if (mod.files.length > 0 || mod.mezzi.some((m) => m.files.length > 0)) modKeys.add(mk);
-        for (const { mezzo, files } of mod.mezzi) {
-          if (files.length > 0) mezKeys.add(`${marca.id}::${mod.modello.id}::${mezzo.id}`);
-        }
+        if (mod.files.length > 0) modKeys.add(mk);
       }
     }
-    if (modKeys.size === 0 && mezKeys.size === 0) return;
+    if (modKeys.size === 0) return;
     setExpandedModelli((p) => new Set([...p, ...modKeys]));
-    setExpandedMezzi((p) => new Set([...p, ...mezKeys]));
     didAutoExpandTree.current = true;
   }, [tree]);
 
@@ -474,24 +541,6 @@ export function DocumentiView() {
     const mar = catalog.find((m) => m.id === filtroMarca);
     return (mar?.macchine ?? []).map((mac) => ({ id: mac.id, label: mac.nome }));
   }, [catalog, filtroMarca]);
-
-  const mezziFilterOptions = useMemo(() => {
-    if (filtroMarca === "__tutti__" || filtroModello === "__tutti__") {
-      return mezziSnap.map((z) => ({
-        id: z.id,
-        label: `${z.marca} ${z.modello} · ${z.targa || "—"} / ${z.matricola || "—"}`,
-      }));
-    }
-    const mar = catalog.find((m) => m.id === filtroMarca);
-    const mac = mar?.macchine.find((x) => x.id === filtroModello);
-    if (!mar || !mac) return [];
-    return mezziSnap
-      .filter((z) => z.marca.trim().toLowerCase() === mar.nome.trim().toLowerCase() && z.modello.trim().toLowerCase() === mac.nome.trim().toLowerCase())
-      .map((z) => ({
-        id: z.id,
-        label: `${z.targa || "—"} / ${z.matricola || "—"}`,
-      }));
-  }, [catalog, filtroMarca, filtroModello, mezziSnap]);
 
   const sortSelectValue = useMemo(() => {
     if (sortColumn === null || sortPhase === "natural") return "natural";
@@ -598,7 +647,11 @@ export function DocumentiView() {
   const handleDelete = useCallback(
     async (victim: DocumentoGestionale) => {
       if (!canDeleteRecords) return;
-      const ok = window.confirm("Eliminare definitivamente questo documento?");
+      const ok = window.confirm(
+        documentoSenzaMarca(victim)
+          ? `Eliminare definitivamente «${victim.nome}»? Il documento non ha marca assegnata.`
+          : `Eliminare definitivamente «${victim.nome}»?`,
+      );
       if (!ok) return;
       setDocBusy(true);
       try {
@@ -662,38 +715,23 @@ export function DocumentiView() {
     });
   }
 
-  function toggleMezzo(key: string) {
-    setExpandedMezzi((prev) => {
-      const n = new Set(prev);
-      if (n.has(key)) n.delete(key);
-      else n.add(key);
-      return n;
-    });
-  }
-
   const collapseAllTreeGroups = useCallback(() => {
     setExpandedMarche(new Set());
     setExpandedModelli(new Set());
-    setExpandedMezzi(new Set());
     writeDocumentiTreePref("collapsed");
   }, []);
 
   const expandAllTreeGroups = useCallback(() => {
     const mar = new Set<string>();
     const mod = new Set<string>();
-    const mez = new Set<string>();
     for (const { marca, modelli } of tree) {
       mar.add(marca.id);
-      for (const { modello, mezzi } of modelli) {
+      for (const { modello } of modelli) {
         mod.add(`${marca.id}::${modello.id}`);
-        for (const { mezzo } of mezzi) {
-          mez.add(`${marca.id}::${modello.id}::${mezzo.id}`);
-        }
       }
     }
     setExpandedMarche(mar);
     setExpandedModelli(mod);
-    setExpandedMezzi(mez);
     writeDocumentiTreePref("expanded");
   }, [tree]);
 
@@ -705,15 +743,10 @@ export function DocumentiView() {
     return searchActive || expandedModelli.has(`${marcaId}::${modelloId}`);
   }
 
-  function mezzoOpen(marcaId: string, modelloId: string, mezzoId: string) {
-    return searchActive || expandedMezzi.has(`${marcaId}::${modelloId}::${mezzoId}`);
-  }
-
   const resetFiltri = useCallback(() => {
     setSearch("");
     setFiltroMarca("__tutti__");
     setFiltroModello("__tutti__");
-    setFiltroMezzoId("__tutti__");
     setFiltroCategoria("__tutti__");
     setFiltriEspansi(false);
   }, []);
@@ -721,7 +754,6 @@ export function DocumentiView() {
   const hasDocFilters =
     filtroMarca !== "__tutti__" ||
     filtroModello !== "__tutti__" ||
-    filtroMezzoId !== "__tutti__" ||
     filtroCategoria !== "__tutti__";
 
   return (
@@ -792,8 +824,12 @@ export function DocumentiView() {
             <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
-                  <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{sorted.length}</span>
-                  <span>risultat{sorted.length === 1 ? "o" : "i"}</span>
+                  <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">
+                    {documentiSenzaMarca.length + documentiConMarca.length}
+                  </span>
+                  <span>
+                    risultat{documentiSenzaMarca.length + documentiConMarca.length === 1 ? "o" : "i"}
+                  </span>
                 </span>
                 {hasDocFilters ? (
                   <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
@@ -823,84 +859,57 @@ export function DocumentiView() {
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Marca</label>
-                    <FilterSelectWrap>
-                      <select
-                        className={`${selectLavorazioniFilter} h-10 w-full py-0 text-sm`}
-                        value={filtroMarca}
-                        onChange={(e) => {
-                          setFiltroMarca(e.target.value);
-                          setFiltroModello("__tutti__");
-                          setFiltroMezzoId("__tutti__");
-                        }}
-                        aria-label="Filtra per marca"
-                      >
-                        <option value="__tutti__">Tutte le marche</option>
-                        {catalog.map((m) => (
-                          <option key={m.id} value={m.id}>
-                            {m.nome}
-                          </option>
-                        ))}
-                      </select>
-                    </FilterSelectWrap>
+                    <GlobalSelect
+                      variant="filter"
+                      inputClassName={`${globalInputFieldFilter} h-10 py-0 text-sm`}
+                      items={[
+                        { value: "__tutti__", label: "Tutte le marche" },
+                        ...catalog.map((m) => ({ value: m.id, label: m.nome })),
+                      ]}
+                      value={filtroMarca}
+                      onChange={(v) => {
+                        setFiltroMarca(v);
+                        setFiltroModello("__tutti__");
+                      }}
+                      strictFromList
+                      aria-label="Filtra per marca"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Modello</label>
-                    <FilterSelectWrap>
-                      <select
-                        className={`${selectLavorazioniFilter} h-10 w-full py-0 text-sm`}
-                        value={filtroModello}
-                        onChange={(e) => {
-                          setFiltroModello(e.target.value);
-                          setFiltroMezzoId("__tutti__");
-                        }}
-                        aria-label="Filtra per modello"
-                      >
-                        <option value="__tutti__">Tutti i modelli</option>
-                        {modelliFilterOptions.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    </FilterSelectWrap>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Macchina</label>
-                    <FilterSelectWrap>
-                      <select
-                        className={`${selectLavorazioniFilter} h-10 w-full py-0 text-sm`}
-                        value={filtroMezzoId}
-                        onChange={(e) => setFiltroMezzoId(e.target.value)}
-                        aria-label="Filtra per macchina"
-                      >
-                        <option value="__tutti__">Tutte le macchine</option>
-                        {mezziFilterOptions.map((o) => (
-                          <option key={o.id} value={o.id}>
-                            {o.label}
-                          </option>
-                        ))}
-                      </select>
-                    </FilterSelectWrap>
+                    <GlobalSelect
+                      variant="filter"
+                      inputClassName={`${globalInputFieldFilter} h-10 py-0 text-sm`}
+                      items={[
+                        { value: "__tutti__", label: "Tutti i modelli" },
+                        ...modelliFilterOptions.map((o) => ({ value: o.id, label: o.label })),
+                      ]}
+                      value={filtroModello}
+                      onChange={setFiltroModello}
+                      strictFromList
+                      aria-label="Filtra per modello"
+                    />
                   </div>
                   <div>
                     <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ordinamento</label>
-                    <FilterSelectWrap>
-                      <select
-                        className={`${selectLavorazioniFilter} h-10 w-full py-0 text-sm`}
-                        value={sortSelectValue}
-                        onChange={(e) => onSortSelect(e.target.value)}
-                        aria-label="Ordinamento"
-                      >
-                        <option value="natural">Archivio (marca → modello)</option>
-                        <option value="nome:asc">Nome A → Z</option>
-                        <option value="nome:desc">Nome Z → A</option>
-                        <option value="caricatoIl:desc">Data più recente</option>
-                        <option value="caricatoIl:asc">Data meno recente</option>
-                        <option value="categoria:asc">Categoria A → Z</option>
-                        <option value="marca:asc">Marca A → Z</option>
-                        <option value="macchina:asc">Modello A → Z</option>
-                      </select>
-                    </FilterSelectWrap>
+                    <GlobalSelect
+                      variant="filter"
+                      inputClassName={`${globalInputFieldFilter} h-10 py-0 text-sm`}
+                      items={[
+                        { value: "natural", label: "Archivio (marca → modello)" },
+                        { value: "nome:asc", label: "Nome A → Z" },
+                        { value: "nome:desc", label: "Nome Z → A" },
+                        { value: "caricatoIl:desc", label: "Data più recente" },
+                        { value: "caricatoIl:asc", label: "Data meno recente" },
+                        { value: "categoria:asc", label: "Categoria A → Z" },
+                        { value: "marca:asc", label: "Marca A → Z" },
+                        { value: "macchina:asc", label: "Modello A → Z" },
+                      ]}
+                      value={sortSelectValue}
+                      onChange={onSortSelect}
+                      strictFromList
+                      aria-label="Ordinamento"
+                    />
                   </div>
                   <div className="sm:col-span-2 lg:col-span-4">
                     <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Categoria</p>
@@ -944,7 +953,7 @@ export function DocumentiView() {
 
         <section className="mt-4 min-w-0" aria-label="Albero documenti">
           <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            {sorted.length > 0 ? (
+            {hasDocumentiInLista ? (
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={collapseAllTreeGroups} className={`${dsPageToolbarBtn} h-9 px-3 text-xs`} title="Chiudi tutti i gruppi">
                   Comprimi tutto
@@ -955,21 +964,70 @@ export function DocumentiView() {
               </div>
             ) : null}
           </div>
-          <div className="rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]">
+          <div className="overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]">
               {documentiQuery.isLoading ? (
                 <p className="p-8 text-center text-sm text-[color:var(--cab-text-muted)]">Caricamento documenti…</p>
               ) : documentiQuery.isError ? (
                 <p className="p-8 text-center text-sm text-[color:var(--cab-danger)]">
                   Impossibile caricare i documenti. Riprova più tardi.
                 </p>
-              ) : sorted.length === 0 ? (
+              ) : !hasDocumentiInLista ? (
                 <p className="p-8 text-center text-sm text-[color:var(--cab-text-muted)]">Nessun documento corrisponde ai filtri.</p>
               ) : (
                 <div className="divide-y divide-[color:var(--cab-border)]">
-                  {tree.map(({ marca, filesMarca, modelli }) => {
+                  {documentiSenzaMarca.length > 0 ? (
+                    <div className="rounded-t-[var(--ds-radius-xl)] border-b-2 border-[color:color-mix(in_srgb,var(--cab-warning)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-surface))] p-3 sm:p-4">
+                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="text-base" aria-hidden>
+                          ⚠️
+                        </span>
+                        <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
+                          Senza marca ({documentiSenzaMarca.length})
+                        </p>
+                      </div>
+                      <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
+                        Questi documenti restano sempre visibili. Apri la scheda e assegna marca (e modello) quando sei pronto.
+                      </p>
+                      <ul
+                        className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] bg-[var(--cab-card)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-warning)_40%,var(--cab-border))]"
+                        role="listbox"
+                      >
+                        {documentiSenzaMarca.map((d) => (
+                          <ArchiveDocRow
+                            key={d.id}
+                            doc={d}
+                            selected={selectedDocId === d.id}
+                            onSelect={() => setSelectedDocId(d.id)}
+                            onEdit={() => setEditDoc(d)}
+                            onDelete={() => handleDelete(d)}
+                            onInfo={() => setInfoDoc(d)}
+                            onToast={setToast}
+                            onApri={() => openDoc(d)}
+                            canEdit={canUploadDocuments}
+                            canDelete={canDeleteRecords}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
+                  {tree.map(({ marca, filesMarca, modelli }, marcaIndex) => {
                     const { listini, altriMarca } = partitionMarcaLevelDocs(filesMarca);
+                    const docCountMarca = documentiCountByMarcaId.get(marca.id) ?? 0;
+                    const isLastMarcaInTree =
+                      marcaIndex === tree.length - 1 && documentiSenzaCollocazione.length === 0;
+                    const isFirstMarcaInTree = marcaIndex === 0 && documentiSenzaMarca.length === 0;
                     return (
-                      <div key={marca.id} className="bg-[var(--cab-surface)]">
+                      <div
+                        key={marca.id}
+                        className={[
+                          "bg-[var(--cab-surface)]",
+                          isFirstMarcaInTree ? "overflow-hidden rounded-t-[var(--ds-radius-xl)]" : "",
+                          isLastMarcaInTree && !marcaOpen(marca.id) ? "overflow-hidden rounded-b-[var(--ds-radius-xl)]" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
                         <button
                           type="button"
                           onClick={() => toggleMarca(marca.id)}
@@ -980,7 +1038,14 @@ export function DocumentiView() {
                           <div className="min-w-0 flex-1">
                             <p className="text-sm font-semibold text-[color:var(--cab-text)]">{marca.nome}</p>
                             <p className="text-[11px] text-[color:var(--cab-text-muted)]">
-                              {modelli.length} modell{modelli.length === 1 ? "o" : "i"}
+                              <span className="font-medium tabular-nums text-[color:var(--cab-text)]">{docCountMarca}</span>{" "}
+                              document{docCountMarca === 1 ? "o" : "i"}
+                              {modelli.length > 0 ? (
+                                <>
+                                  {" · "}
+                                  {modelli.length} modell{modelli.length === 1 ? "o" : "i"}
+                                </>
+                              ) : null}
                             </p>
                           </div>
                           <svg
@@ -996,11 +1061,18 @@ export function DocumentiView() {
                         </button>
                         <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${marcaOpen(marca.id) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                           <div className="min-h-0 overflow-hidden">
-                            <div className="space-y-4 border-t border-[color:var(--cab-border)] bg-[var(--cab-surface-2)]/35 px-2 pb-3 pt-2 sm:px-4">
+                            <div
+                              className={`space-y-4 border-t border-[color:var(--cab-border)] bg-[var(--cab-surface-2)]/50 px-3 pb-3 pt-3 sm:px-4 ${
+                                isLastMarcaInTree ? "rounded-b-[var(--ds-radius-xl)]" : ""
+                              }`}
+                            >
                               {listini.length > 0 ? (
                                 <div>
                                   <SubTreeHeading title="Listini" />
-                                  <ul className="mt-1 space-y-0.5 pl-0 sm:pl-1" role="listbox">
+                                  <ul
+                                    className="mt-1 overflow-hidden rounded-[var(--ds-radius-md)] ring-1 ring-inset ring-[color:var(--cab-border)]"
+                                    role="listbox"
+                                  >
                                     {listini.map((d) => (
                                       <ArchiveDocRow
                                         key={d.id}
@@ -1023,7 +1095,10 @@ export function DocumentiView() {
                               {altriMarca.length > 0 ? (
                                 <div>
                                   <SubTreeHeading title="Generali (marca)" />
-                                  <ul className="mt-1 space-y-0.5 pl-0 sm:pl-1" role="listbox">
+                                  <ul
+                                    className="mt-1 overflow-hidden rounded-[var(--ds-radius-md)] ring-1 ring-inset ring-[color:var(--cab-border)]"
+                                    role="listbox"
+                                  >
                                     {altriMarca.map((d) => (
                                       <ArchiveDocRow
                                         key={d.id}
@@ -1044,19 +1119,23 @@ export function DocumentiView() {
                               ) : null}
 
                               <div>
-                                <SubTreeHeading title="Modelli e macchine" />
-                                <div className="mt-1 space-y-2 pl-0 sm:pl-1">
-                                  {modelli.map(({ modello, files, mezzi: mezziNodes }) => {
+                                <SubTreeHeading title="Modelli" />
+                                <div className="mt-1 overflow-hidden rounded-[var(--ds-radius-lg)] ring-1 ring-inset ring-[color:var(--cab-border)]">
+                                  {modelli
+                                    .filter(({ files }) => files.length > 0)
+                                    .map(({ modello, files }, modelloIndex) => {
                                     const mk = `${marca.id}::${modello.id}`;
                                     return (
                                       <div
                                         key={mk}
-                                        className="overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]"
+                                        className={
+                                          modelloIndex > 0 ? "border-t border-[color:var(--cab-border)]" : ""
+                                        }
                                       >
                                         <button
                                           type="button"
                                           onClick={() => toggleModello(mk)}
-                                          className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[var(--cab-hover)]"
+                                          className="flex w-full items-center gap-2 bg-[var(--cab-surface)]/60 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)]"
                                           aria-expanded={modelloOpen(marca.id, modello.id)}
                                         >
                                           <span className="w-4 shrink-0 text-center text-xs font-medium text-[color:var(--cab-text-muted)]" aria-hidden>
@@ -1064,7 +1143,7 @@ export function DocumentiView() {
                                           </span>
                                           <span className="flex-1 text-sm font-medium text-[color:var(--cab-text)]">{modello.nome}</span>
                                           <span className="rounded-full bg-[var(--cab-surface-2)] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[color:var(--cab-text-muted)]">
-                                            {files.length + mezziNodes.reduce((s, n) => s + n.files.length, 0)}
+                                            {files.length}
                                           </span>
                                           <svg
                                             className={`h-4 w-4 shrink-0 text-[color:var(--cab-text-muted)] transition-transform ${modelloOpen(marca.id, modello.id) ? "rotate-180" : ""}`}
@@ -1077,83 +1156,26 @@ export function DocumentiView() {
                                           </svg>
                                         </button>
                                         <div
-                                          className={`grid border-t border-[color:var(--cab-border)] transition-[grid-template-rows] duration-200 ${modelloOpen(marca.id, modello.id) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                                          className={`grid bg-[var(--cab-card)] transition-[grid-template-rows] duration-200 ${modelloOpen(marca.id, modello.id) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
                                         >
-                                          <div className="min-h-0 overflow-hidden">
-                                            <div className="space-y-2 bg-[var(--cab-surface-2)]/25 px-2 py-2">
-                                              {files.length > 0 ? (
-                                                <ul className="space-y-0.5" role="listbox">
-                                                  {files.map((d) => (
-                                                    <ArchiveDocRow
-                                                      key={d.id}
-                                                      doc={d}
-                                                      selected={selectedDocId === d.id}
-                                                      onSelect={() => setSelectedDocId(d.id)}
-                                                      onEdit={() => setEditDoc(d)}
-                                                      onDelete={() => handleDelete(d)}
-                                                      onInfo={() => setInfoDoc(d)}
-                                                      onToast={setToast}
-                                                      onApri={() => openDoc(d)}
-                                                      canEdit={canUploadDocuments}
-                                                      canDelete={canDeleteRecords}
-                                                    />
-                                                  ))}
-                                                </ul>
-                                              ) : null}
-                                              {mezziNodes.map(({ mezzo, files: mf }) => {
-                                                const ek = `${marca.id}::${modello.id}::${mezzo.id}`;
-                                                if (mf.length === 0) return null;
-                                                return (
-                                                  <div
-                                                    key={ek}
-                                                    className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)]"
-                                                  >
-                                                    <button
-                                                      type="button"
-                                                      onClick={() => toggleMezzo(ek)}
-                                                      className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-xs font-medium text-[color:var(--cab-text)] transition-colors hover:bg-[var(--cab-hover)]"
-                                                      aria-expanded={mezzoOpen(marca.id, modello.id, mezzo.id)}
-                                                    >
-                                                      <span className="flex-1">
-                                                        {mezzo.targa || "—"} · {mezzo.matricola || "—"}
-                                                        {mezzo.numeroScuderia ? ` · sc. ${mezzo.numeroScuderia}` : ""}
-                                                      </span>
-                                                      <span className="tabular-nums text-[color:var(--cab-text-muted)]">{mf.length}</span>
-                                                      <svg
-                                                        className={`h-3.5 w-3.5 shrink-0 text-[color:var(--cab-text-muted)] ${mezzoOpen(marca.id, modello.id, mezzo.id) ? "rotate-180" : ""}`}
-                                                        fill="none"
-                                                        viewBox="0 0 24 24"
-                                                        stroke="currentColor"
-                                                        strokeWidth={2}
-                                                      >
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                                      </svg>
-                                                    </button>
-                                                    <div className={`grid px-1 transition-[grid-template-rows] duration-200 ${mezzoOpen(marca.id, modello.id, mezzo.id) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                                                      <div className="min-h-0 overflow-hidden">
-                                                        <ul className="space-y-1.5 px-1 pb-2" role="listbox">
-                                                          {mf.map((d) => (
-                                                            <ArchiveDocRow
-                                                              key={d.id}
-                                                              doc={d}
-                                                              selected={selectedDocId === d.id}
-                                                              onSelect={() => setSelectedDocId(d.id)}
-                                                              onEdit={() => setEditDoc(d)}
-                                                              onDelete={() => handleDelete(d)}
-                                                              onInfo={() => setInfoDoc(d)}
-                                                              onToast={setToast}
-                                                              onApri={() => openDoc(d)}
-                                                              canEdit={canUploadDocuments}
-                                                              canDelete={canDeleteRecords}
-                                                            />
-                                                          ))}
-                                                        </ul>
-                                                      </div>
-                                                    </div>
-                                                  </div>
-                                                );
-                                              })}
-                                            </div>
+                                          <div className="min-h-0 overflow-hidden border-t border-[color:var(--cab-border)]">
+                                            <ul className="py-0.5" role="listbox">
+                                              {files.map((d) => (
+                                                <ArchiveDocRow
+                                                  key={d.id}
+                                                  doc={d}
+                                                  selected={selectedDocId === d.id}
+                                                  onSelect={() => setSelectedDocId(d.id)}
+                                                  onEdit={() => setEditDoc(d)}
+                                                  onDelete={() => handleDelete(d)}
+                                                  onInfo={() => setInfoDoc(d)}
+                                                  onToast={setToast}
+                                                  onApri={() => openDoc(d)}
+                                                  canEdit={canUploadDocuments}
+                                                  canDelete={canDeleteRecords}
+                                                />
+                                              ))}
+                                            </ul>
                                           </div>
                                         </div>
                                       </div>
@@ -1169,12 +1191,15 @@ export function DocumentiView() {
                   })}
 
                   {documentiSenzaCollocazione.length > 0 ? (
-                    <div className="border-t border-[color:color-mix(in_srgb,var(--cab-warning)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_8%,var(--cab-surface))] p-3 sm:p-4">
+                    <div className="rounded-b-[var(--ds-radius-xl)] border-t border-[color:color-mix(in_srgb,var(--cab-warning)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_8%,var(--cab-surface))] p-3 sm:p-4">
                       <p className="text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)]">Senza collocazione</p>
                       <p className="mt-1 text-xs leading-snug text-[color:var(--cab-text-muted)]">
-                        Marca, modello o macchina non allineati all&apos;anagrafica. Aggiorna le impostazioni o il documento.
+                        Marca o modello non allineati all&apos;anagrafica. Aggiorna le impostazioni o il documento.
                       </p>
-                      <ul className="mt-2 space-y-0.5" role="listbox">
+                      <ul
+                        className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border)]"
+                        role="listbox"
+                      >
                         {documentiSenzaCollocazione.map((d) => (
                           <ArchiveDocRow
                             key={d.id}
@@ -1210,13 +1235,12 @@ export function DocumentiView() {
       </div>
 
       {uploadOpen && canUploadDocuments ? (
-        <UploadDocumentoModal catalog={catalog} mezzi={mezziSnap} onRequestClose={() => setUploadOpen(false)} onSubmit={handleUpload} />
+        <UploadDocumentoModal catalog={catalog} onRequestClose={() => setUploadOpen(false)} onSubmit={handleUpload} />
       ) : null}
 
       {infoDoc ? (
         <DocumentoInfoModal
           doc={infoDoc}
-          catalog={catalog}
           onRequestClose={() => setInfoDoc(null)}
           onEdit={() => {
             const d = infoDoc;
@@ -1227,7 +1251,7 @@ export function DocumentiView() {
       ) : null}
 
       {editDoc && canUploadDocuments ? (
-        <DocumentoEditModal key={editDoc.id} doc={editDoc} catalog={catalog} mezzi={mezziSnap} onRequestClose={() => setEditDoc(null)} onSave={handleSaveEdit} />
+        <DocumentoEditModal key={editDoc.id} doc={editDoc} catalog={catalog} onRequestClose={() => setEditDoc(null)} onSave={handleSaveEdit} />
       ) : null}
 
       <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche documenti" ariaLabel="Log modifiche documenti">

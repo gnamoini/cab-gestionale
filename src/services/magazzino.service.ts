@@ -2,12 +2,17 @@
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
-import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "magazzino_ricambi";
+
+function oggettoRicambio(r: MagazzinoRicambioRow) {
+  const parts = [r.marca?.trim(), r.nome?.trim()].filter(Boolean);
+  return parts.length ? auditContext(parts.join(" — ")) : undefined;
+}
 
 export type MagazzinoFilters = {
   codice?: string;
@@ -67,7 +72,7 @@ export const magazzinoService = {
       const { data: row, error } = await c.from("magazzino_ricambi").insert(data).select("*").single();
       if (error) return err(error.message);
       const r = row as MagazzinoRicambioRow;
-      await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r) });
+      await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoRicambio(r)) });
       return success(r);
     } catch (e) {
       return serviceFailFromError(e);
@@ -88,7 +93,7 @@ export const magazzinoService = {
         entita: ENTITA,
         entita_id: id,
         azione: "UPDATE",
-        payload: auditDiff(before, r),
+        payload: auditDiff(before, r, oggettoRicambio(r)),
       });
       return success(r);
     } catch (e) {
@@ -103,7 +108,10 @@ export const magazzinoService = {
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
-      if (existing) await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(existing) });
+      if (existing) {
+        const ex = existing as MagazzinoRicambioRow;
+        await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(ex, oggettoRicambio(ex)) });
+      }
       const { error } = await c.from("magazzino_ricambi").delete().eq("id", id);
       if (error) return err(error.message);
       return success(null);

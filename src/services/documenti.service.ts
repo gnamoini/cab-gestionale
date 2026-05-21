@@ -10,7 +10,9 @@ import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 const ENTITA = "documenti";
 
 export type DocumentiFilters = {
+  /** @deprecated Non usare: i documenti si filtrano per marca/modello. */
   mezzo_id?: string;
+  /** Filtro server-side per marca (ilike). Il match sul modello avviene in UI/hub. */
   marca?: string;
   categoria?: CategoriaDocumento;
 };

@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { IconBack, IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
-import { ClientLavorazionePhotoGallery } from "@/components/lavorazioni-clienti/client-lavorazione-photos";
+import { ClientLavorazioneMediaPanel } from "@/components/lavorazioni-clienti/client-lavorazione-media-panel";
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
 import {
   ClientLavorazioneTimelinePanel,
@@ -148,7 +148,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
           />
         </ShellCard>
 
-        <ClientLavorazionePhotoGallery lavorazioneId={row.id} max={5} />
+        <ClientLavorazioneMediaPanel lavorazioneId={row.id} />
       </div>
 
       {qrOpen ? (

@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { erpBtnNeutral, erpFocus, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
+import { erpBtnNeutral, erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { applicaHintCliente, hintsByCliente } from "@/lib/bunder/bunder-cliente-hints";
 import { appendBunderChangeLog } from "@/lib/bunder/bunder-change-log-storage";
 import { bunderKindLabel } from "@/lib/bunder/doc-kind-meta";
@@ -209,17 +211,17 @@ export function BunderEditorModal({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Tipo documento
-              <select
-                className={`${gestionaleSelectFilterClass} mt-1 w-full`}
-                value={local.kind}
-                onChange={(e) => onChangeKind(e.target.value as BunderDocKind)}
-              >
-                {BUNDER_DOC_KIND_OPTIONS.map((o) => (
-                  <option key={o.id} value={o.id}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
+              <div className="mt-1">
+                <GlobalSelect
+                  variant="filter"
+                  inputClassName={globalInputFieldFilter}
+                  items={BUNDER_DOC_KIND_OPTIONS.map((o) => ({ value: o.id, label: o.label }))}
+                  value={local.kind}
+                  onChange={(v) => onChangeKind(v as BunderDocKind)}
+                  strictFromList
+                  aria-label="Tipo documento"
+                />
+              </div>
             </label>
             <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Numero (automatico)
@@ -227,12 +229,13 @@ export function BunderEditorModal({
             </label>
             <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Data documento
-              <input
-                type="date"
-                className={`${dsInput} mt-1 w-full`}
-                value={local.dataDocumento}
-                onChange={(e) => setLocal({ ...local, dataDocumento: e.target.value })}
-              />
+              <div className="mt-1">
+                <GlobalDatePickerYmd
+                  valueYmd={local.dataDocumento}
+                  onChangeYmd={(v) => setLocal({ ...local, dataDocumento: v })}
+                  aria-label="Data documento"
+                />
+              </div>
             </label>
             <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Luogo
@@ -292,14 +295,23 @@ export function BunderEditorModal({
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <label className="min-w-0 flex-1 text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                 Preventivo
-                <select className={`${gestionaleSelectFilterClass} mt-1 w-full`} value={prevPick} onChange={(e) => setPrevPick(e.target.value)}>
-                  <option value="">— Seleziona —</option>
-                  {preventivi.map((p: PreventivoRecord) => (
-                    <option key={p.id} value={p.id}>
-                      {p.numero} · {p.cliente || "Cliente"} · {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
-                    </option>
-                  ))}
-                </select>
+                <div className="mt-1">
+                  <GlobalSelect
+                    variant="filter"
+                    inputClassName={globalInputFieldFilter}
+                    items={[
+                      { value: "", label: "— Seleziona —" },
+                      ...preventivi.map((p: PreventivoRecord) => ({
+                        value: p.id,
+                        label: `${p.numero} · ${p.cliente || "Cliente"} · ${p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €`,
+                      })),
+                    ]}
+                    value={prevPick}
+                    onChange={setPrevPick}
+                    strictFromList
+                    aria-label="Preventivo da importare"
+                  />
+                </div>
               </label>
               <button type="button" className={dsBtnNeutral} onClick={importaPreventivo} disabled={!prevPick}>
                 Importa righe

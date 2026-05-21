@@ -3,24 +3,42 @@
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  GestionaleListTable,
+  GestionaleListTableActionsHead,
+  GlobalTableSortTh,
+} from "@/components/gestionale/global-table";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { PreventiviEditorModal } from "@/components/preventivi/preventivi-editor-modal";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import { PreventiviAdvancedFilterPanel } from "@/components/preventivi/preventivi-advanced-filter-panel";
+import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { useAuth } from "@/context/auth-context";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
 import { getMagazzinoReportSnapshot, subscribeMagazzinoReportSync } from "@/lib/magazzino/magazzino-report-sync";
 import { getMezziReportSnapshot, subscribeMezziReportSync } from "@/lib/mezzi/mezzi-report-sync";
-import { preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-hub-merge";
-import { modelliVisibiliPerMarca, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
-import { marcheFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
+import { mezzoFromLavorazione, preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-hub-merge";
+import { getLavorazioniMezziSnapshot, normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
+import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+import {
+  buildPreventiviFilterCatalog,
+  loadPreventiviAdvancedFiltersPersisted,
+  PREVENTIVI_ADVANCED_FILTERS_EMPTY,
+  preventiviAdvancedFiltersActive,
+  savePreventiviAdvancedFiltersPersisted,
+  type PreventiviAdvancedFilters,
+} from "@/lib/preventivi/preventivi-advanced-filters";
+import {
+  buildPreventiviSearchSuggestions,
+  preventivoRowMatchesPageFilters,
+  type PreventiviPageFilters,
+} from "@/lib/preventivi/preventivi-list-ui-filters";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { buildNewPreventivoFromLavorazioneContext } from "@/lib/preventivi/generate-preventivo-from-lavorazione";
 import { buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
@@ -43,19 +61,12 @@ import { CAB_PREVENTIVI_LOG_REFRESH, CAB_PREVENTIVI_REFRESH } from "@/lib/sistem
 import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase } from "@/lib/preventivi/types";
 import {
   dsBtnNeutral,
-  dsInput,
   dsPageToolbarBtn,
   dsStackPage,
-  dsStickyToolbar,
   GESTIONALE_SEARCH_PLACEHOLDER,
-  dsScrollbar,
-  dsTable,
-  dsTableHead,
   dsTableRow,
-  dsTableWrap,
-  dsFocus,
-  dsTableTdActions,
   dsTableActionsGroup,
+  dsTableTdActions,
   dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
   dsTableActionBtnDanger,
@@ -64,8 +75,20 @@ import {
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { erpBtnNuovaLavorazione, erpFocus, gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { Drawer } from "@/components/design-system";
+import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import {
+  CardMobile,
+  CardMobileActions,
+  Drawer,
+  PageToolbar,
+  PageToolbarActions,
+  PageToolbarResultCount,
+} from "@/components/design-system";
+import {
+  gestionaleListTableRowClass,
+  gestionaleListTableTd,
+  gestionaleListTableTdAzioni,
+} from "@/lib/ui/gestionale-list-table";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
@@ -74,38 +97,7 @@ import {
   logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 
-function startOfLocalDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
-}
-
-function endOfLocalDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(23, 59, 59, 999);
-  return x;
-}
-
-/** yyyy-mm-dd → data locale valida, altrimenti null */
-function parseYmdLocal(ymd: string): Date | null {
-  const t = ymd.trim();
-  if (!t) return null;
-  const [ys, ms, ds] = t.split("-");
-  const y = Number(ys);
-  const m = Number(ms);
-  const day = Number(ds);
-  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(day)) return null;
-  const d = new Date(y, m - 1, day);
-  if (d.getFullYear() !== y || d.getMonth() !== m - 1 || d.getDate() !== day) return null;
-  return d;
-}
-
-function parseMoneyStr(s: string): number | null {
-  const t = s.trim().replace(/\s/g, "").replace(",", ".");
-  if (!t) return null;
-  const n = Number(t);
-  return Number.isFinite(n) ? n : null;
-}
+const SEARCH_DEBOUNCE_MS = 320;
 
 function fmtDataCreazioneTabella(iso: string): string {
   try {
@@ -119,6 +111,9 @@ function fmtDataCreazioneTabella(iso: string): string {
   }
 }
 
+const prevTableTd = gestionaleListTableTd;
+const prevTableTdCliente = `${gestionaleListTableTd} min-w-0 border-l border-zinc-200/90 pl-3 text-zinc-800 dark:border-zinc-700/90 dark:text-zinc-100`;
+
 function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: PreventivoSortKey, phase: Exclude<PreventivoSortPhase, "natural">): number {
   const dir = phase === "asc" ? 1 : -1;
   switch (key) {
@@ -128,6 +123,10 @@ function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: Preven
       return (new Date(a.dataCreazione).getTime() - new Date(b.dataCreazione).getTime()) * dir;
     case "cliente":
       return a.cliente.localeCompare(b.cliente, "it") * dir;
+    case "cantiere":
+      return a.cantiere.localeCompare(b.cantiere, "it") * dir;
+    case "utilizzatore":
+      return a.utilizzatore.localeCompare(b.utilizzatore, "it") * dir;
     case "macchinaRiassunto":
       return a.macchinaRiassunto.localeCompare(b.macchinaRiassunto, "it") * dir;
     case "targa":
@@ -143,42 +142,6 @@ function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: Preven
     default:
       return 0;
   }
-}
-
-function SortThPreventivo({
-  label,
-  columnKey,
-  sortColumn,
-  sortPhase,
-  onSort,
-  thClassName,
-}: {
-  label: string;
-  columnKey: PreventivoSortKey;
-  sortColumn: PreventivoSortKey | null;
-  sortPhase: PreventivoSortPhase;
-  onSort: (k: PreventivoSortKey) => void;
-  thClassName?: string;
-}) {
-  const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
-  let icon: ReactNode = <span className="opacity-40">↕</span>;
-  if (active) {
-    icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
-  }
-  return (
-    <th className={`px-2.5 py-2 text-left align-middle ${thClassName ?? ""}`}>
-      <button
-        type="button"
-        onClick={() => onSort(columnKey)}
-        className={`inline-flex max-w-full items-center gap-1 text-xs font-semibold uppercase tracking-wide transition-colors duration-200 ease-out ${dsFocus} ${
-          active ? "text-[color:var(--cab-primary)]" : "text-[color:var(--cab-text-muted)] hover:text-[color:var(--cab-text)]"
-        }`}
-      >
-        <span className="truncate">{label}</span>
-        {icon}
-      </button>
-    </th>
-  );
 }
 
 export function PreventiviView() {
@@ -204,21 +167,31 @@ export function PreventiviView() {
     isNew: false,
     isRollbackDraft: false,
   });
-  const [searchPreventivi, setSearchPreventivi] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchApplied, setSearchApplied] = useState("");
+  const searchInputRef = useRef(searchInput);
+  searchInputRef.current = searchInput;
   const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [advancedFilters, setAdvancedFilters] = useState<PreventiviAdvancedFilters>(
+    () => loadPreventiviAdvancedFiltersPersisted() ?? PREVENTIVI_ADVANCED_FILTERS_EMPTY,
+  );
 
-  const [filtroClientePrev, setFiltroClientePrev] = useState("__tutti__");
-  const [filtroMarcaPrev, setFiltroMarcaPrev] = useState("__tutti__");
-  const [filtroModelloPrev, setFiltroModelloPrev] = useState("__tutti__");
-  const [filtroTargaPrev, setFiltroTargaPrev] = useState("");
-  const [filtroMatricolaPrev, setFiltroMatricolaPrev] = useState("");
-  const [filtroScuderiaPrev, setFiltroScuderiaPrev] = useState("");
-  const [filtroMesePrev, setFiltroMesePrev] = useState("__tutti__");
-  const [filtroAnnoPrev, setFiltroAnnoPrev] = useState("__tutti__");
-  const [filtroDataDaPrev, setFiltroDataDaPrev] = useState("");
-  const [filtroDataAPrev, setFiltroDataAPrev] = useState("");
-  const [importoMinStr, setImportoMinStr] = useState("");
-  const [importoMaxStr, setImportoMaxStr] = useState("");
+  const patchAdvancedFilters = useCallback((patch: Partial<PreventiviAdvancedFilters>) => {
+    setAdvancedFilters((prev) => {
+      const next = { ...prev, ...patch };
+      savePreventiviAdvancedFiltersPersisted(next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setSearchApplied(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
+  const flushPageSearch = useCallback(() => {
+    setSearchApplied(searchInputRef.current.trim());
+  }, []);
   const pendingHandledRef = useRef(false);
   const rollbackDraftIdRef = useRef<string | null>(null);
   const draftConfirmedRef = useRef(false);
@@ -303,6 +276,7 @@ export function PreventiviView() {
   const filterLavId = searchParams.get(Q_PREVENTIVI_LAV)?.trim() || "";
   const filterOrigRaw = searchParams.get(Q_PREVENTIVI_LAV_ORIG)?.trim() || "";
   const filterMezzoRaw = searchParams.get(Q_PREVENTIVI_MEZZO)?.trim() || "";
+  const focusPreventivoId = searchParams.get(Q_PREVENTIVI_OPEN)?.trim() || "";
   const filterOrig: PreventivoLavorazioneOrigine | null =
     filterOrigRaw === "attiva" || filterOrigRaw === "storico" ? filterOrigRaw : null;
 
@@ -312,28 +286,20 @@ export function PreventiviView() {
     [settingsPayload?.resolved?.mezziListe],
   );
 
-  const clientiPreventiviOpts = useMemo(
-    () => [...listePrefs.clienti].sort((a, b) => a.localeCompare(b, "it")),
-    [listePrefs.clienti],
+  const filterCatalog = useMemo(() => buildPreventiviFilterCatalog(rows, listePrefs), [rows, listePrefs]);
+
+  const pageFilters = useMemo(
+    (): PreventiviPageFilters => ({
+      search: searchApplied,
+      ...advancedFilters,
+    }),
+    [searchApplied, advancedFilters],
   );
 
-  const marchePvOpts = useMemo(() => marcheFromHierarchyTree(listePrefs, "attrezzature"), [listePrefs]);
-
-  const modelliPvOpts = useMemo(() => modelliVisibiliPerMarca(listePrefs, "__tutti__"), [listePrefs]);
-
-  const anniPreventiviOpts = useMemo(() => {
-    const s = new Set<number>();
-    for (const r of rows) {
-      const y = new Date(r.dataCreazione).getFullYear();
-      if (!Number.isNaN(y)) s.add(y);
-    }
-    return [...s].sort((a, b) => b - a);
-  }, [rows]);
-
-  const modelliPvOptsByMarca = useMemo(() => {
-    if (filtroMarcaPrev === "__tutti__") return modelliPvOpts;
-    return modelliVisibiliPerMarca(listePrefs, filtroMarcaPrev);
-  }, [filtroMarcaPrev, modelliPvOpts, listePrefs]);
+  const searchSuggestionPool = useMemo(
+    () => buildPreventiviSearchSuggestions(rows, searchInput),
+    [rows, searchInput],
+  );
 
   const filteredRows = useMemo(() => {
     let list = rows;
@@ -344,98 +310,31 @@ export function PreventiviView() {
       if (filterMezzoRaw.startsWith("hub-pv-")) {
         const pid = filterMezzoRaw.slice("hub-pv-".length);
         list = list.filter((r) => r.id === pid);
+      } else if (filterMezzoRaw.startsWith("t:")) {
+        const key = filterMezzoRaw.slice(2);
+        list = list.filter((r) => normMezzoKey(r.targa) === key);
+      } else if (filterMezzoRaw.startsWith("m:")) {
+        const key = filterMezzoRaw.slice(2);
+        list = list.filter((r) => normMezzoKey(r.matricola) === key);
+      } else if (filterMezzoRaw.startsWith("hub-lav-")) {
+        const lavId = filterMezzoRaw.slice("hub-lav-".length);
+        const { attive, storico } = getLavorazioniMezziSnapshot();
+        const lav = [...storico, ...attive].find((l) => l.id === lavId);
+        if (lav) {
+          const synth = mezzoFromLavorazione(lav);
+          list = list.filter((r) => preventivoMatchesMezzo(synth, r));
+        } else {
+          list = [];
+        }
       } else {
         const mezzo = mezziSnap.find((m) => m.id === filterMezzoRaw);
         if (mezzo) list = list.filter((r) => preventivoMatchesMezzo(mezzo, r));
         else list = [];
       }
     }
-    const rawDa = filtroDataDaPrev.trim();
-    const rawA = filtroDataAPrev.trim();
-    if (rawDa) {
-      const p = parseYmdLocal(rawDa);
-      if (p) {
-        const startMs = startOfLocalDay(p).getTime();
-        list = list.filter((r) => new Date(r.dataCreazione).getTime() >= startMs);
-      }
-    }
-    if (rawA) {
-      const p = parseYmdLocal(rawA);
-      if (p) {
-        const endMs = endOfLocalDay(p).getTime();
-        list = list.filter((r) => new Date(r.dataCreazione).getTime() <= endMs);
-      }
-    }
-    if (filtroClientePrev !== "__tutti__") {
-      list = list.filter((r) => r.cliente === filtroClientePrev);
-    }
-    if (filtroMarcaPrev !== "__tutti__") {
-      list = list.filter((r) => r.marcaAttrezzatura.trim() === filtroMarcaPrev);
-    }
-    if (filtroModelloPrev !== "__tutti__") {
-      list = list.filter((r) => r.modelloAttrezzatura.trim() === filtroModelloPrev);
-    }
-    const targaQ = filtroTargaPrev.trim().toLowerCase();
-    if (targaQ) list = list.filter((r) => r.targa.toLowerCase().includes(targaQ));
-    const matQ = filtroMatricolaPrev.trim().toLowerCase();
-    if (matQ) list = list.filter((r) => r.matricola.toLowerCase().includes(matQ));
-    const scQ = filtroScuderiaPrev.trim().toLowerCase();
-    if (scQ) list = list.filter((r) => r.nScuderia.toLowerCase().includes(scQ));
-    if (filtroMesePrev !== "__tutti__") {
-      const mi = Number(filtroMesePrev);
-      list = list.filter((r) => {
-        const d = new Date(r.dataCreazione);
-        return !Number.isNaN(d.getTime()) && d.getMonth() + 1 === mi;
-      });
-    }
-    if (filtroAnnoPrev !== "__tutti__") {
-      const y = Number(filtroAnnoPrev);
-      list = list.filter((r) => new Date(r.dataCreazione).getFullYear() === y);
-    }
-    const imin = parseMoneyStr(importoMinStr);
-    const imax = parseMoneyStr(importoMaxStr);
-    if (imin !== null) list = list.filter((r) => r.totaleFinale >= imin);
-    if (imax !== null) list = list.filter((r) => r.totaleFinale <= imax);
-    const q = searchPreventivi.trim().toLowerCase();
-    if (q) {
-      list = list.filter((r) => {
-        const hay = [
-          r.numero,
-          r.cliente,
-          r.macchinaRiassunto,
-          r.targa,
-          r.matricola,
-          r.nScuderia,
-          r.marcaAttrezzatura,
-          r.modelloAttrezzatura,
-          r.lavorazioneId,
-        ]
-          .join(" ")
-          .toLowerCase();
-        return hay.includes(q);
-      });
-    }
+    list = list.filter((r) => preventivoRowMatchesPageFilters(r, pageFilters));
     return list;
-  }, [
-    rows,
-    filterLavId,
-    filterOrig,
-    filterMezzoRaw,
-    filtroClientePrev,
-    filtroMarcaPrev,
-    filtroModelloPrev,
-    filtroTargaPrev,
-    filtroMatricolaPrev,
-    filtroScuderiaPrev,
-    filtroMesePrev,
-    filtroAnnoPrev,
-    filtroDataDaPrev,
-    filtroDataAPrev,
-    importoMinStr,
-    importoMaxStr,
-    searchPreventivi,
-    mezziSnap,
-  ]);
+  }, [rows, filterLavId, filterOrig, filterMezzoRaw, pageFilters, mezziSnap]);
 
   const sortedRows = useMemo(() => {
     const list = [...filteredRows];
@@ -453,27 +352,8 @@ export function PreventiviView() {
   const listPageSize = useResponsiveListPageSize();
   const preventiviPagerDeps = useMemo(
     () =>
-      `${filterLavId ?? ""}|${filterOrig ?? ""}|${filterMezzoRaw}|${filtroClientePrev}|${filtroMarcaPrev}|${filtroModelloPrev}|${filtroTargaPrev}|${filtroMatricolaPrev}|${filtroScuderiaPrev}|${filtroMesePrev}|${filtroAnnoPrev}|${filtroDataDaPrev}|${filtroDataAPrev}|${importoMinStr}|${importoMaxStr}|${searchPreventivi}|${sortColumn ?? ""}|${sortPhase}`,
-    [
-      filterLavId,
-      filterOrig,
-      filterMezzoRaw,
-      filtroClientePrev,
-      filtroMarcaPrev,
-      filtroModelloPrev,
-      filtroTargaPrev,
-      filtroMatricolaPrev,
-      filtroScuderiaPrev,
-      filtroMesePrev,
-      filtroAnnoPrev,
-      filtroDataDaPrev,
-      filtroDataAPrev,
-      importoMinStr,
-      importoMaxStr,
-      searchPreventivi,
-      sortColumn,
-      sortPhase,
-    ],
+      `${filterLavId ?? ""}|${filterOrig ?? ""}|${filterMezzoRaw}|${searchApplied}|${JSON.stringify(advancedFilters)}|${sortColumn ?? ""}|${sortPhase}`,
+    [filterLavId, filterOrig, filterMezzoRaw, searchApplied, advancedFilters, sortColumn, sortPhase],
   );
   const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(sortedRows.length, listPageSize);
   useEffect(() => {
@@ -527,49 +407,23 @@ export function PreventiviView() {
     router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
   }
 
-  const hasAdvancedPanelFilters =
-    filtroClientePrev !== "__tutti__" ||
-    filtroMarcaPrev !== "__tutti__" ||
-    filtroModelloPrev !== "__tutti__" ||
-    Boolean(filtroTargaPrev.trim()) ||
-    Boolean(filtroMatricolaPrev.trim()) ||
-    Boolean(filtroScuderiaPrev.trim()) ||
-    filtroMesePrev !== "__tutti__" ||
-    filtroAnnoPrev !== "__tutti__" ||
-    Boolean(importoMinStr.trim()) ||
-    Boolean(importoMaxStr.trim()) ||
-    Boolean(filtroDataDaPrev.trim()) ||
-    Boolean(filtroDataAPrev.trim());
+  const hasAdvancedPanelFilters = preventiviAdvancedFiltersActive(advancedFilters);
 
-  function resetPreventiviFiltriAvanzati() {
-    setFiltroClientePrev("__tutti__");
-    setFiltroMarcaPrev("__tutti__");
-    setFiltroModelloPrev("__tutti__");
-    setFiltroTargaPrev("");
-    setFiltroMatricolaPrev("");
-    setFiltroScuderiaPrev("");
-    setFiltroMesePrev("__tutti__");
-    setFiltroAnnoPrev("__tutti__");
-    setImportoMinStr("");
-    setImportoMaxStr("");
-    setFiltroDataDaPrev("");
-    setFiltroDataAPrev("");
+  const hasPreventiviListFilters =
+    searchApplied.trim().length > 0 ||
+    hasAdvancedPanelFilters ||
+    Boolean(filterLavId) ||
+    Boolean(filterMezzoRaw);
+
+  function resetPreventiviRicerca() {
+    setSearchInput("");
+    setSearchApplied("");
   }
 
-  function resetPreventiviPanelFilters() {
-    setFiltroClientePrev("__tutti__");
-    setFiltroMarcaPrev("__tutti__");
-    setFiltroModelloPrev("__tutti__");
-    setFiltroTargaPrev("");
-    setFiltroMatricolaPrev("");
-    setFiltroScuderiaPrev("");
-    setFiltroMesePrev("__tutti__");
-    setFiltroAnnoPrev("__tutti__");
-    setImportoMinStr("");
-    setImportoMaxStr("");
-    setFiltroDataDaPrev("");
-    setFiltroDataAPrev("");
-    setSearchPreventivi("");
+  function resetPreventiviFiltriPagina() {
+    setAdvancedFilters(PREVENTIVI_ADVANCED_FILTERS_EMPTY);
+    savePreventiviAdvancedFiltersPersisted(PREVENTIVI_ADVANCED_FILTERS_EMPTY);
+    resetPreventiviRicerca();
     setFiltriEspansi(false);
   }
 
@@ -605,7 +459,13 @@ export function PreventiviView() {
   }, [searchParams, router, mezziSnap, magSnap, autore]);
 
   useEffect(() => {
-    const openId = searchParams.get(Q_PREVENTIVI_OPEN)?.trim();
+    if (!focusPreventivoId) return;
+    const el = document.getElementById(`preventivo-row-${focusPreventivoId}`);
+    el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [focusPreventivoId, pagedRows]);
+
+  useEffect(() => {
+    const openId = focusPreventivoId;
     if (!openId) return;
     const rec = rows.find((r) => r.id === openId);
     const t = window.setTimeout(() => {
@@ -614,9 +474,9 @@ export function PreventiviView() {
       sp.delete(Q_PREVENTIVI_OPEN);
       const q = sp.toString();
       router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
-    }, 100);
+    }, 350);
     return () => window.clearTimeout(t);
-  }, [searchParams, rows, router]);
+  }, [focusPreventivoId, searchParams, rows, router]);
 
   function apriModifica(p: PreventivoRecord) {
     if (!canEditWorkOrders) return;
@@ -680,281 +540,95 @@ export function PreventiviView() {
       {bannerMezzo}
 
       <ShellCard>
-        <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <button
-              type="button"
-              onClick={() =>
-                canEditWorkOrders &&
-                setEditor({
-                  open: true,
-                  record: buildEmptyManualPreventivo(autore.trim() || "Operatore"),
-                  isNew: true,
-                  isRollbackDraft: false,
-                })
-              }
-              className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
-              disabled={!canEditWorkOrders}
-              title={canEditWorkOrders ? "Crea un preventivo senza collegamento a lavorazione" : READONLY_PERMISSION_HINT}
-            >
-              <span className="text-base font-semibold leading-none" aria-hidden>
-                +
-              </span>
-              Nuovo preventivo
-            </button>
-            <GestionaleSearchField
-              wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
-              placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-              value={searchPreventivi}
-              onChange={(e) => setSearchPreventivi(e.target.value)}
-              autoComplete="off"
-              aria-label="Cerca preventivi"
-            />
-            <button
-              type="button"
-              onClick={() => setFiltriEspansi((open) => !open)}
-              className={`${dsPageToolbarBtn} relative h-11 min-w-[8.25rem] shrink-0 gap-2 px-3 text-sm sm:ml-auto`}
-              aria-expanded={filtriEspansi}
-            >
-              Filtri
-              <svg
-                className={`h-4 w-4 shrink-0 text-[color:var(--cab-primary)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${filtriEspansi ? "rotate-180" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-                aria-hidden
+        <section aria-label="Azioni e filtri preventivi">
+          <PageToolbar
+            primaryAction={
+              <button
+                type="button"
+                onClick={() =>
+                  canEditWorkOrders &&
+                  setEditor({
+                    open: true,
+                    record: buildEmptyManualPreventivo(autore.trim() || "Operatore"),
+                    isNew: true,
+                    isRollbackDraft: false,
+                  })
+                }
+                className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
+                disabled={!canEditWorkOrders}
+                title={canEditWorkOrders ? "Crea un preventivo senza collegamento a lavorazione" : READONLY_PERMISSION_HINT}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-              </svg>
-              {hasAdvancedPanelFilters ? (
-                <span
-                  className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]"
-                  title="Filtri avanzati attivi"
-                  aria-hidden
-                ></span>
-              ) : null}
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
-                <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{sortedRows.length}</span>
-                <span>risultat{sortedRows.length === 1 ? "o" : "i"}</span>
-              </span>
-              {(searchPreventivi.trim() || hasAdvancedPanelFilters || filterLavId || filterMezzoRaw) ? (
-                <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
-                  Filtri attivi
+                <span className="text-base font-semibold leading-none" aria-hidden>
+                  +
                 </span>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-              <button type="button" className={dsPageToolbarBtn} onClick={() => setSearchPreventivi("")}>
-                Pulisci ricerca
+                Nuovo preventivo
               </button>
-              <button type="button" className={dsPageToolbarBtn} onClick={resetPreventiviPanelFilters}>
-                Reimposta filtri
-              </button>
-            </div>
-          </div>
-        </div>
-        </div>
-
-          <div
-            className={`mt-3 grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              filtriEspansi ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-            }`}
-          >
-            <div className="min-h-0 overflow-hidden">
-              <div className="border-t border-zinc-200 pt-3 dark:border-zinc-800" aria-label="Filtri preventivi">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                    Cliente
-                    <select
-                      className={gestionaleSelectFilterClass}
-                      value={filtroClientePrev}
-                      onChange={(e) => setFiltroClientePrev(e.target.value)}
-                      aria-label="Filtra cliente"
-                    >
-                      <option value="__tutti__">Tutti</option>
-                      {clientiPreventiviOpts.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                    Marca
-                    <select
-                      className={gestionaleSelectFilterClass}
-                      value={filtroMarcaPrev}
-                      onChange={(e) => {
-                        setFiltroMarcaPrev(e.target.value);
-                        setFiltroModelloPrev("__tutti__");
-                      }}
-                      aria-label="Filtra marca attrezzatura"
-                    >
-                      <option value="__tutti__">Tutte</option>
-                      {marchePvOpts.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                    Modello
-                    <select
-                      className={gestionaleSelectFilterClass}
-                      value={filtroModelloPrev}
-                      onChange={(e) => setFiltroModelloPrev(e.target.value)}
-                      aria-label="Filtra modello attrezzatura"
-                    >
-                      <option value="__tutti__">Tutti</option>
-                      {modelliPvOptsByMarca.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                    Targa (contiene)
-                    <input
-                      value={filtroTargaPrev}
-                      onChange={(e) => setFiltroTargaPrev(e.target.value)}
-                      className={`${dsInput} py-2 text-xs ${erpFocus}`}
-                      autoComplete="off"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                    Matricola (contiene)
-                    <input
-                      value={filtroMatricolaPrev}
-                      onChange={(e) => setFiltroMatricolaPrev(e.target.value)}
-                      className={`${dsInput} py-2 text-xs ${erpFocus}`}
-                      autoComplete="off"
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                    N. scuderia (contiene)
-                    <input
-                      value={filtroScuderiaPrev}
-                      onChange={(e) => setFiltroScuderiaPrev(e.target.value)}
-                      className={`${dsInput} py-2 text-xs ${erpFocus}`}
-                      autoComplete="off"
-                    />
-                  </label>
-                  <div className="grid grid-cols-2 gap-2 sm:col-span-2 lg:col-span-1">
-                    <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                      Importo min (€)
-                      <input
-                        value={importoMinStr}
-                        onChange={(e) => setImportoMinStr(e.target.value)}
-                        inputMode="decimal"
-                        placeholder="0"
-                        className={`${dsInput} py-2 text-xs ${erpFocus}`}
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                      Importo max (€)
-                      <input
-                        value={importoMaxStr}
-                        onChange={(e) => setImportoMaxStr(e.target.value)}
-                        inputMode="decimal"
-                        placeholder="∞"
-                        className={`${dsInput} py-2 text-xs ${erpFocus}`}
-                      />
-                    </label>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 sm:col-span-2">
-                    <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                      Data da
-                      <input
-                        type="date"
-                        value={filtroDataDaPrev}
-                        onChange={(e) => setFiltroDataDaPrev(e.target.value)}
-                        className={gestionaleSelectFilterClass}
-                      />
-                    </label>
-                    <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                      Data a
-                      <input
-                        type="date"
-                        value={filtroDataAPrev}
-                        onChange={(e) => setFiltroDataAPrev(e.target.value)}
-                        className={gestionaleSelectFilterClass}
-                      />
-                    </label>
-                  </div>
-                  <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                    Mese creazione
-                    <select
-                      className={gestionaleSelectFilterClass}
-                      value={filtroMesePrev}
-                      onChange={(e) => setFiltroMesePrev(e.target.value)}
-                      aria-label="Mese data creazione"
-                    >
-                      <option value="__tutti__">Tutti</option>
-                      <option value="1">Gennaio</option>
-                      <option value="2">Febbraio</option>
-                      <option value="3">Marzo</option>
-                      <option value="4">Aprile</option>
-                      <option value="5">Maggio</option>
-                      <option value="6">Giugno</option>
-                      <option value="7">Luglio</option>
-                      <option value="8">Agosto</option>
-                      <option value="9">Settembre</option>
-                      <option value="10">Ottobre</option>
-                      <option value="11">Novembre</option>
-                      <option value="12">Dicembre</option>
-                    </select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-[11px] font-medium text-zinc-600 dark:text-zinc-400">
-                    Anno creazione
-                    <select
-                      className={gestionaleSelectFilterClass}
-                      value={filtroAnnoPrev}
-                      onChange={(e) => setFiltroAnnoPrev(e.target.value)}
-                      aria-label="Anno data creazione"
-                    >
-                      <option value="__tutti__">Tutti</option>
-                      {anniPreventiviOpts.map((y) => (
-                        <option key={y} value={String(y)}>
-                          {y}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button type="button" className={dsBtnNeutral} onClick={resetPreventiviFiltriAvanzati}>
-                    Reimposta campi
+            }
+            search={
+              <GestionaleListSearchField
+                id="preventivi-search"
+                wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+                placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    flushPageSearch();
+                  }
+                }}
+                suggestionPool={searchSuggestionPool}
+                aria-label="Cerca preventivi"
+              />
+            }
+            filtersExpanded={filtriEspansi}
+            onFiltersToggle={() => setFiltriEspansi((o) => !o)}
+            filtersActive={hasAdvancedPanelFilters}
+            filtersPanel={
+              <PreventiviAdvancedFilterPanel
+                filters={advancedFilters}
+                onChange={patchAdvancedFilters}
+                catalog={filterCatalog}
+              />
+            }
+            meta={
+              <>
+                <PageToolbarResultCount count={sortedRows.length} filtersActive={hasPreventiviListFilters} />
+                <PageToolbarActions>
+                  <button type="button" className={dsPageToolbarBtn} onClick={resetPreventiviRicerca}>
+                    Pulisci ricerca
                   </button>
-                </div>
-              </div>
-            </div>
-          </div>
+                  <button type="button" className={dsPageToolbarBtn} onClick={resetPreventiviFiltriPagina}>
+                    Reimposta filtri
+                  </button>
+                </PageToolbarActions>
+              </>
+            }
+          />
+        </section>
 
-        <div className={`mt-4 ${dsTableWrap} ${dsScrollbar}`}>
-          <table className={`${dsTable} w-full min-w-0 table-fixed text-sm text-zinc-900 dark:text-zinc-100`}>
-            <colgroup>
+        <GestionaleListTable
+          masterScrollScope={false}
+          wrapClassName="mt-4"
+          visibilityClass="hidden md:block"
+          colgroup={
+            <>
               <col className="w-[5.25rem]" />
               <col className="w-[5.75rem]" />
-              <col />
-              <col className="w-[16%]" />
+              <col className="w-[12%]" />
+              <col className="w-[10%]" />
+              <col className="w-[10%]" />
+              <col className="w-[14%]" />
               <col className="w-[4.5rem]" />
               <col className="w-[5.25rem]" />
               <col className="w-[4.25rem]" />
               <col className="w-[6.25rem]" />
               <col className="w-[10.5rem]" />
-            </colgroup>
-            <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
-              <tr>
-                <SortThPreventivo
+            </>
+          }
+          headRow={
+            <>
+                <GlobalTableSortTh
                   label="N."
                   columnKey="numero"
                   sortColumn={sortColumn}
@@ -962,7 +636,7 @@ export function PreventiviView() {
                   onSort={onSortMain}
                   thClassName="w-[5.25rem] min-w-[5.25rem]"
                 />
-                <SortThPreventivo
+                <GlobalTableSortTh
                   label="Data"
                   columnKey="dataCreazione"
                   sortColumn={sortColumn}
@@ -970,7 +644,7 @@ export function PreventiviView() {
                   onSort={onSortMain}
                   thClassName="w-[5.75rem] min-w-[5.75rem]"
                 />
-                <SortThPreventivo
+                <GlobalTableSortTh
                   label="Cliente"
                   columnKey="cliente"
                   sortColumn={sortColumn}
@@ -978,15 +652,31 @@ export function PreventiviView() {
                   onSort={onSortMain}
                   thClassName="border-l border-zinc-200/90 pl-3 dark:border-zinc-700/90"
                 />
-                <SortThPreventivo
+                <GlobalTableSortTh
+                  label="Cantiere"
+                  columnKey="cantiere"
+                  sortColumn={sortColumn}
+                  sortPhase={sortPhase}
+                  onSort={onSortMain}
+                  thClassName="min-w-0 px-2"
+                />
+                <GlobalTableSortTh
+                  label="Utilizzatore"
+                  columnKey="utilizzatore"
+                  sortColumn={sortColumn}
+                  sortPhase={sortPhase}
+                  onSort={onSortMain}
+                  thClassName="min-w-0 px-2"
+                />
+                <GlobalTableSortTh
                   label="Mezzo"
                   columnKey="macchinaRiassunto"
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[16%] max-w-[16%] px-2"
+                  thClassName="min-w-0 px-2"
                 />
-                <SortThPreventivo
+                <GlobalTableSortTh
                   label="Targa"
                   columnKey="targa"
                   sortColumn={sortColumn}
@@ -994,7 +684,7 @@ export function PreventiviView() {
                   onSort={onSortMain}
                   thClassName="w-[4.5rem] min-w-[4.5rem] px-2"
                 />
-                <SortThPreventivo
+                <GlobalTableSortTh
                   label="Matricola"
                   columnKey="matricola"
                   sortColumn={sortColumn}
@@ -1002,7 +692,7 @@ export function PreventiviView() {
                   onSort={onSortMain}
                   thClassName="w-[5.25rem] min-w-[5.25rem] px-2"
                 />
-                <SortThPreventivo
+                <GlobalTableSortTh
                   label="Scud."
                   columnKey="nScuderia"
                   sortColumn={sortColumn}
@@ -1010,7 +700,7 @@ export function PreventiviView() {
                   onSort={onSortMain}
                   thClassName="w-[4.25rem] min-w-[4.25rem] px-2"
                 />
-                <SortThPreventivo
+                <GlobalTableSortTh
                   label="Totale"
                   columnKey="totaleFinale"
                   sortColumn={sortColumn}
@@ -1018,55 +708,57 @@ export function PreventiviView() {
                   onSort={onSortMain}
                   thClassName="w-[6.25rem] min-w-[6.25rem]"
                 />
-                <th
-                  className="w-[10.5rem] min-w-[10.5rem] px-2.5 py-2 text-right align-middle text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
-                >
-                  Azioni
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {pagedRows.length === 0 ? (
-                <tr className={dsTableRow}>
-                  <td colSpan={9} className="px-4 py-8 text-center text-sm text-zinc-500 dark:text-zinc-400">
-                    Nessun preventivo in archivio.
-                  </td>
-                </tr>
-              ) : (
-              pagedRows.map((p) => {
+                <GestionaleListTableActionsHead />
+            </>
+          }
+          empty={pagedRows.length === 0}
+          emptyMessage="Nessun preventivo in archivio."
+          colSpan={11}
+        >
+              {pagedRows.map((p) => {
                 const hrefLav = p.lavorazioneId.trim()
                   ? buildPreventiviLavorazioneFocusHref(p.lavorazioneId, p.lavorazioneOrigine)
                   : null;
+                const focused = focusPreventivoId === p.id;
                 return (
                   <tr
                     key={p.id}
-                    className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}
+                    id={`preventivo-row-${p.id}`}
+                    className={`${gestionaleListTableRowClass} ${
+                      focused ? "ring-2 ring-inset ring-orange-400/80 bg-orange-500/10" : ""
+                    }`}
                   >
-                    <td className="whitespace-nowrap px-2 align-middle font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100">
+                    <td className={`whitespace-nowrap ${prevTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
                       {p.numero}
                     </td>
-                    <td className="whitespace-nowrap px-2 align-middle text-xs tabular-nums text-zinc-600 dark:text-zinc-300">
+                    <td className={`whitespace-nowrap ${prevTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
                       {fmtDataCreazioneTabella(p.dataCreazione)}
                     </td>
-                    <td className="min-w-0 border-l border-zinc-200/90 px-3 align-middle text-zinc-800 dark:text-zinc-100 dark:border-zinc-700/90">
+                    <td className={prevTableTdCliente}>
                       <span className="line-clamp-2 break-words text-sm leading-snug">{p.cliente || "—"}</span>
                     </td>
-                    <td className="min-w-0 max-w-[1px] px-2 align-middle text-zinc-700 dark:text-zinc-200">
-                      <span className="line-clamp-2 break-words text-xs leading-snug">{p.macchinaRiassunto || "—"}</span>
+                    <td className={`min-w-0 ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
+                      <span className="line-clamp-2 break-words text-xs leading-snug">{p.cantiere || "—"}</span>
                     </td>
-                    <td className="whitespace-nowrap px-2 align-middle font-mono text-[11px] text-zinc-600 dark:text-zinc-300">{p.targa || "—"}</td>
-                    <td className="min-w-0 px-2 align-middle font-mono text-[11px] text-zinc-600 dark:text-zinc-300">
+                    <td className={`min-w-0 ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
+                      <span className="line-clamp-2 break-words text-xs leading-snug">{p.utilizzatore || "—"}</span>
+                    </td>
+                    <td className={`min-w-0 max-w-[1px] ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
+                      <span className="line-clamp-2 break-words text-sm leading-snug">{p.macchinaRiassunto || "—"}</span>
+                    </td>
+                    <td className={`whitespace-nowrap ${prevTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>{p.targa || "—"}</td>
+                    <td className={`min-w-0 ${prevTableTd} font-mono text-[11px] text-zinc-600 dark:text-zinc-300`}>
                       <span className="line-clamp-1">{p.matricola || "—"}</span>
                     </td>
-                    <td className="min-w-0 px-2 align-middle text-[11px] text-zinc-600 dark:text-zinc-300">
+                    <td className={`min-w-0 ${prevTableTd} text-[11px] text-zinc-600 dark:text-zinc-300`}>
                       <span className="line-clamp-1" title={p.nScuderia || undefined}>
                         {p.nScuderia || "—"}
                       </span>
                     </td>
-                    <td className="whitespace-nowrap px-2 align-middle text-right text-sm tabular-nums font-medium text-zinc-800 dark:text-zinc-100">
+                    <td className={`whitespace-nowrap ${prevTableTd} text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-100`}>
                       {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
                     </td>
-                    <td className={dsTableTdActions}>
+                    <td className={gestionaleListTableTdAzioni}>
                       <div className={dsTableActionsGroup}>
                         {hrefLav ? (
                           <Link
@@ -1123,11 +815,127 @@ export function PreventiviView() {
                     </td>
                   </tr>
                 );
-              })
-              )}
-            </tbody>
-          </table>
+              })}
+        </GestionaleListTable>
+
+        <div className="mt-4 space-y-3 md:hidden">
+          {pagedRows.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+              {hasPreventiviListFilters
+                ? "Nessun preventivo corrisponde alla ricerca o ai filtri selezionati."
+                : "Nessun preventivo in archivio."}
+            </p>
+          ) : (
+            pagedRows.map((p) => {
+              const hrefLav = p.lavorazioneId.trim()
+                ? buildPreventiviLavorazioneFocusHref(p.lavorazioneId, p.lavorazioneOrigine)
+                : null;
+              const focused = focusPreventivoId === p.id;
+              return (
+                <CardMobile
+                  key={p.id}
+                  id={`preventivo-row-${p.id}`}
+                  className={focused ? "ring-2 ring-orange-400/80 bg-orange-500/10" : undefined}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-mono text-xs font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">{p.numero}</p>
+                      <p className="mt-1 text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
+                        {p.cliente || "—"}
+                      </p>
+                      <p className="mt-1 text-sm text-zinc-700 dark:text-zinc-200">{p.macchinaRiassunto || "—"}</p>
+                    </div>
+                    <p className="shrink-0 text-right text-base font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">
+                      {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
+                    </p>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                    <div>
+                      <dt className="text-zinc-500 dark:text-zinc-400">Data</dt>
+                      <dd className="font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+                        {fmtDataCreazioneTabella(p.dataCreazione)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-zinc-500 dark:text-zinc-400">Cantiere</dt>
+                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">{p.cantiere || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-zinc-500 dark:text-zinc-400">Utilizzatore</dt>
+                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">{p.utilizzatore || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-zinc-500 dark:text-zinc-400">Targa</dt>
+                      <dd className="font-mono font-medium text-zinc-800 dark:text-zinc-200">{p.targa || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-zinc-500 dark:text-zinc-400">Matricola</dt>
+                      <dd className="font-mono font-medium text-zinc-800 dark:text-zinc-200">{p.matricola || "—"}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-zinc-500 dark:text-zinc-400">Scuderia</dt>
+                      <dd className="font-medium text-zinc-800 dark:text-zinc-200">{p.nScuderia || "—"}</dd>
+                    </div>
+                  </dl>
+                  <CardMobileActions>
+                    {hrefLav ? (
+                      <Link
+                        href={hrefLav}
+                        className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
+                        title={
+                          p.lavorazioneOrigine === "storico"
+                            ? "Apri lavorazione (storico)"
+                            : "Apri lavorazione in corso"
+                        }
+                        aria-label="Apri lavorazione collegata"
+                      >
+                        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 0L21 3m0 0h-5.25M21 3v5.25" />
+                        </svg>
+                      </Link>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={dsTableActionBtnPrimary}
+                      onClick={() => apriModifica(p)}
+                      disabled={!canEditWorkOrders}
+                      title={canEditWorkOrders ? "Apri / modifica" : READONLY_PERMISSION_HINT}
+                      aria-label="Apri o modifica preventivo"
+                    >
+                      <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className={dsTableActionBtnSecondary}
+                      onClick={() => openPreventivoPdfInNewTab(p, autore.trim() || "Operatore")}
+                      title="Esporta PDF"
+                      aria-label="Esporta PDF preventivo"
+                    >
+                      <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      className={dsTableActionBtnDanger}
+                      onClick={() => onElimina(p)}
+                      disabled={!canDeleteRecords}
+                      title={canDeleteRecords ? "Elimina" : READONLY_PERMISSION_HINT}
+                      aria-label="Elimina preventivo"
+                    >
+                      <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
+                  </CardMobileActions>
+                </CardMobile>
+              );
+            })
+          )}
         </div>
+
         {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
       </ShellCard>
 

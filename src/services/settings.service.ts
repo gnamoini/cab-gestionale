@@ -141,6 +141,28 @@ export const settingsService = {
       const allowed = await ensurePermission("manageSettings");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
+      const rpcItems = inputs.map((input) => {
+        const row: Record<string, unknown> = {
+          module: input.module,
+          key: input.key,
+          value: input.value,
+        };
+        if (input.expectedUpdatedAt) row.expected_updated_at = input.expectedUpdatedAt;
+        return row;
+      });
+      const { data, error } = await c.rpc("bulk_upsert_app_settings", { p_items: rpcItems });
+      if (!error) {
+        const rows = (Array.isArray(data) ? data : data ? [data] : []) as AppSettingRow[];
+        return success(rows);
+      }
+      const msg = error.message ?? "";
+      const rpcUnavailable =
+        msg.includes("bulk_upsert_app_settings") ||
+        msg.includes("Could not find the function") ||
+        error.code === "PGRST202";
+      if (!rpcUnavailable) {
+        return err<AppSettingRow[]>(msg.includes("SETTINGS_CONCURRENCY_CONFLICT") ? SETTINGS_CONCURRENCY_CONFLICT : msg, null);
+      }
       const out: AppSettingRow[] = [];
       for (const input of inputs) {
         const r = await applyAppSettingsUpsert(c, input);

@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
+import { useToast } from "@/context/toast-context";
 import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import {
   dispatchLavorazioniPrefsRefresh,
   dispatchMagazzinoMasterRefresh,
   dispatchMezziListeRefresh,
 } from "@/lib/sistema/cab-events";
+import { shouldSuppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { QK } from "@/src/lib/react-query/invalidate-related";
@@ -45,12 +48,20 @@ function isOwnWrite(
 }
 
 /** Invalida cache impostazioni su cambi `app_settings` da altri client; anti-loop, retry subscription, fallback polling. */
+const REMOTE_SETTINGS_NOTIFY_DEBOUNCE_MS = 1500;
+
 export function AppSettingsRealtimeBridge() {
   const qc = useQueryClient();
   const { user } = useAuth();
+  const { push } = useToast();
+  const pushRef = useRef(push);
+  pushRef.current = push;
+  const pathname = usePathname();
   const { isOpen: settingsModalOpen } = useSettingsModalOpen();
   const settingsModalOpenRef = useRef(settingsModalOpen);
   settingsModalOpenRef.current = settingsModalOpen;
+  const onSettingsPageRef = useRef(false);
+  onSettingsPageRef.current = pathname?.startsWith("/impostazioni") ?? false;
   const userIdRef = useRef(user?.id);
   userIdRef.current = user?.id;
 
@@ -60,6 +71,7 @@ export function AppSettingsRealtimeBridge() {
     let cancelled = false;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let remoteNotifyTimer: ReturnType<typeof setTimeout> | null = null;
     let activeChannel: ReturnType<ReturnType<typeof getBrowserSupabase>["channel"]> | null = null;
     const recentFingerprints = new Map<string, number>();
     const PRUNE_MS = 4000;
@@ -70,19 +82,33 @@ export function AppSettingsRealtimeBridge() {
       dispatchLavorazioniPrefsRefresh();
     };
 
+    const isSettingsEditorActive = () =>
+      settingsModalOpenRef.current || onSettingsPageRef.current || shouldSuppressSettingsRemoteNotify();
+
     const scheduleInvalidate = () => {
-      if (settingsModalOpenRef.current) return;
+      if (isSettingsEditorActive()) return;
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
-        if (cancelled || settingsModalOpenRef.current) return;
+        if (cancelled || isSettingsEditorActive()) return;
         void qc.invalidateQueries({ queryKey: [...QK.settings] });
         dispatchSideEffects();
       }, 400);
     };
 
+    const scheduleRemoteSettingsNotify = () => {
+      if (isSettingsEditorActive()) return;
+      if (remoteNotifyTimer) clearTimeout(remoteNotifyTimer);
+      remoteNotifyTimer = setTimeout(() => {
+        remoteNotifyTimer = null;
+        if (cancelled || isSettingsEditorActive()) return;
+        pushRef.current("Un utente ha aggiornato le impostazioni", "info", 4500);
+      }, REMOTE_SETTINGS_NOTIFY_DEBOUNCE_MS);
+    };
+
     const onPayload = (payload: { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> }) => {
       if (cancelled) return;
+      if (shouldSuppressSettingsRemoteNotify()) return;
       if (isOwnWrite(userIdRef.current, payload)) return;
 
       const fp = eventFingerprint(payload);
@@ -94,12 +120,13 @@ export function AppSettingsRealtimeBridge() {
       recentFingerprints.set(fp, now);
 
       if (payload.eventType === "DELETE") {
-        if (settingsModalOpenRef.current) return;
+        if (isSettingsEditorActive()) return;
         void qc.invalidateQueries({ queryKey: [...QK.settings] });
         dispatchSideEffects();
         return;
       }
       scheduleInvalidate();
+      scheduleRemoteSettingsNotify();
     };
 
     const startPollingFallback = () => {
@@ -168,6 +195,7 @@ export function AppSettingsRealtimeBridge() {
     return () => {
       cancelled = true;
       if (debounceTimer) clearTimeout(debounceTimer);
+      if (remoteNotifyTimer) clearTimeout(remoteNotifyTimer);
       stopPollingFallback();
       const sb = getBrowserSupabase();
       if (activeChannel) {

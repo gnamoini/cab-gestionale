@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -685,7 +686,7 @@ export function MezziView() {
                 Chiudi
               </button>
             </div>
-            <form onSubmit={submitNuovo} className="flex min-h-0 flex-1 flex-col">
+            <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNuovo} className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
                 <MezzoFormFields form={nuovoForm} setForm={setNuovoForm} />
               </div>
@@ -721,7 +722,7 @@ export function MezziView() {
                 Chiudi
               </button>
             </div>
-            <form onSubmit={submitEdit} className="flex min-h-0 flex-1 flex-col">
+            <form {...gestionaleFormFocusScopeProps()} onSubmit={submitEdit} className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
                 <MezzoFormFields form={editForm} setForm={setEditForm} />
               </div>

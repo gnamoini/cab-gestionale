@@ -6,6 +6,7 @@ import { useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavoraz
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
+import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleListSelect } from "@/components/gestionale/gestionale-list-select";
 import { SettingsAutocompleteInput } from "@/components/gestionale/settings-autocomplete-input";
@@ -81,7 +82,7 @@ export function LavorazioneEditModal({
       title="Dettagli macchina"
       subtitle="Modifica controllata di anagrafica mezzo e note lavorazione."
     >
-      <form onSubmit={onSubmit} className="flex max-h-[min(88dvh,720px)] flex-col overflow-hidden">
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className="flex max-h-[min(88dvh,720px)] flex-col overflow-hidden">
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
           {update.isError || updateMezzo.isError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{update.error?.message ?? updateMezzo.error?.message ?? "Aggiornamento fallito."}</p>
