@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppProviders } from "@/components/app-providers";
+import { ThemeBoot } from "@/components/theme-boot-client";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
 import "./globals.css";
 
@@ -34,7 +35,7 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="gestionale-scrollbar flex min-h-full flex-col font-sans antialiased">
-        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        <ThemeBoot script={themeBootScript} />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

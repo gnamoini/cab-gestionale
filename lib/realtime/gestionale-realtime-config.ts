@@ -1,6 +1,6 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { invalidateClientPortalQueries } from "@/lib/lavorazioni/client-portal-invalidate";
-import { QK } from "@/src/lib/react-query/invalidate-related";
+import { QK } from "@/src/lib/react-query/query-keys";
 
 /** Intervallo polling di fallback quando Realtime non è connesso (ms). */
 export const GESTIONALE_REALTIME_POLL_MS = 20_000;

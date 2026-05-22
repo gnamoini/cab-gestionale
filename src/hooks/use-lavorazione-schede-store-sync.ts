@@ -3,7 +3,7 @@
 import { useSchedeStoreQuery } from "@/src/hooks/use-schede-store-query";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
-export const LAVORAZIONI_SCHEDE_STORE_CHANGED = "gestionale-schede-store-changed";
+export { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/lib/schede/schede-store-events";
 
 /** @deprecated Preferire `useSchedeStoreQuery` — mantiene API per componenti esistenti. */
 export function useLavorazioneSchedeStoreSync(): LavorazioneSchedeStore {

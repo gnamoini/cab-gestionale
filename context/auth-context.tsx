@@ -9,7 +9,7 @@ import { resolveFormattedUserDisplayName } from "@/src/lib/auth/resolve-user-dis
 import { resolveRole } from "@/lib/auth/rbac";
 import { beginUndoSession, resetUndoSession } from "@/lib/gestionale-log/undo-session";
 import { notifyUndoSessionChanged } from "@/lib/gestionale-log/use-undo-session-id";
-import { QK } from "@/src/lib/react-query/invalidate-related";
+import { QK } from "@/src/lib/react-query/query-keys";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { authLogsService } from "@/src/services/auth-logs.service";
 import type { PublicAuthUser } from "@/src/types/auth-user";

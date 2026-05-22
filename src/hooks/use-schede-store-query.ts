@@ -5,11 +5,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { invalidateClientPortalQueries } from "@/lib/lavorazioni/client-portal-invalidate";
 import { fetchSchedeStoreMerged } from "@/lib/schede/schede-sync-adapter";
 import { LAVORAZIONI_SCHEDE_STORAGE_KEY } from "@/lib/schede/lavorazioni-schede-storage";
-import { QK } from "@/src/lib/react-query/invalidate-related";
+import { SCHEDE_STORE_QUERY_KEY } from "@/src/lib/react-query/query-keys";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
-export const SCHEDE_STORE_QUERY_KEY = [...QK.schede, "store"] as const;
+export { SCHEDE_STORE_QUERY_KEY } from "@/src/lib/react-query/query-keys";
 
 const STORE_OPTS = {
   staleTime: 5_000,

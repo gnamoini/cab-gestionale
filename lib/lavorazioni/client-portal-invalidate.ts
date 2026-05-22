@@ -3,8 +3,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { CLIENT_PORTAL_SYNC_TABLES } from "@/lib/lavorazioni/client-portal-sync-tables";
 import { broadcastGestionaleInvalidate } from "@/lib/sync/cab-realtime-broadcast";
-import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
-import { QK } from "@/src/lib/react-query/invalidate-related";
+import { QK } from "@/src/lib/react-query/query-keys";
 
 export { CLIENT_PORTAL_SYNC_TABLES, isClientPortalSyncTable } from "@/lib/lavorazioni/client-portal-sync-tables";
 export type { ClientPortalSyncTable } from "@/lib/lavorazioni/client-portal-sync-tables";
@@ -24,11 +23,4 @@ export async function invalidateClientPortalQueries(qc: QueryClient): Promise<vo
 /** Propaga sync ad altre schede/tab del browser (stesso origin). */
 export function broadcastClientPortalSync(): void {
   broadcastGestionaleInvalidate([...CLIENT_PORTAL_SYNC_TABLES]);
-}
-
-/**
- * Dopo mutazioni gestionale: invalida portale clienti in questa tab e notifica le altre.
- */
-export async function syncClientPortalAfterGestionaleChange(qc: QueryClient): Promise<void> {
-  dispatchGestionaleLocalMutation(qc, [...CLIENT_PORTAL_SYNC_TABLES]);
 }

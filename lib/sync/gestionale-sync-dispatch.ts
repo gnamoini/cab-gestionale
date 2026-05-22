@@ -20,7 +20,7 @@ import {
   type CabSyncEntity,
   type CabSyncEvent,
 } from "@/lib/sync/cab-sync-bus";
-import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/src/hooks/use-lavorazione-schede-store-sync";
+import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/lib/schede/schede-store-events";
 
 export type DispatchGestionaleRemoteChangeOptions = {
   /** Propaga ad altre tab via BroadcastChannel (default false). */

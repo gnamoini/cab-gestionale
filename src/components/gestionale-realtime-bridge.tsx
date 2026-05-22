@@ -22,6 +22,7 @@ import {
   subscribeGestionaleBroadcast,
 } from "@/lib/sync/cab-realtime-broadcast";
 import { cabSyncEventFromPostgresChange, emitCabSyncEvent } from "@/lib/sync/cab-sync-bus";
+import { dispatchGestionaleRemoteChange } from "@/lib/sync/gestionale-sync-dispatch";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 

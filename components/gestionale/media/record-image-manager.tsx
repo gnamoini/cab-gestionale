@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { syncClientPortalAfterGestionaleChange } from "@/lib/lavorazioni/client-portal-invalidate";
+import { syncClientPortalAfterGestionaleChange } from "@/src/lib/react-query/invalidate-related";
 import {
   deleteStoredImage,
   listStoredImages,
