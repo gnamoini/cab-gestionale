@@ -28,17 +28,26 @@ export type AutocompleteEngineInput = {
   browseCap?: number;
 };
 
-export function autocompleteDisplayValue(input: AutocompleteEngineInput): string {
-  const { mode, value, searchText, focused, items } = input;
-  if (focused) return searchText;
+export function autocompleteIsEditing(input: Pick<AutocompleteEngineInput, "focused" | "searchText">): boolean {
+  return input.focused || input.searchText.length > 0;
+}
+
+/** Valore mostrato a riposo (commit), prima di entrare in modifica. */
+export function autocompleteCommittedDisplayValue(input: AutocompleteEngineInput): string {
+  const { mode, value, items } = input;
   if (mode === "items" && items) {
     return findItemByValue(value, items)?.label ?? "";
   }
   return value;
 }
 
+export function autocompleteDisplayValue(input: AutocompleteEngineInput): string {
+  if (autocompleteIsEditing(input)) return input.searchText;
+  return autocompleteCommittedDisplayValue(input);
+}
+
 export function autocompleteFilterQuery(input: AutocompleteEngineInput): string {
-  return input.focused ? input.searchText : "";
+  return autocompleteIsEditing(input) ? input.searchText : "";
 }
 
 export function autocompleteStringSuggestions(input: AutocompleteEngineInput): string[] {

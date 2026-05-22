@@ -1,5 +1,11 @@
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import {
+  flattenCompatDaAttrezzature,
+  migrateMezziListePrefs,
+} from "@/lib/mezzi/attrezzature-prefs";
+import { flattenCompatFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
+import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { isValueInListOptions } from "@/lib/ui/list-select-utils";
 
 const MAGAZZINO_DEFAULT_AUTHOR = "Operatore";
@@ -181,8 +187,18 @@ export function toFormDraft(r: RicambioMagazzino): RicambioFormState {
 export type RicambioListFieldOptions = {
   marche: readonly string[];
   categorie: readonly string[];
-  mezziCompatibili: readonly string[];
+  /** Albero attrezzature da `app_settings.mezziListe` — unica fonte compatibilità mezzi. */
+  mezziListe: MezziListePrefs;
 };
+
+/** Etichette «Marca — Modello» ammesse per compatibilità ricambio (attrezzature + telai). */
+export function ricambioCompatLabelsFromSettings(mezziListe: MezziListePrefs): string[] {
+  const p = migrateMezziListePrefs(mezziListe);
+  return [
+    ...flattenCompatDaAttrezzature(p),
+    ...flattenCompatFromHierarchyTree(p, "telai"),
+  ].filter((v, i, arr) => arr.indexOf(v) === i).sort((a, b) => a.localeCompare(b, "it"));
+}
 
 /** Validazione valori da elenchi globali (marca, categoria, compatibilità). */
 export function validateRicambioListFields(
@@ -195,7 +211,8 @@ export function validateRicambioListFields(
   if (!isValueInListOptions(f.categoria, opts.categorie)) return "Seleziona una categoria esistente.";
   const compat = parseCompatInput(f.compatibilitaMezzi);
   if (compat.length === 0) return "Seleziona almeno una compatibilità mezzo.";
-  const invalid = compat.filter((x) => !isValueInListOptions(x, opts.mezziCompatibili));
+  const compatAllowed = ricambioCompatLabelsFromSettings(opts.mezziListe);
+  const invalid = compat.filter((x) => !isValueInListOptions(x, compatAllowed));
   if (invalid.length > 0) {
     return `Compatibilità non valida: seleziona solo valori dall'elenco (${invalid[0]}).`;
   }

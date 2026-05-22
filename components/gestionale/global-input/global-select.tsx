@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom";
 import {
   autocompleteCommitFromSearchText,
+  autocompleteCommittedDisplayValue,
   autocompleteDisplayValue,
   autocompleteFuzzySuggestion,
   autocompleteIsValid,
@@ -275,14 +276,35 @@ export function GlobalSelect(props: GlobalSelectProps) {
     }
   };
 
+  const seedSearchFromCommitted = useCallback(() => {
+    setSearchText(autocompleteCommittedDisplayValue(engineInput));
+  }, [engineInput]);
+
+  const isFilterVariant = variant === "filter";
+
+  const beginEditing = useCallback(() => {
+    setFocused(true);
+    setOpen(true);
+    if (isFilterVariant) {
+      setSearchText("");
+    } else {
+      seedSearchFromCommitted();
+    }
+  }, [isFilterVariant, seedSearchFromCommitted]);
+
   const commitBlur = () => {
     setOpen(false);
     setActiveIndex(-1);
     setTouched(true);
     setFocused(false);
+    const trimmed = searchText.trim();
+    if (!trimmed) {
+      if (value && !isFilterVariant) onChange("");
+      setSearchText("");
+      return;
+    }
     const committed = autocompleteCommitFromSearchText(searchText, mode, options, items, strictFromList);
     if (committed && committed !== value) onChange(committed);
-    else if (strictFromList && !committed && searchText.trim() && !value.trim()) onChange("");
     setSearchText("");
   };
 
@@ -428,20 +450,16 @@ export function GlobalSelect(props: GlobalSelectProps) {
         className={`${fieldClass}${showInvalid ? globalInputInvalidRing : ""}`}
         value={displayValue}
         onChange={(e) => {
-          setSearchText(e.target.value);
+          const next = e.target.value;
+          setFocused(true);
+          setSearchText(next);
           setOpen(true);
           setActiveIndex(-1);
+          if (next === "" && !isFilterVariant) onChange("");
         }}
-        onFocus={() => {
-          setFocused(true);
-          setOpen(true);
-          setSearchText("");
-        }}
+        onFocus={beginEditing}
         onClick={() => {
-          if (!open) {
-            setOpen(true);
-            setSearchText("");
-          }
+          if (!open) beginEditing();
         }}
         onBlur={() => {
           blurTimer.current = setTimeout(commitBlur, 120);

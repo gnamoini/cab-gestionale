@@ -21,6 +21,10 @@ export {
   GlobalSettingsListSelect,
   GlobalHierarchyMarcaSelect,
   GlobalHierarchyModelloSelect,
+  GlobalTelaiMarcaSelect,
+  GlobalTelaiModelloSelect,
+  GlobalAttrezzatureMarcaSelect,
+  GlobalAttrezzatureModelloSelect,
   type GlobalSettingsListSelectProps,
 } from "@/components/gestionale/global-input/global-settings-list-select";
 export { GlobalDateRangePicker } from "@/components/gestionale/global-input/global-date-range-picker";

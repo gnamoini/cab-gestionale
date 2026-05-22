@@ -1,6 +1,7 @@
 import {
   aggiungiMarca as aggiungiMarcaAttrezzatura,
   aggiungiModello as aggiungiModelloAttrezzatura,
+  compatLabelMarcaModello,
   eliminaMarca as eliminaMarcaAttrezzatura,
   eliminaModello as eliminaModelloAttrezzatura,
   migrateMezziListePrefs,
@@ -68,6 +69,40 @@ export function modelliVisibiliPerMarcaHierarchy(
   const hit = getHierarchyTree(liste, key).find((m) => m.nome.trim().toLowerCase() === marcaNome.trim().toLowerCase());
   if (!hit) return [];
   return [...new Set(hit.modelli.map((x) => x.nome.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
+}
+
+/** Etichette «Marca — Modello» per albero attrezzature o telai (app_settings.mezziListe). */
+export function flattenCompatFromHierarchyTree(liste: MezziListePrefs, key: HierarchyTreeKey): string[] {
+  const p = migrateMezziListePrefs(liste);
+  const out: string[] = [];
+  for (const m of getHierarchyTree(p, key)) {
+    for (const mod of m.modelli) {
+      const line = compatLabelMarcaModello(m.nome, mod.nome);
+      if (line.trim()) out.push(line);
+    }
+  }
+  return [...new Set(out)].sort((a, b) => a.localeCompare(b, "it"));
+}
+
+/** Filtra etichette compat per marche selezionate; array vuoto = tutte le combinazioni del tree. */
+export function compatLabelsPerMarcheHierarchy(
+  liste: MezziListePrefs,
+  key: HierarchyTreeKey,
+  marcheSelezionate: readonly string[],
+): string[] {
+  const marche = [...new Set(marcheSelezionate.map((m) => m.trim()).filter(Boolean))];
+  if (marche.length === 0) return flattenCompatFromHierarchyTree(liste, key);
+  const p = migrateMezziListePrefs(liste);
+  const marcheSet = new Set(marche);
+  const out: string[] = [];
+  for (const m of getHierarchyTree(p, key)) {
+    if (!marcheSet.has(m.nome.trim())) continue;
+    for (const mod of m.modelli) {
+      const line = compatLabelMarcaModello(m.nome, mod.nome);
+      if (line.trim()) out.push(line);
+    }
+  }
+  return [...new Set(out)].sort((a, b) => a.localeCompare(b, "it"));
 }
 
 export function aggiungiMarcaHierarchy(liste: MezziListePrefs, key: HierarchyTreeKey, nome: string): MezziListePrefs {

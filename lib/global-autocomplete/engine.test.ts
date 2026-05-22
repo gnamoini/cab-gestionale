@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
   autocompleteCommitFromSearchText,
+  autocompleteCommittedDisplayValue,
   autocompleteDisplayValue,
+  autocompleteFilterQuery,
   autocompleteItemSuggestions,
   autocompleteStringSuggestions,
   type AutocompleteEngineInput,
@@ -35,6 +37,31 @@ assert.equal(autocompleteDisplayValue(base({ value: "Alpha", focused: false })),
 assert.equal(
   autocompleteDisplayValue(base({ value: "Alpha", focused: true, searchText: "al" })),
   "al",
+);
+
+// Display: searchText attivo anche senza focus (es. digitazione dopo select con focus DOM)
+assert.equal(
+  autocompleteDisplayValue(base({ value: "Alpha", focused: false, searchText: "al" })),
+  "al",
+);
+
+// Filtro: query attiva con searchText anche senza focus
+assert.equal(autocompleteFilterQuery(base({ focused: false, searchText: "be" })), "be");
+
+// Committed display items mode
+assert.equal(
+  autocompleteCommittedDisplayValue({
+    mode: "items",
+    value: "a",
+    searchText: "",
+    focused: false,
+    open: false,
+    items: [
+      { value: "a", label: "Attesa" },
+      { value: "b", label: "Bozza" },
+    ],
+  }),
+  "Attesa",
 );
 
 // Commit fuzzy/exact

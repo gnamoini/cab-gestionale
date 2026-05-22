@@ -1232,7 +1232,7 @@ export function MagazzinoView() {
     const listErr = validateRicambioListFields(editDraft, {
       marche,
       categorie,
-      mezziCompatibili: mezziCompatOptions,
+      mezziListe: mezziListePrefs,
     });
     if (listErr) {
       setEditListFieldInvalid(true);
@@ -1881,11 +1881,6 @@ export function MagazzinoView() {
                 <RicambioFormFields
                   form={newForm}
                   setForm={setNewForm}
-                  marcheOptions={marche}
-                  categorieOptions={categorie}
-                  fornitoriOptions={fornitori}
-                  mezziOptions={mezzi}
-                  attrezzatureListe={mezziListePrefs}
                   relaxHtmlValidation
                   autoFocusToken={newRicambioFocusToken}
                   codiceOriginaleAvvisoDuplicato={
@@ -2127,11 +2122,6 @@ export function MagazzinoView() {
                       <RicambioFormFields
                         form={editDraft}
                         setForm={setEditForm}
-                        marcheOptions={marche}
-                        categorieOptions={categorie}
-                        fornitoriOptions={fornitori}
-                        mezziOptions={mezzi}
-                        attrezzatureListe={mezziListePrefs}
                         listFieldForceInvalid={editListFieldInvalid}
                       />
                       {detailRicambio ? (

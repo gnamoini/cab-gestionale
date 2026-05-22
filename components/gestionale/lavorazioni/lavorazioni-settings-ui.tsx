@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { STATO_LAVORAZIONE_COMPLETATA_ID } from "@/lib/lavorazioni/stati-dynamic";
+import { sortStringsItCaseInsensitive } from "@/lib/ui/sort-strings-it";
 
 export function ColorSwatchButton({
   value,
@@ -188,9 +189,11 @@ export function AddettiSettingsList({
   storicoAddetti: Set<string>;
   inputClass: string;
 }) {
+  const sortedAddetti = useMemo(() => sortStringsItCaseInsensitive(addetti), [addetti]);
+
   return (
     <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-      {addetti.map((a) => {
+      {sortedAddetti.map((a) => {
         const inUse = attiviAddetti.has(a) || storicoAddetti.has(a);
         const displayHex = addettoDisplayColor(a, addettoColors);
         return (

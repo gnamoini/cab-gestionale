@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
 import {
   aggiungiMarcaHierarchy,
@@ -36,15 +37,25 @@ export function HierarchyTreeSettingsSection({
   const [nuovoModelloByMarca, setNuovoModelloByMarca] = useState<Record<string, string>>({});
   const [expandedMarcaIds, setExpandedMarcaIds] = useState<Set<string>>(() => new Set());
   const [q, setQ] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<
+    | { kind: "marca"; marcaId: string; label: string; modelCount: number }
+    | { kind: "modello"; marcaId: string; modelloId: string; label: string }
+    | null
+  >(null);
+
+  const sortedTree = useMemo(
+    () => [...tree].sort((a, b) => a.nome.localeCompare(b.nome, "it", { sensitivity: "base" })),
+    [tree],
+  );
 
   const filteredTree = useMemo(() => {
     const t = q.trim().toLowerCase();
-    if (!t) return tree;
-    return tree.filter((m) => {
+    if (!t) return sortedTree;
+    return sortedTree.filter((m) => {
       if (m.nome.toLowerCase().includes(t)) return true;
       return m.modelli.some((mod) => mod.nome.toLowerCase().includes(t));
     });
-  }, [q, tree]);
+  }, [q, sortedTree]);
 
   function toggleMarcaExpand(id: string) {
     setExpandedMarcaIds((prev) => {
@@ -97,6 +108,9 @@ export function HierarchyTreeSettingsSection({
         <ul className={`${PANEL} divide-y divide-zinc-100 dark:divide-zinc-800`}>
           {filteredTree.map((m) => {
             const modelliOpen = variant === "modello" ? expandedMarcaIds.has(m.id) : false;
+            const sortedModelli = [...m.modelli].sort((a, b) =>
+              a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }),
+            );
             return (
               <li key={m.id} className="px-2 py-1.5 sm:px-3">
                 <div className="flex items-center gap-2">
@@ -128,12 +142,11 @@ export function HierarchyTreeSettingsSection({
                       type="button"
                       className={`${erpBtnNeutral} min-h-9 shrink-0 px-2 py-1.5 text-xs text-red-600 dark:text-red-400`}
                       onClick={() => {
-                        if (!window.confirm(`Eliminare la marca «${m.nome}» e tutti i suoi modelli?`)) return;
-                        setListe((prev) => eliminaMarcaHierarchy(prev, treeKey, m.id));
-                        setExpandedMarcaIds((prev) => {
-                          const n = new Set(prev);
-                          n.delete(m.id);
-                          return n;
+                        setPendingDelete({
+                          kind: "marca",
+                          marcaId: m.id,
+                          label: m.nome,
+                          modelCount: m.modelli.length,
                         });
                       }}
                     >
@@ -149,7 +162,7 @@ export function HierarchyTreeSettingsSection({
                 {variant === "modello" && modelliOpen ? (
                   <>
                     <ul className="mt-1.5 space-y-1 pl-11">
-                      {m.modelli.map((mod) => (
+                      {sortedModelli.map((mod) => (
                         <li key={mod.id} className="flex items-center gap-2 rounded-lg bg-zinc-50/80 px-2 py-1 dark:bg-zinc-800/50">
                           <input
                             className={`${INPUT} text-zinc-800 dark:text-zinc-100`}
@@ -166,8 +179,12 @@ export function HierarchyTreeSettingsSection({
                             type="button"
                             className={`shrink-0 text-xs text-red-600 hover:underline dark:text-red-400 ${erpFocus}`}
                             onClick={() => {
-                              if (!window.confirm(`Rimuovere il modello «${mod.nome}»?`)) return;
-                              setListe((prev) => eliminaModelloHierarchy(prev, treeKey, m.id, mod.id));
+                              setPendingDelete({
+                                kind: "modello",
+                                marcaId: m.id,
+                                modelloId: mod.id,
+                                label: mod.nome,
+                              });
                             }}
                           >
                             Elimina
@@ -203,6 +220,32 @@ export function HierarchyTreeSettingsSection({
           })}
         </ul>
       )}
+      <SettingsEliminaConfirmDialog
+        open={pendingDelete != null}
+        itemLabel={pendingDelete?.label}
+        detail={
+          pendingDelete?.kind === "marca" && pendingDelete.modelCount > 0
+            ? `Verranno eliminati anche ${pendingDelete.modelCount} modello${pendingDelete.modelCount === 1 ? "" : "i"} associati.`
+            : undefined
+        }
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (!pendingDelete) return;
+          if (pendingDelete.kind === "marca") {
+            setListe((prev) => eliminaMarcaHierarchy(prev, treeKey, pendingDelete.marcaId));
+            setExpandedMarcaIds((prev) => {
+              const n = new Set(prev);
+              n.delete(pendingDelete.marcaId);
+              return n;
+            });
+          } else {
+            setListe((prev) =>
+              eliminaModelloHierarchy(prev, treeKey, pendingDelete.marcaId, pendingDelete.modelloId),
+            );
+          }
+          setPendingDelete(null);
+        }}
+      />
     </div>
   );
 }

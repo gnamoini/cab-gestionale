@@ -48,6 +48,8 @@ export function MagazzinoAdvancedFilterPanel({
               onChange({ compatMarca, compatModello: FILTER_ALL });
             }}
             inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            placeholder="Cerca e seleziona…"
             aria-label="Filtra marca compatibilità"
           />
         </LavorazioniFilterField>
@@ -58,6 +60,8 @@ export function MagazzinoAdvancedFilterPanel({
             value={filters.compatModello === FILTER_ALL ? "" : filters.compatModello}
             onChange={(v) => onChange({ compatModello: v.trim() ? v : FILTER_ALL })}
             inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            placeholder={filters.compatMarca === FILTER_ALL ? "Seleziona prima la marca" : "Cerca e seleziona…"}
             disabled={filters.compatMarca === FILTER_ALL}
             aria-label="Filtra modello compatibilità"
           />
@@ -71,6 +75,7 @@ export function MagazzinoAdvancedFilterPanel({
             value={filters.categoria}
             onChange={(v) => onChange({ categoria: v })}
             inputClassName={gestionaleFilterFieldInputClass}
+            placeholder="Cerca categoria…"
             strictFromList
             variant="filter"
             aria-label="Filtra categoria ricambio"

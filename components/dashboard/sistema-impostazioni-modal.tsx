@@ -34,6 +34,7 @@ import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { appendDashboardSettingsSavedLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
+import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import { CloseButton } from "@/components/design-system";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import {
@@ -43,6 +44,7 @@ import {
   dispatchMezziListeRefresh,
 } from "@/lib/sistema/cab-events";
 import { erpBtnNeutral, erpBtnSoftOrange } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { sortStringsItCaseInsensitive } from "@/lib/ui/sort-strings-it";
 import { buildBulkRowsFromResolved, resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
 import { useCabAppSettingsPayloadQuery, useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
 import {
@@ -352,10 +354,11 @@ function ClientiCommercialiList({
   onRemove: (nome: string) => void;
 }) {
   const [q, setQ] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    if (!t) return [...liste.clienti];
-    return liste.clienti.filter((v) => v.toLowerCase().includes(t));
+    const base = t ? liste.clienti.filter((v) => v.toLowerCase().includes(t)) : [...liste.clienti];
+    return sortStringsItCaseInsensitive(base);
   }, [liste.clienti, q]);
 
   return (
@@ -416,7 +419,7 @@ function ClientiCommercialiList({
               <button
                 type="button"
                 className="shrink-0 text-xs font-medium text-red-600 hover:underline dark:text-red-400"
-                onClick={() => onRemove(nome)}
+                onClick={() => setPendingDelete(nome)}
               >
                 Elimina
               </button>
@@ -424,6 +427,15 @@ function ClientiCommercialiList({
           );
         })}
       </ul>
+      <SettingsEliminaConfirmDialog
+        open={pendingDelete != null}
+        itemLabel={pendingDelete ?? undefined}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) onRemove(pendingDelete);
+          setPendingDelete(null);
+        }}
+      />
     </div>
   );
 }
@@ -446,10 +458,11 @@ function UnifiedStringList({
   onRemove: (v: string) => void;
 }) {
   const [q, setQ] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
-    if (!t) return [...values];
-    return values.filter((v) => v.toLowerCase().includes(t));
+    const base = t ? values.filter((v) => v.toLowerCase().includes(t)) : [...values];
+    return sortStringsItCaseInsensitive(base);
   }, [values, q]);
 
   return (
@@ -489,13 +502,22 @@ function UnifiedStringList({
             <button
               type="button"
               className="shrink-0 text-xs font-medium text-red-600 hover:underline dark:text-red-400"
-              onClick={() => onRemove(m)}
+              onClick={() => setPendingDelete(m)}
             >
               Elimina
             </button>
           </li>
         ))}
       </ul>
+      <SettingsEliminaConfirmDialog
+        open={pendingDelete != null}
+        itemLabel={pendingDelete ?? undefined}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) onRemove(pendingDelete);
+          setPendingDelete(null);
+        }}
+      />
     </div>
   );
 }
@@ -762,7 +784,7 @@ function SistemaImpostazioniWorkspace({
     if ((mag[key] as string[]).includes(t)) return false;
     patchMag((prev) => {
       const cur = prev[key] as string[];
-      return { ...prev, [key]: [...cur, t].sort((a, b) => a.localeCompare(b, "it")) };
+      return { ...prev, [key]: sortStringsItCaseInsensitive([...cur, t]) };
     });
     clear();
     return true;
@@ -778,15 +800,23 @@ function SistemaImpostazioniWorkspace({
     if (((liste[key] as string[] | undefined) ?? []).includes(t)) return false;
     setListe((prev) => {
       const cur = (prev[key] as string[] | undefined) ?? [];
-      return { ...prev, [key]: [...cur, t].sort((a, b) => a.localeCompare(b, "it")) };
+      return { ...prev, [key]: sortStringsItCaseInsensitive([...cur, t]) };
     });
     clear();
     return true;
   };
 
+  type SettingsDeleteConfirm = {
+    label: string;
+    detail?: string;
+    onConfirm: () => void;
+  } | null;
+  const [settingsDeleteConfirm, setSettingsDeleteConfirm] = useState<SettingsDeleteConfirm>(null);
+
   if (!open) return null;
 
   const content = (
+    <>
       <div
         className={`relative flex min-h-0 w-full min-w-0 flex-col ${
           pageMode
@@ -964,7 +994,13 @@ function SistemaImpostazioniWorkspace({
                     return;
                   }
                   const nome = stati.find((s) => s.id === id)?.label ?? id;
-                  setStati((prev) => prev.filter((s) => s.id !== id));
+                  setSettingsDeleteConfirm({
+                    label: nome,
+                    onConfirm: () => {
+                      setStati((prev) => prev.filter((s) => s.id !== id));
+                      setSettingsDeleteConfirm(null);
+                    },
+                  });
                 }}
                 addetti={addetti}
                 addettoColors={addettoColors}
@@ -996,14 +1032,17 @@ function SistemaImpostazioniWorkspace({
                 }}
                 onRemoveAddetto={(name) => {
                   const inUse = attiviAddetti.has(name) || storicoAddetti.has(name);
-                  if (inUse) {
-                    const ok = window.confirm(
-                      `«${name}» compare in lavorazioni già registrate. Verrà rimosso solo dalle liste di selezione future; i record esistenti manterranno il nome. Continuare?`,
-                    );
-                    if (!ok) return;
-                  }
-                  setAddetti((prev) => prev.filter((a) => a !== name));
-                  setAddettoColors((prev) => removeAddettoFromColorMap(prev, name));
+                  setSettingsDeleteConfirm({
+                    label: name,
+                    detail: inUse
+                      ? "Compare in lavorazioni già registrate. Verrà rimosso solo dalle liste di selezione future; i record esistenti manterranno il nome."
+                      : undefined,
+                    onConfirm: () => {
+                      setAddetti((prev) => prev.filter((a) => a !== name));
+                      setAddettoColors((prev) => removeAddettoFromColorMap(prev, name));
+                      setSettingsDeleteConfirm(null);
+                    },
+                  });
                 }}
                 attiviStatoIds={attiveStatoIds}
                 storicoStatoIds={storicoStatoIds}
@@ -1234,6 +1273,14 @@ function SistemaImpostazioniWorkspace({
           </div>
         </div>
       </div>
+      <SettingsEliminaConfirmDialog
+        open={settingsDeleteConfirm != null}
+        itemLabel={settingsDeleteConfirm?.label}
+        detail={settingsDeleteConfirm?.detail}
+        onCancel={() => setSettingsDeleteConfirm(null)}
+        onConfirm={() => settingsDeleteConfirm?.onConfirm()}
+      />
+    </>
   );
 
   if (pageMode) {
