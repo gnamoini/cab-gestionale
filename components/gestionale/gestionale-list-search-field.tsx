@@ -1,13 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   IconGestionaleSearchMagnifier,
   type GestionaleSearchFieldProps,
 } from "@/components/gestionale/gestionale-search-field";
 import {
+  useDropdownOutsideDismiss,
+  useGlobalDropdownPortal,
+} from "@/components/gestionale/global-input/use-global-dropdown-portal";
+import {
   globalInputDropdownOptionClass,
-  globalInputDropdownPanel,
+  globalInputDropdownPortalPanel,
 } from "@/lib/ui/global-input";
 import { dsSearchFieldInput } from "@/lib/ui/design-system";
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
@@ -36,6 +41,7 @@ export function GestionaleListSearchField({
   const inputId = rest.id ?? autoId;
   const listboxId = `${inputId}-search-suggestions`;
   const wrapRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLUListElement>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [open, setOpen] = useState(false);
@@ -61,17 +67,20 @@ export function GestionaleListSearchField({
 
   const showDropdown = open && focused && suggestions.length > 0;
 
-  useEffect(() => {
-    const onDocDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-        setActiveIndex(-1);
-        setFocused(false);
-      }
-    };
-    document.addEventListener("mousedown", onDocDown);
-    return () => document.removeEventListener("mousedown", onDocDown);
+  const { coords, style: portalStyle } = useGlobalDropdownPortal({
+    open: showDropdown,
+    anchorRef: wrapRef,
+    contentRef: dropdownRef,
+    repositionDeps: [suggestions.length, strValue],
+  });
+
+  const dismissDropdown = useCallback(() => {
+    setOpen(false);
+    setActiveIndex(-1);
+    setFocused(false);
   }, []);
+
+  useDropdownOutsideDismiss(showDropdown, wrapRef, dropdownRef, dismissDropdown);
 
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -167,30 +176,39 @@ export function GestionaleListSearchField({
         aria-autocomplete="list"
         autoComplete="off"
       />
-      {showDropdown ? (
-        <ul id={listboxId} role="listbox" className={`${globalInputDropdownPanel} left-0 right-0`}>
-          {suggestions.map((option, idx) => {
-            const active = idx === activeIndex;
-            return (
-              <li key={`${option}-${idx}`} role="presentation">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={active}
-                  className={globalInputDropdownOptionClass(active, false)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (blurTimer.current) clearTimeout(blurTimer.current);
-                    applySuggestion(option, false);
-                  }}
-                  onMouseEnter={() => setActiveIndex(idx)}
-                >
-                  {option}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+      {typeof document !== "undefined" && showDropdown && coords && portalStyle ? (
+        createPortal(
+          <ul
+            ref={dropdownRef}
+            id={listboxId}
+            role="listbox"
+            style={portalStyle}
+            className={`${globalInputDropdownPortalPanel} py-1 ${coords.scrollInside ? "overflow-y-auto" : "overflow-hidden"}`}
+          >
+            {suggestions.map((option, idx) => {
+              const active = idx === activeIndex;
+              return (
+                <li key={`${option}-${idx}`} role="presentation">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={active}
+                    className={globalInputDropdownOptionClass(active, false)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (blurTimer.current) clearTimeout(blurTimer.current);
+                      applySuggestion(option, false);
+                    }}
+                    onMouseEnter={() => setActiveIndex(idx)}
+                  >
+                    {option}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>,
+          document.body,
+        )
       ) : null}
     </div>
   );

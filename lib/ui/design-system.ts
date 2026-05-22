@@ -260,6 +260,8 @@ export const dsZHeader = "z-30";
 export const dsZDrawer = "z-[55]";
 export const dsZModal = "z-50";
 export const dsZModalHigh = "z-[100]";
+/** Menu filtri / autocomplete / calendario (portal su body). */
+export const dsZDropdown = "z-[130]";
 export const dsZToast = "z-[200]";
 
 /** Skeleton */

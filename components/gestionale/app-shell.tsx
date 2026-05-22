@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { CloseButton } from "@/components/design-system";
 import { PageLoadingOverlay } from "@/components/design-system/loading-indicator";
 import { useAuth } from "@/context/auth-context";
@@ -14,7 +14,12 @@ import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-a
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
-import { isNavTargetCurrent, ROUTE_LOADING_FAILSAFE_MS } from "@/src/lib/navigation/route-transition";
+import {
+  isNavTargetCurrent,
+  ROUTE_LOADING_FAILSAFE_MS,
+  ROUTE_TRANSITION_CANCEL_EVENT,
+  scheduleRouteTransitionBegin,
+} from "@/src/lib/navigation/route-transition";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 
 const SIDEBAR_COLLAPSED_KEY = "cab-sidebar-collapsed";
@@ -84,7 +89,10 @@ function NavLink({
     <Link
       href={href}
       title={collapsed ? label : undefined}
-      onClick={() => onNavigate?.(href)}
+      onClick={(e) => {
+        if (isNavTargetCurrent(pathname, href)) return;
+        scheduleRouteTransitionBegin(e, () => onNavigate?.(href));
+      }}
       className={`${navLinkBase} ${active ? navLinkActive : navLinkInactive} ${collapsed ? "justify-center px-2" : ""} ${erpFocus}`}
     >
       {iconWrap}
@@ -231,9 +239,12 @@ function MobileNavRow({
   return (
     <Link
       href={item.href}
-      onClick={() => {
-        onNavigate?.(item.href);
-        onClose();
+      onClick={(e) => {
+        if (isNavTargetCurrent(pathname, item.href)) return;
+        scheduleRouteTransitionBegin(e, () => {
+          onNavigate?.(item.href);
+          onClose();
+        });
       }}
       className={`flex min-h-[3.25rem] items-center gap-3 rounded-xl px-3 text-base font-semibold ${
         active
@@ -372,6 +383,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => window.clearTimeout(timeoutId);
   }, [routeLoading]);
 
+  useEffect(() => {
+    function onCancelRouteTransition() {
+      setRouteLoading(false);
+    }
+    function onPopState() {
+      setRouteLoading(false);
+    }
+    window.addEventListener(ROUTE_TRANSITION_CANCEL_EVENT, onCancelRouteTransition);
+    window.addEventListener("popstate", onPopState);
+    return () => {
+      window.removeEventListener(ROUTE_TRANSITION_CANCEL_EVENT, onCancelRouteTransition);
+      window.removeEventListener("popstate", onPopState);
+    };
+  }, []);
+
   const beginRouteTransition = useCallback(
     (href: string) => {
       if (isNavTargetCurrent(pathname, href)) {
@@ -383,14 +409,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [pathname],
   );
 
-  const onHeaderHomeClick = useCallback(() => {
-    if (isNavTargetCurrent(pathname, homePath)) {
-      setRouteLoading(false);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-      return;
-    }
-    beginRouteTransition(homePath);
-  }, [beginRouteTransition, pathname, homePath]);
+  const onHeaderHomeClick = useCallback(
+    (e: ReactMouseEvent<HTMLAnchorElement>) => {
+      if (isNavTargetCurrent(pathname, homePath)) {
+        e.preventDefault();
+        setRouteLoading(false);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      scheduleRouteTransitionBegin(e, () => beginRouteTransition(homePath));
+    },
+    [beginRouteTransition, pathname, homePath],
+  );
 
   const toggleCollapsed = useCallback(() => {
     setCollapsed((c) => {

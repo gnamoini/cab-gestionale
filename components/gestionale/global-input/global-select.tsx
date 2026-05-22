@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   autocompleteCommitFromSearchText,
   autocompleteDisplayValue,
@@ -13,7 +14,7 @@ import {
 } from "@/lib/global-autocomplete/engine";
 import {
   globalAutocompleteAddBtnClass,
-  globalAutocompleteDropdownPanel,
+  globalAutocompleteDropdownPortalPanel,
   globalAutocompleteOptionClass,
   globalAutocompleteOptionPillClass,
   globalInputEmptyMessage,
@@ -24,6 +25,10 @@ import {
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
 import type { ListSelectItem } from "@/lib/ui/list-select-items";
 import { normListSelectValue } from "@/lib/ui/list-select-utils";
+import {
+  useDropdownOutsideDismiss,
+  useGlobalDropdownPortal,
+} from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import type { CSSProperties } from "react";
 
 export type GlobalSelectOption = ListSelectItem & { pillStyle?: CSSProperties };
@@ -113,6 +118,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const listboxId = `${inputId}-listbox`;
   const fieldClass = fieldClassForVariant(variant, inputClassName);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -168,23 +174,27 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const showInvalid = (touched || forceInvalid) && !isValid;
   const showDropdown = open && !disabled && !isLoading;
   const listEmpty = !isLoading && suggestions.length === 0 && !showAddPanel && addCandidate.length > 0;
+  const portalOpen = showDropdown && (suggestions.length > 0 || listEmpty || showAddPanel);
+
+  const { coords, style: portalStyle } = useGlobalDropdownPortal({
+    open: portalOpen,
+    anchorRef: wrapRef,
+    contentRef: dropdownRef,
+    repositionDeps: [suggestions.length, showAddPanel, listEmpty],
+  });
 
   useEffect(() => {
     onValidityChange?.(isValid);
   }, [isValid, onValidityChange]);
 
-  useEffect(() => {
-    const onDocDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) {
-        setOpen(false);
-        setActiveIndex(-1);
-        setFocused(false);
-        setSearchText("");
-      }
-    };
-    document.addEventListener("mousedown", onDocDown);
-    return () => document.removeEventListener("mousedown", onDocDown);
+  const dismissDropdown = useCallback(() => {
+    setOpen(false);
+    setActiveIndex(-1);
+    setFocused(false);
+    setSearchText("");
   }, []);
+
+  useDropdownOutsideDismiss(portalOpen, wrapRef, dropdownRef, dismissDropdown);
 
   const closeAndReset = useCallback(() => {
     setOpen(false);
@@ -290,6 +300,120 @@ export function GlobalSelect(props: GlobalSelectProps) {
     return globalAutocompleteOptionClass(active, selected);
   };
 
+  const dropdownPanelClass = `${globalAutocompleteDropdownPortalPanel} p-1 ${
+    coords?.scrollInside ? "overflow-y-auto" : "overflow-hidden"
+  }`;
+
+  const dropdownPortal =
+    portalOpen && coords && portalStyle ? (
+      <div ref={dropdownRef} style={portalStyle}>
+        {showDropdown && suggestions.length > 0 ? (
+          <ul id={listboxId} role="listbox" className={dropdownPanelClass}>
+            {suggestions.map((entry, idx) => {
+              const active = idx === activeIndex;
+              if (itemsMode) {
+                const item = entry as GlobalSelectOption;
+                const selected = item.value === value;
+                return (
+                  <li key={item.value} role="presentation" className="py-0.5">
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      style={coloredOptions ? item.pillStyle : undefined}
+                      className={optionBtnClass(active, selected, item.pillStyle)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (blurTimer.current) clearTimeout(blurTimer.current);
+                        selectItem(item, false);
+                      }}
+                      onMouseEnter={() => setActiveIndex(idx)}
+                    >
+                      {item.label}
+                    </button>
+                  </li>
+                );
+              }
+              const option = entry as string;
+              const selected = normListSelectValue(option) === normListSelectValue(value);
+              return (
+                <li key={option} role="presentation" className="py-0.5">
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    className={optionBtnClass(active, selected)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (blurTimer.current) clearTimeout(blurTimer.current);
+                      selectString(option, false);
+                    }}
+                    onMouseEnter={() => setActiveIndex(idx)}
+                  >
+                    {option}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
+        {showDropdown && showAddPanel ? (
+          <div
+            id={listboxId}
+            role="listbox"
+            className={`${globalAutocompleteDropdownPortalPanel} px-3 py-2.5`}
+          >
+            <p className="text-xs text-[color:var(--cab-text-muted)]">
+              {fuzzyLabel ? (
+                <>
+                  Forse cercavi:{" "}
+                  <button
+                    type="button"
+                    className="font-semibold text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      if (blurTimer.current) clearTimeout(blurTimer.current);
+                      if (itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object") {
+                        selectItem(fuzzySuggestion as ListSelectItem, false);
+                      } else if (typeof fuzzySuggestion === "string") {
+                        selectString(fuzzySuggestion, false);
+                      }
+                    }}
+                  >
+                    {fuzzyLabel}
+                  </button>
+                </>
+              ) : (
+                <span className="font-medium">{emptyMessage}</span>
+              )}
+            </p>
+            <button
+              type="button"
+              className={globalAutocompleteAddBtnClass}
+              disabled={addPending}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                if (blurTimer.current) clearTimeout(blurTimer.current);
+                void runAdd();
+              }}
+            >
+              <span aria-hidden>+</span>
+              {addPending ? "Aggiunta in corso…" : "Aggiungi all'elenco"}
+            </button>
+          </div>
+        ) : null}
+        {showDropdown && listEmpty && !showAddPanel ? (
+          <div
+            id={listboxId}
+            role="status"
+            className={`${globalAutocompleteDropdownPortalPanel} px-3 py-2.5 text-xs font-medium text-[color:var(--cab-text-muted)]`}
+          >
+            {emptyMessage}
+          </div>
+        ) : null}
+      </div>
+    ) : null;
+
   return (
     <div ref={wrapRef} className={`relative w-full ${className}`.trim()}>
       {isLoading ? (
@@ -334,110 +458,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         aria-autocomplete="list"
         aria-busy={isLoading || addPending || undefined}
       />
-      {showDropdown && suggestions.length > 0 ? (
-        <ul id={listboxId} role="listbox" className={`${globalAutocompleteDropdownPanel} p-1`}>
-          {suggestions.map((entry, idx) => {
-            const active = idx === activeIndex;
-            if (itemsMode) {
-              const item = entry as GlobalSelectOption;
-              const selected = item.value === value;
-              return (
-                <li key={item.value} role="presentation" className="py-0.5">
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    style={coloredOptions ? item.pillStyle : undefined}
-                    className={optionBtnClass(active, selected, item.pillStyle)}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      if (blurTimer.current) clearTimeout(blurTimer.current);
-                      selectItem(item, false);
-                    }}
-                    onMouseEnter={() => setActiveIndex(idx)}
-                  >
-                    {item.label}
-                  </button>
-                </li>
-              );
-            }
-            const option = entry as string;
-            const selected = normListSelectValue(option) === normListSelectValue(value);
-            return (
-              <li key={option} role="presentation" className="py-0.5">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={selected}
-                  className={optionBtnClass(active, selected)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (blurTimer.current) clearTimeout(blurTimer.current);
-                    selectString(option, false);
-                  }}
-                  onMouseEnter={() => setActiveIndex(idx)}
-                >
-                  {option}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      ) : null}
-      {showDropdown && showAddPanel ? (
-        <div
-          id={listboxId}
-          role="listbox"
-          className={`${globalAutocompleteDropdownPanel} px-3 py-2.5`}
-        >
-          <p className="text-xs text-[color:var(--cab-text-muted)]">
-            {fuzzyLabel ? (
-              <>
-                Forse cercavi:{" "}
-                <button
-                  type="button"
-                  className="font-semibold text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (blurTimer.current) clearTimeout(blurTimer.current);
-                    if (itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object") {
-                      selectItem(fuzzySuggestion as ListSelectItem, false);
-                    } else if (typeof fuzzySuggestion === "string") {
-                      selectString(fuzzySuggestion, false);
-                    }
-                  }}
-                >
-                  {fuzzyLabel}
-                </button>
-              </>
-            ) : (
-              <span className="font-medium">{emptyMessage}</span>
-            )}
-          </p>
-          <button
-            type="button"
-            className={globalAutocompleteAddBtnClass}
-            disabled={addPending}
-            onMouseDown={(e) => {
-              e.preventDefault();
-              if (blurTimer.current) clearTimeout(blurTimer.current);
-              void runAdd();
-            }}
-          >
-            <span aria-hidden>+</span>
-            {addPending ? "Aggiunta in corso…" : "Aggiungi all'elenco"}
-          </button>
-        </div>
-      ) : null}
-      {showDropdown && listEmpty && !showAddPanel ? (
-        <div
-          id={listboxId}
-          role="status"
-          className={`${globalAutocompleteDropdownPanel} px-3 py-2.5 text-xs font-medium text-[color:var(--cab-text-muted)]`}
-        >
-          {emptyMessage}
-        </div>
-      ) : null}
+      {typeof document !== "undefined" && dropdownPortal ? createPortal(dropdownPortal, document.body) : null}
       {showInvalid ? (
         <p className="mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]">
           {invalidMessage}

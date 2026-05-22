@@ -23,19 +23,21 @@ export function GlobalCalendarPanel({
   viewMonth,
   onViewChange,
   onSelectYmd,
+  panelClassName = globalInputCalendarPanel,
 }: {
   selectedYmd: string;
   viewYear: number;
   viewMonth: number;
   onViewChange: (year: number, month: number) => void;
   onSelectYmd: (ymd: string) => void;
+  panelClassName?: string;
 }) {
   const todayYmd = useMemo(() => toYmd(new Date()), []);
   const cells = useMemo(() => buildMonthGrid(viewYear, viewMonth), [viewYear, viewMonth]);
 
   return (
     <div
-      className={globalInputCalendarPanel}
+      className={panelClassName}
       role="dialog"
       aria-label="Calendario"
       onMouseDown={(e) => e.preventDefault()}

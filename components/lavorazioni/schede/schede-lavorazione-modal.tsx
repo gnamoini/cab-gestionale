@@ -40,6 +40,9 @@ import {
   mergeSchedaIngressoFields,
 } from "@/lib/schede/scheda-ingresso-reuse";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
+import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
+import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
+import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import {
   diffSchedaIngressoCampi,
   diffSchedaLavorazioniDoc,
@@ -1613,8 +1616,6 @@ function IngressoPanel({
   const grid = "grid gap-3 sm:grid-cols-2";
   const modelliOpts = modelliForMarca(fields.marcaAttrezzatura);
   const modelliTelaioOpts = modelliForMarcaTelaio(fields.marcaTelaio);
-  const [reuseHighlight, setReuseHighlight] = useState(false);
-  const reuseHighlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const lastIngressoMatch = useMemo(() => {
     if (!hasSchedaIngressoIdentLookup(fields.targa, fields.matricola)) return null;
@@ -1629,26 +1630,19 @@ function IngressoPanel({
     );
   }, [fields.targa, fields.matricola, mezzi, schedeStore, attive, storico, excludeLavorazioneId]);
 
-  const pulseReuseBanner = useCallback(() => {
-    if (reuseHighlightTimer.current) clearTimeout(reuseHighlightTimer.current);
-    setReuseHighlight(true);
-    reuseHighlightTimer.current = setTimeout(() => setReuseHighlight(false), 4500);
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (reuseHighlightTimer.current) clearTimeout(reuseHighlightTimer.current);
-    };
-  }, []);
-
-  const onIdentBlur = useCallback(() => {
-    if (lastIngressoMatch) pulseReuseBanner();
-  }, [lastIngressoMatch, pulseReuseBanner]);
+  const mezzoPrompt = useSchedaIngressoMezzoPrompt({
+    fields,
+    setFields,
+    mezzi,
+    schedeStore,
+    attive,
+    storico,
+    excludeLavorazioneId,
+  });
 
   const copyLastIngresso = useCallback(() => {
     if (!lastIngressoMatch || ro) return;
     setFields(mergeSchedaIngressoFields(fields, lastIngressoMatch.campi));
-    setReuseHighlight(false);
   }, [fields, lastIngressoMatch, ro, setFields]);
 
   const inp = (k: keyof SchedaIngressoFields, label: string) => (
@@ -1659,12 +1653,17 @@ function IngressoPanel({
         readOnly={ro}
         value={fields[k]}
         onChange={(e) => setFields({ ...fields, [k]: e.target.value })}
-        onBlur={k === "targa" || k === "matricola" ? onIdentBlur : undefined}
       />
     </label>
   );
   return (
     <div className="space-y-4">
+      <MezzoRegistratoIngressoDialog
+        open={mezzoPrompt.promptOpen && !ro}
+        mezzo={mezzoPrompt.promptMezzo}
+        onAccept={mezzoPrompt.acceptAutofill}
+        onDismiss={mezzoPrompt.dismissPrompt}
+      />
       <div className="flex flex-wrap items-center justify-between gap-2">
         <button type="button" className={dsBtnNeutral} onClick={onBack}>
           ← Indietro
@@ -1685,7 +1684,7 @@ function IngressoPanel({
       <p className="text-xs text-zinc-500">Autore ultima modifica: {doc.updatedBy}</p>
       <CopiaUltimaSchedaIngressoBanner
         visible={Boolean(lastIngressoMatch) && !ro}
-        highlight={reuseHighlight}
+        highlight={false}
         updatedAt={lastIngressoMatch?.updatedAt}
         disabled={!canEdit || ro}
         disabledTitle={READONLY_PERMISSION_HINT}
@@ -1778,7 +1777,21 @@ function IngressoPanel({
             />
           )}
         </label>
-        {inp("matricola", "Matricola")}
+        {ro ? (
+          inp("matricola", "Matricola")
+        ) : (
+          <SchedaIngressoIdentAutocompleteField
+            field="matricola"
+            label="Matricola"
+            value={fields.matricola}
+            otherValue={fields.targa}
+            mezzi={mezzi}
+            readOnly={ro}
+            disabled={!canEdit}
+            onChange={(v) => setFields({ ...fields, matricola: v })}
+            onExactMezzoMatch={mezzoPrompt.requestPrompt}
+          />
+        )}
         {inp("nScuderia", "N. scuderia")}
         <SchedaOreTextInput
           label="Ore lavoro"
@@ -1832,7 +1845,21 @@ function IngressoPanel({
             />
           )}
         </label>
-        {inp("targa", "Targa")}
+        {ro ? (
+          inp("targa", "Targa")
+        ) : (
+          <SchedaIngressoIdentAutocompleteField
+            field="targa"
+            label="Targa"
+            value={fields.targa}
+            otherValue={fields.matricola}
+            mezzi={mezzi}
+            readOnly={ro}
+            disabled={!canEdit}
+            onChange={(v) => setFields({ ...fields, targa: v })}
+            onExactMezzoMatch={mezzoPrompt.requestPrompt}
+          />
+        )}
         {inp("km", "KM")}
         {inp("livelloCarburante", "Livello carburante")}
         <label className="block text-xs">

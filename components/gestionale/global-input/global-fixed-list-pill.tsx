@@ -10,7 +10,6 @@ import {
   useCallback,
   useEffect,
   useId,
-  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -18,6 +17,10 @@ import {
 import { createPortal } from "react-dom";
 import { dsFocus } from "@/lib/ui/design-system";
 import { globalFixedListPillMenuPanel } from "@/lib/ui/global-input";
+import {
+  useDropdownOutsideDismiss,
+  useGlobalDropdownPortal,
+} from "@/components/gestionale/global-input/use-global-dropdown-portal";
 
 export type FixedListPillOption = {
   value: string;
@@ -25,9 +28,6 @@ export type FixedListPillOption = {
   /** Colori pill per voce (es. stato/priorità/addetto da impostazioni). */
   pillStyle?: CSSProperties;
 };
-
-const MENU_GAP = 6;
-const MENU_Z = 130;
 
 const pillChevron = (
   <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} aria-hidden>
@@ -38,31 +38,6 @@ const pillChevron = (
 export const fixedListPillTextClass = "text-[13px] font-medium leading-tight tracking-wide";
 
 export const fixedListPillMinH = "min-h-8";
-
-type MenuCoords = {
-  top: number;
-  left: number;
-  width: number;
-  maxHeight: number;
-  scrollInside: boolean;
-};
-
-function computeMenuCoords(trigger: HTMLElement, contentHeight?: number): MenuCoords {
-  const rect = trigger.getBoundingClientRect();
-  const spaceBelow = window.innerHeight - rect.bottom - MENU_GAP - 8;
-  const needed = contentHeight ?? 0;
-  const available = Math.max(80, spaceBelow);
-  const scrollInside = needed > 0 && needed > available;
-  const maxHeight = needed > 0 ? Math.min(needed, available) : available;
-
-  return {
-    top: rect.bottom + MENU_GAP,
-    left: rect.left,
-    width: rect.width,
-    maxHeight,
-    scrollInside,
-  };
-}
 
 export function GlobalFixedListPillSelect({
   value,
@@ -88,97 +63,43 @@ export function GlobalFixedListPillSelect({
   const listId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
-  const [open, setOpen] = useState(false);
-  const [menuCoords, setMenuCoords] = useState<MenuCoords | null>(null);
-  const selected = options.find((o) => o.value === value);
   const shellRef = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState(false);
+  const selected = options.find((o) => o.value === value);
   const triggerStyle = selected?.pillStyle ?? fallbackPillStyle;
 
   const close = useCallback(() => setOpen(false), []);
 
-  const measureTrigger = useCallback((): HTMLElement | null => {
-    const shell = shellRef.current?.parentElement;
-    if (shell) return shell;
-    return triggerRef.current;
-  }, []);
+  const anchorRef = shellRef;
 
-  const updateMenuCoords = useCallback(() => {
-    const anchor = measureTrigger();
-    if (!anchor) return;
-    const contentHeight = menuRef.current?.scrollHeight;
-    setMenuCoords((prev) => {
-      const next = computeMenuCoords(anchor, contentHeight);
-      if (
-        prev &&
-        prev.top === next.top &&
-        prev.left === next.left &&
-        prev.width === next.width &&
-        prev.maxHeight === next.maxHeight &&
-        prev.scrollInside === next.scrollInside
-      ) {
-        return prev;
-      }
-      return next;
-    });
-  }, [measureTrigger]);
+  const { coords, style: portalStyle } = useGlobalDropdownPortal({
+    open,
+    anchorRef,
+    contentRef: menuRef,
+    repositionDeps: [options.length],
+  });
 
-  useLayoutEffect(() => {
-    if (!open) {
-      setMenuCoords(null);
-      return;
-    }
-    updateMenuCoords();
-  }, [open, updateMenuCoords, options.length]);
-
-  useLayoutEffect(() => {
-    if (!open || !menuRef.current) return;
-    updateMenuCoords();
-  }, [open, menuCoords?.left, menuCoords?.width, updateMenuCoords]);
+  useDropdownOutsideDismiss(open, shellRef, menuRef, close);
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (triggerRef.current?.contains(t) || menuRef.current?.contains(t)) return;
-      close();
-    };
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
     };
-    const onReposition = () => updateMenuCoords();
-    document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
-    window.addEventListener("resize", onReposition);
-    window.addEventListener("scroll", onReposition, true);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-      window.removeEventListener("resize", onReposition);
-      window.removeEventListener("scroll", onReposition, true);
-    };
-  }, [open, close, updateMenuCoords]);
-
-  const menuStyle: CSSProperties | undefined = menuCoords
-    ? {
-        position: "fixed",
-        left: menuCoords.left,
-        width: menuCoords.width,
-        maxHeight: menuCoords.maxHeight,
-        top: menuCoords.top,
-        zIndex: MENU_Z,
-      }
-    : undefined;
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, close]);
 
   const menu =
-    open && menuCoords ? (
+    open && coords && portalStyle ? (
       <ul
         ref={menuRef}
         id={listId}
         role="listbox"
         aria-label={ariaLabel}
-        style={menuStyle}
+        style={portalStyle}
         className={`${globalFixedListPillMenuPanel} ${
-          menuCoords.scrollInside ? "overflow-y-auto" : "overflow-hidden"
+          coords.scrollInside ? "overflow-y-auto" : "overflow-hidden"
         }`}
       >
         {options.map((opt) => {

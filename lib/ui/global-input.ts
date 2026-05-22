@@ -2,26 +2,12 @@
  * Token condivisi per select, autocomplete e date picker globali.
  * Unica fonte per radius, ombre, z-index e stati hover/focus dei dropdown.
  */
-import { dsInput, gestionaleSelectFilterClass } from "@/lib/ui/design-system";
+import { dsInput, gestionaleSelectFilterClass, dsZDropdown } from "@/lib/ui/design-system";
 
-export const globalInputZDropdown = "z-[var(--ds-z-dropdown,50)]";
+export const globalInputZDropdown = dsZDropdown;
 
-export const globalInputDropdownPanel = [
-  "absolute left-0 right-0 top-full",
-  globalInputZDropdown,
-  "mt-1 max-h-52 overflow-y-auto",
-  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]",
-  "bg-[var(--cab-card)] py-1",
-  "shadow-[var(--cab-shadow-lg)]",
-  "gestionale-scrollbar",
-  "origin-top transition-[opacity,transform] duration-150 ease-out",
-].join(" ");
-
-/** Dropdown autocomplete — stesso chrome del menu pill stato. */
-export const globalAutocompleteDropdownPanel = [
-  "absolute left-0 right-0 top-full",
-  globalInputZDropdown,
-  "mt-1.5 max-h-52 overflow-y-auto",
+const globalAutocompleteDropdownChrome = [
+  "max-h-52 overflow-y-auto",
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border-strong)]",
   "bg-[var(--cab-card)]",
   "shadow-[0_12px_32px_rgba(0,0,0,0.5),0_4px_12px_rgba(0,0,0,0.38)]",
@@ -29,6 +15,35 @@ export const globalAutocompleteDropdownPanel = [
   "gestionale-scrollbar",
   "origin-top transition-[opacity,transform] duration-150 ease-out",
 ].join(" ");
+
+const globalInputDropdownChrome = [
+  "max-h-52 overflow-y-auto",
+  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]",
+  "bg-[var(--cab-card)] py-1",
+  "shadow-[var(--cab-shadow-lg)]",
+  "gestionale-scrollbar",
+  "origin-top transition-[opacity,transform] duration-150 ease-out",
+].join(" ");
+
+export const globalInputDropdownPanel = [
+  "absolute left-0 right-0 top-full",
+  globalInputZDropdown,
+  "mt-1",
+  globalInputDropdownChrome,
+].join(" ");
+
+/** Dropdown autocomplete — stesso chrome del menu pill stato (posizionamento locale). */
+export const globalAutocompleteDropdownPanel = [
+  "absolute left-0 right-0 top-full",
+  globalInputZDropdown,
+  "mt-1.5",
+  globalAutocompleteDropdownChrome,
+].join(" ");
+
+/** Pannello portal (posizione via `fixed` inline — esce da overflow hidden dei filtri). */
+export const globalAutocompleteDropdownPortalPanel = globalAutocompleteDropdownChrome;
+
+export const globalInputDropdownPortalPanel = globalInputDropdownChrome;
 
 /** Menu portal per `GlobalFixedListPillSelect` (elenchi fissi senza ricerca). */
 export const globalFixedListPillMenuPanel = [
@@ -109,13 +124,20 @@ export const globalInputCalendarBtn = [
   "focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]",
 ].join(" ");
 
-export const globalInputCalendarPanel = [
-  "absolute right-0 top-full mt-1 w-[min(100%,18.5rem)]",
-  globalInputZDropdown,
+const globalInputCalendarChrome = [
+  "w-[min(100%,18.5rem)]",
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]",
   "bg-[var(--cab-card)] p-3 shadow-[var(--cab-shadow-lg)]",
   "origin-top transition-[opacity,transform] duration-150 ease-out",
 ].join(" ");
+
+export const globalInputCalendarPanel = [
+  "absolute right-0 top-full mt-1",
+  globalInputZDropdown,
+  globalInputCalendarChrome,
+].join(" ");
+
+export const globalInputCalendarPortalPanel = globalInputCalendarChrome;
 
 export const globalInputCalendarDayBtn = [
   "flex h-9 w-9 items-center justify-center rounded-md text-xs font-semibold transition-colors",

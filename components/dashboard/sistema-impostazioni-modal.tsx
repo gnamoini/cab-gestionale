@@ -57,6 +57,7 @@ import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context"
 import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { usePermissions } from "@/src/hooks/use-permissions";
+import { cancelRouteTransition } from "@/src/lib/navigation/route-transition";
 import {
   dsBtnPrimary,
   dsFocus,
@@ -727,13 +728,16 @@ function SistemaImpostazioniWorkspace({
       if (anchor.target && anchor.target !== "_self") return;
       if (anchor.origin !== window.location.origin) return;
       if (anchor.pathname === window.location.pathname && anchor.search === window.location.search && anchor.hash === window.location.hash) return;
-      if (window.confirm("Hai modifiche non salvate. Vuoi davvero uscire?")) return;
+      if (confirmDiscardChanges()) return;
       e.preventDefault();
       e.stopPropagation();
+      cancelRouteTransition();
     }
     document.addEventListener("click", onDocumentClick, true);
     return () => document.removeEventListener("click", onDocumentClick, true);
-  }, [isDirty]);
+  }, [isDirty, confirmDiscardChanges]);
+
+  useEffect(() => () => cancelRouteTransition(), []);
 
   const patchMag = useCallback((fn: (prev: MagazzinoMasterPrefs) => MagazzinoMasterPrefs) => {
     setMag(fn);

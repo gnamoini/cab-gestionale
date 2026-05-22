@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
-import { findMezzoByTargaOrMatricola } from "@/lib/mezzi/find-mezzo-by-ident";
+import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import { mezzoFormToMeta } from "@/lib/mezzi/mezzi-meta";
 import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoCreateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
@@ -25,6 +25,9 @@ import {
 } from "@/lib/schede/scheda-ingresso-reuse";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
+import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
+import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
+import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleSettingsSelect } from "@/components/gestionale/gestionale-settings-select";
@@ -79,35 +82,6 @@ function emptyIngresso(addettoDefault: string): SchedaIngressoFields {
     descrizioneAnomalia: "",
     livelloCarburante: "",
     addettoAccettazione: addettoDefault,
-    richiedente: "",
-    noteIntervento: "",
-  };
-}
-
-function schedaFieldsFromMezzo(m: MezzoGestito): SchedaIngressoFields {
-  const blank = (v: string | undefined, dash = "—") => {
-    const t = v?.trim();
-    return !t || t === dash || t === "Non assegnata" ? "" : t;
-  };
-  return {
-    dataIngresso: todayItDate(),
-    cliente: blank(m.cliente),
-    cantiere: blank(m.cantiere),
-    utilizzatore: blank(m.utilizzatore),
-    tipoAttrezzatura: blank(m.tipoAttrezzatura),
-    marcaAttrezzatura: blank(m.marca),
-    modelloAttrezzatura: blank(m.modello),
-    matricola: blank(m.matricola, "Non assegnata"),
-    nScuderia: m.numeroScuderia?.trim() ?? "",
-    oreLavoro: m.oreKm ? String(m.oreKm) : "",
-    tipoTelaio: blank(m.tipoTelaio),
-    marcaTelaio: blank(m.marcaTelaio),
-    modelloTelaio: blank(m.modelloTelaio),
-    targa: blank(m.targa),
-    km: m.km != null ? String(m.km) : "",
-    descrizioneAnomalia: "",
-    livelloCarburante: "",
-    addettoAccettazione: "",
     richiedente: "",
     noteIntervento: "",
   };
@@ -169,6 +143,10 @@ export function LavorazioneCreateModal({
   );
   const addettiOpts = globalOpts.lavorazioni.addetti;
   const mezziUi = useMemo(() => (mezziQ.data ?? []).map(toMezzoUI), [mezziQ.data]);
+  const mezziCatalog = useMemo(
+    () => (mezziUi.length > 0 ? mezziUi : [...mezzi]),
+    [mezziUi, mezzi],
+  );
 
   const [fields, setFields] = useState<SchedaIngressoFields>(() => emptyIngresso(""));
   const [mezzoId, setMezzoId] = useState("");
@@ -176,20 +154,27 @@ export function LavorazioneCreateModal({
   const [stato, setStato] = useState("");
   const [priorita, setPriorita] = useState<PrioritaLavorazione>("media");
   const [mezzoHint, setMezzoHint] = useState<string | null>(null);
-  const [reuseHighlight, setReuseHighlight] = useState(false);
-  const reuseHighlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const lastIngressoMatch = useMemo(() => {
     if (!hasSchedaIngressoIdentLookup(fields.targa, fields.matricola)) return null;
     return findLastSchedaIngressoForIdent(
       fields.targa,
       fields.matricola,
-      mezziUi.length > 0 ? mezziUi : mezzi,
+      mezziCatalog,
       schedeStore,
       attive,
       storico,
     );
-  }, [fields.targa, fields.matricola, mezziUi, mezzi, schedeStore, attive, storico]);
+  }, [fields.targa, fields.matricola, mezziCatalog, schedeStore, attive, storico]);
+
+  const mezzoPrompt = useSchedaIngressoMezzoPrompt({
+    fields,
+    setFields,
+    mezzi: mezziCatalog,
+    schedeStore,
+    attive,
+    storico,
+  });
 
   const patch = useCallback((p: Partial<SchedaIngressoFields>) => {
     setFields((f) => ({ ...f, ...p }));
@@ -197,9 +182,18 @@ export function LavorazioneCreateModal({
 
   const applyMezzo = useCallback(
     (m: MezzoGestito) => {
-      const next = schedaFieldsFromMezzo(m);
-      next.addettoAccettazione = fields.addettoAccettazione || addettiOpts[0] || "";
-      setFields((f) => ({ ...f, ...next, addettoAccettazione: f.addettoAccettazione || next.addettoAccettazione }));
+      const fromMezzo = buildSchedaIngressoFieldsFromMezzo(m);
+      fromMezzo.addettoAccettazione = fields.addettoAccettazione || addettiOpts[0] || "";
+      setFields((f) => {
+        const merged = mergeSchedaIngressoFields(
+          { ...f, dataIngresso: f.dataIngresso || todayItDate() },
+          fromMezzo,
+        );
+        return {
+          ...merged,
+          addettoAccettazione: f.addettoAccettazione || merged.addettoAccettazione,
+        };
+      });
       setMezzoId(m.id);
       setCreaNuovoMezzo(false);
       setMezzoHint(`Mezzo riconosciuto: ${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim());
@@ -207,61 +201,36 @@ export function LavorazioneCreateModal({
     [addettiOpts, fields.addettoAccettazione],
   );
 
-  const pulseReuseBanner = useCallback(() => {
-    if (reuseHighlightTimer.current) clearTimeout(reuseHighlightTimer.current);
-    setReuseHighlight(true);
-    reuseHighlightTimer.current = setTimeout(() => setReuseHighlight(false), 4500);
-  }, []);
+  const onMezzoPromptMatch = useCallback(
+    (m: MezzoGestito) => {
+      mezzoPrompt.requestPrompt(m);
+    },
+    [mezzoPrompt],
+  );
 
-  useEffect(() => {
-    return () => {
-      if (reuseHighlightTimer.current) clearTimeout(reuseHighlightTimer.current);
-    };
-  }, []);
+  const acceptMezzoPrompt = useCallback(() => {
+    const m = mezzoPrompt.promptMezzo;
+    mezzoPrompt.acceptAutofill();
+    if (!m) return;
+    setMezzoId(m.id);
+    setCreaNuovoMezzo(false);
+    setMezzoHint(`Mezzo collegato: ${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim());
+  }, [mezzoPrompt]);
 
-  const lookupIdent = useCallback(() => {
-    const hit = findMezzoByTargaOrMatricola(mezziUi, fields.targa, fields.matricola);
-    if (hit) {
-      applyMezzo(hit);
-      if (
-        findLastSchedaIngressoForIdent(
-          fields.targa,
-          fields.matricola,
-          mezziUi,
-          schedeStore,
-          attive,
-          storico,
-        )
-      ) {
-        pulseReuseBanner();
-      }
-      return;
-    }
+  const dismissMezzoPrompt = useCallback(() => {
+    mezzoPrompt.dismissPrompt();
     setMezzoId("");
-    setMezzoHint(null);
     if (fields.targa.trim() || fields.matricola.trim()) {
       setCreaNuovoMezzo(true);
-      setMezzoHint("Nessun mezzo corrispondente: puoi crearne uno nuovo dai dati inseriti.");
-      if (
-        findLastSchedaIngressoForIdent(
-          fields.targa,
-          fields.matricola,
-          mezziUi,
-          schedeStore,
-          attive,
-          storico,
-        )
-      ) {
-        pulseReuseBanner();
-      }
+      setMezzoHint("Continua manualmente: i dati restano editabili.");
+    } else {
+      setMezzoHint(null);
     }
-  }, [applyMezzo, attive, fields.matricola, fields.targa, mezziUi, pulseReuseBanner, schedeStore, storico]);
+  }, [fields.matricola, fields.targa, mezzoPrompt]);
 
   const copyLastIngresso = useCallback(() => {
     if (!lastIngressoMatch) return;
     setFields((f) => mergeSchedaIngressoFields(f, lastIngressoMatch.campi));
-    setReuseHighlight(false);
-    setMezzoHint("Dati copiati dall’ultima scheda ingresso dello stesso mezzo. Verifica e completa i campi.");
   }, [lastIngressoMatch]);
 
   useEffect(() => {
@@ -273,7 +242,6 @@ export function LavorazioneCreateModal({
     setStato(defaultAccettazioneStato?.id ?? resolveDefaultLavorazioneStatoId(stati));
     setPriorita(prioritaOpts.includes("media") ? "media" : (prioritaOpts[0] ?? "media"));
     setMezzoHint(null);
-    setReuseHighlight(false);
   }, [open, defaultMezzoId, prioritaOpts, addettiOpts, defaultAccettazioneStato?.id]);
 
   useEffect(() => {
@@ -381,6 +349,12 @@ export function LavorazioneCreateModal({
       title="Scheda di ingresso"
       subtitle="Nuova lavorazione — compila i dati di accettazione mezzo."
     >
+      <MezzoRegistratoIngressoDialog
+        open={mezzoPrompt.promptOpen}
+        mezzo={mezzoPrompt.promptMezzo}
+        onAccept={acceptMezzoPrompt}
+        onDismiss={dismissMezzoPrompt}
+      />
       <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
           {globalOpts.isError ? (
@@ -492,10 +466,16 @@ export function LavorazioneCreateModal({
               </label>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Matricola
-                <input className={`${dsInput} mt-1 font-mono`} value={fields.matricola} onChange={(e) => patch({ matricola: e.target.value })} onBlur={lookupIdent} disabled={pending} placeholder="Cerca mezzo…" />
-              </label>
+              <SchedaIngressoIdentAutocompleteField
+                field="matricola"
+                label="Matricola"
+                value={fields.matricola}
+                otherValue={fields.targa}
+                mezzi={mezziCatalog}
+                disabled={pending}
+                onChange={(v) => patch({ matricola: v })}
+                onExactMezzoMatch={onMezzoPromptMatch}
+              />
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 N. scuderia
                 <input className={`${dsInput} mt-1 font-mono`} value={fields.nScuderia} onChange={(e) => patch({ nScuderia: e.target.value })} disabled={pending} />
@@ -503,7 +483,7 @@ export function LavorazioneCreateModal({
             </div>
             <CopiaUltimaSchedaIngressoBanner
               visible={Boolean(lastIngressoMatch)}
-              highlight={reuseHighlight}
+              highlight={false}
               updatedAt={lastIngressoMatch?.updatedAt}
               disabled={pending}
               onCopy={copyLastIngresso}
@@ -530,10 +510,16 @@ export function LavorazioneCreateModal({
               </label>
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Targa
-                <input className={`${dsInput} mt-1 font-mono`} value={fields.targa} onChange={(e) => patch({ targa: e.target.value })} onBlur={lookupIdent} disabled={pending} placeholder="Cerca mezzo…" />
-              </label>
+              <SchedaIngressoIdentAutocompleteField
+                field="targa"
+                label="Targa"
+                value={fields.targa}
+                otherValue={fields.matricola}
+                mezzi={mezziCatalog}
+                disabled={pending}
+                onChange={(v) => patch({ targa: v })}
+                onExactMezzoMatch={onMezzoPromptMatch}
+              />
               <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
                 KM
                 <input type="number" min={0} className={inputFieldClass} value={fields.km} onChange={(e) => patch({ km: e.target.value })} disabled={pending} />

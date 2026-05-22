@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { GlobalCalendarPanel, initialViewFromYmd, parseDisplayToYmd } from "@/components/gestionale/global-input/global-calendar-panel";
+import {
+  useDropdownOutsideDismiss,
+  useGlobalDropdownPortal,
+} from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import {
   dateInputValueToIso,
   isoToDateInputValue,
@@ -11,6 +16,7 @@ import {
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
 import {
   globalInputCalendarBtn,
+  globalInputCalendarPortalPanel,
   globalInputFieldDefault,
   globalInputFieldFilterDate,
 } from "@/lib/ui/global-input";
@@ -36,6 +42,8 @@ function fieldClassForVariant(
   return variant === "filter" ? globalInputFieldFilterDate : `${globalInputFieldDefault} pr-11`;
 }
 
+const CALENDAR_PANEL_WIDTH_PX = 296;
+
 export function GlobalDatePicker({
   value,
   onChange,
@@ -50,6 +58,7 @@ export function GlobalDatePicker({
   const autoId = useId();
   const inputId = idProp ?? autoId;
   const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
   const selectedYmd = parseDisplayToYmd(value);
   const initial = initialViewFromYmd(selectedYmd);
@@ -58,13 +67,16 @@ export function GlobalDatePicker({
 
   const fieldClass = fieldClassForVariant(variant, inputClassName);
 
-  useEffect(() => {
-    const onDocDown = (e: MouseEvent) => {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", onDocDown);
-    return () => document.removeEventListener("mousedown", onDocDown);
-  }, []);
+  const closeCalendar = useCallback(() => setOpen(false), []);
+
+  const { coords, style: portalStyle } = useGlobalDropdownPortal({
+    open,
+    anchorRef: wrapRef,
+    contentRef: panelRef,
+    repositionDeps: [viewYear, viewMonth, selectedYmd],
+  });
+
+  useDropdownOutsideDismiss(open, wrapRef, panelRef, closeCalendar);
 
   useEffect(() => {
     if (!open) return;
@@ -93,6 +105,34 @@ export function GlobalDatePicker({
     const r = parseItalianDayToIso(trimmed);
     if (r.ok) onChange(isoToItDisplay(r.iso));
   };
+
+  const calendarPortal =
+    open && coords && portalStyle ? (
+      <div
+        ref={panelRef}
+        style={{
+          ...portalStyle,
+          width: CALENDAR_PANEL_WIDTH_PX,
+          maxHeight: "none",
+          left: Math.max(
+            8,
+            Math.min(coords.left + coords.width - CALENDAR_PANEL_WIDTH_PX, window.innerWidth - CALENDAR_PANEL_WIDTH_PX - 8),
+          ),
+        }}
+      >
+        <GlobalCalendarPanel
+          panelClassName={globalInputCalendarPortalPanel}
+          selectedYmd={selectedYmd}
+          viewYear={viewYear}
+          viewMonth={viewMonth}
+          onViewChange={(y, m) => {
+            setViewYear(y);
+            setViewMonth(m);
+          }}
+          onSelectYmd={applyYmd}
+        />
+      </div>
+    ) : null;
 
   return (
     <div ref={wrapRef} className="relative w-full">
@@ -141,18 +181,7 @@ export function GlobalDatePicker({
           />
         </svg>
       </button>
-      {open ? (
-        <GlobalCalendarPanel
-          selectedYmd={selectedYmd}
-          viewYear={viewYear}
-          viewMonth={viewMonth}
-          onViewChange={(y, m) => {
-            setViewYear(y);
-            setViewMonth(m);
-          }}
-          onSelectYmd={applyYmd}
-        />
-      ) : null}
+      {typeof document !== "undefined" && calendarPortal ? createPortal(calendarPortal, document.body) : null}
     </div>
   );
 }
