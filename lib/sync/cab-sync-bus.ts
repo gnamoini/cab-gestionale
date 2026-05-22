@@ -57,20 +57,19 @@ export function emitCabSyncEvent(event: CabSyncEvent): void {
   }
 }
 
-export function emitCabSyncFromPostgresChange(
+export function cabSyncEventFromPostgresChange(
   table: string,
   payload: { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> },
-): void {
+): CabSyncEvent | null {
   if (table === "app_settings") {
-    emitCabSyncEvent({ type: "settings_updated" });
-    return;
+    return { type: "settings_updated" };
   }
   const entity = cabSyncEntityFromTable(table);
-  if (!entity) return;
+  if (!entity) return null;
   const n = payload.new;
   const o = payload.old;
   const id = String(n?.id ?? o?.id ?? "");
-  if (!id) return;
+  if (!id) return null;
 
   const eventType =
     payload.eventType === "INSERT"
@@ -79,7 +78,15 @@ export function emitCabSyncFromPostgresChange(
         ? "entity_deleted"
         : "entity_updated";
 
-  emitCabSyncEvent({ type: eventType, entity, id, table });
+  return { type: eventType, entity, id, table };
+}
+
+export function emitCabSyncFromPostgresChange(
+  table: string,
+  payload: { eventType: string; new?: Record<string, unknown>; old?: Record<string, unknown> },
+): void {
+  const event = cabSyncEventFromPostgresChange(table, payload);
+  if (event) emitCabSyncEvent(event);
 }
 
 export function subscribeCabSync(listener: Listener): () => void {

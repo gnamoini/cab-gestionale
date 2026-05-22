@@ -22,6 +22,8 @@ export type PostgresChangesChannelOptions = {
   subscribeTimeoutMs?: number;
   onStatusChange?: (status: "connected" | "polling") => void;
   onPollingFallback?: () => void;
+  /** Chiamato se il canale si disconnette dopo subscribe riuscito. */
+  onChannelLost?: () => void;
   logPrefix?: string;
 };
 
@@ -64,6 +66,7 @@ export async function subscribePostgresChangesChannel(
   for (let attempt = 0; attempt < retryAttempts; attempt++) {
     const name = `${channelName}-${attempt}-${Date.now()}`;
     let channel = sb.channel(name);
+    let subscribedOnce = false;
 
     for (const spec of tables) {
       channel = channel.on(
@@ -82,10 +85,16 @@ export async function subscribePostgresChangesChannel(
       new Promise<boolean>((resolve) => {
         channel.subscribe((st, err) => {
           if (st === "SUBSCRIBED") {
+            subscribedOnce = true;
             resolve(true);
             return;
           }
           if (st === "CHANNEL_ERROR" || st === "TIMED_OUT" || st === "CLOSED") {
+            if (subscribedOnce) {
+              console.warn(`${logPrefix} channel lost:`, st, err?.message ?? "");
+              options.onChannelLost?.();
+              return;
+            }
             console.warn(`${logPrefix} subscribe:`, st, err?.message ?? "");
             resolve(false);
           }

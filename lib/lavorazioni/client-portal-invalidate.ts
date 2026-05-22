@@ -1,28 +1,15 @@
 "use client";
 
 import type { QueryClient } from "@tanstack/react-query";
-import { dispatchClientPortalRefresh } from "@/lib/lavorazioni/client-portal-sync";
+import { CLIENT_PORTAL_SYNC_TABLES } from "@/lib/lavorazioni/client-portal-sync-tables";
 import { broadcastGestionaleInvalidate } from "@/lib/sync/cab-realtime-broadcast";
+import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 
-/** Tabelle il cui cambio impatta il portale clienti (allineate a Realtime + broadcast). */
-export const CLIENT_PORTAL_SYNC_TABLES = [
-  "lavorazioni",
-  "lavorazione_documents",
-  "scheda_lavorazione",
-  "preventivi",
-  "mezzi",
-  "log_modifiche",
-  "documenti",
-] as const;
+export { CLIENT_PORTAL_SYNC_TABLES, isClientPortalSyncTable } from "@/lib/lavorazioni/client-portal-sync-tables";
+export type { ClientPortalSyncTable } from "@/lib/lavorazioni/client-portal-sync-tables";
 
-export type ClientPortalSyncTable = (typeof CLIENT_PORTAL_SYNC_TABLES)[number];
-
-export function isClientPortalSyncTable(table: string): table is ClientPortalSyncTable {
-  return (CLIENT_PORTAL_SYNC_TABLES as readonly string[]).includes(table);
-}
-
-/** Invalida cache React Query del portale clienti + media collegati (senza eventi DOM). */
+/** Invalida cache React Query del portale clienti + media collegati (senza broadcast). */
 export async function invalidateClientPortalQueries(qc: QueryClient): Promise<void> {
   await Promise.all([
     qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" }),
@@ -43,7 +30,5 @@ export function broadcastClientPortalSync(): void {
  * Dopo mutazioni gestionale: invalida portale clienti in questa tab e notifica le altre.
  */
 export async function syncClientPortalAfterGestionaleChange(qc: QueryClient): Promise<void> {
-  await invalidateClientPortalQueries(qc);
-  dispatchClientPortalRefresh();
-  broadcastClientPortalSync();
+  dispatchGestionaleLocalMutation(qc, [...CLIENT_PORTAL_SYNC_TABLES]);
 }

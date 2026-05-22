@@ -1,10 +1,15 @@
 "use client";
 
-/** Invalidazione cache cross-tab quando Realtime non è connesso. */
+import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
+
+/** Invalidazione cache cross-tab quando Realtime non è connesso o per sync immediato. */
 
 const CHANNEL_NAME = "cab-gestionale-sync-v1";
+const TAB_ID_KEY = "cab-gestionale-tab-id";
 
-type BroadcastMessage = { type: "invalidate"; tables: string[] };
+export type GestionaleBroadcastMessage =
+  | { type: "invalidate"; tables: string[]; sourceTabId: string }
+  | { type: "cab_sync"; event: CabSyncEvent; sourceTabId: string };
 
 let channel: BroadcastChannel | null = null;
 
@@ -14,25 +19,75 @@ function getChannel(): BroadcastChannel | null {
   return channel;
 }
 
-export function broadcastGestionaleInvalidate(tables: string[]): void {
+/** ID stabile per tab (sessionStorage) — evita eco broadcast. */
+export function getGestionaleTabId(): string {
+  if (typeof window === "undefined") return "ssr";
+  try {
+    let id = sessionStorage.getItem(TAB_ID_KEY);
+    if (!id) {
+      id =
+        typeof crypto !== "undefined" && "randomUUID" in crypto
+          ? crypto.randomUUID()
+          : `tab-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+      sessionStorage.setItem(TAB_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return `tab-${Date.now()}`;
+  }
+}
+
+export function isForeignBroadcastSource(sourceTabId: string | undefined): boolean {
+  if (!sourceTabId) return true;
+  return sourceTabId !== getGestionaleTabId();
+}
+
+function postMessage(message: GestionaleBroadcastMessage): void {
   const ch = getChannel();
   if (!ch) return;
   try {
-    ch.postMessage({ type: "invalidate", tables } satisfies BroadcastMessage);
+    ch.postMessage(message);
   } catch {
     /* ignore */
   }
 }
 
-export function subscribeGestionaleBroadcast(onInvalidate: (tables: string[]) => void): () => void {
+export function broadcastGestionaleInvalidate(tables: string[]): void {
+  postMessage({ type: "invalidate", tables, sourceTabId: getGestionaleTabId() });
+}
+
+export function broadcastCabSyncEvent(event: CabSyncEvent): void {
+  postMessage({ type: "cab_sync", event, sourceTabId: getGestionaleTabId() });
+}
+
+export type GestionaleBroadcastHandler = {
+  onInvalidate: (tables: string[], sourceTabId: string) => void;
+  onCabSync?: (event: CabSyncEvent, sourceTabId: string) => void;
+};
+
+export function subscribeGestionaleBroadcast(handler: GestionaleBroadcastHandler): () => void {
   const ch = getChannel();
   if (!ch) return () => undefined;
 
-  const handler = (ev: MessageEvent<BroadcastMessage>) => {
-    if (ev.data?.type === "invalidate" && Array.isArray(ev.data.tables)) {
-      onInvalidate(ev.data.tables);
+  const listener = (ev: MessageEvent<GestionaleBroadcastMessage>) => {
+    const data = ev.data;
+    if (!data?.sourceTabId || !isForeignBroadcastSource(data.sourceTabId)) return;
+
+    if (data.type === "invalidate" && Array.isArray(data.tables)) {
+      handler.onInvalidate(data.tables, data.sourceTabId);
+      return;
+    }
+    if (data.type === "cab_sync" && data.event && handler.onCabSync) {
+      handler.onCabSync(data.event, data.sourceTabId);
     }
   };
-  ch.addEventListener("message", handler);
-  return () => ch.removeEventListener("message", handler);
+  ch.addEventListener("message", listener);
+  return () => ch.removeEventListener("message", listener);
+}
+
+/** @deprecated Usare `subscribeGestionaleBroadcast`. */
+export function subscribeGestionaleBroadcastLegacy(onInvalidate: (tables: string[]) => void): () => void {
+  return subscribeGestionaleBroadcast({
+    onInvalidate: (tables) => onInvalidate(tables),
+  });
 }

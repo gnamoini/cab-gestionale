@@ -35,17 +35,17 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
   {
     table: "mezzi",
     invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.mezzi });
-      void qc.invalidateQueries({ queryKey: QK.mezzoQueries });
-      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries });
+      void qc.invalidateQueries({ queryKey: QK.mezzi, refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: QK.mezzoQueries, refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
       void invalidateClientPortalQueries(qc);
     },
   },
   {
     table: "magazzino_ricambi",
     invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.magazzino });
-      void qc.invalidateQueries({ queryKey: QK.movimenti });
+      void qc.invalidateQueries({ queryKey: QK.magazzino, refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: QK.movimenti, refetchType: "active" });
       void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
       void invalidateClientPortalQueries(qc);
     },
@@ -53,17 +53,17 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
   {
     table: "movimenti_ricambi",
     invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.movimenti });
+      void qc.invalidateQueries({ queryKey: QK.movimenti, refetchType: "active" });
       void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
-      void qc.invalidateQueries({ queryKey: QK.magazzino });
+      void qc.invalidateQueries({ queryKey: QK.magazzino, refetchType: "active" });
       void invalidateClientPortalQueries(qc);
     },
   },
   {
     table: "preventivi",
     invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.preventivi });
-      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries });
+      void qc.invalidateQueries({ queryKey: QK.preventivi, refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
       void invalidateClientPortalQueries(qc);
     },
   },
@@ -79,29 +79,22 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
   {
     table: "scheda_lavorazione",
     invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.schede });
-      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries });
+      void qc.invalidateQueries({ queryKey: QK.schede, refetchType: "active" });
+      void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
       void invalidateClientPortalQueries(qc);
     },
   },
   {
     table: "log_modifiche",
     invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.log });
+      void qc.invalidateQueries({ queryKey: QK.log, refetchType: "active" });
       void invalidateClientPortalQueries(qc);
     },
   },
   {
     table: "support_notes",
     invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.supportNotes });
-    },
-  },
-  {
-    table: "segnalazioni",
-    invalidate: (qc) => {
-      void qc.invalidateQueries({ queryKey: QK.supportNotes });
-      void qc.invalidateQueries({ queryKey: QK.segnalazioni });
+      void qc.invalidateQueries({ queryKey: QK.supportNotes, refetchType: "active" });
     },
   },
 ];
@@ -109,5 +102,13 @@ export const GESTIONALE_REALTIME_TABLES: GestionaleRealtimeTableSpec[] = [
 export function invalidateAllGestionaleOperationalQueries(qc: QueryClient): void {
   for (const spec of GESTIONALE_REALTIME_TABLES) {
     spec.invalidate(qc);
+  }
+}
+
+export function invalidateGestionaleTables(qc: QueryClient, tables: string[]): void {
+  const unique = [...new Set(tables.filter(Boolean))];
+  for (const table of unique) {
+    const spec = GESTIONALE_REALTIME_TABLES.find((s) => s.table === table);
+    spec?.invalidate(qc);
   }
 }

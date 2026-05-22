@@ -16,10 +16,16 @@ import {
   subscribePostgresChangesChannel,
   type PostgresChangePayload,
 } from "@/lib/realtime/postgres-changes-channel";
-import { broadcastGestionaleInvalidate, subscribeGestionaleBroadcast } from "@/lib/sync/cab-realtime-broadcast";
-import { emitCabSyncFromPostgresChange } from "@/lib/sync/cab-sync-bus";
+import {
+  broadcastCabSyncEvent,
+  broadcastGestionaleInvalidate,
+  subscribeGestionaleBroadcast,
+} from "@/lib/sync/cab-realtime-broadcast";
+import { cabSyncEventFromPostgresChange, emitCabSyncEvent } from "@/lib/sync/cab-sync-bus";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+
+const RECONNECT_MAX_ATTEMPTS = 5;
 
 /**
  * Bridge Realtime globale: invalida cache React Query su cambi DB condivisi.
@@ -37,24 +43,49 @@ export function GestionaleRealtimeBridge() {
     let cancelled = false;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let activeChannel: Awaited<ReturnType<typeof subscribePostgresChangesChannel>>["channel"] | null = null;
+    let reconnecting = false;
+    let reconnectAttempts = 0;
     const pendingTables = new Set<string>();
+    const pendingCabEvents: ReturnType<typeof cabSyncEventFromPostgresChange>[] = [];
     const recentFingerprints = new Map<string, number>();
     const PRUNE_MS = 5000;
+
+    const startPollingFallback = () => {
+      if (pollTimer) return;
+      setGestionaleStatus("polling");
+      pollTimer = setInterval(() => {
+        if (cancelled) return;
+        invalidateAllGestionaleOperationalQueries(qc);
+      }, GESTIONALE_REALTIME_POLL_MS);
+    };
+
+    const stopPollingFallback = () => {
+      if (pollTimer) {
+        clearInterval(pollTimer);
+        pollTimer = null;
+      }
+    };
 
     const flushInvalidations = () => {
       if (cancelled || pendingTables.size === 0) return;
       const tables = [...pendingTables];
+      const cabEvents = pendingCabEvents.filter((e): e is NonNullable<typeof e> => e != null);
       pendingTables.clear();
-      for (const table of tables) {
-        const spec = GESTIONALE_REALTIME_TABLES.find((s) => s.table === table);
-        spec?.invalidate(qc);
-      }
+      pendingCabEvents.length = 0;
+
+      dispatchGestionaleRemoteChange(qc, tables, cabEvents[0] ?? undefined, {
+        emitLocalCabSync: true,
+        cabSyncEvents: cabEvents.slice(1),
+      });
       broadcastGestionaleInvalidate(tables);
+      for (const ev of cabEvents) broadcastCabSyncEvent(ev);
     };
 
-    const scheduleInvalidate = (table: string) => {
+    const scheduleInvalidate = (table: string, cabEvent?: ReturnType<typeof cabSyncEventFromPostgresChange>) => {
       pendingTables.add(table);
+      if (cabEvent) pendingCabEvents.push(cabEvent);
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
@@ -73,32 +104,28 @@ export function GestionaleRealtimeBridge() {
       if (recentFingerprints.has(fp)) return;
       recentFingerprints.set(fp, now);
 
-      emitCabSyncFromPostgresChange(table, payload);
-      scheduleInvalidate(table);
+      const cabEvent = cabSyncEventFromPostgresChange(table, payload);
+      scheduleInvalidate(table, cabEvent ?? undefined);
     };
 
-    const startPollingFallback = () => {
-      if (pollTimer) return;
-      setGestionaleStatus("polling");
-      pollTimer = setInterval(() => {
-        if (cancelled) return;
-        invalidateAllGestionaleOperationalQueries(qc);
-      }, GESTIONALE_REALTIME_POLL_MS);
-    };
-
-    const stopPollingFallback = () => {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
+    const removeActiveChannel = async () => {
+      const sb = getBrowserSupabase();
+      if (activeChannel) {
+        try {
+          await sb.removeChannel(activeChannel);
+        } catch {
+          /* ignore */
+        }
+        activeChannel = null;
       }
     };
 
-    const unsubBroadcast = subscribeGestionaleBroadcast((tables) => {
-      if (cancelled) return;
-      for (const table of tables) scheduleInvalidate(table);
-    });
+    const connectRealtime = async () => {
+      if (cancelled || reconnecting) return;
+      reconnecting = true;
 
-    void (async () => {
+      await removeActiveChannel();
+
       const sb = getBrowserSupabase();
       const tables = GESTIONALE_REALTIME_TABLES.map((s) => ({ table: s.table }));
 
@@ -108,36 +135,78 @@ export function GestionaleRealtimeBridge() {
         onPayload,
         retryAttempts: GESTIONALE_REALTIME_RETRY_ATTEMPTS,
         logPrefix: "[gestionale rt]",
-        onStatusChange: (s) => setGestionaleStatus(s === "connected" ? "connected" : "polling"),
+        onStatusChange: (s) => {
+          if (!cancelled) setGestionaleStatus(s === "connected" ? "connected" : "polling");
+        },
         onPollingFallback: () => {
           if (!cancelled) {
-            console.warn(`[gestionale rt] subscription non disponibile: fallback polling ${GESTIONALE_REALTIME_POLL_MS}ms`);
+            console.warn(
+              `[gestionale rt] subscription non disponibile: fallback polling ${GESTIONALE_REALTIME_POLL_MS}ms`,
+            );
             startPollingFallback();
           }
         },
+        onChannelLost: () => {
+          if (cancelled) return;
+          setGestionaleStatus("polling");
+          void removeActiveChannel().then(() => {
+            if (cancelled) return;
+            if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
+              console.warn("[gestionale rt] max reconnect attempts — polling fallback");
+              startPollingFallback();
+              return;
+            }
+            reconnectAttempts += 1;
+            const backoff = Math.min(1000 * 2 ** reconnectAttempts, 30_000);
+            reconnectTimer = setTimeout(() => {
+              reconnectTimer = null;
+              reconnecting = false;
+              void connectRealtime();
+            }, backoff);
+          });
+        },
       });
+
+      reconnecting = false;
+
+      if (cancelled) {
+        if (subscribed) await sb.removeChannel(channel);
+        return;
+      }
 
       if (subscribed) {
         activeChannel = channel;
+        reconnectAttempts = 0;
         stopPollingFallback();
         setGestionaleStatus("connected");
-      } else if (!cancelled) {
+      } else {
         startPollingFallback();
       }
-    })();
+    };
+
+    const unsubBroadcast = subscribeGestionaleBroadcast({
+      onInvalidate: (tables) => {
+        if (cancelled) return;
+        dispatchGestionaleRemoteChange(qc, tables);
+      },
+      onCabSync: (event) => {
+        if (cancelled) return;
+        emitCabSyncEvent(event);
+      },
+    });
+
+    void connectRealtime();
 
     return () => {
       cancelled = true;
       if (debounceTimer) clearTimeout(debounceTimer);
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       stopPollingFallback();
       unsubBroadcast();
       pendingTables.clear();
+      pendingCabEvents.length = 0;
       setGestionaleStatus("idle");
-      const sb = getBrowserSupabase();
-      if (activeChannel) {
-        void sb.removeChannel(activeChannel);
-        activeChannel = null;
-      }
+      void removeActiveChannel();
     };
   }, [authReady, qc, setGestionaleStatus, user?.id]);
 

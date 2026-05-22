@@ -11,7 +11,7 @@ import {
   gestionaleToDocumentoUpdate,
   uploadDocumentoBlob,
 } from "@/lib/documenti/documenti-db-mapper";
-import { QK } from "@/src/lib/react-query/invalidate-related";
+import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
@@ -559,7 +559,7 @@ export function DocumentiView() {
   }, []);
 
   const refreshDocumenti = useCallback(() => {
-    void qc.invalidateQueries({ queryKey: QK.documenti });
+    dispatchGestionaleLocalMutation(qc, ["documenti"]);
   }, [qc]);
 
   const handleUpload = useCallback(

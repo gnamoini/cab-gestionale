@@ -4,6 +4,7 @@ import "./lavorazioni-scroll.css";
 import "./lavorazioni-select-theme.css";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   GestionaleListTable,
@@ -61,14 +62,15 @@ import {
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import { persistSchedeBundle, persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
+import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
 import { useSchedeStoreQuery } from "@/src/hooks/use-schede-store-query";
 import {
   CAB_ADDETTO_DISPLAY_RENAME,
   type CabAddettoRenameDetail,
 } from "@/lib/sistema/cab-events";
-import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { countSchedePresenti, newSchedaMeta } from "@/lib/schede/schede-ui";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId, statoLavorazioneLabel } from "@/src/shared/selectors";
 import {
@@ -538,6 +540,8 @@ export function LavorazioniView() {
   const searchParams = useSearchParams();
   const { user, authorName } = useAuth();
   const { push: pushToast } = useToast();
+  const qc = useQueryClient();
+  const gestionaleQueryOpts = useGestionaleQueryOpts();
   const permissions = usePermissions();
   const canEditWorkOrders = permissions.canEditWorkOrders;
   const canDeleteRecords = permissions.canDeleteRecords;
@@ -644,10 +648,10 @@ export function LavorazioniView() {
           pushToast(res.error ?? "Salvataggio schede non riuscito.", "error", 5000);
           return;
         }
-        invalidateSchedeStore();
+        dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
       });
     },
-    [invalidateSchedeStore, pushToast],
+    [qc, pushToast],
   );
 
   useEffect(() => {
@@ -733,8 +737,8 @@ export function LavorazioniView() {
     [mezzoFilterPart],
   );
 
-  const attiveQuery = useLavorazioniList(filtersAttive, { staleTime: 30_000 });
-  const chiuseQuery = useLavorazioniList(filtersChiuse, { staleTime: 30_000 });
+  const attiveQuery = useLavorazioniList(filtersAttive, gestionaleQueryOpts);
+  const chiuseQuery = useLavorazioniList(filtersChiuse, gestionaleQueryOpts);
 
   const { undoable: undoableLavLog, logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
 

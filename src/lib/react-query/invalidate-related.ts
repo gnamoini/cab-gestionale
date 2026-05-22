@@ -1,7 +1,7 @@
 "use client";
 
-import { syncClientPortalAfterGestionaleChange } from "@/lib/lavorazioni/client-portal-invalidate";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
+import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
 import type { QueryClient } from "@tanstack/react-query";
 
 export const QK = {
@@ -41,35 +41,21 @@ export const QK = {
 };
 
 export async function invalidateAfterMezzoMutations(qc: QueryClient) {
-  await Promise.all([
-    qc.invalidateQueries({ queryKey: QK.mezzi }),
-    qc.invalidateQueries({ queryKey: QK.mezzoQueries }),
-    qc.invalidateQueries({ queryKey: QK.lavorazioniQueries }),
-    qc.invalidateQueries({ queryKey: QK.preventivi }),
-    qc.invalidateQueries({ queryKey: QK.documenti }),
-    qc.invalidateQueries({ queryKey: QK.log }),
-  ]);
-  await syncClientPortalAfterGestionaleChange(qc);
+  dispatchGestionaleLocalMutation(qc, ["mezzi", "lavorazioni", "preventivi", "documenti", "log_modifiche"]);
 }
 
 export async function invalidateAfterLavorazioneMutations(qc: QueryClient) {
-  await Promise.all([
-    qc.invalidateQueries({ queryKey: QK.mezzoQueries }),
-    qc.invalidateQueries({ queryKey: QK.lavorazioniQueries }),
-    qc.invalidateQueries({ queryKey: QK.schede }),
-    qc.invalidateQueries({ queryKey: QK.movimenti }),
-    qc.invalidateQueries({ queryKey: QK.preventivi }),
-    qc.invalidateQueries({ queryKey: QK.documenti }),
+  await qc.invalidateQueries({ queryKey: QK.mezzoQueries, refetchType: "active" });
+  dispatchGestionaleLocalMutation(qc, [
+    "lavorazioni",
+    "scheda_lavorazione",
+    "documenti",
+    "movimenti_ricambi",
+    "preventivi",
   ]);
-  await syncClientPortalAfterGestionaleChange(qc);
   bumpReportDataRefresh();
 }
 
 export async function invalidateAfterMagazzinoOrMovimenti(qc: QueryClient) {
-  await Promise.all([
-    qc.invalidateQueries({ queryKey: QK.mezzoQueries }),
-    qc.invalidateQueries({ queryKey: QK.lavorazioniQueries }),
-    qc.invalidateQueries({ queryKey: QK.magazzino }),
-    qc.invalidateQueries({ queryKey: QK.movimenti }),
-  ]);
+  dispatchGestionaleLocalMutation(qc, ["magazzino_ricambi", "movimenti_ricambi", "lavorazioni"]);
 }
