@@ -67,3 +67,20 @@ export function registerClienteInListe(liste: MezziListePrefs, clienteNome: stri
   if (!(key in scontoRicambiByCliente)) scontoRicambiByCliente[key] = 0;
   return { ...liste, clienti, scontoRicambiByCliente };
 }
+
+/** Rinomina cliente nell'elenco e migra la chiave sconto ricambi. */
+export function renameClienteInListe(liste: MezziListePrefs, from: string, to: string): MezziListePrefs {
+  const t = to.trim();
+  if (!t || from === t) return liste;
+  const oldKey = normClienteKey(from);
+  const newKey = normClienteKey(t);
+  const clienti = liste.clienti.map((c) => (c === from ? t : c));
+  const scontoRicambiByCliente = { ...(liste.scontoRicambiByCliente ?? {}) };
+  if (oldKey in scontoRicambiByCliente) {
+    scontoRicambiByCliente[newKey] = scontoRicambiByCliente[oldKey]!;
+    delete scontoRicambiByCliente[oldKey];
+  } else if (!(newKey in scontoRicambiByCliente)) {
+    scontoRicambiByCliente[newKey] = 0;
+  }
+  return { ...liste, clienti, scontoRicambiByCliente };
+}

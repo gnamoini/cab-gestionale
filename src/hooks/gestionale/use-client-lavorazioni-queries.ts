@@ -4,16 +4,19 @@ import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
+import { GESTIONALE_REALTIME_POLL_MS } from "@/lib/realtime/gestionale-realtime-config";
 import { clientLavorazioniService } from "@/src/services/client-lavorazioni.service";
 
-/** Allineato al main gestionale; polling locale disabilitato (bridge globale). */
-const STALE_MS = 30_000;
+/** Allineato al main gestionale; refetch aggressivo quando Realtime è in polling. */
+const PORTAL_STALE_MS = 5_000;
 
 export function useClientPortalQueryOpts() {
   const { gestionale } = useRealtimeStatus();
-  void gestionale;
+  const pollingFallback = gestionale === "polling";
+
   return {
-    staleTime: STALE_MS,
+    staleTime: PORTAL_STALE_MS,
+    refetchInterval: pollingFallback ? GESTIONALE_REALTIME_POLL_MS : false,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   } as const;

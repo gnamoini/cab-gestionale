@@ -9,6 +9,7 @@ export const gestionalePageToolbarActionsClass =
   "flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2";
 
 export function GestionalePageToolbarActions({
+  className,
   leading,
   canUndo,
   undoDisabled = false,
@@ -17,6 +18,7 @@ export function GestionalePageToolbarActions({
   onOpenLog,
   logTitle = "Storico modifiche",
 }: {
+  className?: string;
   leading?: ReactNode;
   canUndo: boolean;
   undoDisabled?: boolean;
@@ -28,7 +30,7 @@ export function GestionalePageToolbarActions({
   const undoInactive = undoDisabled || !canUndo || undoPending;
 
   return (
-    <div className={gestionalePageToolbarActionsClass}>
+    <div className={`${gestionalePageToolbarActionsClass}${className ? ` ${className}` : ""}`}>
       {leading}
       <button
         type="button"

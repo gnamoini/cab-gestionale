@@ -13,6 +13,7 @@ export const CLIENT_PORTAL_SYNC_TABLES = [
   "preventivi",
   "mezzi",
   "log_modifiche",
+  "documenti",
 ] as const;
 
 export type ClientPortalSyncTable = (typeof CLIENT_PORTAL_SYNC_TABLES)[number];
@@ -21,7 +22,7 @@ export function isClientPortalSyncTable(table: string): table is ClientPortalSyn
   return (CLIENT_PORTAL_SYNC_TABLES as readonly string[]).includes(table);
 }
 
-/** Invalida cache React Query del portale clienti + media collegati. */
+/** Invalida cache React Query del portale clienti + media collegati (senza eventi DOM). */
 export async function invalidateClientPortalQueries(qc: QueryClient): Promise<void> {
   await Promise.all([
     qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" }),
@@ -31,7 +32,6 @@ export async function invalidateClientPortalQueries(qc: QueryClient): Promise<vo
     qc.invalidateQueries({ queryKey: QK.schede, refetchType: "active" }),
     qc.invalidateQueries({ queryKey: QK.log, refetchType: "active" }),
   ]);
-  dispatchClientPortalRefresh();
 }
 
 /** Propaga sync ad altre schede/tab del browser (stesso origin). */
@@ -44,5 +44,6 @@ export function broadcastClientPortalSync(): void {
  */
 export async function syncClientPortalAfterGestionaleChange(qc: QueryClient): Promise<void> {
   await invalidateClientPortalQueries(qc);
+  dispatchClientPortalRefresh();
   broadcastClientPortalSync();
 }

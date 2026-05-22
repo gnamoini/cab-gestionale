@@ -56,6 +56,7 @@ export async function invalidateAfterLavorazioneMutations(qc: QueryClient) {
   await Promise.all([
     qc.invalidateQueries({ queryKey: QK.mezzoQueries }),
     qc.invalidateQueries({ queryKey: QK.lavorazioniQueries }),
+    qc.invalidateQueries({ queryKey: QK.schede }),
     qc.invalidateQueries({ queryKey: QK.movimenti }),
     qc.invalidateQueries({ queryKey: QK.preventivi }),
     qc.invalidateQueries({ queryKey: QK.documenti }),

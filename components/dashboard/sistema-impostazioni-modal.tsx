@@ -28,6 +28,7 @@ import {
   getScontoRicambiCliente,
   registerClienteInListe,
   removeScontoRicambiCliente,
+  renameClienteInListe,
   setScontoRicambiCliente,
 } from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
@@ -35,6 +36,9 @@ import { appendDashboardSettingsSavedLog } from "@/lib/dashboard/dashboard-siste
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
+import { SettingsEditableStringRow } from "@/components/dashboard/settings-list-ui";
+import { SettingsRinominaPropagaDialog } from "@/components/dashboard/settings-rinomina-propaga-dialog";
+import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
 import { CloseButton } from "@/components/design-system";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import {
@@ -42,7 +46,10 @@ import {
   dispatchLavorazioniPrefsRefresh,
   dispatchMagazzinoMasterRefresh,
   dispatchMezziListeRefresh,
+  dispatchPreventiviRefresh,
 } from "@/lib/sistema/cab-events";
+import { addUniqueToStringList, renameInStringList } from "@/lib/settings/settings-list-mutations";
+import type { SettingsRenameEntry } from "@/lib/settings/settings-rename-types";
 import { erpBtnNeutral, erpBtnSoftOrange } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { sortStringsItCaseInsensitive } from "@/lib/ui/sort-strings-it";
 import { buildBulkRowsFromResolved, resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
@@ -55,6 +62,7 @@ import {
 } from "@/src/shared/selectors";
 import { useLavorazioniStatiInUsoQuery } from "@/src/hooks/gestionale/use-lavorazioni-stati-in-uso";
 import { mergeAppSettingsUpsertWithVersions } from "@/src/services/settings.service";
+import { settingsRenamePropagationService } from "@/src/services/settings-rename-propagation.service";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
@@ -334,7 +342,11 @@ const SETTINGS_CARD =
   "w-full rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900";
 const LIST_UL =
   "mt-3 divide-y divide-zinc-100 dark:divide-zinc-800";
-const LIST_LI = "flex min-h-[2.5rem] items-center justify-between gap-2 px-1 py-1.5";
+
+function useSimilarGate() {
+  return useSettingsSimilarGate();
+}
+
 const INPUT_ROW =
   "min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-500/25 dark:border-zinc-700 dark:bg-zinc-950";
 
@@ -345,6 +357,7 @@ function ClientiCommercialiList({
   setNuovo,
   onAdd,
   onRemove,
+  onRename,
 }: {
   liste: MezziListePrefs;
   setListe: React.Dispatch<React.SetStateAction<MezziListePrefs>>;
@@ -352,14 +365,32 @@ function ClientiCommercialiList({
   setNuovo: (v: string) => void;
   onAdd: (trimmed: string) => void;
   onRemove: (nome: string) => void;
+  onRename: (from: string, to: string) => void;
 }) {
   const [q, setQ] = useState("");
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const { gate, similarDialog } = useSimilarGate();
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
     const base = t ? liste.clienti.filter((v) => v.toLowerCase().includes(t)) : [...liste.clienti];
     return sortStringsItCaseInsensitive(base);
   }, [liste.clienti, q]);
+
+  const tryAdd = (raw: string) => {
+    gate(liste.clienti, raw, undefined, () => {
+      onAdd(raw.trim());
+      setNuovo("");
+    });
+  };
+
+  const tryRename = (from: string, next: string) => {
+    const t = next.trim();
+    if (!t || t === from) return;
+    gate(liste.clienti, t, from, () => {
+      setListe((prev) => renameClienteInListe(prev, from, t));
+      onRename(from, t);
+    });
+  };
 
   return (
     <div className={SETTINGS_CARD}>
@@ -381,15 +412,17 @@ function ClientiCommercialiList({
           onChange={(e) => setNuovo(e.target.value)}
           placeholder="Nuovo cliente"
           className={INPUT_ROW}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              tryAdd(nuovo);
+            }
+          }}
         />
         <button
           type="button"
           className={`${erpBtnSoftOrange} shrink-0 px-2.5 text-xs`}
-          onClick={() => {
-            const t = nuovo.trim();
-            if (!t) return;
-            onAdd(t);
-          }}
+          onClick={() => tryAdd(nuovo)}
         >
           Aggiungi
         </button>
@@ -398,35 +431,34 @@ function ClientiCommercialiList({
         {filtered.map((nome) => {
           const sconto = getScontoRicambiCliente(liste, nome);
           return (
-            <li key={nome} className={`${LIST_LI} flex-wrap`}>
-              <span className="min-w-0 flex-1 truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">{nome}</span>
-              <label className="flex shrink-0 items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                Sconto ricambi %
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={sconto}
-                  onChange={(e) => {
-                    const n = clampScontoRicambiPercent(Number(e.target.value));
-                    setListe((prev) => setScontoRicambiCliente(prev, nome, n));
-                  }}
-                  className="w-16 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-950"
-                  aria-label={`Sconto ricambi per ${nome}`}
-                />
-              </label>
-              <button
-                type="button"
-                className="shrink-0 text-xs font-medium text-red-600 hover:underline dark:text-red-400"
-                onClick={() => setPendingDelete(nome)}
-              >
-                Elimina
-              </button>
-            </li>
+            <SettingsEditableStringRow
+              key={nome}
+              value={nome}
+              onRenameBlur={tryRename}
+              onRemove={() => setPendingDelete(nome)}
+              trailing={
+                <label className="flex shrink-0 items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                  Sconto ricambi %
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={1}
+                    value={sconto}
+                    onChange={(e) => {
+                      const n = clampScontoRicambiPercent(Number(e.target.value));
+                      setListe((prev) => setScontoRicambiCliente(prev, nome, n));
+                    }}
+                    className="w-16 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-950"
+                    aria-label={`Sconto ricambi per ${nome}`}
+                  />
+                </label>
+              }
+            />
           );
         })}
       </ul>
+      {similarDialog}
       <SettingsEliminaConfirmDialog
         open={pendingDelete != null}
         itemLabel={pendingDelete ?? undefined}
@@ -448,6 +480,7 @@ function UnifiedStringList({
   placeholder,
   onAdd,
   onRemove,
+  onRename,
 }: {
   title: string;
   values: readonly string[];
@@ -456,14 +489,29 @@ function UnifiedStringList({
   placeholder: string;
   onAdd: (trimmed: string) => void;
   onRemove: (v: string) => void;
+  onRename?: (from: string, to: string) => void;
 }) {
   const [q, setQ] = useState("");
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const { gate, similarDialog } = useSimilarGate();
   const filtered = useMemo(() => {
     const t = q.trim().toLowerCase();
     const base = t ? values.filter((v) => v.toLowerCase().includes(t)) : [...values];
     return sortStringsItCaseInsensitive(base);
   }, [values, q]);
+
+  const tryAdd = (raw: string) => {
+    gate(values, raw, undefined, () => {
+      onAdd(raw.trim());
+      setNuovo("");
+    });
+  };
+
+  const tryRename = (from: string, next: string) => {
+    const t = next.trim();
+    if (!t || t === from) return;
+    gate(values, t, from, () => onRename?.(from, t));
+  };
 
   return (
     <div className={SETTINGS_CARD}>
@@ -482,33 +530,32 @@ function UnifiedStringList({
           onChange={(e) => setNuovo(e.target.value)}
           placeholder={placeholder}
           className={INPUT_ROW}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              tryAdd(nuovo);
+            }
+          }}
         />
         <button
           type="button"
           className={`${erpBtnSoftOrange} shrink-0 px-2.5 text-xs`}
-          onClick={() => {
-            const t = nuovo.trim();
-            if (!t) return;
-            onAdd(t);
-          }}
+          onClick={() => tryAdd(nuovo)}
         >
           Aggiungi
         </button>
       </div>
       <ul className={LIST_UL}>
         {filtered.map((m) => (
-          <li key={m} className={LIST_LI}>
-            <span className="min-w-0 truncate text-xs text-zinc-800 dark:text-zinc-100">{m}</span>
-            <button
-              type="button"
-              className="shrink-0 text-xs font-medium text-red-600 hover:underline dark:text-red-400"
-              onClick={() => setPendingDelete(m)}
-            >
-              Elimina
-            </button>
-          </li>
+          <SettingsEditableStringRow
+            key={m}
+            value={m}
+            onRenameBlur={tryRename}
+            onRemove={() => setPendingDelete(m)}
+          />
         ))}
       </ul>
+      {similarDialog}
       <SettingsEliminaConfirmDialog
         open={pendingDelete != null}
         itemLabel={pendingDelete ?? undefined}
@@ -668,15 +715,33 @@ function SistemaImpostazioniWorkspace({
     setEcoHydrated(true);
   }, [open, resolvedSettings, settingsPayload.isPending]);
 
-  const saveNow = useCallback(async () => {
+  const renameQueueRef = useRef<SettingsRenameEntry[]>([]);
+  const [propagaOpen, setPropagaOpen] = useState(false);
+  const [propagaPending, setPropagaPending] = useState(false);
+  const [propagaEntries, setPropagaEntries] = useState<SettingsRenameEntry[]>([]);
+
+  const queueRename = useCallback((entry: SettingsRenameEntry) => {
+    renameQueueRef.current = [
+      ...renameQueueRef.current.filter((r) => !(r.kind === entry.kind && r.from === entry.from)),
+      entry,
+    ];
+  }, []);
+
+  const { gate: addettiGate, similarDialog: addettiSimilarDialog } = useSettingsSimilarGate();
+
+  const saveNow = useCallback(async (): Promise<boolean> => {
     const s = snapshotRef.current;
-    if (!s || !lavPrefsHydrated || !magHydrated || !mezziHydrated || !ecoHydrated) return;
+    if (!s || !lavPrefsHydrated || !magHydrated || !mezziHydrated || !ecoHydrated) return false;
     const payload = mergeAppSettingsUpsertWithVersions(
       buildBulkRowsFromResolved(buildResolvedFromModalSnapshot(s)),
       settingsRows,
     );
     suppressSettingsRemoteNotify(8000);
-    await bulkSave.mutateAsync(payload);
+    try {
+      await bulkSave.mutateAsync(payload);
+    } catch {
+      return false;
+    }
     appendDashboardSettingsSavedLog(authorName);
     suppressSettingsRemoteNotify(8000);
     savedSnapshotRef.current = s;
@@ -684,7 +749,36 @@ function SistemaImpostazioniWorkspace({
     dispatchLavorazioniPrefsRefresh();
     dispatchMagazzinoMasterRefresh();
     dispatchMezziListeRefresh();
+    return true;
   }, [bulkSave, lavPrefsHydrated, magHydrated, mezziHydrated, ecoHydrated, settingsRows, authorName]);
+
+  const finalizePropaga = useCallback(async (propagate: boolean) => {
+    if (!propagate) {
+      renameQueueRef.current = [];
+      setPropagaOpen(false);
+      push("Impostazioni salvate", "success", 3400);
+      return;
+    }
+    setPropagaPending(true);
+    const res = await settingsRenamePropagationService.propagateRenames(renameQueueRef.current);
+    setPropagaPending(false);
+    setPropagaOpen(false);
+    if (!res.success) {
+      push(res.error ?? "Propagazione non riuscita", "error", 5000);
+      return;
+    }
+    renameQueueRef.current = [];
+    dispatchPreventiviRefresh();
+    dispatchLavorazioniPrefsRefresh();
+    dispatchMagazzinoMasterRefresh();
+    dispatchMezziListeRefresh();
+    const total = (res.data ?? []).reduce((sum, r) => sum + r.updated, 0);
+    push(
+      total > 0 ? `Impostazioni salvate — ${total} record aggiornati` : "Impostazioni salvate",
+      "success",
+      4200,
+    );
+  }, [push]);
 
   const applySnapshot = useCallback((s: SistemaSettingsSnapshot) => {
     setLavPrefsHydrated(false);
@@ -716,9 +810,18 @@ function SistemaImpostazioniWorkspace({
   }, [confirmDiscardChanges, onClose]);
 
   const handleSaveNow = useCallback(() => {
-    void saveNow()
-      .then(() => push("Impostazioni salvate", "success", 3400))
-      .catch(() => push("Salvataggio impostazioni non riuscito", "error", 4200));
+    void saveNow().then((ok) => {
+      if (!ok) {
+        push("Salvataggio impostazioni non riuscito", "error", 4200);
+        return;
+      }
+      if (renameQueueRef.current.length > 0) {
+        setPropagaEntries([...renameQueueRef.current]);
+        setPropagaOpen(true);
+      } else {
+        push("Impostazioni salvate", "success", 3400);
+      }
+    });
   }, [saveNow, push]);
 
   const handleCancelChanges = useCallback(() => {
@@ -779,13 +882,9 @@ function SistemaImpostazioniWorkspace({
   }, [section]);
 
   const magAdd = (key: keyof MagazzinoMasterPrefs, raw: string, clear: () => void): boolean => {
-    const t = raw.trim();
-    if (!t) return false;
-    if ((mag[key] as string[]).includes(t)) return false;
-    patchMag((prev) => {
-      const cur = prev[key] as string[];
-      return { ...prev, [key]: sortStringsItCaseInsensitive([...cur, t]) };
-    });
+    const next = addUniqueToStringList(mag[key] as string[], raw);
+    if (!next) return false;
+    patchMag((prev) => ({ ...prev, [key]: next }));
     clear();
     return true;
   };
@@ -795,13 +894,10 @@ function SistemaImpostazioniWorkspace({
     raw: string,
     clear: () => void,
   ): boolean => {
-    const t = raw.trim();
-    if (!t) return false;
-    if (((liste[key] as string[] | undefined) ?? []).includes(t)) return false;
-    setListe((prev) => {
-      const cur = (prev[key] as string[] | undefined) ?? [];
-      return { ...prev, [key]: sortStringsItCaseInsensitive([...cur, t]) };
-    });
+    const cur = (liste[key] as string[] | undefined) ?? [];
+    const next = addUniqueToStringList(cur, raw);
+    if (!next) return false;
+    setListe((prev) => ({ ...prev, [key]: next }));
     clear();
     return true;
   };
@@ -1007,23 +1103,20 @@ function SistemaImpostazioniWorkspace({
                 onAddAddetto={(name) => {
                   const t = name.trim();
                   if (!t) return;
-                  if (addetti.some((a) => a.trim().toLowerCase() === t.toLowerCase())) {
-                    window.alert("Addetto già presente (anche con maiuscole diverse).");
-                    return;
-                  }
-                  setAddetti((prev) => [...prev, t]);
-                  setAddettoColors((prev) => assignColorForNewAddetto(prev, t));
+                  addettiGate(addetti, t, undefined, () => {
+                    setAddetti((prev) => [...prev, t]);
+                    setAddettoColors((prev) => assignColorForNewAddetto(prev, t));
+                  });
                 }}
                 onRenameAddettoBlur={(previousName, nextName) => {
                   const t = nextName.trim();
                   if (!t || t === previousName) return;
-                  if (addetti.some((a) => a !== previousName && a.trim().toLowerCase() === t.toLowerCase())) {
-                    window.alert("Nome già utilizzato.");
-                    return;
-                  }
-                  setAddetti((prev) => prev.map((a) => (a === previousName ? t : a)));
-                  setAddettoColors((prev) => renameAddettoInColorMap(prev, previousName, t));
-                  dispatchAddettoDisplayRename({ previousName, nextName: t });
+                  addettiGate(addetti, t, previousName, () => {
+                    setAddetti((prev) => prev.map((a) => (a === previousName ? t : a)));
+                    setAddettoColors((prev) => renameAddettoInColorMap(prev, previousName, t));
+                    queueRename({ kind: "addetto", from: previousName, to: t });
+                    dispatchAddettoDisplayRename({ previousName, nextName: t });
+                  });
                 }}
                 onChangeAddettoColor={(nome, hex) => {
                   const nh = normalizeHex(hex);
@@ -1067,6 +1160,10 @@ function SistemaImpostazioniWorkspace({
                   onRemove={(m) => {
                     patchMag((prev) => ({ ...prev, marche: prev.marche.filter((x) => x !== m) }));
                   }}
+                  onRename={(from, to) => {
+                    patchMag((prev) => ({ ...prev, marche: renameInStringList(prev.marche, from, to) }));
+                    queueRename({ kind: "mag_marca", from, to });
+                  }}
                 />
               </div>
             ) : null}
@@ -1085,6 +1182,10 @@ function SistemaImpostazioniWorkspace({
                   }}
                   onRemove={(m) => {
                     patchMag((prev) => ({ ...prev, fornitori: prev.fornitori.filter((x) => x !== m) }));
+                  }}
+                  onRename={(from, to) => {
+                    patchMag((prev) => ({ ...prev, fornitori: renameInStringList(prev.fornitori, from, to) }));
+                    queueRename({ kind: "mag_fornitore", from, to });
                   }}
                 />
               </div>
@@ -1105,6 +1206,10 @@ function SistemaImpostazioniWorkspace({
                   onRemove={(m) => {
                     patchMag((prev) => ({ ...prev, categorie: prev.categorie.filter((x) => x !== m) }));
                   }}
+                  onRename={(from, to) => {
+                    patchMag((prev) => ({ ...prev, categorie: renameInStringList(prev.categorie, from, to) }));
+                    queueRename({ kind: "mag_categoria", from, to });
+                  }}
                 />
               </div>
             ) : null}
@@ -1124,6 +1229,13 @@ function SistemaImpostazioniWorkspace({
                   onRemove={(m) => {
                     setListe((prev) => ({ ...prev, tipiAttrezzatura: prev.tipiAttrezzatura.filter((x) => x !== m) }));
                   }}
+                  onRename={(from, to) => {
+                    setListe((prev) => ({
+                      ...prev,
+                      tipiAttrezzatura: renameInStringList(prev.tipiAttrezzatura, from, to),
+                    }));
+                    queueRename({ kind: "tipo_attrezzatura", from, to });
+                  }}
                 />
               </div>
             ) : null}
@@ -1134,6 +1246,8 @@ function SistemaImpostazioniWorkspace({
                 variant="marca"
                 liste={liste}
                 setListe={setListe}
+                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_attrezzature", from, to })}
+                onRenameModello={(from, to) => queueRename({ kind: "hierarchy_modello_attrezzature", from, to })}
               />
             ) : null}
 
@@ -1143,6 +1257,8 @@ function SistemaImpostazioniWorkspace({
                 variant="modello"
                 liste={liste}
                 setListe={setListe}
+                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_attrezzature", from, to })}
+                onRenameModello={(from, to) => queueRename({ kind: "hierarchy_modello_attrezzature", from, to })}
               />
             ) : null}
 
@@ -1164,6 +1280,13 @@ function SistemaImpostazioniWorkspace({
                       tipiTelaio: (prev.tipiTelaio ?? []).filter((x) => x !== m),
                     }));
                   }}
+                  onRename={(from, to) => {
+                    setListe((prev) => ({
+                      ...prev,
+                      tipiTelaio: renameInStringList(prev.tipiTelaio ?? [], from, to),
+                    }));
+                    queueRename({ kind: "tipo_telaio", from, to });
+                  }}
                 />
               </div>
             ) : null}
@@ -1174,6 +1297,8 @@ function SistemaImpostazioniWorkspace({
                 variant="marca"
                 liste={liste}
                 setListe={setListe}
+                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_telai", from, to })}
+                onRenameModello={(from, to) => queueRename({ kind: "hierarchy_modello_telai", from, to })}
               />
             ) : null}
 
@@ -1183,6 +1308,8 @@ function SistemaImpostazioniWorkspace({
                 variant="modello"
                 liste={liste}
                 setListe={setListe}
+                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_telai", from, to })}
+                onRenameModello={(from, to) => queueRename({ kind: "hierarchy_modello_telai", from, to })}
               />
             ) : null}
 
@@ -1194,9 +1321,7 @@ function SistemaImpostazioniWorkspace({
                   nuovo={nuovoCliente}
                   setNuovo={setNuovoCliente}
                   onAdd={(t) => {
-                    if (liste.clienti.includes(t)) return;
                     setListe((prev) => registerClienteInListe(prev, t));
-                    setNuovoCliente("");
                   }}
                   onRemove={(m) => {
                     setListe((prev) => {
@@ -1204,6 +1329,7 @@ function SistemaImpostazioniWorkspace({
                       return { ...next, clienti: next.clienti.filter((x) => x !== m) };
                     });
                   }}
+                  onRename={(from, to) => queueRename({ kind: "cliente", from, to })}
                 />
               </div>
             ) : null}
@@ -1223,6 +1349,13 @@ function SistemaImpostazioniWorkspace({
                   onRemove={(m) => {
                     setListe((prev) => ({ ...prev, utilizzatori: prev.utilizzatori.filter((x) => x !== m) }));
                   }}
+                  onRename={(from, to) => {
+                    setListe((prev) => ({
+                      ...prev,
+                      utilizzatori: renameInStringList(prev.utilizzatori, from, to),
+                    }));
+                    queueRename({ kind: "utilizzatore", from, to });
+                  }}
                 />
               </div>
             ) : null}
@@ -1241,6 +1374,13 @@ function SistemaImpostazioniWorkspace({
                   }}
                   onRemove={(m) => {
                     setListe((prev) => ({ ...prev, cantieri: prev.cantieri.filter((x) => x !== m) }));
+                  }}
+                  onRename={(from, to) => {
+                    setListe((prev) => ({
+                      ...prev,
+                      cantieri: renameInStringList(prev.cantieri, from, to),
+                    }));
+                    queueRename({ kind: "cantiere", from, to });
                   }}
                 />
               </div>
@@ -1280,6 +1420,14 @@ function SistemaImpostazioniWorkspace({
         onCancel={() => setSettingsDeleteConfirm(null)}
         onConfirm={() => settingsDeleteConfirm?.onConfirm()}
       />
+      <SettingsRinominaPropagaDialog
+        open={propagaOpen}
+        entries={propagaEntries}
+        pending={propagaPending}
+        onCancel={() => void finalizePropaga(false)}
+        onConfirm={() => void finalizePropaga(true)}
+      />
+      {addettiSimilarDialog}
     </>
   );
 

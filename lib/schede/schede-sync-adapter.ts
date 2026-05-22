@@ -33,6 +33,10 @@ async function syncBundleToDb(bundle: LavorazioneSchedeBundle): Promise<{ ok: tr
 
   const existing = await schedeService.getAll({ lavorazione_id: bundle.lavorazioneId });
   const rows = existing.success && existing.data ? existing.data : [];
+  if (!existing.success) {
+    return { ok: false, error: existing.error ?? "Lettura schede dal database non riuscita." };
+  }
+
   const byTipo = new Map(rows.map((r) => [r.tipo, r]));
 
   for (const part of bundleToSchedaPayloads(bundle)) {
@@ -54,30 +58,57 @@ async function syncBundleToDb(bundle: LavorazioneSchedeBundle): Promise<{ ok: tr
   for (const row of rows) {
     const still = bundleToSchedaPayloads(bundle).some((p) => p.tipo === row.tipo);
     if (!still) {
-      await schedeService.remove(row.id);
+      const del = await schedeService.remove(row.id);
+      if (!del.success) return { ok: false, error: del.error ?? "Eliminazione scheda fallita." };
     }
   }
 
   return { ok: true };
 }
 
+function cacheStoreLocally(store: LavorazioneSchedeStore): void {
+  saveLavorazioneSchedeStore(store);
+}
+
+/** Carica store schede: DB primary con cache locale aggiornata ad ogni fetch. */
 export async function fetchSchedeStoreMerged(): Promise<LavorazioneSchedeStore> {
   const local = loadLavorazioneSchedeStore();
   const remoteRes = await schedeService.getAll();
-  if (!remoteRes.success || !remoteRes.data) return local;
-  const remote = schedaRowsToStore(remoteRes.data);
-  return mergeSchedeStores(local, remote, isSchedeDbPrimary());
+
+  if (remoteRes.success && remoteRes.data) {
+    const remote = schedaRowsToStore(remoteRes.data);
+    if (isSchedeDbPrimary()) {
+      cacheStoreLocally(remote);
+      return remote;
+    }
+    const merged = mergeSchedeStores(local, remote, false);
+    cacheStoreLocally(merged);
+    return merged;
+  }
+
+  if (isSchedeDbPrimary()) {
+    console.warn("[schede] fetch remoto fallito; uso cache locale come fallback.");
+  }
+  return local;
 }
 
 export async function persistSchedeBundle(
   bundle: LavorazioneSchedeBundle,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (isSchedeDbPrimary()) {
+    const db = await syncBundleToDb(bundle);
+    if (!db.ok) return db;
+    const store = loadLavorazioneSchedeStore();
+    store[bundle.lavorazioneId] = bundle;
+    cacheStoreLocally(store);
+    return { ok: true };
+  }
+
   const store = loadLavorazioneSchedeStore();
   store[bundle.lavorazioneId] = bundle;
-  saveLavorazioneSchedeStore(store);
-
+  cacheStoreLocally(store);
   const db = await syncBundleToDb(bundle);
-  if (!db.ok && isSchedeDbPrimary()) return db;
+  if (!db.ok) return db;
   return { ok: true };
 }
 
@@ -88,18 +119,30 @@ export function getOrCreateBundleMerged(
   return getOrCreateBundle(store, lavorazioneId);
 }
 
-/** Salva store locale e sincronizza un bundle (o tutti se `lavorazioneId` assente). */
+/** Salva store e sincronizza con Supabase (DB-first quando abilitato). */
 export async function persistSchedeStore(
   store: LavorazioneSchedeStore,
   lavorazioneId?: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  saveLavorazioneSchedeStore(store);
   const ids = lavorazioneId ? [lavorazioneId] : Object.keys(store);
+
+  if (isSchedeDbPrimary()) {
+    for (const id of ids) {
+      const bundle = store[id];
+      if (!bundle) continue;
+      const db = await syncBundleToDb(bundle);
+      if (!db.ok) return db;
+    }
+    cacheStoreLocally(store);
+    return { ok: true };
+  }
+
+  cacheStoreLocally(store);
   for (const id of ids) {
     const bundle = store[id];
     if (!bundle) continue;
     const db = await syncBundleToDb(bundle);
-    if (!db.ok && isSchedeDbPrimary()) return db;
+    if (!db.ok) return db;
   }
   return { ok: true };
 }

@@ -161,6 +161,7 @@ export function LavorazioniAdvancedFilterPanel({
               inputClassName={gestionaleFilterFieldInputClass}
               strictFromList
               variant="filter"
+              filterNeutralValues={[FILTER_ALL]}
               aria-label="Filtra stato"
             />
           </LavorazioniFilterField>
@@ -205,6 +206,7 @@ export function LavorazioniAdvancedFilterPanel({
               inputClassName={gestionaleFilterFieldInputClass}
               strictFromList
               variant="filter"
+              filterNeutralValues={[FILTER_ALL]}
               aria-label="Filtra stato"
             />
           </LavorazioniFilterField>

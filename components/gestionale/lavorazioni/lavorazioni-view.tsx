@@ -16,6 +16,7 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioneCreateModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
+import { LavorazioniKanbanView } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-view";
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
 import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
 import { SchedeLavorazioneModal } from "@/components/lavorazioni/schede/schede-lavorazione-modal";
@@ -631,8 +632,23 @@ export function LavorazioniView() {
   const concludeLav = useLavorazioneConcludeMutation();
 
   const [createOpen, setCreateOpen] = useState(false);
+  type LavorazioniListViewMode = "table" | "kanban";
+  const [listViewMode, setListViewMode] = useState<LavorazioniListViewMode>("table");
   const [schedeRow, setSchedeRow] = useState<{ row: LavorazioneListRow; origine: "attiva" | "storico"; initialTab?: "schede" | "panoramica" } | null>(null);
   const { store: schedeStore, invalidate: invalidateSchedeStore } = useSchedeStoreQuery();
+
+  const persistSchedeAndSync = useCallback(
+    (promise: Promise<{ ok: true } | { ok: false; error: string }>) => {
+      void promise.then((res) => {
+        if (!res.ok) {
+          pushToast(res.error ?? "Salvataggio schede non riuscito.", "error", 5000);
+          return;
+        }
+        invalidateSchedeStore();
+      });
+    },
+    [invalidateSchedeStore, pushToast],
+  );
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -880,7 +896,7 @@ export function LavorazioniView() {
             },
           },
         };
-        void persistSchedeStore(updated, row.id).then(() => invalidateSchedeStore());
+        persistSchedeAndSync(persistSchedeStore(updated, row.id));
       }
       void logService.create({
         entita: "lavorazioni",
@@ -1250,7 +1266,7 @@ export function LavorazioniView() {
                 },
               },
             };
-            void persistSchedeStore(updated, undoableLavLog.entita_id).then(() => invalidateSchedeStore());
+            persistSchedeAndSync(persistSchedeStore(updated, undoableLavLog.entita_id));
           }
         }
       }
@@ -1289,14 +1305,24 @@ export function LavorazioniView() {
       <PageHeader
         title="Lavorazioni"
         actions={
-          <GestionalePageToolbarActions
-            canUndo={Boolean(undoableLavLog)}
-            undoDisabled={!canEditWorkOrders}
-            undoPending={updateLav.isPending}
-            onUndo={() => void undoUltimaLavorazione()}
-            onOpenLog={() => setLavLogOpen(true)}
-            logTitle="Storico modifiche lavorazioni"
-          />
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              className={dsPageToolbarBtn}
+              onClick={() => setListViewMode((m) => (m === "table" ? "kanban" : "table"))}
+              aria-pressed={listViewMode === "kanban"}
+            >
+              {listViewMode === "table" ? "Vista Kanban" : "Vista Tabella"}
+            </button>
+            <GestionalePageToolbarActions
+              canUndo={Boolean(undoableLavLog)}
+              undoDisabled={!canEditWorkOrders}
+              undoPending={updateLav.isPending}
+              onUndo={() => void undoUltimaLavorazione()}
+              onOpenLog={() => setLavLogOpen(true)}
+              logTitle="Storico modifiche lavorazioni"
+            />
+          </div>
         }
       />
 
@@ -1404,6 +1430,26 @@ export function LavorazioniView() {
         </ShellCard>
 
         <ShellCard>
+          {listViewMode === "kanban" ? (
+            <LavorazioniKanbanView
+              rows={attiveRowsFiltered}
+              columns={statiInCorsoOpts}
+              statiOpts={statiOpts}
+              schedeStore={schedeStore}
+              defaultAddetto={defaultAddetto}
+              prioritaColors={globalOpts.lavorazioni.prioritaColors}
+              flashRowId={flashRowId}
+              navBulkFlashIds={navBulkFlashIds}
+              loading={loading}
+              emptyMessage={
+                hasPageClientFilters || navMezzoFilter
+                  ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
+                  : "Nessuna lavorazione in corso."
+              }
+              onOpenRow={(row) => setSchedeRow({ row, origine: "attiva", initialTab: "panoramica" })}
+            />
+          ) : (
+            <>
           {loading ? <p className="text-sm text-zinc-500">Caricamento…</p> : null}
 
           <GestionaleListTable
@@ -1784,8 +1830,11 @@ export function LavorazioniView() {
           </div>
 
           {showPagerA ? <TablePagination page={pageA} pageCount={pageCountA} onPageChange={setPageA} label={labelA} /> : null}
+            </>
+          )}
         </ShellCard>
 
+        {listViewMode === "table" ? (
         <ShellCard title="Archivio lavorazioni">
           <GestionaleListTable
             visibilityClass="hidden md:block"
@@ -2058,6 +2107,7 @@ export function LavorazioniView() {
 
           {showPagerC ? <TablePagination page={pageC} pageCount={pageCountC} onPageChange={setPageC} label={labelC} /> : null}
         </ShellCard>
+        ) : null}
 
       </div>
 
@@ -2108,8 +2158,7 @@ export function LavorazioniView() {
           initialTab={schedeRow.initialTab}
           bundle={getOrCreateBundle(schedeStore, schedeRow.row.id)}
           onPersist={(next) => {
-            const updated = { ...schedeStore, [next.lavorazioneId]: next };
-            void persistSchedeBundle(next).then(() => invalidateSchedeStore());
+            persistSchedeAndSync(persistSchedeBundle(next));
           }}
           onIngressoCommitted={async (campi) => {
             if (!schedeRow) return;

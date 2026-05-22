@@ -1355,14 +1355,16 @@ export function MagazzinoView() {
     <div className="magazzino-scroll-scope min-w-0">
       <PageHeader
         title="Magazzino ricambi"
+        topRowClassName="max-sm:flex-nowrap max-sm:items-center max-sm:gap-1.5 [&_.cab-page-title-box]:max-sm:truncate"
         actions={
           <GestionalePageToolbarActions
+            className="max-sm:flex-nowrap max-sm:gap-1"
             leading={
               <MagazzinoGiacenzaBell
                 count={sottoScortaTotale}
                 items={sottoScortaList}
                 onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
-                triggerClassName={`${dsPageToolbarBtn} shrink-0`}
+                triggerClassName={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
               />
             }
             canUndo={Boolean(undoableMagazzinoLog)}

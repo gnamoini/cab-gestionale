@@ -14,6 +14,7 @@ import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-do
 import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
 import type { LavorazioneDocumentRow, LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
 import { useLavorazionePdfsByLavorazione } from "@/src/services/domain/lavorazioni-domain.queries";
+import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 
 function IconPdf() {
   return (
@@ -145,10 +146,15 @@ export function LavorazioneDocumentsManager({
   const [urlCache, setUrlCache] = useState<Record<string, string>>({});
 
   const invalidate = useCallback(() => {
-    void qc.invalidateQueries({ queryKey: lavorazioniDomainQueryKeys.lavorazionePdfs(lavorazioneId) });
+    void qc.invalidateQueries({ queryKey: lavorazioniDomainQueryKeys.lavorazionePdfs(lavorazioneId), refetchType: "active" });
     void syncClientPortalAfterGestionaleChange(qc);
     onDocumentEvent?.();
   }, [qc, lavorazioneId, onDocumentEvent]);
+
+  useCabSyncListener("lavorazione_documents", () => {
+    setUrlCache({});
+    void invalidate();
+  });
 
   const resolveUrl = useCallback(
     async (doc: LavorazioneDocumentRow): Promise<string | null> => {

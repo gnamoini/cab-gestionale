@@ -2,6 +2,8 @@
 
 import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
+import { SETTINGS_LIST_ROW } from "@/components/dashboard/settings-list-ui";
+import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
 import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
 import {
   aggiungiMarcaHierarchy,
@@ -25,14 +27,20 @@ export function HierarchyTreeSettingsSection({
   variant,
   liste,
   setListe,
+  onRenameMarca,
+  onRenameModello,
 }: {
   treeKey: HierarchyTreeKey;
   /** "marca" = gestione marche; "modello" = gerarchia modelli sotto marca. */
   variant: "marca" | "modello";
   liste: MezziListePrefs;
   setListe: Dispatch<SetStateAction<MezziListePrefs>>;
+  onRenameMarca?: (from: string, to: string) => void;
+  onRenameModello?: (from: string, to: string) => void;
 }) {
   const tree = useMemo(() => getHierarchyTree(liste, treeKey), [liste, treeKey]);
+  const marcaNames = useMemo(() => tree.map((m) => m.nome), [tree]);
+  const { gate, similarDialog } = useSettingsSimilarGate();
   const [nuovaMarca, setNuovaMarca] = useState("");
   const [nuovoModelloByMarca, setNuovoModelloByMarca] = useState<Record<string, string>>({});
   const [expandedMarcaIds, setExpandedMarcaIds] = useState<Set<string>>(() => new Set());
@@ -90,8 +98,10 @@ export function HierarchyTreeSettingsSection({
               onClick={() => {
                 const t = nuovaMarca.trim();
                 if (!t) return;
-                setListe((prev) => aggiungiMarcaHierarchy(prev, treeKey, t));
-                setNuovaMarca("");
+                gate(marcaNames, t, undefined, () => {
+                  setListe((prev) => aggiungiMarcaHierarchy(prev, treeKey, t));
+                  setNuovaMarca("");
+                });
               }}
             >
               Aggiungi
@@ -112,8 +122,8 @@ export function HierarchyTreeSettingsSection({
               a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }),
             );
             return (
-              <li key={m.id} className="px-2 py-1.5 sm:px-3">
-                <div className="flex items-center gap-2">
+              <li key={m.id} className={`${SETTINGS_LIST_ROW} px-1`}>
+                <div className="flex w-full items-center gap-2">
                   {variant === "modello" ? (
                     <button
                       type="button"
@@ -132,7 +142,19 @@ export function HierarchyTreeSettingsSection({
                     onBlur={(e) => {
                       const t = e.target.value.trim();
                       if (!t || t === m.nome) return;
-                      setListe((prev) => rinominaMarcaHierarchy(prev, treeKey, m.id, t));
+                      const input = e.target;
+                      gate(
+                        marcaNames,
+                        t,
+                        m.nome,
+                        () => {
+                          setListe((prev) => rinominaMarcaHierarchy(prev, treeKey, m.id, t));
+                          onRenameMarca?.(m.nome, t);
+                        },
+                        () => {
+                          input.value = m.nome;
+                        },
+                      );
                     }}
                     aria-label={`Nome marca ${m.nome}`}
                     readOnly={variant === "modello"}
@@ -163,15 +185,28 @@ export function HierarchyTreeSettingsSection({
                   <>
                     <ul className="mt-1.5 space-y-1 pl-11">
                       {sortedModelli.map((mod) => (
-                        <li key={mod.id} className="flex items-center gap-2 rounded-lg bg-zinc-50/80 px-2 py-1 dark:bg-zinc-800/50">
+                        <li key={mod.id} className={`${SETTINGS_LIST_ROW} bg-zinc-50/80 px-2 dark:bg-zinc-800/50`}>
                           <input
-                            className={`${INPUT} text-zinc-800 dark:text-zinc-100`}
+                            className={`${INPUT} min-w-0 flex-1 text-zinc-800 dark:text-zinc-100`}
                             defaultValue={mod.nome}
                             key={`${mod.id}-${mod.nome}`}
                             onBlur={(e) => {
                               const t = e.target.value.trim();
                               if (!t || t === mod.nome) return;
-                              setListe((prev) => rinominaModelloHierarchy(prev, treeKey, m.id, mod.id, t));
+                              const input = e.target;
+                              const modelNames = m.modelli.map((x) => x.nome);
+                              gate(
+                                modelNames,
+                                t,
+                                mod.nome,
+                                () => {
+                                  setListe((prev) => rinominaModelloHierarchy(prev, treeKey, m.id, mod.id, t));
+                                  onRenameModello?.(mod.nome, t);
+                                },
+                                () => {
+                                  input.value = mod.nome;
+                                },
+                              );
                             }}
                             aria-label={`Modello sotto ${m.nome}`}
                           />
@@ -206,8 +241,11 @@ export function HierarchyTreeSettingsSection({
                         onClick={() => {
                           const t = (nuovoModelloByMarca[m.id] ?? "").trim();
                           if (!t) return;
-                          setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, m.id, t));
-                          setModelDraft(m.id, "");
+                          const modelNames = m.modelli.map((x) => x.nome);
+                          gate(modelNames, t, undefined, () => {
+                            setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, m.id, t));
+                            setModelDraft(m.id, "");
+                          });
                         }}
                       >
                         Aggiungi
@@ -246,6 +284,7 @@ export function HierarchyTreeSettingsSection({
           setPendingDelete(null);
         }}
       />
+      {similarDialog}
     </div>
   );
 }

@@ -7,6 +7,7 @@ import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { STATO_LAVORAZIONE_COMPLETATA_ID } from "@/lib/lavorazioni/stati-dynamic";
 import { sortStringsItCaseInsensitive } from "@/lib/ui/sort-strings-it";
+import { SettingsEditableStringRow } from "@/components/dashboard/settings-list-ui";
 
 export function ColorSwatchButton({
   value,
@@ -176,9 +177,9 @@ export function AddettiSettingsList({
   onChangeAddettoColor,
   onRenameBlur,
   onRemove,
-  attiviAddetti,
-  storicoAddetti,
-  inputClass,
+  attiviAddetti: _attiviAddetti,
+  storicoAddetti: _storicoAddetti,
+  inputClass: _inputClass,
 }: {
   addetti: string[];
   addettoColors: Record<string, string>;
@@ -194,35 +195,21 @@ export function AddettiSettingsList({
   return (
     <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
       {sortedAddetti.map((a) => {
-        const inUse = attiviAddetti.has(a) || storicoAddetti.has(a);
         const displayHex = addettoDisplayColor(a, addettoColors);
         return (
-          <li key={a} className="flex min-h-[2.75rem] flex-wrap items-center gap-2 py-2.5 first:pt-0 last:pb-0">
-            <input
-              key={a}
-              className={`${inputClass} min-w-0 flex-1 basis-[12rem] text-sm`}
-              defaultValue={a}
-              aria-label="Nome addetto"
-              onBlur={(e) => onRenameBlur(a, e.target.value)}
-            />
-            <ColorSwatchButton
-              value={displayHex}
-              ariaLabel={`Colore addetto ${a}`}
-              onChange={(hex) => onChangeAddettoColor(a, hex)}
-            />
-            <button
-              type="button"
-              className="ml-auto shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 shadow-sm dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
-              title={
-                inUse
-                  ? "Rimuove dalla lista futura; i record già assegnati mantengono il nome"
-                  : "Elimina addetto"
-              }
-              onClick={() => onRemove(a)}
-            >
-              Elimina
-            </button>
-          </li>
+          <SettingsEditableStringRow
+            key={a}
+            value={a}
+            onRenameBlur={onRenameBlur}
+            onRemove={() => onRemove(a)}
+            trailing={
+              <ColorSwatchButton
+                value={displayHex}
+                ariaLabel={`Colore addetto ${a}`}
+                onChange={(hex) => onChangeAddettoColor(a, hex)}
+              />
+            }
+          />
         );
       })}
     </ul>

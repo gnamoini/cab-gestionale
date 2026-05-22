@@ -48,6 +48,8 @@ export type GlobalSettingsListSelectProps = {
 
   variant?: "default" | "filter";
 
+  filterNeutralValues?: readonly string[];
+
   allowAdd?: boolean;
 
   forceInvalid?: boolean;
@@ -89,6 +91,8 @@ export function GlobalSettingsListSelect({
   id,
 
   variant = "default",
+
+  filterNeutralValues,
 
   allowAdd = true,
 
@@ -151,6 +155,8 @@ export function GlobalSettingsListSelect({
     id,
 
     variant,
+
+    filterNeutralValues,
 
     className,
 

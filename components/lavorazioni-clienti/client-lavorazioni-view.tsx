@@ -565,7 +565,7 @@ export function ClientLavorazioniView() {
   const inCorsoQ = useClientLavorazioniInCorsoQuery(access.allowed);
   const archivioQ = useClientLavorazioniArchivioQuery(access.allowed);
   const logsQ = useLogListQuery(
-    { entita: "lavorazioni", limit: 500 },
+    { entita: "lavorazioni", limit: 2000 },
     {
       enabled: access.allowed,
       ...clientPortalOpts,

@@ -329,7 +329,10 @@ export function LavorazioneCreateModal({
         lavorazioni: null,
         ricambi: null,
       };
-      void persistSchedeStore(store, row.id);
+      const res = await persistSchedeStore(store, row.id);
+      if (!res.ok) {
+        window.alert(res.error ?? "Scheda ingresso non sincronizzata con il database.");
+      }
       onCreated?.(row.id);
       onClose();
     } catch {

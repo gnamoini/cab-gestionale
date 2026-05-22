@@ -6,6 +6,8 @@ import {
   autocompleteFilterQuery,
   autocompleteItemSuggestions,
   autocompleteStringSuggestions,
+  autocompleteShowAddOption,
+  autocompleteAddOptionEnabled,
   type AutocompleteEngineInput,
 } from "@/lib/global-autocomplete/engine";
 
@@ -70,6 +72,18 @@ assert.equal(
   "Beta",
 );
 
+// Commit loose key (punteggiatura ignorata)
+assert.equal(
+  autocompleteCommitFromSearchText("cereba", "strings", ["CE.RE.BA", "Beta"], [], true),
+  "CE.RE.BA",
+);
+
+// Display a riposo dopo editing con searchText vuoto
+assert.equal(
+  autocompleteDisplayValue(base({ value: "CE.RE.BA", focused: false, searchText: "" })),
+  "CE.RE.BA",
+);
+
 // Items mode
 const items = [
   { value: "a", label: "Attesa" },
@@ -85,5 +99,23 @@ const itemFiltered = autocompleteItemSuggestions({
 });
 assert.equal(itemFiltered.length, 1);
 assert.equal(itemFiltered[0]?.value, "b");
+
+const addBase = {
+  allowAdd: true,
+  canAdd: true,
+  hasOnAdd: true,
+  open: true,
+  disabled: false,
+  isLoading: false,
+};
+
+assert.equal(autocompleteShowAddOption(addBase), true);
+assert.equal(autocompleteShowAddOption({ ...addBase, open: false }), false);
+assert.equal(autocompleteShowAddOption({ ...addBase, allowAdd: false }), false);
+assert.equal(autocompleteShowAddOption({ ...addBase, isLoading: true }), false);
+
+assert.equal(autocompleteAddOptionEnabled(" nuovo ", false), true);
+assert.equal(autocompleteAddOptionEnabled("   ", false), false);
+assert.equal(autocompleteAddOptionEnabled("x", true), false);
 
 console.log("global-autocomplete/engine.test.ts: ok");

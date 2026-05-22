@@ -114,6 +114,7 @@ export function PreventiviAdvancedFilterPanel({
             inputClassName={gestionaleFilterFieldInputClass}
             strictFromList
             variant="filter"
+            filterNeutralValues={[FILTER_ALL]}
             aria-label="Filtra stato preventivo"
           />
         </LavorazioniFilterField>
@@ -125,6 +126,7 @@ export function PreventiviAdvancedFilterPanel({
             inputClassName={gestionaleFilterFieldInputClass}
             strictFromList
             variant="filter"
+            filterNeutralValues={[FILTER_ALL]}
             aria-label="Filtra tipo documento preventivo o consuntivo"
           />
         </LavorazioniFilterField>

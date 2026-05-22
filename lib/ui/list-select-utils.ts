@@ -7,11 +7,34 @@ export function normListSelectValue(value: string): string {
     .replace(/[\u0300-\u036f]/g, "");
 }
 
+/** Chiave alfanumerica per matching permissivo (ignora punteggiatura, spazi, trattini). */
+export function normAutocompleteKey(value: string): string {
+  return normListSelectValue(value).replace(/[^a-z0-9]/g, "");
+}
+
 export function uniqueSortedOptions(options: readonly string[]): string[] {
   return [...new Set(options.map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
 }
 
+function scoreLooseAutocompleteKey(query: string, option: string): number {
+  const q = normAutocompleteKey(query);
+  const o = normAutocompleteKey(option);
+  if (!q) return 1;
+  if (o === q) return 100;
+  if (o.startsWith(q)) return 80 - Math.abs(o.length - q.length) / 10;
+  if (o.includes(q)) return 55 - o.indexOf(q);
+  let qi = 0;
+  for (const ch of o) {
+    if (ch === q[qi]) qi += 1;
+    if (qi >= q.length) return 30 - Math.abs(o.length - q.length) / 10;
+  }
+  return 0;
+}
+
 export function scoreListSelectOption(query: string, option: string): number {
+  const loose = scoreLooseAutocompleteKey(query, option);
+  if (loose > 0) return loose;
+
   const q = normListSelectValue(query);
   const o = normListSelectValue(option);
   if (!q) return 1;
@@ -62,10 +85,12 @@ export function findBestFuzzyListOption(query: string, options: readonly string[
 }
 
 export function findExactListOption(value: string, options: readonly string[]): string | null {
+  const vLoose = normAutocompleteKey(value);
   const v = normListSelectValue(value);
-  if (!v) return null;
+  if (!v && !vLoose) return null;
   for (const option of options) {
-    if (normListSelectValue(option) === v) return option.trim();
+    if (vLoose && normAutocompleteKey(option) === vLoose) return option.trim();
+    if (v && normListSelectValue(option) === v) return option.trim();
   }
   return null;
 }

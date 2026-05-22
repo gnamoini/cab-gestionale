@@ -17,7 +17,7 @@ const STORE_OPTS = {
   refetchOnReconnect: true,
 } as const;
 
-/** Store schede: merge DB + localStorage (dual-write). */
+/** Store schede: Supabase primary, localStorage come cache offline. */
 export function useSchedeStoreQuery(enabled = true) {
   const qc = useQueryClient();
 
@@ -28,8 +28,8 @@ export function useSchedeStoreQuery(enabled = true) {
     ...STORE_OPTS,
   });
 
-  useCabSyncListener("scheda_lavorazione", () => {
-    void qc.invalidateQueries({ queryKey: SCHEDE_STORE_QUERY_KEY });
+  useCabSyncListener(["scheda_lavorazione", "lavorazione_documents"], () => {
+    void qc.invalidateQueries({ queryKey: SCHEDE_STORE_QUERY_KEY, refetchType: "active" });
   });
 
   useEffect(() => {
@@ -48,7 +48,7 @@ export function useSchedeStoreQuery(enabled = true) {
   const store: LavorazioneSchedeStore = q.data ?? {};
 
   const invalidate = useCallback(() => {
-    void qc.invalidateQueries({ queryKey: SCHEDE_STORE_QUERY_KEY });
+    void qc.invalidateQueries({ queryKey: SCHEDE_STORE_QUERY_KEY, refetchType: "active" });
     void invalidateClientPortalQueries(qc);
   }, [qc]);
 

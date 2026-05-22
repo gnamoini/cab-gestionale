@@ -9,7 +9,8 @@ import {
   autocompleteFuzzySuggestion,
   autocompleteIsValid,
   autocompleteItemSuggestions,
-  autocompleteShowAddPanel,
+  autocompleteShowAddOption,
+  autocompleteAddOptionEnabled,
   autocompleteStringSuggestions,
   type AutocompleteDataMode,
 } from "@/lib/global-autocomplete/engine";
@@ -54,6 +55,8 @@ type GlobalSelectBaseProps = {
   onAddToList?: (value: string) => void | Promise<void>;
   /** Opzioni con pill colorate (stile stato lavorazione). */
   coloredOptions?: boolean;
+  /** Valori filtro "neutrali" (es. FILTER_ALL): al focus svuotano il campo per cercare. */
+  filterNeutralValues?: readonly string[];
   "aria-label"?: string;
 };
 
@@ -81,6 +84,12 @@ function fieldClassForVariant(
   return variant === "filter" ? globalInputFieldFilter : globalInputFieldDefault;
 }
 
+function isFilterNeutralValue(value: string, neutralValues?: readonly string[]): boolean {
+  if (!value.trim()) return true;
+  if (!neutralValues?.length) return false;
+  return neutralValues.includes(value);
+}
+
 /** @deprecated Usare `GlobalAutocompleteCombobox` — alias di `GlobalSelect`. */
 export const GlobalAutocompleteCombobox = GlobalSelect;
 
@@ -106,6 +115,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     addPending = false,
     onAddToList,
     coloredOptions = false,
+    filterNeutralValues,
     "aria-label": ariaLabel,
   } = props;
 
@@ -122,6 +132,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const editSessionRef = useRef({ modified: false });
 
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -156,16 +167,17 @@ export function GlobalSelect(props: GlobalSelectProps) {
     [addCandidate, mode, options, items],
   );
 
-  const showAddPanel = autocompleteShowAddPanel({
+  const showAddOption = autocompleteShowAddOption({
     allowAdd,
     canAdd,
     hasOnAdd: Boolean(onAddToList),
     open,
     disabled: Boolean(disabled),
     isLoading,
-    searchText,
-    suggestionCount: suggestions.length,
   });
+  const addOptionEnabled = autocompleteAddOptionEnabled(addCandidate, addPending);
+  const addOptionIndex = showAddOption ? suggestions.length : -1;
+  const totalNavigableOptions = suggestions.length + (showAddOption ? 1 : 0);
 
   const isValid = useMemo(
     () => autocompleteIsValid(value, Boolean(required), strictFromList, mode, options, items),
@@ -174,14 +186,14 @@ export function GlobalSelect(props: GlobalSelectProps) {
 
   const showInvalid = (touched || forceInvalid) && !isValid;
   const showDropdown = open && !disabled && !isLoading;
-  const listEmpty = !isLoading && suggestions.length === 0 && !showAddPanel && addCandidate.length > 0;
-  const portalOpen = showDropdown && (suggestions.length > 0 || listEmpty || showAddPanel);
+  const listEmpty = !isLoading && suggestions.length === 0 && !showAddOption && addCandidate.length > 0;
+  const portalOpen = showDropdown && (totalNavigableOptions > 0 || listEmpty);
 
   const { coords, style: portalStyle } = useGlobalDropdownPortal({
     open: portalOpen,
     anchorRef: wrapRef,
     contentRef: dropdownRef,
-    repositionDeps: [suggestions.length, showAddPanel, listEmpty],
+    repositionDeps: [suggestions.length, showAddOption, listEmpty, addOptionEnabled],
   });
 
   useEffect(() => {
@@ -192,6 +204,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     setOpen(false);
     setActiveIndex(-1);
     setFocused(false);
+    editSessionRef.current.modified = false;
     setSearchText("");
   }, []);
 
@@ -207,6 +220,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const selectString = useCallback(
     (option: string, advanceFocus = true) => {
       if (blurTimer.current) clearTimeout(blurTimer.current);
+      editSessionRef.current.modified = false;
       onChange(option);
       closeAndReset();
       setTouched(true);
@@ -218,6 +232,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const selectItem = useCallback(
     (item: ListSelectItem, advanceFocus = true) => {
       if (blurTimer.current) clearTimeout(blurTimer.current);
+      editSessionRef.current.modified = false;
       onChange(item.value);
       closeAndReset();
       setTouched(true);
@@ -239,36 +254,37 @@ export function GlobalSelect(props: GlobalSelectProps) {
     }
     if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
       setOpen(true);
-      setActiveIndex(suggestions.length ? 0 : -1);
+      setActiveIndex(totalNavigableOptions > 0 ? 0 : -1);
       e.preventDefault();
       return;
     }
-    if (e.key === "ArrowDown" && suggestions.length) {
+    if (e.key === "ArrowDown" && totalNavigableOptions > 0) {
       e.preventDefault();
       setOpen(true);
-      setActiveIndex((i) => (i + 1) % suggestions.length);
+      setActiveIndex((i) => (i + 1) % totalNavigableOptions);
       return;
     }
-    if (e.key === "ArrowUp" && suggestions.length) {
+    if (e.key === "ArrowUp" && totalNavigableOptions > 0) {
       e.preventDefault();
       setOpen(true);
-      setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+      setActiveIndex((i) => (i <= 0 ? totalNavigableOptions - 1 : i - 1));
       return;
     }
     if (e.key !== "Enter") return;
     e.preventDefault();
+    if (showAddOption && activeIndex === addOptionIndex && addOptionEnabled) {
+      void runAdd();
+      return;
+    }
     if (suggestions.length > 0) {
-      const idx = activeIndex >= 0 ? activeIndex : 0;
+      const idx = activeIndex >= 0 && activeIndex < suggestions.length ? activeIndex : 0;
       if (itemsMode) selectItem(suggestions[idx] as ListSelectItem);
       else selectString(suggestions[idx] as string);
       return;
     }
-    if (showAddPanel && onAddToList) {
-      void runAdd();
-      return;
-    }
     const committed = autocompleteCommitFromSearchText(searchText, mode, options, items, strictFromList);
     if (committed) {
+      editSessionRef.current.modified = false;
       onChange(committed);
       closeAndReset();
       setTouched(true);
@@ -283,23 +299,26 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const isFilterVariant = variant === "filter";
 
   const beginEditing = useCallback(() => {
+    editSessionRef.current.modified = false;
     setFocused(true);
     setOpen(true);
-    if (isFilterVariant) {
+    if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) {
       setSearchText("");
     } else {
       seedSearchFromCommitted();
     }
-  }, [isFilterVariant, seedSearchFromCommitted]);
+  }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, value]);
 
   const commitBlur = () => {
+    const userModified = editSessionRef.current.modified;
+    editSessionRef.current.modified = false;
     setOpen(false);
     setActiveIndex(-1);
     setTouched(true);
     setFocused(false);
     const trimmed = searchText.trim();
     if (!trimmed) {
-      if (value && !isFilterVariant) onChange("");
+      if (userModified && value && !isFilterVariant) onChange("");
       setSearchText("");
       return;
     }
@@ -326,10 +345,15 @@ export function GlobalSelect(props: GlobalSelectProps) {
     coords?.scrollInside ? "overflow-y-auto" : "overflow-hidden"
   }`;
 
+  const addOptionActive = activeIndex === addOptionIndex;
+  const addOptionBtnClass = `${globalAutocompleteAddBtnClass}${
+    addOptionActive ? " ring-2 ring-inset ring-white/25 shadow-sm" : ""
+  }`;
+
   const dropdownPortal =
     portalOpen && coords && portalStyle ? (
       <div ref={dropdownRef} style={portalStyle}>
-        {showDropdown && suggestions.length > 0 ? (
+        {showDropdown && totalNavigableOptions > 0 ? (
           <ul id={listboxId} role="listbox" className={dropdownPanelClass}>
             {suggestions.map((entry, idx) => {
               const active = idx === activeIndex;
@@ -377,54 +401,58 @@ export function GlobalSelect(props: GlobalSelectProps) {
                 </li>
               );
             })}
+            {showAddOption ? (
+              <li
+                role="presentation"
+                className={`py-0.5 ${suggestions.length > 0 ? "mt-0.5 border-t border-[color:var(--cab-border)] pt-1" : ""}`}
+              >
+                {suggestions.length === 0 && fuzzyLabel ? (
+                  <p className="px-2 pb-1.5 text-xs text-[color:var(--cab-text-muted)]">
+                    Forse cercavi:{" "}
+                    <button
+                      type="button"
+                      className="font-semibold text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        if (blurTimer.current) clearTimeout(blurTimer.current);
+                        if (itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object") {
+                          selectItem(fuzzySuggestion as ListSelectItem, false);
+                        } else if (typeof fuzzySuggestion === "string") {
+                          selectString(fuzzySuggestion, false);
+                        }
+                      }}
+                    >
+                      {fuzzyLabel}
+                    </button>
+                  </p>
+                ) : null}
+                {suggestions.length === 0 && !fuzzyLabel && addCandidate ? (
+                  <p className="px-2 pb-1.5 text-xs font-medium text-[color:var(--cab-text-muted)]">
+                    {emptyMessage}
+                  </p>
+                ) : null}
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={addOptionActive}
+                  className={addOptionBtnClass}
+                  disabled={!addOptionEnabled}
+                  title={addOptionEnabled ? undefined : "Digita un valore da aggiungere"}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    if (blurTimer.current) clearTimeout(blurTimer.current);
+                    if (addOptionEnabled) void runAdd();
+                  }}
+                  onMouseEnter={() => setActiveIndex(addOptionIndex)}
+                >
+                  <span aria-hidden>+</span>
+                  {addPending ? "Aggiunta in corso…" : "Aggiungi all'elenco"}
+                </button>
+              </li>
+            ) : null}
           </ul>
         ) : null}
-        {showDropdown && showAddPanel ? (
-          <div
-            id={listboxId}
-            role="listbox"
-            className={`${globalAutocompleteDropdownPortalPanel} px-3 py-2.5`}
-          >
-            <p className="text-xs text-[color:var(--cab-text-muted)]">
-              {fuzzyLabel ? (
-                <>
-                  Forse cercavi:{" "}
-                  <button
-                    type="button"
-                    className="font-semibold text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      if (blurTimer.current) clearTimeout(blurTimer.current);
-                      if (itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object") {
-                        selectItem(fuzzySuggestion as ListSelectItem, false);
-                      } else if (typeof fuzzySuggestion === "string") {
-                        selectString(fuzzySuggestion, false);
-                      }
-                    }}
-                  >
-                    {fuzzyLabel}
-                  </button>
-                </>
-              ) : (
-                <span className="font-medium">{emptyMessage}</span>
-              )}
-            </p>
-            <button
-              type="button"
-              className={globalAutocompleteAddBtnClass}
-              disabled={addPending}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                if (blurTimer.current) clearTimeout(blurTimer.current);
-                void runAdd();
-              }}
-            >
-              <span aria-hidden>+</span>
-              {addPending ? "Aggiunta in corso…" : "Aggiungi all'elenco"}
-            </button>
-          </div>
-        ) : null}
-        {showDropdown && listEmpty && !showAddPanel ? (
+        {showDropdown && listEmpty ? (
           <div
             id={listboxId}
             role="status"
@@ -451,6 +479,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         value={displayValue}
         onChange={(e) => {
           const next = e.target.value;
+          editSessionRef.current.modified = true;
           setFocused(true);
           setSearchText(next);
           setOpen(true);
@@ -470,7 +499,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         placeholder={placeholder}
         autoComplete="off"
         role="combobox"
-        aria-expanded={showDropdown && (suggestions.length > 0 || listEmpty || showAddPanel)}
+        aria-expanded={showDropdown && (totalNavigableOptions > 0 || listEmpty)}
         aria-controls={listboxId}
         aria-invalid={showInvalid || undefined}
         aria-autocomplete="list"

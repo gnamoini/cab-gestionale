@@ -108,6 +108,7 @@ import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { useAuth } from "@/context/auth-context";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
+import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
@@ -435,6 +436,7 @@ export function SchedeLavorazioneModal({
   const [panoramicaNoteSaving, setPanoramicaNoteSaving] = useState(false);
   const [draft, setDraft] = useState<LavorazioneSchedeBundle>(bundle);
   const draftRef = useRef(draft);
+  const syncedBundleJsonRef = useRef(JSON.stringify(bundle));
   useLayoutEffect(() => {
     draftRef.current = draft;
   }, [draft]);
@@ -500,16 +502,39 @@ export function SchedeLavorazioneModal({
     const t = window.setTimeout(() => {
       setStage({ kind: "hub" });
       setHubTab(initialTab);
-      setDraft(JSON.parse(JSON.stringify(bundle)) as LavorazioneSchedeBundle);
+      const cloned = JSON.parse(JSON.stringify(bundle)) as LavorazioneSchedeBundle;
+      setDraft(cloned);
+      syncedBundleJsonRef.current = JSON.stringify(cloned);
     }, 0);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- evita reset hub dopo persist (es. «Crea nuova»)
   }, [open, lav.id, initialTab]);
 
+  useEffect(() => {
+    if (!open) return;
+    if (unsavedPanel != null) return;
+    if (stage.kind !== "hub") return;
+
+    const incoming = JSON.stringify(bundle);
+    if (incoming === syncedBundleJsonRef.current) return;
+
+    const currentDraft = JSON.stringify(draftRef.current);
+    if (currentDraft !== syncedBundleJsonRef.current) return;
+
+    const cloned = JSON.parse(incoming) as LavorazioneSchedeBundle;
+    setDraft(cloned);
+    syncedBundleJsonRef.current = incoming;
+  }, [bundle, open, unsavedPanel, stage.kind]);
+
+  useCabSyncListener(["scheda_lavorazione", "lavorazione_documents", "documenti"], () => {
+    void hubQuery.refetch();
+  });
+
   const persist = useCallback(
     (b: LavorazioneSchedeBundle) => {
       onPersist(b);
       setDraft(b);
+      syncedBundleJsonRef.current = JSON.stringify(b);
     },
     [onPersist],
   );

@@ -94,11 +94,12 @@ export function globalAutocompleteOptionPillClass(
 }
 
 export const globalAutocompleteAddBtnClass = [
-  "mt-2 flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed",
+  "flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed",
   "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))]",
   "bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))]",
   "px-3 py-2 text-xs font-semibold text-[color:var(--cab-primary)]",
   "transition hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))]",
+  "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))]",
 ].join(" ");
 
 export const globalInputFieldDefault = dsInput;

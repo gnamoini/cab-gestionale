@@ -78,6 +78,7 @@ export function MagazzinoAdvancedFilterPanel({
             placeholder="Cerca categoria…"
             strictFromList
             variant="filter"
+            filterNeutralValues={[FILTER_ALL]}
             aria-label="Filtra categoria ricambio"
           />
         </LavorazioniFilterField>

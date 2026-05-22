@@ -38,7 +38,8 @@ export function MagazzinoGiacenzaBell({
         className={triggerClassName}
         aria-expanded={open}
         aria-haspopup="dialog"
-        title="Avvisi giacenza"
+        aria-label={count > 0 ? `Avvisi giacenza (${count})` : "Avvisi giacenza"}
+        title={count > 0 ? `Avvisi giacenza (${count})` : "Avvisi giacenza"}
       >
         <span className="relative inline-flex text-zinc-600 dark:text-zinc-300" aria-hidden>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -54,7 +55,7 @@ export function MagazzinoGiacenzaBell({
             </span>
           ) : null}
         </span>
-        <span className="max-w-[10rem] truncate text-xs font-semibold text-zinc-800 dark:text-zinc-100">
+        <span className="hidden max-w-[10rem] truncate text-xs font-semibold text-zinc-800 dark:text-zinc-100 sm:inline">
           Avvisi giacenza{count > 0 ? ` (${count})` : ""}
         </span>
       </button>

@@ -105,6 +105,25 @@ export function autocompleteCommitFromSearchText(
   return strictFromList ? null : q;
 }
 
+export function autocompleteShowAddOption(params: {
+  allowAdd: boolean;
+  canAdd: boolean;
+  hasOnAdd: boolean;
+  open: boolean;
+  disabled: boolean;
+  isLoading: boolean;
+}): boolean {
+  return (
+    params.allowAdd &&
+    params.canAdd &&
+    params.hasOnAdd &&
+    params.open &&
+    !params.disabled &&
+    !params.isLoading
+  );
+}
+
+/** @deprecated Usare `autocompleteShowAddOption`. */
 export function autocompleteShowAddPanel(params: {
   allowAdd: boolean;
   canAdd: boolean;
@@ -115,14 +134,9 @@ export function autocompleteShowAddPanel(params: {
   searchText: string;
   suggestionCount: number;
 }): boolean {
-  return (
-    params.allowAdd &&
-    params.canAdd &&
-    params.hasOnAdd &&
-    params.open &&
-    !params.disabled &&
-    !params.isLoading &&
-    params.searchText.trim().length > 0 &&
-    params.suggestionCount === 0
-  );
+  return autocompleteShowAddOption(params);
+}
+
+export function autocompleteAddOptionEnabled(searchText: string, addPending: boolean): boolean {
+  return searchText.trim().length > 0 && !addPending;
 }
