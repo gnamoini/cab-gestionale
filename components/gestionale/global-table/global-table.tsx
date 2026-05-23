@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { isValidElement, type ReactNode } from "react";
 import { dsScrollbar } from "@/lib/ui/design-system";
 import {
   globalTableBase,
@@ -30,6 +30,12 @@ export type GlobalTableProps = {
   colSpan?: number;
 };
 
+function normalizeColgroup(node: ReactNode): ReactNode {
+  if (node == null) return null;
+  if (isValidElement(node) && node.type === "colgroup") return node;
+  return <colgroup>{node}</colgroup>;
+}
+
 /**
  * Shell tabella gestionale — design globale (header Preventivi).
  * Logica sorting/filtri/paginazione resta nelle pagine; qui solo layout/UI.
@@ -53,7 +59,7 @@ export function GlobalTable({
       className={`${globalTableWrap} ${dsScrollbar} ${visibilityClass} ${wrapClassName}`.trim()}
     >
       <table className={tableClass}>
-        {colgroup}
+        {normalizeColgroup(colgroup)}
         <GlobalTableHead sticky={stickyHead}>{headRow}</GlobalTableHead>
         <tbody className={globalTableTbodyInset}>
           {empty ? (

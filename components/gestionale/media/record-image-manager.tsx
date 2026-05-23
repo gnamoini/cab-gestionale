@@ -3,7 +3,7 @@
 import { Tooltip } from "@/components/design-system/tooltip";
 import { useCallback, useEffect, useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { syncClientPortalAfterGestionaleChange } from "@/src/lib/react-query/invalidate-related";
+import { dispatchGestionaleLocalMutation } from "@/src/lib/react-query/invalidate-related";
 import {
   deleteStoredImage,
   listStoredImages,
@@ -129,7 +129,7 @@ export function RecordImageManager({
       const uploaded = await uploadStoredImage(scope, recordId, file);
       const logError = await writeImageLog("image_uploaded", uploaded);
       await refresh();
-      if (scope === "lavorazioni") void syncClientPortalAfterGestionaleChange(qc);
+      if (scope === "lavorazioni") dispatchGestionaleLocalMutation(qc, ["log_modifiche"]);
       if (logError) setError(`Foto caricata, ma log non registrato: ${logError}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload non riuscito.");
@@ -146,7 +146,7 @@ export function RecordImageManager({
       const logError = await writeImageLog("image_deleted", { name: img.name, path: img.path });
       if (preview?.path === img.path) setPreview(null);
       await refresh();
-      if (scope === "lavorazioni") void syncClientPortalAfterGestionaleChange(qc);
+      if (scope === "lavorazioni") dispatchGestionaleLocalMutation(qc, ["log_modifiche"]);
       if (logError) setError(`Foto rimossa, ma log non registrato: ${logError}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Eliminazione non riuscita.");

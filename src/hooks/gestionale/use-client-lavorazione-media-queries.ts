@@ -2,7 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { listStoredImages, type StoredImage } from "@/lib/media/image-storage";
-import { useClientPortalQueryOpts } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
+import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
@@ -16,7 +16,7 @@ export type ClientLavorazioneDocumentsPayload = {
 
 export function useClientLavorazioneDocumentsQuery(lavorazioneId: string, enabled = true) {
   const id = lavorazioneId.trim();
-  const opts = useClientPortalQueryOpts();
+  const opts = useViewQueryOpts();
   return useServiceQuery<
     ClientLavorazioneDocumentsPayload,
     readonly ["client_lavorazione_documents", string]
@@ -41,7 +41,7 @@ export function useClientLavorazionePhotosQuery(
   const id = lavorazioneId.trim();
   const max = opts?.max;
   const enabled = opts?.enabled !== false;
-  const queryOpts = useClientPortalQueryOpts();
+  const queryOpts = useViewQueryOpts();
   return useQuery({
     queryKey: [...QK.clientLavorazionePhotos, id, max ?? "all"] as const,
     queryFn: async (): Promise<StoredImage[]> => {

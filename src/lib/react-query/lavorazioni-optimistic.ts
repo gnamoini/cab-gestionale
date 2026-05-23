@@ -133,10 +133,11 @@ export function rollbackLavorazioneUpdateQueries(
   }
 }
 
-/** Invalidazione leggera post-update rapido (log batched + coerenza finale via Realtime). */
+/** Invalidazione post-update rapido: allinea liste lavorazioni al DB + log batched. */
 export function settleLavorazioneQuickUpdate(qc: QueryClient, hadError: boolean): void {
   if (hadError) {
     void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
+    return;
   }
-  enqueueInvalidateQueryKeys(qc, [QK.log]);
+  enqueueInvalidateQueryKeys(qc, [QK.lavorazioniQueries, QK.log]);
 }

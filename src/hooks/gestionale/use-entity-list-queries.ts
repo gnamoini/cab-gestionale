@@ -22,7 +22,7 @@ import { mezziService, type MezzoFilters } from "@/src/services/mezzi.service";
 import { movimentiService, type MovimentiFilters } from "@/src/services/movimenti.service";
 import { preventiviService, type PreventiviFilters } from "@/src/services/preventivi.service";
 import { schedeService, type SchedaFilters } from "@/src/services/schede.service";
-import type { DocumentoRow, LogModificaWithProfileRow, MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
+import type { DocumentoRow, LogModificaWithProfileRow, MezzoRow, MovimentoRicambioRow, PreventivoRow } from "@/src/types/supabase-tables";
 
 type RqOpts<T> = Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" | "queryFn">;
 
@@ -48,9 +48,12 @@ export function useMagazzinoRicambiUIQuery(filters?: MagazzinoFilters, options?:
   return { ...q, data };
 }
 
-export function useMovimentiListQuery(filters?: MovimentiFilters) {
+export function useMovimentiListQuery(filters?: MovimentiFilters, options?: RqOpts<MovimentoRicambioRow[]>) {
   const gestOpts = useGestionaleQueryOpts();
-  return useServiceQuery([...QK.movimenti, filters ?? null] as const, () => movimentiService.getAll(filters), gestOpts);
+  return useServiceQuery([...QK.movimenti, filters ?? null] as const, () => movimentiService.getAll(filters), {
+    ...gestOpts,
+    ...options,
+  });
 }
 
 export function usePreventiviListQuery(filters?: PreventiviFilters, options?: RqOpts<PreventivoRow[]>) {

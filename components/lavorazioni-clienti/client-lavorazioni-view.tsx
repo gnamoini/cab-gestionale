@@ -7,7 +7,14 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { buildLavorazioniFilterCatalog } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
-import { CardMobile, CardMobileActions, PageToolbar, PageToolbarActions, PageToolbarResultCount } from "@/components/design-system";
+import {
+  CardMobile,
+  CardMobileActions,
+  IconActionButton,
+  PageToolbar,
+  PageToolbarActions,
+  PageToolbarResultCount,
+} from "@/components/design-system";
 import { IconGestionaleRefresh } from "@/components/gestionale/gestionale-log-ui";
 import { ClientLavorazioneIngressoDialog } from "@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog";
 import { ClientLavorazioneDocumentsDialog } from "@/components/lavorazioni-clienti/client-lavorazione-documents";
@@ -29,12 +36,16 @@ import {
   clientPortalFiltersActive,
   filterClientPortalBundles,
   loadClientPortalFiltersPersisted,
+  logClientPortalPipelineDebug,
   saveClientPortalFiltersPersisted,
   type ClientPortalListFilters,
   type ClientPortalRowBundle,
 } from "@/lib/lavorazioni/client-portal-list-filters";
 import { clientLavorazioniDetailPath } from "@/lib/lavorazioni/client-portal-access";
-import { filterClientPortalStatiOptions } from "@/lib/lavorazioni/client-portal-stati";
+import {
+  filterClientPortalStatiOptions,
+  resolveClientPortalStatoId,
+} from "@/lib/lavorazioni/client-portal-stati";
 import { lavorazioneRefLabel } from "@/lib/lavorazioni/client-portal-ui";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
@@ -91,13 +102,18 @@ import {
   dsTypoSectionTitle,
   GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
-import { useClientLavorazioniArchivioQuery, useClientLavorazioniInCorsoQuery, useClientPortalQueryOpts } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
+import { useViewQueryOpts } from "@/lib/view/view-query-opts";
+import { useClientLavorazioniArchivioQuery, useClientLavorazioniInCorsoQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useClientLavorazioniRefresh } from "@/src/hooks/use-client-lavorazioni-refresh";
-import { useLavorazioneSchedeStoreSync } from "@/src/hooks/use-lavorazione-schede-store-sync";
+import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
-import { resolveStatoToDbEnum, statoLavorazioneLabel } from "@/src/shared/selectors";
+import {
+  lavorazioniDomainQueryKeys,
+  stableLavorazioniFiltersKey,
+} from "@/src/services/domain/lavorazioni-domain.queries";
+import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -107,13 +123,12 @@ const SEARCH_DEBOUNCE_MS = 400;
 type RowBundle = ClientPortalRowBundle;
 
 function StatoReadOnlyPill({ stato, statiOpts }: { stato: string; statiOpts: { id: string; label: string; color?: string }[] }) {
-  const safeStato = resolveStatoToDbEnum(stato);
-  const label = statoLavorazioneLabel(safeStato, statiOpts) || safeStato;
+  const resolvedStato = resolveClientPortalStatoId(stato, statiOpts);
+  const label = statoLavorazioneLabel(resolvedStato, statiOpts) || resolvedStato;
   return (
     <span
       className={`${statoPillShellClassDynamic()} inline-flex w-full min-w-0 max-w-full justify-center px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`}
-      style={readablePillStyleFromHex(statoDisplayColor(safeStato, statiOpts))}
-      title={label}
+      style={readablePillStyleFromHex(statoDisplayColor(resolvedStato, statiOpts))}
     >
       {label}
     </span>
@@ -159,51 +174,45 @@ function RowActions({
 }) {
   return (
     <div className={lavTableActionsRow}>
-      <button
-        type="button"
+      <IconActionButton
+        label="Scheda ingresso"
         className={lavTableActionBtnPrimary}
-        title="Scheda ingresso"
-        aria-label="Scheda ingresso"
         onClick={(e) => {
           e.stopPropagation();
           onIngresso();
         }}
       >
         <IconSchedeIngresso />
-      </button>
-      <button
-        type="button"
+      </IconActionButton>
+      <IconActionButton
+        label="Documenti PDF"
         className={lavTableActionBtnSecondary}
-        title="Documenti PDF"
-        aria-label="Documenti PDF"
         onClick={(e) => {
           e.stopPropagation();
           onDocuments();
         }}
       >
         <IconDocument />
-      </button>
-      <button
-        type="button"
+      </IconActionButton>
+      <IconActionButton
+        label="QR lavorazione"
         className={lavTableActionBtnSecondary}
-        title="QR lavorazione"
-        aria-label="QR lavorazione"
         onClick={(e) => {
           e.stopPropagation();
           onQr();
         }}
       >
         <IconQrCode />
-      </button>
-      <Link
+      </IconActionButton>
+      <IconActionButton
+        as="link"
         href={clientLavorazioniDetailPath(rowId)}
+        label="Informazioni e avanzamento"
         className={`${lavTableActionBtnInfo} no-underline`}
-        title="Informazioni e avanzamento"
-        aria-label="Informazioni e avanzamento"
         onClick={(e) => e.stopPropagation()}
       >
         <IconInfo />
-      </Link>
+      </IconActionButton>
     </div>
   );
 }
@@ -425,41 +434,12 @@ function MobileCards({
             <ClientLavorazionePhotoStrip lavorazioneId={row.id} max={3} lazy={false} sizeClass="h-12 w-12" />
           </div>
           <CardMobileActions>
-            <button
-              type="button"
-              className={lavTableActionBtnPrimary}
-              title="Scheda ingresso"
-              aria-label="Scheda ingresso"
-              onClick={() => onIngresso(row)}
-            >
-              <IconSchedeIngresso />
-            </button>
-            <button
-              type="button"
-              className={lavTableActionBtnSecondary}
-              title="Documenti PDF"
-              aria-label="Documenti PDF"
-              onClick={() => onDocuments(row)}
-            >
-              <IconDocument />
-            </button>
-            <button
-              type="button"
-              className={lavTableActionBtnSecondary}
-              title="QR lavorazione"
-              aria-label="QR lavorazione"
-              onClick={() => onQr(row)}
-            >
-              <IconQrCode />
-            </button>
-            <Link
-              href={clientLavorazioniDetailPath(row.id)}
-              className={`${lavTableActionBtnInfo} no-underline`}
-              title="Informazioni e avanzamento"
-              aria-label="Informazioni e avanzamento"
-            >
-              <IconInfo />
-            </Link>
+            <RowActions
+              rowId={row.id}
+              onIngresso={() => onIngresso(row)}
+              onQr={() => onQr(row)}
+              onDocuments={() => onDocuments(row)}
+            />
           </CardMobileActions>
         </CardMobile>
       ))}
@@ -560,15 +540,15 @@ export function ClientLavorazioniView() {
   );
   const colStyles = useLavorazioniListTableColStyles(statiOpts, prioritaOpts, addettiGlobali);
   const prioritaColors = globalOpts.lavorazioni.prioritaColors;
-  const schedeStore = useLavorazioneSchedeStoreSync();
-  const clientPortalOpts = useClientPortalQueryOpts();
+  const viewOpts = useViewQueryOpts();
+  const { store: schedeStore } = useSchedeBundlesQuery(access.allowed, { viewLayer: true });
   const inCorsoQ = useClientLavorazioniInCorsoQuery(access.allowed);
   const archivioQ = useClientLavorazioniArchivioQuery(access.allowed);
   const logsQ = useLogListQuery(
     { entita: "lavorazioni", limit: 2000 },
     {
       enabled: access.allowed,
-      ...clientPortalOpts,
+      ...viewOpts,
     },
   );
   const { refresh: refreshClientData, busy: refreshBusy } = useClientLavorazioniRefresh(inCorsoQ, archivioQ, logsQ);
@@ -634,14 +614,42 @@ export function ClientLavorazioniView() {
   }, [allInCorsoBundles, allArchivioBundles, schedeStore, addettiGlobali, defaultAddetto]);
 
   const inCorsoBundles = useMemo(
-    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, defaultAddetto, "in_corso"),
-    [allInCorsoBundles, filters, schedeStore, defaultAddetto],
+    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, defaultAddetto, "in_corso", logsByLav),
+    [allInCorsoBundles, filters, schedeStore, defaultAddetto, logsByLav],
   );
 
   const archivioBundles = useMemo(
-    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, defaultAddetto, "archivio"),
-    [allArchivioBundles, filters, schedeStore, defaultAddetto],
+    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, defaultAddetto, "archivio", logsByLav),
+    [allArchivioBundles, filters, schedeStore, defaultAddetto, logsByLav],
   );
+
+  useEffect(() => {
+    if (access.isLoading || !access.allowed) return;
+    logClientPortalPipelineDebug({
+      inCorsoRaw: inCorsoQ.data?.length ?? 0,
+      archivioRaw: archivioQ.data?.length ?? 0,
+      bundlesInCorso: allInCorsoBundles.length,
+      bundlesArchivio: allArchivioBundles.length,
+      filteredInCorso: inCorsoBundles.length,
+      filteredArchivio: archivioBundles.length,
+      filters,
+      filtersActive,
+      queryKeyInCorso: lavorazioniDomainQueryKeys.list(
+        stableLavorazioniFiltersKey({ archived: false, includeMezzo: true }),
+      ),
+    });
+  }, [
+    access.allowed,
+    access.isLoading,
+    allArchivioBundles.length,
+    allInCorsoBundles.length,
+    archivioQ.data,
+    filters,
+    filtersActive,
+    inCorsoBundles.length,
+    archivioBundles.length,
+    inCorsoQ.data,
+  ]);
 
   const sortedInCorsoBundles = useMemo(
     () =>

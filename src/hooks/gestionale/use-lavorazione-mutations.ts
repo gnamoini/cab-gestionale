@@ -25,8 +25,13 @@ import type { LavorazioneRow } from "@/src/types/supabase-tables";
 export function useLavorazioneCreateMutation() {
   const queryClient = useQueryClient();
   return useServiceMutation((data: LavorazioneInsert) => lavorazioniService.create(data), {
-    onSettled: async () => {
-      await invalidateAfterLavorazioneMutations(queryClient);
+    onSettled: async (data, error) => {
+      if (error) return;
+      const cabSyncEvents =
+        data?.id != null
+          ? [cabSyncEventForEntity("lavorazioni", data.id, "entity_created", "lavorazioni")]
+          : undefined;
+      await invalidateAfterLavorazioneMutations(queryClient, cabSyncEvents);
     },
   });
 }
@@ -63,8 +68,11 @@ export function useLavorazioneUpdateMutation() {
 export function useLavorazioneRemoveMutation() {
   const queryClient = useQueryClient();
   return useServiceMutation((id: string) => lavorazioniService.remove(id), {
-    onSettled: async () => {
-      await invalidateAfterLavorazioneMutations(queryClient);
+    onSettled: async (_data, error, id) => {
+      if (error) return;
+      await invalidateAfterLavorazioneMutations(queryClient, [
+        cabSyncEventForEntity("lavorazioni", id, "entity_deleted", "lavorazioni"),
+      ]);
     },
   });
 }
@@ -74,8 +82,11 @@ export function useLavorazioneRestoreMutation() {
   return useServiceMutation(
     ({ id, stato }: { id: string; stato: LavorazioneRow["stato"] }) => lavorazioniService.restore(id, stato),
     {
-      onSettled: async () => {
-        await invalidateAfterLavorazioneMutations(queryClient);
+      onSettled: async (_data, error, variables) => {
+        if (error) return;
+        await invalidateAfterLavorazioneMutations(queryClient, [
+          cabSyncEventForEntity("lavorazioni", variables.id, "entity_updated", "lavorazioni"),
+        ]);
       },
     },
   );
@@ -84,8 +95,11 @@ export function useLavorazioneRestoreMutation() {
 export function useLavorazioneConcludeMutation() {
   const queryClient = useQueryClient();
   return useServiceMutation((id: string) => lavorazioniService.conclude(id), {
-    onSettled: async () => {
-      await invalidateAfterLavorazioneMutations(queryClient);
+    onSettled: async (_data, error, id) => {
+      if (error) return;
+      await invalidateAfterLavorazioneMutations(queryClient, [
+        cabSyncEventForEntity("lavorazioni", id, "entity_updated", "lavorazioni"),
+      ]);
     },
   });
 }

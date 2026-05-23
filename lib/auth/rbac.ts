@@ -117,7 +117,8 @@ function sectionAccess(user: RbacUser, section: RbacSection): SectionAccess {
     return { read: r, write: false, delete: false };
   }
   if (section === "report") {
-    return { read: opRead(user), write: false, delete: false };
+    const write = opWrite(user);
+    return { read: opRead(user) || write, write, delete: false };
   }
   const read = opRead(user) || (section === "dashboard" && opWrite(user));
   const write = opWrite(user);

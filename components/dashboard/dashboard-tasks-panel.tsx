@@ -85,7 +85,7 @@ export function DashboardTasksPanel() {
               add();
             }
           }}
-          placeholder="Aggiungi attività…"
+          placeholder="Aggiungi nota…"
           className={`${dsInput} min-w-0 flex-1 py-2`}
           maxLength={240}
         />
@@ -101,7 +101,7 @@ export function DashboardTasksPanel() {
       <ul className="gestionale-scrollbar max-h-[168px] space-y-1.5 overflow-y-auto pr-1 text-sm">
         {tasks.length === 0 ? (
           <li className={`rounded-lg border border-dashed border-[color:var(--cab-border)] px-3 py-4 text-center ${dsTypoSmall}`}>
-            Nessuna nota. Aggiungi la prima attività.
+            Nessuna nota. Aggiungi il primo promemoria.
           </li>
         ) : (
           tasks.map((t) => (

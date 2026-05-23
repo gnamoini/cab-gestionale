@@ -14,17 +14,21 @@ import {
   clientTimelinePageTitle,
 } from "@/components/lavorazioni-clienti/client-lavorazione-timeline-panel";
 import { buildClientTimelineHeader } from "@/lib/lavorazioni/client-portal-timeline";
-import { filterClientPortalStatiOptions } from "@/lib/lavorazioni/client-portal-stati";
+import {
+  filterClientPortalStatiOptions,
+  resolveClientPortalStatoId,
+} from "@/lib/lavorazioni/client-portal-stati";
 import { lavorazioneRefLabel } from "@/lib/lavorazioni/client-portal-ui";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
+import { IconActionButton } from "@/components/design-system";
 import { dsBtnNeutral, dsPageToolbarBtn, dsStackPage } from "@/lib/ui/design-system";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useClientLavorazioneDetailQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
 import { useClientLavorazioniRefresh } from "@/src/hooks/use-client-lavorazioni-refresh";
-import { useLavorazioneSchedeStoreSync } from "@/src/hooks/use-lavorazione-schede-store-sync";
+import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
-import { resolveStatoToDbEnum, statoLavorazioneLabel } from "@/src/shared/selectors";
+import { statoLavorazioneLabel } from "@/src/shared/selectors";
 
 export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: string }) {
   const access = useClientLavorazioniAccess();
@@ -34,7 +38,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
     () => filterClientPortalStatiOptions(globalOpts.lavorazioni.stati),
     [globalOpts.lavorazioni.stati],
   );
-  const schedeStore = useLavorazioneSchedeStoreSync();
+  const { store: schedeStore } = useSchedeBundlesQuery(access.allowed, { viewLayer: true });
   const addettiGlobali = globalOpts.lavorazioni.addetti;
   const [qrOpen, setQrOpen] = useState(false);
 
@@ -46,9 +50,11 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
 
   const ref = lavorazioneRefLabel(lavorazioneId);
 
-  const safeStato = row ? resolveStatoToDbEnum(row.stato) : null;
-  const statoLabel = safeStato ? statoLavorazioneLabel(safeStato, statiOpts) || safeStato : "—";
-  const statoStyle = safeStato ? readablePillStyleFromHex(statoDisplayColor(safeStato, statiOpts)) : undefined;
+  const resolvedStato = row ? resolveClientPortalStatoId(row.stato, statiOpts) : null;
+  const statoLabel = resolvedStato ? statoLavorazioneLabel(resolvedStato, statiOpts) || resolvedStato : "—";
+  const statoStyle = resolvedStato
+    ? readablePillStyleFromHex(statoDisplayColor(resolvedStato, statiOpts))
+    : undefined;
 
   const pageTitle = useMemo(() => {
     if (!row) return "Lavorazioni (Clienti)";
@@ -117,15 +123,14 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
         title={pageTitle}
         actions={
           <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2">
-            <Link
+            <IconActionButton
+              as="link"
               href="/lavorazioni-clienti"
+              label="Torna all'elenco"
               className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="Torna all'elenco"
-              aria-label="Torna all'elenco"
             >
               <IconBack />
-              <span className="sr-only">Torna all&apos;elenco</span>
-            </Link>
+            </IconActionButton>
             <button
               type="button"
               className={`${dsPageToolbarBtn} shrink-0`}
@@ -136,16 +141,13 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
               <IconGestionaleRefresh className={refreshBusy ? "animate-spin" : undefined} />
               {refreshBusy ? "Aggiornamento…" : "Aggiorna"}
             </button>
-            <button
-              type="button"
+            <IconActionButton
+              label="QR lavorazione"
               className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
-              title="QR lavorazione"
-              aria-label="QR lavorazione"
               onClick={() => setQrOpen(true)}
             >
               <IconQrCode />
-              <span className="sr-only">QR lavorazione</span>
-            </button>
+            </IconActionButton>
           </div>
         }
       />

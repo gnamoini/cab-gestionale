@@ -1,10 +1,5 @@
 "use client";
 
-import {
-  completionSortKey,
-  fetchLavorazioniListAuthorized,
-  ingressoSortKey,
-} from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { ensureClientLavorazioniAccess } from "@/src/lib/auth/permission-guards";
@@ -28,11 +23,6 @@ function clientPortalSettingsStati() {
   return resolved.lavorazioni.stati;
 }
 
-export type ClientLavorazioniListPayload = {
-  inCorso: LavorazioneListRow[];
-  archivio: LavorazioneListRow[];
-};
-
 export type ClientLavorazioneDetail = {
   row: LavorazioneListRow;
   logs: LogModificaRow[];
@@ -40,28 +30,6 @@ export type ClientLavorazioneDetail = {
 
 /** Portale clienti: sola lettura, specchio live della gestione officina. */
 export const clientLavorazioniService = {
-  /** @deprecated Usare useClientLavorazioniInCorsoQuery + useClientLavorazioniArchivioQuery (cache condivisa). */
-  async list(): Promise<ServiceResult<ClientLavorazioniListPayload>> {
-    try {
-      const allowed = await ensureClientLavorazioniAccess();
-      if (!allowed.success) return err(allowed.error ?? "Accesso negato.");
-
-      const [inCorsoRes, archivioRes] = await Promise.all([
-        fetchLavorazioniListAuthorized({ archived: false, includeMezzo: true }),
-        fetchLavorazioniListAuthorized({ archived: true, includeMezzo: true }),
-      ]);
-      if (!inCorsoRes.success) return err(inCorsoRes.error ?? "Errore caricamento lavorazioni in corso.");
-      if (!archivioRes.success) return err(archivioRes.error ?? "Errore caricamento archivio.");
-
-      const inCorso = [...inCorsoRes.data!].sort((a, b) => ingressoSortKey(b).localeCompare(ingressoSortKey(a)));
-      const archivio = [...archivioRes.data!].sort((a, b) => completionSortKey(b).localeCompare(completionSortKey(a)));
-
-      return success({ inCorso, archivio });
-    } catch (e) {
-      return serviceFailFromError(e);
-    }
-  },
-
   async getDetail(lavorazioneId: string): Promise<ServiceResult<ClientLavorazioneDetail>> {
     try {
       const allowed = await ensureClientLavorazioniAccess();

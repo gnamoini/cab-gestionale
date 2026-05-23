@@ -3,15 +3,24 @@ import {
   lavRowCompletamentoInRange,
   lavRowMatchesAdvancedFilters,
   LAVORAZIONI_ADVANCED_FILTERS_EMPTY,
+  FILTER_ALL,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import {
   clientPortalBundleMatchesFilters,
   CLIENT_PORTAL_FILTERS_EMPTY,
+  sanitizePersistedPortalFilters,
   type ClientPortalRowBundle,
 } from "@/lib/lavorazioni/client-portal-list-filters";
-import { buildClientPortalRowFields } from "@/lib/lavorazioni/client-portal-row-fields";
-import { lavRowMatchesGlobalSearch } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
+import {
+  buildClientPortalRowFields,
+  clientPortalIngressoIso,
+} from "@/lib/lavorazioni/client-portal-row-fields";
+import {
+  lavRowIngressoInRange,
+  lavRowMatchesGlobalSearch,
+} from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LavorazioneSchedeStore } from "@/types/schede";
 
 function sampleRow(overrides: Partial<LavorazioneListRow> = {}): LavorazioneListRow {
   return {
@@ -32,7 +41,7 @@ function sampleRow(overrides: Partial<LavorazioneListRow> = {}): LavorazioneList
   } as LavorazioneListRow;
 }
 
-const emptySchede = {};
+const emptySchede: LavorazioneSchedeStore = {};
 
 // Completamento filter must not hide in-corso rows without data_uscita
 {
@@ -82,6 +91,47 @@ const emptySchede = {};
     clientPortalBundleMatchesFilters(bundle, filters, emptySchede, "", "in_corso"),
     true,
   );
+}
+
+// Ingresso range: no active date filters passes even with missing ingresso on row
+{
+  const row = sampleRow({ data_ingresso: null, created_at: "" });
+  assert.equal(lavRowIngressoInRange(row, "", ""), true);
+}
+
+// Scheda dataIngresso non parseabile → fallback DB per filtri portale
+{
+  const row = sampleRow({ data_ingresso: "2026-05-01T10:00:00.000Z" });
+  const schede: LavorazioneSchedeStore = {
+    [row.id]: {
+      ingresso: { campi: { dataIngresso: "—" } },
+    } as LavorazioneSchedeStore[string],
+  };
+  assert.equal(clientPortalIngressoIso(row, schede), "2026-05-01");
+  const fields = buildClientPortalRowFields(row, schede, [], []);
+  const bundle: ClientPortalRowBundle = { row, fields };
+  assert.equal(
+    clientPortalBundleMatchesFilters(bundle, CLIENT_PORTAL_FILTERS_EMPTY, schede, "", "in_corso"),
+    true,
+    "malformed scheda ingresso date must not drop row when filters empty",
+  );
+}
+
+// Migrazione v3→v4 reset list filters obsoleti
+{
+  const sanitized = sanitizePersistedPortalFilters(
+    {
+      search: "test",
+      addetto: "Addetto Obsoleto",
+      marca: "Marca X",
+      stato: "lav-stato-in-lavorazione",
+    },
+    { resetListFilters: true },
+  );
+  assert.equal(sanitized.search, "test");
+  assert.equal(sanitized.addetto, FILTER_ALL);
+  assert.equal(sanitized.marca, FILTER_ALL);
+  assert.equal(sanitized.stato, FILTER_ALL);
 }
 
 console.log("client-portal-list-filters.test.ts: ok");

@@ -90,6 +90,7 @@ function dayEndMs(ymd: string): number {
 
 /** Filtro client su data ingresso (ISO o yyyy-mm-dd). */
 export function lavRowIngressoInRange(row: LavorazioneListRow, daYmd: string, aYmd: string): boolean {
+  if (!daYmd.trim() && !aYmd.trim()) return true;
   const raw = row.data_ingresso?.trim() || row.created_at;
   const t = new Date(raw).getTime();
   if (!Number.isFinite(t)) return false;

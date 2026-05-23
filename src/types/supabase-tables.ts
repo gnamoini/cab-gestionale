@@ -118,6 +118,18 @@ export type MovimentoRicambioRow = {
   created_at: string;
 };
 
+/** Dati storici manuali Report lavorazioni (`report_manual_entries`). */
+export type ReportManualEntryRow = {
+  id: string;
+  period_month: string;
+  completed_count: number;
+  note: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  deleted_at?: string | null;
+};
+
 export type PreventivoRow = {
   id: string;
   mezzo_id: string;

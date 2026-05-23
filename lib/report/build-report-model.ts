@@ -6,14 +6,20 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
   compareRangeFor,
   deltaPct,
-  endOfLocalDay,
   isoInRange,
   resolvePresetRange,
-  startOfLocalDay,
   type DateRange,
   type ReportCompareMode,
   type ReportPeriodPreset,
 } from "@/lib/report/date-ranges";
+import {
+  avgCloseDays,
+  countCompletedInRange,
+  countOpenedInRange,
+  sparkFromDailyCompletions,
+  uniqueClientiServiti,
+  type ReportManualByMonth,
+} from "@/lib/report/lavorazioni-report-selectors";
 import { extractScortaDelta } from "@/lib/report/magazzino-log-parse";
 import { buildMagazzinoMonthlyRows } from "@/lib/report/magazzino-monthly-rows";
 import { loadMagazzinoManualMonthMap } from "@/lib/report/magazzino-manual-storage";
@@ -26,6 +32,8 @@ export type ReportLiveInput = {
   compareMode?: ReportCompareMode;
   attive: LavorazioneAttiva[];
   storico: LavorazioneArchiviata[];
+  completate: LavorazioneArchiviata[];
+  manualByMonth?: ReportManualByMonth;
   magazzino: RicambioMagazzino[];
   mezzi: MezzoGestito[];
   magLog: MagazzinoChangeLogEntry[];
@@ -35,7 +43,6 @@ export type KpiCompareRow = {
   label: string;
   deltaAbs: string | null;
   deltaPct: number | null;
-  /** Valore più basso = migliore (es. giorni chiusura). */
   invert?: boolean;
 };
 
@@ -44,7 +51,6 @@ export type KpiCardModel = {
   label: string;
   value: string;
   sub?: string;
-  /** Righe confronto periodo; null se confronto disattivato. */
   compareRows: KpiCompareRow[] | null;
   spark: number[];
 };
@@ -63,62 +69,8 @@ export type ReportModel = {
   compareRange: DateRange | null;
   compareMode: ReportCompareMode;
   kpis: KpiCardModel[];
-  /** Dettaglio numerico per banner nelle sezioni (evita logica duplicata). */
   compareDetail: ReportCompareDetail | null;
 };
-
-function countOpenedInRange(attive: LavorazioneAttiva[], storico: LavorazioneArchiviata[], r: DateRange): number {
-  let n = 0;
-  for (const x of attive) if (isoInRange(x.dataIngresso, r)) n += 1;
-  for (const x of storico) if (isoInRange(x.dataIngresso, r)) n += 1;
-  return n;
-}
-
-/** Chiusure = lavorazioni archiviate con data chiusura nel periodo. */
-function countCompletedInRange(_attive: LavorazioneAttiva[], storico: LavorazioneArchiviata[], r: DateRange): number {
-  let n = 0;
-  for (const x of storico) {
-    if (x.dataCompletamento && isoInRange(x.dataCompletamento, r)) n += 1;
-  }
-  return n;
-}
-
-function avgCloseDays(storico: LavorazioneArchiviata[], _attive: LavorazioneAttiva[], r: DateRange): number {
-  const vals: number[] = [];
-  const ms = (a: string, b: string) => {
-    const t0 = new Date(a).getTime();
-    const t1 = new Date(b).getTime();
-    if (Number.isNaN(t0) || Number.isNaN(t1)) return 0;
-    return Math.max(0, (t1 - t0) / 86400000);
-  };
-  for (const x of storico) {
-    if (!x.dataCompletamento || !isoInRange(x.dataCompletamento, r)) continue;
-    const g = ms(x.dataIngresso, x.dataCompletamento);
-    if (g > 0) vals.push(g);
-  }
-  if (vals.length === 0) return 0;
-  return Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10;
-}
-
-function uniqueClientiServiti(attive: LavorazioneAttiva[], storico: LavorazioneArchiviata[], r: DateRange): number {
-  const s = new Set<string>();
-  const touch = (c: string, inR: boolean) => {
-    const t = c.trim();
-    if (!t || !inR) return;
-    s.add(t);
-  };
-  for (const x of attive) {
-    const inR =
-      isoInRange(x.dataIngresso, r) || (x.dataCompletamento ? isoInRange(x.dataCompletamento, r) : false);
-    touch(x.cliente, inR);
-  }
-  for (const x of storico) {
-    const inR =
-      (x.dataCompletamento && isoInRange(x.dataCompletamento, r)) || isoInRange(x.dataIngresso, r);
-    touch(x.cliente, inR);
-  }
-  return s.size;
-}
 
 function ricambiUtilizzatiQty(magLog: MagazzinoChangeLogEntry[], r: DateRange): number {
   let q = 0;
@@ -134,22 +86,6 @@ function totalCapitale(rows: RicambioMagazzino[]): number {
   let s = 0;
   for (const r of rows) s += capitaleImmobilizzato(r);
   return Math.round(s * 100) / 100;
-}
-
-function addDays(d: Date, n: number): Date {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n, 12, 0, 0, 0);
-}
-
-function sparkFromDailyCompletions(storico: LavorazioneArchiviata[], attive: LavorazioneAttiva[], end: Date): number[] {
-  const days = 7;
-  const out = Array.from({ length: days }, () => 0);
-  for (let i = 0; i < days; i++) {
-    const dayStart = startOfLocalDay(addDays(end, -(days - 1 - i)));
-    const dayEnd = endOfLocalDay(dayStart);
-    const r: DateRange = { start: dayStart, end: dayEnd };
-    out[i] = countCompletedInRange(attive, storico, r);
-  }
-  return out;
 }
 
 function fmtEur(n: number): string {
@@ -188,26 +124,26 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const compareMode = input.compareMode ?? "none";
   const range = resolvePresetRange(input.anchor, input.preset, input.customFrom, input.customTo);
   const compareRange = compareMode === "none" ? null : compareRangeFor(range, compareMode);
-  const { attive, storico, magazzino, mezzi, magLog, anchor } = input;
+  const { attive, storico, completate, manualByMonth, magazzino, mezzi, magLog, anchor } = input;
 
   const opened = countOpenedInRange(attive, storico, range);
-  const completed = countCompletedInRange(attive, storico, range);
-  const tempoMedio = avgCloseDays(storico, attive, range);
+  const completed = countCompletedInRange(completate, range, manualByMonth);
+  const tempoMedio = avgCloseDays(completate, range);
   const cap = totalCapitale(magazzino);
   const ricambi = ricambiUtilizzatiQty(magLog, range);
-  const clienti = uniqueClientiServiti(attive, storico, range);
+  const clienti = uniqueClientiServiti(attive, completate, range);
   const mezziN = mezzi.length;
 
   const magCur = sumMagazzinoPeriod(magLog, magazzino, range, anchor);
   const magPrev = compareRange ? sumMagazzinoPeriod(magLog, magazzino, compareRange, anchor) : null;
 
   const openedP = compareRange ? countOpenedInRange(attive, storico, compareRange) : null;
-  const completedP = compareRange ? countCompletedInRange(attive, storico, compareRange) : null;
-  const tempoP = compareRange ? avgCloseDays(storico, attive, compareRange) : null;
+  const completedP = compareRange ? countCompletedInRange(completate, compareRange, manualByMonth) : null;
+  const tempoP = compareRange ? avgCloseDays(completate, compareRange) : null;
   const ricambiP = compareRange ? ricambiUtilizzatiQty(magLog, compareRange) : null;
-  const clientiP = compareRange ? uniqueClientiServiti(attive, storico, compareRange) : null;
+  const clientiP = compareRange ? uniqueClientiServiti(attive, completate, compareRange) : null;
 
-  const spark = sparkFromDailyCompletions(storico, attive, range.end);
+  const spark = sparkFromDailyCompletions(completate, range.end);
 
   const dOpened =
     compareRange && openedP != null

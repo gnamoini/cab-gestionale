@@ -1,6 +1,5 @@
 "use client";
 
-import { CLIENT_PORTAL_SYNC_TABLES } from "@/lib/lavorazioni/client-portal-sync-tables";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 import {
@@ -31,9 +30,10 @@ export async function invalidateAfterMezzoMutations(qc: QueryClient) {
   });
 }
 
-export async function invalidateAfterLavorazioneMutations(qc: QueryClient) {
+export async function invalidateAfterLavorazioneMutations(qc: QueryClient, cabSyncEvents?: CabSyncEvent[]) {
   dispatchGestionaleAction(qc, ["lavorazioni", "scheda_lavorazione", "documenti", "movimenti_ricambi", "preventivi"], {
     source: "local_mutation",
+    cabSyncEvents,
   });
   bumpReportDataRefresh();
 }
@@ -43,11 +43,6 @@ export async function invalidateAfterMagazzinoOrMovimenti(qc: QueryClient, cabSy
     source: "local_mutation",
     cabSyncEvents,
   });
-}
-
-/** Dopo mutazioni gestionale: invalida portale clienti in questa tab e notifica le altre. */
-export async function syncClientPortalAfterGestionaleChange(qc: QueryClient): Promise<void> {
-  dispatchGestionaleAction(qc, [...CLIENT_PORTAL_SYNC_TABLES], { source: "local_mutation" });
 }
 
 export function invalidateAfterPreventiviMutations(

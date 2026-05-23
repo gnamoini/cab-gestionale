@@ -19,11 +19,18 @@ export function filterClientPortalStatiOptions(
   return buildStatiLavorazioniOptions(settingsStati);
 }
 
+export function resolveClientPortalStatoId(
+  stato: string,
+  stati: StatoLavorazioneConfig[],
+): string {
+  return resolveStatoId(stato, stati, CLIENT_PORTAL_FALLBACK_STATO);
+}
+
 export function sanitizeClientLavorazioneRow(
   row: LavorazioneListRow,
   stati: StatoLavorazioneConfig[],
 ): LavorazioneListRow {
-  const resolved = resolveStatoId(row.stato, stati, CLIENT_PORTAL_FALLBACK_STATO);
+  const resolved = resolveClientPortalStatoId(row.stato, stati);
   return resolved === row.stato ? row : { ...row, stato: resolved };
 }
 

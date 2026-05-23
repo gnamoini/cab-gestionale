@@ -3,39 +3,75 @@
 import { useMemo } from "react";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import {
-  computeDashboardLavPreview,
-  computeDashboardMagStatsFromRows,
-} from "@/lib/view/view-aggregation-cache";
+  computeDashboardLavWidgetRows,
+  computeDashboardMagDailyMovements,
+  computeDashboardMagRecentMovements,
+  computeDashboardMagRecentRicambi,
+  computeDashboardMagWidgetStats,
+} from "@/lib/view/dashboard-widgets-selectors";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
-import { useMagazzinoListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import {
+  useMagazzinoRicambiUIQuery,
+  useMovimentiListQuery,
+} from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 
 const LAV_FILTERS = { includeMezzo: true as const, archived: false as const };
 
-/** Query + selector aggregati per KPI dashboard operativa (read-only VIEW layer). */
+/** Query + selector aggregati per widget Lavorazioni/Magazzino dashboard (VIEW layer, read-only). */
 export function useDashboardMetrics() {
   const staging = isStagingPublicSlice();
   const viewOpts = useViewQueryOpts();
 
   const lavQuery = useLavorazioniList(LAV_FILTERS, viewOpts);
-  const magQuery = useMagazzinoListQuery(undefined, viewOpts);
+  const magQuery = useMagazzinoRicambiUIQuery(undefined, viewOpts);
+  const movQuery = useMovimentiListQuery(undefined, viewOpts);
 
-  const lavCount = lavQuery.data?.length ?? 0;
-  const preview = useMemo(() => computeDashboardLavPreview(lavQuery.data ?? []), [lavQuery.data]);
+  const lavRows = useMemo(() => computeDashboardLavWidgetRows(lavQuery.data ?? []), [lavQuery.data]);
+
+  const ricambiById = useMemo(() => {
+    const map = new Map<string, (typeof magQuery.data)[number]>();
+    for (const r of magQuery.data ?? []) map.set(r.id, r);
+    return map;
+  }, [magQuery.data]);
+
   const magStats = useMemo(
-    () => computeDashboardMagStatsFromRows(magQuery.data ?? [], staging),
+    () => (staging ? { capitale: 0, sottoScorta: 0 } : computeDashboardMagWidgetStats(magQuery.data ?? [])),
     [magQuery.data, staging],
   );
 
-  const isLoading = lavQuery.isLoading || magQuery.isLoading;
-  const isError = lavQuery.isError || magQuery.isError;
+  const magRecentRicambi = useMemo(
+    () => (staging ? [] : computeDashboardMagRecentRicambi(magQuery.data ?? [])),
+    [magQuery.data, staging],
+  );
+
+  const magDailyMovements = useMemo(
+    () => (staging ? { entrate: 0, uscite: 0 } : computeDashboardMagDailyMovements(movQuery.data ?? [])),
+    [movQuery.data, staging],
+  );
+
+  const magRecentMovements = useMemo(
+    () => (staging ? [] : computeDashboardMagRecentMovements(movQuery.data ?? [], ricambiById)),
+    [movQuery.data, ricambiById, staging],
+  );
+
+  const isLoading = lavQuery.isLoading || magQuery.isLoading || movQuery.isLoading;
+  const isError = lavQuery.isError || magQuery.isError || movQuery.isError;
 
   return {
+    staging,
     lavQuery,
     magQuery,
-    lavCount,
-    preview,
+    movQuery,
+    lavRows,
     magStats,
+    magRecentRicambi,
+    magDailyMovements,
+    magRecentMovements,
+    lavLoading: lavQuery.isLoading,
+    lavError: lavQuery.isError,
+    magLoading: magQuery.isLoading || movQuery.isLoading,
+    magError: magQuery.isError || movQuery.isError,
     isLoading,
     isError,
   };

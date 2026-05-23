@@ -4,6 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { fetchSchedeBundlesFromDb } from "@/lib/schede/schede-sync-adapter";
 import { GESTIONALE_REALTIME_POLL_MS } from "@/lib/realtime/gestionale-realtime-config";
+import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { QK, SCHEde_BUNDLES_QUERY_KEY } from "@/src/lib/react-query/query-keys";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -15,20 +16,27 @@ const BUNDLE_OPTS = {
   refetchOnReconnect: true,
 } as const;
 
+export type SchedeBundlesQueryOptions = {
+  /** VIEW layer (portale clienti): refetch stale al mount. Default CORE gestionale. */
+  viewLayer?: boolean;
+};
+
 /** Bundle schede per lavorazione — React Query unica source UI (DB). */
-export function useSchedeBundlesQuery(enabled = true) {
+export function useSchedeBundlesQuery(enabled = true, options?: SchedeBundlesQueryOptions) {
   const qc = useQueryClient();
   const { gestionale } = useRealtimeStatus();
+  const viewOpts = useViewQueryOpts();
   const pollingFallback = gestionale === "polling";
   const realtimeConnected = gestionale === "connected";
+  const viewLayer = options?.viewLayer === true;
 
   const q = useQuery({
     queryKey: SCHEde_BUNDLES_QUERY_KEY,
     queryFn: fetchSchedeBundlesFromDb,
     enabled,
-    staleTime: realtimeConnected ? 30_000 : 5_000,
+    staleTime: viewLayer ? viewOpts.staleTime : realtimeConnected ? 30_000 : 5_000,
     refetchInterval: pollingFallback ? GESTIONALE_REALTIME_POLL_MS : false,
-    refetchOnMount: realtimeConnected ? false : undefined,
+    refetchOnMount: viewLayer ? viewOpts.refetchOnMount : realtimeConnected ? false : undefined,
     ...BUNDLE_OPTS,
   });
 

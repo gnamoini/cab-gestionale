@@ -1,7 +1,10 @@
+import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
 import { isoToDateInputValue } from "@/lib/lavorazioni/date-day-only";
+import { migrateStatoConfigId } from "@/lib/lavorazioni/stati-dynamic";
 import { lavRowIngressoInRange } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
 export const FILTER_ALL = "__tutti__" as const;
@@ -73,16 +76,19 @@ function rowEntityFields(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore | undefined,
   defaultAddetto: string,
+  logs?: readonly LogModificaRow[],
 ): RowEntityFields {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
   const m = row.mezzo;
+  const fromLogs = logs?.length ? latestAddettoFromLogs(logs) : "—";
+  const addettoFallback = fromLogs !== "—" ? fromLogs : defaultAddetto;
   const addetto =
     ing?.addettoAccettazione?.trim() ||
     schedeStore?.[row.id]?.lavorazioni?.campi.righe
       .flatMap((r) => r.addettiAssegnati)
       .find((a) => a.addetto.trim())
       ?.addetto.trim() ||
-    defaultAddetto ||
+    addettoFallback ||
     "";
 
   let marca = "";
@@ -226,8 +232,9 @@ export function lavRowMatchesAdvancedFilters(
   schedeStore: LavorazioneSchedeStore | undefined,
   defaultAddetto: string,
   variant?: LavorazioniListFilterVariant,
+  logs?: readonly LogModificaRow[],
 ): boolean {
-  const entity = rowEntityFields(row, schedeStore, defaultAddetto);
+  const entity = rowEntityFields(row, schedeStore, defaultAddetto, logs);
 
   if (f.cliente.trim() && norm(entity.cliente) !== norm(f.cliente)) return false;
   if (f.cantiere.trim() && norm(entity.cantiere) !== norm(f.cantiere)) return false;
@@ -236,7 +243,7 @@ export function lavRowMatchesAdvancedFilters(
   if (!listFilterMatches(f.addetto, entity.addetto)) return false;
   if (!listFilterMatches(f.marca, entity.marca)) return false;
   if (!listFilterMatches(f.modello, entity.modello)) return false;
-  if (f.stato !== FILTER_ALL && row.stato !== f.stato) return false;
+  if (f.stato !== FILTER_ALL && row.stato !== f.stato && row.stato !== migrateStatoConfigId(f.stato)) return false;
 
   if (!lavRowIngressoInRange(row, f.ingressoDa, f.ingressoA)) return false;
   if (variant !== "in_corso" && !lavRowCompletamentoInRange(row, f.completamentoDa, f.completamentoA)) return false;

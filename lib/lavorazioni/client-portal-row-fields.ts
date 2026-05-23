@@ -87,16 +87,20 @@ export function clientPortalMezzoIdent(
   };
 }
 
+function clientPortalIngressoIsoFromDb(row: LavorazioneListRow): string {
+  const raw = row.data_ingresso?.trim() || row.created_at;
+  return raw.length >= 10 ? raw.slice(0, 10) : raw;
+}
+
 export function clientPortalIngressoIso(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const fromScheda = schedeStore?.[row.id]?.ingresso?.campi.dataIngresso?.trim();
   if (fromScheda) {
     if (/^\d{4}-\d{2}-\d{2}/.test(fromScheda)) return fromScheda.slice(0, 10);
     const d = new Date(fromScheda);
     if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
-    return fromScheda;
+    return clientPortalIngressoIsoFromDb(row);
   }
-  const raw = row.data_ingresso?.trim() || row.created_at;
-  return raw.length >= 10 ? raw.slice(0, 10) : raw;
+  return clientPortalIngressoIsoFromDb(row);
 }
 
 export function clientPortalDataIngressoLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {

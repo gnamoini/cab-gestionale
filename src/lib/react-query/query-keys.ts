@@ -30,6 +30,8 @@ export const QK = {
   authLogs: ["auth_logs"] as const,
   /** Note condivise (modulo Supporto). */
   supportNotes: ["support_notes"] as const,
+  /** Dati storici manuali Report lavorazioni. */
+  reportManualEntries: ["report_manual_entries"] as const,
   /** @deprecated Usare `supportNotes` — tabella legacy `segnalazioni`. */
   segnalazioni: ["segnalazioni"] as const,
 };

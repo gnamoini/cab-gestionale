@@ -157,7 +157,13 @@ export function executeInvalidateGestionaleTables(
   const uniqueTables = [...new Set(tables.filter(Boolean))];
   if (uniqueTables.length === 0) return;
 
-  const refetchType = options?.refetchType ?? "active";
+  const baseRefetchType = options?.refetchType ?? "active";
+  const refetchType =
+    baseRefetchType === "active" &&
+    hasDestructiveCabEvents(options?.cabSyncEvents) &&
+    uniqueTables.includes("lavorazioni")
+      ? "all"
+      : baseRefetchType;
   const entityId = canUseEntityAwareLavorazioni(
     uniqueTables,
     options?.entityIdByTable,

@@ -1,8 +1,8 @@
-import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { interventiMezzoDaLavorazioni } from "@/lib/mezzi/lavorazioni-sync";
+import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { deltaPct, isoInRange, type DateRange } from "@/lib/report/date-ranges";
 import { extractScortaDelta } from "@/lib/report/magazzino-log-parse";
 
@@ -11,13 +11,6 @@ export type ReportRowCompare = {
   deltaAbs: number;
   deltaPct: number | null;
 };
-
-function touchLavorazione(ingressoIso: string, completamentoIso: string | null, r: DateRange): boolean {
-  const i = new Date(ingressoIso).getTime();
-  if (Number.isNaN(i)) return false;
-  const c = completamentoIso ? new Date(completamentoIso).getTime() : Number.POSITIVE_INFINITY;
-  return i <= r.end.getTime() && c >= r.start.getTime();
-}
 
 export type TopRicambioReportRow = {
   rank: number;
@@ -132,18 +125,18 @@ export function buildTopRicambiPeriodo(
   return out.map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
+/** Completate archiviate con chiusura nel periodo (stessa regola KPI). */
 export function buildTopMezziPeriodo(
   mezzi: MezzoGestito[],
-  attive: LavorazioneAttiva[],
-  storico: LavorazioneArchiviata[],
+  completate: LavorazioneArchiviata[],
   range: DateRange,
 ): TopMezzoReportRow[] {
   const rows: Array<Omit<TopMezzoReportRow, "rank">> = [];
   for (const m of mezzi) {
-    const all = interventiMezzoDaLavorazioni(m, attive, storico).filter((x) =>
-      touchLavorazione(x.dataIngresso, x.dataCompletamento, range),
+    const matched = completate.filter(
+      (x) => x.dataCompletamento && isoInRange(x.dataCompletamento, range) && lavorazioneMatchesMezzo(m, x),
     );
-    if (all.length === 0) continue;
+    if (matched.length === 0) continue;
     rows.push({
       id: m.id,
       mezzo: `${m.marca} ${m.modello}`.trim(),
@@ -151,55 +144,25 @@ export function buildTopMezziPeriodo(
       matricola: m.matricola || "—",
       nScuderia: (m.numeroScuderia ?? "").trim() || "—",
       cliente: m.cliente,
-      interventi: all.length,
+      interventi: matched.length,
     });
   }
   rows.sort((a, b) => b.interventi - a.interventi);
   return rows.map((r, i) => ({ ...r, rank: i + 1 }));
 }
 
-type LavRef = {
-  id: string;
-  cliente: string;
-  ingresso: string;
-  completamento: string | null;
-};
-
-function collectLavorazioniRefs(attive: LavorazioneAttiva[], storico: LavorazioneArchiviata[]): LavRef[] {
-  const out: LavRef[] = [];
-  for (const x of storico) {
-    out.push({
-      id: x.id,
-      cliente: x.cliente,
-      ingresso: x.dataIngresso,
-      completamento: x.dataCompletamento,
-    });
-  }
-  for (const x of attive) {
-    out.push({
-      id: x.id,
-      cliente: x.cliente,
-      ingresso: x.dataIngresso,
-      completamento: null,
-    });
-  }
-  return out;
-}
-
+/** Completate archiviate con chiusura nel periodo (stessa regola KPI). */
 export function buildTopClientiPeriodo(
-  attive: LavorazioneAttiva[],
-  storico: LavorazioneArchiviata[],
+  completate: LavorazioneArchiviata[],
   range: DateRange,
 ): TopClienteReportRow[] {
-  const refs = collectLavorazioniRefs(attive, storico);
   const map = new Map<string, { count: number; lastMs: number }>();
 
-  for (const r of refs) {
-    if (!touchLavorazione(r.ingresso, r.completamento, range)) continue;
-    const c = r.cliente.trim();
+  for (const x of completate) {
+    if (!x.dataCompletamento || !isoInRange(x.dataCompletamento, range)) continue;
+    const c = x.cliente.trim();
     if (!c) continue;
-    const lastIso = r.completamento ?? r.ingresso;
-    const lastMs = new Date(lastIso).getTime();
+    const lastMs = new Date(x.dataCompletamento).getTime();
     const cur = map.get(c) ?? { count: 0, lastMs: 0 };
     cur.count += 1;
     if (Number.isFinite(lastMs) && lastMs > cur.lastMs) cur.lastMs = lastMs;

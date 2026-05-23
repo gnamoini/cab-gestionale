@@ -1,4 +1,4 @@
-/** Notifica ascoltatori (es. pagina Report) che i log o snapshot potrebbero essere cambiati. */
+/** Notifica ascoltatori (es. pagina Report) di invalidare/refetch le query React Query sorgente. */
 
 const listeners = new Set<() => void>();
 

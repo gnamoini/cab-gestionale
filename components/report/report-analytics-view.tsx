@@ -63,6 +63,8 @@ export function ReportAnalyticsView() {
       compareMode,
       attive: live.attive,
       storico: live.storico,
+      completate: live.completate,
+      manualByMonth: live.manualByMonth,
       magazzino: live.magazzino,
       mezzi: live.mezzi,
       magLog: live.magLog,
@@ -71,15 +73,15 @@ export function ReportAnalyticsView() {
 
   const tops = useMemo(() => {
     if (!model) return null;
-    const mezzi = buildTopMezziPeriodo(live.mezzi, live.attive, live.storico, model.range);
-    const clienti = buildTopClientiPeriodo(live.attive, live.storico, model.range);
+    const mezzi = buildTopMezziPeriodo(live.mezzi, live.completate, model.range);
+    const clienti = buildTopClientiPeriodo(live.completate, model.range);
     if (!model.compareRange) return { mezzi, clienti };
     const r = model.compareRange;
     return {
-      mezzi: mergeTopMezziCompare(mezzi, buildTopMezziPeriodo(live.mezzi, live.attive, live.storico, r)),
-      clienti: mergeTopClientiCompare(clienti, buildTopClientiPeriodo(live.attive, live.storico, r)),
+      mezzi: mergeTopMezziCompare(mezzi, buildTopMezziPeriodo(live.mezzi, live.completate, r)),
+      clienti: mergeTopClientiCompare(clienti, buildTopClientiPeriodo(live.completate, r)),
     };
-  }, [model, live]);
+  }, [model, live.mezzi, live.completate]);
 
   if (!mounted || !anchor || live.isLoading || !model || !tops) {
     return (
@@ -134,7 +136,9 @@ export function ReportAnalyticsView() {
 
       <ReportLavorazioniSection
         attive={live.attive}
-        storico={live.storico}
+        completate={live.completate}
+        manualEntries={live.manualEntries}
+        manualByMonth={live.manualByMonth}
         anchor={anchor}
         filterRange={model.range}
         compareDetail={model.compareDetail}
@@ -152,7 +156,7 @@ export function ReportAnalyticsView() {
 
       <ReportRicambiConsumoSection magLog={live.magLog} prodotti={live.magazzino} filterRange={model.range} anchor={anchor} />
 
-      <ShellCard title="Classifiche operative" subtitle="Dati reali nel periodo selezionato; con confronto attivo le colonne Δ si riferiscono alla metrica principale della classifica.">
+      <ShellCard title="Classifiche operative" subtitle="Completate archiviate nel periodo selezionato; con confronto attivo le colonne Δ si riferiscono alla metrica principale della classifica.">
         <div className="grid gap-8 lg:grid-cols-2">
           <div className="min-w-0">
             <h3 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Mezzi più lavorati</h3>

@@ -1,4 +1,5 @@
 import type { LavorazioneArchiviata } from "@/lib/lavorazioni/types";
+import { countCompletedByMonth, type ReportManualByMonth } from "@/lib/report/lavorazioni-report-selectors";
 
 const MONTHS = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"] as const;
 
@@ -15,23 +16,18 @@ function ym(y: number, m0: string): string {
   return `${y}-${m0}`;
 }
 
-function countFromSystem(storico: LavorazioneArchiviata[]): Map<string, number> {
-  const map = new Map<string, number>();
-  const bump = (key: string) => map.set(key, (map.get(key) ?? 0) + 1);
-  for (const x of storico) {
-    if (!x.dataCompletamento) continue;
-    const d = new Date(x.dataCompletamento);
-    if (Number.isNaN(d.getTime())) continue;
-    bump(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`);
-  }
-  return map;
-}
-
 export function buildLavorazioniYearMatrix(
-  storico: LavorazioneArchiviata[],
+  completate: LavorazioneArchiviata[],
   anchor: Date,
-): { rows: LavorazioniYearRow[]; monthLabels: readonly string[]; hasAnyData: boolean } {
-  const sys = countFromSystem(storico);
+  manualByMonth?: ReportManualByMonth,
+): {
+  rows: LavorazioniYearRow[];
+  monthLabels: readonly string[];
+  hasAnyData: boolean;
+  manualMonthKeys: Set<string>;
+} {
+  const sys = countCompletedByMonth(completate, manualByMonth);
+  const manualMonthKeys = new Set(manualByMonth ? [...manualByMonth.keys()] : []);
   const years = new Set<number>();
   for (const k of sys.keys()) years.add(Number(k.slice(0, 4)));
   const yEnd = anchor.getFullYear();
@@ -72,14 +68,13 @@ export function buildLavorazioniYearMatrix(
     rows.push({ year, months, total, growthVsPrevPct, bestMonthIdx, worstMonthIdx });
   }
 
-  return { rows, monthLabels: MONTHS, hasAnyData: hasAny };
+  return { rows, monthLabels: MONTHS, hasAnyData: hasAny, manualMonthKeys };
 }
 
 function daysInMonth(y: number, m0: number): number {
   return new Date(y, m0 + 1, 0).getDate();
 }
 
-/** Mesi trascorsi nell’anno (frazionario, max 12). */
 function monthsElapsedFractional(anchor: Date): number {
   const y = anchor.getFullYear();
   const m0 = anchor.getMonth();
@@ -88,10 +83,6 @@ function monthsElapsedFractional(anchor: Date): number {
   return Math.min(12, Math.max(1e-6, frac));
 }
 
-/**
- * Previsione fine anno: regressione lineare pesata (pesi esponenziali decrescenti
- * con l’età dell’anno) + blend con il ritmo YTD reale (peso crescente con i mesi trascorsi).
- */
 function forecastYearEndWeighted(
   historyYears: { year: number; total: number }[],
   yEnd: number,
@@ -146,7 +137,6 @@ export type YearForecastLinePoint = {
   kind: "history" | "ytd" | "forecast";
 };
 
-/** Modello per line chart: storico, YTD anno corrente, tratteggio fino a stima fine anno. */
 export function yearlyForecastLineModel(
   rows: LavorazioniYearRow[],
   anchor: Date,

@@ -1,21 +1,8 @@
-import { LAVORAZIONE_STATO_COMPLETATA_ID } from "@/lib/lavorazioni/constants";
 import { meseCompletamentoFromIso } from "@/lib/lavorazioni/duration";
 import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
-import { LAVORAZIONI_STATI_CHIUSE, type LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow, PrioritaLavorazione } from "@/src/types/supabase-tables";
-
-const CHIUSE = new Set<string>(LAVORAZIONI_STATI_CHIUSE);
-
-/** UI legacy: stato DB considerato chiuso (non usare per split report). */
-export function isStatoLavorazioneChiusoDb(stato: string): boolean {
-  return CHIUSE.has(stato);
-}
-
-/** UI legacy: stato «completata» (non usare per KPI chiusure report). */
-export function isCompletataForReport(statoId: string): boolean {
-  return statoId === LAVORAZIONE_STATO_COMPLETATA_ID || statoId === "completata";
-}
 
 function str(v: string | null | undefined, fb = "—"): string {
   const t = v?.trim();
@@ -27,11 +14,11 @@ function prioritaToLav(p: PrioritaLavorazione): PrioritaLav {
   return "alta";
 }
 
-/** ISO chiusura/archivio per statistiche (solo lavorazioni archiviate). */
+/** ISO chiusura/archivio persistente (solo `archived_at` o `data_uscita` da conclude). */
 export function lavorazioneReportClosureIso(
-  row: Pick<LavorazioneRow, "archived_at" | "data_uscita" | "updated_at">,
+  row: Pick<LavorazioneRow, "archived_at" | "data_uscita">,
 ): string | null {
-  const iso = row.archived_at?.trim() || row.data_uscita?.trim() || row.updated_at?.trim();
+  const iso = row.archived_at?.trim() || row.data_uscita?.trim();
   return iso && iso.length > 0 ? iso : null;
 }
 
@@ -59,7 +46,6 @@ function macchinaClienteUtil(row: LavorazioneListRow): {
 export function lavorazioneListRowToAttiva(row: LavorazioneListRow): LavorazioneAttiva {
   const { macchina, cliente, utilizzatore, targa, matricola, nScuderia } = macchinaClienteUtil(row);
   const ing = row.data_ingresso?.trim() ? row.data_ingresso : row.created_at;
-  const usc = row.data_uscita?.trim() ? row.data_uscita : null;
   return {
     id: row.id,
     macchina,
@@ -74,14 +60,14 @@ export function lavorazioneListRowToAttiva(row: LavorazioneListRow): Lavorazione
     addetto: "—",
     noteInterne: str(row.note, ""),
     dataIngresso: ing,
-    dataCompletamento: usc,
+    dataCompletamento: null,
   };
 }
 
 /** Riga lista DB → shape legacy `LavorazioneArchiviata`. */
 export function lavorazioneListRowToArchiviata(row: LavorazioneListRow): LavorazioneArchiviata {
   const a = lavorazioneListRowToAttiva(row);
-  const fine = lavorazioneReportClosureIso(row) ?? row.updated_at;
+  const fine = lavorazioneReportClosureIso(row);
   return {
     id: a.id,
     macchina: a.macchina,
@@ -96,8 +82,8 @@ export function lavorazioneListRowToArchiviata(row: LavorazioneListRow): Lavoraz
     statoFinaleId: row.stato,
     prioritaFinale: a.priorita,
     dataIngresso: a.dataIngresso,
-    dataCompletamento: fine,
-    meseCompletamento: meseCompletamentoFromIso(fine),
+    dataCompletamento: fine ?? "",
+    meseCompletamento: fine ? meseCompletamentoFromIso(fine) : "",
   };
 }
 
