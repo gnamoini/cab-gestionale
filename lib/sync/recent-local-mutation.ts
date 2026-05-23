@@ -1,0 +1,82 @@
+/** Soppressione eco Realtime sulla stessa tab dopo mutazione locale / optimistic update. */
+
+const RECENT_ENTITY_MS = 8_000;
+/** Burst breve per mutazioni bulk senza id row (es. store schede ottimistico). */
+const RECENT_TABLE_BURST_MS = 3_000;
+
+const recentEntityKeys = new Map<string, number>();
+const recentTableBursts = new Map<string, number>();
+
+function prune(now: number): void {
+  for (const [k, t] of recentEntityKeys) {
+    if (now - t > RECENT_ENTITY_MS) recentEntityKeys.delete(k);
+  }
+  for (const [k, t] of recentTableBursts) {
+    if (now - t > RECENT_TABLE_BURST_MS) recentTableBursts.delete(k);
+  }
+}
+
+function entityKey(table: string, entityId: string): string {
+  return `${table}:${entityId}`;
+}
+
+/** Segna mutazione locale recente per tabella + entity id (sopprime eco Realtime mirato). */
+export function markRecentLocalGestionaleMutation(tables: string[], entityId?: string): void {
+  if (!entityId) return;
+  const now = Date.now();
+  prune(now);
+  for (const table of tables) {
+    if (!table) continue;
+    recentEntityKeys.set(entityKey(table, entityId), now);
+  }
+}
+
+/** Burst tabella senza id row (finestra breve, solo path ottimistico esplicito). */
+export function markRecentLocalTableBurst(tables: string[]): void {
+  const now = Date.now();
+  prune(now);
+  for (const table of tables) {
+    if (!table) continue;
+    recentTableBursts.set(table, now);
+  }
+}
+
+import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
+
+/** Segna da eventi cab-sync con id noto. */
+export function markRecentLocalGestionaleFromCabEvents(cabSyncEvents?: CabSyncEvent[]): void {
+  if (!cabSyncEvents?.length) return;
+  for (const ev of cabSyncEvents) {
+    if (ev.type === "settings_updated") continue;
+    const table = ev.table;
+    if (table && ev.id) markRecentLocalGestionaleMutation([table], ev.id);
+  }
+}
+
+export function shouldSuppressRemoteCacheInvalidation(table: string, entityId?: string): boolean {
+  const now = Date.now();
+  prune(now);
+  if (entityId) {
+    const key = recentEntityKeys.get(entityKey(table, entityId));
+    if (key != null && now - key <= RECENT_ENTITY_MS) return true;
+  }
+  const burst = recentTableBursts.get(table);
+  if (burst != null && now - burst <= RECENT_TABLE_BURST_MS) return true;
+  return false;
+}
+
+export function filterTablesForRemoteCacheInvalidation(
+  tables: string[],
+  entityIdByTable?: ReadonlyMap<string, string>,
+): string[] {
+  return tables.filter((table) => {
+    const entityId = entityIdByTable?.get(table);
+    return !shouldSuppressRemoteCacheInvalidation(table, entityId);
+  });
+}
+
+/** Per test / debug. */
+export function clearRecentLocalGestionaleMutations(): void {
+  recentEntityKeys.clear();
+  recentTableBursts.clear();
+}

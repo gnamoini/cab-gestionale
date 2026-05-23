@@ -5,12 +5,8 @@ import {
   CLIENT_PORTAL_SYNC_TABLES,
   isClientPortalSyncTable,
 } from "@/lib/lavorazioni/client-portal-sync-tables";
-import { dispatchClientPortalRefresh } from "@/lib/lavorazioni/client-portal-sync";
+import { invalidateGestionaleTables } from "@/lib/realtime/gestionale-realtime-config";
 import {
-  invalidateGestionaleTables,
-} from "@/lib/realtime/gestionale-realtime-config";
-import {
-  broadcastCabSyncEvent,
   broadcastGestionaleInvalidate,
   getGestionaleTabId,
 } from "@/lib/sync/cab-realtime-broadcast";
@@ -20,23 +16,39 @@ import {
   type CabSyncEntity,
   type CabSyncEvent,
 } from "@/lib/sync/cab-sync-bus";
+import {
+  filterTablesForRemoteCacheInvalidation,
+  markRecentLocalGestionaleFromCabEvents,
+} from "@/lib/sync/recent-local-mutation";
+import { shouldSkipEntityRefetch } from "@/lib/sync/recent-entity-invalidation";
+import { reconcileGestionaleCabEvents, type ReconcileSource } from "@/lib/sync/gestionale-reconcile";
 import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/lib/schede/schede-store-events";
 
-export type DispatchGestionaleRemoteChangeOptions = {
-  /** Propaga ad altre tab via BroadcastChannel (default false). */
-  broadcast?: boolean;
-  /** Emetti cab-sync locale (default true se cabSyncEvent fornito). */
-  emitLocalCabSync?: boolean;
-  /** Eventi cab-sync aggiuntivi oltre a quelli derivati dalle tabelle. */
+/** Origine del cambiamento — un solo entry point (`dispatchGestionaleAction`). */
+export type GestionaleActionSource = "local_mutation" | "realtime" | "broadcast" | "reconnect";
+
+export type DispatchGestionaleActionOptions = {
+  source: GestionaleActionSource;
   cabSyncEvents?: CabSyncEvent[];
+  entityIdByTable?: ReadonlyMap<string, string>;
+  skipCacheInvalidation?: boolean;
+};
+
+/** @deprecated Usare `DispatchGestionaleActionOptions`. */
+export type DispatchGestionaleRemoteChangeOptions = {
+  emitLocalCabSync?: boolean;
+  cabSyncEvents?: CabSyncEvent[];
+  skipCacheInvalidation?: boolean;
+  entityIdByTable?: ReadonlyMap<string, string>;
 };
 
 const recentDispatchFingerprints = new Map<string, number>();
-const DISPATCH_DEDUP_MS = 5000;
+export const GESTIONALE_DISPATCH_DEDUP_MS = 5000;
+let lastGestionaleDispatchAt = 0;
 
 function pruneDispatchFingerprints(now: number): void {
   for (const [k, t] of recentDispatchFingerprints) {
-    if (now - t > DISPATCH_DEDUP_MS) recentDispatchFingerprints.delete(k);
+    if (now - t > GESTIONALE_DISPATCH_DEDUP_MS) recentDispatchFingerprints.delete(k);
   }
 }
 
@@ -58,31 +70,164 @@ function shouldSkipDispatch(fingerprint: string): boolean {
   pruneDispatchFingerprints(now);
   if (recentDispatchFingerprints.has(fingerprint)) return true;
   recentDispatchFingerprints.set(fingerprint, now);
+  lastGestionaleDispatchAt = now;
   return false;
 }
 
-function syntheticCabSyncFromTable(table: string): CabSyncEvent | null {
+/** Timestamp ultimo dispatch applicato (per evitare snapshot recovery ridondante). */
+export function getLastGestionaleDispatchAt(): number {
+  return lastGestionaleDispatchAt;
+}
+
+function syntheticCabSyncFromTable(table: string, id?: string): CabSyncEvent | null {
   const entity = cabSyncEntityFromTable(table);
   if (!entity) return null;
-  return { type: "entity_updated", entity, id: "", table };
+  return { type: "entity_updated", entity, id: id ?? "", table };
+}
+
+function buildEntityIdByTable(
+  tables: string[],
+  cabEvents: CabSyncEvent[],
+  explicit?: ReadonlyMap<string, string>,
+): Map<string, string> {
+  const map = new Map<string, string>(explicit);
+  for (const ev of cabEvents) {
+    if (ev.type === "settings_updated" || !ev.id || !ev.table) continue;
+    map.set(ev.table, ev.id);
+  }
+  for (const table of tables) {
+    if (map.has(table)) continue;
+    const match = cabEvents.find((e) => e.type !== "settings_updated" && e.table === table && e.id);
+    if (match && match.type !== "settings_updated") map.set(table, match.id);
+  }
+  return map;
+}
+
+function collectCabEvents(
+  uniqueTables: string[],
+  cabSyncEvents?: CabSyncEvent[],
+  primaryCabEvent?: CabSyncEvent,
+): CabSyncEvent[] {
+  const cabEvents: CabSyncEvent[] = [];
+  if (primaryCabEvent) cabEvents.push(primaryCabEvent);
+  if (cabSyncEvents?.length) cabEvents.push(...cabSyncEvents);
+
+  for (const t of uniqueTables) {
+    const entity = cabSyncEntityFromTable(t);
+    if (!entity) continue;
+
+    if (
+      primaryCabEvent &&
+      primaryCabEvent.type !== "settings_updated" &&
+      primaryCabEvent.entity === entity
+    ) {
+      continue;
+    }
+
+    const hasExplicit = cabEvents.some(
+      (e) => e.type !== "settings_updated" && (e.table === t || e.entity === entity),
+    );
+    if (hasExplicit) continue;
+
+    const syn = syntheticCabSyncFromTable(t);
+    if (syn) cabEvents.push(syn);
+  }
+  return cabEvents;
+}
+
+function reconcileSourceFromAction(source: GestionaleActionSource): ReconcileSource {
+  if (source === "local_mutation") return "local_mutation";
+  if (source === "reconnect") return "reconnect";
+  return "realtime";
+}
+
+function hasDestructiveCabEvents(cabEvents: CabSyncEvent[]): boolean {
+  return cabEvents.some((e) => e.type === "entity_created" || e.type === "entity_deleted");
+}
+
+function filterTablesForCacheInvalidation(
+  tables: string[],
+  entityIdByTable: ReadonlyMap<string, string>,
+  source: GestionaleActionSource,
+): string[] {
+  let out = filterTablesForRemoteCacheInvalidation(tables, entityIdByTable);
+  if (source === "realtime") {
+    out = out.filter((table) => {
+      const entityId = entityIdByTable.get(table);
+      if (!entityId) return true;
+      return !shouldSkipEntityRefetch(table, entityId);
+    });
+  }
+  return out;
 }
 
 function dispatchPortalSideEffects(tables: string[]): void {
   const touchesPortal = tables.some((t) => isClientPortalSyncTable(t));
   if (!touchesPortal) return;
-  dispatchClientPortalRefresh();
   if (typeof window !== "undefined") {
     window.dispatchEvent(new CustomEvent(LAVORAZIONI_SCHEDE_STORE_CHANGED));
   }
 }
 
-function invalidateTables(qc: QueryClient, tables: string[]): void {
-  invalidateGestionaleTables(qc, tables);
+/**
+ * Entry point unico per ogni mutazione/sync gestionale.
+ *
+ * Pipeline: dedup → invalidazione mirata (invalidate-targets) → portale → reconcile → cab-sync locale
+ * Cross-tab broadcast solo per `local_mutation`.
+ */
+export function dispatchGestionaleAction(
+  qc: QueryClient,
+  tables: string[],
+  options: DispatchGestionaleActionOptions,
+): void {
+  const uniqueTables = [...new Set(tables.filter(Boolean))];
+  const cabEvents = collectCabEvents(uniqueTables, options.cabSyncEvents);
+  if (uniqueTables.length === 0 && cabEvents.length === 0) return;
+
+  if (options.source === "local_mutation") {
+    markRecentLocalGestionaleFromCabEvents(options.cabSyncEvents);
+  }
+
+  const fp = gestionaleDispatchFingerprint(uniqueTables, cabEvents);
+  if (shouldSkipDispatch(fp)) return;
+
+  const entityIdByTable = buildEntityIdByTable(uniqueTables, cabEvents, options.entityIdByTable);
+  const tablesForCache = options.skipCacheInvalidation
+    ? []
+    : filterTablesForCacheInvalidation(uniqueTables, entityIdByTable, options.source);
+
+  if (tablesForCache.length > 0) {
+    invalidateGestionaleTables(qc, tablesForCache, {
+      entityIdByTable,
+      cabSyncEvents: cabEvents,
+      immediate: options.source === "local_mutation" || hasDestructiveCabEvents(cabEvents),
+    });
+    dispatchPortalSideEffects(tablesForCache);
+  }
+
+  reconcileGestionaleCabEvents(qc, cabEvents, reconcileSourceFromAction(options.source), {
+    skipInvalidation: tablesForCache.length > 0,
+  });
+
+  for (const ev of cabEvents) emitCabSyncEvent(ev);
+
+  if (options.source === "local_mutation") {
+    broadcastGestionaleInvalidate(uniqueTables, entityIdByTable);
+  }
+}
+
+/** Dopo mutazione locale — delega a `dispatchGestionaleAction`. */
+export function dispatchGestionaleLocalMutation(
+  qc: QueryClient,
+  tables: string[],
+  cabSyncEvents?: CabSyncEvent[],
+): void {
+  dispatchGestionaleAction(qc, tables, { source: "local_mutation", cabSyncEvents });
 }
 
 /**
- * Applica invalidazione cache + cab-sync + eventi portale.
- * Usato da Realtime bridge, broadcast receiver e mutazioni locali.
+ * Cambiamento remoto (Realtime / BroadcastChannel).
+ * @deprecated Preferire `dispatchGestionaleAction` con source esplicita.
  */
 export function dispatchGestionaleRemoteChange(
   qc: QueryClient,
@@ -90,58 +235,16 @@ export function dispatchGestionaleRemoteChange(
   cabSyncEvent?: CabSyncEvent,
   options?: DispatchGestionaleRemoteChangeOptions,
 ): void {
-  const uniqueTables = [...new Set(tables.filter(Boolean))];
-  if (uniqueTables.length === 0 && !cabSyncEvent && !options?.cabSyncEvents?.length) return;
+  const cabSyncEvents: CabSyncEvent[] = [];
+  if (cabSyncEvent) cabSyncEvents.push(cabSyncEvent);
+  if (options?.cabSyncEvents?.length) cabSyncEvents.push(...options.cabSyncEvents);
 
-  const cabEvents: CabSyncEvent[] = [];
-  if (cabSyncEvent) cabEvents.push(cabSyncEvent);
-  for (const t of uniqueTables) {
-    const entity = cabSyncEntityFromTable(t);
-    if (
-      cabSyncEvent &&
-      cabSyncEvent.type !== "settings_updated" &&
-      entity &&
-      cabSyncEvent.entity === entity
-    ) {
-      continue;
-    }
-    const syn = syntheticCabSyncFromTable(t);
-    if (syn) cabEvents.push(syn);
-  }
-  if (options?.cabSyncEvents?.length) cabEvents.push(...options.cabSyncEvents);
-
-  const fp = gestionaleDispatchFingerprint(uniqueTables, cabEvents);
-  if (shouldSkipDispatch(fp)) return;
-
-  invalidateTables(qc, uniqueTables);
-  dispatchPortalSideEffects(uniqueTables);
-
-  const emitLocal = options?.emitLocalCabSync !== false;
-  if (emitLocal) {
-    for (const ev of cabEvents) emitCabSyncEvent(ev);
-  }
-}
-
-/** Dopo mutazione locale: invalida questa tab e propaga alle altre. */
-export function dispatchGestionaleLocalMutation(
-  qc: QueryClient,
-  tables: string[],
-  cabSyncEvents?: CabSyncEvent[],
-): void {
-  dispatchGestionaleRemoteChange(qc, tables, undefined, {
-    broadcast: false,
-    emitLocalCabSync: true,
-    cabSyncEvents,
+  dispatchGestionaleAction(qc, tables, {
+    source: "realtime",
+    cabSyncEvents: cabSyncEvents.length > 0 ? cabSyncEvents : undefined,
+    entityIdByTable: options?.entityIdByTable,
+    skipCacheInvalidation: options?.skipCacheInvalidation,
   });
-
-  broadcastGestionaleInvalidate(tables);
-  for (const ev of cabSyncEvents ?? []) {
-    broadcastCabSyncEvent(ev);
-  }
-  for (const table of tables) {
-    const syn = syntheticCabSyncFromTable(table);
-    if (syn) broadcastCabSyncEvent(syn);
-  }
 }
 
 /** Tabelle portale per sync post-mutazione gestionale. */

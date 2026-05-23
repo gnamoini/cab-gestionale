@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CardMobile, CloseButton } from "@/components/design-system";
+import { CardMobile, CloseButton, IconActionButton } from "@/components/design-system";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
@@ -17,11 +17,11 @@ import {
   ricambioUiToMagazzinoUpdate,
 } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { magazzinoService } from "@/src/services/magazzino.service";
-import { useMagazzinoListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
-import { QK } from "@/src/lib/react-query/invalidate-related";
-import { getMagazzinoReportSnapshot, setMagazzinoReportSnapshot } from "@/lib/magazzino/magazzino-report-sync";
-import { MAGAZZINO_PRODOTTI_REFRESH_EVENT } from "@/lib/magazzino/magazzino-prodotti-refresh-event";
+import { QK, invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
+import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
+import { patchMagazzinoListCache } from "@/lib/magazzino/magazzino-list-cache";
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { flattenCompatDaAttrezzature, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
@@ -514,8 +514,8 @@ export function MagazzinoView() {
   }
 
   const queryClient = useQueryClient();
-  const magazzinoListQ = useMagazzinoListQuery();
-  const [prodotti, setProdotti] = useState<RicambioMagazzino[]>([]);
+  const magazzinoListQ = useMagazzinoRicambiUIQuery();
+  const prodotti = magazzinoListQ.data ?? [];
   const [searchInput, setSearchInput] = useState("");
   const [searchApplied, setSearchApplied] = useState("");
   const searchInputRef = useRef(searchInput);
@@ -623,9 +623,7 @@ export function MagazzinoView() {
   const [timelineByRicambio, setTimelineByRicambio] = useState<Record<string, MagazzinoLogEntry[]>>({});
 
   useEffect(() => {
-    if (!magazzinoListQ.data) return;
-    const mapped = magazzinoListQ.data.map((row) => magazzinoRowToRicambioUI(row));
-    setProdotti(mapped);
+    const mapped = magazzinoListQ.data ?? [];
     const order = new Map<string, number>();
     mapped.forEach((r, i) => order.set(r.id, i));
     orderMapRef.current = order;
@@ -826,9 +824,12 @@ export function MagazzinoView() {
     };
   }, []);
 
-  useEffect(() => {
-    setMagazzinoReportSnapshot(prodotti);
-  }, [prodotti]);
+  const patchProdotti = useCallback(
+    (updater: (prev: RicambioMagazzino[]) => RicambioMagazzino[]) => {
+      patchMagazzinoListCache(queryClient, updater, authorName);
+    },
+    [queryClient, authorName],
+  );
 
   useEffect(() => {
     const raw = { mag: appSettings?.magazzinoMaster, liste: appSettings?.mezziListe };
@@ -934,16 +935,6 @@ export function MagazzinoView() {
     saveMagazzinoChangeLog(logEntries);
   }, [logEntries, logPersistReady]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const syncFromSnapshot = () => {
-      setProdotti(() => getMagazzinoReportSnapshot().map((r) => ({ ...r })));
-      setLogEntries(loadMagazzinoChangeLog());
-    };
-    window.addEventListener(MAGAZZINO_PRODOTTI_REFRESH_EVENT, syncFromSnapshot);
-    return () => window.removeEventListener(MAGAZZINO_PRODOTTI_REFRESH_EVENT, syncFromSnapshot);
-  }, []);
-
   const marche = useMemo(
     () => mergeMasterWithRows(masterMarche, prodotti.map((p) => p.marca)),
     [masterMarche, prodotti],
@@ -987,8 +978,6 @@ export function MagazzinoView() {
     if (!newOpen) return null;
     return findFirstDuplicateByCodiceOriginale(prodotti, newForm.codiceFornitoreOriginale);
   }, [newOpen, prodotti, newForm.codiceFornitoreOriginale]);
-
-  const nuovoCodiceBloccaSalvataggio = Boolean(nuovoCodiceDupEsistente);
 
   const consumoMap = useMemo(
     () => buildConsumoMapMagazzinoRolling36ForProducts(logEntries, prodotti, new Date()),
@@ -1104,10 +1093,12 @@ export function MagazzinoView() {
       authorName,
     );
     const next = touch({ ...row, scorta: dopo });
-    setProdotti((prev) => prev.map((p) => (p.id === id ? next : p)));
+    patchProdotti((prev) => prev.map((p) => (p.id === id ? next : p)));
     void magazzinoService.update(id, ricambioUiToMagazzinoUpdate(next)).then((res) => {
       if (!res.success) window.alert(res.error ?? "Aggiornamento scorta non riuscito.");
-      else void queryClient.invalidateQueries({ queryKey: [...QK.magazzino] });
+      else void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+        cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
+      ]);
     });
     flashRow(id);
   }
@@ -1127,7 +1118,7 @@ export function MagazzinoView() {
       window.alert("La scorta non corrisponde più all’ultima registrazione: annullamento non disponibile.");
       return;
     }
-    setProdotti((prev) => prev.map((p) => (p.id === id ? touch({ ...p, scorta: parsed.prima }) : p)));
+    patchProdotti((prev) => prev.map((p) => (p.id === id ? touch({ ...p, scorta: parsed.prima }) : p)));
     markMagazzinoLogEntryAnnullato(entry.id);
   }
 
@@ -1155,10 +1146,12 @@ export function MagazzinoView() {
       return;
     }
     const ui = magazzinoRowToRicambioUI(updated.data, authorName);
-    setProdotti((prev) => prev.map((p) => (p.id === entry.ricambioId ? touch(ui) : p)));
+    patchProdotti((prev) => prev.map((p) => (p.id === entry.ricambioId ? touch(ui) : p)));
     markMagazzinoLogEntryAnnullato(entry.id);
     flashRow(entry.ricambioId);
-    void queryClient.invalidateQueries({ queryKey: [...QK.magazzino] });
+    void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+      cabSyncEventForEntity("magazzino_ricambi", entry.ricambioId, "entity_updated", "magazzino_ricambi"),
+    ]);
   }
 
   function openNewModal() {
@@ -1177,9 +1170,6 @@ export function MagazzinoView() {
   async function finalizeNewRicambio() {
     setNewListFieldInvalid(false);
     const r = ricambioFromFormLenient(newForm, newRicambioDraftId ?? undefined, authorName);
-    if (findFirstDuplicateByCodiceOriginale(prodotti, newForm.codiceFornitoreOriginale)) {
-      return;
-    }
     const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r));
     if (!created.success || !created.data) {
       window.alert(created.error ?? "Creazione ricambio non riuscita.");
@@ -1187,7 +1177,7 @@ export function MagazzinoView() {
     }
     const ui = magazzinoRowToRicambioUI(created.data, authorName);
     registerOrderIndex(ui.id);
-    setProdotti((prev) => [ui, ...prev]);
+    patchProdotti((prev) => [ui, ...prev]);
     setNewForm(emptyRicambioForm());
     setNewRicambioDraftId(null);
     setNewOpen(false);
@@ -1195,12 +1185,13 @@ export function MagazzinoView() {
     setNewIncompleteList([]);
     logImmediate(ui.id, ui.descrizione, "aggiunta", changesForNuovoRicambio(ui), authorName);
     flashRow(ui.id);
-    void queryClient.invalidateQueries({ queryKey: [...QK.magazzino] });
+    void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+      cabSyncEventForEntity("magazzino_ricambi", ui.id, "entity_created", "magazzino_ricambi"),
+    ]);
   }
 
   function submitNew(e: React.FormEvent) {
     e.preventDefault();
-    if (nuovoCodiceBloccaSalvataggio) return;
     void finalizeNewRicambio();
   }
 
@@ -1253,14 +1244,16 @@ export function MagazzinoView() {
       return;
     }
     const ui = magazzinoRowToRicambioUI(updated.data, authorName);
-    setProdotti((prev) => prev.map((p) => (p.id === detail.id ? touch(ui) : p)));
+    patchProdotti((prev) => prev.map((p) => (p.id === detail.id ? touch(ui) : p)));
     setEditDraft(null);
     setDetail({ id: detail.id, mode: "info" });
     if (changes.length > 0) {
       logImmediate(detail.id, ui.descrizione, "update", changes, authorName);
     }
     flashRow(detail.id);
-    void queryClient.invalidateQueries({ queryKey: [...QK.magazzino] });
+    void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+      cabSyncEventForEntity("magazzino_ricambi", detail.id, "entity_updated", "magazzino_ricambi"),
+    ]);
   }
 
   async function eliminaRicambio() {
@@ -1273,10 +1266,12 @@ export function MagazzinoView() {
       return;
     }
     logImmediate(detailRicambio.id, detailRicambio.descrizione, "rimozione", [], authorName);
-    setProdotti((prev) => prev.filter((p) => p.id !== detailRicambio.id));
+    patchProdotti((prev) => prev.filter((p) => p.id !== detailRicambio.id));
     setDetail(null);
     setEditDraft(null);
-    void queryClient.invalidateQueries({ queryKey: [...QK.magazzino] });
+    void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+      cabSyncEventForEntity("magazzino_ricambi", detailRicambio.id, "entity_deleted", "magazzino_ricambi"),
+    ]);
   }
 
   function closeDetail() {
@@ -1676,45 +1671,36 @@ export function MagazzinoView() {
                     </td>
                     <td className={gestionaleListTableTdAzioni}>
                       <div className={dsTableActionsGroup}>
-                        <button
-                          type="button"
-                          onClick={() => openInfo(p)}
-                          className={dsTableActionBtnInfo}
-                          title="Scheda informativa"
-                          aria-label="Scheda informativa"
-                        >
+                        <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                           <IconInfoMagazzino />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => undoLastScorta(p.id)}
-                          disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
+                        </IconActionButton>
+                        <IconActionButton
+                          label="Annulla"
+                          tooltipContent={magCanCreateRicambio ? "Annulla" : "Sola lettura"}
                           className={dsTableActionBtnUndo}
-                          title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : "Annulla l’ultima modifica di scorta (solo se registrata come singola operazione)"}
-                          aria-label="Annulla ultima modifica scorta"
+                          disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
+                          onClick={() => undoLastScorta(p.id)}
                         >
                           <IconUndoMagazzino />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => adjustScorta(p.id, -1)}
-                          disabled={!magCanCreateRicambio}
+                        </IconActionButton>
+                        <IconActionButton
+                          label="Diminuisci"
+                          tooltipContent={magCanCreateRicambio ? "Diminuisci" : "Sola lettura"}
                           className={dsTableActionBtnSecondary}
-                          title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : "Diminuisci scorta"}
-                          aria-label="Diminuisci scorta"
+                          disabled={!magCanCreateRicambio}
+                          onClick={() => adjustScorta(p.id, -1)}
                         >
                           −
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => adjustScorta(p.id, 1)}
-                          disabled={!magCanCreateRicambio}
+                        </IconActionButton>
+                        <IconActionButton
+                          label="Aumenta"
+                          tooltipContent={magCanCreateRicambio ? "Aumenta" : "Sola lettura"}
                           className={dsTableActionBtnPrimary}
-                          title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : "Aumenta scorta"}
-                          aria-label="Aumenta scorta"
+                          disabled={!magCanCreateRicambio}
+                          onClick={() => adjustScorta(p.id, 1)}
                         >
                           +
-                        </button>
+                        </IconActionButton>
                       </div>
                     </td>
                   </tr>
@@ -1800,45 +1786,36 @@ export function MagazzinoView() {
                     </p>
                   </div>
                   <div className={`${dsTableActionsGroup} shrink-0`} role="group" aria-label="Azioni">
-                  <button
-                    type="button"
-                    onClick={() => openInfo(p)}
-                    className={dsTableActionBtnInfo}
-                    title="Scheda informativa"
-                    aria-label="Scheda informativa"
-                  >
+                  <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                     <IconInfoMagazzino />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => undoLastScorta(p.id)}
-                    disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
+                  </IconActionButton>
+                  <IconActionButton
+                    label="Annulla"
+                    tooltipContent={magCanCreateRicambio ? "Annulla" : "Sola lettura"}
                     className={dsTableActionBtnUndo}
-                    title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : "Annulla l’ultima modifica di scorta (solo se registrata come singola operazione)"}
-                    aria-label="Annulla ultima modifica scorta"
+                    disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
+                    onClick={() => undoLastScorta(p.id)}
                   >
                     <IconUndoMagazzino />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => adjustScorta(p.id, -1)}
-                    disabled={!magCanCreateRicambio}
+                  </IconActionButton>
+                  <IconActionButton
+                    label="Diminuisci"
+                    tooltipContent={magCanCreateRicambio ? "Diminuisci" : "Sola lettura"}
                     className={dsTableActionBtnSecondary}
-                    title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : "Diminuisci scorta"}
-                    aria-label="Diminuisci scorta"
+                    disabled={!magCanCreateRicambio}
+                    onClick={() => adjustScorta(p.id, -1)}
                   >
                     −
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => adjustScorta(p.id, 1)}
-                    disabled={!magCanCreateRicambio}
+                  </IconActionButton>
+                  <IconActionButton
+                    label="Aumenta"
+                    tooltipContent={magCanCreateRicambio ? "Aumenta" : "Sola lettura"}
                     className={dsTableActionBtnPrimary}
-                    title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : "Aumenta scorta"}
-                    aria-label="Aumenta scorta"
+                    disabled={!magCanCreateRicambio}
+                    onClick={() => adjustScorta(p.id, 1)}
                   >
                     +
-                  </button>
+                  </IconActionButton>
                   </div>
                 </div>
               </CardMobile>
@@ -1911,8 +1888,6 @@ export function MagazzinoView() {
                 <button
                   type="submit"
                   className={`${erpBtnAccent} w-full disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
-                  disabled={nuovoCodiceBloccaSalvataggio}
-                  title={nuovoCodiceBloccaSalvataggio ? "Correggi il codice o apri il ricambio esistente" : undefined}
                 >
                   Salva in magazzino
                 </button>

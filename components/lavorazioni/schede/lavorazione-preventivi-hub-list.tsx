@@ -1,6 +1,6 @@
 "use client";
 
-import { CardMobile, CardMobileActions } from "@/components/design-system";
+import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
 import { GlobalTable, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import {
   dsScrollbar,
@@ -108,13 +108,7 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
             </td>
             <td className={dsTableTdActions}>
               <div className={dsTableActionsGroup}>
-                <button
-                  type="button"
-                  className={dsTableActionBtnPrimary}
-                  title="Apri nei Preventivi"
-                  aria-label="Apri nei Preventivi"
-                  onClick={() => onApriNeiPreventivi(p)}
-                >
+                <IconActionButton label="Apri" className={dsTableActionBtnPrimary} onClick={() => onApriNeiPreventivi(p)}>
                   <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                     <path
                       strokeLinecap="round"
@@ -122,7 +116,7 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
                       d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 0L21 3m0 0h-5.25M21 3v5.25"
                     />
                   </svg>
-                </button>
+                </IconActionButton>
               </div>
             </td>
           </tr>
@@ -159,13 +153,7 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
               </div>
             </dl>
             <CardMobileActions>
-              <button
-                type="button"
-                className={dsTableActionBtnPrimary}
-                title="Apri nei Preventivi"
-                aria-label="Apri nei Preventivi"
-                onClick={() => onApriNeiPreventivi(p)}
-              >
+              <IconActionButton label="Apri" className={dsTableActionBtnPrimary} onClick={() => onApriNeiPreventivi(p)}>
                 <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                   <path
                     strokeLinecap="round"
@@ -173,7 +161,7 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
                     d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 0L21 3m0 0h-5.25M21 3v5.25"
                   />
                 </svg>
-              </button>
+              </IconActionButton>
             </CardMobileActions>
           </CardMobile>
         ))}

@@ -7,19 +7,19 @@ export const CAB_MAGAZZINO_MASTER_REFRESH = "cab-magazzino-master-refresh";
 /** Evento: ricarica elenchi mezzi (clienti, marche, tipi, stati) da localStorage. */
 export const CAB_MEZZI_LISTE_REFRESH = "cab-mezzi-liste-refresh";
 
+/** @deprecated Preferire `dispatchGestionaleAction` + `persistSettingsRecord`. Nessun listener attivo. */
 export function dispatchLavorazioniPrefsRefresh(): void {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event(CAB_LAVORAZIONI_PREFS_REFRESH));
+  /* legacy no-op */
 }
 
+/** @deprecated Preferire `dispatchGestionaleAction` + `persistSettingsRecord`. Nessun listener attivo. */
 export function dispatchMagazzinoMasterRefresh(): void {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event(CAB_MAGAZZINO_MASTER_REFRESH));
+  /* legacy no-op */
 }
 
+/** @deprecated Preferire `dispatchGestionaleAction` + `persistSettingsRecord`. Nessun listener attivo. */
 export function dispatchMezziListeRefresh(): void {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event(CAB_MEZZI_LISTE_REFRESH));
+  /* legacy no-op */
 }
 
 /** Rinomina addetto su record lavorazioni (attive + storico) quando la vista è montata. */
@@ -38,13 +38,6 @@ export const CAB_DASHBOARD_SISTEMA_LOG_REFRESH = "cab-dashboard-sistema-log-refr
 export function dispatchDashboardSistemaLogRefresh(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(CAB_DASHBOARD_SISTEMA_LOG_REFRESH));
-}
-
-export const CAB_PREVENTIVI_REFRESH = "cab-preventivi-refresh";
-
-export function dispatchPreventiviRefresh(): void {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event(CAB_PREVENTIVI_REFRESH));
 }
 
 export const CAB_PREVENTIVI_LOG_REFRESH = "cab-preventivi-log-refresh";

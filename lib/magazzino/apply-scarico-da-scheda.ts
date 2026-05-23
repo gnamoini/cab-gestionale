@@ -1,54 +1,41 @@
-import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
-import { dispatchMagazzinoProdottiRefresh } from "@/lib/magazzino/magazzino-prodotti-refresh-event";
-import {
-  loadMagazzinoChangeLog,
-  MAGAZZINO_CHANGE_LOG_MAX,
-  saveMagazzinoChangeLog,
-  type MagazzinoChangeLogEntry,
-} from "@/lib/magazzino/magazzino-change-log-storage";
-import { getMagazzinoReportSnapshot, setMagazzinoReportSnapshot } from "@/lib/magazzino/magazzino-report-sync";
+"use client";
 
-export function applyMagazzinoScaricoDaScheda(opts: {
+import type { QueryClient } from "@tanstack/react-query";
+import {
+  cabSyncEventForEntity,
+  dispatchGestionaleLocalMutation,
+} from "@/lib/sync/gestionale-sync-dispatch";
+import { movimentiService } from "@/src/services/movimenti.service";
+
+export async function applyMagazzinoScaricoDaScheda(opts: {
   ricambioId: string;
+  lavorazioneId: string;
   quantita: number;
   autore: string;
   riepilogo: string;
-}): { ok: true } | { ok: false; error: string } {
-  if (typeof window === "undefined") return { ok: false, error: "Ambiente non disponibile" };
+  qc: QueryClient;
+}): Promise<{ ok: true } | { ok: false; error: string }> {
+  void opts.autore;
+  void opts.riepilogo;
   const qty = Math.round(Number(opts.quantita));
   if (!Number.isFinite(qty) || qty <= 0) return { ok: false, error: "Quantità non valida" };
 
-  const rows = getMagazzinoReportSnapshot();
-  const idx = rows.findIndex((r) => r.id === opts.ricambioId);
-  if (idx < 0) return { ok: false, error: "Ricambio non trovato nell'anagrafica magazzino" };
-  const p = rows[idx]!;
-  if (p.scorta < qty) return { ok: false, error: `Scorta insufficiente (disponibili ${p.scorta})` };
+  const res = await movimentiService.create({
+    ricambio_id: opts.ricambioId,
+    lavorazione_id: opts.lavorazioneId,
+    tipo: "uscita",
+    quantita: qty,
+  });
 
-  const now = new Date().toISOString();
-  const nuovaScorta = p.scorta - qty;
-  const nextP = {
-    ...p,
-    scorta: nuovaScorta,
-    dataUltimaModifica: now,
-    autoreUltimaModifica: opts.autore.trim() || "Gestionale",
-  };
-  const next = [...rows];
-  next[idx] = nextP;
-  setMagazzinoReportSnapshot(next);
+  if (!res.success || !res.data) {
+    return { ok: false, error: res.error ?? "Movimento magazzino non riuscito." };
+  }
 
-  const entry: MagazzinoChangeLogEntry = {
-    id: `log-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    tipo: "update",
-    ricambioId: p.id,
-    ricambio: p.descrizione,
-    autore: opts.autore.trim() || "Gestionale",
-    at: now,
-    riepilogo: opts.riepilogo,
-    changes: [{ campo: "Scorta", prima: String(p.scorta), dopo: String(nuovaScorta) }],
-  };
-  const log = loadMagazzinoChangeLog();
-  saveMagazzinoChangeLog([entry, ...log].slice(0, MAGAZZINO_CHANGE_LOG_MAX));
-  bumpReportDataRefresh();
-  dispatchMagazzinoProdottiRefresh();
+  const mov = res.data;
+  dispatchGestionaleLocalMutation(opts.qc, ["movimenti_ricambi", "magazzino_ricambi", "lavorazioni"], [
+    cabSyncEventForEntity("movimenti_ricambi", mov.id, "entity_created", "movimenti_ricambi"),
+    cabSyncEventForEntity("magazzino_ricambi", opts.ricambioId, "entity_updated", "magazzino_ricambi"),
+  ]);
+
   return { ok: true };
 }

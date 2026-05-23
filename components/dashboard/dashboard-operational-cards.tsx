@@ -5,11 +5,8 @@ import { useMemo } from "react";
 import { dsFocus, dsSurfaceInteractiveKpi, dsSurfacePanel, dsTypoSmall } from "@/lib/ui/design-system";
 import { DashboardTasksPanel } from "@/components/dashboard/dashboard-tasks-panel";
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
-import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
-import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
-import { useMagazzinoListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
-import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
@@ -19,33 +16,10 @@ const cardClass = `${dsSurfaceInteractiveKpi} ${dsFocus}`;
 const kpiCardBadgeClass =
   "rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[color:color-mix(in_srgb,var(--cab-primary)_95%,var(--cab-text))]";
 
-function macchinaLabel(row: { mezzo: { marca: string; modello: string } | null }): string {
-  const m = row.mezzo;
-  return m ? `${m.marca} ${m.modello}`.trim() : "—";
-}
-
 export function DashboardOperationalCards() {
   const staging = isStagingPublicSlice();
   const globalOpts = useGlobalOptions({ debugTag: "DashboardOperationalCards" });
-  const magazzinoQ = useMagazzinoListQuery();
-  const lavFilters = useMemo(
-    () => ({
-      includeMezzo: true as const,
-      archived: false as const,
-    }),
-    [],
-  );
-  const lavQuery = useLavorazioniList(lavFilters, { staleTime: 30_000 });
-  const rows = lavQuery.data ?? [];
-  const preview = useMemo(() => rows.slice(0, 3), [rows]);
-
-  const magStats = useMemo(() => {
-    if (staging) return { sotto: 0, cap: 0, tot: 0 };
-    const items = (magazzinoQ.data ?? []).map((row) => magazzinoRowToRicambioUI(row));
-    const sotto = items.filter((p) => p.scortaMinima > 0 && p.scorta < p.scortaMinima).length;
-    const cap = items.reduce((acc, r) => acc + capitaleImmobilizzato(r), 0);
-    return { sotto, cap, tot: items.length };
-  }, [staging, magazzinoQ.data]);
+  const { lavCount, preview, magStats, isLoading, isError } = useDashboardMetrics();
 
   const eur = useMemo(
     () =>
@@ -64,11 +38,11 @@ export function DashboardOperationalCards() {
           <h2 className={`${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-primary)]`}>Lavorazioni attive</h2>
           <span className={kpiCardBadgeClass}>Operativo</span>
         </div>
-        <p className="mt-3 text-3xl font-semibold tabular-nums text-[color:var(--cab-text)]">{rows.length}</p>
+        <p className="mt-3 text-3xl font-semibold tabular-nums text-[color:var(--cab-text)]">{lavCount}</p>
         <ul className="mt-4 flex-1 space-y-2 text-sm text-[color:color-mix(in_srgb,var(--cab-text-muted)_35%,var(--cab-text))]">
-          {lavQuery.isLoading ? (
+          {isLoading ? (
             <li className="text-[color:var(--cab-text-muted)]">Caricamento…</li>
-          ) : lavQuery.isError ? (
+          ) : isError ? (
             <li className="text-[color:var(--cab-danger)]">Impossibile caricare le lavorazioni. Riprova più tardi.</li>
           ) : preview.length === 0 ? (
             <li className="text-[color:var(--cab-text-muted)]">Nessuna lavorazione attiva.</li>
@@ -80,75 +54,42 @@ export function DashboardOperationalCards() {
                   style={{ backgroundColor: statoDisplayColor(r.stato, globalOpts.lavorazioni.stati) }}
                   aria-hidden
                 />
-                <span>
-                  <span className="font-medium text-[color:var(--cab-text)]">{formatTitleCasePhrase(macchinaLabel(r))}</span>
-                  <span className="text-[color:var(--cab-text-muted)]"> — </span>
-                  <span className="text-[color:var(--cab-text-muted)]">
-                    {formatTitleCasePhrase(statoLavorazioneLabel(r.stato, globalOpts.lavorazioni.stati))}
-                  </span>
+                <span className="min-w-0 truncate">
+                  <span className="font-medium text-[color:var(--cab-text)]">{formatTitleCasePhrase(r.macchina)}</span>
+                  <span className="text-[color:var(--cab-text-muted)]"> · {statoLavorazioneLabel(r.stato, globalOpts.lavorazioni.stati)}</span>
                 </span>
               </li>
             ))
           )}
         </ul>
-        <p className={`mt-3 ${dsTypoSmall} font-semibold text-[color:var(--cab-primary)] group-hover:underline`}>Apri lavorazioni →</p>
       </Link>
 
-      {staging ? (
-        <div
-          className={`${dsSurfacePanel} cursor-not-allowed border-dashed opacity-90`}
-          aria-label="Magazzino non disponibile in staging"
-        >
-          <div className="flex items-start justify-between gap-2">
-            <h2 className={`${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}>Magazzino</h2>
-            <span className="rounded-full bg-zinc-200 px-2 py-0.5 text-[10px] font-bold uppercase text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200">
-              In aggiornamento
-            </span>
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-[color:var(--cab-text-muted)]">
-            Modulo non disponibile in questo ambiente.
-          </p>
-        </div>
-      ) : (
-        <Link href="/magazzino" className={cardClass} aria-label="Apri magazzino">
-          <div className="flex items-start justify-between gap-2">
-            <h2 className={`${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-primary)]`}>Magazzino / giacenze</h2>
-            <span className={kpiCardBadgeClass}>Stock</span>
-          </div>
-          <div className="mt-3 space-y-2">
-            <div>
-              <p className="text-3xl font-semibold tabular-nums text-[color:var(--cab-text)]">{magStats.sotto}</p>
-              <p className={`${dsTypoSmall} font-medium`}>Avvisi giacenza (sotto scorta minima)</p>
-            </div>
-            <div className="flex flex-wrap gap-x-4 gap-y-1 border-t border-[color:var(--cab-border)] pt-3 text-sm">
-              <div>
-                <p className="text-lg font-semibold tabular-nums text-[color:var(--cab-text)]">{eur}</p>
-                <p className={dsTypoSmall}>Capitale immobilizzato</p>
-              </div>
-              <div>
-                <p className="text-lg font-semibold tabular-nums text-[color:var(--cab-text)]">{magStats.tot}</p>
-                <p className={dsTypoSmall}>Articoli in anagrafica</p>
-              </div>
-            </div>
-          </div>
-          <p className={`mt-auto pt-3 ${dsTypoSmall} font-semibold text-[color:var(--cab-primary)] group-hover:underline`}>Apri magazzino →</p>
-        </Link>
-      )}
-
-      <div className={`${dsSurfacePanel} md:col-span-2 xl:col-span-1`}>
+      <Link href="/magazzino" className={cardClass} aria-label="Apri magazzino">
         <div className="flex items-start justify-between gap-2">
-          <h2 className={`${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-primary)]`}>Cose da fare</h2>
-          <span className={kpiCardBadgeClass}>Note</span>
+          <h2 className={`${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-primary)]`}>Magazzino</h2>
+          <span className={kpiCardBadgeClass}>Stock</span>
         </div>
-        <div className="mt-3 min-h-0 flex-1">
-          {staging ? (
-            <p className="rounded-lg border border-dashed border-zinc-200 px-3 py-4 text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-              Le attività rapide su dashboard non sono disponibili in questo ambiente.
-            </p>
-          ) : (
-            <DashboardTasksPanel />
-          )}
-        </div>
+        {staging ? (
+          <p className="mt-3 text-sm text-[color:var(--cab-text-muted)]">Anteprima disabilitata in staging pubblico.</p>
+        ) : (
+          <>
+            <p className="mt-3 text-3xl font-semibold tabular-nums text-[color:var(--cab-text)]">{magStats.tot}</p>
+            <div className={`${dsSurfacePanel} mt-4 space-y-1.5 p-3 text-sm`}>
+              <p className="flex justify-between gap-2">
+                <span className="text-[color:var(--cab-text-muted)]">Sotto scorta</span>
+                <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">{magStats.sotto}</span>
+              </p>
+              <p className="flex justify-between gap-2">
+                <span className="text-[color:var(--cab-text-muted)]">Capitale immobilizzato</span>
+                <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">{eur}</span>
+              </p>
+            </div>
+          </>
+        )}
+      </Link>
+
+      <div className={`${dsSurfacePanel} flex min-h-[12rem] flex-col p-4`}>
+        <DashboardTasksPanel />
       </div>
     </div>
   );

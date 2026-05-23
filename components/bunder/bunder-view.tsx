@@ -16,7 +16,8 @@ import { bunderKindLabel, BUNDER_DOC_KIND_OPTIONS } from "@/lib/bunder/doc-kind-
 import type { BunderCommercialDocument, BunderDocKind } from "@/lib/bunder/types";
 import { loadBunderDocuments, saveBunderDocuments } from "@/lib/bunder/bunder-storage";
 import { CAB_BUNDER_LOG_REFRESH } from "@/lib/sistema/cab-events";
-import { getMagazzinoReportSnapshot, subscribeMagazzinoReportSync } from "@/lib/magazzino/magazzino-report-sync";
+import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import {
   dsBtnNeutral,
   dsBtnPrimary,
@@ -43,7 +44,7 @@ import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-siz
 import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
-import { Drawer } from "@/components/design-system";
+import { Drawer, IconActionButton, Tooltip } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
@@ -209,7 +210,9 @@ export function BunderView() {
   const { authorName: autore } = useAuth();
   const authorTrim = autore.trim() || "Operatore";
   const [docs, setDocs] = useState<BunderCommercialDocument[]>(() => (typeof window !== "undefined" ? loadBunderDocuments() : []));
-  const [mag, setMag] = useState(() => (typeof window !== "undefined" ? getMagazzinoReportSnapshot() : []));
+  const viewOpts = useViewQueryOpts({ staleTime: 90_000 });
+  const magazzinoQ = useMagazzinoRicambiUIQuery(undefined, viewOpts);
+  const mag = magazzinoQ.data ?? [];
   const [search, setSearch] = useState("");
   const [filtriOpen, setFiltriOpen] = useState(false);
   const [filtroDraft, setFiltroDraft] = useState<FiltriDraft>(DRAFT_EMPTY);
@@ -239,10 +242,6 @@ export function BunderView() {
 
   const [logOpen, setLogOpen] = useState(false);
   const [logEntries, setLogEntries] = useState<BunderLogStored[]>(() => (typeof window !== "undefined" ? loadBunderChangeLog() : []));
-
-  useEffect(() => {
-    return subscribeMagazzinoReportSync(() => setMag(getMagazzinoReportSnapshot()));
-  }, []);
 
   useEffect(() => {
     function onLog() {
@@ -891,36 +890,36 @@ export function BunderView() {
                     </td>
                     <td className={dsTableTdActions}>
                       <div className={dsTableActionsGroup}>
-                        <button type="button" className={dsTableActionBtnPrimary} title="Apri / modifica" aria-label="Apri modifica" onClick={() => setEditor({ open: true, doc: d })}>
+                        <IconActionButton label="Modifica" className={dsTableActionBtnPrimary} onClick={() => setEditor({ open: true, doc: d })}>
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
-                        </button>
-                        <button type="button" className={dsTableActionBtnSecondary} title="PDF" aria-label="Apri PDF" onClick={() => rowPdf(d)}>
+                        </IconActionButton>
+                        <IconActionButton label="PDF" className={dsTableActionBtnSecondary} onClick={() => rowPdf(d)}>
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                           </svg>
-                        </button>
-                        <button type="button" className={dsTableActionBtnSecondary} title="Word" aria-label="Apri Word" onClick={() => rowWord(d)}>
+                        </IconActionButton>
+                        <IconActionButton label="Word" className={dsTableActionBtnSecondary} onClick={() => rowWord(d)}>
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
-                        </button>
-                        <button type="button" className={dsTableActionBtnSecondary} title="Duplica" aria-label="Duplica" onClick={() => duplica(d)}>
+                        </IconActionButton>
+                        <IconActionButton label="Duplica" className={dsTableActionBtnSecondary} onClick={() => duplica(d)}>
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m0 4h6a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2v-6" />
                           </svg>
-                        </button>
-                        <button type="button" className={dsTableActionBtnSecondary} title="Crea nuovo da questo" aria-label="Crea nuovo da questo" onClick={() => nuovoDa(d)}>
+                        </IconActionButton>
+                        <IconActionButton label="Nuovo" className={dsTableActionBtnSecondary} onClick={() => nuovoDa(d)}>
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
                           </svg>
-                        </button>
-                        <button type="button" className={dsTableActionBtnDanger} title="Elimina" aria-label="Elimina" onClick={() => elimina(d)}>
+                        </IconActionButton>
+                        <IconActionButton label="Elimina" className={dsTableActionBtnDanger} onClick={() => elimina(d)}>
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
-                        </button>
+                        </IconActionButton>
                       </div>
                     </td>
                   </tr>
@@ -993,18 +992,19 @@ export function BunderView() {
                             atIso: entry.atIso,
                           }}
                           trailing={
-                            <button
-                              type="button"
-                              className={logEntryDismissBtnClass}
-                              aria-label="Rimuovi voce"
-                              title="Rimuovi voce"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (window.confirm("Rimuovere questa voce dal log?")) removeBunderChangeLogEntryById(entry.id);
-                              }}
-                            >
-                              ×
-                            </button>
+                            <Tooltip content="Rimuovi">
+                              <button
+                                type="button"
+                                className={logEntryDismissBtnClass}
+                                aria-label="Rimuovi voce"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm("Rimuovere questa voce dal log?")) removeBunderChangeLogEntryById(entry.id);
+                                }}
+                              >
+                                ×
+                              </button>
+                            </Tooltip>
                           }
                         />
                       </li>

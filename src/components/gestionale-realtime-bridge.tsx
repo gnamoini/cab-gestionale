@@ -1,9 +1,17 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
+import { useToast } from "@/context/toast-context";
 import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
+import {
+  appSettingsChangeFingerprint,
+  isOwnAppSettingsWrite,
+  REMOTE_SETTINGS_NOTIFY_DEBOUNCE_MS,
+  shouldShowRemoteSettingsToast,
+} from "@/lib/realtime/app-settings-realtime-handlers";
 import {
   GESTIONALE_REALTIME_DEBOUNCE_MS,
   GESTIONALE_REALTIME_POLL_MS,
@@ -16,27 +24,38 @@ import {
   subscribePostgresChangesChannel,
   type PostgresChangePayload,
 } from "@/lib/realtime/postgres-changes-channel";
-import {
-  broadcastCabSyncEvent,
-  broadcastGestionaleInvalidate,
-  subscribeGestionaleBroadcast,
-} from "@/lib/sync/cab-realtime-broadcast";
-import { cabSyncEventFromPostgresChange, emitCabSyncEvent } from "@/lib/sync/cab-sync-bus";
-import { dispatchGestionaleRemoteChange } from "@/lib/sync/gestionale-sync-dispatch";
+import { shouldSuppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
+import { subscribeGestionaleBroadcast } from "@/lib/sync/cab-realtime-broadcast";
+import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
+import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
+import { refetchActiveOperationalSnapshot } from "@/lib/sync/gestionale-snapshot-recovery";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
+import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 
 const RECONNECT_MAX_ATTEMPTS = 5;
 
 /**
- * Bridge Realtime globale: invalida cache React Query su cambi DB condivisi.
- * Fallback polling solo se la subscription Realtime non è disponibile.
+ * Bridge Realtime unificato: tabelle operative + `app_settings`.
+ * Invalidazione via `dispatchGestionaleAction` → `invalidate-targets`.
  */
 export function GestionaleRealtimeBridge() {
   const qc = useQueryClient();
   const { user, status } = useAuth();
-  const { setGestionaleStatus } = useRealtimeStatus();
+  const { push } = useToast();
+  const pushRef = useRef(push);
+  pushRef.current = push;
+  const pathname = usePathname();
+  const { isOpen: settingsModalOpen } = useSettingsModalOpen();
+  const { setGestionaleStatus, setSettingsStatus } = useRealtimeStatus();
   const authReady = isAuthSessionEstablished(status) && !!user?.id;
+  const rtConnectedRef = useRef(false);
+  const settingsModalOpenRef = useRef(settingsModalOpen);
+  settingsModalOpenRef.current = settingsModalOpen;
+  const onSettingsPageRef = useRef(false);
+  onSettingsPageRef.current = pathname?.startsWith("/impostazioni") ?? false;
+  const userIdRef = useRef(user?.id);
+  userIdRef.current = user?.id;
 
   useEffect(() => {
     if (!authReady || !isSupabasePublicEnvConfigured()) return;
@@ -44,18 +63,42 @@ export function GestionaleRealtimeBridge() {
     let cancelled = false;
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+    let remoteSettingsNotifyTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let activeChannel: Awaited<ReturnType<typeof subscribePostgresChangesChannel>>["channel"] | null = null;
     let reconnecting = false;
     let reconnectAttempts = 0;
+    let wasPolling = false;
     const pendingTables = new Set<string>();
     const pendingCabEvents: ReturnType<typeof cabSyncEventFromPostgresChange>[] = [];
+    const pendingEntityIdByTable = new Map<string, string>();
     const recentFingerprints = new Map<string, number>();
     const PRUNE_MS = 5000;
 
+    const setConnectionStatus = (next: "connected" | "polling" | "idle") => {
+      setGestionaleStatus(next);
+      setSettingsStatus(next);
+    };
+
+    const isSettingsEditorActive = () =>
+      settingsModalOpenRef.current || onSettingsPageRef.current || shouldSuppressSettingsRemoteNotify();
+
+    const scheduleRemoteSettingsNotify = () => {
+      if (isSettingsEditorActive()) return;
+      if (remoteSettingsNotifyTimer) return;
+      remoteSettingsNotifyTimer = setTimeout(() => {
+        remoteSettingsNotifyTimer = null;
+        if (cancelled || isSettingsEditorActive()) return;
+        if (!shouldShowRemoteSettingsToast()) return;
+        pushRef.current("Un utente ha aggiornato le impostazioni", "info", 4500);
+      }, REMOTE_SETTINGS_NOTIFY_DEBOUNCE_MS);
+    };
+
     const startPollingFallback = () => {
       if (pollTimer) return;
-      setGestionaleStatus("polling");
+      wasPolling = true;
+      rtConnectedRef.current = false;
+      setConnectionStatus("polling");
       pollTimer = setInterval(() => {
         if (cancelled) return;
         invalidateAllGestionaleOperationalQueries(qc);
@@ -76,17 +119,24 @@ export function GestionaleRealtimeBridge() {
       pendingTables.clear();
       pendingCabEvents.length = 0;
 
-      dispatchGestionaleRemoteChange(qc, tables, cabEvents[0] ?? undefined, {
-        emitLocalCabSync: true,
-        cabSyncEvents: cabEvents.slice(1),
+      const entityIdByTable = new Map(pendingEntityIdByTable);
+      pendingEntityIdByTable.clear();
+
+      dispatchGestionaleAction(qc, tables, {
+        source: "realtime",
+        cabSyncEvents: cabEvents,
+        entityIdByTable,
       });
-      broadcastGestionaleInvalidate(tables);
-      for (const ev of cabEvents) broadcastCabSyncEvent(ev);
     };
 
     const scheduleInvalidate = (table: string, cabEvent?: ReturnType<typeof cabSyncEventFromPostgresChange>) => {
       pendingTables.add(table);
-      if (cabEvent) pendingCabEvents.push(cabEvent);
+      if (cabEvent) {
+        pendingCabEvents.push(cabEvent);
+        if (cabEvent.type !== "settings_updated" && cabEvent.table && cabEvent.id) {
+          pendingEntityIdByTable.set(cabEvent.table, cabEvent.id);
+        }
+      }
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => {
         debounceTimer = null;
@@ -96,6 +146,25 @@ export function GestionaleRealtimeBridge() {
 
     const onPayload = (table: string, payload: PostgresChangePayload) => {
       if (cancelled) return;
+
+      if (table === "app_settings") {
+        if (shouldSuppressSettingsRemoteNotify()) return;
+        if (isOwnAppSettingsWrite(userIdRef.current, payload)) return;
+        if (isSettingsEditorActive()) return;
+
+        const settingsFp = appSettingsChangeFingerprint(payload);
+        const now = Date.now();
+        for (const [k, t] of recentFingerprints) {
+          if (now - t > PRUNE_MS) recentFingerprints.delete(k);
+        }
+        if (recentFingerprints.has(settingsFp)) return;
+        recentFingerprints.set(settingsFp, now);
+
+        const cabEvent = cabSyncEventFromPostgresChange(table, payload) ?? { type: "settings_updated" as const };
+        scheduleInvalidate(table, cabEvent);
+        scheduleRemoteSettingsNotify();
+        return;
+      }
 
       const fp = postgresChangeFingerprint(table, payload);
       const now = Date.now();
@@ -137,7 +206,14 @@ export function GestionaleRealtimeBridge() {
         retryAttempts: GESTIONALE_REALTIME_RETRY_ATTEMPTS,
         logPrefix: "[gestionale rt]",
         onStatusChange: (s) => {
-          if (!cancelled) setGestionaleStatus(s === "connected" ? "connected" : "polling");
+          if (cancelled) return;
+          const next = s === "connected" ? "connected" : "polling";
+          rtConnectedRef.current = next === "connected";
+          if (next === "connected" && wasPolling) {
+            wasPolling = false;
+            refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+          }
+          setConnectionStatus(next);
         },
         onPollingFallback: () => {
           if (!cancelled) {
@@ -149,7 +225,8 @@ export function GestionaleRealtimeBridge() {
         },
         onChannelLost: () => {
           if (cancelled) return;
-          setGestionaleStatus("polling");
+          rtConnectedRef.current = false;
+          setConnectionStatus("polling");
           void removeActiveChannel().then(() => {
             if (cancelled) return;
             if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
@@ -179,20 +256,24 @@ export function GestionaleRealtimeBridge() {
         activeChannel = channel;
         reconnectAttempts = 0;
         stopPollingFallback();
-        setGestionaleStatus("connected");
+        rtConnectedRef.current = true;
+        if (wasPolling) {
+          wasPolling = false;
+          refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+        }
+        setConnectionStatus("connected");
       } else {
         startPollingFallback();
       }
     };
 
     const unsubBroadcast = subscribeGestionaleBroadcast({
-      onInvalidate: (tables) => {
+      onInvalidate: (tables, _sourceTabId, entityIdByTable) => {
         if (cancelled) return;
-        dispatchGestionaleRemoteChange(qc, tables);
-      },
-      onCabSync: (event) => {
-        if (cancelled) return;
-        emitCabSyncEvent(event);
+        dispatchGestionaleAction(qc, tables, {
+          source: "broadcast",
+          entityIdByTable,
+        });
       },
     });
 
@@ -200,16 +281,19 @@ export function GestionaleRealtimeBridge() {
 
     return () => {
       cancelled = true;
+      rtConnectedRef.current = false;
       if (debounceTimer) clearTimeout(debounceTimer);
+      if (remoteSettingsNotifyTimer) clearTimeout(remoteSettingsNotifyTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
       stopPollingFallback();
       unsubBroadcast();
       pendingTables.clear();
       pendingCabEvents.length = 0;
-      setGestionaleStatus("idle");
+      pendingEntityIdByTable.clear();
+      setConnectionStatus("idle");
       void removeActiveChannel();
     };
-  }, [authReady, qc, setGestionaleStatus, user?.id]);
+  }, [authReady, pathname, qc, setGestionaleStatus, setSettingsStatus, settingsModalOpen, user?.id]);
 
   return null;
 }

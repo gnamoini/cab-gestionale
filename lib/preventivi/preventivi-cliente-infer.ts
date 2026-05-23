@@ -56,7 +56,7 @@ function meanManodoperaSconto(list: PreventivoRecord[], maxN: number): number {
  */
 export function inferEconomiciClientePreventivi(
   cliente: string,
-  tutti: PreventivoRecord[],
+  tutti: readonly PreventivoRecord[],
   excludeId?: string,
   defaultScontoRicambiCliente = 0,
 ): {

@@ -227,9 +227,11 @@ export function RicambioFormFields({
         {codiceOriginaleAvvisoDuplicato ? (
           <div
             className="mt-2 rounded-lg border border-amber-200/95 bg-amber-50/95 p-3 shadow-sm dark:border-amber-800/55 dark:bg-amber-950/35"
-            role="alert"
+            role="status"
           >
-            <p className="text-sm font-semibold text-amber-950 dark:text-amber-50">Codice già presente in magazzino</p>
+            <p className="text-sm font-semibold text-amber-950 dark:text-amber-50">
+              ⚠ Entità simile già esistente — codice già presente in magazzino
+            </p>
             <dl className="mt-2 space-y-1 text-xs text-amber-950/95 dark:text-amber-100/95">
               <div className="flex gap-2">
                 <dt className="shrink-0 font-medium text-amber-900/80 dark:text-amber-200/90">Marca</dt>

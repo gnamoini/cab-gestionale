@@ -47,6 +47,8 @@ export type MezzoRow = {
   tipo_attrezzatura: string | null;
   anno: number | null;
   meta: Record<string, unknown> | null;
+  /** Chiave normalizzata per dedupe/ricerca (Global Validation Layer). */
+  entity_key?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -101,6 +103,8 @@ export type MagazzinoRicambioRow = {
   prezzo_vendita: number | null;
   consumo_medio_mensile: number | null;
   meta: Record<string, unknown>;
+  /** Chiave normalizzata per dedupe/ricerca (Global Validation Layer). */
+  entity_key?: string | null;
   created_at: string;
   updated_at: string;
 };

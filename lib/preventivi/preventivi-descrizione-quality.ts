@@ -1,6 +1,6 @@
-import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { normPhrase, loadPreventiviLearning } from "@/lib/preventivi/preventivi-learning-storage";
 import type { DescrizionePreventivoContext } from "@/lib/preventivi/preventivi-descrizione-aggregator";
+import type { PreventivoRecord } from "@/lib/preventivi/types";
 
 /** Correzioni ortografiche frequenti (officina / referti tecnici). */
 const TYPO_REPLACEMENTS: readonly (readonly [RegExp, string])[] = [
@@ -57,14 +57,16 @@ function parseClienteLines(testo: string): string[] {
  */
 export function lookupSimilarFullDescription(
   technicalRaw: string,
-  ctx?: Pick<DescrizionePreventivoContext, "lavorazioneId">,
+  ctx?: Pick<DescrizionePreventivoContext, "lavorazioneId" | "existingPreventiviRecords">,
 ): string | null {
   const norm = normPhrase(technicalRaw);
   if (norm.length < 12) return null;
 
   let best: { score: number; text: string } | null = null;
 
-  for (const p of loadPreventivi()) {
+  const records: readonly PreventivoRecord[] = ctx?.existingPreventiviRecords ?? [];
+
+  for (const p of records) {
     if (ctx?.lavorazioneId && p.lavorazioneId === ctx.lavorazioneId) continue;
     const src = normPhrase(p.descrizioneLavorazioniTecnicaSorgente);
     const out = p.descrizioneLavorazioniCliente.trim();
@@ -101,7 +103,9 @@ export function lookupSimilarLineForChunk(chunk: string, ctx: DescrizionePrevent
     if (!best || score > best.score) best = { score, line: polished };
   };
 
-  for (const p of loadPreventivi()) {
+  const records: readonly PreventivoRecord[] = ctx?.existingPreventiviRecords ?? [];
+
+  for (const p of records) {
     if (p.lavorazioneId && p.lavorazioneId === ctx.lavorazioneId) continue;
     const techParts = p.descrizioneLavorazioniTecnicaSorgente.split(/[+;,\n\r]+/);
     const clientLines = parseClienteLines(p.descrizioneLavorazioniCliente);

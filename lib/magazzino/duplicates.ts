@@ -1,14 +1,23 @@
+import { buildRicambioCodiceEntityKey } from "@/lib/validation/entity-keys";
+import { entityAutocompleteKey, normalizeEntityString } from "@/lib/validation/global-entity-validation";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 
 /**
  * Normalizza il codice fornitore originale per confronto:
  * trim, case-insensitive, spazi interni compressi (doppi spazi → uno).
+ * @deprecated Preferire `buildRicambioCodiceEntityKey` / `normalizeEntityString`.
  */
 export function normalizeMagazzinoCodiceOE(value: string): string {
-  return value
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ");
+  return normalizeEntityString(value).replace(/\s+/g, " ");
+}
+
+function codiceMatchKey(codiceRaw: string): string {
+  const entityKey = buildRicambioCodiceEntityKey(codiceRaw);
+  if (entityKey) {
+    const pipe = entityKey.indexOf("|");
+    return pipe >= 0 ? entityKey.slice(0, pipe) : entityKey;
+  }
+  return normalizeMagazzinoCodiceOE(codiceRaw);
 }
 
 /** Primo ricambio in elenco con stesso codice OE normalizzato (escluso `excludeId` se presente). */
@@ -17,11 +26,14 @@ export function findFirstDuplicateByCodiceOriginale(
   codiceRaw: string,
   options?: { excludeId?: string },
 ): RicambioMagazzino | null {
-  const key = normalizeMagazzinoCodiceOE(codiceRaw);
-  if (!key) return null;
+  const key = codiceMatchKey(codiceRaw);
+  const looseKey = entityAutocompleteKey(codiceRaw);
+  if (!key && !looseKey) return null;
   for (const item of items) {
     if (options?.excludeId && item.id === options.excludeId) continue;
-    if (normalizeMagazzinoCodiceOE(item.codiceFornitoreOriginale) === key) return item;
+    const itemKey = codiceMatchKey(item.codiceFornitoreOriginale);
+    if (key && itemKey === key) return item;
+    if (looseKey && entityAutocompleteKey(item.codiceFornitoreOriginale) === looseKey) return item;
   }
   return null;
 }
@@ -40,7 +52,7 @@ export type MagazzinoArchiveDuplicateCodeGroup = {
 export function analyzeArchiveDuplicateCodes(items: RicambioMagazzino[]): MagazzinoArchiveDuplicateCodeGroup[] {
   const map = new Map<string, RicambioMagazzino[]>();
   for (const it of items) {
-    const k = normalizeMagazzinoCodiceOE(it.codiceFornitoreOriginale);
+    const k = codiceMatchKey(it.codiceFornitoreOriginale);
     if (!k) continue;
     const arr = map.get(k);
     if (arr) arr.push(it);

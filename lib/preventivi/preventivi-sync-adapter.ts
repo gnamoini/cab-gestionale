@@ -1,9 +1,9 @@
 "use client";
 
+import type { QueryClient } from "@tanstack/react-query";
 import { isPreventiviDbPrimary } from "@/lib/preventivi/preventivi-db-primary";
 import {
   isPreventivoUuid,
-  mergePreventivoRecords,
   preventivoRecordToInsert,
   preventivoRecordToUpdate,
   preventivoRowToRecord,
@@ -11,41 +11,72 @@ import {
 import {
   appendPreventivo as appendLocal,
   deletePreventivo as deleteLocal,
-  loadPreventivi,
   upsertPreventivo as upsertLocal,
 } from "@/lib/preventivi/preventivi-storage";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
+import { lavorazioneListRowToAttiva } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import { lavorazioneMatchesMezzo, normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { getLavorazioniMezziSnapshot } from "@/lib/mezzi/lavorazioni-sync";
 import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
-import { dispatchPreventiviRefresh } from "@/lib/sistema/cab-events";
+import {
+  cabSyncEventForEntity,
+  dispatchGestionaleLocalMutation,
+} from "@/lib/sync/gestionale-sync-dispatch";
 import { preventiviService } from "@/src/services/preventivi.service";
 import type { PreventiviFilters } from "@/src/services/preventivi.service";
+import { lavorazioniService, type LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 
 export const PREVENTIVI_CONCURRENCY_CONFLICT =
   "Un altro utente ha aggiornato questo preventivo. Ricarica e riprova.";
 
-function resolveMezzoIdForRecord(
+export type PreventivoPersistOptions = {
+  expectedUpdatedAt?: string;
+  skipDb?: boolean;
+  queryClient?: QueryClient;
+  skipDispatch?: boolean;
+};
+
+export type PreventivoRemoveOptions = {
+  queryClient?: QueryClient;
+  skipDispatch?: boolean;
+};
+
+function notifyPreventiviMutation(
+  qc: QueryClient | undefined,
+  id: string,
+  type: "entity_created" | "entity_updated" | "entity_deleted",
+  skipDispatch?: boolean,
+): void {
+  if (!qc || skipDispatch) return;
+  dispatchGestionaleLocalMutation(qc, ["preventivi"], [
+    cabSyncEventForEntity("preventivi", id, type, "preventivi"),
+  ]);
+}
+
+async function resolveMezzoIdForRecord(
   record: PreventivoRecord,
   mezziRows: readonly MezzoRow[],
-): string | null {
-  const det = record as PreventivoRecord & { mezzoId?: string };
+): Promise<string | null> {
   const stored = (record as unknown as { mezzoId?: string }).mezzoId;
   if (typeof stored === "string" && isPreventivoUuid(stored)) return stored;
 
   const gestiti: MezzoGestito[] = mezziRows.map((r) => toMezzoUI(r));
-  const snap = getLavorazioniMezziSnapshot();
-  const lav =
-    snap.attive.find((l) => l.id === record.lavorazioneId) ??
-    snap.storico.find((l) => l.id === record.lavorazioneId);
-  if (lav) {
-    const m = findMezzoForLavorazione(gestiti, lav);
-    if (m?.id && isPreventivoUuid(m.id)) return m.id;
-    const hit = gestiti.find((g) => lavorazioneMatchesMezzo(g, lav));
-    if (hit?.id && isPreventivoUuid(hit.id)) return hit.id;
+
+  if (isPreventivoUuid(record.lavorazioneId)) {
+    const lavRes = await lavorazioniService.getById(record.lavorazioneId);
+    if (lavRes.success && lavRes.data) {
+      const row = lavRes.data;
+      if (row.mezzo_id && isPreventivoUuid(row.mezzo_id)) return row.mezzo_id;
+      const mezzoRow = mezziRows.find((m) => m.id === row.mezzo_id) ?? null;
+      const listRow = { ...row, mezzo: mezzoRow } as LavorazioneListRow;
+      const lav = lavorazioneListRowToAttiva(listRow);
+      const m = findMezzoForLavorazione(gestiti, lav);
+      if (m?.id && isPreventivoUuid(m.id)) return m.id;
+      const hit = gestiti.find((g) => lavorazioneMatchesMezzo(g, lav));
+      if (hit?.id && isPreventivoUuid(hit.id)) return hit.id;
+    }
   }
 
   const clienteKey = normMezzoKey(record.cliente);
@@ -99,9 +130,12 @@ async function syncRecordToDb(
   record: PreventivoRecord,
   mezziRows: readonly MezzoRow[],
   expectedUpdatedAt?: string,
-): Promise<{ ok: true; record: PreventivoRecord; legacyId?: string } | { ok: false; error: string }> {
+): Promise<
+  | { ok: true; record: PreventivoRecord; legacyId?: string; created: boolean }
+  | { ok: false; error: string }
+> {
   const legacyId = !isPreventivoUuid(record.id) ? record.id : undefined;
-  const mezzoId = resolveMezzoIdForRecord(record, mezziRows);
+  const mezzoId = await resolveMezzoIdForRecord(record, mezziRows);
   if (!mezzoId) {
     return { ok: false, error: "Mezzo non trovato per sincronizzare il preventivo." };
   }
@@ -134,85 +168,78 @@ async function syncRecordToDb(
       ok: true,
       record: preventivoRowToRecord(upd.data, mezziRows.find((m) => m.id === mezzoId) ?? null),
       legacyId,
+      created: false,
     };
   }
 
   const ins = await preventiviService.create(preventivoRecordToInsert(record, mezzoId));
   if (!ins.success || !ins.data) return { ok: false, error: ins.error ?? "Creazione fallito." };
   const synced = preventivoRowToRecord(ins.data, mezziRows.find((m) => m.id === mezzoId) ?? null);
-  return { ok: true, record: synced, legacyId };
+  return { ok: true, record: synced, legacyId, created: true };
 }
 
-function mirrorLocal(record: PreventivoRecord, legacyId?: string): void {
+function mirrorLocalLegacy(record: PreventivoRecord): void {
   upsertLocal(record);
-  const toDelete = new Set<string>();
-  if (legacyId && legacyId !== record.id) toDelete.add(legacyId);
-  if (isPreventivoUuid(record.id)) {
-    const numero = record.numero.trim();
-    if (numero) {
-      for (const ghost of loadPreventivi()) {
-        if (ghost.id === record.id) continue;
-        if (!isPreventivoUuid(ghost.id) && ghost.numero.trim() === numero) {
-          toDelete.add(ghost.id);
-        }
-      }
-    }
-  }
-  for (const id of toDelete) deleteLocal(id);
 }
 
 export async function persistPreventivoRecord(
   record: PreventivoRecord,
   mezziRows: readonly MezzoRow[],
-  options?: { expectedUpdatedAt?: string; skipDb?: boolean },
+  options?: PreventivoPersistOptions,
 ): Promise<{ ok: true; record: PreventivoRecord } | { ok: false; error: string }> {
   const hydrated = { ...record, aggiornatoAt: new Date().toISOString() };
 
   if (!options?.skipDb) {
     const db = await syncRecordToDb(hydrated, mezziRows, options?.expectedUpdatedAt);
     if (db.ok) {
-      mirrorLocal(db.record, db.legacyId);
-      dispatchPreventiviRefresh();
+      notifyPreventiviMutation(
+        options?.queryClient,
+        db.record.id,
+        db.created ? "entity_created" : "entity_updated",
+        options?.skipDispatch,
+      );
       return { ok: true, record: db.record };
     }
     if (isPreventiviDbPrimary()) return db;
   }
 
-  mirrorLocal(hydrated);
-  dispatchPreventiviRefresh();
+  if (isPreventiviDbPrimary()) {
+    return { ok: false, error: "Salvataggio preventivo non riuscito." };
+  }
+
+  mirrorLocalLegacy(hydrated);
+  notifyPreventiviMutation(options?.queryClient, hydrated.id, "entity_updated", options?.skipDispatch);
   return { ok: true, record: hydrated };
 }
 
 export async function appendPreventivoSynced(
   record: PreventivoRecord,
   mezziRows: readonly MezzoRow[],
+  options?: PreventivoPersistOptions,
 ): Promise<{ ok: true; record: PreventivoRecord } | { ok: false; error: string }> {
-  const res = await persistPreventivoRecord(record, mezziRows);
-  if (res.ok && !loadPreventivi().some((p) => p.id === res.record.id)) {
-    appendLocal(res.record);
-  }
-  return res;
+  return persistPreventivoRecord(record, mezziRows, options);
 }
 
 export async function removePreventivoRecord(
   id: string,
+  options?: PreventivoRemoveOptions,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   if (isPreventivoUuid(id)) {
     const del = await preventiviService.remove(id);
     if (!del.success && isPreventiviDbPrimary()) {
       return { ok: false, error: del.error ?? "Eliminazione fallita." };
     }
+    if (del.success) {
+      notifyPreventiviMutation(options?.queryClient, id, "entity_deleted", options?.skipDispatch);
+      return { ok: true };
+    }
   }
-  deleteLocal(id);
-  dispatchPreventiviRefresh();
-  return { ok: true };
-}
 
-export function mergeLoadedPreventivi(
-  local: readonly PreventivoRecord[],
-  remote: readonly PreventivoRow[] | undefined,
-  mezziRows: readonly MezzoRow[],
-): PreventivoRecord[] {
-  const mezziById = new Map(mezziRows.map((m) => [m.id, m]));
-  return mergePreventivoRecords(local, remote ?? [], mezziById, isPreventiviDbPrimary());
+  if (isPreventiviDbPrimary()) {
+    return { ok: false, error: "Eliminazione preventivo non riuscita." };
+  }
+
+  deleteLocal(id);
+  notifyPreventiviMutation(options?.queryClient, id, "entity_deleted", options?.skipDispatch);
+  return { ok: true };
 }

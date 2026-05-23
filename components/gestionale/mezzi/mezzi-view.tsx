@@ -55,6 +55,8 @@ import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { logService } from "@/src/services/log.service";
 import { auditPayload, pickExistingFields } from "@/lib/gestionale-log/undo";
 import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
+import { EntitySimilarWarning } from "@/components/design-system/entity-similar-warning";
+import { findMezzoBySimilarIdent } from "@/lib/validation/services/mezzi-validation";
 import { useAuth } from "@/context/auth-context";
 
 function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
@@ -727,7 +729,7 @@ export function MezziView() {
             </div>
             <form {...gestionaleFormFocusScopeProps()} onSubmit={submitEdit} className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
-                <MezzoFormFields form={editForm} setForm={setEditForm} />
+                <MezzoFormFields form={editForm} setForm={setEditForm} excludeMezzoId={editMezzo.id} />
               </div>
               <div className="shrink-0 border-t border-zinc-100 p-4 dark:border-zinc-800">
                 <button type="submit" disabled={updateMut.isPending} className={`${erpBtnAccent} w-full disabled:opacity-60`}>
@@ -760,11 +762,14 @@ function MezzoFormSection({ title, children }: { title: string; children: React.
 function MezzoFormFields({
   form,
   setForm,
+  excludeMezzoId,
 }: {
   form: MezzoForm;
   setForm: React.Dispatch<React.SetStateAction<MezzoForm>>;
+  excludeMezzoId?: string;
 }) {
   const globalOpts = useGlobalOptions({ debugTag: "MezzoFormFields" });
+  const mezziListQ = useMezziListQuery();
   const liste = globalOpts.mezziListe;
 
   const clientiBase = useMemo(() => sortedUniqueStrings(liste?.clienti ?? []), [liste]);
@@ -794,6 +799,14 @@ function MezzoFormFields({
   }, [form.marcaTelaio, form.modelloTelaio, setForm]);
 
   const listSelectWrapClass = "mt-1 w-full";
+
+  const similarMezzoIdent = useMemo(() => {
+    const rows = mezziListQ.data ?? [];
+    const hit = findMezzoBySimilarIdent(rows, form.targa, form.matricola, excludeMezzoId);
+    if (!hit) return null;
+    const ident = hit.targa?.trim() || hit.matricola?.trim() || hit.id;
+    return `${ident} (${hit.cliente} — ${hit.marca} ${hit.modello})`.trim();
+  }, [mezziListQ.data, form.targa, form.matricola, excludeMezzoId]);
 
   if (globalOpts.isLoading) {
     return <p className="text-sm text-zinc-500 dark:text-zinc-400">Caricamento impostazioni…</p>;
@@ -848,6 +861,7 @@ function MezzoFormFields({
             <input value={form.numeroScuderia} onChange={(e) => setForm((f) => ({ ...f, numeroScuderia: e.target.value }))} className={`${dsInput} mt-1 font-mono`} />
           </label>
         </div>
+        <EntitySimilarWarning similarTo={similarMezzoIdent} />
         <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Ore lavoro
           <input type="number" min={0} step={1} value={form.oreLavoro} onChange={(e) => setForm((f) => ({ ...f, oreLavoro: e.target.value }))} className={`${dsInput} mt-1`} />

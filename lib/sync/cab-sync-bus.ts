@@ -52,9 +52,6 @@ export function emitCabSyncEvent(event: CabSyncEvent): void {
       console.warn("[cab-sync-bus] listener error", e);
     }
   }
-  if (typeof window !== "undefined") {
-    window.dispatchEvent(new CustomEvent("cab-sync", { detail: event }));
-  }
 }
 
 export function cabSyncEventFromPostgresChange(
@@ -92,4 +89,19 @@ export function emitCabSyncFromPostgresChange(
 export function subscribeCabSync(listener: Listener): () => void {
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+/** Sotto-entità logiche schede (tipo in `scheda_lavorazione`, non tabella separata). */
+export type SchedeLogicalKind = "schede_ingresso" | "schede_lavorazione" | "schede_ricambi";
+
+const TIPO_TO_SCHEDE_KIND: Record<string, SchedeLogicalKind> = {
+  ingresso: "schede_ingresso",
+  intervento: "schede_lavorazione",
+  ricambi: "schede_ricambi",
+};
+
+export function schedeLogicalKindFromRow(row: { tipo?: string }): SchedeLogicalKind | null {
+  const t = row.tipo?.trim();
+  if (!t) return null;
+  return TIPO_TO_SCHEDE_KIND[t] ?? null;
 }

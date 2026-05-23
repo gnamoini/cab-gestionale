@@ -5,8 +5,11 @@
 
 export { Button, PrimaryActionButton, type DsButtonProps, type DsButtonVariant } from "./button";
 export { IconButton, type IconButtonProps } from "./icon-button";
+export { IconActionButton, type IconActionButtonProps } from "./icon-action-button";
+export { Tooltip, type TooltipProps } from "./tooltip";
 export { CloseButton, type CloseButtonProps } from "./close-button";
 export { Badge, type BadgeTone } from "./badge";
+export { EntitySimilarWarning, useEntitySimilarWarning } from "./entity-similar-warning";
 export { SearchBar, GESTIONALE_SEARCH_PLACEHOLDER, type SearchBarProps } from "./search-bar";
 export { FormField, formInputClass, formTextareaClass } from "./form-field";
 export { PageLayout, type PageLayoutProps } from "./page-layout";

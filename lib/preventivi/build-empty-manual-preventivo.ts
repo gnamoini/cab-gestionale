@@ -1,9 +1,12 @@
 import { localCalendarDayIsoFromDate } from "@/lib/lavorazioni/date-day-only";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
+import {
+  nextPreventivoId,
+  nextPreventivoNumeroFromRecords,
+} from "@/lib/preventivi/preventivi-records-from-cache";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
-import { loadPreventivi, nextPreventivoId, nextPreventivoNumero } from "@/lib/preventivi/preventivi-storage";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
@@ -13,18 +16,18 @@ import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-setting
 /** Bozza vuota senza lavorazione collegata (salvataggio alla prima conferma in modale). */
 export function buildEmptyManualPreventivo(
   autore: string,
+  existingRecords: readonly PreventivoRecord[],
   cliente = "",
   tipoDocumento: PreventivoRecord["tipoDocumento"] = PREVENTIVO_TIPO_DOCUMENTO_DEFAULT,
 ): PreventivoRecord {
-  const tutti = loadPreventivi();
   const mezziListe = migrateMezziListePrefs(getRuntimeCabAppSettings()?.mezziListe ?? createMezziListePrefsDefault());
   const defaultSconto = getScontoRicambiCliente(mezziListe, cliente);
-  const infer = inferEconomiciClientePreventivi(cliente, tutti, undefined, defaultSconto);
+  const infer = inferEconomiciClientePreventivi(cliente, existingRecords, undefined, defaultSconto);
   const now = new Date().toISOString();
   const dataCreazione = localCalendarDayIsoFromDate();
   const draft: PreventivoRecord = {
     id: nextPreventivoId(),
-    numero: nextPreventivoNumero(tutti),
+    numero: nextPreventivoNumeroFromRecords(existingRecords),
     dataCreazione,
     aggiornatoAt: now,
     stato: "bozza",

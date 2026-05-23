@@ -1,5 +1,6 @@
 "use client";
 
+import { Tooltip } from "@/components/design-system/tooltip";
 import { useCallback, useEffect, useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { syncClientPortalAfterGestionaleChange } from "@/src/lib/react-query/invalidate-related";
@@ -198,20 +199,23 @@ export function RecordImageManager({
         <div className={`mt-2.5 flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}`}>
           {images.map((img) => (
             <div key={img.path} className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
-              <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} title="Apri foto">
-                {/* eslint-disable-next-line @next/next/no-img-element -- Signed Storage URLs are short-lived and already lazy-loaded thumbnails. */}
-                <img src={img.signedUrl} alt={img.name} loading="lazy" className="h-full w-full object-cover" />
-              </button>
-              {canEdit ? (
-                <button
-                  type="button"
-                  className="absolute right-1 top-1 hidden rounded bg-black/60 px-1 text-[11px] font-bold text-white group-hover:block"
-                  onClick={() => void removeImage(img)}
-                  title="Elimina foto"
-                  aria-label="Elimina foto"
-                >
-                  ×
+              <Tooltip content="Apri">
+                <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} aria-label="Apri foto">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- Signed Storage URLs are short-lived and already lazy-loaded thumbnails. */}
+                  <img src={img.signedUrl} alt={img.name} loading="lazy" className="h-full w-full object-cover" />
                 </button>
+              </Tooltip>
+              {canEdit ? (
+                <Tooltip content="Elimina">
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1 hidden rounded bg-black/60 px-1 text-[11px] font-bold text-white group-hover:block"
+                    onClick={() => void removeImage(img)}
+                    aria-label="Elimina foto"
+                  >
+                    ×
+                  </button>
+                </Tooltip>
               ) : null}
             </div>
           ))}

@@ -27,6 +27,8 @@ import {
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
 import type { ListSelectItem } from "@/lib/ui/list-select-items";
 import { normListSelectValue } from "@/lib/ui/list-select-utils";
+import { findSimilarEntityInPool } from "@/lib/validation/global-entity-validation";
+import { EntitySimilarWarning } from "@/components/design-system/entity-similar-warning";
 import {
   useDropdownOutsideDismiss,
   useGlobalDropdownPortal,
@@ -58,6 +60,10 @@ type GlobalSelectBaseProps = {
   /** Valori filtro "neutrali" (es. FILTER_ALL): al focus svuotano il campo per cercare. */
   filterNeutralValues?: readonly string[];
   "aria-label"?: string;
+  /** Mostra warning non bloccante se il testo digitato è simile a un'opzione esistente. */
+  showSimilarWarning?: boolean;
+  /** Standardizza sigle societarie (SRL/SPA) nel confronto similarità. */
+  similarStandardizeLegalSuffix?: boolean;
 };
 
 export type GlobalSelectStringProps = GlobalSelectBaseProps & {
@@ -116,6 +122,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
     onAddToList,
     coloredOptions = false,
     filterNeutralValues,
+    showSimilarWarning = true,
+    similarStandardizeLegalSuffix = false,
     "aria-label": ariaLabel,
   } = props;
 
@@ -185,6 +193,20 @@ export function GlobalSelect(props: GlobalSelectProps) {
   );
 
   const showInvalid = (touched || forceInvalid) && !isValid;
+  const activeTextForSimilar = focused || searchText.length > 0 ? searchText : value;
+  const similarPool = useMemo(() => {
+    if (itemsMode) return items.map((item) => item.label);
+    return [...options];
+  }, [itemsMode, items, options]);
+  const similarTo = useMemo(() => {
+    if (!showSimilarWarning || similarPool.length === 0) return null;
+    const text = activeTextForSimilar.trim();
+    if (!text) return null;
+    return findSimilarEntityInPool(text, similarPool, {
+      exclude: value.trim() || undefined,
+      standardizeLegalSuffix: similarStandardizeLegalSuffix,
+    });
+  }, [showSimilarWarning, similarPool, activeTextForSimilar, value, similarStandardizeLegalSuffix]);
   const showDropdown = open && !disabled && !isLoading;
   const listEmpty = !isLoading && suggestions.length === 0 && !showAddOption && addCandidate.length > 0;
   const portalOpen = showDropdown && (totalNavigableOptions > 0 || listEmpty);
@@ -511,6 +533,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
           {invalidMessage}
         </p>
       ) : null}
+      <EntitySimilarWarning similarTo={similarTo} />
     </div>
   );
 }

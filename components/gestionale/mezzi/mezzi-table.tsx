@@ -1,9 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { memo } from "react";
-import { CardMobile, CardMobileActions } from "@/components/design-system";
+import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
 import {
   dsScrollbar,
   dsTable,
@@ -155,6 +154,53 @@ export type MezziTableProps = {
   onDelete?: (m: MezzoGestito) => void;
 };
 
+function MezzoRowActions({
+  m,
+  onHub,
+  onDelete,
+}: {
+  m: MezzoGestito;
+  onHub: (m: MezzoGestito) => void;
+  onDelete?: (m: MezzoGestito) => void;
+}) {
+  return (
+    <>
+      <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => onHub(m)}>
+        <IconInfo />
+      </IconActionButton>
+      <IconActionButton
+        as="link"
+        href={hrefDocumentiPerMezzo(m)}
+        label="Documenti"
+        className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
+      >
+        <IconFolderDocs />
+      </IconActionButton>
+      <IconActionButton
+        as="link"
+        href={hrefLavorazioniPerMezzo(m)}
+        label="Lavorazioni"
+        className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
+      >
+        <IconWrench />
+      </IconActionButton>
+      <IconActionButton
+        as="link"
+        href={hrefPreventiviPerMezzo(m)}
+        label="Preventivi"
+        className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
+      >
+        <IconClipboardList />
+      </IconActionButton>
+      {onDelete && !m.hubSynthetic ? (
+        <IconActionButton label="Elimina" className={dsTableActionBtnDanger} onClick={() => onDelete(m)}>
+          <IconTrash />
+        </IconActionButton>
+      ) : null}
+    </>
+  );
+}
+
 function MezzoRowInner({
   m,
   interventi,
@@ -201,38 +247,7 @@ function MezzoRowInner({
       <td className={`${dsTableTdCompact} whitespace-nowrap text-xs text-zinc-700 dark:text-zinc-300`}>{ultima}</td>
       <td className={dsTableTdActions}>
         <div className={dsTableActionsGroup}>
-          <button type="button" className={dsTableActionBtnInfo} title="Scheda hub mezzo" aria-label="Scheda hub mezzo" onClick={() => onHub(m)}>
-            <IconInfo />
-          </button>
-          <Link
-            href={hrefDocumentiPerMezzo(m)}
-            className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
-            title="Documenti"
-            aria-label="Documenti"
-          >
-            <IconFolderDocs />
-          </Link>
-          <Link
-            href={hrefLavorazioniPerMezzo(m)}
-            className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
-            title="Lavorazioni (solo questo mezzo)"
-            aria-label="Lavorazioni"
-          >
-            <IconWrench />
-          </Link>
-          <Link
-            href={hrefPreventiviPerMezzo(m)}
-            className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
-            title="Preventivi"
-            aria-label="Preventivi"
-          >
-            <IconClipboardList />
-          </Link>
-          {onDelete && !m.hubSynthetic ? (
-            <button type="button" className={dsTableActionBtnDanger} title="Elimina mezzo" aria-label="Elimina mezzo" onClick={() => onDelete(m)}>
-              <IconTrash />
-            </button>
-          ) : null}
+          <MezzoRowActions m={m} onHub={onHub} onDelete={onDelete} />
         </div>
       </td>
     </tr>
@@ -295,23 +310,7 @@ function MezzoMobileCard({
         </div>
       </dl>
       <CardMobileActions>
-        <button type="button" className={dsTableActionBtnInfo} title="Scheda hub mezzo" aria-label="Scheda hub mezzo" onClick={() => onHub(m)}>
-          <IconInfo />
-        </button>
-        <Link href={hrefDocumentiPerMezzo(m)} className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`} title="Documenti" aria-label="Documenti">
-          <IconFolderDocs />
-        </Link>
-        <Link href={hrefLavorazioniPerMezzo(m)} className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`} title="Lavorazioni (solo questo mezzo)" aria-label="Lavorazioni">
-          <IconWrench />
-        </Link>
-        <Link href={hrefPreventiviPerMezzo(m)} className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`} title="Preventivi" aria-label="Preventivi">
-          <IconClipboardList />
-        </Link>
-        {onDelete && !m.hubSynthetic ? (
-          <button type="button" className={dsTableActionBtnDanger} title="Elimina mezzo" aria-label="Elimina mezzo" onClick={() => onDelete(m)}>
-            <IconTrash />
-          </button>
-        ) : null}
+        <MezzoRowActions m={m} onHub={onHub} onDelete={onDelete} />
       </CardMobileActions>
     </CardMobile>
   );

@@ -1,5 +1,9 @@
+import { isPreventiviDbPrimary } from "@/lib/preventivi/preventivi-db-primary";
+import {
+  nextPreventivoId as nextPreventivoIdFromCache,
+  nextPreventivoNumeroFromRecords,
+} from "@/lib/preventivi/preventivi-records-from-cache";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
-import { dispatchPreventiviRefresh } from "@/lib/sistema/cab-events";
 import { PREVENTIVI_MAX, PREVENTIVI_STORAGE_KEY } from "@/lib/preventivi/constants";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
@@ -12,8 +16,10 @@ import type {
   PreventivoStato,
 } from "@/lib/preventivi/types";
 
-function nextId(): string {
-  return `prev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+function warnDeprecatedWrite(name: string): void {
+  if (process.env.NODE_ENV === "development") {
+    console.warn(`[preventivi-storage] ${name} is deprecated — use DB + React Query`);
+  }
 }
 
 function hydratePreventivo(raw: unknown): PreventivoRecord | null {
@@ -104,27 +110,16 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
   return { ...strutturato, ...calcolaTotaliPreventivo(strutturato) };
 }
 
+/** @deprecated Use nextPreventivoNumeroFromRecords from preventivi-records-from-cache */
 export function nextPreventivoNumero(existing: PreventivoRecord[]): string {
-  const y = new Date().getFullYear();
-  let max = 0;
-  for (const p of existing) {
-    const t = p.numero.trim();
-    const mNew = /^(\d{4})-(\d+)$/.exec(t);
-    const mLegacy = /^PV-(\d{4})-(\d+)$/.exec(t);
-    let seq: number | null = null;
-    let year: string | null = null;
-    if (mNew) {
-      year = mNew[1]!;
-      seq = parseInt(mNew[2]!, 10);
-    } else if (mLegacy) {
-      year = mLegacy[1]!;
-      seq = parseInt(mLegacy[2]!, 10);
-    }
-    if (year === String(y) && seq !== null) max = Math.max(max, seq);
-  }
-  return `${y}-${String(max + 1).padStart(3, "0")}`;
+  return nextPreventivoNumeroFromRecords(existing);
 }
 
+export function nextPreventivoId(): string {
+  return nextPreventivoIdFromCache();
+}
+
+/** Read-only: usato solo per migrazione one-shot localStorage → DB. */
 export function loadPreventivi(): PreventivoRecord[] {
   if (typeof window === "undefined") return [];
   try {
@@ -142,7 +137,23 @@ export function loadPreventivi(): PreventivoRecord[] {
   }
 }
 
+/** Rimuove dati entity preventivi da localStorage (post-migrazione admin). */
+export function clearPreventiviLocalEntityData(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(PREVENTIVI_STORAGE_KEY);
+    bumpReportDataRefresh();
+  } catch {
+    /* quota */
+  }
+}
+
+/** @deprecated DB-first: no-op quando isPreventiviDbPrimary() */
 export function savePreventivi(rows: PreventivoRecord[]): void {
+  if (isPreventiviDbPrimary()) {
+    warnDeprecatedWrite("savePreventivi");
+    return;
+  }
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(PREVENTIVI_STORAGE_KEY, JSON.stringify(rows.slice(0, PREVENTIVI_MAX)));
@@ -152,31 +163,46 @@ export function savePreventivi(rows: PreventivoRecord[]): void {
   }
 }
 
+/** @deprecated DB-first: no-op quando isPreventiviDbPrimary() */
 export function appendPreventivo(row: PreventivoRecord): void {
+  if (isPreventiviDbPrimary()) {
+    warnDeprecatedWrite("appendPreventivo");
+    return;
+  }
   const prev = loadPreventivi();
   const hydrated = hydratePreventivo(row) ?? row;
   savePreventivi([hydrated, ...prev.filter((x) => x.id !== hydrated.id)]);
-  dispatchPreventiviRefresh();
 }
 
+/** @deprecated DB-first: no-op quando isPreventiviDbPrimary() */
 export function upsertPreventivo(row: PreventivoRecord): void {
+  if (isPreventiviDbPrimary()) {
+    warnDeprecatedWrite("upsertPreventivo");
+    return;
+  }
   const prev = loadPreventivi();
   const hydrated = hydratePreventivo(row) ?? row;
   const i = prev.findIndex((x) => x.id === hydrated.id);
   const next = i >= 0 ? [...prev.slice(0, i), hydrated, ...prev.slice(i + 1)] : [hydrated, ...prev];
   savePreventivi(next);
-  dispatchPreventiviRefresh();
 }
 
+/** @deprecated DB-first: no-op quando isPreventiviDbPrimary() */
 export function deletePreventivo(id: string): void {
+  if (isPreventiviDbPrimary()) {
+    warnDeprecatedWrite("deletePreventivo");
+    return;
+  }
   savePreventivi(loadPreventivi().filter((x) => x.id !== id));
-  dispatchPreventiviRefresh();
 }
 
-export function duplicatePreventivo(source: PreventivoRecord, autore: string): PreventivoRecord {
-  const all = loadPreventivi();
+export function duplicatePreventivo(
+  source: PreventivoRecord,
+  autore: string,
+  existingRecords: readonly PreventivoRecord[],
+): PreventivoRecord {
   const now = new Date().toISOString();
-  const numero = nextPreventivoNumero(all);
+  const numero = nextPreventivoNumeroFromRecords(existingRecords);
   const righeRicambi = source.righeRicambi.map((r) => ({
     ...r,
     scontoPercent: r.scontoPercent ?? 0,
@@ -187,7 +213,7 @@ export function duplicatePreventivo(source: PreventivoRecord, autore: string): P
   };
   const next: PreventivoRecord = {
     ...source,
-    id: nextId(),
+    id: nextPreventivoId(),
     numero,
     dataCreazione: now,
     aggiornatoAt: now,
@@ -207,5 +233,3 @@ export function countPreventiviByLavorazioneId(): Map<string, number> {
   }
   return m;
 }
-
-export { nextId as nextPreventivoId };

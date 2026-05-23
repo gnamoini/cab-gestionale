@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { IconActionButton } from "@/components/design-system";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { ensurePreventivoStruttura, partitionRigheRicambi, pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
 import { calcolaTotaliPreventivo, totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
@@ -44,7 +46,6 @@ import { marcheFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
-import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import {
   GlobalHierarchyMarcaSelect,
@@ -100,6 +101,7 @@ export function PreventiviEditorModal({
   isRollbackDraft = false,
   autore,
   mezziRows,
+  allRecords,
   onClose,
   onSaved,
   onSaveError,
@@ -110,10 +112,12 @@ export function PreventiviEditorModal({
   isRollbackDraft?: boolean;
   autore: string;
   mezziRows: readonly MezzoRow[];
+  allRecords: readonly PreventivoRecord[];
   onClose: () => void;
   onSaved: () => void;
   onSaveError?: (message: string) => void;
 }) {
+  const queryClient = useQueryClient();
   const baselineRef = useRef<PreventivoRecord | null>(null);
   const draftRef = useRef<PreventivoRecord | null>(null);
   const [draft, setDraft] = useState<PreventivoRecord | null>(null);
@@ -193,7 +197,7 @@ export function PreventiviEditorModal({
     const defaultSconto = getScontoRicambiCliente(prefsAtt, trimmed);
     const infer = inferEconomiciClientePreventivi(
       trimmed,
-      loadPreventivi(),
+      allRecords,
       draftRef.current?.id,
       defaultSconto,
     );
@@ -298,6 +302,7 @@ export function PreventiviEditorModal({
 
     const res = await persistPreventivoRecord(next, mezziRows, {
       expectedUpdatedAt: !isNew ? baseline?.aggiornatoAt : undefined,
+      queryClient,
     });
     if (!res.ok) {
       onSaveError?.(res.error);
@@ -610,17 +615,15 @@ export function PreventiviEditorModal({
                         />
                       </label>
                       <div className="flex items-end justify-end">
-                        <button
-                          type="button"
+                        <IconActionButton
+                          label="Rimuovi"
                           className={dsTableActionBtnDanger}
                           onClick={() => removeAddettoRow(idx)}
-                          title="Rimuovi addetto"
-                          aria-label={`Rimuovi addetto riga ${idx + 1}`}
                         >
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
-                        </button>
+                        </IconActionButton>
                       </div>
                     </div>
                   ))}

@@ -1,15 +1,14 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
+import { computeSecurityAuthAggregates } from "@/lib/view/view-aggregation-cache";
+import { useSecurityViewQueryOpts } from "@/lib/view/view-query-opts";
 import { usePermissions } from "@/src/hooks/use-permissions";
-import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
-import { QK } from "@/src/lib/react-query/invalidate-related";
-import { authService } from "@/src/services/auth.service";
-import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import type { AuthLogAction, AuthLogWithProfileRow } from "@/src/types/supabase-tables";
 import { useAuthLogsQuery } from "@/src/hooks/use-auth-logs-query";
+import { authService } from "@/src/services/auth.service";
+import { useQuery } from "@tanstack/react-query";
+import { QK } from "@/src/lib/react-query/invalidate-related";
 
 export type SecurityDashboardFilters = {
   /** yyyy-mm-dd locale, null = nessun limite inferiore */
@@ -28,56 +27,8 @@ function localDayEndIso(ymd: string): string {
   return new Date(y, mo - 1, d, 23, 59, 59, 999).toISOString();
 }
 
-function isSameLocalCalendarDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
-
-function isTodayLocal(iso: string): boolean {
-  return isSameLocalCalendarDay(new Date(iso), new Date());
-}
-
-function buildAggregates(rows: AuthLogWithProfileRow[]) {
-  const recentLogins = rows.filter((r) => r.action === "login");
-  const recentLoginFailed = rows.filter((r) => r.action === "login_failed");
-
-  const activeTodayIds = new Set<string>();
-  for (const r of rows) {
-    if (!r.user_id) continue;
-    if (r.action !== "login" && r.action !== "logout") continue;
-    if (isTodayLocal(r.created_at)) activeTodayIds.add(r.user_id);
-  }
-
-  const lastByUser = new Map<
-    string,
-    { userId: string; nome: string; email: string; lastAt: string; lastAction: AuthLogAction }
-  >();
-  for (const r of rows) {
-    if (!r.user_id) continue;
-    if (r.action !== "login" && r.action !== "logout") continue;
-    const nome = r.profiles?.nome?.trim() || r.email || "—";
-    const cur = lastByUser.get(r.user_id);
-    if (!cur || r.created_at > cur.lastAt) {
-      lastByUser.set(r.user_id, {
-        userId: r.user_id,
-        nome,
-        email: r.email,
-        lastAt: r.created_at,
-        lastAction: r.action,
-      });
-    }
-  }
-  const lastAccessPerUser = [...lastByUser.values()].sort((a, b) => (a.lastAt < b.lastAt ? 1 : -1));
-
-  return {
-    recentLogins,
-    recentLoginFailed,
-    activeTodayCount: activeTodayIds.size,
-    activeTodayIds: [...activeTodayIds],
-    lastAccessPerUser,
-  };
-}
-
 export function useSecurityProfilesQuery(enabled: boolean) {
+  const securityOpts = useSecurityViewQueryOpts();
   return useQuery({
     queryKey: QK.authUsers,
     queryFn: async () => {
@@ -86,21 +37,18 @@ export function useSecurityProfilesQuery(enabled: boolean) {
       return r.data;
     },
     enabled,
-    staleTime: 300_000,
-    refetchOnWindowFocus: false,
-    retry: 1,
+    ...securityOpts,
   });
 }
 
 /**
- * Dati aggregati per `/dashboard/security`: usa `useAuthLogsQuery` con profilo e filtri.
+ * Dati aggregati per `/dashboard/security`: read-heavy VIEW layer (no subscription Realtime dedicata).
  */
-export function useSecurityDashboardData(filters: SecurityDashboardFilters, opts?: { realtime?: boolean }) {
+export function useSecurityDashboardData(filters: SecurityDashboardFilters) {
   const { status, user } = useAuth();
   const permissions = usePermissions();
-  const qc = useQueryClient();
+  const securityOpts = useSecurityViewQueryOpts({ staleTime: 120_000 });
   const isAdmin = permissions.canManageSecurity;
-  const realtime = !!opts?.realtime;
 
   const dateFromIso = filters.dateFromYmd ? localDayStartIso(filters.dateFromYmd) : null;
   const dateToIso = filters.dateToYmd ? localDayEndIso(filters.dateToYmd) : null;
@@ -112,37 +60,10 @@ export function useSecurityDashboardData(filters: SecurityDashboardFilters, opts
     dateFrom: dateFromIso,
     dateTo: dateToIso,
     enabled: isAuthSessionEstablished(status) && !!user?.id && isAdmin,
+    staleTime: securityOpts.staleTime,
   });
 
-  const aggregates = useMemo(() => buildAggregates(logsQ.data ?? []), [logsQ.data]);
-
-  useEffect(() => {
-    if (!realtime || !isAdmin || !isSupabasePublicEnvConfigured()) return;
-    let cancelled = false;
-    let activeChannel: Awaited<
-      ReturnType<typeof import("@/lib/realtime/postgres-changes-channel").subscribePostgresChangesChannel>
-    >["channel"] | null = null;
-
-    void (async () => {
-      const { subscribePostgresChangesChannel } = await import("@/lib/realtime/postgres-changes-channel");
-      const sb = getBrowserSupabase();
-      const { channel } = await subscribePostgresChangesChannel(sb, {
-        channelName: "cab-auth-logs-security-rt",
-        tables: [{ table: "auth_logs", event: "INSERT" }],
-        onPayload: () => {
-          void qc.invalidateQueries({ queryKey: [...QK.authLogs] });
-        },
-        logPrefix: "[auth_logs rt]",
-      });
-      if (!cancelled) activeChannel = channel;
-    })();
-
-    return () => {
-      cancelled = true;
-      const sb = getBrowserSupabase();
-      if (activeChannel) void sb.removeChannel(activeChannel);
-    };
-  }, [realtime, isAdmin, qc]);
+  const aggregates = useMemo(() => computeSecurityAuthAggregates(logsQ.data ?? []), [logsQ.data]);
 
   return { isAdmin, logsQuery: logsQ, ...aggregates };
 }

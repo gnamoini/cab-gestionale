@@ -14,6 +14,7 @@ export type AuthLogsQueryOpts = {
   dateFrom?: string | null;
   dateTo?: string | null;
   enabled?: boolean;
+  staleTime?: number;
 };
 
 function normalizeAuthLogsInput(input?: number | AuthLogsQueryOpts) {
@@ -25,6 +26,7 @@ function normalizeAuthLogsInput(input?: number | AuthLogsQueryOpts) {
       dateFrom: null as string | null,
       dateTo: null as string | null,
       enabled: true,
+      staleTime: undefined as number | undefined,
     };
   }
   const o = input ?? {};
@@ -35,6 +37,7 @@ function normalizeAuthLogsInput(input?: number | AuthLogsQueryOpts) {
     dateFrom: o.dateFrom ?? null,
     dateTo: o.dateTo ?? null,
     enabled: o.enabled !== false,
+    staleTime: o.staleTime,
   };
 }
 
@@ -62,7 +65,7 @@ export function useAuthLogsQuery(input?: number | AuthLogsQueryOpts): UseQueryRe
       return r.rows;
     },
     enabled: isAuthSessionEstablished(status) && !!user?.id && p.enabled,
-    staleTime: p.withProfile ? 300_000 : 300_000,
+    staleTime: p.staleTime ?? 300_000,
     gcTime: 300_000,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

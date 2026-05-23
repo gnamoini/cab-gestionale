@@ -13,7 +13,7 @@ import { righeFromPreventivo, totaleDocumento } from "@/lib/bunder/bunder-genera
 import { BUNDER_DOC_KIND_OPTIONS } from "@/lib/bunder/doc-kind-meta";
 import { allocateNextNumero } from "@/lib/bunder/bunder-numbering";
 import type { BunderCommercialDocument, BunderDocKind, BunderProductRiga } from "@/lib/bunder/types";
-import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
+import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 
@@ -37,7 +37,7 @@ export function BunderEditorModal({
   onSave: (d: BunderCommercialDocument) => void;
 }) {
   const [local, setLocal] = useState<BunderCommercialDocument | null>(null);
-  const preventivi = useMemo(() => loadPreventivi(), [open]);
+  const { records: preventivi } = usePreventiviRecordsQuery(open);
   const [prevPick, setPrevPick] = useState("");
 
   useEffect(() => {

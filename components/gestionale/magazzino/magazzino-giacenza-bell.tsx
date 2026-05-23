@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Tooltip } from "@/components/design-system/tooltip";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { erpBtnNeutral, erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsScrollbar, dsTable, dsTableHead, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
@@ -32,15 +33,15 @@ export function MagazzinoGiacenzaBell({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={triggerClassName}
-        aria-expanded={open}
-        aria-haspopup="dialog"
-        aria-label={count > 0 ? `Avvisi giacenza (${count})` : "Avvisi giacenza"}
-        title={count > 0 ? `Avvisi giacenza (${count})` : "Avvisi giacenza"}
-      >
+      <Tooltip content="Avvisi">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={triggerClassName}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+          aria-label={count > 0 ? `Avvisi giacenza (${count})` : "Avvisi giacenza"}
+        >
         <span className="relative inline-flex text-zinc-600 dark:text-zinc-300" aria-hidden>
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path
@@ -59,6 +60,7 @@ export function MagazzinoGiacenzaBell({
           Avvisi giacenza{count > 0 ? ` (${count})` : ""}
         </span>
       </button>
+      </Tooltip>
 
       {open ? (
         <div

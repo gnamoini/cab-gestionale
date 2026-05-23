@@ -14,21 +14,13 @@ export function mezzoPerFiltroPreventivi(
 }
 
 export function mergePreventiviPerMacchina(
-  localRows: readonly PreventivoRecord[],
   hubRows: readonly PreventivoRow[] | undefined,
   mezzo: MezzoGestito,
 ): PreventivoRecord[] {
-  const byId = new Map<string, PreventivoRecord>();
-  for (const p of localRows) {
-    if (preventivoMatchesMezzo(mezzo, p)) byId.set(p.id, p);
-  }
-  for (const row of hubRows ?? []) {
-    const stub = preventivoRowToRecordStub(row, null);
-    if (preventivoMatchesMezzo(mezzo, stub)) byId.set(stub.id, stub);
-  }
-  return [...byId.values()].sort(
-    (a, b) => new Date(b.dataCreazione).getTime() - new Date(a.dataCreazione).getTime(),
-  );
+  return (hubRows ?? [])
+    .map((row) => preventivoRowToRecordStub(row, null))
+    .filter((p) => preventivoMatchesMezzo(mezzo, p))
+    .sort((a, b) => new Date(b.dataCreazione).getTime() - new Date(a.dataCreazione).getTime());
 }
 
 export function fmtPreventivoDataTabella(iso: string): string {

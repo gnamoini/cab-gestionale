@@ -13,7 +13,7 @@ import {
   drawPdfPageFooters,
   drawPdfSectionTitle,
   drawPdfTotalsSummary,
-  drawPreventivoPdfHeader,
+  drawGestionalePdfHeader,
   ensurePdfSpace,
   fmtDateIt,
   fmtEuroPdf,
@@ -21,7 +21,7 @@ import {
   pdfAdvanceSection,
   pdfPreventivoVoceTableColumns,
   pdfTableDefaults,
-} from "@/lib/pdf/preventivo-pdf-layout";
+} from "@/lib/pdf/core/pdf-base-template";
 import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -76,7 +76,7 @@ export function openPreventivoPdfInNewTab(p: PreventivoRecord, autore: string): 
   const importoIva = Math.round(totaleNetto * (PDF_PREVENTIVO_IVA_PERCENT / 100) * 100) / 100;
   const totaleConIva = Math.round((totaleNetto + importoIva) * 100) / 100;
 
-  let y = drawPreventivoPdfHeader(doc, pageW, tipoUpper, {
+  let y = drawGestionalePdfHeader(doc, pageW, tipoUpper, {
     numero: p.numero.trim() || undefined,
     data: p.dataCreazione ? fmtDateIt(p.dataCreazione) : undefined,
     operatore,

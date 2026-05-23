@@ -1,7 +1,10 @@
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
-import { nextPreventivoId, nextPreventivoNumero, loadPreventivi } from "@/lib/preventivi/preventivi-storage";
+import {
+  nextPreventivoId,
+  nextPreventivoNumeroFromRecords,
+} from "@/lib/preventivi/preventivi-records-from-cache";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
 import { trasformaDescrizioneLavorazioni } from "@/lib/preventivi/trasforma-descrizione";
@@ -21,8 +24,9 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
   mezzo: MezzoGestito | null;
   magazzino: RicambioMagazzino[];
   autore: string;
+  existingRecords: readonly PreventivoRecord[];
 }): PreventivoRecord {
-  const { lav, origine, bundle, magazzino, autore } = opts;
+  const { lav, origine, bundle, magazzino, autore, existingRecords } = opts;
   const now = new Date().toISOString();
   const ing = bundle.ingresso?.campi ?? null;
   const lavScheda = bundle.lavorazioni?.tipo === "lavorazioni" ? bundle.lavorazioni : null;
@@ -57,6 +61,7 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     modelloAttrezzatura,
     macchinaRiassunto,
     codiciRicambi,
+    existingPreventiviRecords: existingRecords,
   });
 
   const righeRicambiRaw: PreventivoRigaRicambio[] = (ricScheda?.campi.righe ?? []).map((r) => {
@@ -76,7 +81,7 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     };
   });
 
-  const tuttiPv = loadPreventivi();
+  const tuttiPv = existingRecords;
   const mezziListe = migrateMezziListePrefs(getRuntimeCabAppSettings()?.mezziListe ?? createMezziListePrefsDefault());
   const defaultSconto = getScontoRicambiCliente(mezziListe, cliente);
   const infer = inferEconomiciClientePreventivi(cliente, tuttiPv, undefined, defaultSconto);
@@ -117,7 +122,7 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
 
   const draft: PreventivoRecord = {
     id: nextPreventivoId(),
-    numero: nextPreventivoNumero(tuttiPv),
+    numero: nextPreventivoNumeroFromRecords(tuttiPv),
     dataCreazione: now,
     aggiornatoAt: now,
     stato: "bozza",

@@ -1,8 +1,9 @@
 "use client";
 
 import { useLayoutEffect } from "react";
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
 import { useToast } from "@/context/toast-context";
+import { persistSettingsRecord } from "@/lib/sync/persist-settings-record";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
 import { setRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
@@ -41,7 +42,6 @@ export function useCabAppSettingsPayloadQuery(options?: {
     enabled,
     staleTime: options?.staleTime ?? 30_000,
     gcTime: 86_400_000,
-    refetchInterval: 45_000,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
@@ -63,23 +63,29 @@ function useSettingsConflictToast() {
 }
 
 export function useSettingsBulkMutation() {
+  const qc = useQueryClient();
   const onConflict = useSettingsConflictToast();
-  return useServiceMutation((rows: AppSettingsUpsertInput[]) => settingsService.bulkUpsertSettings(rows), {
-    invalidateQueryKeys: [[...QK.settings]],
-    onError: (e) => {
-      onConflict(e.message);
+  return useServiceMutation(
+    (rows: AppSettingsUpsertInput[]) => persistSettingsRecord(qc, () => settingsService.bulkUpsertSettings(rows)),
+    {
+      onError: (e) => {
+        onConflict(e.message);
+      },
     },
-  });
+  );
 }
 
 export function useSettingsUpsertMutation() {
+  const qc = useQueryClient();
   const onConflict = useSettingsConflictToast();
-  return useServiceMutation((input: AppSettingsUpsertInput) => settingsService.upsertSetting(input), {
-    invalidateQueryKeys: [[...QK.settings]],
-    onError: (e) => {
-      onConflict(e.message);
+  return useServiceMutation(
+    (input: AppSettingsUpsertInput) => persistSettingsRecord(qc, () => settingsService.upsertSetting(input)),
+    {
+      onError: (e) => {
+        onConflict(e.message);
+      },
     },
-  });
+  );
 }
 
-export { mergeAppSettingsUpsertWithVersions, SETTINGS_CONCURRENCY_CONFLICT };
+export { mergeAppSettingsUpsertWithVersions, persistSettingsRecord, SETTINGS_CONCURRENCY_CONFLICT };

@@ -17,6 +17,7 @@ import {
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { dsSurfaceCard, dsTypoCardTitle } from "@/lib/ui/design-system";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 
 export function DashboardRecentFeeds() {
   const router = useRouter();
@@ -24,8 +25,10 @@ export function DashboardRecentFeeds() {
   const { user } = useAuth();
   const authorName = user?.nome?.trim() || user?.email?.split("@")[0]?.trim() || "Operatore";
 
-  const lavLogsQ = useLogListQuery({ entita: "lavorazioni", limit: 12 }, { enabled: !staging, staleTime: 15_000 });
-  const magLogsQ = useLogListQuery({ entita: "magazzino_ricambi", limit: 12 }, { enabled: !staging, staleTime: 15_000 });
+  const viewOpts = useViewQueryOpts({ staleTime: 90_000 });
+
+  const lavLogsQ = useLogListQuery({ entita: "lavorazioni", limit: 12 }, { enabled: !staging, ...viewOpts });
+  const magLogsQ = useLogListQuery({ entita: "magazzino_ricambi", limit: 12 }, { enabled: !staging, ...viewOpts });
 
   const lavSlice = useMemo(() => {
     return buildLogModificheDisplayEntries(lavLogsQ.data ?? [], (row) =>

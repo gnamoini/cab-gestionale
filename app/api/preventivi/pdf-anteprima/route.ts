@@ -30,7 +30,9 @@ async function readPdfBytes(formData: FormData): Promise<Uint8Array | null> {
 }
 
 export async function GET(request: Request) {
-  if (!(await verifyServerSectionRead("preventivi"))) {
+  const canPreview =
+    (await verifyServerSectionRead("preventivi")) || (await verifyServerSectionRead("lavorazioni"));
+  if (!canPreview) {
     return new Response("Non autorizzato", { status: 403 });
   }
 
@@ -56,7 +58,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (!(await verifyServerSectionRead("preventivi"))) {
+  const canPreview =
+    (await verifyServerSectionRead("preventivi")) || (await verifyServerSectionRead("lavorazioni"));
+  if (!canPreview) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
   }
 

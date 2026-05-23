@@ -23,8 +23,6 @@ export const QK = {
   userPermissions: ["user_permissions"] as const,
   /** Portale lavorazioni clienti — accesso sessione. */
   clientLavorazioniAccess: ["client_lavorazioni_access"] as const,
-  /** @deprecated Lista condivisa via lavorazioniQueries — non invalidare separatamente. */
-  clientLavorazioniList: ["client_lavorazioni_list"] as const,
   clientLavorazioniDetail: ["client_lavorazioni_detail"] as const,
   clientLavorazioneDocuments: ["client_lavorazione_documents"] as const,
   clientLavorazionePhotos: ["client_lavorazione_photos"] as const,
@@ -36,4 +34,8 @@ export const QK = {
   segnalazioni: ["segnalazioni"] as const,
 };
 
-export const SCHEDE_STORE_QUERY_KEY = [...QK.schede, "store"] as const;
+/** Bundle schede per lavorazione — unica cache React Query (derivata da DB). */
+export const SCHEde_BUNDLES_QUERY_KEY = [...QK.schede, "bundles"] as const;
+
+/** @deprecated Usare `SCHEde_BUNDLES_QUERY_KEY`. */
+export const SCHEDE_STORE_QUERY_KEY = SCHEde_BUNDLES_QUERY_KEY;

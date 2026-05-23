@@ -8,7 +8,13 @@ const CHANNEL_NAME = "cab-gestionale-sync-v1";
 const TAB_ID_KEY = "cab-gestionale-tab-id";
 
 export type GestionaleBroadcastMessage =
-  | { type: "invalidate"; tables: string[]; sourceTabId: string }
+  | {
+      type: "invalidate";
+      tables: string[];
+      sourceTabId: string;
+      /** Entity id per tabella — soppressione eco post-mutazione cross-tab. */
+      entityIdByTable?: Record<string, string>;
+    }
   | { type: "cab_sync"; event: CabSyncEvent; sourceTabId: string };
 
 let channel: BroadcastChannel | null = null;
@@ -52,8 +58,20 @@ function postMessage(message: GestionaleBroadcastMessage): void {
   }
 }
 
-export function broadcastGestionaleInvalidate(tables: string[]): void {
-  postMessage({ type: "invalidate", tables, sourceTabId: getGestionaleTabId() });
+export function broadcastGestionaleInvalidate(
+  tables: string[],
+  entityIdByTable?: ReadonlyMap<string, string> | Record<string, string>,
+): void {
+  const entityRecord =
+    entityIdByTable instanceof Map
+      ? Object.fromEntries(entityIdByTable)
+      : entityIdByTable;
+  postMessage({
+    type: "invalidate",
+    tables,
+    sourceTabId: getGestionaleTabId(),
+    ...(entityRecord && Object.keys(entityRecord).length > 0 ? { entityIdByTable: entityRecord } : {}),
+  });
 }
 
 export function broadcastCabSyncEvent(event: CabSyncEvent): void {
@@ -61,7 +79,11 @@ export function broadcastCabSyncEvent(event: CabSyncEvent): void {
 }
 
 export type GestionaleBroadcastHandler = {
-  onInvalidate: (tables: string[], sourceTabId: string) => void;
+  onInvalidate: (
+    tables: string[],
+    sourceTabId: string,
+    entityIdByTable?: ReadonlyMap<string, string>,
+  ) => void;
   onCabSync?: (event: CabSyncEvent, sourceTabId: string) => void;
 };
 
@@ -74,7 +96,10 @@ export function subscribeGestionaleBroadcast(handler: GestionaleBroadcastHandler
     if (!data?.sourceTabId || !isForeignBroadcastSource(data.sourceTabId)) return;
 
     if (data.type === "invalidate" && Array.isArray(data.tables)) {
-      handler.onInvalidate(data.tables, data.sourceTabId);
+      const entityMap = data.entityIdByTable
+        ? new Map(Object.entries(data.entityIdByTable))
+        : undefined;
+      handler.onInvalidate(data.tables, data.sourceTabId, entityMap);
       return;
     }
     if (data.type === "cab_sync" && data.event && handler.onCabSync) {

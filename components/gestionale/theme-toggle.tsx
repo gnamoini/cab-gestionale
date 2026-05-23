@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Tooltip } from "@/components/design-system/tooltip";
 import { useTheme } from "@/context/theme-context";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
 
@@ -28,6 +29,7 @@ export function ThemeToggle() {
   useEffect(() => setMounted(true), []);
 
   const label = resolved === "dark" ? "Passa a tema chiaro" : "Passa a tema scuro";
+  const tip = resolved === "dark" ? "Chiaro" : "Scuro";
 
   if (!mounted) {
     return (
@@ -39,14 +41,15 @@ export function ThemeToggle() {
   }
 
   return (
-    <button
-      type="button"
-      onClick={toggleLightDark}
-      className={`${dsPageToolbarBtn} h-11 min-w-[2.75rem] px-2.5 sm:px-3`}
-      title={label}
-      aria-label={label}
-    >
-      {resolved === "dark" ? <IconSun className="h-[18px] w-[18px]" /> : <IconMoon className="h-[18px] w-[18px]" />}
-    </button>
+    <Tooltip content={tip}>
+      <button
+        type="button"
+        onClick={toggleLightDark}
+        className={`${dsPageToolbarBtn} h-11 min-w-[2.75rem] px-2.5 sm:px-3`}
+        aria-label={label}
+      >
+        {resolved === "dark" ? <IconSun className="h-[18px] w-[18px]" /> : <IconMoon className="h-[18px] w-[18px]" />}
+      </button>
+    </Tooltip>
   );
 }

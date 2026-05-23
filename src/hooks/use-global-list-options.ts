@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import {
   isStructuredListKey,
   resolveGlobalListItems,
@@ -10,9 +9,7 @@ import {
   type GlobalSettingsListContext,
   type GlobalSettingsListKey,
 } from "@/src/lib/global-list/global-settings-list-keys";
-import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { QK } from "@/src/lib/react-query/invalidate-related";
 
 export type GlobalListOptionsResult = {
   mode: "strings" | "items";
@@ -27,6 +24,7 @@ export type GlobalListOptionsResult = {
 
 /**
  * Elenchi da `app_settings` per combobox globali — nessun array passato dal parent.
+ * Aggiornamento cache via unified dispatch + Realtime (nessun listener legacy).
  */
 export function useGlobalListOptions(
   listKey: GlobalSettingsListKey,
@@ -34,12 +32,7 @@ export function useGlobalListOptions(
   options?: { enabled?: boolean },
 ): GlobalListOptionsResult {
   const enabled = options?.enabled ?? true;
-  const qc = useQueryClient();
   const q = useCabAppSettingsPayloadQuery({ enabled, staleTime: 0 });
-
-  useCabSyncListener("settings", () => {
-    void qc.invalidateQueries({ queryKey: [...QK.settings] });
-  });
 
   return useMemo((): GlobalListOptionsResult => {
     const structured = isStructuredListKey(listKey);

@@ -4,6 +4,8 @@ import {
   type MagazzinoAdvancedFilters,
 } from "@/lib/magazzino/magazzino-advanced-filters";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { buildNormalizedSearchHaystack } from "@/lib/validation/entity-keys";
+import { normalizeEntityString, scoreEntityMatch } from "@/lib/validation/global-entity-validation";
 import { filterListSelectSuggestions } from "@/lib/ui/list-select-utils";
 
 export type MagazzinoPageFilters = MagazzinoAdvancedFilters & {
@@ -12,7 +14,7 @@ export type MagazzinoPageFilters = MagazzinoAdvancedFilters & {
 };
 
 export function magazzinoRowSearchHaystack(row: RicambioMagazzino): string {
-  return [
+  return buildNormalizedSearchHaystack([
     row.marca,
     row.codiceFornitoreOriginale,
     row.codiceFornitoreNonOriginale,
@@ -21,16 +23,15 @@ export function magazzinoRowSearchHaystack(row: RicambioMagazzino): string {
     row.categoria,
     row.fornitoreNonOriginale,
     ...row.compatibilitaMezzi,
-  ]
-    .filter((s) => typeof s === "string" && s.trim().length > 0)
-    .join(" ")
-    .toLowerCase();
+  ]);
 }
 
 export function magazzinoRowMatchesGlobalSearch(row: RicambioMagazzino, query: string): boolean {
-  const q = query.trim().toLowerCase();
+  const q = normalizeEntityString(query);
   if (!q) return true;
-  return magazzinoRowSearchHaystack(row).includes(q);
+  const hay = magazzinoRowSearchHaystack(row);
+  if (hay.includes(q)) return true;
+  return q.split(/\s+/).filter(Boolean).every((w) => hay.includes(w) || scoreEntityMatch(w, hay) > 0);
 }
 
 export function magazzinoRowMatchesPageFilters(row: RicambioMagazzino, filters: MagazzinoPageFilters): boolean {

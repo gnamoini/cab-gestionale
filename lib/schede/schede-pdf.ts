@@ -1,56 +1,214 @@
 "use client";
 
-import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
+import {
+  PDF_MARGIN_L,
+  PDF_MARGIN_R,
+  PDF_SECTION_CONTENT_GAP,
+  drawGestionalePdfHeader,
+  drawPdfFieldGrid,
+  drawPdfPageFooters,
+  drawPdfSectionTitle,
+  ensurePdfSpace,
+  fmtDateIt,
+  getAutoTableFinalY,
+  pdfAdvanceSection,
+  pdfContentWidth,
+  pdfTableDefaults,
+  type PdfField,
+} from "@/lib/pdf/core/pdf-base-template";
+import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
+import { buildSchedaPdfDownloadFileName } from "@/lib/schede/scheda-pdf-filename";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
-import { drawPdfLabelValueLines } from "@/lib/pdf/jspdf-label-lines";
 import type { LavorazioneSchedeBundle, SchedaIngressoDoc, SchedaLavorazioniDoc, SchedaRicambiDoc } from "@/types/schede";
 
-function fmtGenIt(): string {
-  return new Date().toLocaleString("it-IT", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function schedaDocumentTitle(titoloScheda: string): string {
+  const t = titoloScheda.trim();
+  if (!t) return "SCHEDA";
+  return t.toUpperCase();
 }
 
-function drawPdfHeader(doc: jsPDF, pageW: number, titoloScheda: string, identificazioneLine: string, autore: string, ts: string) {
-  doc.setFillColor(234, 88, 12);
-  doc.rect(0, 0, pageW, 16, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(20);
-  doc.text("CAB GESTIONALE", pageW / 2, 10, { align: "center" });
-
-  doc.setTextColor(24, 24, 27);
-  doc.setFontSize(15);
-  doc.text(titoloScheda, 14, 26);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9.5);
-  doc.setTextColor(63, 63, 70);
-  const subY = identificazioneLine.trim() ? 34 : 32;
-  if (identificazioneLine.trim()) {
-    const lines = doc.splitTextToSize(identificazioneLine, pageW - 28);
-    doc.text(lines, 14, subY);
-  }
-
-  doc.setFontSize(8.5);
-  doc.setTextColor(113, 113, 122);
-  const metaY = identificazioneLine.trim() ? 34 + (doc.splitTextToSize(identificazioneLine, pageW - 28).length - 1) * 4.2 + 6 : 40;
-  doc.text(`Generato il ${ts} · Operatore: ${autore.trim() || "—"}`, 14, Math.max(metaY, 44));
-}
-
-function ingressoPairsInIdent(identLower: string, value: string): boolean {
+function ingressoValueInIdent(identLower: string, value: string): boolean {
   const v = value.trim();
-  if (!v) return false;
-  if (!identLower.trim()) return false;
+  if (!v || !identLower.trim()) return false;
   return identLower.includes(v.toLowerCase());
 }
 
-/** Apre un PDF reale (blob) in nuova scheda — nessun download automatico immediato. */
+function ingressoField(label: string, value: string | undefined, identLower: string): PdfField | null {
+  const v = value?.trim();
+  if (!v || ingressoValueInIdent(identLower, v)) return null;
+  return { label, value: v };
+}
+
+function drawIdentificazioneMacchinaSection(doc: jsPDF, y: number, pageW: number, text: string): number {
+  const idText = text.trim();
+  if (!idText) return y;
+  y = ensurePdfSpace(doc, y, 22);
+  y = drawPdfSectionTitle(doc, y, pageW, "Identificazione macchina");
+  y += PDF_SECTION_CONTENT_GAP;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(24, 24, 27);
+  const idLines = doc.splitTextToSize(idText, pdfContentWidth(pageW)) as string[];
+  doc.text(idLines, PDF_MARGIN_L, y);
+  return y + idLines.length * 4.5 + PDF_SECTION_CONTENT_GAP;
+}
+
+function drawIngressoPdf(
+  doc: jsPDF,
+  pageW: number,
+  startY: number,
+  scheda: SchedaIngressoDoc,
+  identLower: string,
+): number {
+  const c = scheda.campi;
+  let y = startY;
+
+  const sections: { title: string; fields: PdfField[] }[] = [
+    {
+      title: "Dati ingresso",
+      fields: [
+        ingressoField("Data ingresso", c.dataIngresso, identLower),
+        ingressoField("Addetto accettazione", c.addettoAccettazione, identLower),
+      ].filter((f): f is PdfField => f !== null),
+    },
+    {
+      title: "Dati anagrafici",
+      fields: [
+        ingressoField("Cliente", c.cliente, identLower),
+        ingressoField("Cantiere", c.cantiere, identLower),
+        ingressoField("Utilizzatore", c.utilizzatore, identLower),
+      ].filter((f): f is PdfField => f !== null),
+    },
+    {
+      title: "Attrezzatura",
+      fields: [
+        ingressoField("Tipo attrezzatura", c.tipoAttrezzatura, identLower),
+        ingressoField("Marca attrezzatura", c.marcaAttrezzatura, identLower),
+        ingressoField("Modello attrezzatura", c.modelloAttrezzatura, identLower),
+        ingressoField("Matricola", c.matricola, identLower),
+        ingressoField("N. scuderia", c.nScuderia, identLower),
+        ingressoField("Ore lavoro", c.oreLavoro, identLower),
+      ].filter((f): f is PdfField => f !== null),
+    },
+    {
+      title: "Telaio",
+      fields: [
+        ingressoField("Tipo telaio", c.tipoTelaio, identLower),
+        ingressoField("Marca telaio", c.marcaTelaio, identLower),
+        ingressoField("Modello telaio", c.modelloTelaio, identLower),
+        ingressoField("Targa", c.targa, identLower),
+        ingressoField("KM", c.km, identLower),
+        ingressoField("Livello carburante", c.livelloCarburante, identLower),
+      ].filter((f): f is PdfField => f !== null),
+    },
+    {
+      title: "Note",
+      fields: [ingressoField("Descrizione anomalia", c.descrizioneAnomalia, identLower)].filter(
+        (f): f is PdfField => f !== null,
+      ),
+    },
+  ];
+
+  for (const section of sections) {
+    if (!section.fields.length) continue;
+    y = ensurePdfSpace(doc, y, 28);
+    y = drawPdfSectionTitle(doc, y, pageW, section.title);
+    y = drawPdfFieldGrid(doc, y, pageW, section.fields);
+    y = pdfAdvanceSection(y);
+  }
+
+  return y;
+}
+
+function drawLavorazioniPdf(
+  doc: jsPDF,
+  pageW: number,
+  startY: number,
+  scheda: SchedaLavorazioniDoc,
+  ident: string,
+): number {
+  const c = scheda.campi;
+  let y = startY;
+  const idText = (ident || c.identificazioneMacchina?.trim() || "").trim();
+  y = drawIdentificazioneMacchinaSection(doc, y, pageW, idText);
+
+  let oreTotale = 0;
+  const body = c.righe.map((r) => {
+    for (const a of r.addettiAssegnati ?? []) {
+      oreTotale += Number.isFinite(a.oreImpiegate) ? a.oreImpiegate : 0;
+    }
+    const add =
+      (r.addettiAssegnati ?? [])
+        .map((a) => `${a.addetto || "—"} (${String(a.oreImpiegate ?? 0)}h)`)
+        .join(", ") || "—";
+    return [r.dataLavorazione || "—", r.lavorazioniEffettuate || "—", add];
+  });
+
+  y = ensurePdfSpace(doc, y, 26);
+  y = drawPdfSectionTitle(doc, y, pageW, "Interventi effettuati");
+  y += PDF_SECTION_CONTENT_GAP;
+  autoTable(doc, {
+    startY: y,
+    head: [["Data", "Lavorazioni effettuate", "Addetti (ore)"]],
+    body: body.length ? body : [["—", "—", "—"]],
+    columnStyles: {
+      0: { cellWidth: 26 },
+      1: { cellWidth: "auto" as const },
+      2: { cellWidth: 42 },
+    },
+    ...pdfTableDefaults,
+  });
+  y = pdfAdvanceSection(getAutoTableFinalY(doc, y + 12));
+
+  y = ensurePdfSpace(doc, y, 14);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.setTextColor(24, 24, 27);
+  doc.text(`Ore totali: ${oreTotale.toFixed(2)}`, PDF_MARGIN_L, y);
+  return y + 6;
+}
+
+function drawRicambiPdf(
+  doc: jsPDF,
+  pageW: number,
+  startY: number,
+  scheda: SchedaRicambiDoc,
+  ident: string,
+): number {
+  const c = scheda.campi;
+  let y = startY;
+  const idText = (ident || c.identificazioneMacchina?.trim() || "").trim();
+  y = drawIdentificazioneMacchinaSection(doc, y, pageW, idText);
+
+  const body = c.righe.map((r) => [
+    r.ricambioNome || "—",
+    r.codice || "—",
+    String(r.quantita ?? "—"),
+    r.addetto || "—",
+    r.dataUtilizzo || "—",
+  ]);
+
+  y = ensurePdfSpace(doc, y, 26);
+  y = drawPdfSectionTitle(doc, y, pageW, "Ricambi utilizzati");
+  y += PDF_SECTION_CONTENT_GAP;
+  autoTable(doc, {
+    startY: y,
+    head: [["Ricambio", "Codice", "Qtà", "Addetto", "Data"]],
+    body: body.length ? body : [["—", "—", "—", "—", "—"]],
+    columnStyles: {
+      0: { cellWidth: "auto" as const },
+      1: { cellWidth: 28 },
+      2: { cellWidth: 14, halign: "center" as const },
+      3: { cellWidth: 32 },
+      4: { cellWidth: 26 },
+    },
+    ...pdfTableDefaults,
+  });
+  return getAutoTableFinalY(doc, y + 12);
+}
+
+/** Apre un PDF reale (blob) in nuova scheda con layout unificato preventivi/schede. */
 export function openSchedaPdfInNewTab(opts: {
   titoloScheda: string;
   identificazioneLine: string;
@@ -58,131 +216,40 @@ export function openSchedaPdfInNewTab(opts: {
   doc: SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc;
   autore: string;
 }): void {
-  const ts = fmtGenIt();
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const ident = opts.identificazioneLine.trim();
   const identLower = ident.toLowerCase();
+  const operatore = opts.autore.trim() || opts.doc.updatedBy?.trim() || opts.doc.createdBy?.trim() || "Operatore";
+  const docDate = opts.doc.createdAt ? fmtDateIt(opts.doc.createdAt) : fmtDateIt(new Date().toISOString());
+  const footerRef = opts.bundle.lavorazioneId.trim() || opts.titoloScheda.trim() || "Scheda";
 
-  drawPdfHeader(doc, pageW, opts.titoloScheda, ident, opts.autore, ts);
+  let y = drawGestionalePdfHeader(doc, pageW, schedaDocumentTitle(opts.titoloScheda), {
+    numero: opts.bundle.lavorazioneId.trim() || undefined,
+    data: docDate,
+    operatore,
+  });
+  y = pdfAdvanceSection(y);
 
-  const startY = ident ? 52 : 48;
+  if (opts.doc.tipo === "ingresso" && ident) {
+    y = drawIdentificazioneMacchinaSection(doc, y, pageW, ident);
+    y = pdfAdvanceSection(y);
+  }
 
   if (opts.doc.tipo === "ingresso") {
-    const c = opts.doc.campi;
-    const raw: { label: string; value: string }[] = [
-      { label: "Data ingresso", value: c.dataIngresso },
-      { label: "Cliente", value: c.cliente },
-      { label: "Cantiere", value: c.cantiere },
-      { label: "Utilizzatore", value: c.utilizzatore },
-      { label: "Tipo attrezzatura", value: c.tipoAttrezzatura },
-      { label: "Marca attrezzatura", value: c.marcaAttrezzatura },
-      { label: "Modello attrezzatura", value: c.modelloAttrezzatura },
-      { label: "Matricola", value: c.matricola },
-      { label: "N. scuderia", value: c.nScuderia },
-      { label: "Ore lavoro", value: c.oreLavoro },
-      { label: "Tipo telaio", value: c.tipoTelaio },
-      { label: "Marca telaio", value: c.marcaTelaio },
-      { label: "Modello telaio", value: c.modelloTelaio },
-      { label: "Targa", value: c.targa },
-      { label: "KM", value: c.km },
-      { label: "Livello carburante", value: c.livelloCarburante },
-      { label: "Addetto accettazione", value: c.addettoAccettazione },
-      { label: "Descrizione anomalia", value: c.descrizioneAnomalia },
-    ];
-    const pairs = raw
-      .map(({ label, value }) => ({ label, value: value?.trim() ? value : "—" }))
-      .filter(({ label, value }) => !ingressoPairsInIdent(identLower, value === "—" ? "" : value));
-    drawPdfLabelValueLines(doc, startY, pageW, pairs);
+    drawIngressoPdf(doc, pageW, y, opts.doc, identLower);
   } else if (opts.doc.tipo === "lavorazioni") {
-    const c = opts.doc.campi;
-    let y = startY;
-    const idText = (ident || c.identificazioneMacchina?.trim() || "").trim();
-    if (!ident && idText) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(39, 39, 42);
-      doc.text("Identificazione macchina", 14, y);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      const idLines = doc.splitTextToSize(idText, pageW - 28);
-      doc.text(idLines, 14, y + 5);
-      y += 6 + idLines.length * 4.5;
-    } else {
-      y = startY;
-    }
-
-    let oreTotale = 0;
-    const body = c.righe.map((r) => {
-      for (const a of r.addettiAssegnati ?? []) {
-        oreTotale += Number.isFinite(a.oreImpiegate) ? a.oreImpiegate : 0;
-      }
-      const add =
-        (r.addettiAssegnati ?? [])
-          .map((a) => `${a.addetto || "—"} (${String(a.oreImpiegate ?? 0)}h)`)
-          .join(", ") || "—";
-      return [r.dataLavorazione || "—", r.lavorazioniEffettuate || "—", add];
-    });
-    autoTable(doc, {
-      startY: y,
-      head: [["Data", "Lavorazioni effettuate", "Addetti (ore)"]],
-      body: body.length ? body : [["—", "—", "—"]],
-      styles: { fontSize: 8.5, cellPadding: 2, valign: "top", lineColor: [228, 228, 231], lineWidth: 0.15 },
-      headStyles: { fillColor: [250, 250, 250], textColor: [39, 39, 42], fontStyle: "bold", fontSize: 9 },
-      columnStyles: { 0: { cellWidth: 26 }, 1: { cellWidth: 92 }, 2: { cellWidth: pageW - 26 - 92 - 28 } },
-      margin: { left: 14, right: 14 },
-      theme: "plain",
-    });
-    const finalY = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 24;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(24, 24, 27);
-    doc.text(`ORE TOTALI: ${oreTotale.toFixed(2)}`, 14, finalY + 10);
+    drawLavorazioniPdf(doc, pageW, y, opts.doc, ident);
   } else {
-    const c = opts.doc.campi;
-    let y = startY;
-    const idText = (ident || c.identificazioneMacchina?.trim() || "").trim();
-    if (!ident && idText) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
-      doc.setTextColor(39, 39, 42);
-      doc.text("Identificazione macchina", 14, y);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      const idLines = doc.splitTextToSize(idText, pageW - 28);
-      doc.text(idLines, 14, y + 5);
-      y += 6 + idLines.length * 4.5;
-    } else {
-      y = startY;
-    }
-
-    const body = c.righe.map((r) => [
-      r.ricambioNome || "—",
-      r.codice || "—",
-      String(r.quantita ?? "—"),
-      r.addetto || "—",
-      r.dataUtilizzo || "—",
-    ]);
-    autoTable(doc, {
-      startY: y,
-      head: [["Ricambio", "Codice", "Qtà", "Addetto", "Data"]],
-      body: body.length ? body : [["—", "—", "—", "—", "—"]],
-      styles: { fontSize: 8.5, cellPadding: 2, lineColor: [228, 228, 231], lineWidth: 0.15 },
-      headStyles: { fillColor: [250, 250, 250], textColor: [39, 39, 42], fontStyle: "bold", fontSize: 9 },
-      margin: { left: 14, right: 14 },
-      theme: "plain",
-    });
+    drawRicambiPdf(doc, pageW, y, opts.doc, ident);
   }
 
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i += 1) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(113, 113, 122);
-    doc.text(`${opts.titoloScheda} · Pag. ${i}/${pageCount} · ${ts}`, 14, doc.internal.pageSize.getHeight() - 8);
-  }
+  drawPdfPageFooters(doc, footerRef);
 
-  const blob = doc.output("blob");
-  const url = URL.createObjectURL(blob);
-  openUrlInNewTab(url, { revokeBlobUrlAfterMs: 120_000 });
+  const fileName = buildSchedaPdfDownloadFileName({
+    doc: opts.doc,
+    lavorazioneId: opts.bundle.lavorazioneId,
+    titoloScheda: opts.titoloScheda,
+  });
+  void openPdfBlobInNewTab(doc.output("blob"), fileName);
 }

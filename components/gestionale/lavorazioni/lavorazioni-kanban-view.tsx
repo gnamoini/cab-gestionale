@@ -6,12 +6,14 @@ import {
   LavorazioneIngressoDateCell,
   LavorazioniMezzoIdentStack,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
-import { prioritaLabel, prioritaPillShellClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { prioritaLabel, statoPillShellClassDynamic } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import { isStatoClosed } from "@/lib/lavorazioni/stati-dynamic";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
-import { resolveStatoToDbEnum, statoLavorazioneLabel } from "@/src/shared/selectors";
+import { resolveStatoToDbEnum } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -102,13 +104,14 @@ function KanbanCard({
     >
       <div className="flex items-start justify-between gap-2">
         <p className="min-w-0 flex-1 text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50">{macchina}</p>
-        <span
-          className={`${prioritaPillShellClass()} shrink-0 px-2 py-0.5 text-[10px] font-semibold`}
-          style={readablePillStyleFromHex(prioHex)}
+        <TablePillReadonly
+          shellClass={statoPillShellClassDynamic()}
+          shellStyle={readablePillStyleFromHex(prioHex)}
           title={prioritaLabel(p)}
+          fitContent
         >
           {prioritaLabel(p)}
-        </span>
+        </TablePillReadonly>
       </div>
       <div className="mt-2">
         <LavorazioniClienteUtilStack cliente={clienteLabel(row, schedeStore)} utilizzatore={utilizzatoreLabel(row, schedeStore)} />
@@ -155,34 +158,24 @@ export function LavorazioniKanbanView({
   emptyMessage: string;
   onOpenRow: (row: LavorazioneListRow) => void;
 }) {
+  const operationalColumns = useMemo(
+    () => columns.filter((col) => !isStatoClosed(col)),
+    [columns],
+  );
+
   const byStato = useMemo(() => {
     const map = new Map<string, LavorazioneListRow[]>();
-    for (const col of columns) map.set(col.id, []);
+    for (const col of operationalColumns) map.set(col.id, []);
     for (const row of rows) {
       const statoId = resolveStatoToDbEnum(row.stato);
       const list = map.get(statoId);
       if (list) list.push(row);
-      else map.set(statoId, [row]);
     }
     for (const list of map.values()) {
       list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     }
     return map;
-  }, [rows, columns]);
-
-  const columnIds = useMemo(() => new Set(columns.map((c) => c.id)), [columns]);
-
-  const extraColumns = useMemo(() => {
-    const out: StatoLavorazioneConfig[] = [];
-    for (const statoId of byStato.keys()) {
-      if (columnIds.has(statoId)) continue;
-      out.push({
-        id: statoId,
-        label: statoLavorazioneLabel(statoId, [...statiOpts]) || statoId,
-      });
-    }
-    return out;
-  }, [byStato, columnIds, statiOpts]);
+  }, [rows, operationalColumns]);
 
   if (loading) {
     return <p className="text-sm text-zinc-500">Caricamento…</p>;
@@ -243,8 +236,7 @@ export function LavorazioniKanbanView({
       </p>
       <div className="gestionale-scrollbar -mx-1 overflow-x-auto px-1 pb-1">
         <div className="flex min-w-min items-start gap-3">
-          {columns.map(renderColumn)}
-          {extraColumns.map(renderColumn)}
+          {operationalColumns.map(renderColumn)}
         </div>
       </div>
     </div>

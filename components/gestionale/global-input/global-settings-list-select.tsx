@@ -192,6 +192,11 @@ export function GlobalSettingsListSelect({
 
     emptyMessage,
 
+    similarStandardizeLegalSuffix:
+      listKey === "mezzi:clienti" ||
+      listKey === "mezzi:utilizzatori" ||
+      listKey === "magazzino:fornitori",
+
   };
 
 

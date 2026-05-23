@@ -1,19 +1,7 @@
 import { fmtDateIt } from "@/lib/pdf/preventivo-pdf-layout";
+import { sanitizePdfFileNamePart } from "@/lib/pdf/pdf-filename-utils";
 import { preventivoTipoDocumentoLabel } from "@/lib/preventivi/preventivi-tipo-documento";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
-
-/** Caratteri non ammessi nei nomi file (Windows / browser). */
-const INVALID_FILE_NAME_CHARS = /[\\/:*?"<>|]/g;
-
-function sanitizePdfFileNamePart(raw: string, fallback: string): string {
-  return (
-    raw
-      .trim()
-      .replace(INVALID_FILE_NAME_CHARS, " ")
-      .replace(/\s+/g, " ")
-      .trim() || fallback
-  );
-}
 
 /** Etichetta progressivo per nome file: es. N.12 da 2026-012 o PV-2026-012. */
 export function formatPreventivoNumeroFileLabel(numero: string): string {

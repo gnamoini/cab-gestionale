@@ -9,7 +9,11 @@ import {
   lavorazioneDocumentByTipo,
 } from "@/lib/lavorazioni/lavorazione-documents";
 import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
-import { syncClientPortalAfterGestionaleChange } from "@/src/lib/react-query/invalidate-related";
+import {
+  cabSyncEventForEntity,
+  dispatchGestionaleLocalMutation,
+} from "@/lib/sync/gestionale-sync-dispatch";
+import { reconcileGestionaleEntity } from "@/lib/sync/gestionale-reconcile";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
 import type { LavorazioneDocumentRow, LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
@@ -145,15 +149,26 @@ export function LavorazioneDocumentsManager({
   const [uploadingTipo, setUploadingTipo] = useState<LavorazioneDocumentTipo | null>(null);
   const [urlCache, setUrlCache] = useState<Record<string, string>>({});
 
-  const invalidate = useCallback(() => {
-    void qc.invalidateQueries({ queryKey: lavorazioniDomainQueryKeys.lavorazionePdfs(lavorazioneId), refetchType: "active" });
-    void syncClientPortalAfterGestionaleChange(qc);
-    onDocumentEvent?.();
-  }, [qc, lavorazioneId, onDocumentEvent]);
+  const syncDocuments = useCallback(
+    (eventType: "entity_created" | "entity_updated" | "entity_deleted" = "entity_updated") => {
+      dispatchGestionaleLocalMutation(qc, ["lavorazione_documents"], [
+        cabSyncEventForEntity("lavorazione_documents", lavorazioneId, eventType, "lavorazione_documents"),
+      ]);
+      onDocumentEvent?.();
+    },
+    [qc, lavorazioneId, onDocumentEvent],
+  );
 
-  useCabSyncListener("lavorazione_documents", () => {
+  useCabSyncListener("lavorazione_documents", (event) => {
     setUrlCache({});
-    void invalidate();
+    const r = reconcileGestionaleEntity(qc, event, "cab_sync", { skipInvalidation: true });
+    if (r.needsRefetch) {
+      void qc.invalidateQueries({
+        queryKey: lavorazioniDomainQueryKeys.lavorazionePdfs(lavorazioneId),
+        refetchType: "active",
+      });
+    }
+    onDocumentEvent?.();
   });
 
   const resolveUrl = useCallback(
@@ -198,7 +213,7 @@ export function LavorazioneDocumentsManager({
       return;
     }
     pushToast("Documento caricato.", "success");
-    await invalidate();
+    syncDocuments("entity_created");
   }
 
   async function handleRemove(tipo: LavorazioneDocumentTipo) {
@@ -211,7 +226,7 @@ export function LavorazioneDocumentsManager({
       return;
     }
     pushToast("Documento eliminato.", "success");
-    await invalidate();
+    syncDocuments("entity_deleted");
   }
 
   async function openDoc(doc: LavorazioneDocumentRow) {

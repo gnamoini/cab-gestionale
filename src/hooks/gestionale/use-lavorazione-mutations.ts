@@ -2,7 +2,19 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
-import { invalidateAfterLavorazioneMutations } from "@/src/lib/react-query/invalidate-related";
+import {
+  cabSyncEventForEntity,
+  dispatchGestionaleAction,
+  invalidateAfterLavorazioneMutations,
+} from "@/src/lib/react-query/invalidate-related";
+import {
+  applyOptimisticLavorazioneUpdate,
+  rollbackLavorazioneUpdateQueries,
+  settleLavorazioneQuickUpdate,
+  snapshotLavorazioneUpdateQueries,
+  type LavorazioneUpdateOptimisticContext,
+} from "@/src/lib/react-query/lavorazioni-optimistic";
+import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
 import {
   lavorazioniService,
   type LavorazioneInsert,
@@ -21,11 +33,31 @@ export function useLavorazioneCreateMutation() {
 
 export function useLavorazioneUpdateMutation() {
   const queryClient = useQueryClient();
-  return useServiceMutation(({ id, data }: { id: string; data: LavorazioneUpdate }) => lavorazioniService.update(id, data), {
-    onSettled: async () => {
-      await invalidateAfterLavorazioneMutations(queryClient);
+  return useServiceMutation(
+    ({ id, data }: { id: string; data: LavorazioneUpdate }) => lavorazioniService.update(id, data),
+    {
+      onMutate: async (variables) => {
+        const context = await snapshotLavorazioneUpdateQueries(queryClient, variables.id);
+        applyOptimisticLavorazioneUpdate(queryClient, variables.id, variables.data);
+        return context;
+      },
+      onSuccess: (serverRow, variables) => {
+        applyOptimisticLavorazioneUpdate(queryClient, variables.id, variables.data, serverRow);
+        markRecentLocalGestionaleMutation(["lavorazioni"], variables.id);
+        dispatchGestionaleAction(queryClient, ["lavorazioni"], {
+          source: "local_mutation",
+          cabSyncEvents: [cabSyncEventForEntity("lavorazioni", variables.id)],
+          skipCacheInvalidation: true,
+        });
+      },
+      onError: (_err, _variables, context) => {
+        if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);
+      },
+      onSettled: (_data, error) => {
+        settleLavorazioneQuickUpdate(queryClient, Boolean(error));
+      },
     },
-  });
+  );
 }
 
 export function useLavorazioneRemoveMutation() {

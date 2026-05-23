@@ -5,6 +5,7 @@ import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-g
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
+import { attachMagazzinoEntityKey } from "@/lib/validation/entity-persistence";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "magazzino_ricambi";
@@ -69,7 +70,8 @@ export const magazzinoService = {
       const allowed = await ensurePermission("editInventory");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: row, error } = await c.from("magazzino_ricambi").insert(data).select("*").single();
+      const payload = attachMagazzinoEntityKey(data);
+      const { data: row, error } = await c.from("magazzino_ricambi").insert(payload).select("*").single();
       if (error) return err(error.message);
       const r = row as MagazzinoRicambioRow;
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoRicambio(r)) });
@@ -84,9 +86,10 @@ export const magazzinoService = {
       const allowed = await ensurePermission("editInventory");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
+      const payload = Object.keys(data).length > 0 ? attachMagazzinoEntityKey(data) : data;
       const { data: before, error: e0 } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
-      const { data: row, error } = await c.from("magazzino_ricambi").update(data).eq("id", id).select("*").single();
+      const { data: row, error } = await c.from("magazzino_ricambi").update(payload).eq("id", id).select("*").single();
       if (error) return err(error.message);
       const r = row as MagazzinoRicambioRow;
       await writeModificaLog(c, {

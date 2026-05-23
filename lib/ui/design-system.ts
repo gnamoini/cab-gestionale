@@ -262,7 +262,13 @@ export const dsZModal = "z-50";
 export const dsZModalHigh = "z-[100]";
 /** Menu filtri / autocomplete / calendario (portal su body). */
 export const dsZDropdown = "z-[130]";
+/** Tooltip icon-only (sopra dropdown, sotto toast). */
+export const dsZTooltip = "z-[140]";
 export const dsZToast = "z-[200]";
+
+/** Contenuto tooltip portal (icon-only actions). */
+export const dsTooltipContent =
+  "pointer-events-none max-w-[12rem] whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-2 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)] transition-[opacity,transform] duration-150 ease-out";
 
 /** Skeleton */
 export const dsSkeletonPulse =

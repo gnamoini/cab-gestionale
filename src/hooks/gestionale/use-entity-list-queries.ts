@@ -9,7 +9,11 @@
  */
 
 import type { UseQueryOptions } from "@tanstack/react-query";
+import { useMemo } from "react";
+import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { documentiService, type DocumentiFilters } from "@/src/services/documenti.service";
 import { logService, type LogFilters } from "@/src/services/log.service";
@@ -26,12 +30,27 @@ export function useMezziListQuery(filters?: MezzoFilters, options?: RqOpts<Mezzo
   return useServiceQuery([...QK.mezzi, filters ?? null] as const, () => mezziService.getAll(filters), options);
 }
 
-export function useMagazzinoListQuery(filters?: MagazzinoFilters) {
-  return useServiceQuery([...QK.magazzino, filters ?? null] as const, () => magazzinoService.getAll(filters));
+export function useMagazzinoListQuery(filters?: MagazzinoFilters, options?: RqOpts<import("@/src/types/supabase-tables").MagazzinoRicambioRow[]>) {
+  const gestOpts = useGestionaleQueryOpts();
+  return useServiceQuery([...QK.magazzino, filters ?? null] as const, () => magazzinoService.getAll(filters), {
+    ...gestOpts,
+    ...options,
+  });
+}
+
+/** Lista magazzino mappata al modello UI — unica source per componenti gestionali. */
+export function useMagazzinoRicambiUIQuery(filters?: MagazzinoFilters, options?: RqOpts<import("@/src/types/supabase-tables").MagazzinoRicambioRow[]>) {
+  const q = useMagazzinoListQuery(filters, options);
+  const data = useMemo(
+    (): RicambioMagazzino[] => (q.data ?? []).map((row) => magazzinoRowToRicambioUI(row)),
+    [q.data],
+  );
+  return { ...q, data };
 }
 
 export function useMovimentiListQuery(filters?: MovimentiFilters) {
-  return useServiceQuery([...QK.movimenti, filters ?? null] as const, () => movimentiService.getAll(filters));
+  const gestOpts = useGestionaleQueryOpts();
+  return useServiceQuery([...QK.movimenti, filters ?? null] as const, () => movimentiService.getAll(filters), gestOpts);
 }
 
 export function usePreventiviListQuery(filters?: PreventiviFilters, options?: RqOpts<PreventivoRow[]>) {

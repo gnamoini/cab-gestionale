@@ -8,6 +8,8 @@ import { mezzoFormToMeta } from "@/lib/mezzi/mezzi-meta";
 import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoCreateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useQueryClient } from "@tanstack/react-query";
+import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
@@ -127,6 +129,7 @@ export function LavorazioneCreateModal({
   storico?: readonly LavorazioneArchiviata[];
 }) {
   const globalOpts = useGlobalOptions({ enabled: open, debugTag: "LavorazioneCreateModal" });
+  const qc = useQueryClient();
   const create = useLavorazioneCreateMutation();
   const createMezzo = useMezzoCreateMutation();
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
@@ -332,6 +335,8 @@ export function LavorazioneCreateModal({
       const res = await persistSchedeStore(store, row.id);
       if (!res.ok) {
         window.alert(res.error ?? "Scheda ingresso non sincronizzata con il database.");
+      } else {
+        dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
       }
       onCreated?.(row.id);
       onClose();

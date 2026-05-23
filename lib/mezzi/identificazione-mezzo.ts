@@ -1,4 +1,5 @@
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import { normalizeEntityString, scoreEntityMatch } from "@/lib/validation/global-entity-validation";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -84,7 +85,7 @@ export function identificazionePartsFromSchedaIngresso(f: SchedaIngressoFields):
 
 /** Ricerca su anagrafica mezzi (targa, matricola, scuderia, cliente, marca, modello, utilizzatore, tipo). */
 export function mezzoMatchesSmartQuery(mezzo: MezzoGestito, raw: string): boolean {
-  const q = raw.trim().toLowerCase();
+  const q = normalizeEntityString(raw);
   if (!q) return true;
   const hay = [
     mezzo.targa,
@@ -98,7 +99,8 @@ export function mezzoMatchesSmartQuery(mezzo: MezzoGestito, raw: string): boolea
     `${mezzo.marca} ${mezzo.modello}`,
   ]
     .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(q) || q.split(/\s+/).every((w) => w.length > 0 && hay.includes(w));
+    .map((s) => normalizeEntityString(String(s)))
+    .join(" ");
+  if (hay.includes(q)) return true;
+  return q.split(/\s+/).filter(Boolean).every((w) => w.length > 0 && (hay.includes(w) || scoreEntityMatch(w, hay) > 0));
 }

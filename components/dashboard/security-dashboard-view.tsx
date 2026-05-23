@@ -35,6 +35,7 @@ import {
   dsTableWrap,
   gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
+import { useSecurityViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useSecurityDashboardData, useSecurityProfilesQuery } from "@/src/hooks/use-security-dashboard-data";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { AuthLogWithProfileRow, LogModificaRow } from "@/src/types/supabase-tables";
@@ -191,11 +192,11 @@ function LastAccessTable({
 }
 
 function useUserActivity(userId: string | null, enabled: boolean) {
+  const securityOpts = useSecurityViewQueryOpts();
   return useQuery({
     queryKey: [...QK.log, "user-activity", userId ?? "none"],
     enabled: enabled && !!userId,
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
+    ...securityOpts,
     queryFn: async (): Promise<UserActivityRow[]> => {
       if (!userId) return [];
       const sb = getBrowserSupabase();
@@ -243,11 +244,11 @@ function useUserActivity(userId: string | null, enabled: boolean) {
 }
 
 function useRecentSystemActivity(enabled: boolean) {
+  const securityOpts = useSecurityViewQueryOpts();
   return useQuery({
     queryKey: [...QK.log, "security-recent"],
     enabled,
-    staleTime: 60_000,
-    refetchOnWindowFocus: false,
+    ...securityOpts,
     queryFn: async (): Promise<UserActivityRow[]> => {
       const sb = getBrowserSupabase();
       const { data, error } = await sb
@@ -349,7 +350,6 @@ export function SecurityDashboardView() {
   const securityAccessLoggedRef = useRef(false);
   const [range, setRange] = useState(defaultRange);
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
-  const [realtime, setRealtime] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [resettingLogs, setResettingLogs] = useState(false);
   const queryClient = useQueryClient();
@@ -364,7 +364,7 @@ export function SecurityDashboardView() {
   );
 
   const profilesQ = useSecurityProfilesQuery(!!isAdmin);
-  const dash = useSecurityDashboardData(filters, { realtime });
+  const dash = useSecurityDashboardData(filters);
   const usersQ = useSecurityUsersPermissionsQuery(!!isAdmin);
   const recentActivityQ = useRecentSystemActivity(!!isAdmin);
 
@@ -448,21 +448,19 @@ export function SecurityDashboardView() {
         title="Sicurezza"
         actions={
           <>
-            <button type="button" className={dsPageToolbarBtn} onClick={() => void logsQuery.refetch()} disabled={logsQuery.isFetching}>
-              {logsQuery.isFetching ? "Aggiornamento…" : "Aggiorna log"}
+            <button
+              type="button"
+              className={dsPageToolbarBtn}
+              onClick={() =>
+                void Promise.all([logsQuery.refetch(), recentActivityQ.refetch(), profilesQ.refetch()])
+              }
+              disabled={logsQuery.isFetching || recentActivityQ.isFetching}
+            >
+              {logsQuery.isFetching || recentActivityQ.isFetching ? "Aggiornamento…" : "Aggiorna dati"}
             </button>
             <button type="button" className={dsBtnDanger} onClick={() => void handleResetChangeLogs()} disabled={resettingLogs}>
               {resettingLogs ? "Reset…" : "Resetta log modifiche"}
             </button>
-            <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-3 py-2 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]">
-              <input
-                type="checkbox"
-                className="h-3.5 w-3.5 rounded border-[color:var(--cab-border-strong)]"
-                checked={realtime}
-                onChange={(e) => setRealtime(e.target.checked)}
-              />
-              Live
-            </label>
           </>
         }
       />

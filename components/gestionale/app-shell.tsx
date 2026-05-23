@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
-import { CloseButton } from "@/components/design-system";
+import { CloseButton, Tooltip } from "@/components/design-system";
 import { PageLoadingOverlay } from "@/components/design-system/loading-indicator";
 import { useAuth } from "@/context/auth-context";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -67,11 +67,10 @@ function NavLink({
   );
 
   if (disabled) {
-    return (
+    const node = (
       <div
         role="link"
         aria-disabled="true"
-        title={collapsed ? `${label} — ${badge ?? "Non disponibile"}` : badge ?? undefined}
         className={`${navLinkBase} cursor-not-allowed opacity-75 ${collapsed ? "justify-center px-2" : ""}`}
       >
         {iconWrap}
@@ -83,12 +82,17 @@ function NavLink({
         ) : null}
       </div>
     );
+    if (!collapsed) return node;
+    return (
+      <Tooltip content={badge ? "Non disponibile" : label} side="right">
+        {node}
+      </Tooltip>
+    );
   }
 
-  return (
+  const node = (
     <Link
       href={href}
-      title={collapsed ? label : undefined}
       onClick={(e) => {
         if (isNavTargetCurrent(pathname, href)) return;
         scheduleRouteTransitionBegin(e, () => onNavigate?.(href));
@@ -98,6 +102,14 @@ function NavLink({
       {iconWrap}
       <span className={`min-w-0 flex-1 truncate leading-tight ${collapsed ? "sr-only" : ""}`}>{label}</span>
     </Link>
+  );
+
+  if (!collapsed) return node;
+
+  return (
+    <Tooltip content={label} side="right">
+      {node}
+    </Tooltip>
   );
 }
 
@@ -466,17 +478,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="truncate text-sm font-semibold text-[color:var(--cab-text)]">Manutenzione</p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={toggleCollapsed}
-            title={collapsed ? "Espandi menu" : "Comprimi menu"}
-            aria-label={collapsed ? "Espandi menu laterale" : "Comprimi menu laterale"}
-            className={`hidden min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-sm text-[color:var(--cab-text-muted)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:bg-[var(--cab-hover)] md:inline-flex dark:border-[color:var(--cab-border-strong)] ${erpFocus} ${
-              collapsed ? "mx-auto" : ""
-            }`}
-          >
-            {collapsed ? "⟩" : "⟨"}
-          </button>
+          <Tooltip content={collapsed ? "Espandi" : "Comprimi"} side="right">
+            <button
+              type="button"
+              onClick={toggleCollapsed}
+              aria-label={collapsed ? "Espandi menu laterale" : "Comprimi menu laterale"}
+              className={`hidden min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-sm text-[color:var(--cab-text-muted)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:bg-[var(--cab-hover)] md:inline-flex dark:border-[color:var(--cab-border-strong)] ${erpFocus} ${
+                collapsed ? "mx-auto" : ""
+              }`}
+            >
+              {collapsed ? "⟩" : "⟨"}
+            </button>
+          </Tooltip>
         </div>
         <nav
           className="gestionale-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3"

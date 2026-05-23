@@ -1,6 +1,5 @@
 import { loadLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
 import { normPhrase } from "@/lib/preventivi/preventivi-learning-storage";
-import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
 export type DescrizionePreventivoContext = {
@@ -12,6 +11,8 @@ export type DescrizionePreventivoContext = {
   modelloAttrezzatura?: string;
   macchinaRiassunto?: string;
   codiciRicambi?: string[];
+  /** Record preventivi da cache RQ (DB-first). */
+  existingPreventiviRecords?: readonly PreventivoRecord[];
 };
 
 type ScoredSnippet = {
@@ -114,7 +115,7 @@ function snippetsFromPreventivi(ctx: DescrizionePreventivoContext, techNorm: str
   const out: ScoredSnippet[] = [];
   const seenSource = new Set<string>();
 
-  const ranked = loadPreventivi()
+  const ranked = (ctx.existingPreventiviRecords ?? [])
     .filter((p) => p.id !== ctx.lavorazioneId)
     .map((p) => ({ p, score: scorePreventivoMatch(p, ctx, techNorm) }))
     .filter((x) => x.score >= 40)

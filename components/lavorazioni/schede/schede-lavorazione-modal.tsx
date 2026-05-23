@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { Tooltip } from "@/components/design-system/tooltip";
 import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
 import { LavorazioniModalShell, LavorazioniModalTitleBar } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -20,7 +21,7 @@ import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/sch
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-import { getMagazzinoReportSnapshot } from "@/lib/magazzino/magazzino-report-sync";
+import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
   formatIdentificazioneMezzoLine,
@@ -77,12 +78,11 @@ import {
   buildPreventiviOpenHrefForRecord,
 } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { mergePreventiviPerMacchina, mezzoPerFiltroPreventivi } from "@/lib/preventivi/preventivi-per-macchina";
+import { preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { Q_PREVENTIVI_NUOVO } from "@/lib/preventivi/preventivi-query";
-import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { writePendingPreventivoPayload } from "@/lib/preventivi/preventivi-session-bridge";
 import type { PreventivoLavorazioneOrigine, PreventivoRecord } from "@/lib/preventivi/types";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
-import { CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
 import {
   dsBadgeOk,
   dsBtnDanger,
@@ -109,6 +109,8 @@ import { useAuth } from "@/context/auth-context";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
+import { reconcileGestionaleEntity } from "@/lib/sync/gestionale-reconcile";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
@@ -422,6 +424,7 @@ export function SchedeLavorazioneModal({
   );
   const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
   const hubQuery = useLavorazioneHub(lav.id);
+  const qc = useQueryClient();
   const hubData = hubQuery.data;
   const initialTab = normalizeHubTab(initialTabProp);
   const appSettings = settingsPayload?.resolved;
@@ -526,8 +529,9 @@ export function SchedeLavorazioneModal({
     syncedBundleJsonRef.current = incoming;
   }, [bundle, open, unsavedPanel, stage.kind]);
 
-  useCabSyncListener(["scheda_lavorazione", "lavorazione_documents", "documenti"], () => {
-    void hubQuery.refetch();
+  useCabSyncListener(["scheda_lavorazione", "lavorazione_documents", "documenti"], (event) => {
+    const r = reconcileGestionaleEntity(qc, event, "cab_sync", { skipInvalidation: true });
+    if (r.needsRefetch) void hubQuery.refetch();
   });
 
   const persist = useCallback(
@@ -684,25 +688,20 @@ export function SchedeLavorazioneModal({
   }
 
   const lavOrigine = origine ?? (lav.id.startsWith("lav-arch-") ? ("storico" as const) : ("attiva" as const));
-  const [pvTick, setPvTick] = useState(0);
-  useEffect(() => {
-    if (!open) return;
-    const fn = () => setPvTick((x) => x + 1);
-    window.addEventListener(CAB_PREVENTIVI_REFRESH, fn);
-    return () => window.removeEventListener(CAB_PREVENTIVI_REFRESH, fn);
-  }, [open]);
 
   const preventiviCollegati = useMemo(() => {
-    if (!open || typeof window === "undefined") return [];
-    return loadPreventivi().filter((p) => p.lavorazioneId === lav.id);
-  }, [lav.id, pvTick, open]);
+    if (!open) return [];
+    return (hubData?.preventivi ?? [])
+      .filter((row) => row.lavorazione_id === lav.id)
+      .map((row) => preventivoRowToRecordStub(row, null));
+  }, [lav.id, open, hubData?.preventivi]);
 
   const mezzoFiltroPreventivi = useMemo(() => mezzoPerFiltroPreventivi(lav, mezzi), [lav, mezzi]);
 
   const preventiviPerMacchina = useMemo(() => {
-    if (!open || typeof window === "undefined") return [];
-    return mergePreventiviPerMacchina(loadPreventivi(), hubData?.preventivi, mezzoFiltroPreventivi);
-  }, [open, hubData?.preventivi, mezzoFiltroPreventivi, pvTick]);
+    if (!open) return [];
+    return mergePreventiviPerMacchina(hubData?.preventivi, mezzoFiltroPreventivi);
+  }, [open, hubData?.preventivi, mezzoFiltroPreventivi]);
 
   function apriPreventivoNeiPreventivi(p: PreventivoRecord) {
     onClose();
@@ -2056,19 +2055,20 @@ function LavorazioniPanel({
                               patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
                             }}
                           />
-                          <button
-                            type="button"
-                            className="shrink-0 rounded p-1 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
-                            title="Rimuovi addetto"
-                            aria-label="Rimuovi addetto"
-                            onClick={() => {
-                              if (!window.confirm("Rimuovere questo addetto dalla riga?")) return;
-                              const next = (r.addettiAssegnati ?? []).filter((_, j) => j !== idx);
-                              patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
-                            }}
-                          >
-                            ✕
-                          </button>
+                          <Tooltip content="Rimuovi">
+                            <button
+                              type="button"
+                              className="shrink-0 rounded p-1 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                              aria-label="Rimuovi addetto"
+                              onClick={() => {
+                                if (!window.confirm("Rimuovere questo addetto dalla riga?")) return;
+                                const next = (r.addettiAssegnati ?? []).filter((_, j) => j !== idx);
+                                patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </Tooltip>
                         </div>
                       ))}
                       <button
@@ -2088,18 +2088,19 @@ function LavorazioniPanel({
                 </td>
                 {!ro ? (
                   <td className="px-2 py-2 align-top">
-                    <button
-                      type="button"
-                      className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
-                      title="Rimuovi riga"
-                      aria-label="Rimuovi riga lavorazione"
-                      onClick={() => {
+                    <Tooltip content="Rimuovi">
+                      <button
+                        type="button"
+                        className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                        aria-label="Rimuovi riga lavorazione"
+                        onClick={() => {
                         if (!window.confirm("Eliminare questa riga?")) return;
                         patchRighe(doc.campi.righe.filter((x) => x.id !== r.id));
                       }}
                     >
                       ✕
                     </button>
+                    </Tooltip>
                   </td>
                 ) : null}
               </tr>
@@ -2155,7 +2156,9 @@ function RicambiPanel({
   onDelete: () => void;
 }) {
   const ro = doc.sorgente === "file_esterno";
-  const prodotti = getMagazzinoReportSnapshot();
+  const qc = useQueryClient();
+  const magazzinoQ = useMagazzinoRicambiUIQuery();
+  const prodotti = magazzinoQ.data ?? [];
   const [acRowId, setAcRowId] = useState<string | null>(null);
   const [magSearch, setMagSearch] = useState("");
   const [magSearchOpen, setMagSearchOpen] = useState(false);
@@ -2243,27 +2246,31 @@ function RicambiPanel({
     }
     const ok = window.confirm(`Confermare scarico magazzino di ${r.quantita} pz. per ${r.ricambioNome}?`);
     if (!ok) return;
-    const res = applyMagazzinoScaricoDaScheda({
-      ricambioId: r.ricambioId,
-      quantita: r.quantita,
-      autore: currentUser,
-      riepilogo: `Scheda ricambi · ${identLine}`,
-    });
-    if (!res.ok) {
-      window.alert(res.error);
-      return;
-    }
-    const righe = doc.campi.righe.map((x) => (x.id === r.id ? { ...x, scaricoMagazzinoApplicato: true } : x));
-    const now = new Date().toISOString();
-    const u = currentUser.trim() || "Operatore";
-    const nextDoc: SchedaRicambiDoc = {
-      ...doc,
-      campi: { ...doc.campi, righe },
-      updatedAt: now,
-      updatedBy: u,
-    };
-    setDoc(nextDoc);
-    onImmediatePersist(nextDoc);
+    void (async () => {
+      const res = await applyMagazzinoScaricoDaScheda({
+        ricambioId: r.ricambioId!,
+        lavorazioneId: lav.id,
+        quantita: r.quantita,
+        autore: currentUser,
+        riepilogo: `Scheda ricambi · ${identLine}`,
+        qc,
+      });
+      if (!res.ok) {
+        window.alert(res.error);
+        return;
+      }
+      const righe = doc.campi.righe.map((x) => (x.id === r.id ? { ...x, scaricoMagazzinoApplicato: true } : x));
+      const now = new Date().toISOString();
+      const u = currentUser.trim() || "Operatore";
+      const nextDoc: SchedaRicambiDoc = {
+        ...doc,
+        campi: { ...doc.campi, righe },
+        updatedAt: now,
+        updatedBy: u,
+      };
+      setDoc(nextDoc);
+      onImmediatePersist(nextDoc);
+    })();
   }
 
   return (
@@ -2475,18 +2482,19 @@ function RicambiPanel({
                   ) : null}
                   {!ro ? (
                     <td className="px-2 py-2 align-top">
-                      <button
-                        type="button"
-                        className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
-                        title="Rimuovi riga"
-                        aria-label="Rimuovi riga ricambio"
-                        onClick={() => {
-                          if (!window.confirm("Eliminare questa riga?")) return;
-                          patchRighe(doc.campi.righe.filter((x) => x.id !== r.id));
-                        }}
-                      >
-                        ✕
-                      </button>
+                      <Tooltip content="Rimuovi">
+                        <button
+                          type="button"
+                          className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                          aria-label="Rimuovi riga ricambio"
+                          onClick={() => {
+                            if (!window.confirm("Eliminare questa riga?")) return;
+                            patchRighe(doc.campi.righe.filter((x) => x.id !== r.id));
+                          }}
+                        >
+                          ✕
+                        </button>
+                      </Tooltip>
                     </td>
                   ) : null}
                 </tr>

@@ -62,7 +62,9 @@ import {
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import { persistSchedeBundle, persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
+import { applyOptimisticSchedeStore, rollbackSchedeStore, snapshotSchedeStore } from "@/lib/schede/schede-store-optimistic";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
+import { markRecentLocalTableBurst } from "@/lib/sync/recent-local-mutation";
 import { useSchedeStoreQuery } from "@/src/hooks/use-schede-store-query";
 import {
   CAB_ADDETTO_DISPLAY_RENAME,
@@ -87,6 +89,7 @@ import {
 } from "@/lib/ui/design-system";
 import {
   Drawer,
+  IconActionButton,
   PageToolbar,
   PageToolbarActions,
   PageToolbarResultCount,
@@ -642,13 +645,23 @@ export function LavorazioniView() {
   const { store: schedeStore, invalidate: invalidateSchedeStore } = useSchedeStoreQuery();
 
   const persistSchedeAndSync = useCallback(
-    (promise: Promise<{ ok: true } | { ok: false; error: string }>) => {
+    (
+      promise: Promise<{ ok: true } | { ok: false; error: string }>,
+      options?: { syncAfter?: boolean; rollbackSnapshot?: ReturnType<typeof snapshotSchedeStore> },
+    ) => {
       void promise.then((res) => {
         if (!res.ok) {
+          if (options?.rollbackSnapshot !== undefined) {
+            rollbackSchedeStore(qc, options.rollbackSnapshot);
+          }
           pushToast(res.error ?? "Salvataggio schede non riuscito.", "error", 5000);
           return;
         }
-        dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
+        if (options?.syncAfter !== false) {
+          dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
+        } else {
+          markRecentLocalTableBurst(["scheda_lavorazione"]);
+        }
       });
     },
     [qc, pushToast],
@@ -900,7 +913,12 @@ export function LavorazioniView() {
             },
           },
         };
-        persistSchedeAndSync(persistSchedeStore(updated, row.id));
+        const schedeSnapshot = snapshotSchedeStore(qc);
+        applyOptimisticSchedeStore(qc, updated);
+        persistSchedeAndSync(persistSchedeStore(updated, row.id), {
+          syncAfter: false,
+          rollbackSnapshot: schedeSnapshot,
+        });
       }
       void logService.create({
         entita: "lavorazioni",
@@ -914,7 +932,7 @@ export function LavorazioniView() {
       });
       flashRow(row.id);
     },
-    [authorName, canEditWorkOrders, defaultAddetto, flashRow, globalOpts.lavorazioni.addetti, schedeStore, user?.id],
+    [authorName, canEditWorkOrders, defaultAddetto, flashRow, globalOpts.lavorazioni.addetti, persistSchedeAndSync, qc, schedeStore, user?.id],
   );
 
   function openEliminaConfirm(row: LavorazioneListRow) {
@@ -1648,43 +1666,36 @@ export function LavorazioniView() {
                         </td>
                         <td className={lavTableTdAzioni}>
                           <div className={lavTableActionsRow}>
-                            <button
-                              type="button"
+                            <IconActionButton
+                              label="Concludi"
+                              tooltipContent={row.stato === "completata" ? "Concludi" : "Non disponibile"}
                               className={lavTableActionBtnSecondary}
-                              title={row.stato === "completata" ? "Concludi lavorazione" : "Concludi disponibile solo con stato completata"}
-                              aria-label="Concludi lavorazione"
                               disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true}
                               onClick={() => openConcludiConfirm(row)}
                             >
                               <IconCloseWork />
-                            </button>
+                            </IconActionButton>
                             {canDeleteLavorazioneAttiva(row, canDeleteRecords) ? (
-                              <button
-                                type="button"
+                              <IconActionButton
+                                label="Elimina"
                                 className={lavTableActionBtnDanger}
-                                title="Elimina"
-                                aria-label="Elimina"
                                 disabled={mutPending || loading || !canDeleteRecords}
                                 onClick={() => openEliminaConfirm(row)}
                               >
                                 <IconTrash />
-                              </button>
+                              </IconActionButton>
                             ) : null}
-                            <button
-                              type="button"
+                            <IconActionButton
+                              label="Apri"
                               className={lavTableActionBtnInfo}
-                              title="Apri dettaglio lavorazione"
-                              aria-label="Apri dettaglio lavorazione"
                               disabled={mutPending}
                               onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "panoramica" })}
                             >
                               <IconInfo />
-                            </button>
-                            <button
-                              type="button"
+                            </IconActionButton>
+                            <IconActionButton
+                              label="Schede"
                               className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                              title="Apri schede lavorazione"
-                              aria-label="Apri schede lavorazione"
                               disabled={mutPending}
                               onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "schede" })}
                             >
@@ -1692,7 +1703,7 @@ export function LavorazioniView() {
                               <span className={dsTableActionBadge} aria-hidden>
                                 {schedeCountForRow(row, schedeStore)}/3
                               </span>
-                            </button>
+                            </IconActionButton>
                           </div>
                         </td>
                       </tr>
@@ -1795,29 +1806,36 @@ export function LavorazioniView() {
                       />
                     }
                   >
-                    <button type="button" className={dsTableActionBtnSecondary} title={row.stato === "completata" ? "Concludi lavorazione" : "Concludi disponibile solo con stato completata"} aria-label="Concludi lavorazione" disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true} onClick={() => openConcludiConfirm(row)}>
+                    <IconActionButton
+                      label="Concludi"
+                      tooltipContent={row.stato === "completata" ? "Concludi" : "Non disponibile"}
+                      className={dsTableActionBtnSecondary}
+                      disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true}
+                      onClick={() => openConcludiConfirm(row)}
+                    >
                       <IconCloseWork />
-                    </button>
+                    </IconActionButton>
                     {canDeleteLavorazioneAttiva(row, canDeleteRecords) ? (
-                      <button
-                        type="button"
+                      <IconActionButton
+                        label="Elimina"
                         className={dsTableActionBtnDanger}
-                        title="Elimina"
-                        aria-label="Elimina"
                         disabled={mutPending || loading || !canDeleteRecords}
                         onClick={() => openEliminaConfirm(row)}
                       >
                         <IconTrash />
-                      </button>
+                      </IconActionButton>
                     ) : null}
-                    <button type="button" className={dsTableActionBtnInfo} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" disabled={mutPending} onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "panoramica" })}>
+                    <IconActionButton
+                      label="Apri"
+                      className={dsTableActionBtnInfo}
+                      disabled={mutPending}
+                      onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "panoramica" })}
+                    >
                       <IconInfo />
-                    </button>
-                    <button
-                      type="button"
+                    </IconActionButton>
+                    <IconActionButton
+                      label="Schede"
                       className={`${dsTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                      title="Apri schede lavorazione"
-                      aria-label="Apri schede lavorazione"
                       disabled={mutPending}
                       onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "schede" })}
                     >
@@ -1825,7 +1843,7 @@ export function LavorazioniView() {
                       <span className={dsTableActionBadge} aria-hidden>
                         {schedeCountForRow(row, schedeStore)}/3
                       </span>
-                    </button>
+                    </IconActionButton>
                   </LavorazioneMobileCardFooter>
                 </LavorazioneMobileCardShell>
               );
@@ -1992,31 +2010,32 @@ export function LavorazioniView() {
                         </td>
                         <td className={lavTableTdAzioni}>
                           <div className={lavTableActionsRow}>
-                            <button
-                              type="button"
+                            <IconActionButton
+                              label="Ripristina"
+                              tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
                               className={lavTableActionBtnDanger}
-                              title="Ripristina lavorazione"
-                              aria-label="Ripristina lavorazione"
                               disabled={!canEditWorkOrders || mutPending || loading}
                               onClick={() => submitRipristinaInLavorazione(row)}
                             >
                               <IconRipristinaDaArchivio />
-                            </button>
-                            <button type="button" className={lavTableActionBtnInfo} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}>
+                            </IconActionButton>
+                            <IconActionButton
+                              label="Apri"
+                              className={lavTableActionBtnInfo}
+                              onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}
+                            >
                               <IconInfo />
-                            </button>
-                            <button
-                              type="button"
+                            </IconActionButton>
+                            <IconActionButton
+                              label="Schede"
                               className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                              title="Apri schede lavorazione"
-                              aria-label="Apri schede lavorazione"
                               onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "schede" })}
                             >
                               <IconSchede />
                               <span className={dsTableActionBadge} aria-hidden>
                                 {schedeCountForRow(row, schedeStore)}/3
                               </span>
-                            </button>
+                            </IconActionButton>
                           </div>
                         </td>
                       </tr>
@@ -2077,31 +2096,32 @@ export function LavorazioniView() {
                       />
                     }
                   >
-                    <button
-                      type="button"
+                    <IconActionButton
+                      label="Ripristina"
+                      tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
                       className={lavTableActionBtnDanger}
-                      title="Ripristina lavorazione"
-                      aria-label="Ripristina lavorazione"
                       disabled={!canEditWorkOrders || mutPending || loading}
                       onClick={() => submitRipristinaInLavorazione(row)}
                     >
                       <IconRipristinaDaArchivio />
-                    </button>
-                    <button type="button" className={lavTableActionBtnInfo} title="Apri dettaglio lavorazione" aria-label="Apri dettaglio lavorazione" onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}>
+                    </IconActionButton>
+                    <IconActionButton
+                      label="Apri"
+                      className={lavTableActionBtnInfo}
+                      onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}
+                    >
                       <IconInfo />
-                    </button>
-                    <button
-                      type="button"
+                    </IconActionButton>
+                    <IconActionButton
+                      label="Schede"
                       className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                      title="Apri schede lavorazione"
-                      aria-label="Apri schede lavorazione"
                       onClick={() => setSchedeRow({ row, origine: "storico", initialTab: "schede" })}
                     >
                       <IconSchede />
                       <span className={dsTableActionBadge} aria-hidden>
                         {schedeCountForRow(row, schedeStore)}/3
                       </span>
-                    </button>
+                    </IconActionButton>
                   </LavorazioneMobileCardFooter>
                 </LavorazioneMobileCardShell>
               );

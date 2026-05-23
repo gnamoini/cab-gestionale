@@ -15,10 +15,11 @@ import { movimentiService } from "@/src/services/movimenti.service";
 import { preventiviService } from "@/src/services/preventivi.service";
 import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
 import { schedeService } from "@/src/services/schede.service";
+import { QK } from "@/src/lib/react-query/query-keys";
 
 /** Prefisso stabile per query atomi dominio lavorazioni (invalidazione globale). */
 export const lavorazioniDomainQueryKeys = {
-  root: ["lavorazioniQueries"] as const,
+  root: QK.lavorazioniQueries,
   base: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "base", lavorazioneId] as const,
   list: (filtersKey: string) => [...lavorazioniDomainQueryKeys.root, "list", filtersKey] as const,
   schede: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "schede", lavorazioneId] as const,

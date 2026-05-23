@@ -2,8 +2,8 @@
 
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   GestionaleListTable,
@@ -23,10 +23,9 @@ import { useAuth } from "@/context/auth-context";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
-import { getMagazzinoReportSnapshot, subscribeMagazzinoReportSync } from "@/lib/magazzino/magazzino-report-sync";
-import { getMezziReportSnapshot, subscribeMezziReportSync } from "@/lib/mezzi/mezzi-report-sync";
+import { splitLavorazioniListRowsForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import { mezzoFromLavorazione, preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-hub-merge";
-import { getLavorazioniMezziSnapshot, normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
+import { normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import {
   buildPreventiviFilterCatalog,
@@ -59,14 +58,16 @@ import {
   removePreventivoRecord,
 } from "@/lib/preventivi/preventivi-sync-adapter";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
-import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { useToast } from "@/context/toast-context";
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
 import {
   preventivoTipoDocumentoBadgeClass,
   preventivoTipoDocumentoLabel,
 } from "@/lib/preventivi/preventivi-tipo-documento";
-import { CAB_PREVENTIVI_LOG_REFRESH, CAB_PREVENTIVI_REFRESH } from "@/lib/sistema/cab-events";
+import { CAB_PREVENTIVI_LOG_REFRESH } from "@/lib/sistema/cab-events";
 import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey, PreventivoSortPhase } from "@/lib/preventivi/types";
 import {
   dsBtnNeutral,
@@ -89,9 +90,11 @@ import {
   CardMobile,
   CardMobileActions,
   Drawer,
+  IconActionButton,
   PageToolbar,
   PageToolbarActions,
   PageToolbarResultCount,
+  Tooltip,
 } from "@/components/design-system";
 import {
   gestionaleListTableRowClass,
@@ -122,6 +125,88 @@ function fmtDataCreazioneTabella(iso: string): string {
 
 const prevTableTd = gestionaleListTableTd;
 const prevTableTdCliente = `${gestionaleListTableTd} min-w-0 border-l border-zinc-200/90 pl-3 text-zinc-800 dark:border-zinc-700/90 dark:text-zinc-100`;
+
+function IconPreventivoEdit({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+    </svg>
+  );
+}
+
+function IconPreventivoPdf({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+    </svg>
+  );
+}
+
+function IconPreventivoTrash({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+    </svg>
+  );
+}
+
+function PreventivoRowActions({
+  p,
+  hrefLav,
+  canEditWorkOrders,
+  canDeleteRecords,
+  autore,
+  onEdit,
+  onDelete,
+}: {
+  p: PreventivoRecord;
+  hrefLav: string | null;
+  canEditWorkOrders: boolean;
+  canDeleteRecords: boolean;
+  autore: string;
+  onEdit: (rec: PreventivoRecord) => void;
+  onDelete: (rec: PreventivoRecord) => void;
+}) {
+  return (
+    <>
+      {hrefLav ? (
+        <IconActionButton
+          as="link"
+          href={hrefLav}
+          label="Lavorazione"
+          className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
+        >
+          <IconNavLavorazioni className={dsTableActionGlyph} strokeWidth={2} />
+        </IconActionButton>
+      ) : null}
+      <IconActionButton
+        label="Modifica"
+        tooltipContent={canEditWorkOrders ? "Modifica" : "Sola lettura"}
+        className={dsTableActionBtnPrimary}
+        disabled={!canEditWorkOrders}
+        onClick={() => onEdit(p)}
+      >
+        <IconPreventivoEdit />
+      </IconActionButton>
+      <IconActionButton
+        label="PDF"
+        className={dsTableActionBtnSecondary}
+        onClick={() => openPreventivoPdfInNewTab(p, autore.trim() || "Operatore")}
+      >
+        <IconPreventivoPdf />
+      </IconActionButton>
+      <IconActionButton
+        label="Elimina"
+        tooltipContent={canDeleteRecords ? "Elimina" : "Sola lettura"}
+        className={dsTableActionBtnDanger}
+        disabled={!canDeleteRecords}
+        onClick={() => onDelete(p)}
+      >
+        <IconPreventivoTrash />
+      </IconActionButton>
+    </>
+  );
+}
 
 function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: PreventivoSortKey, phase: Exclude<PreventivoSortPhase, "natural">): number {
   const dir = phase === "asc" ? 1 : -1;
@@ -161,11 +246,18 @@ export function PreventiviView() {
   const searchParams = useSearchParams();
   const { authorName: autore } = useAuth();
   const { push: pushToast } = useToast();
+  const queryClient = useQueryClient();
   const { records: rows, refetch: refetchPreventivi } = usePreventiviRecordsQuery();
   const mezziListQ = useMezziListQuery();
   const mezziRows = mezziListQ.data ?? [];
-  const [mezziSnap, setMezziSnap] = useState(() => getMezziReportSnapshot());
-  const [magSnap, setMagSnap] = useState(() => getMagazzinoReportSnapshot());
+  const mezziSnap = useMemo(() => mezziRows.map(toMezzoUI), [mezziRows]);
+  const magazzinoQ = useMagazzinoRicambiUIQuery();
+  const magSnap = magazzinoQ.data ?? [];
+  const lavorazioniListQ = useLavorazioniList({ includeMezzo: true });
+  const lavReport = useMemo(
+    () => splitLavorazioniListRowsForReport(lavorazioniListQ.data ?? []),
+    [lavorazioniListQ.data],
+  );
   const [sortColumn, setSortColumn] = useState<PreventivoSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<PreventivoSortPhase>("natural");
   const [editor, setEditor] = useState<{
@@ -236,26 +328,10 @@ export function PreventiviView() {
     return () => window.clearTimeout(t);
   }, [logOpen]);
 
-  useEffect(() => {
-    function onRefresh() {
-      reload();
-    }
-    window.addEventListener(CAB_PREVENTIVI_REFRESH, onRefresh);
-    return () => window.removeEventListener(CAB_PREVENTIVI_REFRESH, onRefresh);
-  }, [reload]);
-
-  useEffect(() => {
-    return subscribeMezziReportSync(() => setMezziSnap(getMezziReportSnapshot()));
-  }, []);
-
-  useEffect(() => {
-    return subscribeMagazzinoReportSync(() => setMagSnap(getMagazzinoReportSnapshot()));
-  }, []);
-
   function closeEditor() {
     const rollbackId = rollbackDraftIdRef.current;
     if (rollbackId && !draftConfirmedRef.current) {
-      void removePreventivoRecord(rollbackId).then(() => reload());
+      void removePreventivoRecord(rollbackId, { queryClient }).then(() => reload());
     }
     rollbackDraftIdRef.current = null;
     draftConfirmedRef.current = false;
@@ -276,7 +352,7 @@ export function PreventiviView() {
     const openId = searchParams.get(Q_PREVENTIVI_OPEN)?.trim();
     const nuovo = searchParams.get(Q_PREVENTIVI_NUOVO);
     if (openId === orphanId || nuovo === "1") return;
-    void removePreventivoRecord(orphanId).then(() => {
+    void removePreventivoRecord(orphanId, { queryClient }).then(() => {
       clearEphemeralPreventivoDraft();
       reload();
     });
@@ -327,7 +403,7 @@ export function PreventiviView() {
         list = list.filter((r) => normMezzoKey(r.matricola) === key);
       } else if (filterMezzoRaw.startsWith("hub-lav-")) {
         const lavId = filterMezzoRaw.slice("hub-lav-".length);
-        const { attive, storico } = getLavorazioniMezziSnapshot();
+        const { attive, storico } = lavReport;
         const lav = [...storico, ...attive].find((l) => l.id === lavId);
         if (lav) {
           list = list.filter((r) => preventivoMatchesMezzo(mezzoFromLavorazione(lav), r));
@@ -365,7 +441,7 @@ export function PreventiviView() {
       }
     }
     return list;
-  }, [rows, filterLavId, filterOrig, filterMezzoRaw, pageFilters, mezziSnap, focusPreventivoId]);
+  }, [rows, filterLavId, filterOrig, filterMezzoRaw, pageFilters, mezziSnap, focusPreventivoId, lavReport]);
 
   const sortedRows = useMemo(() => {
     const list = [...filteredRows];
@@ -473,8 +549,9 @@ export function PreventiviView() {
       mezzo,
       magazzino: magSnap,
       autore: autore.trim() || "Operatore",
+      existingRecords: rows,
     });
-    void appendPreventivoSynced(rec, mezziRows).then((res) => {
+    void appendPreventivoSynced(rec, mezziRows, { queryClient }).then((res) => {
       if (!res.ok) {
         pushToast(res.error, "error", 5000);
         return;
@@ -491,7 +568,7 @@ export function PreventiviView() {
     sp.set(Q_PREVENTIVI_OPEN, rec.id);
     const q = sp.toString();
     router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
-  }, [searchParams, router, mezziSnap, magSnap, autore]);
+  }, [searchParams, router, mezziSnap, magSnap, autore, rows, mezziRows, queryClient]);
 
   useEffect(() => {
     if (!focusPreventivoId) return;
@@ -539,7 +616,7 @@ export function PreventiviView() {
       autore: u,
       atIso: new Date().toISOString(),
     });
-    const res = await removePreventivoRecord(p.id);
+    const res = await removePreventivoRecord(p.id, { queryClient });
     setEliminaPending(false);
     if (!res.ok) {
       pushToast(res.error, "error", 5000);
@@ -599,7 +676,7 @@ export function PreventiviView() {
                   canEditWorkOrders &&
                   setEditor({
                     open: true,
-                    record: buildEmptyManualPreventivo(autore.trim() || "Operatore"),
+                    record: buildEmptyManualPreventivo(autore.trim() || "Operatore", rows),
                     isNew: true,
                     isRollbackDraft: false,
                   })
@@ -819,55 +896,15 @@ export function PreventiviView() {
                     </td>
                     <td className={gestionaleListTableTdAzioni}>
                       <div className={dsTableActionsGroup}>
-                        {hrefLav ? (
-                          <Link
-                            href={hrefLav}
-                            className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
-                            title={
-                              p.lavorazioneOrigine === "storico"
-                                ? "Apri lavorazione (storico)"
-                                : "Apri lavorazione in corso"
-                            }
-                            aria-label="Apri lavorazione collegata"
-                          >
-                            <IconNavLavorazioni className={dsTableActionGlyph} strokeWidth={2} />
-                          </Link>
-                        ) : null}
-                        <button
-                          type="button"
-                          className={dsTableActionBtnPrimary}
-                          onClick={() => apriModifica(p)}
-                          disabled={!canEditWorkOrders}
-                          title={canEditWorkOrders ? "Apri / modifica" : READONLY_PERMISSION_HINT}
-                          aria-label="Apri o modifica preventivo"
-                        >
-                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className={dsTableActionBtnSecondary}
-                          onClick={() => openPreventivoPdfInNewTab(p, autore.trim() || "Operatore")}
-                          title="Esporta PDF"
-                          aria-label="Esporta PDF preventivo"
-                        >
-                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          className={dsTableActionBtnDanger}
-                          onClick={() => openEliminaConfirm(p)}
-                          disabled={!canDeleteRecords}
-                          title={canDeleteRecords ? "Elimina" : READONLY_PERMISSION_HINT}
-                          aria-label="Elimina preventivo"
-                        >
-                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                        <PreventivoRowActions
+                          p={p}
+                          hrefLav={hrefLav}
+                          canEditWorkOrders={canEditWorkOrders}
+                          canDeleteRecords={canDeleteRecords}
+                          autore={autore}
+                          onEdit={apriModifica}
+                          onDelete={openEliminaConfirm}
+                        />
                       </div>
                     </td>
                   </tr>
@@ -946,55 +983,15 @@ export function PreventiviView() {
                     </div>
                   </dl>
                   <CardMobileActions>
-                    {hrefLav ? (
-                      <Link
-                        href={hrefLav}
-                        className={`${dsTableActionBtnSecondary} inline-flex items-center justify-center no-underline`}
-                        title={
-                          p.lavorazioneOrigine === "storico"
-                            ? "Apri lavorazione (storico)"
-                            : "Apri lavorazione in corso"
-                        }
-                        aria-label="Apri lavorazione collegata"
-                      >
-                        <IconNavLavorazioni className={dsTableActionGlyph} strokeWidth={2} />
-                      </Link>
-                    ) : null}
-                    <button
-                      type="button"
-                      className={dsTableActionBtnPrimary}
-                      onClick={() => apriModifica(p)}
-                      disabled={!canEditWorkOrders}
-                      title={canEditWorkOrders ? "Apri / modifica" : READONLY_PERMISSION_HINT}
-                      aria-label="Apri o modifica preventivo"
-                    >
-                      <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      className={dsTableActionBtnSecondary}
-                      onClick={() => openPreventivoPdfInNewTab(p, autore.trim() || "Operatore")}
-                      title="Esporta PDF"
-                      aria-label="Esporta PDF preventivo"
-                    >
-                      <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                      </svg>
-                    </button>
-                    <button
-                      type="button"
-                      className={dsTableActionBtnDanger}
-                      onClick={() => openEliminaConfirm(p)}
-                      disabled={!canDeleteRecords}
-                      title={canDeleteRecords ? "Elimina" : READONLY_PERMISSION_HINT}
-                      aria-label="Elimina preventivo"
-                    >
-                      <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    <PreventivoRowActions
+                      p={p}
+                      hrefLav={hrefLav}
+                      canEditWorkOrders={canEditWorkOrders}
+                      canDeleteRecords={canDeleteRecords}
+                      autore={autore}
+                      onEdit={apriModifica}
+                      onDelete={openEliminaConfirm}
+                    />
                   </CardMobileActions>
                 </CardMobile>
               );
@@ -1012,6 +1009,7 @@ export function PreventiviView() {
         isRollbackDraft={editor.isRollbackDraft}
         autore={autore.trim() || "Operatore"}
         mezziRows={mezziRows}
+        allRecords={rows}
         onClose={closeEditor}
         onSaved={onEditorSaved}
         onSaveError={(msg) => {
@@ -1059,18 +1057,19 @@ export function PreventiviView() {
                             atIso: entry.atIso,
                           }}
                           trailing={
-                            <button
-                              type="button"
-                              className={logEntryDismissBtnClass}
-                              aria-label="Rimuovi voce dal log"
-                              title="Rimuovi voce dal log"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (window.confirm("Rimuovere questa voce dal log?")) removePreventiviChangeLogEntryById(entry.id);
-                              }}
-                            >
-                              ×
-                            </button>
+                            <Tooltip content="Rimuovi">
+                              <button
+                                type="button"
+                                className={logEntryDismissBtnClass}
+                                aria-label="Rimuovi voce dal log"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  if (window.confirm("Rimuovere questa voce dal log?")) removePreventiviChangeLogEntryById(entry.id);
+                                }}
+                              >
+                                ×
+                              </button>
+                            </Tooltip>
                           }
                         />
                       </li>

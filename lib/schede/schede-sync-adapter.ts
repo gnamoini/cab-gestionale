@@ -70,26 +70,26 @@ function cacheStoreLocally(store: LavorazioneSchedeStore): void {
   saveLavorazioneSchedeStore(store);
 }
 
-/** Carica store schede: DB primary con cache locale aggiornata ad ogni fetch. */
-export async function fetchSchedeStoreMerged(): Promise<LavorazioneSchedeStore> {
-  const local = loadLavorazioneSchedeStore();
+/** Carica bundle schede da DB — unica source per React Query. */
+export async function fetchSchedeBundlesFromDb(): Promise<LavorazioneSchedeStore> {
   const remoteRes = await schedeService.getAll();
-
   if (remoteRes.success && remoteRes.data) {
     const remote = schedaRowsToStore(remoteRes.data);
     if (isSchedeDbPrimary()) {
       cacheStoreLocally(remote);
-      return remote;
     }
-    const merged = mergeSchedeStores(local, remote, false);
-    cacheStoreLocally(merged);
-    return merged;
+    return remote;
   }
-
   if (isSchedeDbPrimary()) {
-    console.warn("[schede] fetch remoto fallito; uso cache locale come fallback.");
+    console.warn("[schede] fetch remoto fallito; cache UI vuota.");
+    return {};
   }
-  return local;
+  return loadLavorazioneSchedeStore();
+}
+
+/** @deprecated Usare `fetchSchedeBundlesFromDb`. */
+export async function fetchSchedeStoreMerged(): Promise<LavorazioneSchedeStore> {
+  return fetchSchedeBundlesFromDb();
 }
 
 export async function persistSchedeBundle(

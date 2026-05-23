@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import {
   gestionaleDispatchFingerprint,
   cabSyncEventForEntity,
+  GESTIONALE_DISPATCH_DEDUP_MS,
+  getLastGestionaleDispatchAt,
 } from "@/lib/sync/gestionale-sync-dispatch";
 import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
 
@@ -36,5 +38,8 @@ const unknown = cabSyncEventFromPostgresChange("unknown_table", {
   new: { id: "x" },
 });
 assert.equal(unknown, null);
+
+assert.equal(GESTIONALE_DISPATCH_DEDUP_MS, 5000);
+assert.equal(typeof getLastGestionaleDispatchAt(), "number");
 
 console.log("gestionale-sync-dispatch.test.ts: ok");

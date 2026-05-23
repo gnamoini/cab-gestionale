@@ -5,32 +5,6 @@ import type { MezzoGestito, MezzoInterventoLavorazione } from "@/lib/mezzi/types
 import { migrateStatoConfigId } from "@/src/shared/selectors";
 import type { StatoLavorazione } from "@/src/types/supabase-tables";
 
-type LavSnapshot = { attive: LavorazioneAttiva[]; storico: LavorazioneArchiviata[] };
-
-let snapshot: LavSnapshot = { attive: [], storico: [] };
-
-const listeners = new Set<() => void>();
-
-export function setLavorazioniMezziSnapshot(next: LavSnapshot) {
-  snapshot = {
-    attive: next.attive.map((r) => ({ ...r })),
-    storico: next.storico.map((r) => ({ ...r })),
-  };
-  listeners.forEach((fn) => fn());
-}
-
-export function getLavorazioniMezziSnapshot(): LavSnapshot {
-  return {
-    attive: snapshot.attive.map((r) => ({ ...r })),
-    storico: snapshot.storico.map((r) => ({ ...r })),
-  };
-}
-
-export function subscribeLavorazioniMezziSync(onChange: () => void): () => void {
-  listeners.add(onChange);
-  return () => listeners.delete(onChange);
-}
-
 export function normMezzoKey(s: string): string {
   return s.trim().toLowerCase().replace(/\s+/g, " ");
 }
