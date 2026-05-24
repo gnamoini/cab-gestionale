@@ -56,7 +56,11 @@ export const reportManualEntriesService = {
       const periodMonth = normalizePeriodMonth(input.periodMonth);
       if (!periodMonth) return err("Periodo non valido (usa YYYY-MM).");
       const past = validatePastMonth(periodMonth);
-      if (!past.success) return past;
+      if (!past.success) {
+        return err(
+          past.error ?? "Solo mesi precedenti al mese corrente possono essere modificati manualmente.",
+        );
+      }
       const count = Math.round(Number(input.completedCount));
       if (!Number.isFinite(count) || count < 0) return err("Numero completate non valido.");
       const note = input.note?.trim() || null;
