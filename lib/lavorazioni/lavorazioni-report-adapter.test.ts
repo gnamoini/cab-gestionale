@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  isReportArchivioCompletataRow,
   lavorazioneListRowToAttiva,
   lavorazioneListRowToArchiviata,
   lavorazioneReportClosureIso,
@@ -75,5 +76,29 @@ assert.equal(split.attive.length, 1);
 assert.equal(split.attive[0]?.id, "active");
 assert.equal(split.storico.length, 1);
 assert.equal(split.storico[0]?.id, "archived");
+
+assert.equal(
+  isReportArchivioCompletataRow(
+    mockRow({ archived: true, archived_at: "2025-05-01T00:00:00.000Z" }),
+  ),
+  true,
+  "archived with closure counts as report completata",
+);
+
+assert.equal(
+  isReportArchivioCompletataRow(
+    mockRow({ archived: false, stato: "completata", data_uscita: "2025-03-01T00:00:00.000Z" }),
+  ),
+  false,
+  "in-corso with stato completata must not count as report completata",
+);
+
+assert.equal(
+  isReportArchivioCompletataRow(
+    mockRow({ archived: true, archived_at: null, data_uscita: null, updated_at: "2025-06-01T12:00:00.000Z" }),
+  ),
+  false,
+  "archived without persistent closure must not count as report completata",
+);
 
 console.log("lavorazioni-report-adapter.test.ts OK");

@@ -17,6 +17,7 @@ import {
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { dsSurfaceCard, dsTypoCardTitle } from "@/lib/ui/design-system";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 
 export function DashboardRecentFeeds() {
@@ -26,6 +27,8 @@ export function DashboardRecentFeeds() {
   const authorName = user?.nome?.trim() || user?.email?.split("@")[0]?.trim() || "Operatore";
 
   const viewOpts = useViewQueryOpts({ staleTime: 90_000 });
+  const globalOpts = useGlobalOptions({ debugTag: "DashboardRecentFeeds" });
+  const statiLavorazione = globalOpts.lavorazioni.stati;
 
   const lavLogsQ = useLogListQuery({ entita: "lavorazioni", limit: 12 }, { enabled: !staging, ...viewOpts });
   const magLogsQ = useLogListQuery({ entita: "magazzino_ricambi", limit: 12 }, { enabled: !staging, ...viewOpts });
@@ -33,6 +36,7 @@ export function DashboardRecentFeeds() {
   const lavSlice = useMemo(() => {
     return buildLogModificheDisplayEntries(lavLogsQ.data ?? [], (row) =>
       logAutoreLabel(row, user?.id ?? null, authorName),
+      { statiLavorazione },
     )
       .slice(0, 8)
       .map((entry) => ({
@@ -40,7 +44,7 @@ export function DashboardRecentFeeds() {
         vm: entry.vm,
         href: buildLogModificheFocusHref(entry.row),
       }));
-  }, [authorName, lavLogsQ.data, user?.id]);
+  }, [authorName, lavLogsQ.data, statiLavorazione, user?.id]);
 
   const magSlice = useMemo(() => {
     return buildLogModificheDisplayEntries(magLogsQ.data ?? [], (row) =>

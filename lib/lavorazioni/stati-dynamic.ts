@@ -122,10 +122,36 @@ export function resolveDefaultLavorazioneStatoId(stati: StatoLavorazioneConfig[]
   return prefer?.id ?? DEFAULT_LAVORAZIONE_STATO_ID;
 }
 
+function findStatoInConfig(statoRaw: string, stati: StatoLavorazioneConfig[]): StatoLavorazioneConfig | undefined {
+  const trimmed = statoRaw.trim();
+  if (!trimmed) return undefined;
+  const migrated = migrateStatoConfigId(trimmed);
+  const slugged = slugifyStatoId(trimmed);
+  const lower = trimmed.toLowerCase();
+
+  const byId = stati.find((s) => {
+    const sid = s.id;
+    const sm = migrateStatoConfigId(sid);
+    const sidSlug = slugifyStatoId(sid);
+    return (
+      sid === trimmed ||
+      sid === migrated ||
+      sm === migrated ||
+      sid.toLowerCase() === lower ||
+      sm.toLowerCase() === lower ||
+      sidSlug === slugged ||
+      slugifyStatoId(sm) === slugged
+    );
+  });
+  if (byId) return byId;
+
+  return stati.find((s) => s.label.trim().toLowerCase() === lower);
+}
+
 export function statoLavorazioneLabel(statoId: string, stati: StatoLavorazioneConfig[]): string {
-  const id = migrateStatoConfigId(statoId);
-  const hit = stati.find((s) => s.id === id);
+  const hit = findStatoInConfig(statoId, stati);
   if (hit?.label?.trim()) return hit.label.trim();
+  const id = migrateStatoConfigId(statoId.trim());
   return id.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 

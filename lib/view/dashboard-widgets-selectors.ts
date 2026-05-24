@@ -190,3 +190,14 @@ export function formatDashboardMagRicambioIdent(marca: string, codice: string): 
   if (hasCodice) return c;
   return null;
 }
+
+/** Titolo riga widget magazzino: marca + nome ricambio (senza codice). */
+export function formatDashboardMagRicambioTitle(marca: string, nome: string): string {
+  const m = marca.trim();
+  const n = nome.trim();
+  const hasMarca = m.length > 0 && m !== "—";
+  if (hasMarca && n) return `${m} ${n}`;
+  if (n) return n;
+  if (hasMarca) return m;
+  return "—";
+}

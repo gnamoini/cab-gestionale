@@ -22,7 +22,7 @@ import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import {
   formatDashboardLavWidgetSubtitle,
-  formatDashboardMagRicambioIdent,
+  formatDashboardMagRicambioTitle,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
@@ -213,19 +213,17 @@ function DashboardMagazzinoWidget({
                 <WidgetEmpty message="Nessun ricambio." />
               ) : (
                 <ul className="space-y-2">
-                  {recentRicambi.map((r) => {
-                    const ident = formatDashboardMagRicambioIdent(r.marca, r.codice);
-                    return (
+                  {recentRicambi.map((r) => (
                       <li key={r.id} className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">{r.label}</p>
-                          {ident ? <p className={`${dsTypoCaption} truncate`}>{ident}</p> : null}
+                          <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">
+                            {formatDashboardMagRicambioTitle(r.marca, r.label)}
+                          </p>
                           <p className={dsTypoCaption}>{formatShortDate(r.updatedAt)}</p>
                         </div>
                         {r.sottoScorta ? <Badge tone="warn">Sotto</Badge> : null}
                       </li>
-                    );
-                  })}
+                    ))}
                 </ul>
               )}
             </div>

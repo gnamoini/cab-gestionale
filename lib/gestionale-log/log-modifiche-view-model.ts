@@ -9,6 +9,7 @@ import {
 import { isImageLogAction, type GestionaleLogEventTone, type GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { isLogReverted } from "@/lib/gestionale-log/undo";
 import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
+import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { LogModificaRow, LogModificaWithProfileRow } from "@/src/types/supabase-tables";
 
 export type LogModificaAutoreSource = LogModificaRow | LogModificaWithProfileRow;
@@ -36,7 +37,11 @@ function summaryToViewModel(summary: LogModificaSummary, autore: string, atIso: 
 }
 
 /** Vista centralizzata di una riga `log_modifiche` per UI gestionale. */
-export function buildLogModificheGestionaleViewModel(row: LogModificaRow, autore: string): GestionaleLogViewModel {
+export function buildLogModificheGestionaleViewModel(
+  row: LogModificaRow,
+  autore: string,
+  statiLavorazione?: StatoLavorazioneConfig[],
+): GestionaleLogViewModel {
   const reverted = isLogReverted(row);
   const summary = buildLogModificaSummary({
     entita: row.entita,
@@ -44,6 +49,7 @@ export function buildLogModificheGestionaleViewModel(row: LogModificaRow, autore
     azione: reverted ? "UNDO" : row.azione,
     payload: row.payload,
     annullato: reverted,
+    statiLavorazione: row.entita === "lavorazioni" ? statiLavorazione : undefined,
   });
   if (isImageLogAction(row.azione) && !reverted) {
     summary.tipoRiga = row.azione === "image_deleted" ? "ELIMINAZIONE FILE" : "CARICAMENTO FILE";
@@ -55,6 +61,8 @@ export function buildLogModificheGestionaleViewModel(row: LogModificaRow, autore
 export type BuildLogModificheDisplayOptions = {
   /** Sostituisce titoli generici (es. «Lavorazione») con etichetta contestuale. */
   resolveOggetto?: (row: LogModificaAutoreSource) => string | undefined;
+  /** Etichette stati da impostazioni (lavorazioni). */
+  statiLavorazione?: StatoLavorazioneConfig[];
 };
 
 export function buildLogModificheDisplayEntries(
@@ -64,7 +72,7 @@ export function buildLogModificheDisplayEntries(
 ): { id: string; row: LogModificaRow; vm: GestionaleLogViewModel }[] {
   const consolidated = consolidateLogModificaRows(rows);
   return consolidated.map((row) => {
-    let vm = buildLogModificheGestionaleViewModel(row, resolveAutore(row));
+    let vm = buildLogModificheGestionaleViewModel(row, resolveAutore(row), options?.statiLavorazione);
     const oggetto = options?.resolveOggetto?.(row)?.trim();
     if (oggetto && oggetto !== "—" && (vm.oggettoRiga === "Lavorazione" || vm.oggettoRiga === "—")) {
       vm = { ...vm, oggettoRiga: oggetto };

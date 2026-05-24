@@ -64,6 +64,8 @@ type GlobalSelectBaseProps = {
   showSimilarWarning?: boolean;
   /** Standardizza sigle societarie (SRL/SPA) nel confronto similarità. */
   similarStandardizeLegalSuffix?: boolean;
+  /** Solo scelta da elenco: niente digitazione né filtro testuale. */
+  selectOnly?: boolean;
 };
 
 export type GlobalSelectStringProps = GlobalSelectBaseProps & {
@@ -124,6 +126,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     filterNeutralValues,
     showSimilarWarning = true,
     similarStandardizeLegalSuffix = false,
+    selectOnly = false,
     "aria-label": ariaLabel,
   } = props;
 
@@ -135,7 +138,13 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const autoId = useId();
   const inputId = idProp ?? autoId;
   const listboxId = `${inputId}-listbox`;
-  const fieldClass = fieldClassForVariant(variant, inputClassName);
+  const fieldClass = useMemo(() => {
+    const base = fieldClassForVariant(variant, inputClassName);
+    if (!selectOnly) return base;
+    return base
+      .replace(/\bcursor-text\b/g, "cursor-pointer")
+      .replace(/\bappearance-auto\b/g, "appearance-none");
+  }, [variant, inputClassName, selectOnly]);
   const wrapRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -321,6 +330,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const isFilterVariant = variant === "filter";
 
   const beginEditing = useCallback(() => {
+    if (selectOnly) {
+      setOpen(true);
+      setActiveIndex(-1);
+      return;
+    }
     editSessionRef.current.modified = false;
     setFocused(true);
     setOpen(true);
@@ -329,9 +343,14 @@ export function GlobalSelect(props: GlobalSelectProps) {
     } else {
       seedSearchFromCommitted();
     }
-  }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, value]);
+  }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, selectOnly, value]);
 
   const commitBlur = () => {
+    if (selectOnly) {
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
+    }
     const userModified = editSessionRef.current.modified;
     editSessionRef.current.modified = false;
     setOpen(false);
@@ -500,6 +519,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         className={`${fieldClass}${showInvalid ? globalInputInvalidRing : ""}`}
         value={displayValue}
         onChange={(e) => {
+          if (selectOnly) return;
           const next = e.target.value;
           editSessionRef.current.modified = true;
           setFocused(true);
@@ -510,8 +530,14 @@ export function GlobalSelect(props: GlobalSelectProps) {
         }}
         onFocus={beginEditing}
         onClick={() => {
+          if (selectOnly) {
+            setOpen(true);
+            setActiveIndex(-1);
+            return;
+          }
           if (!open) beginEditing();
         }}
+        readOnly={selectOnly || undefined}
         onBlur={() => {
           blurTimer.current = setTimeout(commitBlur, 120);
         }}
@@ -524,7 +550,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
         aria-expanded={showDropdown && (totalNavigableOptions > 0 || listEmpty)}
         aria-controls={listboxId}
         aria-invalid={showInvalid || undefined}
-        aria-autocomplete="list"
+        aria-autocomplete={selectOnly ? "none" : "list"}
+        aria-readonly={selectOnly || undefined}
         aria-busy={isLoading || addPending || undefined}
       />
       {typeof document !== "undefined" && dropdownPortal ? createPortal(dropdownPortal, document.body) : null}

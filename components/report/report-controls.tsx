@@ -64,6 +64,7 @@ export function ReportControls({
           <GlobalSelect
             id="report-compare"
             variant="filter"
+            selectOnly
             inputClassName={`${globalInputFieldFilter} h-10 max-w-md lg:max-w-none`}
             items={[
               { value: "none", label: "Nessuno" },

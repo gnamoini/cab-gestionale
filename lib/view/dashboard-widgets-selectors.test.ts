@@ -5,6 +5,7 @@ import {
   computeDashboardMagWidgetStats,
   formatDashboardLavWidgetSubtitle,
   formatDashboardMagRicambioIdent,
+  formatDashboardMagRicambioTitle,
 } from "@/lib/view/dashboard-widgets-selectors";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -41,6 +42,8 @@ assert.equal(widgetRows.filter((r) => r.isUrgent).length, 2);
 assert.equal(formatDashboardLavWidgetSubtitle("Rossi Srl", "AB123"), "Rossi Srl · AB123");
 assert.equal(formatDashboardLavWidgetSubtitle("Rossi Srl", "—"), "Rossi Srl");
 assert.equal(formatDashboardMagRicambioIdent("Bucher", "OE-123"), "Bucher · OE-123");
+assert.equal(formatDashboardMagRicambioTitle("Bucher", "Ruota Bocca Aspirazione"), "Bucher Ruota Bocca Aspirazione");
+assert.equal(formatDashboardMagRicambioTitle("—", "Filtro olio"), "Filtro olio");
 
 const ricambi: RicambioMagazzino[] = [
   {

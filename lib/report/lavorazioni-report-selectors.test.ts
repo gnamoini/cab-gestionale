@@ -6,6 +6,7 @@ import {
   countCompletedByMonth,
   countCompletedInRange,
   monthKeysOverlappingRange,
+  uniqueClientiServiti,
 } from "@/lib/report/lavorazioni-report-selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -53,6 +54,12 @@ function mockRow(overrides: Partial<LavorazioneListRow> = {}): LavorazioneListRo
 const bundle = buildReportLavorazioniBundle([
   mockRow({ id: "active" }),
   mockRow({
+    id: "active-completata-ui",
+    archived: false,
+    stato: "completata",
+    data_uscita: "2025-03-15T08:00:00.000Z",
+  }),
+  mockRow({
     id: "arch-no-close",
     archived: true,
     archived_at: null,
@@ -66,10 +73,23 @@ const bundle = buildReportLavorazioniBundle([
   }),
 ]);
 
-assert.equal(bundle.attive.length, 1);
+assert.equal(bundle.attive.length, 2);
 assert.equal(bundle.storico.length, 2);
 assert.equal(bundle.completate.length, 1);
 assert.equal(bundle.completate[0]?.id, "arch-closed");
+
+const archivioOnly = buildReportLavorazioniBundle(
+  [mockRow({ id: "active" })],
+  [
+    mockRow({
+      id: "arch-closed",
+      archived: true,
+      archived_at: "2025-03-15T08:00:00.000Z",
+      data_uscita: "2025-03-15T08:00:00.000Z",
+    }),
+  ],
+);
+assert.equal(archivioOnly.completate.length, 1, "dedicated archivio fetch drives completate");
 
 const range = {
   start: startOfLocalDay(new Date(2025, 2, 1)),
@@ -77,6 +97,18 @@ const range = {
 };
 
 assert.equal(countCompletedInRange([mockArchived()], range), 1);
+
+assert.equal(
+  uniqueClientiServiti(
+    [
+      mockArchived({ cliente: "Cliente A" }),
+      mockArchived({ id: "a2", cliente: "Cliente B", dataCompletamento: "2025-04-01T12:00:00.000Z" }),
+    ],
+    range,
+  ),
+  1,
+  "clienti serviti counts only archive closures in range",
+);
 
 const manual = new Map([["2025-03", 42]]);
 assert.equal(countCompletedInRange([], range, manual), 42);

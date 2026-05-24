@@ -8,6 +8,8 @@ import {
   type GestionaleLogEventTone,
 } from "@/lib/gestionale-log/view-model";
 import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-log-oggetto";
+import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
+import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 
 /** Summary persistito in `log_modifiche.payload.summary` (generato al write). */
 export type LogModificaSummary = {
@@ -218,10 +220,17 @@ function buildOggettoFromRecord(entita: string, raw: Record<string, unknown>): s
   }
 }
 
-function formatValueForField(key: string, value: unknown): string {
+function formatStatoForLog(raw: string, stati?: StatoLavorazioneConfig[]): string {
+  const s = safeStr(raw).trim();
+  if (!s || s === "—") return "—";
+  if (stati?.length) return statoLavorazioneLabel(s, stati);
+  return formatStatoDisplay(s);
+}
+
+function formatValueForField(key: string, value: unknown, stati?: StatoLavorazioneConfig[]): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return value ? "Sì" : "No";
-  if (key === "stato") return formatStatoDisplay(String(value));
+  if (key === "stato") return formatStatoForLog(String(value), stati);
   if (key === "priorita" || key === "priorita_lavorazione") return formatTitleCasePhrase(String(value));
   if (typeof value === "object") return "aggiornato";
   const s = String(value).trim();
@@ -250,14 +259,22 @@ export function extractPayloadFieldChanges(payload: unknown): PayloadFieldChange
   return changes;
 }
 
-export function modificaLineForFieldChange(change: PayloadFieldChange): string {
-  return humanChangeSentence(change.key, change.before, change.after);
+export function modificaLineForFieldChange(
+  change: PayloadFieldChange,
+  stati?: StatoLavorazioneConfig[],
+): string {
+  return humanChangeSentence(change.key, change.before, change.after, stati);
 }
 
-function humanChangeSentence(key: string, before: unknown, after: unknown): string {
+function humanChangeSentence(
+  key: string,
+  before: unknown,
+  after: unknown,
+  stati?: StatoLavorazioneConfig[],
+): string {
   const label = humanFieldLabel(key);
-  const p = formatValueForField(key, before);
-  const d = formatValueForField(key, after);
+  const p = formatValueForField(key, before, stati);
+  const d = formatValueForField(key, after, stati);
 
   if (key === "quantita" || key === "scorta") {
     const a = Number(before);
@@ -276,11 +293,61 @@ function humanChangeSentence(key: string, before: unknown, after: unknown): stri
   return `${label} modificato da “${p}” a “${d}”`;
 }
 
-function diffToModifiche(payload: Record<string, unknown>): string[] {
-  return extractPayloadFieldChanges(payload).map(modificaLineForFieldChange);
+function diffToModifiche(payload: Record<string, unknown>, stati?: StatoLavorazioneConfig[]): string[] {
+  return extractPayloadFieldChanges(payload).map((c) => modificaLineForFieldChange(c, stati));
 }
 
-function defaultModificheForCreate(entita: string, azione: string, record: Record<string, unknown> | null): string[] {
+const STATO_MODIFICATO_LINE_RE =
+  /^Stato modificato da [“"]([^"”]+)[”"] a [“"]([^"”]+)[”"]$/i;
+const STATO_INIZIALE_LINE_RE = /^Stato iniziale:\s*(.+)$/i;
+
+function remapStatoModificaLineText(line: string, stati: StatoLavorazioneConfig[]): string {
+  const bare = line.replace(/^•\s*/, "").trim();
+  const mod = bare.match(STATO_MODIFICATO_LINE_RE);
+  if (mod) {
+    return `Stato modificato da “${formatStatoForLog(mod[1], stati)}” a “${formatStatoForLog(mod[2], stati)}”`;
+  }
+  const ini = bare.match(STATO_INIZIALE_LINE_RE);
+  if (ini) {
+    return `Stato iniziale: ${formatStatoForLog(ini[1].trim(), stati)}`;
+  }
+  return line;
+}
+
+/** Riscrive righe «Stato …» usando le etichette da impostazioni (anche su summary persistito). */
+function remapLavorazioneStatoInModifiche(
+  modifiche: string[],
+  payload: unknown,
+  stati?: StatoLavorazioneConfig[],
+): string[] {
+  if (!stati?.length) return modifiche;
+
+  const statoChange =
+    payload != null ? extractPayloadFieldChanges(payload).find((c) => c.key === "stato") : undefined;
+  const fromPayload = statoChange
+    ? humanChangeSentence("stato", statoChange.before, statoChange.after, stati)
+    : null;
+
+  let replacedFromPayload = false;
+  return modifiche.map((m) => {
+    const bare = m.replace(/^•\s*/, "").trim();
+    if (/^Stato modificato da /i.test(bare) || /^Stato iniziale:/i.test(bare)) {
+      if (fromPayload && !replacedFromPayload) {
+        replacedFromPayload = true;
+        return fromPayload;
+      }
+      return remapStatoModificaLineText(m, stati);
+    }
+    return m;
+  });
+}
+
+function defaultModificheForCreate(
+  entita: string,
+  azione: string,
+  record: Record<string, unknown> | null,
+  stati?: StatoLavorazioneConfig[],
+): string[] {
   const u = safeStr(azione).toUpperCase();
   if (u === "DELETE") return ["Record eliminato dal sistema"];
   if (u === "RESTORE") return ["Record ripristinato"];
@@ -291,7 +358,7 @@ function defaultModificheForCreate(entita: string, azione: string, record: Recor
       case "lavorazioni": {
         const lines = ["Creata nuova lavorazione"];
         const stato = pickStr(record ?? {}, ["stato"]);
-        if (stato) lines.push(`Stato iniziale: ${formatStatoDisplay(stato)}`);
+        if (stato) lines.push(`Stato iniziale: ${formatStatoForLog(stato, stati)}`);
         return lines;
       }
       case "magazzino_ricambi":
@@ -318,7 +385,9 @@ export function buildLogModificaSummary(input: {
   azione: string;
   payload?: unknown;
   annullato?: boolean;
+  statiLavorazione?: StatoLavorazioneConfig[];
 }): LogModificaSummary {
+  const stati = input.entita === "lavorazioni" ? input.statiLavorazione : undefined;
   const payload =
     input.payload != null && typeof input.payload === "object" && !Array.isArray(input.payload)
       ? (input.payload as Record<string, unknown>)
@@ -339,31 +408,42 @@ export function buildLogModificaSummary(input: {
           if (rebuilt !== "Lavorazione") resolvedOggetto = rebuilt;
         }
       }
+      const resolvedModifiche =
+        input.entita === "lavorazioni"
+          ? remapLavorazioneStatoInModifiche(modifiche as string[], payload, stati)
+          : (modifiche as string[]);
       return {
         tipoRiga,
         oggettoRiga: resolvedOggetto,
-        modifiche,
+        modifiche: resolvedModifiche,
         tone: toneFromAzione(input.azione, input.annullato),
       };
     }
   }
 
   if (typeof payload?.compact === "string" && payload.compact.trim()) {
-    const compact = payload.compact.trim();
+    let modifiche = payload.compact
+      .trim()
+      .split(/\s·\s/)
+      .map((part) => part.replace(/^•\s*/, "").trim())
+      .filter(Boolean);
+    if (input.entita === "lavorazioni" && stati?.length) {
+      modifiche = remapLavorazioneStatoInModifiche(modifiche, payload, stati);
+    }
     return {
       tipoRiga: tipoRigaFromAzione(input.entita, input.azione),
       oggettoRiga: buildOggettoFromRecord(input.entita, recordFromPayload(payload) ?? {}),
-      modifiche: [compact],
+      modifiche: modifiche.length ? modifiche : [payload.compact.trim()],
       tone: toneFromAzione(input.azione, input.annullato),
     };
   }
 
   const record = payload ? recordFromPayload(payload) : null;
   const oggettoRiga = record ? buildOggettoFromRecord(input.entita, record) : "—";
-  let modifiche = payload ? diffToModifiche(payload) : [];
+  let modifiche = payload ? diffToModifiche(payload, stati) : [];
 
   if (modifiche.length === 0) {
-    modifiche = defaultModificheForCreate(input.entita, input.azione, record);
+    modifiche = defaultModificheForCreate(input.entita, input.azione, record, stati);
   }
 
   return {

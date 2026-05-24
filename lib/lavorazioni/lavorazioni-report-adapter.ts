@@ -88,6 +88,18 @@ export function lavorazioneListRowToArchiviata(row: LavorazioneListRow): Lavoraz
 }
 
 /**
+ * Report — completata = solo archivio ufficiale con chiusura persistente.
+ * Esclude lavorazioni in corso, stati UI «completata» non archiviate, `updated_at` come proxy.
+ */
+export function isReportArchivioCompletataRow(
+  row: Pick<LavorazioneListRow, "archived" | "deleted_at" | "archived_at" | "data_uscita">,
+): boolean {
+  if (row.deleted_at) return false;
+  if (!isLavorazioneArchived(row)) return false;
+  return Boolean(lavorazioneReportClosureIso(row));
+}
+
+/**
  * Report: distingue in corso (`archived=false`) vs archiviate (`archived=true`).
  * Esclude righe con `deleted_at` (defense in depth oltre a RLS/query).
  */

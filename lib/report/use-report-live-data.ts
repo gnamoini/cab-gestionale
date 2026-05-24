@@ -16,6 +16,8 @@ import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.que
 
 /** Tutte le lavorazioni non eliminate (in corso + archiviate); split report su `archived`. */
 const LAV_LIST_FILTERS = { includeMezzo: true as const };
+/** Fetch archivio ufficiale — unica fonte metriche «completate» nel report. */
+const LAV_ARCHIVIO_FILTERS = { includeMezzo: true as const, archived: true as const };
 
 export function useReportLiveData() {
   const queryClient = useQueryClient();
@@ -34,6 +36,7 @@ export function useReportLiveData() {
   }, [queryClient, bumpMagLog]);
 
   const lavQuery = useLavorazioniList(LAV_LIST_FILTERS, viewOpts);
+  const lavArchivioQuery = useLavorazioniList(LAV_ARCHIVIO_FILTERS, viewOpts);
   const magQuery = useMagazzinoListQuery(undefined, viewOpts);
   const mezziQuery = useMezziListQuery(undefined, viewOpts);
   const manualQuery = useReportManualEntriesQuery();
@@ -60,8 +63,8 @@ export function useReportLiveData() {
   }, [refetchReportQueries]);
 
   const bundle = useMemo(
-    () => buildReportLavorazioniBundle(lavQuery.data ?? []),
-    [lavQuery.data],
+    () => buildReportLavorazioniBundle(lavQuery.data ?? [], lavArchivioQuery.data),
+    [lavQuery.data, lavArchivioQuery.data],
   );
 
   const manualEntries = manualQuery.data ?? [];
@@ -85,8 +88,17 @@ export function useReportLiveData() {
       manualByMonth,
       magLog,
       isLoading:
-        lavQuery.isLoading || magQuery.isLoading || mezziQuery.isLoading || manualQuery.isLoading,
-      isError: lavQuery.isError || magQuery.isError || mezziQuery.isError || manualQuery.isError,
+        lavQuery.isLoading ||
+        lavArchivioQuery.isLoading ||
+        magQuery.isLoading ||
+        mezziQuery.isLoading ||
+        manualQuery.isLoading,
+      isError:
+        lavQuery.isError ||
+        lavArchivioQuery.isError ||
+        magQuery.isError ||
+        mezziQuery.isError ||
+        manualQuery.isError,
       manualLoading: manualQuery.isLoading,
       manualError: manualQuery.isError,
     }),
@@ -96,10 +108,12 @@ export function useReportLiveData() {
       manualByMonth,
       magLog,
       lavQuery.isLoading,
+      lavArchivioQuery.isLoading,
       magQuery.isLoading,
       mezziQuery.isLoading,
       manualQuery.isLoading,
       lavQuery.isError,
+      lavArchivioQuery.isError,
       magQuery.isError,
       mezziQuery.isError,
       manualQuery.isError,

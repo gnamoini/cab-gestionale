@@ -1242,9 +1242,10 @@ export function LavorazioniView() {
             if (!lav) return undefined;
             return lavorazioneLogOggettoFromListRow(lav, schedeStore);
           },
+          statiLavorazione: statiOpts,
         },
       ),
-    [lavModificheLogQuery.data, user?.id, authorName, lavorazioniById, schedeStore],
+    [lavModificheLogQuery.data, user?.id, authorName, lavorazioniById, schedeStore, statiOpts],
   );
 
   const hasPageClientFilters =

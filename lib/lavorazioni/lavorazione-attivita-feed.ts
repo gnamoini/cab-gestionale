@@ -133,6 +133,7 @@ function eventFromLog(
     azione: reverted ? "UNDO" : row.azione,
     payload: row.payload,
     annullato: reverted,
+    statiLavorazione: statiOpts,
   });
 
   const tier = classifyTier(summary, row);

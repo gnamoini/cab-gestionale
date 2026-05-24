@@ -1,4 +1,9 @@
-import { splitLavorazioniListRowsForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
+import {
+  isReportArchivioCompletataRow,
+  lavorazioneListRowToArchiviata,
+  splitLavorazioniListRowsForReport,
+} from "@/lib/lavorazioni/lavorazioni-report-adapter";
+import { isLavorazioneArchived } from "@/lib/lavorazioni/archived";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import {
   endOfLocalDay,
@@ -18,9 +23,25 @@ export type ReportLavorazioniBundle = {
 
 export type ReportManualByMonth = Map<string, number>;
 
-export function buildReportLavorazioniBundle(rows: LavorazioneListRow[]): ReportLavorazioniBundle {
+/**
+ * @param rows Lista completa (attive + archivio) per ingressi e conteggi in corso.
+ * @param archivioRows Opzionale: fetch dedicato `archived=true` — source-of-truth per completate.
+ */
+export function buildReportLavorazioniBundle(
+  rows: LavorazioneListRow[],
+  archivioRows?: LavorazioneListRow[],
+): ReportLavorazioniBundle {
   const { attive, storico } = splitLavorazioniListRowsForReport(rows);
-  const completate = storico.filter((x) => Boolean(x.dataCompletamento?.trim()));
+  const archSource =
+    archivioRows ?? rows.filter((r) => !r.deleted_at && isLavorazioneArchived(r));
+  const completate: LavorazioneArchiviata[] = [];
+  const seen = new Set<string>();
+  for (const r of archSource) {
+    if (!isReportArchivioCompletataRow(r)) continue;
+    if (seen.has(r.id)) continue;
+    seen.add(r.id);
+    completate.push(lavorazioneListRowToArchiviata(r));
+  }
   return { attive, storico, completate };
 }
 
@@ -135,22 +156,13 @@ export function avgCloseDays(completate: LavorazioneArchiviata[], range: DateRan
   return Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10;
 }
 
-export function uniqueClientiServiti(
-  attive: LavorazioneAttiva[],
-  completate: LavorazioneArchiviata[],
-  range: DateRange,
-): number {
+/** Clienti con almeno una chiusura archivio nel periodo (solo completate persistite). */
+export function uniqueClientiServiti(completate: LavorazioneArchiviata[], range: DateRange): number {
   const s = new Set<string>();
-  const touch = (c: string, inR: boolean) => {
-    const t = c.trim();
-    if (!t || !inR) return;
-    s.add(t);
-  };
-  for (const x of attive) touch(x.cliente, isoInRange(x.dataIngresso, range));
   for (const x of completate) {
-    const inR =
-      (x.dataCompletamento && isoInRange(x.dataCompletamento, range)) || isoInRange(x.dataIngresso, range);
-    touch(x.cliente, inR);
+    if (!x.dataCompletamento || !isoInRange(x.dataCompletamento, range)) continue;
+    const t = x.cliente.trim();
+    if (t) s.add(t);
   }
   return s.size;
 }

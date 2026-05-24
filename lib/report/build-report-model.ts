@@ -131,7 +131,7 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const tempoMedio = avgCloseDays(completate, range);
   const cap = totalCapitale(magazzino);
   const ricambi = ricambiUtilizzatiQty(magLog, range);
-  const clienti = uniqueClientiServiti(attive, completate, range);
+  const clienti = uniqueClientiServiti(completate, range);
   const mezziN = mezzi.length;
 
   const magCur = sumMagazzinoPeriod(magLog, magazzino, range, anchor);
@@ -141,7 +141,7 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const completedP = compareRange ? countCompletedInRange(completate, compareRange, manualByMonth) : null;
   const tempoP = compareRange ? avgCloseDays(completate, compareRange) : null;
   const ricambiP = compareRange ? ricambiUtilizzatiQty(magLog, compareRange) : null;
-  const clientiP = compareRange ? uniqueClientiServiti(attive, completate, compareRange) : null;
+  const clientiP = compareRange ? uniqueClientiServiti(completate, compareRange) : null;
 
   const spark = sparkFromDailyCompletions(completate, range.end);
 
