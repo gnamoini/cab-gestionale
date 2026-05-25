@@ -1,10 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Tooltip } from "@/components/design-system/tooltip";
+import { useCallback, useEffect, useState } from "react";
+import { CloseButton, Tooltip } from "@/components/design-system";
+import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-import { erpBtnNeutral, erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsScrollbar, dsTable, dsTableHead, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import {
+  dsModalBackdrop,
+  dsModalPanel,
+  dsScrollbar,
+  dsTable,
+  dsTableHead,
+  dsTableRow,
+  dsTableWrap,
+  dsZModal,
+} from "@/lib/ui/design-system";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+
+const GIACENZA_MODAL_TITLE_ID = "magazzino-giacenza-modal-title";
 
 export function MagazzinoGiacenzaBell({
   count,
@@ -18,9 +30,10 @@ export function MagazzinoGiacenzaBell({
   triggerClassName: string;
 }) {
   const [open, setOpen] = useState(false);
-  const panelRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
+
+  useBodyScrollLock(open);
 
   useEffect(() => {
     if (!open) return;
@@ -64,33 +77,35 @@ export function MagazzinoGiacenzaBell({
 
       {open ? (
         <div
-          className="fixed inset-0 z-[52] flex items-center justify-center bg-black/40 p-4"
+          className={`${dsModalBackdrop} ${dsZModal}`}
           role="presentation"
           onMouseDown={(e) => {
-            if (e.target === e.currentTarget) close();
+            if (e.target === e.currentTarget) {
+              e.preventDefault();
+              close();
+            }
           }}
         >
           <div
-            ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-label="Ricambi sotto scorta minima"
-            className="flex max-h-[min(88dvh,640px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+            aria-labelledby={GIACENZA_MODAL_TITLE_ID}
+            className={`${dsModalPanel} flex max-h-[min(88dvh,640px)] w-full max-w-3xl flex-col overflow-hidden p-0`}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-              <div>
-                <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Sotto scorta minima</h2>
-                <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
+            <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
+              <div className="min-w-0 flex-1">
+                <h2 id={GIACENZA_MODAL_TITLE_ID} className="truncate text-sm font-semibold text-[color:var(--cab-text)]">
+                  Sotto scorta minima
+                </h2>
+                <p className="mt-0.5 text-xs text-[color:var(--cab-text-muted)]">
                   {count === 0 ? "Nessun avviso attivo" : `${count} ricamb${count === 1 ? "io" : "i"} da verificare`}
                 </p>
               </div>
-              <button type="button" onClick={close} className={`${erpBtnNeutral} shrink-0 ${erpFocus}`}>
-                Chiudi
-              </button>
-            </div>
+              <CloseButton onClick={close} className="shrink-0" />
+            </header>
 
-            <div className="gestionale-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4">
+            <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain p-3 sm:p-4 ${dsScrollbar}`}>
               {items.length === 0 ? (
                 <p className="py-8 text-center text-sm font-medium text-emerald-700 dark:text-emerald-400">Tutto in regola.</p>
               ) : (

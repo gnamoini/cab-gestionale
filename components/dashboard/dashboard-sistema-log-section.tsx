@@ -5,9 +5,9 @@ import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
+  GestionaleLogEntryDismissButton,
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
-  logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import {
   DASHBOARD_SISTEMA_LOG_STORAGE_KEY,
@@ -135,18 +135,9 @@ export function DashboardSistemaLogListEmbedded({
                 vm={vmFromStored(e)}
                 trailing={
                   dismissible ? (
-                    <button
-                      type="button"
-                      className={logEntryDismissBtnClass}
-                      aria-label="Rimuovi voce dal log"
-                      title="Rimuovi voce dal log"
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        if (window.confirm("Rimuovere questa voce dal log?")) removeDashboardSistemaLogEntryById(e.id);
-                      }}
-                    >
-                      ×
-                    </button>
+                    <GestionaleLogEntryDismissButton
+                      onDismiss={() => removeDashboardSistemaLogEntryById(e.id)}
+                    />
                   ) : undefined
                 }
               />

@@ -13,6 +13,7 @@ import {
 } from "@/components/gestionale/global-input";
 import { MezziSearchBar, MezziFilterFields } from "@/components/gestionale/mezzi/mezzi-filters";
 import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-detail-modal";
+import { MezzoEliminaConfirmDialog } from "@/components/gestionale/mezzi/mezzo-elimina-confirm-dialog";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
@@ -24,7 +25,7 @@ import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
 import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
 import { mezzoFormToMeta, metaToMezzoFormFields } from "@/lib/mezzi/mezzi-meta";
 import { compareMezzi, mezzoMatchesUltimaLavFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
-import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
+import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb, mezzoHaLavorazioneCollegataDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import { dsInput, dsPageToolbarBtn, dsStackPage, dsStickyToolbar } from "@/lib/ui/design-system";
@@ -42,6 +43,7 @@ import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import type { MezzoFilters, MezzoInsert, MezzoUpdate } from "@/src/services/mezzi.service";
+import { mezziService, type MezzoDependencies } from "@/src/services/mezzi.service";
 import {
   useMezziListQuery,
 } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -49,6 +51,7 @@ import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useMezzoRemoveMutation } from "@/src/hooks/gestionale/use-mezzo-remove-mutation";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
@@ -272,6 +275,11 @@ export function MezziView() {
   const createMut = useMezzoCreateMutation();
   const updateMut = useMezzoUpdateMutation();
   const removeMut = useMezzoRemoveMutation();
+  const { success: toastSuccess, error: toastError } = useGestionaleToast();
+
+  const [eliminaConfirmMezzo, setEliminaConfirmMezzo] = useState<MezzoGestito | null>(null);
+  const [eliminaDeps, setEliminaDeps] = useState<MezzoDependencies | null>(null);
+  const [loadingEliminaDeps, setLoadingEliminaDeps] = useState(false);
 
   const flashRow = useCallback((id: string) => {
     if (flashClearRef.current) clearTimeout(flashClearRef.current);
@@ -316,22 +324,55 @@ export function MezziView() {
     setFiltriEspansi(false);
   }
 
+  function closeEliminaConfirm() {
+    if (removeMut.isPending) return;
+    setEliminaConfirmMezzo(null);
+    setEliminaDeps(null);
+    setLoadingEliminaDeps(false);
+  }
+
   function handleDeleteMezzo(m: MezzoGestito) {
     if (!canEditVehicles || m.hubSynthetic) return;
-    const label = `${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim();
-    if (
-      !window.confirm(
-        `Eliminare definitivamente il mezzo «${label || m.id.slice(0, 8)}»?\n\nL'operazione non è reversibile. Mezzi con lavorazioni o preventivi collegati non possono essere eliminati.`,
-      )
-    ) {
-      return;
-    }
-    removeMut.mutate(m.id, {
+    setEliminaConfirmMezzo(m);
+    setEliminaDeps(null);
+    setLoadingEliminaDeps(true);
+  }
+
+  useEffect(() => {
+    const mezzo = eliminaConfirmMezzo;
+    if (!mezzo) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await mezziService.countDependencies(mezzo.id);
+      if (cancelled) return;
+      setLoadingEliminaDeps(false);
+      if (res.success && res.data) {
+        setEliminaDeps(res.data);
+        return;
+      }
+      toastError(res.error ?? "Verifica collegamenti non riuscita.", { entity: "mezzo", action: "delete" });
+      setEliminaConfirmMezzo(null);
+      setEliminaDeps(null);
+      setLoadingEliminaDeps(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [eliminaConfirmMezzo, toastError]);
+
+  function confirmEliminaMezzo() {
+    const mezzo = eliminaConfirmMezzo;
+    if (!mezzo || !canEditVehicles) return;
+    removeMut.mutate(mezzo.id, {
       onSuccess: () => {
+        toastSuccess("Mezzo eliminato.");
+        closeEliminaConfirm();
         setHubMezzo(null);
         setEditMezzo(null);
       },
-      onError: (err) => window.alert(err.message),
+      onError: (err) => {
+        toastError(err, { entity: "mezzo", action: "delete" });
+      },
     });
   }
 
@@ -341,7 +382,8 @@ export function MezziView() {
     };
   }, []);
 
-  const anyOverlay = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen);
+  const scrollLockActive = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen);
+  const anyOverlay = scrollLockActive || Boolean(eliminaConfirmMezzo);
   useEffect(() => {
     const id = searchParams.get(Q_FOCUS_MEZZO)?.trim();
     if (!id) return;
@@ -352,7 +394,7 @@ export function MezziView() {
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, focusMezzoInTable]);
 
-  useBodyScrollLock(anyOverlay);
+  useBodyScrollLock(scrollLockActive);
 
   useEffect(() => {
     if (!anyOverlay) return;
@@ -633,6 +675,19 @@ export function MezziView() {
           onDelete={canEditVehicles ? () => handleDeleteMezzo(hubMezzo) : undefined}
         />
       ) : null}
+
+      <MezzoEliminaConfirmDialog
+        open={eliminaConfirmMezzo != null}
+        mezzo={eliminaConfirmMezzo}
+        deps={eliminaDeps}
+        identityLinkedLavorazione={
+          eliminaConfirmMezzo != null ? mezzoHaLavorazioneCollegataDb(eliminaConfirmMezzo, lavRows) : false
+        }
+        loadingDeps={loadingEliminaDeps}
+        pending={removeMut.isPending}
+        onCancel={closeEliminaConfirm}
+        onConfirm={confirmEliminaMezzo}
+      />
 
       <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche" ariaLabel="Log modifiche mezzi" lockScroll={false}>
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">

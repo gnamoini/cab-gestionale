@@ -50,6 +50,7 @@ export function lavRowSearchHaystack(row: LavorazioneListRow, schedeStore?: Lavo
     ing?.marcaTelaio,
     ing?.modelloTelaio,
     lavRigheText,
+    row.codice?.trim() || "",
     row.id,
     row.stato,
     labelLavorazioneStatoDb(row.stato),

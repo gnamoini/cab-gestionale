@@ -49,23 +49,6 @@ export function inferTipoFileFromNome(nome: string): DocumentoTipoFile {
   return "altro";
 }
 
-export function iconAbbrev(t: DocumentoTipoFile): string {
-  switch (t) {
-    case "pdf":
-      return "PDF";
-    case "immagine":
-      return "IMG";
-    case "excel":
-      return "XLS";
-    case "word":
-      return "DOC";
-    case "testo":
-      return "TXT";
-    default:
-      return "FILE";
-  }
-}
-
 export function getDocAssocRefs(doc: DocumentoGestionale, catalog: CatalogMarca[]): DocumentoAssocRef[] {
   return legacyAssocRefs(doc, catalog);
 }
@@ -75,18 +58,6 @@ export function assocPairLabel(catalog: CatalogMarca[], ref: DocumentoAssocRef):
   const mac = mar?.macchine.find((x) => x.id === ref.macchinaId);
   if (!mar || !mac) return "—";
   return `${mar.nome} ${mac.nome}`;
-}
-
-export function formatLinkedDestinations(
-  doc: DocumentoGestionale,
-  catalog: CatalogMarca[],
-  exclude?: DocumentoAssocRef,
-): string {
-  const refs = getDocAssocRefs(doc, catalog);
-  const labels = refs
-    .filter((r) => !exclude || r.marcaId !== exclude.marcaId || r.macchinaId !== exclude.macchinaId)
-    .map((r) => assocPairLabel(catalog, r));
-  return labels.join(" · ");
 }
 
 export type DocumentiSortKey = "nome" | "marca" | "macchina" | "caricatoIl" | "categoria";
@@ -116,11 +87,14 @@ export function compareDocs(
   b: DocumentoGestionale,
   key: DocumentiSortKey | null,
   phase: DocumentiSortPhase,
+  opts?: { skipSenzaMarcaPartition?: boolean },
 ): number {
   const ra = resolveDocumentoApplicazione(a);
   const rb = resolveDocumentoApplicazione(b);
-  const senzaMarcaCmp = compareSenzaMarcaPrima(a, b);
-  if (senzaMarcaCmp !== 0) return senzaMarcaCmp;
+  if (!opts?.skipSenzaMarcaPartition) {
+    const senzaMarcaCmp = compareSenzaMarcaPrima(a, b);
+    if (senzaMarcaCmp !== 0) return senzaMarcaCmp;
+  }
   if (phase === "natural" || key === null) {
     const m = (ra.marcaKey ?? ra.marca).localeCompare(rb.marcaKey ?? rb.marca, "it");
     if (m !== 0) return m;
@@ -223,7 +197,7 @@ export function buildDocumentiViewTree(
       const r = resolveDocumentoApplicazione(d);
       if (r.applicabilita === "marca" && sameMarca(r.marcaKey ?? r.marca, marca.nome)) filesMarca.push(d);
     }
-    filesMarca.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase));
+    filesMarca.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase, { skipSenzaMarcaPartition: true }));
 
     for (const mac of marca.macchine) {
       const filesModello: DocumentoGestionale[] = [];
@@ -235,7 +209,7 @@ export function buildDocumentiViewTree(
         if (!sameModello(r.modelloKey ?? r.macchina, mac.nome)) continue;
         filesModello.push(d);
       }
-      filesModello.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase));
+      filesModello.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase, { skipSenzaMarcaPartition: true }));
 
       if (filesModello.length > 0) {
         modelli.push({
@@ -251,59 +225,9 @@ export function buildDocumentiViewTree(
   return out;
 }
 
-export function docMatchesFilters(
-  doc: DocumentoGestionale,
-  catalog: CatalogMarca[],
-  opts: {
-    filtroMarca: string;
-    filtroModello: string;
-    filtroCategoria: DocumentoGestionale["categoria"] | "__tutti__";
-    filtroTipo: DocumentoTipoFile | "__tutti__";
-  },
-): boolean {
-  const r = resolveDocumentoApplicazione(doc);
-
-  if (opts.filtroCategoria !== "__tutti__" && doc.categoria !== opts.filtroCategoria) return false;
-  if (opts.filtroTipo !== "__tutti__" && doc.tipoFile !== opts.filtroTipo) return false;
-
-  if (documentoSenzaMarca(doc)) return true;
-
-  if (opts.filtroMarca !== "__tutti__") {
-    const mar = catalog.find((m) => m.id === opts.filtroMarca);
-    if (!mar || !sameMarca(r.marcaKey ?? r.marca, mar.nome)) return false;
-  }
-  if (opts.filtroModello !== "__tutti__") {
-    const mar = opts.filtroMarca !== "__tutti__" ? catalog.find((m) => m.id === opts.filtroMarca) : null;
-    const modelliScope = mar?.macchine ?? catalog.flatMap((m) => m.macchine);
-    const mac = modelliScope.find((x) => x.id === opts.filtroModello);
-    if (!mac) return false;
-    if (r.applicabilita === "marca") return true;
-    if (!sameModello(r.modelloKey ?? r.macchina, mac.nome)) return false;
-  }
-  return true;
-}
-
-export function docMatchesSearch(doc: DocumentoGestionale, catalog: CatalogMarca[], q: string): boolean {
-  if (!q) return true;
-  const r = resolveDocumentoApplicazione(doc);
-  const assocText = getDocAssocRefs(doc, catalog)
-    .map((ref) => assocPairLabel(catalog, ref))
-    .join(" ");
-  const hay = [
-    doc.nome,
-    r.marcaKey ?? r.marca,
-    r.modelloKey ?? r.macchina,
-    documentoSenzaMarca(doc) ? "senza marca" : "",
-    labelCategoria(doc.categoria),
-    labelTipoFile(doc.tipoFile),
-    labelApplicabilitaBreve(r.applicabilita!),
-    formatDocumentoRigaSintetica(doc),
-    doc.note ?? "",
-    assocText,
-  ]
-    .join(" ")
-    .toLowerCase();
-  return hay.includes(q);
+/** Conteggio documenti in un nodo marca dell'albero (marca + modelli). */
+export function countDocsInMarcaNode(node: ArchiveDocMarcaNode): number {
+  return node.filesMarca.length + node.modelli.reduce((n, m) => n + m.files.length, 0);
 }
 
 export function getDocumentApriHref(doc: DocumentoGestionale): string | null {
@@ -318,16 +242,6 @@ export function extractFileExtension(fileName: string): string {
   const i = fileName.lastIndexOf(".");
   if (i <= 0 || i === fileName.length - 1) return "";
   return fileName.slice(i).toLowerCase();
-}
-
-export function pairKey(ref: DocumentoAssocRef): string {
-  return `${ref.marcaId}||${ref.macchinaId}`;
-}
-
-export function parsePairKey(key: string): DocumentoAssocRef | null {
-  const parts = key.split("||");
-  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
-  return { marcaId: parts[0]!, macchinaId: parts[1]! };
 }
 
 export { formatDocumentoRigaSintetica, labelApplicabilitaBreve, resolveDocumentoApplicazione };

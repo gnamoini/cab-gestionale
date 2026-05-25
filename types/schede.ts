@@ -103,6 +103,8 @@ export type SchedaRicambiDoc = SchedaMeta & {
 
 export type LavorazioneSchedeBundle = {
   lavorazioneId: string;
+  /** Codice umano display (es. 26-0001). Non sostituisce lavorazioneId uuid. */
+  codice?: string | null;
   ingresso: SchedaIngressoDoc | null;
   lavorazioni: SchedaLavorazioniDoc | null;
   ricambi: SchedaRicambiDoc | null;

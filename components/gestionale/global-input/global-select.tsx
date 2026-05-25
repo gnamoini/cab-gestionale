@@ -130,6 +130,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
     "aria-label": ariaLabel,
   } = props;
 
+  const isFilterVariant = variant === "filter";
+
   const itemsMode = "items" in props && props.items != null;
   const mode: AutocompleteDataMode = itemsMode ? "items" : "strings";
   const items = itemsMode ? props.items : [];
@@ -196,10 +198,10 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const addOptionIndex = showAddOption ? suggestions.length : -1;
   const totalNavigableOptions = suggestions.length + (showAddOption ? 1 : 0);
 
-  const isValid = useMemo(
-    () => autocompleteIsValid(value, Boolean(required), strictFromList, mode, options, items),
-    [value, required, strictFromList, mode, options, items],
-  );
+  const isValid = useMemo(() => {
+    if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) return true;
+    return autocompleteIsValid(value, Boolean(required), strictFromList, mode, options, items);
+  }, [isFilterVariant, value, filterNeutralValues, required, strictFromList, mode, options, items]);
 
   const showInvalid = (touched || forceInvalid) && !isValid;
   const activeTextForSimilar = focused || searchText.length > 0 ? searchText : value;
@@ -208,14 +210,14 @@ export function GlobalSelect(props: GlobalSelectProps) {
     return [...options];
   }, [itemsMode, items, options]);
   const similarTo = useMemo(() => {
-    if (!showSimilarWarning || similarPool.length === 0) return null;
+    if (isFilterVariant || !showSimilarWarning || similarPool.length === 0) return null;
     const text = activeTextForSimilar.trim();
     if (!text) return null;
     return findSimilarEntityInPool(text, similarPool, {
       exclude: value.trim() || undefined,
       standardizeLegalSuffix: similarStandardizeLegalSuffix,
     });
-  }, [showSimilarWarning, similarPool, activeTextForSimilar, value, similarStandardizeLegalSuffix]);
+  }, [isFilterVariant, showSimilarWarning, similarPool, activeTextForSimilar, value, similarStandardizeLegalSuffix]);
   const showDropdown = open && !disabled && !isLoading;
   const listEmpty = !isLoading && suggestions.length === 0 && !showAddOption && addCandidate.length > 0;
   const portalOpen = showDropdown && (totalNavigableOptions > 0 || listEmpty);
@@ -327,7 +329,10 @@ export function GlobalSelect(props: GlobalSelectProps) {
     setSearchText(autocompleteCommittedDisplayValue(engineInput));
   }, [engineInput]);
 
-  const isFilterVariant = variant === "filter";
+  const canClearCommittedFilter = useCallback(() => {
+    if (!value.trim()) return false;
+    return !isFilterNeutralValue(value, filterNeutralValues);
+  }, [value, filterNeutralValues]);
 
   const beginEditing = useCallback(() => {
     if (selectOnly) {
@@ -359,7 +364,13 @@ export function GlobalSelect(props: GlobalSelectProps) {
     setFocused(false);
     const trimmed = searchText.trim();
     if (!trimmed) {
-      if (userModified && value && !isFilterVariant) onChange("");
+      if (userModified) {
+        if (!isFilterVariant) {
+          if (value) onChange("");
+        } else if (canClearCommittedFilter()) {
+          onChange("");
+        }
+      }
       setSearchText("");
       return;
     }
@@ -526,7 +537,10 @@ export function GlobalSelect(props: GlobalSelectProps) {
           setSearchText(next);
           setOpen(true);
           setActiveIndex(-1);
-          if (next === "" && !isFilterVariant) onChange("");
+          if (next === "") {
+            if (!isFilterVariant) onChange("");
+            else if (canClearCommittedFilter()) onChange("");
+          }
         }}
         onFocus={beginEditing}
         onClick={() => {

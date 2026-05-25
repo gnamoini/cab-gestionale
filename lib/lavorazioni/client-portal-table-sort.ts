@@ -1,8 +1,10 @@
 import type { ClientPortalRowBundle } from "@/lib/lavorazioni/client-portal-list-filters";
+import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { GlobalTableSortPhase } from "@/lib/ui/global-table";
 export type ClientPortalSortKey =
   | "ingresso"
+  | "codice"
   | "cliente"
   | "cantiere"
   | "attrezzatura"
@@ -42,6 +44,8 @@ function cmpBundle(
       const db = new Date(fb.dataIngressoAt).getTime();
       return t(da === db ? 0 : da < db ? -1 : 1);
     }
+    case "codice":
+      return t(cmpStr(lavorazioneDisplayCodice(ra), lavorazioneDisplayCodice(rb)));
     case "cliente":
       return t(
         cmpStr(

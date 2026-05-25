@@ -15,6 +15,7 @@ type LavorazioniFilterQuery = {
   in(column: string, values: readonly unknown[]): LavorazioniFilterQuery;
   eq(column: string, value: unknown): LavorazioniFilterQuery;
   ilike(column: string, pattern: string): LavorazioniFilterQuery;
+  or(filters: string): LavorazioniFilterQuery;
   gte(column: string, value: string): LavorazioniFilterQuery;
   lte(column: string, value: string): LavorazioniFilterQuery;
   is(column: string, value: null): LavorazioniFilterQuery;
@@ -56,7 +57,10 @@ export function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuer
   if (filters.stato) query = query.eq("stato", filters.stato);
   if (filters.priorita) query = query.eq("priorita", filters.priorita);
   const search = filters.search?.trim();
-  if (search) query = query.ilike("note", `%${escapeIlikeToken(search)}%`);
+  if (search) {
+    const token = escapeIlikeToken(search);
+    query = query.or(`note.ilike.%${token}%,codice.ilike.%${token}%`);
+  }
   if (filters.data_ingresso_da?.trim()) query = query.gte("data_ingresso", filters.data_ingresso_da.trim());
   if (filters.data_ingresso_a?.trim()) query = query.lte("data_ingresso", endOfDayIso(filters.data_ingresso_a));
   if (filters.data_uscita_da?.trim()) query = query.gte("data_uscita", filters.data_uscita_da.trim());

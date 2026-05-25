@@ -25,16 +25,12 @@ import {
   type DocumentiLogStored,
 } from "@/lib/documenti/documenti-change-log-storage";
 import { CAB_DOCUMENTI_LOG_REFRESH } from "@/lib/sistema/cab-events";
-import { GlobalSelect } from "@/components/gestionale/global-input";
 import {
   erpBtnNeutral,
   erpBtnNuovaLavorazione,
   erpFocus,
-  selectLavorazioniFilter,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import {
-  dsInput,
   dsPageToolbarBtn,
   dsStackPage,
   dsStickyToolbar,
@@ -50,19 +46,14 @@ import { Drawer, IconActionButton } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
+  GestionaleLogEntryDismissButton,
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
-  logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { buildModificaRigaFromChanges, type CampoChangeLike } from "@/lib/gestionale-log/view-model";
 import { useAuth } from "@/context/auth-context";
 import {
-  buildDocumentiCountByMarcaId,
-  buildDocumentiViewTree,
-  compareDocs,
-  docMatchesFilters,
-  docMatchesSearch,
-  documentoCollocatoInCatalogo,
+  countDocsInMarcaNode,
   documentoSenzaMarca,
   formatDocumentoRigaSintetica,
   getDocumentApriHref,
@@ -73,11 +64,30 @@ import {
   type DocumentiSortKey,
   type DocumentiSortPhase,
 } from "@/components/gestionale/documenti/documenti-helpers";
+import {
+  DocumentiAdvancedFilterPanel,
+  applyDocumentiSortSelect,
+  documentiSortSelectValue,
+} from "@/components/gestionale/documenti/documenti-advanced-filter-panel";
+import {
+  DOCUMENTI_ADVANCED_FILTERS_EMPTY,
+  FILTER_ALL,
+  documentiAdvancedFiltersActive,
+  loadDocumentiAdvancedFiltersPersisted,
+  saveDocumentiAdvancedFiltersPersisted,
+  type DocumentiAdvancedFilters,
+} from "@/lib/documenti/documenti-advanced-filters";
+import {
+  buildDocumentiFilteredView,
+  documentiMarcaPageCount,
+  documentiMarcaPagerLabel,
+  sliceDocumentiTreePage,
+  type DocumentiPageFilters,
+} from "@/lib/documenti/documenti-list-ui-filters";
 import { DocumentoEditModal, DocumentoInfoModal, UploadDocumentoModal } from "@/components/gestionale/documenti/documenti-modals";
 import { buildDocumentiCatalogFromImpostazioni } from "@/lib/documenti/documenti-catalog";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
-import type { MezzoGestito } from "@/lib/mezzi/types";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -86,6 +96,7 @@ import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
 /** Preferenza ultima azione “comprimi / espandi tutto” sull’albero documenti. */
 const DOCUMENTI_TREE_PREF_KEY = "cab-documenti-tree-pref";
+const SEARCH_DEBOUNCE_MS = 320;
 
 function readDocumentiTreePref(): "collapsed" | "expanded" | "default" {
   if (typeof window === "undefined") return "default";
@@ -343,10 +354,11 @@ export function DocumentiView() {
     [documentiQuery.data],
   );
 
-  const [search, setSearch] = useState("");
-  const [filtroMarca, setFiltroMarca] = useState<string>("__tutti__");
-  const [filtroModello, setFiltroModello] = useState<string>("__tutti__");
-  const [filtroCategoria, setFiltroCategoria] = useState<DocumentoGestionale["categoria"] | "__tutti__">("__tutti__");
+  const [searchInput, setSearchInput] = useState("");
+  const [searchApplied, setSearchApplied] = useState("");
+  const [advancedFilters, setAdvancedFilters] = useState<DocumentiAdvancedFilters>(
+    () => loadDocumentiAdvancedFiltersPersisted() ?? DOCUMENTI_ADVANCED_FILTERS_EMPTY,
+  );
   const [filtriEspansi, setFiltriEspansi] = useState(false);
 
   const [sortColumn, setSortColumn] = useState<DocumentiSortKey | null>(null);
@@ -355,6 +367,24 @@ export function DocumentiView() {
   const [expandedMarche, setExpandedMarche] = useState<Set<string>>(() => new Set());
   const [expandedModelli, setExpandedModelli] = useState<Set<string>>(() => new Set());
   const documentiMarcheInitDone = useRef(false);
+  const urlHydratedRef = useRef(false);
+
+  const patchAdvancedFilters = useCallback((patch: Partial<DocumentiAdvancedFilters>) => {
+    setAdvancedFilters((prev) => {
+      const next = { ...prev, ...patch };
+      saveDocumentiAdvancedFiltersPersisted(next);
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setSearchApplied(searchInput.trim()), SEARCH_DEBOUNCE_MS);
+    return () => window.clearTimeout(t);
+  }, [searchInput]);
+
+  const flushPageSearch = useCallback(() => {
+    setSearchApplied(searchInput.trim());
+  }, [searchInput]);
 
   const [uploadOpen, setUploadOpen] = useState(false);
   const [infoDoc, setInfoDoc] = useState<DocumentoGestionale | null>(null);
@@ -383,27 +413,42 @@ export function DocumentiView() {
   }, [toast]);
 
   useEffect(() => {
-    const raw = searchParams.get("q");
-    if (raw && raw.trim()) setSearch(decodeURIComponent(raw.trim()));
-  }, [searchParams]);
+    if (urlHydratedRef.current || catalog.length === 0) return;
+    urlHydratedRef.current = true;
 
-  useEffect(() => {
+    const rawQ = searchParams.get("q");
+    if (rawQ?.trim()) {
+      const q = decodeURIComponent(rawQ.trim());
+      setSearchInput(q);
+      setSearchApplied(q);
+    }
+
     const marcaQ = searchParams.get("marca")?.trim();
     const modelloQ = searchParams.get("modello")?.trim();
     const mid = searchParams.get("mezzoId")?.trim();
     const mezzo = mid ? mezziSnap.find((m) => m.id === mid) : null;
     const marcaNome = marcaQ || mezzo?.marca?.trim() || "";
-    const modelloNome = modelloQ || mezzo?.modello?.trim() || "";
     if (!marcaNome) return;
+
     const mar = catalog.find((c) => c.nome.trim().toLowerCase() === marcaNome.toLowerCase());
     if (!mar) return;
-    setFiltroMarca(mar.id);
+
+    let modelloId: string = FILTER_ALL;
+    const modelloNome = modelloQ || mezzo?.modello?.trim() || "";
+    if (modelloNome) {
+      const mac = mar.macchine.find((x) => x.nome.trim().toLowerCase() === modelloNome.toLowerCase());
+      if (mac) {
+        modelloId = mac.id;
+        setExpandedModelli((p) => new Set(p).add(`${mar.id}::${mac.id}`));
+      }
+    }
+
+    setAdvancedFilters((prev) => {
+      const next = { ...prev, marca: mar.id, modello: modelloId };
+      saveDocumentiAdvancedFiltersPersisted(next);
+      return next;
+    });
     setExpandedMarche((p) => new Set(p).add(mar.id));
-    if (!modelloNome) return;
-    const mac = mar.macchine.find((x) => x.nome.trim().toLowerCase() === modelloNome.toLowerCase());
-    if (!mac) return;
-    setFiltroModello(mac.id);
-    setExpandedModelli((p) => new Set(p).add(`${mar.id}::${mac.id}`));
   }, [searchParams, mezziSnap, catalog]);
 
   useEffect(() => {
@@ -413,52 +458,62 @@ export function DocumentiView() {
     setExpandedMarche(new Set(catalog.map((m) => m.id)));
   }, [catalog]);
 
-  const searchActive = search.trim().length > 0;
+  const pageFilters = useMemo(
+    (): DocumentiPageFilters => ({
+      search: searchApplied,
+      ...advancedFilters,
+    }),
+    [searchApplied, advancedFilters],
+  );
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return docs.filter(
-      (d) =>
-        docMatchesFilters(d, catalog, {
-          filtroMarca,
-          filtroModello,
-          filtroCategoria,
-          filtroTipo: "__tutti__",
-        }) && docMatchesSearch(d, catalog, q),
-    );
-  }, [docs, catalog, search, filtroMarca, filtroModello, filtroCategoria]);
+  const searchActive = searchApplied.trim().length > 0;
 
-  const documentiSenzaMarca = useMemo(() => {
-    const rows = filtered.filter(documentoSenzaMarca);
-    rows.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase));
-    return rows;
-  }, [filtered, sortColumn, sortPhase]);
+  const filteredView = useMemo(
+    () =>
+      buildDocumentiFilteredView(docs, catalog, mezziSnap, pageFilters, {
+        sortColumn,
+        sortPhase,
+      }),
+    [docs, catalog, mezziSnap, pageFilters, sortColumn, sortPhase],
+  );
 
-  const documentiConMarca = useMemo(() => {
-    const rows = filtered.filter((d) => !documentoSenzaMarca(d));
-    rows.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase));
-    return rows;
-  }, [filtered, sortColumn, sortPhase]);
+  const {
+    senzaMarca: documentiSenzaMarca,
+    conMarca: documentiConMarca,
+    tree,
+    senzaCollocazione: documentiSenzaCollocazione,
+    totalDocs,
+  } = filteredView;
 
   const listPageSize = useResponsiveListPageSize();
+  const [marcaPage, setMarcaPage] = useState(1);
+  const totalMarche = tree.length;
+  const docPageCount = documentiMarcaPageCount(totalMarche, listPageSize);
+  const showDocPager = totalMarche > listPageSize;
+
   const docListDeps = useMemo(
     () =>
-      `${search}|${filtroMarca}|${filtroModello}|${filtroCategoria}|${sortColumn ?? ""}|${sortPhase}|${documentiConMarca.length}|${documentiSenzaMarca.length}`,
-    [search, filtroMarca, filtroModello, filtroCategoria, sortColumn, sortPhase, documentiConMarca.length, documentiSenzaMarca.length],
+      `${searchApplied}|${advancedFilters.marca}|${advancedFilters.modello}|${advancedFilters.categoria}|${sortColumn ?? ""}|${sortPhase}|${totalDocs}|${totalMarche}`,
+    [searchApplied, advancedFilters, sortColumn, sortPhase, totalDocs, totalMarche],
   );
-  const {
-    page: docPage,
-    setPage: setDocPage,
-    pageCount: docPageCount,
-    sliceItems: sliceSortedDocs,
-    showPager: showDocPager,
-    label: docPagerLabel,
-    resetPage: resetDocPage,
-  } = useClientPagination(documentiConMarca.length, listPageSize);
+
   useEffect(() => {
-    resetDocPage();
-  }, [docListDeps, listPageSize, resetDocPage]);
-  const sortedPaged = useMemo(() => sliceSortedDocs(documentiConMarca), [documentiConMarca, sliceSortedDocs, docPage]);
+    setMarcaPage((p) => Math.min(Math.max(1, p), docPageCount));
+  }, [docPageCount]);
+
+  useEffect(() => {
+    setMarcaPage(1);
+  }, [docListDeps, listPageSize]);
+
+  const pagedTree = useMemo(
+    () => sliceDocumentiTreePage(tree, marcaPage, listPageSize),
+    [tree, marcaPage, listPageSize],
+  );
+
+  const docPagerLabel = useMemo(
+    () => documentiMarcaPagerLabel(marcaPage, listPageSize, totalMarche),
+    [marcaPage, listPageSize, totalMarche],
+  );
 
   const {
     page: docLogPage,
@@ -474,35 +529,17 @@ export function DocumentiView() {
   }, [logOpen, logEntries.length, listPageSize, resetDocLogPage]);
   const pagedDocLogEntries = useMemo(() => sliceDocLogEntries(logEntries), [logEntries, sliceDocLogEntries, docLogPage]);
 
-  const documentiCountByMarcaId = useMemo(
-    () => buildDocumentiCountByMarcaId(documentiConMarca, catalog),
-    [documentiConMarca, catalog],
-  );
-
-  const tree = useMemo(
-    () => buildDocumentiViewTree(catalog, mezziSnap, sortedPaged, sortColumn, sortPhase),
-    [catalog, mezziSnap, sortedPaged, sortColumn, sortPhase],
-  );
-
-  const documentiSenzaCollocazione = useMemo(
-    () =>
-      documentiConMarca.filter(
-        (d) => !documentoCollocatoInCatalogo(d, catalog, mezziSnap),
-      ),
-    [documentiConMarca, catalog, mezziSnap],
-  );
-
-  const hasDocumentiInLista = documentiSenzaMarca.length > 0 || documentiConMarca.length > 0;
+  const hasDocumentiInLista = totalDocs > 0;
 
   useEffect(() => {
     if (
       selectedDocId &&
       !documentiSenzaMarca.some((d) => d.id === selectedDocId) &&
-      !sortedPaged.some((d) => d.id === selectedDocId)
+      !documentiConMarca.some((d) => d.id === selectedDocId)
     ) {
       setSelectedDocId(null);
     }
-  }, [sortedPaged, documentiSenzaMarca, selectedDocId]);
+  }, [documentiConMarca, documentiSenzaMarca, selectedDocId]);
 
   const didAutoExpandTree = useRef(false);
   useEffect(() => {
@@ -524,28 +561,13 @@ export function DocumentiView() {
     didAutoExpandTree.current = true;
   }, [tree]);
 
-  const modelliFilterOptions = useMemo(() => {
-    if (filtroMarca === "__tutti__") {
-      return catalog.flatMap((m) => m.macchine.map((mac) => ({ id: mac.id, label: `${m.nome} — ${mac.nome}` })));
-    }
-    const mar = catalog.find((m) => m.id === filtroMarca);
-    return (mar?.macchine ?? []).map((mac) => ({ id: mac.id, label: mac.nome }));
-  }, [catalog, filtroMarca]);
-
-  const sortSelectValue = useMemo(() => {
-    if (sortColumn === null || sortPhase === "natural") return "natural";
-    return `${sortColumn}:${sortPhase}`;
-  }, [sortColumn, sortPhase]);
+  const sortSelectValue = useMemo(
+    () => documentiSortSelectValue(sortColumn, sortPhase),
+    [sortColumn, sortPhase],
+  );
 
   const onSortSelect = useCallback((v: string) => {
-    if (v === "natural") {
-      setSortColumn(null);
-      setSortPhase("natural");
-      return;
-    }
-    const [col, ph] = v.split(":") as [DocumentiSortKey, DocumentiSortPhase];
-    setSortColumn(col);
-    setSortPhase(ph === "desc" ? "desc" : "asc");
+    applyDocumentiSortSelect(v, setSortColumn, setSortPhase);
   }, []);
 
   const refreshDocumenti = useCallback(() => {
@@ -714,7 +736,7 @@ export function DocumentiView() {
   const expandAllTreeGroups = useCallback(() => {
     const mar = new Set<string>();
     const mod = new Set<string>();
-    for (const { marca, modelli } of tree) {
+    for (const { marca, modelli } of pagedTree) {
       mar.add(marca.id);
       for (const { modello } of modelli) {
         mod.add(`${marca.id}::${modello.id}`);
@@ -723,7 +745,7 @@ export function DocumentiView() {
     setExpandedMarche(mar);
     setExpandedModelli(mod);
     writeDocumentiTreePref("expanded");
-  }, [tree]);
+  }, [pagedTree]);
 
   function marcaOpen(id: string) {
     return searchActive || expandedMarche.has(id);
@@ -733,18 +755,23 @@ export function DocumentiView() {
     return searchActive || expandedModelli.has(`${marcaId}::${modelloId}`);
   }
 
-  const resetFiltri = useCallback(() => {
-    setSearch("");
-    setFiltroMarca("__tutti__");
-    setFiltroModello("__tutti__");
-    setFiltroCategoria("__tutti__");
-    setFiltriEspansi(false);
+  const resetRicerca = useCallback(() => {
+    setSearchInput("");
+    setSearchApplied("");
   }, []);
 
-  const hasDocFilters =
-    filtroMarca !== "__tutti__" ||
-    filtroModello !== "__tutti__" ||
-    filtroCategoria !== "__tutti__";
+  const resetFiltri = useCallback(() => {
+    setAdvancedFilters(DOCUMENTI_ADVANCED_FILTERS_EMPTY);
+    saveDocumentiAdvancedFiltersPersisted(DOCUMENTI_ADVANCED_FILTERS_EMPTY);
+    setFiltriEspansi(false);
+    setSortColumn(null);
+    setSortPhase("natural");
+    setMarcaPage(1);
+    resetRicerca();
+  }, [resetRicerca]);
+
+  const hasAdvancedPanelFilters = documentiAdvancedFiltersActive(advancedFilters);
+  const hasPageClientFilters = searchActive || hasAdvancedPanelFilters;
 
   return (
     <>
@@ -778,8 +805,14 @@ export function DocumentiView() {
                 Carica documento
               </button>
               <GestionaleSearchField
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    flushPageSearch();
+                  }
+                }}
                 placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
                 aria-label="Cerca documenti"
                 wrapperClassName="flex-1 sm:min-w-[12rem]"
@@ -801,7 +834,7 @@ export function DocumentiView() {
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
-                {hasDocFilters ? (
+                {hasAdvancedPanelFilters ? (
                   <span
                     className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]"
                     title="Filtri attivi"
@@ -815,20 +848,18 @@ export function DocumentiView() {
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
                   <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">
-                    {documentiSenzaMarca.length + documentiConMarca.length}
+                    {totalDocs}
                   </span>
-                  <span>
-                    risultat{documentiSenzaMarca.length + documentiConMarca.length === 1 ? "o" : "i"}
-                  </span>
+                  <span>risultat{totalDocs === 1 ? "o" : "i"}</span>
                 </span>
-                {hasDocFilters ? (
+                {hasPageClientFilters ? (
                   <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
                     Filtri attivi
                   </span>
                 ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                <button type="button" className={dsPageToolbarBtn} onClick={() => setSearch("")}>
+                <button type="button" className={dsPageToolbarBtn} onClick={resetRicerca}>
                   Pulisci ricerca
                 </button>
                 <button type="button" className={dsPageToolbarBtn} onClick={resetFiltri}>
@@ -845,99 +876,13 @@ export function DocumentiView() {
             }`}
           >
             <div className="min-h-0 overflow-hidden">
-              <div className="border-t border-[color:var(--cab-border)] pt-3" aria-label="Filtri documenti">
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Marca</label>
-                    <GlobalSelect
-                      variant="filter"
-                      inputClassName={`${globalInputFieldFilter} h-10 py-0 text-sm`}
-                      items={[
-                        { value: "__tutti__", label: "Tutte le marche" },
-                        ...catalog.map((m) => ({ value: m.id, label: m.nome })),
-                      ]}
-                      value={filtroMarca}
-                      onChange={(v) => {
-                        setFiltroMarca(v);
-                        setFiltroModello("__tutti__");
-                      }}
-                      strictFromList
-                      aria-label="Filtra per marca"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Modello</label>
-                    <GlobalSelect
-                      variant="filter"
-                      inputClassName={`${globalInputFieldFilter} h-10 py-0 text-sm`}
-                      items={[
-                        { value: "__tutti__", label: "Tutti i modelli" },
-                        ...modelliFilterOptions.map((o) => ({ value: o.id, label: o.label })),
-                      ]}
-                      value={filtroModello}
-                      onChange={setFiltroModello}
-                      strictFromList
-                      aria-label="Filtra per modello"
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ordinamento</label>
-                    <GlobalSelect
-                      variant="filter"
-                      inputClassName={`${globalInputFieldFilter} h-10 py-0 text-sm`}
-                      items={[
-                        { value: "natural", label: "Archivio (marca → modello)" },
-                        { value: "nome:asc", label: "Nome A → Z" },
-                        { value: "nome:desc", label: "Nome Z → A" },
-                        { value: "caricatoIl:desc", label: "Data più recente" },
-                        { value: "caricatoIl:asc", label: "Data meno recente" },
-                        { value: "categoria:asc", label: "Categoria A → Z" },
-                        { value: "marca:asc", label: "Marca A → Z" },
-                        { value: "macchina:asc", label: "Modello A → Z" },
-                      ]}
-                      value={sortSelectValue}
-                      onChange={onSortSelect}
-                      strictFromList
-                      aria-label="Ordinamento"
-                    />
-                  </div>
-                  <div className="sm:col-span-2 lg:col-span-4">
-                    <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Categoria</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(
-                        [
-                          ["__tutti__", "Tutte"],
-                          ["listini", "Listini"],
-                          ["cataloghi", "Cataloghi"],
-                          ["manuali", "Manuali"],
-                          ["altro", "Altro"],
-                        ] as const
-                      ).map(([value, label]) => {
-                        const on = filtroCategoria === value;
-                        return (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setFiltroCategoria(value)}
-                            className={`rounded-[var(--ds-radius-lg)] border px-3 py-2 text-xs font-semibold transition-colors ${
-                              on
-                                ? "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]"
-                                : "border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-[color:var(--cab-text)] hover:border-[color:var(--cab-border-strong)] hover:bg-[var(--cab-hover)]"
-                            } ${erpFocus}`}
-                          >
-                            {label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <button type="button" onClick={resetFiltri} className={`${erpBtnNeutral} py-2 text-xs font-semibold`}>
-                    Reimposta filtri
-                  </button>
-                </div>
-              </div>
+              <DocumentiAdvancedFilterPanel
+                filters={advancedFilters}
+                onChange={patchAdvancedFilters}
+                catalog={catalog}
+                sortSelectValue={sortSelectValue}
+                onSortSelect={onSortSelect}
+              />
             </div>
           </div>
 
@@ -1001,12 +946,16 @@ export function DocumentiView() {
                     </div>
                   ) : null}
 
-                  {tree.map(({ marca, filesMarca, modelli }, marcaIndex) => {
+                  {pagedTree.map((node, marcaIndex) => {
+                    const { marca, filesMarca, modelli } = node;
                     const { listini, altriMarca } = partitionMarcaLevelDocs(filesMarca);
-                    const docCountMarca = documentiCountByMarcaId.get(marca.id) ?? 0;
+                    const docCountMarca = countDocsInMarcaNode(node);
                     const isLastMarcaInTree =
-                      marcaIndex === tree.length - 1 && documentiSenzaCollocazione.length === 0;
-                    const isFirstMarcaInTree = marcaIndex === 0 && documentiSenzaMarca.length === 0;
+                      marcaIndex === pagedTree.length - 1 &&
+                      documentiSenzaCollocazione.length === 0 &&
+                      !showDocPager;
+                    const isFirstMarcaInTree =
+                      marcaIndex === 0 && documentiSenzaMarca.length === 0 && marcaPage === 1;
                     return (
                       <div
                         key={marca.id}
@@ -1213,9 +1162,9 @@ export function DocumentiView() {
             </div>
             {showDocPager ? (
               <TablePagination
-                page={docPage}
+                page={marcaPage}
                 pageCount={docPageCount}
-                onPageChange={setDocPage}
+                onPageChange={setMarcaPage}
                 label={docPagerLabel}
                 className="rounded-b-[var(--ds-radius-xl)] border border-t-0 border-[color:var(--cab-border)] bg-[var(--cab-surface-2)]/40"
               />
@@ -1263,18 +1212,9 @@ export function DocumentiView() {
                             atIso: entry.atIso,
                           }}
                           trailing={
-                            <button
-                              type="button"
-                              className={logEntryDismissBtnClass}
-                              aria-label="Rimuovi voce dal log"
-                              title="Rimuovi voce dal log"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (window.confirm("Rimuovere questa voce dal log?")) removeDocumentiChangeLogEntryById(entry.id);
-                              }}
-                            >
-                              ×
-                            </button>
+                            <GestionaleLogEntryDismissButton
+                              onDismiss={() => removeDocumentiChangeLogEntryById(entry.id)}
+                            />
                           }
                         />
                       </li>

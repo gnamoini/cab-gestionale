@@ -4,6 +4,7 @@ import { consolidateLogModificaRows } from "@/lib/gestionale-log/log-consolidate
 import {
   buildLogModificaSummary,
   modificheToModificaRiga,
+  parseModificheLines,
   type LogModificaSummary,
 } from "@/lib/gestionale-log/log-summary";
 import { isImageLogAction, type GestionaleLogEventTone, type GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
@@ -73,7 +74,8 @@ export function buildLogModificheDisplayEntries(
   const consolidated = consolidateLogModificaRows(rows);
   return consolidated.map((row) => {
     let vm = buildLogModificheGestionaleViewModel(row, resolveAutore(row), options?.statiLavorazione);
-    const oggetto = options?.resolveOggetto?.(row)?.trim();
+    const oggetto =
+      options?.resolveOggetto?.(row)?.trim() ?? logModificaOggettoFromPayload(row)?.trim();
     if (oggetto && oggetto !== "—" && (vm.oggettoRiga === "Lavorazione" || vm.oggettoRiga === "—")) {
       vm = { ...vm, oggettoRiga: oggetto };
     }
@@ -89,11 +91,44 @@ export function buildLogModificheDisplayList(
   return buildLogModificheDisplayEntries(rows, resolveAutore, options).map((e) => e.vm);
 }
 
+export function logModificaOggettoFromPayload(row: LogModificaRow): string | undefined {
+  const p = row.payload;
+  if (!p || typeof p !== "object" || Array.isArray(p)) return undefined;
+  const ctx = (p as Record<string, unknown>).context;
+  if (ctx && typeof ctx === "object" && !Array.isArray(ctx)) {
+    const oggetto = (ctx as Record<string, unknown>).oggetto;
+    if (typeof oggetto === "string" && oggetto.trim()) return oggetto.trim();
+  }
+  return undefined;
+}
+
+function lavorazioneIdFromLogRow(row: LogModificaRow): string | null {
+  if (row.entita === "lavorazioni") return row.entita_id;
+  const p = row.payload;
+  if (!p || typeof p !== "object" || Array.isArray(p)) return null;
+  const payload = p as Record<string, unknown>;
+  for (const rec of [payload.after, payload.snapshot, payload.before]) {
+    if (!rec || typeof rec !== "object" || Array.isArray(rec)) continue;
+    const lavId = (rec as Record<string, unknown>).lavorazione_id;
+    if (typeof lavId === "string" && lavId.trim()) return lavId.trim();
+  }
+  return null;
+}
+
+/** Accorcia elenco modifiche per feed dashboard (prime N righe). */
+export function briefLogModificaRiga(modificaRiga: string, maxLines = 3): string {
+  const lines = parseModificheLines(modificaRiga);
+  if (lines.length <= maxLines) return modificaRiga;
+  const head = lines.slice(0, maxLines).map((line) => `• ${line}`);
+  return `${head.join("\n")}\n• …`;
+}
+
 /** Deep link da voce log globale a pagina operativa. */
 export function buildLogModificheFocusHref(row: LogModificaRow): string | null {
-  if (row.entita === "lavorazioni") {
+  const lavId = lavorazioneIdFromLogRow(row);
+  if (lavId) {
     const sp = new URLSearchParams();
-    sp.set(Q_FOCUS_LAV_ROW, row.entita_id);
+    sp.set(Q_FOCUS_LAV_ROW, lavId);
     return `/lavorazioni?${sp.toString()}`;
   }
   if (row.entita === "magazzino_ricambi") {

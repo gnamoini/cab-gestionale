@@ -75,7 +75,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
 
   return (
     <div className={dsModalBackdrop} role="presentation">
-      <button type="button" className="absolute inset-0 cursor-default" aria-label="chiudi" onClick={() => !pending && onClose()} />
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Chiudi" onClick={() => !pending && onClose()} />
       <div className={`relative z-[1] ${dsModalPanel} max-h-[min(90dvh,32rem)] overflow-y-auto`} role="dialog" aria-modal="true" aria-labelledby="cab-create-user-title">
         <div className="flex items-start justify-between gap-3">
           <h2 id="cab-create-user-title" className="text-base font-semibold text-[color:var(--cab-text)]">

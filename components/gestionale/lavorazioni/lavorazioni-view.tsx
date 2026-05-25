@@ -17,6 +17,7 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioneCreateModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
+import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { LavorazioniKanbanView } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-view";
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
 import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
@@ -157,6 +158,7 @@ import {
   lavTableColAzioniClass,
   lavTableColCantiereClass,
   lavTableColClienteClass,
+  lavTableColCodiceClass,
   lavTableColIdentificazioneClass,
   lavTableColIngressoClass,
   lavTableColNoteClass,
@@ -369,6 +371,7 @@ function legacyLavBase(row: LavorazioneListRow, fallbackAddetto: string) {
   const mezzo = row.mezzo;
   return {
     id: row.id,
+    codice: row.codice ?? null,
     macchina: mezzo ? `${mezzo.marca} ${mezzo.modello}`.trim() || "—" : "—",
     targa: mezzo?.targa?.trim() || "",
     matricola: mezzo?.matricola?.trim() || "",
@@ -413,6 +416,7 @@ function isoToItalianDay(iso: string | null | undefined): string {
 type SortPhase = "asc" | "desc" | "natural";
 type SortKeyAtt =
   | "ingresso"
+  | "codice"
   | "cliente"
   | "utilizzatore"
   | "cantiere"
@@ -424,6 +428,7 @@ type SortKeyAtt =
   | "addetto";
 type SortKeyCh =
   | "ingresso"
+  | "codice"
   | "cliente"
   | "utilizzatore"
   | "cantiere"
@@ -449,6 +454,9 @@ function cmpAtt(
 ): number {
   const dir = phase === "desc" ? -1 : 1;
   const t = (x: number) => x * dir;
+  if (k === "codice") {
+    return t(cmpStr(lavorazioneDisplayCodice(a), lavorazioneDisplayCodice(b)));
+  }
   if (k === "macchina") return t(cmpStr(macchinaLabel(a, schedeStore), macchinaLabel(b, schedeStore)));
   if (k === "mezzoIdent") return t(cmpStr(mezzoIdent(a, schedeStore), mezzoIdent(b, schedeStore)));
   if (k === "cliente") return t(cmpStr(clienteLabel(a, schedeStore), clienteLabel(b, schedeStore)));
@@ -477,6 +485,9 @@ function cmpCh(
 ): number {
   const dir = phase === "desc" ? -1 : 1;
   const t = (x: number) => x * dir;
+  if (k === "codice") {
+    return t(cmpStr(lavorazioneDisplayCodice(a), lavorazioneDisplayCodice(b)));
+  }
   if (k === "macchina") return t(cmpStr(macchinaLabel(a, schedeStore), macchinaLabel(b, schedeStore)));
   if (k === "mezzoIdent") return t(cmpStr(mezzoIdent(a, schedeStore), mezzoIdent(b, schedeStore)));
   if (k === "cliente") return t(cmpStr(clienteLabel(a, schedeStore), clienteLabel(b, schedeStore)));
@@ -1480,6 +1491,7 @@ export function LavorazioniView() {
             colgroup={
               <>
                 <col className={lavTableColIngressoClass} />
+                <col className={lavTableColCodiceClass} />
                 <col className={lavTableColClienteClass} />
                 <col className={lavTableColCantiereClass} />
                 <col className={lavTableColAttrezzaturaClass} />
@@ -1496,6 +1508,14 @@ export function LavorazioniView() {
                   <GlobalTableSortTh
                     label="Ingresso"
                     columnKey="ingresso"
+                    sortColumn={sortColA}
+                    sortPhase={sortPhaseA}
+                    align="left"
+                    onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
+                  />
+                  <GlobalTableSortTh
+                    label="Codice"
+                    columnKey="codice"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
                     align="left"
@@ -1569,7 +1589,7 @@ export function LavorazioniView() {
                 ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessuna lavorazione in corso."
             }
-            colSpan={10}
+            colSpan={11}
           >
                   {pagedAttive.map((row) => {
                     const flash = flashRowId === row.id || navBulkFlashIds.has(row.id);
@@ -1589,6 +1609,9 @@ export function LavorazioniView() {
                       >
                         <td className={lavTableTd}>
                           <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
+                        </td>
+                        <td className={`${lavTableTdCenter} font-semibold tabular-nums`}>
+                          {lavorazioneDisplayCodice(row)}
                         </td>
                         <td className={lavTableTd}>
                           <ClienteUtilizzatoreCell row={row} schedeStore={schedeStore} />
@@ -1864,6 +1887,7 @@ export function LavorazioniView() {
             colgroup={
               <>
                 <col className={lavTableColIngressoClass} />
+                <col className={lavTableColCodiceClass} />
                 <col className={lavTableColClienteClass} />
                 <col className={lavTableColCantiereClass} />
                 <col className={lavTableColAttrezzaturaClass} />
@@ -1880,6 +1904,14 @@ export function LavorazioniView() {
                   <GlobalTableSortTh
                     label="Ingresso"
                     columnKey="ingresso"
+                    sortColumn={sortColC}
+                    sortPhase={sortPhaseC}
+                    align="left"
+                    onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
+                  />
+                  <GlobalTableSortTh
+                    label="Codice"
+                    columnKey="codice"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
                     align="left"
@@ -1958,7 +1990,7 @@ export function LavorazioniView() {
                 ? "Nessun record in archivio corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessun record in archivio."
             }
-            colSpan={10}
+            colSpan={11}
           >
                   {pagedChiuse.map((row) => {
                     const flash = flashRowId === row.id || navBulkFlashIds.has(row.id);
@@ -1979,6 +2011,9 @@ export function LavorazioniView() {
                       >
                         <td className={lavTableTd}>
                           <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
+                        </td>
+                        <td className={`${lavTableTdCenter} font-semibold tabular-nums`}>
+                          {lavorazioneDisplayCodice(row)}
                         </td>
                         <td className={lavTableTd}>
                           <ClienteUtilizzatoreCell row={row} schedeStore={schedeStore} />
@@ -2181,7 +2216,7 @@ export function LavorazioniView() {
           }
           origine={schedeRow.origine}
           initialTab={schedeRow.initialTab}
-          bundle={getOrCreateBundle(schedeStore, schedeRow.row.id)}
+          bundle={getOrCreateBundle(schedeStore, schedeRow.row.id, schedeRow.row.codice)}
           onPersist={(next) => {
             persistSchedeAndSync(persistSchedeBundle(next));
           }}

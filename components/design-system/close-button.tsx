@@ -8,7 +8,7 @@ export type CloseButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "ch
   label?: string;
 };
 
-export function CloseButton({ label = "chiudi", className = "", type = "button", ...props }: CloseButtonProps) {
+export function CloseButton({ label = "Chiudi", className = "", type = "button", ...props }: CloseButtonProps) {
   return (
     <Tooltip content={label}>
       <button

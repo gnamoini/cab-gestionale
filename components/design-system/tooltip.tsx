@@ -15,6 +15,17 @@ import { dsTooltipContent } from "@/lib/ui/design-system";
 import { tooltipFixedStyle, tooltipTransformOrigin, type TooltipSide } from "@/lib/ui/tooltip-portal";
 import { useTooltip } from "@/components/design-system/use-tooltip";
 
+/** Prima lettera maiuscola per etichette tooltip (accessibilità e UI coerente). */
+function tooltipDisplayContent(content: string): string {
+  const trimmed = content.trim();
+  if (!trimmed) return trimmed;
+  const first = trimmed.charAt(0);
+  if (first >= "a" && first <= "z") {
+    return first.toLocaleUpperCase("it-IT") + trimmed.slice(1);
+  }
+  return trimmed;
+}
+
 export type TooltipProps = {
   /** Testo breve (1–3 parole). */
   content?: string;
@@ -49,8 +60,9 @@ function mergeHandler<E>(
 export function Tooltip({ content, children, side = "top", disabled = false, delayMs }: TooltipProps) {
   const anchorRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
+  const displayContent = content?.trim() ? tooltipDisplayContent(content) : content;
   const { open, visible, coords, triggerProps } = useTooltip({
-    content,
+    content: displayContent,
     disabled,
     delayMs,
     side,
@@ -79,7 +91,7 @@ export function Tooltip({ content, children, side = "top", disabled = false, del
   });
 
   const panel =
-    open && content?.trim() && typeof document !== "undefined"
+    open && displayContent?.trim() && typeof document !== "undefined"
       ? createPortal(
           <div
             ref={contentRef}
@@ -90,7 +102,7 @@ export function Tooltip({ content, children, side = "top", disabled = false, del
               transformOrigin: tooltipTransformOrigin(coords?.side ?? side),
             }}
           >
-            {content}
+            {displayContent}
           </div>,
           document.body,
         )

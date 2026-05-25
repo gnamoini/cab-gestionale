@@ -29,7 +29,7 @@ export type StatoLavorazione = string;
 /** Slug priorità lavorazione (colonna TEXT — configurato in app_settings). */
 export type PrioritaLavorazione = string;
 
-export type TipoSchedaLavorazione = "ingresso" | "intervento" | "ricambi";
+export type TipoSchedaLavorazione = "ingresso" | "interventi" | "ricambi";
 
 export type TipoMovimentoRicambio = "entrata" | "uscita";
 
@@ -69,6 +69,8 @@ export type LavorazioneRow = {
   archived_at?: string | null;
   /** Eliminazione logica: esclusa da liste operative e statistiche. */
   deleted_at?: string | null;
+  /** Codice umano display (es. 26-0001). Generato server-side. */
+  codice?: string | null;
 };
 
 /** PDF allegato lavorazione (`lavorazione_documents`). */

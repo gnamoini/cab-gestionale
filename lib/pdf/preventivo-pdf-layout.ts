@@ -1,6 +1,23 @@
 import type { jsPDF } from "jspdf";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
+export {
+  buildPreventivoAttrezzaturaPdfFields,
+  buildPreventivoClientePdfFields as buildAnagraficaPdfFields,
+  buildPreventivoMezzoPdfFields,
+  buildPreventivoTelaioMezzoPdfFields,
+  inferTipoAttrezzaturaPdfLegacy as inferTipoAttrezzaturaPdf,
+} from "@/lib/pdf/anagrafica-pdf-fields";
+import {
+  buildPreventivoAttrezzaturaPdfFields,
+  buildPreventivoTelaioMezzoPdfFields,
+} from "@/lib/pdf/anagrafica-pdf-fields";
+
+/** @deprecated Usare buildPreventivoAttrezzaturaPdfFields + buildPreventivoTelaioMezzoPdfFields */
+export function buildAttrezzaturaPdfFields(p: PreventivoRecord): PdfField[] {
+  return [...buildPreventivoAttrezzaturaPdfFields(p), ...buildPreventivoTelaioMezzoPdfFields(p)];
+}
+
 /** Margini A4 ottimizzati per stampa (mm). */
 export const PDF_MARGIN_L = 22;
 export const PDF_MARGIN_R = 22;
@@ -49,44 +66,6 @@ function cleanField(v: string | undefined | null): string | undefined {
   const t = String(v ?? "").trim();
   if (!t || t === "—") return undefined;
   return t;
-}
-
-export function inferTipoAttrezzaturaPdf(p: PreventivoRecord): string | undefined {
-  const mm = [p.marcaAttrezzatura, p.modelloAttrezzatura].filter(Boolean).join(" ").trim();
-  const mac = p.macchinaRiassunto.trim();
-  if (!mac) return undefined;
-  if (mm && mac.toLowerCase() === mm.toLowerCase()) return undefined;
-  if (mm && mac.toLowerCase().startsWith(mm.toLowerCase())) {
-    const rest = mac.slice(mm.length).trim();
-    return rest || undefined;
-  }
-  return mac;
-}
-
-export function buildAnagraficaPdfFields(p: PreventivoRecord): PdfField[] {
-  const out: PdfField[] = [];
-  const cliente = cleanField(p.cliente);
-  const cantiere = cleanField(p.cantiere);
-  const utilizzatore = cleanField(p.utilizzatore);
-  if (cliente) out.push({ label: "Cliente", value: cliente });
-  if (cantiere) out.push({ label: "Cantiere", value: cantiere });
-  if (utilizzatore) out.push({ label: "Utilizzatore", value: utilizzatore });
-  return out;
-}
-
-export function buildAttrezzaturaPdfFields(p: PreventivoRecord): PdfField[] {
-  const out: PdfField[] = [];
-  const tipo = inferTipoAttrezzaturaPdf(p);
-  const marca = cleanField(p.marcaAttrezzatura);
-  const modello = cleanField(p.modelloAttrezzatura);
-  const matricola = cleanField(p.matricola);
-  const scuderia = cleanField(p.nScuderia);
-  if (tipo) out.push({ label: "Tipo attrezzatura", value: tipo });
-  if (marca) out.push({ label: "Marca", value: marca });
-  if (modello) out.push({ label: "Modello", value: modello });
-  if (matricola) out.push({ label: "Matricola", value: matricola });
-  if (scuderia) out.push({ label: "N. scuderia", value: scuderia });
-  return out;
 }
 
 export function buildTelaioPdfFields(p: PreventivoRecord): PdfField[] {
@@ -209,6 +188,121 @@ export function drawPdfFieldGrid(doc: jsPDF, startY: number, pageW: number, fiel
   }
 
   return y + 1.5;
+}
+
+/** Blocco full-width: etichetta + paragrafo (note, testi lunghi). Label vuota = solo paragrafo. */
+export function drawPdfLabeledParagraph(
+  doc: jsPDF,
+  startY: number,
+  pageW: number,
+  label: string,
+  value: string,
+): number {
+  const text = value.trim();
+  if (!text) return startY;
+
+  const cw = pdfContentWidth(pageW);
+  const lineH = 4.5;
+  let y = startY + PDF_SECTION_CONTENT_GAP;
+  const labelTrim = label.trim();
+
+  if (labelTrim) {
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...C_MUTED);
+    doc.setFontSize(7);
+    doc.text(labelTrim.toUpperCase(), PDF_MARGIN_L, y);
+    y += 3.4;
+  }
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(...C_PRIMARY);
+  doc.setFontSize(9);
+  const valLines = doc.splitTextToSize(text, cw) as string[];
+  doc.text(valLines, PDF_MARGIN_L, y);
+  y += Math.max(valLines.length, 1) * lineH + 4;
+
+  return y + 1.5;
+}
+
+function estimatePdfFieldGridHeight(fieldCount: number): number {
+  if (fieldCount <= 0) return 0;
+  const rows = Math.ceil(fieldCount / 2);
+  const lineH = 4.5;
+  return PDF_SECTION_CONTENT_GAP + rows * (3.4 + lineH + 4) + 1.5;
+}
+
+function estimatePdfLabeledParagraphHeight(doc: jsPDF, pageW: number, label: string, value: string): number {
+  const text = value.trim();
+  if (!text) return 0;
+  const cw = pdfContentWidth(pageW);
+  const lineH = 4.5;
+  const labelTrim = label.trim();
+  let h = PDF_SECTION_CONTENT_GAP;
+  if (labelTrim) h += 3.4;
+  doc.setFontSize(9);
+  const valLines = doc.splitTextToSize(text, cw) as string[];
+  h += Math.max(valLines.length, 1) * lineH + 4 + 1.5;
+  return h;
+}
+
+/** Sezione con titolo + pannello (sfondo/bordo) + griglia campi. */
+export function drawPdfSectionPanelGrid(
+  doc: jsPDF,
+  startY: number,
+  pageW: number,
+  title: string,
+  fields: PdfField[],
+): number {
+  if (!fields.length) return startY;
+
+  const pad = 3.5;
+  const boxW = pdfContentWidth(pageW);
+  const gridH = estimatePdfFieldGridHeight(fields.length);
+  const boxH = gridH + pad * 2;
+
+  let y = ensurePdfSpace(doc, startY, 34 + boxH);
+  y = drawPdfSectionTitle(doc, y, pageW, title);
+
+  doc.setFillColor(252, 252, 253);
+  doc.setDrawColor(...C_RULE);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(PDF_MARGIN_L, y, boxW, boxH, 2, 2, "FD");
+
+  const contentEnd = drawPdfFieldGrid(doc, y + pad, pageW, fields);
+  return pdfAdvanceSection(Math.max(contentEnd, y + boxH));
+}
+
+/** Sezione con titolo + pannello + paragrafi full-width (note). */
+export function drawPdfSectionPanelParagraphs(
+  doc: jsPDF,
+  startY: number,
+  pageW: number,
+  title: string,
+  fields: PdfField[],
+): number {
+  if (!fields.length) return startY;
+
+  const pad = 3.5;
+  const boxW = pdfContentWidth(pageW);
+  let innerH = 0;
+  for (const f of fields) {
+    innerH += estimatePdfLabeledParagraphHeight(doc, pageW, f.label, f.value);
+  }
+  const boxH = innerH + pad * 2;
+
+  let y = ensurePdfSpace(doc, startY, 34 + boxH);
+  y = drawPdfSectionTitle(doc, y, pageW, title);
+
+  doc.setFillColor(252, 252, 253);
+  doc.setDrawColor(...C_RULE);
+  doc.setLineWidth(0.25);
+  doc.roundedRect(PDF_MARGIN_L, y, boxW, boxH, 2, 2, "FD");
+
+  let innerY = y + pad;
+  for (const field of fields) {
+    innerY = drawPdfLabeledParagraph(doc, innerY, pageW, field.label, field.value);
+  }
+  return pdfAdvanceSection(Math.max(innerY + pad, y + boxH));
 }
 
 /** Blocco identificazione compatto (N., Data, Operatore). */

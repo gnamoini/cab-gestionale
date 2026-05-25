@@ -56,6 +56,9 @@ export type GlobalSettingsListSelectProps = {
 
   invalidMessage?: string;
 
+  /** Solo scelta da elenco: niente digitazione né filtro testuale. */
+  selectOnly?: boolean;
+
   "aria-label"?: string;
 
 };
@@ -99,6 +102,8 @@ export function GlobalSettingsListSelect({
   forceInvalid,
 
   invalidMessage,
+
+  selectOnly,
 
   "aria-label": ariaLabel,
 
@@ -191,6 +196,8 @@ export function GlobalSettingsListSelect({
     invalidMessage,
 
     emptyMessage,
+
+    selectOnly,
 
     similarStandardizeLegalSuffix:
       listKey === "mezzi:clienti" ||

@@ -1,4 +1,5 @@
 import { formatClientPortalAttrezzatura } from "@/lib/lavorazioni/client-portal-attrezzatura-format";
+import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { parseMezzoMeta } from "@/lib/mezzi/mezzi-meta";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -33,10 +34,8 @@ function fmtWhen(iso: string): string {
   }
 }
 
-export function lavorazioneRefLabel(id: string): string {
-  const t = id.trim();
-  if (t.length <= 10) return t.toUpperCase();
-  return `#${t.slice(0, 8).toUpperCase()}`;
+export function lavorazioneRefLabel(id: string, codice?: string | null): string {
+  return lavorazioneDisplayCodice({ id, codice });
 }
 
 export function macchinaClienteLabel(row: LavorazioneListRow): string {

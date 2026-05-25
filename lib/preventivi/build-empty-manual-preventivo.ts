@@ -1,9 +1,7 @@
 import { localCalendarDayIsoFromDate } from "@/lib/lavorazioni/date-day-only";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
-import {
-  nextPreventivoId,
-  nextPreventivoNumeroFromRecords,
-} from "@/lib/preventivi/preventivi-records-from-cache";
+import { nextPreventivoNumeroManualeFromRecords } from "@/lib/preventivi/preventivo-numero-manuale";
+import { nextPreventivoId } from "@/lib/preventivi/preventivi-records-from-cache";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
@@ -27,7 +25,7 @@ export function buildEmptyManualPreventivo(
   const dataCreazione = localCalendarDayIsoFromDate();
   const draft: PreventivoRecord = {
     id: nextPreventivoId(),
-    numero: nextPreventivoNumeroFromRecords(existingRecords),
+    numero: nextPreventivoNumeroManualeFromRecords(existingRecords),
     dataCreazione,
     aggiornatoAt: now,
     stato: "bozza",
@@ -43,6 +41,14 @@ export function buildEmptyManualPreventivo(
     nScuderia: "",
     marcaAttrezzatura: "",
     modelloAttrezzatura: "",
+    tipoAttrezzatura: "",
+    oreLavoro: "",
+    tipoTelaio: "",
+    marcaTelaio: "",
+    modelloTelaio: "",
+    km: "",
+    livelloCarburante: "",
+    richiedente: "",
     descrizioneLavorazioniCliente: "",
     descrizioneLavorazioniTecnicaSorgente: "",
     descrizioneGenerataAuto: "",

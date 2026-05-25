@@ -47,6 +47,15 @@ export type PreventivoRecord = {
   nScuderia: string;
   marcaAttrezzatura: string;
   modelloAttrezzatura: string;
+  /** Allineati a scheda ingresso — persistiti in `dettagli` JSON. */
+  tipoAttrezzatura: string;
+  oreLavoro: string;
+  tipoTelaio: string;
+  marcaTelaio: string;
+  modelloTelaio: string;
+  km: string;
+  livelloCarburante: string;
+  richiedente: string;
   descrizioneLavorazioniCliente: string;
   /** Testo tecnico aggregato usato in generazione (per apprendimento). */
   descrizioneLavorazioniTecnicaSorgente: string;

@@ -28,11 +28,23 @@ export function saveLavorazioneSchedeStore(store: LavorazioneSchedeStore): void 
   }
 }
 
-export function getOrCreateBundle(store: LavorazioneSchedeStore, lavorazioneId: string): LavorazioneSchedeBundle {
+export function getOrCreateBundle(
+  store: LavorazioneSchedeStore,
+  lavorazioneId: string,
+  codice?: string | null,
+): LavorazioneSchedeBundle {
   const ex = store[lavorazioneId];
-  if (ex) return normalizeSchedeBundle(ex);
+  if (ex) {
+    const normalized = normalizeSchedeBundle(ex);
+    const c = codice?.trim();
+    if (c && !normalized.codice?.trim()) {
+      return { ...normalized, codice: c };
+    }
+    return normalized;
+  }
   return {
     lavorazioneId,
+    codice: codice?.trim() || null,
     ingresso: null,
     lavorazioni: null,
     ricambi: null,

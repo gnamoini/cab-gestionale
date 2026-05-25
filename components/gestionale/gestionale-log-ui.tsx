@@ -2,6 +2,7 @@
 
 import type { ReactNode, SVGProps } from "react";
 import { memo } from "react";
+import { Tooltip } from "@/components/design-system/tooltip";
 import { LogEntry } from "@/components/design-system/log-entry";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 
@@ -115,6 +116,33 @@ export function GestionaleLogChangeList({
 
 export const logEntryDismissBtnClass =
   "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-transparent text-sm font-semibold text-[color:var(--cab-text-muted)] transition-colors hover:border-[color:var(--cab-border)] hover:bg-[var(--cab-surface)] hover:text-[color:var(--cab-danger)]";
+
+export const gestionaleLogDismissTooltip = "Rimuovi";
+
+/** Pulsante × per rimuovere una voce dal log (tooltip globale + aria-label). */
+export function GestionaleLogEntryDismissButton({
+  onDismiss,
+  confirmMessage = "Rimuovere questa voce dal log?",
+}: {
+  onDismiss: () => void;
+  confirmMessage?: string;
+}) {
+  return (
+    <Tooltip content={gestionaleLogDismissTooltip}>
+      <button
+        type="button"
+        className={logEntryDismissBtnClass}
+        aria-label="Rimuovi voce"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (window.confirm(confirmMessage)) onDismiss();
+        }}
+      >
+        ×
+      </button>
+    </Tooltip>
+  );
+}
 
 /** Voce log compatta (delega al design system). */
 export function GestionaleLogEntryFourLines({

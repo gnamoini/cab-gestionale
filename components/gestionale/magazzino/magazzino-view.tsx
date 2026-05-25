@@ -61,7 +61,7 @@ import {
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsTableRow,
   dsBtnNeutral,
-  dsBtnGhost,
+  dsBtnDanger,
   dsBtnPrimary,
   dsBtnSoftOrange,
   dsFocus,
@@ -125,9 +125,9 @@ import {
   buildMagazzinoGestionaleLogViewModel,
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
+  GestionaleLogEntryDismissButton,
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
-  logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { useAuth } from "@/context/auth-context";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -1884,10 +1884,10 @@ export function MagazzinoView() {
                   />
                 ) : null}
               </div>
-              <div className="shrink-0 space-y-2 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] p-4">
                 <button
                   type="submit"
-                  className={`${erpBtnAccent} w-full disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
+                  className={`${erpBtnAccent} w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
                 >
                   Salva in magazzino
                 </button>
@@ -1925,7 +1925,7 @@ export function MagazzinoView() {
             <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                className={`${dsBtnGhost} w-full border border-zinc-200/90 bg-zinc-50/80 py-2.5 text-sm font-medium sm:w-auto dark:border-zinc-600 dark:bg-zinc-800/50`}
+                className={`${erpBtnNeutral} w-full justify-center sm:w-auto`}
                 onClick={() => {
                   setNewIncompleteOpen(false);
                 }}
@@ -1934,7 +1934,7 @@ export function MagazzinoView() {
               </button>
               <button
                 type="button"
-                className={erpBtnAccent}
+                className={`${erpBtnAccent} w-full justify-center sm:w-auto`}
                 onClick={() => {
                   finalizeNewRicambio();
                 }}
@@ -2069,25 +2069,16 @@ export function MagazzinoView() {
                         <GestionaleLogEntryFourLines
                           vm={buildMagazzinoGestionaleLogViewModel(ev)}
                           trailing={
-                            <button
-                              type="button"
-                              className={logEntryDismissBtnClass}
-                              aria-label="Rimuovi voce dal log"
-                              title="Rimuovi voce dal log"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (window.confirm("Rimuovere questa voce dal log?")) removeMagazzinoLogEntry(ev.id);
-                              }}
-                            >
-                              ×
-                            </button>
+                            <GestionaleLogEntryDismissButton
+                              onDismiss={() => removeMagazzinoLogEntry(ev.id)}
+                            />
                           }
                         />
                       </li>
                     ))}
                   </ul>
                 </div>
-                <button type="button" onClick={startEditFromInfo} className={`${erpBtnAccent} w-full`} disabled={!magCanCreateRicambio} title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : undefined}>
+                <button type="button" onClick={startEditFromInfo} className={`${erpBtnAccent} w-full justify-center`} disabled={!magCanCreateRicambio} title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : undefined}>
                   Modifica
                 </button>
               </div>
@@ -2134,12 +2125,12 @@ export function MagazzinoView() {
                         </div>
                       ) : null}
                     </div>
-                    <div className="shrink-0 space-y-2 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-                      <div className="flex flex-col gap-2 sm:flex-row">
-                        <button type="submit" className={`${erpBtnAccent} flex-1`}>
+                    <div className="shrink-0 space-y-2 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] p-4">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                        <button type="submit" className={`${erpBtnAccent} w-full justify-center sm:w-auto`}>
                           Salva
                         </button>
-                        <button type="button" onClick={cancelEditBackToInfo} className={`${dsBtnGhost} flex-1 border border-zinc-200/90 bg-zinc-50/90 py-2.5 text-sm font-medium sm:flex-initial dark:border-zinc-600 dark:bg-zinc-800/60`}>
+                        <button type="button" onClick={cancelEditBackToInfo} className={`${erpBtnNeutral} w-full justify-center sm:w-auto`}>
                           Annulla
                         </button>
                       </div>
@@ -2148,7 +2139,7 @@ export function MagazzinoView() {
                         onClick={eliminaRicambio}
                         disabled={!magCanDeleteRicambio}
                         title={!magCanDeleteRicambio ? READONLY_PERMISSION_HINT : undefined}
-                        className={`w-full rounded-lg border border-red-200 bg-red-50 py-2 text-sm font-medium text-red-800 shadow-sm hover:bg-red-100 hover:shadow-md hover:ring-1 hover:ring-red-200/60 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-200 dark:hover:bg-red-950/55 ${erpFocus}`}
+                        className={`${dsBtnDanger} w-full justify-center`}
                       >
                         Elimina ricambio
                       </button>
@@ -2181,18 +2172,9 @@ export function MagazzinoView() {
                         onClick={() => focusRicambioInTable(entry.ricambioId)}
                         title="Mostra ricambio in tabella"
                         trailing={
-                          <button
-                            type="button"
-                            className={logEntryDismissBtnClass}
-                            aria-label="Rimuovi voce dal log"
-                            title="Rimuovi voce dal log"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              if (window.confirm("Rimuovere questa voce dal log?")) removeMagazzinoLogEntry(entry.id);
-                            }}
-                          >
-                            ×
-                          </button>
+                          <GestionaleLogEntryDismissButton
+                            onDismiss={() => removeMagazzinoLogEntry(entry.id)}
+                          />
                         }
                       />
                     </li>

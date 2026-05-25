@@ -87,3 +87,8 @@ export function mezzoHaLavorazioneAttivaDb(m: MezzoGestito, rows: LavorazioneLis
     return lavorazioneMatchesMezzo(m, lavRowToMatchShape(row));
   });
 }
+
+/** Lavorazione non eliminata (in corso o archiviata) collegata per identità mezzo. */
+export function mezzoHaLavorazioneCollegataDb(m: MezzoGestito, rows: LavorazioneListRow[]): boolean {
+  return rows.some((row) => lavorazioneMatchesMezzo(m, lavRowToMatchShape(row)));
+}

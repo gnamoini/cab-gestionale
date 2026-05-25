@@ -4,6 +4,7 @@ import type { MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
 import type { QueryClient } from "@tanstack/react-query";
 import { QK } from "@/src/lib/react-query/query-keys";
 
+/** Formato legacy annuale (2026-001 / PV-2026-012) — solo migrazione localStorage. */
 export function nextPreventivoNumeroFromRecords(existing: readonly PreventivoRecord[]): string {
   const y = new Date().getFullYear();
   let max = 0;

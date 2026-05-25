@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
@@ -26,22 +26,17 @@ import {
   mergeSchedaIngressoFields,
 } from "@/lib/schede/scheda-ingresso-reuse";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
-import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
-import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleSettingsSelect } from "@/components/gestionale/gestionale-settings-select";
-import {
-  GlobalHierarchyMarcaSelect,
-  GlobalHierarchyModelloSelect,
-  GlobalSelect,
-  GlobalSettingsListSelect,
-} from "@/components/gestionale/global-input";
+import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { GlobalDatePicker } from "@/components/gestionale/global-input";
-import { dsInput, dsLabel } from "@/lib/ui/design-system";
+import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
+import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
+import { dsInput } from "@/lib/ui/design-system";
 
 function todayItDate(): string {
   return new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -87,24 +82,6 @@ function emptyIngresso(addettoDefault: string): SchedaIngressoFields {
     richiedente: "",
     noteIntervento: "",
   };
-}
-
-function FormSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="space-y-3 border-b border-[color:var(--cab-border)] pb-4 last:border-b-0">
-      <h3 className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{title}</h3>
-      <div className="space-y-3">{children}</div>
-    </section>
-  );
-}
-
-function FormField({ label, children, className = "" }: { label: string; children: ReactNode; className?: string }) {
-  return (
-    <label className={`block min-w-0 ${className}`.trim()}>
-      <span className={dsLabel}>{label}</span>
-      <div className="mt-1">{children}</div>
-    </label>
-  );
 }
 
 export function LavorazioneCreateModal({
@@ -324,6 +301,7 @@ export function LavorazioneCreateModal({
       const store = loadLavorazioneSchedeStore();
       store[row.id] = {
         lavorazioneId: row.id,
+        codice: row.codice ?? null,
         ingresso: {
           ...newSchedaMeta("ingresso", fields.addettoAccettazione || createdBy),
           tipo: "ingresso",
@@ -427,139 +405,25 @@ export function LavorazioneCreateModal({
             </div>
           </FormSection>
 
-          <FormSection title="Cliente">
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Cliente *
-              <GlobalSettingsListSelect listKey="mezzi:clienti" className={listSelectWrapClass} value={fields.cliente} onChange={(v) => patch({ cliente: v })} disabled={pending} required aria-label="Cliente" />
-            </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Cantiere
-              <GlobalSettingsListSelect listKey="mezzi:cantieri" className="mt-1" value={fields.cantiere} onChange={(v) => patch({ cantiere: v })} disabled={pending} aria-label="Cantiere" />
-            </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Utilizzatore
-              <GlobalSettingsListSelect listKey="mezzi:utilizzatori" className="mt-1" value={fields.utilizzatore} onChange={(v) => patch({ utilizzatore: v })} disabled={pending} aria-label="Utilizzatore" />
-            </label>
-          </FormSection>
-
-          <FormSection title="Attrezzatura">
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Tipo attrezzatura
-              <GlobalSettingsListSelect listKey="mezzi:tipiAttrezzatura" className="mt-1" value={fields.tipoAttrezzatura} onChange={(v) => patch({ tipoAttrezzatura: v })} disabled={pending} aria-label="Tipo attrezzatura" />
-            </label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Marca *
-                <GlobalHierarchyMarcaSelect
-                  tree="attrezzature"
-                  className={listSelectWrapClass}
-                  value={fields.marcaAttrezzatura}
-                  onChange={(v) => patch({ marcaAttrezzatura: v, modelloAttrezzatura: "" })}
-                  disabled={pending}
-                  required
-                  aria-label="Marca attrezzatura"
-                />
-              </label>
-              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Modello
-                <GlobalHierarchyModelloSelect
-                  tree="attrezzature"
-                  marcaNome={fields.marcaAttrezzatura}
-                  className={listSelectWrapClass}
-                  value={fields.modelloAttrezzatura}
-                  onChange={(v) => patch({ modelloAttrezzatura: v })}
-                  disabled={pending}
-                  aria-label="Modello attrezzatura"
-                />
-              </label>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <SchedaIngressoIdentAutocompleteField
-                field="matricola"
-                label="Matricola"
-                value={fields.matricola}
-                otherValue={fields.targa}
-                mezzi={mezziCatalog}
-                disabled={pending}
-                onChange={(v) => patch({ matricola: v })}
-                onExactMezzoMatch={onMezzoPromptMatch}
-              />
-              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                N. scuderia
-                <input className={`${dsInput} mt-1 font-mono`} value={fields.nScuderia} onChange={(e) => patch({ nScuderia: e.target.value })} disabled={pending} />
-              </label>
-            </div>
-            <CopiaUltimaSchedaIngressoBanner
-              visible={Boolean(lastIngressoMatch)}
-              highlight={false}
-              updatedAt={lastIngressoMatch?.updatedAt}
-              disabled={pending}
-              onCopy={copyLastIngresso}
-            />
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Ore lavoro
-              <input type="number" min={0} className={inputFieldClass} value={fields.oreLavoro} onChange={(e) => patch({ oreLavoro: e.target.value })} disabled={pending} />
-            </label>
-          </FormSection>
-
-          <FormSection title="Telaio">
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Tipo telaio
-              <GlobalSettingsListSelect listKey="mezzi:tipiTelaio" className="mt-1" value={fields.tipoTelaio} onChange={(v) => patch({ tipoTelaio: v })} disabled={pending} aria-label="Tipo telaio" />
-            </label>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Marca
-                <GlobalHierarchyMarcaSelect tree="telai" className={listSelectWrapClass} value={fields.marcaTelaio} onChange={(v) => patch({ marcaTelaio: v, modelloTelaio: "" })} disabled={pending} aria-label="Marca telaio" />
-              </label>
-              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Modello
-                <GlobalHierarchyModelloSelect tree="telai" marcaNome={fields.marcaTelaio} className={listSelectWrapClass} value={fields.modelloTelaio} onChange={(v) => patch({ modelloTelaio: v })} disabled={pending} aria-label="Modello telaio" />
-              </label>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <SchedaIngressoIdentAutocompleteField
-                field="targa"
-                label="Targa"
-                value={fields.targa}
-                otherValue={fields.matricola}
-                mezzi={mezziCatalog}
-                disabled={pending}
-                onChange={(v) => patch({ targa: v })}
-                onExactMezzoMatch={onMezzoPromptMatch}
-              />
-              <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                KM
-                <input type="number" min={0} className={inputFieldClass} value={fields.km} onChange={(e) => patch({ km: e.target.value })} disabled={pending} />
-              </label>
-            </div>
-          </FormSection>
+          <SchedaIngressoAnagraficaFields
+            value={fields}
+            onPatch={patch}
+            mezzi={mezziCatalog}
+            disabled={pending}
+            onExactMezzoMatch={onMezzoPromptMatch}
+            lastIngressoMatch={lastIngressoMatch}
+            onCopyLastIngresso={copyLastIngresso}
+            clienteRequired
+            marcaAttrezzaturaRequired
+          />
 
           <FormSection title="Intervento">
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Carburante
-              <GlobalSelect
-                className="mt-1"
-                value={fields.livelloCarburante}
-                onChange={(v) => patch({ livelloCarburante: v })}
-                options={["Vuoto", "1/4", "1/2", "3/4", "Pieno"]}
-                disabled={pending}
-                allowAdd={false}
-                aria-label="Livello carburante"
-              />
-            </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Descrizione anomalia
-              <textarea className={`${dsInput} mt-1 min-h-[72px] w-full resize-y`} value={fields.descrizioneAnomalia} onChange={(e) => patch({ descrizioneAnomalia: e.target.value })} disabled={pending} rows={3} />
-            </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Note
-              <textarea className={`${dsInput} mt-1 min-h-[56px] w-full resize-y`} value={fields.noteIntervento} onChange={(e) => patch({ noteIntervento: e.target.value })} disabled={pending} rows={2} />
-            </label>
-            <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
-              Richiedente
-              <input className={inputFieldClass} value={fields.richiedente} onChange={(e) => patch({ richiedente: e.target.value })} disabled={pending} placeholder="Nome libero" />
-            </label>
+            <FormField label="Descrizione anomalia">
+              <textarea className={`${dsInput} min-h-[72px] w-full resize-y`} value={fields.descrizioneAnomalia} onChange={(e) => patch({ descrizioneAnomalia: e.target.value })} disabled={pending} rows={3} />
+            </FormField>
+            <FormField label="Note">
+              <textarea className={`${dsInput} min-h-[56px] w-full resize-y`} value={fields.noteIntervento} onChange={(e) => patch({ noteIntervento: e.target.value })} disabled={pending} rows={2} />
+            </FormField>
           </FormSection>
 
           {!mezzoId ? (

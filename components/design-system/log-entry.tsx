@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { memo } from "react";
+import { Tooltip } from "@/components/design-system/tooltip";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { parseModificheLines } from "@/lib/gestionale-log/log-summary";
 import type { GestionaleLogEventTone, GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
@@ -84,16 +85,21 @@ export const LogEntry = memo(function LogEntry({ vm, onClick, title, trailing }:
   const body = <LogEntryBody vm={vm} trailing={trailing} />;
 
   if (onClick) {
-    return (
+    const button = (
       <button
         type="button"
         onClick={onClick}
-        title={title}
-        className={`w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] px-3 text-left transition-colors hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[var(--cab-hover)] ${erpFocus}`}
+        className={`w-full cursor-pointer rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] px-3 text-left transition-colors hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[var(--cab-hover)] ${erpFocus}`}
       >
         {body}
       </button>
     );
+
+    if (title?.trim()) {
+      return <Tooltip content={title}>{button}</Tooltip>;
+    }
+
+    return button;
   }
 
   return (

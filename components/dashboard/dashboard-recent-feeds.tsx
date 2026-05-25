@@ -12,6 +12,7 @@ import {
 import {
   buildLogModificheDisplayEntries,
   buildLogModificheFocusHref,
+  briefLogModificaRiga,
   logAutoreLabel,
 } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
@@ -41,7 +42,10 @@ export function DashboardRecentFeeds() {
       .slice(0, 8)
       .map((entry) => ({
         id: entry.id,
-        vm: entry.vm,
+        vm: {
+          ...entry.vm,
+          modificaRiga: briefLogModificaRiga(entry.vm.modificaRiga),
+        },
         href: buildLogModificheFocusHref(entry.row),
       }));
   }, [authorName, lavLogsQ.data, statiLavorazione, user?.id]);
@@ -76,7 +80,7 @@ export function DashboardRecentFeeds() {
                   <GestionaleLogEntryFourLines
                     vm={vm}
                     onClick={href ? () => router.push(href) : undefined}
-                    title={href ? "Apri in Lavorazioni" : undefined}
+                    title={href ? "Apri lavorazione e evidenzia riga" : undefined}
                   />
                 </li>
               ))}

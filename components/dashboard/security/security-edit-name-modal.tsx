@@ -23,7 +23,7 @@ export function SecurityEditNameModal({ open, initialNome, pending, onClose, onS
 
   return (
     <div className={dsModalBackdrop} role="presentation">
-      <button type="button" className="absolute inset-0 cursor-default" aria-label="chiudi" onClick={() => !pending && onClose()} />
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Chiudi" onClick={() => !pending && onClose()} />
       <div
         className={`relative z-[1] ${dsModalPanel} max-w-md`}
         role="dialog"

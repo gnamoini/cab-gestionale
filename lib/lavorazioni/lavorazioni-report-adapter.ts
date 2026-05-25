@@ -48,6 +48,7 @@ export function lavorazioneListRowToAttiva(row: LavorazioneListRow): Lavorazione
   const ing = row.data_ingresso?.trim() ? row.data_ingresso : row.created_at;
   return {
     id: row.id,
+    codice: row.codice ?? null,
     macchina,
     targa,
     matricola,
@@ -70,6 +71,7 @@ export function lavorazioneListRowToArchiviata(row: LavorazioneListRow): Lavoraz
   const fine = lavorazioneReportClosureIso(row);
   return {
     id: a.id,
+    codice: a.codice,
     macchina: a.macchina,
     targa: a.targa,
     matricola: a.matricola,

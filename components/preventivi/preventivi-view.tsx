@@ -94,7 +94,6 @@ import {
   PageToolbar,
   PageToolbarActions,
   PageToolbarResultCount,
-  Tooltip,
 } from "@/components/design-system";
 import {
   gestionaleListTableRowClass,
@@ -104,9 +103,9 @@ import {
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
+  GestionaleLogEntryDismissButton,
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
-  logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 
 const SEARCH_DEBOUNCE_MS = 320;
@@ -1057,19 +1056,9 @@ export function PreventiviView() {
                             atIso: entry.atIso,
                           }}
                           trailing={
-                            <Tooltip content="Rimuovi">
-                              <button
-                                type="button"
-                                className={logEntryDismissBtnClass}
-                                aria-label="Rimuovi voce dal log"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (window.confirm("Rimuovere questa voce dal log?")) removePreventiviChangeLogEntryById(entry.id);
-                                }}
-                              >
-                                ×
-                              </button>
-                            </Tooltip>
+                            <GestionaleLogEntryDismissButton
+                              onDismiss={() => removePreventiviChangeLogEntryById(entry.id)}
+                            />
                           }
                         />
                       </li>

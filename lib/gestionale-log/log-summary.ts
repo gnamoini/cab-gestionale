@@ -293,8 +293,108 @@ function humanChangeSentence(
   return `${label} modificato da “${p}” a “${d}”`;
 }
 
+const SCHEDA_CAMPO_LABELS: Record<string, string> = {
+  addettoAccettazione: "Addetto accettazione",
+  addetto: "Addetto",
+  cliente: "Cliente",
+  cantiere: "Cantiere",
+  utilizzatore: "Utilizzatore",
+  tipoAttrezzatura: "Tipo attrezzatura",
+  marcaAttrezzatura: "Marca attrezzatura",
+  modelloAttrezzatura: "Modello attrezzatura",
+  matricola: "Matricola",
+  nScuderia: "N. scuderia",
+  targa: "Targa",
+  dataIngresso: "Data ingresso",
+  noteIntervento: "Note intervento",
+  descrizioneAnomalia: "Descrizione anomalia",
+  richiedente: "Richiedente",
+};
+
+const GENERIC_MODIFICA_LINES = new Set(["Modifica registrata", "Record aggiornato", "Dati aggiornati"]);
+
+function isGenericModificaLines(modifiche: readonly string[]): boolean {
+  return modifiche.length > 0 && modifiche.every((line) => GENERIC_MODIFICA_LINES.has(line.replace(/^•\s*/, "").trim()));
+}
+
+function oggettoFromPayloadContext(payload: Record<string, unknown> | null): string {
+  if (!payload) return "";
+  const ctx = payload.context;
+  if (!ctx || typeof ctx !== "object" || Array.isArray(ctx)) return "";
+  return safeStr((ctx as Record<string, unknown>).oggetto).trim();
+}
+
+function unwrapSchedaContenutoCampi(raw: unknown): Record<string, unknown> {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+  const root = raw as Record<string, unknown>;
+  const doc = root.doc;
+  if (doc && typeof doc === "object" && !Array.isArray(doc)) {
+    const campi = (doc as Record<string, unknown>).campi;
+    if (campi && typeof campi === "object" && !Array.isArray(campi)) {
+      return campi as Record<string, unknown>;
+    }
+  }
+  return root;
+}
+
+function diffContenutoSchedaModifiche(before: unknown, after: unknown): string[] {
+  const b = unwrapSchedaContenutoCampi(before);
+  const a = unwrapSchedaContenutoCampi(after);
+  const keys = new Set([...Object.keys(b), ...Object.keys(a)]);
+  const lines: string[] = [];
+  for (const key of keys) {
+    if (JSON.stringify(b[key]) === JSON.stringify(a[key])) continue;
+    const label = SCHEDA_CAMPO_LABELS[key] ?? humanFieldLabel(key);
+    const p = formatValueForField(key, b[key]);
+    const d = formatValueForField(key, a[key]);
+    if (p === "—" || p === "") lines.push(`${label} impostato a “${d}”`);
+    else if (d === "—" || d === "") lines.push(`${label} rimosso`);
+    else lines.push(`${label} modificato da “${p}” a “${d}”`);
+    if (lines.length >= 8) break;
+  }
+  return lines;
+}
+
+function refreshGenericModifiche(
+  modifiche: string[],
+  payload: Record<string, unknown> | null,
+  stati?: StatoLavorazioneConfig[],
+): string[] {
+  if (!payload || !isGenericModificaLines(modifiche)) return modifiche;
+  const rediff = diffToModifiche(payload, stati);
+  return rediff.length ? rediff : modifiche;
+}
+
+function resolveOggettoRiga(
+  entita: string,
+  oggettoRiga: string,
+  payload: Record<string, unknown> | null,
+): string {
+  let resolved = oggettoRiga;
+  const ctxOggetto = oggettoFromPayloadContext(payload);
+  if (ctxOggetto && (resolved === "Lavorazione" || resolved === "—" || !resolved.trim())) {
+    resolved = ctxOggetto;
+  }
+  if (entita === "lavorazioni" && resolved === "Lavorazione") {
+    const record = payload ? recordFromPayload(payload) : null;
+    if (record) {
+      const rebuilt = buildOggettoFromRecord(entita, record);
+      if (rebuilt !== "Lavorazione") resolved = rebuilt;
+    }
+  }
+  return resolved;
+}
+
 function diffToModifiche(payload: Record<string, unknown>, stati?: StatoLavorazioneConfig[]): string[] {
-  return extractPayloadFieldChanges(payload).map((c) => modificaLineForFieldChange(c, stati));
+  const lines: string[] = [];
+  for (const change of extractPayloadFieldChanges(payload)) {
+    if (change.key === "contenuto") {
+      lines.push(...diffContenutoSchedaModifiche(change.before, change.after));
+      continue;
+    }
+    lines.push(modificaLineForFieldChange(change, stati));
+  }
+  return lines;
 }
 
 const STATO_MODIFICATO_LINE_RE =
@@ -400,18 +500,12 @@ export function buildLogModificaSummary(input: {
     const oggettoRiga = typeof s.oggettoRiga === "string" ? s.oggettoRiga : "";
     const modifiche = Array.isArray(s.modifiche) ? s.modifiche.filter((x) => typeof x === "string") : [];
     if (tipoRiga && oggettoRiga && modifiche.length) {
-      let resolvedOggetto = oggettoRiga;
-      if (input.entita === "lavorazioni" && resolvedOggetto === "Lavorazione") {
-        const record = recordFromPayload(payload);
-        if (record) {
-          const rebuilt = buildOggettoFromRecord(input.entita, record);
-          if (rebuilt !== "Lavorazione") resolvedOggetto = rebuilt;
-        }
-      }
-      const resolvedModifiche =
+      const resolvedOggetto = resolveOggettoRiga(input.entita, oggettoRiga, payload);
+      let resolvedModifiche =
         input.entita === "lavorazioni"
           ? remapLavorazioneStatoInModifiche(modifiche as string[], payload, stati)
           : (modifiche as string[]);
+      resolvedModifiche = refreshGenericModifiche(resolvedModifiche, payload, stati);
       return {
         tipoRiga,
         oggettoRiga: resolvedOggetto,
@@ -439,7 +533,7 @@ export function buildLogModificaSummary(input: {
   }
 
   const record = payload ? recordFromPayload(payload) : null;
-  const oggettoRiga = record ? buildOggettoFromRecord(input.entita, record) : "—";
+  const oggettoRiga = resolveOggettoRiga(input.entita, record ? buildOggettoFromRecord(input.entita, record) : "—", payload);
   let modifiche = payload ? diffToModifiche(payload, stati) : [];
 
   if (modifiche.length === 0) {

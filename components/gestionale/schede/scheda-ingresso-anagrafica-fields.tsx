@@ -1,0 +1,255 @@
+"use client";
+
+import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
+import {
+  GlobalHierarchyMarcaSelect,
+  GlobalHierarchyModelloSelect,
+  GlobalSelect,
+  GlobalSettingsListSelect,
+} from "@/components/gestionale/global-input";
+import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
+import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
+import { dsInput } from "@/lib/ui/design-system";
+import type { MezzoGestito } from "@/lib/mezzi/types";
+import type { SchedaIngressoFields } from "@/types/schede";
+
+export type SchedaIngressoAnagraficaSection = "cliente" | "attrezzatura" | "telaio" | "dettagli";
+
+const ALL_SECTIONS: SchedaIngressoAnagraficaSection[] = ["cliente", "attrezzatura", "telaio", "dettagli"];
+
+export function SchedaIngressoAnagraficaFields({
+  value,
+  onPatch,
+  mezzi,
+  disabled = false,
+  sections = ALL_SECTIONS,
+  onExactMezzoMatch,
+  lastIngressoMatch,
+  onCopyLastIngresso,
+  clienteRequired = false,
+  marcaAttrezzaturaRequired = false,
+}: {
+  value: SchedaIngressoFields;
+  onPatch: (patch: Partial<SchedaIngressoFields>) => void;
+  mezzi: readonly MezzoGestito[];
+  disabled?: boolean;
+  sections?: readonly SchedaIngressoAnagraficaSection[];
+  onExactMezzoMatch?: (mezzo: MezzoGestito) => void;
+  lastIngressoMatch?: { updatedAt?: string } | null;
+  onCopyLastIngresso?: () => void;
+  clienteRequired?: boolean;
+  marcaAttrezzaturaRequired?: boolean;
+}) {
+  const show = (s: SchedaIngressoAnagraficaSection) => sections.includes(s);
+  const inputFieldClass = `block w-full ${dsInput}`;
+  const listSelectWrapClass = "w-full";
+  const mezzoMatchHandler = onExactMezzoMatch ?? (() => {});
+
+  return (
+    <>
+      {show("cliente") ? (
+        <FormSection title="Anagrafica cliente">
+          <FormField label="Cliente" required={clienteRequired}>
+            <GlobalSettingsListSelect
+              listKey="mezzi:clienti"
+              className={listSelectWrapClass}
+              value={value.cliente}
+              onChange={(v) => onPatch({ cliente: v })}
+              disabled={disabled}
+              required={clienteRequired}
+              aria-label="Cliente"
+            />
+          </FormField>
+          <FormField label="Cantiere">
+            <GlobalSettingsListSelect
+              listKey="mezzi:cantieri"
+              className={listSelectWrapClass}
+              value={value.cantiere}
+              onChange={(v) => onPatch({ cantiere: v })}
+              disabled={disabled}
+              aria-label="Cantiere"
+            />
+          </FormField>
+          <FormField label="Utilizzatore">
+            <GlobalSettingsListSelect
+              listKey="mezzi:utilizzatori"
+              className={listSelectWrapClass}
+              value={value.utilizzatore}
+              onChange={(v) => onPatch({ utilizzatore: v })}
+              disabled={disabled}
+              aria-label="Utilizzatore"
+            />
+          </FormField>
+          <FormField label="Richiedente">
+            <input
+              className={inputFieldClass}
+              value={value.richiedente}
+              onChange={(e) => onPatch({ richiedente: e.target.value })}
+              disabled={disabled}
+              placeholder="Nome libero"
+              aria-label="Richiedente"
+            />
+          </FormField>
+        </FormSection>
+      ) : null}
+
+      {show("attrezzatura") ? (
+        <FormSection title="Anagrafica attrezzatura">
+          <FormField label="Tipo attrezzatura">
+            <GlobalSettingsListSelect
+              listKey="mezzi:tipiAttrezzatura"
+              className={listSelectWrapClass}
+              value={value.tipoAttrezzatura}
+              onChange={(v) => onPatch({ tipoAttrezzatura: v })}
+              disabled={disabled}
+              aria-label="Tipo attrezzatura"
+            />
+          </FormField>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <FormField label="Marca" required={marcaAttrezzaturaRequired}>
+              <GlobalHierarchyMarcaSelect
+                tree="attrezzature"
+                className={listSelectWrapClass}
+                value={value.marcaAttrezzatura}
+                onChange={(v) => onPatch({ marcaAttrezzatura: v, modelloAttrezzatura: "" })}
+                disabled={disabled}
+                required={marcaAttrezzaturaRequired}
+                aria-label="Marca attrezzatura"
+              />
+            </FormField>
+            <FormField label="Modello">
+              <GlobalHierarchyModelloSelect
+                tree="attrezzature"
+                marcaNome={value.marcaAttrezzatura}
+                className={listSelectWrapClass}
+                value={value.modelloAttrezzatura}
+                onChange={(v) => onPatch({ modelloAttrezzatura: v })}
+                disabled={disabled}
+                aria-label="Modello attrezzatura"
+              />
+            </FormField>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <SchedaIngressoIdentAutocompleteField
+              field="matricola"
+              label="Matricola"
+              value={value.matricola}
+              otherValue={value.targa}
+              mezzi={mezzi}
+              disabled={disabled}
+              onChange={(v) => onPatch({ matricola: v })}
+              onExactMezzoMatch={mezzoMatchHandler}
+            />
+            <FormField label="N. scuderia">
+              <input
+                className={`${inputFieldClass} font-mono`}
+                value={value.nScuderia}
+                onChange={(e) => onPatch({ nScuderia: e.target.value })}
+                disabled={disabled}
+                aria-label="N. scuderia"
+              />
+            </FormField>
+          </div>
+          {onCopyLastIngresso ? (
+            <CopiaUltimaSchedaIngressoBanner
+              visible={Boolean(lastIngressoMatch)}
+              highlight={false}
+              updatedAt={lastIngressoMatch?.updatedAt}
+              disabled={disabled}
+              onCopy={onCopyLastIngresso}
+            />
+          ) : null}
+        </FormSection>
+      ) : null}
+
+      {show("telaio") ? (
+        <FormSection title="Anagrafica mezzo / telaio">
+          <FormField label="Tipo telaio">
+            <GlobalSettingsListSelect
+              listKey="mezzi:tipiTelaio"
+              className={listSelectWrapClass}
+              value={value.tipoTelaio}
+              onChange={(v) => onPatch({ tipoTelaio: v })}
+              disabled={disabled}
+              aria-label="Tipo telaio"
+            />
+          </FormField>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <FormField label="Marca">
+              <GlobalHierarchyMarcaSelect
+                tree="telai"
+                className={listSelectWrapClass}
+                value={value.marcaTelaio}
+                onChange={(v) => onPatch({ marcaTelaio: v, modelloTelaio: "" })}
+                disabled={disabled}
+                aria-label="Marca telaio"
+              />
+            </FormField>
+            <FormField label="Modello">
+              <GlobalHierarchyModelloSelect
+                tree="telai"
+                marcaNome={value.marcaTelaio}
+                className={listSelectWrapClass}
+                value={value.modelloTelaio}
+                onChange={(v) => onPatch({ modelloTelaio: v })}
+                disabled={disabled}
+                aria-label="Modello telaio"
+              />
+            </FormField>
+          </div>
+          <SchedaIngressoIdentAutocompleteField
+            field="targa"
+            label="Targa"
+            value={value.targa}
+            otherValue={value.matricola}
+            mezzi={mezzi}
+            disabled={disabled}
+            onChange={(v) => onPatch({ targa: v })}
+            onExactMezzoMatch={mezzoMatchHandler}
+          />
+        </FormSection>
+      ) : null}
+
+      {show("dettagli") ? (
+        <FormSection title="Modelli e dettagli tecnici">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <FormField label="Ore lavoro">
+              <input
+                type="number"
+                min={0}
+                className={inputFieldClass}
+                value={value.oreLavoro}
+                onChange={(e) => onPatch({ oreLavoro: e.target.value })}
+                disabled={disabled}
+                aria-label="Ore lavoro"
+              />
+            </FormField>
+            <FormField label="KM">
+              <input
+                type="number"
+                min={0}
+                className={inputFieldClass}
+                value={value.km}
+                onChange={(e) => onPatch({ km: e.target.value })}
+                disabled={disabled}
+                aria-label="KM"
+              />
+            </FormField>
+          </div>
+          <FormField label="Carburante">
+            <GlobalSelect
+              className={listSelectWrapClass}
+              value={value.livelloCarburante}
+              onChange={(v) => onPatch({ livelloCarburante: v })}
+              options={["Vuoto", "1/4", "1/2", "3/4", "Pieno"]}
+              disabled={disabled}
+              allowAdd={false}
+              selectOnly
+              aria-label="Livello carburante"
+            />
+          </FormField>
+        </FormSection>
+      ) : null}
+    </>
+  );
+}

@@ -1,4 +1,11 @@
 import { isPreventiviDbPrimary } from "@/lib/preventivi/preventivi-db-primary";
+import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
+import { isPreventivoUuid } from "@/lib/preventivi/preventivi-db-mapper";
+import { nextPreventivoNumeroManualeFromRecords } from "@/lib/preventivi/preventivo-numero-manuale";
+import {
+  isPreventivoNumeroLavorazione,
+  nextPreventivoNumeroForLavorazione,
+} from "@/lib/preventivi/preventivo-numero-lavorazione";
 import {
   nextPreventivoId as nextPreventivoIdFromCache,
   nextPreventivoNumeroFromRecords,
@@ -91,6 +98,14 @@ function hydratePreventivo(raw: unknown): PreventivoRecord | null {
     nScuderia: String(o.nScuderia ?? ""),
     marcaAttrezzatura: String(o.marcaAttrezzatura ?? ""),
     modelloAttrezzatura: String(o.modelloAttrezzatura ?? ""),
+    tipoAttrezzatura: String(o.tipoAttrezzatura ?? ""),
+    oreLavoro: String(o.oreLavoro ?? ""),
+    tipoTelaio: String(o.tipoTelaio ?? ""),
+    marcaTelaio: String(o.marcaTelaio ?? ""),
+    modelloTelaio: String(o.modelloTelaio ?? ""),
+    km: String(o.km ?? ""),
+    livelloCarburante: String(o.livelloCarburante ?? ""),
+    richiedente: String(o.richiedente ?? ""),
     descrizioneLavorazioniCliente: String(o.descrizioneLavorazioniCliente ?? ""),
     descrizioneLavorazioniTecnicaSorgente: String(o.descrizioneLavorazioniTecnicaSorgente ?? ""),
     descrizioneGenerataAuto: String(o.descrizioneGenerataAuto ?? ""),
@@ -202,7 +217,19 @@ export function duplicatePreventivo(
   existingRecords: readonly PreventivoRecord[],
 ): PreventivoRecord {
   const now = new Date().toISOString();
-  const numero = nextPreventivoNumeroFromRecords(existingRecords);
+  let numero: string;
+  if (isPreventivoUuid(source.lavorazioneId)) {
+    const codiceFromNumero = isPreventivoNumeroLavorazione(source.numero)
+      ? source.numero.trim().replace(/\/\d+$/, "")
+      : lavorazioneDisplayCodice({ id: source.lavorazioneId });
+    numero = nextPreventivoNumeroForLavorazione(
+      codiceFromNumero,
+      existingRecords,
+      source.lavorazioneId,
+    );
+  } else {
+    numero = nextPreventivoNumeroManualeFromRecords(existingRecords);
+  }
   const righeRicambi = source.righeRicambi.map((r) => ({
     ...r,
     scontoPercent: r.scontoPercent ?? 0,

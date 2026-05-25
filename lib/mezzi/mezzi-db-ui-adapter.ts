@@ -132,6 +132,7 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
       : emptyManodopera();
 
   const m = mezzo;
+  const mezzoUi = m ? toMezzoUI(m) : null;
   return {
     id: row.id,
     numero,
@@ -155,6 +156,31 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
     nScuderia: m?.numero_scuderia ?? (typeof det.nScuderia === "string" ? det.nScuderia : "") ?? "",
     marcaAttrezzatura: m?.marca ?? (typeof det.marcaAttrezzatura === "string" ? det.marcaAttrezzatura : ""),
     modelloAttrezzatura: m?.modello ?? (typeof det.modelloAttrezzatura === "string" ? det.modelloAttrezzatura : ""),
+    tipoAttrezzatura:
+      typeof det.tipoAttrezzatura === "string"
+        ? det.tipoAttrezzatura
+        : mezzoUi?.tipoAttrezzatura && mezzoUi.tipoAttrezzatura !== "—"
+          ? mezzoUi.tipoAttrezzatura
+          : "",
+    oreLavoro:
+      typeof det.oreLavoro === "string"
+        ? det.oreLavoro
+        : mezzoUi?.oreKm != null && mezzoUi.oreKm > 0
+          ? String(mezzoUi.oreKm)
+          : "",
+    tipoTelaio: typeof det.tipoTelaio === "string" ? det.tipoTelaio : (mezzoUi?.tipoTelaio ?? ""),
+    marcaTelaio: typeof det.marcaTelaio === "string" ? det.marcaTelaio : (mezzoUi?.marcaTelaio ?? ""),
+    modelloTelaio: typeof det.modelloTelaio === "string" ? det.modelloTelaio : (mezzoUi?.modelloTelaio ?? ""),
+    km:
+      typeof det.km === "string"
+        ? det.km
+        : mezzoUi?.km != null
+          ? String(mezzoUi.km)
+          : mezzoUi?.oreKm != null && mezzoUi.oreKm > 0
+            ? String(mezzoUi.oreKm)
+            : "",
+    livelloCarburante: typeof det.livelloCarburante === "string" ? det.livelloCarburante : "",
+    richiedente: typeof det.richiedente === "string" ? det.richiedente : "",
     descrizioneLavorazioniCliente: typeof det.descrizioneLavorazioniCliente === "string" ? det.descrizioneLavorazioniCliente : "—",
     descrizioneLavorazioniTecnicaSorgente:
       typeof det.descrizioneLavorazioniTecnicaSorgente === "string" ? det.descrizioneLavorazioniTecnicaSorgente : "",

@@ -39,6 +39,11 @@ assert.equal(schedaTipoToPdfSlug("lavorazioni"), "scheda-lavorazione");
 assert.equal(schedaTipoToPdfSlug("ricambi"), "scheda-ricambi");
 
 assert.equal(
+  buildSchedaPdfDownloadFileName({ doc: ingressoDoc, lavorazioneId: "LV-1024", codiceLavorazione: "26-0001" }),
+  "scheda-ingresso_26-0001_2026-01-23.pdf",
+);
+
+assert.equal(
   buildSchedaPdfDownloadFileName({ doc: ingressoDoc, lavorazioneId: "LV-1024" }),
   "scheda-ingresso_LV-1024_2026-01-23.pdf",
 );

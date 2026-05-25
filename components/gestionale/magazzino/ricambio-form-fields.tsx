@@ -17,6 +17,7 @@ import {
   parseCompatInput,
   syncPrezzoVenditaInForm,
 } from "@/lib/magazzino/form";
+import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import { GestionaleFormFocusScope } from "@/components/gestionale/gestionale-form-focus-scope";
 import { dsBtnPrimary } from "@/lib/ui/design-system";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
@@ -27,6 +28,10 @@ const inputBase =
 /** Nasconde frecce native del browser su input numerici (stepper custom solo scorta). */
 const noSpinner =
   "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
+
+function formatEurIt(n: number): string {
+  return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
+}
 
 const stepperBtnMinus =
   "flex h-9 w-9 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-600 shadow-sm outline-none transition-[background-color,border-color,box-shadow,color] duration-150 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 hover:shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-orange-400/55 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 active:bg-zinc-200/90 dark:active:bg-zinc-600 [-webkit-tap-highlight-color:transparent]";
@@ -187,7 +192,8 @@ export function RicambioFormFields({
     const scontoAlt = Math.min(100, Math.max(0, parseFloat(form.scontoFornitoreNonOriginale) || 0));
     const markupPct = clampMarkupPercentuale(parseFloat(String(form.markupPercentuale).replace(",", ".")) || 0);
     const prezzoVendita = Math.max(0, parseFloat(String(form.prezzoVendita).replace(",", ".")) || 0);
-    return { listinoOE, scontoOE, listinoAlt, scontoAlt, markupPct, prezzoVendita };
+    const prezzoVenditaPrevisto = prezzoVenditaDaListinoEMarkup(listinoOE, markupPct);
+    return { listinoOE, scontoOE, listinoAlt, scontoAlt, markupPct, prezzoVendita, prezzoVenditaPrevisto };
   }, [
     form.prezzoFornitoreOriginale,
     form.scontoFornitoreOriginale,
@@ -286,7 +292,8 @@ export function RicambioFormFields({
           value={form.categoria}
           onChange={(categoria) => setForm((f) => ({ ...f, categoria }))}
           required={!fieldsOptional}
-          placeholder="Cerca o seleziona categoria…"
+          selectOnly
+          placeholder="Seleziona categoria…"
           aria-label="Categoria ricambio"
         />
       </RicambioField>
@@ -408,6 +415,16 @@ export function RicambioFormFields({
           }
           className={`${inputBase} ${noSpinner} tabular-nums`}
         />
+        <div
+          className="mt-2 flex items-center justify-between gap-3 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-3 py-2.5 shadow-[var(--cab-shadow-sm)]"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="text-xs font-medium text-[color:var(--cab-text-muted)]">Prezzo di vendita previsto</span>
+          <span className="text-sm font-semibold tabular-nums text-[color:var(--cab-text)]">
+            {formatEurIt(previewLineari.prezzoVenditaPrevisto)}
+          </span>
+        </div>
       </RicambioField>
       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Alternativo</p>
       <RicambioField label="Fornitore non originale">

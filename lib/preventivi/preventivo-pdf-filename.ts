@@ -3,15 +3,29 @@ import { sanitizePdfFileNamePart } from "@/lib/pdf/pdf-filename-utils";
 import { preventivoTipoDocumentoLabel } from "@/lib/preventivi/preventivi-tipo-documento";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
-/** Etichetta progressivo per nome file: es. N.12 da 2026-012 o PV-2026-012. */
+/** Etichetta progressivo per nome file PDF. */
 export function formatPreventivoNumeroFileLabel(numero: string): string {
   const t = numero.trim();
   if (!t) return "N.senza-numero";
-  const m = /^(?:PV-)?(\d{4})-(\d+)$/.exec(t);
-  if (m) {
-    const seq = parseInt(m[2]!, 10);
-    return Number.isFinite(seq) ? `N.${seq}` : `N.${m[2]}`;
+
+  const linked = /^(\d{2}-\d{4})\/(\d+)$/.exec(t);
+  if (linked) {
+    const seq = parseInt(linked[2]!, 10);
+    return Number.isFinite(seq) ? `N.${seq}` : `N.${linked[2]}`;
   }
+
+  const manual = /^(\d{2})-(\d{4})\/M$/i.exec(t);
+  if (manual) {
+    const seq = parseInt(manual[2]!, 10);
+    return Number.isFinite(seq) ? `N.${seq}-M` : "N.M";
+  }
+
+  const legacy = /^(?:PV-)?(\d{4})-(\d+)$/.exec(t);
+  if (legacy) {
+    const seq = parseInt(legacy[2]!, 10);
+    return Number.isFinite(seq) ? `N.${seq}` : `N.${legacy[2]}`;
+  }
+
   return `N.${sanitizePdfFileNamePart(t, "senza-numero")}`;
 }
 

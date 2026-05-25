@@ -35,37 +35,40 @@ const cabCard = "bg-[var(--cab-card)]";
 export const dsFocus =
   "outline-none transition-all duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--cab-bg-app)] dark:focus-visible:ring-offset-[var(--cab-bg-app)]";
 
-export const dsDisabled = "disabled:pointer-events-none disabled:opacity-55";
+export const dsDisabled = "disabled:pointer-events-none disabled:opacity-55 disabled:cursor-not-allowed";
+
+/** Cursore manina su controlli cliccabili (bottoni design system). */
+const dsBtnCursor = "cursor-pointer";
 
 /** D — Neutro: Chiudi, Annulla, azioni discrete */
-export const dsBtnNeutral = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] ${cabBorder} ${cabSurface} px-2.5 py-2 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border)_75%,transparent)] ${dsFocus} ${dsDisabled}`;
+export const dsBtnNeutral = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] ${cabBorder} ${cabSurface} px-2.5 py-2 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border)_75%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** Toolbar intestazione pagina */
-export const dsPageToolbarBtn = `inline-flex min-h-[2.5rem] shrink-0 items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] ${cabSurface} px-3 py-2 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,box-shadow,ring-color,border-color,color] duration-200 ease-out hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)] ${dsFocus} ${dsDisabled}`;
+export const dsPageToolbarBtn = `inline-flex min-h-[2.5rem] shrink-0 items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] ${cabSurface} px-3 py-2 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,box-shadow,ring-color,border-color,color] duration-200 ease-out hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 export const dsBtnSettings = dsPageToolbarBtn;
 
 /** A — Primario */
-export const dsBtnPrimary = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-sm)] hover:brightness-[1.06] hover:shadow-[var(--cab-shadow-md)] hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] ${dsFocus} ${dsDisabled}`;
+export const dsBtnPrimary = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-sm)] hover:brightness-[1.06] hover:shadow-[var(--cab-shadow-md)] hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** A — CTA hero */
-export const dsBtnCtaHero = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] bg-gradient-to-b from-[var(--cab-primary)] to-[color:color-mix(in_srgb,var(--cab-primary)_82%,#000)] px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-md)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:brightness-[1.03] active:translate-y-0 active:brightness-[0.98] ${dsFocus} ${dsDisabled}`;
+export const dsBtnCtaHero = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] bg-gradient-to-b from-[var(--cab-primary)] to-[color:color-mix(in_srgb,var(--cab-primary)_82%,#000)] px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-md)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:brightness-[1.03] active:translate-y-0 active:brightness-[0.98] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** B — Secondario soft arancio */
-export const dsBtnSoftOrange = `inline-flex items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-2.5 py-1.5 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-surface))] hover:shadow-[var(--cab-shadow-md)] ${dsFocus} ${dsDisabled}`;
+export const dsBtnSoftOrange = `inline-flex items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-2.5 py-1.5 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-surface))] hover:shadow-[var(--cab-shadow-md)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
-export const dsBtnIcon = `inline-flex min-w-[2rem] items-center justify-center rounded-[var(--ds-radius-lg)] ${cabBorder} ${cabSurface} px-2 py-1.5 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] ${dsFocus} ${dsDisabled}`;
+export const dsBtnIcon = `inline-flex min-w-[2rem] items-center justify-center rounded-[var(--ds-radius-lg)] ${cabBorder} ${cabSurface} px-2 py-1.5 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
-export const dsBtnSubtle = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] ${cabBorder} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_85%,var(--cab-surface))] px-3 py-2 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] ${dsFocus} ${dsDisabled}`;
+export const dsBtnSubtle = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] ${cabBorder} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_85%,var(--cab-surface))] px-3 py-2 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** B2 — Ghost (toolbar secondaria, filtri testuali) */
-export const dsBtnGhost = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] border border-transparent bg-transparent px-2.5 py-2 text-xs font-medium ${cabTextMuted} hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] ${dsFocus} ${dsDisabled}`;
+export const dsBtnGhost = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] border border-transparent bg-transparent px-2.5 py-2 text-xs font-medium ${cabTextMuted} hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** B — alias “secondario” tab toolbar */
 export const dsBtnSecondary = dsBtnNeutral;
 
 /** C — Pericolo */
-export const dsBtnDanger = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] px-3 py-2 text-sm font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] shadow-[var(--cab-shadow-sm)] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_20%,var(--cab-surface))] ${dsFocus} ${dsDisabled}`;
+export const dsBtnDanger = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] px-3 py-2 text-sm font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] shadow-[var(--cab-shadow-sm)] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_20%,var(--cab-surface))] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** F — Input su sfondo chiaro (form gestionale) */
 export const dsInput = `w-full rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} px-3 py-2.5 text-sm ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-[color:var(--cab-text-muted)] hover:border-[color:var(--cab-border-strong)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] ${dsFocus}`;
@@ -179,7 +182,7 @@ export const dsCardMobileShell =
 export const dsTableActionGlyph = "h-4 w-4 shrink-0 opacity-90";
 
 const dsTableActionSqBase =
-  `inline-flex ${dsTableActionsRowHeight} w-9 min-w-9 shrink-0 items-center justify-center rounded-lg border-2 p-0 shadow-[var(--cab-shadow-sm)] outline-none transition-[background-color,border-color,box-shadow,color,opacity] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 box-border ${dsFocus}`;
+  `inline-flex ${dsTableActionsRowHeight} w-9 min-w-9 shrink-0 items-center justify-center rounded-lg border-2 p-0 shadow-[var(--cab-shadow-sm)] outline-none transition-[background-color,border-color,box-shadow,color,opacity] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed box-border ${dsBtnCursor} ${dsFocus}`;
 
 /** Pulsante azione con badge contatore (es. schede 1/3) — aggiungere `dsTableActionBadge` come figlio. */
 export const dsTableActionBtnWithBadge = "relative";
@@ -204,16 +207,16 @@ export const dsTableActionBtnUndo = dsTableActionBtnSecondary;
 export const dsTableActionBtnDanger = `${dsTableActionSqBase} border-[color:color-mix(in_srgb,var(--cab-danger)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))]`;
 
 /** Azione testuale su una riga (tabella, toolbar compatta) — `h-9`. */
-export const dsTableActionTextBtn = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} px-2.5 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[var(--cab-hover)] ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
+export const dsTableActionTextBtn = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} px-2.5 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[var(--cab-hover)] ${dsBtnCursor} ${dsFocus} disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed`;
 
 /** Azione testuale primaria (tabella) — `h-9`. */
-export const dsTableActionTextBtnPrimary = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-2.5 text-xs font-semibold text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-150 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
+export const dsTableActionTextBtnPrimary = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-2.5 text-xs font-semibold text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-150 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] ${dsBtnCursor} ${dsFocus} disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed`;
 
 /** Azione testuale distruttiva (tabella) — `h-9`. */
-export const dsTableActionTextBtnDanger = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] px-2.5 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))] ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
+export const dsTableActionTextBtnDanger = `inline-flex h-9 shrink-0 items-center gap-1 whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] px-2.5 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow] duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))] ${dsBtnCursor} ${dsFocus} disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed`;
 
 /** Hub schede (PDF / Modifica / Elimina): stessa silhouette di `dsBtnPrimary` («Crea nuova»). */
-const dsSchedaHubBtnBase = `inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--ds-radius-lg)] px-4 py-2.5 text-sm font-semibold shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-150 ${dsFocus} disabled:pointer-events-none disabled:opacity-50`;
+const dsSchedaHubBtnBase = `inline-flex shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-[var(--ds-radius-lg)] px-4 py-2.5 text-sm font-semibold shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-150 ${dsBtnCursor} ${dsFocus} disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed`;
 
 export const dsSchedaHubBtn = `${dsSchedaHubBtnBase} border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} ${cabText} hover:bg-[var(--cab-hover)]`;
 

@@ -47,16 +47,20 @@ export function formatSchedaPdfDateYmd(doc: SchedaIngressoDoc | SchedaLavorazion
 export function buildSchedaPdfDownloadFileName(opts: {
   doc: SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc;
   lavorazioneId: string;
+  codiceLavorazione?: string | null;
   /** Fallback legacy (pre-unificazione: titolo scheda senza id/data strutturati). */
   titoloScheda?: string;
 }): string {
   const slug = schedaTipoToPdfSlug(opts.doc.tipo);
+  const codiceRaw = opts.codiceLavorazione?.trim();
+  const codicePart = codiceRaw ? sanitizePdfFileNamePart(codiceRaw, "") : "";
   const lavRaw = opts.lavorazioneId.trim();
   const lavId = sanitizePdfFileNamePart(lavRaw, "");
+  const refPart = codicePart || lavId;
   const datePart = formatSchedaPdfDateYmd(opts.doc);
 
-  if (lavId) {
-    return `${slug}_${lavId}_${datePart}.pdf`;
+  if (refPart) {
+    return `${slug}_${refPart}_${datePart}.pdf`;
   }
 
   const legacyTitle = sanitizePdfFileNamePart(opts.titoloScheda ?? slug, slug)

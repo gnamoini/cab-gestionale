@@ -20,6 +20,7 @@ import {
   gestionaleListColAzioniClass,
   gestionaleListColCantiereClass,
   gestionaleListColClienteClass,
+  gestionaleListColCodiceClass,
   gestionaleListColIdentificazioneClass,
   gestionaleListColIngressoClass,
   gestionaleListColNoteClass,
@@ -104,6 +105,7 @@ export function lavTablePillColWidthRem(labels: readonly string[]): number {
 }
 
 export const lavTableColIngressoClass = gestionaleListColIngressoClass;
+export const lavTableColCodiceClass = gestionaleListColCodiceClass;
 export const lavTableColClienteClass = gestionaleListColClienteClass;
 export const lavTableColCantiereClass = gestionaleListColCantiereClass;
 export const lavTableColAttrezzaturaClass = gestionaleListColAttrezzaturaClass;

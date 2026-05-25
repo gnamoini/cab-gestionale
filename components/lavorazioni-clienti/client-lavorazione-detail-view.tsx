@@ -48,7 +48,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
 
   const { refresh: refreshClientData, busy: refreshBusy } = useClientLavorazioniRefresh(detailQ);
 
-  const ref = lavorazioneRefLabel(lavorazioneId);
+  const ref = lavorazioneRefLabel(lavorazioneId, row?.codice);
 
   const resolvedStato = row ? resolveClientPortalStatoId(row.stato, statiOpts) : null;
   const statoLabel = resolvedStato ? statoLavorazioneLabel(resolvedStato, statiOpts) || resolvedStato : "—";

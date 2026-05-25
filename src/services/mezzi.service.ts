@@ -6,6 +6,7 @@ import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow } from "@/src/types/supabase-tables";
 import { attachMezzoEntityKey } from "@/lib/validation/entity-persistence";
+import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "mezzi";
@@ -38,25 +39,54 @@ async function sb() {
 async function countMezzoDependencies(id: string): Promise<ServiceResult<MezzoDependencies>> {
   try {
     const c = await sb();
-    const [lavRes, pvRes] = await Promise.all([
-      c.from("lavorazioni").select("*", { count: "exact", head: true }).eq("mezzo_id", id).is("deleted_at", null),
-      c.from("preventivi").select("*", { count: "exact", head: true }).eq("mezzo_id", id),
-    ]);
-    if (lavRes.error) return err(lavRes.error.message);
-    if (pvRes.error) return err(pvRes.error.message);
+    const { data, error } = await c.rpc("count_mezzo_dependencies", { p_mezzo_id: id });
+    if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "read" }));
+
+    const row = (data ?? {}) as Record<string, unknown>;
+    const num = (key: string) => {
+      const v = row[key];
+      return typeof v === "number" ? v : Number(v) || 0;
+    };
+
     return success({
-      lavorazioni: lavRes.count ?? 0,
-      preventivi: pvRes.count ?? 0,
+      lavorazioniInCorso: num("lavorazioni_in_corso"),
+      lavorazioniArchiviate: num("lavorazioni_archiviate"),
+      lavorazioniStoriche: num("lavorazioni_storiche"),
+      preventivi: num("preventivi"),
+      documenti: num("documenti"),
+      schedeStoriche: num("schede_storiche"),
+      schedeAttive: num("schede_attive"),
     });
   } catch (e) {
-    return serviceFailFromError(e);
+    return serviceFailFromError<MezzoDependencies>(e, null, { entity: "mezzo", action: "read" });
   }
 }
 
 export type MezzoDependencies = {
-  lavorazioni: number;
+  /** Lavorazioni non archiviate (in corso) collegate per mezzo_id. */
+  lavorazioniInCorso: number;
+  /** Lavorazioni archiviate ma non soft-deleted (FK ancora attivo). */
+  lavorazioniArchiviate: number;
+  /** Lavorazioni eliminate logicamente (purge con delete mezzo). */
+  lavorazioniStoriche: number;
   preventivi: number;
+  documenti: number;
+  schedeStoriche: number;
+  schedeAttive: number;
 };
+
+export function mezzoDeleteBlockedBy(deps: MezzoDependencies, identityLinkedLavorazione = false): boolean {
+  const lav =
+    deps.lavorazioniInCorso + deps.lavorazioniArchiviate + (identityLinkedLavorazione ? 1 : 0);
+  return lav > 0 || deps.preventivi > 0;
+}
+
+export function mezzoDeleteBlockedByLavorazioni(
+  deps: MezzoDependencies,
+  identityLinkedLavorazione = false,
+): boolean {
+  return deps.lavorazioniInCorso + deps.lavorazioniArchiviate + (identityLinkedLavorazione ? 1 : 0) > 0;
+}
 
 export const mezziService = {
   countDependencies: countMezzoDependencies,
@@ -144,15 +174,8 @@ export const mezziService = {
       const allowed = await ensurePermission("editVehicles");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const deps = await countMezzoDependencies(id);
-      if (!deps.success || !deps.data) return err(deps.error ?? "Verifica dipendenze fallita.");
-      if (deps.data.lavorazioni > 0 || deps.data.preventivi > 0) {
-        return err(
-          `Impossibile eliminare: collegati ${deps.data.lavorazioni} lavorazioni e ${deps.data.preventivi} preventivi.`,
-        );
-      }
       const { data: existing, error: e0 } = await c.from("mezzi").select("*").eq("id", id).maybeSingle();
-      if (e0) return err(e0.message);
+      if (e0) return err(humanizeGestionaleError(e0.message, { entity: "mezzo", action: "delete" }));
       if (existing) {
         await writeModificaLog(c, {
           entita: ENTITA,
@@ -161,11 +184,13 @@ export const mezziService = {
           payload: auditSnapshot(existing as MezzoRow, oggettoMezzo(existing as MezzoRow)),
         });
       }
-      const { error } = await c.from("mezzi").delete().eq("id", id);
-      if (error) return err(error.message);
+      const { error } = await c.rpc("delete_mezzo", { p_mezzo_id: id });
+      if (error) {
+        return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "delete" }));
+      }
       return success(null);
     } catch (e) {
-      return serviceFailFromError(e);
+      return serviceFailFromError(e, null, { entity: "mezzo", action: "delete" });
     }
   },
 };

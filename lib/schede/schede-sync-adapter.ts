@@ -7,6 +7,7 @@ import {
   schedaRowsToStore,
   schedaUpdateFromContenuto,
 } from "@/lib/schede/schede-db-mapper";
+import { normalizeSchedaTipoDb } from "@/lib/schede/scheda-tipo-db-mapper";
 import { isSchedeDbPrimary } from "@/lib/schede/schede-db-primary";
 import {
   getOrCreateBundle,
@@ -37,9 +38,24 @@ async function syncBundleToDb(bundle: LavorazioneSchedeBundle): Promise<{ ok: tr
     return { ok: false, error: existing.error ?? "Lettura schede dal database non riuscita." };
   }
 
-  const byTipo = new Map(rows.map((r) => [r.tipo, r]));
+  const payloads = bundleToSchedaPayloads(bundle);
 
-  for (const part of bundleToSchedaPayloads(bundle)) {
+  const byTipo = new Map(
+    rows
+      .map((r) => {
+        const normalized = normalizeSchedaTipoDb(r.tipo);
+        return normalized ? ([normalized, r] as const) : null;
+      })
+      .filter((e): e is [ReturnType<typeof normalizeSchedaTipoDb> & string, (typeof rows)[number]] => e !== null),
+  );
+
+  const payloadTipi = new Set(
+    payloads
+      .map((p) => normalizeSchedaTipoDb(p.tipo))
+      .filter((t): t is NonNullable<typeof t> => t !== null),
+  );
+
+  for (const part of payloads) {
     const row = byTipo.get(part.tipo);
     if (row) {
       const upd = await schedeService.update(row.id, {
@@ -56,11 +72,10 @@ async function syncBundleToDb(bundle: LavorazioneSchedeBundle): Promise<{ ok: tr
   }
 
   for (const row of rows) {
-    const still = bundleToSchedaPayloads(bundle).some((p) => p.tipo === row.tipo);
-    if (!still) {
-      const del = await schedeService.remove(row.id);
-      if (!del.success) return { ok: false, error: del.error ?? "Eliminazione scheda fallita." };
-    }
+    const normalized = normalizeSchedaTipoDb(row.tipo);
+    if (!normalized || payloadTipi.has(normalized)) continue;
+    const del = await schedeService.remove(row.id);
+    if (!del.success) return { ok: false, error: del.error ?? "Eliminazione scheda fallita." };
   }
 
   return { ok: true };

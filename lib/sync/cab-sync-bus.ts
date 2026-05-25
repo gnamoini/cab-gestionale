@@ -1,6 +1,6 @@
 "use client";
 
-/** Entità sincronizzate multi-utente (allineate a tabelle / domini gestionale). */
+import { normalizeSchedaTipoDb, type SchedaTipoDb } from "@/lib/schede/scheda-tipo-db-mapper";
 export type CabSyncEntity =
   | "app_settings"
   | "lavorazioni"
@@ -94,14 +94,14 @@ export function subscribeCabSync(listener: Listener): () => void {
 /** Sotto-entità logiche schede (tipo in `scheda_lavorazione`, non tabella separata). */
 export type SchedeLogicalKind = "schede_ingresso" | "schede_lavorazione" | "schede_ricambi";
 
-const TIPO_TO_SCHEDE_KIND: Record<string, SchedeLogicalKind> = {
+const TIPO_TO_SCHEDE_KIND: Record<SchedaTipoDb, SchedeLogicalKind> = {
   ingresso: "schede_ingresso",
-  intervento: "schede_lavorazione",
+  interventi: "schede_lavorazione",
   ricambi: "schede_ricambi",
 };
 
 export function schedeLogicalKindFromRow(row: { tipo?: string }): SchedeLogicalKind | null {
-  const t = row.tipo?.trim();
-  if (!t) return null;
-  return TIPO_TO_SCHEDE_KIND[t] ?? null;
+  const normalized = normalizeSchedaTipoDb(row.tipo ?? "");
+  if (!normalized) return null;
+  return TIPO_TO_SCHEDE_KIND[normalized] ?? null;
 }

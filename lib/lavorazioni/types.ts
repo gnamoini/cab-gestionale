@@ -14,6 +14,8 @@ export interface StatoLavorazioneConfig {
 /** Record in tabella principale (non archiviato). */
 export interface LavorazioneAttiva {
   id: string;
+  /** Codice umano display (es. 26-0001). */
+  codice?: string | null;
   macchina: string;
   targa: string;
   matricola: string;
@@ -34,6 +36,8 @@ export interface LavorazioneAttiva {
 
 export interface LavorazioneArchiviata {
   id: string;
+  /** Codice umano display (es. 26-0001). */
+  codice?: string | null;
   macchina: string;
   targa: string;
   matricola: string;

@@ -1,10 +1,9 @@
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
-import {
-  nextPreventivoId,
-  nextPreventivoNumeroFromRecords,
-} from "@/lib/preventivi/preventivi-records-from-cache";
+import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
+import { nextPreventivoNumeroForLavorazione } from "@/lib/preventivi/preventivo-numero-lavorazione";
+import { nextPreventivoId } from "@/lib/preventivi/preventivi-records-from-cache";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
 import { trasformaDescrizioneLavorazioni } from "@/lib/preventivi/trasforma-descrizione";
@@ -15,6 +14,7 @@ import type { LavorazioneSchedeBundle } from "@/types/schede";
 import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { mergeAnagraficaPreventivo } from "@/lib/preventivi/preventivo-anagrafica-map";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 
 export function buildNewPreventivoFromLavorazioneContext(opts: {
@@ -32,15 +32,26 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
   const lavScheda = bundle.lavorazioni?.tipo === "lavorazioni" ? bundle.lavorazioni : null;
   const ricScheda = bundle.ricambi?.tipo === "ricambi" ? bundle.ricambi : null;
 
-  const cliente = (ing?.cliente?.trim() || lav.cliente).trim();
-  const cantiere = (ing?.cantiere?.trim() || "").trim();
-  const utilizzatore = (ing?.utilizzatore?.trim() || lav.utilizzatore).trim();
-  const targa = (ing?.targa?.trim() || lav.targa).trim();
-  const matricola = (ing?.matricola?.trim() || lav.matricola).trim();
-  const nScuderia = (ing?.nScuderia?.trim() || lav.nScuderia?.trim() || opts.mezzo?.numeroScuderia || "").trim();
-  const marcaAttrezzatura = (ing?.marcaAttrezzatura?.trim() || opts.mezzo?.marca || "").trim();
-  const modelloAttrezzatura = (ing?.modelloAttrezzatura?.trim() || opts.mezzo?.modello || "").trim();
-  const macchinaRiassunto = [marcaAttrezzatura, modelloAttrezzatura].filter(Boolean).join(" ").trim() || lav.macchina.trim();
+  const anag = mergeAnagraficaPreventivo(ing, opts.mezzo, lav);
+  const {
+    cliente,
+    cantiere,
+    utilizzatore,
+    macchinaRiassunto,
+    targa,
+    matricola,
+    nScuderia,
+    marcaAttrezzatura,
+    modelloAttrezzatura,
+    tipoAttrezzatura,
+    oreLavoro,
+    tipoTelaio,
+    marcaTelaio,
+    modelloTelaio,
+    km,
+    livelloCarburante,
+    richiedente,
+  } = anag;
 
   const techParts =
     lavScheda?.campi?.righe?.map((r) => r.lavorazioniEffettuate?.trim()).filter(Boolean) ?? ([] as string[]);
@@ -122,7 +133,11 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
 
   const draft: PreventivoRecord = {
     id: nextPreventivoId(),
-    numero: nextPreventivoNumeroFromRecords(tuttiPv),
+    numero: nextPreventivoNumeroForLavorazione(
+      lavorazioneDisplayCodice(lav),
+      tuttiPv,
+      lav.id,
+    ),
     dataCreazione: now,
     aggiornatoAt: now,
     stato: "bozza",
@@ -139,6 +154,14 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     nScuderia,
     marcaAttrezzatura,
     modelloAttrezzatura,
+    tipoAttrezzatura,
+    oreLavoro,
+    tipoTelaio,
+    marcaTelaio,
+    modelloTelaio,
+    km,
+    livelloCarburante,
+    richiedente,
     descrizioneLavorazioniCliente: autoCliente,
     descrizioneLavorazioniTecnicaSorgente: technicalBlob,
     descrizioneGenerataAuto: autoCliente,

@@ -5,6 +5,7 @@ import { collectQueryKeysForGestionaleTables } from "@/src/lib/react-query/inval
 import { QK } from "@/src/lib/react-query/query-keys";
 
 assert.equal(schedeLogicalKindFromRow({ tipo: "ingresso" }), "schede_ingresso");
+assert.equal(schedeLogicalKindFromRow({ tipo: "interventi" }), "schede_lavorazione");
 assert.equal(schedeLogicalKindFromRow({ tipo: "intervento" }), "schede_lavorazione");
 assert.equal(schedeLogicalKindFromRow({ tipo: "ricambi" }), "schede_ricambi");
 assert.equal(schedeLogicalKindFromRow({ tipo: "unknown" }), null);

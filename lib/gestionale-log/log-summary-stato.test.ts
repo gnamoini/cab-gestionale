@@ -63,4 +63,49 @@ assert.equal(
   "payload diff must prefer before/after with remapped labels",
 );
 
+const genericRefresh = buildLogModificaSummary({
+  entita: "lavorazioni",
+  entita_id: "lav-1",
+  azione: "UPDATE",
+  statiLavorazione: stati,
+  payload: {
+    context: { oggetto: "Cliente Demo — Bobcat E35" },
+    before: { priorita: "media", note: "Prima" },
+    after: { priorita: "alta", note: "Dopo" },
+    summary: {
+      tipoRiga: "AGGIORNAMENTO LAVORAZIONE",
+      oggettoRiga: "Lavorazione",
+      modifiche: ["Modifica registrata"],
+    },
+  },
+});
+
+assert.equal(genericRefresh.oggettoRiga, "Cliente Demo — Bobcat E35", "context oggetto must replace generic title");
+assert.ok(
+  genericRefresh.modifiche.some((m) => m.includes("Priorità")),
+  "generic cached summary must refresh from payload diff",
+);
+
+const schedaAddetto = buildLogModificaSummary({
+  entita: "scheda_lavorazione",
+  entita_id: "sch-1",
+  azione: "UPDATE",
+  payload: {
+    before: {
+      lavorazione_id: "lav-9",
+      contenuto: { doc: { campi: { addettoAccettazione: "Mario" } } },
+    },
+    after: {
+      lavorazione_id: "lav-9",
+      contenuto: { doc: { campi: { addettoAccettazione: "Luigi" } } },
+    },
+  },
+});
+
+assert.equal(
+  schedaAddetto.modifiche[0],
+  "Addetto accettazione modificato da “Mario” a “Luigi”",
+  "scheda contenuto diff must expand nested campi",
+);
+
 console.log("log-summary-stato.test.ts OK");

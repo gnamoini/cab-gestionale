@@ -41,19 +41,27 @@ import {
   dsTableRow,
   dsTableWrap,
 } from "@/lib/ui/design-system";
-import { migrateMezziListePrefs, modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
-import { marcheFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
+import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { inferEconomiciClientePreventivi } from "@/lib/preventivi/preventivi-cliente-infer";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
+import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
+import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
+import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
-  GlobalHierarchyMarcaSelect,
-  GlobalHierarchyModelloSelect,
-  GlobalSettingsListSelect,
-} from "@/components/gestionale/global-input";
+  anagraficaFromMezzo,
+  applyAnagraficaPatchToPreventivo,
+  preventivoToSchedaIngressoSlice,
+  schedaIngressoSliceToPreventivoPatch,
+} from "@/lib/preventivi/preventivo-anagrafica-map";
+import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
+import type { SchedaIngressoFields } from "@/types/schede";
 import { GlobalDatePickerYmd } from "@/components/gestionale/global-input";
-import { dateInputValueToIso, isoToDateInputValue, localCalendarDayIsoFromIso } from "@/lib/lavorazioni/date-day-only";
+import { PDF_PREVENTIVO_IVA_PERCENT } from "@/lib/pdf/preventivo-pdf-layout";
+import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
+import { dateInputValueToIso, isoToDateInputValue } from "@/lib/lavorazioni/date-day-only";
 
 function cloneRecord(p: PreventivoRecord): PreventivoRecord {
   return JSON.parse(JSON.stringify(p)) as PreventivoRecord;
@@ -61,11 +69,34 @@ function cloneRecord(p: PreventivoRecord): PreventivoRecord {
 
 const ORE_MIN = 0.01;
 
-const preventivoIntestazioneSegmentWrap = `${dsSegmentedWrap} mt-1 w-full gap-0.5 p-0.5`;
+const preventivoIntestazioneSegmentWrap = `${dsSegmentedWrap} w-full gap-0.5 p-0.5`;
 const preventivoIntestazioneSegmentOn = `${dsSegmentedBtnOn} flex-1 px-2.5 py-1 text-xs`;
 const preventivoIntestazioneSegmentOff = `${dsSegmentedBtnOff} flex-1 px-2.5 py-1 text-xs`;
 const preventivoManodoperaRowGrid =
   "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7.5rem_2.25rem] sm:items-end sm:gap-2";
+
+const emptySchedaIngressoFields: SchedaIngressoFields = {
+  dataIngresso: "",
+  cliente: "",
+  cantiere: "",
+  utilizzatore: "",
+  tipoAttrezzatura: "",
+  marcaAttrezzatura: "",
+  modelloAttrezzatura: "",
+  matricola: "",
+  nScuderia: "",
+  oreLavoro: "",
+  tipoTelaio: "",
+  marcaTelaio: "",
+  modelloTelaio: "",
+  targa: "",
+  km: "",
+  descrizioneAnomalia: "",
+  livelloCarburante: "",
+  addettoAccettazione: "",
+  richiedente: "",
+  noteIntervento: "",
+};
 
 function parseOreManodoperaInput(raw: string): number {
   const v = parseFloat(raw.replace(",", "."));
@@ -92,6 +123,15 @@ function composeLavorazioniClienteEditorText(specifiche: string): string {
 
 function extractLavorazioniClienteSpecifiche(composed: string): string {
   return pulisciDescrizioneLavorazioniSpecifiche(composed);
+}
+
+function SectionTotal({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t border-[color:var(--cab-border)] pt-2 text-sm">
+      <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{label}</span>
+      <span className="tabular-nums font-semibold text-[color:var(--cab-text)]">{value}</span>
+    </div>
+  );
 }
 
 export function PreventiviEditorModal({
@@ -161,6 +201,13 @@ export function PreventiviEditorModal({
     return calcolaTotaliPreventivo(draft);
   }, [draft]);
 
+  const economicsPreview = useMemo(() => {
+    const netto = totals.totaleFinale;
+    const importoIva = Math.round(netto * (PDF_PREVENTIVO_IVA_PERCENT / 100) * 100) / 100;
+    const totaleConIva = Math.round((netto + importoIva) * 100) / 100;
+    return { netto, importoIva, totaleConIva };
+  }, [totals.totaleFinale]);
+
   const ricambiPart = useMemo(
     () => (draft ? partitionRigheRicambi(draft.righeRicambi) : { standard: [], materialiConsumo: null }),
     [draft],
@@ -173,10 +220,41 @@ export function PreventiviEditorModal({
     return JSON.stringify(applyTotals(cur)) !== JSON.stringify(applyTotals(base));
   }, [draft, applyTotals]);
 
-  const marcheEditorOpts = useMemo(() => marcheFromHierarchyTree(prefsAtt, "attrezzature"), [prefsAtt]);
-  const utilizzatoriEditorOpts = prefsAtt.utilizzatori;
-  const cantieriEditorOpts = prefsAtt.cantieri;
-  const clientiEditorOpts = prefsAtt.clienti;
+  const mezziCatalog = useMemo(() => mezziRows.map(toMezzoUI), [mezziRows]);
+
+  const anagraficaFields = useMemo(
+    () => (draft ? preventivoToSchedaIngressoSlice(draft) : null),
+    [draft],
+  );
+
+  const setAnagraficaFields = useCallback(
+    (next: SchedaIngressoFields) => {
+      setDraft((prev) => {
+        if (!prev) return prev;
+        const anagPatch = schedaIngressoSliceToPreventivoPatch(next);
+        return applyTotals(applyAnagraficaPatchToPreventivo(prev, anagPatch));
+      });
+    },
+    [applyTotals],
+  );
+
+  const mezzoPrompt = useSchedaIngressoMezzoPrompt({
+    fields: anagraficaFields ?? emptySchedaIngressoFields,
+    setFields: setAnagraficaFields,
+    mezzi: mezziCatalog,
+  });
+
+  function patchAnagrafica(partial: Partial<SchedaIngressoFields>) {
+    if (!draft) return;
+    const merged = { ...preventivoToSchedaIngressoSlice(draft), ...partial };
+    const anagPatch = schedaIngressoSliceToPreventivoPatch(merged);
+    setDraft((prev) => (prev ? applyTotals(applyAnagraficaPatchToPreventivo(prev, anagPatch)) : prev));
+    if (partial.cliente !== undefined) applyClienteScontoRighe(partial.cliente);
+  }
+
+  function onMezzoPromptMatch(mezzo: Parameters<typeof anagraficaFromMezzo>[0]) {
+    mezzoPrompt.requestPrompt(mezzo);
+  }
 
   function requestClose() {
     if (!isDirty) {
@@ -366,20 +444,47 @@ export function PreventiviEditorModal({
           : `${preventivoTipoDocumentoLabel(draft.tipoDocumento)} ${draft.numero}`
       }
     >
+      <MezzoRegistratoIngressoDialog
+        open={mezzoPrompt.promptOpen}
+        mezzo={mezzoPrompt.promptMezzo}
+        onAccept={() => {
+          mezzoPrompt.acceptAutofill();
+          const cliente = mezzoPrompt.promptMezzo?.cliente?.trim();
+          if (cliente) applyClienteScontoRighe(cliente);
+        }}
+        onDismiss={mezzoPrompt.dismissPrompt}
+      />
       <div className="relative flex max-h-[min(92dvh,900px)] min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar">
-          <div className="space-y-6">
-            <section className="rounded-xl border border-zinc-200 bg-zinc-50/40 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Intestazione
-              </h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Numero</span>
-                  <input className={`${dsInput} mt-1 tabular-nums`} readOnly value={draft.numero} />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Tipo documento</span>
+          <div className="sticky top-0 z-[2] -mx-4 mb-3 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_94%,transparent)] px-4 py-2 backdrop-blur-sm">
+            <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
+              <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[color:var(--cab-text-muted)]">
+                <span>
+                  Ricambi{" "}
+                  <strong className="font-medium tabular-nums text-[color:var(--cab-text)]">{fmtEuro(totals.totaleRicambi)}</strong>
+                </span>
+                <span>
+                  Manodopera{" "}
+                  <strong className="font-medium tabular-nums text-[color:var(--cab-text)]">{fmtEuro(totals.totaleManodopera)}</strong>
+                </span>
+                <span>
+                  IVA {PDF_PREVENTIVO_IVA_PERCENT}%{" "}
+                  <strong className="font-medium tabular-nums text-[color:var(--cab-text)]">{fmtEuro(economicsPreview.importoIva)}</strong>
+                </span>
+              </div>
+              <span className="text-sm font-semibold tabular-nums text-[color:var(--cab-text)]">
+                Totale {fmtEuro(economicsPreview.totaleConIva)}
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <FormSection title="Dati documento">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <FormField label="Numero">
+                  <input className={`${dsInput} tabular-nums`} readOnly value={draft.numero} />
+                </FormField>
+                <FormField label="Tipo documento">
                   <div role="tablist" aria-label="Tipo documento" className={preventivoIntestazioneSegmentWrap}>
                     {PREVENTIVO_TIPI_DOCUMENTO.map((t) => {
                       const active = draft.tipoDocumento === t.id;
@@ -397,266 +502,70 @@ export function PreventiviEditorModal({
                       );
                     })}
                   </div>
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Data creazione</span>
-                  <div className="mt-1">
-                    <GlobalDatePickerYmd
-                      variant="default"
-                      valueYmd={isoToDateInputValue(draft.dataCreazione)}
-                      onChangeYmd={(ymd) => {
-                        if (!ymd.trim()) return;
-                        const r = dateInputValueToIso(ymd);
-                        if (r.ok) patch({ dataCreazione: r.iso });
-                      }}
-                      aria-label="Data creazione"
-                    />
-                  </div>
-                </label>
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Anagrafica cliente
-              </h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className="block text-xs sm:col-span-1">
-                  <span className="text-zinc-500">Cliente</span>
-                  <GlobalSettingsListSelect
-                    listKey="mezzi:clienti"
-                    className="mt-1"
-                    value={draft.cliente}
-                    onChange={(v) => {
-                      patch({ cliente: v });
-                      applyClienteScontoRighe(v);
+                </FormField>
+                <FormField label="Data creazione">
+                  <GlobalDatePickerYmd
+                    variant="default"
+                    valueYmd={isoToDateInputValue(draft.dataCreazione)}
+                    onChangeYmd={(ymd) => {
+                      if (!ymd.trim()) return;
+                      const r = dateInputValueToIso(ymd);
+                      if (r.ok) patch({ dataCreazione: r.iso });
                     }}
-                    aria-label="Cliente"
+                    aria-label="Data creazione"
                   />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Cantiere</span>
-                  <GlobalSettingsListSelect listKey="mezzi:cantieri" className="mt-1" value={draft.cantiere} onChange={(v) => patch({ cantiere: v })} aria-label="Cantiere" />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Utilizzatore</span>
-                  <GlobalSettingsListSelect listKey="mezzi:utilizzatori" className="mt-1" value={draft.utilizzatore} onChange={(v) => patch({ utilizzatore: v })} aria-label="Utilizzatore" />
-                </label>
+                </FormField>
               </div>
-            </section>
+            </FormSection>
 
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Identificazione macchina
-              </h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Targa</span>
-                  <input className={`${dsInput} mt-1`} value={draft.targa} onChange={(e) => patch({ targa: e.target.value })} />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Matricola</span>
-                  <input className={`${dsInput} mt-1`} value={draft.matricola} onChange={(e) => patch({ matricola: e.target.value })} />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">N. scuderia</span>
-                  <input className={`${dsInput} mt-1`} value={draft.nScuderia} onChange={(e) => patch({ nScuderia: e.target.value })} />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Marca attrezzatura</span>
-                  <GlobalHierarchyMarcaSelect
-                    tree="attrezzature"
-                    className="mt-1"
-                    value={draft.marcaAttrezzatura}
-                    onChange={(marca) => {
-                      setDraft((prev) => {
-                        if (!prev) return prev;
-                        const p = prefsAtt;
-                        const opts = marca.trim() ? modelliVisibiliPerMarca(p, marca) : [];
-                        let modello = prev.modelloAttrezzatura;
-                        if (modello.trim() && !opts.includes(modello.trim())) modello = "";
-                        const macchinaRiassunto = [marca, modello].filter(Boolean).join(" ").trim();
-                        return applyTotals({
-                          ...prev,
-                          marcaAttrezzatura: marca,
-                          modelloAttrezzatura: modello,
-                          macchinaRiassunto: macchinaRiassunto || prev.macchinaRiassunto,
-                        });
-                      });
-                    }}
-                    aria-label="Marca attrezzatura"
-                  />
-                </label>
-                <label className="block text-xs sm:col-span-2">
-                  <span className="text-zinc-500">Modello</span>
-                  <GlobalHierarchyModelloSelect
-                    tree="attrezzature"
-                    marcaNome={draft.marcaAttrezzatura}
-                    className="mt-1"
-                    value={draft.modelloAttrezzatura}
-                    onChange={(modello) => {
-                      setDraft((prev) => {
-                        if (!prev) return prev;
-                        const macchinaRiassunto = [prev.marcaAttrezzatura, modello].filter(Boolean).join(" ").trim();
-                        return applyTotals({
-                          ...prev,
-                          modelloAttrezzatura: modello,
-                          macchinaRiassunto: macchinaRiassunto || prev.macchinaRiassunto,
-                        });
-                      });
-                    }}
-                    aria-label="Modello attrezzatura"
-                  />
-                </label>
-              </div>
-            </section>
+            {draft.lavorazioneId.trim() ? (
+              <FormSection title="Lavorazione collegata">
+                <p className="text-sm text-[color:var(--cab-text)]">
+                  <span className="font-medium tabular-nums">{lavorazioneDisplayCodice({ id: draft.lavorazioneId })}</span>
+                  {draft.lavorazioneOrigine === "storico" ? (
+                    <span className="ml-2 text-xs text-[color:var(--cab-text-muted)]">(archivio)</span>
+                  ) : null}
+                  {draft.macchinaRiassunto.trim() ? (
+                    <span className="mt-1 block text-xs text-[color:var(--cab-text-muted)]">{draft.macchinaRiassunto.trim()}</span>
+                  ) : null}
+                </p>
+              </FormSection>
+            ) : null}
 
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                Lavorazioni
-              </h3>
-              <label className="mt-3 block text-xs">
-                <span className="text-zinc-500">Lavorazioni specifiche (testo cliente)</span>
+            {anagraficaFields ? (
+              <SchedaIngressoAnagraficaFields
+                value={anagraficaFields}
+                onPatch={patchAnagrafica}
+                mezzi={mezziCatalog}
+                onExactMezzoMatch={onMezzoPromptMatch}
+                clienteRequired
+              />
+            ) : null}
+
+            <FormSection title="Lavorazioni effettuate">
+              <FormField label="Lavorazioni specifiche (testo cliente)">
                 <textarea
-                  className={`${dsInput} mt-1 min-h-[7rem] resize-y`}
+                  className={`${dsInput} min-h-[6rem] resize-y`}
                   value={composeLavorazioniClienteEditorText(draft.descrizioneLavorazioniCliente)}
                   onChange={(e) =>
                     patch({ descrizioneLavorazioniCliente: extractLavorazioniClienteSpecifiche(e.target.value) })
                   }
                 />
-              </label>
-              <p className="mt-2 text-[11px] text-zinc-500 dark:text-zinc-400">
+              </FormField>
+              <p className="text-[11px] text-[color:var(--cab-text-muted)]">
                 Le modifiche al testo allenano il modello per preventivi simili futuri.
               </p>
-            </section>
+            </FormSection>
 
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Manodopera</h3>
-                <button type="button" className={dsBtnNeutral} onClick={addAddettoRow}>
-                  Aggiungi addetto
-                </button>
-              </div>
-
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Costo orario (€/h)</span>
-                  <input
-                    className={`${dsInput} mt-1 text-right tabular-nums`}
-                    type="number"
-                    min={0}
-                    step={0.5}
-                    value={draft.manodopera.costoOrario}
-                    onChange={(e) => {
-                      const v = Math.max(0, parseFloat(e.target.value) || 0);
-                      setDraft((prev) =>
-                        prev
-                          ? applyTotals({
-                              ...prev,
-                              manodopera: { ...prev.manodopera, costoOrario: v },
-                            })
-                          : prev,
-                      );
-                    }}
-                  />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Ore totali</span>
-                  <input
-                    className={`${dsInput} mt-1 text-right tabular-nums`}
-                    readOnly
-                    value={String(draft.manodopera.oreTotali)}
-                    aria-label="Ore totali calcolate"
-                  />
-                </label>
-                <label className="block text-xs">
-                  <span className="text-zinc-500">Importo manodopera</span>
-                  <input
-                    className={`${dsInput} mt-1 text-right tabular-nums font-medium`}
-                    readOnly
-                    value={fmtEuro(totals.totaleManodopera)}
-                    aria-label="Importo manodopera calcolato"
-                  />
-                </label>
-              </div>
-
-              <div className="mt-4 overflow-hidden rounded-lg border border-zinc-200 bg-zinc-50/40 dark:border-zinc-700 dark:bg-zinc-950/30">
-                <div
-                  className={`${preventivoManodoperaRowGrid} hidden border-b border-zinc-200/80 px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:border-zinc-700/80 sm:grid`}
-                >
-                  <span>Addetto</span>
-                  <span className="text-right">Ore</span>
-                  <span className="sr-only">Azioni</span>
-                </div>
-                <div className="divide-y divide-zinc-200/80 dark:divide-zinc-700/80">
-                  {draft.manodopera.righeAddetti.map((a, idx) => (
-                    <div key={`${idx}-${a.addetto}`} className={`${preventivoManodoperaRowGrid} px-3 py-2.5`}>
-                      <label className="block min-w-0 text-xs">
-                        <span className="text-zinc-500 sm:sr-only">Addetto</span>
-                        <input
-                          className={`${dsInput} mt-1 sm:mt-0`}
-                          value={a.addetto}
-                          onChange={(e) => patchAddettoRow(idx, { addetto: e.target.value })}
-                          placeholder="Nome addetto"
-                          aria-label={`Addetto riga ${idx + 1}`}
-                        />
-                      </label>
-                      <label className="block text-xs">
-                        <span className="text-zinc-500 sm:sr-only">Ore</span>
-                        <input
-                          className={`${dsInput} mt-1 text-right tabular-nums sm:mt-0`}
-                          type="number"
-                          min={ORE_MIN}
-                          step={0.01}
-                          inputMode="decimal"
-                          value={a.ore}
-                          onChange={(e) => patchAddettoRow(idx, { ore: parseOreManodoperaInput(e.target.value) })}
-                          aria-label={`Ore addetto riga ${idx + 1}`}
-                        />
-                      </label>
-                      <div className="flex items-end justify-end">
-                        <IconActionButton
-                          label="Rimuovi"
-                          className={dsTableActionBtnDanger}
-                          onClick={() => removeAddettoRow(idx)}
-                        >
-                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </IconActionButton>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="mt-3 border-t border-zinc-200 pt-3 dark:border-zinc-700">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
-                  <span className="font-medium text-zinc-700 dark:text-zinc-200">{PREVENTIVO_COLLAUDO_DESCRIZIONE}</span>
-                  <span className="text-zinc-500">Qtà: 1</span>
-                  <label className="flex items-center gap-2 sm:ml-auto">
-                    <span className="whitespace-nowrap text-zinc-500">Prezzo (€)</span>
-                    <input
-                      className={`${dsInput} w-28 text-right tabular-nums`}
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={draft.collaudoPrezzo ?? 0}
-                      onChange={(e) => patch({ collaudoPrezzo: Math.max(0, parseFloat(e.target.value) || 0) })}
-                    />
-                  </label>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-900/40">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ricambi utilizzati</h3>
+            <FormSection
+              title="Ricambi / materiali"
+              action={
                 <button type="button" className={dsBtnNeutral} onClick={addRiga}>
                   Aggiungi riga
                 </button>
-              </div>
-              <div className={`${dsTableWrap} ${dsScrollbar} mt-3`}>
+              }
+            >
+              <div className={`${dsTableWrap} ${dsScrollbar}`}>
                 <table className={`${dsTable} min-w-[960px]`}>
                   <thead className="sticky top-0 z-[1] bg-[var(--cab-card)] shadow-[inset_0_-1px_0_0_var(--cab-border)]">
                     <tr>
@@ -725,20 +634,18 @@ export function PreventiviEditorModal({
                 </table>
               </div>
               {ricambiPart.materialiConsumo ? (
-                <div className="mt-4 rounded-lg border border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-700 dark:bg-zinc-950/40">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                <div className="rounded-[var(--ds-radius-md)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_50%,transparent)] p-3">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
                     Materiali di consumo
                   </p>
                   <div className="mt-2 grid gap-2 sm:grid-cols-[1fr_auto_auto] sm:items-end">
-                    <p className="text-sm text-zinc-800 dark:text-zinc-100">{PREVENTIVO_MATERIALI_CONSUMO_DESCRIZIONE}</p>
-                    <label className="block text-xs">
-                      <span className="text-zinc-500">Qtà</span>
-                      <input className={`${dsInput} mt-1 w-20 text-right tabular-nums`} readOnly value="1" />
-                    </label>
-                    <label className="block text-xs">
-                      <span className="text-zinc-500">Prezzo (€)</span>
+                    <p className="text-sm text-[color:var(--cab-text)]">{PREVENTIVO_MATERIALI_CONSUMO_DESCRIZIONE}</p>
+                    <FormField label="Qtà">
+                      <input className={`${dsInput} w-20 text-right tabular-nums`} readOnly value="1" />
+                    </FormField>
+                    <FormField label="Prezzo (€)">
                       <input
-                        className={`${dsInput} mt-1 w-28 text-right tabular-nums`}
+                        className={`${dsInput} w-28 text-right tabular-nums`}
                         type="number"
                         min={0}
                         step={0.01}
@@ -749,54 +656,175 @@ export function PreventiviEditorModal({
                           })
                         }
                       />
-                    </label>
+                    </FormField>
                   </div>
-                  <p className="mt-2 text-right text-sm font-medium tabular-nums text-zinc-800 dark:text-zinc-100">
-                    Totale: {fmtEuro(totaleNettoRigaRicambio(ricambiPart.materialiConsumo))}
-                  </p>
                 </div>
               ) : null}
-            </section>
+              <SectionTotal label="Totale" value={fmtEuro(totals.totaleRicambi)} />
+            </FormSection>
 
-            <section className="rounded-xl border border-zinc-200 bg-zinc-50/50 p-4 dark:border-zinc-700 dark:bg-zinc-950/40">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Totali</h3>
-              <div className="mt-3 rounded-lg border border-zinc-200 bg-white p-3 text-sm dark:border-zinc-700 dark:bg-zinc-900/60">
-                <p className="flex justify-between text-zinc-600 dark:text-zinc-300">
-                  <span>Totale ricambi (netto righe)</span>
-                  <span className="tabular-nums font-medium">{fmtEuro(totals.totaleRicambi)}</span>
-                </p>
-                <p className="mt-1 flex justify-between text-zinc-600 dark:text-zinc-300">
-                  <span>Totale manodopera</span>
-                  <span className="tabular-nums font-medium">{fmtEuro(totals.totaleManodopera)}</span>
-                </p>
-                <p className="mt-1 flex justify-between text-zinc-600 dark:text-zinc-300">
-                  <span>{PREVENTIVO_COLLAUDO_DESCRIZIONE}</span>
-                  <span className="tabular-nums font-medium">{fmtEuro(draft.collaudoPrezzo ?? 0)}</span>
-                </p>
-                <p className="mt-1 flex justify-between text-zinc-600 dark:text-zinc-300">
+            <FormSection
+              title="Manodopera"
+              action={
+                <button type="button" className={dsBtnNeutral} onClick={addAddettoRow}>
+                  Aggiungi addetto
+                </button>
+              }
+            >
+              <div className="grid gap-3 sm:grid-cols-3">
+                <FormField label="Costo orario (€/h)">
+                  <input
+                    className={`${dsInput} text-right tabular-nums`}
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={draft.manodopera.costoOrario}
+                    onChange={(e) => {
+                      const v = Math.max(0, parseFloat(e.target.value) || 0);
+                      setDraft((prev) =>
+                        prev
+                          ? applyTotals({
+                              ...prev,
+                              manodopera: { ...prev.manodopera, costoOrario: v },
+                            })
+                          : prev,
+                      );
+                    }}
+                  />
+                </FormField>
+                <FormField label="Ore totali">
+                  <input
+                    className={`${dsInput} text-right tabular-nums`}
+                    readOnly
+                    value={String(draft.manodopera.oreTotali)}
+                    aria-label="Ore totali calcolate"
+                  />
+                </FormField>
+                <FormField label="Importo manodopera">
+                  <input
+                    className={`${dsInput} text-right tabular-nums font-medium`}
+                    readOnly
+                    value={fmtEuro(totals.totaleManodopera)}
+                    aria-label="Importo manodopera calcolato"
+                  />
+                </FormField>
+              </div>
+
+              <div className="overflow-hidden rounded-[var(--ds-radius-md)] border border-[color:var(--cab-border)]">
+                <div
+                  className={`${preventivoManodoperaRowGrid} hidden border-b border-[color:var(--cab-border)] px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)] sm:grid`}
+                >
+                  <span>Addetto</span>
+                  <span className="text-right">Ore</span>
+                  <span className="sr-only">Azioni</span>
+                </div>
+                <div className="divide-y divide-[color:var(--cab-border)]">
+                  {draft.manodopera.righeAddetti.map((a, idx) => (
+                    <div key={`${idx}-${a.addetto}`} className={`${preventivoManodoperaRowGrid} px-3 py-2.5`}>
+                      <FormField label="Addetto" className="sm:[&>div]:mt-0 sm:[&>span]:sr-only">
+                        <input
+                          className={dsInput}
+                          value={a.addetto}
+                          onChange={(e) => patchAddettoRow(idx, { addetto: e.target.value })}
+                          placeholder="Nome addetto"
+                          aria-label={`Addetto riga ${idx + 1}`}
+                        />
+                      </FormField>
+                      <FormField label="Ore" className="sm:[&>div]:mt-0 sm:[&>span]:sr-only">
+                        <input
+                          className={`${dsInput} text-right tabular-nums`}
+                          type="number"
+                          min={ORE_MIN}
+                          step={0.01}
+                          inputMode="decimal"
+                          value={a.ore}
+                          onChange={(e) => patchAddettoRow(idx, { ore: parseOreManodoperaInput(e.target.value) })}
+                          aria-label={`Ore addetto riga ${idx + 1}`}
+                        />
+                      </FormField>
+                      <div className="flex items-end justify-end">
+                        <IconActionButton
+                          label="Rimuovi"
+                          className={dsTableActionBtnDanger}
+                          onClick={() => removeAddettoRow(idx)}
+                        >
+                          <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </IconActionButton>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-[var(--ds-radius-md)] border border-[color:var(--cab-border)] px-3 py-2">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+                  <span className="font-medium text-[color:var(--cab-text)]">{PREVENTIVO_COLLAUDO_DESCRIZIONE}</span>
+                  <span className="text-[color:var(--cab-text-muted)]">Qtà: 1</span>
+                  <label className="ml-auto flex items-center gap-2">
+                    <span className="whitespace-nowrap text-[color:var(--cab-text-muted)]">Prezzo (€)</span>
+                    <input
+                      className={`${dsInput} w-28 text-right tabular-nums`}
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={draft.collaudoPrezzo ?? 0}
+                      onChange={(e) => patch({ collaudoPrezzo: Math.max(0, parseFloat(e.target.value) || 0) })}
+                    />
+                  </label>
+                </div>
+              </div>
+              <SectionTotal
+                label="Totale"
+                value={fmtEuro(totals.totaleManodopera + (draft.collaudoPrezzo ?? 0))}
+              />
+            </FormSection>
+
+            <FormSection title="Riepilogo economico">
+              <div className="space-y-2 text-sm">
+                <p className="flex justify-between text-[color:var(--cab-text-muted)]">
                   <span>
                     {PREVENTIVO_SMALTIMENTO_DESCRIZIONE} ({PREVENTIVO_SMALTIMENTO_PERCENT}% netto)
                   </span>
-                  <span className="tabular-nums font-medium">{fmtEuro(totals.totaleSmaltimento)}</span>
+                  <span className="tabular-nums font-medium text-[color:var(--cab-text)]">{fmtEuro(totals.totaleSmaltimento)}</span>
                 </p>
-                <p className="mt-2 flex justify-between border-t border-zinc-100 pt-2 text-base font-semibold text-zinc-900 dark:border-zinc-800 dark:text-zinc-50">
-                  <span>Totale finale</span>
-                  <span className="tabular-nums">{fmtEuro(totals.totaleFinale)}</span>
+                <p className="flex justify-between border-t border-[color:var(--cab-border)] pt-2 font-semibold text-[color:var(--cab-text)]">
+                  <span>Totale netto</span>
+                  <span className="tabular-nums">{fmtEuro(economicsPreview.netto)}</span>
                 </p>
               </div>
-              <label className="mt-3 block text-xs">
-                <span className="text-zinc-500">Note finali</span>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="rounded-[var(--ds-radius-md)] border border-[color:var(--cab-border)] px-3 py-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">
+                    IVA ({PDF_PREVENTIVO_IVA_PERCENT}%)
+                  </p>
+                  <p className="mt-1 text-base font-semibold tabular-nums text-[color:var(--cab-text)]">
+                    {fmtEuro(economicsPreview.importoIva)}
+                  </p>
+                </div>
+                <div className="rounded-[var(--ds-radius-md)] border border-orange-500/40 bg-orange-50/40 px-3 py-2 dark:bg-orange-950/20">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">Totale con IVA</p>
+                  <p className="mt-1 text-base font-semibold tabular-nums text-[color:var(--cab-text)]">
+                    {fmtEuro(economicsPreview.totaleConIva)}
+                  </p>
+                </div>
+              </div>
+            </FormSection>
+
+            <FormSection title="Note">
+              <FormField label="Note finali">
                 <textarea
-                  className={`${dsInput} mt-1 min-h-[4.5rem] resize-y`}
+                  className={`${dsInput} min-h-[4rem] resize-y`}
                   value={draft.noteFinali}
                   onChange={(e) => patch({ noteFinali: e.target.value })}
                 />
-              </label>
-            </section>
+              </FormField>
+            </FormSection>
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
           <button type="button" className={dsBtnNeutral} onClick={() => openPreventivoPdfInNewTab(applyTotals(draft), autore)}>
             Anteprima PDF
           </button>

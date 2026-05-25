@@ -47,6 +47,7 @@ import {
   resolveClientPortalStatoId,
 } from "@/lib/lavorazioni/client-portal-stati";
 import { lavorazioneRefLabel } from "@/lib/lavorazioni/client-portal-ui";
+import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import {
@@ -70,6 +71,7 @@ import {
   lavTableColAzioniClass,
   lavTableColCantiereClass,
   lavTableColClienteClass,
+  lavTableColCodiceClass,
   lavTableColIdentificazioneClass,
   lavTableColIngressoClass,
   lavTableColNoteClass,
@@ -276,6 +278,7 @@ function DesktopTable({
     variant === "active" ? (
       <>
         <GlobalTableSortTh label="Ingresso" columnKey="ingresso" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
+        <GlobalTableSortTh label="Codice" columnKey="codice" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Attrezzatura" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
@@ -289,6 +292,7 @@ function DesktopTable({
     ) : (
       <>
         <GlobalTableSortTh label="Ingresso" columnKey="ingresso" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
+        <GlobalTableSortTh label="Codice" columnKey="codice" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Attrezzatura" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
@@ -307,12 +311,15 @@ function DesktopTable({
       headRow={headRow}
       empty={bundles.length === 0}
       emptyMessage={emptyMessage}
-      colSpan={variant === "active" ? 10 : 9}
+      colSpan={variant === "active" ? 11 : 10}
     >
       {bundles.map(({ row, fields }) => (
         <tr key={row.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
           <td className={lavTableTd}>
             <LavorazioneIngressoDateCellFromIso iso={fields.dataIngressoAt} />
+          </td>
+          <td className={`${lavTableTdCenter} font-semibold tabular-nums`}>
+            {lavorazioneDisplayCodice(row)}
           </td>
           <td className={lavTableTd}>
             <LavorazioniClienteUtilStack cliente={fields.cliente} utilizzatore={fields.utilizzatore} />
@@ -844,7 +851,7 @@ export function ClientLavorazioniView() {
           open
           onClose={() => setQrRow(null)}
           lavorazioneId={qrRow.id}
-          refLabel={lavorazioneRefLabel(qrRow.id)}
+          refLabel={lavorazioneRefLabel(qrRow.id, qrRow.codice)}
         />
       ) : null}
 
@@ -864,7 +871,7 @@ export function ClientLavorazioniView() {
           open
           onClose={() => setDocsRow(null)}
           lavorazioneId={docsRow.id}
-          refLabel={lavorazioneRefLabel(docsRow.id)}
+          refLabel={lavorazioneRefLabel(docsRow.id, docsRow.codice)}
         />
       ) : null}
     </>

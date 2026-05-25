@@ -12,6 +12,7 @@ import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-s
 import {
   GlobalHierarchyMarcaSelect,
   GlobalHierarchyModelloSelect,
+  GlobalSelect,
   GlobalSettingsListSelect,
 } from "@/components/gestionale/global-input";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
@@ -506,6 +507,9 @@ export function SchedeLavorazioneModal({
       setStage({ kind: "hub" });
       setHubTab(initialTab);
       const cloned = JSON.parse(JSON.stringify(bundle)) as LavorazioneSchedeBundle;
+      if (!cloned.codice?.trim() && lav.codice?.trim()) {
+        cloned.codice = lav.codice.trim();
+      }
       setDraft(cloned);
       syncedBundleJsonRef.current = JSON.stringify(cloned);
     }, 0);
@@ -1262,7 +1266,6 @@ export function SchedeLavorazioneModal({
               tipiTelaioLista={listePrefs.tipiTelaio ?? []}
               marcheTelaioGuidate={marcheTelaioGuidate}
               modelliForMarcaTelaio={modelliForMarcaTelaio}
-              addettiLista={addetti}
               utilizzatoriLista={listePrefs.utilizzatori}
               cantieriLista={listePrefs.cantieri}
               dataIngressoInputRef={ingressoPrimoCampoRef}
@@ -1604,7 +1607,6 @@ function IngressoPanel({
   tipiTelaioLista,
   marcheTelaioGuidate,
   modelliForMarcaTelaio,
-  addettiLista,
   utilizzatoriLista,
   cantieriLista,
   dataIngressoInputRef,
@@ -1628,7 +1630,6 @@ function IngressoPanel({
   tipiTelaioLista: string[];
   marcheTelaioGuidate: string[];
   modelliForMarcaTelaio: (marca: string) => string[];
-  addettiLista: string[];
   utilizzatoriLista: string[];
   cantieriLista: string[];
   dataIngressoInputRef?: Ref<HTMLInputElement>;
@@ -1885,32 +1886,35 @@ function IngressoPanel({
           />
         )}
         {inp("km", "KM")}
-        {inp("livelloCarburante", "Livello carburante")}
+        <label className="block text-xs">
+          <span className="text-zinc-500">Livello carburante</span>
+          <GlobalSelect
+            className="mt-1"
+            value={fields.livelloCarburante}
+            onChange={(v) => setFields({ ...fields, livelloCarburante: v })}
+            options={["Vuoto", "1/4", "1/2", "3/4", "Pieno"]}
+            disabled={ro}
+            allowAdd={false}
+            selectOnly
+            aria-label="Livello carburante"
+          />
+        </label>
         <label className="block text-xs">
           <span className="text-zinc-500">Addetto accettazione</span>
-          {ro ? (
-            <input className={`${dsInput} mt-1`} readOnly value={fields.addettoAccettazione} />
-          ) : (
-            <>
-              <input
-                className={`${dsInput} mt-1`}
-                list="scheda-ingresso-addetti"
-                value={fields.addettoAccettazione}
-                onChange={(e) => setFields({ ...fields, addettoAccettazione: e.target.value })}
-              />
-              <datalist id="scheda-ingresso-addetti">
-                {addettiLista.map((a) => (
-                  <option key={a} value={a} />
-                ))}
-              </datalist>
-            </>
-          )}
+          <GlobalSettingsListSelect
+            listKey="lavorazioni:addetti"
+            className="mt-1"
+            value={fields.addettoAccettazione}
+            onChange={(v) => setFields({ ...fields, addettoAccettazione: v })}
+            disabled={ro}
+            aria-label="Addetto accettazione"
+          />
         </label>
       </div>
       <label className="block text-xs">
         <span className="text-zinc-500">Descrizione anomalia</span>
         <textarea
-          className={`${dsInput} mt-1 min-h-[6rem]`}
+          className={`${dsInput} mt-1 min-h-[6rem] resize-none`}
           readOnly={ro}
           value={fields.descrizioneAnomalia}
           onChange={(e) => setFields({ ...fields, descrizioneAnomalia: e.target.value })}
@@ -1919,7 +1923,7 @@ function IngressoPanel({
       <label className="block text-xs">
         <span className="text-zinc-500">Note</span>
         <textarea
-          className={`${dsInput} mt-1 min-h-[4rem]`}
+          className={`${dsInput} mt-1 min-h-[4rem] resize-none`}
           readOnly={ro}
           value={fields.noteIntervento ?? ""}
           onChange={(e) => setFields({ ...fields, noteIntervento: e.target.value })}

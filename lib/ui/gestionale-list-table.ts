@@ -121,8 +121,9 @@ export const gestionaleListTableMobileStackClass = "mt-4 space-y-3 md:hidden";
 
 // —— Larghezze colonne dati (preset Lavorazioni — riusare in portale clienti) ——
 
-export const gestionaleListColIngressoClass = "w-[7.5%]";
-export const gestionaleListColClienteClass = "w-[9.5%]";
+export const gestionaleListColIngressoClass = "w-[7%]";
+export const gestionaleListColCodiceClass = "w-[6%]";
+export const gestionaleListColClienteClass = "w-[9%]";
 export const gestionaleListColCantiereClass = "w-[9%]";
 export const gestionaleListColAttrezzaturaClass = "w-[11.5%]";
 export const gestionaleListColIdentificazioneClass = "w-[9.5%]";

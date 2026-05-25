@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { GlobalTableHeadLabel } from "@/components/gestionale/global-table/global-table-header";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
@@ -31,7 +32,6 @@ import {
   dsTableWrap,
   dsTableThSticky,
   dsFocus,
-  dsTableTdActions,
   dsTableActionsGroup,
   dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
@@ -39,18 +39,20 @@ import {
   dsTableActionGlyph,
   GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
+import { gestionaleListTableTdAzioni, gestionaleListTableThAzioni } from "@/lib/ui/gestionale-list-table";
+import { globalTableHeadEdgeInset } from "@/lib/ui/global-table";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
-import { Drawer, IconActionButton, Tooltip } from "@/components/design-system";
+import { Drawer, IconActionButton } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
+  GestionaleLogEntryDismissButton,
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
-  logEntryDismissBtnClass,
 } from "@/components/gestionale/gestionale-log-ui";
 
 type FiltriDraft = {
@@ -798,10 +800,10 @@ export function BunderView() {
               <col className="w-[5.5rem]" />
               <col className="w-[6.5rem]" />
               <col className="w-[18%]" />
-              <col className="w-[12.5rem]" />
+              <col className="w-[16rem]" />
             </colgroup>
             <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
-              <tr>
+              <tr className={globalTableHeadEdgeInset}>
                 <SortThBunder
                   label="Numero"
                   columnKey="numeroProgressivo"
@@ -855,11 +857,11 @@ export function BunderView() {
                   sortPhase={bunderSortPhase}
                   onSort={onSortBunder}
                 />
-                <th
-                  className={`${dsTableThSticky} px-2 py-2 text-right align-middle text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)] sm:px-3`}
-                >
-                  Azioni
-                </th>
+                <GlobalTableHeadLabel
+                  label="Azioni"
+                  align="center"
+                  thClassName={`${gestionaleListTableThAzioni} ${dsTableThSticky}`}
+                />
               </tr>
             </thead>
             <tbody>
@@ -888,7 +890,7 @@ export function BunderView() {
                     <td className="min-w-0 px-2 py-2 align-middle text-xs text-zinc-600 dark:text-zinc-300 sm:px-3" title={prod}>
                       <span className="line-clamp-2">{prod || "—"}</span>
                     </td>
-                    <td className={dsTableTdActions}>
+                    <td className={gestionaleListTableTdAzioni}>
                       <div className={dsTableActionsGroup}>
                         <IconActionButton label="Modifica" className={dsTableActionBtnPrimary} onClick={() => setEditor({ open: true, doc: d })}>
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -992,19 +994,9 @@ export function BunderView() {
                             atIso: entry.atIso,
                           }}
                           trailing={
-                            <Tooltip content="Rimuovi">
-                              <button
-                                type="button"
-                                className={logEntryDismissBtnClass}
-                                aria-label="Rimuovi voce"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  if (window.confirm("Rimuovere questa voce dal log?")) removeBunderChangeLogEntryById(entry.id);
-                                }}
-                              >
-                                ×
-                              </button>
-                            </Tooltip>
+                            <GestionaleLogEntryDismissButton
+                              onDismiss={() => removeBunderChangeLogEntryById(entry.id)}
+                            />
                           }
                         />
                       </li>
