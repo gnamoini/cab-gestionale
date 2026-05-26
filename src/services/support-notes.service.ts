@@ -18,7 +18,6 @@ const PROFILE_SELECT = `
 
 export type SupportNoteInsert = {
   content: string;
-  created_by: string;
 };
 
 async function sb() {
@@ -52,7 +51,6 @@ export const supportNotesService = {
         .from("support_notes")
         .insert({
           content: input.content.trim(),
-          created_by: input.created_by,
         })
         .select(PROFILE_SELECT)
         .single();

@@ -59,6 +59,9 @@ export const dsBtnSoftOrange = `inline-flex items-center justify-center rounded-
 
 export const dsBtnIcon = `inline-flex min-w-[2rem] items-center justify-center rounded-[var(--ds-radius-lg)] ${cabBorder} ${cabSurface} px-2 py-1.5 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
+/** Pulsante ± stepper quantità — stessa famiglia di `dsBtnIcon`, footprint fisso 36×36. */
+export const dsStepperBtn = `inline-flex h-9 w-9 shrink-0 select-none items-center justify-center rounded-[var(--ds-radius-lg)] border-2 border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} p-0 text-sm font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border-strong))] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] ${dsBtnCursor} ${dsFocus} [-webkit-tap-highlight-color:transparent]`;
+
 export const dsBtnSubtle = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] ${cabBorder} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_85%,var(--cab-surface))] px-3 py-2 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** B2 — Ghost (toolbar secondaria, filtri testuali) */
@@ -78,7 +81,17 @@ export const dsSearchFieldInput = `w-full min-h-11 rounded-[var(--ds-radius-lg)]
 
 export const dsTextarea = `${dsInput} min-h-[5.5rem] resize-y`;
 
-/** F — Login / campi su tema scuro */
+/** F — Checkbox nativo (login, footer modali, form gestionale). */
+export const dsCheckboxInput =
+  "mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[color:var(--cab-border-strong)] text-[var(--cab-primary)] shadow-[var(--cab-shadow-sm)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_30%,transparent)] disabled:cursor-not-allowed disabled:opacity-50";
+
+/** F — Opzione checkbox in card (footer modali, toggle secondari). */
+export const dsCheckboxOptionLabel = `flex min-w-0 cursor-pointer items-start gap-3 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] ${cabSurface} px-3 py-2.5 text-left shadow-[var(--cab-shadow-sm)] transition-[border-color,background-color,box-shadow] duration-150 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] has-[:checked]:shadow-[var(--cab-shadow-md)] has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)] has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-55`;
+
+/** I — Footer form modale (checkbox opzionale + azioni). */
+export const dsModalFormFooter =
+  "flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3";
+
 export const dsInputAuth = `w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border-strong)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_90%,#000)] px-3 py-2.5 text-sm text-[color:var(--cab-text)] shadow-md shadow-black/20 outline-none ring-[color:color-mix(in_srgb,var(--cab-primary)_18%,transparent)] placeholder:text-[color:var(--cab-text-muted)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_50%,var(--cab-border))] focus:ring-2 ${dsFocus} ${dsDisabled}`;
 
 /** E — Chevron select */

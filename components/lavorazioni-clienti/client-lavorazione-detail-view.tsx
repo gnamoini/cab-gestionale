@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useMemo, useState, type MouseEvent } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { IconGestionaleRefresh } from "@/components/gestionale/gestionale-log-ui";
@@ -13,6 +14,7 @@ import {
   ClientLavorazioneTimelinePanel,
   clientTimelinePageTitle,
 } from "@/components/lavorazioni-clienti/client-lavorazione-timeline-panel";
+import { clientLavorazioniListPath } from "@/lib/lavorazioni/client-portal-access";
 import { buildClientTimelineHeader } from "@/lib/lavorazioni/client-portal-timeline";
 import {
   filterClientPortalStatiOptions,
@@ -30,8 +32,28 @@ import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 
+const CLIENT_PORTAL_BACK_LABEL = "Torna a Lavorazioni (Clienti)";
+
 export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: string }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const listPath = clientLavorazioniListPath();
   const access = useClientLavorazioniAccess();
+
+  const goToClientList = useCallback(
+    (e: MouseEvent<HTMLAnchorElement>) => {
+      if (pathname === listPath) {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+      }
+      if (pathname.startsWith(`${listPath}/`)) {
+        e.preventDefault();
+        router.push(listPath);
+      }
+    },
+    [listPath, pathname, router],
+  );
   const detailQ = useClientLavorazioneDetailQuery(lavorazioneId, access.allowed);
   const globalOpts = useGlobalOptions({ debugTag: "ClientLavorazioneDetail" });
   const statiOpts = useMemo(
@@ -108,8 +130,8 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {detailQ.error?.message ?? "La lavorazione richiesta non esiste o non è accessibile."}
             </p>
-            <Link href="/lavorazioni-clienti" className={`mt-4 inline-flex ${dsBtnNeutral}`}>
-              Torna all&apos;elenco
+            <Link href={listPath} onClick={goToClientList} className={`mt-4 inline-flex ${dsBtnNeutral}`}>
+              {CLIENT_PORTAL_BACK_LABEL}
             </Link>
           </ShellCard>
         </div>
@@ -125,8 +147,9 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
           <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2">
             <IconActionButton
               as="link"
-              href="/lavorazioni-clienti"
-              label="Torna all'elenco"
+              href={listPath}
+              label={CLIENT_PORTAL_BACK_LABEL}
+              onClick={goToClientList}
               className={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
             >
               <IconBack />

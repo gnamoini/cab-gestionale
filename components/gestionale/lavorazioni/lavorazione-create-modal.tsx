@@ -1,42 +1,55 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import { mezzoFormToMeta } from "@/lib/mezzi/mezzi-meta";
 import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
-import { useMezzoCreateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
-import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
+import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
+import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { findMezzoByTargaOrMatricola } from "@/lib/mezzi/find-mezzo-by-ident";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { loadLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
 import { persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
 import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId } from "@/src/shared/selectors";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
-import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import {
   findLastSchedaIngressoForIdent,
   hasSchedaIngressoIdentLookup,
   mergeSchedaIngressoFields,
 } from "@/lib/schede/scheda-ingresso-reuse";
+import { SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL } from "@/lib/schede/scheda-ingresso-ui-labels";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
+import type { MezzoInsert } from "@/src/services/mezzi.service";
 import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
+import {
+  MezzoDuplicatoAnagraficaDialog,
+  type MezzoDuplicatoAnagraficaChoice,
+} from "@/components/lavorazioni/schede/mezzo-duplicato-anagrafica-dialog";
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { GestionaleSettingsSelect } from "@/components/gestionale/gestionale-settings-select";
-import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { GlobalDatePicker } from "@/components/gestionale/global-input";
+import {
+  addettoPillShellClass,
+  erpBtnAccent,
+  erpBtnNeutral,
+  prioritaPillShellClass,
+  statoPillShellClass,
+} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { GlobalDatePicker, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
+import { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
-import { dsInput } from "@/lib/ui/design-system";
+import { dsCheckboxInput, dsCheckboxOptionLabel, dsInput, dsModalFormFooter, dsTypoCaption } from "@/lib/ui/design-system";
 
 function todayItDate(): string {
   return new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -84,6 +97,28 @@ function emptyIngresso(addettoDefault: string): SchedaIngressoFields {
   };
 }
 
+function schedaFieldsToMezzoPayload(fields: SchedaIngressoFields): MezzoInsert {
+  return {
+    cliente: fields.cliente.trim(),
+    utilizzatore: fields.utilizzatore.trim() || null,
+    marca: fields.marcaAttrezzatura.trim(),
+    modello: fields.modelloAttrezzatura.trim() || "—",
+    targa: fields.targa.trim() || null,
+    matricola: fields.matricola.trim() || null,
+    numero_scuderia: fields.nScuderia.trim() || null,
+    tipo_attrezzatura: fields.tipoAttrezzatura.trim() || null,
+    anno: new Date().getFullYear(),
+    meta: mezzoFormToMeta({
+      cantiere: fields.cantiere,
+      tipoTelaio: fields.tipoTelaio,
+      marcaTelaio: fields.marcaTelaio,
+      modelloTelaio: fields.modelloTelaio,
+      oreLavoro: fields.oreLavoro,
+      km: fields.km,
+    }) as Record<string, unknown>,
+  };
+}
+
 export function LavorazioneCreateModal({
   open,
   onClose,
@@ -109,6 +144,7 @@ export function LavorazioneCreateModal({
   const qc = useQueryClient();
   const create = useLavorazioneCreateMutation();
   const createMezzo = useMezzoCreateMutation();
+  const updateMezzo = useMezzoUpdateMutation();
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
 
   const liste = globalOpts.mezziListe;
@@ -134,6 +170,21 @@ export function LavorazioneCreateModal({
   const [stato, setStato] = useState("");
   const [priorita, setPriorita] = useState<PrioritaLavorazione>("media");
   const [mezzoHint, setMezzoHint] = useState<string | null>(null);
+  const [duplicateMezzo, setDuplicateMezzo] = useState<MezzoGestito | null>(null);
+  const duplicateChoiceRef = useRef<((choice: MezzoDuplicatoAnagraficaChoice | null) => void) | null>(null);
+
+  const askDuplicateMezzoChoice = useCallback((mezzo: MezzoGestito) => {
+    return new Promise<MezzoDuplicatoAnagraficaChoice | null>((resolve) => {
+      duplicateChoiceRef.current = resolve;
+      setDuplicateMezzo(mezzo);
+    });
+  }, []);
+
+  const closeDuplicateMezzoDialog = useCallback((choice: MezzoDuplicatoAnagraficaChoice | null) => {
+    duplicateChoiceRef.current?.(choice);
+    duplicateChoiceRef.current = null;
+    setDuplicateMezzo(null);
+  }, []);
 
   const lastIngressoMatch = useMemo(() => {
     if (!hasSchedaIngressoIdentLookup(fields.targa, fields.matricola)) return null;
@@ -235,7 +286,37 @@ export function LavorazioneCreateModal({
     if (!prioritaOpts.includes(priorita)) setPriorita(prioritaOpts[0]!);
   }, [open, priorita, prioritaOpts]);
 
-  const statoColore = stato ? readablePillStyleFromHex(statoDisplayColor(stato, stati)) : undefined;
+  const tablePillOptions = useMemo(
+    () => buildLavorazioniPillOptionsFromGlobal(globalOpts),
+    [globalOpts],
+  );
+  const statoPillOptions = useMemo(() => tablePillOptions.stati(stati), [tablePillOptions, stati]);
+  const prioritaPillOptions = useMemo(
+    () => tablePillOptions.priorita(prioritaOpts),
+    [tablePillOptions, prioritaOpts],
+  );
+  const addettoPillOptions = useMemo(
+    () => tablePillOptions.addetto(fields.addettoAccettazione),
+    [tablePillOptions, fields.addettoAccettazione],
+  );
+  const statoPillStyle = useMemo(
+    () => (stato ? readablePillStyleFromHex(statoDisplayColor(stato, stati)) : undefined),
+    [stato, stati],
+  );
+  const prioritaPillStyle = useMemo(
+    () =>
+      readablePillStyleFromHex(
+        priorita === "urgente" ? "#b91c1c" : prioritaDisplayColor(priorita as PrioritaLav, globalOpts.lavorazioni.prioritaColors),
+      ),
+    [priorita, globalOpts.lavorazioni.prioritaColors],
+  );
+  const addettoPillStyle = useMemo(
+    () =>
+      readablePillStyleFromHex(
+        addettoDisplayColor(fields.addettoAccettazione, globalOpts.lavorazioni.addettoColors),
+      ),
+    [fields.addettoAccettazione, globalOpts.lavorazioni.addettoColors],
+  );
 
   if (!open) return null;
 
@@ -266,26 +347,21 @@ export function LavorazioneCreateModal({
       let finalMezzoId = mezzoId.trim();
       const needNewMezzo = creaNuovoMezzo || !finalMezzoId;
       if (needNewMezzo) {
-        const mezzo = await createMezzo.mutateAsync({
-          cliente: fields.cliente.trim(),
-          utilizzatore: fields.utilizzatore.trim() || null,
-          marca: fields.marcaAttrezzatura.trim(),
-          modello: fields.modelloAttrezzatura.trim() || "—",
-          targa: fields.targa.trim() || null,
-          matricola: fields.matricola.trim() || null,
-          numero_scuderia: fields.nScuderia.trim() || null,
-          tipo_attrezzatura: fields.tipoAttrezzatura.trim() || null,
-          anno: new Date().getFullYear(),
-          meta: mezzoFormToMeta({
-            cantiere: fields.cantiere,
-            tipoTelaio: fields.tipoTelaio,
-            marcaTelaio: fields.marcaTelaio,
-            modelloTelaio: fields.modelloTelaio,
-            oreLavoro: fields.oreLavoro,
-            km: fields.km,
-          }) as Record<string, unknown>,
-        });
-        finalMezzoId = mezzo.id;
+        const payload = schedaFieldsToMezzoPayload(fields);
+        const existing = findMezzoByTargaOrMatricola(mezziCatalog, fields.targa, fields.matricola);
+        if (existing) {
+          const choice = await askDuplicateMezzoChoice(existing);
+          if (!choice) return;
+          if (choice === "keep") {
+            finalMezzoId = existing.id;
+          } else {
+            await updateMezzo.mutateAsync({ id: existing.id, data: payload });
+            finalMezzoId = existing.id;
+          }
+        } else {
+          const mezzo = await createMezzo.mutateAsync(payload);
+          finalMezzoId = mezzo.id;
+        }
       }
 
       const row = await create.mutateAsync({
@@ -303,7 +379,7 @@ export function LavorazioneCreateModal({
         lavorazioneId: row.id,
         codice: row.codice ?? null,
         ingresso: {
-          ...newSchedaMeta("ingresso", fields.addettoAccettazione || createdBy),
+          ...newSchedaMeta("ingresso", createdBy),
           tipo: "ingresso",
           campi: { ...fields },
         },
@@ -323,7 +399,7 @@ export function LavorazioneCreateModal({
     }
   }
 
-  const pending = create.isPending || createMezzo.isPending;
+  const pending = create.isPending || createMezzo.isPending || updateMezzo.isPending;
   const inputFieldClass = `mt-1 block w-full ${dsInput}`;
   const listSelectWrapClass = "mt-1 w-full";
 
@@ -346,8 +422,10 @@ export function LavorazioneCreateModal({
           {globalOpts.isError ? (
             <p className="text-sm text-red-600 dark:text-red-400">{globalOpts.error?.message ?? "Errore impostazioni."}</p>
           ) : null}
-          {create.isError || createMezzo.isError ? (
-            <p className="text-sm text-red-600 dark:text-red-400">{create.error?.message ?? createMezzo.error?.message ?? "Salvataggio fallito."}</p>
+          {create.isError || createMezzo.isError || updateMezzo.isError ? (
+            <p className="text-sm text-red-600 dark:text-red-400">
+              {create.error?.message ?? createMezzo.error?.message ?? updateMezzo.error?.message ?? "Salvataggio fallito."}
+            </p>
           ) : null}
           {mezzoHint ? (
             <p className="rounded-lg border border-orange-200/80 bg-orange-50/80 px-3 py-2 text-xs text-orange-950 dark:border-orange-900/40 dark:bg-orange-950/30 dark:text-orange-100">
@@ -367,39 +445,36 @@ export function LavorazioneCreateModal({
             </FormField>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
               <FormField label="Stato iniziale">
-                <div className="flex min-h-10 items-center gap-2">
-                  {stato && stati.length > 0 ? (
-                    <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-[color:var(--cab-border)]" style={statoColore} aria-hidden />
-                  ) : null}
-                  <GestionaleSettingsSelect
-                    className="min-w-0 flex-1"
-                    ariaLabel="Stato iniziale"
-                    listKey="lavorazioni:stati"
-                    value={stato}
-                    onChange={setStato}
-                    disabled={pending || globalOpts.isLoading}
-                    required
-                  />
-                </div>
-              </FormField>
-              <FormField label="Priorità">
-                <GestionaleSettingsSelect
-                  className="capitalize"
-                  ariaLabel="Priorità"
-                  listKey="lavorazioni:priorita"
-                  value={priorita}
-                  onChange={(v) => setPriorita(v as PrioritaLavorazione)}
-                  disabled={pending}
-                  required
+                <GlobalFixedListPillSelect
+                  value={stato}
+                  onChange={setStato}
+                  options={statoPillOptions}
+                  ariaLabel="Stato iniziale"
+                  disabled={pending || globalOpts.isLoading || stati.length === 0}
+                  shellClass={statoPillShellClass()}
+                  fallbackPillStyle={statoPillStyle}
                 />
               </FormField>
-              <FormField label="Addetto" className="sm:col-span-2 lg:col-span-1">
-                <GlobalSettingsListSelect
-                  listKey="lavorazioni:addetti"
-                  aria-label="Addetto accettazione"
+              <FormField label="Priorità">
+                <GlobalFixedListPillSelect
+                  value={priorita}
+                  onChange={(v) => setPriorita(v as PrioritaLavorazione)}
+                  options={prioritaPillOptions}
+                  ariaLabel="Priorità"
+                  disabled={pending || prioritaOpts.length === 0}
+                  shellClass={prioritaPillShellClass()}
+                  fallbackPillStyle={prioritaPillStyle}
+                />
+              </FormField>
+              <FormField label="Utente" className="sm:col-span-2 lg:col-span-1">
+                <GlobalFixedListPillSelect
                   value={fields.addettoAccettazione}
                   onChange={(v) => patch({ addettoAccettazione: v })}
-                  disabled={pending}
+                  options={addettoPillOptions}
+                  ariaLabel={SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL}
+                  disabled={pending || addettiOpts.length === 0}
+                  shellClass={addettoPillShellClass()}
+                  fallbackPillStyle={addettoPillStyle}
                 />
               </FormField>
             </div>
@@ -425,24 +500,47 @@ export function LavorazioneCreateModal({
               <textarea className={`${dsInput} min-h-[56px] w-full resize-y`} value={fields.noteIntervento} onChange={(e) => patch({ noteIntervento: e.target.value })} disabled={pending} rows={2} />
             </FormField>
           </FormSection>
-
-          {!mezzoId ? (
-            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-zinc-200 bg-zinc-50/60 px-3 py-2 text-xs dark:border-zinc-700 dark:bg-zinc-900/40">
-              <input type="checkbox" className="mt-0.5" checked={creaNuovoMezzo} onChange={(e) => setCreaNuovoMezzo(e.target.checked)} disabled={pending} />
-              <span>Crea nuovo mezzo in anagrafica da questi dati e collegalo alla lavorazione</span>
-            </label>
-          ) : null}
         </div>
 
-        <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={pending}>
-            Annulla
-          </button>
-          <button type="submit" className={erpBtnAccent} disabled={pending || !createdBy || stati.length === 0 || globalOpts.isLoading}>
-            {pending ? "Salvataggio…" : "Salva lavorazione"}
-          </button>
+        <footer className={dsModalFormFooter}>
+          {!mezzoId ? (
+            <label className={`${dsCheckboxOptionLabel} min-w-0 flex-1 sm:max-w-[min(100%,28rem)]`}>
+              <input
+                type="checkbox"
+                className={dsCheckboxInput}
+                checked={creaNuovoMezzo}
+                onChange={(e) => setCreaNuovoMezzo(e.target.checked)}
+                disabled={pending}
+              />
+              <span className="min-w-0">
+                <span className="block text-sm font-medium text-[color:var(--cab-text)]">
+                  Crea nuovo mezzo in anagrafica
+                </span>
+                <span className={`mt-0.5 block ${dsTypoCaption}`}>
+                  Collegalo alla lavorazione con i dati compilati sopra.
+                </span>
+              </span>
+            </label>
+          ) : (
+            <span className="min-w-0 flex-1" aria-hidden />
+          )}
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={pending}>
+              Annulla
+            </button>
+            <button type="submit" className={erpBtnAccent} disabled={pending || !createdBy || stati.length === 0 || globalOpts.isLoading}>
+              {pending ? "Salvataggio…" : "Salva lavorazione"}
+            </button>
+          </div>
         </footer>
       </form>
+      <MezzoDuplicatoAnagraficaDialog
+        open={duplicateMezzo != null}
+        mezzo={duplicateMezzo}
+        onKeepExisting={() => closeDuplicateMezzoDialog("keep")}
+        onOverwrite={() => closeDuplicateMezzoDialog("overwrite")}
+        onCancel={() => closeDuplicateMezzoDialog(null)}
+      />
     </LavorazioniModalShell>
   );
 }

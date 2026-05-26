@@ -1,4 +1,4 @@
-import { hasPermission } from "@/lib/auth/rbac";
+import { CLIENTE_HOME_PATH, hasPermission } from "@/lib/auth/rbac";
 
 /** Persistenza in `app_settings` (module lavorazioni, key client_portal_access). */
 export const CLIENT_LAVORAZIONI_SETTINGS_MODULE = "lavorazioni";
@@ -29,8 +29,12 @@ export function userHasClientLavorazioniAccess(
   return settings.enabledUserIds.includes(userId);
 }
 
+export function clientLavorazioniListPath(): string {
+  return CLIENTE_HOME_PATH;
+}
+
 export function clientLavorazioniDetailPath(lavorazioneId: string): string {
-  return `/lavorazioni-clienti/${encodeURIComponent(lavorazioneId.trim())}`;
+  return `${CLIENTE_HOME_PATH}/${encodeURIComponent(lavorazioneId.trim())}`;
 }
 
 export function clientLavorazioniPublicUrl(lavorazioneId: string, origin?: string): string {

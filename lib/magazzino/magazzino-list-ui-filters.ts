@@ -11,6 +11,7 @@ import { filterListSelectSuggestions } from "@/lib/ui/list-select-utils";
 export type MagazzinoPageFilters = MagazzinoAdvancedFilters & {
   search: string;
   soloSottoScorta: boolean;
+  nascondiScortaZero: boolean;
 };
 
 export function magazzinoRowSearchHaystack(row: RicambioMagazzino): string {
@@ -36,8 +37,9 @@ export function magazzinoRowMatchesGlobalSearch(row: RicambioMagazzino, query: s
 
 export function magazzinoRowMatchesPageFilters(row: RicambioMagazzino, filters: MagazzinoPageFilters): boolean {
   if (filters.soloSottoScorta && !(row.scorta < row.scortaMinima)) return false;
+  if (filters.nascondiScortaZero && row.scorta <= 0) return false;
   if (!magazzinoRowMatchesGlobalSearch(row, filters.search)) return false;
-  const { search: _s, soloSottoScorta: _sc, ...advanced } = filters;
+  const { search: _s, soloSottoScorta: _sc, nascondiScortaZero: _sz, ...advanced } = filters;
   return magazzinoRowMatchesAdvancedFilters(row, advanced);
 }
 

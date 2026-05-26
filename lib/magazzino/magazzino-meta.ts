@@ -25,7 +25,9 @@ function str(v: unknown): string {
 
 function strArray(v: unknown): string[] {
   if (!Array.isArray(v)) return [];
-  return v.map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean);
+  return v
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter((x) => x && x !== "—");
 }
 
 export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta {
@@ -48,7 +50,7 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
 }
 
 export function ricambioUiToMagazzinoMeta(r: RicambioMagazzino): MagazzinoRicambioMeta {
-  const compat = r.compatibilitaMezzi.map((x) => x.trim()).filter(Boolean);
+  const compat = r.compatibilitaMezzi.map((x) => x.trim()).filter((x) => x && x !== "—");
   return {
     note: r.note.trim() || undefined,
     categoria: r.categoria.trim() || undefined,
@@ -78,7 +80,7 @@ export function metaFieldsToRicambioUi(meta: MagazzinoRicambioMeta): Pick<
   return {
     note: meta.note ?? "",
     categoria: meta.categoria?.trim() || "Generale",
-    compatibilitaMezzi: meta.compatibilitaMezzi ?? [],
+    compatibilitaMezzi: meta.compatibilitaMezzi?.filter((x) => x && x !== "—") ?? [],
     scortaMinima: Math.max(0, meta.scortaMinima ?? 0),
     scontoFornitoreOriginale: Math.min(100, Math.max(0, meta.scontoFornitoreOriginale ?? 0)),
     fornitoreNonOriginale: meta.fornitoreNonOriginale ?? "",

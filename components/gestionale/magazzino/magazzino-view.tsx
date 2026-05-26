@@ -34,6 +34,7 @@ import {
 import {
   emptyRicambioForm,
   formatMarkupDisplay,
+  compatDisplayLabel,
   ricambioFromForm,
   ricambioFromFormLenient,
   toFormDraft,
@@ -54,6 +55,7 @@ import {
   formatAvgMonthlyMagazzinoIt,
   formatMonthKeyIt,
 } from "@/lib/magazzino/ricambio-consumo-from-log";
+import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
 import {
   dsPageToolbarBtn,
@@ -173,7 +175,7 @@ function mergeMasterWithRows(master: string[], rowValues: string[]) {
 }
 
 function compatLabel(list: string[]) {
-  return list.join(", ");
+  return compatDisplayLabel(list);
 }
 
 function rowStockBg(r: RicambioMagazzino) {
@@ -184,9 +186,8 @@ function rowStockBg(r: RicambioMagazzino) {
 }
 
 function rowStockBorderFirstTd(r: RicambioMagazzino) {
-  if (r.scorta < r.scortaMinima) {
-    return "border-l-4 border-l-red-500";
-  }
+  // Evita artefatti sul bordo sinistro della tabella (border-collapsing).
+  // Lo stato sotto scorta resta già evidenziato da badge/riga.
   return "";
 }
 
@@ -526,6 +527,7 @@ export function MagazzinoView() {
     () => loadMagazzinoAdvancedFiltersPersisted() ?? MAGAZZINO_ADVANCED_FILTERS_EMPTY,
   );
   const [soloSottoScorta, setSoloSottoScorta] = useState(false);
+  const [nascondiScortaZero, setNascondiScortaZero] = useState(false);
   const [filtriEspansi, setFiltriEspansi] = useState(false);
 
   const patchAdvancedFilters = useCallback((patch: Partial<MagazzinoAdvancedFilters>) => {
@@ -560,7 +562,6 @@ export function MagazzinoView() {
   );
 
   const [newOpen, setNewOpen] = useState(false);
-  const [newRicambioFocusToken, setNewRicambioFocusToken] = useState(0);
   const [newRicambioDraftId, setNewRicambioDraftId] = useState<string | null>(null);
   const [newForm, setNewForm] = useState<RicambioFormState>(emptyRicambioForm());
   const [dupCheckModalOpen, setDupCheckModalOpen] = useState(false);
@@ -890,14 +891,12 @@ export function MagazzinoView() {
       const masterRow = settingsRowsRef.current.find(
         (r) => r.module === CAB_SETTINGS_MODULE.magazzino && r.key === CAB_SETTINGS_KEY.master,
       );
-      const serverVal = masterRow?.value as
-        | { marche?: string[]; categorie?: string[]; mezziCompatibili?: string[]; fornitori?: string[] }
-        | undefined;
+      const serverVal = (masterRow?.value ?? {}) as MagazzinoMasterPrefs;
       const serverSig = JSON.stringify({
-        marche: serverVal?.marche ?? [],
-        categorie: serverVal?.categorie ?? [],
-        mezziCompatibili: serverVal?.mezziCompatibili ?? [],
-        fornitori: serverVal?.fornitori ?? [],
+        marche: serverVal.marche ?? [],
+        categorie: serverVal.categorie ?? [],
+        mezziCompatibili: serverVal.mezziCompatibili ?? [],
+        fornitori: serverVal.fornitori ?? [],
       });
       if (sig === serverSig) {
         lastSyncedMagMasterSigRef.current = sig;
@@ -909,6 +908,7 @@ export function MagazzinoView() {
           module: CAB_SETTINGS_MODULE.magazzino,
           key: CAB_SETTINGS_KEY.master,
           value: {
+            ...serverVal,
             marche: masterMarche,
             categorie: masterCategorie,
             mezziCompatibili: masterMezzi,
@@ -1016,9 +1016,10 @@ export function MagazzinoView() {
     (): MagazzinoPageFilters => ({
       search: searchApplied,
       soloSottoScorta,
+      nascondiScortaZero,
       ...advancedFilters,
     }),
-    [searchApplied, soloSottoScorta, advancedFilters],
+    [searchApplied, soloSottoScorta, nascondiScortaZero, advancedFilters],
   );
 
   const searchSuggestionPool = useMemo(
@@ -1052,7 +1053,7 @@ export function MagazzinoView() {
 
   useEffect(() => {
     resetPage();
-  }, [searchApplied, advancedFilters, soloSottoScorta, sortColumn, sortPhase, listPageSize, resetPage]);
+  }, [searchApplied, advancedFilters, soloSottoScorta, nascondiScortaZero, sortColumn, sortPhase, listPageSize, resetPage]);
 
   const pagedMagazzino = useMemo(() => sliceItems(filteredSorted), [sliceItems, filteredSorted, page]);
 
@@ -1163,7 +1164,6 @@ export function MagazzinoView() {
     setNewListFieldInvalid(false);
     setNewForm(emptyRicambioForm());
     setNewRicambioDraftId(crypto.randomUUID());
-    setNewRicambioFocusToken((t) => t + 1);
     setNewOpen(true);
   }
 
@@ -1337,6 +1337,7 @@ export function MagazzinoView() {
     setAdvancedFilters(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
     saveMagazzinoAdvancedFiltersPersisted(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
     setSoloSottoScorta(false);
+    setNascondiScortaZero(false);
     resetMagazzinoRicerca();
     setFiltriEspansi(false);
   }
@@ -1344,7 +1345,7 @@ export function MagazzinoView() {
   const hasAdvancedPanelFilters = magazzinoAdvancedFiltersActive(advancedFilters);
 
   const hasMagazzinoFilters =
-    searchApplied.trim().length > 0 || hasAdvancedPanelFilters || soloSottoScorta;
+    searchApplied.trim().length > 0 || hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero;
 
   return (
     <div className="magazzino-scroll-scope min-w-0">
@@ -1432,7 +1433,7 @@ export function MagazzinoView() {
             }
             filtersExpanded={filtriEspansi}
             onFiltersToggle={() => setFiltriEspansi((o) => !o)}
-            filtersActive={hasAdvancedPanelFilters || soloSottoScorta}
+            filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
             filtersPanel={
               <MagazzinoAdvancedFilterPanel
                 filters={advancedFilters}
@@ -1464,6 +1465,26 @@ export function MagazzinoView() {
                     />
                     Sotto scorta minima
                   </button>
+                  <button
+                    type="button"
+                    aria-pressed={nascondiScortaZero}
+                    onClick={() => setNascondiScortaZero((v) => !v)}
+                    className={
+                      nascondiScortaZero
+                        ? `${dsPageToolbarBtn} border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
+                        : dsPageToolbarBtn
+                    }
+                  >
+                    <span
+                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                        nascondiScortaZero
+                          ? "bg-[var(--cab-primary)]"
+                          : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
+                      }`}
+                      aria-hidden
+                    />
+                    Nascondi scorta 0
+                  </button>
                   <button type="button" className={dsPageToolbarBtn} onClick={resetMagazzinoRicerca}>
                     Pulisci ricerca
                   </button>
@@ -1479,10 +1500,10 @@ export function MagazzinoView() {
         <div className={`mt-4 hidden md:block ${gestionaleListTableMasterWrapClass}`}>
           <table className={gestionaleListTableClass}>
             <colgroup>
-              <col className="w-[10.5%]" />
+              <col className="w-[12%]" />
               <col className="w-[7%]" />
               <col className="w-[20%]" />
-              <col className="w-[9%]" />
+              <col className="w-[7%]" />
               <col className="w-[6%]" />
               <col className="w-[7.5%]" />
               <col className="w-[10%]" />
@@ -1593,20 +1614,22 @@ export function MagazzinoView() {
                 const avgM = consumoRow?.avgMonthly ?? null;
                 const low = p.scorta < p.scortaMinima;
                 const flash = flashRowId === p.id;
+                const rowSurfaceClass = [
+                  gestionaleListTableRowSurfaceClass,
+                  rowStockBg(p),
+                  flash
+                    ? "bg-white/95 shadow-[inset_0_0_0_1px_rgba(228,228,231,0.95),0_0_20px_rgba(255,255,255,0.65)] transition-[background-color,box-shadow] duration-200 ease-out dark:bg-zinc-100/12 dark:shadow-[inset_0_0_0_1px_rgba(82,82,91,0.45),0_0_18px_rgba(255,255,255,0.06)]"
+                    : "",
+                ]
+                  .filter(Boolean)
+                  .join(" ");
+                const rowTone = low ? "low-stock" : flash ? "flash-mag" : undefined;
                 return (
                   <tr
                     id={`magazzino-row-${p.id}`}
                     key={p.id}
-                    className={[
-                      dsTableRow,
-                      gestionaleListTableRowSurfaceClass,
-                      rowStockBg(p),
-                      flash
-                        ? "bg-white/95 shadow-[inset_0_0_0_1px_rgba(228,228,231,0.95),0_0_20px_rgba(255,255,255,0.65)] transition-[background-color,box-shadow] duration-200 ease-out dark:bg-zinc-100/12 dark:shadow-[inset_0_0_0_1px_rgba(82,82,91,0.45),0_0_18px_rgba(255,255,255,0.06)]"
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
+                    data-gestionale-row-tone={rowTone}
+                    className={[dsTableRow, rowSurfaceClass].filter(Boolean).join(" ")}
                   >
                     <td className={`min-w-0 ${dsTableTdCompact} ${rowStockBorderFirstTd(p)}`}>
                       <span className="inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-[12px] font-semibold leading-snug tracking-wide dark:bg-zinc-800">
@@ -1861,7 +1884,6 @@ export function MagazzinoView() {
                   form={newForm}
                   setForm={setNewForm}
                   relaxHtmlValidation
-                  autoFocusToken={newRicambioFocusToken}
                   codiceOriginaleAvvisoDuplicato={
                     nuovoCodiceDupEsistente
                       ? {

@@ -1,22 +1,69 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  LavorazioniClienteUtilStack,
-  LavorazioneIngressoDateCell,
-  LavorazioniMezzoIdentStack,
-} from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
+import { LavorazioneIngressoDateCell } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
-import { prioritaLabel, statoPillShellClassDynamic } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import {
+  addettoPillShellClassDynamic,
+  prioritaLabel,
+  statoPillShellClassDynamic,
+} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
-import { isStatoClosed } from "@/lib/lavorazioni/stati-dynamic";
+import { comparePrioritaLavorazione } from "@/lib/lavorazioni/priorita-order";
+import {
+  DEFAULT_LAVORAZIONE_STATO_ID,
+  isStatoClosed,
+  migrateStatoConfigId,
+  resolveStatoId,
+  STATO_LAVORAZIONE_COMPLETATA_ID,
+} from "@/lib/lavorazioni/stati-dynamic";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
-import { resolveStatoToDbEnum } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
+
+/** Vista Kanban: «Attesa preventivo» non ha colonna dedicata — card sotto Accettazione. */
+function isAttesaPreventivoStato(col: StatoLavorazioneConfig): boolean {
+  const id = col.id.trim().toLowerCase();
+  const migrated = migrateStatoConfigId(col.id).toLowerCase();
+  const label = col.label.trim().toLowerCase();
+  if (label.includes("attesa preventivo")) return true;
+  if (migrated === "attesa_preventivo" || migrated === "in_attesa_preventivo") return true;
+  if (id === "lav-stato-att-prev" || id.includes("att-prev") || id.includes("att_prev")) return true;
+  return false;
+}
+
+function findAccettazioneColumnId(columns: readonly StatoLavorazioneConfig[]): string {
+  const hit =
+    columns.find((c) => migrateStatoConfigId(c.id) === DEFAULT_LAVORAZIONE_STATO_ID) ??
+    columns.find((c) => c.label.trim().toLowerCase().includes("accettazione"));
+  return hit?.id ?? DEFAULT_LAVORAZIONE_STATO_ID;
+}
+
+function findCompletateColumnConfig(stati: readonly StatoLavorazioneConfig[]): StatoLavorazioneConfig {
+  const hit =
+    stati.find((c) => migrateStatoConfigId(c.id) === STATO_LAVORAZIONE_COMPLETATA_ID) ??
+    stati.find((c) => isStatoClosed(c) && c.label.trim().toLowerCase().includes("complet"));
+  return (
+    hit ?? {
+      id: STATO_LAVORAZIONE_COMPLETATA_ID,
+      label: "Completate",
+      color: "#15803d",
+      closed: true,
+    }
+  );
+}
+
+function sortKanbanCards(rows: LavorazioneListRow[]): LavorazioneListRow[] {
+  return [...rows].sort((a, b) => {
+    const byPriority = comparePrioritaLavorazione(b.priorita, a.priorita);
+    if (byPriority !== 0) return byPriority;
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+}
 
 function macchinaLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
@@ -52,6 +99,16 @@ function addettoLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeSto
   );
 }
 
+function identValue(raw: string): string {
+  const t = raw.trim();
+  return t && t !== "—" ? t : "";
+}
+
+function mezzoIdentLines(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string[] {
+  const parts = mezzoIdentParts(row, schedeStore);
+  return [parts.targa, parts.matricola, parts.scuderia].map(identValue).filter(Boolean);
+}
+
 function mezzoIdentParts(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore) {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
   const scuderiaIngresso = ing?.nScuderia?.trim() ?? "";
@@ -75,6 +132,7 @@ function KanbanCard({
   schedeStore,
   defaultAddetto,
   prioritaColors,
+  addettoColors,
   flash,
   onOpen,
 }: {
@@ -82,13 +140,19 @@ function KanbanCard({
   schedeStore: LavorazioneSchedeStore;
   defaultAddetto: string;
   prioritaColors: Record<string, string | undefined>;
+  addettoColors: Record<string, string | undefined>;
   flash: boolean;
   onOpen: () => void;
 }) {
   const macchina = macchinaLabel(row, schedeStore);
-  const ident = mezzoIdentParts(row, schedeStore);
+  const cliente = clienteLabel(row, schedeStore);
+  const cantiere = cantiereLabel(row, schedeStore);
+  const utilizzatore = utilizzatoreLabel(row, schedeStore);
+  const identLines = mezzoIdentLines(row, schedeStore);
+  const addetto = addettoLabel(row, schedeStore, defaultAddetto);
   const p = row.priorita as PrioritaLavorazione;
   const prioHex = p === "urgente" ? "#b91c1c" : prioritaDisplayColor(p as PrioritaLav, prioritaColors);
+  const addettoHex = addettoDisplayColor(addetto, addettoColors as Record<string, string>);
   const note = lavorazioneNoteOperative(row, schedeStore);
 
   return (
@@ -102,29 +166,49 @@ function KanbanCard({
         .filter(Boolean)
         .join(" ")}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="min-w-0 flex-1 text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50">{macchina}</p>
-        <TablePillReadonly
-          shellClass={statoPillShellClassDynamic()}
-          shellStyle={readablePillStyleFromHex(prioHex)}
-          title={prioritaLabel(p)}
-          fitContent
-        >
-          {prioritaLabel(p)}
-        </TablePillReadonly>
-      </div>
-      <div className="mt-2">
-        <LavorazioniClienteUtilStack cliente={clienteLabel(row, schedeStore)} utilizzatore={utilizzatoreLabel(row, schedeStore)} />
-      </div>
-      <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-        <span className="font-semibold uppercase tracking-wide">Cantiere:</span> {cantiereLabel(row, schedeStore)}
-      </p>
-      <div className="mt-1">
-        <LavorazioniMezzoIdentStack targa={ident.targa} matricola={ident.matricola} nScuderia={ident.scuderia} />
-      </div>
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-zinc-600 dark:text-zinc-300">
-        <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
-        <span className="truncate font-medium">{addettoLabel(row, schedeStore, defaultAddetto)}</span>
+      <div className="flex items-start gap-2">
+        <div className="min-w-0 flex-1 space-y-1 leading-tight">
+          <p className="text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50">{macchina}</p>
+          <div className="min-w-0 space-y-0.5">
+            <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">{cliente}</p>
+            {identValue(cantiere) ? (
+              <p className="truncate text-[11px] text-zinc-600 dark:text-zinc-300">{cantiere}</p>
+            ) : null}
+            {utilizzatore.trim() ? (
+              <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{utilizzatore}</p>
+            ) : null}
+          </div>
+          {identLines.length > 0 ? (
+            <div className="min-w-0 space-y-0.5 leading-snug">
+              {identLines.map((line) => (
+                <p key={line} className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+                  {line}
+                </p>
+              ))}
+            </div>
+          ) : null}
+          <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+            <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
+          </div>
+        </div>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <TablePillReadonly
+            shellClass={statoPillShellClassDynamic()}
+            shellStyle={readablePillStyleFromHex(prioHex)}
+            title={prioritaLabel(p)}
+            fitContent
+          >
+            {prioritaLabel(p)}
+          </TablePillReadonly>
+          <TablePillReadonly
+            shellClass={addettoPillShellClassDynamic()}
+            shellStyle={readablePillStyleFromHex(addettoHex)}
+            title={addetto}
+            fitContent
+          >
+            {addetto}
+          </TablePillReadonly>
+        </div>
       </div>
       {note.trim() ? (
         <p className="mt-2 line-clamp-2 text-[11px] text-zinc-500 dark:text-zinc-400">{note}</p>
@@ -135,53 +219,93 @@ function KanbanCard({
 
 export function LavorazioniKanbanView({
   rows,
+  closedRows = [],
   columns,
   statiOpts,
   schedeStore,
   defaultAddetto,
   prioritaColors,
+  addettoColors,
   flashRowId,
   navBulkFlashIds,
   loading,
   emptyMessage,
+  closedEmptyMessage = "Nessuna lavorazione completata.",
   onOpenRow,
+  onOpenClosedRow,
 }: {
   rows: readonly LavorazioneListRow[];
+  closedRows?: readonly LavorazioneListRow[];
   columns: readonly StatoLavorazioneConfig[];
   statiOpts: readonly StatoLavorazioneConfig[];
   schedeStore: LavorazioneSchedeStore;
   defaultAddetto: string;
   prioritaColors: Record<string, string | undefined>;
+  addettoColors: Record<string, string | undefined>;
   flashRowId: string | null;
   navBulkFlashIds: ReadonlySet<string>;
   loading: boolean;
   emptyMessage: string;
+  closedEmptyMessage?: string;
   onOpenRow: (row: LavorazioneListRow) => void;
+  onOpenClosedRow?: (row: LavorazioneListRow) => void;
 }) {
   const operationalColumns = useMemo(
     () => columns.filter((col) => !isStatoClosed(col)),
     [columns],
   );
 
-  const byStato = useMemo(() => {
+  const kanbanColumns = useMemo(
+    () => operationalColumns.filter((col) => !isAttesaPreventivoStato(col)),
+    [operationalColumns],
+  );
+
+  const accettazioneColumnId = useMemo(() => findAccettazioneColumnId(operationalColumns), [operationalColumns]);
+
+  const attesaPreventivoColumns = useMemo(
+    () => operationalColumns.filter(isAttesaPreventivoStato),
+    [operationalColumns],
+  );
+
+  const { byStato, attesaPreventivoByStato } = useMemo(() => {
+    const statiList = [...statiOpts];
     const map = new Map<string, LavorazioneListRow[]>();
-    for (const col of operationalColumns) map.set(col.id, []);
+    const attesaMap = new Map<string, LavorazioneListRow[]>();
+    for (const col of kanbanColumns) map.set(col.id, []);
+    for (const col of attesaPreventivoColumns) attesaMap.set(col.id, []);
+    const fallbackAttesaId = attesaPreventivoColumns[0]?.id;
+
     for (const row of rows) {
-      const statoId = resolveStatoToDbEnum(row.stato);
+      const statoId = resolveStatoId(row.stato, statiList);
+      const statoCol = statiList.find((c) => c.id === statoId);
+      if (statoCol && isAttesaPreventivoStato(statoCol)) {
+        const attesaList = attesaMap.get(statoId) ?? (fallbackAttesaId ? attesaMap.get(fallbackAttesaId) : undefined);
+        attesaList?.push(row);
+        continue;
+      }
       const list = map.get(statoId);
       if (list) list.push(row);
     }
-    for (const list of map.values()) {
-      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    for (const col of kanbanColumns) {
+      map.set(col.id, sortKanbanCards(map.get(col.id) ?? []));
     }
-    return map;
-  }, [rows, operationalColumns]);
+    for (const col of attesaPreventivoColumns) {
+      attesaMap.set(col.id, sortKanbanCards(attesaMap.get(col.id) ?? []));
+    }
+
+    return { byStato: map, attesaPreventivoByStato: attesaMap };
+  }, [rows, kanbanColumns, attesaPreventivoColumns, statiOpts]);
+
+  const completateColumn = useMemo(() => findCompletateColumnConfig(statiOpts), [statiOpts]);
+  const completateItems = useMemo(() => sortKanbanCards([...closedRows]), [closedRows]);
+  const openClosedRow = onOpenClosedRow ?? onOpenRow;
 
   if (loading) {
     return <p className="text-sm text-zinc-500">Caricamento…</p>;
   }
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && completateItems.length === 0) {
     return (
       <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
         {emptyMessage}
@@ -189,7 +313,79 @@ export function LavorazioniKanbanView({
     );
   }
 
+  const renderKanbanCards = (
+    items: readonly LavorazioneListRow[],
+    onOpen: (row: LavorazioneListRow) => void = onOpenRow,
+  ) =>
+    items.map((row) => (
+      <KanbanCard
+        key={row.id}
+        row={row}
+        schedeStore={schedeStore}
+        defaultAddetto={defaultAddetto}
+        prioritaColors={prioritaColors}
+        addettoColors={addettoColors}
+        flash={flashRowId === row.id || navBulkFlashIds.has(row.id)}
+        onOpen={() => onOpen(row)}
+      />
+    ));
+
+  const renderStatoHeader = (statoCol: StatoLavorazioneConfig, count: number, className?: string) => (
+    <div
+      className={[
+        "flex items-center justify-between gap-2 px-3 py-2.5",
+        className ?? "border-b border-zinc-200/80 dark:border-zinc-700/80",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <span
+        className="inline-flex max-w-full items-center rounded-lg px-2 py-1 text-[11px] font-bold uppercase tracking-wide"
+        style={readablePillStyleFromHex(statoDisplayColor(statoCol.id, [...statiOpts]))}
+      >
+        <span className="truncate">{statoCol.label}</span>
+      </span>
+      <span className="shrink-0 rounded-md bg-zinc-200/80 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
+        {count}
+      </span>
+    </div>
+  );
+
   const renderColumn = (col: StatoLavorazioneConfig) => {
+    if (col.id === accettazioneColumnId && attesaPreventivoColumns.length > 0) {
+      const accItems = byStato.get(col.id) ?? [];
+      const attesaSections = attesaPreventivoColumns.map((apCol) => ({
+        col: apCol,
+        items: attesaPreventivoByStato.get(apCol.id) ?? [],
+      }));
+      return (
+        <section
+          key={col.id}
+          className="flex w-[min(100%,17.5rem)] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30"
+          aria-label={`Colonna ${col.label}`}
+        >
+          {renderStatoHeader(col, accItems.length)}
+          <div className="gestionale-scrollbar flex min-h-[8rem] flex-col gap-2 overflow-y-auto overscroll-contain p-2">
+            {accItems.length === 0 ? (
+              <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
+            ) : (
+              renderKanbanCards(accItems)
+            )}
+            {attesaSections.map(({ col: apCol, items }) => (
+              <div key={apCol.id} className="space-y-2 border-t border-zinc-200/80 pt-2 dark:border-zinc-700/80">
+                {renderStatoHeader(apCol, items.length, "border-b-0 px-0 py-0")}
+                {items.length === 0 ? (
+                  <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
+                ) : (
+                  renderKanbanCards(items)
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      );
+    }
+
     const items = byStato.get(col.id) ?? [];
     return (
       <section
@@ -197,46 +393,41 @@ export function LavorazioniKanbanView({
         className="flex w-[min(100%,17.5rem)] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30"
         aria-label={`Colonna ${col.label}`}
       >
-        <header className="flex items-center justify-between gap-2 border-b border-zinc-200/80 px-3 py-2.5 dark:border-zinc-700/80">
-          <span
-            className="inline-flex max-w-full items-center rounded-lg px-2 py-1 text-[11px] font-bold uppercase tracking-wide"
-            style={readablePillStyleFromHex(statoDisplayColor(col.id, [...statiOpts]))}
-          >
-            <span className="truncate">{col.label}</span>
-          </span>
-          <span className="shrink-0 rounded-md bg-zinc-200/80 px-1.5 py-0.5 text-[10px] font-bold tabular-nums text-zinc-700 dark:bg-zinc-800 dark:text-zinc-200">
-            {items.length}
-          </span>
-        </header>
+        {renderStatoHeader(col, items.length)}
         <div className="gestionale-scrollbar flex min-h-[8rem] flex-col gap-2 overflow-y-auto overscroll-contain p-2">
           {items.length === 0 ? (
             <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
           ) : (
-            items.map((row) => (
-              <KanbanCard
-                key={row.id}
-                row={row}
-                schedeStore={schedeStore}
-                defaultAddetto={defaultAddetto}
-                prioritaColors={prioritaColors}
-                flash={flashRowId === row.id || navBulkFlashIds.has(row.id)}
-                onOpen={() => onOpenRow(row)}
-              />
-            ))
+            renderKanbanCards(items)
           )}
         </div>
       </section>
     );
   };
 
+  const renderCompletateColumn = () => (
+    <section
+      key={completateColumn.id}
+      className="flex w-[min(100%,17.5rem)] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30"
+      aria-label="Colonna Completate"
+    >
+      {renderStatoHeader(completateColumn, completateItems.length)}
+      <div className="gestionale-scrollbar flex min-h-[8rem] flex-col gap-2 overflow-y-auto overscroll-contain p-2">
+        {completateItems.length === 0 ? (
+          <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">{closedEmptyMessage}</p>
+        ) : (
+          renderKanbanCards(completateItems, openClosedRow)
+        )}
+      </div>
+    </section>
+  );
+
   return (
     <div className="space-y-3">
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
-        Vista rapida officina — solo lavorazioni in corso ({rows.length})
-      </p>
       <div className="gestionale-scrollbar -mx-1 overflow-x-auto px-1 pb-1">
         <div className="flex min-w-min items-start gap-3">
-          {operationalColumns.map(renderColumn)}
+          {kanbanColumns.map(renderColumn)}
+          {renderCompletateColumn()}
         </div>
       </div>
     </div>

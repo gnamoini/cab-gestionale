@@ -6,6 +6,7 @@ import {
 import { marcheFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { isRicambioCompatUniversal } from "@/lib/magazzino/form";
 
 export const FILTER_ALL = "__tutti__" as const;
 
@@ -108,6 +109,10 @@ export function magazzinoRowMatchesCompatFilters(
     (!marcaSel || marcaSel === FILTER_ALL) &&
     (!modelloSel || modelloSel === FILTER_ALL)
   ) {
+    return true;
+  }
+
+  if (isRicambioCompatUniversal(row.compatibilitaMezzi)) {
     return true;
   }
 

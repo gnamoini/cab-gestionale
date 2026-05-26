@@ -8,13 +8,17 @@ import {
   lavorazioneIngressoIso,
 } from "@/lib/lavorazioni/lavorazione-ingresso-display";
 import {
+  lavorazioneOreTotaliSchedaLabel,
+  lavorazionePermanenzaGiorniLabel,
+} from "@/lib/lavorazioni/lavorazioni-list-table-display";
+import {
   gestionaleListTableActionBadge,
   gestionaleListTableActionBtnDanger,
   gestionaleListTableActionBtnInfo,
   gestionaleListTableActionBtnPrimary,
   gestionaleListTableActionBtnSecondary,
   gestionaleListTableActionBtnWithBadge,
-  gestionaleListTableActionsGroup,
+  gestionaleListTableActionsGroupEnd,
   gestionaleListTableActionsRowHeight,
   gestionaleListColAttrezzaturaClass,
   gestionaleListColAzioniClass,
@@ -49,7 +53,7 @@ export const lavTableActionBtnPrimary = gestionaleListTableActionBtnPrimary;
 export const lavTableActionBtnSecondary = gestionaleListTableActionBtnSecondary;
 export const lavTableActionBtnInfo = gestionaleListTableActionBtnInfo;
 export const lavTableActionBtnDanger = gestionaleListTableActionBtnDanger;
-export const lavTableActionsRow = gestionaleListTableActionsGroup;
+export const lavTableActionsRow = gestionaleListTableActionsGroupEnd;
 export {
   gestionaleListTableActionBadge as dsTableActionBadge,
   gestionaleListTableActionBtnWithBadge as dsTableActionBtnWithBadge,
@@ -223,13 +227,28 @@ export function LavorazioniMezzoIdentStack({
   matricola: string;
   nScuderia?: string;
 }) {
+  const norm = (value: string) => {
+    const t = value.trim();
+    return t && t !== "—" ? t : "";
+  };
+  const lines = [
+    norm(targa),
+    norm(matricola),
+    norm(nScuderia ?? "") ? `N. ${norm(nScuderia ?? "")}` : "",
+  ].filter(Boolean);
+  if (lines.length === 0) {
+    return <span className="text-sm text-zinc-400">—</span>;
+  }
   return (
-    <div className="min-w-0 leading-tight">
-      <div className="truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">{targa}</div>
-      <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{matricola}</div>
-      {nScuderia && nScuderia !== "—" ? (
-        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">N. {nScuderia}</div>
-      ) : null}
+    <div className="min-w-0 leading-snug">
+      {lines.map((text, index) => (
+        <div
+          key={`${text}-${index}`}
+          className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100"
+        >
+          {text}
+        </div>
+      ))}
     </div>
   );
 }
@@ -277,3 +296,26 @@ export function useLavorazioniListTableColStyles(
 /** Wrap tabella desktop Lavorazioni (scroll + card). */
 /** @deprecated Usare `gestionaleListTableMasterWrapClass`. */
 export const lavorazioniListTableWrapClass = gestionaleListTableMasterWrapClass;
+
+/** Ore totali scheda lavorazioni + permanenza in giorni (colonna archivio). */
+export function LavorazioneOrePermanenzaCell({
+  row,
+  schedeStore,
+  align = "center",
+}: {
+  row: LavorazioneListRow;
+  schedeStore: LavorazioneSchedeStore;
+  align?: "center" | "start";
+}) {
+  const ore = lavorazioneOreTotaliSchedaLabel(row, schedeStore);
+  const permanenza = lavorazionePermanenzaGiorniLabel(row);
+  const alignClass = align === "start" ? "items-start text-left" : "items-center text-center";
+  return (
+    <div className={`flex flex-col gap-0.5 ${alignClass}`}>
+      <span className="text-xs font-medium tabular-nums text-zinc-800 dark:text-zinc-100">{ore}</span>
+      {permanenza !== "—" ? (
+        <span className="text-[11px] font-normal leading-tight text-zinc-500 dark:text-zinc-400">{permanenza}</span>
+      ) : null}
+    </div>
+  );
+}

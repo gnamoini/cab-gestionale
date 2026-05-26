@@ -1,10 +1,14 @@
 /** Anagrafiche magazzino (liste guidate) persistite in locale — condivise tra Magazzino e Impostazioni sistema. */
 
+import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
+
 /** @deprecated Persistenza spostata su `public.app_settings` (modulo `magazzino`, chiave `master`). */
 export const MAGAZZINO_MASTER_PREFS_KEY = "gestionale-magazzino-master-prefs-v1";
 
 export type MagazzinoMasterPrefs = {
   marche: string[];
+  /** Sconto % fornitore su listino OE per marca (chiave normalizzata lowercase). */
+  scontoFornitoreByMarca?: Record<string, number>;
   categorie: string[];
   mezziCompatibili: string[];
   fornitori: string[];
@@ -20,6 +24,7 @@ export function loadMagazzinoMasterPrefs(): MagazzinoMasterPrefs | null {
     const o = p as Record<string, unknown>;
     return {
       marche: Array.isArray(o.marche) ? (o.marche as string[]).filter((x) => typeof x === "string") : [],
+      scontoFornitoreByMarca: parseScontoFornitoreByMarca(o.scontoFornitoreByMarca),
       categorie: Array.isArray(o.categorie) ? (o.categorie as string[]).filter((x) => typeof x === "string") : [],
       mezziCompatibili: Array.isArray(o.mezziCompatibili)
         ? (o.mezziCompatibili as string[]).filter((x) => typeof x === "string")

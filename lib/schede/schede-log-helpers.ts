@@ -27,7 +27,7 @@ const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
   km: "KM",
   descrizioneAnomalia: "Descrizione anomalia",
   livelloCarburante: "Livello carburante",
-  addettoAccettazione: "Addetto accettazione",
+  addettoAccettazione: "Utente accettazione",
   richiedente: "Richiedente",
   noteIntervento: "Note",
 };

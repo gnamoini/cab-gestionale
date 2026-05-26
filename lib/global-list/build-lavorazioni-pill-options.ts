@@ -38,7 +38,7 @@ export function buildAddettoTablePillOptions(
   addettoColors: Record<string, string>,
 ): FixedListPillOption[] {
   const inList = addetti.includes(label);
-  const items: FixedListPillOption[] = [{ value: "", label: "—" }];
+  const items: FixedListPillOption[] = [];
   if (!inList && label !== "—") {
     items.push({
       value: label,

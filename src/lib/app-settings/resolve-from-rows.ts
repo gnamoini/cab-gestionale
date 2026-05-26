@@ -2,12 +2,14 @@
 
 import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
 import { DEFAULT_ADDETTI_LAVORAZIONI } from "@/lib/lavorazioni/constants";
+import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { DEFAULT_STATI_LAVORAZIONI_WORKFLOW, normalizeStatiList } from "@/lib/lavorazioni/stati-dynamic";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { parseScontoRicambiByCliente } from "@/lib/mezzi/cliente-commerciale";
 import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
+import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
@@ -45,7 +47,7 @@ function parsePrioritaDb(raw: unknown): PrioritaLavorazione[] {
   if (!Array.isArray(raw)) return [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
   const allowed = new Set(DEFAULT_PRIORITA_LAVORAZIONI_DB);
   const parsed = raw.filter((x): x is PrioritaLavorazione => typeof x === "string" && allowed.has(x as PrioritaLavorazione));
-  return parsed.length ? [...new Set(parsed)] : [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
+  return parsed.length ? orderPrioritaList([...new Set(parsed)]) : [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
 }
 
 function parseLavorazioniPayload(raw: unknown): CabAppSettingsResolved["lavorazioni"] {
@@ -110,6 +112,7 @@ function parseMagazzinoMasterPayload(raw: unknown): MagazzinoMasterPrefs {
   const o = raw as Record<string, unknown>;
   return {
     marche: Array.isArray(o.marche) ? o.marche.filter((x): x is string => typeof x === "string") : [],
+    scontoFornitoreByMarca: parseScontoFornitoreByMarca(o.scontoFornitoreByMarca),
     categorie: Array.isArray(o.categorie) ? o.categorie.filter((x): x is string => typeof x === "string") : [],
     mezziCompatibili: Array.isArray(o.mezziCompatibili)
       ? o.mezziCompatibili.filter((x): x is string => typeof x === "string")

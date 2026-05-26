@@ -17,7 +17,10 @@ export function buildIngressoPdfSections(c: SchedaIngressoFields): {
 } {
   const field = pdfFieldFromValue;
   return {
-    data: [field("Data ingresso", c.dataIngresso), field("Addetto accettazione", c.addettoAccettazione)].filter(
+    data: [
+      field("Data ingresso", c.dataIngresso),
+      field("Utente accettazione", c.addettoAccettazione),
+    ].filter(
       (f): f is PdfField => f !== null,
     ),
     cliente: buildClienteAnagraficaPdfFields(c),

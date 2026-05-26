@@ -41,6 +41,7 @@ import {
   hasSchedaIngressoIdentLookup,
   mergeSchedaIngressoFields,
 } from "@/lib/schede/scheda-ingresso-reuse";
+import { SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL } from "@/lib/schede/scheda-ingresso-ui-labels";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
 import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
@@ -1900,14 +1901,14 @@ function IngressoPanel({
           />
         </label>
         <label className="block text-xs">
-          <span className="text-zinc-500">Addetto accettazione</span>
+          <span className="text-zinc-500">{SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL}</span>
           <GlobalSettingsListSelect
             listKey="lavorazioni:addetti"
             className="mt-1"
             value={fields.addettoAccettazione}
             onChange={(v) => setFields({ ...fields, addettoAccettazione: v })}
             disabled={ro}
-            aria-label="Addetto accettazione"
+            aria-label={SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL}
           />
         </label>
       </div>

@@ -23,6 +23,13 @@ import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
+import {
+  getScontoFornitoreMarca,
+  registerMarcaInMagazzinoMaster,
+  removeMarcaFromMagazzinoMaster,
+  renameMarcaInMagazzinoMaster,
+  setScontoFornitoreMarca,
+} from "@/lib/magazzino/marca-fornitore-sconto";
 import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import {
   clampScontoRicambiPercent,
@@ -120,6 +127,7 @@ function snapshotFromResolved(r: CabAppSettingsResolved): SistemaSettingsSnapsho
     prioritaDb: r.lavorazioni.prioritaDb?.length ? [...r.lavorazioni.prioritaDb] : [...DEFAULT_PRIORITA_LAVORAZIONI_DB],
     mag: {
       marche: [...r.magazzinoMaster.marche],
+      scontoFornitoreByMarca: { ...(r.magazzinoMaster.scontoFornitoreByMarca ?? {}) },
       categorie: [...r.magazzinoMaster.categorie],
       mezziCompatibili: [...r.magazzinoMaster.mezziCompatibili],
       fornitori: [...(r.magazzinoMaster.fornitori ?? [])],
@@ -466,6 +474,126 @@ function ClientiCommercialiList({
         onCancel={() => setPendingDelete(null)}
         onConfirm={() => {
           if (pendingDelete) onRemove(pendingDelete);
+          setPendingDelete(null);
+        }}
+      />
+    </div>
+  );
+}
+
+function MagazzinoMarcheList({
+  mag,
+  setMag,
+  nuovo,
+  setNuovo,
+  onRename,
+}: {
+  mag: MagazzinoMasterPrefs;
+  setMag: React.Dispatch<React.SetStateAction<MagazzinoMasterPrefs>>;
+  nuovo: string;
+  setNuovo: (v: string) => void;
+  onRename: (from: string, to: string) => void;
+}) {
+  const [q, setQ] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const { gate, similarDialog } = useSimilarGate();
+  const filtered = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    const base = t ? mag.marche.filter((v) => v.toLowerCase().includes(t)) : [...mag.marche];
+    return sortStringsItCaseInsensitive(base);
+  }, [mag.marche, q]);
+
+  const tryAdd = (raw: string) => {
+    gate(mag.marche, raw, undefined, () => {
+      const trimmed = raw.trim();
+      if (!trimmed) return;
+      setMag((prev) => registerMarcaInMagazzinoMaster(prev, trimmed));
+      setNuovo("");
+    });
+  };
+
+  const tryRename = (from: string, next: string) => {
+    const t = next.trim();
+    if (!t || t === from) return;
+    gate(mag.marche, t, from, () => {
+      setMag((prev) => renameMarcaInMagazzinoMaster(prev, from, t));
+      onRename(from, t);
+    });
+  };
+
+  return (
+    <div className={SETTINGS_CARD}>
+      <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">Marche ricambi</h3>
+      <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+        Sconto % sul prezzo di listino fornitore originale, applicato automaticamente ai ricambi con la stessa marca.
+      </p>
+      <GestionaleSearchField
+        wrapperClassName="mt-2 w-full"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Filtra elenco…"
+        autoComplete="off"
+        aria-label="Filtra marche ricambi"
+      />
+      <div className="mt-2 flex gap-1">
+        <input
+          value={nuovo}
+          onChange={(e) => setNuovo(e.target.value)}
+          placeholder="Nuova marca"
+          className={INPUT_ROW}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              tryAdd(nuovo);
+            }
+          }}
+        />
+        <button
+          type="button"
+          className={`${erpBtnSoftOrange} shrink-0 px-2.5 text-xs`}
+          onClick={() => tryAdd(nuovo)}
+        >
+          Aggiungi
+        </button>
+      </div>
+      <ul className={LIST_UL}>
+        {filtered.map((nome) => {
+          const sconto = getScontoFornitoreMarca(mag, nome);
+          return (
+            <SettingsEditableStringRow
+              key={nome}
+              value={nome}
+              onRenameBlur={tryRename}
+              onRemove={() => setPendingDelete(nome)}
+              trailing={
+                <label className="flex shrink-0 items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                  Sconto listino %
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={sconto}
+                    onChange={(e) => {
+                      const n = clampScontoRicambiPercent(Number(e.target.value));
+                      setMag((prev) => setScontoFornitoreMarca(prev, nome, n));
+                    }}
+                    className="w-16 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-950"
+                    aria-label={`Sconto listino per ${nome}`}
+                  />
+                </label>
+              }
+            />
+          );
+        })}
+      </ul>
+      {similarDialog}
+      <SettingsEliminaConfirmDialog
+        open={pendingDelete != null}
+        itemLabel={pendingDelete ?? undefined}
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => {
+          if (pendingDelete) setMag((prev) => removeMarcaFromMagazzinoMaster(prev, pendingDelete));
           setPendingDelete(null);
         }}
       />
@@ -1189,23 +1317,12 @@ function SistemaImpostazioniWorkspace({
 
             {section === "mag-marche" ? (
               <div className="w-full">
-                <UnifiedStringList
-                  title="Marche ricambi"
-                  values={mag.marche}
+                <MagazzinoMarcheList
+                  mag={mag}
+                  setMag={setMag}
                   nuovo={nuovaMarca}
                   setNuovo={setNuovaMarca}
-                  placeholder="Nuova marca"
-                  onAdd={(t) => {
-                    if (magAdd("marche", t, () => setNuovaMarca(""))) {
-                    }
-                  }}
-                  onRemove={(m) => {
-                    patchMag((prev) => ({ ...prev, marche: prev.marche.filter((x) => x !== m) }));
-                  }}
-                  onRename={(from, to) => {
-                    patchMag((prev) => ({ ...prev, marche: renameInStringList(prev.marche, from, to) }));
-                    queueRename({ kind: "mag_marca", from, to });
-                  }}
+                  onRename={(from, to) => queueRename({ kind: "mag_marca", from, to })}
                 />
               </div>
             ) : null}

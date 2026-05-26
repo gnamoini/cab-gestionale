@@ -47,10 +47,9 @@ export function SupportoView() {
   const addNote = useCallback(
     async (body: string) => {
       if (!denyUnless(canWrite, setActionError)) return;
-      if (!user?.id) return;
       setActionError(null);
       try {
-        await createM.mutateAsync({ content: body, created_by: user.id });
+        await createM.mutateAsync({ content: body });
         push("Nota salvata", "success", 3200);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Impossibile salvare la nota.";
@@ -58,7 +57,7 @@ export function SupportoView() {
         push(msg, "error", 4200);
       }
     },
-    [canWrite, createM, push, user?.id],
+    [canWrite, createM, push],
   );
 
   const updateNote = useCallback(

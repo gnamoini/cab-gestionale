@@ -3,12 +3,40 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import {
   flattenCompatDaAttrezzature,
   migrateMezziListePrefs,
+  parseCompatMarcaModello,
 } from "@/lib/mezzi/attrezzature-prefs";
 import { flattenCompatFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { isValueInListOptions } from "@/lib/ui/list-select-utils";
 
 const MAGAZZINO_DEFAULT_AUTHOR = "Operatore";
+
+/** Segnaposto legacy in DB/form — non è una compatibilità reale. */
+export const RICAMBIO_COMPAT_LEGACY_PLACEHOLDER = "—";
+
+export function normalizeCompatList(list: readonly string[]): string[] {
+  return list.map((x) => x.trim()).filter((x) => x && x !== RICAMBIO_COMPAT_LEGACY_PLACEHOLDER);
+}
+
+/** Nessuna compatibilità esplicita = universale (tutte le macchine). */
+export function isRicambioCompatUniversal(list: readonly string[]): boolean {
+  return normalizeCompatList(list).length === 0;
+}
+
+/** Testo compatibilità in UI: «Marca Modello» senza trattino (chiave interna resta «Marca — Modello»). */
+export function compatLineDisplayText(line: string): string {
+  const t = line.trim();
+  if (!t) return t;
+  const { marca, modello } = parseCompatMarcaModello(t);
+  if (marca && modello) return `${marca} ${modello}`;
+  return marca || modello || t;
+}
+
+export function compatDisplayLabel(list: readonly string[]): string {
+  const compat = normalizeCompatList(list);
+  if (compat.length === 0) return "Universale (tutte le macchine)";
+  return compat.map(compatLineDisplayText).join(", ");
+}
 
 /** Limita markup % nell'intervallo gestionale; non tronca i decimali. */
 export function clampMarkupPercentuale(n: number): number {
@@ -65,7 +93,7 @@ export function parseCompatInput(s: string): string[] {
   return s
     .split(/[,;\n]/)
     .map((x) => x.trim())
-    .filter(Boolean);
+    .filter((x) => x && x !== RICAMBIO_COMPAT_LEGACY_PLACEHOLDER);
 }
 
 export function syncPrezzoVenditaInForm(f: RicambioFormState): RicambioFormState {
@@ -102,8 +130,7 @@ export function ricambioFromForm(f: RicambioFormState, id?: string, autoreUltima
     !f.marca.trim() ||
     !f.codiceFornitoreOriginale.trim() ||
     !f.descrizione.trim() ||
-    !f.categoria.trim() ||
-    parseCompatInput(f.compatibilitaMezzi).length === 0
+    !f.categoria.trim()
   ) {
     return null;
   }
@@ -117,7 +144,6 @@ export function ricambioFormImportantWarnings(f: RicambioFormState): string[] {
   if (!f.marca.trim()) w.push("marca");
   if (!f.categoria.trim()) w.push("categoria");
   if (!f.descrizione.trim()) w.push("descrizione");
-  if (parseCompatInput(f.compatibilitaMezzi).length === 0) w.push("compatibilità mezzi");
   const listino = Math.max(0, parseFloat(f.prezzoFornitoreOriginale) || 0);
   if (!(listino > 0)) w.push("prezzo listino");
   return w;
@@ -141,7 +167,7 @@ export function ricambioFromFormLenient(
     descrizione: f.descrizione.trim() || "Senza descrizione",
     note: f.note.trim(),
     categoria: f.categoria.trim() || "—",
-    compatibilitaMezzi: compat.length ? compat : ["—"],
+    compatibilitaMezzi: compat,
     scorta: Math.max(0, parseFloat(f.scorta) || 0),
     scortaMinima: Math.max(0, parseFloat(f.scortaMinima) || 0),
     dataUltimaModifica: ts,
@@ -170,7 +196,7 @@ export function toFormDraft(r: RicambioMagazzino): RicambioFormState {
     descrizione: r.descrizione,
     note: r.note,
     categoria: r.categoria,
-    compatibilitaMezzi: r.compatibilitaMezzi.join(", "),
+    compatibilitaMezzi: normalizeCompatList(r.compatibilitaMezzi).join(", "),
     scorta: String(r.scorta),
     scortaMinima: String(r.scortaMinima),
     prezzoFornitoreOriginale: String(r.prezzoFornitoreOriginale),
@@ -210,11 +236,12 @@ export function validateRicambioListFields(
   if (!f.categoria.trim()) return "Seleziona una categoria.";
   if (!isValueInListOptions(f.categoria, opts.categorie)) return "Seleziona una categoria esistente.";
   const compat = parseCompatInput(f.compatibilitaMezzi);
-  if (compat.length === 0) return "Seleziona almeno una compatibilità mezzo.";
-  const compatAllowed = ricambioCompatLabelsFromSettings(opts.mezziListe);
-  const invalid = compat.filter((x) => !isValueInListOptions(x, compatAllowed));
-  if (invalid.length > 0) {
-    return `Compatibilità non valida: seleziona solo valori dall'elenco (${invalid[0]}).`;
+  if (compat.length > 0) {
+    const compatAllowed = ricambioCompatLabelsFromSettings(opts.mezziListe);
+    const invalid = compat.filter((x) => !isValueInListOptions(x, compatAllowed));
+    if (invalid.length > 0) {
+      return `Compatibilità non valida: seleziona solo valori dall'elenco (${invalid[0]}).`;
+    }
   }
   return null;
 }

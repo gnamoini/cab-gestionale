@@ -2,6 +2,80 @@
 
 .lavorazioni-scroll-scope {
   scrollbar-gutter: auto;
+  /* Inset laterale tabella — speculare rispetto a `[&_tr>td:first-child]:pl-4 sm:pl-5`. */
+  --gestionale-table-edge-inset: 1rem;
+}
+
+@media (min-width: 640px) {
+  .lavorazioni-scroll-scope {
+    --gestionale-table-edge-inset: 1.25rem;
+  }
+}
+
+/* Sfondo riga: tutte le <td> (il bg su <tr> non si propaga in modo affidabile). */
+.lavorazioni-scroll-scope tbody tr > td {
+  background-color: rgb(255 255 255);
+  transition: background-color 150ms ease-out;
+}
+
+.dark .lavorazioni-scroll-scope tbody tr > td {
+  background-color: rgb(24 24 27 / 0.4);
+}
+
+.lavorazioni-scroll-scope tbody tr:hover > td {
+  background-color: var(--cab-hover) !important;
+}
+
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
+  background-color: rgb(254 242 242 / 0.5);
+}
+
+.dark .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
+  background-color: rgb(69 10 10 / 0.2);
+}
+
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td {
+  background-color: rgb(255 247 237 / 0.9);
+}
+
+.dark .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td {
+  background-color: rgb(244 244 245 / 0.12);
+}
+
+.lavorazioni-scroll-scope tbody tr[data-selected="true"]:not(:hover) > td {
+  background-color: color-mix(in srgb, var(--cab-primary) 10%, var(--cab-card));
+}
+
+.lavorazioni-scroll-scope .gestionale-list-table-actions-cell {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  padding-left: calc(0.5rem + 3px);
+  padding-right: var(--gestionale-table-edge-inset) !important;
+  text-align: right;
+  white-space: nowrap;
+  vertical-align: middle;
+  box-shadow: -12px 0 16px -12px color-mix(in srgb, var(--cab-card) 94%, transparent);
+}
+
+.dark .lavorazioni-scroll-scope .gestionale-list-table-actions-cell {
+  box-shadow: -12px 0 16px -12px color-mix(in srgb, rgb(9 9 11) 88%, transparent);
+}
+
+.lavorazioni-scroll-scope .gestionale-list-table-actions-head {
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  padding-left: calc(0.625rem + 3px);
+  padding-right: var(--gestionale-table-edge-inset) !important;
+  text-align: right;
+  white-space: nowrap;
+  vertical-align: middle;
+  background-color: inherit;
 }
 
 .lavorazioni-scroll-scope,
@@ -60,4 +134,46 @@
 
 .dark .lavorazioni-scroll-scope *::-webkit-scrollbar-thumb:active {
   background: rgb(212 212 216 / 0.35);
+}
+
+/* Tabella densa Lavorazioni — scroll orizzontale, Azioni sticky a destra, colonne progressive */
+
+.gestionale-lavorazioni-dense-table {
+  min-width: 68rem;
+}
+
+@media (max-width: 1400px) {
+  .gestionale-lavorazioni-dense-table {
+    min-width: 62rem;
+  }
+
+  .gestionale-lavorazioni-dense-table col:nth-child(6),
+  .gestionale-lavorazioni-dense-table thead th:nth-child(6),
+  .gestionale-lavorazioni-dense-table tbody td:nth-child(6) {
+    display: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .gestionale-lavorazioni-dense-table {
+    min-width: 54rem;
+  }
+
+  .gestionale-lavorazioni-dense-table col:nth-child(5),
+  .gestionale-lavorazioni-dense-table thead th:nth-child(5),
+  .gestionale-lavorazioni-dense-table tbody td:nth-child(5) {
+    display: none;
+  }
+}
+
+@media (max-width: 1050px) {
+  .gestionale-lavorazioni-dense-table {
+    min-width: 48rem;
+  }
+
+  .gestionale-lavorazioni-dense-table col:nth-child(3),
+  .gestionale-lavorazioni-dense-table thead th:nth-child(3),
+  .gestionale-lavorazioni-dense-table tbody td:nth-child(3) {
+    display: none;
+  }
 }

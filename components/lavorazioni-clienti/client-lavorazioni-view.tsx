@@ -1,5 +1,6 @@
 "use client";
 
+import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
@@ -71,7 +72,6 @@ import {
   lavTableColAzioniClass,
   lavTableColCantiereClass,
   lavTableColClienteClass,
-  lavTableColCodiceClass,
   lavTableColIdentificazioneClass,
   lavTableColIngressoClass,
   lavTableColNoteClass,
@@ -88,6 +88,7 @@ import {
   type LavorazioniListTableColStyles,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
+import { gestionaleLavorazioniDenseTableClass } from "@/lib/ui/gestionale-list-table";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
@@ -278,7 +279,6 @@ function DesktopTable({
     variant === "active" ? (
       <>
         <GlobalTableSortTh label="Ingresso" columnKey="ingresso" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
-        <GlobalTableSortTh label="Codice" columnKey="codice" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Attrezzatura" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
@@ -292,7 +292,6 @@ function DesktopTable({
     ) : (
       <>
         <GlobalTableSortTh label="Ingresso" columnKey="ingresso" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
-        <GlobalTableSortTh label="Codice" columnKey="codice" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Attrezzatura" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
@@ -307,19 +306,17 @@ function DesktopTable({
   return (
     <GestionaleListTable
       visibilityClass="hidden md:block"
+      className={gestionaleLavorazioniDenseTableClass}
       colgroup={colgroup}
       headRow={headRow}
       empty={bundles.length === 0}
       emptyMessage={emptyMessage}
-      colSpan={variant === "active" ? 11 : 10}
+      colSpan={variant === "active" ? 10 : 9}
     >
       {bundles.map(({ row, fields }) => (
         <tr key={row.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
           <td className={lavTableTd}>
             <LavorazioneIngressoDateCellFromIso iso={fields.dataIngressoAt} />
-          </td>
-          <td className={`${lavTableTdCenter} font-semibold tabular-nums`}>
-            {lavorazioneDisplayCodice(row)}
           </td>
           <td className={lavTableTd}>
             <LavorazioniClienteUtilStack cliente={fields.cliente} utilizzatore={fields.utilizzatore} />

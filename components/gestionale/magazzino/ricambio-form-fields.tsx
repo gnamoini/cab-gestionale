@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
-import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { useMemo, useState } from "react";
+import { GlobalMultiSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import type { RicambioFormState } from "@/lib/magazzino/form";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -9,7 +9,11 @@ import { isValueInListOptions } from "@/lib/ui/list-select-utils";
 import {
   migrateMezziListePrefs,
 } from "@/lib/mezzi/attrezzature-prefs";
-import { RicambioCompatHierarchyPicker } from "@/components/gestionale/magazzino/ricambio-compat-hierarchy-picker";
+import {
+  compatLabelsPerMarcheHierarchy,
+  flattenCompatFromHierarchyTree,
+  marcheFromHierarchyTree,
+} from "@/lib/mezzi/hierarchy-list-prefs";
 import { ricambioCompatLabelsFromSettings } from "@/lib/magazzino/form";
 import {
   clampMarkupPercentuale,
@@ -19,7 +23,8 @@ import {
 } from "@/lib/magazzino/form";
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import { GestionaleFormFocusScope } from "@/components/gestionale/gestionale-form-focus-scope";
-import { dsBtnPrimary } from "@/lib/ui/design-system";
+import { dsBtnPrimary, dsInput, dsStepperBtn } from "@/lib/ui/design-system";
+import { getScontoFornitoreMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 
 const inputBase =
@@ -29,15 +34,11 @@ const inputBase =
 const noSpinner =
   "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
+const stepperInputClass = `${dsInput} ${noSpinner} h-9 min-h-9 py-0`;
+
 function formatEurIt(n: number): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
 }
-
-const stepperBtnMinus =
-  "flex h-9 w-9 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-600 shadow-sm outline-none transition-[background-color,border-color,box-shadow,color] duration-150 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-900 hover:shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:border-zinc-500 dark:hover:bg-zinc-700 dark:hover:text-zinc-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-orange-400/55 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 active:bg-zinc-200/90 dark:active:bg-zinc-600 [-webkit-tap-highlight-color:transparent]";
-
-const stepperBtnPlus =
-  "flex h-9 w-9 shrink-0 cursor-pointer select-none items-center justify-center rounded-md border border-zinc-200 bg-zinc-50 text-sm font-semibold text-zinc-800 shadow-sm outline-none transition-[background-color,border-color,box-shadow] duration-150 hover:border-orange-200/90 hover:bg-orange-50/95 hover:shadow-sm dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-100 focus-visible:z-10 focus-visible:ring-2 focus-visible:ring-orange-400/55 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-zinc-900 active:bg-orange-100/90 [-webkit-tap-highlight-color:transparent]";
 
 function StockStepper({
   value,
@@ -61,7 +62,7 @@ function StockStepper({
     <div role="group" aria-label={groupLabel} className="flex items-stretch gap-1">
       <button
         type="button"
-        className={stepperBtnMinus}
+        className={dsStepperBtn}
         aria-label={ariaDecrease}
         onPointerDown={(e) => {
           e.preventDefault();
@@ -84,7 +85,7 @@ function StockStepper({
       />
       <button
         type="button"
-        className={stepperBtnPlus}
+        className={dsStepperBtn}
         aria-label={ariaIncrease}
         onPointerDown={(e) => {
           e.preventDefault();
@@ -123,7 +124,6 @@ export function RicambioFormFields({
   setForm,
   codiceOriginaleAvvisoDuplicato,
   relaxHtmlValidation = false,
-  autoFocusToken = 0,
   listFieldForceInvalid = false,
 }: {
   form: RicambioFormState;
@@ -132,8 +132,6 @@ export function RicambioFormFields({
   codiceOriginaleAvvisoDuplicato?: { existing: RicambioMagazzino; onVaiAlRicambio: () => void } | null;
   /** Se true: nessun `required` HTML (submit gestito lato applicazione). */
   relaxHtmlValidation?: boolean;
-  /** Incrementato a ogni apertura modal «Nuovo ricambio» per focus affidabile sul campo Marca. */
-  autoFocusToken?: number;
   /** Evidenzia errori elenco dopo submit fallito. */
   listFieldForceInvalid?: boolean;
 }) {
@@ -141,19 +139,13 @@ export function RicambioFormFields({
   const prefsTree = useMemo(() => migrateMezziListePrefs(globalOpts.mezziListe), [globalOpts.mezziListe]);
   const globalCompatLabels = useMemo(() => ricambioCompatLabelsFromSettings(globalOpts.mezziListe), [globalOpts.mezziListe]);
   const mezziSel = useMemo(() => new Set(parseCompatInput(form.compatibilitaMezzi)), [form.compatibilitaMezzi]);
+  const [marcheFiltroAtt, setMarcheFiltroAtt] = useState<Set<string>>(() => new Set());
+  const [marcheFiltroTel, setMarcheFiltroTel] = useState<Set<string>>(() => new Set());
 
   const invalidCompat = useMemo(() => {
     const selected = parseCompatInput(form.compatibilitaMezzi);
     return selected.filter((x) => !isValueInListOptions(x, globalCompatLabels));
   }, [form.compatibilitaMezzi, globalCompatLabels]);
-
-  useEffect(() => {
-    if (!relaxHtmlValidation || autoFocusToken <= 0) return;
-    const id = window.requestAnimationFrame(() => {
-      document.getElementById("magazzino-ricambio-marca")?.focus();
-    });
-    return () => window.cancelAnimationFrame(id);
-  }, [autoFocusToken, relaxHtmlValidation]);
 
   function toggleMezzo(m: string) {
     setForm((f) => {
@@ -163,6 +155,19 @@ export function RicambioFormFields({
       const joined = Array.from(cur).sort((a, b) => a.localeCompare(b, "it")).join(", ");
       return { ...f, compatibilitaMezzi: joined };
     });
+  }
+
+  function removeCompatLine(line: string) {
+    setForm((f) => {
+      const cur = new Set(parseCompatInput(f.compatibilitaMezzi));
+      cur.delete(line);
+      const joined = Array.from(cur).sort((a, b) => a.localeCompare(b, "it")).join(", ");
+      return { ...f, compatibilitaMezzi: joined };
+    });
+  }
+
+  function addCompatLine(line: string) {
+    toggleMezzo(line);
   }
 
   function setCompatLines(lines: readonly string[], selected: boolean) {
@@ -205,6 +210,47 @@ export function RicambioFormFields({
 
   const fieldsOptional = relaxHtmlValidation;
 
+  const marcheAttrezzatura = useMemo(() => marcheFromHierarchyTree(prefsTree, "attrezzature"), [prefsTree]);
+  const marcheTelaio = useMemo(() => marcheFromHierarchyTree(prefsTree, "telai"), [prefsTree]);
+
+  const marcheFiltroAttList = useMemo(() => Array.from(marcheFiltroAtt).sort((a, b) => a.localeCompare(b, "it")), [marcheFiltroAtt]);
+  const marcheFiltroTelList = useMemo(() => Array.from(marcheFiltroTel).sort((a, b) => a.localeCompare(b, "it")), [marcheFiltroTel]);
+
+  const compatAttrezzatureLabels = useMemo(
+    () => new Set(flattenCompatFromHierarchyTree(prefsTree, "attrezzature")),
+    [prefsTree],
+  );
+  const compatTelaiLabels = useMemo(
+    () => new Set(flattenCompatFromHierarchyTree(prefsTree, "telai")),
+    [prefsTree],
+  );
+
+  const selectedAttrezzature = useMemo(
+    () =>
+      Array.from(mezziSel)
+        .filter((x) => compatAttrezzatureLabels.has(x))
+        .sort((a, b) => a.localeCompare(b, "it"))
+        .map((value) => ({ value })),
+    [mezziSel, compatAttrezzatureLabels],
+  );
+  const selectedTelai = useMemo(
+    () =>
+      Array.from(mezziSel)
+        .filter((x) => compatTelaiLabels.has(x))
+        .sort((a, b) => a.localeCompare(b, "it"))
+        .map((value) => ({ value })),
+    [mezziSel, compatTelaiLabels],
+  );
+
+  const attrezzatureOpts = useMemo(
+    () => compatLabelsPerMarcheHierarchy(prefsTree, "attrezzature", marcheFiltroAttList),
+    [prefsTree, marcheFiltroAttList],
+  );
+  const telaiOpts = useMemo(
+    () => compatLabelsPerMarcheHierarchy(prefsTree, "telai", marcheFiltroTelList),
+    [prefsTree, marcheFiltroTelList],
+  );
+
   return (
     <GestionaleFormFocusScope className="flex flex-col gap-3">
       <RicambioField label={fieldsOptional ? "Marca" : "Marca *"}>
@@ -212,7 +258,14 @@ export function RicambioFormFields({
           listKey="magazzino:marche"
           id="magazzino-ricambio-marca"
           value={form.marca}
-          onChange={(marca) => setForm((f) => ({ ...f, marca }))}
+          onChange={(marca) => {
+            const sconto = getScontoFornitoreMarca(globalOpts.magazzinoMaster, marca);
+            setForm((f) => ({
+              ...f,
+              marca,
+              scontoFornitoreOriginale: String(sconto),
+            }));
+          }}
           required={!fieldsOptional}
           placeholder="Cerca o seleziona marca…"
           aria-label="Marca ricambio"
@@ -297,43 +350,95 @@ export function RicambioFormFields({
           aria-label="Categoria ricambio"
         />
       </RicambioField>
-      <RicambioField label={fieldsOptional ? "Compatibilità mezzi" : "Compatibilità mezzi *"}>
+      <RicambioField label="Compatibilità mezzi">
         {globalOpts.isLoading ? (
           <p className="text-[11px] text-zinc-500">Caricamento elenchi attrezzature e telai…</p>
         ) : null}
-        <RicambioCompatHierarchyPicker
-          tree="attrezzature"
-          prefsTree={prefsTree}
-          marcheHeading="Marche attrezzatura"
-          modelliHeading="Modelli attrezzatura"
-          emptyMarcheHint="Configura marche in Impostazioni → Attrezzature."
-          emptyModelliHint="Configura marche e modelli in Impostazioni → Attrezzature."
-          selectedLines={mezziSel}
-          onToggleLine={toggleMezzo}
-          onSetLines={setCompatLines}
-          disabled={globalOpts.isLoading}
-          showDivider={false}
-        />
-        <RicambioCompatHierarchyPicker
-          tree="telai"
-          prefsTree={prefsTree}
-          marcheHeading="Marche telaio"
-          modelliHeading="Modelli telaio"
-          emptyMarcheHint="Configura marche in Impostazioni → Telai."
-          emptyModelliHint="Configura marche e modelli in Impostazioni → Telai."
-          selectedLines={mezziSel}
-          onToggleLine={toggleMezzo}
-          onSetLines={setCompatLines}
-          disabled={globalOpts.isLoading}
-        />
+        <div className="space-y-3">
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+              Marca attrezzatura
+            </p>
+            <GlobalMultiSelect
+              ariaLabel="Marca attrezzatura compatibilità"
+              placeholder="Cerca marca attrezzatura…"
+              disabled={globalOpts.isLoading}
+              options={marcheAttrezzatura}
+              selected={marcheFiltroAttList.map((m) => ({ value: m }))}
+              onAdd={(m) => setMarcheFiltroAtt((prev) => new Set(prev).add(m))}
+              onRemove={(m) =>
+                setMarcheFiltroAtt((prev) => {
+                  const next = new Set(prev);
+                  next.delete(m);
+                  return next;
+                })
+              }
+              emptyMessage="Nessuna marca"
+            />
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+              Modello attrezzatura
+            </p>
+            <GlobalMultiSelect
+              ariaLabel="Modello attrezzatura compatibilità"
+              placeholder="Cerca modello attrezzatura…"
+              disabled={globalOpts.isLoading}
+              options={attrezzatureOpts}
+              selected={selectedAttrezzature}
+              onAdd={addCompatLine}
+              onRemove={removeCompatLine}
+              emptyMessage="Nessun modello"
+            />
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+              Marca telaio
+            </p>
+            <GlobalMultiSelect
+              ariaLabel="Marca telaio compatibilità"
+              placeholder="Cerca marca telaio…"
+              disabled={globalOpts.isLoading}
+              options={marcheTelaio}
+              selected={marcheFiltroTelList.map((m) => ({ value: m }))}
+              onAdd={(m) => setMarcheFiltroTel((prev) => new Set(prev).add(m))}
+              onRemove={(m) =>
+                setMarcheFiltroTel((prev) => {
+                  const next = new Set(prev);
+                  next.delete(m);
+                  return next;
+                })
+              }
+              emptyMessage="Nessuna marca"
+            />
+          </div>
+
+          <div>
+            <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+              Modello telaio
+            </p>
+            <GlobalMultiSelect
+              ariaLabel="Modello telaio compatibilità"
+              placeholder="Cerca modello telaio…"
+              disabled={globalOpts.isLoading}
+              options={telaiOpts}
+              selected={selectedTelai}
+              onAdd={addCompatLine}
+              onRemove={removeCompatLine}
+              emptyMessage="Nessun modello"
+            />
+          </div>
+        </div>
         <p className="mt-1 text-[11px] text-zinc-500">
-          {mezziSel.size > 0 ? `${mezziSel.size} compatibilità selezionate` : "Nessuna selezione"}
+          {mezziSel.size > 0
+            ? `${mezziSel.size} compatibilità selezionate`
+            : "Nessuna selezione — compatibilità universale (tutte le macchine)"}
         </p>
-        {!fieldsOptional && ((listFieldForceInvalid && mezziSel.size === 0) || invalidCompat.length > 0) ? (
+        {invalidCompat.length > 0 ? (
           <p className="mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]">
-            {invalidCompat.length > 0
-              ? "Seleziona solo compatibilità dall'elenco configurato."
-              : "Seleziona almeno una compatibilità (attrezzatura o telaio)."}
+            Seleziona solo compatibilità dall&apos;elenco configurato.
           </p>
         ) : null}
       </RicambioField>
@@ -348,7 +453,7 @@ export function RicambioFormFields({
               onDelta={(d) => bumpScorta("scorta", d)}
               ariaDecrease="Diminuisci scorta"
               ariaIncrease="Aumenta scorta"
-              inputClass={`${inputBase} ${noSpinner}`}
+              inputClass={stepperInputClass}
             />
           </div>
         </div>
@@ -362,7 +467,7 @@ export function RicambioFormFields({
               onDelta={(d) => bumpScorta("scortaMinima", d)}
               ariaDecrease="Diminuisci scorta minima"
               ariaIncrease="Aumenta scorta minima"
-              inputClass={`${inputBase} ${noSpinner}`}
+              inputClass={stepperInputClass}
             />
           </div>
         </div>

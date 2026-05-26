@@ -20,6 +20,8 @@ export type GestionaleSettingsSelectProps = {
   id?: string;
   className?: string;
   children?: ReactNode;
+  /** Solo scelta da elenco configurato (niente digitazione). */
+  selectOnly?: boolean;
 };
 
 /**
@@ -36,6 +38,7 @@ export function GestionaleSettingsSelect({
   ariaLabel,
   id,
   className = "",
+  selectOnly = false,
 }: GestionaleSettingsSelectProps) {
   if (!listKey) {
     return (
@@ -56,7 +59,8 @@ export function GestionaleSettingsSelect({
         required={required}
         placeholder={placeholder}
         aria-label={ariaLabel}
-        allowAdd={listKey !== "lavorazioni:stati" && listKey !== "lavorazioni:priorita"}
+        allowAdd={!selectOnly && listKey !== "lavorazioni:stati" && listKey !== "lavorazioni:priorita"}
+        selectOnly={selectOnly}
       />
     </div>
   );

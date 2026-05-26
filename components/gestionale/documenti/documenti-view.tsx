@@ -799,10 +799,50 @@ export function DocumentiView() {
                 title={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}
                 className={`${erpBtnNuovaLavorazione} h-11 shrink-0 disabled:opacity-60`}
               >
-                <svg className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-                Carica documento
+                {docBusy ? (
+                  <>
+                    <svg
+                      className="h-5 w-5 shrink-0 animate-spin"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      aria-hidden
+                    >
+                      <circle
+                        cx="12"
+                        cy="12"
+                        r="9"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        opacity="0.25"
+                      />
+                      <path
+                        d="M21 12a9 9 0 0 0-9-9"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    Caricamento…
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      className="h-5 w-5 shrink-0"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      aria-hidden
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                      />
+                    </svg>
+                    Carica documento
+                  </>
+                )}
               </button>
               <GestionaleSearchField
                 value={searchInput}

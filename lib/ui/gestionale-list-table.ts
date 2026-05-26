@@ -34,9 +34,8 @@ import {
   dsTableActionBtnSecondary,
   dsTableActionBtnWithBadge,
   dsTableActionsGroup,
+  dsTableActionsGroupEnd,
   dsTableActionsRowHeight,
-  dsTableTdActions,
-  dsTableThActions,
 } from "@/lib/ui/design-system";
 
 // —— Shell / contenitore (padding laterale via tbody inset, come Lavorazioni) ——
@@ -48,10 +47,13 @@ export const gestionaleListTableWrap = globalTableWrap;
 export const gestionaleListTableWrapClass = `${globalTableWrap} ${dsScrollbar}`;
 
 /** Classe aggiuntiva sul wrap quando la lista è in pagina Lavorazioni / specchio clienti. */
-export const gestionaleListTableScrollScopeClass = "lavorazioni-scroll-scope max-w-full overflow-x-hidden";
+export const gestionaleListTableScrollScopeClass = "lavorazioni-scroll-scope max-w-full min-w-0";
 
 /** Preset completo wrap desktop (Lavorazioni master). */
 export const gestionaleListTableMasterWrapClass = `${gestionaleListTableScrollScopeClass} ${gestionaleListTableWrapClass}`;
+
+/** Tabella densa Lavorazioni — scroll orizzontale sotto ~lg, colonne nascoste via CSS. */
+export const gestionaleLavorazioniDenseTableClass = "gestionale-lavorazioni-dense-table";
 
 /** Classe `<table>` — `table-fixed` + tipografia 13px. */
 export const gestionaleListTableClass = globalTableFixed;
@@ -90,15 +92,19 @@ export const gestionaleListTableTdCenter =
 export const gestionaleListTableTdPill = "px-1.5 py-1 align-middle text-center";
 export const gestionaleListTableTdPillWrap = "mx-auto max-w-full";
 
-// —— Colonna Azioni (titolo centrato, +3px inset come Lavorazioni) ——
+// —— Colonna Azioni (titolo a destra, sticky — stili in `lavorazioni-scroll.css`) ——
 
-export const gestionaleListTableThAzioni =
-  `${dsTableThActions} !pl-[calc(0.625rem+3px)]`;
+/** Solo layout sticky — sfondo allineato alla riga in `lavorazioni-scroll.css` (evita conflitti Tailwind su `<td>`). */
+export const gestionaleListTableActionsCellClass = "gestionale-list-table-actions-cell";
 
-export const gestionaleListTableTdAzioni =
-  `${dsTableTdActions} !pl-[calc(0.5rem+3px)]`;
+export const gestionaleListTableActionsHeadClass = "gestionale-list-table-actions-head";
+
+export const gestionaleListTableThAzioni = gestionaleListTableActionsHeadClass;
+
+export const gestionaleListTableTdAzioni = gestionaleListTableActionsCellClass;
 
 export const gestionaleListTableActionsGroup = dsTableActionsGroup;
+export const gestionaleListTableActionsGroupEnd = dsTableActionsGroupEnd;
 export const gestionaleListTableActionsRowHeight = dsTableActionsRowHeight;
 
 export {
@@ -123,12 +129,12 @@ export const gestionaleListTableMobileStackClass = "mt-4 space-y-3 md:hidden";
 
 export const gestionaleListColIngressoClass = "w-[7%]";
 export const gestionaleListColCodiceClass = "w-[6%]";
-export const gestionaleListColClienteClass = "w-[9%]";
-export const gestionaleListColCantiereClass = "w-[9%]";
-export const gestionaleListColAttrezzaturaClass = "w-[11.5%]";
-export const gestionaleListColIdentificazioneClass = "w-[9.5%]";
+export const gestionaleListColClienteClass = "w-[10%]";
+export const gestionaleListColCantiereClass = "w-[6.5%]";
+export const gestionaleListColAttrezzaturaClass = "w-[13%]";
+export const gestionaleListColIdentificazioneClass = "w-[10%]";
 export const gestionaleListColNoteClass = "w-[8%]";
-export const gestionaleListColAzioniClass = "w-[12%]";
+export const gestionaleListColAzioniClass = "w-[11.5rem] min-w-[11.5rem]";
 
 /** Utility: combina classi riga con stato highlight (navigazione da URL). */
 export function gestionaleListTableRowClassNames(extra?: string): string {

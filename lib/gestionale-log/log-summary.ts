@@ -294,7 +294,7 @@ function humanChangeSentence(
 }
 
 const SCHEDA_CAMPO_LABELS: Record<string, string> = {
-  addettoAccettazione: "Addetto accettazione",
+  addettoAccettazione: "Utente accettazione",
   addetto: "Addetto",
   cliente: "Cliente",
   cantiere: "Cantiere",

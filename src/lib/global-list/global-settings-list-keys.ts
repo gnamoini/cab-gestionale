@@ -7,6 +7,7 @@ import {
   type HierarchyTreeKey,
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
+import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
@@ -92,7 +93,7 @@ export function resolveGlobalListItems(
       pillStyle: pillStyleFromHex(s.color),
     }));
   }
-  return resolved.lavorazioni.prioritaDb.map((p) => ({
+  return orderPrioritaList(resolved.lavorazioni.prioritaDb).map((p) => ({
     value: p,
     label: prioritaLabel(p as PrioritaLav),
     pillStyle: pillStyleFromHex(
@@ -228,7 +229,7 @@ export function buildAppendGlobalListUpsert(
     case "magazzino:marche":
     case "magazzino:fornitori":
     case "magazzino:mezziCompatibili": {
-      const field = listKey.split(":")[1] as keyof MagazzinoMasterPrefs;
+      const field = listKey.split(":")[1] as "marche" | "categorie" | "mezziCompatibili" | "fornitori";
       const current = resolved.magazzinoMaster[field] ?? [];
       const { next, canonical } = appendUniqueSorted(current, value);
       if (!canonical) return { ok: false, reason: "empty" };

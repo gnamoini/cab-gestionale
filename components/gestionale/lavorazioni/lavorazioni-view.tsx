@@ -17,7 +17,6 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioneCreateModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
-import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { LavorazioniKanbanView } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-view";
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
 import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
@@ -41,16 +40,18 @@ import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { Q_FOCUS_LAV_ROW, Q_FOCUS_MEZZO, Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
-import { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
+import {
+  buildLavorazioniPillOptionsFromGlobal,
+} from "@/lib/global-list/build-lavorazioni-pill-options";
+import { gestionaleLavorazioniDenseTableClass } from "@/lib/ui/gestionale-list-table";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import { durataMsStorico, formatDurataMs } from "@/lib/lavorazioni/duration";
 import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
-import { resolveLavorazioneUltimaModifica } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
+import { resolveLavorazioneUltimaModifica, buildLatestLogAutoreByEntitaId } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { lavRowMatchesPageFilters, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import {
   buildLavorazioniFilterCatalog,
@@ -158,7 +159,6 @@ import {
   lavTableColAzioniClass,
   lavTableColCantiereClass,
   lavTableColClienteClass,
-  lavTableColCodiceClass,
   lavTableColIdentificazioneClass,
   lavTableColIngressoClass,
   lavTableColNoteClass,
@@ -171,7 +171,9 @@ import {
   lavTablePillWrapStyleFromLabels,
   lavTableTdPillWrap,
   lavTableThAzioni,
+  LavorazioneOrePermanenzaCell,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
+import { lavorazioneOreLavoroSortValue } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 
 function fmtDay(iso: string | null | undefined): string {
   if (!iso?.trim()) return "—";
@@ -182,15 +184,6 @@ function fmtDay(iso: string | null | undefined): string {
   }
 }
 
-
-function fmtOreTotaliCell(row: LavorazioneListRow): string {
-  const ms = durataMsStorico(
-    (row.data_ingresso ?? row.created_at) as string,
-    (row.data_uscita ?? row.updated_at) as string,
-  );
-  if (ms <= 0) return "—";
-  return formatDurataMs(ms);
-}
 
 function macchinaLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
@@ -225,12 +218,6 @@ function addettoLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeSto
   );
 }
 
-function addettoSelectValue(label: string, addetti: string[]): string {
-  if (addetti.includes(label)) return label;
-  if (label === "—") return "";
-  return label;
-}
-
 function schedeCountForRow(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore): number {
   return countSchedePresenti(getOrCreateBundle(schedeStore, row.id));
 }
@@ -242,23 +229,23 @@ function mezzoIdentParts(row: LavorazioneListRow, schedeStore?: LavorazioneSched
   const scuderiaIngresso = ing?.nScuderia?.trim() ?? "";
   if (ing) {
     return {
-      targa: ing.targa?.trim() || "—",
-      matricola: ing.matricola?.trim() || "—",
+      targa: ing.targa?.trim() ?? "",
+      matricola: ing.matricola?.trim() ?? "",
       scuderia: scuderiaIngresso,
     };
   }
   const m = row.mezzo;
   return {
-    targa: m?.targa?.trim() || "—",
-    matricola: m?.matricola?.trim() || "—",
+    targa: m?.targa?.trim() ?? "",
+    matricola: m?.matricola?.trim() ?? "",
     scuderia: "",
   };
 }
 
 function mezzoIdent(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const p = mezzoIdentParts(row, schedeStore);
-  const base = `${p.targa} · ${p.matricola}`;
-  return p.scuderia ? `${base} · ${p.scuderia}` : base;
+  const parts = [p.targa, p.matricola, p.scuderia ? `N. ${p.scuderia}` : ""].filter(Boolean);
+  return parts.join(" · ");
 }
 
 function ClienteUtilizzatoreCell({
@@ -283,13 +270,20 @@ function MezzoIdentStackCell({
   schedeStore?: LavorazioneSchedeStore;
 }) {
   const p = mezzoIdentParts(row, schedeStore);
+  const lines = [p.targa, p.matricola, p.scuderia ? `N. ${p.scuderia}` : ""].filter(Boolean);
+  if (lines.length === 0) {
+    return <span className="text-sm text-zinc-400">—</span>;
+  }
   return (
-    <div className="min-w-0 leading-tight">
-      <div className="truncate text-xs font-medium text-zinc-800 dark:text-zinc-100">{p.targa}</div>
-      <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{p.matricola}</div>
-      {p.scuderia ? (
-        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">N. {p.scuderia}</div>
-      ) : null}
+    <div className="min-w-0 leading-snug">
+      {lines.map((text, index) => (
+        <div
+          key={`${text}-${index}`}
+          className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100"
+        >
+          {text}
+        </div>
+      ))}
     </div>
   );
 }
@@ -299,12 +293,6 @@ function telaioLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStor
   if (!ing) return "—";
   const parts = [ing.tipoTelaio, ing.marcaTelaio, ing.modelloTelaio].map((s) => s?.trim()).filter(Boolean);
   return parts.length ? parts.join(" ") : "—";
-}
-
-function oreLavoroLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore): string {
-  const ore = schedeStore[row.id]?.ingresso?.campi.oreLavoro?.trim();
-  if (ore) return ore;
-  return fmtOreTotaliCell(row);
 }
 
 function dataCompletamentoIso(row: LavorazioneListRow): string {
@@ -416,7 +404,6 @@ function isoToItalianDay(iso: string | null | undefined): string {
 type SortPhase = "asc" | "desc" | "natural";
 type SortKeyAtt =
   | "ingresso"
-  | "codice"
   | "cliente"
   | "utilizzatore"
   | "cantiere"
@@ -428,7 +415,6 @@ type SortKeyAtt =
   | "addetto";
 type SortKeyCh =
   | "ingresso"
-  | "codice"
   | "cliente"
   | "utilizzatore"
   | "cantiere"
@@ -454,9 +440,6 @@ function cmpAtt(
 ): number {
   const dir = phase === "desc" ? -1 : 1;
   const t = (x: number) => x * dir;
-  if (k === "codice") {
-    return t(cmpStr(lavorazioneDisplayCodice(a), lavorazioneDisplayCodice(b)));
-  }
   if (k === "macchina") return t(cmpStr(macchinaLabel(a, schedeStore), macchinaLabel(b, schedeStore)));
   if (k === "mezzoIdent") return t(cmpStr(mezzoIdent(a, schedeStore), mezzoIdent(b, schedeStore)));
   if (k === "cliente") return t(cmpStr(clienteLabel(a, schedeStore), clienteLabel(b, schedeStore)));
@@ -485,9 +468,6 @@ function cmpCh(
 ): number {
   const dir = phase === "desc" ? -1 : 1;
   const t = (x: number) => x * dir;
-  if (k === "codice") {
-    return t(cmpStr(lavorazioneDisplayCodice(a), lavorazioneDisplayCodice(b)));
-  }
   if (k === "macchina") return t(cmpStr(macchinaLabel(a, schedeStore), macchinaLabel(b, schedeStore)));
   if (k === "mezzoIdent") return t(cmpStr(mezzoIdent(a, schedeStore), mezzoIdent(b, schedeStore)));
   if (k === "cliente") return t(cmpStr(clienteLabel(a, schedeStore), clienteLabel(b, schedeStore)));
@@ -501,14 +481,8 @@ function cmpCh(
     return t(da === db ? 0 : da < db ? -1 : 1);
   }
   if (k === "oreTotali") {
-    const ra = durataMsStorico(
-      (a.data_ingresso ?? a.created_at) as string,
-      dataCompletamentoIso(a),
-    );
-    const rb = durataMsStorico(
-      (b.data_ingresso ?? b.created_at) as string,
-      dataCompletamentoIso(b),
-    );
+    const ra = lavorazioneOreLavoroSortValue(a, schedeStore);
+    const rb = lavorazioneOreLavoroSortValue(b, schedeStore);
     return t(ra === rb ? 0 : ra < rb ? -1 : 1);
   }
   const ua = new Date(dataCompletamentoIso(a)).getTime();
@@ -719,9 +693,11 @@ export function LavorazioniView() {
     });
   }, []);
 
+  // Default: ordine naturale (nessun filtro attivo in header).
   const [sortColA, setSortColA] = useState<SortKeyAtt | null>(null);
   const [sortPhaseA, setSortPhaseA] = useState<SortPhase>("natural");
 
+  // Default: ordine naturale (nessun filtro attivo in header).
   const [sortColC, setSortColC] = useState<SortKeyCh | null>(null);
   const [sortPhaseC, setSortPhaseC] = useState<SortPhase>("natural");
 
@@ -840,7 +816,8 @@ export function LavorazioniView() {
   const createdBy = user?.id ?? null;
 
   const mutErr = updateLav.isError ? updateLav.error?.message : removeLav.isError ? removeLav.error?.message : null;
-  const mutPending = updateLav.isPending || removeLav.isPending || restoreLav.isPending || concludeLav.isPending;
+  // Non bloccare l'UI inline per update ottimistici (stato/priorità).
+  const mutPendingBlocking = removeLav.isPending || restoreLav.isPending || concludeLav.isPending;
 
   const onStatoRow = useCallback(
     (row: LavorazioneListRow, next: string) => {
@@ -1085,17 +1062,18 @@ export function LavorazioniView() {
     const rows = [...attiveRowsFiltered];
     rows.sort((a, b) => {
       if (sortPhaseA === "natural" || sortColA === null) {
-        const ta = new Date(a.created_at).getTime();
-        const tb = new Date(b.created_at).getTime();
-        if (tb !== ta) return tb - ta;
-        return b.id.localeCompare(a.id);
+        // Ordine naturale: più vecchia in alto, nuova in fondo.
+        const ta = new Date(a.data_ingresso ?? a.created_at).getTime();
+        const tb = new Date(b.data_ingresso ?? b.created_at).getTime();
+        if (ta !== tb) return ta - tb;
+        return a.id.localeCompare(b.id);
       }
       const p = cmpAtt(a, b, sortColA, sortPhaseA, schedeStore, defaultAddetto, statoOrderIds);
       if (p !== 0) return p;
-      const ta = new Date(a.created_at).getTime();
-      const tb = new Date(b.created_at).getTime();
-      if (tb !== ta) return tb - ta;
-      return b.id.localeCompare(a.id);
+      const ta = new Date(a.data_ingresso ?? a.created_at).getTime();
+      const tb = new Date(b.data_ingresso ?? b.created_at).getTime();
+      if (ta !== tb) return ta - tb;
+      return a.id.localeCompare(b.id);
     });
     return rows;
   }, [attiveRowsFiltered, sortColA, sortPhaseA, schedeStore, defaultAddetto, statoOrderIds]);
@@ -1104,10 +1082,11 @@ export function LavorazioniView() {
     const rows = [...chiuseRowsFiltered];
     rows.sort((a, b) => {
       if (sortPhaseC === "natural" || sortColC === null) {
-        const ta = new Date(a.data_uscita ?? a.updated_at).getTime();
-        const tb = new Date(b.data_uscita ?? b.updated_at).getTime();
-        if (tb !== ta) return tb - ta;
-        return b.id.localeCompare(a.id);
+        // Ordine naturale: più vecchia in alto, nuova in fondo.
+        const ta = new Date(a.data_ingresso ?? a.created_at).getTime();
+        const tb = new Date(b.data_ingresso ?? b.created_at).getTime();
+        if (ta !== tb) return ta - tb;
+        return a.id.localeCompare(b.id);
       }
       const p = cmpCh(a, b, sortColC, sortPhaseC, schedeStore, defaultAddetto);
       if (p !== 0) return p;
@@ -1259,6 +1238,14 @@ export function LavorazioniView() {
     [lavModificheLogQuery.data, user?.id, authorName, lavorazioniById, schedeStore, statiOpts],
   );
 
+  const ultimaModificaAutoreByLavId = useMemo(
+    () =>
+      buildLatestLogAutoreByEntitaId(lavModificheLogQuery.data ?? [], (row) =>
+        logAutoreLabel(row, user?.id ?? null, authorName),
+      ),
+    [lavModificheLogQuery.data, user?.id, authorName],
+  );
+
   const hasPageClientFilters =
     searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
 
@@ -1351,7 +1338,7 @@ export function LavorazioniView() {
             <GestionalePageToolbarActions
               canUndo={Boolean(undoableLavLog)}
               undoDisabled={!canEditWorkOrders}
-              undoPending={updateLav.isPending}
+              undoPending={mutPendingBlocking}
               onUndo={() => void undoUltimaLavorazione()}
               onOpenLog={() => setLavLogOpen(true)}
               logTitle="Storico modifiche lavorazioni"
@@ -1397,7 +1384,7 @@ export function LavorazioniView() {
                 type="button"
                 onClick={() => setCreateOpen(true)}
                 className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
-                disabled={mutPending || !createdBy || !canEditWorkOrders}
+                disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}
                 title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : !createdBy ? "Accedi per creare una lavorazione." : undefined}
               >
                 + Nuova lavorazione
@@ -1433,7 +1420,7 @@ export function LavorazioniView() {
             meta={
               <>
                 <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  {mutPending ? (
+                  {mutPendingBlocking ? (
                     <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Salvataggio in corso…</span>
                   ) : null}
                   {!createdBy ? (
@@ -1467,20 +1454,28 @@ export function LavorazioniView() {
           {listViewMode === "kanban" ? (
             <LavorazioniKanbanView
               rows={attiveRowsFiltered}
+              closedRows={chiuseRowsFiltered}
               columns={statiInCorsoOpts}
               statiOpts={statiOpts}
               schedeStore={schedeStore}
               defaultAddetto={defaultAddetto}
               prioritaColors={globalOpts.lavorazioni.prioritaColors}
+              addettoColors={globalOpts.lavorazioni.addettoColors}
               flashRowId={flashRowId}
               navBulkFlashIds={navBulkFlashIds}
               loading={loading}
               emptyMessage={
                 hasPageClientFilters || navMezzoFilter
-                  ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
-                  : "Nessuna lavorazione in corso."
+                  ? "Nessuna lavorazione corrisponde alla ricerca o ai filtri selezionati."
+                  : "Nessuna lavorazione."
+              }
+              closedEmptyMessage={
+                hasPageClientFilters || navMezzoFilter
+                  ? "Nessuna lavorazione completata corrisponde alla ricerca o ai filtri selezionati."
+                  : "Nessuna lavorazione completata."
               }
               onOpenRow={(row) => setSchedeRow({ row, origine: "attiva", initialTab: "panoramica" })}
+              onOpenClosedRow={(row) => setSchedeRow({ row, origine: "storico", initialTab: "panoramica" })}
             />
           ) : (
             <>
@@ -1488,10 +1483,10 @@ export function LavorazioniView() {
 
           <GestionaleListTable
             visibilityClass="hidden md:block"
+            className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
                 <col className={lavTableColIngressoClass} />
-                <col className={lavTableColCodiceClass} />
                 <col className={lavTableColClienteClass} />
                 <col className={lavTableColCantiereClass} />
                 <col className={lavTableColAttrezzaturaClass} />
@@ -1508,14 +1503,6 @@ export function LavorazioniView() {
                   <GlobalTableSortTh
                     label="Ingresso"
                     columnKey="ingresso"
-                    sortColumn={sortColA}
-                    sortPhase={sortPhaseA}
-                    align="left"
-                    onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
-                  />
-                  <GlobalTableSortTh
-                    label="Codice"
-                    columnKey="codice"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
                     align="left"
@@ -1589,29 +1576,27 @@ export function LavorazioniView() {
                 ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessuna lavorazione in corso."
             }
-            colSpan={11}
+            colSpan={10}
           >
                   {pagedAttive.map((row) => {
                     const flash = flashRowId === row.id || navBulkFlashIds.has(row.id);
+                    const rowSurfaceClass = [
+                      "h-14 bg-white dark:bg-zinc-900/40",
+                      flash
+                        ? "bg-orange-50/90 shadow-[inset_0_0_0_1px_rgba(251,146,60,0.45)] ring-2 ring-orange-400/35"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
                     return (
                       <tr
                         key={row.id}
                         id={`lavorazioni-row-${row.id}`}
-                        className={[
-                          dsTableRow,
-                          "h-14 bg-white dark:bg-zinc-900/40",
-                          flash
-                            ? "bg-orange-50/90 shadow-[inset_0_0_0_1px_rgba(251,146,60,0.45)] ring-2 ring-orange-400/35"
-                            : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
+                        data-gestionale-row-tone={flash ? "flash" : undefined}
+                        className={[dsTableRow, rowSurfaceClass].filter(Boolean).join(" ")}
                       >
                         <td className={lavTableTd}>
                           <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
-                        </td>
-                        <td className={`${lavTableTdCenter} font-semibold tabular-nums`}>
-                          {lavorazioneDisplayCodice(row)}
                         </td>
                         <td className={lavTableTd}>
                           <ClienteUtilizzatoreCell row={row} schedeStore={schedeStore} />
@@ -1639,7 +1624,7 @@ export function LavorazioniView() {
                             value={row.stato}
                             onChange={(v) => onStatoRow(row, v)}
                             ariaLabel={`Stato — ${macchinaLabel(row, schedeStore)}`}
-                            disabled={mutPending || loading || !canEditWorkOrders}
+                            disabled={loading || !canEditWorkOrders}
                             title={statoLavorazioneLabel(row.stato, statiOpts)}
                           >
                             <option value={row.stato}>{statoLavorazioneLabel(row.stato, statiOpts)}</option>
@@ -1657,7 +1642,7 @@ export function LavorazioniView() {
                             value={row.priorita}
                             onChange={(v) => onPrioritaRow(row, v)}
                             ariaLabel={`Priorità — ${macchinaLabel(row, schedeStore)}`}
-                            disabled={mutPending || loading || !canEditWorkOrders}
+                            disabled={loading || !canEditWorkOrders}
                             title={prioritaLabel(row.priorita)}
                           >
                             <option value={row.priorita}>{prioritaLabel(row.priorita)}</option>
@@ -1676,13 +1661,13 @@ export function LavorazioniView() {
                                 tablePillOptions={tablePillOptions.addetto(addetto)}
                                 shellClass={addettoPillShellClass()}
                                 shellStyle={addettoPillShellStyle(globalOpts.lavorazioni.addettoColors[addetto])}
-                                value={addettoSelectValue(addetto, addetti)}
+                                value={addetto}
                                 onChange={(v) => onAddettoRow(row, v)}
                                 ariaLabel={`Addetto — ${macchinaLabel(row, schedeStore)}`}
-                                disabled={mutPending || loading || !canEditWorkOrders || addetti.length === 0}
+                                disabled={loading || !canEditWorkOrders || addetti.length === 0}
                                 title={addetto}
                               >
-                                <option value={addettoSelectValue(addetto, addetti)}>{addetto}</option>
+                                <option value={addetto}>{addetto}</option>
                               </InlineSelectField>
                             );
                           })()}
@@ -1694,7 +1679,7 @@ export function LavorazioniView() {
                               label="Concludi"
                               tooltipContent={row.stato === "completata" ? "Concludi" : "Non disponibile"}
                               className={lavTableActionBtnSecondary}
-                              disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true}
+                              disabled={mutPendingBlocking || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true}
                               onClick={() => openConcludiConfirm(row)}
                             >
                               <IconCloseWork />
@@ -1703,7 +1688,7 @@ export function LavorazioniView() {
                               <IconActionButton
                                 label="Elimina"
                                 className={lavTableActionBtnDanger}
-                                disabled={mutPending || loading || !canDeleteRecords}
+                                disabled={mutPendingBlocking || loading || !canDeleteRecords}
                                 onClick={() => openEliminaConfirm(row)}
                               >
                                 <IconTrash />
@@ -1712,7 +1697,7 @@ export function LavorazioniView() {
                             <IconActionButton
                               label="Apri"
                               className={lavTableActionBtnInfo}
-                              disabled={mutPending}
+                              disabled={mutPendingBlocking}
                               onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "panoramica" })}
                             >
                               <IconInfo />
@@ -1720,7 +1705,7 @@ export function LavorazioniView() {
                             <IconActionButton
                               label="Schede"
                               className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                              disabled={mutPending}
+                              disabled={mutPendingBlocking}
                               onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "schede" })}
                             >
                               <IconSchede />
@@ -1763,7 +1748,7 @@ export function LavorazioniView() {
                           value={row.stato}
                           onChange={(v) => onStatoRow(row, v)}
                           ariaLabel={`Stato — ${macchina}`}
-                          disabled={mutPending || loading || !canEditWorkOrders}
+                          disabled={loading || !canEditWorkOrders}
                           title={statoLavorazioneLabel(row.stato, statiOpts)}
                         >
                           <option value={row.stato}>{statoLavorazioneLabel(row.stato, statiOpts)}</option>
@@ -1794,7 +1779,7 @@ export function LavorazioniView() {
                         value={row.priorita}
                         onChange={(v) => onPrioritaRow(row, v)}
                         ariaLabel={`Priorità — ${macchina}`}
-                        disabled={mutPending || loading || !canEditWorkOrders}
+                        disabled={loading || !canEditWorkOrders}
                         title={prioritaLabel(row.priorita)}
                       >
                         <option value={row.priorita}>{prioritaLabel(row.priorita)}</option>
@@ -1811,13 +1796,13 @@ export function LavorazioniView() {
                             tablePillOptions={tablePillOptions.addetto(addetto)}
                             shellClass={addettoPillShellClass()}
                             shellStyle={addettoPillShellStyle(globalOpts.lavorazioni.addettoColors[addetto])}
-                            value={addettoSelectValue(addetto, addetti)}
+                            value={addetto}
                             onChange={(v) => onAddettoRow(row, v)}
                             ariaLabel={`Addetto — ${macchina}`}
-                            disabled={mutPending || loading || !canEditWorkOrders || addetti.length === 0}
+                            disabled={loading || !canEditWorkOrders || addetti.length === 0}
                             title={addetto}
                           >
-                            <option value={addettoSelectValue(addetto, addetti)}>{addetto}</option>
+                            <option value={addetto}>{addetto}</option>
                           </InlineSelectField>
                         );
                       })()}
@@ -1826,7 +1811,9 @@ export function LavorazioniView() {
                   <LavorazioneMobileCardFooter
                     meta={
                       <LavorazioneMobileUltimaModifica
-                        info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id])}
+                        info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
+                          autoreLog: ultimaModificaAutoreByLavId.get(row.id),
+                        })}
                       />
                     }
                   >
@@ -1834,7 +1821,7 @@ export function LavorazioniView() {
                       label="Concludi"
                       tooltipContent={row.stato === "completata" ? "Concludi" : "Non disponibile"}
                       className={dsTableActionBtnSecondary}
-                      disabled={mutPending || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true}
+                      disabled={mutPendingBlocking || loading || !canEditWorkOrders || row.stato !== "completata" || row.archived === true}
                       onClick={() => openConcludiConfirm(row)}
                     >
                       <IconCloseWork />
@@ -1843,7 +1830,7 @@ export function LavorazioniView() {
                       <IconActionButton
                         label="Elimina"
                         className={dsTableActionBtnDanger}
-                        disabled={mutPending || loading || !canDeleteRecords}
+                        disabled={mutPendingBlocking || loading || !canDeleteRecords}
                         onClick={() => openEliminaConfirm(row)}
                       >
                         <IconTrash />
@@ -1852,7 +1839,7 @@ export function LavorazioniView() {
                     <IconActionButton
                       label="Apri"
                       className={dsTableActionBtnInfo}
-                      disabled={mutPending}
+                      disabled={mutPendingBlocking}
                       onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "panoramica" })}
                     >
                       <IconInfo />
@@ -1860,7 +1847,7 @@ export function LavorazioniView() {
                     <IconActionButton
                       label="Schede"
                       className={`${dsTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                      disabled={mutPending}
+                      disabled={mutPendingBlocking}
                       onClick={() => setSchedeRow({ row, origine: "attiva", initialTab: "schede" })}
                     >
                       <IconSchede />
@@ -1884,10 +1871,10 @@ export function LavorazioniView() {
         <ShellCard title="Archivio lavorazioni">
           <GestionaleListTable
             visibilityClass="hidden md:block"
+            className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
                 <col className={lavTableColIngressoClass} />
-                <col className={lavTableColCodiceClass} />
                 <col className={lavTableColClienteClass} />
                 <col className={lavTableColCantiereClass} />
                 <col className={lavTableColAttrezzaturaClass} />
@@ -1904,14 +1891,6 @@ export function LavorazioniView() {
                   <GlobalTableSortTh
                     label="Ingresso"
                     columnKey="ingresso"
-                    sortColumn={sortColC}
-                    sortPhase={sortPhaseC}
-                    align="left"
-                    onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
-                  />
-                  <GlobalTableSortTh
-                    label="Codice"
-                    columnKey="codice"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
                     align="left"
@@ -1990,30 +1969,28 @@ export function LavorazioniView() {
                 ? "Nessun record in archivio corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessun record in archivio."
             }
-            colSpan={11}
+            colSpan={10}
           >
                   {pagedChiuse.map((row) => {
                     const flash = flashRowId === row.id || navBulkFlashIds.has(row.id);
                     const telaio = telaioLabel(row, schedeStore);
+                    const rowSurfaceClass = [
+                      "h-14 bg-white dark:bg-zinc-900/40",
+                      flash
+                        ? "bg-orange-50/90 shadow-[inset_0_0_0_1px_rgba(251,146,60,0.45)] ring-2 ring-orange-400/35"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ");
                     return (
                       <tr
                         key={row.id}
                         id={`lavorazioni-storico-row-${row.id}`}
-                        className={[
-                          dsTableRow,
-                          "h-14 bg-white dark:bg-zinc-900/40",
-                          flash
-                            ? "bg-orange-50/90 shadow-[inset_0_0_0_1px_rgba(251,146,60,0.45)] ring-2 ring-orange-400/35"
-                            : "",
-                        ]
-                          .filter(Boolean)
-                          .join(" ")}
+                        data-gestionale-row-tone={flash ? "flash" : undefined}
+                        className={[dsTableRow, rowSurfaceClass].filter(Boolean).join(" ")}
                       >
                         <td className={lavTableTd}>
                           <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
-                        </td>
-                        <td className={`${lavTableTdCenter} font-semibold tabular-nums`}>
-                          {lavorazioneDisplayCodice(row)}
                         </td>
                         <td className={lavTableTd}>
                           <ClienteUtilizzatoreCell row={row} schedeStore={schedeStore} />
@@ -2036,7 +2013,9 @@ export function LavorazioniView() {
                         <td className={lavTableTdCenter}>
                           <LavorazioneIngressoDateCellFromIso iso={dataCompletamentoIso(row)} align="center" />
                         </td>
-                        <td className={lavTableTdCenter}>{oreLavoroLabel(row, schedeStore)}</td>
+                        <td className={lavTableTdCenter}>
+                          <LavorazioneOrePermanenzaCell row={row} schedeStore={schedeStore} />
+                        </td>
                         <td className={lavTableTdPill}>
                           <div className={lavTableTdPillWrap} style={addettoPillWrapStyle}>
                             <span className={`whitespace-nowrap ${lavTablePillTextClass} text-zinc-800 dark:text-zinc-100`}>
@@ -2050,7 +2029,7 @@ export function LavorazioniView() {
                               label="Ripristina"
                               tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
                               className={lavTableActionBtnDanger}
-                              disabled={!canEditWorkOrders || mutPending || loading}
+                              disabled={!canEditWorkOrders || mutPendingBlocking || loading}
                               onClick={() => submitRipristinaInLavorazione(row)}
                             >
                               <IconRipristinaDaArchivio />
@@ -2111,7 +2090,10 @@ export function LavorazioniView() {
                   <LavorazioneMobileMetaGrid>
                     <LavorazioneMobileMetaItem label="Cliente" value={clienteLabel(row, schedeStore)} />
                     <LavorazioneMobileMetaItem label="Cantiere" value={cantiereLabel(row, schedeStore)} />
-                    <LavorazioneMobileMetaItem label="Ore lavoro" value={oreLavoroLabel(row, schedeStore)} />
+                    <LavorazioneMobileMetaItem
+                      label="Ore lavoro"
+                      value={<LavorazioneOrePermanenzaCell row={row} schedeStore={schedeStore} align="start" />}
+                    />
                     <LavorazioneMobileMetaItem
                       label="Addetto"
                       value={addettoLabel(row, schedeStore, defaultAddetto)}
@@ -2128,7 +2110,9 @@ export function LavorazioniView() {
                   <LavorazioneMobileCardFooter
                     meta={
                       <LavorazioneMobileUltimaModifica
-                        info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id])}
+                        info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
+                          autoreLog: ultimaModificaAutoreByLavId.get(row.id),
+                        })}
                       />
                     }
                   >
@@ -2136,7 +2120,7 @@ export function LavorazioniView() {
                       label="Ripristina"
                       tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
                       className={lavTableActionBtnDanger}
-                      disabled={!canEditWorkOrders || mutPending || loading}
+                      disabled={!canEditWorkOrders || mutPendingBlocking || loading}
                       onClick={() => submitRipristinaInLavorazione(row)}
                     >
                       <IconRipristinaDaArchivio />

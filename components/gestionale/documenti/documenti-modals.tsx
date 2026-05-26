@@ -270,6 +270,7 @@ export function UploadDocumentoModal({
               value={categoria}
               onChange={(v) => setCategoria(v as DocumentoGestionale["categoria"])}
               strictFromList
+              selectOnly
               aria-label="Tipo documento"
             />
           </label>
@@ -423,9 +424,7 @@ export function DocumentoEditModal({
   const [applicabilita, setApplicabilita] = useState<DocumentoApplicabilita>(r0.applicabilita ?? "marca");
   const [marca, setMarca] = useState(r0.marcaKey ?? r0.marca);
   const [modello, setModello] = useState(r0.modelloKey ?? (r0.applicabilita === "modello" ? r0.macchina : ""));
-  const [tipoFile, setTipoFile] = useState<DocumentoTipoFile>(doc.tipoFile);
   const [note, setNote] = useState(doc.note ?? "");
-  const [autore, setAutore] = useState(doc.autoreCaricamento);
   const [marcaInvalid, setMarcaInvalid] = useState(false);
   const [modelloInvalid, setModelloInvalid] = useState(false);
 
@@ -452,15 +451,16 @@ export function DocumentoEditModal({
     if (!marcaOk || !modelloOk) return;
 
     const today = new Date().toISOString().slice(0, 10);
+    const inferredTipoFile = inferTipoFileFromNome(nome.trim() || doc.nome);
     const base: DocumentoGestionale = {
       ...doc,
       nome: nome.trim(),
       categoria,
       marca: marcaTrim,
       macchina: applicabilita === "marca" || !marcaTrim ? "—" : modello.trim(),
-      tipoFile,
+      tipoFile: inferredTipoFile,
       note: note.trim() || undefined,
-      autoreCaricamento: autore.trim() || doc.autoreCaricamento || authorName,
+      autoreCaricamento: doc.autoreCaricamento?.trim() || authorName,
       ultimaModifica: today,
       applicabilita: marcaTrim ? applicabilita : undefined,
       marcaKey: marcaTrim || undefined,
@@ -487,6 +487,7 @@ export function DocumentoEditModal({
               value={categoria}
               onChange={(v) => setCategoria(v as DocumentoGestionale["categoria"])}
               strictFromList
+              selectOnly
               aria-label="Tipo documento"
             />
           </label>
@@ -521,21 +522,6 @@ export function DocumentoEditModal({
             </label>
           ) : null}
 
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-            Tipo file
-            <GlobalSelect
-              className={listSelectWrapClass}
-              items={TIPI_FILE.map((t) => ({ value: t, label: labelTipoFile(t) }))}
-              value={tipoFile}
-              onChange={(v) => setTipoFile(v as DocumentoTipoFile)}
-              strictFromList
-              aria-label="Tipo file"
-            />
-          </label>
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-            Autore caricamento
-            <input className={`${inputClass} mt-1`} value={autore} onChange={(e) => setAutore(e.target.value)} />
-          </label>
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note
             <textarea className={`${inputClass} mt-1 min-h-[72px] resize-y`} value={note} onChange={(e) => setNote(e.target.value)} rows={3} />

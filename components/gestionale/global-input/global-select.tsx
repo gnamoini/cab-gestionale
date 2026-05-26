@@ -12,6 +12,7 @@ import {
   autocompleteShowAddOption,
   autocompleteAddOptionEnabled,
   autocompleteStringSuggestions,
+  AUTOCOMPLETE_BROWSE_CAP,
   type AutocompleteDataMode,
 } from "@/lib/global-autocomplete/engine";
 import {
@@ -143,9 +144,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const fieldClass = useMemo(() => {
     const base = fieldClassForVariant(variant, inputClassName);
     if (!selectOnly) return base;
-    return base
-      .replace(/\bcursor-text\b/g, "cursor-pointer")
-      .replace(/\bappearance-auto\b/g, "appearance-none");
+    const normalized = base
+      .replace(/\bcursor-text\b/g, "")
+      .replace(/\bappearance-auto\b/g, "appearance-none")
+      .trim();
+    return `${normalized} cursor-pointer caret-transparent`;
   }, [variant, inputClassName, selectOnly]);
   const wrapRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -175,9 +178,23 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const displayValue = useMemo(() => autocompleteDisplayValue(engineInput), [engineInput]);
 
   const suggestions = useMemo(() => {
+    if (selectOnly) {
+      if (itemsMode) return [...items].slice(0, AUTOCOMPLETE_BROWSE_CAP);
+      const seen = new Set<string>();
+      const ordered: string[] = [];
+      for (const option of options) {
+        const trimmed = option.trim();
+        if (!trimmed) continue;
+        const key = trimmed.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.add(key);
+        ordered.push(trimmed);
+      }
+      return ordered.slice(0, AUTOCOMPLETE_BROWSE_CAP);
+    }
     if (itemsMode) return autocompleteItemSuggestions(engineInput);
     return autocompleteStringSuggestions(engineInput);
-  }, [engineInput, itemsMode]);
+  }, [selectOnly, engineInput, itemsMode, items, options]);
 
   const addCandidate = focused ? searchText.trim() : "";
 
@@ -301,6 +318,16 @@ export function GlobalSelect(props: GlobalSelectProps) {
       e.preventDefault();
       setOpen(true);
       setActiveIndex((i) => (i <= 0 ? totalNavigableOptions - 1 : i - 1));
+      return;
+    }
+    if (e.key === "Tab" && totalNavigableOptions > 0) {
+      e.preventDefault();
+      setOpen(true);
+      if (e.shiftKey) {
+        setActiveIndex((i) => (i <= 0 ? totalNavigableOptions - 1 : i - 1));
+      } else {
+        setActiveIndex((i) => (i < 0 ? 0 : (i + 1) % totalNavigableOptions));
+      }
       return;
     }
     if (e.key !== "Enter") return;

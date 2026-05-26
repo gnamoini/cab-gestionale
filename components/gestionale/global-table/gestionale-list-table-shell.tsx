@@ -48,9 +48,9 @@ export function GestionaleListTableRow({
   );
 }
 
-/** Header colonna Azioni — titolo centrato, stesso inset della pagina Lavorazioni. */
+/** Header colonna Azioni — titolo a destra, sticky durante lo scroll orizzontale. */
 export function GestionaleListTableActionsHead() {
-  return <GlobalTableHeadLabel label="Azioni" align="center" thClassName={gestionaleListTableThAzioni} />;
+  return <GlobalTableHeadLabel label="Azioni" align="right" thClassName={gestionaleListTableThAzioni} />;
 }
 
 export function GestionaleListTableMobileEmpty({ message }: { message: string }) {

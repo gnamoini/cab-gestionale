@@ -4,6 +4,7 @@ export {
   type GlobalSelectOption,
   type GlobalSelectProps,
 } from "@/components/gestionale/global-input/global-select";
+export { GlobalMultiSelect } from "@/components/gestionale/global-input/global-multi-select";
 export {
   GlobalFixedListPillSelect,
   fixedListPillMinH,

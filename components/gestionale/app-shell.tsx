@@ -423,7 +423,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const onHeaderHomeClick = useCallback(
     (e: ReactMouseEvent<HTMLAnchorElement>) => {
-      if (isNavTargetCurrent(pathname, homePath)) {
+      if (pathname === homePath) {
         e.preventDefault();
         setRouteLoading(false);
         window.scrollTo({ top: 0, behavior: "smooth" });

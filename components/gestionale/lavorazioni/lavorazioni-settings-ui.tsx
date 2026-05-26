@@ -7,6 +7,8 @@ import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { STATO_LAVORAZIONE_COMPLETATA_ID } from "@/lib/lavorazioni/stati-dynamic";
 import { sortStringsItCaseInsensitive } from "@/lib/ui/sort-strings-it";
+import { addettoBadgeStyle } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { SettingsEditableStringRow } from "@/components/dashboard/settings-list-ui";
 
 export function ColorSwatchButton({
@@ -137,11 +139,21 @@ export function StatoSettingsList({
               onChange={(e) => onChangeLabel(s.id, e.target.value)}
               aria-label="Nome stato"
             />
-            <ColorSwatchButton
-              value={displayHex}
-              ariaLabel={`Colore stato ${s.label || s.id}`}
-              onChange={(hex) => onChangeStatoColor(s.id, hex)}
-            />
+            <div className="flex shrink-0 items-center gap-2">
+              <span
+                className="inline-flex max-w-[9rem] shrink-0 items-center rounded-lg px-2 py-1 text-[11px] font-bold uppercase tracking-wide ring-1 ring-black/10"
+                style={readablePillStyleFromHex(displayHex)}
+                title="Anteprima pill in tabella e Kanban"
+                aria-hidden
+              >
+                <span className="truncate">{(s.label || s.id).trim() || "—"}</span>
+              </span>
+              <ColorSwatchButton
+                value={displayHex}
+                ariaLabel={`Colore stato ${s.label || s.id}`}
+                onChange={(hex) => onChangeStatoColor(s.id, hex)}
+              />
+            </div>
             {onChangeStatoClosed ? (
               <label
                 className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-zinc-400"
@@ -203,11 +215,21 @@ export function AddettiSettingsList({
             onRenameBlur={onRenameBlur}
             onRemove={() => onRemove(a)}
             trailing={
-              <ColorSwatchButton
-                value={displayHex}
-                ariaLabel={`Colore addetto ${a}`}
-                onChange={(hex) => onChangeAddettoColor(a, hex)}
-              />
+              <div className="flex shrink-0 items-center gap-2">
+                <span
+                  className="inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-black/10"
+                  style={addettoBadgeStyle(displayHex)}
+                  title="Anteprima pill in tabella"
+                  aria-hidden
+                >
+                  {a}
+                </span>
+                <ColorSwatchButton
+                  value={displayHex}
+                  ariaLabel={`Colore addetto ${a}`}
+                  onChange={(hex) => onChangeAddettoColor(a, hex)}
+                />
+              </div>
             }
           />
         );

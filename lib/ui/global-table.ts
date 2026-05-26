@@ -78,7 +78,7 @@ export const globalTableFixed = `${globalTableBase} table-fixed`;
 
 /** Riga corpo standard. */
 export const globalTableRow =
-  "border-b border-[color:var(--cab-border)] transition-colors duration-150 ease-out hover:bg-[var(--cab-hover)] data-[selected=true]:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-card))]";
+  "group border-b border-[color:var(--cab-border)] transition-colors duration-150 ease-out hover:bg-[var(--cab-hover)] data-[selected=true]:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-card))]";
 
 /** Cella vuota / empty state (con inset laterale come il body). */
 export const globalTableEmptyCell =

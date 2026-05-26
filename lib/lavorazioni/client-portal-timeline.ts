@@ -52,7 +52,7 @@ const INGRESSO_LABELS: { key: keyof SchedaIngressoFields; label: string; multili
   { key: "km", label: "Km" },
   { key: "descrizioneAnomalia", label: "Descrizione anomalia", multiline: true },
   { key: "livelloCarburante", label: "Livello carburante" },
-  { key: "addettoAccettazione", label: "Addetto accettazione" },
+  { key: "addettoAccettazione", label: "Utente accettazione" },
   { key: "richiedente", label: "Richiedente" },
   { key: "noteIntervento", label: "Note intervento", multiline: true },
 ];
