@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import {
   computeDashboardLavWidgetRows,
+  computeDashboardLavWidgetStats,
   computeDashboardMagDailyMovements,
+  computeDashboardMagRecentRicambi,
+  computeDashboardMagSottoScortaRicambi,
   computeDashboardMagWidgetStats,
-  formatDashboardLavWidgetSubtitle,
+  formatDashboardLavWidgetMezzoIdent,
   formatDashboardMagRicambioIdent,
   formatDashboardMagRicambioTitle,
 } from "@/lib/view/dashboard-widgets-selectors";
@@ -36,11 +39,54 @@ const rows = [
 ];
 
 const widgetRows = computeDashboardLavWidgetRows(rows, 5);
-assert.ok(widgetRows.some((r) => r.id === "c" && r.isUrgent));
-assert.ok(widgetRows.some((r) => r.id === "b" && r.isUrgent));
+assert.deepEqual(
+  widgetRows.map((r) => r.id),
+  ["c", "b", "a"],
+);
+assert.ok(widgetRows.every((r) => r.priorita));
 assert.equal(widgetRows.filter((r) => r.isUrgent).length, 2);
-assert.equal(formatDashboardLavWidgetSubtitle("Rossi Srl", "AB123"), "Rossi Srl · AB123");
-assert.equal(formatDashboardLavWidgetSubtitle("Rossi Srl", "—"), "Rossi Srl");
+
+const lavStats = computeDashboardLavWidgetStats(rows);
+assert.equal(lavStats.inCorso, 3);
+assert.equal(lavStats.urgenti, 2);
+assert.equal(lavStats.entratiOggi, 0);
+
+const todayIso = new Date().toISOString();
+const entratiOggi = computeDashboardLavWidgetStats([
+  sampleLav({ id: "today", created_at: todayIso, data_ingresso: null }),
+  sampleLav({ id: "old", created_at: "2020-01-01T10:00:00.000Z", data_ingresso: null }),
+]);
+assert.equal(entratiOggi.entratiOggi, 1);
+assert.equal(entratiOggi.inCorso, 2);
+
+const mixed = computeDashboardLavWidgetRows(
+  [
+    sampleLav({ id: "low", priorita: "bassa", updated_at: "2026-05-25T12:00:00.000Z" }),
+    sampleLav({ id: "high", priorita: "alta", updated_at: "2026-05-20T12:00:00.000Z" }),
+    sampleLav({ id: "mid", priorita: "media", updated_at: "2026-05-24T12:00:00.000Z" }),
+  ],
+  3,
+);
+assert.deepEqual(
+  mixed.map((r) => r.id),
+  ["high", "mid", "low"],
+);
+assert.equal(
+  formatDashboardLavWidgetMezzoIdent({
+    cliente: "Specchia",
+    matricola: "S NE296",
+    nScuderia: "1653",
+    targa: "GZ923GX",
+  }),
+  "Specchia · S NE296 · 1653 · GZ923GX",
+);
+assert.equal(
+  formatDashboardLavWidgetMezzoIdent({ matricola: "M-99", nScuderia: "12", targa: "AB123" }),
+  "M-99 · 12 · AB123",
+);
+assert.equal(formatDashboardLavWidgetMezzoIdent({ matricola: "M-99", targa: "AB123" }), "M-99 · AB123");
+assert.equal(formatDashboardLavWidgetMezzoIdent({ matricola: "", targa: "AB123" }), "AB123");
+assert.equal(formatDashboardLavWidgetMezzoIdent({ matricola: "—", targa: "" }), null);
 assert.equal(formatDashboardMagRicambioIdent("Bucher", "OE-123"), "Bucher · OE-123");
 assert.equal(formatDashboardMagRicambioTitle("Bucher", "Ruota Bocca Aspirazione"), "Bucher Ruota Bocca Aspirazione");
 assert.equal(formatDashboardMagRicambioTitle("—", "Filtro olio"), "Filtro olio");
@@ -71,6 +117,23 @@ const ricambi: RicambioMagazzino[] = [
 
 assert.equal(computeDashboardMagWidgetStats(ricambi).sottoScorta, 1);
 assert.equal(computeDashboardMagWidgetStats(ricambi).capitale, 10);
+assert.equal(computeDashboardMagSottoScortaRicambi(ricambi).length, 1);
+assert.equal(computeDashboardMagSottoScortaRicambi(ricambi)[0]?.id, "r1");
+assert.equal(computeDashboardMagRecentRicambi(ricambi).length, 0);
+
+const ricambiMix: RicambioMagazzino[] = [
+  ricambi[0]!,
+  {
+    ...ricambi[0]!,
+    id: "r2",
+    scorta: 10,
+    scortaMinima: 2,
+    dataUltimaModifica: "2026-05-25T00:00:00.000Z",
+  },
+];
+assert.equal(computeDashboardMagSottoScortaRicambi(ricambiMix).length, 1);
+assert.equal(computeDashboardMagRecentRicambi(ricambiMix).length, 1);
+assert.equal(computeDashboardMagRecentRicambi(ricambiMix)[0]?.id, "r2");
 
 const today = new Date().toISOString();
 const movs: MovimentoRicambioRow[] = [

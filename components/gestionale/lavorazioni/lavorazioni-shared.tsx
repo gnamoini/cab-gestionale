@@ -110,6 +110,11 @@ export function prioritaPillShellClass(): string {
   return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
 }
 
+/** Pill priorità a larghezza dinamica (Kanban, tabella fit-content). */
+export function prioritaPillShellClassDynamic(): string {
+  return "relative inline-flex w-fit max-w-full min-w-0 items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
+}
+
 export function prioritaPillShellStyle(hex: string | undefined): CSSProperties {
   return pillStyleFromHex(hex);
 }

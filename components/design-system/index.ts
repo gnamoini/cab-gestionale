@@ -35,3 +35,11 @@ export { Drawer, type DrawerProps } from "./drawer";
 export { LogEntry, LogEntryRenderer, type LogEntryProps } from "./log-entry";
 
 export { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+export {
+  GlobalLoadingSpinner,
+  GlobalLoadingView,
+  GlobalLoadingOverlay,
+  GlobalLoadingPageFallback,
+  type GlobalLoadingSpinnerSize,
+} from "./global-loading";
+export { LoadingSpinner, PageLoadingOverlay } from "./loading-indicator";

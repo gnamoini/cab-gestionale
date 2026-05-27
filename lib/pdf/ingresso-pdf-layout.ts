@@ -19,7 +19,7 @@ export function buildIngressoPdfSections(c: SchedaIngressoFields): {
   return {
     data: [
       field("Data ingresso", c.dataIngresso),
-      field("Utente accettazione", c.addettoAccettazione),
+      field("Addetto accettazione", c.addettoAccettazione),
     ].filter(
       (f): f is PdfField => f !== null,
     ),

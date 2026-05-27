@@ -39,9 +39,6 @@ export function SupportoNoteForm({
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-zinc-500 dark:text-zinc-400">
           Autore: <span className="font-semibold text-zinc-700 dark:text-zinc-200">{authorName}</span>
-          <span className="mt-1 block text-[11px] text-zinc-400 dark:text-zinc-500">
-            Le note sono condivise con tutti gli utenti autorizzati e salvate nel database.
-          </span>
         </p>
         <button
           type="button"

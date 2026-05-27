@@ -3,7 +3,7 @@
 import { useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
+import { useAuth, isAuthFullyAuthenticated } from "@/context/auth-context";
 import {
   ACCESS_DENIED_PATH,
   canAccessPage,
@@ -39,7 +39,7 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
   const clientLav = useClientLavorazioniAccess();
 
-  const sessionReady = isAuthSessionEstablished(status);
+  const sessionReady = isAuthFullyAuthenticated(status);
   const checkingClientLav =
     pathname.startsWith("/lavorazioni-clienti") && clientLav.isLoading && sessionReady;
 

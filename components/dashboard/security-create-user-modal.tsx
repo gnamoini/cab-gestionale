@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/context/toast-context";
 import { createUserByAdminAction } from "@/src/actions/admin-users";
+import { useUsernameAvailability } from "@/src/hooks/use-username-availability";
+import { sanitizeUsernameInput, usernameFieldError } from "@/src/lib/auth/username";
 import { CloseButton } from "@/components/design-system";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { APP_ROLES, roleLabel, type AppRole } from "@/src/lib/auth/permissions";
@@ -28,15 +30,18 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
   const { push } = useToast();
   const qc = useQueryClient();
   const [nome, setNome] = useState("");
+  const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [ruolo, setRuolo] = useState<AppRole>("operatore");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const usernameAvailability = useUsernameAvailability(username, { enabled: open });
 
   useEffect(() => {
     if (!open) return;
     setNome("");
+    setUsername("");
     setEmail("");
     setPassword("");
     setRuolo("operatore");
@@ -49,9 +54,23 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    const usernameErr = usernameFieldError(username);
+    if (usernameErr) {
+      setError(usernameErr);
+      return;
+    }
+    if (usernameAvailability === "taken") {
+      setError("Username già utilizzato.");
+      return;
+    }
+    if (usernameAvailability === "checking") {
+      setError("Attendi la verifica del nome utente.");
+      return;
+    }
     setPending(true);
     const res = await createUserByAdminAction({
       nome: nome.trim(),
+      username: username.trim(),
       email: email.trim(),
       password,
       ruolo,
@@ -69,7 +88,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
       qc.invalidateQueries({ queryKey: QK.userPermissions }),
       qc.invalidateQueries({ queryKey: QK.authLogs }),
     ]);
-    push("Utente creato correttamente. Può accedere con email e password impostate.", "success");
+    push("Utente creato. Può accedere con email o nome utente e la password impostata.", "success");
     onClose();
   }
 
@@ -92,6 +111,42 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
           <label className="block min-w-0">
             <span className={dsSectionTitle}>Nome</span>
             <input className={`${dsInput} mt-1 w-full`} value={nome} onChange={(e) => setNome(e.target.value)} autoComplete="name" required disabled={pending} />
+          </label>
+          <label className="block min-w-0">
+            <span className={dsSectionTitle}>Nome utente</span>
+            <input
+              className={`${dsInput} mt-1 w-full`}
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(sanitizeUsernameInput(e.target.value))}
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="es. mario.rossi"
+              required
+              minLength={3}
+              maxLength={32}
+              pattern="[a-z0-9][a-z0-9._-]*[a-z0-9]"
+              disabled={pending}
+              aria-invalid={usernameAvailability === "taken" || usernameAvailability === "invalid"}
+            />
+            {usernameAvailability === "checking" ? (
+              <span className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]">Verifica disponibilità…</span>
+            ) : usernameAvailability === "available" ? (
+              <span className="mt-0.5 block text-[10px] text-[color:var(--cab-success)]">Username disponibile.</span>
+            ) : usernameAvailability === "taken" ? (
+              <span className="mt-0.5 block text-[10px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]">
+                Username già utilizzato.
+              </span>
+            ) : usernameAvailability === "invalid" ? (
+              <span className="mt-0.5 block text-[10px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]">
+                Username non valido.
+              </span>
+            ) : (
+              <span className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]">
+                Univoco in azienda. Usato per il login insieme all&apos;email (3–32 caratteri, minuscolo).
+              </span>
+            )}
           </label>
           <label className="block min-w-0">
             <span className={dsSectionTitle}>Email</span>
@@ -140,7 +195,11 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
             <button type="button" className={dsBtnGhost} onClick={() => onClose()} disabled={pending}>
               Annulla
             </button>
-            <button type="submit" className={dsBtnPrimary} disabled={pending}>
+            <button
+              type="submit"
+              className={dsBtnPrimary}
+              disabled={pending || usernameAvailability === "taken" || usernameAvailability === "checking"}
+            >
               {pending ? "Creazione…" : "Crea utente"}
             </button>
           </div>

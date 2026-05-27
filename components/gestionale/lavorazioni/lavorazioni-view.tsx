@@ -51,6 +51,10 @@ import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import {
+  formatIdentificazionePdfCell,
+  openLavorazioniInCorsoPdfInNewTab,
+} from "@/lib/lavorazioni/lavorazioni-list-pdf";
 import { resolveLavorazioneUltimaModifica, buildLatestLogAutoreByEntitaId } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { lavRowMatchesPageFilters, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import {
@@ -351,6 +355,15 @@ function IconSchede({ className = dsTableActionGlyph }: { className?: string }) 
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M7 4h7l3 3v13H7V4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
       <path d="M14 4v4h4M9.5 12h5M9.5 15.5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V4h12v5M6 14h12M7 17h10v3H7z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 9h14a2 2 0 012 2v4a2 2 0 01-2 2h-2v-3H7v3H5a2 2 0 01-2-2v-4a2 2 0 012-2z" />
     </svg>
   );
 }
@@ -1321,12 +1334,44 @@ export function LavorazioniView() {
     }
   }
 
+  const onPrintLavorazioniInCorso = useCallback(() => {
+    if (sortedAttive.length === 0) {
+      pushToast("Nessuna lavorazione in corso da stampare con i filtri attivi.", "warning", 4200);
+      return;
+    }
+    openLavorazioniInCorsoPdfInNewTab(
+      sortedAttive.map((row) => {
+        const ident = mezzoIdentParts(row, schedeStore);
+        return {
+          cliente: clienteLabel(row, schedeStore),
+          attrezzatura: macchinaLabel(row, schedeStore),
+          identificazione: formatIdentificazionePdfCell(ident.targa, ident.matricola, ident.scuderia),
+          stato: statoLavorazioneLabel(row.stato, statiOpts),
+          priorita: prioritaLabel(row.priorita),
+          prioritaSortKey: row.priorita,
+          addetto: addettoLabel(row, schedeStore, defaultAddetto),
+        };
+      }),
+      authorName,
+    );
+  }, [sortedAttive, pushToast, schedeStore, statiOpts, authorName, defaultAddetto]);
+
   return (
     <>
       <PageHeader
         title="Lavorazioni"
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              className={dsPageToolbarBtn}
+              onClick={onPrintLavorazioniInCorso}
+              title="Stampa PDF lavorazioni in corso"
+              aria-label="Stampa lavorazioni in corso"
+            >
+              <IconPrint />
+              Stampa
+            </button>
             <button
               type="button"
               className={dsPageToolbarBtn}
@@ -1482,7 +1527,7 @@ export function LavorazioniView() {
           {loading ? <p className="text-sm text-zinc-500">Caricamento…</p> : null}
 
           <GestionaleListTable
-            visibilityClass="hidden md:block"
+            visibilityClass="hidden xl:block"
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
@@ -1720,7 +1765,7 @@ export function LavorazioniView() {
                   })}
           </GestionaleListTable>
 
-          <div className="mt-4 space-y-2 md:hidden">
+          <div className="mt-4 space-y-2 xl:hidden">
             {pagedAttive.length === 0 ? (
               <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
                 {hasPageClientFilters || navMezzoFilter
@@ -1870,7 +1915,7 @@ export function LavorazioniView() {
         {listViewMode === "table" ? (
         <ShellCard title="Archivio lavorazioni">
           <GestionaleListTable
-            visibilityClass="hidden md:block"
+            visibilityClass="hidden xl:block"
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
@@ -2058,7 +2103,7 @@ export function LavorazioniView() {
                   })}
           </GestionaleListTable>
 
-          <div className="mt-4 space-y-2 md:hidden">
+          <div className="mt-4 space-y-2 xl:hidden">
             {pagedChiuse.length === 0 ? (
               <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
                 {hasPageClientFilters || navMezzoFilter

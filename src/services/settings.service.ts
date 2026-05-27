@@ -45,7 +45,8 @@ export function mergeAppSettingsUpsertWithVersions(
   }));
 }
 
-async function applyAppSettingsUpsert(c: SupabaseClient, input: AppSettingsUpsertInput): Promise<ServiceResult<AppSettingRow>> {
+/** Upsert singola riga `app_settings` (RLS applicata sul client). */
+export async function applyAppSettingsUpsert(c: SupabaseClient, input: AppSettingsUpsertInput): Promise<ServiceResult<AppSettingRow>> {
   const { data: userData } = await c.auth.getUser();
   const updated_by = userData.user?.id ?? null;
   const { module, key, value, expectedUpdatedAt } = input;

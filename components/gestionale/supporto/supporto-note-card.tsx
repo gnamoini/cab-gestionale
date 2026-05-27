@@ -1,15 +1,77 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { CardMobileActions } from "@/components/design-system";
+import { IconActionButton } from "@/components/design-system";
 import type { SupportoNote } from "@/lib/supporto/supporto-note-types";
 import { formatSupportoNoteDateTime } from "@/lib/supporto/supporto-notes-format";
-import { dsBadgeOk, dsBtnIcon, dsTextarea } from "@/lib/ui/design-system";
+import {
+  dsBadgeOk,
+  dsBtnNeutral,
+  dsBtnPrimary,
+  dsTableActionBtnDanger,
+  dsTableActionBtnPrimary,
+  dsTableActionBtnSecondary,
+  dsTableActionGlyph,
+  dsTableActionsGroupEnd,
+  dsTextarea,
+  dsTypoBody,
+  dsTypoCaption,
+} from "@/lib/ui/design-system";
+
+function IconPencil({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M19.5 7.125L16.862 4.487"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function IconCheckResolved({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M9 12.5l2 2 4-4.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function IconTrash({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M5 7h14M10 11v6M14 11v6M8 7l1-3h6l1 3M7 7l1 13h8l1-13"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
 function SupportoNoteActions({
   note,
   canEdit,
-  editing,
+  canModerate,
   disabled,
   onToggleResolved,
   onDelete,
@@ -17,60 +79,61 @@ function SupportoNoteActions({
 }: {
   note: SupportoNote;
   canEdit: boolean;
-  editing: boolean;
+  canModerate: boolean;
   disabled?: boolean;
   onToggleResolved: (id: string, resolved: boolean) => void;
   onDelete: () => void;
   onStartEdit: () => void;
 }) {
+  const resolvedLabel = note.resolved ? "Segna come aperta" : "Segna come risolta";
+
   return (
-    <>
-      {canEdit && !editing ? (
-        <button
-          type="button"
-          onClick={onStartEdit}
-          disabled={disabled}
-          className="rounded-md border border-zinc-200 px-2 py-1 text-[11px] font-medium text-orange-700 hover:bg-orange-50 disabled:opacity-50 dark:border-zinc-700 dark:text-orange-400 dark:hover:bg-zinc-900"
-        >
-          Modifica
-        </button>
-      ) : null}
-      <label className="flex cursor-pointer items-center gap-1.5 rounded-md border border-zinc-200 px-2 py-1 text-[11px] text-zinc-600 dark:border-zinc-700 dark:text-zinc-300">
-        <input
-          type="checkbox"
-          className="h-3.5 w-3.5 rounded border-zinc-300 text-orange-600 focus:ring-orange-500 dark:border-zinc-600 dark:bg-zinc-900"
-          checked={note.resolved}
-          onChange={(e) => onToggleResolved(note.id, e.target.checked)}
-          disabled={disabled || !canEdit || editing}
-          aria-label="Segna come risolta"
-        />
-        <span>Risolta</span>
-      </label>
+    <div className={dsTableActionsGroupEnd}>
       {canEdit ? (
-        <button
-          type="button"
-          onClick={onDelete}
-          disabled={disabled || editing}
-          className={`${dsBtnIcon} text-zinc-500 hover:text-red-600 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-red-400`}
-          title="Elimina nota"
-          aria-label="Elimina nota"
+        <IconActionButton
+          label="Modifica nota"
+          tooltipContent="Modifica"
+          className={dsTableActionBtnSecondary}
+          disabled={disabled}
+          onClick={onStartEdit}
         >
-          <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-            />
-          </svg>
-        </button>
+          <IconPencil />
+        </IconActionButton>
       ) : null}
-    </>
+      {canModerate ? (
+        <IconActionButton
+          label={resolvedLabel}
+          tooltipContent={resolvedLabel}
+          className={note.resolved ? dsTableActionBtnPrimary : dsTableActionBtnSecondary}
+          disabled={disabled}
+          aria-pressed={note.resolved}
+          onClick={() => onToggleResolved(note.id, !note.resolved)}
+        >
+          <IconCheckResolved />
+        </IconActionButton>
+      ) : null}
+      {canModerate ? (
+        <IconActionButton
+          label="Elimina nota"
+          tooltipContent="Elimina"
+          className={dsTableActionBtnDanger}
+          disabled={disabled}
+          onClick={onDelete}
+        >
+          <IconTrash />
+        </IconActionButton>
+      ) : null}
+    </div>
   );
 }
+
+const supportoNoteCardShell =
+  "rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 py-2.5 shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow] duration-150 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)]";
 
 export function SupportoNoteCard({
   note,
   canEdit,
+  canModerate,
   onUpdate,
   onDelete,
   onToggleResolved,
@@ -78,6 +141,7 @@ export function SupportoNoteCard({
 }: {
   note: SupportoNote;
   canEdit: boolean;
+  canModerate: boolean;
   onUpdate: (id: string, content: string, expectedUpdatedAt: string) => void | Promise<void>;
   onDelete: (id: string) => void;
   onToggleResolved: (id: string, resolved: boolean) => void;
@@ -86,6 +150,7 @@ export function SupportoNoteCard({
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.body);
   const authorDisplay = note.autore.trim().toUpperCase();
+  const showActions = !editing && (canEdit || canModerate);
 
   useEffect(() => {
     if (!editing) setDraft(note.body);
@@ -118,82 +183,62 @@ export function SupportoNoteCard({
 
   return (
     <li>
-      <article
-        className={`flex flex-col rounded-lg border border-zinc-200/90 bg-white px-3 py-2 shadow-sm transition-[border-color,box-shadow] duration-150 hover:border-zinc-300/90 dark:border-zinc-800 dark:bg-zinc-950/40 dark:hover:border-zinc-600 ${
-          note.resolved ? "opacity-90" : ""
-        }`}
-      >
-        <div className="min-w-0 flex-1 space-y-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-            <p className="text-xs font-bold tracking-wide text-orange-700">[{authorDisplay}]</p>
-            {note.resolved ? (
-              <span className={`${dsBadgeOk} text-[10px] py-0`} title="Nota risolta">
-                Risolta
-              </span>
-            ) : null}
-            <p className="text-[10px] tabular-nums text-zinc-500 dark:text-zinc-400">{formatSupportoNoteDateTime(note.at)}</p>
+      <article className={`${supportoNoteCardShell} ${note.resolved ? "opacity-90" : ""}`}>
+        {editing ? (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+              <p className="text-xs font-bold tracking-wide text-[color:var(--cab-primary)]">[{authorDisplay}]</p>
+              {note.resolved ? (
+                <span className={`${dsBadgeOk} py-0`} title="Nota risolta">
+                  Risolta
+                </span>
+              ) : null}
+              <p className={dsTypoCaption}>{formatSupportoNoteDateTime(note.at)}</p>
+            </div>
+            <textarea
+              rows={3}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              disabled={disabled}
+              className={`${dsTextarea} text-sm`}
+              aria-label="Modifica testo nota"
+            />
+            <div className="flex flex-wrap justify-end gap-1.5">
+              <button type="button" onClick={cancelEdit} disabled={disabled} className={dsBtnNeutral}>
+                Annulla
+              </button>
+              <button type="button" onClick={handleSaveEdit} disabled={disabled || !draft.trim()} className={dsBtnPrimary}>
+                Salva
+              </button>
+            </div>
           </div>
-          {editing ? (
-            <div className="space-y-1.5 pt-0.5">
-              <textarea
-                rows={3}
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                disabled={disabled}
-                className={`${dsTextarea} text-sm`}
-                aria-label="Modifica testo nota"
-              />
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={handleSaveEdit}
-                  disabled={disabled || !draft.trim()}
-                  className="rounded-md bg-orange-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-orange-700 disabled:opacity-50"
-                >
-                  Salva
-                </button>
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  disabled={disabled}
-                  className="rounded-md border border-zinc-200 px-2.5 py-1 text-[11px] font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-200 dark:hover:bg-zinc-900"
-                >
-                  Annulla
-                </button>
+        ) : (
+          <div className="flex items-start gap-2">
+            <div className="min-w-0 flex-1 space-y-1">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                <p className="text-xs font-bold tracking-wide text-[color:var(--cab-primary)]">[{authorDisplay}]</p>
+                {note.resolved ? (
+                  <span className={`${dsBadgeOk} py-0`} title="Nota risolta">
+                    Risolta
+                  </span>
+                ) : null}
+                <p className={dsTypoCaption}>{formatSupportoNoteDateTime(note.at)}</p>
               </div>
+              <p className={`${dsTypoBody} whitespace-pre-wrap break-words leading-snug`}>{note.body}</p>
             </div>
-          ) : (
-            <p className="whitespace-pre-wrap break-words text-sm leading-snug text-zinc-800 dark:text-zinc-100">
-              {note.body}
-            </p>
-          )}
-        </div>
-        {!editing ? (
-          <>
-            <CardMobileActions className="md:hidden">
+            {showActions ? (
               <SupportoNoteActions
                 note={note}
                 canEdit={canEdit}
-                editing={editing}
+                canModerate={canModerate}
                 disabled={disabled}
                 onToggleResolved={onToggleResolved}
                 onDelete={handleDelete}
                 onStartEdit={startEdit}
               />
-            </CardMobileActions>
-            <div className="mt-1.5 hidden flex-col items-end gap-1 md:flex">
-              <SupportoNoteActions
-                note={note}
-                canEdit={canEdit}
-                editing={editing}
-                disabled={disabled}
-                onToggleResolved={onToggleResolved}
-                onDelete={handleDelete}
-                onStartEdit={startEdit}
-              />
-            </div>
-          </>
-        ) : null}
+            ) : null}
+          </div>
+        )}
       </article>
     </li>
   );

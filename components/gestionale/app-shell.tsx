@@ -4,14 +4,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { CloseButton, Tooltip } from "@/components/design-system";
-import { PageLoadingOverlay } from "@/components/design-system/loading-indicator";
 import { useAuth } from "@/context/auth-context";
+import { useGlobalLoading, useShowGlobalLoading } from "@/context/global-loading-context";
+import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
 import { CLIENTE_HOME_PATH, shouldHideNavHref, isClienteRole } from "@/lib/auth/rbac";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
+import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
 import {
@@ -113,7 +115,7 @@ function NavLink({
   );
 }
 
-function AccountMenu({ compact }: { compact?: boolean }) {
+function AccountMenu() {
   const { user, logout, status } = useAuth();
   const [open, setOpen] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -127,8 +129,11 @@ function AccountMenu({ compact }: { compact?: boolean }) {
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
+  const showGlobalLoading = useShowGlobalLoading();
+
   async function onLogout() {
     setOpen(false);
+    showGlobalLoading(GLOBAL_LOADING_MESSAGES.logout);
     await logout();
     window.location.assign("/login");
   }
@@ -141,17 +146,15 @@ function AccountMenu({ compact }: { compact?: boolean }) {
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className={`${dsPageToolbarBtn} h-11 max-w-[14rem] justify-start gap-2 px-2.5 py-0 text-left text-xs ${erpFocus}`}
+        className={`${dsPageToolbarBtn} h-11 min-w-0 max-w-[min(14rem,42vw)] justify-start gap-2 px-2.5 py-0 text-left text-xs sm:max-w-[14rem] ${erpFocus}`}
         aria-expanded={open}
         aria-haspopup="menu"
       >
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500 text-[11px] font-bold text-white">
           {initial}
         </span>
-        <span className={`min-w-0 flex-1 truncate font-medium text-[color:var(--cab-text)] ${compact ? "max-md:sr-only" : ""}`}>
-          {label}
-        </span>
-        <span className="shrink-0 text-[color:var(--cab-text-muted)] max-md:sr-only" aria-hidden>
+        <span className="min-w-0 flex-1 truncate font-medium text-[color:var(--cab-text)]">{label}</span>
+        <span className="shrink-0 text-[color:var(--cab-text-muted)]" aria-hidden>
           ▾
         </span>
       </button>
@@ -183,8 +186,10 @@ function AccountMenu({ compact }: { compact?: boolean }) {
 
 function SidebarAccountFooter() {
   const { user, logout, status } = useAuth();
+  const showGlobalLoading = useShowGlobalLoading();
 
   async function onLogout() {
+    showGlobalLoading(GLOBAL_LOADING_MESSAGES.logout);
     await logout();
     window.location.assign("/login");
   }
@@ -332,17 +337,11 @@ function MobileNavDrawer({
         aria-label="Menu principale"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-zinc-200 px-4 dark:border-zinc-800">
-          <div className="flex min-w-0 items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-sm font-bold text-white">
-              CAB
-            </div>
-            <div className="min-w-0 leading-tight">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Gestionale</p>
-              <p className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">Manutenzione</p>
-            </div>
+        <div className="relative flex h-14 shrink-0 items-center justify-center border-b border-zinc-200 px-4 dark:border-zinc-800">
+          <CabLogo height={22} className="shrink-0" priority />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+            <CloseButton onClick={onClose} />
           </div>
-          <CloseButton onClick={onClose} />
         </div>
         <nav className="gestionale-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3" aria-label="Sezioni principali">
           {navItems.map((item) => (
@@ -364,6 +363,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const clientLavAccess = useClientLavorazioniAccess();
   const clienteOnly = isClienteRole(user);
   const homePath = clienteOnly ? CLIENTE_HOME_PATH : "/dashboard";
+  useGlobalLoading(routeLoading ? GLOBAL_LOADING_MESSAGES.navigation : null);
   const navItems = useMemo(
     () =>
       resolveGestionaleNav({
@@ -455,37 +455,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width] duration-200 ease-out md:flex ${asideW}`}
       >
         <div
-          className={`flex shrink-0 border-b border-[color:var(--cab-border)] ${
-            collapsed
-              ? "flex-col items-stretch gap-1.5 px-1.5 py-2"
-              : "h-14 flex-row items-center gap-2 px-2.5"
+          className={`flex shrink-0 items-center border-b border-[color:var(--cab-border)] ${
+            collapsed ? "justify-center px-1.5 py-2" : "h-14 gap-2 px-2.5"
           }`}
         >
-          <div className={`flex min-w-0 items-center gap-2 ${collapsed ? "justify-center" : "min-w-0 flex-1"}`}>
-            <div
-              className={`flex shrink-0 items-center justify-center rounded-lg bg-orange-500 font-bold text-white ${
-                collapsed ? "h-8 w-8 text-xs" : "h-9 w-9 text-sm"
-              }`}
-            >
-              CAB
+          {!collapsed ? (
+            <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center self-stretch py-1">
+              <CabLogo height={30} className="min-w-0 shrink-0 translate-x-[2px] translate-y-[4px] object-center" priority />
             </div>
-            <div
-              className={`min-w-0 flex-1 leading-tight transition-opacity duration-200 ease-out ${
-                collapsed ? "pointer-events-none hidden opacity-0" : ""
-              }`}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Gestionale</p>
-              <p className="truncate text-sm font-semibold text-[color:var(--cab-text)]">Manutenzione</p>
-            </div>
-          </div>
+          ) : null}
           <Tooltip content={collapsed ? "Espandi" : "Comprimi"} side="right">
             <button
               type="button"
               onClick={toggleCollapsed}
               aria-label={collapsed ? "Espandi menu laterale" : "Comprimi menu laterale"}
-              className={`hidden min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-sm text-[color:var(--cab-text-muted)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:bg-[var(--cab-hover)] md:inline-flex dark:border-[color:var(--cab-border-strong)] ${erpFocus} ${
-                collapsed ? "mx-auto" : ""
-              }`}
+              className={`${erpFocus} hidden min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-sm text-[color:var(--cab-text-muted)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:bg-[var(--cab-hover)] md:inline-flex dark:border-[color:var(--cab-border-strong)]`}
             >
               {collapsed ? "⟩" : "⟨"}
             </button>
@@ -529,27 +513,22 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             onClick={onHeaderHomeClick}
             className={`${erpFocus} hidden min-w-0 items-center gap-2.5 rounded-lg py-1 pr-2 md:inline-flex`}
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-xs font-bold text-white">
-              CAB
-            </span>
-            <span className="truncate text-sm font-semibold text-[color:var(--cab-text)]">Gestionale</span>
+            <CabLogo height={28} className="shrink-0 translate-y-[2px]" />
+            <span className="truncate text-xs font-semibold text-[color:var(--cab-text)] sm:text-sm">{CAB_APP_PRODUCT_NAME}</span>
           </Link>
 
           <div className="flex min-w-0 items-center justify-center gap-2 md:hidden">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-orange-500 text-xs font-bold text-white">
-              CAB
-            </div>
-            <span className="truncate text-sm font-semibold text-[color:var(--cab-text)]">Manutenzione</span>
+            <CabLogo height={20} className="shrink-0" />
+            <span className="truncate text-xs font-semibold text-[color:var(--cab-text)]">{CAB_APP_PRODUCT_NAME}</span>
           </div>
 
           <div className="flex shrink-0 items-center gap-2 justify-self-end md:ml-auto md:items-center">
             <ThemeToggle />
-            <AccountMenu compact />
+            <AccountMenu />
           </div>
         </header>
 
         <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} onNavigate={beginRouteTransition} />
-        <PageLoadingOverlay show={routeLoading} />
 
         <main className="gestionale-scrollbar mx-auto w-full max-w-[min(100%,100rem)] flex-1 overflow-auto px-2 py-3 sm:px-3 md:px-4 md:py-4">
           {children}

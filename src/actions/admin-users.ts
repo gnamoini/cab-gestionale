@@ -6,10 +6,12 @@ import { APP_ROLES, resolveRole, hasPermission, type AppRole } from "@/lib/auth/
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
+import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
 import type { ProfileRow } from "@/src/types/supabase-tables";
 
 export type CreateUserByAdminInput = {
   nome: string;
+  username: string;
   email: string;
   password: string;
   ruolo: AppRole;
@@ -19,9 +21,14 @@ export type CreateUserByAdminResult =
   | { ok: true; userId: string }
   | { ok: false; message: string };
 
+export type CheckUsernameAvailabilityResult =
+  | { ok: true; available: boolean }
+  | { ok: false; message: string };
+
 export type SecurityUserAdminRow = {
   id: string;
   nome: string;
+  username: string | null;
   email: string;
   ruolo: AppRole;
   createdAt: string | null;
@@ -128,6 +135,7 @@ function userRowFrom(profile: ProfileRow | undefined, authUser?: { id: string; e
   return {
     id: profile?.id ?? authUser?.id ?? "",
     nome,
+    username: profile?.username?.trim() || null,
     email: authUser?.email ?? "",
     ruolo: resolveRole(profile?.ruolo),
     createdAt: authUser?.created_at ?? profile?.created_at ?? null,
@@ -141,11 +149,16 @@ function userRowFrom(profile: ProfileRow | undefined, authUser?: { id: string; e
  */
 export async function createUserByAdminAction(input: CreateUserByAdminInput): Promise<CreateUserByAdminResult> {
   const nome = input.nome?.trim() ?? "";
+  const username = normalizeUsername(input.username ?? "");
   const email = input.email?.trim().toLowerCase() ?? "";
   const password = input.password ?? "";
   const ruolo = resolveRole(input.ruolo);
 
   if (!nome) return { ok: false, message: "Il nome è obbligatorio." };
+  const usernameErr = usernameFieldError(username);
+  if (usernameErr) {
+    return { ok: false, message: usernameErr };
+  }
   if (!email || !isValidEmail(email)) return { ok: false, message: "Email non valida." };
   if (password.length < 6) return { ok: false, message: "La password deve avere almeno 6 caratteri." };
   if (!RUOLI.includes(ruolo)) return { ok: false, message: "Ruolo non valido." };
@@ -154,6 +167,9 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
   if (!caller.ok) return { ok: false, message: caller.message };
   const admin = serviceAdmin(caller.url, caller.serviceKey);
 
+  const { data: usernameTaken } = await admin.from("profiles").select("id").eq("username", username).maybeSingle();
+  if (usernameTaken) return { ok: false, message: "Username già utilizzato." };
+
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
     password,
@@ -161,6 +177,7 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
     app_metadata: {
       cab_nome: nome,
       cab_ruolo: ruolo,
+      cab_username: username,
     },
   });
 
@@ -189,7 +206,11 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
     };
   }
 
-  const { data: row, error: verifyErr } = await admin.from("profiles").select("id, nome, ruolo").eq("id", userId).maybeSingle();
+  const { data: row, error: verifyErr } = await admin
+    .from("profiles")
+    .select("id, nome, ruolo, username")
+    .eq("id", userId)
+    .maybeSingle();
   if (verifyErr || !row) {
     return {
       ok: false,
@@ -198,7 +219,47 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
     };
   }
 
+  if (row.username !== username) {
+    const { error: usernameErr } = await admin.from("profiles").update({ username }).eq("id", userId);
+    if (usernameErr) {
+      const msg = usernameErr.message.includes("unique") || usernameErr.message.includes("duplicate")
+        ? "Username già utilizzato."
+        : usernameErr.message;
+      try {
+        await admin.auth.admin.deleteUser(userId);
+      } catch {
+        /* best effort */
+      }
+      return { ok: false, message: msg };
+    }
+  }
+
   return { ok: true, userId };
+}
+
+/** Verifica disponibilità username (solo admin sicurezza, case-insensitive). */
+export async function checkUsernameAvailabilityAction(input: {
+  username: string;
+  excludeUserId?: string | null;
+}): Promise<CheckUsernameAvailabilityResult> {
+  const username = normalizeUsername(input.username ?? "");
+  if (usernameFieldError(username)) {
+    return { ok: true, available: false };
+  }
+
+  const caller = await assertAdminCaller();
+  if (!caller.ok) return { ok: false, message: caller.message };
+
+  const sb = await createSupabaseServerUserClient();
+  const { data, error } = await sb.rpc("check_username_available", {
+    p_username: username,
+    p_exclude_user_id: input.excludeUserId ?? null,
+  });
+
+  if (error) {
+    return { ok: false, message: "Impossibile verificare il nome utente. Riprova." };
+  }
+  return { ok: true, available: data === true };
 }
 
 export async function listUsersByAdminAction(): Promise<ListUsersByAdminResult> {

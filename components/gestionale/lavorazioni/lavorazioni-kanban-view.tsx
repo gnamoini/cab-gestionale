@@ -6,7 +6,7 @@ import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazio
 import {
   addettoPillShellClassDynamic,
   prioritaLabel,
-  statoPillShellClassDynamic,
+  prioritaPillShellClassDynamic,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
@@ -55,6 +55,22 @@ function findCompletateColumnConfig(stati: readonly StatoLavorazioneConfig[]): S
       closed: true,
     }
   );
+}
+
+/** Accento visivo card Kanban per priorità (solo styling, token CAB). */
+function kanbanCardPrioritaAccent(priorita: PrioritaLavorazione): string {
+  switch (priorita) {
+    case "bassa":
+      return "border-l-[color:color-mix(in_srgb,var(--cab-border-strong)_75%,var(--cab-text-muted))] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))]";
+    case "media":
+      return "border-l-[color:color-mix(in_srgb,var(--cab-border-strong)_55%,var(--cab-primary))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))]";
+    case "alta":
+      return "border-l-[var(--cab-primary)] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-card))]";
+    case "urgente":
+      return "border-l-[color:color-mix(in_srgb,var(--cab-danger)_90%,#b91c1c)] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-card))]";
+    default:
+      return "border-l-[color:var(--cab-border-strong)]";
+  }
 }
 
 function sortKanbanCards(rows: LavorazioneListRow[]): LavorazioneListRow[] {
@@ -160,8 +176,9 @@ function KanbanCard({
       type="button"
       onClick={onOpen}
       className={[
-        "w-full rounded-xl border border-zinc-200 bg-white p-3 text-left shadow-sm transition hover:border-orange-300/80 hover:shadow-md dark:border-zinc-700 dark:bg-zinc-900/60 dark:hover:border-orange-500/40",
-        flash ? "ring-2 ring-orange-400/40" : "",
+        "w-full rounded-xl border border-[color:var(--cab-border)] border-l-4 p-3 text-left shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,background-color] duration-200 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)]",
+        kanbanCardPrioritaAccent(p),
+        flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -193,7 +210,7 @@ function KanbanCard({
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <TablePillReadonly
-            shellClass={statoPillShellClassDynamic()}
+            shellClass={prioritaPillShellClassDynamic()}
             shellStyle={readablePillStyleFromHex(prioHex)}
             title={prioritaLabel(p)}
             fitContent
@@ -361,7 +378,7 @@ export function LavorazioniKanbanView({
       return (
         <section
           key={col.id}
-          className="flex w-[min(100%,17.5rem)] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30"
+          className="flex w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30 lg:min-w-0 lg:w-auto lg:flex-1 lg:shrink"
           aria-label={`Colonna ${col.label}`}
         >
           {renderStatoHeader(col, accItems.length)}
@@ -390,7 +407,7 @@ export function LavorazioniKanbanView({
     return (
       <section
         key={col.id}
-        className="flex w-[min(100%,17.5rem)] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30"
+        className="flex w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30 lg:min-w-0 lg:w-auto lg:flex-1 lg:shrink"
         aria-label={`Colonna ${col.label}`}
       >
         {renderStatoHeader(col, items.length)}
@@ -408,7 +425,7 @@ export function LavorazioniKanbanView({
   const renderCompletateColumn = () => (
     <section
       key={completateColumn.id}
-      className="flex w-[min(100%,17.5rem)] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30"
+      className="flex w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30 lg:min-w-0 lg:w-auto lg:flex-1 lg:shrink"
       aria-label="Colonna Completate"
     >
       {renderStatoHeader(completateColumn, completateItems.length)}
@@ -424,8 +441,8 @@ export function LavorazioniKanbanView({
 
   return (
     <div className="space-y-3">
-      <div className="gestionale-scrollbar -mx-1 overflow-x-auto px-1 pb-1">
-        <div className="flex min-w-min items-start gap-3">
+      <div className="gestionale-scrollbar w-full overflow-x-auto pb-1 lg:overflow-x-visible">
+        <div className="flex w-full min-w-max items-start gap-3 lg:min-w-0">
           {kanbanColumns.map(renderColumn)}
           {renderCompletateColumn()}
         </div>

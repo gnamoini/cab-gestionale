@@ -305,7 +305,7 @@ function DesktopTable({
 
   return (
     <GestionaleListTable
-      visibilityClass="hidden md:block"
+      visibilityClass="hidden xl:block"
       className={gestionaleLavorazioniDenseTableClass}
       colgroup={colgroup}
       headRow={headRow}
@@ -393,14 +393,14 @@ function MobileCards({
 }) {
   if (bundles.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 md:hidden">
+      <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 xl:hidden">
         {emptyMessage}
       </p>
     );
   }
 
   return (
-    <div className="mt-4 space-y-3 md:hidden">
+    <div className="mt-4 space-y-3 xl:hidden">
       {bundles.map(({ row, fields }) => (
         <CardMobile key={row.id}>
           <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{fields.attrezzatura}</p>

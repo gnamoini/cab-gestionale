@@ -55,7 +55,7 @@ export function GestionaleListTableActionsHead() {
 
 export function GestionaleListTableMobileEmpty({ message }: { message: string }) {
   return (
-    <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 md:hidden">
+    <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 xl:hidden">
       {message}
     </p>
   );

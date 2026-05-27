@@ -10,8 +10,14 @@ const WEIGHT: Record<PrioritaLavorazione, number> = {
   urgente: 3,
 };
 
+/** Enum DB legacy (migrazione a bassa/media/alta/urgente). */
+const LEGACY_PRIORITA_ALIASES: Record<string, PrioritaLavorazione> = {
+  normale: "media",
+};
+
 export function prioritaSortWeight(p: string): number {
-  if (p in WEIGHT) return WEIGHT[p as PrioritaLavorazione];
+  const normalized = LEGACY_PRIORITA_ALIASES[p] ?? p;
+  if (normalized in WEIGHT) return WEIGHT[normalized as PrioritaLavorazione];
   return 99;
 }
 

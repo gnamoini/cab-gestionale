@@ -49,7 +49,7 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
   return (
     <>
       <GlobalTable
-        visibilityClass="hidden md:block"
+        visibilityClass="hidden xl:block"
         className="w-full min-w-0 text-sm text-zinc-900 dark:text-zinc-100"
         colgroup={
           <>
@@ -123,7 +123,7 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
         ))}
       </GlobalTable>
 
-      <div className={`space-y-3 md:hidden ${dsScrollbar}`}>
+      <div className={`space-y-3 xl:hidden ${dsScrollbar}`}>
         {rows.map((p) => (
           <CardMobile key={p.id}>
             <div className="flex items-start justify-between gap-3">

@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { AuthError, Session, User } from "@supabase/supabase-js";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import { resolveSignInEmail } from "@/src/lib/auth/resolve-sign-in-email";
+import { formatLoginIdentifierInput, isValidLoginIdentifier } from "@/src/lib/auth/username";
 import { resolveFormattedUserDisplayName } from "@/src/lib/auth/resolve-user-display-name";
 import { resolveRole } from "@/lib/auth/rbac";
 import { beginUndoSession, resetUndoSession } from "@/lib/gestionale-log/undo-session";
@@ -36,6 +37,11 @@ const FALLBACK_AUTHOR = "Utente CAB";
 /** Sessione considerata valida per query e gate (non forzare logout su glitch rete). */
 export function isAuthSessionEstablished(status: AuthStatus): boolean {
   return status === "authenticated" || status === "degraded";
+}
+
+/** Sessione pienamente verificata: usare per accesso pagine/azioni sensibili. */
+export function isAuthFullyAuthenticated(status: AuthStatus): boolean {
+  return status === "authenticated";
 }
 
 function delay(ms: number): Promise<void> {
@@ -279,8 +285,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setConfigurationError(null);
       try {
+        const identifier = formatLoginIdentifierInput(email);
+        if (!isValidLoginIdentifier(identifier)) {
+          return {
+            ok: false as const,
+            message: "Accesso non riuscito. Verifica email o nome utente e password.",
+          };
+        }
         const sb = getBrowserSupabase();
-        const signInEmail = resolveSignInEmail(email);
+        const signInEmail = await resolveSignInEmail(sb, identifier);
+        if (!signInEmail) {
+          authLogsService.logLoginFailedFireAndForget(identifier.includes("@") ? identifier : `${identifier}@login`);
+          return {
+            ok: false as const,
+            message: "Accesso non riuscito. Verifica email o nome utente e password.",
+          };
+        }
         const { error } = await sb.auth.signInWithPassword({
           email: signInEmail,
           password,
@@ -317,7 +337,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             : e instanceof Error
               ? e.message
               : "Errore di accesso.";
-        authLogsService.logLoginFailedFireAndForget(resolveSignInEmail(email));
+        authLogsService.logLoginFailedFireAndForget(email.trim().toLowerCase());
         return { ok: false as const, message: msg };
       }
     },

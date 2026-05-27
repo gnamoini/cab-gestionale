@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import {
   gestionaleDispatchFingerprint,
   cabSyncEventForEntity,
+  cabSyncEventNotificaKey,
+  shouldDispatchNotificaForCabEvent,
   GESTIONALE_DISPATCH_DEDUP_MS,
   getLastGestionaleDispatchAt,
 } from "@/lib/sync/gestionale-sync-dispatch";
-import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
+import { cabSyncEventFromPostgresChange, type CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 
 const fp1 = gestionaleDispatchFingerprint(["lavorazioni"], [
   cabSyncEventForEntity("lavorazioni", "abc", "entity_created", "lavorazioni"),
@@ -41,5 +43,16 @@ assert.equal(unknown, null);
 
 assert.equal(GESTIONALE_DISPATCH_DEDUP_MS, 5000);
 assert.equal(typeof getLastGestionaleDispatchAt(), "number");
+
+const magEv = cabSyncEventForEntity("magazzino_ricambi", "ric-1", "entity_updated", "magazzino_ricambi");
+const lavSyn: CabSyncEvent = { type: "entity_updated", entity: "lavorazioni", id: "", table: "lavorazioni" };
+assert.ok(magEv);
+assert.equal(
+  shouldDispatchNotificaForCabEvent(lavSyn, [magEv]),
+  false,
+  "evento sintetico lavorazioni non deve notificare se esplicito solo magazzino",
+);
+assert.equal(shouldDispatchNotificaForCabEvent(magEv, [magEv]), true);
+assert.equal(cabSyncEventNotificaKey(magEv), "magazzino_ricambi:entity_updated:ric-1");
 
 console.log("gestionale-sync-dispatch.test.ts: ok");

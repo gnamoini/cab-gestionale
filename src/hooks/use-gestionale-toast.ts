@@ -24,6 +24,13 @@ export function useGestionaleToast() {
     [push],
   );
 
+  const info = useCallback(
+    (message: string, durationMs = 4200) => {
+      push(message, "info", durationMs);
+    },
+    [push],
+  );
+
   const error = useCallback(
     (err: unknown, ctx?: GestionaleErrorContext, durationMs = 4800) => {
       const raw = err instanceof Error ? err.message : typeof err === "string" ? err : "Operazione non riuscita.";
@@ -32,5 +39,5 @@ export function useGestionaleToast() {
     [push],
   );
 
-  return useMemo(() => ({ success, warning, error, push }), [success, warning, error, push]);
+  return useMemo(() => ({ success, warning, info, error, push }), [success, warning, info, error, push]);
 }

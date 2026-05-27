@@ -19,6 +19,10 @@ export const metadata: Metadata = {
   title: "CAB — Gestionale manutenzione igiene urbana",
   description:
     "Gestionale web per officina: magazzino ricambi, lavorazioni, ERP/CRM, report e documentale.",
+  icons: {
+    icon: "/cab-logo.png",
+    apple: "/cab-logo.png",
+  },
 };
 
 export default function RootLayout({
@@ -26,7 +30,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const themeBootScript = `(function(){try{var k=${JSON.stringify(CAB_THEME_STORAGE_KEY)};var s=localStorage.getItem(k);var d;if(s==="dark")d=true;else if(s==="light")d=false;else d=window.matchMedia("(prefers-color-scheme: dark)").matches;var r=document.documentElement;r.classList.toggle("dark",d);r.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
+  const themeBootScript = `(function(){try{var k=${JSON.stringify(CAB_THEME_STORAGE_KEY)};var s=localStorage.getItem(k);var d;if(s==="dark")d=true;else if(s==="light")d=false;else d=window.matchMedia("(prefers-color-scheme: dark)").matches;var r=document.documentElement;r.classList.toggle("dark",!!d);r.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
 
   return (
     <html

@@ -1,7 +1,8 @@
 "use client";
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
+import { ensurePermission, ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
+import { SUPPORT_NOTE_MODERATION_DENIED } from "@/lib/supporto/support-note-permissions";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { SupportNoteRow, SupportNoteWithProfileRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -96,8 +97,8 @@ export const supportNotesService = {
 
   async setResolved(id: string, resolved: boolean): Promise<ServiceResult<SupportNoteRow>> {
     try {
-      const allowed = await ensureSectionWrite("supporto");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+      const allowed = await ensurePermission("manageSecurity");
+      if (!allowed.success) return err(allowed.error ?? SUPPORT_NOTE_MODERATION_DENIED);
       const c = await sb();
       const { data, error } = await c
         .from("support_notes")
@@ -113,20 +114,18 @@ export const supportNotesService = {
     }
   },
 
-  async softDelete(id: string): Promise<ServiceResult<SupportNoteRow>> {
+  async softDelete(id: string): Promise<ServiceResult<{ id: string }>> {
     try {
-      const allowed = await ensureSectionWrite("supporto");
-      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+      const allowed = await ensurePermission("manageSecurity");
+      if (!allowed.success) return err(allowed.error ?? SUPPORT_NOTE_MODERATION_DENIED);
       const c = await sb();
-      const { data, error } = await c
+      const { error } = await c
         .from("support_notes")
         .update({ deleted_at: new Date().toISOString() })
         .eq("id", id)
-        .is("deleted_at", null)
-        .select("*")
-        .single();
+        .is("deleted_at", null);
       if (error) return err(error.message);
-      return success(data as SupportNoteRow);
+      return success({ id });
     } catch (e) {
       return serviceFailFromError(e);
     }

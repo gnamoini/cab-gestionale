@@ -10,9 +10,6 @@ import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gest
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
-import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
-import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
-import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { findMezzoByTargaOrMatricola } from "@/lib/mezzi/find-mezzo-by-ident";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -21,39 +18,26 @@ import { persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
 import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId } from "@/src/shared/selectors";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
-import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
-import {
-  findLastSchedaIngressoForIdent,
-  hasSchedaIngressoIdentLookup,
-  mergeSchedaIngressoFields,
-} from "@/lib/schede/scheda-ingresso-reuse";
-import { SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL } from "@/lib/schede/scheda-ingresso-ui-labels";
+import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import type { MezzoInsert } from "@/src/services/mezzi.service";
-import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
 import {
   MezzoDuplicatoAnagraficaDialog,
   type MezzoDuplicatoAnagraficaChoice,
 } from "@/components/lavorazioni/schede/mezzo-duplicato-anagrafica-dialog";
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
-import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
-  addettoPillShellClass,
-  erpBtnAccent,
-  erpBtnNeutral,
-  prioritaPillShellClass,
-  statoPillShellClass,
-} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { GlobalDatePicker, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
-import { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
-import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
-import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
-import { dsCheckboxInput, dsCheckboxOptionLabel, dsInput, dsModalFormFooter, dsTypoCaption } from "@/lib/ui/design-system";
+  emptySchedaIngressoFields,
+  SchedaIngressoFormBody,
+  SchedaIngressoFormModalShell,
+  todayItDate,
+} from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
+import { dsCheckboxInput, dsCheckboxOptionLabel, dsModalFormFooter, dsTypoCaption } from "@/lib/ui/design-system";
 
-function todayItDate(): string {
-  return new Date().toLocaleDateString("it-IT", { day: "2-digit", month: "2-digit", year: "numeric" });
-}
+export { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 
 function itDateToYmd(it: string): string {
   const p = it.trim().split(/[/.-]/);
@@ -70,31 +54,6 @@ function ymdToIsoMidUtc(ymd: string): string {
   const [y, m, d] = p.split("-").map((x) => Number(x));
   if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return new Date().toISOString();
   return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0)).toISOString();
-}
-
-function emptyIngresso(addettoDefault: string): SchedaIngressoFields {
-  return {
-    dataIngresso: todayItDate(),
-    cliente: "",
-    cantiere: "",
-    utilizzatore: "",
-    tipoAttrezzatura: "",
-    marcaAttrezzatura: "",
-    modelloAttrezzatura: "",
-    matricola: "",
-    nScuderia: "",
-    oreLavoro: "",
-    tipoTelaio: "",
-    marcaTelaio: "",
-    modelloTelaio: "",
-    targa: "",
-    km: "",
-    descrizioneAnomalia: "",
-    livelloCarburante: "",
-    addettoAccettazione: addettoDefault,
-    richiedente: "",
-    noteIntervento: "",
-  };
 }
 
 function schedaFieldsToMezzoPayload(fields: SchedaIngressoFields): MezzoInsert {
@@ -147,7 +106,6 @@ export function LavorazioneCreateModal({
   const updateMezzo = useMezzoUpdateMutation();
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
 
-  const liste = globalOpts.mezziListe;
   const stati = globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata");
   const defaultAccettazioneStato = stati.find((s) => {
     const hay = `${s.id} ${s.label}`.toLowerCase();
@@ -164,7 +122,7 @@ export function LavorazioneCreateModal({
     [mezziUi, mezzi],
   );
 
-  const [fields, setFields] = useState<SchedaIngressoFields>(() => emptyIngresso(""));
+  const [fields, setFields] = useState<SchedaIngressoFields>(() => emptySchedaIngressoFields(""));
   const [mezzoId, setMezzoId] = useState("");
   const [creaNuovoMezzo, setCreaNuovoMezzo] = useState(false);
   const [stato, setStato] = useState("");
@@ -186,17 +144,9 @@ export function LavorazioneCreateModal({
     setDuplicateMezzo(null);
   }, []);
 
-  const lastIngressoMatch = useMemo(() => {
-    if (!hasSchedaIngressoIdentLookup(fields.targa, fields.matricola)) return null;
-    return findLastSchedaIngressoForIdent(
-      fields.targa,
-      fields.matricola,
-      mezziCatalog,
-      schedeStore,
-      attive,
-      storico,
-    );
-  }, [fields.targa, fields.matricola, mezziCatalog, schedeStore, attive, storico]);
+  const patch = useCallback((p: Partial<SchedaIngressoFields>) => {
+    setFields((f) => ({ ...f, ...p }));
+  }, []);
 
   const mezzoPrompt = useSchedaIngressoMezzoPrompt({
     fields,
@@ -206,10 +156,6 @@ export function LavorazioneCreateModal({
     attive,
     storico,
   });
-
-  const patch = useCallback((p: Partial<SchedaIngressoFields>) => {
-    setFields((f) => ({ ...f, ...p }));
-  }, []);
 
   const applyMezzo = useCallback(
     (m: MezzoGestito) => {
@@ -232,13 +178,6 @@ export function LavorazioneCreateModal({
     [addettiOpts, fields.addettoAccettazione],
   );
 
-  const onMezzoPromptMatch = useCallback(
-    (m: MezzoGestito) => {
-      mezzoPrompt.requestPrompt(m);
-    },
-    [mezzoPrompt],
-  );
-
   const acceptMezzoPrompt = useCallback(() => {
     const m = mezzoPrompt.promptMezzo;
     mezzoPrompt.acceptAutofill();
@@ -259,21 +198,16 @@ export function LavorazioneCreateModal({
     }
   }, [fields.matricola, fields.targa, mezzoPrompt]);
 
-  const copyLastIngresso = useCallback(() => {
-    if (!lastIngressoMatch) return;
-    setFields((f) => mergeSchedaIngressoFields(f, lastIngressoMatch.campi));
-  }, [lastIngressoMatch]);
-
   useEffect(() => {
     if (!open) return;
     const addetto0 = addettiOpts[0] ?? "";
-    setFields(emptyIngresso(addetto0));
+    setFields(emptySchedaIngressoFields(addetto0));
     setMezzoId((defaultMezzoId ?? "").trim());
     setCreaNuovoMezzo(false);
     setStato(defaultAccettazioneStato?.id ?? resolveDefaultLavorazioneStatoId(stati));
     setPriorita(prioritaOpts.includes("media") ? "media" : (prioritaOpts[0] ?? "media"));
     setMezzoHint(null);
-  }, [open, defaultMezzoId, prioritaOpts, addettiOpts, defaultAccettazioneStato?.id]);
+  }, [open, defaultMezzoId, prioritaOpts, addettiOpts, defaultAccettazioneStato?.id, stati]);
 
   useEffect(() => {
     if (!open || !defaultMezzoId) return;
@@ -285,38 +219,6 @@ export function LavorazioneCreateModal({
     if (!open || prioritaOpts.length === 0) return;
     if (!prioritaOpts.includes(priorita)) setPriorita(prioritaOpts[0]!);
   }, [open, priorita, prioritaOpts]);
-
-  const tablePillOptions = useMemo(
-    () => buildLavorazioniPillOptionsFromGlobal(globalOpts),
-    [globalOpts],
-  );
-  const statoPillOptions = useMemo(() => tablePillOptions.stati(stati), [tablePillOptions, stati]);
-  const prioritaPillOptions = useMemo(
-    () => tablePillOptions.priorita(prioritaOpts),
-    [tablePillOptions, prioritaOpts],
-  );
-  const addettoPillOptions = useMemo(
-    () => tablePillOptions.addetto(fields.addettoAccettazione),
-    [tablePillOptions, fields.addettoAccettazione],
-  );
-  const statoPillStyle = useMemo(
-    () => (stato ? readablePillStyleFromHex(statoDisplayColor(stato, stati)) : undefined),
-    [stato, stati],
-  );
-  const prioritaPillStyle = useMemo(
-    () =>
-      readablePillStyleFromHex(
-        priorita === "urgente" ? "#b91c1c" : prioritaDisplayColor(priorita as PrioritaLav, globalOpts.lavorazioni.prioritaColors),
-      ),
-    [priorita, globalOpts.lavorazioni.prioritaColors],
-  );
-  const addettoPillStyle = useMemo(
-    () =>
-      readablePillStyleFromHex(
-        addettoDisplayColor(fields.addettoAccettazione, globalOpts.lavorazioni.addettoColors),
-      ),
-    [fields.addettoAccettazione, globalOpts.lavorazioni.addettoColors],
-  );
 
   if (!open) return null;
 
@@ -400,140 +302,78 @@ export function LavorazioneCreateModal({
   }
 
   const pending = create.isPending || createMezzo.isPending || updateMezzo.isPending;
-  const inputFieldClass = `mt-1 block w-full ${dsInput}`;
-  const listSelectWrapClass = "mt-1 w-full";
+  const saveError =
+    create.isError || createMezzo.isError || updateMezzo.isError
+      ? (create.error?.message ?? createMezzo.error?.message ?? updateMezzo.error?.message ?? "Salvataggio fallito.")
+      : null;
 
   return (
-    <LavorazioniModalShell
-      wide
-      maxWidthClass="max-w-2xl"
-      onRequestClose={onClose}
-      title="Scheda di ingresso"
-      subtitle="Nuova lavorazione — compila i dati di accettazione mezzo."
-    >
-      <MezzoRegistratoIngressoDialog
-        open={mezzoPrompt.promptOpen}
-        mezzo={mezzoPrompt.promptMezzo}
-        onAccept={acceptMezzoPrompt}
-        onDismiss={dismissMezzoPrompt}
-      />
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
-          {globalOpts.isError ? (
-            <p className="text-sm text-red-600 dark:text-red-400">{globalOpts.error?.message ?? "Errore impostazioni."}</p>
-          ) : null}
-          {create.isError || createMezzo.isError || updateMezzo.isError ? (
-            <p className="text-sm text-red-600 dark:text-red-400">
-              {create.error?.message ?? createMezzo.error?.message ?? updateMezzo.error?.message ?? "Salvataggio fallito."}
-            </p>
-          ) : null}
-          {mezzoHint ? (
-            <p className="rounded-lg border border-orange-200/80 bg-orange-50/80 px-3 py-2 text-xs text-orange-950 dark:border-orange-900/40 dark:bg-orange-950/30 dark:text-orange-100">
-              {mezzoHint}
-            </p>
-          ) : null}
-
-          <FormSection title="Ingresso">
-            <FormField label="Data ingresso *">
-              <GlobalDatePicker
-                value={fields.dataIngresso}
-                onChange={(v) => patch({ dataIngresso: v })}
-                inputClassName={dsInput}
-                required
-                disabled={pending}
-              />
-            </FormField>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              <FormField label="Stato iniziale">
-                <GlobalFixedListPillSelect
-                  value={stato}
-                  onChange={setStato}
-                  options={statoPillOptions}
-                  ariaLabel="Stato iniziale"
-                  disabled={pending || globalOpts.isLoading || stati.length === 0}
-                  shellClass={statoPillShellClass()}
-                  fallbackPillStyle={statoPillStyle}
-                />
-              </FormField>
-              <FormField label="Priorità">
-                <GlobalFixedListPillSelect
-                  value={priorita}
-                  onChange={(v) => setPriorita(v as PrioritaLavorazione)}
-                  options={prioritaPillOptions}
-                  ariaLabel="Priorità"
-                  disabled={pending || prioritaOpts.length === 0}
-                  shellClass={prioritaPillShellClass()}
-                  fallbackPillStyle={prioritaPillStyle}
-                />
-              </FormField>
-              <FormField label="Utente" className="sm:col-span-2 lg:col-span-1">
-                <GlobalFixedListPillSelect
-                  value={fields.addettoAccettazione}
-                  onChange={(v) => patch({ addettoAccettazione: v })}
-                  options={addettoPillOptions}
-                  ariaLabel={SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL}
-                  disabled={pending || addettiOpts.length === 0}
-                  shellClass={addettoPillShellClass()}
-                  fallbackPillStyle={addettoPillStyle}
-                />
-              </FormField>
-            </div>
-          </FormSection>
-
-          <SchedaIngressoAnagraficaFields
-            value={fields}
+    <>
+      <SchedaIngressoFormModalShell
+        open={open}
+        onRequestClose={onClose}
+        variant="create-lavorazione"
+        subtitle="Nuova lavorazione — compila i dati di accettazione mezzo."
+        footer={null}
+      >
+        <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <SchedaIngressoFormBody
+            variant="create-lavorazione"
+            fields={fields}
+            setFields={setFields}
             onPatch={patch}
-            mezzi={mezziCatalog}
-            disabled={pending}
-            onExactMezzoMatch={onMezzoPromptMatch}
-            lastIngressoMatch={lastIngressoMatch}
-            onCopyLastIngresso={copyLastIngresso}
-            clienteRequired
-            marcaAttrezzaturaRequired
+            pending={pending}
+            mezzi={mezzi}
+            schedeStore={schedeStore}
+            attive={attive}
+            storico={storico}
+            stato={stato}
+            onStatoChange={setStato}
+            priorita={priorita}
+            onPrioritaChange={setPriorita}
+            mezzoHint={mezzoHint}
+            errorMessage={saveError}
+            mezzoPrompt={mezzoPrompt}
+            onMezzoDialogAccept={acceptMezzoPrompt}
+            onMezzoDialogDismiss={dismissMezzoPrompt}
           />
-
-          <FormSection title="Intervento">
-            <FormField label="Descrizione anomalia">
-              <textarea className={`${dsInput} min-h-[72px] w-full resize-y`} value={fields.descrizioneAnomalia} onChange={(e) => patch({ descrizioneAnomalia: e.target.value })} disabled={pending} rows={3} />
-            </FormField>
-            <FormField label="Note">
-              <textarea className={`${dsInput} min-h-[56px] w-full resize-y`} value={fields.noteIntervento} onChange={(e) => patch({ noteIntervento: e.target.value })} disabled={pending} rows={2} />
-            </FormField>
-          </FormSection>
-        </div>
-
-        <footer className={dsModalFormFooter}>
-          {!mezzoId ? (
-            <label className={`${dsCheckboxOptionLabel} min-w-0 flex-1 sm:max-w-[min(100%,28rem)]`}>
-              <input
-                type="checkbox"
-                className={dsCheckboxInput}
-                checked={creaNuovoMezzo}
-                onChange={(e) => setCreaNuovoMezzo(e.target.checked)}
-                disabled={pending}
-              />
-              <span className="min-w-0">
-                <span className="block text-sm font-medium text-[color:var(--cab-text)]">
-                  Crea nuovo mezzo in anagrafica
+          <footer className={dsModalFormFooter}>
+            {!mezzoId ? (
+              <label className={`${dsCheckboxOptionLabel} min-w-0 flex-1 sm:max-w-[min(100%,28rem)]`}>
+                <input
+                  type="checkbox"
+                  className={dsCheckboxInput}
+                  checked={creaNuovoMezzo}
+                  onChange={(e) => setCreaNuovoMezzo(e.target.checked)}
+                  disabled={pending}
+                />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-[color:var(--cab-text)]">
+                    Crea nuovo mezzo in anagrafica
+                  </span>
+                  <span className={`mt-0.5 block ${dsTypoCaption}`}>
+                    Collegalo alla lavorazione con i dati compilati sopra.
+                  </span>
                 </span>
-                <span className={`mt-0.5 block ${dsTypoCaption}`}>
-                  Collegalo alla lavorazione con i dati compilati sopra.
-                </span>
-              </span>
-            </label>
-          ) : (
-            <span className="min-w-0 flex-1" aria-hidden />
-          )}
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={pending}>
-              Annulla
-            </button>
-            <button type="submit" className={erpBtnAccent} disabled={pending || !createdBy || stati.length === 0 || globalOpts.isLoading}>
-              {pending ? "Salvataggio…" : "Salva lavorazione"}
-            </button>
-          </div>
-        </footer>
-      </form>
+              </label>
+            ) : (
+              <span className="min-w-0 flex-1" aria-hidden />
+            )}
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+              <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={pending}>
+                Annulla
+              </button>
+              <button
+                type="submit"
+                className={erpBtnAccent}
+                disabled={pending || !createdBy || stati.length === 0 || globalOpts.isLoading}
+              >
+                {pending ? "Salvataggio…" : "Salva lavorazione"}
+              </button>
+            </div>
+          </footer>
+        </form>
+      </SchedaIngressoFormModalShell>
       <MezzoDuplicatoAnagraficaDialog
         open={duplicateMezzo != null}
         mezzo={duplicateMezzo}
@@ -541,6 +381,6 @@ export function LavorazioneCreateModal({
         onOverwrite={() => closeDuplicateMezzoDialog("overwrite")}
         onCancel={() => closeDuplicateMezzoDialog(null)}
       />
-    </LavorazioniModalShell>
+    </>
   );
 }

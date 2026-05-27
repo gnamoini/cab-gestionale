@@ -736,7 +736,7 @@ export function PreventiviView() {
         <GestionaleListTable
           masterScrollScope={false}
           wrapClassName="mt-4"
-          visibilityClass="hidden md:block"
+          visibilityClass="hidden xl:block"
           colgroup={
             <>
               <col className="w-[5.25rem]" />
@@ -911,7 +911,7 @@ export function PreventiviView() {
               })}
         </GestionaleListTable>
 
-        <div className="mt-4 space-y-3 md:hidden">
+        <div className="mt-4 space-y-3 xl:hidden">
           {pagedRows.length === 0 ? (
             <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
               {hasPreventiviListFilters

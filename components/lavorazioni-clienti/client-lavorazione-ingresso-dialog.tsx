@@ -8,7 +8,7 @@ import { buildClientPortalRowFields } from "@/lib/lavorazioni/client-portal-row-
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
-import { SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL } from "@/lib/schede/scheda-ingresso-ui-labels";
+import { SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL } from "@/lib/schede/scheda-ingresso-ui-labels";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 
 const INGRESSO_FIELD_LABELS: { key: keyof SchedaIngressoFields; label: string }[] = [
@@ -28,7 +28,7 @@ const INGRESSO_FIELD_LABELS: { key: keyof SchedaIngressoFields; label: string }[
   { key: "km", label: "Km" },
   { key: "descrizioneAnomalia", label: "Descrizione anomalia" },
   { key: "livelloCarburante", label: "Livello carburante" },
-  { key: "addettoAccettazione", label: SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL },
+  { key: "addettoAccettazione", label: SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL },
   { key: "richiedente", label: "Richiedente" },
   { key: "noteIntervento", label: "Note intervento" },
 ];

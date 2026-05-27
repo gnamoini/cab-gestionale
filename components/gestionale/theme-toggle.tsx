@@ -23,15 +23,15 @@ function IconMoon({ className }: { className?: string }) {
 }
 
 export function ThemeToggle() {
-  const { resolved, toggleLightDark } = useTheme();
+  const { resolved, themeReady, themeSaving, toggleLightDark } = useTheme();
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
 
   const label = resolved === "dark" ? "Passa a tema chiaro" : "Passa a tema scuro";
-  const tip = resolved === "dark" ? "Chiaro" : "Scuro";
+  const tip = themeSaving ? "Salvataggio…" : resolved === "dark" ? "Chiaro" : "Scuro";
 
-  if (!mounted) {
+  if (!mounted || !themeReady) {
     return (
       <span
         className="inline-flex h-11 min-w-[2.75rem] shrink-0 items-center justify-center rounded-lg border border-transparent bg-transparent"
@@ -45,8 +45,10 @@ export function ThemeToggle() {
       <button
         type="button"
         onClick={toggleLightDark}
-        className={`${dsPageToolbarBtn} h-11 min-w-[2.75rem] px-2.5 sm:px-3`}
+        disabled={themeSaving}
+        className={`${dsPageToolbarBtn} h-11 min-w-[2.75rem] px-2.5 sm:px-3 disabled:opacity-60`}
         aria-label={label}
+        aria-busy={themeSaving}
       >
         {resolved === "dark" ? <IconSun className="h-[18px] w-[18px]" /> : <IconMoon className="h-[18px] w-[18px]" />}
       </button>

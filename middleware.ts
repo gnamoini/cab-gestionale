@@ -20,7 +20,6 @@ const LOGIN_PATH = "/login";
 
 function isStaticAsset(pathname: string): boolean {
   if (pathname.startsWith("/_next")) return true;
-  if (pathname.startsWith("/api")) return true;
   if (pathname === "/favicon.ico") return true;
   if (/\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff2?|ttf|eot)$/.test(pathname)) return true;
   return false;

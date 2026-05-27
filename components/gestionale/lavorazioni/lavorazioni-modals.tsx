@@ -125,6 +125,7 @@ export function LavorazioniModalShell({
   wide,
   maxWidthClass,
   alignTop,
+  layerClassName,
   onRequestClose,
   title,
   subtitle,
@@ -136,6 +137,8 @@ export function LavorazioniModalShell({
   wide?: boolean;
   maxWidthClass?: string;
   alignTop?: boolean;
+  /** Es. `z-[110]` quando la modale si apre sopra un'altra modale gestionale. */
+  layerClassName?: string;
   onRequestClose: () => void;
   /** Se impostato, mostra header standard con titolo e X. */
   title?: string;
@@ -160,7 +163,7 @@ export function LavorazioniModalShell({
 
   return (
     <div
-      className={`${dsLavorazioniModalLayer} ${alignTop ? "!items-start" : ""}`}
+      className={`${dsLavorazioniModalLayer} ${layerClassName ?? ""} ${alignTop ? "!items-start" : ""}`}
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {

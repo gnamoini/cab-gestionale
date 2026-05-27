@@ -65,3 +65,5 @@ export function useSchedaIngressoMezzoPrompt({
     acceptAutofill,
   };
 }
+
+export type UseSchedaIngressoMezzoPromptResult = ReturnType<typeof useSchedaIngressoMezzoPrompt>;

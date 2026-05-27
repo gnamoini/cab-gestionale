@@ -63,7 +63,7 @@ export function openSchedaPrintWindow(opts: {
       ["KM", c.km],
       ["Descrizione anomalia", c.descrizioneAnomalia],
       ["Livello carburante", c.livelloCarburante],
-      ["Utente accettazione", c.addettoAccettazione],
+      ["Addetto accettazione", c.addettoAccettazione],
     ]);
   } else if (opts.doc.tipo === "lavorazioni") {
     const c = opts.doc.campi;

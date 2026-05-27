@@ -2,13 +2,21 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { useAuth } from "@/context/auth-context";
+import { useAuth, isAuthFullyAuthenticated } from "@/context/auth-context";
+import { resolvePostLoginRedirectPath } from "@/lib/auth/resolve-post-login-redirect";
+import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
+import { CabLogo } from "@/components/gestionale/cab-logo";
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
+import { CloseButton, GlobalLoadingSpinner } from "@/components/design-system";
+import { GlobalLoadingView } from "@/components/design-system/global-loading";
+import { useGlobalLoading } from "@/context/global-loading-context";
+import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import {
   dsBtnNeutral,
   dsBtnPrimary,
+  dsCheckboxInput,
   dsLabel,
   dsModalBackdrop,
   dsModalPanel,
@@ -17,22 +25,12 @@ import {
   dsTypoCaption,
 } from "@/lib/ui/design-system";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-
-function safeRedirectTarget(raw: string | null): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/dashboard";
-  if (raw.startsWith("/login")) return "/dashboard";
-  const pathOnly = raw.split("?")[0] ?? raw;
-  if (isStagingPublicSlice() && isStagingBlockedPathname(pathOnly)) {
-    return "/dashboard?staging_unavailable=1";
-  }
-  return raw;
-}
-
-function isValidEmailFormat(value: string): boolean {
-  const s = value.trim();
-  if (!s) return false;
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
-}
+import {
+  formatLoginIdentifierInput,
+  isValidEmailFormat,
+  isValidLoginIdentifier,
+  loginIdentifierFieldError,
+} from "@/src/lib/auth/username";
 
 /** Messaggi login senza esporre dettagli interni Supabase. */
 function loginErrorUserMessage(raw: string): string {
@@ -48,15 +46,54 @@ function loginErrorUserMessage(raw: string): string {
     m.includes("email not confirmed") ||
     m.includes("user not found")
   ) {
-    return "Accesso non riuscito. Verifica email e password.";
+    return "Accesso non riuscito. Verifica email o nome utente e password.";
   }
   return "Accesso non riuscito. Riprova.";
 }
 
-function IconMail({ className = "h-4 w-4" }: { className?: string }) {
+function LoginPageShell({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="relative isolate min-h-dvh overflow-hidden bg-[var(--cab-bg-app)]">
+      <div
+        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-15%,color-mix(in_srgb,var(--cab-primary)_20%,transparent),transparent_55%),radial-gradient(ellipse_70%_50%_at_100%_100%,color-mix(in_srgb,var(--cab-primary)_10%,transparent),transparent_50%),linear-gradient(180deg,var(--cab-bg-app)_0%,color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-bg-app))_100%)]"
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.055]"
+        style={{
+          backgroundImage: "radial-gradient(circle at 1.5px 1.5px, currentColor 1px, transparent 0)",
+          backgroundSize: "24px 24px",
+        }}
+        aria-hidden
+      />
+      <div
+        className="pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.04] blur-[1px] dark:opacity-[0.06]"
+        aria-hidden
+      >
+        <CabLogo height={240} className="mx-auto object-center dark:brightness-[1.15] dark:contrast-[0.92] dark:saturate-0" />
+      </div>
+      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
+        <ThemeToggle />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function LoginAuthWaitShell({ message }: { message: string }) {
+  return (
+    <LoginPageShell>
+      <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-12">
+        <GlobalLoadingView message={message} />
+      </div>
+    </LoginPageShell>
+  );
+}
+
+function IconUser({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
     </svg>
   );
 }
@@ -88,12 +125,18 @@ function IconEyeOff({ className = "h-4 w-4" }: { className?: string }) {
 
 const iconInset = "pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[color:var(--cab-text-muted)]";
 
+const loginCardClass = `${dsSurfaceCard} w-full max-w-[26rem] border-[color:color-mix(in_srgb,var(--cab-border)_70%,var(--cab-border-strong))] p-6 shadow-[var(--cab-shadow-md)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-border)_45%,transparent)] sm:p-8`;
+
+const loginAlertErrorClass =
+  "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_8%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-danger)_90%,var(--cab-text))]";
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, status, configurationError } = useAuth();
+  const { login, status, configurationError, user } = useAuth();
+  const clientLavAccess = useClientLavorazioniAccess();
   const formId = useId();
-  const emailId = `${formId}-email`;
+  const identifierId = `${formId}-identifier`;
   const passwordId = `${formId}-password`;
   const emailRef = useRef<HTMLInputElement>(null);
 
@@ -111,12 +154,32 @@ export function LoginForm() {
   const [resetDone, setResetDone] = useState(false);
   const [resetError, setResetError] = useState<string | null>(null);
 
+  const authWaitMessage =
+    status === "loading"
+      ? GLOBAL_LOADING_MESSAGES.default
+      : isAuthFullyAuthenticated(status)
+        ? GLOBAL_LOADING_MESSAGES.redirectWorkspace
+        : null;
+  useGlobalLoading(authWaitMessage);
+
   useEffect(() => {
-    if (status !== "authenticated" && status !== "degraded") return;
-    const target = safeRedirectTarget(searchParams.get("from"));
-    router.replace(target);
+    if (!isAuthFullyAuthenticated(status)) return;
+    if (clientLavAccess.isLoading) return;
+
+    const target = resolvePostLoginRedirectPath({
+      user: user ? { ruolo: user.ruolo, id: user.id } : null,
+      requestedPath: searchParams.get("from"),
+      clientLavorazioniAllowed: clientLavAccess.allowed,
+    });
+
+    let finalTarget = target;
+    if (isStagingPublicSlice() && isStagingBlockedPathname(target.split("?")[0] ?? target)) {
+      finalTarget = "/dashboard?staging_unavailable=1";
+    }
+
+    router.replace(finalTarget);
     router.refresh();
-  }, [status, router, searchParams]);
+  }, [status, user, clientLavAccess.isLoading, clientLavAccess.allowed, router, searchParams]);
 
   useEffect(() => {
     if (status === "loading" || status === "authenticated" || status === "degraded") return;
@@ -169,27 +232,25 @@ export function LoginForm() {
   }
 
   if (status === "loading") {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-[var(--cab-bg-app)] px-4 text-sm text-[color:var(--cab-text-muted)]">
-        Caricamento…
-      </div>
-    );
+    return <LoginAuthWaitShell message={GLOBAL_LOADING_MESSAGES.default} />;
   }
 
-  if (status === "authenticated" || status === "degraded") {
-    return (
-      <div className="flex min-h-dvh items-center justify-center bg-[var(--cab-bg-app)] px-4 text-sm text-[color:var(--cab-text-muted)]">
-        Reindirizzamento…
-      </div>
-    );
+  if (isAuthFullyAuthenticated(status)) {
+    return <LoginAuthWaitShell message={GLOBAL_LOADING_MESSAGES.redirectWorkspace} />;
   }
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setFieldError(null);
-    if (!isValidEmailFormat(email)) {
-      setFieldError("Inserisci un indirizzo email valido.");
+    const identifier = formatLoginIdentifierInput(email);
+    const idErr = loginIdentifierFieldError(identifier);
+    if (idErr) {
+      setFieldError(idErr);
+      return;
+    }
+    if (!isValidLoginIdentifier(identifier)) {
+      setFieldError("Inserisci un'email valida o un nome utente.");
       return;
     }
     if (!password) {
@@ -198,14 +259,12 @@ export function LoginForm() {
     }
     setPending(true);
     try {
-      const res = await login(email, password, remember);
+      const res = await login(identifier, password, remember);
       if (!res.ok) {
         setError(loginErrorUserMessage(res.message));
         return;
       }
-      const target = safeRedirectTarget(searchParams.get("from"));
-      router.replace(target);
-      router.refresh();
+      /* Redirect gestito dall'effect post-auth (permessi + ordine menu). */
     } finally {
       setPending(false);
     }
@@ -215,179 +274,191 @@ export function LoginForm() {
   const configBlocked = !!configurationError;
 
   return (
-    <div className="relative flex min-h-dvh flex-col bg-[var(--cab-bg-app)] lg:grid lg:min-h-dvh lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)] xl:grid-cols-[minmax(0,1.1fr)_minmax(0,28rem)]">
-      <div
-        className="relative hidden min-h-[12rem] shrink-0 overflow-hidden bg-gradient-to-br from-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-bg-app))] via-[var(--cab-bg-app)] to-[var(--cab-surface-2)] lg:block lg:min-h-0"
-        aria-hidden
-      >
-        <div className="absolute inset-0 opacity-[0.07] dark:opacity-[0.12]" style={{ backgroundImage: "radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)", backgroundSize: "28px 28px" }} />
-        <div className="relative flex h-full min-h-dvh flex-col justify-end p-10 xl:p-14">
-          <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-[var(--ds-radius-xl)] bg-[var(--cab-primary)] text-base font-bold text-white shadow-[var(--cab-shadow-md)]">
-            CAB
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[color:var(--cab-text-muted)]">Gestionale officina</p>
-          <h2 className="mt-2 max-w-md text-2xl font-semibold tracking-tight text-[color:var(--cab-text)] xl:text-3xl">
-            Manutenzione e operatività in un solo posto.
-          </h2>
-          <p className={`mt-3 max-w-sm ${dsTypoCaption} text-[color:var(--cab-text-muted)]`}>
-            Magazzino, lavorazioni, documenti e report: accesso riservato al team autorizzato.
-          </p>
-        </div>
-      </div>
-
-      <div className="flex flex-1 flex-col items-center justify-center px-4 py-10 sm:px-6 lg:py-12">
-        <div className={`relative w-full max-w-md p-6 sm:p-8 ${dsSurfaceCard}`}>
-          <div className="absolute right-3 top-3 z-10 sm:right-4 sm:top-4">
-            <ThemeToggle />
-          </div>
-
-          <div className="mb-8 pr-12">
-            <p className="text-[10px] font-semibold uppercase tracking-wider text-[color:var(--cab-text-muted)]">Accesso</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-[color:var(--cab-text)]">Bentornato</h1>
-            <p className={`mt-2 ${dsTypoCaption} max-w-sm`}>Accedi con le credenziali aziendali per continuare.</p>
-          </div>
+    <LoginPageShell>
+      <main className="relative z-10 flex min-h-dvh flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
+        <div className={loginCardClass}>
+          <header className="mb-7 flex flex-col items-center text-center">
+            <CabLogo height={56} priority className="mx-auto object-center dark:brightness-[1.08] dark:contrast-[0.95]" />
+            <p className="mt-2 text-xs font-semibold tracking-wide text-[color:var(--cab-text-muted)]">
+              Gestionale Officina
+            </p>
+            <h1 className="sr-only">Accedi al gestionale</h1>
+          </header>
 
           {configBlocked ? (
-            <p className="mb-4 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border)_80%,var(--cab-border-strong))] bg-[var(--cab-surface-2)] px-3 py-2 text-center text-xs text-[color:var(--cab-text-muted)]" role="status">
-              Accesso disabilitato: correggere la configurazione indicata nel banner in alto (variabili pubbliche Supabase).
+            <p
+              className={`mb-5 ${loginAlertErrorClass} text-center text-xs`}
+              role="status"
+            >
+              Accesso disabilitato: configurare le variabili pubbliche Supabase.
             </p>
           ) : null}
 
-          <form onSubmit={onSubmit} noValidate className="space-y-5">
-            <div>
-              <label htmlFor={emailId} className={`block ${dsLabel} text-[color:var(--cab-text)]`}>
-                Email
-              </label>
-              <div className="relative mt-1.5">
-                <span className={iconInset} aria-hidden>
-                  <IconMail />
-                </span>
-                <input
-                  ref={emailRef}
-                  id={emailId}
-                  name="email"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="email"
-                  className={`${dsSearchFieldInput} pl-10`}
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    setFieldError(null);
-                  }}
-                  disabled={busy || configBlocked}
-                  aria-invalid={Boolean(fieldError)}
-                  aria-describedby={fieldError ? `${formId}-field-err` : undefined}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex items-baseline justify-between gap-2">
-                <label htmlFor={passwordId} className={`${dsLabel} text-[color:var(--cab-text)]`}>
-                  Password
+          <form onSubmit={onSubmit} noValidate className="space-y-4">
+            <div className="space-y-4">
+              <div>
+                <label htmlFor={identifierId} className={`block ${dsLabel} text-[color:var(--cab-text)]`}>
+                  Email o username
                 </label>
-                <button
-                  type="button"
-                  onClick={openForgot}
-                  disabled={busy || configBlocked || resetPending}
-                  className="shrink-0 text-xs font-medium text-[color:var(--cab-primary)] underline-offset-2 hover:underline disabled:opacity-50"
-                >
-                  Password dimenticata?
-                </button>
+                <div className="relative mt-1.5">
+                  <span className={iconInset} aria-hidden>
+                    <IconUser />
+                  </span>
+                  <input
+                    ref={emailRef}
+                    id={identifierId}
+                    name="identifier"
+                    type="text"
+                    inputMode="text"
+                    autoComplete="username"
+                    placeholder="Email o username"
+                    className={`${dsSearchFieldInput} pl-10`}
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(formatLoginIdentifierInput(e.target.value));
+                      setFieldError(null);
+                      setError(null);
+                    }}
+                    onBlur={() => {
+                      if (email.trim()) setEmail(formatLoginIdentifierInput(email));
+                    }}
+                    disabled={busy || configBlocked}
+                    aria-invalid={Boolean(fieldError)}
+                    aria-describedby={fieldError ? `${formId}-field-err` : undefined}
+                  />
+                </div>
               </div>
-              <div className="relative mt-1.5">
-                <span className={iconInset} aria-hidden>
-                  <IconLock />
-                </span>
-                <input
-                  id={passwordId}
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  autoComplete="current-password"
-                  className={`${dsSearchFieldInput} pl-10 pr-11`}
-                  value={password}
-                  onChange={(e) => {
-                    setPassword(e.target.value);
-                    setFieldError(null);
-                  }}
-                  disabled={busy || configBlocked}
-                  aria-invalid={Boolean(fieldError)}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  disabled={busy || configBlocked}
-                  className="absolute right-2 top-1/2 z-[1] -translate-y-1/2 rounded-[var(--ds-radius-lg)] p-1.5 text-[color:var(--cab-text-muted)] hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] disabled:opacity-50"
-                  aria-label={showPassword ? "Nascondi password" : "Mostra password"}
-                >
-                  {showPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
-                </button>
+
+              <div>
+                <div className="flex items-baseline justify-between gap-2">
+                  <label htmlFor={passwordId} className={`${dsLabel} text-[color:var(--cab-text)]`}>
+                    Password
+                  </label>
+                </div>
+                <div className="relative mt-1.5">
+                  <span className={iconInset} aria-hidden>
+                    <IconLock />
+                  </span>
+                  <input
+                    id={passwordId}
+                    name="password"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    className={`${dsSearchFieldInput} pl-10 pr-11`}
+                    value={password}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setFieldError(null);
+                      setError(null);
+                    }}
+                    disabled={busy || configBlocked}
+                    aria-invalid={Boolean(fieldError)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    disabled={busy || configBlocked}
+                    className="absolute right-2 top-1/2 z-[1] -translate-y-1/2 rounded-[var(--ds-radius-lg)] p-1.5 text-[color:var(--cab-text-muted)] hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] disabled:opacity-50"
+                    aria-label={showPassword ? "Nascondi password" : "Mostra password"}
+                  >
+                    {showPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <div className="mt-2 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={openForgot}
+                    disabled={busy || configBlocked || resetPending}
+                    className="text-xs font-medium text-[color:var(--cab-primary)] underline-offset-2 transition-colors hover:underline disabled:opacity-50"
+                  >
+                    Password dimenticata?
+                  </button>
+                </div>
               </div>
             </div>
 
-            <label className="flex cursor-pointer items-start gap-3 rounded-[var(--ds-radius-lg)] border border-transparent py-0.5 text-sm text-[color:var(--cab-text)]">
+            <label className="flex cursor-pointer items-center gap-2.5 py-0.5 text-sm text-[color:var(--cab-text)]">
               <input
                 type="checkbox"
                 checked={remember}
                 onChange={(e) => setRemember(e.target.checked)}
                 disabled={busy || configBlocked}
-                className="mt-0.5 h-4 w-4 shrink-0 rounded border-[color:var(--cab-border-strong)] text-[var(--cab-primary)] focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]"
+                className={dsCheckboxInput}
               />
-              <span>
-                <span className="font-medium">Resta collegato</span>
-                <span className={`mt-0.5 block ${dsTypoCaption}`}>
-                  Sessione attiva su questo dispositivo fino al logout; rinnovo token gestito automaticamente.
-                </span>
-              </span>
+              <span className="font-medium">Resta collegato</span>
             </label>
 
             {fieldError ? (
-              <p id={`${formId}-field-err`} className="text-sm font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_85%,var(--cab-text))]" role="alert">
+              <p
+                id={`${formId}-field-err`}
+                className="text-sm font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]"
+                role="alert"
+              >
                 {fieldError}
               </p>
             ) : null}
 
             {error ? (
-              <p
-                className="rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] px-3 py-2.5 text-sm text-[color:color-mix(in_srgb,var(--cab-danger)_90%,var(--cab-text))]"
-                role="alert"
-              >
+              <p className={loginAlertErrorClass} role="alert">
                 {error}
               </p>
             ) : null}
 
-            <button type="submit" disabled={busy || configBlocked} className={`${dsBtnPrimary} min-h-12 w-full justify-center py-3 text-base font-semibold`}>
-              {busy ? "Accesso in corso…" : "Accedi"}
+            <button
+              type="submit"
+              disabled={busy || configBlocked}
+              className={`${dsBtnPrimary} mt-1 min-h-11 w-full justify-center py-2.5 text-sm font-semibold`}
+            >
+              {busy ? (
+                <>
+                  <GlobalLoadingSpinner size="sm" className="text-white" />
+                  <span>Accesso in corso…</span>
+                </>
+              ) : (
+                "Accedi"
+              )}
             </button>
+
+            <p className={`pt-1 text-center ${dsTypoCaption}`}>
+              Accesso riservato agli utenti autorizzati.
+              <br />
+              Le credenziali sono fornite dall’amministratore.
+            </p>
           </form>
 
-          <p className={`mt-6 text-center ${dsTypoCaption}`}>
-            {isStagingPublicSlice() ? "Staging pubblico · accesso controllato" : "Accesso riservato · credenziali fornite dall’amministratore"}
-          </p>
+          {isStagingPublicSlice() ? (
+            <p className={`mt-5 text-center ${dsTypoCaption}`}>Staging · accesso controllato</p>
+          ) : null}
         </div>
-      </div>
+      </main>
 
       {forgotOpen ? (
         <div className={dsModalBackdrop} role="presentation" onMouseDown={(e) => e.target === e.currentTarget && closeForgot()}>
           <div
-            className={`${dsModalPanel} relative mx-auto max-w-md`}
+            className={`${dsModalPanel} relative mx-auto max-w-md shadow-[var(--cab-shadow-md)]`}
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${formId}-forgot-title`}
             onMouseDown={(e) => e.stopPropagation()}
           >
-            <h2 id={`${formId}-forgot-title`} className="text-base font-semibold text-[color:var(--cab-text)]">
-              Recupero password
-            </h2>
-            <p className={`mt-1 ${dsTypoCaption}`}>
-              Riceverai un link per reimpostare la password se l&apos;indirizzo è associato a un account.
+            <div className="flex items-start justify-between gap-3">
+              <h2 id={`${formId}-forgot-title`} className="text-base font-semibold text-[color:var(--cab-text)]">
+                Recupero password
+              </h2>
+              <CloseButton onClick={closeForgot} disabled={resetPending} />
+            </div>
+            <p className={`mt-1.5 ${dsTypoCaption}`}>
+              Link di reimpostazione se l&apos;email è associata a un account.
             </p>
 
             {resetDone ? (
-              <p className="mt-4 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-success)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-success)_12%,var(--cab-surface))] px-3 py-2.5 text-sm text-[color:var(--cab-text)]" role="status">
+              <p
+                className="mt-4 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-success)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-success)_10%,var(--cab-surface))] px-3 py-2.5 text-sm text-[color:var(--cab-text)]"
+                role="status"
+              >
                 <span className="font-medium">Email inviata se l&apos;account esiste.</span>
-                <span className={`mt-1 block ${dsTypoCaption}`}>Controlla anche la cartella spam.</span>
+                <span className={`mt-1 block ${dsTypoCaption}`}>Controlla anche lo spam.</span>
               </p>
             ) : (
               <form onSubmit={submitReset} className="mt-4 space-y-4">
@@ -397,13 +468,14 @@ export function LoginForm() {
                   </label>
                   <div className="relative mt-1.5">
                     <span className={iconInset} aria-hidden>
-                      <IconMail />
+                      <IconUser />
                     </span>
                     <input
                       id={`${formId}-reset-email`}
                       type="email"
                       inputMode="email"
                       autoComplete="email"
+                      placeholder="nome@azienda.it"
                       className={`${dsSearchFieldInput} pl-10`}
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
@@ -412,16 +484,26 @@ export function LoginForm() {
                   </div>
                 </div>
                 {resetError ? (
-                  <p className="text-sm font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]" role="alert">
+                  <p
+                    className="text-sm font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]"
+                    role="alert"
+                  >
                     {resetError}
                   </p>
                 ) : null}
                 <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
                   <button type="button" className={dsBtnNeutral} onClick={closeForgot} disabled={resetPending}>
-                    Chiudi
+                    Annulla
                   </button>
                   <button type="submit" className={dsBtnPrimary} disabled={resetPending}>
-                    {resetPending ? "Invio…" : "Invia istruzioni"}
+                    {resetPending ? (
+                      <>
+                        <GlobalLoadingSpinner size="sm" className="text-white" />
+                        <span>Invio…</span>
+                      </>
+                    ) : (
+                      "Invia link"
+                    )}
                   </button>
                 </div>
               </form>
@@ -430,13 +512,13 @@ export function LoginForm() {
             {resetDone ? (
               <div className="mt-4 flex justify-end">
                 <button type="button" className={dsBtnPrimary} onClick={closeForgot}>
-                  Ho capito
+                  Chiudi
                 </button>
               </div>
             ) : null}
           </div>
         </div>
       ) : null}
-    </div>
+    </LoginPageShell>
   );
 }

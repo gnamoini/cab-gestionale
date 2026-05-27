@@ -2,6 +2,8 @@
 
 import { useAuth } from "@/context/auth-context";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
+import { GlobalLoadingView } from "@/components/design-system/global-loading";
+import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 
 /**
@@ -12,6 +14,7 @@ export function GestionaleSettingsReadyGate({ children }: { children: React.Reac
   const { configurationError } = useAuth();
   const settingsBlocked = !isSupabasePublicEnvConfigured() || !!configurationError;
   const q = useCabAppSettingsPayloadQuery({ enabled: !settingsBlocked });
+  const settingsLoading = q.isPending && !q.data;
 
   if (settingsBlocked) {
     return (
@@ -26,14 +29,10 @@ export function GestionaleSettingsReadyGate({ children }: { children: React.Reac
     );
   }
 
-  if (q.isPending && !q.data) {
+  if (settingsLoading) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
-        <div
-          className="h-9 w-9 animate-spin rounded-full border-2 border-[color:var(--cab-border)] border-t-[color:var(--cab-primary)]"
-          aria-hidden
-        />
-        <p className="text-sm font-medium text-[color:var(--cab-text-muted)]">Caricamento impostazioni…</p>
+      <div className="flex min-h-[50vh] items-center justify-center px-4 py-16">
+        <GlobalLoadingView message={GLOBAL_LOADING_MESSAGES.settings} />
       </div>
     );
   }

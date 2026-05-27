@@ -23,7 +23,7 @@ import {
 } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 
-export type SecurityUserSortKey = "nome" | "email" | "ruolo" | "clientAccess" | "stato";
+export type SecurityUserSortKey = "nome" | "username" | "email" | "ruolo" | "clientAccess" | "stato";
 
 export type EditableSecurityUser = SecurityUserPermissionRow;
 
@@ -32,6 +32,8 @@ function compareUsers(a: EditableSecurityUser, b: EditableSecurityUser, key: Sec
   switch (key) {
     case "nome":
       return dir * a.nome.localeCompare(b.nome, "it");
+    case "username":
+      return dir * (a.username || "").localeCompare(b.username || "", "it");
     case "email":
       return dir * (a.email || "").localeCompare(b.email || "", "it");
     case "ruolo":
@@ -65,7 +67,7 @@ function SecurityUsersTableSkeleton() {
         <tbody>
           {Array.from({ length: 6 }).map((_, i) => (
             <tr key={i} className={dsTableRow}>
-              <td colSpan={6} className="px-3 py-3">
+              <td colSpan={7} className="px-3 py-3">
                 <div className={`h-4 w-full ${dsSkeletonPulse}`} />
               </td>
             </tr>
@@ -97,7 +99,11 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
     if (roleFilter !== "all") list = list.filter((r) => r.ruolo === roleFilter);
     if (q) {
       list = list.filter(
-        (r) => r.nome.toLowerCase().includes(q) || r.email.toLowerCase().includes(q) || r.ruolo.toLowerCase().includes(q),
+        (r) =>
+          r.nome.toLowerCase().includes(q) ||
+          (r.username ?? "").toLowerCase().includes(q) ||
+          r.email.toLowerCase().includes(q) ||
+          r.ruolo.toLowerCase().includes(q),
       );
     }
     if (sortColumn && (sortPhase === "asc" || sortPhase === "desc")) {
@@ -146,7 +152,7 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
           <span className="sr-only">Cerca utente</span>
           <input
             className={`${dsInput} w-full`}
-            placeholder="Cerca per nome o email…"
+            placeholder="Cerca per nome, username o email…"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -195,6 +201,7 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
               <thead>
                 <tr className={dsTableHead}>
                   <ReportSortTh label="Nome" columnKey="nome" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                  <ReportSortTh label="Username" columnKey="username" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                   <ReportSortTh label="Email" columnKey="email" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                   <ReportSortTh label="Ruolo" columnKey="ruolo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                   <ReportSortTh
@@ -228,6 +235,9 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
                             </button>
                           ) : null}
                         </div>
+                      </td>
+                      <td className={`${dsTableTd} max-w-[10rem] truncate font-mono text-[11px]`} title={row.username ?? undefined}>
+                        {row.username || "—"}
                       </td>
                       <td className={`${dsTableTd} max-w-[14rem] truncate`} title={row.email}>
                         {row.email || "—"}

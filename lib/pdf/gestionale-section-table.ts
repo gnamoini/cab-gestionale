@@ -373,6 +373,7 @@ export function drawGestionaleDataSectionTable(
 
   autoTable(doc, {
     startY: y,
+    tableWidth: pdfContentWidth(pageW),
     head: [[{ content: title.toUpperCase(), colSpan: colCount }], [...headColumns]],
     body,
     foot: sectionTotal

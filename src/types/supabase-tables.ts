@@ -16,6 +16,8 @@ export type RuoloProfile = RuoloUtente;
 export type ProfileRow = {
   id: string;
   nome: string;
+  /** Nome utente univoco per login (minuscolo, 3–32 caratteri). */
+  username?: string | null;
   ruolo: RuoloUtente;
   /** Etichetta cliente (mezzi.cliente) per utenti ruolo=cliente. */
   cliente_ref?: string | null;

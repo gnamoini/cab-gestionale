@@ -12,6 +12,10 @@ import {
 import { useAuth } from "@/context/auth-context";
 import { useToast } from "@/context/toast-context";
 import { denyUnless } from "@/lib/auth/guard-action";
+import {
+  canModerateSupportNotes,
+  SUPPORT_NOTE_MODERATION_DENIED,
+} from "@/lib/supporto/support-note-permissions";
 import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -42,6 +46,7 @@ export function SupportoView() {
   const loading = notesQ.isLoading;
   const mutating = createM.isPending || updateM.isPending || deleteM.isPending || resolvedM.isPending;
   const canWrite = rbac.canWrite("supporto");
+  const canModerate = canModerateSupportNotes(user);
   const supabaseReady = isSupabasePublicEnvConfigured();
 
   const addNote = useCallback(
@@ -78,7 +83,7 @@ export function SupportoView() {
 
   const deleteNote = useCallback(
     async (id: string) => {
-      if (!denyUnless(canWrite, setActionError)) return;
+      if (!denyUnless(canModerate, setActionError, SUPPORT_NOTE_MODERATION_DENIED)) return;
       setActionError(null);
       try {
         await deleteM.mutateAsync(id);
@@ -89,12 +94,12 @@ export function SupportoView() {
         push(msg, "error", 4200);
       }
     },
-    [canWrite, deleteM, push],
+    [canModerate, deleteM, push],
   );
 
   const toggleResolved = useCallback(
     async (id: string, resolved: boolean) => {
-      if (!denyUnless(canWrite, setActionError)) return;
+      if (!denyUnless(canModerate, setActionError, SUPPORT_NOTE_MODERATION_DENIED)) return;
       setActionError(null);
       try {
         await resolvedM.mutateAsync({ id, resolved });
@@ -104,7 +109,7 @@ export function SupportoView() {
         push(msg, "error", 4200);
       }
     },
-    [canWrite, push, resolvedM],
+    [canModerate, push, resolvedM],
   );
 
   const filtered = useMemo(() => {
@@ -191,6 +196,7 @@ export function SupportoView() {
                   key={note.id}
                   note={note}
                   canEdit={canWrite}
+                  canModerate={canModerate}
                   onUpdate={updateNote}
                   onDelete={deleteNote}
                   onToggleResolved={toggleResolved}

@@ -74,7 +74,11 @@ export const globalTableTdActions =
 export const globalTableBase =
   "min-w-full w-full border-collapse text-left text-[13px] leading-tight text-[color:var(--cab-text)]";
 
-export const globalTableFixed = `${globalTableBase} table-fixed`;
+/**
+ * `table-auto` sotto `xl` per evitare compressione eccessiva in larghezze intermedie;
+ * `xl:table-fixed` mantiene densità e allineamenti desktop.
+ */
+export const globalTableFixed = `${globalTableBase} table-auto xl:table-fixed`;
 
 /** Riga corpo standard. */
 export const globalTableRow =

@@ -16,6 +16,7 @@ import {
   type CabSyncEntity,
   type CabSyncEvent,
 } from "@/lib/sync/cab-sync-bus";
+import { dispatchNotificaGestionale } from "@/lib/sync/gestionale-notification-dispatch";
 import {
   filterTablesForRemoteCacheInvalidation,
   markRecentLocalGestionaleFromCabEvents,
@@ -169,6 +170,31 @@ function dispatchPortalSideEffects(tables: string[]): void {
   }
 }
 
+/** Chiave stabile per confrontare eventi espliciti vs sintetici (collectCabEvents). */
+export function cabSyncEventNotificaKey(ev: CabSyncEvent): string {
+  if (ev.type === "settings_updated") return "settings_updated";
+  return `${ev.entity}:${ev.type}:${ev.id}`;
+}
+
+/**
+ * Toast solo per eventi passati dal chiamante (`cabSyncEvents`).
+ * Gli eventi sintetici (es. `lavorazioni` in invalidate magazzino) restano per sync/cache.
+ */
+export function shouldDispatchNotificaForCabEvent(
+  ev: CabSyncEvent,
+  explicitCabEvents: CabSyncEvent[] | undefined,
+): boolean {
+  const explicit = explicitCabEvents ?? [];
+  if (ev.type === "settings_updated") {
+    return explicit.some((e) => e.type === "settings_updated");
+  }
+  if (explicit.length > 0) {
+    const key = cabSyncEventNotificaKey(ev);
+    return explicit.some((e) => e.type !== "settings_updated" && cabSyncEventNotificaKey(e) === key);
+  }
+  return Boolean(ev.id);
+}
+
 /**
  * Entry point unico per ogni mutazione/sync gestionale.
  *
@@ -209,7 +235,13 @@ export function dispatchGestionaleAction(
     skipInvalidation: tablesForCache.length > 0,
   });
 
-  for (const ev of cabEvents) emitCabSyncEvent(ev);
+  const explicitCabEvents = options.cabSyncEvents;
+  for (const ev of cabEvents) {
+    emitCabSyncEvent(ev);
+    if (shouldDispatchNotificaForCabEvent(ev, explicitCabEvents)) {
+      dispatchNotificaGestionale(ev);
+    }
+  }
 
   if (options.source === "local_mutation") {
     broadcastGestionaleInvalidate(uniqueTables, entityIdByTable);

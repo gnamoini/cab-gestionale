@@ -4,9 +4,11 @@ import { useMemo } from "react";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import {
   computeDashboardLavWidgetRows,
+  computeDashboardLavWidgetStats,
   computeDashboardMagDailyMovements,
   computeDashboardMagRecentMovements,
   computeDashboardMagRecentRicambi,
+  computeDashboardMagSottoScortaRicambi,
   computeDashboardMagWidgetStats,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
@@ -28,6 +30,7 @@ export function useDashboardMetrics() {
   const movQuery = useMovimentiListQuery(undefined, viewOpts);
 
   const lavRows = useMemo(() => computeDashboardLavWidgetRows(lavQuery.data ?? []), [lavQuery.data]);
+  const lavStats = useMemo(() => computeDashboardLavWidgetStats(lavQuery.data ?? []), [lavQuery.data]);
 
   const ricambiById = useMemo(() => {
     const map = new Map<string, (typeof magQuery.data)[number]>();
@@ -37,6 +40,11 @@ export function useDashboardMetrics() {
 
   const magStats = useMemo(
     () => (staging ? { capitale: 0, sottoScorta: 0 } : computeDashboardMagWidgetStats(magQuery.data ?? [])),
+    [magQuery.data, staging],
+  );
+
+  const magSottoScortaRicambi = useMemo(
+    () => (staging ? [] : computeDashboardMagSottoScortaRicambi(magQuery.data ?? [])),
     [magQuery.data, staging],
   );
 
@@ -64,7 +72,9 @@ export function useDashboardMetrics() {
     magQuery,
     movQuery,
     lavRows,
+    lavStats,
     magStats,
+    magSottoScortaRicambi,
     magRecentRicambi,
     magDailyMovements,
     magRecentMovements,

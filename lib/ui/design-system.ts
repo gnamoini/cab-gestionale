@@ -173,15 +173,15 @@ export const dsTableActionsRowHeight = "h-9 min-h-9 max-h-9";
 
 /** G — Gruppo pulsanti azione tabella (preset ufficiale Lavorazioni). */
 export const dsTableActionsGroup =
-  `inline-flex ${dsTableActionsRowHeight} w-max max-w-none flex-nowrap items-stretch justify-center gap-1`;
+  "inline-flex w-max max-w-full min-w-0 flex-wrap items-stretch justify-center gap-1 xl:h-9 xl:min-h-9 xl:max-h-9 xl:max-w-none xl:flex-nowrap";
 
 /** Gruppo azioni allineato a destra (card mobile / toolbar). */
 export const dsTableActionsGroupEnd =
-  `inline-flex ${dsTableActionsRowHeight} w-max max-w-none flex-nowrap items-stretch justify-end gap-1`;
+  "inline-flex w-max max-w-full min-w-0 flex-wrap items-stretch justify-end gap-1 xl:h-9 xl:min-h-9 xl:max-h-9 xl:max-w-none xl:flex-nowrap";
 
 /** Gruppo azioni allineato a sinistra (toolbar secondaria). */
 export const dsTableActionsGroupStart =
-  `inline-flex ${dsTableActionsRowHeight} w-max max-w-none flex-nowrap items-stretch justify-start gap-1`;
+  "inline-flex w-max max-w-full min-w-0 flex-wrap items-stretch justify-start gap-1 xl:h-9 xl:min-h-9 xl:max-h-9 xl:max-w-none xl:flex-nowrap";
 
 /** Footer azioni card mobile: wrap, stesso `gap-1` / `items-stretch` del gruppo tabella. */
 export const dsCardMobileActionsGroup =
@@ -280,6 +280,8 @@ export const dsZModalHigh = "z-[100]";
 export const dsZDropdown = "z-[130]";
 /** Tooltip icon-only (sopra dropdown, sotto toast). */
 export const dsZTooltip = "z-[140]";
+/** Overlay loading globale (sotto toast, sopra modali standard). */
+export const dsZGlobalLoading = "z-[170]";
 export const dsZToast = "z-[200]";
 
 /** Contenuto tooltip portal (icon-only actions). */

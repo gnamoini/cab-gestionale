@@ -7,86 +7,100 @@ import {
   useEffect,
   useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
-import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
+import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
+import {
+  applyPersistedThemeToDocument,
+  resolveBootThemeMode,
+  systemPrefersDark,
+  writeThemeBootCache,
+} from "@/lib/theme/cab-theme-storage";
+import type { PersistedThemeMode } from "@/lib/theme/user-theme-prefs";
+import { useUserThemePrefsQuery, useUserThemeUpsertMutation } from "@/src/hooks/gestionale/use-user-theme-prefs";
 
-export type ThemePreference = "light" | "dark" | "system";
+export type { PersistedThemeMode };
 
-function readStored(): ThemePreference | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const v = localStorage.getItem(CAB_THEME_STORAGE_KEY);
-    if (v === "light" || v === "dark" || v === "system") return v;
-  } catch {
-    /* ignore */
-  }
-  return null;
-}
-
-function systemPrefersDark() {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
-}
-
-export function applyThemeToDocument(pref: ThemePreference) {
-  const root = document.documentElement;
-  const isDark = pref === "dark" || (pref === "system" && systemPrefersDark());
-  root.classList.toggle("dark", isDark);
-  root.style.colorScheme = isDark ? "dark" : "light";
+function fallbackThemeMode(): PersistedThemeMode {
+  return systemPrefersDark() ? "dark" : "light";
 }
 
 type ThemeContextValue = {
-  preference: ThemePreference;
-  resolved: "light" | "dark";
-  setPreference: (p: ThemePreference) => void;
-  /** Salva esplicitamente light o dark (utile dal toggle sole/luna). */
+  resolved: PersistedThemeMode;
+  /** True dopo bootstrap locale (evita mismatch idratazione sul toggle). */
+  themeReady: boolean;
+  /** Salvataggio preferenza su DB in corso. */
+  themeSaving: boolean;
   toggleLightDark: () => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [preference, setPreferenceState] = useState<ThemePreference>("system");
+  const { user, status } = useAuth();
+  const userId = isAuthSessionEstablished(status) ? user?.id : undefined;
+
+  const [resolved, setResolved] = useState<PersistedThemeMode>("light");
+  const [themeReady, setThemeReady] = useState(false);
+  const optimisticThemeRef = useRef<PersistedThemeMode | null>(null);
+
+  const prefsQuery = useUserThemePrefsQuery(userId, status);
+  const themeMutation = useUserThemeUpsertMutation(userId);
 
   useLayoutEffect(() => {
-    const stored = readStored();
-    const p = stored ?? "system";
-    setPreferenceState(p);
-    applyThemeToDocument(p);
+    const boot = typeof window !== "undefined" ? resolveBootThemeMode() : "light";
+    setResolved(boot);
+    applyPersistedThemeToDocument(boot);
+    setThemeReady(true);
   }, []);
 
   useEffect(() => {
-    if (preference !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = () => applyThemeToDocument("system");
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, [preference]);
+    if (!userId || prefsQuery.isLoading) return;
+    if (optimisticThemeRef.current) return;
 
-  const setPreference = useCallback((p: ThemePreference) => {
-    setPreferenceState(p);
-    try {
-      if (p === "system") localStorage.removeItem(CAB_THEME_STORAGE_KEY);
-      else localStorage.setItem(CAB_THEME_STORAGE_KEY, p);
-    } catch {
-      /* ignore */
+    const serverTheme = prefsQuery.data?.theme;
+    const next = serverTheme ?? fallbackThemeMode();
+    setResolved(next);
+    applyPersistedThemeToDocument(next);
+    writeThemeBootCache(next);
+  }, [userId, prefsQuery.isLoading, prefsQuery.data?.theme]);
+
+  useEffect(() => {
+    if (!userId) {
+      optimisticThemeRef.current = null;
     }
-    applyThemeToDocument(p);
+  }, [userId]);
+
+  const applyResolved = useCallback((mode: PersistedThemeMode) => {
+    setResolved(mode);
+    applyPersistedThemeToDocument(mode);
+    writeThemeBootCache(mode);
   }, []);
 
-  const resolved: "light" | "dark" =
-    preference === "dark" || (preference === "system" && systemPrefersDark()) ? "dark" : "light";
-
   const toggleLightDark = useCallback(() => {
-    const next: ThemePreference = resolved === "dark" ? "light" : "dark";
-    setPreference(next);
-  }, [resolved, setPreference]);
+    const next: PersistedThemeMode = resolved === "dark" ? "light" : "dark";
+    optimisticThemeRef.current = next;
+    applyResolved(next);
+
+    if (!userId) return;
+
+    themeMutation.mutate(next, {
+      onSettled: () => {
+        optimisticThemeRef.current = null;
+      },
+    });
+  }, [applyResolved, resolved, themeMutation, userId]);
 
   const value = useMemo(
-    () => ({ preference, resolved, setPreference, toggleLightDark }),
-    [preference, resolved, setPreference, toggleLightDark],
+    () => ({
+      resolved,
+      themeReady,
+      themeSaving: themeMutation.isPending,
+      toggleLightDark,
+    }),
+    [resolved, themeReady, themeMutation.isPending, toggleLightDark],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

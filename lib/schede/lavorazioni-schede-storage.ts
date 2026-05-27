@@ -1,4 +1,5 @@
 import { migrateSchedeStore, normalizeSchedeBundle } from "@/lib/schede/schede-store-migrate";
+import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/lib/schede/schede-store-events";
 import type { LavorazioneSchedeBundle, LavorazioneSchedeStore } from "@/types/schede";
 
 export const LAVORAZIONI_SCHEDE_STORAGE_KEY = "gestionale-lavorazioni-schede-v1";
@@ -22,7 +23,7 @@ export function saveLavorazioneSchedeStore(store: LavorazioneSchedeStore): void 
   if (typeof window === "undefined") return;
   try {
     window.localStorage.setItem(LAVORAZIONI_SCHEDE_STORAGE_KEY, JSON.stringify(store));
-    window.dispatchEvent(new CustomEvent("gestionale-schede-store-changed"));
+    window.dispatchEvent(new CustomEvent(LAVORAZIONI_SCHEDE_STORE_CHANGED));
   } catch {
     /* quota */
   }

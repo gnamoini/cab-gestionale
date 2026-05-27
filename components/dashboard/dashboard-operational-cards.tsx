@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { Badge } from "@/components/design-system";
 import { DashboardTasksPanel } from "@/components/dashboard/dashboard-tasks-panel";
 import {
@@ -12,16 +12,12 @@ import {
   dsTypoSmall,
 } from "@/lib/ui/design-system";
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
-import {
-  prioritaLabel,
-  statoPillShellClassDynamic,
-} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { prioritaLabel, statoPillShellClassDynamic } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { lavTablePillTextClass } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import {
-  formatDashboardLavWidgetSubtitle,
   formatDashboardMagRicambioTitle,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
@@ -33,23 +29,15 @@ const kpiCardClass = `${dsSurfaceInteractiveKpi} ${dsFocus}`;
 const panelCardClass = `${dsSurfacePanel} flex min-h-[220px] flex-col p-4`;
 
 const kpiCardBadgeClass =
-  "rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[color:color-mix(in_srgb,var(--cab-primary)_95%,var(--cab-text))]";
+  "rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[color:var(--cab-text-muted)]";
 
 const widgetTitleClass = `${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-primary)]`;
 
-function formatEur(value: number): string {
-  return new Intl.NumberFormat("it-IT", {
-    style: "currency",
-    currency: "EUR",
-    maximumFractionDigits: 0,
-  }).format(value);
-}
+const magSottoScortaPillHex = "#b91c1c";
 
-function formatShortDate(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("it-IT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-}
+/** Larghezza condivisa pill priorità/stato nel widget Lavorazioni dashboard. */
+const dashboardLavMiniPillColClass = "w-[6.75rem]";
+const dashboardLavMiniPillClass = `${statoPillShellClassDynamic()} inline-flex w-full min-h-[1.375rem] items-center justify-center px-1.5 py-0.5 ${lavTablePillTextClass} text-[10px] whitespace-nowrap`;
 
 function WidgetLoading() {
   return <p className={dsTypoCaption}>Caricamento…</p>;
@@ -72,33 +60,46 @@ function KpiStat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function StatoMiniPill({ stato, statiOpts }: { stato: string; statiOpts: { id: string; label: string; color?: string }[] }) {
-  const label = statoLavorazioneLabel(stato, statiOpts) || stato;
+function dashboardLavPrioritaHex(
+  priorita: string,
+  prioritaColors: Record<string, string | undefined>,
+): string {
+  const p = priorita as PrioritaLav;
+  return p === "urgente" ? "#b91c1c" : prioritaDisplayColor(p, prioritaColors);
+}
+
+function DashboardLavRowPill({
+  priorita,
+  prioritaColors,
+  children,
+}: {
+  priorita: string;
+  prioritaColors: Record<string, string | undefined>;
+  children: ReactNode;
+}) {
   return (
-    <span
-      className={`${statoPillShellClassDynamic()} inline-flex max-w-[5.5rem] shrink-0 justify-center px-1.5 py-0.5 ${lavTablePillTextClass} text-[10px] whitespace-nowrap`}
-      style={readablePillStyleFromHex(statoDisplayColor(stato, statiOpts))}
+    <div
+      className="flex min-w-0 items-stretch gap-2 rounded-lg border px-2.5 py-2 shadow-sm shadow-black/10 transition-[filter,box-shadow] duration-200 ease-out dark:shadow-black/25"
+      style={readablePillStyleFromHex(dashboardLavPrioritaHex(priorita, prioritaColors))}
     >
-      {label}
+      {children}
+    </div>
+  );
+}
+
+function PrioritaMiniPill({ priorita }: { priorita: string }) {
+  return (
+    <span className={`${dashboardLavMiniPillClass} border-current/30 bg-black/15 backdrop-blur-[1px]`}>
+      {prioritaLabel(priorita)}
     </span>
   );
 }
 
-function PrioritaMiniPill({
-  priorita,
-  prioritaColors,
-}: {
-  priorita: string;
-  prioritaColors: Record<string, string | undefined>;
-}) {
-  const p = priorita as PrioritaLav;
-  const hex = p === "urgente" ? "#b91c1c" : prioritaDisplayColor(p, prioritaColors);
+function StatoMiniPill({ stato, statiOpts }: { stato: string; statiOpts: { id: string; label: string; color?: string }[] }) {
+  const label = statoLavorazioneLabel(stato, statiOpts) || stato;
   return (
-    <span
-      className={`${statoPillShellClassDynamic()} inline-flex shrink-0 justify-center px-1.5 py-0.5 ${lavTablePillTextClass} text-[10px] whitespace-nowrap`}
-      style={readablePillStyleFromHex(hex)}
-    >
-      {prioritaLabel(priorita)}
+    <span className={dashboardLavMiniPillClass} style={readablePillStyleFromHex(statoDisplayColor(stato, statiOpts))}>
+      {label}
     </span>
   );
 }
@@ -106,12 +107,14 @@ function PrioritaMiniPill({
 function DashboardLavorazioniWidget({
   loading,
   error,
+  stats,
   rows,
   statiOpts,
   prioritaColors,
 }: {
   loading: boolean;
   error: boolean;
+  stats: ReturnType<typeof useDashboardMetrics>["lavStats"];
   rows: ReturnType<typeof useDashboardMetrics>["lavRows"];
   statiOpts: { id: string; label: string; color?: string }[];
   prioritaColors: Record<string, string | undefined>;
@@ -122,43 +125,83 @@ function DashboardLavorazioniWidget({
         <h2 className={widgetTitleClass}>Lavorazioni</h2>
         <span className={kpiCardBadgeClass}>Operativo</span>
       </div>
-      <ul className="mt-4 flex-1 space-y-2.5">
-        {loading ? (
-          <li>
-            <WidgetLoading />
-          </li>
-        ) : error ? (
-          <li>
-            <WidgetError />
-          </li>
-        ) : rows.length === 0 ? (
-          <li>
-            <WidgetEmpty message="Nessuna lavorazione attiva." />
-          </li>
-        ) : (
-          rows.map((row) => {
-            const subtitle = formatDashboardLavWidgetSubtitle(row.cliente, row.ident);
+      {loading ? (
+        <div className="mt-4">
+          <WidgetLoading />
+        </div>
+      ) : error ? (
+        <div className="mt-4">
+          <WidgetError />
+        </div>
+      ) : (
+        <>
+          <div className="mt-4 grid grid-cols-3 gap-3">
+            <KpiStat label="In corso" value={String(stats.inCorso)} />
+            <KpiStat label="Urgenti" value={String(stats.urgenti)} />
+            <KpiStat label="Entrati oggi" value={String(stats.entratiOggi)} />
+          </div>
+          <ul className="mt-4 flex-1 space-y-2.5">
+            {rows.length === 0 ? (
+              <li>
+                <WidgetEmpty message="Nessuna lavorazione attiva." />
+              </li>
+            ) : (
+              rows.map((row) => {
+            const subtitle = row.mezzoIdent;
             return (
-              <li key={row.id} className="flex min-w-0 items-start gap-2">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">
-                    {formatTitleCasePhrase(row.macchina)}
-                  </p>
-                  {subtitle ? <p className={`${dsTypoCaption} truncate`}>{subtitle}</p> : null}
-                  <p className={dsTypoCaption}>{formatShortDate(row.updatedAt)}</p>
-                </div>
-                <span className="flex shrink-0 items-center gap-1 pt-0.5">
-                  {row.isUrgent ? (
-                    <PrioritaMiniPill priorita={row.priorita} prioritaColors={prioritaColors} />
-                  ) : null}
-                  <StatoMiniPill stato={row.stato} statiOpts={statiOpts} />
-                </span>
+              <li key={row.id}>
+                <DashboardLavRowPill priorita={row.priorita} prioritaColors={prioritaColors}>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-semibold leading-snug">{formatTitleCasePhrase(row.macchina)}</p>
+                    {subtitle ? (
+                      <p className="mt-0.5 truncate text-[11px] leading-snug opacity-90">{subtitle}</p>
+                    ) : null}
+                  </div>
+                  <span
+                    className={`flex shrink-0 flex-col items-stretch justify-between gap-1.5 self-stretch py-0.5 ${dashboardLavMiniPillColClass}`}
+                  >
+                    <PrioritaMiniPill priorita={row.priorita} />
+                    <StatoMiniPill stato={row.stato} statiOpts={statiOpts} />
+                  </span>
+                </DashboardLavRowPill>
               </li>
             );
-          })
-        )}
-      </ul>
+              })
+            )}
+          </ul>
+        </>
+      )}
     </Link>
+  );
+}
+
+type MagazzinoRicambioRow = ReturnType<typeof useDashboardMetrics>["magRecentRicambi"][number];
+
+function MagazzinoSottoScortaListItem({ r }: { r: MagazzinoRicambioRow }) {
+  return (
+    <li>
+      <div
+        className="flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 shadow-sm shadow-black/10 transition-[filter,box-shadow] duration-200 ease-out dark:shadow-black/25"
+        style={readablePillStyleFromHex(magSottoScortaPillHex)}
+      >
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-snug">
+          {formatDashboardMagRicambioTitle(r.marca, r.label)}
+        </p>
+        <span className="inline-flex shrink-0 rounded-md border border-current/30 bg-black/15 px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap backdrop-blur-[1px]">
+          Sotto scorta
+        </span>
+      </div>
+    </li>
+  );
+}
+
+function MagazzinoRicambioListItem({ r }: { r: MagazzinoRicambioRow }) {
+  return (
+    <li className="flex min-w-0 items-start gap-2">
+      <p className="min-w-0 flex-1 truncate text-sm font-medium text-[color:var(--cab-text)]">
+        {formatDashboardMagRicambioTitle(r.marca, r.label)}
+      </p>
+    </li>
   );
 }
 
@@ -168,6 +211,7 @@ function DashboardMagazzinoWidget({
   error,
   stats,
   daily,
+  sottoScortaRicambi,
   recentRicambi,
   recentMovements,
 }: {
@@ -176,11 +220,10 @@ function DashboardMagazzinoWidget({
   error: boolean;
   stats: ReturnType<typeof useDashboardMetrics>["magStats"];
   daily: ReturnType<typeof useDashboardMetrics>["magDailyMovements"];
+  sottoScortaRicambi: ReturnType<typeof useDashboardMetrics>["magSottoScortaRicambi"];
   recentRicambi: ReturnType<typeof useDashboardMetrics>["magRecentRicambi"];
   recentMovements: ReturnType<typeof useDashboardMetrics>["magRecentMovements"];
 }) {
-  const capitaleLabel = useMemo(() => formatEur(stats.capitale), [stats.capitale]);
-
   return (
     <Link href="/magazzino" className={kpiCardClass} aria-label="Apri magazzino">
       <div className="flex items-start justify-between gap-2">
@@ -199,37 +242,26 @@ function DashboardMagazzinoWidget({
         </div>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-2 gap-3">
-            <KpiStat label="Capitale immobilizzato" value={capitaleLabel} />
+          <div className="mt-4 grid grid-cols-3 gap-3">
             <KpiStat label="Sotto scorta" value={String(stats.sottoScorta)} />
             <KpiStat label="Entrate oggi" value={String(daily.entrate)} />
             <KpiStat label="Uscite oggi" value={String(daily.uscite)} />
           </div>
           <div className="mt-4 space-y-3">
             <div>
-              <p className={`${dsTypoCaption} mb-0.5 font-semibold uppercase tracking-wide`}>Ultimi modificati</p>
-              <p className={`${dsTypoCaption} mb-1.5`}>Anagrafica ricambio aggiornata di recente</p>
-              {recentRicambi.length === 0 ? (
-                <WidgetEmpty message="Nessun ricambio." />
+              <p className={`${dsTypoCaption} mb-0.5 font-semibold uppercase tracking-wide`}>Sotto scorta</p>
+              {sottoScortaRicambi.length === 0 ? (
+                <WidgetEmpty message="Nessun ricambio sotto scorta." />
               ) : (
                 <ul className="space-y-2">
-                  {recentRicambi.map((r) => (
-                      <li key={r.id} className="flex min-w-0 items-start gap-2">
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">
-                            {formatDashboardMagRicambioTitle(r.marca, r.label)}
-                          </p>
-                          <p className={dsTypoCaption}>{formatShortDate(r.updatedAt)}</p>
-                        </div>
-                        {r.sottoScorta ? <Badge tone="warn">Sotto</Badge> : null}
-                      </li>
-                    ))}
+                  {sottoScortaRicambi.map((r) => (
+                    <MagazzinoSottoScortaListItem key={r.id} r={r} />
+                  ))}
                 </ul>
               )}
             </div>
             <div>
-              <p className={`${dsTypoCaption} mb-0.5 font-semibold uppercase tracking-wide`}>Ultimi movimenti</p>
-              <p className={`${dsTypoCaption} mb-1.5`}>Entrate e uscite di stock registrate</p>
+              <p className={`${dsTypoCaption} mb-1.5 font-semibold uppercase tracking-wide`}>Ultimi movimenti</p>
               {recentMovements.length === 0 ? (
                 <WidgetEmpty message="Nessun movimento." />
               ) : (
@@ -240,6 +272,18 @@ function DashboardMagazzinoWidget({
                       <span className="min-w-0 flex-1 truncate text-[color:var(--cab-text)]">{m.label}</span>
                       <span className={`${dsTypoCaption} shrink-0 tabular-nums`}>×{m.quantita}</span>
                     </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <div>
+              <p className={`${dsTypoCaption} mb-1.5 font-semibold uppercase tracking-wide`}>Ultimi modificati</p>
+              {recentRicambi.length === 0 ? (
+                <WidgetEmpty message="Nessun altro ricambio modificato." />
+              ) : (
+                <ul className="space-y-2">
+                  {recentRicambi.map((r) => (
+                    <MagazzinoRicambioListItem key={r.id} r={r} />
                   ))}
                 </ul>
               )}
@@ -258,7 +302,6 @@ function DashboardLocalNotesWidget() {
         <h2 className={widgetTitleClass}>Note</h2>
         <span className={kpiCardBadgeClass}>Appunti</span>
       </div>
-      <p className={`${dsTypoCaption} mt-1`}>Promemoria locali di questa pagina, non collegati al modulo Supporto.</p>
       <div className="mt-3 min-h-0 flex-1">
         <DashboardTasksPanel />
       </div>
@@ -271,7 +314,9 @@ export function DashboardOperationalCards() {
   const {
     staging,
     lavRows,
+    lavStats,
     magStats,
+    magSottoScortaRicambi,
     magRecentRicambi,
     magDailyMovements,
     magRecentMovements,
@@ -286,6 +331,7 @@ export function DashboardOperationalCards() {
       <DashboardLavorazioniWidget
         loading={lavLoading}
         error={lavError}
+        stats={lavStats}
         rows={lavRows}
         statiOpts={globalOpts.lavorazioni.stati}
         prioritaColors={globalOpts.lavorazioni.prioritaColors}
@@ -296,6 +342,7 @@ export function DashboardOperationalCards() {
         error={magError}
         stats={magStats}
         daily={magDailyMovements}
+        sottoScortaRicambi={magSottoScortaRicambi}
         recentRicambi={magRecentRicambi}
         recentMovements={magRecentMovements}
       />

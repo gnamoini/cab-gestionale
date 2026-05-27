@@ -1104,7 +1104,7 @@ export function MagazzinoView() {
     flashRow(id);
   }
 
-  function undoLastScorta(id: string) {
+  async function undoLastScorta(id: string) {
     if (!magCanCreateRicambio) return;
     flushPendingLog();
     const entry = latestUndoableScortaEntryForRicambio(logEntries, id, magUndoScope);
@@ -1119,8 +1119,19 @@ export function MagazzinoView() {
       window.alert("La scorta non corrisponde più all’ultima registrazione: annullamento non disponibile.");
       return;
     }
-    patchProdotti((prev) => prev.map((p) => (p.id === id ? touch({ ...p, scorta: parsed.prima }) : p)));
+    const touched = touch({ ...row, scorta: parsed.prima });
+    const updated = await magazzinoService.update(id, ricambioUiToMagazzinoUpdate(touched));
+    if (!updated.success || !updated.data) {
+      window.alert(updated.error ?? "Annullamento scorta non riuscito.");
+      return;
+    }
+    const ui = magazzinoRowToRicambioUI(updated.data, authorName);
+    patchProdotti((prev) => prev.map((p) => (p.id === id ? touch(ui) : p)));
     markMagazzinoLogEntryAnnullato(entry.id);
+    flashRow(id);
+    void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+      cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
+    ]);
   }
 
   async function undoUltimoMagazzino() {
@@ -1497,7 +1508,7 @@ export function MagazzinoView() {
           />
         </section>
 
-        <div className={`mt-4 hidden md:block ${gestionaleListTableMasterWrapClass}`}>
+        <div className={`mt-4 hidden xl:block ${gestionaleListTableMasterWrapClass}`}>
           <table className={gestionaleListTableClass}>
             <colgroup>
               <col className="w-[12%]" />
@@ -1702,7 +1713,7 @@ export function MagazzinoView() {
                           tooltipContent={magCanCreateRicambio ? "Annulla" : "Sola lettura"}
                           className={dsTableActionBtnUndo}
                           disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
-                          onClick={() => undoLastScorta(p.id)}
+                          onClick={() => void undoLastScorta(p.id)}
                         >
                           <IconUndoMagazzino />
                         </IconActionButton>
@@ -1733,7 +1744,7 @@ export function MagazzinoView() {
           </table>
         </div>
 
-        <div className="mt-4 space-y-3 md:hidden">
+        <div className="mt-4 space-y-3 xl:hidden">
           {pagedMagazzino.map((p) => {
             const consumoRow = consumoMap.get(p.id);
             const avgM = consumoRow?.avgMonthly ?? null;
@@ -1817,7 +1828,7 @@ export function MagazzinoView() {
                     tooltipContent={magCanCreateRicambio ? "Annulla" : "Sola lettura"}
                     className={dsTableActionBtnUndo}
                     disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
-                    onClick={() => undoLastScorta(p.id)}
+                    onClick={() => void undoLastScorta(p.id)}
                   >
                     <IconUndoMagazzino />
                   </IconActionButton>

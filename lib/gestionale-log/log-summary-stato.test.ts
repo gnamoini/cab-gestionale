@@ -104,7 +104,7 @@ const schedaAddetto = buildLogModificaSummary({
 
 assert.equal(
   schedaAddetto.modifiche[0],
-  "Utente accettazione modificato da “Mario” a “Luigi”",
+  "Addetto accettazione modificato da “Mario” a “Luigi”",
   "scheda contenuto diff must expand nested campi",
 );
 

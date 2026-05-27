@@ -8,11 +8,12 @@ import { flushSync } from "react-dom";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
 import { LavorazioniModalShell, LavorazioniModalTitleBar } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
+import { SchedaEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/scheda-elimina-confirm-dialog";
+import { normalizeSchedaIngressoFields } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import {
-  GlobalHierarchyMarcaSelect,
-  GlobalHierarchyModelloSelect,
-  GlobalSelect,
   GlobalSettingsListSelect,
 } from "@/components/gestionale/global-input";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
@@ -29,23 +30,10 @@ import {
   identificazionePartsFromLavorazione,
   identificazionePartsFromSchedaIngresso,
 } from "@/lib/mezzi/identificazione-mezzo";
-import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
-import {
-  marcheFromHierarchyTree,
-  modelliVisibiliPerMarcaHierarchy,
-} from "@/lib/mezzi/hierarchy-list-prefs";
-import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
   findLastSchedaIngressoForIdent,
-  hasSchedaIngressoIdentLookup,
-  mergeSchedaIngressoFields,
 } from "@/lib/schede/scheda-ingresso-reuse";
-import { SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL } from "@/lib/schede/scheda-ingresso-ui-labels";
-import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
-import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
-import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
-import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import {
   diffSchedaIngressoCampi,
   diffSchedaLavorazioniDoc,
@@ -113,7 +101,6 @@ import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { reconcileGestionaleEntity } from "@/lib/sync/gestionale-reconcile";
 import { useQueryClient } from "@tanstack/react-query";
-import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import type {
@@ -130,7 +117,7 @@ import type {
 
 type LavRow = LavorazioneAttiva | LavorazioneArchiviata;
 
-type Stage = { kind: "hub" } | { kind: "ingresso" } | { kind: "lavorazioni" } | { kind: "ricambi" };
+type Stage = { kind: "hub" } | { kind: "lavorazioni" } | { kind: "ricambi" };
 type HubTab = "schede" | "panoramica" | "preventivi" | "documenti" | "attivita";
 type HubTabInput = HubTab | "timeline" | "log";
 
@@ -424,12 +411,10 @@ export function SchedeLavorazioneModal({
     () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.stati],
   );
-  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
   const hubQuery = useLavorazioneHub(lav.id);
   const qc = useQueryClient();
   const hubData = hubQuery.data;
   const initialTab = normalizeHubTab(initialTabProp);
-  const appSettings = settingsPayload?.resolved;
   const mezzo = useMemo(() => findMezzoForLavorazione(mezzi, lav), [mezzi, lav]);
   const identSubtitle = useMemo(
     () => formatIdentificazioneMezzoLine(identificazionePartsFromLavorazione(lav, mezzo)),
@@ -446,9 +431,10 @@ export function SchedeLavorazioneModal({
     draftRef.current = draft;
   }, [draft]);
   const [ingressoF, setIngressoF] = useState<SchedaIngressoFields | null>(null);
+  const [ingressoFormOpen, setIngressoFormOpen] = useState(false);
   const [lavDoc, setLavDoc] = useState<SchedaLavorazioniDoc | null>(null);
   const [ricDoc, setRicDoc] = useState<SchedaRicambiDoc | null>(null);
-  const ingressoPrimoCampoRef = useRef<HTMLInputElement | null>(null);
+  const [eliminaConfirmTipo, setEliminaConfirmTipo] = useState<SchedaTipo | null>(null);
   const baselineIngressoJson = useRef<string | null>(null);
   const baselineLavorazioniJson = useRef<string | null>(null);
   const baselineRicambiJson = useRef<string | null>(null);
@@ -458,28 +444,6 @@ export function SchedeLavorazioneModal({
       onSchedaLog?.(ev);
     },
     [onSchedaLog],
-  );
-
-  const listePrefs = useMemo(
-    () => migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault()),
-    [appSettings?.mezziListe],
-  );
-
-  const marcheGuidate = useMemo(
-    () => marcheFromHierarchyTree(listePrefs, "attrezzature"),
-    [listePrefs],
-  );
-
-  const marcheTelaioGuidate = useMemo(() => marcheFromHierarchyTree(listePrefs, "telai"), [listePrefs]);
-
-  const modelliForMarca = useCallback(
-    (marca: string) => modelliVisibiliPerMarcaHierarchy(listePrefs, "attrezzature", marca),
-    [listePrefs],
-  );
-
-  const modelliForMarcaTelaio = useCallback(
-    (marca: string) => modelliVisibiliPerMarcaHierarchy(listePrefs, "telai", marca),
-    [listePrefs],
   );
 
   const attivitaFeedInput = useMemo(() => {
@@ -503,10 +467,15 @@ export function SchedeLavorazioneModal({
   );
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setEliminaConfirmTipo(null);
+      return;
+    }
     const t = window.setTimeout(() => {
       setStage({ kind: "hub" });
       setHubTab(initialTab);
+      setIngressoFormOpen(false);
+      setIngressoF(null);
       const cloned = JSON.parse(JSON.stringify(bundle)) as LavorazioneSchedeBundle;
       if (!cloned.codice?.trim() && lav.codice?.trim()) {
         cloned.codice = lav.codice.trim();
@@ -548,9 +517,26 @@ export function SchedeLavorazioneModal({
     [onPersist],
   );
 
-  function deleteSchedaTipo(tipo: SchedaTipo) {
+  function openIngressoEditor(campi: SchedaIngressoFields) {
+    const normalized = normalizeSchedaIngressoFields(campi, addetti[0] ?? "");
+    baselineIngressoJson.current = JSON.stringify(normalized);
+    setIngressoF(normalized);
+    setIngressoFormOpen(true);
+  }
+
+  function closeIngressoEditor() {
+    setIngressoFormOpen(false);
+    setIngressoF(null);
+  }
+
+  function requestDeleteSchedaTipo(tipo: SchedaTipo) {
     if (!canEditWorkOrders) return;
-    if (!window.confirm("Confermi eliminazione scheda?")) return;
+    setEliminaConfirmTipo(tipo);
+  }
+
+  function confirmDeleteSchedaTipo() {
+    const tipo = eliminaConfirmTipo;
+    if (!tipo || !canEditWorkOrders) return;
     const base = draftRef.current;
     const label =
       tipo === "ingresso"
@@ -561,8 +547,9 @@ export function SchedeLavorazioneModal({
     const next: LavorazioneSchedeBundle = { ...base, [tipo]: null };
     persist(next);
     emitLog({ tipo: "eliminazione", schedaOggetto: label, riepilogo: "Scheda eliminata", changes: [] });
+    setEliminaConfirmTipo(null);
     setStage({ kind: "hub" });
-    if (tipo === "ingresso") setIngressoF(null);
+    if (tipo === "ingresso") closeIngressoEditor();
     if (tipo === "lavorazioni") setLavDoc(null);
     if (tipo === "ricambi") setRicDoc(null);
   }
@@ -577,15 +564,14 @@ export function SchedeLavorazioneModal({
       flushSync(() => {
         setIngressoF(campi);
         persist({ ...draftRef.current, ingresso: doc });
-        setStage({ kind: "ingresso" });
       });
+      openIngressoEditor(campi);
       emitLog({
         tipo: "creazione",
         schedaOggetto: SCHEDA_INGRESSO_LABEL,
         riepilogo: "Scheda ingresso creata",
         changes: [],
       });
-      queueMicrotask(() => ingressoPrimoCampoRef.current?.focus());
     } else if (tipo === "lavorazioni") {
       const campi = buildSchedaLavorazioniFieldsFromContext(lav, mezzo);
       const addInit: RigaAddettoOreScheda[] = [];
@@ -683,7 +669,7 @@ export function SchedeLavorazioneModal({
     };
     setIngressoF(campi);
     persist({ ...draftRef.current, ingresso: doc });
-    setStage({ kind: "ingresso" });
+    openIngressoEditor(campi);
     emitLog({
       tipo: "creazione",
       schedaOggetto: SCHEDA_INGRESSO_LABEL,
@@ -858,12 +844,11 @@ export function SchedeLavorazioneModal({
   function tryIngressoBack() {
     const ig = ingressoF;
     if (!ig) {
-      setStage({ kind: "hub" });
+      closeIngressoEditor();
       return;
     }
     if (baselineIngressoJson.current === JSON.stringify(ig)) {
-      setStage({ kind: "hub" });
-      setIngressoF(null);
+      closeIngressoEditor();
       return;
     }
     setUnsavedPanel("ingresso");
@@ -975,9 +960,7 @@ export function SchedeLavorazioneModal({
       openBlobInNewTab(hub.ingresso.fileEsterno.mime, hub.ingresso.fileEsterno.dataBase64, hub.ingresso.fileEsterno.fileName);
       return;
     }
-    baselineIngressoJson.current = JSON.stringify(hub.ingresso.campi);
-    setIngressoF(hub.ingresso.campi);
-    setStage({ kind: "ingresso" });
+    openIngressoEditor(hub.ingresso.campi);
   }
   function apriSchedaLavorazioni() {
     if (!hub.lavorazioni) return;
@@ -1097,7 +1080,7 @@ export function SchedeLavorazioneModal({
                     autore: currentUser,
                   });
                 }}
-                onElimina={hub.lavorazioni ? () => deleteSchedaTipo("lavorazioni") : undefined}
+                onElimina={hub.lavorazioni ? () => requestDeleteSchedaTipo("lavorazioni") : undefined}
               />
               <SchedaSectionHub
                 title="Scheda ricambi utilizzati"
@@ -1116,7 +1099,7 @@ export function SchedeLavorazioneModal({
                     autore: currentUser,
                   });
                 }}
-                onElimina={hub.ricambi ? () => deleteSchedaTipo("ricambi") : undefined}
+                onElimina={hub.ricambi ? () => requestDeleteSchedaTipo("ricambi") : undefined}
               />
               <div className="flex justify-end border-t border-zinc-100 pt-3 dark:border-zinc-800">
                 <button
@@ -1249,44 +1232,13 @@ export function SchedeLavorazioneModal({
             <LavorazioneAttivitaPanel feedInput={attivitaFeedInput} />
           ) : null}
 
-          {stage.kind === "ingresso" && hub.ingresso && ingressoF ? (
-            <IngressoPanel
-              doc={hub.ingresso}
-              fields={ingressoF}
-              setFields={setIngressoF}
-              mezzi={mezzi}
-              schedeStore={schedeStore}
-              attive={attive}
-              storico={storico}
-              excludeLavorazioneId={lav.id}
-              canEdit={canEditWorkOrders}
-              clientiLista={listePrefs.clienti}
-              tipiAttrezzaturaLista={listePrefs.tipiAttrezzatura}
-              marcheGuidate={marcheGuidate}
-              modelliForMarca={modelliForMarca}
-              tipiTelaioLista={listePrefs.tipiTelaio ?? []}
-              marcheTelaioGuidate={marcheTelaioGuidate}
-              modelliForMarcaTelaio={modelliForMarcaTelaio}
-              utilizzatoriLista={listePrefs.utilizzatori}
-              cantieriLista={listePrefs.cantieri}
-              dataIngressoInputRef={ingressoPrimoCampoRef}
-              onBack={tryIngressoBack}
-              onDelete={() => deleteSchedaTipo("ingresso")}
-              onSave={() => {
-                if (!commitIngressoSave()) return;
-                setStage({ kind: "hub" });
-                setIngressoF(null);
-              }}
-            />
-          ) : null}
-
           {stage.kind === "lavorazioni" && hub.lavorazioni && lavDoc ? (
             <LavorazioniPanel
               doc={lavDoc}
               setDoc={setLavDoc}
               addettiLista={addetti}
               onBack={tryLavorazioniBack}
-              onDelete={() => deleteSchedaTipo("lavorazioni")}
+              onDelete={() => requestDeleteSchedaTipo("lavorazioni")}
               onSave={() => {
                 if (!commitLavorazioniSave()) return;
                 setStage({ kind: "hub" });
@@ -1304,7 +1256,7 @@ export function SchedeLavorazioneModal({
               currentUser={currentUser}
               addettiLista={addetti}
               onBack={tryRicambiBack}
-              onDelete={() => deleteSchedaTipo("ricambi")}
+              onDelete={() => requestDeleteSchedaTipo("ricambi")}
               onImmediatePersist={(d) => persist({ ...draftRef.current, ricambi: d })}
               onSave={() => {
                 if (!commitRicambiSave()) return;
@@ -1333,7 +1285,7 @@ export function SchedeLavorazioneModal({
                     const p = unsavedPanel;
                     setUnsavedPanel(null);
                     setStage({ kind: "hub" });
-                    if (p === "ingresso") setIngressoF(null);
+                    if (p === "ingresso") closeIngressoEditor();
                     if (p === "lav") setLavDoc(null);
                     if (p === "ric") setRicDoc(null);
                   }}
@@ -1347,7 +1299,7 @@ export function SchedeLavorazioneModal({
                     const p = unsavedPanel;
                     if (p === "ingresso") {
                       if (!commitIngressoSave()) return;
-                      setIngressoF(null);
+                      closeIngressoEditor();
                     } else if (p === "lav") {
                       if (!commitLavorazioniSave()) return;
                       setLavDoc(null);
@@ -1367,6 +1319,38 @@ export function SchedeLavorazioneModal({
         ) : null}
         </div>
       </LavorazioniModalShell>
+
+      {ingressoFormOpen && ingressoF && hub.ingresso ? (
+        <SchedaIngressoEditModal
+          open={ingressoFormOpen}
+          onClose={tryIngressoBack}
+          fields={ingressoF}
+          setFields={setIngressoF}
+          onPatch={(patch) => setIngressoF((f) => (f ? { ...f, ...patch } : f))}
+          onSave={() => {
+            if (!commitIngressoSave()) return;
+            closeIngressoEditor();
+          }}
+          onDelete={
+            hub.ingresso.sorgente !== "file_esterno" ? () => requestDeleteSchedaTipo("ingresso") : undefined
+          }
+          readOnly={hub.ingresso.sorgente === "file_esterno"}
+          canEdit={canEditWorkOrders}
+          updatedBy={hub.ingresso.updatedBy}
+          mezzi={mezzi}
+          schedeStore={schedeStore}
+          attive={attive}
+          storico={storico}
+          excludeLavorazioneId={lav.id}
+        />
+      ) : null}
+
+      <SchedaEliminaConfirmDialog
+        open={eliminaConfirmTipo != null}
+        tipo={eliminaConfirmTipo}
+        onCancel={() => setEliminaConfirmTipo(null)}
+        onConfirm={confirmDeleteSchedaTipo}
+      />
     </>
   );
 }
@@ -1587,351 +1571,6 @@ function SchedaEditorBottomSave({ readOnly, onSave }: { readOnly: boolean; onSav
       <button type="button" className={dsBtnPrimary} onClick={onSave}>
         Salva scheda
       </button>
-    </div>
-  );
-}
-
-function IngressoPanel({
-  doc,
-  fields,
-  setFields,
-  mezzi,
-  schedeStore,
-  attive,
-  storico,
-  excludeLavorazioneId,
-  canEdit,
-  clientiLista,
-  tipiAttrezzaturaLista,
-  marcheGuidate,
-  modelliForMarca,
-  tipiTelaioLista,
-  marcheTelaioGuidate,
-  modelliForMarcaTelaio,
-  utilizzatoriLista,
-  cantieriLista,
-  dataIngressoInputRef,
-  onBack,
-  onDelete,
-  onSave,
-}: {
-  doc: SchedaIngressoDoc;
-  fields: SchedaIngressoFields;
-  setFields: (f: SchedaIngressoFields) => void;
-  mezzi: MezzoGestito[];
-  schedeStore: Record<string, LavorazioneSchedeBundle>;
-  attive: LavorazioneAttiva[];
-  storico: LavorazioneArchiviata[];
-  excludeLavorazioneId: string;
-  canEdit: boolean;
-  clientiLista: string[];
-  tipiAttrezzaturaLista: string[];
-  marcheGuidate: string[];
-  modelliForMarca: (marca: string) => string[];
-  tipiTelaioLista: string[];
-  marcheTelaioGuidate: string[];
-  modelliForMarcaTelaio: (marca: string) => string[];
-  utilizzatoriLista: string[];
-  cantieriLista: string[];
-  dataIngressoInputRef?: Ref<HTMLInputElement>;
-  onBack: () => void;
-  onDelete: () => void;
-  onSave: () => void;
-}) {
-  const ro = doc.sorgente === "file_esterno";
-  const grid = "grid gap-3 sm:grid-cols-2";
-  const modelliOpts = modelliForMarca(fields.marcaAttrezzatura);
-  const modelliTelaioOpts = modelliForMarcaTelaio(fields.marcaTelaio);
-
-  const lastIngressoMatch = useMemo(() => {
-    if (!hasSchedaIngressoIdentLookup(fields.targa, fields.matricola)) return null;
-    return findLastSchedaIngressoForIdent(
-      fields.targa,
-      fields.matricola,
-      mezzi,
-      schedeStore,
-      attive,
-      storico,
-      { excludeLavorazioneId },
-    );
-  }, [fields.targa, fields.matricola, mezzi, schedeStore, attive, storico, excludeLavorazioneId]);
-
-  const mezzoPrompt = useSchedaIngressoMezzoPrompt({
-    fields,
-    setFields,
-    mezzi,
-    schedeStore,
-    attive,
-    storico,
-    excludeLavorazioneId,
-  });
-
-  const copyLastIngresso = useCallback(() => {
-    if (!lastIngressoMatch || ro) return;
-    setFields(mergeSchedaIngressoFields(fields, lastIngressoMatch.campi));
-  }, [fields, lastIngressoMatch, ro, setFields]);
-
-  const inp = (k: keyof SchedaIngressoFields, label: string) => (
-    <label className="block text-xs" key={String(k)}>
-      <span className="text-zinc-500">{label}</span>
-      <input
-        className={`${dsInput} mt-1`}
-        readOnly={ro}
-        value={fields[k]}
-        onChange={(e) => setFields({ ...fields, [k]: e.target.value })}
-      />
-    </label>
-  );
-  return (
-    <div className="space-y-4">
-      <MezzoRegistratoIngressoDialog
-        open={mezzoPrompt.promptOpen && !ro}
-        mezzo={mezzoPrompt.promptMezzo}
-        onAccept={mezzoPrompt.acceptAutofill}
-        onDismiss={mezzoPrompt.dismissPrompt}
-      />
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <button type="button" className={dsBtnNeutral} onClick={onBack}>
-          ← Indietro
-        </button>
-        <div className="flex flex-wrap items-center gap-2">
-          {doc.sorgente !== "file_esterno" ? (
-            <button type="button" className={dsBtnDanger} onClick={onDelete}>
-              Elimina scheda
-            </button>
-          ) : null}
-          {!ro ? (
-            <button type="button" className={dsBtnPrimary} onClick={onSave}>
-              Salva scheda
-            </button>
-          ) : null}
-        </div>
-      </div>
-      <p className="text-xs text-zinc-500">Autore ultima modifica: {doc.updatedBy}</p>
-      <CopiaUltimaSchedaIngressoBanner
-        visible={Boolean(lastIngressoMatch) && !ro}
-        highlight={false}
-        updatedAt={lastIngressoMatch?.updatedAt}
-        disabled={!canEdit || ro}
-        disabledTitle={READONLY_PERMISSION_HINT}
-        onCopy={copyLastIngresso}
-      />
-      <div className={grid}>
-        <SchedaDayField
-          label="Data ingresso *"
-          value={fields.dataIngresso}
-          onChange={(v) => setFields({ ...fields, dataIngresso: v })}
-          readOnly={ro}
-          inputRef={dataIngressoInputRef}
-        />
-        <label className="block text-xs">
-          <span className="text-zinc-500">Cliente</span>
-          <GlobalSettingsListSelect
-            listKey="mezzi:clienti"
-            className="mt-1"
-            value={fields.cliente}
-            onChange={(v) => setFields({ ...fields, cliente: v })}
-            disabled={ro}
-            aria-label="Cliente"
-          />
-        </label>
-        <label className="block text-xs">
-          <span className="text-zinc-500">Cantiere</span>
-          <GlobalSettingsListSelect
-            listKey="mezzi:cantieri"
-            className="mt-1"
-            value={fields.cantiere}
-            onChange={(v) => setFields({ ...fields, cantiere: v })}
-            disabled={ro}
-            aria-label="Cantiere"
-          />
-        </label>
-        <label className="block text-xs">
-          <span className="text-zinc-500">Utilizzatore</span>
-          <GlobalSettingsListSelect
-            listKey="mezzi:utilizzatori"
-            className="mt-1"
-            value={fields.utilizzatore}
-            onChange={(v) => setFields({ ...fields, utilizzatore: v })}
-            disabled={ro}
-            aria-label="Utilizzatore"
-          />
-        </label>
-        <label className="block text-xs">
-          <span className="text-zinc-500">Tipo attrezzatura</span>
-          <GlobalSettingsListSelect
-            listKey="mezzi:tipiAttrezzatura"
-            className="mt-1"
-            value={fields.tipoAttrezzatura}
-            onChange={(v) => setFields({ ...fields, tipoAttrezzatura: v })}
-            disabled={ro}
-            aria-label="Tipo attrezzatura"
-          />
-        </label>
-        <label className="block text-xs">
-          <span className="text-zinc-500">Marca attrezzatura</span>
-          {ro ? (
-            <input className={`${dsInput} mt-1`} readOnly value={fields.marcaAttrezzatura} />
-          ) : (
-            <GlobalHierarchyMarcaSelect
-              tree="attrezzature"
-              className="mt-1"
-              value={fields.marcaAttrezzatura}
-              onChange={(v) =>
-                setFields({
-                  ...fields,
-                  marcaAttrezzatura: v,
-                  modelloAttrezzatura: "",
-                })
-              }
-              aria-label="Marca attrezzatura"
-            />
-          )}
-        </label>
-        <label className="block text-xs">
-          <span className="text-zinc-500">Modello attrezzatura</span>
-          {ro ? (
-            <input className={`${dsInput} mt-1`} readOnly value={fields.modelloAttrezzatura} />
-          ) : (
-            <GlobalHierarchyModelloSelect
-              tree="attrezzature"
-              marcaNome={fields.marcaAttrezzatura}
-              className="mt-1"
-              value={fields.modelloAttrezzatura}
-              onChange={(v) => setFields({ ...fields, modelloAttrezzatura: v })}
-              aria-label="Modello attrezzatura"
-            />
-          )}
-        </label>
-        {ro ? (
-          inp("matricola", "Matricola")
-        ) : (
-          <SchedaIngressoIdentAutocompleteField
-            field="matricola"
-            label="Matricola"
-            value={fields.matricola}
-            otherValue={fields.targa}
-            mezzi={mezzi}
-            readOnly={ro}
-            disabled={!canEdit}
-            onChange={(v) => setFields({ ...fields, matricola: v })}
-            onExactMezzoMatch={mezzoPrompt.requestPrompt}
-          />
-        )}
-        {inp("nScuderia", "N. scuderia")}
-        <SchedaOreTextInput
-          label="Ore lavoro"
-          value={fields.oreLavoro}
-          onChange={(v) => setFields({ ...fields, oreLavoro: v })}
-          readOnly={ro}
-        />
-        <label className="block text-xs">
-          <span className="text-zinc-500">Tipo telaio</span>
-          <GlobalSettingsListSelect
-            listKey="mezzi:tipiTelaio"
-            className="mt-1"
-            value={fields.tipoTelaio}
-            onChange={(v) => setFields({ ...fields, tipoTelaio: v })}
-            disabled={ro}
-            aria-label="Tipo telaio"
-          />
-        </label>
-        <label className="block text-xs">
-          <span className="text-zinc-500">Marca telaio</span>
-          {ro ? (
-            <input className={`${dsInput} mt-1`} readOnly value={fields.marcaTelaio} />
-          ) : (
-            <GlobalHierarchyMarcaSelect
-              tree="telai"
-              className="mt-1"
-              value={fields.marcaTelaio}
-              onChange={(v) =>
-                setFields({
-                  ...fields,
-                  marcaTelaio: v,
-                  modelloTelaio: "",
-                })
-              }
-              aria-label="Marca telaio"
-            />
-          )}
-        </label>
-        <label className="block text-xs">
-          <span className="text-zinc-500">Modello telaio</span>
-          {ro ? (
-            <input className={`${dsInput} mt-1`} readOnly value={fields.modelloTelaio} />
-          ) : (
-            <GlobalHierarchyModelloSelect
-              tree="telai"
-              marcaNome={fields.marcaTelaio}
-              className="mt-1"
-              value={fields.modelloTelaio}
-              onChange={(v) => setFields({ ...fields, modelloTelaio: v })}
-              aria-label="Modello telaio"
-            />
-          )}
-        </label>
-        {ro ? (
-          inp("targa", "Targa")
-        ) : (
-          <SchedaIngressoIdentAutocompleteField
-            field="targa"
-            label="Targa"
-            value={fields.targa}
-            otherValue={fields.matricola}
-            mezzi={mezzi}
-            readOnly={ro}
-            disabled={!canEdit}
-            onChange={(v) => setFields({ ...fields, targa: v })}
-            onExactMezzoMatch={mezzoPrompt.requestPrompt}
-          />
-        )}
-        {inp("km", "KM")}
-        <label className="block text-xs">
-          <span className="text-zinc-500">Livello carburante</span>
-          <GlobalSelect
-            className="mt-1"
-            value={fields.livelloCarburante}
-            onChange={(v) => setFields({ ...fields, livelloCarburante: v })}
-            options={["Vuoto", "1/4", "1/2", "3/4", "Pieno"]}
-            disabled={ro}
-            allowAdd={false}
-            selectOnly
-            aria-label="Livello carburante"
-          />
-        </label>
-        <label className="block text-xs">
-          <span className="text-zinc-500">{SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL}</span>
-          <GlobalSettingsListSelect
-            listKey="lavorazioni:addetti"
-            className="mt-1"
-            value={fields.addettoAccettazione}
-            onChange={(v) => setFields({ ...fields, addettoAccettazione: v })}
-            disabled={ro}
-            aria-label={SCHEDA_INGRESSO_UTENTE_ACCETTAZIONE_LABEL}
-          />
-        </label>
-      </div>
-      <label className="block text-xs">
-        <span className="text-zinc-500">Descrizione anomalia</span>
-        <textarea
-          className={`${dsInput} mt-1 min-h-[6rem] resize-none`}
-          readOnly={ro}
-          value={fields.descrizioneAnomalia}
-          onChange={(e) => setFields({ ...fields, descrizioneAnomalia: e.target.value })}
-        />
-      </label>
-      <label className="block text-xs">
-        <span className="text-zinc-500">Note</span>
-        <textarea
-          className={`${dsInput} mt-1 min-h-[4rem] resize-none`}
-          readOnly={ro}
-          value={fields.noteIntervento ?? ""}
-          onChange={(e) => setFields({ ...fields, noteIntervento: e.target.value })}
-        />
-      </label>
-      {inp("richiedente", "Richiedente")}
-      <SchedaEditorBottomSave readOnly={ro} onSave={onSave} />
     </div>
   );
 }

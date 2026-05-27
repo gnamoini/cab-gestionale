@@ -1,4 +1,5 @@
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
+import { comparePrioritaLavorazione } from "@/lib/lavorazioni/priorita-order";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MovimentoRicambioRow } from "@/src/types/supabase-tables";
@@ -8,8 +9,8 @@ export type DashboardLavWidgetRow = {
   stato: string;
   priorita: string;
   macchina: string;
-  cliente: string;
-  ident: string;
+  /** Cliente · matricola · n. scuderia · targa (solo valori presenti). */
+  mezzoIdent: string | null;
   updatedAt: string;
   isUrgent: boolean;
 };
@@ -36,6 +37,12 @@ export type DashboardMagDailyMovements = {
   uscite: number;
 };
 
+export type DashboardLavWidgetStats = {
+  inCorso: number;
+  urgenti: number;
+  entratiOggi: number;
+};
+
 export type DashboardMagWidgetStats = {
   capitale: number;
   sottoScorta: number;
@@ -54,23 +61,27 @@ function macchinaLabelFromLavRow(row: LavorazioneListRow): string {
   return m ? `${m.marca} ${m.modello}`.trim() : "—";
 }
 
-function clienteLabelFromLavRow(row: LavorazioneListRow): string {
-  return row.mezzo?.cliente?.trim() || "—";
-}
-
-/** Targa se presente, altrimenti matricola. */
-function targaOrMatricolaFromLavRow(row: LavorazioneListRow): string {
+function mezzoIdentPartsFromLavRow(row: LavorazioneListRow): {
+  cliente: string;
+  matricola: string;
+  nScuderia: string;
+  targa: string;
+} {
   const m = row.mezzo;
-  if (!m) return "—";
-  const targa = m.targa?.trim();
-  if (targa) return targa;
-  const matricola = m.matricola?.trim();
-  if (matricola) return matricola;
-  return "—";
+  return {
+    cliente: m?.cliente?.trim() ?? "",
+    matricola: m?.matricola?.trim() ?? "",
+    nScuderia: m?.numero_scuderia?.trim() ?? "",
+    targa: m?.targa?.trim() ?? "",
+  };
 }
 
 function lavUpdatedAt(row: LavorazioneListRow): string {
   return row.updated_at ?? row.created_at;
+}
+
+function lavIngressIso(row: LavorazioneListRow): string {
+  return row.data_ingresso ?? row.created_at;
 }
 
 function toLavWidgetRow(row: LavorazioneListRow): DashboardLavWidgetRow {
@@ -79,36 +90,36 @@ function toLavWidgetRow(row: LavorazioneListRow): DashboardLavWidgetRow {
     stato: row.stato,
     priorita: row.priorita,
     macchina: macchinaLabelFromLavRow(row),
-    cliente: clienteLabelFromLavRow(row),
-    ident: targaOrMatricolaFromLavRow(row),
+    mezzoIdent: formatDashboardLavWidgetMezzoIdent(mezzoIdentPartsFromLavRow(row)),
     updatedAt: lavUpdatedAt(row),
     isUrgent: row.priorita === "urgente",
   };
 }
 
-/** Ultime modificate + urgenti (dedupe, max N). */
+/** Contatori KPI widget Lavorazioni (stesso dataset lista attiva non archiviata). */
+export function computeDashboardLavWidgetStats(rows: readonly LavorazioneListRow[]): DashboardLavWidgetStats {
+  let urgenti = 0;
+  let entratiOggi = 0;
+  for (const row of rows) {
+    if (row.priorita === "urgente") urgenti++;
+    if (isTodayLocal(lavIngressIso(row))) entratiOggi++;
+  }
+  return { inCorso: rows.length, urgenti, entratiOggi };
+}
+
+/** Priorità decrescente (urgente → bassa), poi data aggiornamento (max N). */
 export function computeDashboardLavWidgetRows(
   rows: readonly LavorazioneListRow[],
   limit = 5,
 ): DashboardLavWidgetRow[] {
-  const byUpdated = [...rows].sort((a, b) => lavUpdatedAt(b).localeCompare(lavUpdatedAt(a)));
-  const urgent = byUpdated.filter((r) => r.priorita === "urgente");
-  const seen = new Set<string>();
-  const out: DashboardLavWidgetRow[] = [];
-
-  for (const row of urgent) {
-    if (out.length >= limit) break;
-    if (seen.has(row.id)) continue;
-    seen.add(row.id);
-    out.push(toLavWidgetRow(row));
-  }
-  for (const row of byUpdated) {
-    if (out.length >= limit) break;
-    if (seen.has(row.id)) continue;
-    seen.add(row.id);
-    out.push(toLavWidgetRow(row));
-  }
-  return out;
+  return [...rows]
+    .sort((a, b) => {
+      const byPriority = comparePrioritaLavorazione(b.priorita, a.priorita);
+      if (byPriority !== 0) return byPriority;
+      return lavUpdatedAt(b).localeCompare(lavUpdatedAt(a));
+    })
+    .slice(0, limit)
+    .map(toLavWidgetRow);
 }
 
 export function computeDashboardMagWidgetStats(items: readonly RicambioMagazzino[]): DashboardMagWidgetStats {
@@ -117,22 +128,43 @@ export function computeDashboardMagWidgetStats(items: readonly RicambioMagazzino
   return { sottoScorta, capitale };
 }
 
-/** Ricambi ordinati per `dataUltimaModifica` (anagrafica aggiornata, non movimenti stock). */
+function isRicambioSottoScorta(r: RicambioMagazzino): boolean {
+  return r.scortaMinima > 0 && r.scorta < r.scortaMinima;
+}
+
+function toDashboardMagRicambioRow(r: RicambioMagazzino): DashboardMagRecentRicambioRow {
+  return {
+    id: r.id,
+    label: r.descrizione.trim() || r.codiceFornitoreOriginale,
+    marca: r.marca.trim() || "—",
+    codice: r.codiceFornitoreOriginale,
+    updatedAt: r.dataUltimaModifica,
+    sottoScorta: isRicambioSottoScorta(r),
+  };
+}
+
+/** Ricambi sotto scorta (per primi nel widget dashboard). */
+export function computeDashboardMagSottoScortaRicambi(
+  items: readonly RicambioMagazzino[],
+  limit = 5,
+): DashboardMagRecentRicambioRow[] {
+  return [...items]
+    .filter(isRicambioSottoScorta)
+    .sort((a, b) => b.dataUltimaModifica.localeCompare(a.dataUltimaModifica))
+    .slice(0, limit)
+    .map(toDashboardMagRicambioRow);
+}
+
+/** Ultimi modificati, esclusi quelli già in sezione sotto scorta. */
 export function computeDashboardMagRecentRicambi(
   items: readonly RicambioMagazzino[],
   limit = 5,
 ): DashboardMagRecentRicambioRow[] {
   return [...items]
+    .filter((r) => !isRicambioSottoScorta(r))
     .sort((a, b) => b.dataUltimaModifica.localeCompare(a.dataUltimaModifica))
     .slice(0, limit)
-    .map((r) => ({
-      id: r.id,
-      label: r.descrizione.trim() || r.codiceFornitoreOriginale,
-      marca: r.marca.trim() || "—",
-      codice: r.codiceFornitoreOriginale,
-      updatedAt: r.dataUltimaModifica,
-      sottoScorta: r.scortaMinima > 0 && r.scorta < r.scortaMinima,
-    }));
+    .map(toDashboardMagRicambioRow);
 }
 
 export function computeDashboardMagDailyMovements(
@@ -169,15 +201,25 @@ export function computeDashboardMagRecentMovements(
     });
 }
 
-export function formatDashboardLavWidgetSubtitle(cliente: string, ident: string): string | null {
-  const c = cliente.trim();
-  const i = ident.trim();
-  const hasCliente = c.length > 0 && c !== "—";
-  const hasIdent = i.length > 0 && i !== "—";
-  if (hasCliente && hasIdent) return `${c} · ${i}`;
-  if (hasCliente) return c;
-  if (hasIdent) return i;
-  return null;
+function dashboardIdentSegment(value: string | undefined): string {
+  const t = value?.trim() ?? "";
+  return t && t !== "—" ? t : "";
+}
+
+/** Cliente · matricola · n. scuderia · targa — omette campi assenti (niente «—» o segnaposto). */
+export function formatDashboardLavWidgetMezzoIdent(parts: {
+  cliente?: string;
+  matricola?: string;
+  nScuderia?: string;
+  targa?: string;
+}): string | null {
+  const segments = [
+    dashboardIdentSegment(parts.cliente),
+    dashboardIdentSegment(parts.matricola),
+    dashboardIdentSegment(parts.nScuderia),
+    dashboardIdentSegment(parts.targa),
+  ].filter(Boolean);
+  return segments.length > 0 ? segments.join(" · ") : null;
 }
 
 export function formatDashboardMagRicambioIdent(marca: string, codice: string): string | null {

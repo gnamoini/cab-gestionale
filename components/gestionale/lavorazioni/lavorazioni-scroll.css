@@ -4,12 +4,18 @@
   scrollbar-gutter: auto;
   /* Inset laterale tabella — speculare rispetto a `[&_tr>td:first-child]:pl-4 sm:pl-5`. */
   --gestionale-table-edge-inset: 1rem;
+  /* Hover riga: visibile ma discreto (evita flash bianco da --cab-hover su tabelle dense). */
+  --gestionale-table-row-hover: color-mix(in srgb, var(--cab-primary) 4%, var(--cab-card));
 }
 
 @media (min-width: 640px) {
   .lavorazioni-scroll-scope {
     --gestionale-table-edge-inset: 1.25rem;
   }
+}
+
+.dark .lavorazioni-scroll-scope {
+  --gestionale-table-row-hover: color-mix(in srgb, var(--cab-primary) 6%, var(--cab-card));
 }
 
 /* Sfondo riga: tutte le <td> (il bg su <tr> non si propaga in modo affidabile). */
@@ -22,8 +28,13 @@
   background-color: rgb(24 24 27 / 0.4);
 }
 
+.lavorazioni-scroll-scope tbody tr:hover {
+  /* `globalTableRow` applica hover su <tr>; le celle hanno bg proprio — evita doppia illuminazione. */
+  background-color: transparent !important;
+}
+
 .lavorazioni-scroll-scope tbody tr:hover > td {
-  background-color: var(--cab-hover) !important;
+  background-color: var(--gestionale-table-row-hover) !important;
 }
 
 .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
