@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { roleLabel, type AppRole } from "@/lib/auth/rbac";
 
 const ROLE_TONE: Record<AppRole, string> = {
@@ -19,6 +20,9 @@ export function SecurityRoleBadge({ role }: { role: AppRole }) {
 }
 
 export function SecurityStatusBadge({ lastSignInAt }: { lastSignInAt: string | null }) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   if (!lastSignInAt) {
     return (
       <span className="inline-flex items-center gap-1.5 text-xs text-[color:var(--cab-text-muted)]">
@@ -27,6 +31,16 @@ export function SecurityStatusBadge({ lastSignInAt }: { lastSignInAt: string | n
       </span>
     );
   }
+
+  if (!mounted) {
+    return (
+      <span className="inline-flex items-center gap-1.5 text-xs text-[color:var(--cab-text-muted)]">
+        <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" aria-hidden />
+        —
+      </span>
+    );
+  }
+
   const days = (Date.now() - new Date(lastSignInAt).getTime()) / 86_400_000;
   if (days <= 7) {
     return (

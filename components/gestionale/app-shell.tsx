@@ -26,6 +26,9 @@ import { isStagingPublicSlice } from "@/lib/env/staging-public";
 
 const SIDEBAR_COLLAPSED_KEY = "cab-sidebar-collapsed";
 
+const shellTopBarClass =
+  "flex h-14 shrink-0 items-center border-b border-[color:var(--cab-border)]";
+
 const navLinkBase =
   "group relative flex min-h-10 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors duration-200 ease-out";
 
@@ -454,11 +457,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <aside
         className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width] duration-200 ease-out md:flex ${asideW}`}
       >
-        <div
-          className={`flex shrink-0 items-center border-b border-[color:var(--cab-border)] ${
-            collapsed ? "justify-center px-1.5 py-2" : "h-14 gap-2 px-2.5"
-          }`}
-        >
+        <div className={`${shellTopBarClass} ${collapsed ? "justify-center px-1.5" : "gap-2 px-2.5"}`}>
           {!collapsed ? (
             <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center self-stretch py-1">
               <CabLogo height={30} className="min-w-0 shrink-0 translate-x-[2px] translate-y-[4px] object-center" priority />

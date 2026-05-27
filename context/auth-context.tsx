@@ -11,6 +11,7 @@ import { resolveRole } from "@/lib/auth/rbac";
 import { beginUndoSession, resetUndoSession } from "@/lib/gestionale-log/undo-session";
 import { notifyUndoSessionChanged } from "@/lib/gestionale-log/use-undo-session-id";
 import { QK } from "@/src/lib/react-query/query-keys";
+import { clearInvalidAuthSession, isInvalidRefreshAuthMessage } from "@/src/lib/auth/clear-invalid-auth-session";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { authLogsService } from "@/src/services/auth-logs.service";
 import type { PublicAuthUser } from "@/src/types/auth-user";
@@ -63,16 +64,8 @@ function isTransientNetworkAuthError(err: AuthError | Error): boolean {
   );
 }
 
-/** Solo errori che richiedono pulizia sessione (refresh invalido). */
 function shouldClearSessionOnAuthError(err: AuthError | Error): boolean {
-  const m = err.message.toLowerCase();
-  return (
-    m.includes("invalid refresh token") ||
-    m.includes("refresh token not found") ||
-    m.includes("invalid jwt") ||
-    (m.includes("jwt expired") && m.includes("refresh")) ||
-    m.includes("session expired")
-  );
+  return isInvalidRefreshAuthMessage(err.message);
 }
 
 async function getSessionWithSoftRetry(sb: ReturnType<typeof getBrowserSupabase>): Promise<{
@@ -116,6 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const userIdRef = useRef<string | null>(null);
   const lastStableUserRef = useRef<PublicAuthUser | null>(null);
+  const clearingSessionRef = useRef(false);
 
   useEffect(() => {
     userIdRef.current = user?.id ?? null;
@@ -161,6 +155,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [applyAuthUser],
   );
 
+  const handleInvalidSession = useCallback(
+    async (sb: ReturnType<typeof getBrowserSupabase>, reason: string) => {
+      if (clearingSessionRef.current) {
+        await applySession(null);
+        return;
+      }
+      clearingSessionRef.current = true;
+      try {
+        console.warn("[auth] sessione non valida, clear:", reason);
+        await clearInvalidAuthSession(sb);
+        await applySession(null);
+      } finally {
+        clearingSessionRef.current = false;
+      }
+    },
+    [applySession],
+  );
+
   const refresh = useCallback(async () => {
     if (!isSupabasePublicEnvConfigured()) {
       setConfigurationError(MISSING_SUPABASE_ENV_MESSAGE);
@@ -175,8 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const session = data?.session ?? null;
 
       if (error && shouldClearSessionOnAuthError(error)) {
-        console.warn("[auth] refresh: sessione non più valida:", error.message);
-        await applySession(null);
+        await handleInvalidSession(sb, error.message);
         return;
       }
       if (error && isTransientNetworkAuthError(error)) {
@@ -203,7 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus("degraded");
       }
     }
-  }, [applySession]);
+  }, [applySession, handleInvalidSession]);
 
   useEffect(() => {
     let cancelled = false;
@@ -229,7 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return;
 
         if (initErr && shouldClearSessionOnAuthError(initErr)) {
-          await applySession(null);
+          await handleInvalidSession(sb, initErr.message);
         } else if (initErr && session?.user && isTransientNetworkAuthError(initErr)) {
           await applySession(session);
           setStatus("degraded");
@@ -246,6 +257,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
           if (cancelled) return;
+          if (event === "TOKEN_REFRESHED" && !session) {
+            void handleInvalidSession(sb, "TOKEN_REFRESHED senza sessione");
+            return;
+          }
           if (event === "TOKEN_REFRESHED" && session?.user?.id && session.user.id === userIdRef.current) {
             return;
           }
@@ -275,7 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       subscription?.unsubscribe();
     };
-  }, [applySession]);
+  }, [applySession, handleInvalidSession]);
 
   const login = useCallback(
     async (email: string, password: string, _remember: boolean) => {
@@ -313,9 +328,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const session = sessWrap?.session ?? null;
         if (sessErr && shouldClearSessionOnAuthError(sessErr)) {
           authLogsService.logLoginFailedFireAndForget(signInEmail);
-          console.warn("[auth] login: sessione invalida dopo signIn:", sessErr.message);
-          await sb.auth.signOut().catch(() => {});
-          return { ok: false as const, message: sessErr.message || "Sessione non valida." };
+          await handleInvalidSession(sb, sessErr.message);
+          return { ok: false as const, message: "Accesso non riuscito. Riprova." };
         }
         if (!session?.user) {
           authLogsService.logLoginFailedFireAndForget(signInEmail);
@@ -341,7 +355,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { ok: false as const, message: msg };
       }
     },
-    [applyAuthUser, queryClient],
+    [applyAuthUser, handleInvalidSession, queryClient],
   );
 
   const logout = useCallback(async () => {

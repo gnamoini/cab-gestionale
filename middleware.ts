@@ -1,6 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { isStagingPublicSlice, isStagingBlockedPathname } from "@/lib/env/staging-public";
+import { isInvalidRefreshAuthMessage } from "@/src/lib/auth/clear-invalid-auth-session";
 import { createSupabaseMiddlewareClient } from "@/src/lib/supabase/middleware-client";
 import {
   CLIENT_LAVORAZIONI_SETTINGS_KEY,
@@ -46,18 +47,25 @@ export async function middleware(request: NextRequest) {
 
   const {
     data: { user },
+    error: authError,
   } = await supabase.auth.getUser();
 
+  let activeUser = user;
+  if (authError && isInvalidRefreshAuthMessage(authError.message)) {
+    await supabase.auth.signOut();
+    activeUser = null;
+  }
+
   if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
-    if (user) {
-      const { data: prof } = await supabase.from("profiles").select("ruolo").eq("id", user.id).maybeSingle();
+    if (activeUser) {
+      const { data: prof } = await supabase.from("profiles").select("ruolo").eq("id", activeUser.id).maybeSingle();
       const home = defaultHomePathForRole(prof?.ruolo ?? null);
       return NextResponse.redirect(new URL(home, request.url));
     }
     return response;
   }
 
-  if (!user) {
+  if (!activeUser) {
     const url = request.nextUrl.clone();
     url.pathname = LOGIN_PATH;
     const from = pathname === "/" ? "/dashboard" : `${pathname}${request.nextUrl.search}`;
@@ -72,7 +80,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { data: prof } = await supabase.from("profiles").select("ruolo").eq("id", user.id).maybeSingle();
+  const { data: prof } = await supabase.from("profiles").select("ruolo").eq("id", activeUser.id).maybeSingle();
   const role = prof?.ruolo ?? null;
 
   let clientLavorazioniAllowed = hasPermission(role, "viewClientLavorazioni");
@@ -84,7 +92,7 @@ export async function middleware(request: NextRequest) {
       .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
       .maybeSingle();
     const settings = parseClientPortalAccess(row?.value);
-    clientLavorazioniAllowed = resolveClientLavorazioniPortalAccess(role, user.id, settings.enabledUserIds);
+    clientLavorazioniAllowed = resolveClientLavorazioniPortalAccess(role, activeUser.id, settings.enabledUserIds);
   }
 
   const section = pathnameToSection(pathname);

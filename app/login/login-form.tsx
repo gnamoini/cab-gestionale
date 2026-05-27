@@ -40,6 +40,15 @@ function loginErrorUserMessage(raw: string): string {
     return "Connessione non disponibile. Riprova tra poco.";
   }
   if (
+    m.includes("invalid refresh token") ||
+    m.includes("refresh token not found") ||
+    m.includes("invalid jwt") ||
+    m.includes("session expired") ||
+    m.includes("sessione non valida")
+  ) {
+    return "Accesso non riuscito. Riprova.";
+  }
+  if (
     m.includes("invalid login") ||
     m.includes("invalid credential") ||
     m.includes("wrong password") ||
