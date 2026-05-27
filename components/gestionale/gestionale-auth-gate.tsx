@@ -22,7 +22,8 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (configBlocked) return;
     if (status !== "anonymous") return;
-    const from = `${pathname}${typeof window !== "undefined" ? window.location.search : ""}`;
+    const qs = window.location.search;
+    const from = qs ? `${pathname}${qs}` : pathname;
     router.replace(`/login?from=${encodeURIComponent(from || "/dashboard")}`);
   }, [status, configBlocked, router, pathname]);
 

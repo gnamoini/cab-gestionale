@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppProviders } from "@/components/app-providers";
-import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
+import { buildThemeBootInlineScript } from "@/lib/theme/theme-boot-inline-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,8 +29,6 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const themeBootScript = `(function(){try{var k=${JSON.stringify(CAB_THEME_STORAGE_KEY)};var s=localStorage.getItem(k);var d;if(s==="dark")d=true;else if(s==="light")d=false;else d=window.matchMedia("(prefers-color-scheme: dark)").matches;var r=document.documentElement;r.classList.toggle("dark",!!d);r.style.colorScheme=d?"dark":"light";}catch(e){}})();`;
-
   return (
     <html
       lang="it"
@@ -39,14 +36,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        <Script id="cab-theme-boot" strategy="beforeInteractive">
-          {themeBootScript}
-        </Script>
+        {/* Blocking boot: unica scrittura su <html> prima di React. Attributi bis_* / chrome-extension sono injection esterna. */}
+        <script dangerouslySetInnerHTML={{ __html: buildThemeBootInlineScript() }} />
       </head>
-      <body
-        suppressHydrationWarning
-        className="gestionale-scrollbar flex min-h-full flex-col font-sans antialiased"
-      >
+      <body className="gestionale-scrollbar flex min-h-full flex-col font-sans antialiased">
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

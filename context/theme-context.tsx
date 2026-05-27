@@ -5,7 +5,6 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -49,10 +48,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const prefsQuery = useUserThemePrefsQuery(userId, status);
   const themeMutation = useUserThemeUpsertMutation(userId);
 
-  useLayoutEffect(() => {
-    const boot = typeof window !== "undefined" ? resolveBootThemeMode() : "light";
-    setResolved(boot);
-    applyPersistedThemeToDocument(boot);
+  /** Solo stato React: il DOM `<html>` è già impostato dallo script blocking in RootLayout. */
+  useEffect(() => {
+    setResolved(resolveBootThemeMode());
     setThemeReady(true);
   }, []);
 

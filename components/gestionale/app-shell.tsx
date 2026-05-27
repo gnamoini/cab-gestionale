@@ -141,8 +141,11 @@ function AccountMenu() {
     window.location.assign("/login");
   }
 
-  const initial = (user?.nome?.trim()?.charAt(0) ?? user?.email?.trim()?.charAt(0) ?? "?").toUpperCase();
-  const label = status === "loading" ? "…" : user?.nome ?? "Account";
+  const initial =
+    status === "loading"
+      ? "·"
+      : (user?.nome?.trim()?.charAt(0) ?? user?.email?.trim()?.charAt(0) ?? "?").toUpperCase();
+  const label = status === "loading" ? "Account" : (user?.nome ?? "Account");
 
   return (
     <div className="relative" ref={wrapRef}>

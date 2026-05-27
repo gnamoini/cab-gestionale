@@ -14,10 +14,12 @@ import { QK } from "@/src/lib/react-query/query-keys";
 import { clearInvalidAuthSession, isInvalidRefreshAuthMessage } from "@/src/lib/auth/clear-invalid-auth-session";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { authLogsService } from "@/src/services/auth-logs.service";
+import type { AuthStatus } from "@/src/lib/auth/auth-status";
 import type { PublicAuthUser } from "@/src/types/auth-user";
 import type { RuoloUtente } from "@/src/types/supabase-tables";
 
-export type AuthStatus = "loading" | "authenticated" | "anonymous" | "degraded";
+export type { AuthStatus } from "@/src/lib/auth/auth-status";
+export { isAuthFullyAuthenticated, isAuthSessionEstablished } from "@/src/lib/auth/auth-status";
 
 type AuthContextValue = {
   status: AuthStatus;
@@ -34,16 +36,6 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const FALLBACK_AUTHOR = "Utente CAB";
-
-/** Sessione considerata valida per query e gate (non forzare logout su glitch rete). */
-export function isAuthSessionEstablished(status: AuthStatus): boolean {
-  return status === "authenticated" || status === "degraded";
-}
-
-/** Sessione pienamente verificata: usare per accesso pagine/azioni sensibili. */
-export function isAuthFullyAuthenticated(status: AuthStatus): boolean {
-  return status === "authenticated";
-}
 
 function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
