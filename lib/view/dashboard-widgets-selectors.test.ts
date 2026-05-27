@@ -38,13 +38,24 @@ const rows = [
   sampleLav({ id: "c", priorita: "urgente", updated_at: "2026-05-23T09:00:00.000Z" }),
 ];
 
-const widgetRows = computeDashboardLavWidgetRows(rows, 5);
+const widgetRows = computeDashboardLavWidgetRows(rows, 4);
 assert.deepEqual(
   widgetRows.map((r) => r.id),
   ["c", "b", "a"],
 );
 assert.ok(widgetRows.every((r) => r.priorita));
 assert.equal(widgetRows.filter((r) => r.isUrgent).length, 2);
+
+const withAddetto = computeDashboardLavWidgetRows([sampleLav({ id: "x" })], 4, {
+  schedeStore: {
+    x: {
+      ingresso: {
+        campi: { addettoAccettazione: "Mario Rossi" },
+      } as never,
+    } as never,
+  },
+});
+assert.equal(withAddetto[0]?.addetto, "Mario Rossi");
 
 const lavStats = computeDashboardLavWidgetStats(rows);
 assert.equal(lavStats.inCorso, 3);

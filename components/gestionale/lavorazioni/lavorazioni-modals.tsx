@@ -705,7 +705,7 @@ export function SettingsLavorazioniModal({
         aria-selected={active}
         className={`rounded-lg px-3 py-2 text-xs font-semibold transition-[background-color,color,box-shadow] duration-150 ${
           active
-            ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:brightness-[1.06] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]"
+            ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:bg-[var(--cab-primary-hover)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]"
             : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/90"
         }`}
         onClick={() => setTab(id)}

@@ -39,7 +39,7 @@ export async function invalidateAfterLavorazioneMutations(qc: QueryClient, cabSy
 }
 
 export async function invalidateAfterMagazzinoOrMovimenti(qc: QueryClient, cabSyncEvents?: CabSyncEvent[]) {
-  dispatchGestionaleAction(qc, ["magazzino_ricambi", "movimenti_ricambi", "lavorazioni"], {
+  dispatchGestionaleAction(qc, ["magazzino_ricambi", "movimenti_ricambi", "lavorazioni", "log_modifiche"], {
     source: "local_mutation",
     cabSyncEvents,
   });

@@ -210,6 +210,18 @@ function sentenceForCampoChange(c: CampoChangeLike): string {
   if (campo === "Foto") {
     return d === "Foto rimossa" ? "Foto rimossa" : "Foto aggiunta";
   }
+  if (campo === "Prezzo vendita" || campo === "Prezzo listino OE" || campo === "Prezzo alternativo") {
+    return `${campo} modificato da ${p} a ${d}`;
+  }
+  if (campo === "Scorta minima") {
+    return `Scorta minima modificata da ${p} a ${d}`;
+  }
+  if (campo === "Fornitore alternativo" || campo === "Codice alternativo") {
+    return `${campo} modificato da ${formatTitleCasePhrase(p)} a ${formatTitleCasePhrase(d)}`;
+  }
+  if (campo === "Markup %") {
+    return `Markup modificato da ${p} a ${d}`;
+  }
   if (campo === "Targa") {
     return `Targa modificata da ${formatTargaDisplay(p)} a ${formatTargaDisplay(d)}`;
   }
@@ -306,18 +318,39 @@ export function buildMezziGestionaleLogViewModel(entry: MezziLogEntryLike): Gest
   };
 }
 
+function magazzinoLeadLine(entry: MagazzinoLogEntryLike): string | null {
+  const who = formatLogAuthorDisplay(entry.autore);
+  const cosa = formatTitleCasePhrase(entry.ricambio);
+  if (entry.tipo === "aggiunta") {
+    return `${who} ha creato il ricambio ${cosa}`;
+  }
+  if (entry.tipo === "rimozione") {
+    return `${who} ha eliminato il ricambio ${cosa}`;
+  }
+  return null;
+}
+
 export function buildMagazzinoGestionaleLogViewModel(entry: MagazzinoLogEntryLike): GestionaleLogViewModel {
   const tipoRiga = magazzinoTipoRiga(entry);
   const tone = magazzinoToneForEntry(entry);
   const oggettoRiga = formatTitleCasePhrase(entry.ricambio);
 
+  const lead = magazzinoLeadLine(entry);
   let modificaRiga: string;
   if (entry.tipo === "aggiunta") {
-    modificaRiga = toBulletModificaRiga(["Nuovo articolo inserito in magazzino"]);
+    const bullets: string[] = [lead ?? "Nuovo ricambio creato in magazzino"];
+    if (entry.changes.length > 0) {
+      const detailLines = entry.changes
+        .filter((c) => c.campo !== "Sincronizzazione")
+        .map(sentenceForCampoChange);
+      if (detailLines.length) bullets.push(...detailLines);
+    }
+    modificaRiga = toBulletModificaRiga(bullets);
   } else if (entry.tipo === "rimozione") {
-    modificaRiga = toBulletModificaRiga(["Articolo rimosso dal magazzino"]);
+    modificaRiga = toBulletModificaRiga([lead ?? "Ricambio eliminato dal magazzino"]);
   } else if (entry.changes.length) {
-    modificaRiga = buildModificaRigaFromChanges(entry.changes);
+    const lines = entry.changes.map(sentenceForCampoChange);
+    modificaRiga = toBulletModificaRiga(lines);
   } else {
     const fb = stripAutoreFromRiepilogo(entry.riepilogo, entry.autore);
     modificaRiga = fb ? toBulletModificaRiga([fb]) : "—";

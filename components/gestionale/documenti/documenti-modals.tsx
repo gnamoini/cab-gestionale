@@ -3,6 +3,7 @@
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { GlobalLoadingSpinner } from "@/components/design-system/loading-indicator";
 import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import { defaultApplicabilitaForCategoria } from "@/lib/documenti/documenti-applicabilita";
 import type { DocumentoGestionale, DocumentoTipoFile, DocumentoApplicabilita } from "@/lib/types/gestionale";
@@ -29,7 +30,7 @@ function documentoSenzaMarcaUi(doc: DocumentoGestionale): boolean {
 }
 
 const inputClass =
-  "w-full rounded-lg border border-zinc-600/90 bg-zinc-900 px-2.5 py-2 text-sm text-zinc-100 shadow-md shadow-black/20 outline-none transition placeholder:text-zinc-500 focus:border-orange-500/75 focus:ring-2 focus:ring-orange-400/30";
+  "w-full rounded-lg border border-zinc-600/90 bg-zinc-900 px-2.5 py-2 text-sm text-zinc-100 shadow-md shadow-black/20 outline-none transition placeholder:text-zinc-500 focus:border-[color:color-mix(in_srgb,var(--cab-primary)_75%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_30%,transparent)]";
 
 const listSelectWrapClass = "mt-1 w-full";
 
@@ -130,21 +131,21 @@ function ApplicabilitaField({
   return (
     <fieldset className="space-y-2">
       <legend className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Applicabilità</legend>
-      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-orange-500/60 has-[:checked]:bg-orange-500/5">
+      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_60%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]">
         <input
           type="radio"
           name="doc-applicabilita"
-          className="accent-orange-500"
+          className="accent-[var(--cab-primary)]"
           checked={applicabilita === "marca"}
           onChange={() => onChange("marca")}
         />
         <span className="text-sm text-zinc-200">Tutta la marca</span>
       </label>
-      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-orange-500/60 has-[:checked]:bg-orange-500/5">
+      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_60%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]">
         <input
           type="radio"
           name="doc-applicabilita"
-          className="accent-orange-500"
+          className="accent-[var(--cab-primary)]"
           checked={applicabilita === "modello"}
           onChange={() => onChange("modello")}
         />
@@ -156,12 +157,14 @@ function ApplicabilitaField({
 
 export function UploadDocumentoModal({
   catalog,
+  isUploading = false,
   onRequestClose,
   onSubmit,
 }: {
   catalog: CatalogMarca[];
+  isUploading?: boolean;
   onRequestClose: () => void;
-  onSubmit: (payload: Omit<DocumentoGestionale, "id">) => void;
+  onSubmit: (payload: Omit<DocumentoGestionale, "id">) => void | Promise<void>;
 }) {
   const { authorName } = useAuth();
   const pickedFileRef = useRef<File | null>(null);
@@ -202,8 +205,9 @@ export function UploadDocumentoModal({
     if (!nome.trim()) setNome(f.name);
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (isUploading) return;
     const n = nome.trim();
     const file = pickedFileRef.current;
     const marcaTrim = marca.trim();
@@ -244,11 +248,16 @@ export function UploadDocumentoModal({
     const tmp = { ...base, id: "__new__" } as DocumentoGestionale;
     const resolved = resolveDocumentoApplicazione(tmp);
     const { id: _drop, ...payload } = resolved;
-    onSubmit(payload as Omit<DocumentoGestionale, "id">);
-    onRequestClose();
+    try {
+      await onSubmit(payload as Omit<DocumentoGestionale, "id">);
+      onRequestClose();
+    } catch {
+      /* errore upload: modale resta aperta per correzione / retry */
+    }
   }
 
   const canSubmit =
+    !isUploading &&
     pickedName.trim().length > 0 &&
     (applicabilita === "marca" || !marca.trim() || modello.trim().length > 0);
 
@@ -256,7 +265,13 @@ export function UploadDocumentoModal({
     <DocumentiModalShell title="Carica documento" onRequestClose={onRequestClose} wide>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
         <div className="lavorazioni-scroll-scope min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
-          <DocumentoFileDropzone pickedName={pickedName} pickedSizeKb={pickedSizeKb} onFileChange={onFileChange} />
+          <DocumentoFileDropzone
+            pickedName={pickedName}
+            pickedSizeKb={pickedSizeKb}
+            onFileChange={onFileChange}
+            disabled={isUploading}
+            uploadPhase={isUploading ? "uploading" : undefined}
+          />
 
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Nome file
@@ -317,8 +332,15 @@ export function UploadDocumentoModal({
           </label>
         </div>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <button type="submit" className={`${erpBtnAccent} w-full min-h-11`} disabled={!canSubmit}>
-            Conferma caricamento
+          <button type="submit" className={`${erpBtnAccent} flex w-full min-h-11 items-center justify-center gap-2`} disabled={!canSubmit}>
+            {isUploading ? (
+              <>
+                <GlobalLoadingSpinner size="sm" label="Caricamento…" />
+                Caricamento…
+              </>
+            ) : (
+              "Conferma caricamento"
+            )}
           </button>
         </div>
       </form>
@@ -357,7 +379,7 @@ export function DocumentoInfoModal({
                   href={openHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-orange-600 underline decoration-orange-400/50 underline-offset-2 hover:text-orange-700"
+                  className="font-medium text-[color:var(--cab-primary)] underline decoration-[color:color-mix(in_srgb,var(--cab-primary)_50%,transparent)] underline-offset-2 hover:text-[color:var(--cab-primary-hover)]"
                 >
                   Apri in nuova scheda
                 </a>

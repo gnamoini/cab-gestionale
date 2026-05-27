@@ -64,7 +64,7 @@ function LoginPageShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative isolate min-h-dvh overflow-hidden bg-[var(--cab-bg-app)]">
       <div
-        className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_90%_60%_at_50%_-15%,color-mix(in_srgb,var(--cab-primary)_20%,transparent),transparent_55%),radial-gradient(ellipse_70%_50%_at_100%_100%,color-mix(in_srgb,var(--cab-primary)_10%,transparent),transparent_50%),linear-gradient(180deg,var(--cab-bg-app)_0%,color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-bg-app))_100%)]"
+        className="pointer-events-none absolute inset-0 bg-[var(--cab-bg-app)]"
         aria-hidden
       />
       <div

@@ -75,3 +75,9 @@ export function saveMagazzinoChangeLog(entries: MagazzinoChangeLogEntry[]): void
 export function removeMagazzinoChangeLogEntryById(id: string): void {
   saveMagazzinoChangeLog(loadMagazzinoChangeLog().filter((e) => e.id !== id));
 }
+
+/** Rimuove voci locali legate a un draft id mai persistito (es. chiusura modale nuovo ricambio). */
+export function purgeMagazzinoLogEntriesForRicambioId(ricambioId: string): void {
+  if (!ricambioId.trim()) return;
+  saveMagazzinoChangeLog(loadMagazzinoChangeLog().filter((e) => e.ricambioId !== ricambioId));
+}

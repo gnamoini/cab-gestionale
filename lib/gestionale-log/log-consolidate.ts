@@ -8,56 +8,68 @@ import { auditPayload, isLogReverted } from "@/lib/gestionale-log/undo";
 import { isImageLogAction } from "@/lib/gestionale-log/view-model";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
-/** Finestra per unire modifiche consecutive allo stesso campo (ms). */
-export const LOG_CONSECUTIVE_MERGE_WINDOW_MS = 60_000;
-
-function isMergeableUpdateRow(row: LogModificaRow): boolean {
-  if (isLogReverted(row)) return false;
-  if (safeStr(row.azione).toUpperCase() !== "UPDATE") return false;
-  if (isImageLogAction(row.azione)) return false;
-  return extractPayloadFieldChanges(row.payload).length === 1;
-}
-
-function singleFieldChange(row: LogModificaRow): PayloadFieldChange | null {
-  const changes = extractPayloadFieldChanges(row.payload);
-  return changes.length === 1 ? changes[0]! : null;
-}
+/** Finestra per unire modifiche consecutive (ms). Allineata a `LOG_AGGREGATION_WINDOW_MS`. */
+export const LOG_CONSECUTIVE_MERGE_WINDOW_MS = 30_000;
 
 function safeStr(s: unknown): string {
   if (s === null || s === undefined) return "";
   return String(s);
 }
 
-/** Due UPDATE consecutivi (cronologici) sullo stesso campo, stesso autore/entità, entro la finestra. */
-function canExtendMergeChain(older: LogModificaRow, newer: LogModificaRow, windowMs: number): boolean {
+function fieldValuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (a == null && b == null) return true;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** UPDATE senza effetto netto (es. priorità Media→Alta→Media). */
+export function isNetNoOpUpdateRow(row: LogModificaRow): boolean {
+  if (safeStr(row.azione).toUpperCase() !== "UPDATE") return false;
+  const changes = extractPayloadFieldChanges(row.payload);
+  if (!changes.length) return true;
+  return changes.every((c) => fieldValuesEqual(c.before, c.after));
+}
+
+function isConsolidatableUpdateRow(row: LogModificaRow): boolean {
+  if (isLogReverted(row)) return false;
+  if (safeStr(row.azione).toUpperCase() !== "UPDATE") return false;
+  if (isImageLogAction(row.azione)) return false;
+  return extractPayloadFieldChanges(row.payload).length >= 1;
+}
+
+function canExtendUpdateBurst(older: LogModificaRow, newer: LogModificaRow, windowMs: number): boolean {
   if (older.entita !== newer.entita || older.entita_id !== newer.entita_id) return false;
   if (older.autore_id !== newer.autore_id) return false;
-  const co = singleFieldChange(older);
-  const cn = singleFieldChange(newer);
-  if (!co || !cn || co.key !== cn.key) return false;
+  if (!isConsolidatableUpdateRow(older) || !isConsolidatableUpdateRow(newer)) return false;
   const tOlder = new Date(older.created_at).getTime();
   const tNewer = new Date(newer.created_at).getTime();
   if (Number.isNaN(tOlder) || Number.isNaN(tNewer)) return false;
   return tNewer >= tOlder && tNewer - tOlder <= windowMs;
 }
 
-function buildMergedRow(group: LogModificaRow[]): LogModificaRow {
+function buildBurstMergedRow(group: LogModificaRow[]): LogModificaRow {
   const oldest = group[0]!;
   const newest = group[group.length - 1]!;
-  const firstChange = singleFieldChange(oldest)!;
-  const lastChange = singleFieldChange(newest)!;
-  const base = auditPayload(newest) ?? {};
-  const beforeObj =
-    base.before && typeof base.before === "object" && !Array.isArray(base.before)
-      ? { ...(base.before as Record<string, unknown>) }
-      : {};
-  const afterObj =
-    base.after && typeof base.after === "object" && !Array.isArray(base.after)
-      ? { ...(base.after as Record<string, unknown>) }
-      : {};
-  beforeObj[firstChange.key] = firstChange.before;
-  afterObj[lastChange.key] = lastChange.after;
-  const mergedRaw = { ...base, before: beforeObj, after: afterObj };
+  const beforeObj: Record<string, unknown> = {};
+  const afterObj: Record<string, unknown> = {};
+
+  const oldestBase = auditPayload(oldest);
+  if (oldestBase.before && typeof oldestBase.before === "object" && !Array.isArray(oldestBase.before)) {
+    Object.assign(beforeObj, oldestBase.before as Record<string, unknown>);
+  }
+  const newestBase = auditPayload(newest);
+  if (newestBase.after && typeof newestBase.after === "object" && !Array.isArray(newestBase.after)) {
+    Object.assign(afterObj, newestBase.after as Record<string, unknown>);
+  }
+
+  for (const row of group) {
+    for (const ch of extractPayloadFieldChanges(row.payload)) {
+      if (!(ch.key in beforeObj)) beforeObj[ch.key] = ch.before;
+      afterObj[ch.key] = ch.after;
+    }
+  }
+
+  const mergedRaw = { ...auditPayload(newest), before: beforeObj, after: afterObj };
   const summary = buildLogModificaSummary({
     entita: newest.entita,
     entita_id: newest.entita_id,
@@ -70,9 +82,15 @@ function buildMergedRow(group: LogModificaRow[]): LogModificaRow {
   };
 }
 
+/** @deprecated Usare burst merge interno; mantenuto per test o estensioni. */
+export function singleFieldChange(row: LogModificaRow): PayloadFieldChange | null {
+  const changes = extractPayloadFieldChanges(row.payload);
+  return changes.length === 1 ? changes[0]! : null;
+}
+
 /**
- * Unisce voci UPDATE consecutive sullo stesso parametro (es. priorità Media→Alta→Bassa
- * diventa Media→Bassa) se distanziate al massimo `windowMs`.
+ * Unisce voci UPDATE consecutive sullo stesso record (uno o più campi) entro `windowMs`,
+ * mantenendo valori iniziali e finali (coalescing stato finale).
  * Restituisce le righe in ordine cronologico decrescente (come da API).
  */
 export function consolidateLogModificaRows(
@@ -85,18 +103,19 @@ export function consolidateLogModificaRows(
   let i = 0;
   while (i < asc.length) {
     const row = asc[i]!;
-    if (!isMergeableUpdateRow(row)) {
+    if (!isConsolidatableUpdateRow(row)) {
       out.push(row);
       i += 1;
       continue;
     }
     const group: LogModificaRow[] = [row];
     let j = i + 1;
-    while (j < asc.length && isMergeableUpdateRow(asc[j]!) && canExtendMergeChain(group[group.length - 1]!, asc[j]!, windowMs)) {
+    while (j < asc.length && canExtendUpdateBurst(group[group.length - 1]!, asc[j]!, windowMs)) {
       group.push(asc[j]!);
       j += 1;
     }
-    out.push(group.length > 1 ? buildMergedRow(group) : row);
+    const merged = group.length > 1 ? buildBurstMergedRow(group) : row;
+    if (!isNetNoOpUpdateRow(merged)) out.push(merged);
     i = j;
   }
   return out.sort((a, b) => b.created_at.localeCompare(a.created_at));

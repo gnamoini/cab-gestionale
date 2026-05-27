@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/context/toast-context";
+import { useUploadFeedback } from "@/context/upload-feedback-context";
+import { UploadStatusInline } from "@/components/gestionale/upload";
 import {
   isPdfFile,
   LAVORAZIONE_DOCUMENT_SLOTS,
@@ -41,7 +43,9 @@ function DocumentSlotRow({
   doc,
   canEdit,
   uploading,
+  uploadError,
   onUpload,
+  onRetryUpload,
   onRemove,
   onOpen,
   onDownload,
@@ -51,7 +55,9 @@ function DocumentSlotRow({
   doc: LavorazioneDocumentRow | undefined;
   canEdit: boolean;
   uploading: boolean;
+  uploadError?: string | null;
   onUpload: (file: File) => void;
+  onRetryUpload?: () => void;
   onRemove: () => void;
   onOpen: () => void;
   onDownload: () => void;
@@ -59,7 +65,7 @@ function DocumentSlotRow({
   const inputId = useId();
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-zinc-100 bg-white/80 px-3 py-2.5 dark:border-zinc-700/80 dark:bg-zinc-900/50">
+    <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-zinc-100 bg-white/80 px-3 py-2.5 dark:border-zinc-700/80 dark:bg-zinc-900/50 max-sm:flex-col">
       <div className="flex min-w-0 items-start gap-2">
         <IconPdf />
         <div className="min-w-0">
@@ -129,6 +135,17 @@ function DocumentSlotRow({
           </label>
         ) : null}
       </div>
+      {uploading || uploadError ? (
+        <div className="mt-2 w-full basis-full">
+          <UploadStatusInline
+            phase={uploading ? "uploading" : "error"}
+            fileName={doc?.filename}
+            error={uploadError}
+            onRetry={onRetryUpload}
+            compact
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -144,9 +161,12 @@ export function LavorazioneDocumentsManager({
 }) {
   const qc = useQueryClient();
   const { push: pushToast } = useToast();
+  const { trackUpload } = useUploadFeedback();
   const docsQ = useLavorazionePdfsByLavorazione(lavorazioneId);
   const rows = docsQ.data ?? [];
   const [uploadingTipo, setUploadingTipo] = useState<LavorazioneDocumentTipo | null>(null);
+  const [uploadErrorByTipo, setUploadErrorByTipo] = useState<Partial<Record<LavorazioneDocumentTipo, string>>>({});
+  const [lastUploadFileByTipo, setLastUploadFileByTipo] = useState<Partial<Record<LavorazioneDocumentTipo, File>>>({});
   const [urlCache, setUrlCache] = useState<Record<string, string>>({});
 
   const syncDocuments = useCallback(
@@ -202,18 +222,50 @@ export function LavorazioneDocumentsManager({
 
   async function handleUpload(tipo: LavorazioneDocumentTipo, file: File) {
     if (!isPdfFile(file)) {
-      pushToast("Seleziona un file PDF.", "error");
+      setUploadErrorByTipo((prev) => ({ ...prev, [tipo]: "Seleziona un file PDF." }));
       return;
     }
+    const slot = LAVORAZIONE_DOCUMENT_SLOTS.find((s) => s.tipo === tipo);
     setUploadingTipo(tipo);
-    const res = await lavorazioneDocumentsService.upload(lavorazioneId, tipo, file);
+    setUploadErrorByTipo((prev) => {
+      const next = { ...prev };
+      delete next[tipo];
+      return next;
+    });
+    setLastUploadFileByTipo((prev) => ({ ...prev, [tipo]: file }));
+
+    const result = await trackUpload({
+      file,
+      label: slot?.label ?? tipo,
+      successToast: "Documento caricato.",
+      showErrorToast: true,
+      run: async () => {
+        const res = await lavorazioneDocumentsService.upload(lavorazioneId, tipo, file);
+        if (!res.success) throw new Error(res.error ?? "Upload non riuscito.");
+        return res.data;
+      },
+      onSuccess: () => {
+        syncDocuments("entity_created");
+        setUploadErrorByTipo((prev) => {
+          const next = { ...prev };
+          delete next[tipo];
+          return next;
+        });
+      },
+      onError: (message) => {
+        setUploadErrorByTipo((prev) => ({ ...prev, [tipo]: message }));
+      },
+    });
+
     setUploadingTipo(null);
-    if (!res.success) {
-      pushToast(res.error ?? "Upload non riuscito.", "error");
-      return;
+    if (!result.ok) {
+      setUploadErrorByTipo((prev) => ({ ...prev, [tipo]: result.error }));
     }
-    pushToast("Documento caricato.", "success");
-    syncDocuments("entity_created");
+  }
+
+  function retryUpload(tipo: LavorazioneDocumentTipo) {
+    const file = lastUploadFileByTipo[tipo];
+    if (file) void handleUpload(tipo, file);
   }
 
   async function handleRemove(tipo: LavorazioneDocumentTipo) {
@@ -265,7 +317,9 @@ export function LavorazioneDocumentsManager({
             doc={doc}
             canEdit={canEdit}
             uploading={busy}
+            uploadError={uploadErrorByTipo[slot.tipo]}
             onUpload={(file) => void handleUpload(slot.tipo, file)}
+            onRetryUpload={() => retryUpload(slot.tipo)}
             onRemove={() => void handleRemove(slot.tipo)}
             onOpen={() => doc && void openDoc(doc)}
             onDownload={() => doc && void downloadDoc(doc)}

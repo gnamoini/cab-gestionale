@@ -72,7 +72,7 @@ export function GlobalFixedListPillSelect({
 
   const anchorRef = shellRef;
 
-  const { coords, style: portalStyle } = useGlobalDropdownPortal({
+  const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
     open,
     anchorRef,
     contentRef: menuRef,
@@ -91,15 +91,15 @@ export function GlobalFixedListPillSelect({
   }, [open, close]);
 
   const menu =
-    open && coords && portalStyle ? (
+    open && portalStyle ? (
       <ul
         ref={menuRef}
         id={listId}
         role="listbox"
         aria-label={ariaLabel}
         style={portalStyle}
-        className={`${globalFixedListPillMenuPanel} ${
-          coords.scrollInside ? "overflow-y-auto" : "overflow-hidden"
+        className={`${globalFixedListPillMenuPanel} ${placementOriginClass} ${
+          scrollInside ? "overflow-y-auto" : "overflow-hidden"
         }`}
       >
         {options.map((opt) => {
@@ -112,7 +112,7 @@ export function GlobalFixedListPillSelect({
                 role="option"
                 aria-selected={active}
                 style={optStyle}
-                className={`w-full cursor-pointer rounded-md border px-2 py-1.5 text-center ${fixedListPillTextClass} transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] ${dsFocus} ${
+                className={`w-full min-h-11 cursor-pointer rounded-md border px-2 py-2.5 text-center sm:min-h-0 sm:py-1.5 ${fixedListPillTextClass} transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] ${dsFocus} ${
                   active ? "ring-2 ring-inset ring-white/35 shadow-sm" : ""
                 }`}
                 onClick={() => {

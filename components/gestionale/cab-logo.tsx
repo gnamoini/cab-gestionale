@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export const CAB_LOGO_PATH = "/cab-logo.png";
 
-export const CAB_APP_PRODUCT_NAME = "Gestionale Officina v1.00 Pilot";
+export const CAB_APP_PRODUCT_NAME = "Gestionale Officina v1.01 Pilot";
 
 type CabLogoProps = {
   className?: string;

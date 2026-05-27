@@ -37,7 +37,7 @@ export function FormField({
   return (
     <label className={`block min-w-0 text-xs font-medium text-zinc-600 dark:text-zinc-400 ${className}`.trim()}>
       {label}
-      {required ? <span className="text-orange-600 dark:text-orange-400"> *</span> : null}
+      {required ? <span className="text-[color:var(--cab-primary)]"> *</span> : null}
       <div className="mt-1">{children}</div>
     </label>
   );

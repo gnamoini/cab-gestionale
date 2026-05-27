@@ -14,17 +14,15 @@ import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import {
   applyPersistedThemeToDocument,
   resolveBootThemeMode,
-  systemPrefersDark,
   writeThemeBootCache,
 } from "@/lib/theme/cab-theme-storage";
-import type { PersistedThemeMode } from "@/lib/theme/user-theme-prefs";
+import {
+  DEFAULT_PERSISTED_THEME_MODE,
+  type PersistedThemeMode,
+} from "@/lib/theme/user-theme-prefs";
 import { useUserThemePrefsQuery, useUserThemeUpsertMutation } from "@/src/hooks/gestionale/use-user-theme-prefs";
 
 export type { PersistedThemeMode };
-
-function fallbackThemeMode(): PersistedThemeMode {
-  return systemPrefersDark() ? "dark" : "light";
-}
 
 type ThemeContextValue = {
   resolved: PersistedThemeMode;
@@ -41,34 +39,40 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const { user, status } = useAuth();
   const userId = isAuthSessionEstablished(status) ? user?.id : undefined;
 
-  const [resolved, setResolved] = useState<PersistedThemeMode>("light");
+  const [resolved, setResolved] = useState<PersistedThemeMode>(DEFAULT_PERSISTED_THEME_MODE);
   const [themeReady, setThemeReady] = useState(false);
   const optimisticThemeRef = useRef<PersistedThemeMode | null>(null);
 
   const prefsQuery = useUserThemePrefsQuery(userId, status);
   const themeMutation = useUserThemeUpsertMutation(userId);
 
-  /** Solo stato React: il DOM `<html>` è già impostato dallo script blocking in RootLayout. */
+  /** Allinea React alla cache boot (DOM già impostato dallo script blocking in RootLayout). */
   useEffect(() => {
-    setResolved(resolveBootThemeMode());
+    const boot = resolveBootThemeMode();
+    setResolved(boot);
+    applyPersistedThemeToDocument(boot);
     setThemeReady(true);
   }, []);
 
+  /** Preferenza DB autenticato (source of truth); assenza riga → default globale dark. */
   useEffect(() => {
     if (!userId || prefsQuery.isLoading) return;
     if (optimisticThemeRef.current) return;
 
     const serverTheme = prefsQuery.data?.theme;
-    const next = serverTheme ?? fallbackThemeMode();
+    const next = serverTheme ?? DEFAULT_PERSISTED_THEME_MODE;
     setResolved(next);
     applyPersistedThemeToDocument(next);
     writeThemeBootCache(next);
   }, [userId, prefsQuery.isLoading, prefsQuery.data?.theme]);
 
+  /** Logout / sessione assente: torna alla cache locale (login e app coerenti). */
   useEffect(() => {
-    if (!userId) {
-      optimisticThemeRef.current = null;
-    }
+    if (userId) return;
+    optimisticThemeRef.current = null;
+    const boot = resolveBootThemeMode();
+    setResolved(boot);
+    applyPersistedThemeToDocument(boot);
   }, [userId]);
 
   const applyResolved = useCallback((mode: PersistedThemeMode) => {

@@ -1,0 +1,80 @@
+"use client";
+
+import { useId, type ReactNode } from "react";
+import { UploadStatusInline } from "@/components/gestionale/upload/upload-status-inline";
+import type { UploadFeedbackPhase } from "@/lib/upload/upload-feedback-types";
+import { dsBtnNeutral, dsDisabled } from "@/lib/ui/design-system";
+
+type GestionaleFileInputProps = {
+  accept?: string;
+  disabled?: boolean;
+  buttonLabel: ReactNode;
+  buttonClassName?: string;
+  title?: string;
+  phase?: UploadFeedbackPhase;
+  fileName?: string;
+  error?: string | null;
+  onRetry?: () => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  showInlineStatus?: boolean;
+  statusClassName?: string;
+};
+
+/**
+ * Input file nascosto + trigger button con stato upload unificato.
+ */
+export function GestionaleFileInput({
+  accept,
+  disabled = false,
+  buttonLabel,
+  buttonClassName,
+  title,
+  phase = "idle",
+  fileName,
+  error,
+  onRetry,
+  onChange,
+  showInlineStatus = true,
+  statusClassName,
+}: GestionaleFileInputProps) {
+  const inputId = useId();
+  const busy = phase === "uploading";
+  const inputDisabled = disabled || busy;
+
+  return (
+    <div className="flex flex-col gap-2">
+      <label
+        htmlFor={inputId}
+        title={title}
+        className={`${buttonClassName ?? dsBtnNeutral} ${inputDisabled ? `cursor-wait opacity-60 ${dsDisabled}` : "cursor-pointer"}`}
+      >
+        {busy ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]" aria-hidden />
+            Caricamento…
+          </span>
+        ) : (
+          buttonLabel
+        )}
+        <input
+          id={inputId}
+          type="file"
+          accept={accept}
+          className="sr-only"
+          disabled={inputDisabled}
+          onChange={onChange}
+        />
+      </label>
+      {showInlineStatus ? (
+        <UploadStatusInline
+          phase={phase}
+          fileName={fileName}
+          error={error}
+          onRetry={onRetry}
+          className={statusClassName}
+          compact
+        />
+      ) : null}
+    </div>
+  );
+}

@@ -102,6 +102,8 @@ export type PreventivoPdfHeaderMeta = {
   numero?: string;
   data?: string;
   operatore?: string;
+  /** Default true: linea orizzontale sotto metadati (data/operatore). */
+  metaDivider?: boolean;
 };
 
 /** Intestazione aziendale + tipo documento + metadati documento su una riga. */
@@ -144,6 +146,7 @@ export function drawPreventivoPdfHeader(
   }
 
   y += 2;
+  if (meta?.metaDivider === false) return y;
   return drawPdfHorizontalRule(doc, y, pageW);
 }
 

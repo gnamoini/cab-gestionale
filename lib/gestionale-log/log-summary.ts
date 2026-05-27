@@ -10,6 +10,8 @@ import {
 import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import { parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
+import { MAGAZZINO_CAMPO_LABEL } from "@/lib/magazzino/magazzino-log-events";
 
 /** Summary persistito in `log_modifiche.payload.summary` (generato al write). */
 export type LogModificaSummary = {
@@ -67,6 +69,18 @@ const FIELD_LABELS: Record<string, string> = {
   tipo_attrezzatura: "Tipo attrezzatura",
   anno: "Anno",
   meta: "Dati aggiuntivi",
+};
+
+const MAGAZZINO_META_LOG_LABELS: Record<string, string> = {
+  note: MAGAZZINO_CAMPO_LABEL.note ?? "Note",
+  categoria: MAGAZZINO_CAMPO_LABEL.categoria ?? "Categoria",
+  compatibilitaMezzi: MAGAZZINO_CAMPO_LABEL.compatibilitaMezzi ?? "Compatibilità",
+  scortaMinima: MAGAZZINO_CAMPO_LABEL.scortaMinima ?? "Scorta minima",
+  scontoFornitoreOriginale: MAGAZZINO_CAMPO_LABEL.scontoFornitoreOriginale ?? "Sconto OE %",
+  fornitoreNonOriginale: MAGAZZINO_CAMPO_LABEL.fornitoreNonOriginale ?? "Fornitore alternativo",
+  codiceFornitoreNonOriginale: MAGAZZINO_CAMPO_LABEL.codiceFornitoreNonOriginale ?? "Codice alternativo",
+  prezzoFornitoreNonOriginale: MAGAZZINO_CAMPO_LABEL.prezzoFornitoreNonOriginale ?? "Prezzo alternativo",
+  scontoFornitoreNonOriginale: MAGAZZINO_CAMPO_LABEL.scontoFornitoreNonOriginale ?? "Sconto alt. %",
 };
 
 function humanFieldLabel(key: string): string {
@@ -140,8 +154,14 @@ export function entityKindLabel(entita: string): string {
   }
 }
 
-export function tipoRigaFromAzione(entita: string, azione: string): string {
+export function tipoRigaFromAzione(entita: string, azione: string, payload?: unknown): string {
   if (isImageLogAction(azione)) return "CARICAMENTO FILE";
+  if (entita === "movimenti_ricambi" && safeStr(azione).toUpperCase() === "CREATE") {
+    const rec = payload ? recordFromPayload(payload as Record<string, unknown>) : null;
+    const tipo = rec && typeof rec.tipo === "string" ? rec.tipo : "";
+    if (tipo === "entrata") return "CARICO MAGAZZINO";
+    if (tipo === "uscita") return "SCARICO MAGAZZINO";
+  }
   const u = safeStr(azione).toUpperCase();
   const kind = entityKindLabel(entita);
   if (u === "CREATE") return `CREAZIONE ${kind}`;
@@ -337,6 +357,39 @@ function unwrapSchedaContenutoCampi(raw: unknown): Record<string, unknown> {
   return root;
 }
 
+function formatMetaValueForLog(key: string, value: unknown): string {
+  if (key === "compatibilitaMezzi" && Array.isArray(value)) {
+    const parts = value.map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean);
+    return parts.length ? parts.join(", ") : "—";
+  }
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return formatValueForField(key, value);
+}
+
+function diffMagazzinoMetaModifiche(before: unknown, after: unknown): string[] {
+  const b = parseMagazzinoRicambioMeta(before);
+  const a = parseMagazzinoRicambioMeta(after);
+  const keys = new Set([
+    ...Object.keys(MAGAZZINO_META_LOG_LABELS),
+    ...Object.keys(b as object),
+    ...Object.keys(a as object),
+  ]);
+  const lines: string[] = [];
+  for (const key of keys) {
+    const bv = (b as Record<string, unknown>)[key];
+    const av = (a as Record<string, unknown>)[key];
+    if (JSON.stringify(bv) === JSON.stringify(av)) continue;
+    const label = MAGAZZINO_META_LOG_LABELS[key] ?? humanFieldLabel(key);
+    const p = formatMetaValueForLog(key, bv);
+    const d = formatMetaValueForLog(key, av);
+    if (p === "—" || p === "") lines.push(`${label} impostato a “${d}”`);
+    else if (d === "—" || d === "") lines.push(`${label} rimosso`);
+    else lines.push(`${label} modificato da “${p}” a “${d}”`);
+    if (lines.length >= 10) break;
+  }
+  return lines;
+}
+
 function diffContenutoSchedaModifiche(before: unknown, after: unknown): string[] {
   const b = unwrapSchedaContenutoCampi(before);
   const a = unwrapSchedaContenutoCampi(after);
@@ -385,12 +438,23 @@ function resolveOggettoRiga(
   return resolved;
 }
 
-function diffToModifiche(payload: Record<string, unknown>, stati?: StatoLavorazioneConfig[]): string[] {
+function diffToModifiche(
+  payload: Record<string, unknown>,
+  stati?: StatoLavorazioneConfig[],
+  entita?: string,
+): string[] {
   const lines: string[] = [];
   for (const change of extractPayloadFieldChanges(payload)) {
     if (change.key === "contenuto") {
       lines.push(...diffContenutoSchedaModifiche(change.before, change.after));
       continue;
+    }
+    if (change.key === "meta" && entita === "magazzino_ricambi") {
+      const metaLines = diffMagazzinoMetaModifiche(change.before, change.after);
+      if (metaLines.length) {
+        lines.push(...metaLines);
+        continue;
+      }
     }
     lines.push(modificaLineForFieldChange(change, stati));
   }
@@ -461,8 +525,20 @@ function defaultModificheForCreate(
         if (stato) lines.push(`Stato iniziale: ${formatStatoForLog(stato, stati)}`);
         return lines;
       }
-      case "magazzino_ricambi":
-        return ["Nuovo articolo inserito in magazzino"];
+      case "magazzino_ricambi": {
+        const nome = pickStr(record ?? {}, ["nome", "descrizione", "codice"]);
+        const marca = pickStr(record ?? {}, ["marca"]);
+        const label = joinOggetto([formatTitleCasePhrase(marca), formatTitleCasePhrase(nome)]);
+        return label !== "—" ? [`Creato il ricambio ${label}`] : ["Nuovo ricambio creato in magazzino"];
+      }
+      case "movimenti_ricambi": {
+        const tipo = pickStr(record ?? {}, ["tipo"]);
+        const q = Number(record?.quantita);
+        const qty = Number.isFinite(q) && q > 0 ? String(Math.round(q)) : "—";
+        if (tipo === "entrata") return [`Carico magazzino: +${qty} pezzi`];
+        if (tipo === "uscita") return [`Scarico magazzino: −${qty} pezzi`];
+        return ["Movimento magazzino registrato"];
+      }
       case "mezzi":
         return ["Nuovo mezzo registrato in anagrafica"];
       case "preventivi":
@@ -525,7 +601,7 @@ export function buildLogModificaSummary(input: {
       modifiche = remapLavorazioneStatoInModifiche(modifiche, payload, stati);
     }
     return {
-      tipoRiga: tipoRigaFromAzione(input.entita, input.azione),
+      tipoRiga: tipoRigaFromAzione(input.entita, input.azione, payload),
       oggettoRiga: buildOggettoFromRecord(input.entita, recordFromPayload(payload) ?? {}),
       modifiche: modifiche.length ? modifiche : [payload.compact.trim()],
       tone: toneFromAzione(input.azione, input.annullato),
@@ -534,14 +610,24 @@ export function buildLogModificaSummary(input: {
 
   const record = payload ? recordFromPayload(payload) : null;
   const oggettoRiga = resolveOggettoRiga(input.entita, record ? buildOggettoFromRecord(input.entita, record) : "—", payload);
-  let modifiche = payload ? diffToModifiche(payload, stati) : [];
+  let modifiche = payload ? diffToModifiche(payload, stati, input.entita) : [];
 
   if (modifiche.length === 0) {
     modifiche = defaultModificheForCreate(input.entita, input.azione, record, stati);
   }
 
+  if (input.entita === "magazzino_ricambi" && safeStr(input.azione).toUpperCase() === "DELETE") {
+    const nome = record ? joinOggetto([formatTitleCasePhrase(pickStr(record, ["marca"])), formatTitleCasePhrase(pickStr(record, ["nome", "codice"]))]) : "";
+    if (nome !== "—") modifiche = [`Eliminato il ricambio ${nome}`];
+    else modifiche = ["Ricambio eliminato dal magazzino"];
+  }
+
+  if (input.annullato) {
+    modifiche = ["Modifica annullata"];
+  }
+
   return {
-    tipoRiga: input.annullato ? "OPERAZIONE ANNULLATA" : tipoRigaFromAzione(input.entita, input.azione),
+    tipoRiga: input.annullato ? "OPERAZIONE ANNULLATA" : tipoRigaFromAzione(input.entita, input.azione, payload),
     oggettoRiga,
     modifiche,
     tone: toneFromAzione(input.azione, input.annullato),

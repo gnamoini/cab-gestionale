@@ -1,8 +1,10 @@
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
+import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { comparePrioritaLavorazione } from "@/lib/lavorazioni/priorita-order";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MovimentoRicambioRow } from "@/src/types/supabase-tables";
+import type { LavorazioneSchedeStore } from "@/types/schede";
 
 export type DashboardLavWidgetRow = {
   id: string;
@@ -11,8 +13,15 @@ export type DashboardLavWidgetRow = {
   macchina: string;
   /** Cliente · matricola · n. scuderia · targa (solo valori presenti). */
   mezzoIdent: string | null;
+  /** Addetto assegnato (da schede), se presente. */
+  addetto: string | null;
   updatedAt: string;
   isUrgent: boolean;
+};
+
+export type DashboardLavWidgetRowsOptions = {
+  schedeStore?: LavorazioneSchedeStore;
+  defaultAddetto?: string;
 };
 
 export type DashboardMagRecentRicambioRow = {
@@ -84,13 +93,18 @@ function lavIngressIso(row: LavorazioneListRow): string {
   return row.data_ingresso ?? row.created_at;
 }
 
-function toLavWidgetRow(row: LavorazioneListRow): DashboardLavWidgetRow {
+function toLavWidgetRow(
+  row: LavorazioneListRow,
+  options?: DashboardLavWidgetRowsOptions,
+): DashboardLavWidgetRow {
+  const addettoRaw = lavorazioneAddettoLabel(row, options?.schedeStore, options?.defaultAddetto ?? "");
   return {
     id: row.id,
     stato: row.stato,
     priorita: row.priorita,
     macchina: macchinaLabelFromLavRow(row),
     mezzoIdent: formatDashboardLavWidgetMezzoIdent(mezzoIdentPartsFromLavRow(row)),
+    addetto: addettoRaw || null,
     updatedAt: lavUpdatedAt(row),
     isUrgent: row.priorita === "urgente",
   };
@@ -110,7 +124,8 @@ export function computeDashboardLavWidgetStats(rows: readonly LavorazioneListRow
 /** Priorità decrescente (urgente → bassa), poi data aggiornamento (max N). */
 export function computeDashboardLavWidgetRows(
   rows: readonly LavorazioneListRow[],
-  limit = 5,
+  limit = 4,
+  options?: DashboardLavWidgetRowsOptions,
 ): DashboardLavWidgetRow[] {
   return [...rows]
     .sort((a, b) => {
@@ -119,7 +134,7 @@ export function computeDashboardLavWidgetRows(
       return lavUpdatedAt(b).localeCompare(lavUpdatedAt(a));
     })
     .slice(0, limit)
-    .map(toLavWidgetRow);
+    .map((row) => toLavWidgetRow(row, options));
 }
 
 export function computeDashboardMagWidgetStats(items: readonly RicambioMagazzino[]): DashboardMagWidgetStats {

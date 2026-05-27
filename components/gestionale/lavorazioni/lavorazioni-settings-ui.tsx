@@ -48,7 +48,7 @@ export function ColorSwatchButton({
         type="button"
         aria-label={ariaLabel}
         aria-expanded={open}
-        className="h-8 w-8 rounded-md border-2 border-zinc-300 shadow-sm transition hover:ring-2 hover:ring-orange-400/45 dark:border-zinc-600"
+        className="h-8 w-8 rounded-md border-2 border-zinc-300 shadow-sm transition hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] dark:border-zinc-600"
         style={{ backgroundColor: hex }}
         onClick={() => setOpen((o) => !o)}
       />
@@ -68,7 +68,7 @@ export function ColorSwatchButton({
           />
           <button
             type="button"
-            className="text-left text-xs font-medium text-orange-600 hover:underline"
+            className="text-left text-xs font-medium text-[color:var(--cab-primary)] hover:underline"
             onClick={() => setOpen(false)}
           >
             Chiudi

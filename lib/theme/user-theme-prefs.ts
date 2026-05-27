@@ -3,6 +3,9 @@ export const USER_PREFS_SETTINGS_MODULE = "user_prefs";
 
 export type PersistedThemeMode = "light" | "dark";
 
+/** Default globale applicazione (boot, nuovi utenti, assenza preferenza salvata). */
+export const DEFAULT_PERSISTED_THEME_MODE: PersistedThemeMode = "dark";
+
 export function parsePersistedThemeMode(value: unknown): PersistedThemeMode | null {
   if (value === "light" || value === "dark") return value;
   return null;

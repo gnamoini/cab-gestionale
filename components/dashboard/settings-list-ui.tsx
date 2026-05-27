@@ -7,7 +7,7 @@ export const SETTINGS_LIST_ROW =
   "group flex min-h-[2.75rem] items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-surface))] dark:hover:bg-zinc-800/70";
 
 export const SETTINGS_LIST_INPUT =
-  "min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-xs font-medium text-zinc-800 outline-none transition-[border-color,background-color,box-shadow] duration-150 focus:border-orange-300 focus:bg-white focus:ring-2 focus:ring-orange-500/25 dark:text-zinc-100 dark:focus:border-orange-400 dark:focus:bg-zinc-950";
+  "min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-xs font-medium text-zinc-800 outline-none transition-[border-color,background-color,box-shadow] duration-150 focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:bg-white focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_25%,transparent)] dark:text-zinc-100 dark:focus:bg-zinc-950";
 
 export const SETTINGS_LIST_ACTION =
   "shrink-0 rounded-md px-2 py-1 text-xs font-medium opacity-70 transition-opacity duration-150 group-hover:opacity-100";
@@ -60,7 +60,7 @@ export function SettingsEditableStringRow({
       <div className="flex shrink-0 items-center gap-0.5">
         <button
           type="button"
-          className={`${SETTINGS_LIST_ACTION} text-zinc-600 hover:text-orange-600 dark:text-zinc-300 dark:hover:text-orange-400 ${erpFocus}`}
+          className={`${SETTINGS_LIST_ACTION} text-zinc-600 hover:text-[color:var(--cab-primary)] dark:text-zinc-300 dark:hover:text-[color:var(--cab-primary)] ${erpFocus}`}
           title="Modifica"
           aria-label={`Modifica ${value}`}
           onClick={() => setEditing(true)}

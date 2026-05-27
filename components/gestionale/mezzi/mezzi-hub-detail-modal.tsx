@@ -169,7 +169,7 @@ export function MezziHubDetailModal({
         type="button"
         key={id}
         onClick={() => setTab(id)}
-        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${on ? "border-orange-400/70 bg-orange-500/15 text-orange-900" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"} ${erpFocus}`}
+        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${on ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"} ${erpFocus}`}
       >
         {label}
       </button>
@@ -368,7 +368,7 @@ export function MezziHubDetailModal({
                       {ev.ref?.lavorazioneId && ev.ref.origine ? (
                         <Link
                           href={buildPreventiviArchivioFilterHref(ev.ref.lavorazioneId, ev.ref.origine)}
-                          className="text-xs font-medium text-orange-700 underline-offset-2 hover:underline"
+                          className="text-xs font-medium text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
                           onClick={onClose}
                         >
                           Preventivi collegati

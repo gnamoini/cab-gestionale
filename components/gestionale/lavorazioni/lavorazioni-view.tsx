@@ -82,6 +82,8 @@ import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-qu
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId, statoLavorazioneLabel } from "@/src/shared/selectors";
 import {
+  dsAccentRowHighlight,
+  dsAccentSoftBanner,
   dsInput,
   dsPageToolbarBtn,
   dsStackPage,
@@ -1406,7 +1408,7 @@ export function LavorazioniView() {
         ) : null}
 
         {navMezzoFilter ? (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50/90 px-3 py-2 text-sm text-orange-950">
+          <div className={`flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm ${dsAccentSoftBanner}`}>
             <span>
               Filtro mezzo: <span className="font-semibold tabular-nums">{navMezzoFilterBadgeLabel(navMezzoFilter)}</span>
             </span>
@@ -1628,7 +1630,7 @@ export function LavorazioniView() {
                     const rowSurfaceClass = [
                       "h-14 bg-white dark:bg-zinc-900/40",
                       flash
-                        ? "bg-orange-50/90 shadow-[inset_0_0_0_1px_rgba(251,146,60,0.45)] ring-2 ring-orange-400/35"
+                        ? `bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] ${dsAccentRowHighlight}`
                         : "",
                     ]
                       .filter(Boolean)
@@ -2022,7 +2024,7 @@ export function LavorazioniView() {
                     const rowSurfaceClass = [
                       "h-14 bg-white dark:bg-zinc-900/40",
                       flash
-                        ? "bg-orange-50/90 shadow-[inset_0_0_0_1px_rgba(251,146,60,0.45)] ring-2 ring-orange-400/35"
+                        ? `bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] ${dsAccentRowHighlight}`
                         : "",
                     ]
                       .filter(Boolean)

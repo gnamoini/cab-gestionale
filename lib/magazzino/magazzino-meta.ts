@@ -1,3 +1,4 @@
+import { normalizeRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 
 export type MagazzinoRicambioMeta = {
@@ -42,7 +43,10 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
     scortaMinima: Number.isFinite(scortaMinima) ? Math.max(0, scortaMinima) : undefined,
     scontoFornitoreOriginale: num(m.scontoFornitoreOriginale, NaN) || undefined,
     fornitoreNonOriginale: str(m.fornitoreNonOriginale) || undefined,
-    codiceFornitoreNonOriginale: str(m.codiceFornitoreNonOriginale) || undefined,
+    codiceFornitoreNonOriginale: (() => {
+      const c = str(m.codiceFornitoreNonOriginale);
+      return c ? normalizeRicambioCodice(c) : undefined;
+    })(),
     prezzoFornitoreNonOriginale: num(m.prezzoFornitoreNonOriginale, NaN) || undefined,
     scontoFornitoreNonOriginale: num(m.scontoFornitoreNonOriginale, NaN) || undefined,
     autoreUltimaModifica: str(m.autoreUltimaModifica) || undefined,
@@ -58,7 +62,10 @@ export function ricambioUiToMagazzinoMeta(r: RicambioMagazzino): MagazzinoRicamb
     scortaMinima: Math.max(0, r.scortaMinima),
     scontoFornitoreOriginale: r.scontoFornitoreOriginale > 0 ? r.scontoFornitoreOriginale : undefined,
     fornitoreNonOriginale: r.fornitoreNonOriginale.trim() || undefined,
-    codiceFornitoreNonOriginale: r.codiceFornitoreNonOriginale.trim() || undefined,
+    codiceFornitoreNonOriginale: (() => {
+      const c = r.codiceFornitoreNonOriginale.trim();
+      return c ? normalizeRicambioCodice(c) : undefined;
+    })(),
     prezzoFornitoreNonOriginale: r.prezzoFornitoreNonOriginale > 0 ? r.prezzoFornitoreNonOriginale : undefined,
     scontoFornitoreNonOriginale: r.scontoFornitoreNonOriginale > 0 ? r.scontoFornitoreNonOriginale : undefined,
     autoreUltimaModifica: r.autoreUltimaModifica.trim() || undefined,

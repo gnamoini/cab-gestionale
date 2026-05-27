@@ -803,7 +803,7 @@ export function PreventiviEditorModal({
                     {fmtEuro(economicsPreview.importoIva)}
                   </p>
                 </div>
-                <div className="rounded-[var(--ds-radius-md)] border border-orange-500/40 bg-orange-50/40 px-3 py-2 dark:bg-orange-950/20">
+                <div className="rounded-[var(--ds-radius-md)] border border-[color:color-mix(in_srgb,var(--cab-primary)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-3 py-2">
                   <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-600 dark:text-zinc-400">Totale con IVA</p>
                   <p className="mt-1 text-base font-semibold tabular-nums text-[color:var(--cab-text)]">
                     {fmtEuro(economicsPreview.totaleConIva)}

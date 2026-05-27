@@ -1,7 +1,9 @@
 "use client";
 
 import { useCallback, useRef, useState, type DragEvent } from "react";
+import { UploadStatusInline } from "@/components/gestionale/upload";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import type { UploadFeedbackPhase } from "@/lib/upload/upload-feedback-types";
 
 const ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg";
 
@@ -10,11 +12,25 @@ type DocumentoFileDropzoneProps = {
   pickedSizeKb: number;
   onFileChange: (file: File | null) => void;
   disabled?: boolean;
+  uploadPhase?: UploadFeedbackPhase;
+  uploadError?: string | null;
+  onUploadRetry?: () => void;
 };
 
-export function DocumentoFileDropzone({ pickedName, pickedSizeKb, onFileChange, disabled }: DocumentoFileDropzoneProps) {
+export function DocumentoFileDropzone({
+  pickedName,
+  pickedSizeKb,
+  onFileChange,
+  disabled,
+  uploadPhase,
+  uploadError,
+  onUploadRetry,
+}: DocumentoFileDropzoneProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const selectionPhase: UploadFeedbackPhase =
+    uploadPhase && uploadPhase !== "idle" ? uploadPhase : pickedName ? "selected" : "idle";
+  const dropzoneBusy = selectionPhase === "uploading" || disabled;
 
   const pick = useCallback(
     (file: File | null) => {
@@ -57,15 +73,20 @@ export function DocumentoFileDropzone({ pickedName, pickedSizeKb, onFileChange, 
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
         onDrop={onDrop}
-        onClick={() => !disabled && fileRef.current?.click()}
-        className={`flex cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-all duration-200 ${
-          disabled ? "cursor-not-allowed opacity-55" : ""
+        onClick={() => !dropzoneBusy && fileRef.current?.click()}
+        className={`flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed px-4 py-8 text-center transition-all duration-200 ${
+          dropzoneBusy ? "cursor-wait opacity-70" : "cursor-pointer"
         } ${
-          dragOver
-            ? "border-orange-400 bg-orange-500/10 shadow-[0_0_0_3px_color-mix(in_srgb,var(--cab-primary)_25%,transparent)]"
-            : "border-zinc-500/70 bg-zinc-950/25 hover:border-orange-500/60 hover:bg-orange-500/5 dark:border-zinc-600 dark:hover:border-orange-500/50"
+          selectionPhase === "uploading"
+            ? "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]"
+            : selectionPhase === "selected"
+              ? "border-[color:color-mix(in_srgb,var(--cab-success)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-success)_6%,var(--cab-surface))]"
+              : dragOver
+                ? "border-[color:var(--cab-primary)] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] shadow-[0_0_0_3px_color-mix(in_srgb,var(--cab-primary)_25%,transparent)]"
+                : "border-zinc-500/70 bg-zinc-950/25 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))] dark:border-zinc-600"
         }`}
         aria-label="Area caricamento file"
+        aria-busy={selectionPhase === "uploading"}
       >
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-surface))] text-2xl" aria-hidden>
           📤
@@ -83,18 +104,27 @@ export function DocumentoFileDropzone({ pickedName, pickedSizeKb, onFileChange, 
           Carica PDF o documento
         </button>
         <p className="text-[11px] text-zinc-500">PDF, Word, Excel, PNG, JPG</p>
+        {selectionPhase === "uploading" ? (
+          <p className="text-xs font-medium text-[color:var(--cab-primary)]">Caricamento in corso…</p>
+        ) : null}
       </div>
       <input
         ref={fileRef}
         type="file"
         className="sr-only"
         accept={ACCEPT}
-        disabled={disabled}
+        disabled={dropzoneBusy}
         onChange={(e) => pick(e.target.files?.[0] ?? null)}
       />
-      {pickedName ? (
+      <UploadStatusInline
+        phase={selectionPhase}
+        fileName={pickedName}
+        error={uploadError}
+        onRetry={onUploadRetry}
+      />
+      {pickedName && selectionPhase === "selected" ? (
         <p className="rounded-lg border border-zinc-700/50 bg-zinc-950/40 px-3 py-2 text-xs text-zinc-300">
-          Selezionato: <span className="font-semibold text-zinc-100">{pickedName}</span>
+          Pronto per il salvataggio: <span className="font-semibold text-zinc-100">{pickedName}</span>
           {pickedSizeKb > 0 ? <span className="text-zinc-500"> ({pickedSizeKb} KB)</span> : null}
         </p>
       ) : null}

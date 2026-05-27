@@ -129,7 +129,7 @@ export function MagazzinoGiacenzaBell({
                           <td className="max-w-[280px] px-2 py-2 align-top">
                             <button
                               type="button"
-                              className={`w-full text-left font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:text-orange-700 hover:decoration-orange-400 dark:text-zinc-50 dark:decoration-zinc-600 ${erpFocus}`}
+                              className={`w-full text-left font-medium text-zinc-900 underline decoration-zinc-300 underline-offset-2 hover:text-[color:var(--cab-primary)] hover:decoration-[color:var(--cab-primary)] dark:text-zinc-50 dark:decoration-zinc-600 ${erpFocus}`}
                               onClick={() => {
                                 close();
                                 onSelectRicambio(p.id);

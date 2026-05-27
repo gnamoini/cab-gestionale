@@ -54,8 +54,9 @@ export const globalFixedListPillMenuPanel = [
   "gestionale-scrollbar",
 ].join(" ");
 
+/** Touch target ≥44px su mobile; compatto da `sm` in su. */
 export const globalInputDropdownOptionBase =
-  "block w-full px-3 py-2.5 text-left text-xs font-medium transition-colors";
+  "block w-full min-h-11 px-3 py-2.5 text-left text-sm font-medium transition-colors sm:min-h-0 sm:py-2 sm:text-xs";
 
 export function globalInputDropdownOptionClass(active: boolean, selected?: boolean): string {
   if (active) {
@@ -68,7 +69,7 @@ export function globalInputDropdownOptionClass(active: boolean, selected?: boole
 }
 
 const autocompleteOptionBase =
-  "w-full cursor-pointer rounded-md border px-2 py-1.5 text-center text-[13px] font-medium leading-tight tracking-wide transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] outline-none";
+  "w-full min-h-11 cursor-pointer rounded-md border px-2 py-2.5 text-center text-sm font-medium leading-tight tracking-wide transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] outline-none sm:min-h-0 sm:py-1.5 sm:text-[13px]";
 
 export function globalAutocompleteOptionClass(active: boolean, selected?: boolean): string {
   if (active) {

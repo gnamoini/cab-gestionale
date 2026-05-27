@@ -6,6 +6,7 @@ import {
   useRef,
   type FocusEvent,
   type MouseEvent,
+  type PointerEvent,
   type ReactElement,
   type ReactNode,
   type TouchEvent,
@@ -33,6 +34,8 @@ export type TooltipProps = {
   side?: TooltipSide;
   disabled?: boolean;
   delayMs?: number;
+  /** Default `true`. Impostare `false` su controlli che restano focalizzati dopo il click (es. toggle tema). */
+  showOnFocus?: boolean;
 };
 
 function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined>): (node: T | null) => void {
@@ -57,7 +60,14 @@ function mergeHandler<E>(
   };
 }
 
-export function Tooltip({ content, children, side = "top", disabled = false, delayMs }: TooltipProps) {
+export function Tooltip({
+  content,
+  children,
+  side = "top",
+  disabled = false,
+  delayMs,
+  showOnFocus = true,
+}: TooltipProps) {
   const anchorRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
   const displayContent = content?.trim() ? tooltipDisplayContent(content) : content;
@@ -66,6 +76,7 @@ export function Tooltip({ content, children, side = "top", disabled = false, del
     disabled,
     delayMs,
     side,
+    showOnFocus,
     anchorRef,
     contentRef,
   });
@@ -85,9 +96,22 @@ export function Tooltip({ content, children, side = "top", disabled = false, del
     onMouseLeave: mergeHandler(triggerProps.onMouseLeave, childProps.onMouseLeave as ((e: MouseEvent<HTMLElement>) => void) | undefined),
     onFocus: mergeHandler(triggerProps.onFocus, childProps.onFocus as ((e: FocusEvent<HTMLElement>) => void) | undefined),
     onBlur: mergeHandler(triggerProps.onBlur, childProps.onBlur as ((e: FocusEvent<HTMLElement>) => void) | undefined),
+    onPointerDown: mergeHandler(
+      triggerProps.onPointerDown,
+      childProps.onPointerDown as ((e: PointerEvent<HTMLElement>) => void) | undefined,
+    ),
+    onPointerUp: mergeHandler(
+      triggerProps.onPointerUp,
+      childProps.onPointerUp as ((e: PointerEvent<HTMLElement>) => void) | undefined,
+    ),
+    onPointerCancel: mergeHandler(
+      triggerProps.onPointerCancel,
+      childProps.onPointerCancel as ((e: PointerEvent<HTMLElement>) => void) | undefined,
+    ),
     onTouchStart: mergeHandler(triggerProps.onTouchStart, childProps.onTouchStart as ((e: TouchEvent<HTMLElement>) => void) | undefined),
     onTouchEnd: mergeHandler(triggerProps.onTouchEnd, childProps.onTouchEnd as ((e: TouchEvent<HTMLElement>) => void) | undefined),
     onTouchCancel: mergeHandler(triggerProps.onTouchCancel, childProps.onTouchCancel as ((e: TouchEvent<HTMLElement>) => void) | undefined),
+    onTouchMove: mergeHandler(triggerProps.onTouchMove, childProps.onTouchMove as ((e: TouchEvent<HTMLElement>) => void) | undefined),
   });
 
   const panel =

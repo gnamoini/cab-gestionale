@@ -83,7 +83,7 @@ export function LavorazioneMezzoPicker({
               <li key={m.id}>
                 <button
                   type="button"
-                  className="w-full rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-orange-500/10"
+                  className="w-full rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]"
                   onClick={() => applyMezzo(m)}
                 >
                   <span className="font-medium text-zinc-900 dark:text-zinc-50">{summarizeMezzo(m)}</span>
@@ -94,7 +94,7 @@ export function LavorazioneMezzoPicker({
         </ul>
       ) : null}
       {manual ? (
-        <p className="mt-2 text-[11px] font-medium text-orange-700">Modalità manuale: compila i campi sottostanti.</p>
+        <p className="mt-2 text-[11px] font-medium text-[color:var(--cab-primary)]">Modalità manuale: compila i campi sottostanti.</p>
       ) : null}
     </div>
   );

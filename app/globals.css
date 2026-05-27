@@ -17,6 +17,7 @@ html {
   --cab-text-muted: #71717a;
   --cab-border: #e4e4e7;
   --cab-border-strong: #d4d4d8;
+  /* Arancione logo CAB (monocolore — no gradient) */
   --cab-primary: #f97316;
   --cab-primary-hover: #ea580c;
   --cab-success: #059669;
@@ -59,6 +60,7 @@ html {
   --cab-border: rgb(39 39 42);
   --cab-border-strong: rgb(63 63 70);
   /* Stesso arancio della light mode: CTA / primario identici in dark */
+  /* Arancione logo CAB (monocolore — no gradient) */
   --cab-primary: #f97316;
   --cab-primary-hover: #ea580c;
   --cab-success: #34d399;

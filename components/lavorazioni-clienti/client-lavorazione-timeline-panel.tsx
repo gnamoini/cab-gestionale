@@ -100,7 +100,7 @@ function TimelineEventsSection({ events }: { events: ClientTimelineEvent[] }) {
                   <span className="absolute top-3 bottom-0 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
                 ) : null}
                 <span
-                  className="relative z-10 mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-orange-500 ring-2 ring-white dark:ring-zinc-900"
+                  className="relative z-10 mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--cab-primary)] ring-2 ring-white dark:ring-zinc-900"
                   aria-hidden
                 />
               </div>

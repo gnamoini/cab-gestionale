@@ -239,7 +239,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const listEmpty = !isLoading && suggestions.length === 0 && !showAddOption && addCandidate.length > 0;
   const portalOpen = showDropdown && (totalNavigableOptions > 0 || listEmpty);
 
-  const { coords, style: portalStyle } = useGlobalDropdownPortal({
+  const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
     open: portalOpen,
     anchorRef: wrapRef,
     contentRef: dropdownRef,
@@ -420,8 +420,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
     return globalAutocompleteOptionClass(active, selected);
   };
 
-  const dropdownPanelClass = `${globalAutocompleteDropdownPortalPanel} p-1 ${
-    coords?.scrollInside ? "overflow-y-auto" : "overflow-hidden"
+  const dropdownPanelClass = `${globalAutocompleteDropdownPortalPanel} p-1 ${placementOriginClass} ${
+    scrollInside ? "overflow-y-auto" : "overflow-hidden"
   }`;
 
   const addOptionActive = activeIndex === addOptionIndex;
@@ -430,7 +430,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   }`;
 
   const dropdownPortal =
-    portalOpen && coords && portalStyle ? (
+    portalOpen && portalStyle ? (
       <div ref={dropdownRef} style={portalStyle}>
         {showDropdown && totalNavigableOptions > 0 ? (
           <ul id={listboxId} role="listbox" className={dropdownPanelClass}>

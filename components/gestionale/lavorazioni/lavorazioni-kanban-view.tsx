@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo, type KeyboardEvent } from "react";
+import { KanbanColumnScroll } from "@/components/gestionale/lavorazioni/kanban-column-scroll";
+import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import { LavorazioneIngressoDateCell } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import {
@@ -18,6 +20,7 @@ import {
   resolveStatoId,
   STATO_LAVORAZIONE_COMPLETATA_ID,
 } from "@/lib/lavorazioni/stati-dynamic";
+import { kanbanCardPriorityVisual } from "@/lib/lavorazioni/kanban-card-priority-style";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
@@ -55,22 +58,6 @@ function findCompletateColumnConfig(stati: readonly StatoLavorazioneConfig[]): S
       closed: true,
     }
   );
-}
-
-/** Accento visivo card Kanban per priorità (solo styling, token CAB). */
-function kanbanCardPrioritaAccent(priorita: PrioritaLavorazione): string {
-  switch (priorita) {
-    case "bassa":
-      return "border-l-[color:color-mix(in_srgb,var(--cab-border-strong)_75%,var(--cab-text-muted))] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))]";
-    case "media":
-      return "border-l-[color:color-mix(in_srgb,var(--cab-border-strong)_55%,var(--cab-primary))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))]";
-    case "alta":
-      return "border-l-[var(--cab-primary)] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-card))]";
-    case "urgente":
-      return "border-l-[color:color-mix(in_srgb,var(--cab-danger)_90%,#b91c1c)] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-card))]";
-    default:
-      return "border-l-[color:var(--cab-border-strong)]";
-  }
 }
 
 function sortKanbanCards(rows: LavorazioneListRow[]): LavorazioneListRow[] {
@@ -143,15 +130,20 @@ function mezzoIdentParts(row: LavorazioneListRow, schedeStore?: LavorazioneSched
   };
 }
 
-function KanbanCard({
-  row,
-  schedeStore,
-  defaultAddetto,
-  prioritaColors,
-  addettoColors,
-  flash,
-  onOpen,
-}: {
+const KANBAN_COLUMN_SCROLL_CLASS =
+  "lavorazioni-kanban-column-scroll gestionale-scrollbar flex flex-col gap-2 p-2";
+
+const KANBAN_COLUMN_SECTION_CLASS =
+  "lavorazioni-kanban-column flex h-full min-h-0 w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30 lg:min-w-0 lg:w-auto lg:flex-1";
+
+function kanbanCardOpenKey(e: KeyboardEvent, onOpen: () => void) {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    onOpen();
+  }
+}
+
+type KanbanCardProps = {
   row: LavorazioneListRow;
   schedeStore: LavorazioneSchedeStore;
   defaultAddetto: string;
@@ -159,7 +151,32 @@ function KanbanCard({
   addettoColors: Record<string, string | undefined>;
   flash: boolean;
   onOpen: () => void;
-}) {
+};
+
+function kanbanCardPropsEqual(prev: Readonly<KanbanCardProps>, next: Readonly<KanbanCardProps>) {
+  return (
+    prev.row.id === next.row.id &&
+    prev.row.priorita === next.row.priorita &&
+    prev.row.stato === next.row.stato &&
+    prev.row.updated_at === next.row.updated_at &&
+    prev.row.created_at === next.row.created_at &&
+    prev.flash === next.flash &&
+    prev.defaultAddetto === next.defaultAddetto &&
+    prev.schedeStore[prev.row.id] === next.schedeStore[next.row.id] &&
+    prev.prioritaColors === next.prioritaColors &&
+    prev.addettoColors === next.addettoColors
+  );
+}
+
+const KanbanCard = memo(function KanbanCard({
+  row,
+  schedeStore,
+  defaultAddetto,
+  prioritaColors,
+  addettoColors,
+  flash,
+  onOpen,
+}: KanbanCardProps) {
   const macchina = macchinaLabel(row, schedeStore);
   const cliente = clienteLabel(row, schedeStore);
   const cantiere = cantiereLabel(row, schedeStore);
@@ -167,44 +184,57 @@ function KanbanCard({
   const identLines = mezzoIdentLines(row, schedeStore);
   const addetto = addettoLabel(row, schedeStore, defaultAddetto);
   const p = row.priorita as PrioritaLavorazione;
-  const prioHex = p === "urgente" ? "#b91c1c" : prioritaDisplayColor(p as PrioritaLav, prioritaColors);
+  const prioLav = p as PrioritaLav;
+  const prioVisual = kanbanCardPriorityVisual(prioLav, prioritaColors as Partial<Record<PrioritaLav, string>>);
+  const prioHex = prioritaDisplayColor(prioLav, prioritaColors);
   const addettoHex = addettoDisplayColor(addetto, addettoColors as Record<string, string>);
   const note = lavorazioneNoteOperative(row, schedeStore);
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
+      onKeyDown={(e) => kanbanCardOpenKey(e, onOpen)}
+      style={prioVisual.style}
       className={[
-        "w-full rounded-xl border border-[color:var(--cab-border)] border-l-4 p-3 text-left shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,background-color] duration-200 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)]",
-        kanbanCardPrioritaAccent(p),
-        flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]" : "",
+        "lavorazioni-kanban-card-hit w-full cursor-pointer rounded-xl border border-[color:var(--cab-border)] p-3 text-left transition-[border-color,box-shadow,background-color] duration-200 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--cab-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cab-card)]",
+        prioVisual.className,
+        flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)]" : "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
       <div className="flex items-start gap-2">
+        <span
+          className={prioVisual.dotClassName}
+          style={prioVisual.dotStyle}
+          aria-hidden
+          title={prioritaLabel(p)}
+        />
         <div className="min-w-0 flex-1 space-y-1 leading-tight">
-          <p className="text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50">{macchina}</p>
+          <p className="text-sm font-semibold leading-snug text-[color:var(--cab-text)]">{macchina}</p>
           <div className="min-w-0 space-y-0.5">
-            <p className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">{cliente}</p>
+            <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">{cliente}</p>
             {identValue(cantiere) ? (
-              <p className="truncate text-[11px] text-zinc-600 dark:text-zinc-300">{cantiere}</p>
+              <p className="truncate text-[11px] text-[color:var(--cab-text-muted)]">{cantiere}</p>
             ) : null}
             {utilizzatore.trim() ? (
-              <p className="truncate text-[11px] text-zinc-500 dark:text-zinc-400">{utilizzatore}</p>
+              <p className="truncate text-[11px] text-[color:color-mix(in_srgb,var(--cab-text-muted)_88%,var(--cab-text))]">
+                {utilizzatore}
+              </p>
             ) : null}
           </div>
           {identLines.length > 0 ? (
             <div className="min-w-0 space-y-0.5 leading-snug">
               {identLines.map((line) => (
-                <p key={line} className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100">
+                <p key={line} className="truncate text-[13px] font-medium text-[color:var(--cab-text)]">
                   {line}
                 </p>
               ))}
             </div>
           ) : null}
-          <div className="text-[11px] text-zinc-600 dark:text-zinc-300">
+          <div className="text-[11px] text-[color:var(--cab-text-muted)]">
             <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
           </div>
         </div>
@@ -228,11 +258,13 @@ function KanbanCard({
         </div>
       </div>
       {note.trim() ? (
-        <p className="mt-2 line-clamp-2 text-[11px] text-zinc-500 dark:text-zinc-400">{note}</p>
+        <p className="mt-2 line-clamp-2 text-[11px] text-[color:var(--cab-text-muted)]">{note}</p>
       ) : null}
-    </button>
+    </div>
   );
-}
+}, kanbanCardPropsEqual);
+
+KanbanCard.displayName = "KanbanCard";
 
 export function LavorazioniKanbanView({
   rows,
@@ -378,11 +410,11 @@ export function LavorazioniKanbanView({
       return (
         <section
           key={col.id}
-          className="flex w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30 lg:min-w-0 lg:w-auto lg:flex-1 lg:shrink"
+          className={KANBAN_COLUMN_SECTION_CLASS}
           aria-label={`Colonna ${col.label}`}
         >
           {renderStatoHeader(col, accItems.length)}
-          <div className="gestionale-scrollbar flex min-h-[8rem] flex-col gap-2 overflow-y-auto overscroll-contain p-2">
+          <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
             {accItems.length === 0 ? (
               <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
             ) : (
@@ -398,7 +430,7 @@ export function LavorazioniKanbanView({
                 )}
               </div>
             ))}
-          </div>
+          </KanbanColumnScroll>
         </section>
       );
     }
@@ -407,17 +439,17 @@ export function LavorazioniKanbanView({
     return (
       <section
         key={col.id}
-        className="flex w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30 lg:min-w-0 lg:w-auto lg:flex-1 lg:shrink"
+        className={KANBAN_COLUMN_SECTION_CLASS}
         aria-label={`Colonna ${col.label}`}
       >
         {renderStatoHeader(col, items.length)}
-        <div className="gestionale-scrollbar flex min-h-[8rem] flex-col gap-2 overflow-y-auto overscroll-contain p-2">
+        <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
           {items.length === 0 ? (
             <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
           ) : (
             renderKanbanCards(items)
           )}
-        </div>
+        </KanbanColumnScroll>
       </section>
     );
   };
@@ -425,24 +457,24 @@ export function LavorazioniKanbanView({
   const renderCompletateColumn = () => (
     <section
       key={completateColumn.id}
-      className="flex w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30 lg:min-w-0 lg:w-auto lg:flex-1 lg:shrink"
+      className={KANBAN_COLUMN_SECTION_CLASS}
       aria-label="Colonna Completate"
     >
       {renderStatoHeader(completateColumn, completateItems.length)}
-      <div className="gestionale-scrollbar flex min-h-[8rem] flex-col gap-2 overflow-y-auto overscroll-contain p-2">
+      <KanbanColumnScroll columnId={completateColumn.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
         {completateItems.length === 0 ? (
           <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">{closedEmptyMessage}</p>
         ) : (
           renderKanbanCards(completateItems, openClosedRow)
         )}
-      </div>
+      </KanbanColumnScroll>
     </section>
   );
 
   return (
-    <div className="space-y-3">
-      <div className="gestionale-scrollbar w-full overflow-x-auto pb-1 lg:overflow-x-visible">
-        <div className="flex w-full min-w-max items-start gap-3 lg:min-w-0">
+    <div className="lavorazioni-kanban-scope space-y-3">
+      <div className="lavorazioni-kanban-board gestionale-scrollbar min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
+        <div className="flex h-[var(--lavorazioni-kanban-col-max-h)] min-h-[18rem] w-max min-w-full items-stretch gap-3 lg:w-full">
           {kanbanColumns.map(renderColumn)}
           {renderCompletateColumn()}
         </div>

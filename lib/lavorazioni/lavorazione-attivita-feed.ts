@@ -1,4 +1,4 @@
-import { consolidateLogModificaRows } from "@/lib/gestionale-log/log-consolidate";
+import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
 import { buildLogModificaSummary } from "@/lib/gestionale-log/log-summary";
 import { isLogReverted } from "@/lib/gestionale-log/undo";
 import type { GestionaleLogEventTone } from "@/lib/gestionale-log/view-model";
@@ -243,7 +243,7 @@ function dedupeEvents(items: LavorazioneAttivitaEvent[]): LavorazioneAttivitaEve
 
 export function buildLavorazioneAttivitaFeed(input: LavorazioneAttivitaFeedInput): LavorazioneAttivitaEvent[] {
   const statiOpts = input.statiOpts ?? [];
-  const fromLogs = consolidateLogModificaRows(input.logRows).map((row) =>
+  const fromLogs = reconcileLogModificaRows(input.logRows).map((row) =>
     eventFromLog(row, input.resolveAutore, statiOpts),
   );
   const merged = dedupeEvents([...fromLogs, ...supplementFromDomain(input)]);

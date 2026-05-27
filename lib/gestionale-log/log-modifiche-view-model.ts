@@ -1,6 +1,6 @@
 "use client";
 
-import { consolidateLogModificaRows } from "@/lib/gestionale-log/log-consolidate";
+import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
 import {
   buildLogModificaSummary,
   modificheToModificaRiga,
@@ -71,7 +71,7 @@ export function buildLogModificheDisplayEntries(
   resolveAutore: (row: LogModificaAutoreSource) => string,
   options?: BuildLogModificheDisplayOptions,
 ): { id: string; row: LogModificaRow; vm: GestionaleLogViewModel }[] {
-  const consolidated = consolidateLogModificaRows(rows);
+  const consolidated = reconcileLogModificaRows(rows);
   return consolidated.map((row) => {
     let vm = buildLogModificheGestionaleViewModel(row, resolveAutore(row), options?.statiLavorazione);
     const oggetto =

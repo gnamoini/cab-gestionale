@@ -39,6 +39,10 @@ const magSottoScortaPillHex = "#b91c1c";
 const dashboardLavMiniPillColClass = "w-[6.75rem]";
 const dashboardLavMiniPillClass = `${statoPillShellClassDynamic()} inline-flex w-full min-h-[1.375rem] items-center justify-center px-1.5 py-0.5 ${lavTablePillTextClass} text-[10px] whitespace-nowrap`;
 
+/** Righe secondarie pill lavorazioni dashboard — ereditano contrasto dal colore priorità. */
+const dashboardLavRowMetaClass =
+  "mt-0.5 truncate text-[11px] font-normal leading-snug text-inherit opacity-95";
+
 function WidgetLoading() {
   return <p className={dsTypoCaption}>Caricamento…</p>;
 }
@@ -152,10 +156,11 @@ function DashboardLavorazioniWidget({
               <li key={row.id}>
                 <DashboardLavRowPill priorita={row.priorita} prioritaColors={prioritaColors}>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold leading-snug">{formatTitleCasePhrase(row.macchina)}</p>
-                    {subtitle ? (
-                      <p className="mt-0.5 truncate text-[11px] leading-snug opacity-90">{subtitle}</p>
-                    ) : null}
+                    <p className="truncate text-sm font-semibold leading-snug text-inherit">
+                      {formatTitleCasePhrase(row.macchina)}
+                    </p>
+                    {subtitle ? <p className={dashboardLavRowMetaClass}>{subtitle}</p> : null}
+                    {row.addetto ? <p className={dashboardLavRowMetaClass}>{row.addetto}</p> : null}
                   </div>
                   <span
                     className={`flex shrink-0 flex-col items-stretch justify-between gap-1.5 self-stretch py-0.5 ${dashboardLavMiniPillColClass}`}

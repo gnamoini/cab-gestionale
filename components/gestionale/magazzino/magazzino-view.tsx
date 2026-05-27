@@ -28,6 +28,7 @@ import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-stor
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
 import {
   loadMagazzinoChangeLog,
+  purgeMagazzinoLogEntriesForRicambioId,
   saveMagazzinoChangeLog,
   type MagazzinoChangeLogEntry,
 } from "@/lib/magazzino/magazzino-change-log-storage";
@@ -124,13 +125,24 @@ import {
   type MagazzinoPageFilters,
 } from "@/lib/magazzino/magazzino-list-ui-filters";
 import {
-  buildMagazzinoGestionaleLogViewModel,
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogEntryDismissButton,
   GestionaleLogList,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
+import {
+  buildMagazzinoLocalLogEntry,
+  buildMagazzinoScortaPersistedLogEntry,
+} from "@/lib/magazzino/magazzino-log-events";
+import {
+  applyScortaOptimisticDelta,
+  awaitScortaSyncDrain,
+  enqueueScortaSync,
+} from "@/lib/magazzino/scorta-adjust-sync";
+import { revealRicambioInTableAfterSave } from "@/lib/magazzino/magazzino-table-focus";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { useMagazzinoLogFeed } from "@/lib/magazzino/use-magazzino-log-feed";
 import { useAuth } from "@/context/auth-context";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -208,6 +220,19 @@ function formatDataUltimaMain(iso: string) {
     month: "short",
     year: "numeric",
   });
+}
+
+/** Card mobile magazzino: `gg/mm/aa · Autore` (compatto, una riga). */
+function formatMagazzinoUltimaModificaMobile(iso: string, autore: string): string {
+  const d = new Date(iso);
+  const who = autore.trim() || "—";
+  if (Number.isNaN(d.getTime())) return who;
+  const datePart = d.toLocaleDateString("it-IT", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+  });
+  return `${datePart} · ${who}`;
 }
 
 function isModificaOlderThanMonths(iso: string, months: number) {
@@ -318,29 +343,6 @@ function changesForNuovoRicambio(r: RicambioMagazzino): CampoChange[] {
 type MagazzinoLogTipo = "aggiunta" | "update" | "rimozione";
 
 type MagazzinoLogEntry = MagazzinoChangeLogEntry;
-
-function computeRiepilogo(changes: CampoChange[]): string {
-  const parts: string[] = [];
-  for (const c of changes) {
-    if (c.campo === "Scorta") {
-      const p = Number.parseInt(c.prima, 10);
-      const d = Number.parseInt(c.dopo, 10);
-      if (!Number.isNaN(p) && !Number.isNaN(d)) {
-        const delta = d - p;
-        parts.push(delta >= 0 ? `Scorta +${delta}` : `Scorta ${delta}`);
-      } else {
-        parts.push("Scorta aggiornata");
-      }
-    } else if (c.campo === "Prezzo vendita") {
-      parts.push("Prezzo vendita aggiornato");
-    } else if (c.campo === "Descrizione") {
-      parts.push("Descrizione modificata");
-    } else {
-      parts.push(`${c.campo} aggiornato`);
-    }
-  }
-  return [...new Set(parts)].join(", ");
-}
 
 /** Stile interazioni ERP uniforme (hover / active / ring) */
 const erpFocus = dsFocus;
@@ -463,7 +465,7 @@ function ArchiveDupRicambioRow({
     <button
       type="button"
       onClick={() => onOpen(p.id)}
-      className="w-full rounded-lg border border-zinc-200/90 bg-white px-2.5 py-2 text-left text-xs transition-colors hover:border-orange-300/60 hover:bg-orange-50/40 dark:border-zinc-700 dark:bg-zinc-900/50"
+      className="w-full rounded-lg border border-zinc-200/90 bg-white px-2.5 py-2 text-left text-xs transition-colors hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] dark:border-zinc-700 dark:bg-zinc-900/50"
     >
       <div className="font-semibold text-zinc-800 dark:text-zinc-100">{p.marca}</div>
       <div className="mt-0.5 font-mono text-[11px] font-medium text-zinc-700 dark:text-zinc-200">{p.codiceFornitoreOriginale}</div>
@@ -563,6 +565,8 @@ export function MagazzinoView() {
 
   const [newOpen, setNewOpen] = useState(false);
   const [newRicambioDraftId, setNewRicambioDraftId] = useState<string | null>(null);
+  const [saveBusy, setSaveBusy] = useState(false);
+  const { success: toastSuccess } = useGestionaleToast();
   const [newForm, setNewForm] = useState<RicambioFormState>(emptyRicambioForm());
   const [dupCheckModalOpen, setDupCheckModalOpen] = useState(false);
   const [newIncompleteOpen, setNewIncompleteOpen] = useState(false);
@@ -605,23 +609,37 @@ export function MagazzinoView() {
 
   const listPageSize = useResponsiveListPageSize();
   listPageSizeRef.current = listPageSize;
+
   const {
-    page: magLogPage,
-    setPage: setMagLogPage,
-    pageCount: magLogPageCount,
-    sliceItems: sliceMagLogEntries,
-    showPager: showMagLogPager,
-    label: magLogPagerLabel,
-    resetPage: resetMagLogPage,
-  } = useClientPagination(logEntries.length, listPageSize);
+    feed: magLogFeed,
+    timelineByRicambio: magLogTimelineByRicambio,
+    isLoading: magLogFeedLoading,
+    isLocalId: isMagLogLocalId,
+  } = useMagazzinoLogFeed({
+    localEntries: logEntries,
+    prodotti,
+    authorName,
+    userId: user?.id ?? null,
+  });
+
+  const {
+    page: magLogDrawerPage,
+    setPage: setMagLogDrawerPage,
+    pageCount: magLogDrawerPageCount,
+    sliceItems: sliceMagLogFeed,
+    showPager: showMagLogDrawerPager,
+    label: magLogDrawerPagerLabel,
+    resetPage: resetMagLogDrawerPage,
+  } = useClientPagination(magLogFeed.length, listPageSize);
 
   useEffect(() => {
-    resetMagLogPage();
-  }, [logOpen, logEntries.length, listPageSize, resetMagLogPage]);
+    resetMagLogDrawerPage();
+  }, [logOpen, magLogFeed.length, listPageSize, resetMagLogDrawerPage]);
 
-  const pagedMagLogEntries = useMemo(() => sliceMagLogEntries(logEntries), [logEntries, sliceMagLogEntries, magLogPage]);
-
-  const [timelineByRicambio, setTimelineByRicambio] = useState<Record<string, MagazzinoLogEntry[]>>({});
+  const pagedMagLogFeed = useMemo(
+    () => sliceMagLogFeed(magLogFeed),
+    [magLogFeed, sliceMagLogFeed, magLogDrawerPage],
+  );
 
   useEffect(() => {
     const mapped = magazzinoListQ.data ?? [];
@@ -646,32 +664,15 @@ export function MagazzinoView() {
 
   function applyLogEntry(entry: MagazzinoLogEntry) {
     setLogEntries((prev) => [entry, ...prev].slice(0, 100));
-    setTimelineByRicambio((prev) => ({
-      ...prev,
-      [entry.ricambioId]: [entry, ...(prev[entry.ricambioId] ?? [])].slice(0, 80),
-    }));
   }
 
   function removeMagazzinoLogEntry(id: string) {
+    if (!isMagLogLocalId(id)) return;
     setLogEntries((prev) => prev.filter((e) => e.id !== id));
-    setTimelineByRicambio((prev) => {
-      const next: Record<string, MagazzinoLogEntry[]> = { ...prev };
-      for (const k of Object.keys(next)) {
-        next[k] = (next[k] ?? []).filter((e) => e.id !== id);
-      }
-      return next;
-    });
   }
 
   function markMagazzinoLogEntryAnnullato(id: string) {
     setLogEntries((prev) => prev.map((e) => (e.id === id ? { ...e, annullato: true } : e)));
-    setTimelineByRicambio((prev) => {
-      const next: Record<string, MagazzinoLogEntry[]> = { ...prev };
-      for (const k of Object.keys(next)) {
-        next[k] = (next[k] ?? []).map((e) => (e.id === id ? { ...e, annullato: true } : e));
-      }
-      return next;
-    });
   }
 
   function flushPendingLog() {
@@ -686,19 +687,15 @@ export function MagazzinoView() {
       dopo: v.dopo,
     }));
     if (changes.length === 0) return;
-    const base = computeRiepilogo(changes);
-    const riepilogo = `${p.autore} — ${base}`;
-    const entry: MagazzinoLogEntry = {
+    const entry = buildMagazzinoLocalLogEntry({
       id: `log-${Date.now()}-${++logSeqRef.current}`,
       tipo: "update",
       ricambioId: p.ricambioId,
-      ricambio: p.ricambioLabel,
+      ricambioLabel: p.ricambioLabel,
       autore: p.autore,
-      at: new Date().toISOString(),
       changes,
-      riepilogo,
       ...magazzinoLogScopeFields(),
-    };
+    });
     applyLogEntry(entry);
   }
 
@@ -729,23 +726,15 @@ export function MagazzinoView() {
     autore: string = authorName,
   ) {
     flushPendingLog();
-    const riepilogo =
-      tipo === "aggiunta"
-        ? "Nuovo ricambio registrato"
-        : tipo === "rimozione"
-          ? "Rimosso dal magazzino"
-          : `${autore} — ${computeRiepilogo(changes)}`;
-    const entry: MagazzinoLogEntry = {
+    const entry = buildMagazzinoLocalLogEntry({
       id: `log-${Date.now()}-${++logSeqRef.current}`,
       tipo,
       ricambioId,
-      ricambio: ricambioLabel,
+      ricambioLabel,
       autore,
-      at: new Date().toISOString(),
       changes,
-      riepilogo,
       ...magazzinoLogScopeFields(),
-    };
+    });
     applyLogEntry(entry);
   }
 
@@ -1084,28 +1073,36 @@ export function MagazzinoView() {
 
   function adjustScorta(id: string, delta: number) {
     if (!magCanCreateRicambio) return;
-    const row = prodotti.find((p) => p.id === id);
-    if (!row) return;
-    const dopo = Math.max(0, Math.round(row.scorta + delta));
-    queueFieldUpdates(
-      id,
-      row.descrizione,
-      [{ campo: "Scorta", prima: String(row.scorta), dopo: String(dopo) }],
-      authorName,
-    );
-    const next = touch({ ...row, scorta: dopo });
-    patchProdotti((prev) => prev.map((p) => (p.id === id ? next : p)));
-    void magazzinoService.update(id, ricambioUiToMagazzinoUpdate(next)).then((res) => {
-      if (!res.success) window.alert(res.error ?? "Aggiornamento scorta non riuscito.");
-      else void invalidateAfterMagazzinoOrMovimenti(queryClient, [
-        cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
-      ]);
-    });
+    const applied = applyScortaOptimisticDelta(queryClient, id, delta, authorName, touch);
+    if (!applied.found) return;
     flashRow(id);
+    enqueueScortaSync(queryClient, id, authorName, {
+      onPersisted: ({ ricambioId, label, prima, dopo }) => {
+        const entry = buildMagazzinoScortaPersistedLogEntry({
+          id: `log-${Date.now()}-${++logSeqRef.current}`,
+          ricambioId,
+          ricambioLabel: label,
+          autore: authorName,
+          prima,
+          dopo,
+          ...magazzinoLogScopeFields(),
+        });
+        applyLogEntry(entry);
+      },
+      onError: ({ error }) => {
+        window.alert(error);
+      },
+      invalidate: () => {
+        void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+          cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
+        ]);
+      },
+    });
   }
 
   async function undoLastScorta(id: string) {
     if (!magCanCreateRicambio) return;
+    await awaitScortaSyncDrain(id);
     flushPendingLog();
     const entry = latestUndoableScortaEntryForRicambio(logEntries, id, magUndoScope);
     if (!entry) {
@@ -1178,27 +1175,64 @@ export function MagazzinoView() {
     setNewOpen(true);
   }
 
-  async function finalizeNewRicambio() {
-    setNewListFieldInvalid(false);
-    const r = ricambioFromFormLenient(newForm, newRicambioDraftId ?? undefined, authorName);
-    const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r));
-    if (!created.success || !created.data) {
-      window.alert(created.error ?? "Creazione ricambio non riuscita.");
-      return;
+  function closeNewRicambioModal() {
+    const draftId = newRicambioDraftId;
+    if (draftId) {
+      purgeMagazzinoLogEntriesForRicambioId(draftId);
+      setLogEntries(loadMagazzinoChangeLog());
     }
-    const ui = magazzinoRowToRicambioUI(created.data, authorName);
-    registerOrderIndex(ui.id);
-    patchProdotti((prev) => [ui, ...prev]);
-    setNewForm(emptyRicambioForm());
     setNewRicambioDraftId(null);
     setNewOpen(false);
-    setNewIncompleteOpen(false);
-    setNewIncompleteList([]);
-    logImmediate(ui.id, ui.descrizione, "aggiunta", changesForNuovoRicambio(ui), authorName);
-    flashRow(ui.id);
+  }
+
+  function completeMagazzinoSave(
+    ricambioId: string,
+    toastMessage: string,
+    syncType: "entity_created" | "entity_updated" = "entity_updated",
+  ) {
+    const inView = revealRicambioInTableAfterSave({
+      ricambioId,
+      filteredSortedRef,
+      listPageSizeRef,
+      setMagazzinoPage: (p) => setMagazzinoPageRef.current(p),
+      flashRow,
+      closeOverlays: () => {
+        setNewOpen(false);
+        setNewIncompleteOpen(false);
+        setDetail(null);
+        setEditDraft(null);
+      },
+    });
+    toastSuccess(inView ? toastMessage : `${toastMessage} (fuori dai filtri attivi)`);
     void invalidateAfterMagazzinoOrMovimenti(queryClient, [
-      cabSyncEventForEntity("magazzino_ricambi", ui.id, "entity_created", "magazzino_ricambi"),
+      cabSyncEventForEntity("magazzino_ricambi", ricambioId, syncType, "magazzino_ricambi"),
     ]);
+  }
+
+  async function finalizeNewRicambio() {
+    if (saveBusy) return;
+    setNewListFieldInvalid(false);
+    setSaveBusy(true);
+    try {
+      const r = ricambioFromFormLenient(newForm, newRicambioDraftId ?? undefined, authorName, {
+        mezziListe: mezziListePrefs,
+      });
+      const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r));
+      if (!created.success || !created.data) {
+        window.alert(created.error ?? "Creazione ricambio non riuscita.");
+        return;
+      }
+      const ui = magazzinoRowToRicambioUI(created.data, authorName);
+      registerOrderIndex(ui.id);
+      patchProdotti((prev) => [ui, ...prev]);
+      setNewForm(emptyRicambioForm());
+      setNewRicambioDraftId(null);
+      setNewIncompleteOpen(false);
+      setNewIncompleteList([]);
+      completeMagazzinoSave(ui.id, "Ricambio creato in magazzino.", "entity_created");
+    } finally {
+      setSaveBusy(false);
+    }
   }
 
   function submitNew(e: React.FormEvent) {
@@ -1229,7 +1263,7 @@ export function MagazzinoView() {
 
   async function saveEdit(e: React.FormEvent) {
     e.preventDefault();
-    if (!magCanCreateRicambio) return;
+    if (!magCanCreateRicambio || saveBusy) return;
     if (!detail || detail.mode !== "edit" || !editDraft) return;
     const listErr = validateRicambioListFields(editDraft, {
       marche,
@@ -1243,28 +1277,25 @@ export function MagazzinoView() {
     }
     setEditListFieldInvalid(false);
     const before = prodotti.find((p) => p.id === detail.id);
-    const next = ricambioFromForm(editDraft, detail.id, authorName);
+    const next = ricambioFromForm(editDraft, detail.id, authorName, { mezziListe: mezziListePrefs });
     if (!next || !before) {
       window.alert("Compila tutti i campi obbligatori.");
       return;
     }
-    const changes = diffRicambi(before, next);
-    const updated = await magazzinoService.update(detail.id, ricambioUiToMagazzinoUpdate(next));
-    if (!updated.success || !updated.data) {
-      window.alert(updated.error ?? "Salvataggio non riuscito.");
-      return;
+    const ricambioId = detail.id;
+    setSaveBusy(true);
+    try {
+      const updated = await magazzinoService.update(ricambioId, ricambioUiToMagazzinoUpdate(next));
+      if (!updated.success || !updated.data) {
+        window.alert(updated.error ?? "Salvataggio non riuscito.");
+        return;
+      }
+      const ui = magazzinoRowToRicambioUI(updated.data, authorName);
+      patchProdotti((prev) => prev.map((p) => (p.id === ricambioId ? touch(ui) : p)));
+      completeMagazzinoSave(ricambioId, "Modifiche salvate.");
+    } finally {
+      setSaveBusy(false);
     }
-    const ui = magazzinoRowToRicambioUI(updated.data, authorName);
-    patchProdotti((prev) => prev.map((p) => (p.id === detail.id ? touch(ui) : p)));
-    setEditDraft(null);
-    setDetail({ id: detail.id, mode: "info" });
-    if (changes.length > 0) {
-      logImmediate(detail.id, ui.descrizione, "update", changes, authorName);
-    }
-    flashRow(detail.id);
-    void invalidateAfterMagazzinoOrMovimenti(queryClient, [
-      cabSyncEventForEntity("magazzino_ricambi", detail.id, "entity_updated", "magazzino_ricambi"),
-    ]);
   }
 
   async function eliminaRicambio() {
@@ -1276,7 +1307,6 @@ export function MagazzinoView() {
       window.alert(removed.error ?? "Eliminazione non riuscita.");
       return;
     }
-    logImmediate(detailRicambio.id, detailRicambio.descrizione, "rimozione", [], authorName);
     patchProdotti((prev) => prev.filter((p) => p.id !== detailRicambio.id));
     setDetail(null);
     setEditDraft(null);
@@ -1292,10 +1322,8 @@ export function MagazzinoView() {
 
   const infoTimeline = useMemo(() => {
     if (!detailRicambio) return [];
-    return [...(timelineByRicambio[detailRicambio.id] ?? [])].sort(
-      (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
-    );
-  }, [detailRicambio, timelineByRicambio]);
+    return magLogTimelineByRicambio[detailRicambio.id] ?? [];
+  }, [detailRicambio, magLogTimelineByRicambio]);
 
   const anyOverlayOpen = newOpen || newIncompleteOpen || !!detail || logOpen || dupCheckModalOpen;
   useBodyScrollLock(anyOverlayOpen);
@@ -1757,7 +1785,7 @@ export function MagazzinoView() {
                 className={[
                   rowStockBg(p),
                   flash
-                    ? "shadow-[inset_0_0_0_1px_rgba(251,146,60,0.45)] ring-2 ring-orange-400/35"
+                    ? "shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_45%,transparent)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]"
                     : "",
                 ]
                   .filter(Boolean)
@@ -1811,14 +1839,12 @@ export function MagazzinoView() {
                   </div>
                 </dl>
                 <div className="mt-3 flex items-center justify-between gap-2 border-t border-zinc-200/90 pt-3 dark:border-zinc-700/80">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                      Ultima modifica
-                    </p>
-                    <p className="truncate text-xs font-medium text-zinc-900 dark:text-zinc-100">
-                      {formatDataUltimaMain(p.dataUltimaModifica)} · {p.autoreUltimaModifica}
-                    </p>
-                  </div>
+                  <p
+                    className="min-w-0 flex-1 truncate text-xs font-medium tabular-nums text-[color:var(--cab-text-muted)]"
+                    title={formatTimestampHover(p.dataUltimaModifica)}
+                  >
+                    {formatMagazzinoUltimaModificaMobile(p.dataUltimaModifica, p.autoreUltimaModifica)}
+                  </p>
                   <div className={`${dsTableActionsGroup} shrink-0`} role="group" aria-label="Azioni">
                   <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                     <IconInfoMagazzino />
@@ -1868,8 +1894,7 @@ export function MagazzinoView() {
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) {
               e.preventDefault();
-              setNewRicambioDraftId(null);
-              setNewOpen(false);
+              closeNewRicambioModal();
             }
           }}
         >
@@ -1884,10 +1909,7 @@ export function MagazzinoView() {
               <h2 id="new-ricambio-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                 Nuovo ricambio
               </h2>
-              <CloseButton onClick={() => {
-                setNewRicambioDraftId(null);
-                setNewOpen(false);
-              }} />
+              <CloseButton onClick={closeNewRicambioModal} />
             </div>
             <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNew} className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
@@ -1911,18 +1933,18 @@ export function MagazzinoView() {
                     recordId={newRicambioDraftId}
                     title="Foto ricambio"
                     canEdit={magCanCreateRicambio}
-                    onImageEvent={(ev) =>
-                      logImageEvent(ev, ricambioFromFormLenient(newForm, newRicambioDraftId, authorName))
-                    }
+                    auditLog={false}
                   />
                 ) : null}
               </div>
               <div className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] p-4">
                 <button
                   type="submit"
+                  disabled={saveBusy}
+                  aria-busy={saveBusy}
                   className={`${erpBtnAccent} w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
                 >
-                  Salva in magazzino
+                  {saveBusy ? "Salvataggio…" : "Salva in magazzino"}
                 </button>
               </div>
             </form>
@@ -2097,18 +2119,26 @@ export function MagazzinoView() {
                 <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
                   <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">Storico modifiche</p>
                   <ul className={`${gestionaleLogScrollEmbeddedClass} mt-2 max-h-56 space-y-2 pr-0.5`}>
-                    {infoTimeline.map((ev) => (
-                      <li key={ev.id} className="list-none">
-                        <GestionaleLogEntryFourLines
-                          vm={buildMagazzinoGestionaleLogViewModel(ev)}
-                          trailing={
-                            <GestionaleLogEntryDismissButton
-                              onDismiss={() => removeMagazzinoLogEntry(ev.id)}
-                            />
-                          }
-                        />
+                    {infoTimeline.length === 0 ? (
+                      <li className="list-none text-sm text-zinc-500 dark:text-zinc-400">
+                        {magLogFeedLoading ? "Caricamento storico…" : "Nessuna modifica registrata."}
                       </li>
-                    ))}
+                    ) : (
+                      infoTimeline.map((ev) => (
+                        <li key={ev.id} className="list-none">
+                          <GestionaleLogEntryFourLines
+                            vm={ev.vm}
+                            trailing={
+                              ev.source === "local" ? (
+                                <GestionaleLogEntryDismissButton
+                                  onDismiss={() => removeMagazzinoLogEntry(ev.id)}
+                                />
+                              ) : undefined
+                            }
+                          />
+                        </li>
+                      ))
+                    )}
                   </ul>
                 </div>
                 <button type="button" onClick={startEditFromInfo} className={`${erpBtnAccent} w-full justify-center`} disabled={!magCanCreateRicambio} title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : undefined}>
@@ -2160,8 +2190,13 @@ export function MagazzinoView() {
                     </div>
                     <div className="shrink-0 space-y-2 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] p-4">
                       <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                        <button type="submit" className={`${erpBtnAccent} w-full justify-center sm:w-auto`}>
-                          Salva
+                        <button
+                          type="submit"
+                          disabled={saveBusy}
+                          aria-busy={saveBusy}
+                          className={`${erpBtnAccent} w-full justify-center sm:w-auto disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+                        >
+                          {saveBusy ? "Salvataggio…" : "Salva"}
                         </button>
                         <button type="button" onClick={cancelEditBackToInfo} className={`${erpBtnNeutral} w-full justify-center sm:w-auto`}>
                           Annulla
@@ -2194,20 +2229,24 @@ export function MagazzinoView() {
       >
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
           <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
-              {logEntries.length === 0 ? (
-                <GestionaleLogEmpty message="Nessuna modifica registrata in questa sessione." />
+              {magLogFeedLoading && magLogFeed.length === 0 ? (
+                <p className="px-1 py-2 text-sm text-zinc-500 dark:text-zinc-400">Caricamento storico…</p>
+              ) : magLogFeed.length === 0 ? (
+                <GestionaleLogEmpty message="Nessuna modifica registrata." />
               ) : (
                 <GestionaleLogList>
-                  {pagedMagLogEntries.map((entry) => (
-                    <li key={entry.id} className="list-none">
+                  {pagedMagLogFeed.map((item) => (
+                    <li key={item.id} className="list-none">
                       <GestionaleLogEntryFourLines
-                        vm={buildMagazzinoGestionaleLogViewModel(entry)}
-                        onClick={() => focusRicambioInTable(entry.ricambioId)}
+                        vm={item.vm}
+                        onClick={() => focusRicambioInTable(item.ricambioId)}
                         title="Mostra ricambio in tabella"
                         trailing={
-                          <GestionaleLogEntryDismissButton
-                            onDismiss={() => removeMagazzinoLogEntry(entry.id)}
-                          />
+                          item.source === "local" ? (
+                            <GestionaleLogEntryDismissButton
+                              onDismiss={() => removeMagazzinoLogEntry(item.id)}
+                            />
+                          ) : undefined
                         }
                       />
                     </li>
@@ -2215,8 +2254,13 @@ export function MagazzinoView() {
                 </GestionaleLogList>
             )}
           </div>
-          {showMagLogPager ? (
-            <TablePagination page={magLogPage} pageCount={magLogPageCount} onPageChange={setMagLogPage} label={magLogPagerLabel} />
+          {showMagLogDrawerPager ? (
+            <TablePagination
+              page={magLogDrawerPage}
+              pageCount={magLogDrawerPageCount}
+              onPageChange={setMagLogDrawerPage}
+              label={magLogDrawerPagerLabel}
+            />
           ) : null}
         </div>
       </Drawer>

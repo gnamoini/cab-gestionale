@@ -76,7 +76,7 @@ export function FilterSelectWrap({ children }: { children: ReactNode }) {
   return (
     <div className="relative w-full min-w-[11rem] max-w-full">
       <span
-        className="pointer-events-none absolute left-2.5 top-1/2 z-10 -translate-y-1/2 text-orange-400"
+        className="pointer-events-none absolute left-2.5 top-1/2 z-10 -translate-y-1/2 text-[color:var(--cab-primary)]"
         aria-hidden
       >
         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.25}>
@@ -94,12 +94,12 @@ export function prioritaLabel(p: string) {
 
 /** Classi layout pill tabella (colori da `*PillShellStyle` + inline style). */
 export function statoPillShellClass(): string {
-  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:shadow-md focus-within:ring-2 focus-within:ring-inset focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] dark:border-white/10";
 }
 
 /** Pill stato a larghezza dinamica (fit-content, senza troncamento). */
 export function statoPillShellClassDynamic(): string {
-  return "relative inline-flex w-fit max-w-full min-w-0 items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-fit max-w-full min-w-0 items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:shadow-md focus-within:ring-2 focus-within:ring-inset focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] dark:border-white/10";
 }
 
 export function statoPillShellStyle(hex: string | undefined): CSSProperties {
@@ -107,12 +107,12 @@ export function statoPillShellStyle(hex: string | undefined): CSSProperties {
 }
 
 export function prioritaPillShellClass(): string {
-  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:shadow-md focus-within:ring-2 focus-within:ring-inset focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] dark:border-white/10";
 }
 
 /** Pill priorità a larghezza dinamica (Kanban, tabella fit-content). */
 export function prioritaPillShellClassDynamic(): string {
-  return "relative inline-flex w-fit max-w-full min-w-0 items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-fit max-w-full min-w-0 items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/12 transition-[filter,box-shadow] duration-200 ease-out hover:shadow-md focus-within:ring-2 focus-within:ring-inset focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] dark:border-white/10";
 }
 
 export function prioritaPillShellStyle(hex: string | undefined): CSSProperties {
@@ -120,7 +120,7 @@ export function prioritaPillShellStyle(hex: string | undefined): CSSProperties {
 }
 
 export function addettoPillShellClass(): string {
-  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:brightness-[1.04] focus-within:ring-2 focus-within:ring-inset focus-within:ring-orange-400/45 dark:border-white/10";
+  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:shadow-md focus-within:ring-2 focus-within:ring-inset focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] dark:border-white/10";
 }
 
 /** Pill addetto tabella: larghezza al contenuto (come stato). */

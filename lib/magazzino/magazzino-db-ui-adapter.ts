@@ -1,3 +1,4 @@
+import { normalizeRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import {
   metaFieldsToRicambioUi,
@@ -32,7 +33,7 @@ export function magazzinoRowToRicambioUI(row: MagazzinoRicambioRow, autore = "Si
   return {
     id: row.id,
     marca: row.marca?.trim() || "—",
-    codiceFornitoreOriginale: row.codice,
+    codiceFornitoreOriginale: normalizeRicambioCodice(row.codice?.trim() ?? ""),
     descrizione: row.nome,
     note: fromMeta.note,
     categoria: fromMeta.categoria,
@@ -55,7 +56,7 @@ export function magazzinoRowToRicambioUI(row: MagazzinoRicambioRow, autore = "Si
 /** Modello UI → insert Supabase. */
 export function ricambioUiToMagazzinoInsert(r: RicambioMagazzino): MagazzinoInsert {
   const row: MagazzinoInsert = {
-    codice: r.codiceFornitoreOriginale.trim(),
+    codice: normalizeRicambioCodice(r.codiceFornitoreOriginale.trim()),
     nome: r.descrizione.trim(),
     marca: r.marca.trim() || null,
     quantita: Math.max(0, Math.round(r.scorta)),

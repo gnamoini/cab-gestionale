@@ -1,7 +1,13 @@
-import type { PersistedThemeMode } from "@/lib/theme/user-theme-prefs";
+import {
+  DEFAULT_PERSISTED_THEME_MODE,
+  type PersistedThemeMode,
+} from "@/lib/theme/user-theme-prefs";
 
-/** Chiave localStorage — cache di boot (non source of truth; DB `user_prefs`). */
+/** Chiave localStorage — cache di boot (allineata a DB `user_prefs` quando autenticato). */
 export const CAB_THEME_STORAGE_KEY = "cab-theme";
+
+/** Migrazione one-shot: reset preferenza locale al default globale dark. */
+export const CAB_THEME_CLIENT_MIGRATION_KEY = "cab-theme-default-dark-v1";
 
 /** Applica tema al documento (condiviso con ThemeProvider). */
 export function applyPersistedThemeToDocument(mode: PersistedThemeMode): void {
@@ -31,12 +37,20 @@ export function writeThemeBootCache(mode: PersistedThemeMode): void {
   }
 }
 
-export function systemPrefersDark(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+/** Reset locale one-shot verso default dark (tutti i browser esistenti). */
+export function runThemeClientMigrationToDefault(): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (localStorage.getItem(CAB_THEME_CLIENT_MIGRATION_KEY) === "1") return;
+    localStorage.setItem(CAB_THEME_STORAGE_KEY, DEFAULT_PERSISTED_THEME_MODE);
+    localStorage.setItem(CAB_THEME_CLIENT_MIGRATION_KEY, "1");
+  } catch {
+    /* ignore */
+  }
 }
 
-/** Tema iniziale prima del fetch DB (cache utente o preferenza OS). */
+/** Tema boot: cache locale valida oppure default globale (mai preferenza OS). */
 export function resolveBootThemeMode(): PersistedThemeMode {
-  return readThemeBootCache() ?? (systemPrefersDark() ? "dark" : "light");
+  runThemeClientMigrationToDefault();
+  return readThemeBootCache() ?? DEFAULT_PERSISTED_THEME_MODE;
 }

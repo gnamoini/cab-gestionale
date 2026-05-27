@@ -14,6 +14,7 @@ import { useRbac } from "@/src/hooks/use-rbac";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
+import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
 import {
@@ -36,7 +37,7 @@ const navLinkInactive =
   "text-zinc-600 hover:bg-zinc-100/95 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/90 dark:hover:text-zinc-100";
 
 const navLinkActive =
-  "bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_22%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-8 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[var(--cab-primary)] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-card))] dark:text-orange-100 dark:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,transparent)]";
+  "bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_22%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-8 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[var(--cab-primary)] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-card))] dark:text-white dark:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,transparent)]";
 
 function NavLink({
   href,
@@ -141,10 +142,6 @@ function AccountMenu() {
     window.location.assign("/login");
   }
 
-  const initial =
-    status === "loading"
-      ? "·"
-      : (user?.nome?.trim()?.charAt(0) ?? user?.email?.trim()?.charAt(0) ?? "?").toUpperCase();
   const label = status === "loading" ? "Account" : (user?.nome ?? "Account");
 
   return (
@@ -156,9 +153,11 @@ function AccountMenu() {
         aria-expanded={open}
         aria-haspopup="menu"
       >
-        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-orange-500 text-[11px] font-bold text-white">
-          {initial}
-        </span>
+        <UserProfileAvatar
+          nome={status === "loading" ? "·" : user?.nome}
+          email={user?.email}
+          variant="header"
+        />
         <span className="min-w-0 flex-1 truncate font-medium text-[color:var(--cab-text)]">{label}</span>
         <span className="shrink-0 text-[color:var(--cab-text-muted)]" aria-hidden>
           ▾
@@ -205,9 +204,7 @@ function SidebarAccountFooter() {
   return (
     <div className="border-t border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-950/40">
       <div className="flex items-center gap-2">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-500 text-xs font-bold text-white">
-          {(user?.nome?.trim()?.charAt(0) ?? user?.email?.trim()?.charAt(0) ?? "?").toUpperCase()}
-        </span>
+        <UserProfileAvatar nome={user?.nome} email={user?.email} variant="sidebar" />
         <div className="min-w-0 flex-1">
           <p className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-50">{nome}</p>
           {user?.email ? (
@@ -271,7 +268,7 @@ function MobileNavRow({
       }}
       className={`flex min-h-[3.25rem] items-center gap-3 rounded-xl px-3 text-base font-semibold ${
         active
-          ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-card))] text-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_28%,transparent)] dark:text-orange-50"
+          ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-card))] text-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_28%,transparent)] dark:text-white"
           : "text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
       } ${erpFocus}`}
     >
@@ -500,31 +497,39 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className={`flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${mainPad}`}>
-        <header className="sticky top-0 z-30 grid h-14 grid-cols-[auto_1fr_auto] items-center gap-2 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_88%,transparent)] px-3 backdrop-blur-md sm:px-4 md:flex md:justify-between md:gap-3 md:px-5">
-          <button
-            type="button"
-            className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] md:hidden dark:border-[color:var(--cab-border-strong)] ${erpFocus}`}
-            aria-label="Apri menu"
-            onClick={() => setMobileOpen(true)}
-          >
-            ☰
-          </button>
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_88%,transparent)] px-3 backdrop-blur-md sm:px-4 md:justify-between md:gap-3 md:px-5">
+          <div className="flex shrink-0 items-center justify-start">
+            <button
+              type="button"
+              className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] md:hidden dark:border-[color:var(--cab-border-strong)] ${erpFocus}`}
+              aria-label="Apri menu"
+              onClick={() => setMobileOpen(true)}
+            >
+              ☰
+            </button>
 
-          <Link
-            href={homePath}
-            onClick={onHeaderHomeClick}
-            className={`${erpFocus} hidden min-w-0 items-center gap-2.5 rounded-lg py-1 pr-2 md:inline-flex`}
-          >
-            <CabLogo height={28} className="shrink-0 translate-y-[2px]" />
-            <span className="truncate text-xs font-semibold text-[color:var(--cab-text)] sm:text-sm">{CAB_APP_PRODUCT_NAME}</span>
-          </Link>
-
-          <div className="flex min-w-0 items-center justify-center gap-2 md:hidden">
-            <CabLogo height={20} className="shrink-0" />
-            <span className="truncate text-xs font-semibold text-[color:var(--cab-text)]">{CAB_APP_PRODUCT_NAME}</span>
+            <Link
+              href={homePath}
+              onClick={onHeaderHomeClick}
+              className={`${erpFocus} hidden min-w-0 items-center gap-2.5 rounded-lg py-1 pr-2 md:inline-flex`}
+            >
+              <CabLogo height={28} className="shrink-0 translate-y-[2px]" />
+              <span className="truncate text-xs font-semibold text-[color:var(--cab-text)] sm:text-sm">{CAB_APP_PRODUCT_NAME}</span>
+            </Link>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2 justify-self-end md:ml-auto md:items-center">
+          <div className="flex min-w-0 flex-1 justify-center md:hidden">
+            <Link
+              href={homePath}
+              onClick={onHeaderHomeClick}
+              aria-label={CAB_APP_PRODUCT_NAME}
+              className={`${erpFocus} inline-flex min-h-11 items-center justify-center rounded-lg px-1`}
+            >
+              <CabLogo height={22} className="shrink-0 translate-y-1 object-center" priority />
+            </Link>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-2">
             <ThemeToggle />
             <AccountMenu />
           </div>

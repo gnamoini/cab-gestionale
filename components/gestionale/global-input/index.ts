@@ -48,3 +48,10 @@ export {
   GestionaleFormFocusScope,
   gestionaleFormFocusScopeProps,
 } from "@/components/gestionale/gestionale-form-focus-scope";
+export { GlobalAnchoredMenu } from "@/components/gestionale/global-input/global-anchored-menu";
+export {
+  useGlobalDropdownPortal,
+  useDropdownOutsideDismiss,
+  type UseGlobalDropdownPortalOptions,
+  type UseGlobalDropdownPortalResult,
+} from "@/components/gestionale/global-input/use-global-dropdown-portal";

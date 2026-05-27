@@ -67,7 +67,7 @@ export function GestionaleListSearchField({
 
   const showDropdown = open && focused && suggestions.length > 0;
 
-  const { coords, style: portalStyle } = useGlobalDropdownPortal({
+  const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
     open: showDropdown,
     anchorRef: wrapRef,
     contentRef: dropdownRef,
@@ -176,14 +176,16 @@ export function GestionaleListSearchField({
         aria-autocomplete="list"
         autoComplete="off"
       />
-      {typeof document !== "undefined" && showDropdown && coords && portalStyle ? (
+      {typeof document !== "undefined" && showDropdown && portalStyle ? (
         createPortal(
           <ul
             ref={dropdownRef}
             id={listboxId}
             role="listbox"
             style={portalStyle}
-            className={`${globalInputDropdownPortalPanel} py-1 ${coords.scrollInside ? "overflow-y-auto" : "overflow-hidden"}`}
+            className={`${globalInputDropdownPortalPanel} py-1 ${placementOriginClass} ${
+              scrollInside ? "overflow-y-auto" : "overflow-hidden"
+            }`}
           >
             {suggestions.map((option, idx) => {
               const active = idx === activeIndex;

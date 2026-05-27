@@ -8,6 +8,7 @@ import {
   useState,
   type FocusEvent,
   type MouseEvent,
+  type PointerEvent,
   type RefObject,
   type TouchEvent,
 } from "react";
@@ -20,12 +21,15 @@ import {
 const DEFAULT_SHOW_DELAY_MS = 150;
 const HIDE_DELAY_MS = 100;
 const TOUCH_HOLD_MS = 400;
+/** Dopo un tap touch, ignora mouseenter sintetici (ghost events). */
+const TOUCH_GHOST_MOUSE_MS = 500;
 
 export function useTooltip({
   content,
   disabled = false,
   delayMs = DEFAULT_SHOW_DELAY_MS,
   side = "top",
+  showOnFocus = true,
   anchorRef,
   contentRef,
 }: {
@@ -33,6 +37,8 @@ export function useTooltip({
   disabled?: boolean;
   delayMs?: number;
   side?: TooltipSide;
+  /** Tooltip su focus tastiera (`:focus-visible`). Disabilitare per azioni che restano focalizzate al click. */
+  showOnFocus?: boolean;
   anchorRef: RefObject<HTMLElement | null>;
   contentRef: RefObject<HTMLElement | null>;
 }): {
@@ -44,9 +50,13 @@ export function useTooltip({
     onMouseLeave: (e: MouseEvent<HTMLElement>) => void;
     onFocus: (e: FocusEvent<HTMLElement>) => void;
     onBlur: (e: FocusEvent<HTMLElement>) => void;
+    onPointerDown: (e: PointerEvent<HTMLElement>) => void;
+    onPointerUp: (e: PointerEvent<HTMLElement>) => void;
+    onPointerCancel: (e: PointerEvent<HTMLElement>) => void;
     onTouchStart: (e: TouchEvent<HTMLElement>) => void;
     onTouchEnd: (e: TouchEvent<HTMLElement>) => void;
     onTouchCancel: (e: TouchEvent<HTMLElement>) => void;
+    onTouchMove: (e: TouchEvent<HTMLElement>) => void;
   };
 } {
   const [open, setOpen] = useState(false);
@@ -55,7 +65,10 @@ export function useTooltip({
   const showTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const touchGhostTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const activeRef = useRef(false);
+  const pointerActivatedRef = useRef(false);
+  const touchGhostRef = useRef(false);
 
   const canShow = Boolean(content?.trim()) && !disabled;
 
@@ -79,6 +92,22 @@ export function useTooltip({
       touchTimerRef.current = null;
     }
   }, []);
+
+  const clearTouchGhostTimer = useCallback(() => {
+    if (touchGhostTimerRef.current) {
+      clearTimeout(touchGhostTimerRef.current);
+      touchGhostTimerRef.current = null;
+    }
+  }, []);
+
+  const armTouchGhostMouseGuard = useCallback(() => {
+    touchGhostRef.current = true;
+    clearTouchGhostTimer();
+    touchGhostTimerRef.current = setTimeout(() => {
+      touchGhostRef.current = false;
+      touchGhostTimerRef.current = null;
+    }, TOUCH_GHOST_MOUSE_MS);
+  }, [clearTouchGhostTimer]);
 
   const updateCoords = useCallback(() => {
     const anchor = anchorRef.current;
@@ -117,6 +146,16 @@ export function useTooltip({
     scheduleHide();
   }, [clearShowTimer, clearTouchTimer, scheduleHide]);
 
+  const hideImmediate = useCallback(() => {
+    activeRef.current = false;
+    clearShowTimer();
+    clearTouchTimer();
+    clearHideTimer();
+    setVisible(false);
+    setOpen(false);
+    setCoords(null);
+  }, [clearShowTimer, clearTouchTimer, clearHideTimer]);
+
   useLayoutEffect(() => {
     if (!open) return;
     updateCoords();
@@ -138,11 +177,13 @@ export function useTooltip({
       clearShowTimer();
       clearHideTimer();
       clearTouchTimer();
+      clearTouchGhostTimer();
     };
-  }, [clearShowTimer, clearHideTimer, clearTouchTimer]);
+  }, [clearShowTimer, clearHideTimer, clearTouchTimer, clearTouchGhostTimer]);
 
   const onMouseEnter = useCallback(
     (_e: MouseEvent<HTMLElement>) => {
+      if (touchGhostRef.current) return;
       show();
     },
     [show],
@@ -150,6 +191,7 @@ export function useTooltip({
 
   const onMouseLeave = useCallback(
     (_e: MouseEvent<HTMLElement>) => {
+      pointerActivatedRef.current = false;
       hide();
     },
     [hide],
@@ -157,19 +199,40 @@ export function useTooltip({
 
   const onFocus = useCallback(
     (e: FocusEvent<HTMLElement>) => {
+      if (!showOnFocus || pointerActivatedRef.current) return;
       if (e.target instanceof HTMLElement && e.target.matches(":focus-visible")) {
         show();
       }
     },
-    [show],
+    [show, showOnFocus],
   );
 
   const onBlur = useCallback(
     (_e: FocusEvent<HTMLElement>) => {
+      pointerActivatedRef.current = false;
       hide();
     },
     [hide],
   );
+
+  const onPointerDown = useCallback(
+    (e: PointerEvent<HTMLElement>) => {
+      if (e.pointerType === "mouse" || e.pointerType === "touch" || e.pointerType === "pen") {
+        pointerActivatedRef.current = true;
+      }
+      hideImmediate();
+    },
+    [hideImmediate],
+  );
+
+  const onPointerUp = useCallback(() => {
+    // Il flag pointer resta fino a mouse leave / blur per non riaprire su :focus-visible da click.
+  }, []);
+
+  const onPointerCancel = useCallback(() => {
+    pointerActivatedRef.current = false;
+    hideImmediate();
+  }, [hideImmediate]);
 
   const onTouchStart = useCallback(
     (_e: TouchEvent<HTMLElement>) => {
@@ -185,17 +248,26 @@ export function useTooltip({
   const onTouchEnd = useCallback(
     (_e: TouchEvent<HTMLElement>) => {
       clearTouchTimer();
+      armTouchGhostMouseGuard();
       hide();
     },
-    [clearTouchTimer, hide],
+    [armTouchGhostMouseGuard, clearTouchTimer, hide],
   );
 
   const onTouchCancel = useCallback(
     (_e: TouchEvent<HTMLElement>) => {
       clearTouchTimer();
+      armTouchGhostMouseGuard();
       hide();
     },
-    [clearTouchTimer, hide],
+    [armTouchGhostMouseGuard, clearTouchTimer, hide],
+  );
+
+  const onTouchMove = useCallback(
+    (_e: TouchEvent<HTMLElement>) => {
+      clearTouchTimer();
+    },
+    [clearTouchTimer],
   );
 
   return {
@@ -207,9 +279,13 @@ export function useTooltip({
       onMouseLeave,
       onFocus,
       onBlur,
+      onPointerDown,
+      onPointerUp,
+      onPointerCancel,
       onTouchStart,
       onTouchEnd,
       onTouchCancel,
+      onTouchMove,
     },
   };
 }

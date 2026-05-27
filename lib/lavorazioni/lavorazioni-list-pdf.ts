@@ -69,17 +69,16 @@ function lavorazioniPdfColumnStyles(contentW: number) {
  */
 export function openLavorazioniInCorsoPdfInNewTab(
   rows: readonly LavorazioniInCorsoPdfRow[],
-  autore: string,
+  _autore: string,
 ): void {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const contentW = pdfContentWidth(pageW);
   const nowIso = new Date().toISOString();
-  const operatore = autore.trim() || "Operatore";
 
   let y = drawGestionalePdfHeader(doc, pageW, "LAVORAZIONI IN CORSO", {
     data: fmtDateIt(nowIso),
-    operatore,
+    metaDivider: false,
   });
   y = pdfAdvanceSection(y);
 
@@ -97,13 +96,12 @@ export function openLavorazioniInCorsoPdfInNewTab(
     doc,
     y,
     pageW,
-    "Elenco",
+    "TABELLA LAVORAZIONI",
     ["Cliente", "Attrezzatura", "Identificazione", "Stato", "Priorità", "Addetto"],
     body,
     lavorazioniPdfColumnStyles(contentW),
-    { label: "Righe", value: String(ordered.length) },
   );
 
-  drawPdfPageFooters(doc, `Lavorazioni in corso · ${ordered.length} righe`);
+  drawPdfPageFooters(doc, "Lavorazioni in corso");
   void openPdfBlobInNewTab(doc.output("blob"), buildFileName());
 }

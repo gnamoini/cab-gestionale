@@ -7,6 +7,8 @@ import {
 } from "@/lib/mezzi/attrezzature-prefs";
 import { flattenCompatFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { normalizeRicambioCodice } from "@/lib/magazzino/ricambio-codice";
+import { expandRicambioCompatibilitaMezzi } from "@/lib/magazzino/ricambio-compat-expand";
 import { isValueInListOptions } from "@/lib/ui/list-select-utils";
 
 const MAGAZZINO_DEFAULT_AUTHOR = "Operatore";
@@ -76,6 +78,10 @@ export type RicambioFormState = {
   note: string;
   categoria: string;
   compatibilitaMezzi: string;
+  /** Marche attrezzatura in filtro (espansione automatica modelli al save se vuote). */
+  compatMarcheAttrezzaturaFiltro: string;
+  /** Marche telaio in filtro (espansione automatica modelli al save se vuote). */
+  compatMarcheTelaioFiltro: string;
   scorta: string;
   scortaMinima: string;
   prezzoFornitoreOriginale: string;
@@ -112,6 +118,8 @@ export function emptyRicambioForm(): RicambioFormState {
     note: "",
     categoria: "",
     compatibilitaMezzi: "",
+    compatMarcheAttrezzaturaFiltro: "",
+    compatMarcheTelaioFiltro: "",
     scorta: "0",
     scortaMinima: "0",
     prezzoFornitoreOriginale: "0",
@@ -125,7 +133,12 @@ export function emptyRicambioForm(): RicambioFormState {
   });
 }
 
-export function ricambioFromForm(f: RicambioFormState, id?: string, autoreUltimaModifica = MAGAZZINO_DEFAULT_AUTHOR): RicambioMagazzino | null {
+export function ricambioFromForm(
+  f: RicambioFormState,
+  id?: string,
+  autoreUltimaModifica = MAGAZZINO_DEFAULT_AUTHOR,
+  compatExpand?: RicambioCompatExpandOptions,
+): RicambioMagazzino | null {
   if (
     !f.marca.trim() ||
     !f.codiceFornitoreOriginale.trim() ||
@@ -134,7 +147,7 @@ export function ricambioFromForm(f: RicambioFormState, id?: string, autoreUltima
   ) {
     return null;
   }
-  return ricambioFromFormLenient(f, id, autoreUltimaModifica);
+  return ricambioFromFormLenient(f, id, autoreUltimaModifica, compatExpand);
 }
 
 /** Elenco campi “importanti” mancanti o deboli (per avviso UX, non per bloccare). */
@@ -150,12 +163,44 @@ export function ricambioFormImportantWarnings(f: RicambioFormState): string[] {
 }
 
 /** Crea sempre un record: valori vuoti diventano segnaposto coerenti (salvataggio “incompleto”). */
+export type RicambioCompatExpandOptions = {
+  mezziListe: MezziListePrefs;
+};
+
+function resolveCompatibilitaMezziForSave(
+  f: RicambioFormState,
+  expand?: RicambioCompatExpandOptions,
+): string[] {
+  const parsed = parseCompatInput(f.compatibilitaMezzi);
+  if (!expand) return parsed;
+  return expandRicambioCompatibilitaMezzi(parsed, {
+    marcheAttrezzaturaFiltro: parseCompatInput(f.compatMarcheAttrezzaturaFiltro),
+    marcheTelaioFiltro: parseCompatInput(f.compatMarcheTelaioFiltro),
+    mezziListe: expand.mezziListe,
+  });
+}
+
+/** Applica espansione marca→tutti i modelli (per validazione e anteprima save). */
+export function applyCompatExpansionToFormState(
+  f: RicambioFormState,
+  mezziListe: MezziListePrefs,
+): RicambioFormState {
+  const expanded = resolveCompatibilitaMezziForSave(f, { mezziListe });
+  return {
+    ...f,
+    compatibilitaMezzi: expanded.join(", "),
+    compatMarcheAttrezzaturaFiltro: "",
+    compatMarcheTelaioFiltro: "",
+  };
+}
+
 export function ricambioFromFormLenient(
   f: RicambioFormState,
   id?: string,
   autoreUltimaModifica = MAGAZZINO_DEFAULT_AUTHOR,
+  compatExpand?: RicambioCompatExpandOptions,
 ): RicambioMagazzino {
-  const compat = parseCompatInput(f.compatibilitaMezzi);
+  const compat = resolveCompatibilitaMezziForSave(f, compatExpand);
   const ts = new Date().toISOString();
   const listino = Math.max(0, parseFloat(f.prezzoFornitoreOriginale) || 0);
   const markup = clampMarkupPercentuale(parseFloat(String(f.markupPercentuale).replace(",", ".")) || 0);
@@ -163,7 +208,7 @@ export function ricambioFromFormLenient(
   return {
     id: id ?? `r-${Date.now()}`,
     marca: f.marca.trim() || "—",
-    codiceFornitoreOriginale: f.codiceFornitoreOriginale.trim() || "—",
+    codiceFornitoreOriginale: normalizeRicambioCodice(f.codiceFornitoreOriginale.trim()) || "—",
     descrizione: f.descrizione.trim() || "Senza descrizione",
     note: f.note.trim(),
     categoria: f.categoria.trim() || "—",
@@ -177,7 +222,7 @@ export function ricambioFromFormLenient(
     markupPercentuale: markup,
     prezzoVendita,
     fornitoreNonOriginale: f.fornitoreNonOriginale.trim(),
-    codiceFornitoreNonOriginale: f.codiceFornitoreNonOriginale.trim(),
+    codiceFornitoreNonOriginale: normalizeRicambioCodice(f.codiceFornitoreNonOriginale.trim()),
     prezzoFornitoreNonOriginale: Math.max(0, parseFloat(f.prezzoFornitoreNonOriginale) || 0),
     scontoFornitoreNonOriginale: Math.min(100, Math.max(0, parseFloat(f.scontoFornitoreNonOriginale) || 0)),
   };
@@ -197,6 +242,8 @@ export function toFormDraft(r: RicambioMagazzino): RicambioFormState {
     note: r.note,
     categoria: r.categoria,
     compatibilitaMezzi: normalizeCompatList(r.compatibilitaMezzi).join(", "),
+    compatMarcheAttrezzaturaFiltro: "",
+    compatMarcheTelaioFiltro: "",
     scorta: String(r.scorta),
     scortaMinima: String(r.scortaMinima),
     prezzoFornitoreOriginale: String(r.prezzoFornitoreOriginale),
@@ -235,7 +282,8 @@ export function validateRicambioListFields(
   if (!isValueInListOptions(f.marca, opts.marche)) return "Seleziona una marca esistente.";
   if (!f.categoria.trim()) return "Seleziona una categoria.";
   if (!isValueInListOptions(f.categoria, opts.categorie)) return "Seleziona una categoria esistente.";
-  const compat = parseCompatInput(f.compatibilitaMezzi);
+  const fForCompat = applyCompatExpansionToFormState(f, opts.mezziListe);
+  const compat = parseCompatInput(fForCompat.compatibilitaMezzi);
   if (compat.length > 0) {
     const compatAllowed = ricambioCompatLabelsFromSettings(opts.mezziListe);
     const invalid = compat.filter((x) => !isValueInListOptions(x, compatAllowed));

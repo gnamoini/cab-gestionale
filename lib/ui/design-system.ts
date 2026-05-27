@@ -31,6 +31,18 @@ const cabBorder = "border-[color:var(--cab-border)]";
 const cabSurface = "bg-[var(--cab-surface)]";
 const cabCard = "bg-[var(--cab-card)]";
 
+/** Evidenziazione riga/card attiva (arancione piatto). */
+export const dsAccentRowHighlight =
+  "shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_45%,transparent)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]";
+
+/** Banner informativo accent (sfondo soft monocolore). */
+export const dsAccentSoftBanner =
+  "rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))]";
+
+/** Toggle pill attivo (arancione piatto). */
+export const dsAccentToggleOn =
+  "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]";
+
 /** Focus ring e micro-feedback click — usare su tutti i controlli interattivi. */
 export const dsFocus =
   "outline-none transition-all duration-150 active:scale-[0.98] focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--cab-bg-app)] dark:focus-visible:ring-offset-[var(--cab-bg-app)]";
@@ -49,10 +61,10 @@ export const dsPageToolbarBtn = `inline-flex min-h-[2.5rem] shrink-0 items-cente
 export const dsBtnSettings = dsPageToolbarBtn;
 
 /** A — Primario */
-export const dsBtnPrimary = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-sm)] hover:brightness-[1.06] hover:shadow-[var(--cab-shadow-md)] hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+export const dsBtnPrimary = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-primary-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
-/** A — CTA hero */
-export const dsBtnCtaHero = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] bg-gradient-to-b from-[var(--cab-primary)] to-[color:color-mix(in_srgb,var(--cab-primary)_82%,#000)] px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-md)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-lg hover:brightness-[1.03] active:translate-y-0 active:brightness-[0.98] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+/** A — CTA hero (stesso arancio piatto del primario) */
+export const dsBtnCtaHero = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[var(--cab-primary)] px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-md)] transition-[box-shadow,background-color] duration-200 ease-out hover:bg-[var(--cab-primary-hover)] hover:shadow-lg active:bg-[var(--cab-primary-hover)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** B — Secondario soft arancio */
 export const dsBtnSoftOrange = `inline-flex items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-2.5 py-1.5 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-surface))] hover:shadow-[var(--cab-shadow-md)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;

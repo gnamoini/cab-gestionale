@@ -627,7 +627,7 @@ export function PreventiviView() {
 
   const bannerFilter =
     filterLavId && filterOrig ? (
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50/80 px-3 py-2 text-sm text-orange-950">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]">
         <span>
           Filtro attivo: preventivi collegati alla lavorazione selezionata ({filterOrig === "attiva" ? "attiva" : "storico"}).
         </span>
@@ -638,7 +638,7 @@ export function PreventiviView() {
     ) : null;
 
   const bannerMezzo = filterMezzoRaw ? (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-orange-200 bg-orange-50/80 px-3 py-2 text-sm text-orange-950">
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]">
       <span>Filtro attivo: preventivi collegati al mezzo selezionato.</span>
       <button type="button" className={dsBtnNeutral} onClick={clearMezzoFilter}>
         Rimuovi filtro
@@ -855,7 +855,7 @@ export function PreventiviView() {
                     key={p.id}
                     id={`preventivo-row-${p.id}`}
                     className={`${gestionaleListTableRowClass} ${
-                      focused ? "ring-2 ring-inset ring-orange-400/80 bg-orange-500/10" : ""
+                      focused ? "ring-2 ring-inset ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]" : ""
                     }`}
                   >
                     <td className={`whitespace-nowrap ${prevTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
@@ -928,7 +928,7 @@ export function PreventiviView() {
                 <CardMobile
                   key={p.id}
                   id={`preventivo-row-${p.id}`}
-                  className={focused ? "ring-2 ring-orange-400/80 bg-orange-500/10" : undefined}
+                  className={focused ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]" : undefined}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">

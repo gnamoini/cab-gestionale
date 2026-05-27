@@ -41,7 +41,7 @@ export function ThemeToggle() {
   }
 
   return (
-    <Tooltip content={tip}>
+    <Tooltip content={tip} showOnFocus={false}>
       <button
         type="button"
         onClick={toggleLightDark}

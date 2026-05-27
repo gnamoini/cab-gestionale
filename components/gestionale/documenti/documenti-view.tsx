@@ -11,6 +11,7 @@ import {
   gestionaleToDocumentoUpdate,
   uploadDocumentoBlob,
 } from "@/lib/documenti/documenti-db-mapper";
+import { useUploadFeedback } from "@/context/upload-feedback-context";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { PageHeader } from "@/components/gestionale/page-header";
@@ -148,12 +149,12 @@ function DocGlyph({ doc }: { doc: DocumentoGestionale }) {
     "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border text-[9px] font-bold uppercase tracking-tight shadow-sm";
   const byCat =
     doc.categoria === "listini"
-      ? "border-amber-200/90 bg-gradient-to-br from-amber-50 to-amber-100/80 text-amber-900 dark:border-amber-800/60 dark:from-amber-950/80 dark:to-amber-900/40 dark:text-amber-100"
+      ? "border-amber-200/90 bg-amber-50 text-amber-900 dark:border-amber-800/60 dark:bg-amber-950/80 dark:text-amber-100"
       : doc.categoria === "cataloghi"
-        ? "border-sky-200/90 bg-gradient-to-br from-sky-50 to-sky-100/80 text-sky-900 dark:border-sky-800/60 dark:from-sky-950/80 dark:to-sky-900/40 dark:text-sky-100"
+        ? "border-sky-200/90 bg-sky-50 text-sky-900 dark:border-sky-800/60 dark:bg-sky-950/80 dark:text-sky-100"
         : doc.categoria === "manuali"
-          ? "border-emerald-200/90 bg-gradient-to-br from-emerald-50 to-emerald-100/80 text-emerald-900 dark:border-emerald-800/60 dark:from-emerald-950/80 dark:to-emerald-900/40 dark:text-emerald-100"
-          : "border-zinc-200/90 bg-gradient-to-br from-zinc-50 to-zinc-100/80 text-zinc-700 dark:border-zinc-600 dark:from-zinc-800 dark:to-zinc-900 dark:text-zinc-200";
+          ? "border-emerald-200/90 bg-emerald-50 text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/80 dark:text-emerald-100"
+          : "border-zinc-200/90 bg-zinc-50 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200";
   const icon =
     doc.categoria === "listini" ? (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -339,7 +340,9 @@ export function DocumentiView() {
   const mezziQuery = useMezziListQuery();
   const documentiQuery = useDocumentiListQuery();
   const mezziSnap = useMemo(() => (mezziQuery.data ?? []).map(toMezzoUI), [mezziQuery.data]);
-  const [docBusy, setDocBusy] = useState(false);
+  const { runUpload, isUploading: docUploadInFlight } = useUploadFeedback();
+  const [docMutating, setDocMutating] = useState(false);
+  const docBusy = docMutating || docUploadInFlight;
 
   const catalog = useMemo(() => {
     const prefs = migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault());
@@ -577,55 +580,59 @@ export function DocumentiView() {
   const handleUpload = useCallback(
     async (payload: Omit<DocumentoGestionale, "id">) => {
       if (!canUploadDocuments) return;
-      setDocBusy(true);
-      try {
-        let urlFile = payload.urlDocumento?.trim() ?? "";
-        if (payload.urlBlob?.trim()) {
-          const up = await uploadDocumentoBlob(payload.urlBlob, payload.nome || "documento");
-          if (!up.success || !up.data) {
-            setToast(up.error ?? "Caricamento file non riuscito.");
-            return;
+      const fileName = payload.nome?.trim() || "documento";
+      const result = await runUpload({
+        fileName,
+        label: `Documento: ${fileName}`,
+        successToast: "Documento caricato.",
+        run: async () => {
+          let urlFile = payload.urlDocumento?.trim() ?? "";
+          if (payload.urlBlob?.trim()) {
+            const up = await uploadDocumentoBlob(payload.urlBlob, payload.nome || "documento");
+            if (!up.success || !up.data) {
+              throw new Error(up.error ?? "Caricamento file non riuscito.");
+            }
+            urlFile = up.data;
+            try {
+              URL.revokeObjectURL(payload.urlBlob);
+            } catch {
+              /* ignore */
+            }
           }
-          urlFile = up.data;
-          try {
-            URL.revokeObjectURL(payload.urlBlob);
-          } catch {
-            /* ignore */
+          if (!urlFile) {
+            throw new Error("File non disponibile per il salvataggio.");
           }
-        }
-        if (!urlFile) {
-          setToast("File non disponibile per il salvataggio.");
-          return;
-        }
-        const insert = gestionaleToDocumentoInsert(payload, urlFile);
-        const res = await documentiService.create(insert);
-        if (!res.success || !res.data) {
-          setToast(res.error ?? "Impossibile salvare il documento.");
-          return;
-        }
-        const row = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
-        appendDocumentiChangeLog({
-          tone: "create",
-          tipoRiga: "CARICAMENTO",
-          oggettoRiga: `Documento: ${row.nome}`,
-          modificaRiga: `Upload in archivio. Categoria: ${labelCategoria(row.categoria)}.`,
-          autore: authorTrim,
-          atIso: new Date().toISOString(),
-        });
-        refreshDocumenti();
-        setToast("Documento caricato.");
-      } finally {
-        setDocBusy(false);
+          const insert = gestionaleToDocumentoInsert(payload, urlFile);
+          const res = await documentiService.create(insert);
+          if (!res.success || !res.data) {
+            throw new Error(res.error ?? "Impossibile salvare il documento.");
+          }
+          const row = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
+          appendDocumentiChangeLog({
+            tone: "create",
+            tipoRiga: "CARICAMENTO",
+            oggettoRiga: `Documento: ${row.nome}`,
+            modificaRiga: `Upload in archivio. Categoria: ${labelCategoria(row.categoria)}.`,
+            autore: authorTrim,
+            atIso: new Date().toISOString(),
+          });
+          refreshDocumenti();
+          return row;
+        },
+      });
+      if (!result.ok) {
+        setToast(result.error);
+        throw new Error(result.error);
       }
     },
-    [authorTrim, refreshDocumenti, canUploadDocuments],
+    [authorTrim, refreshDocumenti, canUploadDocuments, runUpload],
   );
 
   const handleSaveEdit = useCallback(
     async (next: DocumentoGestionale) => {
       if (!canUploadDocuments) return;
       const old = docs.find((d) => d.id === next.id);
-      setDocBusy(true);
+      setDocMutating(true);
       try {
         const update = gestionaleToDocumentoUpdate(next);
         const res = await documentiService.update(next.id, update);
@@ -650,7 +657,7 @@ export function DocumentiView() {
         refreshDocumenti();
         setToast("Documento aggiornato.");
       } finally {
-        setDocBusy(false);
+        setDocMutating(false);
       }
     },
     [docs, authorTrim, refreshDocumenti, canUploadDocuments],
@@ -665,7 +672,7 @@ export function DocumentiView() {
           : `Eliminare definitivamente «${victim.nome}»?`,
       );
       if (!ok) return;
-      setDocBusy(true);
+      setDocMutating(true);
       try {
         const res = await documentiService.remove(victim.id);
         if (!res.success) {
@@ -694,7 +701,7 @@ export function DocumentiView() {
         refreshDocumenti();
         setToast("Documento eliminato.");
       } finally {
-        setDocBusy(false);
+        setDocMutating(false);
       }
     },
     [authorTrim, refreshDocumenti, canDeleteRecords],
@@ -1214,7 +1221,12 @@ export function DocumentiView() {
       </div>
 
       {uploadOpen && canUploadDocuments ? (
-        <UploadDocumentoModal catalog={catalog} onRequestClose={() => setUploadOpen(false)} onSubmit={handleUpload} />
+        <UploadDocumentoModal
+          catalog={catalog}
+          isUploading={docUploadInFlight}
+          onRequestClose={() => setUploadOpen(false)}
+          onSubmit={handleUpload}
+        />
       ) : null}
 
       {infoDoc ? (

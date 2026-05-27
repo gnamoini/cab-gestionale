@@ -21,9 +21,9 @@ const FILTER_OPTIONS: { id: LavorazioneAttivitaFilter; label: string }[] = [
 ];
 
 function tierDotClass(tier: LavorazioneAttivitaEvent["tier"]): string {
-  if (tier === "stato") return "h-3 w-3 bg-orange-500 ring-[3px]";
+  if (tier === "stato") return "h-3 w-3 bg-[var(--cab-primary)] ring-[3px]";
   if (tier === "secondary") return "h-2 w-2 bg-zinc-400/80 ring-2 opacity-70";
-  return "h-2.5 w-2.5 bg-orange-500 ring-2";
+  return "h-2.5 w-2.5 bg-[var(--cab-primary)] ring-2";
 }
 
 function tierTitleClass(tier: LavorazioneAttivitaEvent["tier"]): string {
@@ -119,7 +119,7 @@ export function LavorazioneAttivitaPanel({
                 type="button"
                 className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-colors ${
                   active
-                    ? "border-orange-400/70 bg-orange-500/15 text-orange-900 dark:text-orange-100"
+                    ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]"
                     : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
                 }`}
                 onClick={() => setFilter(opt.id)}

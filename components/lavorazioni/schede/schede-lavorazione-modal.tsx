@@ -991,7 +991,7 @@ export function SchedeLavorazioneModal({
         key={id}
         className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
           active
-            ? "border-orange-400/70 bg-orange-500/15 text-orange-900 dark:text-orange-100"
+            ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]"
             : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
         }`}
         onClick={() => {
@@ -1015,7 +1015,7 @@ export function SchedeLavorazioneModal({
             </span>
             <Link
               href={buildPreventiviArchivioFilterHref(lav.id, lavOrigine)}
-              className="font-semibold text-orange-700 underline-offset-2 hover:underline dark:text-orange-400"
+              className="font-semibold text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
             >
               Apri archivio preventivi
             </Link>
@@ -1960,7 +1960,7 @@ function RicambiPanel({
                 <li key={p.id}>
                   <button
                     type="button"
-                    className="flex w-full flex-col px-3 py-2 text-left hover:bg-orange-50 dark:hover:bg-orange-950/30"
+                    className="flex w-full flex-col px-3 py-2 text-left hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] dark:hover:bg-orange-950/30"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => addRicambioFromMag(p)}
                   >
@@ -2019,7 +2019,7 @@ function RicambiPanel({
                               <li key={p.id}>
                                 <button
                                   type="button"
-                                  className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-orange-50"
+                                  className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]"
                                   onMouseDown={(e) => e.preventDefault()}
                                   onClick={() => {
                                     patchRighe(

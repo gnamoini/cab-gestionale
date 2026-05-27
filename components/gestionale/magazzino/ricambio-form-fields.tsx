@@ -14,21 +14,23 @@ import {
   flattenCompatFromHierarchyTree,
   marcheFromHierarchyTree,
 } from "@/lib/mezzi/hierarchy-list-prefs";
-import { ricambioCompatLabelsFromSettings } from "@/lib/magazzino/form";
 import {
   clampMarkupPercentuale,
   normalizeMarkupInputString,
   parseCompatInput,
+  ricambioCompatLabelsFromSettings,
   syncPrezzoVenditaInForm,
 } from "@/lib/magazzino/form";
+import { marchePendingUniversalCompatExpand } from "@/lib/magazzino/ricambio-compat-expand";
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
+import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
 import { GestionaleFormFocusScope } from "@/components/gestionale/gestionale-form-focus-scope";
 import { dsBtnPrimary, dsInput, dsStepperBtn } from "@/lib/ui/design-system";
 import { getScontoFornitoreMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 
 const inputBase =
-  "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-orange-500/25 focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950";
+  "w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm outline-none ring-[color:color-mix(in_srgb,var(--cab-primary)_25%,transparent)] focus:ring-2 dark:border-zinc-700 dark:bg-zinc-950";
 
 /** Nasconde frecce native del browser su input numerici (stepper custom solo scorta). */
 const noSpinner =
@@ -139,8 +141,28 @@ export function RicambioFormFields({
   const prefsTree = useMemo(() => migrateMezziListePrefs(globalOpts.mezziListe), [globalOpts.mezziListe]);
   const globalCompatLabels = useMemo(() => ricambioCompatLabelsFromSettings(globalOpts.mezziListe), [globalOpts.mezziListe]);
   const mezziSel = useMemo(() => new Set(parseCompatInput(form.compatibilitaMezzi)), [form.compatibilitaMezzi]);
-  const [marcheFiltroAtt, setMarcheFiltroAtt] = useState<Set<string>>(() => new Set());
-  const [marcheFiltroTel, setMarcheFiltroTel] = useState<Set<string>>(() => new Set());
+  const [marcheFiltroAtt, setMarcheFiltroAtt] = useState<Set<string>>(
+    () => new Set(parseCompatInput(form.compatMarcheAttrezzaturaFiltro)),
+  );
+  const [marcheFiltroTel, setMarcheFiltroTel] = useState<Set<string>>(
+    () => new Set(parseCompatInput(form.compatMarcheTelaioFiltro)),
+  );
+
+  function syncMarcheAttrezzaturaFiltro(next: Set<string>) {
+    setMarcheFiltroAtt(next);
+    const joined = Array.from(next)
+      .sort((a, b) => a.localeCompare(b, "it"))
+      .join(", ");
+    setForm((f) => ({ ...f, compatMarcheAttrezzaturaFiltro: joined }));
+  }
+
+  function syncMarcheTelaioFiltro(next: Set<string>) {
+    setMarcheFiltroTel(next);
+    const joined = Array.from(next)
+      .sort((a, b) => a.localeCompare(b, "it"))
+      .join(", ");
+    setForm((f) => ({ ...f, compatMarcheTelaioFiltro: joined }));
+  }
 
   const invalidCompat = useMemo(() => {
     const selected = parseCompatInput(form.compatibilitaMezzi);
@@ -251,6 +273,24 @@ export function RicambioFormFields({
     [prefsTree, marcheFiltroTelList],
   );
 
+  const pendingUniversalMarche = useMemo(
+    () =>
+      marchePendingUniversalCompatExpand(parseCompatInput(form.compatibilitaMezzi), {
+        marcheAttrezzaturaFiltro: marcheFiltroAttList,
+        marcheTelaioFiltro: marcheFiltroTelList,
+        mezziListe: prefsTree,
+      }),
+    [form.compatibilitaMezzi, marcheFiltroAttList, marcheFiltroTelList, prefsTree],
+  );
+
+  const pendingUniversalLabel = useMemo(() => {
+    const parts = [
+      ...pendingUniversalMarche.attrezzature.map((m) => `${m} (attrezzatura)`),
+      ...pendingUniversalMarche.telai.map((m) => `${m} (telaio)`),
+    ];
+    return parts.join(", ");
+  }, [pendingUniversalMarche]);
+
   return (
     <GestionaleFormFocusScope className="flex flex-col gap-3">
       <RicambioField label={fieldsOptional ? "Marca" : "Marca *"}>
@@ -275,7 +315,11 @@ export function RicambioFormFields({
         <input
           required={!relaxHtmlValidation}
           value={form.codiceFornitoreOriginale}
-          onChange={(e) => setForm((f) => ({ ...f, codiceFornitoreOriginale: e.target.value }))}
+          onChange={(e) =>
+            applyRicambioCodiceInputChange(e, (codiceFornitoreOriginale) =>
+              setForm((f) => ({ ...f, codiceFornitoreOriginale })),
+            )
+          }
           className={`${inputBase} font-mono font-semibold tracking-wide ${
             codiceOriginaleAvvisoDuplicato
               ? "border-amber-400/90 ring-1 ring-amber-400/35 dark:border-amber-600 dark:ring-amber-600/30"
@@ -365,14 +409,12 @@ export function RicambioFormFields({
               disabled={globalOpts.isLoading}
               options={marcheAttrezzatura}
               selected={marcheFiltroAttList.map((m) => ({ value: m }))}
-              onAdd={(m) => setMarcheFiltroAtt((prev) => new Set(prev).add(m))}
-              onRemove={(m) =>
-                setMarcheFiltroAtt((prev) => {
-                  const next = new Set(prev);
-                  next.delete(m);
-                  return next;
-                })
-              }
+              onAdd={(m) => syncMarcheAttrezzaturaFiltro(new Set(marcheFiltroAtt).add(m))}
+              onRemove={(m) => {
+                const next = new Set(marcheFiltroAtt);
+                next.delete(m);
+                syncMarcheAttrezzaturaFiltro(next);
+              }}
               emptyMessage="Nessuna marca"
             />
           </div>
@@ -403,14 +445,12 @@ export function RicambioFormFields({
               disabled={globalOpts.isLoading}
               options={marcheTelaio}
               selected={marcheFiltroTelList.map((m) => ({ value: m }))}
-              onAdd={(m) => setMarcheFiltroTel((prev) => new Set(prev).add(m))}
-              onRemove={(m) =>
-                setMarcheFiltroTel((prev) => {
-                  const next = new Set(prev);
-                  next.delete(m);
-                  return next;
-                })
-              }
+              onAdd={(m) => syncMarcheTelaioFiltro(new Set(marcheFiltroTel).add(m))}
+              onRemove={(m) => {
+                const next = new Set(marcheFiltroTel);
+                next.delete(m);
+                syncMarcheTelaioFiltro(next);
+              }}
               emptyMessage="Nessuna marca"
             />
           </div>
@@ -434,8 +474,18 @@ export function RicambioFormFields({
         <p className="mt-1 text-[11px] text-zinc-500">
           {mezziSel.size > 0
             ? `${mezziSel.size} compatibilità selezionate`
-            : "Nessuna selezione — compatibilità universale (tutte le macchine)"}
+            : pendingUniversalLabel
+              ? "Nessun modello selezionato — al salvataggio verranno aggiunti tutti i modelli delle marche in filtro."
+              : "Nessuna selezione — compatibilità universale (tutte le macchine)"}
         </p>
+        {pendingUniversalLabel ? (
+          <p
+            className="mt-1.5 rounded-md border border-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)] bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,transparent)] px-2 py-1 text-[11px] text-[color:var(--cab-text)]"
+            role="status"
+          >
+            Compatibilità universale per marca: {pendingUniversalLabel}
+          </p>
+        ) : null}
         {invalidCompat.length > 0 ? (
           <p className="mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]">
             Seleziona solo compatibilità dall&apos;elenco configurato.
@@ -544,7 +594,11 @@ export function RicambioFormFields({
       <RicambioField label="Codice alternativo">
         <input
           value={form.codiceFornitoreNonOriginale}
-          onChange={(e) => setForm((f) => ({ ...f, codiceFornitoreNonOriginale: e.target.value }))}
+          onChange={(e) =>
+            applyRicambioCodiceInputChange(e, (codiceFornitoreNonOriginale) =>
+              setForm((f) => ({ ...f, codiceFornitoreNonOriginale })),
+            )
+          }
           className={`${inputBase} font-mono`}
         />
       </RicambioField>

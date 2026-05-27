@@ -20,7 +20,7 @@ import { erpBtnNeutral, erpBtnSoftOrange, erpFocus } from "@/components/gestiona
 
 const PANEL = "w-full rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900";
 const INPUT =
-  "min-h-10 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-500/25 dark:border-zinc-700 dark:bg-zinc-950";
+  "min-h-10 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_25%,transparent)] dark:border-zinc-700 dark:bg-zinc-950";
 
 export function HierarchyTreeSettingsSection({
   treeKey,

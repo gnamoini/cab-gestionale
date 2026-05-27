@@ -1,7 +1,7 @@
 "use client";
 
 import { Tooltip } from "@/components/design-system/tooltip";
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { dispatchGestionaleLocalMutation } from "@/src/lib/react-query/invalidate-related";
 import {
@@ -13,6 +13,8 @@ import {
   type StoredImage,
 } from "@/lib/media/image-storage";
 import { prefetchStorageBuckets } from "@/src/services/storage.service";
+import { GestionaleFileInput } from "@/components/gestionale/upload";
+import { useFileUpload } from "@/hooks/use-file-upload";
 import { dsBtnDanger, dsBtnNeutral, dsScrollbar } from "@/lib/ui/design-system";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { logService } from "@/src/services/log.service";
@@ -54,6 +56,7 @@ export function RecordImageManager({
   title = "Foto",
   canEdit = true,
   maxImages = MAX_IMAGES_PER_RECORD,
+  auditLog = true,
   onImageEvent,
 }: {
   scope: ImageScope;
@@ -61,14 +64,14 @@ export function RecordImageManager({
   title?: string;
   canEdit?: boolean;
   maxImages?: number;
+  /** Se false, nessuna riga in log_modifiche finché il record non è persistito (es. draft nuovo ricambio). */
+  auditLog?: boolean;
   onImageEvent?: (event: RecordImageLogEvent) => void;
 }) {
   const qc = useQueryClient();
-  const inputId = useId();
   const [images, setImages] = useState<StoredImage[]>([]);
   const [preview, setPreview] = useState<StoredImage | null>(null);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
@@ -94,6 +97,7 @@ export function RecordImageManager({
 
   const writeImageLog = useCallback(
     async (action: ImageLogAction, image: { name: string; path: string }): Promise<string | null> => {
+      if (!auditLog) return null;
       const at = new Date().toISOString();
       const supabase = getBrowserSupabase();
       const { data } = await supabase.auth.getUser();
@@ -114,29 +118,26 @@ export function RecordImageManager({
       onImageEvent?.({ action, scope, recordId, imageName: image.name, path: image.path, at });
       return null;
     },
-    [onImageEvent, recordId, scope],
+    [auditLog, onImageEvent, recordId, scope],
   );
 
-  async function onFile(file: File | undefined) {
-    if (!file || uploading) return;
-    if (images.length >= maxImages) {
-      setError(`Limite massimo ${maxImages} immagini raggiunto`);
-      return;
-    }
-    setUploading(true);
-    setError(null);
-    try {
+  const imageUpload = useFileUpload({
+    label: title,
+    successToast: false,
+    run: async (file) => {
+      if (images.length >= maxImages) {
+        throw new Error(`Limite massimo ${maxImages} immagini raggiunto`);
+      }
       const uploaded = await uploadStoredImage(scope, recordId, file);
       const logError = await writeImageLog("image_uploaded", uploaded);
       await refresh();
       if (scope === "lavorazioni") dispatchGestionaleLocalMutation(qc, ["log_modifiche"]);
-      if (logError) setError(`Foto caricata, ma log non registrato: ${logError}`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload non riuscito.");
-    } finally {
-      setUploading(false);
-    }
-  }
+      if (logError) {
+        throw new Error(`Foto caricata, ma log non registrato: ${logError}`);
+      }
+      return uploaded;
+    },
+  });
 
   async function removeImage(img: StoredImage) {
     if (!window.confirm("Eliminare questa foto?")) return;
@@ -154,8 +155,9 @@ export function RecordImageManager({
   }
 
   const limitReached = images.length >= maxImages;
-  const canUpload = canEdit && !limitReached && !uploading;
+  const canUpload = canEdit && !limitReached && imageUpload.canSelect;
   const uploadTitle = limitReached ? `Limite massimo ${maxImages} immagini raggiunto` : "Aggiungi foto";
+  const uploadError = imageUpload.error ?? error;
 
   return (
     <section className="rounded-lg border border-zinc-100 bg-white/80 px-3 py-2.5 dark:border-zinc-700/80 dark:bg-zinc-900/50">
@@ -170,29 +172,23 @@ export function RecordImageManager({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
-          <label
-            className={`${dsBtnNeutral} ${canUpload ? "cursor-pointer" : "cursor-not-allowed opacity-55"}`}
+          <GestionaleFileInput
+            accept="image/*"
+            disabled={!canUpload}
+            buttonLabel="Aggiungi foto"
             title={uploadTitle}
-          >
-            Aggiungi foto
-            <input
-              id={inputId}
-              type="file"
-              accept="image/*"
-              className="sr-only"
-              disabled={!canUpload}
-              onChange={(e) => {
-                const file = e.currentTarget.files?.[0];
-                e.currentTarget.value = "";
-                void onFile(file);
-              }}
-            />
-          </label>
+            phase={imageUpload.phase}
+            fileName={imageUpload.file?.name}
+            error={imageUpload.error}
+            onRetry={imageUpload.retry}
+            onChange={imageUpload.onFileInputChange}
+            showInlineStatus={false}
+          />
         </div>
       </div>
-      {error ? (
+      {uploadError ? (
         <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
-          {error}
+          {uploadError}
         </p>
       ) : null}
       {images.length > 0 ? (

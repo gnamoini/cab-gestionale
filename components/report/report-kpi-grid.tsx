@@ -69,7 +69,7 @@ export function ReportKpiGrid({ items }: { items: KpiCardModel[] }) {
             {hasCmp ? <CompareBlock rows={k.compareRows!} /> : null}
             <div className="mt-auto flex items-end justify-between gap-2 pt-4">
               <span className="text-[11px] text-zinc-400">Trend 7gg (chiusure)</span>
-              <ReportSparkline values={k.spark} className="text-orange-500" />
+              <ReportSparkline values={k.spark} className="text-[color:var(--cab-primary)]" />
             </div>
           </div>
         );

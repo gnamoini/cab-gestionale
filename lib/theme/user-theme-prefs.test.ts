@@ -1,5 +1,11 @@
 import assert from "node:assert/strict";
-import { parsePersistedThemeMode, themeModeFromSettingsValue } from "@/lib/theme/user-theme-prefs";
+import {
+  DEFAULT_PERSISTED_THEME_MODE,
+  parsePersistedThemeMode,
+  themeModeFromSettingsValue,
+} from "@/lib/theme/user-theme-prefs";
+
+assert.equal(DEFAULT_PERSISTED_THEME_MODE, "dark");
 
 assert.equal(parsePersistedThemeMode("light"), "light");
 assert.equal(parsePersistedThemeMode("dark"), "dark");

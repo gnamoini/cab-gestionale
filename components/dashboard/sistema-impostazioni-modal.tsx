@@ -357,7 +357,7 @@ function useSimilarGate() {
 }
 
 const INPUT_ROW =
-  "min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-orange-300 focus:ring-2 focus:ring-orange-500/25 dark:border-zinc-700 dark:bg-zinc-950";
+  "min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_25%,transparent)] dark:border-zinc-700 dark:bg-zinc-950";
 
 function ClientiCommercialiList({
   liste,
@@ -1157,7 +1157,7 @@ function SistemaImpostazioniWorkspace({
                         setMobileNavOpen(false);
                       }}
                       className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold transition-colors ${
-                        active ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:brightness-[1.06]" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
+                        active ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:bg-[var(--cab-primary-hover)]" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
                       }`}
                     >
                       {e.label}
@@ -1200,7 +1200,7 @@ function SistemaImpostazioniWorkspace({
                     onClick={() => setSection(e.id)}
                     className={`flex w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition-colors ${
                       active
-                        ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:brightness-[1.06]"
+                        ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:bg-[var(--cab-primary-hover)]"
                         : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
                     }`}
                   >

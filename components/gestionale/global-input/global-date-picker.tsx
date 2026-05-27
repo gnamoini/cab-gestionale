@@ -69,10 +69,13 @@ export function GlobalDatePicker({
 
   const closeCalendar = useCallback(() => setOpen(false), []);
 
-  const { coords, style: portalStyle } = useGlobalDropdownPortal({
+  const { style: portalStyle, placementOriginClass } = useGlobalDropdownPortal({
     open,
     anchorRef: wrapRef,
     contentRef: panelRef,
+    matchAnchorWidth: false,
+    panelWidth: CALENDAR_PANEL_WIDTH_PX,
+    maxHeight: 420,
     repositionDeps: [viewYear, viewMonth, selectedYmd],
   });
 
@@ -107,18 +110,11 @@ export function GlobalDatePicker({
   };
 
   const calendarPortal =
-    open && coords && portalStyle ? (
+    open && portalStyle ? (
       <div
         ref={panelRef}
-        style={{
-          ...portalStyle,
-          width: CALENDAR_PANEL_WIDTH_PX,
-          maxHeight: "none",
-          left: Math.max(
-            8,
-            Math.min(coords.left + coords.width - CALENDAR_PANEL_WIDTH_PX, window.innerWidth - CALENDAR_PANEL_WIDTH_PX - 8),
-          ),
-        }}
+        style={{ ...portalStyle, maxHeight: "none" }}
+        className={placementOriginClass}
       >
         <GlobalCalendarPanel
           panelClassName={globalInputCalendarPortalPanel}

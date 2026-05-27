@@ -93,7 +93,7 @@ export function ReportYearlyForecastLineChart({
           x={xy(dashed[dashed.length - 1]!).px}
           y={H - 10}
           textAnchor="middle"
-          className="fill-orange-600"
+          className="fill-[var(--cab-primary)]"
           style={{ fontSize: 14, fontWeight: 600 }}
         >
           stima
