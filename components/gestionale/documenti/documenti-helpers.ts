@@ -1,5 +1,6 @@
 import type { CatalogMacchina, CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
-import { resolveDocumentoFileUrl } from "@/lib/documenti/documenti-db-mapper";
+import { resolveDocumentoFileUrlSigned } from "@/lib/documenti/documenti-db-mapper";
+import type { DocumentoRow } from "@/src/types/supabase-tables";
 import {
   formatDocumentoRigaSintetica,
   labelApplicabilitaBreve,
@@ -230,12 +231,19 @@ export function countDocsInMarcaNode(node: ArchiveDocMarcaNode): number {
   return node.filesMarca.length + node.modelli.reduce((n, m) => n + m.files.length, 0);
 }
 
-export function getDocumentApriHref(doc: DocumentoGestionale): string | null {
-  const blob = doc.urlBlob?.trim();
-  if (blob && /^blob:/i.test(blob)) return blob;
-  const ext = doc.urlDocumento?.trim();
-  if (ext) return resolveDocumentoFileUrl({ url_file: ext }, doc);
-  return null;
+export function canOpenDocumento(doc: DocumentoGestionale): boolean {
+  return Boolean(doc.urlBlob?.trim() || doc.urlDocumento?.trim());
+}
+
+/** Apre il file con signed URL (bucket `documenti` privato) o blob locale pre-save. */
+export async function openDocumentoFile(
+  doc: DocumentoGestionale,
+  row?: Pick<DocumentoRow, "url_file">,
+): Promise<boolean> {
+  const href = await resolveDocumentoFileUrlSigned(row ?? { url_file: doc.urlDocumento ?? "" }, doc);
+  if (!href) return false;
+  window.open(href, "_blank", "noopener,noreferrer");
+  return true;
 }
 
 export function extractFileExtension(fileName: string): string {

@@ -20,6 +20,7 @@ export const GESTIONALE_TABLE_QUERY_KEYS: Record<string, readonly QueryKeyTuple[
   log_modifiche: [QK.log],
   support_notes: [QK.supportNotes],
   app_settings: [QK.settings],
+  profiles: [QK.profiles],
 };
 
 /** Chiavi portale clienti (dedupe con le chiavi tabella). */

@@ -1,3 +1,5 @@
+import { pushGestionaleToast } from "@/context/toast-context";
+
 /**
  * Apre URL in una nuova scheda senza passare `noopener,noreferrer` come *terzo argomento*
  * di `window.open`: in Chromium ciò può far restituire `null` anche quando la scheda si apre,
@@ -48,7 +50,8 @@ export function openUrlInNewTab(
 
   const trimmed = url?.trim() ?? "";
   if (!trimmed) {
-    window.alert(options?.invalidMessage ?? "URL del documento non valido.");
+    const msg = options?.invalidMessage ?? "URL del documento non valido.";
+    pushGestionaleToast(msg, "warning");
     return false;
   }
 
@@ -89,7 +92,7 @@ export function openBlankWindowForDocumentWrite(blockedMessage?: string): Window
   if (typeof window === "undefined") return null;
   const w = window.open("about:blank", "_blank");
   if (!w) {
-    window.alert(blockedMessage ?? DEFAULT_BLOCKED_MSG);
+    pushGestionaleToast(blockedMessage ?? DEFAULT_BLOCKED_MSG, "warning", 5200);
     return null;
   }
   try {

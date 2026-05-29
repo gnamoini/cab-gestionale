@@ -1,9 +1,8 @@
 "use client";
 
-import Image from "next/image";
 import { useEffect, useMemo, useState } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
-import { CabLogo, CAB_LOGO_PATH } from "@/components/gestionale/cab-logo";
+import { CabLogo, CabLogoFill } from "@/components/gestionale/cab-logo";
 import { formatUserDisplayName } from "@/src/lib/auth/resolve-user-display-name";
 import { dsSkeletonPulse, dsTypoBody } from "@/lib/ui/design-system";
 
@@ -42,13 +41,7 @@ function WelcomeLogoBackdrop() {
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
       <div className="absolute inset-y-0 right-0 w-[min(62%,16rem)] opacity-[0.07] dark:opacity-[0.045]">
-        <Image
-          src={CAB_LOGO_PATH}
-          alt=""
-          fill
-          sizes="(max-width: 640px) 220px, 280px"
-          className="object-contain object-center"
-        />
+        <CabLogoFill className="object-center" />
       </div>
     </div>
   );

@@ -2,23 +2,29 @@
 
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { GlobalLoadingSpinner } from "@/components/design-system/loading-indicator";
 import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import { defaultApplicabilitaForCategoria } from "@/lib/documenti/documenti-applicabilita";
+import {
+  effectiveDocumentoApplicabilita,
+  validateDocumentoMarcaModelloFields,
+} from "@/lib/documenti/documenti-form-validation";
 import type { DocumentoGestionale, DocumentoTipoFile, DocumentoApplicabilita } from "@/lib/types/gestionale";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { GlobalSelect } from "@/components/gestionale/global-input";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { CloseButton } from "@/components/design-system";
+import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GlobalHierarchyMarcaSelect, GlobalHierarchyModelloSelect } from "@/components/gestionale/global-input";
 import { DocumentoFileDropzone } from "@/components/gestionale/documenti/documento-file-dropzone";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useAuth } from "@/context/auth-context";
 import {
   documentoSenzaMarca,
   extractFileExtension,
   formatDocumentoRigaSintetica,
-  getDocumentApriHref,
+  openDocumentoFile,
   inferTipoFileFromNome,
   labelCategoria,
   labelTipoFile,
@@ -35,12 +41,19 @@ const inputClass =
 const listSelectWrapClass = "mt-1 w-full";
 
 const CATEGORIE: DocumentoGestionale["categoria"][] = ["listini", "cataloghi", "manuali", "altro"];
-const TIPI_FILE: DocumentoTipoFile[] = ["pdf", "immagine", "excel", "word", "testo", "altro"];
 
-function sameTextNorm(a: string, b: string): boolean {
-  return a.trim().toLowerCase() === b.trim().toLowerCase();
+const fieldErrorClass = "mt-1 text-xs text-red-600 dark:text-red-400";
+
+function FieldError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <p className={fieldErrorClass} role="alert">
+      {message}
+    </p>
+  );
 }
 
+/** Shell documenti — delega al pattern modale gestionale (scroll lock, ESC, backdrop). */
 function DocumentiModalShell({
   title,
   children,
@@ -52,55 +65,17 @@ function DocumentiModalShell({
   onRequestClose: () => void;
   wide?: boolean;
 }) {
-  useEffect(() => {
-    const sb = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-    const prevOverflow = document.body.style.overflow;
-    const prevPr = document.body.style.paddingRight;
-    document.body.style.overflow = "hidden";
-    if (sb > 0) document.body.style.paddingRight = `${sb}px`;
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      document.body.style.paddingRight = prevPr;
-    };
-  }, []);
-
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onRequestClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onRequestClose]);
-
-  const widthClass = wide ? "max-w-lg" : "max-w-md";
-
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4"
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) {
-          e.preventDefault();
-          onRequestClose();
-        }
-      }}
+    <LavorazioniModalShell
+      layerClassName="z-[100]"
+      wide={wide}
+      maxWidthClass={wide ? "max-w-lg" : "max-w-md"}
+      onRequestClose={onRequestClose}
+      title={title}
+      titleId="documenti-modal-title"
     >
-      <div
-        className={`relative z-[1] flex max-h-[min(92dvh,880px)] w-full flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900 ${widthClass}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="documenti-modal-title"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-          <h2 id="documenti-modal-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            {title}
-          </h2>
-          <CloseButton onClick={onRequestClose} />
-        </div>
-        {children}
-      </div>
-    </div>
+      {children}
+    </LavorazioniModalShell>
   );
 }
 
@@ -124,9 +99,11 @@ function previewNomeFile(nome: string, applicabilita: DocumentoApplicabilita, ma
 function ApplicabilitaField({
   applicabilita,
   onChange,
+  allowModello = true,
 }: {
   applicabilita: DocumentoApplicabilita;
   onChange: (a: DocumentoApplicabilita) => void;
+  allowModello?: boolean;
 }) {
   return (
     <fieldset className="space-y-2">
@@ -141,22 +118,26 @@ function ApplicabilitaField({
         />
         <span className="text-sm text-zinc-200">Tutta la marca</span>
       </label>
-      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_60%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]">
-        <input
-          type="radio"
-          name="doc-applicabilita"
-          className="accent-[var(--cab-primary)]"
-          checked={applicabilita === "modello"}
-          onChange={() => onChange("modello")}
-        />
-        <span className="text-sm text-zinc-200">Modello specifico</span>
-      </label>
+      {allowModello ? (
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_60%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]">
+          <input
+            type="radio"
+            name="doc-applicabilita"
+            className="accent-[var(--cab-primary)]"
+            checked={applicabilita === "modello"}
+            onChange={() => onChange("modello")}
+          />
+          <span className="text-sm text-zinc-200">Modello specifico</span>
+        </label>
+      ) : (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">I listini si applicano a tutta la marca.</p>
+      )}
     </fieldset>
   );
 }
 
 export function UploadDocumentoModal({
-  catalog,
+  catalog: _catalog,
   isUploading = false,
   onRequestClose,
   onSubmit,
@@ -167,6 +148,7 @@ export function UploadDocumentoModal({
   onSubmit: (payload: Omit<DocumentoGestionale, "id">) => void | Promise<void>;
 }) {
   const { authorName } = useAuth();
+  const gestToast = useGestionaleToast();
   const pickedFileRef = useRef<File | null>(null);
   const [nome, setNome] = useState("");
   const [categoria, setCategoria] = useState<DocumentoGestionale["categoria"]>("manuali");
@@ -179,19 +161,16 @@ export function UploadDocumentoModal({
   const [marcaInvalid, setMarcaInvalid] = useState(false);
   const [modelloInvalid, setModelloInvalid] = useState(false);
 
-  const marcheOptions = useMemo(() => catalog.map((m) => m.nome), [catalog]);
-  const modelliOptions = useMemo(() => {
-    const mar = catalog.find((m) => sameTextNorm(m.nome, marca));
-    return mar?.macchine.map((x) => x.nome) ?? [];
-  }, [catalog, marca]);
+  const listiniOnly = categoria === "listini";
+  const effectiveApp = effectiveDocumentoApplicabilita(categoria, applicabilita);
 
   useEffect(() => {
     setApplicabilita(defaultApplicabilitaForCategoria(categoria));
   }, [categoria]);
 
   useEffect(() => {
-    if (applicabilita === "marca") setModello("");
-  }, [applicabilita]);
+    if (effectiveApp === "marca") setModello("");
+  }, [effectiveApp]);
 
   function onFileChange(f: File | null) {
     pickedFileRef.current = f;
@@ -211,15 +190,19 @@ export function UploadDocumentoModal({
     const n = nome.trim();
     const file = pickedFileRef.current;
     const marcaTrim = marca.trim();
-    const marcaOk =
-      marcaTrim.length === 0 || marcheOptions.some((o) => sameTextNorm(o, marcaTrim));
-    const modelloOk =
-      applicabilita === "marca" ||
-      marcaTrim.length === 0 ||
-      (modello.trim().length > 0 && modelliOptions.some((o) => sameTextNorm(o, modello)));
-    setMarcaInvalid(!marcaOk);
-    setModelloInvalid(applicabilita === "modello" && marcaTrim.length > 0 && !modelloOk);
-    if (!n || !file || !marcaOk || !modelloOk) return;
+    const modelloTrim = modello.trim();
+    const validation = validateDocumentoMarcaModelloFields(effectiveApp, marcaTrim, modelloTrim);
+    setMarcaInvalid(validation.marcaInvalid);
+    setModelloInvalid(validation.modelloInvalid);
+    if (!n || !file) return;
+    if (!validation.valid) {
+      gestToast.errorOnce(
+        "documenti-form",
+        validation.modelloInvalid ? "Seleziona un modello per l'applicabilità scelta." : "Controlla marca e modello.",
+        { module: "documenti" },
+      );
+      return;
+    }
 
     const tipo = inferTipoFileFromNome(n);
     const today = new Date().toISOString().slice(0, 10);
@@ -231,7 +214,7 @@ export function UploadDocumentoModal({
       nome: n,
       categoria,
       marca: marcaTrim,
-      macchina: applicabilita === "marca" || !marcaTrim ? "—" : modello.trim(),
+      macchina: effectiveApp === "marca" || !marcaTrim ? "—" : modelloTrim,
       tipoFile: tipo,
       autoreCaricamento: authorName,
       note: note.trim() || undefined,
@@ -240,9 +223,9 @@ export function UploadDocumentoModal({
       dimensioneKb: Math.max(1, Math.round(file.size / 1024)),
       urlBlob,
       fileEstensione: ext || undefined,
-      applicabilita: marcaTrim ? applicabilita : undefined,
+      applicabilita: marcaTrim ? effectiveApp : undefined,
       marcaKey: marcaTrim || undefined,
-      modelloKey: marcaTrim && applicabilita === "modello" ? modello.trim() : undefined,
+      modelloKey: marcaTrim && effectiveApp === "modello" ? modelloTrim : undefined,
       associazioni: undefined,
     };
     const tmp = { ...base, id: "__new__" } as DocumentoGestionale;
@@ -259,11 +242,11 @@ export function UploadDocumentoModal({
   const canSubmit =
     !isUploading &&
     pickedName.trim().length > 0 &&
-    (applicabilita === "marca" || !marca.trim() || modello.trim().length > 0);
+    (effectiveApp === "marca" || !marca.trim() || modello.trim().length > 0);
 
   return (
     <DocumentiModalShell title="Carica documento" onRequestClose={onRequestClose} wide>
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="lavorazioni-scroll-scope min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
           <DocumentoFileDropzone
             pickedName={pickedName}
@@ -290,7 +273,11 @@ export function UploadDocumentoModal({
             />
           </label>
 
-          <ApplicabilitaField applicabilita={applicabilita} onChange={setApplicabilita} />
+          <ApplicabilitaField
+            applicabilita={applicabilita}
+            onChange={setApplicabilita}
+            allowModello={!listiniOnly}
+          />
 
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
@@ -301,11 +288,15 @@ export function UploadDocumentoModal({
               onChange={(v) => {
                 setMarca(v);
                 setModello("");
+                setMarcaInvalid(false);
+                setModelloInvalid(false);
               }}
               aria-label="Marca documento"
+              aria-invalid={marcaInvalid || undefined}
             />
           </label>
-          {applicabilita === "modello" ? (
+          <FieldError message={marcaInvalid ? "Marca non valida." : null} />
+          {effectiveApp === "modello" ? (
             <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Modello
               <GlobalHierarchyModelloSelect
@@ -313,17 +304,22 @@ export function UploadDocumentoModal({
                 tree="attrezzature"
                 marcaNome={marca}
                 value={modello}
-                onChange={setModello}
+                onChange={(v) => {
+                  setModello(v);
+                  setModelloInvalid(false);
+                }}
                 required
                 aria-label="Modello documento"
+                aria-invalid={modelloInvalid || undefined}
               />
+              <FieldError message={modelloInvalid ? "Seleziona un modello." : null} />
             </label>
           ) : null}
 
           <p className="rounded-lg border border-zinc-700/50 bg-zinc-950/30 px-3 py-2 text-[11px] text-zinc-400">
             Anteprima:{" "}
             <span className="font-medium text-zinc-200">
-              {previewNomeFile(nome || pickedName || "file", applicabilita, marca, modello)}
+              {previewNomeFile(nome || pickedName || "file", effectiveApp, marca, modello)}
             </span>
           </p>
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -358,7 +354,7 @@ export function DocumentoInfoModal({
   onEdit: () => void;
 }) {
   const r = resolveDocumentoApplicazione(doc);
-  const openHref = getDocumentApriHref(doc);
+  const canOpenFile = Boolean(doc.urlBlob?.trim() || doc.urlDocumento?.trim());
   const entita = documentoSenzaMarcaUi(doc)
     ? "— (assegna marca dalla modifica)"
     : r.applicabilita === "marca"
@@ -367,22 +363,21 @@ export function DocumentoInfoModal({
 
   return (
     <DocumentiModalShell title="Dettaglio documento" onRequestClose={onRequestClose} wide>
-      <div className="lavorazioni-scroll-scope flex max-h-[min(80dvh,640px)] flex-col">
+      <div className={`lavorazioni-scroll-scope ${gestionaleModalBodyFlexClass}`}>
         <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 text-sm">
           <InfoRow label="Riepilogo" value={<span className="font-semibold">{formatDocumentoRigaSintetica(doc)}</span>} />
           <InfoRow label="Nome file" value={doc.nome} />
           <InfoRow
             label="Apri file"
             value={
-              openHref ? (
-                <a
-                  href={openHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
+              canOpenFile ? (
+                <button
+                  type="button"
                   className="font-medium text-[color:var(--cab-primary)] underline decoration-[color:color-mix(in_srgb,var(--cab-primary)_50%,transparent)] underline-offset-2 hover:text-[color:var(--cab-primary-hover)]"
+                  onClick={() => void openDocumentoFile(doc)}
                 >
                   Apri in nuova scheda
-                </a>
+                </button>
               ) : (
                 "—"
               )
@@ -430,16 +425,17 @@ export function DocumentoInfoModal({
 
 export function DocumentoEditModal({
   doc,
-  catalog,
+  catalog: _catalog,
   onRequestClose,
   onSave,
 }: {
   doc: DocumentoGestionale;
   catalog: CatalogMarca[];
   onRequestClose: () => void;
-  onSave: (next: DocumentoGestionale) => void;
+  onSave: (next: DocumentoGestionale) => boolean | void | Promise<boolean | void>;
 }) {
   const { authorName } = useAuth();
+  const gestToast = useGestionaleToast();
   const r0 = resolveDocumentoApplicazione(doc);
   const [nome, setNome] = useState(doc.nome);
   const [categoria, setCategoria] = useState(doc.categoria);
@@ -449,28 +445,31 @@ export function DocumentoEditModal({
   const [note, setNote] = useState(doc.note ?? "");
   const [marcaInvalid, setMarcaInvalid] = useState(false);
   const [modelloInvalid, setModelloInvalid] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const marcheOptions = useMemo(() => catalog.map((m) => m.nome), [catalog]);
-  const modelliOptions = useMemo(() => {
-    const mar = catalog.find((m) => sameTextNorm(m.nome, marca));
-    return mar?.macchine.map((x) => x.nome) ?? [];
-  }, [catalog, marca]);
+  const listiniOnly = categoria === "listini";
+  const effectiveApp = effectiveDocumentoApplicabilita(categoria, applicabilita);
 
   useEffect(() => {
-    if (applicabilita === "marca") setModello("");
-  }, [applicabilita]);
+    if (effectiveApp === "marca") setModello("");
+  }, [effectiveApp]);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (saving) return;
     const marcaTrim = marca.trim();
-    const marcaOk = marcaTrim.length === 0 || marcheOptions.some((o) => sameTextNorm(o, marcaTrim));
-    const modelloOk =
-      applicabilita === "marca" ||
-      marcaTrim.length === 0 ||
-      (modello.trim().length > 0 && modelliOptions.some((o) => sameTextNorm(o, modello)));
-    setMarcaInvalid(!marcaOk);
-    setModelloInvalid(applicabilita === "modello" && marcaTrim.length > 0 && !modelloOk);
-    if (!marcaOk || !modelloOk) return;
+    const modelloTrim = modello.trim();
+    const validation = validateDocumentoMarcaModelloFields(effectiveApp, marcaTrim, modelloTrim);
+    setMarcaInvalid(validation.marcaInvalid);
+    setModelloInvalid(validation.modelloInvalid);
+    if (!validation.valid) {
+      gestToast.errorOnce(
+        "documenti-form",
+        validation.modelloInvalid ? "Seleziona un modello per l'applicabilità scelta." : "Controlla marca e modello.",
+        { module: "documenti" },
+      );
+      return;
+    }
 
     const today = new Date().toISOString().slice(0, 10);
     const inferredTipoFile = inferTipoFileFromNome(nome.trim() || doc.nome);
@@ -479,23 +478,29 @@ export function DocumentoEditModal({
       nome: nome.trim(),
       categoria,
       marca: marcaTrim,
-      macchina: applicabilita === "marca" || !marcaTrim ? "—" : modello.trim(),
+      macchina: effectiveApp === "marca" || !marcaTrim ? "—" : modelloTrim,
       tipoFile: inferredTipoFile,
       note: note.trim() || undefined,
       autoreCaricamento: doc.autoreCaricamento?.trim() || authorName,
       ultimaModifica: today,
-      applicabilita: marcaTrim ? applicabilita : undefined,
+      applicabilita: marcaTrim ? effectiveApp : undefined,
       marcaKey: marcaTrim || undefined,
-      modelloKey: marcaTrim && applicabilita === "modello" ? modello.trim() : undefined,
+      modelloKey: marcaTrim && effectiveApp === "modello" ? modelloTrim : undefined,
       associazioni: undefined,
     };
-    onSave(resolveDocumentoApplicazione(base));
-    onRequestClose();
+
+    setSaving(true);
+    try {
+      const result = await onSave(resolveDocumentoApplicazione(base));
+      if (result !== false) onRequestClose();
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
     <DocumentiModalShell title="Modifica documento" onRequestClose={onRequestClose} wide>
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="lavorazioni-scroll-scope min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Nome file
@@ -514,7 +519,11 @@ export function DocumentoEditModal({
             />
           </label>
 
-          <ApplicabilitaField applicabilita={applicabilita} onChange={setApplicabilita} />
+          <ApplicabilitaField
+            applicabilita={applicabilita}
+            onChange={setApplicabilita}
+            allowModello={!listiniOnly}
+          />
 
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
@@ -525,11 +534,15 @@ export function DocumentoEditModal({
               onChange={(v) => {
                 setMarca(v);
                 setModello("");
+                setMarcaInvalid(false);
+                setModelloInvalid(false);
               }}
               aria-label="Marca documento"
+              aria-invalid={marcaInvalid || undefined}
             />
           </label>
-          {applicabilita === "modello" && marca.trim() ? (
+          <FieldError message={marcaInvalid ? "Marca non valida." : null} />
+          {effectiveApp === "modello" && marca.trim() ? (
             <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Modello
               <GlobalHierarchyModelloSelect
@@ -537,10 +550,15 @@ export function DocumentoEditModal({
                 tree="attrezzature"
                 marcaNome={marca}
                 value={modello}
-                onChange={setModello}
+                onChange={(v) => {
+                  setModello(v);
+                  setModelloInvalid(false);
+                }}
                 required
                 aria-label="Modello documento"
+                aria-invalid={modelloInvalid || undefined}
               />
+              <FieldError message={modelloInvalid ? "Seleziona un modello." : null} />
             </label>
           ) : null}
 
@@ -550,8 +568,15 @@ export function DocumentoEditModal({
           </label>
         </div>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <button type="submit" className={`${erpBtnAccent} w-full`}>
-            Salva modifiche
+          <button type="submit" className={`${erpBtnAccent} flex w-full min-h-11 items-center justify-center gap-2`} disabled={saving}>
+            {saving ? (
+              <>
+                <GlobalLoadingSpinner size="sm" label="Salvataggio…" />
+                Salvataggio…
+              </>
+            ) : (
+              "Salva modifiche"
+            )}
           </button>
         </div>
       </form>

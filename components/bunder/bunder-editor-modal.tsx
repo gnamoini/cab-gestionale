@@ -15,7 +15,9 @@ import { allocateNextNumero } from "@/lib/bunder/bunder-numbering";
 import type { BunderCommercialDocument, BunderDocKind, BunderProductRiga } from "@/lib/bunder/types";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
-import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 
 function nextRigaId(): string {
   return `br-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -173,16 +175,7 @@ export function BunderEditorModal({
   const tot = totaleDocumento(local);
 
   return (
-    <div
-      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 p-4"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="flex max-h-[100dvh] w-full max-w-5xl flex-col overflow-hidden rounded-t-2xl border border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-950 sm:rounded-2xl"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+    <GestionaleModalShell onRequestClose={onClose} maxWidthClass="max-w-5xl" wide>
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
           <div className="min-w-0">
             <h2 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">Documento commerciale — {local.numeroProgressivo}</h2>
@@ -343,13 +336,13 @@ export function BunderEditorModal({
               <table className={`${dsTable} min-w-[720px] text-[11px]`}>
                 <thead className="sticky top-0 z-[1] bg-[var(--cab-card)] shadow-[inset_0_-1px_0_0_var(--cab-border)]">
                   <tr>
-                    <th className={dsTableHeadCell}>Qtà</th>
-                    <th className={dsTableHeadCell}>Codice</th>
-                    <th className={dsTableHeadCell}>Nome</th>
-                    <th className={dsTableHeadCell}>Descr. tecnica</th>
-                    <th className={dsTableHeadCell}>Pr. unit.</th>
-                    <th className={dsTableHeadCell}>Tot.</th>
-                    <th className={`${dsTableHeadCell} w-8`} />
+                    <GlobalTableHeadLabel label="Qtà" />
+                    <GlobalTableHeadLabel label="Codice" />
+                    <GlobalTableHeadLabel label="Nome" />
+                    <GlobalTableHeadLabel label="Descr. tecnica" />
+                    <GlobalTableHeadLabel label="Pr. unit." />
+                    <GlobalTableHeadLabel label="Tot." />
+                    <GlobalTableHeadLabel label="" thClassName="w-8" />
                   </tr>
                 </thead>
                 <tbody>
@@ -445,7 +438,6 @@ export function BunderEditorModal({
             <textarea className={`${dsInput} mt-1 min-h-[56px] w-full resize-y`} value={local.noteFirma} onChange={(e) => setLocal({ ...local, noteFirma: e.target.value })} />
           </label>
         </div>
-      </div>
-    </div>
+    </GestionaleModalShell>
   );
 }

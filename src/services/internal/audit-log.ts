@@ -6,6 +6,7 @@ import {
   type AuditLogContext,
 } from "@/lib/gestionale-log/log-summary";
 import { getOrCreateUndoSessionId } from "@/lib/gestionale-log/undo-session";
+import { queueModificaLog } from "@/src/services/internal/log-modifiche-batcher";
 
 export type AuditAzione = "CREATE" | "UPDATE" | "DELETE" | "RESTORE";
 
@@ -36,7 +37,7 @@ function enrichPayloadWithUndoSession(payload: AuditPayload | undefined): AuditP
   return { ...base, undo_session_id: sessionId };
 }
 
-export async function writeModificaLog(
+async function writeModificaLogImmediate(
   client: SupabaseClient,
   input: {
     entita: string;
@@ -68,6 +69,23 @@ export async function writeModificaLog(
     azione: input.azione,
     autore_id: autore,
     payload,
+  });
+}
+
+/** Scrive su `log_modifiche` con batching UPDATE (debounce ~3.5s per stessa entità). */
+export function writeModificaLog(
+  client: SupabaseClient,
+  input: {
+    entita: string;
+    entita_id: string;
+    azione: AuditAzione;
+    payload?: AuditPayload;
+    autore_id?: string | null;
+  },
+): void {
+  queueModificaLog((item) => writeModificaLogImmediate(item.client, item), client, {
+    client,
+    ...input,
   });
 }
 

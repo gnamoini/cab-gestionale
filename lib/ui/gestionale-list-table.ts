@@ -4,11 +4,29 @@
  * Tutte le liste gestionale con struttura simile (Clienti, Preventivi, Magazzino, …)
  * devono derivare da questi token e da `<GestionaleListTable>` — non duplicare classi locali.
  *
+ * ## Table header standard (liste dense)
+ *
+ * | Elemento | Token / componente |
+ * |----------|-------------------|
+ * | `<thead>` | `globalTableTheadClass` (via `GlobalTableHead`) |
+ * | `<th>` padding | `globalTableThCell` |
+ * | Label statica | `globalTableThLabel` in `GlobalTableHeadLabel` |
+ * | Sort | `GlobalTableSortTh` (unico sort header liste) |
+ * | Edge inset riga head | `globalTableHeadEdgeInset` su `<tr>` |
+ * | Body inset | `globalTableTbodyInset` su `<tbody>` |
+ * | Colonna Azioni | `GestionaleListTableActionsHead` + `gestionaleListTableTdAzioni` + `gestionaleListTableActionsGroupEnd` |
+ * | Sticky azioni | scope `gestionale-list-table-scope` in `gestionale-list-table.css` |
+ *
+ * ## Allineamento celle corpo
+ *
+ * - Testo: `gestionaleListTableTd`
+ * - Date/numeri centrati: `gestionaleListTableTdCenter`
+ * - Pill (stato, priorità): `gestionaleListTableTdPill`
+ * - Azioni: `gestionaleListTableTdAzioni` + `gestionaleListTableActionsGroupEnd`
+ *
  * Checklist nuova tabella:
  * - Shell: `GestionaleListTable` (+ `visibilityClass` se c’è card mobile)
  * - Righe: `gestionaleListTableRowClass`
- * - Celle dati: `gestionaleListTableTd`
- * - Azioni: `GestionaleListTableActionsHead` + `gestionaleListTableTdAzioni` + `gestionaleListTableActionsGroup`
  * - Header sort: `GlobalTableSortTh` (mai titoli su due righe salvo eccezione documentata)
  * - Titoli: una riga, `whitespace-nowrap` (già in `GlobalTableHeadLabel` / `GlobalTableSortTh`)
  */
@@ -46,8 +64,9 @@ export const gestionaleListTableWrap = globalTableWrap;
 /** Scrollbar + eventuale scope scroll pagina (es. modali lavorazioni). */
 export const gestionaleListTableWrapClass = `${globalTableWrap} ${dsScrollbar}`;
 
-/** Classe aggiuntiva sul wrap quando la lista è in pagina Lavorazioni / specchio clienti. */
-export const gestionaleListTableScrollScopeClass = "lavorazioni-scroll-scope max-w-full min-w-0";
+/** Scope scroll + sticky azioni (vedi `gestionale-list-table.css`). Alias retrocompat: `lavorazioni-scroll-scope`. */
+export const gestionaleListTableScrollScopeClass =
+  "gestionale-list-table-scope lavorazioni-scroll-scope max-w-full min-w-0";
 
 /** Preset completo wrap desktop (Lavorazioni master). */
 export const gestionaleListTableMasterWrapClass = `${gestionaleListTableScrollScopeClass} ${gestionaleListTableWrapClass}`;

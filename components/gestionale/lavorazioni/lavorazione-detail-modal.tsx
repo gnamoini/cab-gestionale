@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
+import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
 import { LavorazioneAttivitaPanel } from "@/components/lavorazioni/lavorazione-attivita-panel";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
@@ -22,8 +22,10 @@ import { documentoRowToGestionale, preventivoRowToRecordStub } from "@/lib/mezzi
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import { dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
+import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import {
   erpBtnNeutral,
   erpBtnSoftOrange,
@@ -184,19 +186,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
   const titolo = hub ? `Lavorazione · ${hub.kpi.statoLabel}` : "Lavorazione";
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="flex max-h-[min(92vh,820px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="lav-hub-title"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+    <GestionaleModalShell onRequestClose={onClose} maxWidthClass="max-w-3xl" titleId="lav-hub-title">
         <div className="flex shrink-0 flex-wrap items-start justify-between gap-2 border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
           <div className="min-w-0">
             <h2 id="lav-hub-title" className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
@@ -286,9 +276,9 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
               <table className={`${dsTable} min-w-[520px] text-xs`}>
                 <thead>
                   <tr>
-                    <th className={dsTableHeadCell}>Tipo</th>
-                    <th className={dsTableHeadCell}>Creata</th>
-                    <th className={dsTableHeadCell}>Aggiornata</th>
+                    <GlobalTableHeadLabel label="Tipo" />
+                    <GlobalTableHeadLabel label="Creata" />
+                    <GlobalTableHeadLabel label="Aggiornata" />
                   </tr>
                 </thead>
                 <tbody>
@@ -318,10 +308,10 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
               <table className={`${dsTable} min-w-[520px] text-xs`}>
                 <thead>
                   <tr>
-                    <th className={dsTableHeadCell}>Tipo</th>
-                    <th className={dsTableHeadCell}>Quantità</th>
-                    <th className={dsTableHeadCell}>Ricambio</th>
-                    <th className={dsTableHeadCell}>Quando</th>
+                    <GlobalTableHeadLabel label="Tipo" />
+                    <GlobalTableHeadLabel label="Quantità" />
+                    <GlobalTableHeadLabel label="Ricambio" />
+                    <GlobalTableHeadLabel label="Quando" />
                   </tr>
                 </thead>
                 <tbody>
@@ -391,7 +381,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                   <li className="text-sm text-zinc-500">Nessun documento sul mezzo collegato.</li>
                 ) : (
                   pagedDoc.map((d) => {
-                    const href = getDocumentApriHref(d);
+                    const canOpen = canOpenDocumento(d);
                     return (
                       <li
                         key={d.id}
@@ -401,13 +391,11 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                           <p className="text-[11px] font-semibold uppercase text-zinc-500">{formatDocumentoRigaSintetica(d)}</p>
                           <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{d.nome}</p>
                         </div>
-                        {href ? (
+                        {canOpen ? (
                           <button
                             type="button"
                             className={`${erpBtnNeutral} shrink-0`}
-                            onClick={() =>
-                              openUrlInNewTab(href, { revokeBlobUrlAfterMs: href.startsWith("blob:") ? 120_000 : undefined })
-                            }
+                            onClick={() => void openDocumentoFile(d)}
                           >
                             Apri
                           </button>
@@ -431,7 +419,6 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
             )
           ) : null}
         </div>
-      </div>
-    </div>
+    </GestionaleModalShell>
   );
 }

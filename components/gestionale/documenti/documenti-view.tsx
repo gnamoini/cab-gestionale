@@ -6,13 +6,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { documentiService } from "@/src/services/documenti.service";
 import { useDocumentiListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { deleteDocumentoStoragePath } from "@/lib/documenti/delete-documento-fully";
 import {
   gestionaleToDocumentoInsert,
   gestionaleToDocumentoUpdate,
   uploadDocumentoBlob,
 } from "@/lib/documenti/documenti-db-mapper";
 import { useUploadFeedback } from "@/context/upload-feedback-context";
-import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
+import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
@@ -42,7 +43,6 @@ import {
   dsTableActionBtnInfo,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
-import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { Drawer, IconActionButton } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
@@ -57,7 +57,7 @@ import {
   countDocsInMarcaNode,
   documentoSenzaMarca,
   formatDocumentoRigaSintetica,
-  getDocumentApriHref,
+  openDocumentoFile,
   labelCategoria,
   labelTipoFile,
   partitionMarcaLevelDocs,
@@ -92,6 +92,10 @@ import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
+import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
@@ -198,7 +202,7 @@ function ArchiveDocRow({
   onEdit,
   onDelete,
   onInfo,
-  onToast,
+  onFileUnavailable,
   onApri,
   canEdit,
   canDelete,
@@ -209,19 +213,18 @@ function ArchiveDocRow({
   onEdit: () => void;
   onDelete: () => void;
   onInfo: () => void;
-  onToast: (s: string) => void;
+  onFileUnavailable?: () => void;
   onApri: () => void;
   canEdit: boolean;
   canDelete: boolean;
 }) {
-  const href = getDocumentApriHref(doc);
+  const canOpen = Boolean(doc.urlBlob?.trim() || doc.urlDocumento?.trim());
   const stop = (e: MouseEvent) => e.stopPropagation();
   const senzaMarca = documentoSenzaMarca(doc);
 
   const handleEditClick = (e: MouseEvent) => {
     e.stopPropagation();
     if (!canEdit) return;
-    if (!window.confirm(`Modificare i metadati di «${doc.nome}»?`)) return;
     onEdit();
   };
 
@@ -236,9 +239,9 @@ function ArchiveDocRow({
       <IconActionButton
         label="Apri"
         className={dsTableActionBtnPrimary}
-        disabled={!href}
+        disabled={!canOpen}
         onClick={() => {
-          if (!href) onToast("File non disponibile");
+          if (!canOpen) onFileUnavailable?.();
           else onApri();
         }}
       >
@@ -330,9 +333,10 @@ function SubTreeHeading({ title }: { title: string }) {
 export function DocumentiView() {
   const searchParams = useSearchParams();
   const qc = useQueryClient();
-  const permissions = usePermissions();
-  const canUploadDocuments = permissions.canUploadDocuments;
-  const canDeleteRecords = permissions.canDeleteRecords;
+  const docPerm = usePermissions("documenti");
+  const globalPerm = usePermissions();
+  const canUploadDocuments = docPerm.canWrite;
+  const canDeleteRecords = docPerm.canWrite && globalPerm.canDeleteRecords;
   const { authorName: author } = useAuth();
   const authorTrim = author.trim() || "Operatore";
   const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
@@ -392,10 +396,16 @@ export function DocumentiView() {
   const [uploadOpen, setUploadOpen] = useState(false);
   const [infoDoc, setInfoDoc] = useState<DocumentoGestionale | null>(null);
   const [editDoc, setEditDoc] = useState<DocumentoGestionale | null>(null);
-  const [toast, setToast] = useState<string | null>(null);
+  const [deleteConfirmDoc, setDeleteConfirmDoc] = useState<DocumentoGestionale | null>(null);
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const gestToast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const [logOpen, setLogOpen] = useState(false);
-  const [logEntries, setLogEntries] = useState<DocumentiLogStored[]>(() => loadDocumentiChangeLog());
+  const [logEntries, setLogEntries] = useState<DocumentiLogStored[]>([]);
+
+  useEffect(() => {
+    setLogEntries(loadDocumentiChangeLog());
+  }, []);
 
   useEffect(() => {
     function onLogRefresh() {
@@ -408,12 +418,6 @@ export function DocumentiView() {
   useEffect(() => {
     if (logOpen) setLogEntries(loadDocumentiChangeLog());
   }, [logOpen]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 2800);
-    return () => window.clearTimeout(t);
-  }, [toast]);
 
   useEffect(() => {
     if (urlHydratedRef.current || catalog.length === 0) return;
@@ -574,7 +578,7 @@ export function DocumentiView() {
   }, []);
 
   const refreshDocumenti = useCallback(() => {
-    dispatchGestionaleLocalMutation(qc, ["documenti"]);
+    void invalidateOperationalTruth({ queryClient: qc, domain: "documenti" });
   }, [qc]);
 
   const handleUpload = useCallback(
@@ -605,6 +609,9 @@ export function DocumentiView() {
           const insert = gestionaleToDocumentoInsert(payload, urlFile);
           const res = await documentiService.create(insert);
           if (!res.success || !res.data) {
+            if (payload.urlBlob?.trim()) {
+              await deleteDocumentoStoragePath(urlFile);
+            }
             throw new Error(res.error ?? "Impossibile salvare il documento.");
           }
           const row = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
@@ -621,24 +628,26 @@ export function DocumentiView() {
         },
       });
       if (!result.ok) {
-        setToast(result.error);
+        gestToast.errorOnce("documenti-upload", result.error, { module: "documenti" });
         throw new Error(result.error);
       }
     },
-    [authorTrim, refreshDocumenti, canUploadDocuments, runUpload],
+    [authorTrim, gestToast, refreshDocumenti, canUploadDocuments, runUpload],
   );
 
   const handleSaveEdit = useCallback(
-    async (next: DocumentoGestionale) => {
-      if (!canUploadDocuments) return;
+    async (next: DocumentoGestionale): Promise<boolean> => {
+      if (!canUploadDocuments) return false;
       const old = docs.find((d) => d.id === next.id);
       setDocMutating(true);
       try {
         const update = gestionaleToDocumentoUpdate(next);
         const res = await documentiService.update(next.id, update);
         if (!res.success || !res.data) {
-          setToast(res.error ?? "Impossibile aggiornare il documento.");
-          return;
+          gestToast.errorOnce("documenti-update", res.error ?? "Impossibile aggiornare il documento.", {
+            module: "documenti",
+          });
+          return false;
         }
         if (old) {
           const saved = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
@@ -655,28 +664,24 @@ export function DocumentiView() {
           }
         }
         refreshDocumenti();
-        setToast("Documento aggiornato.");
+        gestToast.successOnce("documenti-update", "Documento aggiornato.");
+        return true;
       } finally {
         setDocMutating(false);
       }
     },
-    [docs, authorTrim, refreshDocumenti, canUploadDocuments],
+    [docs, authorTrim, gestToast, refreshDocumenti, canUploadDocuments],
   );
 
-  const handleDelete = useCallback(
+  const executeDelete = useCallback(
     async (victim: DocumentoGestionale) => {
-      if (!canDeleteRecords) return;
-      const ok = window.confirm(
-        documentoSenzaMarca(victim)
-          ? `Eliminare definitivamente «${victim.nome}»? Il documento non ha marca assegnata.`
-          : `Eliminare definitivamente «${victim.nome}»?`,
-      );
-      if (!ok) return;
       setDocMutating(true);
       try {
         const res = await documentiService.remove(victim.id);
         if (!res.success) {
-          setToast(res.error ?? "Impossibile eliminare il documento.");
+          gestToast.errorOnce("documenti-delete", res.error ?? "Impossibile eliminare il documento.", {
+            module: "documenti",
+          });
           return;
         }
         appendDocumentiChangeLog({
@@ -699,21 +704,26 @@ export function DocumentiView() {
         setInfoDoc((d) => (d?.id === victim.id ? null : d));
         setEditDoc((d) => (d?.id === victim.id ? null : d));
         refreshDocumenti();
-        setToast("Documento eliminato.");
+        gestToast.successDeleted();
       } finally {
         setDocMutating(false);
+        setDeleteConfirmDoc(null);
       }
     },
-    [authorTrim, refreshDocumenti, canDeleteRecords],
+    [authorTrim, gestToast, refreshDocumenti],
   );
 
-  function openDoc(doc: DocumentoGestionale) {
-    const href = getDocumentApriHref(doc);
-    if (!href) {
-      setToast("File non disponibile");
-      return;
-    }
-    openUrlInNewTab(href, { revokeBlobUrlAfterMs: href.startsWith("blob:") ? 120_000 : undefined });
+  const handleDelete = useCallback(
+    (victim: DocumentoGestionale) => {
+      if (!canDeleteRecords) return;
+      setDeleteConfirmDoc(victim);
+    },
+    [canDeleteRecords],
+  );
+
+  async function openDoc(doc: DocumentoGestionale) {
+    const ok = await openDocumentoFile(doc);
+    if (!ok) gestToast.warning("File non disponibile.");
   }
 
   function toggleMarca(id: string) {
@@ -781,6 +791,7 @@ export function DocumentiView() {
   const hasPageClientFilters = searchActive || hasAdvancedPanelFilters;
 
   return (
+    <GestionaleSectionGate module="documenti">
     <>
       <PageHeader
         title="Documenti"
@@ -983,7 +994,7 @@ export function DocumentiView() {
                             onEdit={() => setEditDoc(d)}
                             onDelete={() => handleDelete(d)}
                             onInfo={() => setInfoDoc(d)}
-                            onToast={setToast}
+                            onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                             onApri={() => openDoc(d)}
                             canEdit={canUploadDocuments}
                             canDelete={canDeleteRecords}
@@ -1068,7 +1079,7 @@ export function DocumentiView() {
                                         onEdit={() => setEditDoc(d)}
                                         onDelete={() => handleDelete(d)}
                                         onInfo={() => setInfoDoc(d)}
-                                        onToast={setToast}
+                                        onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                                         onApri={() => openDoc(d)}
                                         canEdit={canUploadDocuments}
                                         canDelete={canDeleteRecords}
@@ -1094,7 +1105,7 @@ export function DocumentiView() {
                                         onEdit={() => setEditDoc(d)}
                                         onDelete={() => handleDelete(d)}
                                         onInfo={() => setInfoDoc(d)}
-                                        onToast={setToast}
+                                        onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                                         onApri={() => openDoc(d)}
                                         canEdit={canUploadDocuments}
                                         canDelete={canDeleteRecords}
@@ -1155,7 +1166,7 @@ export function DocumentiView() {
                                                   onEdit={() => setEditDoc(d)}
                                                   onDelete={() => handleDelete(d)}
                                                   onInfo={() => setInfoDoc(d)}
-                                                  onToast={setToast}
+                                                  onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                                                   onApri={() => openDoc(d)}
                                                   canEdit={canUploadDocuments}
                                                   canDelete={canDeleteRecords}
@@ -1195,7 +1206,7 @@ export function DocumentiView() {
                             onEdit={() => setEditDoc(d)}
                             onDelete={() => handleDelete(d)}
                             onInfo={() => setInfoDoc(d)}
-                            onToast={setToast}
+                            onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                             onApri={() => openDoc(d)}
                             canEdit={canUploadDocuments}
                             canDelete={canDeleteRecords}
@@ -1280,15 +1291,24 @@ export function DocumentiView() {
         </div>
       </Drawer>
 
-      {toast ? (
-        <p
-          className="fixed bottom-6 left-1/2 z-[110] max-w-sm -translate-x-1/2 rounded-lg border border-zinc-200 bg-white px-4 py-2 text-center text-xs font-medium text-zinc-700 shadow-lg dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
-          role="status"
-          aria-live="polite"
-        >
-          {toast}
-        </p>
-      ) : null}
+      <SettingsEliminaConfirmDialog
+        open={deleteConfirmDoc != null}
+        itemLabel={deleteConfirmDoc?.nome}
+        detail={
+          deleteConfirmDoc && documentoSenzaMarca(deleteConfirmDoc)
+            ? "Il documento non ha marca assegnata."
+            : undefined
+        }
+        pending={docMutating}
+        onCancel={() => {
+          if (!docMutating) setDeleteConfirmDoc(null);
+        }}
+        onConfirm={() => {
+          if (deleteConfirmDoc) void executeDelete(deleteConfirmDoc);
+        }}
+      />
+      {confirmDialog}
     </>
+    </GestionaleSectionGate>
   );
 }

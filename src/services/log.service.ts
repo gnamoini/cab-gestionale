@@ -7,7 +7,7 @@ import type { PermissionKey } from "@/src/lib/auth/permissions";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LogModificaRow, LogModificaWithProfileRow } from "@/src/types/supabase-tables";
 
-import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+import { errMessageFromSupabase, serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const LOG_MODIFICHE_SELECT = "*, profiles!log_modifiche_autore_id_fkey(id,nome)";
 
@@ -32,7 +32,7 @@ export const logService = {
       if (filters?.entita_id) q = q.eq("entita_id", filters.entita_id);
       if (filters?.limit != null) q = q.limit(Math.min(Math.max(filters.limit, 1), 500));
       const { data, error } = await q;
-      if (error) return err(error.message);
+      if (error) return err(errMessageFromSupabase(error, { action: "read" }));
       return success((data ?? []) as LogModificaWithProfileRow[]);
     } catch (e) {
       return serviceFailFromError(e);
@@ -68,7 +68,7 @@ export const logService = {
       });
       const payload = mergePayloadWithSummary(data.payload, summary);
       const { data: row, error } = await c.from("log_modifiche").insert({ ...data, payload }).select("*").single();
-      if (error) return err(error.message);
+      if (error) return err(errMessageFromSupabase(error));
       return success(row as LogModificaRow);
     } catch (e) {
       return serviceFailFromError(e);

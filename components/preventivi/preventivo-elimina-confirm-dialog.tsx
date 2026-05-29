@@ -1,7 +1,6 @@
 "use client";
 
-import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
 export function PreventivoEliminaConfirmDialog({
@@ -17,12 +16,14 @@ export function PreventivoEliminaConfirmDialog({
   onConfirm: () => void;
   pending?: boolean;
 }) {
-  if (!open || !record) return null;
+  if (!record) return null;
 
   return (
-    <LavorazioniModalShell onRequestClose={pending ? () => {} : onCancel} title="Eliminare preventivo?">
-      <div className="p-4 sm:p-6">
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+    <GestionaleConfirmDialog
+      open={open}
+      title="Eliminare preventivo?"
+      message={
+        <>
           Stai per eliminare il preventivo <span className="font-semibold tabular-nums">{record.numero}</span>
           {record.cliente.trim() ? (
             <>
@@ -33,16 +34,13 @@ export function PreventivoEliminaConfirmDialog({
           .
           <br />
           Questa operazione è irreversibile.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <button type="button" className={dsBtnNeutral} onClick={onCancel} disabled={pending}>
-            Annulla
-          </button>
-          <button type="button" className={dsBtnDanger} onClick={onConfirm} disabled={pending}>
-            {pending ? "Eliminazione…" : "Elimina preventivo"}
-          </button>
-        </div>
-      </div>
-    </LavorazioniModalShell>
+        </>
+      }
+      confirmLabel={pending ? "Eliminazione…" : "Elimina preventivo"}
+      destructive
+      pending={pending}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   );
 }

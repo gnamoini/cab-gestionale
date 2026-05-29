@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { IconActionButton } from "@/components/design-system";
 import type { SupportoNote } from "@/lib/supporto/supporto-note-types";
 import { formatSupportoNoteDateTime } from "@/lib/supporto/supporto-notes-format";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import {
   dsBadgeOk,
   dsBtnNeutral,
@@ -149,6 +150,7 @@ export function SupportoNoteCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(note.body);
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const authorDisplay = note.autore.trim().toUpperCase();
   const showActions = !editing && (canEdit || canModerate);
 
@@ -157,9 +159,15 @@ export function SupportoNoteCard({
   }, [note.body, editing]);
 
   const handleDelete = useCallback(() => {
-    if (!window.confirm("Eliminare questa nota?")) return;
-    onDelete(note.id);
-  }, [note.id, onDelete]);
+    void confirm({
+      title: "Eliminare nota?",
+      message: "La nota verrà rimossa in modo permanente.",
+      destructive: true,
+      confirmLabel: "Elimina",
+    }).then((ok) => {
+      if (ok) onDelete(note.id);
+    });
+  }, [confirm, note.id, onDelete]);
 
   const handleSaveEdit = useCallback(() => {
     const t = draft.trim();
@@ -240,6 +248,7 @@ export function SupportoNoteCard({
           </div>
         )}
       </article>
+      {confirmDialog}
     </li>
   );
 }

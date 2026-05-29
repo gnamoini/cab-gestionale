@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/context/toast-context";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useUploadFeedback } from "@/context/upload-feedback-context";
 import { UploadStatusInline } from "@/components/gestionale/upload";
 import {
@@ -11,10 +12,8 @@ import {
   lavorazioneDocumentByTipo,
 } from "@/lib/lavorazioni/lavorazione-documents";
 import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
-import {
-  cabSyncEventForEntity,
-  dispatchGestionaleLocalMutation,
-} from "@/lib/sync/gestionale-sync-dispatch";
+import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
+import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { reconcileGestionaleEntity } from "@/lib/sync/gestionale-reconcile";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
@@ -160,7 +159,8 @@ export function LavorazioneDocumentsManager({
   onDocumentEvent?: () => void;
 }) {
   const qc = useQueryClient();
-  const { push: pushToast } = useToast();
+  const gestToast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const { trackUpload } = useUploadFeedback();
   const docsQ = useLavorazionePdfsByLavorazione(lavorazioneId);
   const rows = docsQ.data ?? [];
@@ -171,9 +171,13 @@ export function LavorazioneDocumentsManager({
 
   const syncDocuments = useCallback(
     (eventType: "entity_created" | "entity_updated" | "entity_deleted" = "entity_updated") => {
-      dispatchGestionaleLocalMutation(qc, ["lavorazione_documents"], [
-        cabSyncEventForEntity("lavorazione_documents", lavorazioneId, eventType, "lavorazione_documents"),
-      ]);
+      void invalidateOperationalTruth({
+        queryClient: qc,
+        domain: "lavorazioni",
+        cabSyncEvents: [
+          cabSyncEventForEntity("lavorazione_documents", lavorazioneId, eventType, "lavorazione_documents"),
+        ],
+      });
       onDocumentEvent?.();
     },
     [qc, lavorazioneId, onDocumentEvent],
@@ -269,22 +273,28 @@ export function LavorazioneDocumentsManager({
   }
 
   async function handleRemove(tipo: LavorazioneDocumentTipo) {
-    if (!window.confirm("Eliminare questo documento?")) return;
+    const ok = await confirm({
+      title: "Eliminare documento?",
+      message: "Il file verrà rimosso dalla lavorazione.",
+      destructive: true,
+      confirmLabel: "Elimina",
+    });
+    if (!ok) return;
     setUploadingTipo(tipo);
     const res = await lavorazioneDocumentsService.remove(lavorazioneId, tipo);
     setUploadingTipo(null);
     if (!res.success) {
-      pushToast(res.error ?? "Eliminazione non riuscita.", "error");
+      gestToast.errorOnce("lav-doc-delete", res.error ?? "Eliminazione non riuscita.", { module: "lavorazioni" });
       return;
     }
-    pushToast("Documento eliminato.", "success");
+    gestToast.successDeleted();
     syncDocuments("entity_deleted");
   }
 
   async function openDoc(doc: LavorazioneDocumentRow) {
     const url = urlCache[doc.storage_path] ?? (await resolveUrl(doc));
     if (!url) {
-      pushToast("Impossibile aprire il documento.", "error");
+      gestToast.warning("Impossibile aprire il documento.");
       return;
     }
     window.open(url, "_blank", "noopener,noreferrer");
@@ -293,7 +303,7 @@ export function LavorazioneDocumentsManager({
   async function downloadDoc(doc: LavorazioneDocumentRow) {
     const url = urlCache[doc.storage_path] ?? (await resolveUrl(doc));
     if (!url) {
-      pushToast("Impossibile scaricare il documento.", "error");
+      gestToast.warning("Impossibile scaricare il documento.");
       return;
     }
     const a = document.createElement("a");
@@ -326,6 +336,7 @@ export function LavorazioneDocumentsManager({
           />
         );
       })}
+      {confirmDialog}
     </section>
   );
 }

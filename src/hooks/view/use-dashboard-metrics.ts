@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { useQueryClient } from "@tanstack/react-query";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { computeDashboardMagFeedFromLogs } from "@/lib/view/dashboard-magazzino-log-selectors";
@@ -9,8 +10,9 @@ import {
   computeDashboardLavWidgetStats,
   computeDashboardMagDailyMovements,
   computeDashboardMagSottoScortaRicambi,
-  computeDashboardMagWidgetStats,
 } from "@/lib/view/dashboard-widgets-selectors";
+import { computeReportMagazzinoKpiWidgetFromUi } from "@/lib/report/report-kpi-selectors";
+import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import {
   useLogListQuery,
@@ -18,23 +20,33 @@ import {
   useMovimentiListQuery,
 } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
-import { QK } from "@/src/lib/react-query/invalidate-related";
+import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 
 const LAV_FILTERS = { includeMezzo: true as const, archived: false as const };
-const MAG_LOG_SCAN_LIMIT = 80;
+const DASHBOARD_REPORT_INVALIDATE_DEBOUNCE_MS = 400;
 
 /** Query + selector aggregati per widget Lavorazioni/Magazzino dashboard (VIEW layer, read-only). */
 export function useDashboardMetrics() {
   const staging = isStagingPublicSlice();
   const viewOpts = useViewQueryOpts();
   const qc = useQueryClient();
+  const { gestionale } = useRealtimeStatus();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const loadStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
+  const loadLoggedRef = useRef(false);
 
-  const invalidateMagLogs = () => {
-    void qc.invalidateQueries({ queryKey: QK.log, refetchType: "active" });
-  };
+  const invalidateMagLogs = useCallback(() => {
+    if (gestionale === "connected") return;
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      void invalidateOperationalTruth({ queryClient: qc, domain: "report" });
+    }, DASHBOARD_REPORT_INVALIDATE_DEBOUNCE_MS);
+  }, [qc, gestionale]);
 
   useCabSyncListener("log_modifiche", invalidateMagLogs);
   useCabSyncListener("magazzino_ricambi", invalidateMagLogs);
@@ -47,11 +59,11 @@ export function useDashboardMetrics() {
   const magQuery = useMagazzinoRicambiUIQuery(undefined, viewOpts);
   const movQuery = useMovimentiListQuery(undefined, viewOpts);
   const magLogsQ = useLogListQuery(
-    { entita: "magazzino_ricambi", limit: MAG_LOG_SCAN_LIMIT },
+    { entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
     { enabled: !staging, ...viewOpts },
   );
   const movLogsQ = useLogListQuery(
-    { entita: "movimenti_ricambi", limit: MAG_LOG_SCAN_LIMIT },
+    { entita: "movimenti_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
     { enabled: !staging, ...viewOpts },
   );
 
@@ -72,10 +84,10 @@ export function useDashboardMetrics() {
     return map;
   }, [magQuery.data]);
 
-  const magStats = useMemo(
-    () => (staging ? { capitale: 0, sottoScorta: 0 } : computeDashboardMagWidgetStats(magQuery.data ?? [])),
-    [magQuery.data, staging],
-  );
+  const magStats = useMemo(() => {
+    if (staging) return { capitale: 0, sottoScorta: 0 };
+    return computeReportMagazzinoKpiWidgetFromUi(magQuery.data ?? []);
+  }, [magQuery.data, staging]);
 
   const magSottoScortaRicambi = useMemo(
     () => (staging ? [] : computeDashboardMagSottoScortaRicambi(magQuery.data ?? [])),
@@ -102,6 +114,15 @@ export function useDashboardMetrics() {
     lavQuery.isLoading || magQuery.isLoading || movQuery.isLoading || magLogsQ.isLoading || movLogsQ.isLoading;
   const isError =
     lavQuery.isError || magQuery.isError || movQuery.isError || magLogsQ.isError || movLogsQ.isError;
+
+  useEffect(() => {
+    if (staging || loadLoggedRef.current) return;
+    if (isLoading) return;
+    if (isError) return;
+    loadLoggedRef.current = true;
+    const durationMs = Math.round(performance.now() - loadStartRef.current);
+    trackRuntimeEvent(RuntimeEvents.dashboardLoadDuration, { durationMs });
+  }, [staging, isLoading, isError]);
 
   return {
     staging,

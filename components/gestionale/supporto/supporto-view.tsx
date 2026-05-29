@@ -10,7 +10,7 @@ import {
   type SupportoNotesFilterKey,
 } from "@/components/gestionale/supporto/supporto-notes-filter";
 import { useAuth } from "@/context/auth-context";
-import { useToast } from "@/context/toast-context";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { denyUnless } from "@/lib/auth/guard-action";
 import {
   canModerateSupportNotes,
@@ -32,7 +32,7 @@ import { useSupportNotesQuery } from "@/src/hooks/use-support-notes-query";
 
 export function SupportoView() {
   const { authorName, user } = useAuth();
-  const { push } = useToast();
+  const gestToast = useGestionaleToast();
   const rbac = useRbac();
   const notesQ = useSupportNotesQuery();
   const createM = useCreateSupportNoteMutation();
@@ -55,14 +55,14 @@ export function SupportoView() {
       setActionError(null);
       try {
         await createM.mutateAsync({ content: body });
-        push("Nota salvata", "success", 3200);
+        gestToast.successOnce("supporto-create", "Nota salvata");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Impossibile salvare la nota.";
         setActionError(msg);
-        push(msg, "error", 4200);
+        gestToast.errorOnce("supporto-create", msg);
       }
     },
-    [canWrite, createM, push],
+    [canWrite, createM, gestToast],
   );
 
   const updateNote = useCallback(
@@ -71,14 +71,14 @@ export function SupportoView() {
       setActionError(null);
       try {
         await updateM.mutateAsync({ id, content, expectedUpdatedAt });
-        push("Nota aggiornata", "success", 3000);
+        gestToast.successOnce("supporto-update", "Nota aggiornata");
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Impossibile aggiornare la nota.";
         setActionError(msg);
-        if (!msg.includes("altro utente")) push(msg, "error", 4200);
+        if (!msg.includes("altro utente")) gestToast.errorOnce("supporto-update", msg);
       }
     },
-    [canWrite, push, updateM],
+    [canWrite, gestToast, updateM],
   );
 
   const deleteNote = useCallback(
@@ -87,14 +87,14 @@ export function SupportoView() {
       setActionError(null);
       try {
         await deleteM.mutateAsync(id);
-        push("Nota eliminata", "info", 3000);
+        gestToast.successDeleted();
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Impossibile eliminare la nota.";
         setActionError(msg);
-        push(msg, "error", 4200);
+        gestToast.errorOnce("supporto-delete", msg);
       }
     },
-    [canModerate, deleteM, push],
+    [canModerate, deleteM, gestToast],
   );
 
   const toggleResolved = useCallback(
@@ -106,10 +106,10 @@ export function SupportoView() {
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Impossibile aggiornare lo stato.";
         setActionError(msg);
-        push(msg, "error", 4200);
+        gestToast.errorOnce("supporto-resolve", msg);
       }
     },
-    [canModerate, push, resolvedM],
+    [canModerate, gestToast, resolvedM],
   );
 
   const filtered = useMemo(() => {

@@ -6,7 +6,7 @@ import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import { attachMagazzinoEntityKey } from "@/lib/validation/entity-persistence";
-import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+import { errMessageFromSupabase, serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "magazzino_ricambi";
 
@@ -44,7 +44,7 @@ export const magazzinoService = {
       if (filters?.nome?.trim()) q = q.ilike("nome", `%${filters.nome.trim()}%`);
       if (filters?.marca?.trim()) q = q.ilike("marca", `%${filters.marca.trim()}%`);
       const { data, error } = await q;
-      if (error) return err(error.message);
+      if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
       return success((data ?? []) as MagazzinoRicambioRow[]);
     } catch (e) {
       return serviceFailFromError(e);
@@ -57,7 +57,7 @@ export const magazzinoService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data, error } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
-      if (error) return err(error.message);
+      if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
       if (!data) return err("Ricambio non trovato");
       return success(data as MagazzinoRicambioRow);
     } catch (e) {
@@ -72,7 +72,7 @@ export const magazzinoService = {
       const c = await sb();
       const payload = attachMagazzinoEntityKey(data);
       const { data: row, error } = await c.from("magazzino_ricambi").insert(payload).select("*").single();
-      if (error) return err(error.message);
+      if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
       const r = row as MagazzinoRicambioRow;
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoRicambio(r)) });
       return success(r);
@@ -88,9 +88,9 @@ export const magazzinoService = {
       const c = await sb();
       const payload = Object.keys(data).length > 0 ? attachMagazzinoEntityKey(data) : data;
       const { data: before, error: e0 } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
-      if (e0) return err(e0.message);
+      if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
       const { data: row, error } = await c.from("magazzino_ricambi").update(payload).eq("id", id).select("*").single();
-      if (error) return err(error.message);
+      if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
       const r = row as MagazzinoRicambioRow;
       await writeModificaLog(c, {
         entita: ENTITA,
@@ -110,13 +110,13 @@ export const magazzinoService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
-      if (e0) return err(e0.message);
+      if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
       if (existing) {
         const ex = existing as MagazzinoRicambioRow;
         await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(ex, oggettoRicambio(ex)) });
       }
       const { error } = await c.from("magazzino_ricambi").delete().eq("id", id);
-      if (error) return err(error.message);
+      if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
       return success(null);
     } catch (e) {
       return serviceFailFromError(e);
@@ -143,7 +143,7 @@ export const magazzinoService = {
         .eq("ricambio_id", id)
         .eq("tipo", "uscita")
         .gte("created_at", since.toISOString());
-      if (eM) return err(eM.message);
+      if (eM) return err(errMessageFromSupabase(eM, { module: "magazzino" }));
       const sum = (movs ?? []).reduce((s, m) => s + num((m as { quantita: unknown }).quantita), 0);
       const months = Math.max(1, Math.min(windowMonths, 24));
       const mensile = Math.round((sum / months) * 1000) / 1000;

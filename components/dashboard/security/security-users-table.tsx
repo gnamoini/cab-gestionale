@@ -6,6 +6,7 @@ import type { SecurityUserPermissionRow } from "@/src/actions/security-users-per
 import { SecurityEditNameModal } from "@/components/dashboard/security/security-edit-name-modal";
 import { SecurityRoleBadge, SecurityStatusBadge } from "@/components/dashboard/security/security-role-badge";
 import { SecurityToggle } from "@/components/dashboard/security/security-toggle";
+import { GlobalTableHead, GestionaleListTableActionsHead } from "@/components/gestionale/global-table";
 import { cycleReportSort, ReportSortTh, type ReportSortPhase } from "@/components/report/report-sort-th";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
@@ -15,7 +16,6 @@ import {
   dsSkeletonPulse,
   dsTable,
   dsTableEmptyCell,
-  dsTableHead,
   dsTableRow,
   dsTableTd,
   dsTableWrap,
@@ -198,25 +198,21 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
         <>
           <div className={`${dsTableWrap} ${dsScrollbar}`}>
             <table className={`${dsTable} text-xs`}>
-              <thead>
-                <tr className={dsTableHead}>
-                  <ReportSortTh label="Nome" columnKey="nome" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
-                  <ReportSortTh label="Username" columnKey="username" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
-                  <ReportSortTh label="Email" columnKey="email" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
-                  <ReportSortTh label="Ruolo" columnKey="ruolo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
-                  <ReportSortTh
-                    label="Accesso Lavorazioni (Clienti)"
-                    columnKey="clientAccess"
-                    sortColumn={sortColumn}
-                    sortPhase={sortPhase}
-                    onSort={handleSort}
-                  />
-                  <ReportSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
-                  <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)] sm:px-2.5">
-                    Azioni
-                  </th>
-                </tr>
-              </thead>
+              <GlobalTableHead>
+                <ReportSortTh label="Nome" columnKey="nome" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                <ReportSortTh label="Username" columnKey="username" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                <ReportSortTh label="Email" columnKey="email" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                <ReportSortTh label="Ruolo" columnKey="ruolo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                <ReportSortTh
+                  label="Accesso Lavorazioni (Clienti)"
+                  columnKey="clientAccess"
+                  sortColumn={sortColumn}
+                  sortPhase={sortPhase}
+                  onSort={handleSort}
+                />
+                <ReportSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                <GestionaleListTableActionsHead />
+              </GlobalTableHead>
               <tbody>
                 {paged.map((row) => {
                   const portalLocked = row.clientLavorazioniAccessFromRole;

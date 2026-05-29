@@ -1,7 +1,9 @@
 "use client";
 
+import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { buildLavorazioneDocumentStoragePath } from "@/src/lib/storage/storage-paths";
-import { STORAGE_BUCKETS, storageCreateSignedUrl, storageRemove, storageUpload } from "@/src/services/storage.service";
+import { removeDocumentoStoragePathsBestEffort } from "@/lib/documenti/delete-documento-fully";
+import { STORAGE_BUCKETS, storageCreateSignedUrl, storageUpload } from "@/src/services/storage.service";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -41,12 +43,15 @@ export const lavorazioneDocumentsService = {
     if (!res.success) return err(res.error ?? "Errore caricamento documenti.");
     try {
       const rows = res.data ?? [];
-      const withUrls = await Promise.all(
+      const settled = await Promise.allSettled(
         rows.map(async (row) => ({
           ...row,
           signedUrl: await signedUrlForPath(row.storage_path),
         })),
       );
+      const withUrls = settled
+        .filter((r): r is PromiseFulfilledResult<LavorazioneDocumentWithUrl> => r.status === "fulfilled")
+        .map((r) => r.value);
       return success(withUrls);
     } catch (e) {
       return serviceFailFromError(e);
@@ -77,18 +82,18 @@ export const lavorazioneDocumentsService = {
         .eq("tipo", tipo)
         .maybeSingle();
 
-      if (existing.data?.storage_path) {
-        try {
-          await storageRemove(STORAGE_BUCKETS.documenti, [existing.data.storage_path as string]);
-        } catch {
-          /* sostituzione: ignora errore rimozione vecchio file */
-        }
-      }
+      if (existing.error) return err(existing.error.message);
+
+      const oldPath = (existing.data?.storage_path as string | undefined)?.trim() ?? "";
 
       await storageUpload(STORAGE_BUCKETS.documenti, path, file, {
         contentType: "application/pdf",
         upsert: true,
       });
+
+      if (oldPath && oldPath !== path) {
+        await removeDocumentoStoragePathsBestEffort([oldPath]);
+      }
 
       const row = {
         lavorazione_id: id,
@@ -141,11 +146,7 @@ export const lavorazioneDocumentsService = {
       if (!existing) return success(null);
 
       const path = (existing as LavorazioneDocumentRow).storage_path;
-      try {
-        await storageRemove(STORAGE_BUCKETS.documenti, [path]);
-      } catch {
-        /* continua eliminazione metadati */
-      }
+      await removeDocumentoStoragePathsBestEffort([path]);
 
       const { error } = await sb.from("lavorazione_documents").delete().eq("lavorazione_id", id).eq("tipo", tipo);
       if (error) return err(error.message);
@@ -159,6 +160,7 @@ export const lavorazioneDocumentsService = {
         payload: { event: "lavorazione_document_deleted", tipo, path },
       });
 
+      trackRuntimeEvent(RuntimeEvents.lavorazioneDocumentsDelete, { lavorazioneId: id, tipo });
       return success(null);
     } catch (e) {
       return serviceFailFromError(e);
@@ -166,19 +168,25 @@ export const lavorazioneDocumentsService = {
   },
 
   /** Rimuove tutti i PDF collegati (es. prima eliminazione logica lavorazione). */
-  async purgeForLavorazione(lavorazioneId: string): Promise<void> {
-    const id = lavorazioneId.trim();
-    if (!id) return;
-    const sb = await getBrowserSupabase();
-    const { data } = await sb.from("lavorazione_documents").select("storage_path, tipo").eq("lavorazione_id", id);
-    const paths = (data ?? []).map((r) => r.storage_path as string).filter(Boolean);
-    if (paths.length > 0) {
-      try {
-        await storageRemove(STORAGE_BUCKETS.documenti, paths);
-      } catch {
-        /* best effort */
+  async purgeForLavorazione(lavorazioneId: string): Promise<ServiceResult<null>> {
+    try {
+      const id = lavorazioneId.trim();
+      if (!id) return success(null);
+      const sb = await getBrowserSupabase();
+      const { data, error: fetchErr } = await sb
+        .from("lavorazione_documents")
+        .select("storage_path, tipo")
+        .eq("lavorazione_id", id);
+      if (fetchErr) return err(fetchErr.message);
+      const paths = (data ?? []).map((r) => r.storage_path as string).filter(Boolean);
+      if (paths.length > 0) {
+        await removeDocumentoStoragePathsBestEffort(paths);
       }
+      const { error } = await sb.from("lavorazione_documents").delete().eq("lavorazione_id", id);
+      if (error) return err(error.message);
+      return success(null);
+    } catch (e) {
+      return serviceFailFromError(e);
     }
-    await sb.from("lavorazione_documents").delete().eq("lavorazione_id", id);
   },
 };

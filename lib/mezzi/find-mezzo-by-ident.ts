@@ -4,6 +4,12 @@ function normIdent(v: string): string {
   return v.trim().toLowerCase();
 }
 
+function normScuderia(v: string): string {
+  const n = normIdent(v);
+  if (!n || n === "—") return "";
+  return n;
+}
+
 /** Trova mezzo per targa o matricola (match esatto, case-insensitive). */
 export function findMezzoByTargaOrMatricola(
   mezzi: readonly MezzoGestito[],
@@ -27,4 +33,23 @@ export function findMezzoByTargaOrMatricola(
     if (hit) return hit;
   }
   return null;
+}
+
+/** Match esatto su targa, matricola o n. scuderia (anagrafica ingresso). */
+export function findMezzoByIngressoIdent(
+  mezzi: readonly MezzoGestito[],
+  ident: { targa?: string; matricola?: string; nScuderia?: string },
+): MezzoGestito | null {
+  const byTm = findMezzoByTargaOrMatricola(mezzi, ident.targa ?? "", ident.matricola ?? "");
+  if (byTm) return byTm;
+
+  const ns = normScuderia(ident.nScuderia ?? "");
+  if (!ns) return null;
+
+  return (
+    mezzi.find((x) => {
+      const xs = normScuderia(x.numeroScuderia ?? "");
+      return xs && xs === ns;
+    }) ?? null
+  );
 }

@@ -1,12 +1,11 @@
 "use client";
 
-import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import {
   SCHEDA_INGRESSO_LABEL,
   SCHEDA_LAVORAZIONI_LABEL,
   SCHEDA_RICAMBI_LABEL,
 } from "@/lib/schede/schede-log-helpers";
-import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
 import type { SchedaTipo } from "@/types/schede";
 
 export function schedaLabelForTipo(tipo: SchedaTipo): string {
@@ -31,31 +30,25 @@ export function SchedaEliminaConfirmDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  if (!open || !tipo) return null;
-
+  if (!tipo) return null;
   const label = schedaLabelForTipo(tipo);
 
   return (
-    <LavorazioniModalShell
-      layerClassName="z-[120]"
-      onRequestClose={onCancel}
+    <GestionaleConfirmDialog
+      open={open}
       title="Eliminare scheda?"
-    >
-      <div className="p-4 sm:p-6">
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+      layerClassName="z-[120]"
+      message={
+        <>
           Stai per eliminare <span className="font-semibold">{label}</span> da questa lavorazione.
           <br />
           Questa operazione è irreversibile.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <button type="button" className={dsBtnNeutral} onClick={onCancel}>
-            Annulla
-          </button>
-          <button type="button" className={dsBtnDanger} onClick={onConfirm}>
-            Elimina scheda
-          </button>
-        </div>
-      </div>
-    </LavorazioniModalShell>
+        </>
+      }
+      confirmLabel="Elimina scheda"
+      destructive
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   );
 }

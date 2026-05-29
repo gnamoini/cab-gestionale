@@ -1,7 +1,11 @@
 "use client";
 
 import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
-import { GlobalTable, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import {
+  GestionaleListTable,
+  GestionaleListTableActionsHead,
+  GlobalTableHeadLabel,
+} from "@/components/gestionale/global-table";
 import {
   dsScrollbar,
   dsTableActionBtnPrimary,
@@ -48,7 +52,8 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
 
   return (
     <>
-      <GlobalTable
+      <GestionaleListTable
+        masterScrollScope={false}
         visibilityClass="hidden xl:block"
         className="w-full min-w-0 text-sm text-zinc-900 dark:text-zinc-100"
         colgroup={
@@ -75,7 +80,7 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
             <GlobalTableHeadLabel label="Utilizzatore" thClassName="min-w-0 px-2" />
             <GlobalTableHeadLabel label="Attrezzatura" thClassName="min-w-0 px-2" />
             <GlobalTableHeadLabel label="Targa / Matricola" thClassName="w-[9.75rem] min-w-[9.75rem] px-2" />
-            <GlobalTableHeadLabel label="Azioni" align="center" thClassName="w-[10.5rem] min-w-[10.5rem]" />
+            <GestionaleListTableActionsHead />
           </>
         }
         empty={false}
@@ -121,7 +126,7 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
             </td>
           </tr>
         ))}
-      </GlobalTable>
+      </GestionaleListTable>
 
       <div className={`space-y-3 xl:hidden ${dsScrollbar}`}>
         {rows.map((p) => (

@@ -5,6 +5,7 @@ import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-l
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { MagazzinoCapitalLineChart, MagazzinoEntrateUsciteBars } from "@/components/report/report-charts";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/report/report-buttons";
+import { GlobalTableHead } from "@/components/gestionale/global-table";
 import { cycleReportSort, ReportSortTh, type ReportSortPhase } from "@/components/report/report-sort-th";
 import type { ReportCompareDetail } from "@/lib/report/build-report-model";
 import { deltaPct } from "@/lib/report/date-ranges";
@@ -29,6 +30,7 @@ import {
   dsTypoSmall,
   gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 
 function fmtPct(p: number | null): string {
   if (p == null) return "—";
@@ -92,6 +94,7 @@ export function ReportMagazzinoSection({
   const showEmpty = rows.length === 0 || (!logInRange && !hasRawLog && !hasManualInRange);
 
   const [open, setOpen] = useState(false);
+  useBodyScrollLock(open, "report-magazzino-manual");
   const [key, setKey] = useState(rows[0]?.key ?? "");
   const [ent, setEnt] = useState("");
   const [usc, setUsc] = useState("");
@@ -214,8 +217,7 @@ export function ReportMagazzinoSection({
             <col style={{ width: "19%" }} />
             <col style={{ width: "19%" }} />
           </colgroup>
-          <thead className="sticky top-0 z-10">
-            <tr>
+          <GlobalTableHead sticky>
               <ReportSortTh label="Mese" columnKey="mese" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMag} />
               <ReportSortTh
                 label="Entrate"
@@ -257,8 +259,7 @@ export function ReportMagazzinoSection({
                 onSort={onSortMag}
                 align="right"
               />
-            </tr>
-          </thead>
+          </GlobalTableHead>
           <tbody>
             {sortedRows.map((r) => (
               <tr key={r.key} className={dsTableRow}>
@@ -306,7 +307,7 @@ export function ReportMagazzinoSection({
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div className={dsModalPanel} onMouseDown={(e) => e.stopPropagation()}>
+          <div className={`${dsModalPanel} flex flex-col overflow-hidden`} onMouseDown={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Storico manuale magazzino</h3>
             <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
               Opzionale: sovrascrivi i valori calcolati per un mese. Lascia vuoto un campo per usare il valore automatico.

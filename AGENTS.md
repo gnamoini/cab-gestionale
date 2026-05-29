@@ -14,3 +14,9 @@ La tabella della pagina **Lavorazioni** è il riferimento unico per tutte le lis
 - Colonna Azioni: `GestionaleListTableActionsHead` + `gestionaleListTableTdAzioni` + `gestionaleListTableActionsGroup`
 
 Non introdurre classi tabella locali (`prevTableTd`, thead custom, `text-sm` sulla table) salvo eccezioni documentate.
+
+## Dev server (Turbopack / proxy)
+
+- Default: `npm run dev` (Turbopack). `next.config.ts` imposta `turbopack.root` al progetto per evitare root inference errata.
+- Se HMR crash su `proxy.ts` / `proxy-handler.ts` (`NextSegmentConfig no longer exists`): usare **`npm run dev:webpack`** temporaneamente mentre si lavora sull'edge auth/RBAC — non disabilitare Turbopack in modo permanente senza motivo.
+- `proxy.ts`: `config.matcher` deve restare **string literal** (no `String.raw` / builder dinamici).

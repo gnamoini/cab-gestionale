@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
-import { useToast } from "@/context/toast-context";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityCreateUserModal } from "@/components/dashboard/security-create-user-modal";
 import {
@@ -18,6 +20,7 @@ import {
   useSecurityUsersPermissionsQuery,
 } from "@/src/hooks/use-security-users-permissions-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
+import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import {
   dsBtnGhost,
   dsBtnNeutral,
@@ -33,7 +36,8 @@ type Props = {
 
 export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }: Props) {
   const { refresh, user: sessionUser } = useAuth();
-  const { push } = useToast();
+  const gestToast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
   const [draftRows, setDraftRows] = useState<EditableSecurityUser[]>([]);
@@ -77,18 +81,13 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
     try {
       const res = await batchUpdateSecurityUsersAction(patches);
       if (!res.ok) {
-        push(res.message, "error");
+        gestToast.error(res.message);
         return;
       }
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: QK.securityUsersPermissions }),
-        queryClient.invalidateQueries({ queryKey: QK.securityUsers }),
-        queryClient.invalidateQueries({ queryKey: QK.profiles }),
-        queryClient.invalidateQueries({ queryKey: QK.authUsers }),
-        queryClient.invalidateQueries({ queryKey: QK.clientLavorazioniAccess }),
-        queryClient.invalidateQueries({ queryKey: QK.userPermissions }),
-        queryClient.invalidateQueries({ queryKey: QK.log }),
-      ]);
+      await invalidateRuntimeTruth({
+        reason: "roleOrPermissionsChanged",
+        queryClient,
+      });
       const fresh = await queryClient.fetchQuery({
         queryKey: QK.securityUsersPermissions,
         queryFn: fetchSecurityUsersPermissionsQuery,
@@ -97,11 +96,11 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
       if (patches.some((p) => p.userId === sessionUser?.id)) {
         await refresh();
       }
-      push("Utenti e permessi salvati correttamente.", "success");
+      gestToast.successOnce("security-users-save", GESTIONALE_TOAST.successSaved);
     } finally {
       setSaving(false);
     }
-  }, [serverUsers, draftRows, isDirty, push, queryClient, refresh, sessionUser?.id, syncFromServer]);
+  }, [serverUsers, draftRows, isDirty, gestToast, queryClient, refresh, sessionUser?.id, syncFromServer]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -114,11 +113,19 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
   }, [isDirty]);
 
   const handleRefetch = useCallback(() => {
-    if (isDirty && !window.confirm("Ci sono modifiche non salvate. Ricaricare comunque?")) return;
-    void usersQ.refetch().then((res) => {
+    void (async () => {
+      if (isDirty) {
+        const ok = await confirm({
+          title: "Modifiche non salvate",
+          message: "Ci sono modifiche non salvate. Ricaricare comunque?",
+          confirmLabel: "Ricarica",
+        });
+        if (!ok) return;
+      }
+      const res = await usersQ.refetch();
       if (res.data?.users) syncFromServer(res.data.users);
-    });
-  }, [isDirty, usersQ, syncFromServer]);
+    })();
+  }, [confirm, isDirty, usersQ, syncFromServer]);
 
   return (
     <ShellCard title="Gestione Utenti e Permessi">
@@ -176,9 +183,10 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
         onClose={() => {
           setCreateOpen(false);
           hydratedRef.current = false;
-          void queryClient.invalidateQueries({ queryKey: QK.securityUsersPermissions });
+          void invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient });
         }}
       />
+      {confirmDialog}
     </ShellCard>
   );
 }

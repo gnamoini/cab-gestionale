@@ -4,9 +4,26 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:webpack": "next dev --webpack",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test:permissions": "npx tsx src/lib/permissions/effective-permissions.test.ts",
+    "test:operator-global-settings": "npx tsx lib/permissions/operator-global-settings.test.ts",
+    "ci:tsc": "npx tsx scripts/ci-tsc-gate.ts",
+    "ci:build": "npx tsx scripts/ci-build-gate.ts",
+    "release:gate": "npx tsx scripts/release-gate.ts",
+    "production:check": "npx tsx scripts/production-check.ts",
+    "test:production-readiness": "npx tsx lib/production/production-readiness.test.ts",
+    "ux:enforce": "npx tsx scripts/ux-enforcement-check.ts",
+    "ux:mobile-gate": "npx tsx scripts/ux-mobile-regression-gate.ts",
+    "ios:check": "npx tsx scripts/mobile-ios-regression-check.ts",
+    "smoke:regression": "npx tsx scripts/smoke-regression-tests.ts",
+    "smoke:structural": "npx tsx scripts/smoke-structural-gate.ts",
+    "smoke:playwright": "npx playwright test -c e2e/playwright.config.ts",
+    "smoke:gate": "npx tsx scripts/smoke-gate.ts",
+    "ops:diagnostics": "npx tsx scripts/ops-diagnostics.ts",
+    "ops:env-check": "npx tsx scripts/ops-env-check.ts"
   },
   "dependencies": {
     "@floating-ui/react-dom": "^2.1.8",
@@ -21,6 +38,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
@@ -29,6 +47,8 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.22.3",
     "typescript": "^5"
   }
 }

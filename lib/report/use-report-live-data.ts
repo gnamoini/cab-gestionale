@@ -1,71 +1,94 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
+import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
+import { assertReportBundleSane } from "@/lib/ops/sanity-assertions";
 import { buildReportLavorazioniBundle } from "@/lib/report/lavorazioni-report-selectors";
-import { loadMagazzinoChangeLog, MAGAZZINO_CHANGE_LOG_STORAGE_KEY } from "@/lib/magazzino/magazzino-change-log-storage";
+import {
+  readLocalMagazzinoLogCache,
+  MAGAZZINO_CHANGE_LOG_STORAGE_KEY,
+} from "@/lib/magazzino/magazzino-change-log-storage";
+import { ricambioIdFromMovimentoRow } from "@/lib/magazzino/magazzino-log-feed-merge";
 import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { manualEntriesToByMonth } from "@/lib/report/report-manual-entries-map";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { resolveMagazzinoReportLogEntries } from "@/lib/report/resolve-magazzino-report-log";
+import { scheduleReportBroadcastRefresh } from "@/lib/report/report-refresh";
 import { subscribeReportDataRefresh } from "@/lib/report/report-broadcast";
-import { useViewQueryOpts } from "@/lib/view/view-query-opts";
-import { useMagazzinoListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useReportViewQueryOpts } from "@/lib/view/view-query-opts";
+import { useLogListQuery, useMagazzinoListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useReportManualEntriesQuery } from "@/src/hooks/view/use-report-manual-entries";
-import { QK } from "@/src/lib/react-query/query-keys";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { logAutoreLabel, buildLogModificheDisplayEntries } from "@/lib/gestionale-log/log-modifiche-view-model";
+import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 
 /** Tutte le lavorazioni non eliminate (in corso + archiviate); split report su `archived`. */
 const LAV_LIST_FILTERS = { includeMezzo: true as const };
-/** Fetch archivio ufficiale — unica fonte metriche «completate» nel report. */
-const LAV_ARCHIVIO_FILTERS = { includeMezzo: true as const, archived: true as const };
 
 export function useReportLiveData() {
   const queryClient = useQueryClient();
-  const viewOpts = useViewQueryOpts({ staleTime: 0 });
+  const viewOpts = useReportViewQueryOpts();
   const [magLogVersion, setMagLogVersion] = useState(0);
+  const readyLoggedRef = useRef(false);
+  const errorLoggedRef = useRef(false);
+  const loadStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
 
   const bumpMagLog = useCallback(() => setMagLogVersion((v) => v + 1), []);
 
-  const refetchReportQueries = useCallback(() => {
-    void queryClient.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
-    void queryClient.invalidateQueries({ queryKey: QK.magazzino, refetchType: "active" });
-    void queryClient.invalidateQueries({ queryKey: QK.movimenti, refetchType: "active" });
-    void queryClient.invalidateQueries({ queryKey: QK.mezzi, refetchType: "active" });
-    void queryClient.invalidateQueries({ queryKey: QK.reportManualEntries, refetchType: "active" });
-    bumpMagLog();
+  const scheduleRefresh = useCallback(() => {
+    scheduleReportBroadcastRefresh(queryClient, bumpMagLog);
   }, [queryClient, bumpMagLog]);
 
   const lavQuery = useLavorazioniList(LAV_LIST_FILTERS, viewOpts);
-  const lavArchivioQuery = useLavorazioniList(LAV_ARCHIVIO_FILTERS, viewOpts);
   const magQuery = useMagazzinoListQuery(undefined, viewOpts);
   const mezziQuery = useMezziListQuery(undefined, viewOpts);
   const manualQuery = useReportManualEntriesQuery();
+  const magLogsQ = useLogListQuery({ entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT }, viewOpts);
+  const movLogsQ = useLogListQuery({ entita: "movimenti_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT }, viewOpts);
 
   useEffect(() => {
-    const unsub = subscribeReportDataRefresh(refetchReportQueries);
+    const unsub = subscribeReportDataRefresh(scheduleRefresh);
     const onStorage = (e: StorageEvent) => {
-      if (e.key === MAGAZZINO_CHANGE_LOG_STORAGE_KEY) refetchReportQueries();
-    };
-    let visTimer: ReturnType<typeof setTimeout> | null = null;
-    const onVis = () => {
-      if (document.visibilityState !== "visible") return;
-      if (visTimer) clearTimeout(visTimer);
-      visTimer = setTimeout(() => refetchReportQueries(), 800);
+      if (e.key === MAGAZZINO_CHANGE_LOG_STORAGE_KEY) bumpMagLog();
     };
     window.addEventListener("storage", onStorage);
-    document.addEventListener("visibilitychange", onVis);
     return () => {
       unsub();
       window.removeEventListener("storage", onStorage);
-      document.removeEventListener("visibilitychange", onVis);
-      if (visTimer) clearTimeout(visTimer);
     };
-  }, [refetchReportQueries]);
+  }, [scheduleRefresh, bumpMagLog]);
 
-  const bundle = useMemo(
-    () => buildReportLavorazioniBundle(lavQuery.data ?? [], lavArchivioQuery.data),
-    [lavQuery.data, lavArchivioQuery.data],
-  );
+  const isLoading =
+    lavQuery.isLoading ||
+    magQuery.isLoading ||
+    mezziQuery.isLoading ||
+    manualQuery.isLoading ||
+    magLogsQ.isLoading ||
+    movLogsQ.isLoading;
+
+  const isError =
+    lavQuery.isError || magQuery.isError || mezziQuery.isError || manualQuery.isError;
+
+  useEffect(() => {
+    if (isLoading) return;
+    if (isError && !errorLoggedRef.current) {
+      errorLoggedRef.current = true;
+      trackRuntimeEvent(RuntimeEvents.reportDataError);
+      return;
+    }
+    if (!isError && !readyLoggedRef.current) {
+      readyLoggedRef.current = true;
+      const durationMs = Math.round(performance.now() - loadStartRef.current);
+      trackRuntimeEvent(RuntimeEvents.reportDataReady, { durationMs });
+    }
+  }, [isLoading, isError]);
+
+  const bundle = useMemo(() => {
+    const b = buildReportLavorazioniBundle(lavQuery.data ?? []);
+    assertReportBundleSane(b, lavQuery.data?.length ?? 0);
+    return b;
+  }, [lavQuery.data]);
 
   const manualEntries = manualQuery.data ?? [];
   const manualByMonth = useMemo(() => manualEntriesToByMonth(manualEntries), [manualEntries]);
@@ -76,10 +99,36 @@ export function useReportLiveData() {
     return { ...bundle, magazzino, mezzi };
   }, [bundle, magQuery.data, mezziQuery.data]);
 
+  const serverRows = useMemo(
+    () => [...(magLogsQ.data ?? []), ...(movLogsQ.data ?? [])],
+    [magLogsQ.data, movLogsQ.data],
+  );
+
   const magLog = useMemo(() => {
     void magLogVersion;
-    return loadMagazzinoChangeLog();
-  }, [magLogVersion]);
+    const localEntries = readLocalMagazzinoLogCache();
+    const prodottiById = new Map(mapped.magazzino.map((p) => [p.id, p]));
+    const serverItems = buildLogModificheDisplayEntries(serverRows, (row) => logAutoreLabel(row, null, "Sistema"), {
+      resolveOggetto: (row) => {
+        if (row.entita === "magazzino_ricambi") return prodottiById.get(row.entita_id)?.descrizione;
+        const rid = ricambioIdFromMovimentoRow(row);
+        if (rid) return prodottiById.get(rid)?.descrizione;
+        return undefined;
+      },
+    }).map((entry) => ({
+      id: entry.id,
+      source: "server" as const,
+      ricambioId:
+        entry.row.entita === "magazzino_ricambi"
+          ? entry.row.entita_id
+          : ricambioIdFromMovimentoRow(entry.row) ?? entry.row.entita_id,
+      vm: entry.vm,
+      localEntry: undefined,
+      atMs: new Date(entry.row.created_at).getTime(),
+    }));
+
+    return resolveMagazzinoReportLogEntries(localEntries, serverRows, serverItems);
+  }, [magLogVersion, serverRows, mapped.magazzino]);
 
   return useMemo(
     () => ({
@@ -87,18 +136,8 @@ export function useReportLiveData() {
       manualEntries,
       manualByMonth,
       magLog,
-      isLoading:
-        lavQuery.isLoading ||
-        lavArchivioQuery.isLoading ||
-        magQuery.isLoading ||
-        mezziQuery.isLoading ||
-        manualQuery.isLoading,
-      isError:
-        lavQuery.isError ||
-        lavArchivioQuery.isError ||
-        magQuery.isError ||
-        mezziQuery.isError ||
-        manualQuery.isError,
+      isLoading,
+      isError,
       manualLoading: manualQuery.isLoading,
       manualError: manualQuery.isError,
     }),
@@ -107,15 +146,9 @@ export function useReportLiveData() {
       manualEntries,
       manualByMonth,
       magLog,
-      lavQuery.isLoading,
-      lavArchivioQuery.isLoading,
-      magQuery.isLoading,
-      mezziQuery.isLoading,
+      isLoading,
+      isError,
       manualQuery.isLoading,
-      lavQuery.isError,
-      lavArchivioQuery.isError,
-      magQuery.isError,
-      mezziQuery.isError,
       manualQuery.isError,
     ],
   );

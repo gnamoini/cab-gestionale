@@ -1,7 +1,7 @@
 "use client";
 
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
-import { useViewQueryOpts } from "@/lib/view/view-query-opts";
+import { useReportViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/query-keys";
@@ -12,7 +12,7 @@ import {
 import type { ReportManualEntryRow } from "@/src/types/supabase-tables";
 
 export function useReportManualEntriesQuery() {
-  const viewOpts = useViewQueryOpts({ staleTime: 0 });
+  const viewOpts = useReportViewQueryOpts();
   return useServiceQuery(QK.reportManualEntries, () => reportManualEntriesService.list(), viewOpts);
 }
 

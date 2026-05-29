@@ -22,7 +22,8 @@ export function storePdfPreview(bytes: Uint8Array, fileName: string): string {
   return token;
 }
 
-export function readPdfPreview(token: string): { bytes: Uint8Array; fileName: string } | null {
+/** Token monouso: rimosso dopo la prima lettura riuscita. */
+export function consumePdfPreview(token: string): { bytes: Uint8Array; fileName: string } | null {
   purgeExpired();
   const key = token.trim();
   const hit = store.get(key);
@@ -30,5 +31,11 @@ export function readPdfPreview(token: string): { bytes: Uint8Array; fileName: st
     store.delete(key);
     return null;
   }
+  store.delete(key);
   return { bytes: hit.bytes, fileName: hit.fileName };
+}
+
+/** @deprecated Usare `consumePdfPreview` per anteprima monouso. */
+export function readPdfPreview(token: string): { bytes: Uint8Array; fileName: string } | null {
+  return consumePdfPreview(token);
 }

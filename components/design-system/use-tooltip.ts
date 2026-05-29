@@ -24,6 +24,11 @@ const TOUCH_HOLD_MS = 400;
 /** Dopo un tap touch, ignora mouseenter sintetici (ghost events). */
 const TOUCH_GHOST_MOUSE_MS = 500;
 
+function isCoarsePointerDevice(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(hover: none), (pointer: coarse)").matches;
+}
+
 export function useTooltip({
   content,
   disabled = false,
@@ -69,6 +74,7 @@ export function useTooltip({
   const activeRef = useRef(false);
   const pointerActivatedRef = useRef(false);
   const touchGhostRef = useRef(false);
+  const coarsePointerRef = useRef(false);
 
   const canShow = Boolean(content?.trim()) && !disabled;
 
@@ -156,6 +162,20 @@ export function useTooltip({
     setCoords(null);
   }, [clearShowTimer, clearTouchTimer, clearHideTimer]);
 
+  useEffect(() => {
+    coarsePointerRef.current = isCoarsePointerDevice();
+    if (typeof window === "undefined" || typeof window.matchMedia !== "function") return;
+    const mq = window.matchMedia("(hover: none), (pointer: coarse)");
+    const onChange = () => {
+      coarsePointerRef.current = mq.matches;
+      if (mq.matches) hideImmediate();
+    };
+    mq.addEventListener?.("change", onChange);
+    return () => {
+      mq.removeEventListener?.("change", onChange);
+    };
+  }, [hideImmediate]);
+
   useLayoutEffect(() => {
     if (!open) return;
     updateCoords();
@@ -183,6 +203,7 @@ export function useTooltip({
 
   const onMouseEnter = useCallback(
     (_e: MouseEvent<HTMLElement>) => {
+      if (coarsePointerRef.current) return;
       if (touchGhostRef.current) return;
       show();
     },
@@ -191,6 +212,7 @@ export function useTooltip({
 
   const onMouseLeave = useCallback(
     (_e: MouseEvent<HTMLElement>) => {
+      if (coarsePointerRef.current) return;
       pointerActivatedRef.current = false;
       hide();
     },

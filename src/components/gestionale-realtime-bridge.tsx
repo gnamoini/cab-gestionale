@@ -4,8 +4,10 @@ import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
-import { useToast } from "@/context/toast-context";
+import { useToastContext } from "@/context/toast-context";
 import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
+import { noteRealtimeReconnect } from "@/lib/observability/degradation-detector";
+import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import {
   appSettingsChangeFingerprint,
   isOwnAppSettingsWrite,
@@ -29,6 +31,8 @@ import { subscribeGestionaleBroadcast } from "@/lib/sync/cab-realtime-broadcast"
 import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
 import { refetchActiveOperationalSnapshot } from "@/lib/sync/gestionale-snapshot-recovery";
+import { SyncTransportController } from "@/src/lib/runtime/sync/sync-transport-controller";
+import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
@@ -42,7 +46,7 @@ const RECONNECT_MAX_ATTEMPTS = 5;
 export function GestionaleRealtimeBridge() {
   const qc = useQueryClient();
   const { user, status } = useAuth();
-  const { push } = useToast();
+  const { push } = useToastContext();
   const pushRef = useRef(push);
   pushRef.current = push;
   const pathname = usePathname();
@@ -61,7 +65,6 @@ export function GestionaleRealtimeBridge() {
     if (!authReady || !isSupabasePublicEnvConfigured()) return;
 
     let cancelled = false;
-    let pollTimer: ReturnType<typeof setInterval> | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
     let remoteSettingsNotifyTimer: ReturnType<typeof setTimeout> | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -69,9 +72,22 @@ export function GestionaleRealtimeBridge() {
     let reconnecting = false;
     let reconnectAttempts = 0;
     let wasPolling = false;
+    let connectGeneration = 0;
+
+    const transport = new SyncTransportController({
+      pollIntervalMs: GESTIONALE_REALTIME_POLL_MS,
+      onPoll: () => {
+        if (cancelled) return;
+        invalidateAllGestionaleOperationalQueries(qc);
+      },
+      onModeChange: (mode) => {
+        const next = mode === "realtime" ? "connected" : mode === "polling" ? "polling" : "idle";
+        setConnectionStatus(next);
+      },
+    });
     const pendingTables = new Set<string>();
     const pendingCabEvents: ReturnType<typeof cabSyncEventFromPostgresChange>[] = [];
-    const pendingEntityIdByTable = new Map<string, string>();
+    const pendingEntityIdsByTable = new Map<string, Set<string>>();
     const recentFingerprints = new Map<string, number>();
     const PRUNE_MS = 5000;
 
@@ -94,39 +110,43 @@ export function GestionaleRealtimeBridge() {
       }, REMOTE_SETTINGS_NOTIFY_DEBOUNCE_MS);
     };
 
-    const startPollingFallback = () => {
-      if (pollTimer) return;
+    const startPollingFallback = (reason?: string) => {
       wasPolling = true;
       rtConnectedRef.current = false;
-      setConnectionStatus("polling");
-      pollTimer = setInterval(() => {
-        if (cancelled) return;
-        invalidateAllGestionaleOperationalQueries(qc);
-      }, GESTIONALE_REALTIME_POLL_MS);
+      transport.activatePolling(reason);
     };
 
     const stopPollingFallback = () => {
-      if (pollTimer) {
-        clearInterval(pollTimer);
-        pollTimer = null;
-      }
+      transport.stopPolling();
     };
 
     const flushInvalidations = () => {
       if (cancelled || pendingTables.size === 0) return;
       const tables = [...pendingTables];
+      const tableCount = tables.length;
       const cabEvents = pendingCabEvents.filter((e): e is NonNullable<typeof e> => e != null);
       pendingTables.clear();
       pendingCabEvents.length = 0;
 
-      const entityIdByTable = new Map(pendingEntityIdByTable);
-      pendingEntityIdByTable.clear();
+      const entityIdByTable = new Map<string, string>();
+      for (const [table, ids] of pendingEntityIdsByTable) {
+        if (ids.size === 1) {
+          entityIdByTable.set(table, [...ids][0]!);
+        }
+      }
+      pendingEntityIdsByTable.clear();
 
       dispatchGestionaleAction(qc, tables, {
         source: "realtime",
         cabSyncEvents: cabEvents,
         entityIdByTable,
       });
+
+      if (tableCount >= 5) {
+        trackRuntimeEvent(RuntimeEvents.realtimeBurst, { tableCount, tables: tables.slice(0, 8) });
+      } else {
+        trackRuntimeEvent(RuntimeEvents.realtimeFlush, { tableCount });
+      }
     };
 
     const scheduleInvalidate = (table: string, cabEvent?: ReturnType<typeof cabSyncEventFromPostgresChange>) => {
@@ -134,7 +154,12 @@ export function GestionaleRealtimeBridge() {
       if (cabEvent) {
         pendingCabEvents.push(cabEvent);
         if (cabEvent.type !== "settings_updated" && cabEvent.table && cabEvent.id) {
-          pendingEntityIdByTable.set(cabEvent.table, cabEvent.id);
+          let ids = pendingEntityIdsByTable.get(cabEvent.table);
+          if (!ids) {
+            ids = new Set();
+            pendingEntityIdsByTable.set(cabEvent.table, ids);
+          }
+          ids.add(cabEvent.id);
         }
       }
       if (debounceTimer) clearTimeout(debounceTimer);
@@ -144,8 +169,24 @@ export function GestionaleRealtimeBridge() {
       }, GESTIONALE_REALTIME_DEBOUNCE_MS);
     };
 
+    const onAuthCriticalChange = (table: string) => {
+      if (table === "app_settings") {
+        void invalidateRuntimeTruth({
+          reason: "pilotChanged",
+          queryClient: qc,
+          refreshOperational: true,
+        });
+      } else if (table === "user_permissions" || table === "profiles") {
+        void invalidateRuntimeTruth({
+          reason: "roleOrPermissionsChanged",
+          queryClient: qc,
+        });
+      }
+    };
+
     const onPayload = (table: string, payload: PostgresChangePayload) => {
       if (cancelled) return;
+      if (!transport.shouldProcessRealtimePayload()) return;
 
       if (table === "app_settings") {
         if (shouldSuppressSettingsRemoteNotify()) return;
@@ -162,6 +203,7 @@ export function GestionaleRealtimeBridge() {
 
         const cabEvent = cabSyncEventFromPostgresChange(table, payload) ?? { type: "settings_updated" as const };
         scheduleInvalidate(table, cabEvent);
+        onAuthCriticalChange(table);
         scheduleRemoteSettingsNotify();
         return;
       }
@@ -176,11 +218,28 @@ export function GestionaleRealtimeBridge() {
 
       const cabEvent = cabSyncEventFromPostgresChange(table, payload);
       scheduleInvalidate(table, cabEvent ?? undefined);
+      if (table === "user_permissions" || table === "profiles") {
+        onAuthCriticalChange(table);
+      }
     };
 
-    const removeActiveChannel = async () => {
+    const removeActiveChannel = async (reason: string) => {
       const sb = getBrowserSupabase();
       if (activeChannel) {
+        // #region agent log
+        fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e701ad" },
+          body: JSON.stringify({
+            sessionId: "e701ad",
+            location: "gestionale-realtime-bridge.tsx:removeActiveChannel",
+            message: "removeChannel start",
+            data: { reason, connectGeneration },
+            hypothesisId: "H4",
+            timestamp: Date.now(),
+          }),
+        }).catch(() => {});
+        // #endregion
         try {
           await sb.removeChannel(activeChannel);
         } catch {
@@ -193,77 +252,102 @@ export function GestionaleRealtimeBridge() {
     const connectRealtime = async () => {
       if (cancelled || reconnecting) return;
       reconnecting = true;
+      const gen = ++connectGeneration;
 
-      await removeActiveChannel();
+      // #region agent log
+      fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e701ad" },
+        body: JSON.stringify({
+          sessionId: "e701ad",
+          location: "gestionale-realtime-bridge.tsx:connectRealtime",
+          message: "connect start",
+          data: { gen, reconnecting: true },
+          hypothesisId: "H3",
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {});
+      // #endregion
 
-      const sb = getBrowserSupabase();
-      const tables = GESTIONALE_REALTIME_TABLES.map((s) => ({ table: s.table }));
-
-      const { channel, subscribed } = await subscribePostgresChangesChannel(sb, {
-        channelName: "cab-gestionale-rt",
-        tables,
-        onPayload,
-        retryAttempts: GESTIONALE_REALTIME_RETRY_ATTEMPTS,
-        logPrefix: "[gestionale rt]",
-        onStatusChange: (s) => {
-          if (cancelled) return;
-          const next = s === "connected" ? "connected" : "polling";
-          rtConnectedRef.current = next === "connected";
-          if (next === "connected" && wasPolling) {
-            wasPolling = false;
-            refetchActiveOperationalSnapshot(qc, { onlyActive: true });
-          }
-          setConnectionStatus(next);
-        },
-        onPollingFallback: () => {
-          if (!cancelled) {
-            console.warn(
-              `[gestionale rt] subscription non disponibile: fallback polling ${GESTIONALE_REALTIME_POLL_MS}ms`,
-            );
-            startPollingFallback();
-          }
-        },
-        onChannelLost: () => {
-          if (cancelled) return;
-          rtConnectedRef.current = false;
-          setConnectionStatus("polling");
-          void removeActiveChannel().then(() => {
-            if (cancelled) return;
-            if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
-              console.warn("[gestionale rt] max reconnect attempts — polling fallback");
-              startPollingFallback();
-              return;
-            }
-            reconnectAttempts += 1;
-            const backoff = Math.min(1000 * 2 ** reconnectAttempts, 30_000);
-            reconnectTimer = setTimeout(() => {
-              reconnectTimer = null;
-              reconnecting = false;
-              void connectRealtime();
-            }, backoff);
-          });
-        },
-      });
-
-      reconnecting = false;
-
-      if (cancelled) {
-        if (subscribed) await sb.removeChannel(channel);
+      await removeActiveChannel("pre-connect");
+      if (cancelled || gen !== connectGeneration) {
+        reconnecting = false;
         return;
       }
 
-      if (subscribed) {
-        activeChannel = channel;
-        reconnectAttempts = 0;
-        stopPollingFallback();
-        rtConnectedRef.current = true;
-        if (wasPolling) {
-          wasPolling = false;
-          refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+      const sb = getBrowserSupabase();
+      const tables = GESTIONALE_REALTIME_TABLES.map((s) => ({ table: s.table }));
+      const channelName = `cab-gestionale-rt-${gen}`;
+
+      try {
+        const { channel, subscribed } = await subscribePostgresChangesChannel(sb, {
+          channelName,
+          tables,
+          onPayload,
+          retryAttempts: GESTIONALE_REALTIME_RETRY_ATTEMPTS,
+          logPrefix: "[gestionale rt]",
+          onStatusChange: (s) => {
+            if (cancelled) return;
+            if (s === "connected") {
+              rtConnectedRef.current = true;
+              transport.activateRealtime();
+              if (wasPolling) {
+                wasPolling = false;
+                refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+              }
+            } else if (transport.getMode() !== "polling") {
+              rtConnectedRef.current = false;
+              startPollingFallback("channel not connected");
+            }
+          },
+          onPollingFallback: () => {
+            if (!cancelled) {
+              startPollingFallback(`subscription unavailable (${GESTIONALE_REALTIME_POLL_MS}ms)`);
+            }
+          },
+          onChannelLost: () => {
+            if (cancelled) return;
+            rtConnectedRef.current = false;
+            startPollingFallback("channel lost");
+            void removeActiveChannel("channel-lost").then(() => {
+              if (cancelled) return;
+              if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
+                console.warn("[gestionale rt] max reconnect attempts — polling fallback");
+                startPollingFallback();
+                return;
+              }
+              reconnectAttempts += 1;
+              trackRuntimeEvent(RuntimeEvents.realtimeReconnect, { attempt: reconnectAttempts });
+              noteRealtimeReconnect(reconnectAttempts);
+              const backoff = Math.min(1000 * 2 ** reconnectAttempts, 30_000);
+              reconnectTimer = setTimeout(() => {
+                reconnectTimer = null;
+                reconnecting = false;
+                void connectRealtime();
+              }, backoff);
+            });
+          },
+        });
+
+        if (cancelled || gen !== connectGeneration) {
+          if (subscribed && channel) await sb.removeChannel(channel);
+          return;
         }
-        setConnectionStatus("connected");
-      } else {
-        startPollingFallback();
+
+        if (subscribed && channel) {
+          activeChannel = channel;
+          reconnectAttempts = 0;
+          rtConnectedRef.current = true;
+          transport.activateRealtime();
+          if (wasPolling) {
+            wasPolling = false;
+            refetchActiveOperationalSnapshot(qc, { onlyActive: true });
+          }
+        } else {
+          startPollingFallback("subscribe failed");
+        }
+      } finally {
+        reconnecting = false;
       }
     };
 
@@ -285,15 +369,16 @@ export function GestionaleRealtimeBridge() {
       if (debounceTimer) clearTimeout(debounceTimer);
       if (remoteSettingsNotifyTimer) clearTimeout(remoteSettingsNotifyTimer);
       if (reconnectTimer) clearTimeout(reconnectTimer);
-      stopPollingFallback();
+      transport.dispose();
       unsubBroadcast();
       pendingTables.clear();
       pendingCabEvents.length = 0;
-      pendingEntityIdByTable.clear();
+      pendingEntityIdsByTable.clear();
+      connectGeneration += 1;
       setConnectionStatus("idle");
-      void removeActiveChannel();
+      void removeActiveChannel("effect-cleanup");
     };
-  }, [authReady, pathname, qc, setGestionaleStatus, setSettingsStatus, settingsModalOpen, user?.id]);
+  }, [authReady, qc, setGestionaleStatus, setSettingsStatus, user?.id]);
 
   return null;
 }

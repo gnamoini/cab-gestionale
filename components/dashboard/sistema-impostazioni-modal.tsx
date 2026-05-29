@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
-import { useToast } from "@/context/toast-context";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
@@ -59,9 +60,10 @@ import type { SettingsRenameEntry } from "@/lib/settings/settings-rename-types";
 import { erpBtnNeutral, erpBtnSoftOrange } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { sortStringsItCaseInsensitive } from "@/lib/ui/sort-strings-it";
 import { buildBulkRowsFromResolved, resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
+import { OperatorGlobalSettingsPilotBadge } from "@/components/gestionale/operator-global-settings-pilot-badge";
 import { useCabAppSettingsPayloadQuery, useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
-import { invalidateAfterPreventiviMutations } from "@/src/lib/react-query/invalidate-related";
+import { invalidateAfterSettingsRenamePropagation } from "@/src/lib/react-query/invalidate-related";
 import {
   addStatoFromLabel,
   DEFAULT_STATI_LAVORAZIONI_DB,
@@ -200,7 +202,7 @@ const NAV_STRUCTURE: NavEntry[] = [
   { kind: "item", id: "mag-marche", label: "Marche ricambi" },
   { kind: "item", id: "mag-fornitori", label: "Fornitori alternativi" },
   { kind: "item", id: "mag-categorie", label: "Categorie" },
-  { kind: "group", label: "Cliente" },
+  { kind: "group", label: "Clienti commerciali" },
   { kind: "item", id: "cli-cliente", label: "Cliente" },
   { kind: "item", id: "cli-cantiere", label: "Cantiere" },
   { kind: "item", id: "cli-utilizzatore", label: "Utilizzatore" },
@@ -228,7 +230,7 @@ function SettingsNavMenuList({
   onPickSection: (id: SistemaSectionId) => void;
 }) {
   return (
-    <nav className="gestionale-scrollbar max-h-[min(60vh,22rem)] space-y-1 overflow-y-auto p-2" aria-label="Elenco sezioni impostazioni">
+    <nav className="gestionale-scrollbar max-h-[min(60vh,22rem)] space-y-1 overflow-y-auto p-2" aria-label="Elenco sezioni configurazione">
       {filteredNav.map((e, i) => {
         if (e.kind === "group") {
           return (
@@ -302,7 +304,7 @@ function SettingsMobileSectionPicker({
         aria-expanded={open}
         aria-controls="settings-mobile-nav-panel"
         aria-haspopup="listbox"
-        aria-label={`Sezione impostazioni: ${activeLabel}. Apri elenco (${SETTINGS_NAV_ITEM_COUNT} sezioni).`}
+        aria-label={`Sezione configurazione: ${activeLabel}. Apri elenco (${SETTINGS_NAV_ITEM_COUNT} sezioni).`}
       >
         <svg
           className="pointer-events-none absolute left-2.5 top-1/2 h-[1.1rem] w-[1.1rem] -translate-y-1/2 text-[color:var(--cab-text-muted)]"
@@ -330,7 +332,7 @@ function SettingsMobileSectionPicker({
               onChange={(e) => setNavQ(e.target.value)}
               placeholder="Cerca sezione…"
               autoComplete="off"
-              aria-label="Cerca nelle sezioni impostazioni"
+              aria-label="Cerca nelle sezioni configurazione"
             />
           </div>
           <SettingsNavMenuList
@@ -708,7 +710,8 @@ function SistemaImpostazioniWorkspace({
   surface?: "modal" | "page";
 }) {
   const { authorName } = useAuth();
-  const { push } = useToast();
+  const gestToast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const queryClient = useQueryClient();
   const mezziListQ = useMezziListQuery(undefined, { enabled: open });
   const [migratePreventiviPending, setMigratePreventiviPending] = useState(false);
@@ -730,7 +733,7 @@ function SistemaImpostazioniWorkspace({
   const hydratedSessionRef = useRef(false);
   const [savedSnapshotKey, setSavedSnapshotKey] = useState<string | null>(null);
 
-  const [section, setSection] = useState<SistemaSectionId>(() => (surface === "page" ? "cli-cliente" : "op-addetti"));
+  const [section, setSection] = useState<SistemaSectionId>(() => "op-addetti");
   const [navQ, setNavQ] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopNavOpen, setDesktopNavOpen] = useState(true);
@@ -791,7 +794,7 @@ function SistemaImpostazioniWorkspace({
     (label: string) => {
       const next = addStatoFromLabel(stati, label);
       if (!next) {
-        window.alert("Stato già presente o nome non valido.");
+        gestToast.validation("Stato già presente o nome non valido.");
         return;
       }
       setStati(next);
@@ -809,7 +812,7 @@ function SistemaImpostazioniWorkspace({
       hydratedSessionRef.current = false;
       return;
     }
-    setSection(pageMode ? "cli-cliente" : "op-addetti");
+    setSection("op-addetti");
     setNavQ("");
     setMobileNavOpen(false);
   }, [open]);
@@ -889,7 +892,7 @@ function SistemaImpostazioniWorkspace({
     if (!propagate) {
       renameQueueRef.current = [];
       setPropagaOpen(false);
-      push("Impostazioni salvate", "success", 3400);
+      gestToast.successSaved();
       return;
     }
     setPropagaPending(true);
@@ -897,37 +900,36 @@ function SistemaImpostazioniWorkspace({
     setPropagaPending(false);
     setPropagaOpen(false);
     if (!res.success) {
-      push(res.error ?? "Propagazione non riuscita", "error", 5000);
+      gestToast.errorOnce("settings-propaga", res.error ?? "Propagazione non riuscita", { action: "update" });
       return;
     }
+    const propagatedKinds = renameQueueRef.current.map((e) => e.kind);
     renameQueueRef.current = [];
-    invalidateAfterPreventiviMutations(queryClient);
+    invalidateAfterSettingsRenamePropagation(queryClient, propagatedKinds);
     const total = (res.data ?? []).reduce((sum, r) => sum + r.updated, 0);
-    push(
-      total > 0 ? `Impostazioni salvate — ${total} record aggiornati` : "Impostazioni salvate",
-      "success",
-      4200,
+    gestToast.successOnce(
+      "settings-propaga",
+      total > 0 ? `Salvataggio completato — ${total} record aggiornati` : "Salvataggio completato",
     );
-  }, [push, queryClient]);
+  }, [gestToast, queryClient]);
 
   const runPreventiviLocalMigration = useCallback(async () => {
     if (migratePreventiviPending) return;
     const mezziRows = mezziListQ.data ?? [];
     if (mezziRows.length === 0) {
-      push("Attendi il caricamento mezzi prima di migrare i preventivi.", "warning", 4200);
+      gestToast.warning("Attendi il caricamento mezzi prima di migrare i preventivi.");
       return;
     }
     if (localPreventiviCount === 0) {
-      push("Nessun preventivo in localStorage da importare.", "info", 3400);
+      gestToast.info("Nessun preventivo in localStorage da importare.");
       return;
     }
-    if (
-      !window.confirm(
-        `Importare ${localPreventiviCount} preventivi da localStorage verso Supabase? L'operazione è idempotente.`,
-      )
-    ) {
-      return;
-    }
+    const okMigrate = await confirm({
+      title: "Importare preventivi locali?",
+      message: `Importare ${localPreventiviCount} preventivi da localStorage verso il database? L'operazione è idempotente.`,
+      confirmLabel: "Importa",
+    });
+    if (!okMigrate) return;
     setMigratePreventiviPending(true);
     try {
       const res = await migratePreventiviLocalToDb(mezziRows, {
@@ -935,20 +937,21 @@ function SistemaImpostazioniWorkspace({
         clearLocalOnSuccess: true,
       });
       if (res.errors.length > 0) {
-        push(
+        gestToast.warning(
           `Migrati ${res.migrated}, saltati ${res.skipped}. Primi errori: ${res.errors.slice(0, 2).join("; ")}`,
-          "warning",
-          6000,
         );
       } else {
-        push(`Import completato: ${res.migrated} preventivi sincronizzati. localStorage svuotato.`, "success", 5200);
+        gestToast.successOnce(
+          "settings-migrate-preventivi",
+          `Import completato: ${res.migrated} preventivi sincronizzati.`,
+        );
       }
     } catch {
-      push("Migrazione preventivi non riuscita.", "error", 5000);
+      gestToast.errorOnce("settings-migrate-preventivi", "Migrazione preventivi non riuscita.");
     } finally {
       setMigratePreventiviPending(false);
     }
-  }, [localPreventiviCount, mezziListQ.data, migratePreventiviPending, push, queryClient]);
+  }, [confirm, gestToast, localPreventiviCount, mezziListQ.data, migratePreventiviPending, queryClient]);
 
   const applySnapshot = useCallback((s: SistemaSettingsSnapshot) => {
     setLavPrefsHydrated(false);
@@ -969,39 +972,56 @@ function SistemaImpostazioniWorkspace({
     setEcoHydrated(true);
   }, []);
 
-  const confirmDiscardChanges = useCallback(() => {
+  const confirmDiscardChanges = useCallback(async () => {
     if (!isDirty) return true;
-    return window.confirm("Hai modifiche non salvate. Vuoi davvero uscire?");
-  }, [isDirty]);
+    return confirm({
+      title: "Uscire senza salvare?",
+      message: "Hai modifiche non salvate. Vuoi davvero uscire?",
+      destructive: true,
+      confirmLabel: "Esci",
+    });
+  }, [confirm, isDirty]);
 
   const handleRequestClose = useCallback(() => {
-    if (!confirmDiscardChanges()) return;
-    onClose?.();
+    void confirmDiscardChanges().then((ok) => {
+      if (!ok) return;
+      onClose?.();
+    });
   }, [confirmDiscardChanges, onClose]);
 
   const handleSaveNow = useCallback(() => {
     void saveNow().then((ok) => {
       if (!ok) {
-        push("Salvataggio impostazioni non riuscito", "error", 4200);
+        gestToast.errorOnce("settings-save", "Salvataggio configurazione non riuscito");
         return;
       }
       if (renameQueueRef.current.length > 0) {
         setPropagaEntries([...renameQueueRef.current]);
         setPropagaOpen(true);
       } else {
-        push("Impostazioni salvate", "success", 3400);
+        gestToast.successSaved();
       }
     });
-  }, [saveNow, push]);
+  }, [gestToast, saveNow]);
 
   const handleCancelChanges = useCallback(() => {
     const s = savedSnapshotRef.current;
     if (!s) return;
-    if (isDirty && !window.confirm("Annullare tutte le modifiche non salvate?")) return;
-    applySnapshot(s);
-    setSavedSnapshotKey(snapshotKey(s));
-    push("Modifiche annullate", "info", 2600);
-  }, [applySnapshot, isDirty, push]);
+    void (async () => {
+      if (isDirty) {
+        const ok = await confirm({
+          title: "Annullare modifiche?",
+          message: "Tutte le modifiche non salvate verranno perse.",
+          destructive: true,
+          confirmLabel: "Annulla modifiche",
+        });
+        if (!ok) return;
+      }
+      applySnapshot(s);
+      setSavedSnapshotKey(snapshotKey(s));
+      gestToast.info("Modifiche annullate");
+    })();
+  }, [applySnapshot, confirm, gestToast, isDirty]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -1023,10 +1043,13 @@ function SistemaImpostazioniWorkspace({
       if (anchor.target && anchor.target !== "_self") return;
       if (anchor.origin !== window.location.origin) return;
       if (anchor.pathname === window.location.pathname && anchor.search === window.location.search && anchor.hash === window.location.hash) return;
-      if (confirmDiscardChanges()) return;
-      e.preventDefault();
-      e.stopPropagation();
-      cancelRouteTransition();
+      void confirmDiscardChanges().then((ok) => {
+        if (!ok) return;
+        e.preventDefault();
+        e.stopPropagation();
+        cancelRouteTransition();
+      });
+      return;
     }
     document.addEventListener("click", onDocumentClick, true);
     return () => document.removeEventListener("click", onDocumentClick, true);
@@ -1087,7 +1110,7 @@ function SistemaImpostazioniWorkspace({
         className={`relative flex min-h-0 w-full min-w-0 flex-col ${
           pageMode
             ? "overflow-visible rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)]"
-            : "h-[calc(100dvh-1.5rem)] overflow-hidden sm:h-[min(88dvh,900px)]"
+            : "max-md:h-[calc(100dvh-1.5rem)] max-md:overflow-hidden md:h-[min(88dvh,900px)] md:overflow-hidden"
         }`}
       >
         <header className={`${pageMode ? "hidden" : "shrink-0 border-b border-zinc-200 bg-[var(--cab-card)] px-3 py-2.5 dark:border-zinc-800 sm:px-4 sm:py-3"}`}>
@@ -1097,7 +1120,7 @@ function SistemaImpostazioniWorkspace({
                 type="button"
                 className={`${erpBtnNeutral} h-9 min-w-9 shrink-0 px-2 text-base md:hidden`}
                 onClick={() => setMobileNavOpen(true)}
-                aria-label="Apri sezioni impostazioni"
+                aria-label="Apri sezioni configurazione"
                 aria-expanded={mobileNavOpen}
               >
                 ☰
@@ -1106,13 +1129,13 @@ function SistemaImpostazioniWorkspace({
                 type="button"
                 className={`${erpBtnNeutral} hidden h-9 min-w-9 shrink-0 px-2 text-base md:inline-flex`}
                 onClick={() => setDesktopNavOpen((v) => !v)}
-                aria-label={desktopNavOpen ? "Comprimi sezioni impostazioni" : "Espandi sezioni impostazioni"}
+                aria-label={desktopNavOpen ? "Comprimi sezioni configurazione" : "Espandi sezioni configurazione"}
                 aria-expanded={desktopNavOpen}
               >
                 ☰
               </button>
               <div className="min-w-0">
-                <h2 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">Impostazioni globali</h2>
+                <h2 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">Configurazione globale</h2>
                 <p className="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-400">{activeSectionLabel}</p>
               </div>
             </div>
@@ -1124,7 +1147,7 @@ function SistemaImpostazioniWorkspace({
           <div className="absolute inset-0 z-20 bg-[var(--cab-overlay)] backdrop-blur-[1px] md:hidden" role="presentation" onMouseDown={(e) => {
             if (e.target === e.currentTarget) setMobileNavOpen(false);
           }}>
-            <aside className="flex h-full w-[min(82vw,20rem)] flex-col border-r border-zinc-200 bg-[var(--cab-card)] shadow-2xl dark:border-zinc-800" aria-label="Sezioni impostazioni">
+            <aside className="flex h-full w-[min(82vw,20rem)] flex-col border-r border-zinc-200 bg-[var(--cab-card)] shadow-2xl dark:border-zinc-800" aria-label="Sezioni configurazione">
               <header className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
                 <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Sezioni</h3>
                 <CloseButton onClick={() => setMobileNavOpen(false)} />
@@ -1135,10 +1158,10 @@ function SistemaImpostazioniWorkspace({
                   onChange={(e) => setNavQ(e.target.value)}
                   placeholder="Cerca…"
                   autoComplete="off"
-                  aria-label="Cerca nelle sezioni impostazioni"
+                  aria-label="Cerca nelle sezioni configurazione"
                 />
               </div>
-              <nav className="gestionale-scrollbar flex-1 space-y-1 overflow-y-auto p-2" aria-label="Sezioni impostazioni mobile">
+              <nav className="gestionale-scrollbar flex-1 space-y-1 overflow-y-auto p-2" aria-label="Sezioni configurazione mobile">
                 {filteredNav.map((e, i) => {
                   if (e.kind === "group") {
                     return (
@@ -1177,10 +1200,10 @@ function SistemaImpostazioniWorkspace({
                 onChange={(e) => setNavQ(e.target.value)}
                 placeholder="Cerca…"
                 autoComplete="off"
-                aria-label="Cerca nelle sezioni impostazioni"
+                aria-label="Cerca nelle sezioni configurazione"
               />
             </div>
-            <nav className={`${pageMode ? "space-y-0.5 p-2" : "gestionale-scrollbar flex-1 space-y-0.5 overflow-y-auto p-2"}`} aria-label="Sezioni impostazioni">
+            <nav className={`${pageMode ? "space-y-0.5 p-2" : "gestionale-scrollbar flex-1 space-y-0.5 overflow-y-auto p-2"}`} aria-label="Sezioni configurazione">
               {filteredNav.map((e, i) => {
                 if (e.kind === "group") {
                   return (
@@ -1248,15 +1271,15 @@ function SistemaImpostazioniWorkspace({
                 onReorderStato={(from, to) => setStati((prev) => reorderStatiList(prev, from, to))}
                 onRemoveStato={(id) => {
                   if (id === STATO_LAVORAZIONE_COMPLETATA_DB) {
-                    window.alert("Lo stato «Completata» non può essere eliminato.");
+                    gestToast.validation("Lo stato «Completata» non può essere eliminato.");
                     return;
                   }
                   if (attiveStatoIds.has(id)) {
-                    window.alert("Impossibile eliminare: stato in uso su lavorazioni attive.");
+                    gestToast.validation("Impossibile eliminare: stato in uso su lavorazioni attive.");
                     return;
                   }
                   if (storicoStatoIds.has(id)) {
-                    window.alert("Impossibile eliminare: stato in uso nello storico.");
+                    gestToast.validation("Impossibile eliminare: stato in uso nello storico.");
                     return;
                   }
                   const nome = stati.find((s) => s.id === id)?.label ?? id;
@@ -1608,6 +1631,7 @@ function SistemaImpostazioniWorkspace({
         onConfirm={() => void finalizePropaga(true)}
       />
       {addettiSimilarDialog}
+      {confirmDialog}
     </>
   );
 
@@ -1615,26 +1639,42 @@ function SistemaImpostazioniWorkspace({
     return (
       <div className={dsStackPage}>
         <PageHeader
-          title="Impostazioni"
+          title="Configurazione"
+          description="Configurazione globale del gestionale."
           belowTitle={
-            <SettingsMobileSectionPicker
-              open={mobileNavOpen}
-              activeLabel={activeSectionLabel}
-              onToggle={() => setMobileNavOpen((v) => !v)}
-              onClose={() => setMobileNavOpen(false)}
-              filteredNav={filteredNav}
-              section={section}
-              onPickSection={setSection}
-              navQ={navQ}
-              setNavQ={setNavQ}
-            />
+            <>
+              <OperatorGlobalSettingsPilotBadge />
+              <SettingsMobileSectionPicker
+                open={mobileNavOpen}
+                activeLabel={activeSectionLabel}
+                onToggle={() => setMobileNavOpen((v) => !v)}
+                onClose={() => setMobileNavOpen(false)}
+                filteredNav={filteredNav}
+                section={section}
+                onPickSection={setSection}
+                navQ={navQ}
+                setNavQ={setNavQ}
+              />
+            </>
           }
           actions={
             <>
-              <button type="button" className={erpBtnNeutral} onClick={handleCancelChanges} disabled={!isDirty || bulkSave.isPending}>
+              <button
+                type="button"
+                className={erpBtnNeutral}
+                onClick={handleCancelChanges}
+                disabled={!isDirty || bulkSave.isPending}
+                title="Ripristina le modifiche non salvate"
+              >
                 Annulla modifiche
               </button>
-              <button type="button" className={dsBtnPrimary} onClick={handleSaveNow} disabled={!isDirty || bulkSave.isPending}>
+              <button
+                type="button"
+                className={dsBtnPrimary}
+                onClick={handleSaveNow}
+                disabled={!isDirty || bulkSave.isPending}
+                title="Salva tutte le modifiche alla configurazione globale"
+              >
                 {bulkSave.isPending ? "Salvataggio…" : "Salva"}
               </button>
             </>
@@ -1662,7 +1702,11 @@ export function SistemaImpostazioniPageView() {
   if (permissions.isLoading) {
     return (
       <div className={dsStackPage}>
-        <PageHeader title="Impostazioni" description="Caricamento permessi…" />
+        <PageHeader
+          title="Configurazione"
+          description="Caricamento permessi…"
+          belowTitle={<OperatorGlobalSettingsPilotBadge />}
+        />
       </div>
     );
   }
@@ -1670,10 +1714,14 @@ export function SistemaImpostazioniPageView() {
   if (!permissions.canManageSettings) {
     return (
       <div className={dsStackPage}>
-        <PageHeader title="Impostazioni" description="Non hai i permessi per modificare le impostazioni globali." />
+        <PageHeader
+          title="Configurazione"
+          description="Non hai i permessi per modificare la configurazione globale."
+          belowTitle={<OperatorGlobalSettingsPilotBadge />}
+        />
         <ShellCard title="Accesso negato">
           <p className="text-sm text-[color:var(--cab-text-muted)]">
-            Questa pagina è disponibile solo per utenti con ruolo <strong className="text-[color:var(--cab-text)]">admin</strong>.
+            Questa pagina è disponibile solo per utenti autorizzati (admin, manager o operatore in ambiente pilot).
           </p>
           <Link href="/dashboard" className={`mt-4 inline-flex ${erpBtnNeutral}`}>
             Torna alla dashboard
@@ -1683,5 +1731,9 @@ export function SistemaImpostazioniPageView() {
     );
   }
 
-  return <SistemaImpostazioniWorkspace surface="page" />;
+  return (
+    <div className={dsStackPage}>
+      <SistemaImpostazioniWorkspace surface="page" />
+    </div>
+  );
 }

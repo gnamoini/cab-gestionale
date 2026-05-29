@@ -156,13 +156,40 @@ export function avgCloseDays(completate: LavorazioneArchiviata[], range: DateRan
   return Math.round((vals.reduce((s, v) => s + v, 0) / vals.length) * 10) / 10;
 }
 
+function addClienteToSet(s: Set<string>, cliente: string) {
+  const t = cliente.trim();
+  if (t) s.add(t);
+}
+
 /** Clienti con almeno una chiusura archivio nel periodo (solo completate persistite). */
 export function uniqueClientiServiti(completate: LavorazioneArchiviata[], range: DateRange): number {
   const s = new Set<string>();
   for (const x of completate) {
     if (!x.dataCompletamento || !isoInRange(x.dataCompletamento, range)) continue;
-    const t = x.cliente.trim();
-    if (t) s.add(t);
+    addClienteToSet(s, x.cliente);
+  }
+  return s.size;
+}
+
+/**
+ * Clienti distinti con attività nel periodo: ingresso (in corso o archivio) o chiusura archivio.
+ * Esclude eliminate (già filtrate in `splitLavorazioniListRowsForReport` / bundle completate).
+ */
+export function uniqueClientiNelPeriodo(
+  attive: LavorazioneAttiva[],
+  storico: LavorazioneArchiviata[],
+  completate: LavorazioneArchiviata[],
+  range: DateRange,
+): number {
+  const s = new Set<string>();
+  for (const x of attive) {
+    if (isoInRange(x.dataIngresso, range)) addClienteToSet(s, x.cliente);
+  }
+  for (const x of storico) {
+    if (isoInRange(x.dataIngresso, range)) addClienteToSet(s, x.cliente);
+  }
+  for (const x of completate) {
+    if (x.dataCompletamento && isoInRange(x.dataCompletamento, range)) addClienteToSet(s, x.cliente);
   }
   return s.size;
 }

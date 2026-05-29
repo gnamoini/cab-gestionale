@@ -9,13 +9,24 @@ import { UploadFeedbackTray } from "@/components/gestionale/upload";
 import { GlobalLoadingQueryBridge } from "@/src/components/global-loading-query-bridge";
 import { SupabaseConfigurationBanner } from "@/components/supabase-configuration-banner";
 import { QueryProvider } from "@/src/providers/query-provider";
-import { GestionaleRealtimeBridge } from "@/src/components/gestionale-realtime-bridge";
-import { GestionaleSnapshotRecoveryBridge } from "@/src/components/gestionale-snapshot-recovery-bridge";
-import { GestionaleNotificationsBridge } from "@/src/components/gestionale-notifications-bridge";
+import { DeferredGestionaleBridges } from "@/src/components/deferred-gestionale-bridges";
 import { RealtimeStatusProvider } from "@/src/context/realtime-status-context";
 import { SettingsModalOpenProvider } from "@/src/context/settings-modal-open-context";
+import { DevUxEnforcementGuard } from "@/src/components/dev-ux-enforcement-guard";
+import { IosInteractionStability } from "@/src/components/ios-interaction-stability";
+import { GestionaleClientErrorBoundary } from "@/components/observability/gestionale-client-error-boundary";
+import { ObservabilityProvider } from "@/components/observability/observability-provider";
+import { RuntimeHealthBridge } from "@/components/observability/runtime-health-bridge";
+import { BodyScrollLockRouteGuard } from "@/lib/ui/use-body-scroll-lock";
+import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 
-export function AppProviders({ children }: { children: React.ReactNode }) {
+export function AppProviders({
+  children,
+  initialAuthSnapshot,
+}: {
+  children: React.ReactNode;
+  initialAuthSnapshot?: ServerAuthSnapshot;
+}) {
   return (
     <ToastProvider>
       <UploadFeedbackProvider>
@@ -24,16 +35,22 @@ export function AppProviders({ children }: { children: React.ReactNode }) {
           <GlobalLoadingProvider>
             <GlobalLoadingQueryBridge />
             <RealtimeStatusProvider>
-              <AuthProvider>
-                <ThemeProvider>
-                  <SettingsModalOpenProvider>
-                    <SupabaseConfigurationBanner />
-                    <GestionaleRealtimeBridge />
-                    <GestionaleNotificationsBridge />
-                    <GestionaleSnapshotRecoveryBridge />
-                    {children}
-                  </SettingsModalOpenProvider>
-                </ThemeProvider>
+              <AuthProvider initialSnapshot={initialAuthSnapshot}>
+                <ObservabilityProvider>
+                  <RuntimeHealthBridge />
+                  <BodyScrollLockRouteGuard />
+                  <GestionaleClientErrorBoundary>
+                    <ThemeProvider>
+                      <SettingsModalOpenProvider>
+                        <DevUxEnforcementGuard />
+                        <IosInteractionStability />
+                        <SupabaseConfigurationBanner />
+                        <DeferredGestionaleBridges />
+                        {children}
+                      </SettingsModalOpenProvider>
+                    </ThemeProvider>
+                  </GestionaleClientErrorBoundary>
+                </ObservabilityProvider>
               </AuthProvider>
             </RealtimeStatusProvider>
           </GlobalLoadingProvider>

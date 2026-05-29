@@ -61,7 +61,8 @@ import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi
 import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
-import { useToast } from "@/context/toast-context";
+import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
 import {
   preventivoTipoDocumentoBadgeClass,
@@ -238,13 +239,14 @@ function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: Preven
 }
 
 export function PreventiviView() {
-  const permissions = usePermissions();
-  const canEditWorkOrders = permissions.canEditWorkOrders;
-  const canDeleteRecords = permissions.canDeleteRecords;
+  const prevPerm = usePermissions("preventivi");
+  const globalPerm = usePermissions();
+  const canEditWorkOrders = prevPerm.canWrite;
+  const canDeleteRecords = prevPerm.canWrite && globalPerm.canDeleteRecords;
   const router = useRouter();
   const searchParams = useSearchParams();
   const { authorName: autore } = useAuth();
-  const { push: pushToast } = useToast();
+  const gestToast = useGestionaleToast();
   const queryClient = useQueryClient();
   const { records: rows, refetch: refetchPreventivi } = usePreventiviRecordsQuery();
   const mezziListQ = useMezziListQuery();
@@ -299,7 +301,11 @@ export function PreventiviView() {
   const rollbackDraftIdRef = useRef<string | null>(null);
   const draftConfirmedRef = useRef(false);
   const [logOpen, setLogOpen] = useState(false);
-  const [logEntries, setLogEntries] = useState<PreventiviLogStored[]>(() => loadPreventiviChangeLog());
+  const [logEntries, setLogEntries] = useState<PreventiviLogStored[]>([]);
+
+  useEffect(() => {
+    setLogEntries(loadPreventiviChangeLog());
+  }, []);
   const [eliminaConfirmRecord, setEliminaConfirmRecord] = useState<PreventivoRecord | null>(null);
   const [eliminaPending, setEliminaPending] = useState(false);
 
@@ -552,7 +558,7 @@ export function PreventiviView() {
     });
     void appendPreventivoSynced(rec, mezziRows, { queryClient }).then((res) => {
       if (!res.ok) {
-        pushToast(res.error, "error", 5000);
+        gestToast.errorOnce("preventivi-save", res.error, { module: "preventivi" });
         return;
       }
       const saved = res.record;
@@ -618,7 +624,7 @@ export function PreventiviView() {
     const res = await removePreventivoRecord(p.id, { queryClient });
     setEliminaPending(false);
     if (!res.ok) {
-      pushToast(res.error, "error", 5000);
+      gestToast.errorOnce("preventivi-delete", res.error, { module: "preventivi" });
       return;
     }
     setEliminaConfirmRecord(null);
@@ -647,6 +653,7 @@ export function PreventiviView() {
   ) : null;
 
   return (
+    <GestionaleSectionGate module="preventivi">
     <>
       <PageHeader
         title="Preventivi"
@@ -1012,8 +1019,8 @@ export function PreventiviView() {
         onClose={closeEditor}
         onSaved={onEditorSaved}
         onSaveError={(msg) => {
-          if (msg.includes("altro utente")) pushToast(msg, "warning", 5200);
-          else pushToast(msg, "error", 5000);
+          if (msg.includes("altro utente")) gestToast.warning(msg);
+          else gestToast.errorOnce("preventivi-editor", msg, { module: "preventivi" });
         }}
       />
       </div>
@@ -1073,5 +1080,6 @@ export function PreventiviView() {
         </div>
       </Drawer>
     </>
+    </GestionaleSectionGate>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback } from "react";
-import { useToast } from "@/context/toast-context";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import {
   buildAppendGlobalListUpsert,
   resolveGlobalListOptions,
@@ -20,20 +20,20 @@ import { findExactEntityInPool } from "@/lib/validation/global-entity-validation
 
 export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: GlobalSettingsListContext) {
   const { canManageSettings } = usePermissions();
-  const { push } = useToast();
+  const gestToast = useGestionaleToast();
   const { data: payload } = useCabAppSettingsPayloadQuery();
   const upsert = useSettingsUpsertMutation();
 
   const append = useCallback(
     async (rawValue: string): Promise<string | null> => {
       if (!canManageSettings) {
-        push("Non hai permesso di modificare gli elenchi globali.", "warning", 4200);
+        gestToast.validation("Non hai permesso di modificare gli elenchi globali.");
         return null;
       }
       const resolved = payload?.resolved;
       const rows = payload?.rows;
       if (!resolved || !rows) {
-        push("Impostazioni non ancora caricate.", "warning", 3200);
+        gestToast.warning("Configurazione non ancora caricata.");
         return null;
       }
 
@@ -44,13 +44,13 @@ export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: G
 
       const similar = findSimilarSettingsDuplicate(existing, trimmed);
       if (similar && similar.trim().toLowerCase() !== trimmed.toLowerCase()) {
-        push(`Attenzione: esiste già un valore simile («${similar}»).`, "warning", 4200);
+        gestToast.warning(`Attenzione: esiste già un valore simile («${similar}»).`);
       }
 
       const built = buildAppendGlobalListUpsert(resolved, listKey, rawValue, ctx);
       if (!built.ok) {
         if (built.reason === "missing_marca") {
-          push("Seleziona prima la marca.", "warning", 3200);
+          gestToast.validation("Seleziona prima la marca.");
         }
         return null;
       }
@@ -62,13 +62,13 @@ export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: G
       try {
         await upsert.mutateAsync(withVersions);
       } catch (e) {
-        push(e instanceof Error ? e.message : "Errore salvataggio elenco.", "error", 4500);
+        gestToast.error(e);
         return null;
       }
 
       return built.canonicalValue;
     },
-    [canManageSettings, ctx, listKey, payload?.resolved, payload?.rows, push, upsert],
+    [canManageSettings, ctx, listKey, payload?.resolved, payload?.rows, gestToast, upsert],
   );
 
   return { append, canAppend: canManageSettings, isPending: upsert.isPending };

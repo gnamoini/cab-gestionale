@@ -16,11 +16,7 @@ import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-det
 import { MezzoEliminaConfirmDialog } from "@/components/gestionale/mezzi/mezzo-elimina-confirm-dialog";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import {
-  erpBtnAccent,
-  erpBtnNeutral,
-  erpBtnNuovaLavorazione,
-} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
 import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
 import { mezzoFormToMeta, metaToMezzoFormFields } from "@/lib/mezzi/mezzi-meta";
@@ -28,6 +24,7 @@ import { compareMezzi, mezzoMatchesUltimaLavFilter, type UltimaLavorazioneFilter
 import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb, mezzoHaLavorazioneCollegataDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { dsInput, dsPageToolbarBtn, dsStackPage, dsStickyToolbar } from "@/lib/ui/design-system";
 import { Drawer } from "@/components/design-system";
 import {
@@ -38,7 +35,6 @@ import {
   buildMezziGestionaleLogViewModel,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -49,12 +45,13 @@ import {
 } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
-import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useMezzoRemoveMutation } from "@/src/hooks/gestionale/use-mezzo-remove-mutation";
+import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { usePermissions } from "@/src/hooks/use-permissions";
-import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { logService } from "@/src/services/log.service";
 import { auditPayload, pickExistingFields } from "@/lib/gestionale-log/undo";
 import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
@@ -131,9 +128,9 @@ function formToMezzoUpdate(f: ReturnType<typeof getEmptyNuovo>): MezzoUpdate {
 }
 
 export function MezziView() {
-  const permissions = usePermissions();
+  const mezziPerm = usePermissions("mezzi");
   const { user } = useAuth();
-  const canEditVehicles = permissions.canEditVehicles;
+  const canEditVehicles = mezziPerm.canWrite;
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
@@ -244,8 +241,6 @@ export function MezziView() {
   const pagedSorted = useMemo(() => sliceItems(sorted), [sliceItems, sorted, page]);
 
   const [hubMezzo, setHubMezzo] = useState<MezzoGestito | null>(null);
-  const [nuovoOpen, setNuovoOpen] = useState(false);
-  const [nuovoForm, setNuovoForm] = useState(getEmptyNuovo);
   const [editMezzo, setEditMezzo] = useState<MezzoGestito | null>(null);
   const [editForm, setEditForm] = useState(() => getEmptyNuovo());
 
@@ -272,10 +267,11 @@ export function MezziView() {
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const createMut = useMezzoCreateMutation();
   const updateMut = useMezzoUpdateMutation();
   const removeMut = useMezzoRemoveMutation();
-  const { success: toastSuccess, error: toastError } = useGestionaleToast();
+  const { success: toastSuccess, error: toastError, validation: toastValidation, successOnce, errorOnce } =
+    useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
 
   const [eliminaConfirmMezzo, setEliminaConfirmMezzo] = useState<MezzoGestito | null>(null);
   const [eliminaDeps, setEliminaDeps] = useState<MezzoDependencies | null>(null);
@@ -294,7 +290,6 @@ export function MezziView() {
     (id: string) => {
       setHubMezzo(null);
       setEditMezzo(null);
-      setNuovoOpen(false);
       setFiltroCliente("");
       setFiltroMarca("");
       setFiltroModello("");
@@ -365,7 +360,7 @@ export function MezziView() {
     if (!mezzo || !canEditVehicles) return;
     removeMut.mutate(mezzo.id, {
       onSuccess: () => {
-        toastSuccess("Mezzo eliminato.");
+        successOnce("mezzo-delete", "Mezzo eliminato.");
         closeEliminaConfirm();
         setHubMezzo(null);
         setEditMezzo(null);
@@ -382,7 +377,7 @@ export function MezziView() {
     };
   }, []);
 
-  const scrollLockActive = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen);
+  const scrollLockActive = Boolean(hubMezzo || editMezzo || logOpen);
   const anyOverlay = scrollLockActive || Boolean(eliminaConfirmMezzo);
   useEffect(() => {
     const id = searchParams.get(Q_FOCUS_MEZZO)?.trim();
@@ -394,14 +389,11 @@ export function MezziView() {
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, focusMezzoInTable]);
 
-  useBodyScrollLock(scrollLockActive);
-
   useEffect(() => {
     if (!anyOverlay) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       setHubMezzo(null);
-      setNuovoOpen(false);
       setEditMezzo(null);
       setLogOpen(false);
     };
@@ -409,31 +401,13 @@ export function MezziView() {
     return () => window.removeEventListener("keydown", onKey);
   }, [anyOverlay]);
 
-  function submitNuovo(e: React.FormEvent) {
-    e.preventDefault();
-    if (!canEditVehicles) return;
-    const marca = nuovoForm.marca.trim();
-    if (!marca || !nuovoForm.cliente.trim()) {
-      window.alert("Compila almeno cliente e marca attrezzatura.");
-      return;
-    }
-    createMut.mutate(formToMezzoInsert(nuovoForm), {
-      onSuccess: (row) => {
-        setNuovoForm(getEmptyNuovo());
-        setNuovoOpen(false);
-        flashRow(row.id);
-      },
-      onError: (err) => window.alert(err.message),
-    });
-  }
-
   function submitEdit(e: React.FormEvent) {
     e.preventDefault();
     if (!canEditVehicles) return;
     if (!editMezzo) return;
     const marca = editForm.marca.trim();
     if (!marca || !editForm.cliente.trim()) {
-      window.alert("Compila almeno cliente e marca attrezzatura.");
+      toastValidation("Compila almeno cliente e marca attrezzatura.");
       return;
     }
     const id = editMezzo.id;
@@ -445,7 +419,7 @@ export function MezziView() {
           setHubMezzo(null);
           flashRow(id);
         },
-        onError: (err) => window.alert(err.message),
+        onError: (err) => toastError(err, { entity: "mezzo", action: "create" }),
       },
     );
   }
@@ -455,7 +429,13 @@ export function MezziView() {
     const payload = auditPayload(undoableMezziLog);
     const before = payload.before;
     if (!before) return;
-    if (!window.confirm("Annullare l'ultima azione reversibile sui mezzi?")) return;
+    const ok = await confirm({
+      title: "Annullare l'ultima modifica?",
+      message: "Verrà ripristinato l'ultimo cambiamento reversibile sui mezzi.",
+      confirmLabel: "Annulla modifica",
+      destructive: true,
+    });
+    if (!ok) return;
     const data = pickExistingFields<MezzoUpdate>(before, [
       "cliente",
       "utilizzatore",
@@ -500,11 +480,12 @@ export function MezziView() {
       await logQuery.refetch();
       flashRow(undoableMezziLog.entita_id);
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Undo non riuscito.");
+      toastError(e, { entity: "mezzo", action: "update" });
     }
   }
 
   return (
+    <GestionaleSectionGate module="mezzi">
     <>
       <PageHeader
         title="Mezzi"
@@ -525,22 +506,6 @@ export function MezziView() {
           <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
             <div className="flex flex-col gap-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!canEditVehicles) return;
-                    setNuovoForm(getEmptyNuovo());
-                    setNuovoOpen(true);
-                  }}
-                  className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
-                  disabled={!canEditVehicles}
-                  title={!canEditVehicles ? READONLY_PERMISSION_HINT : undefined}
-                >
-                  <span className="text-lg font-bold leading-none" aria-hidden>
-                    +
-                  </span>
-                  Nuovo mezzo
-                </button>
                 <MezziSearchBar search={search} onSearch={setSearch} wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]" />
                 <button
                   type="button"
@@ -724,78 +689,27 @@ export function MezziView() {
         </div>
       </Drawer>
 
-      {nuovoOpen ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setNuovoOpen(false);
-          }}
-        >
-          <div
-            className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="mezzo-nuovo-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-              <h2 id="mezzo-nuovo-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Nuovo mezzo
-              </h2>
-              <button type="button" className={erpBtnNeutral} onClick={() => setNuovoOpen(false)}>
-                Chiudi
-              </button>
-            </div>
-            <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNuovo} className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
-                <MezzoFormFields form={nuovoForm} setForm={setNuovoForm} />
-              </div>
-              <div className="shrink-0 border-t border-zinc-100 p-4 dark:border-zinc-800">
-                <button type="submit" disabled={createMut.isPending} className={`${erpBtnAccent} w-full disabled:opacity-60`}>
-                  {createMut.isPending ? "Salvataggio…" : "Salva mezzo"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      ) : null}
-
       {editMezzo ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setEditMezzo(null);
-          }}
+        <GestionaleModalShell
+          title="Modifica mezzo"
+          titleId="mezzo-edit-title"
+          onRequestClose={() => setEditMezzo(null)}
         >
-          <div
-            className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="mezzo-edit-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-              <h2 id="mezzo-edit-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Modifica mezzo
-              </h2>
-              <button type="button" className={erpBtnNeutral} onClick={() => setEditMezzo(null)}>
-                Chiudi
+          <form {...gestionaleFormFocusScopeProps()} onSubmit={submitEdit} className="flex min-h-0 flex-1 flex-col">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
+              <MezzoFormFields form={editForm} setForm={setEditForm} excludeMezzoId={editMezzo.id} />
+            </div>
+            <div className="shrink-0 border-t border-[color:var(--cab-border)] p-4">
+              <button type="submit" disabled={updateMut.isPending} className={`${erpBtnAccent} w-full disabled:opacity-60`}>
+                {updateMut.isPending ? "Salvataggio…" : "Salva modifiche"}
               </button>
             </div>
-            <form {...gestionaleFormFocusScopeProps()} onSubmit={submitEdit} className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
-                <MezzoFormFields form={editForm} setForm={setEditForm} excludeMezzoId={editMezzo.id} />
-              </div>
-              <div className="shrink-0 border-t border-zinc-100 p-4 dark:border-zinc-800">
-                <button type="submit" disabled={updateMut.isPending} className={`${erpBtnAccent} w-full disabled:opacity-60`}>
-                  {updateMut.isPending ? "Salvataggio…" : "Salva modifiche"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
+          </form>
+        </GestionaleModalShell>
       ) : null}
+      {confirmDialog}
     </>
+    </GestionaleSectionGate>
   );
 }
 

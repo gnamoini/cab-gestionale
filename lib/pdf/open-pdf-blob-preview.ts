@@ -1,5 +1,6 @@
 "use client";
 
+import { pushGestionaleToast } from "@/context/toast-context";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 
 const PREVIEW_ACTION = "/api/preventivi/pdf-anteprima";
@@ -21,9 +22,11 @@ function openPdfBlobViaObjectUrl(
     blockedMessage: options?.blockedMessage,
   });
   if (!opened) {
-    window.alert(
+    pushGestionaleToast(
       options?.blockedMessage ??
         "Impossibile aprire l'anteprima PDF. Consenti i pop-up per questo sito.",
+      "warning",
+      5200,
     );
   }
   return opened;

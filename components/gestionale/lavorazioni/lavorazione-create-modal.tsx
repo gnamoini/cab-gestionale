@@ -4,28 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
-import { mezzoFormToMeta } from "@/lib/mezzi/mezzi-meta";
 import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
-import { findMezzoByTargaOrMatricola } from "@/lib/mezzi/find-mezzo-by-ident";
+import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { loadLavorazioneSchedeStore } from "@/lib/schede/lavorazioni-schede-storage";
 import { persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
 import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId } from "@/src/shared/selectors";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
+import type { MezzoRow } from "@/src/types/supabase-tables";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
-import type { MezzoInsert } from "@/src/services/mezzi.service";
-import {
-  MezzoDuplicatoAnagraficaDialog,
-  type MezzoDuplicatoAnagraficaChoice,
-} from "@/components/lavorazioni/schede/mezzo-duplicato-anagrafica-dialog";
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -35,7 +30,10 @@ import {
   SchedaIngressoFormModalShell,
   todayItDate,
 } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
-import { dsCheckboxInput, dsCheckboxOptionLabel, dsModalFormFooter, dsTypoCaption } from "@/lib/ui/design-system";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+import { QK } from "@/src/lib/react-query/invalidate-related";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { dsModalFormFooter } from "@/lib/ui/design-system";
 
 export { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 
@@ -54,28 +52,6 @@ function ymdToIsoMidUtc(ymd: string): string {
   const [y, m, d] = p.split("-").map((x) => Number(x));
   if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return new Date().toISOString();
   return new Date(Date.UTC(y, m - 1, d, 12, 0, 0, 0)).toISOString();
-}
-
-function schedaFieldsToMezzoPayload(fields: SchedaIngressoFields): MezzoInsert {
-  return {
-    cliente: fields.cliente.trim(),
-    utilizzatore: fields.utilizzatore.trim() || null,
-    marca: fields.marcaAttrezzatura.trim(),
-    modello: fields.modelloAttrezzatura.trim() || "—",
-    targa: fields.targa.trim() || null,
-    matricola: fields.matricola.trim() || null,
-    numero_scuderia: fields.nScuderia.trim() || null,
-    tipo_attrezzatura: fields.tipoAttrezzatura.trim() || null,
-    anno: new Date().getFullYear(),
-    meta: mezzoFormToMeta({
-      cantiere: fields.cantiere,
-      tipoTelaio: fields.tipoTelaio,
-      marcaTelaio: fields.marcaTelaio,
-      modelloTelaio: fields.modelloTelaio,
-      oreLavoro: fields.oreLavoro,
-      km: fields.km,
-    }) as Record<string, unknown>,
-  };
 }
 
 export function LavorazioneCreateModal({
@@ -101,16 +77,23 @@ export function LavorazioneCreateModal({
 }) {
   const globalOpts = useGlobalOptions({ enabled: open, debugTag: "LavorazioneCreateModal" });
   const qc = useQueryClient();
+  const gestToast = useGestionaleToast();
   const create = useLavorazioneCreateMutation();
   const createMezzo = useMezzoCreateMutation();
   const updateMezzo = useMezzoUpdateMutation();
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
 
-  const stati = globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata");
-  const defaultAccettazioneStato = stati.find((s) => {
-    const hay = `${s.id} ${s.label}`.toLowerCase();
-    return hay.includes("accettazione");
-  });
+  const stati = useMemo(
+    () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
+    [globalOpts.lavorazioni.stati],
+  );
+  const defaultAccettazioneStatoId = useMemo(() => {
+    const hit = stati.find((s) => {
+      const hay = `${s.id} ${s.label}`.toLowerCase();
+      return hay.includes("accettazione");
+    });
+    return hit?.id ?? resolveDefaultLavorazioneStatoId(stati);
+  }, [stati]);
   const prioritaOpts = useMemo(
     () => orderPrioritaList(globalOpts.lavorazioni.prioritaDb),
     [globalOpts.lavorazioni.prioritaDb],
@@ -124,25 +107,11 @@ export function LavorazioneCreateModal({
 
   const [fields, setFields] = useState<SchedaIngressoFields>(() => emptySchedaIngressoFields(""));
   const [mezzoId, setMezzoId] = useState("");
-  const [creaNuovoMezzo, setCreaNuovoMezzo] = useState(false);
   const [stato, setStato] = useState("");
   const [priorita, setPriorita] = useState<PrioritaLavorazione>("media");
   const [mezzoHint, setMezzoHint] = useState<string | null>(null);
-  const [duplicateMezzo, setDuplicateMezzo] = useState<MezzoGestito | null>(null);
-  const duplicateChoiceRef = useRef<((choice: MezzoDuplicatoAnagraficaChoice | null) => void) | null>(null);
-
-  const askDuplicateMezzoChoice = useCallback((mezzo: MezzoGestito) => {
-    return new Promise<MezzoDuplicatoAnagraficaChoice | null>((resolve) => {
-      duplicateChoiceRef.current = resolve;
-      setDuplicateMezzo(mezzo);
-    });
-  }, []);
-
-  const closeDuplicateMezzoDialog = useCallback((choice: MezzoDuplicatoAnagraficaChoice | null) => {
-    duplicateChoiceRef.current?.(choice);
-    duplicateChoiceRef.current = null;
-    setDuplicateMezzo(null);
-  }, []);
+  const formInitRef = useRef(false);
+  const defaultMezzoAppliedRef = useRef<string | null>(null);
 
   const patch = useCallback((p: Partial<SchedaIngressoFields>) => {
     setFields((f) => ({ ...f, ...p }));
@@ -157,33 +126,27 @@ export function LavorazioneCreateModal({
     storico,
   });
 
-  const applyMezzo = useCallback(
-    (m: MezzoGestito) => {
-      const fromMezzo = buildSchedaIngressoFieldsFromMezzo(m);
-      fromMezzo.addettoAccettazione = fields.addettoAccettazione || addettiOpts[0] || "";
-      setFields((f) => {
-        const merged = mergeSchedaIngressoFields(
-          { ...f, dataIngresso: f.dataIngresso || todayItDate() },
-          fromMezzo,
-        );
-        return {
-          ...merged,
-          addettoAccettazione: f.addettoAccettazione || merged.addettoAccettazione,
-        };
-      });
-      setMezzoId(m.id);
-      setCreaNuovoMezzo(false);
-      setMezzoHint(`Mezzo riconosciuto: ${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim());
-    },
-    [addettiOpts, fields.addettoAccettazione],
-  );
+  const applyMezzo = useCallback((m: MezzoGestito) => {
+    const fromMezzo = buildSchedaIngressoFieldsFromMezzo(m);
+    setFields((f) => {
+      const merged = mergeSchedaIngressoFields(
+        { ...f, dataIngresso: f.dataIngresso || todayItDate() },
+        fromMezzo,
+      );
+      return {
+        ...merged,
+        addettoAccettazione: f.addettoAccettazione || merged.addettoAccettazione || addettiOpts[0] || "",
+      };
+    });
+    setMezzoId(m.id);
+    setMezzoHint(`Mezzo riconosciuto: ${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim());
+  }, [addettiOpts]);
 
   const acceptMezzoPrompt = useCallback(() => {
     const m = mezzoPrompt.promptMezzo;
     mezzoPrompt.acceptAutofill();
     if (!m) return;
     setMezzoId(m.id);
-    setCreaNuovoMezzo(false);
     setMezzoHint(`Mezzo collegato: ${m.marca} ${m.modello !== "—" ? m.modello : ""}`.trim());
   }, [mezzoPrompt]);
 
@@ -191,28 +154,44 @@ export function LavorazioneCreateModal({
     mezzoPrompt.dismissPrompt();
     setMezzoId("");
     if (fields.targa.trim() || fields.matricola.trim()) {
-      setCreaNuovoMezzo(true);
       setMezzoHint("Continua manualmente: i dati restano editabili.");
     } else {
       setMezzoHint(null);
     }
   }, [fields.matricola, fields.targa, mezzoPrompt]);
 
+  const resolveFreshCatalog = useCallback(async (): Promise<MezzoGestito[]> => {
+    await qc.refetchQueries({ queryKey: QK.mezzi });
+    const freshRows =
+      qc.getQueryData<MezzoRow[]>([...QK.mezzi, null]) ??
+      qc.getQueriesData<MezzoRow[]>({ queryKey: QK.mezzi }).find(([, data]) => data?.length)?.[1];
+    if (freshRows?.length) return freshRows.map(toMezzoUI);
+    return mezziCatalog;
+  }, [qc, mezziCatalog]);
+
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      formInitRef.current = false;
+      defaultMezzoAppliedRef.current = null;
+      return;
+    }
+    if (formInitRef.current) return;
+    formInitRef.current = true;
     const addetto0 = addettiOpts[0] ?? "";
     setFields(emptySchedaIngressoFields(addetto0));
     setMezzoId((defaultMezzoId ?? "").trim());
-    setCreaNuovoMezzo(false);
-    setStato(defaultAccettazioneStato?.id ?? resolveDefaultLavorazioneStatoId(stati));
+    setStato(defaultAccettazioneStatoId);
     setPriorita(prioritaOpts.includes("media") ? "media" : (prioritaOpts[0] ?? "media"));
     setMezzoHint(null);
-  }, [open, defaultMezzoId, prioritaOpts, addettiOpts, defaultAccettazioneStato?.id, stati]);
+  }, [open, defaultMezzoId, prioritaOpts, addettiOpts, defaultAccettazioneStatoId]);
 
   useEffect(() => {
     if (!open || !defaultMezzoId) return;
+    if (defaultMezzoAppliedRef.current === defaultMezzoId) return;
     const m = mezziUi.find((x) => x.id === defaultMezzoId);
-    if (m) applyMezzo(m);
+    if (!m) return;
+    defaultMezzoAppliedRef.current = defaultMezzoId;
+    applyMezzo(m);
   }, [open, defaultMezzoId, mezziUi, applyMezzo]);
 
   useEffect(() => {
@@ -225,20 +204,20 @@ export function LavorazioneCreateModal({
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!createdBy) {
-      window.alert("Devi essere autenticato per creare una lavorazione.");
+      gestToast.validation("Devi essere autenticato per creare una lavorazione.");
       return;
     }
-    const sid = stato.trim() || defaultAccettazioneStato?.id?.trim() || resolveDefaultLavorazioneStatoId(stati);
+    const sid = stato.trim() || defaultAccettazioneStatoId;
     if (!sid || !isStatoInConfig(sid, stati)) {
-      window.alert("Seleziona uno stato tra quelli configurati in Impostazioni globali.");
+      gestToast.validation("Seleziona uno stato tra quelli configurati in Configurazione globale.");
       return;
     }
     if (!fields.cliente.trim() || !fields.marcaAttrezzatura.trim()) {
-      window.alert("Cliente e marca attrezzatura sono obbligatori.");
+      gestToast.validation("Cliente e marca attrezzatura sono obbligatori.");
       return;
     }
     if (!prioritaOpts.includes(priorita)) {
-      window.alert("Seleziona una priorità dalle impostazioni globali.");
+      gestToast.validation("Seleziona una priorità dalla configurazione globale.");
       return;
     }
 
@@ -246,25 +225,14 @@ export function LavorazioneCreateModal({
     const noteBlob = fields.noteIntervento.trim() || null;
 
     try {
-      let finalMezzoId = mezzoId.trim();
-      const needNewMezzo = creaNuovoMezzo || !finalMezzoId;
-      if (needNewMezzo) {
-        const payload = schedaFieldsToMezzoPayload(fields);
-        const existing = findMezzoByTargaOrMatricola(mezziCatalog, fields.targa, fields.matricola);
-        if (existing) {
-          const choice = await askDuplicateMezzoChoice(existing);
-          if (!choice) return;
-          if (choice === "keep") {
-            finalMezzoId = existing.id;
-          } else {
-            await updateMezzo.mutateAsync({ id: existing.id, data: payload });
-            finalMezzoId = existing.id;
-          }
-        } else {
-          const mezzo = await createMezzo.mutateAsync(payload);
-          finalMezzoId = mezzo.id;
-        }
-      }
+      const catalog = await resolveFreshCatalog();
+      const { mezzoId: finalMezzoId } = await upsertMezzoFromSchedaIngresso({
+        fields,
+        mezziCatalog: catalog,
+        preferredMezzoId: mezzoId.trim() || null,
+        create: (data) => createMezzo.mutateAsync(data),
+        update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+      });
 
       const row = await create.mutateAsync({
         mezzo_id: finalMezzoId,
@@ -290,7 +258,9 @@ export function LavorazioneCreateModal({
       };
       const res = await persistSchedeStore(store, row.id);
       if (!res.ok) {
-        window.alert(res.error ?? "Scheda ingresso non sincronizzata con il database.");
+        gestToast.errorOnce("lav-create-scheda", res.error ?? "Scheda ingresso non sincronizzata con il database.", {
+          module: "lavorazioni",
+        });
       } else {
         dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
       }
@@ -308,79 +278,52 @@ export function LavorazioneCreateModal({
       : null;
 
   return (
-    <>
-      <SchedaIngressoFormModalShell
-        open={open}
-        onRequestClose={onClose}
-        variant="create-lavorazione"
-        subtitle="Nuova lavorazione — compila i dati di accettazione mezzo."
-        footer={null}
-      >
-        <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <SchedaIngressoFormBody
-            variant="create-lavorazione"
-            fields={fields}
-            setFields={setFields}
-            onPatch={patch}
-            pending={pending}
-            mezzi={mezzi}
-            schedeStore={schedeStore}
-            attive={attive}
-            storico={storico}
-            stato={stato}
-            onStatoChange={setStato}
-            priorita={priorita}
-            onPrioritaChange={setPriorita}
-            mezzoHint={mezzoHint}
-            errorMessage={saveError}
-            mezzoPrompt={mezzoPrompt}
-            onMezzoDialogAccept={acceptMezzoPrompt}
-            onMezzoDialogDismiss={dismissMezzoPrompt}
-          />
-          <footer className={dsModalFormFooter}>
-            {!mezzoId ? (
-              <label className={`${dsCheckboxOptionLabel} min-w-0 flex-1 sm:max-w-[min(100%,28rem)]`}>
-                <input
-                  type="checkbox"
-                  className={dsCheckboxInput}
-                  checked={creaNuovoMezzo}
-                  onChange={(e) => setCreaNuovoMezzo(e.target.checked)}
-                  disabled={pending}
-                />
-                <span className="min-w-0">
-                  <span className="block text-sm font-medium text-[color:var(--cab-text)]">
-                    Crea nuovo mezzo in anagrafica
-                  </span>
-                  <span className={`mt-0.5 block ${dsTypoCaption}`}>
-                    Collegalo alla lavorazione con i dati compilati sopra.
-                  </span>
-                </span>
-              </label>
-            ) : (
-              <span className="min-w-0 flex-1" aria-hidden />
-            )}
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-              <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={pending}>
-                Annulla
-              </button>
-              <button
-                type="submit"
-                className={erpBtnAccent}
-                disabled={pending || !createdBy || stati.length === 0 || globalOpts.isLoading}
-              >
-                {pending ? "Salvataggio…" : "Salva lavorazione"}
-              </button>
-            </div>
-          </footer>
-        </form>
-      </SchedaIngressoFormModalShell>
-      <MezzoDuplicatoAnagraficaDialog
-        open={duplicateMezzo != null}
-        mezzo={duplicateMezzo}
-        onKeepExisting={() => closeDuplicateMezzoDialog("keep")}
-        onOverwrite={() => closeDuplicateMezzoDialog("overwrite")}
-        onCancel={() => closeDuplicateMezzoDialog(null)}
-      />
-    </>
+    <SchedaIngressoFormModalShell
+      open={open}
+      onRequestClose={onClose}
+      variant="create-lavorazione"
+      subtitle="Scheda di ingresso — compila l'accettazione mezzo e salva la lavorazione."
+      footer={null}
+    >
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+        <SchedaIngressoFormBody
+          variant="create-lavorazione"
+          fields={fields}
+          setFields={setFields}
+          onPatch={patch}
+          pending={pending}
+          mezzi={mezzi}
+          schedeStore={schedeStore}
+          attive={attive}
+          storico={storico}
+          stato={stato}
+          onStatoChange={setStato}
+          priorita={priorita}
+          onPrioritaChange={setPriorita}
+          mezzoHint={mezzoHint}
+          errorMessage={saveError}
+          mezzoPrompt={mezzoPrompt}
+          onMezzoDialogAccept={acceptMezzoPrompt}
+          onMezzoDialogDismiss={dismissMezzoPrompt}
+        />
+        <footer className={`${dsModalFormFooter} flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end`}>
+          <button
+            type="button"
+            className={`${erpBtnNeutral} min-h-11 w-full sm:min-w-[7rem] sm:w-auto`}
+            onClick={onClose}
+            disabled={pending}
+          >
+            Annulla
+          </button>
+          <button
+            type="submit"
+            className={`${erpBtnAccent} min-h-11 w-full sm:min-w-[10rem] sm:w-auto`}
+            disabled={pending || !createdBy || stati.length === 0 || globalOpts.isLoading}
+          >
+            {pending ? "Salvataggio…" : "Salva lavorazione"}
+          </button>
+        </footer>
+      </form>
+    </SchedaIngressoFormModalShell>
   );
 }

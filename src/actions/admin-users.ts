@@ -8,6 +8,8 @@ import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
 import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
 import type { ProfileRow } from "@/src/types/supabase-tables";
+import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
+import { invalidateServerRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth.server";
 
 export type CreateUserByAdminInput = {
   nome: string;
@@ -333,6 +335,9 @@ export async function updateUserRoleByAdminAction(input: { userId: string; role:
     role: nextRole,
     actorName: caller.callerName,
   });
+
+  clearServerAuthSnapshotCacheForUser(userId);
+  invalidateServerRuntimeTruth();
 
   const authLookup = await admin.auth.admin.getUserById(userId).catch(() => authBefore);
   return { ok: true, user: userRowFrom(profile, authLookup?.data.user ?? undefined) };

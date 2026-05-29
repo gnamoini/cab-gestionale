@@ -11,7 +11,7 @@ export type SupabaseMiddlewareResult = {
 };
 
 /**
- * Client Supabase per il middleware Next.js: aggiorna i cookie di sessione
+ * Client Supabase per il proxy Node Next.js: aggiorna i cookie di sessione
  * e consente a `getUser()` di vedere la sessione reale.
  * Usa solo `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
  * Se mancano → `supabase` è `null` (nessun client creato).

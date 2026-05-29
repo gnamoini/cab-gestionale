@@ -5,7 +5,7 @@ import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow, MovimentoRicambioRow, TipoMovimentoRicambio } from "@/src/types/supabase-tables";
-import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+import { errMessageFromSupabase, serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "movimenti_ricambi";
 const ENT_MAG = "magazzino_ricambi";
@@ -28,7 +28,7 @@ async function applyStockForMovement(
   reverse: boolean,
 ): Promise<ServiceResult<MagazzinoRicambioRow>> {
   const { data: ric, error: e1 } = await c.from("magazzino_ricambi").select("*").eq("id", mov.ricambio_id).maybeSingle();
-  if (e1) return err(e1.message);
+  if (e1) return err(errMessageFromSupabase(e1, { module: "magazzino" }));
   if (!ric) return err("Ricambio non trovato");
   const before = ric as MagazzinoRicambioRow;
   const q0 = num(before.quantita);
@@ -41,7 +41,7 @@ async function applyStockForMovement(
     .eq("id", mov.ricambio_id)
     .select("*")
     .single();
-  if (e2) return err(e2.message);
+  if (e2) return err(errMessageFromSupabase(e2, { module: "magazzino" }));
   const updated = after as MagazzinoRicambioRow;
   await writeModificaLog(c, {
     entita: ENT_MAG,
@@ -77,7 +77,7 @@ export const movimentiService = {
       else if (filters?.lavorazione_ids?.length) q = q.in("lavorazione_id", filters.lavorazione_ids);
       if (filters?.tipo) q = q.eq("tipo", filters.tipo);
       const { data, error } = await q;
-      if (error) return err(error.message);
+      if (error) return err(errMessageFromSupabase(error, { module: "magazzino" }));
       return success((data ?? []) as MovimentoRicambioRow[]);
     } catch (e) {
       return serviceFailFromError(e);
@@ -88,7 +88,7 @@ export const movimentiService = {
     try {
       const c = await sb();
       const { data, error } = await c.from("movimenti_ricambi").select("*").eq("id", id).maybeSingle();
-      if (error) return err(error.message);
+      if (error) return err(errMessageFromSupabase(error, { module: "magazzino" }));
       if (!data) return err("Movimento non trovato");
       return success(data as MovimentoRicambioRow);
     } catch (e) {
@@ -107,7 +107,7 @@ export const movimentiService = {
       const { data: row, error } = await c.from("movimenti_ricambi").insert(data).select("*").single();
       if (error) {
         await applyStockForMovement(c, data, true);
-        return err(error.message);
+        return err(errMessageFromSupabase(error, { module: "magazzino" }));
       }
       const r = row as MovimentoRicambioRow;
       await writeModificaLog(c, {
@@ -128,7 +128,7 @@ export const movimentiService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: oldRow, error: e0 } = await c.from("movimenti_ricambi").select("*").eq("id", id).maybeSingle();
-      if (e0) return err(e0.message);
+      if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
       if (!oldRow) return err("Movimento non trovato");
       const old = oldRow as MovimentoRicambioRow;
 
@@ -136,7 +136,7 @@ export const movimentiService = {
 
       if (!affectsStock) {
         const { data: row, error } = await c.from("movimenti_ricambi").update(data).eq("id", id).select("*").single();
-        if (error) return err(error.message);
+        if (error) return err(errMessageFromSupabase(error, { module: "magazzino" }));
         const r = row as MovimentoRicambioRow;
         await writeModificaLog(c, {
           entita: ENTITA,
@@ -176,7 +176,7 @@ export const movimentiService = {
       if (error) {
         await applyStockForMovement(c, next, true);
         await applyStockForMovement(c, old, false);
-        return err(error.message);
+        return err(errMessageFromSupabase(error, { module: "magazzino" }));
       }
       const r = row as MovimentoRicambioRow;
       await writeModificaLog(c, {
@@ -197,7 +197,7 @@ export const movimentiService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("movimenti_ricambi").select("*").eq("id", id).maybeSingle();
-      if (e0) return err(e0.message);
+      if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
       if (!existing) return success(null);
       const ex = existing as MovimentoRicambioRow;
 
@@ -207,7 +207,7 @@ export const movimentiService = {
       const { error } = await c.from("movimenti_ricambi").delete().eq("id", id);
       if (error) {
         await applyStockForMovement(c, ex, false);
-        return err(error.message);
+        return err(errMessageFromSupabase(error, { module: "magazzino" }));
       }
       await writeModificaLog(c, {
         entita: ENTITA,

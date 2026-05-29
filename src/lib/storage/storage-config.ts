@@ -12,7 +12,7 @@ export type ImageStorageScope = (typeof IMAGE_STORAGE_SCOPES)[number];
 
 export const STORAGE_LIMITS = {
   imagesMaxBytes: 10 * 1024 * 1024,
-  documentiMaxBytes: 50 * 1024 * 1024,
+  documentiMaxBytes: 100 * 1024 * 1024,
   imagesMaxPerRecord: 10,
 } as const;
 

@@ -24,6 +24,8 @@ import {
   dsSurfaceCard,
   dsTypoCaption,
 } from "@/lib/ui/design-system";
+import { resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import {
   formatLoginIdentifierInput,
@@ -79,7 +81,12 @@ function LoginPageShell({ children }: { children: React.ReactNode }) {
         className="pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.04] blur-[1px] dark:opacity-[0.06]"
         aria-hidden
       >
-        <CabLogo height={240} className="mx-auto object-center dark:brightness-[1.15] dark:contrast-[0.92] dark:saturate-0" />
+        <CabLogo
+          height={240}
+          priority={false}
+          sizes="(max-width: 768px) 80vw, 240px"
+          className="mx-auto object-center dark:brightness-[1.15] dark:contrast-[0.92] dark:saturate-0"
+        />
       </div>
       <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
         <ThemeToggle />
@@ -158,6 +165,7 @@ export function LoginForm() {
   const [pending, setPending] = useState(false);
 
   const [forgotOpen, setForgotOpen] = useState(false);
+  useBodyScrollLock(forgotOpen, "login-forgot-password");
   const [resetEmail, setResetEmail] = useState("");
   const [resetPending, setResetPending] = useState(false);
   const [resetDone, setResetDone] = useState(false);
@@ -317,6 +325,7 @@ export function LoginForm() {
                     ref={emailRef}
                     id={identifierId}
                     name="identifier"
+                    data-testid="smoke-login-identifier"
                     type="text"
                     inputMode="text"
                     autoComplete="username"
@@ -351,6 +360,7 @@ export function LoginForm() {
                   <input
                     id={passwordId}
                     name="password"
+                    data-testid="smoke-login-password"
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     placeholder="••••••••"
@@ -416,6 +426,7 @@ export function LoginForm() {
 
             <button
               type="submit"
+              data-testid="smoke-login-submit"
               disabled={busy || configBlocked}
               className={`${dsBtnPrimary} mt-1 min-h-11 w-full justify-center py-2.5 text-sm font-semibold`}
             >
@@ -445,7 +456,7 @@ export function LoginForm() {
       {forgotOpen ? (
         <div className={dsModalBackdrop} role="presentation" onMouseDown={(e) => e.target === e.currentTarget && closeForgot()}>
           <div
-            className={`${dsModalPanel} relative mx-auto max-w-md shadow-[var(--cab-shadow-md)]`}
+            className={`${dsModalPanel} relative mx-auto flex flex-col overflow-hidden shadow-[var(--cab-shadow-md)] ${resolveModalMaxWidthClass("max-w-md")}`}
             role="dialog"
             aria-modal="true"
             aria-labelledby={`${formId}-forgot-title`}

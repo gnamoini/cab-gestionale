@@ -13,6 +13,9 @@ import {
 } from "@/components/gestionale/global-input";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnDanger, dsInput, dsLabel } from "@/lib/ui/design-system";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 export function LavorazioneEditModal({
   row,
@@ -29,6 +32,8 @@ export function LavorazioneEditModal({
 }) {
   const update = useLavorazioneUpdateMutation();
   const updateMezzo = useMezzoUpdateMutation();
+  const gestToast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const [cliente, setCliente] = useState(() => row.mezzo?.cliente?.trim() ?? "");
   const [utilizzatore, setUtilizzatore] = useState(() => row.mezzo?.utilizzatore?.trim() ?? "");
   const [marca, setMarca] = useState(() => row.mezzo?.marca?.trim() ?? "");
@@ -41,7 +46,7 @@ export function LavorazioneEditModal({
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!cliente.trim() || !marca.trim() || !modello.trim() || !matricola.trim()) {
-      window.alert("Cliente, marca, modello e matricola sono obbligatori.");
+      gestToast.validation("Cliente, marca, modello e matricola sono obbligatori.");
       return;
     }
     try {
@@ -60,9 +65,10 @@ export function LavorazioneEditModal({
         });
       }
       await update.mutateAsync({ id: row.id, data: { note: note.trim() || null } });
+      gestToast.successSaved();
       onClose();
-    } catch {
-      /* mostrato sotto */
+    } catch (e) {
+      gestToast.errorOnce("lav-edit", e, { module: "lavorazioni" });
     }
   }
 
@@ -73,12 +79,8 @@ export function LavorazioneEditModal({
       title="Dettagli macchina"
       subtitle="Modifica controllata di anagrafica mezzo e note lavorazione."
     >
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className="flex max-h-[min(88dvh,720px)] flex-col overflow-hidden">
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-          {update.isError || updateMezzo.isError ? (
-            <p className="text-sm text-red-600 dark:text-red-400">{update.error?.message ?? updateMezzo.error?.message ?? "Aggiornamento fallito."}</p>
-          ) : null}
-
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className={dsLabel}>Cliente</span>
@@ -164,8 +166,15 @@ export function LavorazioneEditModal({
               className={`${dsBtnDanger} basis-full sm:basis-auto`}
               disabled={update.isPending || updateMezzo.isPending}
               onClick={() => {
-                if (!window.confirm("Eliminare questa lavorazione? L'azione non è reversibile se il record viene rimosso definitivamente.")) return;
-                onDelete();
+                void confirm({
+                  title: "Eliminare lavorazione?",
+                  message:
+                    "L'azione non è reversibile se il record viene rimosso definitivamente.",
+                  destructive: true,
+                  confirmLabel: "Elimina",
+                }).then((ok) => {
+                  if (ok) onDelete();
+                });
               }}
             >
               Elimina
@@ -173,6 +182,7 @@ export function LavorazioneEditModal({
           ) : null}
         </footer>
       </form>
+      {confirmDialog}
     </LavorazioniModalShell>
   );
 }

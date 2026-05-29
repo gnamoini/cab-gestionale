@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useToast } from "@/context/toast-context";
+import { useToastContext } from "@/context/toast-context";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { subscribeNotificheGestionale } from "@/lib/sync/gestionale-notification-dispatch";
 
@@ -10,7 +10,7 @@ import { subscribeNotificheGestionale } from "@/lib/sync/gestionale-notification
  * Filtra su ruoli admin/autorizzati e deduplica ulteriormente per viewport.
  */
 export function GestionaleNotificationsBridge() {
-  const { push } = useToast();
+  const { push } = useToastContext();
   const { isAdmin, canManageSecurity, isLoading } = usePermissions();
   const canViewOperationalNotifications = isAdmin || canManageSecurity;
   const recentRef = useRef<Map<string, number>>(new Map());

@@ -1,0 +1,84 @@
+# Unica autorità pre-production: questo workflow autorizza merge e deploy production.
+# Vercel non esegue gate né production:check — solo next build dopo Deployment Protection.
+name: Release Gate
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+concurrency:
+  group: release-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    name: release-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Fork PRs must not run with repository secrets.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+
+    env:
+      PRODUCTION_CHECK_REQUIRE_DB: "1"
+      CI: "true"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript (tsc --noEmit)
+        run: npm run ci:tsc
+
+      - name: Next.js build
+        run: npm run ci:build
+        env:
+          NODE_ENV: production
+
+      - name: UX enforcement
+        run: npm run ux:enforce
+
+      - name: UX mobile gate
+        run: npm run ux:mobile-gate
+
+      - name: Production readiness (RBAC, storage, pilot, legacy URLs)
+        run: npm run production:check
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Smoke structural + regression tests
+        run: npm run smoke:structural && npm run smoke:regression
+
+      - name: Install Playwright Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke Playwright (runtime)
+        run: npm run smoke:playwright
+        env:
+          PORT: "3210"
+          SMOKE_BASE_URL: http://127.0.0.1:3210
+          SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+          SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+          SMOKE_OPERATOR_EMAIL: ${{ secrets.SMOKE_OPERATOR_EMAIL }}
+          SMOKE_OPERATOR_PASSWORD: ${{ secrets.SMOKE_OPERATOR_PASSWORD }}
+          SMOKE_DOCUMENTI_LAVORAZIONE_ID: ${{ secrets.SMOKE_DOCUMENTI_LAVORAZIONE_ID }}

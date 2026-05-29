@@ -2,11 +2,7 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
-import {
-  cabSyncEventForEntity,
-  dispatchGestionaleAction,
-  invalidateAfterLavorazioneMutations,
-} from "@/src/lib/react-query/invalidate-related";
+import { cabSyncEventForEntity, invalidateAfterLavorazioneMutations } from "@/src/lib/react-query/invalidate-related";
 import {
   applyOptimisticLavorazioneUpdate,
   rollbackLavorazioneUpdateQueries,
@@ -49,11 +45,6 @@ export function useLavorazioneUpdateMutation() {
       onSuccess: (serverRow, variables) => {
         applyOptimisticLavorazioneUpdate(queryClient, variables.id, variables.data, serverRow);
         markRecentLocalGestionaleMutation(["lavorazioni"], variables.id);
-        dispatchGestionaleAction(queryClient, ["lavorazioni"], {
-          source: "local_mutation",
-          cabSyncEvents: [cabSyncEventForEntity("lavorazioni", variables.id)],
-          skipCacheInvalidation: true,
-        });
       },
       onError: (_err, _variables, context) => {
         if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);

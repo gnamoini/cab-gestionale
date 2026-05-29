@@ -8,20 +8,21 @@ import {
   canDelete,
   canRead,
   canWrite,
-  hasPermission,
-  resolveRole,
-  type AppRole,
+  hasPermission as checkPermission,
   type CanAccessPageOptions,
   type PermissionKey,
   type RbacSection,
 } from "@/lib/auth/rbac";
 import { hasCapability, type Capability } from "@/lib/rbac";
+import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 
 export function useRbac() {
   const { user, status } = useAuth();
   const clientLav = useClientLavorazioniAccess();
-  const isLoading = status === "loading";
-  const role = resolveRole(user);
+  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
+  const isLoading = status === "loading" || permsLoading;
+  const role = snapshot?.role ?? "guest";
+  const rbacCtx = snapshot?.rbacContext ?? { operatorGlobalSettingsDbEnabled: false };
 
   const pageOpts: CanAccessPageOptions = {
     clientLavorazioniAllowed: clientLav.allowed,
@@ -31,20 +32,20 @@ export function useRbac() {
     user,
     role,
     isLoading,
+    operatorGlobalSettingsPilotActive: snapshot?.pilot.effectiveEnabled ?? false,
     clientLavorazioniLoading: clientLav.isLoading,
-    hasPermission: (permission: PermissionKey) => hasPermission(user, permission),
-    hasCapability: (capability: Capability) => hasCapability(user, capability),
-    canRead: (section: RbacSection) => canRead(user, section),
-    canWrite: (section: RbacSection) => canWrite(user, section),
-    canDelete: (section: RbacSection) => canDelete(user, section),
+    hasPermission: (permission: PermissionKey) => checkPermission(user, permission, rbacCtx),
+    hasCapability: (capability: Capability) => hasCapability(user, capability, rbacCtx),
+    canRead: (section: RbacSection) => canRead(user, section, rbacCtx),
+    canWrite: (section: RbacSection) => canWrite(user, section, rbacCtx),
+    canDelete: (section: RbacSection) => canDelete(user, section, rbacCtx),
     canAccessPage: (pathname: string, opts?: CanAccessPageOptions) =>
-      canAccessPage(user, pathname, { ...pageOpts, ...opts }),
-    /** Handler guard: ritorna false e opzionalmente setta errore se non autorizzato. */
+      canAccessPage(user, pathname, { ...pageOpts, ...opts }, rbacCtx),
     guardWrite: (section: RbacSection, onDenied?: (msg: string) => void) =>
-      denyUnless(canWrite(user, section), onDenied),
+      denyUnless(canWrite(user, section, rbacCtx), onDenied),
     guardRead: (section: RbacSection, onDenied?: (msg: string) => void) =>
-      denyUnless(canRead(user, section), onDenied),
-    assertWrite: (section: RbacSection) => assertAllowed(canWrite(user, section)),
+      denyUnless(canRead(user, section, rbacCtx), onDenied),
+    assertWrite: (section: RbacSection) => assertAllowed(canWrite(user, section, rbacCtx)),
     isAdmin: role === "admin",
     isManager: role === "manager",
     isOperatore: role === "operatore" || role === "manager",
@@ -53,10 +54,11 @@ export function useRbac() {
     isOspite: role === "guest",
     isCliente: role === "cliente",
     isReadOnly: role === "guest" || role === "cliente",
+    effectivePermissions: snapshot,
   };
 }
 
-export type UseRbacReturn = ReturnType<typeof useRbac> & { role: AppRole };
+export type UseRbacReturn = ReturnType<typeof useRbac> & { role: ReturnType<typeof useRbac>["role"] };
 
 /** Sessione pronta per valutazioni RBAC lato client. */
 export function useRbacReady(): boolean {

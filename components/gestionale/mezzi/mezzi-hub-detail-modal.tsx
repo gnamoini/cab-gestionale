@@ -16,7 +16,7 @@ import {
   GestionaleLogList,
   buildMezziGestionaleLogViewModel,
 } from "@/components/gestionale/gestionale-log-ui";
-import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
+import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
 import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
 import { buildPreventiviArchivioFilterHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
@@ -32,7 +32,9 @@ import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useMezzoHub } from "@/src/hooks/gestionale/use-mezzo-hub";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import { dsScrollbar, dsTable, dsTableHeadCell, dsTableRow, dsTableWrap, dsBtnDanger } from "@/lib/ui/design-system";
+import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { dsScrollbar, dsTable, dsTableRow, dsTableWrap, dsBtnDanger } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
 type TabId = "panoramica" | "foto" | "lavorazioni" | "timeline" | "preventivi" | "documenti" | "log";
@@ -177,20 +179,13 @@ export function MezziHubDetailModal({
   };
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <div
-        className="flex max-h-[min(92vh,820px)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="mezzi-hub-title"
-        onMouseDown={(e) => e.stopPropagation()}
-      >
-        <div className="flex shrink-0 flex-wrap items-start justify-between gap-2 border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
+    <LavorazioniModalShell
+      wide
+      maxWidthClass="max-w-3xl"
+      onRequestClose={onClose}
+      titleId="mezzi-hub-title"
+      header={
+        <div className="flex w-full shrink-0 flex-wrap items-start justify-between gap-2 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
           <div className="min-w-0">
             <h2 id="mezzi-hub-title" className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
               {mezzo.marca} {mezzo.modello !== "—" ? mezzo.modello : ""}
@@ -221,7 +216,8 @@ export function MezziHubDetailModal({
             </button>
           </div>
         </div>
-
+      }
+    >
         {hubQuery.isError ? (
           <div className="shrink-0 border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100">
             {hubQuery.error?.message ?? "Errore caricamento hub mezzo."}
@@ -312,10 +308,10 @@ export function MezziHubDetailModal({
               <table className={`${dsTable} min-w-[640px] text-xs`}>
                 <thead>
                   <tr>
-                    <th className={dsTableHeadCell}>Ingresso</th>
-                    <th className={dsTableHeadCell}>Stato</th>
-                    <th className={dsTableHeadCell}>Note</th>
-                    <th className={dsTableHeadCell}> </th>
+                    <GlobalTableHeadLabel label="Ingresso" />
+                    <GlobalTableHeadLabel label="Stato" />
+                    <GlobalTableHeadLabel label="Note" />
+                    <GlobalTableHeadLabel label="" thClassName="w-16" />
                   </tr>
                 </thead>
                 <tbody>
@@ -432,7 +428,7 @@ export function MezziHubDetailModal({
                 <li className="text-sm text-zinc-500">Nessun documento collegato a questo mezzo.</li>
               ) : (
                 pagedDoc.map((d) => {
-                  const href = getDocumentApriHref(d);
+                  const canOpen = canOpenDocumento(d);
                   return (
                     <li
                       key={d.id}
@@ -442,13 +438,11 @@ export function MezziHubDetailModal({
                         <p className="text-[11px] font-semibold uppercase text-zinc-500">{formatDocumentoRigaSintetica(d)}</p>
                         <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{d.nome}</p>
                       </div>
-                      {href ? (
+                      {canOpen ? (
                         <button
                           type="button"
                           className={`${erpBtnNeutral} shrink-0`}
-                          onClick={() =>
-                            openUrlInNewTab(href, { revokeBlobUrlAfterMs: href.startsWith("blob:") ? 120_000 : undefined })
-                          }
+                          onClick={() => void openDocumentoFile(d)}
                         >
                           Apri
                         </button>
@@ -498,12 +492,11 @@ export function MezziHubDetailModal({
           ) : null}
         </div>
 
-        <div className="shrink-0 border-t border-zinc-100 bg-zinc-50/50 px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900/80">
+        <div className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] px-4 py-3">
           <Link href={hrefDocumentiPerMezzo(mezzo)} className={`${erpBtnAccent} inline-flex w-full justify-center no-underline sm:w-auto`} onClick={onClose}>
             Documenti (pagina completa)
           </Link>
         </div>
-      </div>
-    </div>
+    </LavorazioniModalShell>
   );
 }

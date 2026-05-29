@@ -33,12 +33,6 @@ export function buildDocumentiCatalogFromImpostazioni(prefs: MezziListePrefs, me
       const mo = z.modello?.trim();
       if (mo) modelliSet.add(mo);
     }
-    if (modelliSet.size === 0) {
-      for (const mo of prefs.modelli) {
-        const t = mo.trim();
-        if (t) modelliSet.add(t);
-      }
-    }
     const modelli = [...modelliSet].sort((a, b) => a.localeCompare(b, "it"));
     const macchine: CatalogMacchina[] = modelli.map((mn) => ({
       id: `mdl-${marcaSlug}__${slug(mn)}`,

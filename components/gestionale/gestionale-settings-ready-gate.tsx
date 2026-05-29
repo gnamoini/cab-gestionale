@@ -7,8 +7,8 @@ import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 
 /**
- * Dopo autenticazione, attende il primo fetch delle impostazioni business da Supabase
- * quando possibile; in caso di errore degrada con defaults (non blocca operatore/ospite).
+ * Dopo autenticazione, carica le impostazioni business da Supabase in parallelo alla shell.
+ * In caso di errore degrada con defaults (non blocca operatore/ospite).
  */
 export function GestionaleSettingsReadyGate({ children }: { children: React.ReactNode }) {
   const { configurationError } = useAuth();
@@ -29,16 +29,19 @@ export function GestionaleSettingsReadyGate({ children }: { children: React.Reac
     );
   }
 
-  if (settingsLoading) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center px-4 py-16">
-        <GlobalLoadingView message={GLOBAL_LOADING_MESSAGES.settings} />
-      </div>
-    );
-  }
-
   return (
     <>
+      {settingsLoading ? (
+        <div
+          className="border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-card))] px-4 py-2"
+          role="status"
+          aria-busy="true"
+        >
+          <div className="mx-auto flex max-w-3xl items-center justify-center gap-2">
+            <GlobalLoadingView message={GLOBAL_LOADING_MESSAGES.settings} spinnerSize="sm" className="flex-row gap-2 py-0" />
+          </div>
+        </div>
+      ) : null}
       {q.isError && !q.data ? (
         <div
           className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"

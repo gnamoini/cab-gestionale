@@ -1,5 +1,7 @@
 "use client";
 
+import "./gestionale-list-table.css";
+
 import type { ReactNode } from "react";
 import { GlobalTable, type GlobalTableProps } from "@/components/gestionale/global-table/global-table";
 import { GlobalTableHeadLabel } from "@/components/gestionale/global-table/global-table-header";

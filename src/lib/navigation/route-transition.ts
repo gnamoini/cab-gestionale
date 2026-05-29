@@ -5,7 +5,7 @@ export function isNavTargetCurrent(pathname: string, href: string): boolean {
   return pathname.startsWith(`${href}/`);
 }
 
-export const ROUTE_LOADING_FAILSAFE_MS = 10_000;
+export const ROUTE_LOADING_FAILSAFE_MS = 5_000;
 
 export const ROUTE_TRANSITION_CANCEL_EVENT = "cab:route-transition-cancel";
 

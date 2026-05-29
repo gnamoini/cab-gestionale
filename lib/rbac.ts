@@ -2,6 +2,7 @@
  * RBAC capability — single source of truth (frontend).
  * Allineato a public.rbac_has_capability() in Supabase.
  */
+import { isOperatorGlobalSettingsEnabled } from "@/lib/permissions/operator-global-settings";
 
 export const CANONICAL_ROLES = ["admin", "manager", "operatore", "cliente", "guest"] as const;
 
@@ -16,6 +17,11 @@ export const CAPABILITIES = [
 ] as const;
 
 export type Capability = (typeof CAPABILITIES)[number];
+
+/** Contesto opzionale per valutazioni capability (es. flag DB pilot impostazioni). */
+export type RbacEvaluationContext = {
+  operatorGlobalSettingsDbEnabled?: boolean;
+};
 
 /** Legacy DB / JWT → ruolo canonico. */
 const LEGACY_ROLE_MAP: Record<string, CanonicalRole> = {
@@ -66,7 +72,7 @@ export const ROLE_CAPABILITIES: Record<CanonicalRole, Record<Capability, boolean
   operatore: {
     can_read_operational: true,
     can_write_operational: true,
-    can_manage_settings: true,
+    can_manage_settings: false,
     can_manage_security: false,
     can_access_client_area: true,
   },
@@ -86,14 +92,22 @@ export const ROLE_CAPABILITIES: Record<CanonicalRole, Record<Capability, boolean
   },
 };
 
-/** Verifica capability per utente (allineato a rbac_has_capability DB). */
-export function hasCapability(user: RbacUserInput, capability: Capability): boolean {
+/** Verifica capability per utente (allineato a rbac_has_capability DB + env pilot). */
+export function hasCapability(
+  user: RbacUserInput,
+  capability: Capability,
+  ctx?: RbacEvaluationContext,
+): boolean {
   const role = resolveCanonicalRole(user);
   if (role === "admin") return true;
+  if (capability === "can_manage_settings" && role === "operatore") {
+    return isOperatorGlobalSettingsEnabled(ctx?.operatorGlobalSettingsDbEnabled === true);
+  }
   return ROLE_CAPABILITIES[role][capability];
 }
 
-export const RBAC_DENIED_MESSAGE = "Operazione non consentita per il tuo ruolo.";
+/** Messaggio UI per permessi negati (allineato a gestionale-error-messages). */
+export const RBAC_DENIED_MESSAGE = "Non hai i permessi per eseguire questa azione.";
 
 /** @deprecated Usare CANONICAL_ROLES / resolveCanonicalRole. */
 export const APP_ROLES = CANONICAL_ROLES;

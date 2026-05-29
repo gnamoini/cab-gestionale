@@ -4,7 +4,7 @@ import type { LavorazioneListRow, LavorazioneUpdate } from "@/src/services/lavor
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 import { QK } from "@/src/lib/react-query/query-keys";
-import { enqueueInvalidateQueryKeys } from "@/src/lib/react-query/invalidate-batch";
+import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-operational-truth";
 
 export type LavorazioniListSnapshot = {
   queryKey: readonly unknown[];
@@ -133,11 +133,7 @@ export function rollbackLavorazioneUpdateQueries(
   }
 }
 
-/** Invalidazione post-update rapido: allinea liste lavorazioni al DB + log batched. */
-export function settleLavorazioneQuickUpdate(qc: QueryClient, hadError: boolean): void {
-  if (hadError) {
-    void qc.invalidateQueries({ queryKey: QK.lavorazioniQueries, refetchType: "active" });
-    return;
-  }
-  enqueueInvalidateQueryKeys(qc, [QK.lavorazioniQueries, QK.log]);
+/** Invalidazione post-update rapido: allinea liste lavorazioni al DB via truth layer. */
+export function settleLavorazioneQuickUpdate(qc: QueryClient, _hadError: boolean): void {
+  void invalidateOperationalTruth({ queryClient: qc, domain: "lavorazioni" });
 }

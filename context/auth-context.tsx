@@ -1,22 +1,35 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { AuthError, Session, User } from "@supabase/supabase-js";
+import { clearGestionaleToasts } from "@/context/toast-context";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import { resolveSignInEmail } from "@/src/lib/auth/resolve-sign-in-email";
 import { formatLoginIdentifierInput, isValidLoginIdentifier } from "@/src/lib/auth/username";
-import { resolveFormattedUserDisplayName } from "@/src/lib/auth/resolve-user-display-name";
-import { resolveRole } from "@/lib/auth/rbac";
+import { isTransientNetworkAuthError, shouldClearSessionOnAuthError } from "@/src/lib/auth/auth-network-retry";
+import { mapDegradedPublicAuthUser, mapSupabaseUserToPublicAuthUser } from "@/src/lib/auth/map-auth-user";
+import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 import { beginUndoSession, resetUndoSession } from "@/lib/gestionale-log/undo-session";
 import { notifyUndoSessionChanged } from "@/lib/gestionale-log/use-undo-session-id";
+import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
+import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { QK } from "@/src/lib/react-query/query-keys";
-import { clearInvalidAuthSession, isInvalidRefreshAuthMessage } from "@/src/lib/auth/clear-invalid-auth-session";
+import { clearInvalidAuthSession } from "@/src/lib/auth/clear-invalid-auth-session";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { authLogsService } from "@/src/services/auth-logs.service";
 import type { AuthStatus } from "@/src/lib/auth/auth-status";
 import type { PublicAuthUser } from "@/src/types/auth-user";
-import type { RuoloUtente } from "@/src/types/supabase-tables";
 
 export type { AuthStatus } from "@/src/lib/auth/auth-status";
 export { isAuthFullyAuthenticated, isAuthSessionEstablished } from "@/src/lib/auth/auth-status";
@@ -24,9 +37,7 @@ export { isAuthFullyAuthenticated, isAuthSessionEstablished } from "@/src/lib/au
 type AuthContextValue = {
   status: AuthStatus;
   user: PublicAuthUser | null;
-  /** Se valorizzato, il client Supabase non è inizializzato (mancano env pubbliche). */
   configurationError: string | null;
-  /** Nome da usare nei log (mai stringa vuota). */
   authorName: string;
   login: (email: string, password: string, remember: boolean) => Promise<{ ok: true } | { ok: false; message: string }>;
   logout: () => Promise<void>;
@@ -36,28 +47,42 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 const FALLBACK_AUTHOR = "Utente CAB";
+const AUTH_INIT_FAILSAFE_MS = 7_000;
 
-function delay(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms));
+function isServerSnapshotFresh(snapshot: ServerAuthSnapshot | null | undefined): boolean {
+  if (!snapshot?.user) return false;
+  const exp = snapshot.session.expiresAt;
+  if (exp == null) return true;
+  return exp * 1000 > Date.now() + 5_000;
 }
 
-function isTransientNetworkAuthError(err: AuthError | Error): boolean {
-  const m = `${err.name} ${err.message}`.toLowerCase();
-  return (
-    m.includes("failed to fetch") ||
-    m.includes("network") ||
-    m.includes("fetch") ||
-    m.includes("timeout") ||
-    m.includes("econnreset") ||
-    m.includes("etimedout") ||
-    m.includes("502") ||
-    m.includes("503") ||
-    m.includes("504")
-  );
-}
-
-function shouldClearSessionOnAuthError(err: AuthError | Error): boolean {
-  return isInvalidRefreshAuthMessage(err.message);
+function deriveInitialAuthState(snapshot: ServerAuthSnapshot | null | undefined): {
+  status: AuthStatus;
+  user: PublicAuthUser | null;
+  configurationError: string | null;
+} {
+  if (!isSupabasePublicEnvConfigured()) {
+    return {
+      status: "anonymous",
+      user: null,
+      configurationError: MISSING_SUPABASE_ENV_MESSAGE,
+    };
+  }
+  if (snapshot?.configurationError) {
+    return {
+      status: "anonymous",
+      user: null,
+      configurationError: snapshot.configurationError,
+    };
+  }
+  if (snapshot?.user && isServerSnapshotFresh(snapshot)) {
+    return {
+      status: "authenticated",
+      user: snapshot.user,
+      configurationError: null,
+    };
+  }
+  return { status: "loading", user: null, configurationError: null };
 }
 
 async function getSessionWithSoftRetry(sb: ReturnType<typeof getBrowserSupabase>): Promise<{
@@ -68,7 +93,7 @@ async function getSessionWithSoftRetry(sb: ReturnType<typeof getBrowserSupabase>
   if (!first.error) return first;
   if (!isTransientNetworkAuthError(first.error)) return first;
   console.warn("[auth] getSession errore transitorio, retry una volta:", first.error.message);
-  await delay(450);
+  await new Promise((r) => setTimeout(r, 300));
   return sb.auth.getSession();
 }
 
@@ -78,34 +103,45 @@ async function loadPublicUserFromSessionUser(sessionUser: User): Promise<PublicA
   if (error) {
     console.warn("[auth] profilo non leggibile:", error.message);
   }
-  const nome = resolveFormattedUserDisplayName({
-    email: sessionUser.email,
-    profileNome: row?.nome,
-    userMetadata: { ...sessionUser.app_metadata, ...sessionUser.user_metadata },
-  });
-  const ruoloFromProfile = typeof row?.ruolo === "string" ? row.ruolo : null;
-  /** Sicurezza: ruolo SOLO da DB (`profiles`). Mai da JWT metadata (escalation). */
-  const ruolo = resolveRole(ruoloFromProfile) as RuoloUtente;
-  return {
-    id: sessionUser.id,
-    email: sessionUser.email ?? "",
-    nome,
-    ruolo,
-  };
+  return mapSupabaseUserToPublicAuthUser(sessionUser, row);
 }
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>("loading");
-  const [user, setUser] = useState<PublicAuthUser | null>(null);
-  const [configurationError, setConfigurationError] = useState<string | null>(null);
+export function AuthProvider({
+  children,
+  initialSnapshot,
+}: {
+  children: ReactNode;
+  initialSnapshot?: ServerAuthSnapshot | null;
+}) {
+  const initial = useMemo(() => deriveInitialAuthState(initialSnapshot), [initialSnapshot]);
+  const [status, setStatus] = useState<AuthStatus>(initial.status);
+  const [user, setUser] = useState<PublicAuthUser | null>(initial.user);
+  const [configurationError, setConfigurationError] = useState<string | null>(initial.configurationError);
   const queryClient = useQueryClient();
   const userIdRef = useRef<string | null>(null);
   const lastStableUserRef = useRef<PublicAuthUser | null>(null);
   const clearingSessionRef = useRef(false);
+  const skipInitGetSessionRef = useRef(isServerSnapshotFresh(initialSnapshot));
+  const authRestoreStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
+  const authRestoreLoggedRef = useRef(skipInitGetSessionRef.current);
+  const authInitFailsafeFiredRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (!initialSnapshot?.user?.id) return;
+    queryClient.setQueryData(
+      [...QK.userPermissions, initialSnapshot.user.id] as const,
+      initialSnapshot.permissions ?? [],
+    );
+  }, [initialSnapshot, queryClient]);
 
   useEffect(() => {
     userIdRef.current = user?.id ?? null;
     if (user && (status === "authenticated" || status === "degraded")) lastStableUserRef.current = user;
+    if (authRestoreLoggedRef.current) return;
+    if (status === "loading") return;
+    authRestoreLoggedRef.current = true;
+    const durationMs = Math.round(performance.now() - authRestoreStartRef.current);
+    trackRuntimeEvent(RuntimeEvents.authRestoreDuration, { durationMs });
   }, [user, status]);
 
   const applyAuthUser = useCallback(
@@ -114,7 +150,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         lastStableUserRef.current = null;
         setStatus("anonymous");
-        void queryClient.invalidateQueries({ queryKey: [...QK.userPermissions] });
+        queryClient.clear();
+        clearGestionaleToasts();
         return;
       }
       try {
@@ -124,16 +161,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus("authenticated");
       } catch (e) {
         console.warn("[auth] applicazione sessione fallita (stato degraded):", e);
-        const nome = resolveFormattedUserDisplayName({
-          email: authUser.email,
-          userMetadata: { ...authUser.app_metadata, ...authUser.user_metadata },
-        });
-        setUser({
-          id: authUser.id,
-          email: authUser.email ?? "",
-          nome,
-          ruolo: "guest",
-        });
+        const u = mapDegradedPublicAuthUser(authUser);
+        setUser(u);
         setStatus("degraded");
       }
     },
@@ -155,7 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       clearingSessionRef.current = true;
       try {
-        console.warn("[auth] sessione non valida, clear:", reason);
+        trackRuntimeEvent(RuntimeEvents.authSessionInvalid, { reason: reason.slice(0, 200) });
         await clearInvalidAuthSession(sb);
         await applySession(null);
       } finally {
@@ -209,6 +238,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [applySession, handleInvalidSession]);
 
   useEffect(() => {
+    if (status !== "loading") {
+      authInitFailsafeFiredRef.current = false;
+      return;
+    }
+    if (!isSupabasePublicEnvConfigured()) return;
+
+    const id = window.setTimeout(() => {
+      if (authInitFailsafeFiredRef.current) return;
+      authInitFailsafeFiredRef.current = true;
+      console.warn("[auth] init timeout — degradazione o logout");
+      if (initialSnapshot?.user) {
+        setUser(initialSnapshot.user);
+        setStatus("degraded");
+        return;
+      }
+      if (lastStableUserRef.current) {
+        setUser(lastStableUserRef.current);
+        setStatus("degraded");
+        return;
+      }
+      setUser(null);
+      setStatus("anonymous");
+      void refresh();
+    }, AUTH_INIT_FAILSAFE_MS);
+
+    return () => window.clearTimeout(id);
+  }, [status, initialSnapshot?.user, refresh]);
+
+  useEffect(() => {
     let cancelled = false;
     let subscription: { unsubscribe: () => void } | null = null;
 
@@ -226,26 +284,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void (async () => {
       try {
         const sb = getBrowserSupabase();
-        const { data: init, error: initErr } = await getSessionWithSoftRetry(sb);
-        const session = init?.session ?? null;
-
-        if (cancelled) return;
-
-        if (initErr && shouldClearSessionOnAuthError(initErr)) {
-          await handleInvalidSession(sb, initErr.message);
-        } else if (initErr && session?.user && isTransientNetworkAuthError(initErr)) {
-          await applySession(session);
-          setStatus("degraded");
-        } else if (initErr) {
-          console.warn("[auth] init getSession:", initErr.message);
-          if (session?.user) await applySession(session);
-          else {
-            setUser(null);
-            setStatus("anonymous");
-          }
-        } else {
-          await applySession(session);
-        }
 
         const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
           if (cancelled) return;
@@ -268,6 +306,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           void applySession(session);
         });
         subscription = sub.subscription;
+
+        if (!skipInitGetSessionRef.current) {
+          const { data: init, error: initErr } = await getSessionWithSoftRetry(sb);
+          const session = init?.session ?? null;
+
+          if (cancelled) return;
+
+          if (initErr && shouldClearSessionOnAuthError(initErr)) {
+            await handleInvalidSession(sb, initErr.message);
+          } else if (initErr && session?.user && isTransientNetworkAuthError(initErr)) {
+            await applySession(session);
+            setStatus("degraded");
+          } else if (initErr) {
+            console.warn("[auth] init getSession:", initErr.message);
+            if (session?.user) await applySession(session);
+            else {
+              setUser(null);
+              setStatus("anonymous");
+            }
+          } else {
+            await applySession(session);
+          }
+        }
       } catch (e) {
         if (!cancelled) {
           const msg = e instanceof Error ? e.message : "";
@@ -314,6 +375,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         if (error) {
           authLogsService.logLoginFailedFireAndForget(signInEmail);
+          trackRuntimeEvent(RuntimeEvents.authLoginFailed, { reason: (error.message || "sign_in").slice(0, 200) });
           return { ok: false as const, message: error.message || "Accesso negato." };
         }
         const { data: sessWrap, error: sessErr } = await getSessionWithSoftRetry(sb);
@@ -334,7 +396,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await applyAuthUser(session.user);
         beginUndoSession();
         notifyUndoSessionChanged();
-        void queryClient.invalidateQueries({ queryKey: [...QK.userPermissions] });
+        await invalidateRuntimeTruth({
+          reason: "sessionEstablished",
+          queryClient,
+        });
+        trackRuntimeEvent(RuntimeEvents.authLoginSuccess, { userId: session.user.id });
         return { ok: true as const };
       } catch (e) {
         const msg =
@@ -344,6 +410,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               ? e.message
               : "Errore di accesso.";
         authLogsService.logLoginFailedFireAndForget(email.trim().toLowerCase());
+        trackRuntimeEvent(RuntimeEvents.authLoginFailed, { reason: msg.slice(0, 200) });
         return { ok: false as const, message: msg };
       }
     },
@@ -351,27 +418,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const logout = useCallback(async () => {
+    const uid = user?.id;
+    const email = user?.email ?? "";
     if (isSupabasePublicEnvConfigured()) {
       try {
         const sb = getBrowserSupabase();
-        const { data: gu, error: guErr } = await sb.auth.getUser();
-        if (guErr) {
-          console.warn("[auth] getUser (logout):", guErr.message);
-        } else if (gu.user?.id) {
-          authLogsService.logLogoutFireAndForget(gu.user.id, gu.user.email ?? "");
+        if (uid) {
+          authLogsService.logLogoutFireAndForget(uid, email);
         }
         await sb.auth.signOut();
       } catch {
         /* ignore */
       }
     }
+    trackRuntimeEvent(RuntimeEvents.authLogout, { userId: uid ?? "anon" });
+    await invalidateRuntimeTruth({ reason: "logout", queryClient });
     setUser(null);
     lastStableUserRef.current = null;
     setStatus("anonymous");
+    queryClient.clear();
+    clearGestionaleToasts();
     resetUndoSession();
     notifyUndoSessionChanged();
-    void queryClient.invalidateQueries({ queryKey: [...QK.userPermissions] });
-  }, [queryClient]);
+  }, [queryClient, user?.email, user?.id]);
 
   const authorName = useMemo(() => {
     const n = user?.nome?.trim();

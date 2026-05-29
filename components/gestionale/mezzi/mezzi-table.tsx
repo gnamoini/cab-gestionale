@@ -4,26 +4,34 @@ import type { ReactNode } from "react";
 import { memo } from "react";
 import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
 import {
-  dsScrollbar,
-  dsTable,
   dsTableActionBtnInfo,
   dsTableActionBtnSecondary,
   dsTableActionBtnDanger,
   dsTableActionGlyph,
-  dsTableActionsGroupEnd,
-  dsTableHead,
-  dsTableRow,
-  dsTableTdCompact,
-  dsTableWrap,
 } from "@/lib/ui/design-system";
+import {
+  GestionaleListTable,
+  GestionaleListTableActionsHead,
+  GlobalTableHeadLabel,
+  GlobalTableSortTh,
+} from "@/components/gestionale/global-table";
+import {
+  gestionaleListColAzioniClass,
+  gestionaleListTableRowClass,
+  gestionaleListTableTd,
+  gestionaleListTableTdAzioni,
+  gestionaleListTableActionsGroupEnd,
+} from "@/lib/ui/gestionale-list-table";
 import { hrefDocumentiPerMezzo, hrefLavorazioniPerMezzo, hrefPreventiviPerMezzo, ultimaLavorazioneLabel } from "@/lib/mezzi/mezzi-helpers";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 
-const cellIdent = `${dsTableTdCompact} font-mono text-[13px] font-medium tabular-nums leading-normal text-zinc-600 dark:text-zinc-400`;
-
 /** 5 icone × 36px + gap — larghezza fissa per non assorbire slack in `table-fixed`. */
-const mezziTableActionsColClass = "w-[12.25rem] max-w-[12.25rem]";
-const mezziTableActionsTdClass = `${mezziTableActionsColClass} whitespace-nowrap px-2 py-1 align-middle text-right`;
+const mezziTableActionsColClass = gestionaleListColAzioniClass;
+
+const mezziCellStackClass = "flex min-w-0 flex-col gap-0.5";
+const mezziCellPrimaryClass = "break-words text-[13px] font-medium leading-snug text-zinc-800 dark:text-zinc-100";
+const mezziCellSecondaryClass = "break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400";
+const mezziCellIdentLineClass = "break-words text-[13px] font-medium leading-snug text-zinc-800 dark:text-zinc-100";
 
 function IconInfo({ className = dsTableActionGlyph }: { className?: string }) {
   return (
@@ -69,79 +77,59 @@ function cellIdentValue(raw: string | undefined) {
   return t;
 }
 
+function hasUtilizzatore(raw: string | undefined) {
+  const t = raw?.trim();
+  return Boolean(t && t !== "—");
+}
+
+function displayScalar(raw: string | undefined) {
+  const t = raw?.trim();
+  if (!t || t === "—") return "—";
+  return t;
+}
+
+function identificazioneLines(m: MezzoGestito): string[] {
+  const lines = [cellIdentValue(m.targa), cellIdentValue(m.matricola), cellIdentValue(m.numeroScuderia)].filter(
+    (v) => v !== "—",
+  );
+  return lines.length > 0 ? lines : ["—"];
+}
+
+function MezziCellTwoLine({
+  primary,
+  secondary,
+  extra,
+}: {
+  primary: string;
+  secondary: string;
+  extra?: ReactNode;
+}) {
+  return (
+    <div className={mezziCellStackClass}>
+      <span className={mezziCellPrimaryClass}>{primary}</span>
+      <span className={mezziCellSecondaryClass}>{secondary}</span>
+      {extra}
+    </div>
+  );
+}
+
+function MezziCellIdentificazione({ lines }: { lines: string[] }) {
+  return (
+    <div className={mezziCellStackClass}>
+      {lines.map((line, i) => (
+        <span key={`${i}-${line}`} className={mezziCellIdentLineClass}>
+          {line}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function IconTrash({ className = dsTableActionGlyph }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
     </svg>
-  );
-}
-
-function MezziSortBtn({
-  label,
-  columnKey,
-  sortColumn,
-  sortPhase,
-  onSort,
-  buttonClassName = "",
-  labelClassName = "",
-}: {
-  label: string;
-  columnKey: MezziSortKey;
-  sortColumn: MezziSortKey | null;
-  sortPhase: MezziSortPhase;
-  onSort: (k: MezziSortKey) => void;
-  buttonClassName?: string;
-  labelClassName?: string;
-}) {
-  const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
-  let icon: ReactNode = <span className="opacity-40">↕</span>;
-  if (active) icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
-  return (
-    <button
-      type="button"
-      onClick={() => onSort(columnKey)}
-      className={`inline-flex min-w-0 max-w-full items-center gap-1 text-xs font-semibold uppercase tracking-wide ${buttonClassName} ${
-        active ? "text-[color:var(--cab-primary)]" : "text-zinc-500 dark:text-zinc-400"
-      }`}
-    >
-      <span className={labelClassName || undefined}>{label}</span>
-      {icon}
-    </button>
-  );
-}
-
-function SortTh({
-  label,
-  columnKey,
-  sortColumn,
-  sortPhase,
-  onSort,
-  headerClassName = "",
-  buttonClassName = "",
-  labelClassName = "",
-}: {
-  label: string;
-  columnKey: MezziSortKey;
-  sortColumn: MezziSortKey | null;
-  sortPhase: MezziSortPhase;
-  onSort: (k: MezziSortKey) => void;
-  headerClassName?: string;
-  buttonClassName?: string;
-  labelClassName?: string;
-}) {
-  return (
-    <th className={`px-2.5 py-2 align-middle ${headerClassName}`}>
-      <MezziSortBtn
-        label={label}
-        columnKey={columnKey}
-        sortColumn={sortColumn}
-        sortPhase={sortPhase}
-        onSort={onSort}
-        buttonClassName={buttonClassName}
-        labelClassName={labelClassName}
-      />
-    </th>
   );
 }
 
@@ -220,12 +208,14 @@ function MezzoRowInner({
   onDelete?: (m: MezzoGestito) => void;
 }) {
   const ultima = ultimaLavorazioneLabel(interventi);
+  const nLavorazioni = interventi.length;
+  const identLines = identificazioneLines(m);
   void _inOff;
   return (
     <tr
       id={`mezzo-row-${m.id}`}
       className={[
-        dsTableRow,
+        gestionaleListTableRowClass,
         flash
           ? "bg-white/95 shadow-[inset_0_0_0_1px_rgba(228,228,231,0.95),0_0_20px_rgba(255,255,255,0.65)] transition-[background-color,box-shadow] duration-200 ease-out dark:bg-zinc-100/12 dark:shadow-[inset_0_0_0_1px_rgba(82,82,91,0.45),0_0_18px_rgba(255,255,255,0.06)]"
           : "",
@@ -233,23 +223,50 @@ function MezzoRowInner({
         .filter(Boolean)
         .join(" ")}
     >
-      <td className={`min-w-0 ${dsTableTdCompact}`}>
-        <div className="break-words font-medium leading-snug">{m.cliente}</div>
-        <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">{m.utilizzatore}</div>
+      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+        <div className={mezziCellStackClass}>
+          <span className={mezziCellPrimaryClass}>{displayScalar(m.cliente)}</span>
+          {hasUtilizzatore(m.utilizzatore) ? (
+            <span className={mezziCellSecondaryClass}>{m.utilizzatore.trim()}</span>
+          ) : null}
+        </div>
       </td>
-      <td className={`${dsTableTdCompact} font-medium`}>{m.marca}</td>
-      <td className={`min-w-0 ${dsTableTdCompact}`}>
-        <div className="break-words font-medium leading-snug">{cellIdentValue(m.modello)}</div>
-        {m.hubSynthetic ? (
-          <div className="mt-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Sintetico</div>
-        ) : null}
+      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+        <span className={mezziCellPrimaryClass}>{displayScalar(m.cantiere)}</span>
       </td>
-      <td className={cellIdent}>{cellIdentValue(m.targa)}</td>
-      <td className={cellIdent}>{cellIdentValue(m.matricola)}</td>
-      <td className={cellIdent}>{cellIdentValue(m.numeroScuderia)}</td>
-      <td className={`${dsTableTdCompact} whitespace-nowrap text-xs text-zinc-700 dark:text-zinc-300`}>{ultima}</td>
-      <td className={mezziTableActionsTdClass}>
-        <div className={dsTableActionsGroupEnd}>
+      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+        <MezziCellTwoLine
+          primary={displayScalar(m.marca)}
+          secondary={cellIdentValue(m.modello)}
+          extra={
+            m.hubSynthetic ? (
+              <span className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Sintetico</span>
+            ) : null
+          }
+        />
+      </td>
+      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+        <MezziCellTwoLine
+          primary={displayScalar(m.marcaTelaio)}
+          secondary={displayScalar(m.modelloTelaio)}
+        />
+      </td>
+      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+        <MezziCellIdentificazione lines={identLines} />
+      </td>
+      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+        <span className={`${mezziCellPrimaryClass} font-normal`}>{ultima}</span>
+      </td>
+      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+        <div className={mezziCellStackClass}>
+          <span className={`${mezziCellPrimaryClass} tabular-nums`}>{nLavorazioni}</span>
+          <span className={mezziCellSecondaryClass}>
+            {nLavorazioni === 1 ? "lavorazione" : "lavorazioni"}
+          </span>
+        </div>
+      </td>
+      <td className={gestionaleListTableTdAzioni}>
+        <div className={gestionaleListTableActionsGroupEnd}>
           <MezzoRowActions m={m} onHub={onHub} onDelete={onDelete} />
         </div>
       </td>
@@ -273,43 +290,56 @@ function MezzoMobileCard({
   onDelete?: (m: MezzoGestito) => void;
 }) {
   const ultima = ultimaLavorazioneLabel(interventi);
+  const nLavorazioni = interventi.length;
+  const identLines = identificazioneLines(m);
   void _inOff;
   return (
     <CardMobile
       id={`mezzo-row-${m.id}`}
       className={flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]" : ""}
     >
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Mezzo</p>
-          <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{m.marca}</p>
-          <p className="text-sm font-medium text-zinc-800 dark:text-zinc-100">{cellIdentValue(m.modello)}</p>
-          {m.hubSynthetic ? (
-            <p className="mt-1 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Sintetico</p>
-          ) : null}
-        </div>
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Cliente</p>
+        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{displayScalar(m.cliente)}</p>
+        {hasUtilizzatore(m.utilizzatore) ? (
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">{m.utilizzatore.trim()}</p>
+        ) : null}
       </div>
       <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+        <div>
+          <dt className="text-zinc-500 dark:text-zinc-400">Cantiere</dt>
+          <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{displayScalar(m.cantiere)}</dd>
+        </div>
+        <div>
+          <dt className="text-zinc-500 dark:text-zinc-400">N. lavorazioni</dt>
+          <dd className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-50">{nLavorazioni}</dd>
+        </div>
+        <div>
+          <dt className="text-zinc-500 dark:text-zinc-400">Attrezzatura</dt>
+          <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{displayScalar(m.marca)}</dd>
+          <dd className="text-xs text-zinc-500 dark:text-zinc-400">{cellIdentValue(m.modello)}</dd>
+          {m.hubSynthetic ? (
+            <dd className="mt-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Sintetico</dd>
+          ) : null}
+        </div>
+        <div>
+          <dt className="text-zinc-500 dark:text-zinc-400">Telaio</dt>
+          <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{displayScalar(m.marcaTelaio)}</dd>
+          <dd className="text-xs text-zinc-500 dark:text-zinc-400">{displayScalar(m.modelloTelaio)}</dd>
+        </div>
         <div className="col-span-2">
-          <dt className="text-zinc-500 dark:text-zinc-400">Cliente / Utilizzatore</dt>
-          <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{m.cliente}</dd>
-          <dd className="text-xs text-zinc-600 dark:text-zinc-300">{m.utilizzatore}</dd>
-        </div>
-        <div>
-          <dt className="text-zinc-500 dark:text-zinc-400">Targa</dt>
-          <dd className="font-mono text-[13px] font-medium tabular-nums text-zinc-600 dark:text-zinc-400">{cellIdentValue(m.targa)}</dd>
-        </div>
-        <div>
-          <dt className="text-zinc-500 dark:text-zinc-400">Matricola</dt>
-          <dd className="font-mono text-[13px] font-medium tabular-nums text-zinc-600 dark:text-zinc-400">{cellIdentValue(m.matricola)}</dd>
-        </div>
-        <div>
-          <dt className="text-zinc-500 dark:text-zinc-400">Scuderia</dt>
-          <dd className="font-mono text-[13px] font-medium tabular-nums text-zinc-600 dark:text-zinc-400">{cellIdentValue(m.numeroScuderia)}</dd>
+          <dt className="text-zinc-500 dark:text-zinc-400">Identificazione</dt>
+          <dd className="flex flex-col gap-0.5">
+            {identLines.map((line, i) => (
+              <span key={`${i}-${line}`} className="text-[13px] font-medium leading-snug text-zinc-800 dark:text-zinc-100">
+                {line}
+              </span>
+            ))}
+          </dd>
         </div>
         <div className="col-span-2">
-          <dt className="text-zinc-500 dark:text-zinc-400">Ultima lav.</dt>
-          <dd className="text-xs font-medium text-zinc-800 dark:text-zinc-200">{ultima}</dd>
+          <dt className="text-zinc-500 dark:text-zinc-400">Ultima lavorazione</dt>
+          <dd className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{ultima}</dd>
         </div>
       </dl>
       <CardMobileActions>
@@ -324,57 +354,54 @@ const MezzoRow = memo(MezzoRowInner);
 export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, sortPhase, onSort, flashRowId, onHub, onDelete }: MezziTableProps) {
   return (
     <>
-      <div className={`hidden ${dsTableWrap} ${dsScrollbar} md:block`}>
-        <table className={`${dsTable} w-full min-w-0 table-fixed text-left text-[13px] leading-snug text-zinc-900 dark:text-zinc-100`}>
-          <colgroup>
-            <col className="w-[12%]" />
-            <col className="w-[10%]" />
+      <GestionaleListTable
+        visibilityClass="hidden md:block"
+        colgroup={
+          <>
             <col className="w-[14%]" />
-            <col className="w-[10%]" />
+            <col className="w-[9%]" />
             <col className="w-[12%]" />
-            <col className="w-[7%]" />
+            <col className="w-[12%]" />
+            <col className="w-[14%]" />
+            <col className="w-[12%]" />
             <col className="w-[9%]" />
             <col className={mezziTableActionsColClass} />
-          </colgroup>
-          <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
-            <tr>
-              <SortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <SortTh label="Marca" columnKey="marca" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <SortTh label="Modello" columnKey="modello" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <SortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <SortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <SortTh label="Scuderia" columnKey="numeroScuderia" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <SortTh label="Ultima lav." columnKey="ultimaLavorazione" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-              <th
-                className={`${mezziTableActionsColClass} px-2.5 py-2 text-right align-middle text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400`}
-              >
-                Azioni
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
-              <tr className={dsTableRow}>
-                <td colSpan={8} className="px-3 py-8 text-center text-sm text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">
-                  Nessun mezzo corrisponde ai criteri.
-                </td>
-              </tr>
-            ) : (
-              rows.map((m) => (
-                <MezzoRow
-                  key={m.id}
-                  m={m}
-                  interventi={interventiByMezzoId.get(m.id) ?? []}
-                  inOff={inOfficina(m)}
-                  flash={flashRowId === m.id}
-                  onHub={onHub}
-                  onDelete={onDelete}
-                />
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+          </>
+        }
+        headRow={
+          <>
+            <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+            <GlobalTableHeadLabel label="Cantiere" />
+            <GlobalTableSortTh label="Attrezzatura" columnKey="marca" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+            <GlobalTableHeadLabel label="Telaio" />
+            <GlobalTableSortTh label="Identificazione" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+            <GlobalTableSortTh
+              label="Ultima lavorazione"
+              columnKey="ultimaLavorazione"
+              sortColumn={sortColumn}
+              sortPhase={sortPhase}
+              onSort={onSort}
+            />
+            <GlobalTableHeadLabel label="N. lavorazioni" />
+            <GestionaleListTableActionsHead />
+          </>
+        }
+        empty={rows.length === 0}
+        emptyMessage="Nessun mezzo corrisponde ai criteri."
+        colSpan={8}
+      >
+        {rows.map((m) => (
+          <MezzoRow
+            key={m.id}
+            m={m}
+            interventi={interventiByMezzoId.get(m.id) ?? []}
+            inOff={inOfficina(m)}
+            flash={flashRowId === m.id}
+            onHub={onHub}
+            onDelete={onDelete}
+          />
+        ))}
+      </GestionaleListTable>
 
       <div className="space-y-3 md:hidden">
         {rows.length === 0 ? (

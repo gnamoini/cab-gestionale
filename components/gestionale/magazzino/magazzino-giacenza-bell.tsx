@@ -15,6 +15,7 @@ import {
   dsZModal,
 } from "@/lib/ui/design-system";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
 
 const GIACENZA_MODAL_TITLE_ID = "magazzino-giacenza-modal-title";
 
@@ -33,7 +34,7 @@ export function MagazzinoGiacenzaBell({
 
   const close = useCallback(() => setOpen(false), []);
 
-  useBodyScrollLock(open);
+  useBodyScrollLock(open, "MagazzinoGiacenzaBell");
 
   useEffect(() => {
     if (!open) return;
@@ -90,7 +91,7 @@ export function MagazzinoGiacenzaBell({
             role="dialog"
             aria-modal="true"
             aria-labelledby={GIACENZA_MODAL_TITLE_ID}
-            className={`${dsModalPanel} flex max-h-[min(88dvh,640px)] w-full max-w-3xl flex-col overflow-hidden p-0`}
+            className={`${dsModalPanel} flex flex-col overflow-hidden p-0 ${resolveModalMaxWidthClass("max-w-3xl")}`}
             onMouseDown={(e) => e.stopPropagation()}
           >
             <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">

@@ -38,6 +38,7 @@ import {
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { Q_FOCUS_LAV_ROW, Q_FOCUS_MEZZO, Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
 import {
@@ -78,7 +79,9 @@ import {
 } from "@/lib/sistema/cab-events";
 import { countSchedePresenti, newSchedaMeta } from "@/lib/schede/schede-ui";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
+import { formatSupabaseError } from "@/src/utils/supabaseErrorHandler";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId, statoLavorazioneLabel } from "@/src/shared/selectors";
 import {
@@ -129,10 +132,12 @@ import {
 } from "@/src/services/lavorazioni.service";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
-import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
-import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
+import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { QK } from "@/src/lib/react-query/invalidate-related";
+import type { MezzoRow, PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import { useAuth } from "@/context/auth-context";
-import { useToast } from "@/context/toast-context";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import {
@@ -542,12 +547,14 @@ export function LavorazioniView() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { user, authorName } = useAuth();
-  const { push: pushToast } = useToast();
+  const gestToast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const qc = useQueryClient();
   const gestionaleQueryOpts = useGestionaleQueryOpts();
-  const permissions = usePermissions();
-  const canEditWorkOrders = permissions.canEditWorkOrders;
-  const canDeleteRecords = permissions.canDeleteRecords;
+  const lavPerm = usePermissions("lavorazioni");
+  const globalPerm = usePermissions();
+  const canEditWorkOrders = lavPerm.canWrite;
+  const canDeleteRecords = lavPerm.canWrite && globalPerm.canDeleteRecords;
   const globalOpts = useGlobalOptions({ debugTag: "LavorazioniView" });
   const mezziListQ = useMezziListQuery();
   const statiOpts = useMemo(
@@ -633,6 +640,7 @@ export function LavorazioniView() {
   );
 
   const updateLav = useLavorazioneUpdateMutation();
+  const createMezzo = useMezzoCreateMutation();
   const updateMezzo = useMezzoUpdateMutation();
   const removeLav = useLavorazioneRemoveMutation();
   const restoreLav = useLavorazioneRestoreMutation();
@@ -654,7 +662,7 @@ export function LavorazioniView() {
           if (options?.rollbackSnapshot !== undefined) {
             rollbackSchedeStore(qc, options.rollbackSnapshot);
           }
-          pushToast(res.error ?? "Salvataggio schede non riuscito.", "error", 5000);
+          gestToast.errorOnce("schede-save", res.error ?? "Salvataggio schede non riuscito.", { module: "lavorazioni" });
           return;
         }
         if (options?.syncAfter !== false) {
@@ -664,7 +672,7 @@ export function LavorazioniView() {
         }
       });
     },
-    [qc, pushToast],
+    [qc, gestToast],
   );
 
   useEffect(() => {
@@ -948,14 +956,14 @@ export function LavorazioniView() {
     if (!row || !canDeleteRecords) return;
     removeLav.mutate(row.id, {
       onSuccess: () => {
-        pushToast("Lavorazione eliminata.", "success");
+        gestToast.successOnce("lav-delete", "Lavorazione eliminata.");
         setEliminaConfirmRow(null);
         setSchedeRow((cur) => (cur?.row.id === row.id ? null : cur));
         flashRow(row.id);
         void lavModificheLogQuery.refetch();
       },
       onError: (err) => {
-        pushToast(err.message ?? "Eliminazione non riuscita.", "error");
+        gestToast.errorOnce("lav-delete", err, { module: "lavorazioni", action: "delete" });
       },
     });
   }
@@ -970,7 +978,7 @@ export function LavorazioniView() {
     if (!row || !canEditWorkOrders) return;
     concludeLav.mutate(row.id, {
       onSuccess: () => {
-        pushToast("Lavorazione conclusa e archiviata.", "success");
+        gestToast.successOnce("lav-conclude", "Lavorazione conclusa e archiviata.");
         setConcludiConfirmRow(null);
         if (schedeRow?.row.id === row.id && schedeRow.origine === "attiva") {
           setSchedeRow(null);
@@ -979,16 +987,18 @@ export function LavorazioniView() {
         void lavModificheLogQuery.refetch();
       },
       onError: (err) => {
-        pushToast(err.message ?? "Conclusione non riuscita.", "error");
+        gestToast.errorOnce("lav-conclude", err, { module: "lavorazioni" });
       },
     });
   }
 
-  function submitRipristinaInLavorazione(row: LavorazioneListRow) {
+  async function submitRipristinaInLavorazione(row: LavorazioneListRow) {
     if (!canEditWorkOrders) return;
-    const ok = window.confirm(
-      `Ripristinare la lavorazione «${macchinaLabel(row)}» tra le lavorazioni attive?`,
-    );
+    const ok = await confirm({
+      title: "Ripristinare lavorazione?",
+      message: `«${macchinaLabel(row)}» tornerà tra le lavorazioni attive.`,
+      confirmLabel: "Ripristina",
+    });
     if (!ok) return;
     const preferred =
       statiInCorsoOpts.find((s) => s.id === "in_lavorazione") ??
@@ -996,7 +1006,7 @@ export function LavorazioniView() {
       statiInCorsoOpts[0];
     const restoreStato = preferred?.id ?? resolveDefaultLavorazioneStatoId(globalOpts.lavorazioni.stati);
     if (!restoreStato || !isStatoInConfig(restoreStato, globalOpts.lavorazioni.stati)) {
-      window.alert("Nessuno stato attivo configurato per ripristinare la lavorazione.");
+      gestToast.warning("Nessuno stato attivo configurato per ripristinare la lavorazione.");
       return;
     }
     restoreLav.mutate(
@@ -1184,34 +1194,34 @@ export function LavorazioniView() {
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, focusLavorazioneInTable]);
 
+  /** Post-salvataggio scheda ingresso: UPSERT anagrafica mezzo (merge selettivo) e sync lavorazione. */
   async function syncIngressoToBackend(row: LavorazioneListRow, campi: SchedaIngressoFields) {
+    if (!campi.cliente.trim() || !campi.marcaAttrezzatura.trim()) return;
+
+    await qc.refetchQueries({ queryKey: QK.mezzi });
+    const freshRows =
+      qc.getQueryData<MezzoRow[]>([...QK.mezzi, null]) ??
+      qc.getQueriesData<MezzoRow[]>({ queryKey: QK.mezzi }).find(([, data]) => data?.length)?.[1] ??
+      mezziListQ.data ??
+      [];
+    const catalog = freshRows.map(toMezzoUI);
+
+    const { mezzoId } = await upsertMezzoFromSchedaIngresso({
+      fields: campi,
+      mezziCatalog: catalog,
+      preferredMezzoId: row.mezzo_id,
+      create: (data) => createMezzo.mutateAsync(data),
+      update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+    });
+
     const note = campi.noteIntervento?.trim() || null;
     const parsedIngresso = parseItalianDayToIso(campi.dataIngresso.trim());
-    const lavPatch: { note?: string | null; data_ingresso?: string } = {};
+    const lavPatch: LavorazioneUpdate = {};
     if (note !== (row.note ?? "").trim()) lavPatch.note = note;
     if (parsedIngresso.ok) lavPatch.data_ingresso = parsedIngresso.iso;
+    if (!row.mezzo_id?.trim() && mezzoId) lavPatch.mezzo_id = mezzoId;
     if (Object.keys(lavPatch).length) {
       await updateLav.mutateAsync({ id: row.id, data: lavPatch });
-    }
-    if (
-      row.mezzo_id &&
-      campi.cliente.trim() &&
-      campi.marcaAttrezzatura.trim() &&
-      campi.modelloAttrezzatura.trim() &&
-      campi.matricola.trim()
-    ) {
-      await updateMezzo.mutateAsync({
-        id: row.mezzo_id,
-        data: {
-          cliente: campi.cliente.trim(),
-          utilizzatore: campi.utilizzatore.trim() || null,
-          marca: campi.marcaAttrezzatura.trim(),
-          modello: campi.modelloAttrezzatura.trim(),
-          targa: campi.targa.trim() || null,
-          matricola: campi.matricola.trim(),
-          numero_scuderia: campi.nScuderia.trim() || null,
-        },
-      });
     }
   }
 
@@ -1267,14 +1277,21 @@ export function LavorazioniView() {
   const totalFilteredCount = attiveRowsFiltered.length + chiuseRowsFiltered.length;
 
   const loading = attiveQuery.isLoading || chiuseQuery.isLoading;
-  const loadErr = attiveQuery.isError ? attiveQuery.error?.message : chiuseQuery.isError ? chiuseQuery.error?.message : null;
+  const loadErrRaw = attiveQuery.isError ? attiveQuery.error : chiuseQuery.isError ? chiuseQuery.error : null;
+  const loadErr = loadErrRaw ? formatSupabaseError(loadErrRaw, { module: "lavorazioni", action: "read" }) : null;
 
   async function undoUltimaLavorazione() {
     if (!canEditWorkOrders || !undoableLavLog) return;
     const payload = auditPayload(undoableLavLog);
     const before = payload.before;
     if (!before) return;
-    if (!window.confirm("Annullare l'ultima azione reversibile sulle lavorazioni?")) return;
+    const okUndo = await confirm({
+      title: "Annullare l'ultima modifica?",
+      message: "Verrà ripristinato l'ultimo cambiamento reversibile sulle lavorazioni.",
+      confirmLabel: "Annulla modifica",
+      destructive: true,
+    });
+    if (!okUndo) return;
     const data = pickExistingFields<LavorazioneUpdate>(before, ["mezzo_id", "stato", "priorita", "data_ingresso", "data_uscita", "note", "created_by"]);
     try {
       let rollbackUpdateLog: LogModificaRow | null = null;
@@ -1332,13 +1349,13 @@ export function LavorazioniView() {
       await lavModificheLogQuery.refetch();
       flashRow(undoableLavLog.entita_id);
     } catch (e) {
-      window.alert(e instanceof Error ? e.message : "Undo non riuscito.");
+      gestToast.error(e, { module: "lavorazioni", action: "update" });
     }
   }
 
   const onPrintLavorazioniInCorso = useCallback(() => {
     if (sortedAttive.length === 0) {
-      pushToast("Nessuna lavorazione in corso da stampare con i filtri attivi.", "warning", 4200);
+      gestToast.warning("Nessuna lavorazione in corso da stampare con i filtri attivi.");
       return;
     }
     openLavorazioniInCorsoPdfInNewTab(
@@ -1356,9 +1373,10 @@ export function LavorazioniView() {
       }),
       authorName,
     );
-  }, [sortedAttive, pushToast, schedeStore, statiOpts, authorName, defaultAddetto]);
+  }, [sortedAttive, gestToast, schedeStore, statiOpts, authorName, defaultAddetto]);
 
   return (
+    <GestionaleSectionGate module="lavorazioni">
     <>
       <PageHeader
         title="Lavorazioni"
@@ -2256,7 +2274,9 @@ export function LavorazioniView() {
             try {
               await syncIngressoToBackend(schedeRow.row, campi);
             } catch {
-              window.alert("Scheda ingresso salvata localmente; sincronizzazione anagrafica mezzo non completata.");
+              gestToast.warning(
+                "Scheda ingresso salvata localmente; sincronizzazione anagrafica mezzo non completata.",
+              );
             }
           }}
           attive={attiveLegacyRows}
@@ -2300,6 +2320,8 @@ export function LavorazioniView() {
         onConfirm={confirmEliminaLavorazione}
       />
 
+      {confirmDialog}
     </>
+    </GestionaleSectionGate>
   );
 }

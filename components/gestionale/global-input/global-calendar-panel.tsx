@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   WEEKDAYS_IT,
   addMonths,
@@ -32,7 +32,14 @@ export function GlobalCalendarPanel({
   onSelectYmd: (ymd: string) => void;
   panelClassName?: string;
 }) {
-  const todayYmd = useMemo(() => toYmd(new Date()), []);
+  const [mounted, setMounted] = useState(false);
+  const [todayYmd, setTodayYmd] = useState("");
+
+  useEffect(() => {
+    setMounted(true);
+    setTodayYmd(toYmd(new Date()));
+  }, []);
+
   const cells = useMemo(() => buildMonthGrid(viewYear, viewMonth), [viewYear, viewMonth]);
 
   return (
@@ -86,7 +93,7 @@ export function GlobalCalendarPanel({
       <div className="grid grid-cols-7 gap-0.5">
         {cells.map((cell) => {
           const selected = selectedYmd === cell.ymd;
-          const isToday = todayYmd === cell.ymd;
+          const isToday = mounted && todayYmd === cell.ymd;
           return (
             <button
               key={cell.ymd}

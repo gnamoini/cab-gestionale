@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { handleSettingsInlineEditKeyDown } from "@/lib/settings/settings-inline-edit-keyboard";
 
 export const SETTINGS_LIST_ROW =
   "group flex min-h-[2.75rem] items-center justify-between gap-2 rounded-lg px-2 py-1.5 transition-colors duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-surface))] dark:hover:bg-zinc-800/70";
@@ -33,6 +34,7 @@ export function SettingsEditableStringRow({
   trailing?: React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
+  const initialValueRef = useRef(value);
 
   return (
     <li className={SETTINGS_LIST_ROW}>
@@ -46,12 +48,9 @@ export function SettingsEditableStringRow({
             setEditing(false);
             onRenameBlur(value, e.target.value);
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") (e.target as HTMLInputElement).blur();
-            if (e.key === "Escape") {
-              setEditing(false);
-            }
-          }}
+          onKeyDown={(e) =>
+            handleSettingsInlineEditKeyDown(e, initialValueRef.current, () => setEditing(false))
+          }
         />
       ) : (
         <span className="min-w-0 flex-1 truncate px-1.5 text-xs font-medium text-zinc-800 dark:text-zinc-100">{value}</span>
@@ -63,7 +62,10 @@ export function SettingsEditableStringRow({
           className={`${SETTINGS_LIST_ACTION} text-zinc-600 hover:text-[color:var(--cab-primary)] dark:text-zinc-300 dark:hover:text-[color:var(--cab-primary)] ${erpFocus}`}
           title="Modifica"
           aria-label={`Modifica ${value}`}
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            initialValueRef.current = value;
+            setEditing(true);
+          }}
         >
           <IconPencil />
         </button>

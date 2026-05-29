@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { listClientLavorazioniAccessByAdminAction, setClientLavorazioniAccessByAdminAction, type ClientLavorazioniAccessRow } from "@/src/actions/client-lavorazioni-access";
+import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { roleLabel, type AppRole, hasPermission } from "@/lib/auth/rbac";
 import { QK } from "@/src/lib/react-query/invalidate-related";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import {
   dsTable,
   dsTableEmptyCell,
-  dsTableHeadCell,
   dsTableRow,
   dsTableTd,
   dsTableWrap,
@@ -30,6 +32,7 @@ function RoleBadge({ role }: { role: AppRole }) {
 
 export function ClientLavorazioniAccessPanel() {
   const qc = useQueryClient();
+  const gestToast = useGestionaleToast();
   const [rows, setRows] = useState<ClientLavorazioniAccessRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,11 +61,12 @@ export function ClientLavorazioniAccessPanel() {
     const res = await setClientLavorazioniAccessByAdminAction({ userId: row.id, enabled });
     setPendingId(null);
     if (!res.ok) {
-      window.alert(res.message);
+      gestToast.error(res.message);
       return;
     }
     await qc.invalidateQueries({ queryKey: QK.clientLavorazioniAccess });
     await load();
+    gestToast.successOnce("client-lav-access", GESTIONALE_TOAST.successDone);
   }
 
   return (
@@ -81,10 +85,10 @@ export function ClientLavorazioniAccessPanel() {
         <table className={`${dsTable} text-xs`}>
           <thead>
             <tr>
-              <th className={dsTableHeadCell}>Utente</th>
-              <th className={dsTableHeadCell}>Email</th>
-              <th className={dsTableHeadCell}>Ruolo</th>
-              <th className={dsTableHeadCell}>Accesso portale</th>
+              <GlobalTableHeadLabel label="Utente" />
+              <GlobalTableHeadLabel label="Email" />
+              <GlobalTableHeadLabel label="Ruolo" />
+              <GlobalTableHeadLabel label="Accesso portale" />
             </tr>
           </thead>
           <tbody>

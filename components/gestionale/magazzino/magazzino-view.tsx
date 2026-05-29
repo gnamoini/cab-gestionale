@@ -7,6 +7,7 @@ import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CardMobile, CloseButton, IconActionButton } from "@/components/design-system";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
@@ -62,40 +63,31 @@ import {
   dsPageToolbarBtn,
   dsStackPage,
   GESTIONALE_SEARCH_PLACEHOLDER,
-  dsTableRow,
   dsBtnNeutral,
   dsBtnDanger,
   dsBtnPrimary,
   dsBtnSoftOrange,
   dsFocus,
-  dsZModalHigh,
-  dsTableTdActions,
-  dsTableActionsGroup,
   dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
   dsTableActionBtnUndo,
   dsTableActionBtnInfo,
   dsTableActionGlyph,
-  dsTableTdCompact,
 } from "@/lib/ui/design-system";
 import {
-  globalTableSortActive,
-  globalTableSortButton,
-  globalTableSortIdle,
-  globalTableSortLabelSingle,
-  globalTableThCell,
-  globalTableThLabel,
-} from "@/lib/ui/global-table";
+  GestionaleListTable,
+  GestionaleListTableActionsHead,
+  GlobalTableSortTh,
+} from "@/components/gestionale/global-table";
 import {
-  gestionaleListTableClass,
-  gestionaleListTableMasterWrapClass,
+  gestionaleListTableRowClass,
   gestionaleListTableRowSurfaceClass,
-  gestionaleListTableTbodyClass,
-  gestionaleListTableTheadClass,
-  gestionaleListTableHeadRowClass,
+  gestionaleListTableTd,
   gestionaleListTableTdAzioni,
-  gestionaleListTableThAzioni,
+  gestionaleListTableTdCenter,
+  gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
+import { MagazzinoDescrizioneSortTh } from "@/components/gestionale/magazzino/magazzino-descrizione-sort-th";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -109,7 +101,6 @@ import {
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { MagazzinoAdvancedFilterPanel } from "@/components/gestionale/magazzino/magazzino-advanced-filter-panel";
 import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   buildMagazzinoFilterCatalog,
@@ -141,6 +132,9 @@ import {
   enqueueScortaSync,
 } from "@/lib/magazzino/scorta-adjust-sync";
 import { revealRicambioInTableAfterSave } from "@/lib/magazzino/magazzino-table-focus";
+import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useMagazzinoLogFeed } from "@/lib/magazzino/use-magazzino-log-feed";
 import { useAuth } from "@/context/auth-context";
@@ -374,77 +368,6 @@ function IconUndoMagazzino({ className = dsTableActionGlyph }: { className?: str
 
 const SEARCH_DEBOUNCE_MS = 320;
 
-function MagazzinoSortBtn({
-  label,
-  columnKey,
-  sortColumn,
-  sortPhase,
-  onSort,
-  buttonClassName = "",
-  labelClassName = "",
-}: {
-  label: string;
-  columnKey: SortKeyMagazzino;
-  sortColumn: SortKeyMagazzino | null;
-  sortPhase: SortPhaseMagazzino;
-  onSort: (k: SortKeyMagazzino) => void;
-  buttonClassName?: string;
-  labelClassName?: string;
-}) {
-  const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
-  let icon: ReactNode = <span className="opacity-40">↕</span>;
-  if (active) {
-    icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
-  }
-  return (
-    <button
-      type="button"
-      onClick={() => onSort(columnKey)}
-      className={`${globalTableSortButton} min-w-0 max-w-full ${buttonClassName} ${
-        active ? globalTableSortActive : globalTableSortIdle
-      }`}
-    >
-      <span className={labelClassName ? labelClassName : globalTableSortLabelSingle}>{label}</span>
-      {icon}
-    </button>
-  );
-}
-
-function SortTh({
-  label,
-  columnKey,
-  sortColumn,
-  sortPhase,
-  onSort,
-  headerClassName = "",
-  buttonClassName = "",
-  labelClassName = "",
-}: {
-  label: string;
-  columnKey: SortKeyMagazzino;
-  sortColumn: SortKeyMagazzino | null;
-  sortPhase: SortPhaseMagazzino;
-  onSort: (k: SortKeyMagazzino) => void;
-  headerClassName?: string;
-  buttonClassName?: string;
-  /** Es. `min-w-0 truncate` per colonne strette. */
-  labelClassName?: string;
-}) {
-  return (
-    <th className={`${globalTableThCell} ${headerClassName}`}>
-      <MagazzinoSortBtn
-        label={label}
-        columnKey={columnKey}
-        sortColumn={sortColumn}
-        sortPhase={sortPhase}
-        onSort={onSort}
-        buttonClassName={buttonClassName}
-        labelClassName={labelClassName}
-      />
-    </th>
-  );
-}
-
 function InfoRow({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="grid grid-cols-[128px_1fr] gap-2 border-b border-zinc-100 py-2 text-sm last:border-b-0 dark:border-zinc-800">
@@ -566,7 +489,10 @@ export function MagazzinoView() {
   const [newOpen, setNewOpen] = useState(false);
   const [newRicambioDraftId, setNewRicambioDraftId] = useState<string | null>(null);
   const [saveBusy, setSaveBusy] = useState(false);
-  const { success: toastSuccess } = useGestionaleToast();
+  const { success: toastSuccess, error: toastError, validation: toastValidation, successDeleted, errorOnce } =
+    useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
+  const [eliminaRicambioTarget, setEliminaRicambioTarget] = useState<RicambioMagazzino | null>(null);
   const [newForm, setNewForm] = useState<RicambioFormState>(emptyRicambioForm());
   const [dupCheckModalOpen, setDupCheckModalOpen] = useState(false);
   const [newIncompleteOpen, setNewIncompleteOpen] = useState(false);
@@ -1090,7 +1016,7 @@ export function MagazzinoView() {
         applyLogEntry(entry);
       },
       onError: ({ error }) => {
-        window.alert(error);
+        toastError(error);
       },
       invalidate: () => {
         void invalidateAfterMagazzinoOrMovimenti(queryClient, [
@@ -1106,20 +1032,20 @@ export function MagazzinoView() {
     flushPendingLog();
     const entry = latestUndoableScortaEntryForRicambio(logEntries, id, magUndoScope);
     if (!entry) {
-      window.alert("Nessuna modifica di scorta annullabile per questo ricambio.");
+      toastValidation("Nessuna modifica di scorta annullabile per questo ricambio.");
       return;
     }
     const parsed = parseScortaChange(entry);
     if (!parsed) return;
     const row = prodotti.find((p) => p.id === id);
     if (!row || row.scorta !== parsed.dopo) {
-      window.alert("La scorta non corrisponde più all’ultima registrazione: annullamento non disponibile.");
+      toastValidation("La scorta non corrisponde più all’ultima registrazione: annullamento non disponibile.");
       return;
     }
     const touched = touch({ ...row, scorta: parsed.prima });
     const updated = await magazzinoService.update(id, ricambioUiToMagazzinoUpdate(touched));
     if (!updated.success || !updated.data) {
-      window.alert(updated.error ?? "Annullamento scorta non riuscito.");
+      toastError(updated.error ?? "Annullamento scorta non riuscito.");
       return;
     }
     const ui = magazzinoRowToRicambioUI(updated.data, authorName);
@@ -1138,10 +1064,16 @@ export function MagazzinoView() {
     if (!entry) return;
     const row = prodotti.find((p) => p.id === entry.ricambioId);
     if (!row) {
-      window.alert("Ricambio non trovato: undo non disponibile.");
+      toastValidation("Ricambio non trovato: undo non disponibile.");
       return;
     }
-    if (!window.confirm("Annullare l'ultima azione reversibile sul magazzino?")) return;
+    const okUndo = await confirm({
+      title: "Annullare l'ultima modifica?",
+      message: "Verrà ripristinato l'ultimo cambiamento reversibile sul magazzino.",
+      confirmLabel: "Annulla modifica",
+      destructive: true,
+    });
+    if (!okUndo) return;
     const next: RicambioMagazzino = { ...row };
     for (const ch of entry.changes) {
       const key = CAMPO_KEY_BY_LABEL.get(ch.campo);
@@ -1151,7 +1083,7 @@ export function MagazzinoView() {
     const touched = touch(next);
     const updated = await magazzinoService.update(entry.ricambioId, ricambioUiToMagazzinoUpdate(touched));
     if (!updated.success || !updated.data) {
-      window.alert(updated.error ?? "Undo non riuscito.");
+      toastError(updated.error ?? "Undo non riuscito.");
       return;
     }
     const ui = magazzinoRowToRicambioUI(updated.data, authorName);
@@ -1219,7 +1151,7 @@ export function MagazzinoView() {
       });
       const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r));
       if (!created.success || !created.data) {
-        window.alert(created.error ?? "Creazione ricambio non riuscita.");
+        toastError(created.error ?? "Creazione ricambio non riuscita.");
         return;
       }
       const ui = magazzinoRowToRicambioUI(created.data, authorName);
@@ -1272,14 +1204,14 @@ export function MagazzinoView() {
     });
     if (listErr) {
       setEditListFieldInvalid(true);
-      window.alert(listErr);
+      toastError(listErr);
       return;
     }
     setEditListFieldInvalid(false);
     const before = prodotti.find((p) => p.id === detail.id);
     const next = ricambioFromForm(editDraft, detail.id, authorName, { mezziListe: mezziListePrefs });
     if (!next || !before) {
-      window.alert("Compila tutti i campi obbligatori.");
+      toastValidation("Compila tutti i campi obbligatori.");
       return;
     }
     const ricambioId = detail.id;
@@ -1287,7 +1219,7 @@ export function MagazzinoView() {
     try {
       const updated = await magazzinoService.update(ricambioId, ricambioUiToMagazzinoUpdate(next));
       if (!updated.success || !updated.data) {
-        window.alert(updated.error ?? "Salvataggio non riuscito.");
+        toastError(updated.error ?? "Salvataggio non riuscito.");
         return;
       }
       const ui = magazzinoRowToRicambioUI(updated.data, authorName);
@@ -1298,20 +1230,26 @@ export function MagazzinoView() {
     }
   }
 
-  async function eliminaRicambio() {
-    if (!detailRicambio) return;
-    if (!magCanDeleteRicambio) return;
-    if (!window.confirm(`Eliminare il ricambio "${detailRicambio.descrizione}" dal magazzino?`)) return;
-    const removed = await magazzinoService.remove(detailRicambio.id);
+  function requestEliminaRicambio() {
+    if (!detailRicambio || !magCanDeleteRicambio) return;
+    setEliminaRicambioTarget(detailRicambio);
+  }
+
+  async function executeEliminaRicambio() {
+    if (!eliminaRicambioTarget) return;
+    const id = eliminaRicambioTarget.id;
+    const removed = await magazzinoService.remove(id);
     if (!removed.success) {
-      window.alert(removed.error ?? "Eliminazione non riuscita.");
+      toastError(removed.error ?? "Eliminazione non riuscita.", { module: "magazzino", action: "delete" });
       return;
     }
-    patchProdotti((prev) => prev.filter((p) => p.id !== detailRicambio.id));
-    setDetail(null);
-    setEditDraft(null);
+    patchProdotti((prev) => prev.filter((p) => p.id !== id));
+    setDetail((d) => (d?.id === id ? null : d));
+    if (detail?.id === id) setEditDraft(null);
+    setEliminaRicambioTarget(null);
+    successDeleted();
     void invalidateAfterMagazzinoOrMovimenti(queryClient, [
-      cabSyncEventForEntity("magazzino_ricambi", detailRicambio.id, "entity_deleted", "magazzino_ricambi"),
+      cabSyncEventForEntity("magazzino_ricambi", id, "entity_deleted", "magazzino_ricambi"),
     ]);
   }
 
@@ -1325,18 +1263,23 @@ export function MagazzinoView() {
     return magLogTimelineByRicambio[detailRicambio.id] ?? [];
   }, [detailRicambio, magLogTimelineByRicambio]);
 
-  const anyOverlayOpen = newOpen || newIncompleteOpen || !!detail || logOpen || dupCheckModalOpen;
-  useBodyScrollLock(anyOverlayOpen);
-
   function addMasterMarca() {
     const t = nuovaMarca.trim();
     if (!t) return;
     setMasterMarche((prev) => [...new Set([...prev, t])].sort((a, b) => a.localeCompare(b, "it")));
     setNuovaMarca("");
   }
-  function removeMasterMarca(m: string) {
+  async function removeMasterMarca(m: string) {
     const n = prodotti.filter((p) => p.marca === m).length;
-    if (n > 0 && !window.confirm(`Marca usata da ${n} ricambi. Rimuoverla dall'anagrafica?`)) return;
+    if (n > 0) {
+      const ok = await confirm({
+        title: "Rimuovere marca?",
+        message: `Marca usata da ${n} ricambi. Rimuoverla dall'anagrafica?`,
+        destructive: true,
+        confirmLabel: "Rimuovi",
+      });
+      if (!ok) return;
+    }
     setMasterMarche((prev) => prev.filter((x) => x !== m));
   }
   function addMasterCategoria() {
@@ -1345,14 +1288,30 @@ export function MagazzinoView() {
     setMasterCategorie((prev) => [...new Set([...prev, t])].sort((a, b) => a.localeCompare(b, "it")));
     setNuovaCategoria("");
   }
-  function removeMasterCategoria(c: string) {
+  async function removeMasterCategoria(c: string) {
     const n = prodotti.filter((p) => p.categoria === c).length;
-    if (n > 0 && !window.confirm(`Categoria usata da ${n} ricambi. Rimuoverla dall'anagrafica?`)) return;
+    if (n > 0) {
+      const ok = await confirm({
+        title: "Rimuovere categoria?",
+        message: `Categoria usata da ${n} ricambi. Rimuoverla dall'anagrafica?`,
+        destructive: true,
+        confirmLabel: "Rimuovi",
+      });
+      if (!ok) return;
+    }
     setMasterCategorie((prev) => prev.filter((x) => x !== c));
   }
-  function removeMasterMezzo(m: string) {
+  async function removeMasterMezzo(m: string) {
     const n = prodotti.reduce((acc, p) => acc + (p.compatibilitaMezzi.includes(m) ? 1 : 0), 0);
-    if (n > 0 && !window.confirm(`Mezzo indicato su ${n} ricambi. Rimuoverlo dall'anagrafica?`)) return;
+    if (n > 0) {
+      const ok = await confirm({
+        title: "Rimuovere mezzo?",
+        message: `Mezzo indicato su ${n} ricambi. Rimuoverlo dall'anagrafica?`,
+        destructive: true,
+        confirmLabel: "Rimuovi",
+      });
+      if (!ok) return;
+    }
     setMasterMezzi((prev) => prev.filter((x) => x !== m));
   }
   function addMasterFornitore() {
@@ -1361,9 +1320,17 @@ export function MagazzinoView() {
     setMasterFornitori((prev) => [...new Set([...prev, t])].sort((a, b) => a.localeCompare(b, "it")));
     setNuovoFornitore("");
   }
-  function removeMasterFornitore(f: string) {
+  async function removeMasterFornitore(f: string) {
     const n = prodotti.filter((p) => p.fornitoreNonOriginale.trim() === f).length;
-    if (n > 0 && !window.confirm(`Fornitore indicato su ${n} ricambi. Rimuoverlo dall'anagrafica?`)) return;
+    if (n > 0) {
+      const ok = await confirm({
+        title: "Rimuovere fornitore?",
+        message: `Fornitore indicato su ${n} ricambi. Rimuoverlo dall'anagrafica?`,
+        destructive: true,
+        confirmLabel: "Rimuovi",
+      });
+      if (!ok) return;
+    }
     setMasterFornitori((prev) => prev.filter((x) => x !== f));
   }
 
@@ -1387,6 +1354,7 @@ export function MagazzinoView() {
     searchApplied.trim().length > 0 || hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero;
 
   return (
+    <GestionaleSectionGate module="magazzino">
     <div className="magazzino-scroll-scope min-w-0">
       <PageHeader
         title="Magazzino ricambi"
@@ -1536,9 +1504,10 @@ export function MagazzinoView() {
           />
         </section>
 
-        <div className={`mt-4 hidden xl:block ${gestionaleListTableMasterWrapClass}`}>
-          <table className={gestionaleListTableClass}>
-            <colgroup>
+        <GestionaleListTable
+          visibilityClass="mt-4 hidden xl:block"
+          colgroup={
+            <>
               <col className="w-[12%]" />
               <col className="w-[7%]" />
               <col className="w-[20%]" />
@@ -1549,146 +1518,124 @@ export function MagazzinoView() {
               <col className="w-[8.5%]" />
               <col className="w-[9.5%]" />
               <col className="w-[12%]" />
-            </colgroup>
-            <thead className={gestionaleListTableTheadClass}>
-              <tr className={gestionaleListTableHeadRowClass}>
-                <SortTh
-                  label="CODICE"
-                  columnKey="codiceFornitoreOriginale"
-                  sortColumn={sortColumn}
-                  sortPhase={sortPhase}
-                  onSort={onSort}
-                  headerClassName="!pl-4 pr-2.5 text-left"
-                  buttonClassName="w-full justify-start"
-                />
-                <SortTh
-                  label="Marca"
-                  columnKey="marca"
-                  sortColumn={sortColumn}
-                  sortPhase={sortPhase}
-                  onSort={onSort}
-                />
-                <th className="min-w-0 px-2.5 py-2 align-top">
-                  <div className="flex min-w-0 flex-col items-start gap-1">
-                    <MagazzinoSortBtn
-                      label="Descrizione"
-                      columnKey="descrizione"
-                      sortColumn={sortColumn}
-                      sortPhase={sortPhase}
-                      onSort={onSort}
-                    />
-                    <MagazzinoSortBtn
-                      label="Compatibilità"
-                      columnKey="compatibilitaMezzi"
-                      sortColumn={sortColumn}
-                      sortPhase={sortPhase}
-                      onSort={onSort}
-                      buttonClassName="text-[10px] font-semibold normal-case tracking-normal"
-                    />
-                  </div>
-                </th>
-                <SortTh
-                  label="Categoria"
-                  columnKey="categoria"
-                  sortColumn={sortColumn}
-                  sortPhase={sortPhase}
-                  onSort={onSort}
-                  headerClassName="min-w-0"
-                  labelClassName="min-w-0 truncate"
-                  buttonClassName="w-full min-w-0 justify-start"
-                />
-                <SortTh
-                  label="Scorta"
-                  columnKey="scorta"
-                  sortColumn={sortColumn}
-                  sortPhase={sortPhase}
-                  onSort={onSort}
-                  headerClassName="text-center"
-                  buttonClassName="w-full justify-center"
-                />
-                <SortTh
-                  label="Scorta min."
-                  columnKey="scortaMinima"
-                  sortColumn={sortColumn}
-                  sortPhase={sortPhase}
-                  onSort={onSort}
-                  headerClassName="min-w-0 text-center"
-                  buttonClassName="w-full min-w-0 justify-center whitespace-nowrap"
-                />
-                <SortTh
-                  label="Ultima modifica"
-                  columnKey="dataUltimaModifica"
-                  sortColumn={sortColumn}
-                  sortPhase={sortPhase}
-                  onSort={onSort}
-                  headerClassName="min-w-0 text-center"
-                  buttonClassName="w-full justify-center whitespace-nowrap"
-                />
-                <SortTh
-                  label="P. vendita"
-                  columnKey="prezzoVendita"
-                  sortColumn={sortColumn}
-                  sortPhase={sortPhase}
-                  onSort={onSort}
-                  headerClassName="text-center"
-                  buttonClassName="w-full justify-center"
-                />
-                <SortTh
-                  label="Consumo medio"
-                  columnKey="consumoMedioMensile"
-                  sortColumn={sortColumn}
-                  sortPhase={sortPhase}
-                  onSort={onSort}
-                  headerClassName="whitespace-nowrap text-center"
-                  buttonClassName="w-full justify-center whitespace-nowrap"
-                />
-                <th className={`${globalTableThCell} ${gestionaleListTableThAzioni}`}>
-                  <span className={`${globalTableThLabel} block truncate whitespace-nowrap`}>Azioni</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody className={gestionaleListTableTbodyClass}>
+            </>
+          }
+          headRow={
+            <>
+              <GlobalTableSortTh
+                label="CODICE"
+                columnKey="codiceFornitoreOriginale"
+                sortColumn={sortColumn}
+                sortPhase={sortPhase}
+                onSort={onSort}
+                contentChipInset
+              />
+              <GlobalTableSortTh
+                label="Marca"
+                columnKey="marca"
+                sortColumn={sortColumn}
+                sortPhase={sortPhase}
+                onSort={onSort}
+              />
+              <MagazzinoDescrizioneSortTh sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+              <GlobalTableSortTh
+                label="Categoria"
+                columnKey="categoria"
+                sortColumn={sortColumn}
+                sortPhase={sortPhase}
+                onSort={onSort}
+                thClassName="min-w-0"
+              />
+              <GlobalTableSortTh
+                label="Scorta"
+                columnKey="scorta"
+                sortColumn={sortColumn}
+                sortPhase={sortPhase}
+                onSort={onSort}
+                align="center"
+              />
+              <GlobalTableSortTh
+                label="Scorta min."
+                columnKey="scortaMinima"
+                sortColumn={sortColumn}
+                sortPhase={sortPhase}
+                onSort={onSort}
+                align="center"
+                thClassName="min-w-0"
+              />
+              <GlobalTableSortTh
+                label="Ultima modifica"
+                columnKey="dataUltimaModifica"
+                sortColumn={sortColumn}
+                sortPhase={sortPhase}
+                onSort={onSort}
+                align="center"
+                thClassName="min-w-0"
+              />
+              <GlobalTableSortTh
+                label="P. vendita"
+                columnKey="prezzoVendita"
+                sortColumn={sortColumn}
+                sortPhase={sortPhase}
+                onSort={onSort}
+                align="center"
+              />
+              <GlobalTableSortTh
+                label="Consumo medio"
+                columnKey="consumoMedioMensile"
+                sortColumn={sortColumn}
+                sortPhase={sortPhase}
+                onSort={onSort}
+                align="center"
+                thClassName="whitespace-nowrap"
+              />
+              <GestionaleListTableActionsHead />
+            </>
+          }
+          empty={filteredSorted.length === 0}
+          emptyMessage="Nessun ricambio corrisponde ai filtri selezionati."
+          colSpan={10}
+        >
               {pagedMagazzino.map((p) => {
                 const consumoRow = consumoMap.get(p.id);
                 const avgM = consumoRow?.avgMonthly ?? null;
                 const low = p.scorta < p.scortaMinima;
                 const flash = flashRowId === p.id;
-                const rowSurfaceClass = [
-                  gestionaleListTableRowSurfaceClass,
-                  rowStockBg(p),
-                  flash
-                    ? "bg-white/95 shadow-[inset_0_0_0_1px_rgba(228,228,231,0.95),0_0_20px_rgba(255,255,255,0.65)] transition-[background-color,box-shadow] duration-200 ease-out dark:bg-zinc-100/12 dark:shadow-[inset_0_0_0_1px_rgba(82,82,91,0.45),0_0_18px_rgba(255,255,255,0.06)]"
-                    : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ");
                 const rowTone = low ? "low-stock" : flash ? "flash-mag" : undefined;
                 return (
                   <tr
                     id={`magazzino-row-${p.id}`}
                     key={p.id}
                     data-gestionale-row-tone={rowTone}
-                    className={[dsTableRow, rowSurfaceClass].filter(Boolean).join(" ")}
+                    className={[
+                      gestionaleListTableRowClass,
+                      rowStockBg(p),
+                      flash
+                        ? "bg-white/95 shadow-[inset_0_0_0_1px_rgba(228,228,231,0.95),0_0_20px_rgba(255,255,255,0.65)] transition-[background-color,box-shadow] duration-200 ease-out dark:bg-zinc-100/12 dark:shadow-[inset_0_0_0_1px_rgba(82,82,91,0.45),0_0_18px_rgba(255,255,255,0.06)]"
+                        : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
                   >
-                    <td className={`min-w-0 ${dsTableTdCompact} ${rowStockBorderFirstTd(p)}`}>
+                    <td className={`min-w-0 ${gestionaleListTableTd} ${rowStockBorderFirstTd(p)}`}>
                       <span className="inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-[12px] font-semibold leading-snug tracking-wide dark:bg-zinc-800">
                         {p.codiceFornitoreOriginale}
                       </span>
                     </td>
-                    <td className={`${dsTableTdCompact} font-medium`}>{p.marca}</td>
-                    <td className={`min-w-0 ${dsTableTdCompact}`}>
+                    <td className={`${gestionaleListTableTd} font-medium`}>{p.marca}</td>
+                    <td className={`min-w-0 ${gestionaleListTableTd}`}>
                       <div className="break-words font-medium leading-snug">{p.descrizione}</div>
                       <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">
                         {compatLabel(p.compatibilitaMezzi)}
                       </div>
                     </td>
                     <td
-                      className={`min-w-0 ${dsTableTdCompact} text-zinc-700 dark:text-zinc-300`}
+                      className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-300`}
                       title={p.categoria}
                     >
                       <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
                     </td>
-                    <td className={`${dsTableTdCompact} text-center`}>
+                    <td className={gestionaleListTableTdCenter}>
                       <span
                         className={`inline-flex min-w-[2.5rem] justify-center rounded-full px-2 py-0.5 font-mono text-xs font-semibold tabular-nums ${
                           low
@@ -1699,10 +1646,10 @@ export function MagazzinoView() {
                         {p.scorta}
                       </span>
                     </td>
-                    <td className={`${dsTableTdCompact} text-center font-mono text-xs tabular-nums text-zinc-700 dark:text-zinc-300`}>
+                    <td className={`${gestionaleListTableTdCenter} font-mono text-zinc-700 dark:text-zinc-300`}>
                       {p.scortaMinima}
                     </td>
-                    <td className={`${dsTableTdCompact} text-center align-middle`}>
+                    <td className={gestionaleListTableTdCenter}>
                       {(() => {
                         const stale = isModificaOlderThanMonths(p.dataUltimaModifica, 6);
                         return (
@@ -1724,15 +1671,15 @@ export function MagazzinoView() {
                         );
                       })()}
                     </td>
-                    <td className={`${dsTableTdCompact} text-center font-medium tabular-nums`}>{eur(p.prezzoVendita)}</td>
+                    <td className={`${gestionaleListTableTdCenter} font-medium`}>{eur(p.prezzoVendita)}</td>
                     <td
-                      className={`${dsTableTdCompact} text-center text-[13px] tabular-nums text-zinc-700 dark:text-zinc-300`}
+                      className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300`}
                       title={consumoRow?.insufficientReason ?? (avgM != null ? "Da log magazzino (uscite Δ scorta)" : undefined)}
                     >
                       {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "dati insufficienti"}
                     </td>
                     <td className={gestionaleListTableTdAzioni}>
-                      <div className={dsTableActionsGroup}>
+                      <div className={gestionaleListTableActionsGroupEnd}>
                         <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                           <IconInfoMagazzino />
                         </IconActionButton>
@@ -1768,9 +1715,7 @@ export function MagazzinoView() {
                   </tr>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+        </GestionaleListTable>
 
         <div className="mt-4 space-y-3 xl:hidden">
           {pagedMagazzino.map((p) => {
@@ -1845,7 +1790,7 @@ export function MagazzinoView() {
                   >
                     {formatMagazzinoUltimaModificaMobile(p.dataUltimaModifica, p.autoreUltimaModifica)}
                   </p>
-                  <div className={`${dsTableActionsGroup} shrink-0`} role="group" aria-label="Azioni">
+                  <div className={`${gestionaleListTableActionsGroupEnd} shrink-0`} role="group" aria-label="Azioni">
                   <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                     <IconInfoMagazzino />
                   </IconActionButton>
@@ -1889,28 +1834,11 @@ export function MagazzinoView() {
       </div>
 
       {newOpen ? (
-        <div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              closeNewRicambioModal();
-            }
-          }}
+        <GestionaleModalShell
+          onRequestClose={closeNewRicambioModal}
+          title="Nuovo ricambio"
+          titleId="new-ricambio-title"
         >
-          <div
-            className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="new-ricambio-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-              <h2 id="new-ricambio-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Nuovo ricambio
-              </h2>
-              <CloseButton onClick={closeNewRicambioModal} />
-            </div>
             <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNew} className="flex min-h-0 flex-1 flex-col">
               <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
                 <RicambioFormFields
@@ -1948,36 +1876,22 @@ export function MagazzinoView() {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </GestionaleModalShell>
       ) : null}
 
       {newIncompleteOpen ? (
-        <div
-          className={`fixed inset-0 ${dsZModalHigh} flex items-center justify-center bg-black/45 p-4`}
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              setNewIncompleteOpen(false);
-            }
-          }}
+        <GestionaleModalShell
+          onRequestClose={() => setNewIncompleteOpen(false)}
+          title="Attenzione: mancano alcune informazioni"
+          titleId="ricambio-incomplete-title"
+          maxWidthClass="max-w-md"
         >
-          <div
-            className="relative z-10 w-full max-w-md rounded-xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ricambio-incomplete-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <h2 id="ricambio-incomplete-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-              Attenzione: mancano alcune informazioni
-            </h2>
-            <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-200">
+            <ul className="list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-200">
               {newIncompleteList.map((x) => (
                 <li key={x}>{x}</li>
               ))}
             </ul>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <div className="mt-4 flex flex-col gap-2 border-t border-[color:var(--cab-border)] p-4 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 className={`${erpBtnNeutral} w-full justify-center sm:w-auto`}
@@ -1997,34 +1911,16 @@ export function MagazzinoView() {
                 Conferma comunque
               </button>
             </div>
-          </div>
-        </div>
+        </GestionaleModalShell>
       ) : null}
 
       {detail && detailRicambio ? (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              closeDetail();
-            }
-          }}
+        <GestionaleModalShell
+          onRequestClose={closeDetail}
+          title={detail.mode === "info" ? "Scheda ricambio" : "Modifica ricambio"}
+          titleId="detail-ricambio-title"
+          maxWidthClass="max-w-lg"
         >
-          <div
-            className="flex max-h-[92vh] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="detail-ricambio-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-              <h2 id="detail-ricambio-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                {detail.mode === "info" ? "Scheda ricambio" : "Modifica ricambio"}
-              </h2>
-              <CloseButton onClick={closeDetail} />
-            </div>
-
             {detail.mode === "info" ? (
               <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
                 <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
@@ -2204,7 +2100,7 @@ export function MagazzinoView() {
                       </div>
                       <button
                         type="button"
-                        onClick={eliminaRicambio}
+                        onClick={requestEliminaRicambio}
                         disabled={!magCanDeleteRicambio}
                         title={!magCanDeleteRicambio ? READONLY_PERMISSION_HINT : undefined}
                         className={`${dsBtnDanger} w-full justify-center`}
@@ -2216,8 +2112,7 @@ export function MagazzinoView() {
                 ) : null}
               </form>
             )}
-          </div>
-        </div>
+        </GestionaleModalShell>
       ) : null}
 
       <Drawer
@@ -2266,28 +2161,12 @@ export function MagazzinoView() {
       </Drawer>
 
       {dupCheckModalOpen ? (
-        <div
-          className="fixed inset-0 z-[56] flex items-center justify-center bg-black/40 p-4"
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) {
-              e.preventDefault();
-              setDupCheckModalOpen(false);
-            }
-          }}
+        <GestionaleModalShell
+          onRequestClose={() => setDupCheckModalOpen(false)}
+          title="Codici duplicati in archivio"
+          titleId="dup-magazzino-title"
+          maxWidthClass="max-w-lg"
         >
-          <div
-            className="flex max-h-[min(92dvh,720px)] w-full max-w-lg flex-col overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="dup-magazzino-title"
-            onMouseDown={(e) => e.stopPropagation()}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-              <h2 id="dup-magazzino-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                Codici duplicati in archivio
-              </h2>
-              <CloseButton onClick={() => setDupCheckModalOpen(false)} />
-            </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
               {archivioDupCodeGroups.length === 0 ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">Nessun codice duplicato rilevato.</p>
@@ -2316,9 +2195,17 @@ export function MagazzinoView() {
                 </ul>
               )}
             </div>
-          </div>
-        </div>
+        </GestionaleModalShell>
       ) : null}
+      <SettingsEliminaConfirmDialog
+        open={eliminaRicambioTarget != null}
+        itemLabel={eliminaRicambioTarget?.descrizione}
+        detail="Il ricambio verrà rimosso dal magazzino."
+        onCancel={() => setEliminaRicambioTarget(null)}
+        onConfirm={() => void executeEliminaRicambio()}
+      />
+      {confirmDialog}
     </div>
+    </GestionaleSectionGate>
   );
 }

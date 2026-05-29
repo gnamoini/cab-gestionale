@@ -42,10 +42,6 @@ export function KanbanColumnScroll({
   }, [columnId, measureOverflow]);
 
   useLayoutEffect(() => {
-    measureOverflow();
-  });
-
-  useLayoutEffect(() => {
     const el = ref.current;
     if (el && isOverflowing) el.scrollTop = scrollTopRef.current;
   });

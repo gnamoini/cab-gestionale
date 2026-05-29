@@ -1,8 +1,6 @@
 "use client";
 
-import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnPrimary } from "@/lib/ui/design-system";
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 
 export function LavorazioneConcludiConfirmDialog({
   open,
@@ -15,26 +13,15 @@ export function LavorazioneConcludiConfirmDialog({
   onConfirm: () => void;
   pending?: boolean;
 }) {
-  if (!open) return null;
-
   return (
-    <LavorazioniModalShell
-      onRequestClose={pending ? () => {} : onCancel}
+    <GestionaleConfirmDialog
+      open={open}
       title="Conferma conclusione lavorazione"
-    >
-      <div className="p-4 sm:p-6">
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
-          La lavorazione verrà spostata nell&apos;archivio. Vuoi continuare?
-        </p>
-        <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <button type="button" className={erpBtnNeutral} onClick={onCancel} disabled={pending}>
-            Annulla
-          </button>
-          <button type="button" className={dsBtnPrimary} onClick={onConfirm} disabled={pending}>
-            {pending ? "Conclusione…" : "Conferma"}
-          </button>
-        </div>
-      </div>
-    </LavorazioniModalShell>
+      message="La lavorazione verrà spostata nell'archivio. Vuoi continuare?"
+      confirmLabel={pending ? "Conclusione…" : "Conferma"}
+      pending={pending}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
+    />
   );
 }

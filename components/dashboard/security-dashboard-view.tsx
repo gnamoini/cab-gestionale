@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { roleLabel } from "@/src/lib/auth/permissions";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityUsersPermissionsPanel } from "@/components/dashboard/security/security-users-permissions-panel";
@@ -29,16 +30,24 @@ import {
   dsSurfaceInteractiveKpi,
   dsTable,
   dsTableEmptyCell,
-  dsTableHeadCell,
   dsTableRow,
   dsTableTd,
   dsTableWrap,
   gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { useSecurityViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useSecurityDashboardData, useSecurityProfilesQuery } from "@/src/hooks/use-security-dashboard-data";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { AuthLogWithProfileRow, LogModificaRow } from "@/src/types/supabase-tables";
+import {
+  runSecurityReleaseControlAction,
+  setPilotDbOverrideAction,
+  type ChecklistItem,
+  type PilotControlStatus,
+} from "@/src/actions/security-release-control";
 
 type UserActivityRow =
   | {
@@ -99,6 +108,12 @@ function payloadDetail(payload: unknown): string {
   return "Evento registrato";
 }
 
+function findingTone(category: string): "danger" | "warning" | "neutral" {
+  if (category === "security" || category === "storage" || category === "rbac" || category === "feature-flag") return "danger";
+  if (category === "database" || category === "ux") return "warning";
+  return "neutral";
+}
+
 function LogTable({ rows, columns }: { rows: AuthLogWithProfileRow[]; columns: "login" | "failed" }) {
   if (rows.length === 0) {
     return (
@@ -118,10 +133,10 @@ function LogTable({ rows, columns }: { rows: AuthLogWithProfileRow[]; columns: "
       <table className={`${dsTable} text-xs`}>
         <thead>
           <tr>
-            <th className={dsTableHeadCell}>Data/ora</th>
-            {columns === "login" ? <th className={dsTableHeadCell}>Utente</th> : null}
-            <th className={dsTableHeadCell}>Email</th>
-            {columns === "failed" ? <th className={dsTableHeadCell}>User agent</th> : <th className={dsTableHeadCell}>Azione</th>}
+            <GlobalTableHeadLabel label="Data/ora" />
+            {columns === "login" ? <GlobalTableHeadLabel label="Utente" /> : null}
+            <GlobalTableHeadLabel label="Email" />
+            {columns === "failed" ? <GlobalTableHeadLabel label="User agent" /> : <GlobalTableHeadLabel label="Azione" />}
           </tr>
         </thead>
         <tbody>
@@ -170,10 +185,10 @@ function LastAccessTable({
       <table className={`${dsTable} text-xs`}>
         <thead>
           <tr>
-            <th className={dsTableHeadCell}>Utente</th>
-            <th className={dsTableHeadCell}>Email log</th>
-            <th className={dsTableHeadCell}>Ultimo evento</th>
-            <th className={dsTableHeadCell}>Azione</th>
+            <GlobalTableHeadLabel label="Utente" />
+            <GlobalTableHeadLabel label="Email log" />
+            <GlobalTableHeadLabel label="Ultimo evento" />
+            <GlobalTableHeadLabel label="Azione" />
           </tr>
         </thead>
         <tbody>
@@ -346,13 +361,24 @@ function UserDetailDrawer({
 export function SecurityDashboardView() {
   const { user } = useAuth();
   const permissions = usePermissions();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
+  const gestToast = useGestionaleToast();
   const isAdmin = permissions.canManageSecurity;
   const securityAccessLoggedRef = useRef(false);
+  const hasReadinessSnapshotRef = useRef(false);
   const [range, setRange] = useState(defaultRange);
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [resettingLogs, setResettingLogs] = useState(false);
   const queryClient = useQueryClient();
+  const [pilotInfoExpanded, setPilotInfoExpanded] = useState(false);
+  const [pilotStatus, setPilotStatus] = useState<PilotControlStatus | null>(null);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [productionReady, setProductionReady] = useState<boolean | null>(null);
+  const [readinessLoading, setReadinessLoading] = useState(false);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [readinessStale, setReadinessStale] = useState(false);
+  const [lastReadinessSnapshotAt, setLastReadinessSnapshotAt] = useState<string | null>(null);
 
   const filters = useMemo(
     () => ({
@@ -373,25 +399,37 @@ export function SecurityDashboardView() {
     [usersQ.users, selectedUserId],
   );
 
-  async function handleResetChangeLogs() {
-    if (!window.confirm("Resettare il log modifiche globale? L'azione è irreversibile e non elimina utenti o dati operativi.")) return;
-    setResettingLogs(true);
-    try {
-      const res = await resetGlobalChangeLogsByAdminAction();
+  const runControlCenterCheck = useCallback(async (includeBuildChecks = false) => {
+    setReadinessLoading(true);
+    setReadinessError(null);
+    const res = await runSecurityReleaseControlAction(includeBuildChecks);
+    setReadinessLoading(false);
+    if (!res.ok) {
+      setReadinessError(res.message);
+      setReadinessStale(hasReadinessSnapshotRef.current);
+      return;
+    }
+    setPilotStatus(res.payload.pilot);
+    setChecklist(res.payload.checklist);
+    setProductionReady(res.payload.readiness.ready);
+    setReadinessStale(false);
+    setLastReadinessSnapshotAt(new Date().toISOString());
+    hasReadinessSnapshotRef.current = true;
+  }, []);
+
+  const togglePilotDb = useCallback(
+    async (enabled: boolean) => {
+      const res = await setPilotDbOverrideAction(enabled);
       if (!res.ok) {
-        window.alert(res.message);
+        gestToast.error(res.message);
         return;
       }
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: QK.log }),
-        recentActivityQ.refetch(),
-        logsQuery.refetch(),
-      ]);
-      window.alert(`Log modifiche resettato. Righe rimosse: ${res.deletedCount ?? "n/d"}.`);
-    } finally {
-      setResettingLogs(false);
-    }
-  }
+      setPilotStatus(res.status);
+      gestToast.successDone();
+      void runControlCenterCheck(false);
+    },
+    [gestToast, runControlCenterCheck],
+  );
 
   useEffect(() => {
     if (!isAdmin || !user?.id || securityAccessLoggedRef.current) return;
@@ -412,7 +450,77 @@ export function SecurityDashboardView() {
     })();
   }, [isAdmin, user?.id, user?.nome]);
 
+  useEffect(() => {
+    if (!isAdmin) return;
+    void runControlCenterCheck(false);
+  }, [isAdmin, runControlCenterCheck]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    const sb = getBrowserSupabase();
+    const channel = sb
+      .channel("security-release-control-center")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "app_settings" },
+        () => {
+          void runControlCenterCheck(false);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "user_permissions" },
+        () => {
+          void (async () => {
+            const { invalidateRuntimeTruth } = await import(
+              "@/src/lib/runtime/truth-layer/invalidate-runtime-truth"
+            );
+            await invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient });
+            await usersQ.refetch();
+            await runControlCenterCheck(false);
+          })();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void sb.removeChannel(channel);
+    };
+  }, [isAdmin, queryClient, runControlCenterCheck, usersQ]);
+
   const { logsQuery, recentLogins, recentLoginFailed, activeTodayCount, activeTodayIds, lastAccessPerUser } = dash;
+
+  async function handleResetChangeLogs() {
+    const ok = await confirm({
+      title: "Resettare log modifiche?",
+      message:
+        "L'azione è irreversibile e non elimina utenti o dati operativi.",
+      destructive: true,
+      confirmLabel: "Resetta log",
+    });
+    if (!ok) return;
+    setResettingLogs(true);
+    try {
+      const res = await resetGlobalChangeLogsByAdminAction();
+      if (!res.ok) {
+        gestToast.error(res.message);
+        return;
+      }
+      const { invalidateOperationalTruth } = await import(
+        "@/src/lib/runtime/truth-layer/invalidate-runtime-truth"
+      );
+      await invalidateOperationalTruth({ queryClient, domain: "report" });
+      await Promise.all([recentActivityQ.refetch(), logsQuery.refetch()]);
+      gestToast.successOnce(
+        "security-reset-logs",
+        `Log modifiche resettato. Righe rimosse: ${res.deletedCount ?? "n/d"}.`,
+      );
+    } catch (e) {
+      gestToast.errorOnce("security-reset-logs", e);
+    } finally {
+      setResettingLogs(false);
+    }
+  }
 
   const activeTodayRows = useMemo(() => {
     const pmap = new Map((profilesQ.data ?? []).map((p) => [p.id, p.nome]));
@@ -458,6 +566,9 @@ export function SecurityDashboardView() {
             >
               {logsQuery.isFetching || recentActivityQ.isFetching ? "Aggiornamento…" : "Aggiorna dati"}
             </button>
+            <button type="button" className={dsPageToolbarBtn} onClick={() => void runControlCenterCheck(true)} disabled={readinessLoading}>
+              {readinessLoading ? "Controllo…" : "Esegui checklist completa"}
+            </button>
             <button type="button" className={dsBtnDanger} onClick={() => void handleResetChangeLogs()} disabled={resettingLogs}>
               {resettingLogs ? "Reset…" : "Resetta log modifiche"}
             </button>
@@ -465,8 +576,174 @@ export function SecurityDashboardView() {
         }
       />
 
-      <SecurityUsersPermissionsPanel readOnly={!isAdmin} onOpenDetail={setSelectedUserId} />
-      <UserDetailDrawer user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUserId(null)} />
+      <ShellCard title="Security & Release Control Center" subtitle="Single source of truth per permessi, pilot mode e readiness di produzione.">
+        <div className="space-y-6">
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">1) RBAC & Permissions</h3>
+              <span className="rounded-md border border-[color:var(--cab-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                Gestione utenti + coerenza RLS
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className={dsSurfaceInteractiveKpi}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Utenti gestiti</p>
+                <p className="mt-1 text-2xl font-bold tabular-nums text-[color:var(--cab-text)]">{usersQ.users.length}</p>
+              </div>
+              <div className={dsSurfaceInteractiveKpi}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Stato RLS</p>
+                <p className="mt-1 text-base font-bold text-[color:var(--cab-text)]">
+                  {pilotStatus ? "Verificato" : "Da verificare"}
+                </p>
+              </div>
+              <div className={dsSurfaceInteractiveKpi}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Mismatch UI/DB</p>
+                <p className="mt-1 text-base font-bold text-[color:var(--cab-text)]">
+                  {checklist.filter((c) => c.status === "fail" && (c.category === "rbac" || c.category === "security")).length}
+                </p>
+              </div>
+            </div>
+            <SecurityUsersPermissionsPanel readOnly={!isAdmin} onOpenDetail={setSelectedUserId} />
+            <UserDetailDrawer user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUserId(null)} />
+          </section>
+
+          <section className="space-y-3">
+            <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">PILOT MODE — Override funzionalità operatori</h3>
+            <p className="text-xs text-[color:var(--cab-text-muted)]">
+              Consente agli operatori di modificare impostazioni globali nel pilot.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className={dsSurfaceInteractiveKpi}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">isOperatorGlobalSettingsEnabled()</p>
+                <p className="mt-1 text-base font-bold text-[color:var(--cab-text)]">{pilotStatus?.effectiveEnabled ? "TRUE" : "FALSE"}</p>
+              </div>
+              <div className={dsSurfaceInteractiveKpi}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">ENV flag</p>
+                <p className="mt-1 text-base font-bold text-[color:var(--cab-text)]">{pilotStatus?.envEnabled ? "ON" : "OFF"}</p>
+              </div>
+              <div className={dsSurfaceInteractiveKpi}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">DB flag app_settings</p>
+                <p className="mt-1 text-base font-bold text-[color:var(--cab-text)]">{pilotStatus?.dbEnabled ? "ON" : "OFF"}</p>
+              </div>
+              <div className={dsSurfaceInteractiveKpi}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Override attivo</p>
+                <p className="mt-1 text-base font-bold text-[color:var(--cab-text)]">{pilotStatus?.effectiveEnabled ? "ON" : "OFF"}</p>
+              </div>
+            </div>
+            <div className="rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-3 py-2 text-xs text-[color:var(--cab-text)]">
+              Stato pilot:
+              {" "}
+              <strong>
+                {pilotStatus?.state === "complete"
+                  ? "COMPLETO (UI + RLS attivo)"
+                  : pilotStatus?.state === "ui_only"
+                    ? "SOLO UI ATTIVO"
+                    : pilotStatus?.state === "db_only"
+                      ? "SOLO DB ATTIVO"
+                      : "DISATTIVO (produzione-safe)"}
+              </strong>
+            </div>
+            {pilotStatus?.incoherent ? (
+              <p className="rounded-md border border-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-surface))] px-3 py-2 text-xs text-[color:var(--cab-text)]">
+                INCOERENTE (risk mode): UI ON e DB OFF (o viceversa).
+              </p>
+            ) : null}
+            <div className="flex flex-wrap gap-2">
+              <button type="button" className={dsPageToolbarBtn} disabled title="L'env non è modificabile dalla UI.">
+                Toggle UI (env): {pilotStatus?.envEnabled ? "ON" : "OFF"}
+              </button>
+              <button
+                type="button"
+                className={dsPageToolbarBtn}
+                onClick={() => void togglePilotDb(!(pilotStatus?.dbEnabled ?? false))}
+                disabled={readinessLoading}
+              >
+                Toggle DB (app_settings): {pilotStatus?.dbEnabled ? "ON" : "OFF"}
+              </button>
+              <button
+                type="button"
+                className={dsBtnDanger}
+                onClick={() => void togglePilotDb(false)}
+                disabled={readinessLoading}
+              >
+                Disattiva completamente pilot override
+              </button>
+            </div>
+            <label className="inline-flex items-center gap-2 text-xs text-[color:var(--cab-text-muted)]">
+              <input
+                type="checkbox"
+                checked={pilotInfoExpanded}
+                onChange={(e) => setPilotInfoExpanded(e.target.checked)}
+              />
+              Mostra avviso pilot mode
+            </label>
+            {pilotInfoExpanded ? (
+              <p className="rounded-md border border-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-surface))] px-3 py-2 text-xs text-[color:var(--cab-text)]">
+                Solo ambiente pilot/dev. Non attivare in produzione.
+              </p>
+            ) : null}
+          </section>
+
+          <section className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">PRODUCTION READINESS CHECKLIST</h3>
+              {productionReady != null ? (
+                <span
+                  className={`inline-flex items-center rounded-md px-2.5 py-1 text-xs font-bold ${
+                    productionReady
+                      ? "bg-[color:color-mix(in_srgb,var(--cab-success)_15%,var(--cab-surface))] text-[color:var(--cab-success)]"
+                      : "bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] text-[color:var(--cab-danger)]"
+                  }`}
+                >
+                  {productionReady ? "READY" : "NOT READY"}
+                </span>
+              ) : null}
+            </div>
+            {readinessError ? (
+              <p className="text-sm text-[color:var(--cab-danger)]">
+                {readinessError}
+                {readinessStale ? " (snapshot precedente mantenuto: stato STALE)." : ""}
+              </p>
+            ) : null}
+            {readinessStale ? (
+              <p className="text-xs text-[color:var(--cab-text-muted)]">
+                Stato checklist STALE
+                {lastReadinessSnapshotAt ? ` · ultimo snapshot valido: ${fmtWhen(lastReadinessSnapshotAt)}` : ""}.
+              </p>
+            ) : null}
+            {readinessLoading && checklist.length === 0 ? (
+              <p className="text-sm text-[color:var(--cab-text-muted)]">Esecuzione readiness check…</p>
+            ) : null}
+            {checklist.length > 0 ? (
+              <div className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3">
+                <ul className="space-y-2">
+                  {checklist.map((item) => (
+                    <li key={item.id} className="rounded-md border border-[color:var(--cab-border)] p-2 text-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <p className="font-semibold text-[color:var(--cab-text)]">{item.label}</p>
+                        <span
+                          className={`inline-flex rounded px-2 py-0.5 text-[10px] font-bold ${
+                            item.status === "ok"
+                              ? "bg-[color:color-mix(in_srgb,var(--cab-success)_15%,var(--cab-surface))] text-[color:var(--cab-success)]"
+                              : "bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] text-[color:var(--cab-danger)]"
+                          }`}
+                        >
+                          {item.status === "ok" ? "OK" : "FAIL"}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-[color:var(--cab-text-muted)]">
+                        Categoria: {item.category}
+                        {item.explanation ? ` · ${item.explanation}` : ""}
+                      </p>
+                      {item.source ? <p className="mt-0.5 font-mono text-[10px] text-[color:var(--cab-text-muted)]">Source: {item.source}</p> : null}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </section>
+        </div>
+      </ShellCard>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className={dsSurfaceInteractiveKpi}>
@@ -509,11 +786,11 @@ export function SecurityDashboardView() {
             <table className={`${dsTable} text-xs`}>
               <thead>
                 <tr>
-                  <th className={dsTableHeadCell}>Data/ora</th>
-                  <th className={dsTableHeadCell}>Entità</th>
-                  <th className={dsTableHeadCell}>Azione</th>
-                  <th className={dsTableHeadCell}>Responsabile</th>
-                  <th className={dsTableHeadCell}>Dettaglio</th>
+                  <GlobalTableHeadLabel label="Data/ora" />
+                  <GlobalTableHeadLabel label="Entità" />
+                  <GlobalTableHeadLabel label="Azione" />
+                  <GlobalTableHeadLabel label="Responsabile" />
+                  <GlobalTableHeadLabel label="Dettaglio" />
                 </tr>
               </thead>
               <tbody>
@@ -600,8 +877,8 @@ export function SecurityDashboardView() {
             <table className={`${dsTable} text-xs`}>
               <thead>
                 <tr>
-                  <th className={dsTableHeadCell}>Nome</th>
-                  <th className={dsTableHeadCell}>Id profilo</th>
+                  <GlobalTableHeadLabel label="Nome" />
+                  <GlobalTableHeadLabel label="Id profilo" />
                 </tr>
               </thead>
               <tbody>
@@ -628,6 +905,7 @@ export function SecurityDashboardView() {
       <ShellCard title="Ultimo accesso per utente" subtitle="Per ogni user_id: ultimo login o logout nel periodo filtrato.">
         <LastAccessTable rows={lastAccessPerUser} />
       </ShellCard>
+      {confirmDialog}
     </div>
   );
 }

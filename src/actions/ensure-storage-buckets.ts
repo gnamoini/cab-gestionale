@@ -20,7 +20,7 @@ const BUCKET_OPTIONS: Record<
     allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/jpg"],
   },
   [STORAGE_BUCKETS.documenti]: {
-    public: true,
+    public: false,
     fileSizeLimit: STORAGE_LIMITS.documentiMaxBytes,
   },
 };

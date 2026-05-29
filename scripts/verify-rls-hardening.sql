@@ -55,3 +55,34 @@ where table_schema = 'public'
   and grantee = 'anon'
   and table_name in ('lavorazioni', 'mezzi', 'profiles', 'magazzino_ricambi')
 order by table_name, privilege_type;
+
+-- 7) Helper enforcement user_permissions
+select proname
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public'
+  and proname in (
+    'user_effective_can',
+    'rbac_module_can',
+    'rbac_storage_documenti_path_allowed',
+    'rbac_storage_images_path_allowed',
+    'rbac_staff_has_any_module_write'
+  )
+order by proname;
+
+-- 8) resolve_auth_email_for_login: anon non deve poter eseguire
+select grantee, privilege_type
+from information_schema.routine_privileges
+where routine_schema = 'public'
+  and routine_name = 'resolve_auth_email_for_login'
+order by grantee, privilege_type;
+
+-- 9) rbac_role_for_user: authenticated non deve poter eseguire
+select grantee, privilege_type
+from information_schema.routine_privileges
+where routine_schema = 'public'
+  and routine_name = 'rbac_role_for_user'
+  and grantee = 'authenticated';
+
+-- 10) Bucket documenti privato
+select id, public from storage.buckets where id in ('documenti', 'images');

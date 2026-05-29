@@ -6,7 +6,6 @@ import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
   compareRangeFor,
   deltaPct,
-  isoInRange,
   resolvePresetRange,
   type DateRange,
   type ReportCompareMode,
@@ -17,11 +16,11 @@ import {
   countCompletedInRange,
   countOpenedInRange,
   sparkFromDailyCompletions,
-  uniqueClientiServiti,
+  uniqueClientiNelPeriodo,
   type ReportManualByMonth,
 } from "@/lib/report/lavorazioni-report-selectors";
-import { extractScortaDelta } from "@/lib/report/magazzino-log-parse";
 import { buildMagazzinoMonthlyRows } from "@/lib/report/magazzino-monthly-rows";
+import { sumMagazzinoUsciteQtyInRange } from "@/lib/report/magazzino-period-aggregate";
 import { loadMagazzinoManualMonthMap } from "@/lib/report/magazzino-manual-storage";
 
 export type ReportLiveInput = {
@@ -72,16 +71,6 @@ export type ReportModel = {
   compareDetail: ReportCompareDetail | null;
 };
 
-function ricambiUtilizzatiQty(magLog: MagazzinoChangeLogEntry[], r: DateRange): number {
-  let q = 0;
-  for (const e of magLog) {
-    if (!isoInRange(e.at, r)) continue;
-    const d = extractScortaDelta(e);
-    if (d != null && d < 0) q += -d;
-  }
-  return Math.round(q * 10) / 10;
-}
-
 function totalCapitale(rows: RicambioMagazzino[]): number {
   let s = 0;
   for (const r of rows) s += capitaleImmobilizzato(r);
@@ -130,8 +119,8 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const completed = countCompletedInRange(completate, range, manualByMonth);
   const tempoMedio = avgCloseDays(completate, range);
   const cap = totalCapitale(magazzino);
-  const ricambi = ricambiUtilizzatiQty(magLog, range);
-  const clienti = uniqueClientiServiti(completate, range);
+  const ricambi = sumMagazzinoUsciteQtyInRange(magLog, range);
+  const clienti = uniqueClientiNelPeriodo(attive, storico, completate, range);
   const mezziN = mezzi.length;
 
   const magCur = sumMagazzinoPeriod(magLog, magazzino, range, anchor);
@@ -140,8 +129,10 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const openedP = compareRange ? countOpenedInRange(attive, storico, compareRange) : null;
   const completedP = compareRange ? countCompletedInRange(completate, compareRange, manualByMonth) : null;
   const tempoP = compareRange ? avgCloseDays(completate, compareRange) : null;
-  const ricambiP = compareRange ? ricambiUtilizzatiQty(magLog, compareRange) : null;
-  const clientiP = compareRange ? uniqueClientiServiti(completate, compareRange) : null;
+  const ricambiP = compareRange ? sumMagazzinoUsciteQtyInRange(magLog, compareRange) : null;
+  const clientiP = compareRange
+    ? uniqueClientiNelPeriodo(attive, storico, completate, compareRange)
+    : null;
 
   const spark = sparkFromDailyCompletions(completate, range.end);
 

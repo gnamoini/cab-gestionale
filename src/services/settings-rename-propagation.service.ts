@@ -85,6 +85,56 @@ async function propagateSimpleColumn(
   return { kind, from, to, updated: n };
 }
 
+type IngressoCampoKey = "cliente" | "utilizzatore" | "cantiere";
+
+function patchIngressoCampoInContenuto(
+  contenuto: unknown,
+  field: IngressoCampoKey,
+  from: string,
+  to: string,
+): { next: Record<string, unknown>; changed: boolean } {
+  if (!contenuto || typeof contenuto !== "object" || Array.isArray(contenuto)) {
+    return { next: {}, changed: false };
+  }
+  const base = { ...(contenuto as Record<string, unknown>) };
+  const ingresso = base.ingresso;
+  if (!ingresso || typeof ingresso !== "object" || Array.isArray(ingresso)) {
+    return { next: base, changed: false };
+  }
+  const ing = { ...(ingresso as Record<string, unknown>) };
+  const campi = ing.campi;
+  if (!campi || typeof campi !== "object" || Array.isArray(campi)) {
+    return { next: base, changed: false };
+  }
+  const c = { ...(campi as Record<string, unknown>) };
+  if (typeof c[field] !== "string" || c[field] !== from) {
+    return { next: base, changed: false };
+  }
+  return {
+    next: { ...base, ingresso: { ...ing, campi: { ...c, [field]: to } } },
+    changed: true,
+  };
+}
+
+async function propagateSchedaIngressoCampo(
+  field: IngressoCampoKey,
+  from: string,
+  to: string,
+): Promise<number> {
+  const c = await sb();
+  const { data, error } = await c.from("scheda_lavorazione").select("id, contenuto");
+  if (error) throw new Error(error.message);
+  let updated = 0;
+  for (const row of data ?? []) {
+    const { next, changed } = patchIngressoCampoInContenuto(row.contenuto, field, from, to);
+    if (!changed) continue;
+    const { error: upErr } = await c.from("scheda_lavorazione").update({ contenuto: next }).eq("id", row.id);
+    if (upErr) throw new Error(upErr.message);
+    updated += 1;
+  }
+  return updated;
+}
+
 async function propagateAddettoRename(from: string, to: string): Promise<SettingsRenamePropagationResult> {
   const c = await sb();
   const { data, error } = await c.from("scheda_lavorazione").select("id, contenuto");
@@ -153,17 +203,22 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
     case "cliente": {
       out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "cliente"));
       out.push(await propagateSimpleColumn(kind, from, to, "preventivi", "cliente"));
+      out.push({ kind, from, to, updated: await propagateSchedaIngressoCampo("cliente", from, to) });
       const c = await sb();
       const prof = await countUpdate(c, "profiles", { cliente_ref: to }, { cliente_ref: from });
       out.push({ kind, from, to, updated: prof });
       break;
     }
-    case "utilizzatore":
+    case "utilizzatore": {
       out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "utilizzatore"));
+      out.push({ kind, from, to, updated: await propagateSchedaIngressoCampo("utilizzatore", from, to) });
       break;
-    case "cantiere":
+    }
+    case "cantiere": {
       out.push({ kind, from, to, updated: await propagateMezziMetaField("cantiere", from, to) });
+      out.push({ kind, from, to, updated: await propagateSchedaIngressoCampo("cantiere", from, to) });
       break;
+    }
     case "addetto":
       out.push(await propagateAddettoRename(from, to));
       break;

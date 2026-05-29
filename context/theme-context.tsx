@@ -52,6 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setResolved(boot);
     applyPersistedThemeToDocument(boot);
     setThemeReady(true);
+    document.documentElement.dataset.ready = "1";
   }, []);
 
   /** Preferenza DB autenticato (source of truth); assenza riga → default globale dark. */

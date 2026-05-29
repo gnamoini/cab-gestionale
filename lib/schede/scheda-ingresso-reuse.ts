@@ -96,7 +96,7 @@ export function findLastSchedaIngressoForIdent(
     const t = new Date(ing.updatedAt).getTime();
     if (!best || t > new Date(best.updatedAt).getTime()) {
       best = {
-        campi: ing.campi,
+        campi: { ...ing.campi },
         sourceLavorazioneId: id,
         updatedAt: ing.updatedAt,
       };

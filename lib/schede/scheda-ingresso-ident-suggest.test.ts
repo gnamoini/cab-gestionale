@@ -39,7 +39,7 @@ const mezzoB: MezzoGestito = {
 }
 
 {
-  const hit = findExactMezzoForIngressoIdent([mezzoA, mezzoB], "matricola", "mx-001", "");
+  const hit = findExactMezzoForIngressoIdent([mezzoA, mezzoB], "matricola", "mx-001", {});
   assert.equal(hit?.id, "m1");
 }
 

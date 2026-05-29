@@ -1,25 +1,35 @@
 "use client";
 
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
+import { usePathname } from "next/navigation";
+import {
+  acquireBodyScrollLock,
+  forceReleaseAllBodyScrollLocks,
+} from "@/lib/ui/body-scroll-lock-manager";
+
+export { BODY_LOCK_ATTR } from "@/lib/ui/body-scroll-lock-manager";
 
 /**
- * Blocca lo scroll del documento quando overlay/modal/drawer sono aperti.
- * Compensa la larghezza della scrollbar per evitare layout shift (pagina che si restringe).
+ * Blocca lo scroll documento quando overlay/modal/drawer sono aperti.
+ * Delega al body scroll manager globale (reference counting + restore sicuro).
  */
-export function useBodyScrollLock(active: boolean): void {
-  useEffect(() => {
+export function useBodyScrollLock(active: boolean, source?: string): void {
+  useLayoutEffect(() => {
     if (!active) return;
-    const gap = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-    const prevHtmlOverflow = document.documentElement.style.overflow;
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevBodyPad = document.body.style.paddingRight;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
-    return () => {
-      document.documentElement.style.overflow = prevHtmlOverflow;
-      document.body.style.overflow = prevBodyOverflow;
-      document.body.style.paddingRight = prevBodyPad;
-    };
-  }, [active]);
+    return acquireBodyScrollLock(source ?? "useBodyScrollLock");
+  }, [active, source]);
+}
+
+/** Sblocca scroll su ogni cambio route (modale smontata senza cleanup). */
+export function useBodyScrollLockRouteGuard(): void {
+  const pathname = usePathname();
+  useLayoutEffect(() => {
+    forceReleaseAllBodyScrollLocks("route-change");
+  }, [pathname]);
+}
+
+/** Montare una volta in AppProviders. */
+export function BodyScrollLockRouteGuard(): null {
+  useBodyScrollLockRouteGuard();
+  return null;
 }

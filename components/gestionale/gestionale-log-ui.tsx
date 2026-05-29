@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode, SVGProps } from "react";
-import { memo } from "react";
+import type { MouseEvent, ReactNode, SVGProps } from "react";
+import { memo, useCallback } from "react";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { LogEntry } from "@/components/design-system/log-entry";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
@@ -127,20 +128,32 @@ export function GestionaleLogEntryDismissButton({
   onDismiss: () => void;
   confirmMessage?: string;
 }) {
+  const { confirm, confirmDialog } = useGestionaleConfirm();
+
+  const handleClick = useCallback(
+    (e: MouseEvent) => {
+      e.stopPropagation();
+      void confirm({
+        title: "Rimuovere voce?",
+        message: confirmMessage,
+        destructive: true,
+        confirmLabel: "Rimuovi",
+      }).then((ok) => {
+        if (ok) onDismiss();
+      });
+    },
+    [confirm, confirmMessage, onDismiss],
+  );
+
   return (
-    <Tooltip content={gestionaleLogDismissTooltip}>
-      <button
-        type="button"
-        className={logEntryDismissBtnClass}
-        aria-label="Rimuovi voce"
-        onClick={(e) => {
-          e.stopPropagation();
-          if (window.confirm(confirmMessage)) onDismiss();
-        }}
-      >
-        ×
-      </button>
-    </Tooltip>
+    <>
+      <Tooltip content={gestionaleLogDismissTooltip}>
+        <button type="button" className={logEntryDismissBtnClass} aria-label="Rimuovi voce" onClick={handleClick}>
+          ×
+        </button>
+      </Tooltip>
+      {confirmDialog}
+    </>
   );
 }
 

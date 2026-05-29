@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { dsZDrawer } from "@/lib/ui/design-system";
+import { cabIosOverlaySurface } from "@/lib/ui/ios-mobile-tokens";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { CloseButton } from "@/components/design-system/close-button";
 import {
@@ -30,13 +31,13 @@ export function Drawer({
   ariaLabel,
   lockScroll = true,
 }: DrawerProps) {
-  useBodyScrollLock(lockScroll && open);
+  useBodyScrollLock(lockScroll && open, "design-system-Drawer");
 
   if (!open) return null;
 
   return (
     <div
-      className={`fixed inset-0 ${dsZDrawer} flex items-stretch justify-end bg-[var(--cab-overlay)] backdrop-blur-[1px]`}
+      className={`fixed inset-0 ${dsZDrawer} flex items-stretch justify-end ${cabIosOverlaySurface} bg-[var(--cab-overlay)] backdrop-blur-[1px]`}
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {

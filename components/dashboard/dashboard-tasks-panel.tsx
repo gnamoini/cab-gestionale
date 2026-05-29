@@ -12,9 +12,11 @@ import {
   type DashboardTask,
 } from "@/lib/dashboard/dashboard-tasks-storage";
 import type { GestionaleLogEventTone } from "@/lib/gestionale-log/view-model";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 
 export function DashboardTasksPanel() {
   const { authorName } = useAuth();
+  const { confirm: askConfirm, confirmDialog } = useGestionaleConfirm();
   const [tasks, setTasks] = useState<DashboardTask[]>([]);
   const [ready, setReady] = useState(false);
   const [draft, setDraft] = useState("");
@@ -160,10 +162,17 @@ export function DashboardTasksPanel() {
               <button
                 type="button"
                 onClick={() => {
-                  if (!window.confirm("Eliminare questa attività?")) return;
-                  logTask("delete", "ELIMINAZIONE", `Eliminata attività: ${t.text.slice(0, 200)}`);
-                  setTasks((prev) => prev.filter((x) => x.id !== t.id));
-                  if (editingId === t.id) setEditingId(null);
+                  void askConfirm({
+                    title: "Eliminare attività?",
+                    message: "L'attività verrà rimossa dall'elenco.",
+                    destructive: true,
+                    confirmLabel: "Elimina",
+                  }).then((ok) => {
+                    if (!ok) return;
+                    logTask("delete", "ELIMINAZIONE", `Eliminata attività: ${t.text.slice(0, 200)}`);
+                    setTasks((prev) => prev.filter((x) => x.id !== t.id));
+                    if (editingId === t.id) setEditingId(null);
+                  });
                 }}
                 className="shrink-0 rounded p-1 text-xs text-zinc-400 transition hover:bg-zinc-200/80 hover:text-zinc-700 dark:hover:bg-zinc-700 dark:hover:text-zinc-200"
                 aria-label="Elimina attività"
@@ -174,6 +183,7 @@ export function DashboardTasksPanel() {
           ))
         )}
       </ul>
+      {confirmDialog}
     </div>
   );
 }

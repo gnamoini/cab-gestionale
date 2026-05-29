@@ -122,18 +122,6 @@ export async function storageCreateSignedUrl(
   return data.signedUrl;
 }
 
-export function storageGetPublicUrl(bucket: StorageBucketId, path: string): string | null {
-  const objectPath = normalizeStorageObjectPath(path);
-  if (!objectPath) return null;
-  try {
-    const supabase = getBrowserSupabase();
-    const { data } = supabase.storage.from(bucket).getPublicUrl(objectPath);
-    return data.publicUrl?.trim() || null;
-  } catch {
-    return null;
-  }
-}
-
 /** Precheck leggero all'avvio (es. prima lista immagini). Non blocca l'app se fallisce. */
 export async function prefetchStorageBuckets(buckets: StorageBucketId[] = Object.values(STORAGE_BUCKETS)): Promise<void> {
   await Promise.all(

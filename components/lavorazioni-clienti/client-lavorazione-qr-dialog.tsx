@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { clientLavorazioniPublicUrl } from "@/lib/lavorazioni/client-portal-access";
 import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 export function ClientLavorazioneQrDialog({
   open,
@@ -16,6 +17,7 @@ export function ClientLavorazioneQrDialog({
   lavorazioneId: string;
   refLabel: string;
 }) {
+  const gestToast = useGestionaleToast();
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [url, setUrl] = useState("");
 
@@ -44,9 +46,9 @@ export function ClientLavorazioneQrDialog({
   async function copyLink() {
     try {
       await navigator.clipboard.writeText(url);
-      window.alert("Link copiato negli appunti.");
+      gestToast.successOnce("qr-copy-link", "Link copiato negli appunti.");
     } catch {
-      window.prompt("Copia il link:", url);
+      gestToast.warning("Copia non disponibile: seleziona e copia il link mostrato sotto.");
     }
   }
 

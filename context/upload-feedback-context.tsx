@@ -9,11 +9,10 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useToast } from "@/context/toast-context";
-import {
-  UPLOAD_MESSAGES,
-  UPLOAD_SUCCESS_VISIBLE_MS,
-} from "@/lib/upload/upload-feedback-messages";
+import { useToastContext } from "@/context/toast-context";
+import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
+import { UPLOAD_SUCCESS_VISIBLE_MS } from "@/lib/upload/upload-feedback-messages";
+import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
 import type {
   RunUploadParams,
   TrackUploadParams,
@@ -46,7 +45,7 @@ function patchItem(
 }
 
 export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
-  const { push: pushToast } = useToast();
+  const { push: pushToast } = useToastContext();
   const [items, setItems] = useState<UploadFeedbackItem[]>([]);
   const itemsRef = useRef(items);
   itemsRef.current = items;
@@ -88,7 +87,7 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
         setPhase(meta.id, "success", null);
         params.onSuccess?.(data);
         if (params.successToast !== false) {
-          pushToast(params.successToast ?? UPLOAD_MESSAGES.success, "success");
+          pushToast(params.successToast ?? GESTIONALE_TOAST.successUploaded, "success");
         }
         scheduleRemove(meta.id, UPLOAD_SUCCESS_VISIBLE_MS);
         return { ok: true, data };
@@ -98,7 +97,7 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
         setPhase(meta.id, "error", message);
         params.onError?.(message);
         if (params.showErrorToast !== false) {
-          pushToast(message, "error");
+          pushToast(humanizeGestionaleError(message), "error");
         }
         return { ok: false, error: message };
       }

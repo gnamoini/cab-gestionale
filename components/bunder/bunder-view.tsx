@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
-import { GlobalTableHeadLabel } from "@/components/gestionale/global-table/global-table-header";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  GestionaleListTable,
+  GestionaleListTableActionsHead,
+  GlobalTableSortTh,
+} from "@/components/gestionale/global-table";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
@@ -25,26 +29,30 @@ import {
   dsPageToolbarBtn,
   dsStackPage,
   dsStickyToolbar,
-  dsScrollbar,
-  dsTable,
-  dsTableHead,
-  dsTableRow,
-  dsTableWrap,
-  dsTableThSticky,
   dsFocus,
-  dsTableActionsGroup,
   dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
   dsTableActionBtnDanger,
   dsTableActionGlyph,
   GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
-import { gestionaleListTableTdAzioni, gestionaleListTableThAzioni } from "@/lib/ui/gestionale-list-table";
-import { globalTableHeadEdgeInset } from "@/lib/ui/global-table";
+import {
+  gestionaleListColAzioniClass,
+  gestionaleListTableRowClass,
+  gestionaleListTableTd,
+  gestionaleListTableTdAzioni,
+  gestionaleListTableTdCenter,
+  gestionaleListTableActionsGroupEnd,
+} from "@/lib/ui/gestionale-list-table";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
+import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { Drawer, IconActionButton } from "@/components/design-system";
 import {
@@ -168,50 +176,12 @@ function compareBunder(
   }
 }
 
-function SortThBunder({
-  label,
-  columnKey,
-  sortColumn,
-  sortPhase,
-  onSort,
-  thClassName,
-  align = "left",
-}: {
-  label: string;
-  columnKey: BunderSortKey;
-  sortColumn: BunderSortKey | null;
-  sortPhase: BunderSortPhase;
-  onSort: (k: BunderSortKey) => void;
-  thClassName?: string;
-  align?: "left" | "right";
-}) {
-  const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
-  let icon: ReactNode = <span className="opacity-40">↕</span>;
-  if (active) {
-    icon = sortPhase === "asc" ? <span>↑</span> : <span>↓</span>;
-  }
-  const alignCls = align === "right" ? "text-right" : "text-left";
-  const btnJustify = align === "right" ? "justify-end" : "justify-start";
-  return (
-    <th className={`${dsTableThSticky} px-2 py-2 align-middle ${alignCls} sm:px-3 ${thClassName ?? ""}`}>
-      <button
-        type="button"
-        onClick={() => onSort(columnKey)}
-        className={`inline-flex w-full max-w-full items-center gap-1 ${btnJustify} text-xs font-semibold uppercase tracking-wide transition-colors duration-200 ease-out ${dsFocus} ${
-          active ? "text-[color:var(--cab-primary)]" : "text-[color:var(--cab-text-muted)] hover:text-[color:var(--cab-text)]"
-        }`}
-      >
-        <span className="truncate">{label}</span>
-        {icon}
-      </button>
-    </th>
-  );
-}
-
 export function BunderView() {
   const { authorName: autore } = useAuth();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
+  const gestToast = useGestionaleToast();
   const authorTrim = autore.trim() || "Operatore";
-  const [docs, setDocs] = useState<BunderCommercialDocument[]>(() => (typeof window !== "undefined" ? loadBunderDocuments() : []));
+  const [docs, setDocs] = useState<BunderCommercialDocument[]>([]);
   const viewOpts = useViewQueryOpts({ staleTime: 90_000 });
   const magazzinoQ = useMagazzinoRicambiUIQuery(undefined, viewOpts);
   const mag = magazzinoQ.data ?? [];
@@ -243,7 +213,12 @@ export function BunderView() {
   const [wizardKind, setWizardKind] = useState<BunderDocKind>("offerta_commerciale");
 
   const [logOpen, setLogOpen] = useState(false);
-  const [logEntries, setLogEntries] = useState<BunderLogStored[]>(() => (typeof window !== "undefined" ? loadBunderChangeLog() : []));
+  const [logEntries, setLogEntries] = useState<BunderLogStored[]>([]);
+
+  useEffect(() => {
+    setDocs(loadBunderDocuments());
+    setLogEntries(loadBunderChangeLog());
+  }, []);
 
   useEffect(() => {
     function onLog() {
@@ -543,15 +518,23 @@ export function BunderView() {
   }
 
   function elimina(d: BunderCommercialDocument) {
-    if (!window.confirm(`Eliminare il documento ${d.numeroProgressivo}?`)) return;
-    persist(docs.filter((x) => x.id !== d.id));
-    appendBunderChangeLog({
-      tone: "delete",
-      tipoRiga: "ELIMINATO DOCUMENTO",
-      oggettoRiga: d.numeroProgressivo,
-      modificaRiga: `Tipo: ${bunderKindLabel(d.kind)}. Destinatario: ${d.aziendaDestinatario}.`,
-      autore: authorTrim,
-      atIso: new Date().toISOString(),
+    void confirm({
+      title: "Eliminare documento?",
+      message: `Il documento ${d.numeroProgressivo} verrà rimosso.`,
+      destructive: true,
+      confirmLabel: "Elimina",
+    }).then((ok) => {
+      if (!ok) return;
+      persist(docs.filter((x) => x.id !== d.id));
+      appendBunderChangeLog({
+        tone: "delete",
+        tipoRiga: "ELIMINATO DOCUMENTO",
+        oggettoRiga: d.numeroProgressivo,
+        modificaRiga: `Tipo: ${bunderKindLabel(d.kind)}. Destinatario: ${d.aziendaDestinatario}.`,
+        autore: authorTrim,
+        atIso: new Date().toISOString(),
+      });
+      gestToast.successOnce("bunder-delete", GESTIONALE_TOAST.successDeleted);
     });
   }
 
@@ -790,9 +773,10 @@ export function BunderView() {
         </div>
         </div>
 
-        <div className={`mt-4 ${dsTableWrap} ${dsScrollbar}`}>
-          <table className={`${dsTable} w-full min-w-0 table-fixed text-left text-sm text-zinc-900 dark:text-zinc-100`}>
-            <colgroup>
+        <GestionaleListTable
+          visibilityClass="mt-4"
+          colgroup={
+            <>
               <col className="w-[7.5rem]" />
               <col className="w-[9.5rem]" />
               <col />
@@ -800,71 +784,68 @@ export function BunderView() {
               <col className="w-[5.5rem]" />
               <col className="w-[6.5rem]" />
               <col className="w-[18%]" />
-              <col className="w-[16rem]" />
-            </colgroup>
-            <thead className={`border-b border-zinc-100 dark:border-zinc-800 ${dsTableHead}`}>
-              <tr className={globalTableHeadEdgeInset}>
-                <SortThBunder
-                  label="Numero"
-                  columnKey="numeroProgressivo"
-                  sortColumn={bunderSortColumn}
-                  sortPhase={bunderSortPhase}
-                  onSort={onSortBunder}
-                  thClassName="whitespace-nowrap"
-                />
-                <SortThBunder
-                  label="Tipo"
-                  columnKey="kind"
-                  sortColumn={bunderSortColumn}
-                  sortPhase={bunderSortPhase}
-                  onSort={onSortBunder}
-                />
-                <SortThBunder
-                  label="Azienda"
-                  columnKey="aziendaDestinatario"
-                  sortColumn={bunderSortColumn}
-                  sortPhase={bunderSortPhase}
-                  onSort={onSortBunder}
-                />
-                <SortThBunder
-                  label="Oggetto"
-                  columnKey="oggetto"
-                  sortColumn={bunderSortColumn}
-                  sortPhase={bunderSortPhase}
-                  onSort={onSortBunder}
-                />
-                <SortThBunder
-                  label="Data"
-                  columnKey="dataDocumento"
-                  sortColumn={bunderSortColumn}
-                  sortPhase={bunderSortPhase}
-                  onSort={onSortBunder}
-                  thClassName="whitespace-nowrap"
-                />
-                <SortThBunder
-                  label="Totale"
-                  columnKey="totale"
-                  sortColumn={bunderSortColumn}
-                  sortPhase={bunderSortPhase}
-                  onSort={onSortBunder}
-                  align="right"
-                  thClassName="whitespace-nowrap"
-                />
-                <SortThBunder
-                  label="Prodotti"
-                  columnKey="prodotti"
-                  sortColumn={bunderSortColumn}
-                  sortPhase={bunderSortPhase}
-                  onSort={onSortBunder}
-                />
-                <GlobalTableHeadLabel
-                  label="Azioni"
-                  align="center"
-                  thClassName={`${gestionaleListTableThAzioni} ${dsTableThSticky}`}
-                />
-              </tr>
-            </thead>
-            <tbody>
+              <col className={gestionaleListColAzioniClass} />
+            </>
+          }
+          headRow={
+            <>
+              <GlobalTableSortTh
+                label="Numero"
+                columnKey="numeroProgressivo"
+                sortColumn={bunderSortColumn}
+                sortPhase={bunderSortPhase}
+                onSort={onSortBunder}
+              />
+              <GlobalTableSortTh
+                label="Tipo"
+                columnKey="kind"
+                sortColumn={bunderSortColumn}
+                sortPhase={bunderSortPhase}
+                onSort={onSortBunder}
+              />
+              <GlobalTableSortTh
+                label="Azienda"
+                columnKey="aziendaDestinatario"
+                sortColumn={bunderSortColumn}
+                sortPhase={bunderSortPhase}
+                onSort={onSortBunder}
+              />
+              <GlobalTableSortTh
+                label="Oggetto"
+                columnKey="oggetto"
+                sortColumn={bunderSortColumn}
+                sortPhase={bunderSortPhase}
+                onSort={onSortBunder}
+              />
+              <GlobalTableSortTh
+                label="Data"
+                columnKey="dataDocumento"
+                sortColumn={bunderSortColumn}
+                sortPhase={bunderSortPhase}
+                onSort={onSortBunder}
+              />
+              <GlobalTableSortTh
+                label="Totale"
+                columnKey="totale"
+                sortColumn={bunderSortColumn}
+                sortPhase={bunderSortPhase}
+                onSort={onSortBunder}
+                align="right"
+              />
+              <GlobalTableSortTh
+                label="Prodotti"
+                columnKey="prodotti"
+                sortColumn={bunderSortColumn}
+                sortPhase={bunderSortPhase}
+                onSort={onSortBunder}
+              />
+              <GestionaleListTableActionsHead />
+            </>
+          }
+          empty={pagedFiltered.length === 0}
+          emptyMessage="Nessun documento corrisponde ai filtri."
+          colSpan={8}
+        >
               {pagedFiltered.map((d) => {
                 const tot = totaleDocumento(d);
                 const prod = d.righe
@@ -874,24 +855,24 @@ export function BunderView() {
                   .join(" · ");
                 const dataIt = new Date(d.dataDocumento + "T12:00:00").toLocaleDateString("it-IT");
                 return (
-                  <tr key={d.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
-                    <td className="whitespace-nowrap px-2 py-2 align-middle font-mono text-xs font-semibold sm:px-3">{d.numeroProgressivo}</td>
-                    <td className="px-2 py-2 align-middle text-xs sm:px-3">{bunderKindLabel(d.kind)}</td>
-                    <td className="min-w-0 px-2 py-2 align-middle sm:px-3" title={d.aziendaDestinatario}>
-                      <span className="line-clamp-2 break-words text-sm">{d.aziendaDestinatario}</span>
+                  <tr key={d.id} className={gestionaleListTableRowClass}>
+                    <td className={`${gestionaleListTableTd} whitespace-nowrap font-mono text-xs font-semibold`}>{d.numeroProgressivo}</td>
+                    <td className={`${gestionaleListTableTd} text-xs`}>{bunderKindLabel(d.kind)}</td>
+                    <td className={`min-w-0 ${gestionaleListTableTd}`} title={d.aziendaDestinatario}>
+                      <span className="line-clamp-2 break-words">{d.aziendaDestinatario}</span>
                     </td>
-                    <td className="min-w-0 max-w-[1px] px-2 py-2 align-middle sm:px-3" title={d.oggetto}>
-                      <span className="line-clamp-2 break-words text-sm">{d.oggetto}</span>
+                    <td className={`min-w-0 max-w-[1px] ${gestionaleListTableTd}`} title={d.oggetto}>
+                      <span className="line-clamp-2 break-words">{d.oggetto}</span>
                     </td>
-                    <td className="whitespace-nowrap px-2 py-2 align-middle text-xs tabular-nums text-zinc-600 dark:text-zinc-300 sm:px-3">{dataIt}</td>
-                    <td className="whitespace-nowrap px-2 py-2 align-middle text-right text-sm tabular-nums font-medium sm:px-3">
+                    <td className={`${gestionaleListTableTdCenter} whitespace-nowrap text-xs text-zinc-600 dark:text-zinc-300`}>{dataIt}</td>
+                    <td className={`${gestionaleListTableTdCenter} whitespace-nowrap font-medium`}>
                       {tot.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
                     </td>
-                    <td className="min-w-0 px-2 py-2 align-middle text-xs text-zinc-600 dark:text-zinc-300 sm:px-3" title={prod}>
+                    <td className={`min-w-0 ${gestionaleListTableTd} text-xs text-zinc-600 dark:text-zinc-300`} title={prod}>
                       <span className="line-clamp-2">{prod || "—"}</span>
                     </td>
                     <td className={gestionaleListTableTdAzioni}>
-                      <div className={dsTableActionsGroup}>
+                      <div className={gestionaleListTableActionsGroupEnd}>
                         <IconActionButton label="Modifica" className={dsTableActionBtnPrimary} onClick={() => setEditor({ open: true, doc: d })}>
                           <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                             <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -927,19 +908,18 @@ export function BunderView() {
                   </tr>
                 );
               })}
-            </tbody>
-          </table>
-        </div>
+        </GestionaleListTable>
         {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
-        {filtered.length === 0 ? <p className="px-4 py-6 text-sm text-zinc-500">Nessun documento corrisponde ai criteri.</p> : null}
       </ShellCard>
       </div>
 
       {wizardOpen ? (
-        <div className="fixed inset-0 z-[65] flex items-center justify-center bg-black/40 p-4" onMouseDown={(e) => e.target === e.currentTarget && setWizardOpen(false)}>
-          <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-5 shadow-xl dark:border-zinc-700 dark:bg-zinc-950" onMouseDown={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Nuovo documento commerciale</h3>
-            <p className="mt-1 text-xs text-zinc-500">Seleziona il tipo. Il testo e le righe saranno generate con impostazione professionale; potrai modificarle nell&apos;editor.</p>
+        <LavorazioniModalShell onRequestClose={() => setWizardOpen(false)} title="Nuovo documento commerciale">
+          <div className="p-4 sm:p-6">
+            <p className="text-sm text-[color:var(--cab-text-muted)]">
+              Seleziona il tipo. Il testo e le righe saranno generate con impostazione professionale; potrai modificarle
+              nell&apos;editor.
+            </p>
             <label className="mt-4 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Tipo
               <div className="mt-1">
@@ -954,16 +934,16 @@ export function BunderView() {
                 />
               </div>
             </label>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" className={dsBtnNeutral} onClick={() => setWizardOpen(false)}>
+            <div className={`${gestionaleConfirmActionsClass} mt-4`}>
+              <button type="button" className={`${dsBtnNeutral} min-h-[2.75rem] sm:min-h-0`} onClick={() => setWizardOpen(false)}>
                 Annulla
               </button>
-              <button type="button" className={dsBtnPrimary} onClick={creaWizard}>
+              <button type="button" className={`${dsBtnPrimary} min-h-[2.75rem] sm:min-h-0`} onClick={creaWizard}>
                 Crea e apri
               </button>
             </div>
           </div>
-        </div>
+        </LavorazioniModalShell>
       ) : null}
 
       <BunderEditorModal
@@ -1009,6 +989,7 @@ export function BunderView() {
           ) : null}
         </div>
       </Drawer>
+      {confirmDialog}
     </>
   );
 }

@@ -38,7 +38,7 @@ export function SchedaIngressoIdentAutocompleteField({
   field,
   label,
   value,
-  otherValue = "",
+  siblingIdent = {},
   mezzi,
   readOnly,
   disabled,
@@ -49,7 +49,7 @@ export function SchedaIngressoIdentAutocompleteField({
   field: SchedaIngressoIdentField;
   label: string;
   value: string;
-  otherValue?: string;
+  siblingIdent?: { targa?: string; matricola?: string; nScuderia?: string };
   mezzi: readonly MezzoGestito[];
   readOnly?: boolean;
   disabled?: boolean;
@@ -95,7 +95,12 @@ export function SchedaIngressoIdentAutocompleteField({
   const pickMezzo = useCallback(
     (mezzo: MezzoGestito) => {
       skipBlurMatch.current = true;
-      const ident = field === "targa" ? mezzo.targa?.trim() ?? "" : mezzo.matricola?.trim() ?? "";
+      const ident =
+        field === "targa"
+          ? mezzo.targa?.trim() ?? ""
+          : field === "matricola"
+            ? mezzo.matricola?.trim() ?? ""
+            : mezzo.numeroScuderia?.trim() ?? "";
       onChange(ident);
       close();
       onExactMezzoMatch(mezzo);
@@ -108,9 +113,9 @@ export function SchedaIngressoIdentAutocompleteField({
       skipBlurMatch.current = false;
       return;
     }
-    const hit = findExactMezzoForIngressoIdent(mezzi, field, value, otherValue);
+    const hit = findExactMezzoForIngressoIdent(mezzi, field, value, siblingIdent);
     if (hit) onExactMezzoMatch(hit);
-  }, [field, mezzi, onExactMezzoMatch, otherValue, value]);
+  }, [field, mezzi, onExactMezzoMatch, siblingIdent, value]);
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
@@ -143,7 +148,12 @@ export function SchedaIngressoIdentAutocompleteField({
   };
 
   const identPreview = (mezzo: MezzoGestito) => {
-    const ident = field === "targa" ? mezzo.targa?.trim() ?? "" : mezzo.matricola?.trim() ?? "";
+    const ident =
+      field === "targa"
+        ? mezzo.targa?.trim() ?? ""
+        : field === "matricola"
+          ? mezzo.matricola?.trim() ?? ""
+          : mezzo.numeroScuderia?.trim() ?? "";
     return ident || "—";
   };
 
@@ -215,7 +225,9 @@ export function SchedaIngressoIdentAutocompleteField({
             }, 140);
           }}
           onKeyDown={onInputKeyDown}
-          placeholder={field === "targa" ? "Cerca targa…" : "Cerca matricola…"}
+          placeholder={
+            field === "targa" ? "Cerca targa…" : field === "matricola" ? "Cerca matricola…" : "Cerca scuderia…"
+          }
           autoComplete="off"
           role="combobox"
           aria-expanded={showDropdown}

@@ -139,7 +139,7 @@ export const GESTIONALE_NAV = [
   { href: "/bunder", label: "BUNDER", Icon: IconNavBunder },
   { href: "/report", label: "Report", Icon: IconNavReport },
   { href: "/supporto", label: "Supporto", Icon: IconNavSupporto },
-  { href: "/impostazioni", label: "Impostazioni", Icon: IconNavSettings },
+  { href: "/impostazioni", label: "Configurazione", Icon: IconNavSettings },
   { href: "/dashboard/security", label: "Sicurezza", Icon: IconNavSecurity },
 ] as const;
 

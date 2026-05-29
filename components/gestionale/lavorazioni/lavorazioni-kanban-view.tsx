@@ -2,6 +2,8 @@
 
 import { memo, useMemo, type KeyboardEvent } from "react";
 import { KanbanColumnScroll } from "@/components/gestionale/lavorazioni/kanban-column-scroll";
+import { LavorazioniKanbanMobileBoard } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-board";
+import type { KanbanMobileSection } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-types";
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import { LavorazioneIngressoDateCell } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { TablePillReadonly } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
@@ -112,6 +114,12 @@ function mezzoIdentLines(row: LavorazioneListRow, schedeStore?: LavorazioneSched
   return [parts.targa, parts.matricola, parts.scuderia].map(identValue).filter(Boolean);
 }
 
+function identSummaryLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string | null {
+  const lines = mezzoIdentLines(row, schedeStore);
+  if (lines.length === 0) return null;
+  return lines.slice(0, 2).join(" · ");
+}
+
 function mezzoIdentParts(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore) {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
   const scuderiaIngresso = ing?.nScuderia?.trim() ?? "";
@@ -200,7 +208,7 @@ const KanbanCard = memo(function KanbanCard({
       className={[
         "lavorazioni-kanban-card-hit w-full cursor-pointer rounded-xl border border-[color:var(--cab-border)] p-3 text-left transition-[border-color,box-shadow,background-color] duration-200 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--cab-primary)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--cab-card)]",
         prioVisual.className,
-        flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)]" : "",
+        flash ? "lavorazioni-kanban-card-flash" : "",
       ]
         .filter(Boolean)
         .join(" ")}
@@ -350,8 +358,64 @@ export function LavorazioniKanbanView({
   const completateItems = useMemo(() => sortKanbanCards([...closedRows]), [closedRows]);
   const openClosedRow = onOpenClosedRow ?? onOpenRow;
 
+  const mobileSections = useMemo((): KanbanMobileSection[] => {
+    const sections: KanbanMobileSection[] = [];
+    for (const col of kanbanColumns) {
+      if (col.id === accettazioneColumnId && attesaPreventivoColumns.length > 0) {
+        sections.push({
+          id: col.id,
+          col,
+          items: byStato.get(col.id) ?? [],
+          nested: attesaPreventivoColumns.map((apCol) => ({
+            col: apCol,
+            items: attesaPreventivoByStato.get(apCol.id) ?? [],
+          })),
+          onOpen: onOpenRow,
+        });
+      } else {
+        sections.push({
+          id: col.id,
+          col,
+          items: byStato.get(col.id) ?? [],
+          onOpen: onOpenRow,
+        });
+      }
+    }
+    sections.push({
+      id: completateColumn.id,
+      col: completateColumn,
+      items: completateItems,
+      onOpen: openClosedRow,
+    });
+    return sections;
+  }, [
+    kanbanColumns,
+    accettazioneColumnId,
+    attesaPreventivoColumns,
+    byStato,
+    attesaPreventivoByStato,
+    completateColumn,
+    completateItems,
+    onOpenRow,
+    openClosedRow,
+  ]);
+
+  const mobileCardLabels = useMemo(
+    () => ({
+      macchina: (row: LavorazioneListRow) => macchinaLabel(row, schedeStore),
+      cliente: (row: LavorazioneListRow) => clienteLabel(row, schedeStore),
+      identSummary: (row: LavorazioneListRow) => identSummaryLabel(row, schedeStore),
+      addetto: (row: LavorazioneListRow) => addettoLabel(row, schedeStore, defaultAddetto),
+    }),
+    [schedeStore, defaultAddetto],
+  );
+
   if (loading) {
-    return <p className="text-sm text-zinc-500">Caricamento…</p>;
+    return (
+      <div className="lavorazioni-kanban-loading">
+        <p className="text-sm text-zinc-500">Caricamento…</p>
+      </div>
+    );
   }
 
   if (rows.length === 0 && completateItems.length === 0) {
@@ -472,8 +536,22 @@ export function LavorazioniKanbanView({
   );
 
   return (
-    <div className="lavorazioni-kanban-scope space-y-3">
-      <div className="lavorazioni-kanban-board gestionale-scrollbar min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
+    <div className="lavorazioni-kanban-scope space-y-3 max-w-full overflow-x-hidden">
+      <div className="min-w-0 max-w-full lg:hidden">
+        <LavorazioniKanbanMobileBoard
+          sections={mobileSections}
+          statiOpts={statiOpts}
+          schedeStore={schedeStore}
+          defaultAddetto={defaultAddetto}
+          prioritaColors={prioritaColors}
+          addettoColors={addettoColors}
+          flashRowId={flashRowId}
+          navBulkFlashIds={navBulkFlashIds}
+          cardLabels={mobileCardLabels}
+        />
+      </div>
+
+      <div className="lavorazioni-kanban-board gestionale-scrollbar hidden min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1 lg:block">
         <div className="flex h-[var(--lavorazioni-kanban-col-max-h)] min-h-[18rem] w-max min-w-full items-stretch gap-3 lg:w-full">
           {kanbanColumns.map(renderColumn)}
           {renderCompletateColumn()}

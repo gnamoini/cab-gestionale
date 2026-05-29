@@ -1,93 +1,4 @@
-/* Scrollbar Lavorazioni — coerente con Magazzino */
-
-.lavorazioni-scroll-scope {
-  scrollbar-gutter: auto;
-  /* Inset laterale tabella — speculare rispetto a `[&_tr>td:first-child]:pl-4 sm:pl-5`. */
-  --gestionale-table-edge-inset: 1rem;
-  /* Hover riga: visibile ma discreto (evita flash bianco da --cab-hover su tabelle dense). */
-  --gestionale-table-row-hover: color-mix(in srgb, var(--cab-primary) 4%, var(--cab-card));
-}
-
-@media (min-width: 640px) {
-  .lavorazioni-scroll-scope {
-    --gestionale-table-edge-inset: 1.25rem;
-  }
-}
-
-.dark .lavorazioni-scroll-scope {
-  --gestionale-table-row-hover: color-mix(in srgb, var(--cab-primary) 6%, var(--cab-card));
-}
-
-/* Sfondo riga: tutte le <td> (il bg su <tr> non si propaga in modo affidabile). */
-.lavorazioni-scroll-scope tbody tr > td {
-  background-color: rgb(255 255 255);
-  transition: background-color 150ms ease-out;
-}
-
-.dark .lavorazioni-scroll-scope tbody tr > td {
-  background-color: rgb(24 24 27 / 0.4);
-}
-
-.lavorazioni-scroll-scope tbody tr:hover {
-  /* `globalTableRow` applica hover su <tr>; le celle hanno bg proprio — evita doppia illuminazione. */
-  background-color: transparent !important;
-}
-
-.lavorazioni-scroll-scope tbody tr:hover > td {
-  background-color: var(--gestionale-table-row-hover) !important;
-}
-
-.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
-  background-color: rgb(254 242 242 / 0.5);
-}
-
-.dark .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
-  background-color: rgb(69 10 10 / 0.2);
-}
-
-.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td {
-  background-color: rgb(255 247 237 / 0.9);
-}
-
-.dark .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td {
-  background-color: rgb(244 244 245 / 0.12);
-}
-
-.lavorazioni-scroll-scope tbody tr[data-selected="true"]:not(:hover) > td {
-  background-color: color-mix(in srgb, var(--cab-primary) 10%, var(--cab-card));
-}
-
-.lavorazioni-scroll-scope .gestionale-list-table-actions-cell {
-  position: sticky;
-  right: 0;
-  z-index: 1;
-  padding-top: 0.25rem;
-  padding-bottom: 0.25rem;
-  padding-left: calc(0.5rem + 3px);
-  padding-right: var(--gestionale-table-edge-inset) !important;
-  text-align: right;
-  white-space: nowrap;
-  vertical-align: middle;
-  box-shadow: -12px 0 16px -12px color-mix(in srgb, var(--cab-card) 94%, transparent);
-}
-
-.dark .lavorazioni-scroll-scope .gestionale-list-table-actions-cell {
-  box-shadow: -12px 0 16px -12px color-mix(in srgb, rgb(9 9 11) 88%, transparent);
-}
-
-.lavorazioni-scroll-scope .gestionale-list-table-actions-head {
-  position: sticky;
-  right: 0;
-  z-index: 3;
-  padding-top: 0.5rem;
-  padding-bottom: 0.5rem;
-  padding-left: calc(0.625rem + 3px);
-  padding-right: var(--gestionale-table-edge-inset) !important;
-  text-align: right;
-  white-space: nowrap;
-  vertical-align: middle;
-  background-color: inherit;
-}
+/* Scrollbar Lavorazioni — scope lista condiviso in gestionale-list-table.css */
 
 .lavorazioni-scroll-scope,
 .lavorazioni-scroll-scope * {
@@ -198,10 +109,13 @@
 .lavorazioni-kanban-board {
   -webkit-overflow-scrolling: touch;
   touch-action: pan-x;
+  overscroll-behavior-x: contain;
+  contain: layout paint;
 }
 
 .lavorazioni-kanban-column {
   max-height: var(--lavorazioni-kanban-col-max-h);
+  contain: layout paint;
 }
 
 .lavorazioni-kanban-column-scroll {
@@ -217,6 +131,7 @@
   overflow-y: auto;
   touch-action: pan-y;
   scrollbar-gutter: stable;
+  overscroll-behavior-y: contain;
 }
 
 .lavorazioni-kanban-column-scroll[data-overflowing="false"] {
@@ -227,4 +142,72 @@
 .lavorazioni-kanban-card-hit {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
+  contain: content;
+}
+
+/* Kanban mobile — accordion verticale, zero scroll orizzontale (no drag/DnD) */
+
+.lavorazioni-kanban-mobile {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overscroll-behavior-x: none;
+  overscroll-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lavorazioni-kanban-mobile-section {
+  contain: layout;
+}
+
+.lavorazioni-kanban-mobile-panel {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.2s ease-out;
+}
+
+.lavorazioni-kanban-mobile-panel-open {
+  grid-template-rows: 1fr;
+}
+
+.lavorazioni-kanban-mobile-panel-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.lavorazioni-kanban-loading {
+  display: flex;
+  min-height: 20rem;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .lavorazioni-kanban-loading {
+    min-height: 18rem;
+  }
+}
+
+.lavorazioni-kanban-card-flash {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cab-primary) 45%, transparent);
+}
+
+.lavorazioni-kanban-mobile-card {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  contain: content;
+}
+
+.lavorazioni-kanban-mobile-card:active {
+  opacity: 0.95;
+}
+
+@media (max-width: 1023px) {
+  .lavorazioni-kanban-scope {
+    --lavorazioni-kanban-col-max-h: none;
+  }
 }

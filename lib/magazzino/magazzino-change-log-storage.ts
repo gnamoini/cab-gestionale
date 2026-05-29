@@ -44,7 +44,8 @@ function normalizeEntry(raw: unknown): MagazzinoChangeLogEntry | null {
   return { id, tipo, ricambioId, ricambio, autore, at, riepilogo, changes, annullato, autoreUserId, undoSessionId };
 }
 
-export function loadMagazzinoChangeLog(): MagazzinoChangeLogEntry[] {
+/** Cache locale opzionale (undo / draft non ancora su server). */
+export function readLocalMagazzinoLogCache(): MagazzinoChangeLogEntry[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(MAGAZZINO_CHANGE_LOG_STORAGE_KEY);
@@ -73,11 +74,14 @@ export function saveMagazzinoChangeLog(entries: MagazzinoChangeLogEntry[]): void
 }
 
 export function removeMagazzinoChangeLogEntryById(id: string): void {
-  saveMagazzinoChangeLog(loadMagazzinoChangeLog().filter((e) => e.id !== id));
+  saveMagazzinoChangeLog(readLocalMagazzinoLogCache().filter((e) => e.id !== id));
 }
 
 /** Rimuove voci locali legate a un draft id mai persistito (es. chiusura modale nuovo ricambio). */
 export function purgeMagazzinoLogEntriesForRicambioId(ricambioId: string): void {
   if (!ricambioId.trim()) return;
-  saveMagazzinoChangeLog(loadMagazzinoChangeLog().filter((e) => e.ricambioId !== ricambioId));
+  saveMagazzinoChangeLog(readLocalMagazzinoLogCache().filter((e) => e.ricambioId !== ricambioId));
 }
+
+/** @deprecated Report usa `readLocalMagazzinoLogCache` + server log; preferire merge server-first. */
+export const loadMagazzinoChangeLog = readLocalMagazzinoLogCache;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useToast } from "@/context/toast-context";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import {
@@ -12,10 +12,10 @@ import {
 const invalidate = [[...QK.supportNotes]] as const;
 
 function useSupportNoteConflictToast() {
-  const { push } = useToast();
+  const gestToast = useGestionaleToast();
   return (message: string) => {
     if (message === SUPPORT_NOTE_CONCURRENCY_CONFLICT) {
-      push("Un altro utente ha aggiornato questa nota. Ricarica la pagina.", "warning", 5200);
+      gestToast.warning("Un altro utente ha aggiornato questa nota. Ricarica la pagina.");
     }
   };
 }

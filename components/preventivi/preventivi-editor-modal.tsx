@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconActionButton } from "@/components/design-system";
+import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { ensurePreventivoStruttura, partitionRigheRicambi, pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
 import { calcolaTotaliPreventivo, totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
 import {
@@ -37,7 +40,6 @@ import {
   dsTable,
   dsTableActionBtnDanger,
   dsTableActionGlyph,
-  dsTableHeadCell,
   dsTableRow,
   dsTableWrap,
 } from "@/lib/ui/design-system";
@@ -454,7 +456,7 @@ export function PreventiviEditorModal({
         }}
         onDismiss={mezzoPrompt.dismissPrompt}
       />
-      <div className="relative flex max-h-[min(92dvh,900px)] min-h-0 flex-1 flex-col">
+      <div className={`relative ${gestionaleModalBodyFlexClass}`}>
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar">
           <div className="sticky top-0 z-[2] -mx-4 mb-3 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_94%,transparent)] px-4 py-2 backdrop-blur-sm">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
@@ -569,13 +571,13 @@ export function PreventiviEditorModal({
                 <table className={`${dsTable} min-w-[960px]`}>
                   <thead className="sticky top-0 z-[1] bg-[var(--cab-card)] shadow-[inset_0_-1px_0_0_var(--cab-border)]">
                     <tr>
-                      <th className={dsTableHeadCell}>Codice OE</th>
-                      <th className={`${dsTableHeadCell} min-w-[140px]`}>Descrizione</th>
-                      <th className={`${dsTableHeadCell} w-24 text-right`}>Qtà</th>
-                      <th className={`${dsTableHeadCell} w-28 text-right`}>Prezzo unit.</th>
-                      <th className={`${dsTableHeadCell} w-24 text-right`}>Sconto %</th>
-                      <th className={`${dsTableHeadCell} w-32 text-right`}>Totale netto</th>
-                      <th className={`${dsTableHeadCell} w-10`} />
+                      <GlobalTableHeadLabel label="Codice OE" />
+                      <GlobalTableHeadLabel label="Descrizione" thClassName="min-w-[140px]" />
+                      <GlobalTableHeadLabel label="Qtà" align="right" thClassName="w-24" />
+                      <GlobalTableHeadLabel label="Prezzo unit." align="right" thClassName="w-28" />
+                      <GlobalTableHeadLabel label="Sconto %" align="right" thClassName="w-24" />
+                      <GlobalTableHeadLabel label="Totale netto" align="right" thClassName="w-32" />
+                      <GlobalTableHeadLabel label="" thClassName="w-10" />
                     </tr>
                   </thead>
                   <tbody>
@@ -836,40 +838,18 @@ export function PreventiviEditorModal({
           </button>
         </div>
 
-        {unsavedExitOpen ? (
-          <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/35 p-4 backdrop-blur-[1px]">
-            <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Modifiche non salvate</h3>
-              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-                Hai modifiche non salvate. Come vuoi procedere?
-              </p>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                <button type="button" className={dsBtnNeutral} onClick={() => setUnsavedExitOpen(false)}>
-                  Resta
-                </button>
-                <button
-                  type="button"
-                  className={dsBtnDanger}
-                  onClick={() => {
-                    setUnsavedExitOpen(false);
-                    onClose();
-                  }}
-                >
-                  Esci senza salvare
-                </button>
-                <button
-                  type="button"
-                  className={dsBtnPrimary}
-                  onClick={() => {
-                    onSalva();
-                  }}
-                >
-                  Salva ed esci
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <GestionaleUnsavedChangesDialog
+          open={unsavedExitOpen}
+          placement="nested"
+          onStay={() => setUnsavedExitOpen(false)}
+          onDiscard={() => {
+            setUnsavedExitOpen(false);
+            onClose();
+          }}
+          onSaveAndExit={() => {
+            onSalva();
+          }}
+        />
       </div>
     </LavorazioniModalShell>
   );

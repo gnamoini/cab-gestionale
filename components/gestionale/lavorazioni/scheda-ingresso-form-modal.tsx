@@ -39,6 +39,7 @@ import { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-l
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
 import { dsBtnDanger, dsInput, dsModalFormFooter } from "@/lib/ui/design-system";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 
 export function todayItDate(): string {
@@ -110,7 +111,7 @@ export function SchedaIngressoFormModalShell({
       maxWidthClass="max-w-2xl"
       layerClassName={variant === "edit-scheda" ? "z-[110]" : undefined}
       onRequestClose={onRequestClose}
-      title="Scheda di ingresso"
+      title={variant === "create-lavorazione" ? "Nuova lavorazione" : "Scheda di ingresso"}
       subtitle={subtitle}
     >
       {children}
@@ -141,6 +142,9 @@ export function SchedaIngressoFormBody({
   mezzoPrompt,
   onMezzoDialogAccept,
   onMezzoDialogDismiss,
+  onSaveMezzo,
+  saveMezzoPending = false,
+  mezzoLinked = false,
 }: {
   variant: SchedaIngressoFormVariant;
   fields: SchedaIngressoFields;
@@ -163,6 +167,9 @@ export function SchedaIngressoFormBody({
   mezzoPrompt: UseSchedaIngressoMezzoPromptResult;
   onMezzoDialogAccept?: () => void;
   onMezzoDialogDismiss?: () => void;
+  onSaveMezzo?: () => void;
+  saveMezzoPending?: boolean;
+  mezzoLinked?: boolean;
 }) {
   const disabled = pending || readOnly;
   const globalOpts = useGlobalOptions({
@@ -338,6 +345,9 @@ export function SchedaIngressoFormBody({
           onCopyLastIngresso={readOnly ? undefined : copyLastIngresso}
           clienteRequired={variant === "create-lavorazione"}
           marcaAttrezzaturaRequired={variant === "create-lavorazione"}
+          onSaveMezzo={variant === "create-lavorazione" && !readOnly ? onSaveMezzo : undefined}
+          saveMezzoPending={saveMezzoPending}
+          mezzoLinked={mezzoLinked}
         />
 
         <FormSection title="Intervento">
@@ -433,7 +443,7 @@ export function SchedaIngressoEditModal({
       subtitle="Modifica i dati di accettazione mezzo."
       footer={null}
     >
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <SchedaIngressoFormBody
           variant="edit-scheda"
           fields={fields}

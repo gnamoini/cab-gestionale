@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
@@ -23,10 +24,8 @@ import {
   dsSegmentedWrap,
   dsScrollbar,
   dsTableEmptyCell,
-  dsTableHeadCell,
   dsTableRow,
   dsTableTd,
-  dsTableThPos,
   dsTableWrap,
   gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
@@ -35,8 +34,6 @@ const ricambiTableWrap = `${dsTableWrap} ${dsScrollbar}`;
 const ricambiTbodyTr = dsTableRow;
 const ricambiTd = dsTableTd;
 /** Colonna indice: allineata a sinistra, larghezza minima come le altre tabelle report. */
-const ricambiThPos = `${dsTableThPos} text-left pl-1.5 pr-0.5`;
-
 type VistaMode = "periodo" | "mese" | "anno";
 
 function parseYm(k: string): { y: number; m: number } | null {
@@ -232,28 +229,14 @@ export function ReportRicambiConsumoSection({
                   <col style={{ width: "14%" }} />
                   <col style={{ width: "13%" }} />
                 </colgroup>
-                <thead>
-                  <tr>
-                    <th scope="col" className={ricambiThPos}>
-                      Pos.
-                    </th>
-                    <th scope="col" className={dsTableHeadCell}>
-                      Codice
-                    </th>
-                    <th scope="col" className={dsTableHeadCell}>
-                      Marca
-                    </th>
-                    <th scope="col" className={dsTableHeadCell}>
-                      Descrizione
-                    </th>
-                    <th scope="col" className={`${dsTableHeadCell} text-right`}>
-                      Consumo medio
-                    </th>
-                    <th scope="col" className={`${dsTableHeadCell} text-right`}>
-                      Totale consumo
-                    </th>
-                  </tr>
-                </thead>
+                <GlobalTableHead>
+                  <GlobalTableHeadLabel label="Pos." thClassName="w-6 min-w-[1.5rem] max-w-[1.75rem] px-0.5 text-center" align="center" />
+                  <GlobalTableHeadLabel label="Codice" />
+                  <GlobalTableHeadLabel label="Marca" />
+                  <GlobalTableHeadLabel label="Descrizione" />
+                  <GlobalTableHeadLabel label="Consumo medio" align="right" />
+                  <GlobalTableHeadLabel label="Totale consumo" align="right" />
+                </GlobalTableHead>
                 <tbody>
                   {ranking.length === 0 ? (
                     <tr>

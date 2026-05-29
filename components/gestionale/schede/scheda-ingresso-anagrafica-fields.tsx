@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback, useRef } from "react";
+import { findExactMezzoForIngressoIdent } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import {
   GlobalHierarchyMarcaSelect,
@@ -9,7 +11,7 @@ import {
 } from "@/components/gestionale/global-input";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
-import { dsInput } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -28,6 +30,9 @@ export function SchedaIngressoAnagraficaFields({
   onCopyLastIngresso,
   clienteRequired = false,
   marcaAttrezzaturaRequired = false,
+  onSaveMezzo,
+  saveMezzoPending = false,
+  mezzoLinked = false,
 }: {
   value: SchedaIngressoFields;
   onPatch: (patch: Partial<SchedaIngressoFields>) => void;
@@ -39,11 +44,31 @@ export function SchedaIngressoAnagraficaFields({
   onCopyLastIngresso?: () => void;
   clienteRequired?: boolean;
   marcaAttrezzaturaRequired?: boolean;
+  /** Salva solo anagrafica mezzo (senza chiudere la lavorazione). */
+  onSaveMezzo?: () => void;
+  saveMezzoPending?: boolean;
+  mezzoLinked?: boolean;
 }) {
   const show = (s: SchedaIngressoAnagraficaSection) => sections.includes(s);
   const inputFieldClass = `block w-full ${dsInput}`;
   const listSelectWrapClass = "w-full";
   const mezzoMatchHandler = onExactMezzoMatch ?? (() => {});
+  const scuderiaBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const identSibling = {
+    targa: value.targa,
+    matricola: value.matricola,
+    nScuderia: value.nScuderia,
+  };
+
+  const tryScuderiaMatchOnBlur = useCallback(() => {
+    if (disabled || !onExactMezzoMatch) return;
+    const hit = findExactMezzoForIngressoIdent(mezzi, "nScuderia", value.nScuderia, {
+      targa: value.targa,
+      matricola: value.matricola,
+      nScuderia: value.nScuderia,
+    });
+    if (hit) onExactMezzoMatch(hit);
+  }, [disabled, mezzi, onExactMezzoMatch, value.matricola, value.nScuderia, value.targa]);
 
   return (
     <>
@@ -134,7 +159,7 @@ export function SchedaIngressoAnagraficaFields({
               field="matricola"
               label="Matricola"
               value={value.matricola}
-              otherValue={value.targa}
+              siblingIdent={identSibling}
               mezzi={mezzi}
               disabled={disabled}
               onChange={(v) => onPatch({ matricola: v })}
@@ -145,6 +170,10 @@ export function SchedaIngressoAnagraficaFields({
                 className={`${inputFieldClass} font-mono`}
                 value={value.nScuderia}
                 onChange={(e) => onPatch({ nScuderia: e.target.value })}
+                onBlur={() => {
+                  if (scuderiaBlurTimer.current) clearTimeout(scuderiaBlurTimer.current);
+                  scuderiaBlurTimer.current = setTimeout(() => tryScuderiaMatchOnBlur(), 140);
+                }}
                 disabled={disabled}
                 aria-label="N. scuderia"
               />
@@ -201,13 +230,31 @@ export function SchedaIngressoAnagraficaFields({
             field="targa"
             label="Targa"
             value={value.targa}
-            otherValue={value.matricola}
+            siblingIdent={identSibling}
             mezzi={mezzi}
             disabled={disabled}
             onChange={(v) => onPatch({ targa: v })}
             onExactMezzoMatch={mezzoMatchHandler}
           />
         </FormSection>
+      ) : null}
+
+      {onSaveMezzo ? (
+        <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          {mezzoLinked ? (
+            <p className="order-2 w-full text-xs text-[color:var(--cab-text-muted)] sm:order-1 sm:mr-auto sm:w-auto">
+              Mezzo collegato in anagrafica.
+            </p>
+          ) : null}
+          <button
+            type="button"
+            className={`${dsBtnNeutral} order-1 min-h-11 w-full sm:order-2 sm:min-w-[9.5rem] sm:w-auto`}
+            disabled={disabled || saveMezzoPending}
+            onClick={onSaveMezzo}
+          >
+            {saveMezzoPending ? "Salvataggio…" : "Salva mezzo"}
+          </button>
+        </div>
       ) : null}
 
       {show("dettagli") ? (

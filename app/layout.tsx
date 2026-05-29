@@ -1,7 +1,8 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppProviders } from "@/components/app-providers";
-import { buildThemeBootInlineScript } from "@/lib/theme/theme-boot-inline-script";
+import { getServerSession } from "@/src/lib/auth/get-server-session";
+import { CAB_THEME_BOOT_INLINE_SCRIPT } from "@/lib/theme/theme-boot-inline-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -24,24 +25,32 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  maximumScale: 1,
+};
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialAuthSnapshot = await getServerSession();
+
   return (
     <html
       lang="it"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} dark h-full antialiased`}
-      style={{ colorScheme: "dark" }}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
-        {/* Blocking boot: unica scrittura su <html> prima di React. Attributi bis_* / chrome-extension sono injection esterna. */}
-        <script dangerouslySetInnerHTML={{ __html: buildThemeBootInlineScript() }} />
+        {/* Blocking boot: tema da localStorage prima di React — non impostare `dark` lato SSR (mismatch). */}
+        <script dangerouslySetInnerHTML={{ __html: CAB_THEME_BOOT_INLINE_SCRIPT }} />
       </head>
-      <body className="gestionale-scrollbar flex min-h-full flex-col font-sans antialiased">
-        <AppProviders>{children}</AppProviders>
+      <body className="gestionale-scrollbar flex h-dvh min-h-0 flex-col overflow-x-hidden font-sans antialiased">
+        <AppProviders initialAuthSnapshot={initialAuthSnapshot}>{children}</AppProviders>
       </body>
     </html>
   );

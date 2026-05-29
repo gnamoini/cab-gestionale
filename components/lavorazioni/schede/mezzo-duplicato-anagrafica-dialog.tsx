@@ -1,5 +1,6 @@
 "use client";
 
+import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
 import { mezzoIngressoSuggestLabel } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { dsBtnNeutral, dsBtnPrimary, dsBtnSoftOrange } from "@/lib/ui/design-system";
@@ -19,37 +20,34 @@ export function MezzoDuplicatoAnagraficaDialog({
   onKeepExisting: () => void;
   onCancel: () => void;
 }) {
-  if (!open || !mezzo) return null;
+  if (!mezzo) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[calc(var(--ds-z-modal,80)+1)] flex items-center justify-center bg-black/35 p-4 backdrop-blur-[1px]"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="mezzo-duplicato-anagrafica-title"
-    >
-      <div className="w-full max-w-md rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-5 shadow-2xl">
-        <h3 id="mezzo-duplicato-anagrafica-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-          Mezzo già in anagrafica
-        </h3>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-          Esiste già un mezzo con la stessa targa o matricola. Come procedere?
-        </p>
-        <p className="mt-2 rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-muted)] px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200">
-          {mezzoIngressoSuggestLabel(mezzo)}
-        </p>
-        <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-          <button type="button" className={dsBtnNeutral} onClick={onCancel}>
+    <GestionaleConfirmDialog
+      open={open}
+      title="Mezzo già in anagrafica"
+      layerClassName="z-[calc(var(--ds-z-modal,80)+1)]"
+      onCancel={onCancel}
+      footer={
+        <div className={gestionaleConfirmActionsClass}>
+          <button type="button" className={`${dsBtnNeutral} min-h-[2.75rem] sm:min-h-0`} onClick={onCancel}>
             Annulla
           </button>
-          <button type="button" className={dsBtnSoftOrange} onClick={onKeepExisting}>
+          <button type="button" className={`${dsBtnSoftOrange} min-h-[2.75rem] sm:min-h-0`} onClick={onKeepExisting}>
             Mantieni dati esistenti
           </button>
-          <button type="button" className={dsBtnPrimary} onClick={onOverwrite}>
+          <button type="button" className={`${dsBtnPrimary} min-h-[2.75rem] sm:min-h-0`} onClick={onOverwrite}>
             Sovrascrivi anagrafica
           </button>
         </div>
-      </div>
-    </div>
+      }
+    >
+      <p className="text-sm text-zinc-700 dark:text-zinc-300">
+        Esiste già un mezzo con la stessa targa o matricola. Come procedere?
+      </p>
+      <p className="mt-2 rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-muted)] px-3 py-2 text-xs text-zinc-700 dark:text-zinc-200">
+        {mezzoIngressoSuggestLabel(mezzo)}
+      </p>
+    </GestionaleConfirmDialog>
   );
 }

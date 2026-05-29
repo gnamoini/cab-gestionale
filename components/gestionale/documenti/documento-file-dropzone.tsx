@@ -4,8 +4,10 @@ import { useCallback, useRef, useState, type DragEvent } from "react";
 import { UploadStatusInline } from "@/components/gestionale/upload";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { UploadFeedbackPhase } from "@/lib/upload/upload-feedback-types";
+import { STORAGE_LIMITS } from "@/src/lib/storage/storage-config";
 
 const ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg";
+const MAX_MB = Math.round(STORAGE_LIMITS.documentiMaxBytes / (1024 * 1024));
 
 type DocumentoFileDropzoneProps = {
   pickedName: string;
@@ -28,6 +30,7 @@ export function DocumentoFileDropzone({
 }: DocumentoFileDropzoneProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [sizeError, setSizeError] = useState<string | null>(null);
   const selectionPhase: UploadFeedbackPhase =
     uploadPhase && uploadPhase !== "idle" ? uploadPhase : pickedName ? "selected" : "idle";
   const dropzoneBusy = selectionPhase === "uploading" || disabled;
@@ -35,6 +38,13 @@ export function DocumentoFileDropzone({
   const pick = useCallback(
     (file: File | null) => {
       if (disabled) return;
+      if (file && file.size > STORAGE_LIMITS.documentiMaxBytes) {
+        setSizeError(`Il file supera il limite di ${MAX_MB} MB.`);
+        onFileChange(null);
+        if (fileRef.current) fileRef.current.value = "";
+        return;
+      }
+      setSizeError(null);
       onFileChange(file);
     },
     [disabled, onFileChange],
@@ -57,6 +67,8 @@ export function DocumentoFileDropzone({
     const file = e.dataTransfer.files?.[0] ?? null;
     pick(file);
   }
+
+  const inlineError = sizeError ?? uploadError;
 
   return (
     <div className="space-y-2">
@@ -103,7 +115,9 @@ export function DocumentoFileDropzone({
         >
           Carica PDF o documento
         </button>
-        <p className="text-[11px] text-zinc-500">PDF, Word, Excel, PNG, JPG</p>
+        <p className="text-[11px] text-zinc-500">
+          PDF, Word, Excel, PNG, JPG · Max {MAX_MB} MB
+        </p>
         {selectionPhase === "uploading" ? (
           <p className="text-xs font-medium text-[color:var(--cab-primary)]">Caricamento in corso…</p>
         ) : null}
@@ -119,7 +133,7 @@ export function DocumentoFileDropzone({
       <UploadStatusInline
         phase={selectionPhase}
         fileName={pickedName}
-        error={uploadError}
+        error={inlineError}
         onRetry={onUploadRetry}
       />
       {pickedName && selectionPhase === "selected" ? (

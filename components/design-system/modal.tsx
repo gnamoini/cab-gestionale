@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { dsModalBackdrop, dsModalPanel, dsZModal } from "@/lib/ui/design-system";
+import { resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { CloseButton } from "@/components/design-system/close-button";
 
@@ -11,14 +12,16 @@ export type ModalProps = {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
-  /** Larghezza pannello (default max-w-lg). */
+  /** Larghezza pannello desktop (default max-w-lg). */
   panelClassName?: string;
 };
 
 export function Modal({ open, onClose, title, children, footer, panelClassName = "" }: ModalProps) {
-  useBodyScrollLock(open);
+  useBodyScrollLock(open, "design-system-Modal");
 
   if (!open) return null;
+
+  const panelWidth = resolveModalMaxWidthClass(panelClassName.trim() || "max-w-lg");
 
   return (
     <div
@@ -32,7 +35,7 @@ export function Modal({ open, onClose, title, children, footer, panelClassName =
       }}
     >
       <div
-        className={`${dsModalPanel} flex max-h-[min(92dvh,720px)] flex-col overflow-hidden p-0 ${panelClassName}`.trim()}
+        className={`${dsModalPanel} flex flex-col overflow-hidden p-0 ${panelWidth}`.trim()}
         role="dialog"
         aria-modal="true"
         aria-labelledby="ds-modal-title"

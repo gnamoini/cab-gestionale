@@ -569,11 +569,16 @@ export function ClientLavorazioniView() {
     return map;
   }, [logsQ.data]);
 
-  const [filters, setFilters] = useState<ClientPortalListFilters>(() => {
+  const [filters, setFilters] = useState<ClientPortalListFilters>(CLIENT_PORTAL_FILTERS_EMPTY);
+  const [searchInput, setSearchInput] = useState("");
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
+
+  useEffect(() => {
     const initial = loadClientPortalFiltersPersisted() ?? CLIENT_PORTAL_FILTERS_EMPTY;
-    return initial;
-  });
-  const [searchInput, setSearchInput] = useState(() => filters.search);
+    setFilters(initial);
+    setSearchInput(initial.search);
+    setFiltersHydrated(true);
+  }, []);
   const [filtriEspansi, setFiltriEspansi] = useState(false);
 
   const patchFilters = useCallback((patch: Partial<ClientPortalListFilters>) => {
@@ -725,7 +730,7 @@ export function ClientLavorazioniView() {
     );
   }
 
-  const listLoading = inCorsoQ.isLoading || archivioQ.isLoading;
+  const listLoading = !filtersHydrated || inCorsoQ.isLoading || archivioQ.isLoading;
   const listError = inCorsoQ.error ?? archivioQ.error;
 
   let bodyContent: ReactNode;

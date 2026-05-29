@@ -11,6 +11,10 @@ import {
   type ReactNode,
 } from "react";
 import { dsZToast } from "@/lib/ui/design-system";
+import {
+  warnDirectUseToast,
+  warnTechnicalErrorToast,
+} from "@/src/lib/ux/interaction-enforcement";
 
 export type CabToastTone = "success" | "warning" | "error" | "info";
 
@@ -25,9 +29,27 @@ const TONE_BAR: Record<CabToastTone, string> = {
 
 type ToastContextValue = {
   push: (message: string, tone?: CabToastTone, durationMs?: number) => void;
+  clear: () => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
+
+let externalToastPush: ToastContextValue["push"] | null = null;
+let externalToastClear: ToastContextValue["clear"] | null = null;
+
+/** Per moduli non-React (es. apertura PDF) — registrato da ToastProvider. */
+export function pushGestionaleToast(
+  message: string,
+  tone: CabToastTone = "info",
+  durationMs?: number,
+) {
+  externalToastPush?.(message, tone, durationMs);
+}
+
+/** Pulisce tutte le notifiche attive (es. logout/session expiry). */
+export function clearGestionaleToasts() {
+  externalToastClear?.();
+}
 
 function CabToastViewport({
   toasts,
@@ -78,8 +100,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const recentPushRef = useRef<Map<string, number>>(new Map());
   const DEDUP_MS = 3000;
 
+  const clear = useCallback(() => {
+    timers.current.forEach((tm) => clearTimeout(tm));
+    timers.current.clear();
+    setToasts([]);
+    recentPushRef.current.clear();
+  }, []);
+
   const push = useCallback(
     (message: string, tone: CabToastTone = "info", durationMs = 4200) => {
+      if (tone === "error") warnTechnicalErrorToast(message);
       const now = Date.now();
       const dedupKey = `${tone}:${message}`;
       const last = recentPushRef.current.get(dedupKey);
@@ -105,7 +135,16 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const value = useMemo(() => ({ push }), [push]);
+  const value = useMemo(() => ({ push, clear }), [clear, push]);
+
+  useEffect(() => {
+    externalToastPush = push;
+    externalToastClear = clear;
+    return () => {
+      if (externalToastPush === push) externalToastPush = null;
+      if (externalToastClear === clear) externalToastClear = null;
+    };
+  }, [clear, push]);
 
   return (
     <ToastContext.Provider value={value}>
@@ -115,8 +154,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useToast() {
+/** API interna: provider, bridge e `useGestionaleToast` — senza warn dev. */
+export function useToastContext() {
   const ctx = useContext(ToastContext);
   if (!ctx) throw new Error("useToast must be used within ToastProvider");
+  return ctx;
+}
+
+/** Solo per import diretti fuori allowlist; in dev warn throttled per caller (non a ogni render). */
+export function useToast() {
+  const ctx = useToastContext();
+  const stackRef = useRef<string | undefined>(undefined);
+  if (stackRef.current === undefined) {
+    stackRef.current = new Error().stack;
+  }
+  useEffect(() => {
+    warnDirectUseToast(stackRef.current);
+  }, []);
   return ctx;
 }

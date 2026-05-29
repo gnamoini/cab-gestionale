@@ -1,19 +1,20 @@
 "use client";
 
-import { GESTIONALE_REALTIME_POLL_MS } from "@/lib/realtime/gestionale-realtime-config";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
+import { gestionaleBackgroundRefetchMeta } from "@/src/lib/ux/gestionale-realtime-query-meta";
 
-/** Opzioni React Query condivise — refetch aggressivo solo in polling fallback Realtime. */
+/** Opzioni React Query condivise — invalidazione polling via GestionaleRealtimeBridge. */
 export function useGestionaleQueryOpts() {
   const { gestionale } = useRealtimeStatus();
-  const pollingFallback = gestionale === "polling";
   const realtimeConnected = gestionale === "connected";
 
   return {
     staleTime: 30_000,
-    refetchInterval: pollingFallback ? GESTIONALE_REALTIME_POLL_MS : false,
+    /** Invalidazione centralizzata in GestionaleRealtimeBridge quando `gestionale === "polling"`. */
+    refetchInterval: false,
     refetchOnWindowFocus: !realtimeConnected,
     refetchOnReconnect: true,
     refetchOnMount: realtimeConnected ? false : undefined,
+    meta: gestionaleBackgroundRefetchMeta(),
   } as const;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { SettingsColorPickerPopover } from "@/components/gestionale/settings-color-picker-popover";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
@@ -21,60 +22,29 @@ export function ColorSwatchButton({
   ariaLabel: string;
 }) {
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLButtonElement>(null);
   const hex = normalizeHex(value) ?? "#52525b";
 
-  useEffect(() => {
-    if (!open) return;
-    function onDoc(ev: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(ev.target as Node)) setOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc, true);
-    return () => document.removeEventListener("mousedown", onDoc, true);
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(ev: KeyboardEvent) {
-      if (ev.key === "Escape") setOpen(false);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
-
   return (
-    <div ref={wrapRef} className="relative shrink-0">
+    <div className="relative shrink-0">
       <button
+        ref={anchorRef}
         type="button"
         aria-label={ariaLabel}
         aria-expanded={open}
+        title={ariaLabel}
         className="h-8 w-8 rounded-md border-2 border-zinc-300 shadow-sm transition hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] dark:border-zinc-600"
         style={{ backgroundColor: hex }}
         onClick={() => setOpen((o) => !o)}
       />
-      {open ? (
-        <div className="absolute right-0 top-[calc(100%+6px)] z-[120] flex min-w-[9rem] flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-            Scegli colore
-          </span>
-          <input
-            type="color"
-            value={hex}
-            className="h-10 w-full max-w-[10rem] cursor-pointer overflow-hidden rounded border border-zinc-200 bg-zinc-50 p-0 dark:border-zinc-600 dark:bg-zinc-800"
-            onChange={(e) => {
-              const nh = normalizeHex(e.target.value);
-              if (nh) onChange(nh);
-            }}
-          />
-          <button
-            type="button"
-            className="text-left text-xs font-medium text-[color:var(--cab-primary)] hover:underline"
-            onClick={() => setOpen(false)}
-          >
-            Chiudi
-          </button>
-        </div>
-      ) : null}
+      <SettingsColorPickerPopover
+        open={open}
+        anchorRef={anchorRef}
+        value={value}
+        ariaLabel={ariaLabel}
+        onChange={onChange}
+        onClose={() => setOpen(false)}
+      />
     </div>
   );
 }
@@ -137,6 +107,13 @@ export function StatoSettingsList({
               className={`${inputClass} min-w-0 flex-1 basis-[10rem] text-sm`}
               value={s.label}
               onChange={(e) => onChangeLabel(s.id, e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  e.currentTarget.blur();
+                }
+              }}
               aria-label="Nome stato"
             />
             <div className="flex shrink-0 items-center gap-2">

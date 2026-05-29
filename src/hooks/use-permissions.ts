@@ -4,7 +4,8 @@ import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { buildEffectivePermissionsByModule, type EffectiveModulePermission } from "@/src/lib/permissions/effective-permissions";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
-import { navHrefToSection, canWriteAnyOperational, resolveRole } from "@/lib/auth/rbac";
+import { navHrefToSection, canWriteAnyOperational, resolveRole, type RbacSection } from "@/lib/auth/rbac";
+import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { permissionsService } from "@/src/services/permissions.service";
@@ -80,18 +81,44 @@ export function usePermissions(module?: GestionalePermissionModule): GlobalPermi
     };
   }
 
-  const map = buildEffectivePermissionsByModule(ruolo, undefined);
+  const permsQuery = useUserPermissionsQuery();
+  const map = buildEffectivePermissionsByModule(ruolo, permsQuery.data);
   const row = map[module];
-  return { ...row, isLoading };
+  return { ...row, isLoading: isLoading || permsQuery.isLoading };
 }
 
-/** Lettura nav: usa matrice RBAC centralizzata. */
+const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>> = {
+  magazzino: "magazzino",
+  preventivi: "preventivi",
+  lavorazioni: "lavorazioni",
+  mezzi: "mezzi",
+  report: "report",
+  documenti: "documenti",
+};
+
+/** Nav ERP: `user_permissions` per modulo operativo; capability RBAC per security/impostazioni. */
 export function useNavHrefPermission(href: string): { canRead: boolean; canWrite: boolean; isLoading: boolean } {
   const rbac = useRbac();
+  const { user, status } = useAuth();
+  const permsQuery = useUserPermissionsQuery();
+  const moduleFromHref = gestionaleNavHrefToModule(href);
   const section = navHrefToSection(href);
+
   if (!section) {
     return { canRead: true, canWrite: canWriteAnyOperational(rbac.user), isLoading: rbac.isLoading };
   }
+
+  const mod = moduleFromHref ?? SECTION_TO_MODULE[section];
+  if (mod) {
+    const map = buildEffectivePermissionsByModule(user?.ruolo, permsQuery.data);
+    const row = map[mod];
+    return {
+      canRead: row.canRead,
+      canWrite: row.canWrite,
+      isLoading: rbac.isLoading || status === "loading" || permsQuery.isLoading,
+    };
+  }
+
   return {
     canRead: rbac.canRead(section),
     canWrite: rbac.canWrite(section),

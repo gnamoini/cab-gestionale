@@ -4,9 +4,17 @@
 
 html {
   scrollbar-gutter: stable;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 :root {
+  --cab-vv-height: 100dvh;
+  --cab-vv-offset-top: 0px;
+  --cab-safe-top: env(safe-area-inset-top, 0px);
+  --cab-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --cab-safe-left: env(safe-area-inset-left, 0px);
+  --cab-safe-right: env(safe-area-inset-right, 0px);
   /* — CAB design tokens (SaaS enterprise, light) — */
   --cab-bg-app: #f4f4f5;
   --cab-bg: #fafafa;
@@ -92,10 +100,6 @@ html {
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-html {
-  scrollbar-gutter: stable;
 }
 
 @keyframes cab-drawer-in {
@@ -184,10 +188,26 @@ body::-webkit-scrollbar-thumb:hover {
   background-color: var(--cab-scrollbar-thumb-hover);
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: clip;
+}
+
 body {
   background: var(--cab-bg-app);
   color: var(--cab-text);
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  padding-left: var(--cab-safe-left);
+  padding-right: var(--cab-safe-right);
+}
+
+@supports (height: 100dvh) {
+  body {
+    min-height: 100dvh;
+  }
 }
 
 @layer base {
@@ -246,4 +266,40 @@ html.dark select option {
   .motion-safe\:transition {
     transition: none !important;
   }
+}
+
+/* — iOS Safari / mobile stability — */
+
+.cab-ios-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  transform: translateZ(0);
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.cab-ios-scroll-y {
+  max-width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1023px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+body[data-cab-scroll-lock-count] {
+  overscroll-behavior: none;
+}
+
+/* Scroll principale gestionale: main in AppShell (.cab-ios-scroll-y) */
+html:not(:has(body[data-cab-scroll-lock-count])) body {
+  overflow-y: auto;
 }

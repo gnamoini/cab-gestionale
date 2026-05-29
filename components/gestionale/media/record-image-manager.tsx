@@ -15,8 +15,12 @@ import {
 import { prefetchStorageBuckets } from "@/src/services/storage.service";
 import { GestionaleFileInput } from "@/components/gestionale/upload";
 import { useFileUpload } from "@/hooks/use-file-upload";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { dsBtnDanger, dsBtnNeutral, dsScrollbar } from "@/lib/ui/design-system";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { logService } from "@/src/services/log.service";
 
 type ImageLogAction = "image_uploaded" | "image_deleted";
@@ -69,6 +73,8 @@ export function RecordImageManager({
   onImageEvent?: (event: RecordImageLogEvent) => void;
 }) {
   const qc = useQueryClient();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
+  const gestToast = useGestionaleToast();
   const [images, setImages] = useState<StoredImage[]>([]);
   const [preview, setPreview] = useState<StoredImage | null>(null);
   const [loading, setLoading] = useState(false);
@@ -140,7 +146,13 @@ export function RecordImageManager({
   });
 
   async function removeImage(img: StoredImage) {
-    if (!window.confirm("Eliminare questa foto?")) return;
+    const ok = await confirm({
+      title: "Eliminare foto?",
+      message: "La foto verrà rimossa in modo permanente.",
+      destructive: true,
+      confirmLabel: "Elimina",
+    });
+    if (!ok) return;
     setError(null);
     try {
       await deleteStoredImage(img.path);
@@ -148,9 +160,13 @@ export function RecordImageManager({
       if (preview?.path === img.path) setPreview(null);
       await refresh();
       if (scope === "lavorazioni") dispatchGestionaleLocalMutation(qc, ["log_modifiche"]);
-      if (logError) setError(`Foto rimossa, ma log non registrato: ${logError}`);
+      if (logError) {
+        gestToast.warning("Foto rimossa, ma registrazione nel log non riuscita.");
+      } else {
+        gestToast.successOnce("record-image-delete", GESTIONALE_TOAST.successDeleted);
+      }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Eliminazione non riuscita.");
+      gestToast.errorOnce("record-image-delete", e);
     }
   }
 
@@ -220,11 +236,15 @@ export function RecordImageManager({
         <p className="mt-2.5 text-[11px] text-zinc-500">Nessuna foto caricata.</p>
       )}
       {preview ? (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 p-4" onMouseDown={() => setPreview(null)}>
-          <div className="max-h-[92vh] max-w-4xl" onMouseDown={(e) => e.stopPropagation()}>
+        <GestionaleModalShell
+          onRequestClose={() => setPreview(null)}
+          maxWidthClass="max-w-4xl"
+          layerClassName="!bg-black/70"
+        >
+          <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-4">
             {/* eslint-disable-next-line @next/next/no-img-element -- Preview uses short-lived Supabase signed URLs. */}
-            <img src={preview.signedUrl} alt={preview.name} className="max-h-[82vh] rounded-xl object-contain shadow-2xl" />
-            <div className="mt-3 flex justify-end gap-2">
+            <img src={preview.signedUrl} alt={preview.name} className="max-h-[min(72dvh,640px)] rounded-xl object-contain shadow-2xl" />
+            <div className="mt-3 flex w-full justify-end gap-2 border-t border-[color:var(--cab-border)] pt-3">
               {canEdit ? (
                 <button type="button" className={dsBtnDanger} onClick={() => void removeImage(preview)}>
                   Elimina
@@ -235,8 +255,9 @@ export function RecordImageManager({
               </button>
             </div>
           </div>
-        </div>
+        </GestionaleModalShell>
       ) : null}
+      {confirmDialog}
     </section>
   );
 }

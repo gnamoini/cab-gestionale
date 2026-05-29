@@ -10,8 +10,9 @@ import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 
 /**
- * Dopo il middleware (cookie sessione Supabase), sincronizza con `AuthProvider`
+ * Dopo il proxy (cookie sessione Supabase), sincronizza con `AuthProvider`
  * e reindirizza al login se la sessione client risulta assente.
+ * Shell-first: sidebar/header restano visibili; banner compatto nel main.
  */
 export function GestionaleAuthGate({ children }: { children: React.ReactNode }) {
   const { status, configurationError, refresh } = useAuth();
@@ -51,23 +52,28 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
     );
   }
 
-  if (status === "loading" || status === "degraded") {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center px-4 py-16">
-        <GlobalLoadingView
-          message={status === "degraded" ? "Verifica sessione in corso…" : GLOBAL_LOADING_MESSAGES.session}
-        />
-      </div>
-    );
-  }
+  const showAuthBanner = status === "loading" || status === "degraded" || status === "anonymous";
+  const bannerMessage =
+    status === "degraded"
+      ? "Verifica sessione in corso…"
+      : status === "anonymous"
+        ? GLOBAL_LOADING_MESSAGES.redirectLogin
+        : GLOBAL_LOADING_MESSAGES.session;
 
-  if (status === "anonymous") {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center px-4 py-16">
-        <GlobalLoadingView message={GLOBAL_LOADING_MESSAGES.redirectLogin} />
-      </div>
-    );
-  }
-
-  return <>{children}</>;
+  return (
+    <>
+      {showAuthBanner ? (
+        <div
+          className="border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-card))] px-4 py-2"
+          role="status"
+          aria-busy="true"
+        >
+          <div className="mx-auto flex max-w-3xl items-center justify-center gap-2">
+            <GlobalLoadingView message={bannerMessage} spinnerSize="sm" className="flex-row gap-2 py-0" />
+          </div>
+        </div>
+      ) : null}
+      <div className={status === "loading" ? "pointer-events-none opacity-95" : undefined}>{children}</div>
+    </>
+  );
 }

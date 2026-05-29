@@ -15,10 +15,7 @@ export const permissionsService = {
       if (!uid) return success([]);
 
       const { data, error } = await c.from("user_permissions").select("*").eq("user_id", uid);
-      if (error) {
-        if (/permission|policy|42501|403|denied/i.test(error.message)) return success([]);
-        return err(error.message);
-      }
+      if (error) return err(error.message);
       return success((data ?? []) as UserPermissionRow[]);
     } catch (e) {
       return serviceFailFromError(e);

@@ -6,8 +6,11 @@ import {
   countCompletedByMonth,
   countCompletedInRange,
   monthKeysOverlappingRange,
+  uniqueClientiNelPeriodo,
   uniqueClientiServiti,
 } from "@/lib/report/lavorazioni-report-selectors";
+import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
+import { sumMagazzinoUsciteQtyInRange } from "@/lib/report/magazzino-period-aggregate";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
 function mockArchived(overrides: Partial<LavorazioneArchiviata> = {}): LavorazioneArchiviata {
@@ -116,5 +119,70 @@ assert.equal(countCompletedByMonth([], manual).get("2025-03"), 42);
 
 const keys = monthKeysOverlappingRange(range);
 assert.ok(keys.includes("2025-03"));
+
+const attivaIngress: LavorazioneAttiva = {
+  id: "act-1",
+  macchina: "M1",
+  targa: "—",
+  matricola: "—",
+  nScuderia: "",
+  cliente: "Cliente Ingresso",
+  utilizzatore: "—",
+  cantiere: "",
+  statoId: "in_lavorazione",
+  priorita: "media",
+  addetto: "—",
+  noteInterne: "",
+  dataIngresso: "2025-03-05T10:00:00.000Z",
+  dataCompletamento: null,
+};
+
+assert.equal(
+  uniqueClientiNelPeriodo([attivaIngress], [], [], range),
+  1,
+  "clienti nel periodo: ingresso in corso",
+);
+
+assert.equal(
+  uniqueClientiNelPeriodo([], [], [mockArchived({ cliente: "Solo Chiusura" })], range),
+  1,
+  "clienti nel periodo: chiusura archivio",
+);
+
+const deletedArch = mockRow({
+  id: "deleted-arch",
+  archived: true,
+  deleted_at: "2025-06-01T00:00:00.000Z",
+  archived_at: "2025-03-15T08:00:00.000Z",
+  data_uscita: "2025-03-15T08:00:00.000Z",
+});
+const bundleDeleted = buildReportLavorazioniBundle([deletedArch], [deletedArch]);
+assert.equal(bundleDeleted.completate.length, 0, "soft-deleted archivio excluded from completate");
+
+const magLogAnnullato: MagazzinoChangeLogEntry[] = [
+  {
+    id: "log-1",
+    tipo: "rimozione",
+    ricambioId: "r1",
+    ricambio: "R1",
+    autore: "test",
+    at: "2025-03-10T12:00:00.000Z",
+    riepilogo: "",
+    changes: [{ campo: "Scorta", prima: "10", dopo: "8" }],
+    annullato: true,
+  },
+  {
+    id: "log-2",
+    tipo: "rimozione",
+    ricambioId: "r1",
+    ricambio: "R1",
+    autore: "test",
+    at: "2025-03-11T12:00:00.000Z",
+    riepilogo: "",
+    changes: [{ campo: "Scorta", prima: "8", dopo: "6" }],
+    annullato: false,
+  },
+];
+assert.equal(sumMagazzinoUsciteQtyInRange(magLogAnnullato, range), 2, "annullato log excluded from uscite KPI");
 
 console.log("lavorazioni-report-selectors.test.ts OK");

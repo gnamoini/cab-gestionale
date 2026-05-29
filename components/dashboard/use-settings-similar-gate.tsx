@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { SettingsSimileConfirmDialog } from "@/components/dashboard/settings-simile-confirm-dialog";
 import {
   findSimilarSettingsDuplicate,
@@ -14,6 +15,7 @@ type SimilarPending =
   | null;
 
 export function useSettingsSimilarGate() {
+  const { validation: toastValidation } = useGestionaleToast();
   const [pendingSimilar, setPendingSimilar] = useState<SimilarPending>(null);
 
   const gate = useCallback((
@@ -26,7 +28,7 @@ export function useSettingsSimilarGate() {
     const t = candidate.trim();
     if (!t) return;
     if (isBlockingExactDuplicate(values, t, exclude)) {
-      window.alert("Elemento già presente (anche con maiuscole diverse).");
+      toastValidation("Elemento già presente (anche con maiuscole diverse).");
       onAbort?.();
       return;
     }
@@ -46,7 +48,7 @@ export function useSettingsSimilarGate() {
       return;
     }
     onProceed();
-  }, []);
+  }, [toastValidation]);
 
   const dialog = pendingSimilar ? (
     <SettingsSimileConfirmDialog

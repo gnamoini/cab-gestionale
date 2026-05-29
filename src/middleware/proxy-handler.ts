@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { isStagingPublicSlice, isStagingBlockedPathname } from "@/lib/env/staging-public";
-import { isInvalidRefreshAuthMessage } from "@/src/lib/auth/clear-invalid-auth-session";
+import { resolveServerAuthWithSupabase } from "@/src/lib/auth/resolve-server-auth";
 import { createSupabaseMiddlewareClient } from "@/src/lib/supabase/middleware-client";
 import {
   CLIENT_LAVORAZIONI_SETTINGS_KEY,
@@ -16,6 +16,12 @@ import {
   pathnameToSection,
   resolveClientLavorazioniPortalAccess,
 } from "@/lib/auth/rbac";
+import {
+  OPERATOR_GLOBAL_SETTINGS_KEY,
+  OPERATOR_GLOBAL_SETTINGS_MODULE,
+  parseOperatorGlobalSettingsDbEnabled,
+} from "@/lib/permissions/operator-global-settings";
+import { rbacContextFromPilotDb } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 
 const LOGIN_PATH = "/login";
 
@@ -26,8 +32,13 @@ function isStaticAsset(pathname: string): boolean {
   return false;
 }
 
-export async function middleware(request: NextRequest) {
+/**
+ * Auth + RBAC edge handler (no segment config here — keep matcher in `middleware.ts` only).
+ */
+export async function handleProxyRequest(request: NextRequest): Promise<NextResponse> {
   const pathname = request.nextUrl.pathname;
+  const bootTiming = process.env.NEXT_PUBLIC_BOOT_TIMING === "1";
+  const t0 = bootTiming ? Date.now() : 0;
 
   if (isStaticAsset(pathname)) {
     return NextResponse.next();
@@ -45,21 +56,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  let activeUser = user;
-  if (authError && isInvalidRefreshAuthMessage(authError.message)) {
-    await supabase.auth.signOut();
-    activeUser = null;
-  }
+  const auth = await resolveServerAuthWithSupabase(supabase, request.cookies.getAll());
+  const activeUser = auth.user;
+  const role = activeUser?.ruolo ?? null;
 
   if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
     if (activeUser) {
-      const { data: prof } = await supabase.from("profiles").select("ruolo").eq("id", activeUser.id).maybeSingle();
-      const home = defaultHomePathForRole(prof?.ruolo ?? null);
+      const home = defaultHomePathForRole(role);
       return NextResponse.redirect(new URL(home, request.url));
     }
     return response;
@@ -80,8 +83,14 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  const { data: prof } = await supabase.from("profiles").select("ruolo").eq("id", activeUser.id).maybeSingle();
-  const role = prof?.ruolo ?? null;
+  if (pathname === "/") {
+    const home = defaultHomePathForRole(role);
+    const redirect = NextResponse.redirect(new URL(home, request.url));
+    if (bootTiming) {
+      console.info(`[boot-timing] proxy GET / → ${home} ${Date.now() - t0}ms`);
+    }
+    return redirect;
+  }
 
   let clientLavorazioniAllowed = hasPermission(role, "viewClientLavorazioni");
   if (!clientLavorazioniAllowed && pathnameToSection(pathname) === "lavorazioni_clienti") {
@@ -96,7 +105,18 @@ export async function middleware(request: NextRequest) {
   }
 
   const section = pathnameToSection(pathname);
-  if (section && !canAccessPage(role, pathname, { clientLavorazioniAllowed })) {
+  let rbacCtx = undefined;
+  if (section === "impostazioni") {
+    const { data: pilotRow } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("module", OPERATOR_GLOBAL_SETTINGS_MODULE)
+      .eq("key", OPERATOR_GLOBAL_SETTINGS_KEY)
+      .maybeSingle();
+    rbacCtx = rbacContextFromPilotDb(parseOperatorGlobalSettingsDbEnabled(pilotRow?.value));
+  }
+
+  if (section && !canAccessPage(role, pathname, { clientLavorazioniAllowed }, rbacCtx)) {
     const url = request.nextUrl.clone();
     url.pathname = ACCESS_DENIED_PATH;
     url.searchParams.set("from", defaultHomePathForRole(role));
@@ -104,9 +124,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  if (bootTiming && pathname === "/dashboard") {
+    console.info(`[boot-timing] proxy ${pathname} ${Date.now() - t0}ms`);
+  }
+
   return response;
 }
-
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|_next/data).*)"],
-};

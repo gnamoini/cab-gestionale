@@ -1,7 +1,6 @@
 "use client";
 
-import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
   mezzoDeleteBlockedBy,
@@ -85,33 +84,7 @@ function hasAnyDependency(deps: MezzoDependencies, identityLinkedLavorazione: bo
 }
 
 function storicoPurgeMessage(deps: MezzoDependencies): string {
-  const sentences: string[] = [];
-  if (deps.lavorazioniStoriche > 0) {
-    sentences.push(
-      deps.lavorazioniStoriche === 1
-        ? "La lavorazione già eliminata verrà rimossa definitivamente dal database"
-        : `Le ${deps.lavorazioniStoriche} lavorazioni già eliminate verranno rimosse definitivamente dal database`,
-    );
-  }
-  if (deps.schedeStoriche > 0) {
-    sentences.push(
-      deps.schedeStoriche === 1
-        ? "la scheda collegata verrà eliminata definitivamente"
-        : `le ${deps.schedeStoriche} schede collegate verranno eliminate definitivamente`,
-    );
-  }
-  if (deps.documenti > 0) {
-    sentences.push(
-      deps.documenti === 1
-        ? "il documento collegato perderà il riferimento al mezzo"
-        : `i ${deps.documenti} documenti collegati perderanno il riferimento al mezzo`,
-    );
-  }
-  if (sentences.length === 0) return "";
-  const head = sentences[0]!;
-  const tail = sentences.slice(1);
-  if (tail.length === 0) return `${head}.`;
-  return `${head}; ${tail.join("; ")}.`;
+  return `Verranno rimossi anche ${deps.lavorazioniStoriche} riferiment${deps.lavorazioniStoriche === 1 ? "o" : "i"} storico alle lavorazioni eliminate. I preventivi collegati non verranno toccati.`;
 }
 
 export function MezzoEliminaConfirmDialog({
@@ -127,7 +100,6 @@ export function MezzoEliminaConfirmDialog({
   open: boolean;
   mezzo: MezzoGestito | null;
   deps: MezzoDependencies | null;
-  /** Lavorazione non eliminata collegata per identità (targa/matricola), non solo mezzo_id. */
   identityLinkedLavorazione?: boolean;
   loadingDeps?: boolean;
   onCancel: () => void;
@@ -157,64 +129,51 @@ export function MezzoEliminaConfirmDialog({
     !identityLinkedLavorazione;
 
   return (
-    <LavorazioniModalShell
-      onRequestClose={pending || loadingDeps ? () => {} : onCancel}
+    <GestionaleConfirmDialog
+      open={open}
       title={`Eliminare «${mezzoLabel(mezzo)}»?`}
       subtitle={mezzoDeleteSubtitle(mezzo)}
+      confirmLabel={pending ? "Eliminazione…" : "Elimina mezzo"}
+      destructive
+      pending={pending || loadingDeps}
+      confirmDisabled={loadingDeps || blocked}
+      onCancel={onCancel}
+      onConfirm={onConfirm}
     >
-      <div className="p-4 sm:p-6">
-        {loadingDeps ? (
-          <p className="text-sm text-zinc-500">Verifica collegamenti in corso…</p>
-        ) : (
-          <>
-            {showDeps ? (
-              <div className="space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
-                <p>Questo mezzo è collegato a:</p>
-                <ul className="list-inside list-disc space-y-1 pl-1">
-                  {lines.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-                {blockedLavorazioni ? (
-                  <p className="rounded-md border border-[color:var(--cab-danger)]/30 bg-[color:var(--cab-danger)]/8 px-3 py-2 text-[color:var(--cab-text)]">
-                    Elimina la lavorazione collegata dalla sezione Lavorazioni prima di eliminare questo mezzo.
-                    Concludere o archiviare la lavorazione non è sufficiente.
-                  </p>
-                ) : blocked ? (
-                  <p className="rounded-md border border-[color:var(--cab-danger)]/30 bg-[color:var(--cab-danger)]/8 px-3 py-2 text-[color:var(--cab-text)]">
-                    Impossibile eliminare: restano preventivi collegati.
-                  </p>
-                ) : storicoPurge && deps ? (
-                  <p className="text-[color:var(--cab-text-muted)]">{storicoPurgeMessage(deps)}</p>
-                ) : (
-                  <p className="text-[color:var(--cab-text-muted)]">
-                    Eliminandolo potresti perdere riferimenti storici su documenti o schede collegate.
-                  </p>
-                )}
-              </div>
-            ) : (
-              <p className="text-sm text-zinc-700 dark:text-zinc-300">
-                Questa operazione è irreversibile.
-                <br />
-                Il mezzo verrà eliminato definitivamente dal sistema.
-              </p>
-            )}
-          </>
-        )}
-        <div className="mt-6 flex flex-wrap justify-end gap-2">
-          <button type="button" className={dsBtnNeutral} onClick={onCancel} disabled={pending || loadingDeps}>
-            Annulla
-          </button>
-          <button
-            type="button"
-            className={dsBtnDanger}
-            onClick={onConfirm}
-            disabled={pending || loadingDeps || blocked}
-          >
-            {pending ? "Eliminazione…" : "Elimina mezzo"}
-          </button>
+      {loadingDeps ? (
+        <p className="text-sm text-zinc-500">Verifica collegamenti in corso…</p>
+      ) : showDeps ? (
+        <div className="space-y-3 text-sm text-zinc-700 dark:text-zinc-300">
+          <p>Questo mezzo è collegato a:</p>
+          <ul className="list-inside list-disc space-y-1 pl-1">
+            {lines.map((line) => (
+              <li key={line}>{line}</li>
+            ))}
+          </ul>
+          {blockedLavorazioni ? (
+            <p className="rounded-md border border-[color:var(--cab-danger)]/30 bg-[color:var(--cab-danger)]/8 px-3 py-2 text-[color:var(--cab-text)]">
+              Elimina la lavorazione collegata dalla sezione Lavorazioni prima di eliminare questo mezzo. Concludere o
+              archiviare la lavorazione non è sufficiente.
+            </p>
+          ) : blocked ? (
+            <p className="rounded-md border border-[color:var(--cab-danger)]/30 bg-[color:var(--cab-danger)]/8 px-3 py-2 text-[color:var(--cab-text)]">
+              Impossibile eliminare: restano preventivi collegati.
+            </p>
+          ) : storicoPurge && deps ? (
+            <p className="text-[color:var(--cab-text-muted)]">{storicoPurgeMessage(deps)}</p>
+          ) : (
+            <p className="text-[color:var(--cab-text-muted)]">
+              Eliminandolo potresti perdere riferimenti storici su documenti o schede collegate.
+            </p>
+          )}
         </div>
-      </div>
-    </LavorazioniModalShell>
+      ) : (
+        <p className="text-sm text-zinc-700 dark:text-zinc-300">
+          Questa operazione è irreversibile.
+          <br />
+          Il mezzo verrà eliminato definitivamente dal sistema.
+        </p>
+      )}
+    </GestionaleConfirmDialog>
   );
 }

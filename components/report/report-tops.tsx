@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { cycleReportSort, ReportSortTh, type ReportSortPhase } from "@/components/report/report-sort-th";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -11,8 +12,6 @@ import {
   dsScrollbar,
   dsTableEmptyCell,
   dsTableTd,
-  dsTableThCompare,
-  dsTableThPos,
   dsTableRow,
   dsTableWrap,
 } from "@/lib/ui/design-system";
@@ -20,8 +19,6 @@ import {
 const wrap = `${dsTableWrap} ${dsScrollbar}`;
 const tbodyTr = dsTableRow;
 const tdBase = dsTableTd;
-const thPos = `${dsTableThPos} text-left pl-1.5 pr-0.5`;
-
 function fmtCmpLine(c: ReportRowCompare | undefined): string {
   if (!c) return "—";
   const abs = c.deltaAbs > 0 ? `+${c.deltaAbs}` : String(c.deltaAbs);
@@ -86,23 +83,15 @@ export function ReportTopRicambi({ rows, showCompare }: { rows: TopRicambioRepor
           <col style={{ width: "11%" }} />
           {showCompare ? <col style={{ width: "20%" }} /> : null}
         </colgroup>
-        <thead>
-          <tr>
-            <th scope="col" className={thPos}>
-              #
-            </th>
-            <ReportSortTh label="Codice" columnKey="codice" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-            <ReportSortTh label="Ricambio" columnKey="nome" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-            <ReportSortTh label="Marca" columnKey="marca" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-            <ReportSortTh label="Entrata" columnKey="qtaEntrata" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
-            <ReportSortTh label="Uscita" columnKey="qtaUscita" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
-            {showCompare ? (
-              <th scope="col" className={dsTableThCompare}>
-                Δ vs confronto
-              </th>
-            ) : null}
-          </tr>
-        </thead>
+        <GlobalTableHead>
+          <GlobalTableHeadLabel label="#" thClassName="w-6 min-w-[1.5rem] max-w-[1.75rem] px-0.5 text-center" align="center" />
+          <ReportSortTh label="Codice" columnKey="codice" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+          <ReportSortTh label="Ricambio" columnKey="nome" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+          <ReportSortTh label="Marca" columnKey="marca" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+          <ReportSortTh label="Entrata" columnKey="qtaEntrata" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
+          <ReportSortTh label="Uscita" columnKey="qtaUscita" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
+          {showCompare ? <GlobalTableHeadLabel label="Δ vs confronto" align="right" /> : null}
+        </GlobalTableHead>
         <tbody>
           {data.length === 0 ? (
             <tr>
@@ -187,30 +176,22 @@ export function ReportTopMezzi({ rows, showCompare }: { rows: TopMezzoReportRow[
           <col style={{ width: "10%" }} />
           {showCompare ? <col style={{ width: "19%" }} /> : null}
         </colgroup>
-        <thead>
-          <tr>
-            <th scope="col" className={thPos}>
-              #
-            </th>
-            <ReportSortTh label="Mezzo" columnKey="mezzo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-            <ReportSortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-            <ReportSortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-            <ReportSortTh
-              label="N. scuderia"
-              columnKey="nScuderia"
-              sortColumn={sortColumn}
-              sortPhase={sortPhase}
-              onSort={onSort}
-            />
-            <ReportSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-            <ReportSortTh label="N° lav." columnKey="interventi" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
-            {showCompare ? (
-              <th scope="col" className={dsTableThCompare}>
-                Δ vs confronto
-              </th>
-            ) : null}
-          </tr>
-        </thead>
+        <GlobalTableHead>
+          <GlobalTableHeadLabel label="#" thClassName="w-6 min-w-[1.5rem] max-w-[1.75rem] px-0.5 text-center" align="center" />
+          <ReportSortTh label="Mezzo" columnKey="mezzo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+          <ReportSortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+          <ReportSortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+          <ReportSortTh
+            label="N. scuderia"
+            columnKey="nScuderia"
+            sortColumn={sortColumn}
+            sortPhase={sortPhase}
+            onSort={onSort}
+          />
+          <ReportSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+          <ReportSortTh label="N° lav." columnKey="interventi" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
+          {showCompare ? <GlobalTableHeadLabel label="Δ vs confronto" align="right" /> : null}
+        </GlobalTableHead>
         <tbody>
           {data.length === 0 ? (
             <tr>
@@ -295,21 +276,13 @@ export function ReportTopClienti({ rows, showCompare }: { rows: TopClienteReport
           <col style={{ width: "20%" }} />
           {showCompare ? <col style={{ width: "26%" }} /> : null}
         </colgroup>
-        <thead>
-          <tr>
-            <th scope="col" className={thPos}>
-              #
-            </th>
-            <ReportSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-            <ReportSortTh label="N° interventi" columnKey="interventi" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
-            <ReportSortTh label="Ultimo" columnKey="ultimoIso" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
-            {showCompare ? (
-              <th scope="col" className={dsTableThCompare}>
-                Δ vs confronto
-              </th>
-            ) : null}
-          </tr>
-        </thead>
+        <GlobalTableHead>
+          <GlobalTableHeadLabel label="#" thClassName="w-6 min-w-[1.5rem] max-w-[1.75rem] px-0.5 text-center" align="center" />
+          <ReportSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+          <ReportSortTh label="N° interventi" columnKey="interventi" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
+          <ReportSortTh label="Ultimo" columnKey="ultimoIso" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} align="right" />
+          {showCompare ? <GlobalTableHeadLabel label="Δ vs confronto" align="right" /> : null}
+        </GlobalTableHead>
         <tbody>
           {data.length === 0 ? (
             <tr>

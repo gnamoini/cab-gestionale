@@ -2,7 +2,7 @@
 
 import { useLayoutEffect } from "react";
 import { useQuery, useQueryClient, type UseQueryResult } from "@tanstack/react-query";
-import { useToast } from "@/context/toast-context";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { persistSettingsRecord } from "@/lib/sync/persist-settings-record";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
@@ -54,10 +54,10 @@ export function useCabAppSettingsPayloadQuery(options?: {
 }
 
 function useSettingsConflictToast() {
-  const { push } = useToast();
+  const gestToast = useGestionaleToast();
   return (message: string) => {
     if (message === SETTINGS_CONCURRENCY_CONFLICT) {
-      push("Impostazioni aggiornate da un altro utente", "warning", 5200);
+      gestToast.warning("Impostazioni aggiornate da un altro utente. Ricarica per vedere le modifiche.");
     }
   };
 }

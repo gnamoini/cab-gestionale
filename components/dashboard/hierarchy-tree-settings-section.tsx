@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import { SETTINGS_LIST_ROW } from "@/components/dashboard/settings-list-ui";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
@@ -15,6 +15,10 @@ import {
   rinominaModelloHierarchy,
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import {
+  handleSettingsAddRowEnter,
+  handleSettingsInlineEditKeyDown,
+} from "@/lib/settings/settings-inline-edit-keyboard";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { erpBtnNeutral, erpBtnSoftOrange, erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 
@@ -65,6 +69,14 @@ export function HierarchyTreeSettingsSection({
     });
   }, [q, sortedTree]);
 
+  useEffect(() => {
+    if (variant !== "modello" || filteredTree.length === 0) return;
+    setExpandedMarcaIds((prev) => {
+      if (prev.size > 0) return prev;
+      return new Set(filteredTree.map((m) => m.id));
+    });
+  }, [variant, filteredTree]);
+
   function toggleMarcaExpand(id: string) {
     setExpandedMarcaIds((prev) => {
       const n = new Set(prev);
@@ -91,6 +103,16 @@ export function HierarchyTreeSettingsSection({
               onChange={(e) => setNuovaMarca(e.target.value)}
               placeholder="Nuova marca"
               autoComplete="off"
+              onKeyDown={(e) =>
+                handleSettingsAddRowEnter(e, () => {
+                  const t = nuovaMarca.trim();
+                  if (!t) return;
+                  gate(marcaNames, t, undefined, () => {
+                    setListe((prev) => aggiungiMarcaHierarchy(prev, treeKey, t));
+                    setNuovaMarca("");
+                  });
+                })
+              }
             />
             <button
               type="button"
@@ -122,44 +144,143 @@ export function HierarchyTreeSettingsSection({
               a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }),
             );
             return (
-              <li key={m.id} className={`${SETTINGS_LIST_ROW} px-1`}>
-                <div className="flex w-full items-center gap-2">
-                  {variant === "modello" ? (
-                    <button
-                      type="button"
-                      onClick={() => toggleMarcaExpand(m.id)}
-                      className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-sm font-bold text-zinc-600 shadow-sm hover:bg-zinc-100 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200 dark:hover:bg-zinc-700 ${erpFocus}`}
-                      aria-expanded={modelliOpen}
-                      title={modelliOpen ? "Comprimi modelli" : "Espandi modelli"}
+              <li key={m.id} className="px-1 py-2">
+                {variant === "modello" ? (
+                  <div className="flex flex-col gap-0">
+                    <div
+                      className={`flex w-full items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50/90 px-2 py-2 dark:border-zinc-800 dark:bg-zinc-800/60 ${SETTINGS_LIST_ROW}`}
                     >
-                      <span aria-hidden>{modelliOpen ? "▼" : "▶"}</span>
-                    </button>
-                  ) : null}
-                  <input
-                    className={`${INPUT} font-semibold text-zinc-900 dark:text-zinc-50`}
-                    defaultValue={m.nome}
-                    key={`${m.id}-${m.nome}`}
-                    onBlur={(e) => {
-                      const t = e.target.value.trim();
-                      if (!t || t === m.nome) return;
-                      const input = e.target;
-                      gate(
-                        marcaNames,
-                        t,
-                        m.nome,
-                        () => {
-                          setListe((prev) => rinominaMarcaHierarchy(prev, treeKey, m.id, t));
-                          onRenameMarca?.(m.nome, t);
-                        },
-                        () => {
-                          input.value = m.nome;
-                        },
-                      );
-                    }}
-                    aria-label={`Nome marca ${m.nome}`}
-                    readOnly={variant === "modello"}
-                  />
-                  {variant === "marca" ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleMarcaExpand(m.id)}
+                        className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-sm font-bold text-zinc-600 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 ${erpFocus}`}
+                        aria-expanded={modelliOpen}
+                        title={modelliOpen ? "Comprimi modelli" : "Espandi modelli"}
+                      >
+                        <span aria-hidden>{modelliOpen ? "▼" : "▶"}</span>
+                      </button>
+                      <span
+                        className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50"
+                        title={m.nome}
+                      >
+                        {m.nome}
+                      </span>
+                      <span className="shrink-0 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                        {m.modelli.length} modell{m.modelli.length === 1 ? "o" : "i"}
+                      </span>
+                    </div>
+
+                    {modelliOpen ? (
+                      <div className="mt-2 space-y-1 border-l-2 border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] pl-4 ml-2">
+                        <ul className="space-y-1">
+                          {sortedModelli.map((mod) => (
+                            <li key={mod.id} className={`${SETTINGS_LIST_ROW} bg-zinc-50/80 px-2 dark:bg-zinc-800/50`}>
+                              <input
+                                className={`${INPUT} min-w-0 flex-1 text-zinc-800 dark:text-zinc-100`}
+                                defaultValue={mod.nome}
+                                key={`${mod.id}-${mod.nome}`}
+                                onBlur={(e) => {
+                                  const t = e.target.value.trim();
+                                  if (!t || t === mod.nome) return;
+                                  const input = e.target;
+                                  const modelNames = m.modelli.map((x) => x.nome);
+                                  gate(
+                                    modelNames,
+                                    t,
+                                    mod.nome,
+                                    () => {
+                                      setListe((prev) => rinominaModelloHierarchy(prev, treeKey, m.id, mod.id, t));
+                                      onRenameModello?.(mod.nome, t);
+                                    },
+                                    () => {
+                                      input.value = mod.nome;
+                                    },
+                                  );
+                                }}
+                                onKeyDown={(e) => handleSettingsInlineEditKeyDown(e, mod.nome)}
+                                aria-label={`Modello sotto ${m.nome}`}
+                              />
+                              <button
+                                type="button"
+                                className={`shrink-0 text-xs text-red-600 hover:underline dark:text-red-400 ${erpFocus}`}
+                                onClick={() => {
+                                  setPendingDelete({
+                                    kind: "modello",
+                                    marcaId: m.id,
+                                    modelloId: mod.id,
+                                    label: mod.nome,
+                                  });
+                                }}
+                              >
+                                Elimina
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                          <input
+                            className={INPUT}
+                            value={nuovoModelloByMarca[m.id] ?? ""}
+                            onChange={(e) => setModelDraft(m.id, e.target.value)}
+                            placeholder="Nuovo modello"
+                            autoComplete="off"
+                            onKeyDown={(e) =>
+                              handleSettingsAddRowEnter(e, () => {
+                                const t = (nuovoModelloByMarca[m.id] ?? "").trim();
+                                if (!t) return;
+                                const modelNames = m.modelli.map((x) => x.nome);
+                                gate(modelNames, t, undefined, () => {
+                                  setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, m.id, t));
+                                  setModelDraft(m.id, "");
+                                });
+                              })
+                            }
+                          />
+                          <button
+                            type="button"
+                            className={`${erpBtnSoftOrange} min-h-10 shrink-0 px-2.5 text-xs`}
+                            onClick={() => {
+                              const t = (nuovoModelloByMarca[m.id] ?? "").trim();
+                              if (!t) return;
+                              const modelNames = m.modelli.map((x) => x.nome);
+                              gate(modelNames, t, undefined, () => {
+                                setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, m.id, t));
+                                setModelDraft(m.id, "");
+                              });
+                            }}
+                          >
+                            Aggiungi
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : (
+                  <div className={`flex w-full items-center gap-2 ${SETTINGS_LIST_ROW}`}>
+                    <input
+                      className={`${INPUT} font-semibold text-zinc-900 dark:text-zinc-50`}
+                      defaultValue={m.nome}
+                      key={`${m.id}-${m.nome}`}
+                      onBlur={(e) => {
+                        const t = e.target.value.trim();
+                        if (!t || t === m.nome) return;
+                        const input = e.target;
+                        gate(
+                          marcaNames,
+                          t,
+                          m.nome,
+                          () => {
+                            setListe((prev) => rinominaMarcaHierarchy(prev, treeKey, m.id, t));
+                            onRenameMarca?.(m.nome, t);
+                          },
+                          () => {
+                            input.value = m.nome;
+                          },
+                        );
+                      }}
+                      onKeyDown={(e) => handleSettingsInlineEditKeyDown(e, m.nome)}
+                      aria-label={`Nome marca ${m.nome}`}
+                    />
                     <button
                       type="button"
                       className={`${erpBtnNeutral} min-h-9 shrink-0 px-2 py-1.5 text-xs text-red-600 dark:text-red-400`}
@@ -174,85 +295,8 @@ export function HierarchyTreeSettingsSection({
                     >
                       Elimina
                     </button>
-                  ) : (
-                    <span className="shrink-0 text-[11px] text-zinc-500 dark:text-zinc-400">
-                      {m.modelli.length} modell{m.modelli.length === 1 ? "o" : "i"}
-                    </span>
-                  )}
-                </div>
-
-                {variant === "modello" && modelliOpen ? (
-                  <>
-                    <ul className="mt-1.5 space-y-1 pl-11">
-                      {sortedModelli.map((mod) => (
-                        <li key={mod.id} className={`${SETTINGS_LIST_ROW} bg-zinc-50/80 px-2 dark:bg-zinc-800/50`}>
-                          <input
-                            className={`${INPUT} min-w-0 flex-1 text-zinc-800 dark:text-zinc-100`}
-                            defaultValue={mod.nome}
-                            key={`${mod.id}-${mod.nome}`}
-                            onBlur={(e) => {
-                              const t = e.target.value.trim();
-                              if (!t || t === mod.nome) return;
-                              const input = e.target;
-                              const modelNames = m.modelli.map((x) => x.nome);
-                              gate(
-                                modelNames,
-                                t,
-                                mod.nome,
-                                () => {
-                                  setListe((prev) => rinominaModelloHierarchy(prev, treeKey, m.id, mod.id, t));
-                                  onRenameModello?.(mod.nome, t);
-                                },
-                                () => {
-                                  input.value = mod.nome;
-                                },
-                              );
-                            }}
-                            aria-label={`Modello sotto ${m.nome}`}
-                          />
-                          <button
-                            type="button"
-                            className={`shrink-0 text-xs text-red-600 hover:underline dark:text-red-400 ${erpFocus}`}
-                            onClick={() => {
-                              setPendingDelete({
-                                kind: "modello",
-                                marcaId: m.id,
-                                modelloId: mod.id,
-                                label: mod.nome,
-                              });
-                            }}
-                          >
-                            Elimina
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                    <div className="mt-1.5 flex flex-col gap-2 pl-11 sm:flex-row">
-                      <input
-                        className={INPUT}
-                        value={nuovoModelloByMarca[m.id] ?? ""}
-                        onChange={(e) => setModelDraft(m.id, e.target.value)}
-                        placeholder="Nuovo modello"
-                        autoComplete="off"
-                      />
-                      <button
-                        type="button"
-                        className={`${erpBtnSoftOrange} min-h-10 shrink-0 px-2.5 text-xs`}
-                        onClick={() => {
-                          const t = (nuovoModelloByMarca[m.id] ?? "").trim();
-                          if (!t) return;
-                          const modelNames = m.modelli.map((x) => x.nome);
-                          gate(modelNames, t, undefined, () => {
-                            setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, m.id, t));
-                            setModelDraft(m.id, "");
-                          });
-                        }}
-                      >
-                        Aggiungi
-                      </button>
-                    </div>
-                  </>
-                ) : null}
+                  </div>
+                )}
               </li>
             );
           })}

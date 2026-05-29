@@ -4,7 +4,20 @@ import type { DateRange } from "@/lib/report/date-ranges";
 import { endOfLocalDay, isoInRange, startOfLocalDay } from "@/lib/report/date-ranges";
 import { extractScortaDelta, monthKeyFromIso } from "@/lib/report/magazzino-log-parse";
 
-/** Quantità uscita attribuibile a una riga di log (scarichi da scorta). */
+/** Quantità entrata attribuibile a una riga di log (carichi scorta). Esclude movimenti annullati. */
+export function entrateQtyFromMagazzinoEntry(e: MagazzinoChangeLogEntry): number {
+  if (e.annullato) return 0;
+  const d = extractScortaDelta(e);
+  if (e.tipo === "aggiunta") {
+    return d != null && d > 0 ? d : 1;
+  }
+  if (e.tipo === "update" && d != null && d > 0) {
+    return d;
+  }
+  return 0;
+}
+
+/** Quantità uscita attribuibile a una riga di log (scarichi da scorta). Esclude movimenti annullati. */
 export function usciteQtyFromMagazzinoEntry(e: MagazzinoChangeLogEntry): number {
   if (e.annullato) return 0;
   const d = extractScortaDelta(e);

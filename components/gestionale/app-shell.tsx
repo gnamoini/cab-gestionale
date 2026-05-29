@@ -12,11 +12,12 @@ import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/componen
 import { CLIENTE_HOME_PATH, shouldHideNavHref, isClienteRole } from "@/lib/auth/rbac";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
+import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
 import { ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
 import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
-import { dsPageToolbarBtn } from "@/lib/ui/design-system";
+import { dsPageToolbarBtn, dsZModalHigh } from "@/lib/ui/design-system";
 import {
   isNavTargetCurrent,
   ROUTE_LOADING_FAILSAFE_MS,
@@ -24,6 +25,8 @@ import {
   scheduleRouteTransitionBegin,
 } from "@/src/lib/navigation/route-transition";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { recordHealthMetric } from "@/lib/observability/runtime-health";
 
 const SIDEBAR_COLLAPSED_KEY = "cab-sidebar-collapsed";
 
@@ -148,6 +151,7 @@ function AccountMenu() {
     <div className="relative" ref={wrapRef}>
       <button
         type="button"
+        data-testid="smoke-account-menu"
         onClick={() => setOpen((v) => !v)}
         className={`${dsPageToolbarBtn} h-11 min-w-0 max-w-[min(14rem,42vw)] justify-start gap-2 px-2.5 py-0 text-left text-xs sm:max-w-[14rem] ${erpFocus}`}
         aria-expanded={open}
@@ -175,6 +179,7 @@ function AccountMenu() {
           <button
             type="button"
             role="menuitem"
+            data-testid="smoke-logout"
             onClick={() => void onLogout()}
             className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
           >
@@ -214,6 +219,7 @@ function SidebarAccountFooter() {
       </div>
       <button
         type="button"
+        data-testid="smoke-logout-sidebar"
         onClick={() => void onLogout()}
         className={`mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white py-2 text-xs font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 ${erpFocus}`}
       >
@@ -299,19 +305,7 @@ function MobileNavDrawer({
   onNavigate?: (href: string) => void;
 }) {
   const pathname = usePathname();
-
-  useEffect(() => {
-    if (!open) return;
-    const sb = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
-    const prev = document.body.style.overflow;
-    const prevPad = document.body.style.paddingRight;
-    document.body.style.overflow = "hidden";
-    if (sb > 0) document.body.style.paddingRight = `${sb}px`;
-    return () => {
-      document.body.style.overflow = prev;
-      document.body.style.paddingRight = prevPad;
-    };
-  }, [open]);
+  useBodyScrollLock(open, "MobileNavDrawer");
 
   useEffect(() => {
     if (!open) return;
@@ -331,10 +325,10 @@ function MobileNavDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] md:hidden" role="presentation">
-      <button type="button" className="absolute inset-0 bg-black/50 backdrop-blur-[1px]" aria-label="Chiudi menu" onClick={onClose} />
+    <div className={`fixed inset-0 ${dsZModalHigh} touch-none overscroll-none md:hidden`} role="presentation">
+      <button type="button" className="absolute inset-0 bg-black/50 backdrop-blur-[1px] touch-manipulation" aria-label="Chiudi menu" onClick={onClose} />
       <div
-        className="cab-nav-drawer-panel absolute inset-y-0 left-0 flex w-[min(19.5rem,88vw)] flex-col border-r border-zinc-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+        className="cab-nav-drawer-panel absolute inset-y-0 left-0 flex w-[min(19.5rem,88vw)] max-w-[100vw] flex-col border-r border-zinc-200 bg-white pt-[env(safe-area-inset-top)] shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
         role="dialog"
         aria-modal="true"
         aria-label="Menu principale"
@@ -360,10 +354,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [routeLoading, setRouteLoading] = useState(false);
+  const routeTransitionStartRef = useRef<number | null>(null);
   const { user } = useAuth();
   const pathname = usePathname();
   const rbac = useRbac();
   const clientLavAccess = useClientLavorazioniAccess();
+  const operatorPilot = useOperatorGlobalSettings();
   const clienteOnly = isClienteRole(user);
   const homePath = clienteOnly ? CLIENTE_HOME_PATH : "/dashboard";
   useGlobalLoading(routeLoading ? GLOBAL_LOADING_MESSAGES.navigation : null);
@@ -371,12 +367,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     () =>
       resolveGestionaleNav({
         hideHref: (href) =>
-          shouldHideNavHref(user, href, {
-            clientLavorazioniAllowed: clientLavAccess.allowed,
-            clientLavorazioniLoading: clientLavAccess.isLoading,
-          }),
+          shouldHideNavHref(
+            user,
+            href,
+            {
+              clientLavorazioniAllowed: clientLavAccess.allowed,
+              clientLavorazioniLoading: clientLavAccess.isLoading,
+            },
+            { operatorGlobalSettingsDbEnabled: operatorPilot.dbEnabled },
+          ),
       }),
-    [user, clientLavAccess.allowed, clientLavAccess.isLoading],
+    [user, clientLavAccess.allowed, clientLavAccess.isLoading, operatorPilot.dbEnabled],
   );
 
   useEffect(() => {
@@ -388,6 +389,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (routeTransitionStartRef.current != null) {
+      const durationMs = Math.round(performance.now() - routeTransitionStartRef.current);
+      recordHealthMetric("routeTransitionMs", durationMs);
+      routeTransitionStartRef.current = null;
+    }
     setRouteLoading(false);
     setMobileOpen(false);
   }, [pathname]);
@@ -405,11 +411,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     function onPopState() {
       setRouteLoading(false);
     }
+    function onPageShow() {
+      setRouteLoading(false);
+    }
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") setRouteLoading(false);
+    }
     window.addEventListener(ROUTE_TRANSITION_CANCEL_EVENT, onCancelRouteTransition);
     window.addEventListener("popstate", onPopState);
+    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVisibilityChange);
     return () => {
       window.removeEventListener(ROUTE_TRANSITION_CANCEL_EVENT, onCancelRouteTransition);
       window.removeEventListener("popstate", onPopState);
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, []);
 
@@ -419,6 +435,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         setRouteLoading(false);
         return;
       }
+      routeTransitionStartRef.current = performance.now();
       setRouteLoading(true);
     },
     [pathname],
@@ -453,7 +470,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const mainPad = collapsed ? "md:pl-[4.25rem]" : "md:pl-[12.75rem]";
 
   return (
-    <div className="flex min-h-dvh bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]">
+    <div className="flex h-dvh min-h-0 max-w-[100vw] overflow-x-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]">
       <aside
         className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width] duration-200 ease-out md:flex ${asideW}`}
       >
@@ -496,11 +513,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className={`flex min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${mainPad}`}>
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_88%,transparent)] px-3 backdrop-blur-md sm:px-4 md:justify-between md:gap-3 md:px-5">
+      <div className={`flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${mainPad}`}>
+        <header className="cab-ios-sticky-header flex h-14 shrink-0 items-center gap-2.5 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_92%,transparent)] px-2.5 backdrop-blur-md sm:px-4 md:justify-between md:gap-3 md:px-5 supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
           <div className="flex shrink-0 items-center justify-start">
             <button
               type="button"
+              data-testid="smoke-nav-drawer-open"
               className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] md:hidden dark:border-[color:var(--cab-border-strong)] ${erpFocus}`}
               aria-label="Apri menu"
               onClick={() => setMobileOpen(true)}
@@ -513,7 +531,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={onHeaderHomeClick}
               className={`${erpFocus} hidden min-w-0 items-center gap-2.5 rounded-lg py-1 pr-2 md:inline-flex`}
             >
-              <CabLogo height={28} className="shrink-0 translate-y-[2px]" />
+              <CabLogo height={28} className="shrink-0 translate-y-[2px]" priority />
               <span className="truncate text-xs font-semibold text-[color:var(--cab-text)] sm:text-sm">{CAB_APP_PRODUCT_NAME}</span>
             </Link>
           </div>
@@ -529,7 +547,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Link>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2.5">
             <ThemeToggle />
             <AccountMenu />
           </div>
@@ -537,7 +555,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} onNavigate={beginRouteTransition} />
 
-        <main className="gestionale-scrollbar mx-auto w-full max-w-[min(100%,100rem)] flex-1 overflow-auto px-2 py-3 sm:px-3 md:px-4 md:py-4">
+        <main className="cab-ios-scroll-y gestionale-scrollbar mx-auto min-h-0 w-full max-w-[min(100%,100rem)] flex-1 px-2 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-3 md:px-4 md:py-4">
           {children}
         </main>
       </div>

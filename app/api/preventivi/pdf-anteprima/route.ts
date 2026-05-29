@@ -1,5 +1,6 @@
-import { storePdfPreview, readPdfPreview } from "@/lib/preventivi/pdf-preview-cache";
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import { consumePdfPreview, storePdfPreview } from "@/lib/preventivi/pdf-preview-cache";
+import { isPdfPreviewPostRateLimited } from "@/lib/preventivi/pdf-preview-rate-limit";
+import { verifyServerModuleCan } from "@/src/lib/auth/server-permission-guards";
 import { NextResponse } from "next/server";
 
 const MAX_PDF_BYTES = 15 * 1024 * 1024;
@@ -31,7 +32,7 @@ async function readPdfBytes(formData: FormData): Promise<Uint8Array | null> {
 
 export async function GET(request: Request) {
   const canPreview =
-    (await verifyServerSectionRead("preventivi")) || (await verifyServerSectionRead("lavorazioni"));
+    (await verifyServerModuleCan("preventivi", "read")) || (await verifyServerModuleCan("lavorazioni", "read"));
   if (!canPreview) {
     return new Response("Non autorizzato", { status: 403 });
   }
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
     return new Response("Anteprima non valida", { status: 400 });
   }
 
-  const hit = readPdfPreview(token);
+  const hit = consumePdfPreview(token);
   if (!hit) {
     return new Response("Anteprima scaduta o non valida. Rigenera il PDF.", { status: 404 });
   }
@@ -58,8 +59,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (isPdfPreviewPostRateLimited(request)) {
+    return NextResponse.json({ error: "Troppe richieste. Riprova tra poco." }, { status: 429 });
+  }
+
   const canPreview =
-    (await verifyServerSectionRead("preventivi")) || (await verifyServerSectionRead("lavorazioni"));
+    (await verifyServerModuleCan("preventivi", "read")) || (await verifyServerModuleCan("lavorazioni", "read"));
   if (!canPreview) {
     return NextResponse.json({ error: "Non autorizzato" }, { status: 403 });
   }

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Tooltip } from "@/components/design-system/tooltip";
-import { formatDocumentoRigaSintetica, getDocumentApriHref } from "@/components/gestionale/documenti/documenti-helpers";
+import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
 import { LavorazioniModalShell, LavorazioniModalTitleBar } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
 import { SchedaEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/scheda-elimina-confirm-dialog";
@@ -19,7 +19,12 @@ import {
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
 import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
 import { useLavorazioneCosto } from "@/src/hooks/gestionale/use-lavorazione-costo";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/schede/schede-badges";
+import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -86,11 +91,11 @@ import {
   dsSchedaHubBtn,
   dsSchedaHubBtnDanger,
   dsSchedaHubBtnPrimary,
-  dsTableHeadCell,
   dsTableRow,
   dsTableWrap,
   GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { LavorazioneAttivitaPanel } from "@/components/lavorazioni/lavorazione-attivita-panel";
 import { buildLavorazioneAttivitaFeed } from "@/lib/lavorazioni/lavorazione-attivita-feed";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
@@ -172,14 +177,14 @@ function todayItDate(): string {
   });
 }
 
-function assertItalianDay(label: string, value: string): boolean {
+function assertItalianDay(label: string, value: string, notify: (message: string) => void): boolean {
   const t = value.trim();
   if (!t) {
-    window.alert(`Data obbligatoria: ${label}`);
+    notify(`Data obbligatoria: ${label}`);
     return false;
   }
   if (!parseItalianDayToIso(t).ok) {
-    window.alert(`${label}: usa il formato GG/MM/AAAA`);
+    notify(`${label}: usa il formato GG/MM/AAAA`);
     return false;
   }
   return true;
@@ -405,6 +410,8 @@ export function SchedeLavorazioneModal({
 }) {
   const router = useRouter();
   const { authorName, user } = useAuth();
+  const gestToast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const { canEditWorkOrders } = usePermissions();
   const globalOpts = useGlobalOptions({ debugTag: "SchedeLavorazioneModal" });
   const statiOpts = useMemo(
@@ -649,7 +656,7 @@ export function SchedeLavorazioneModal({
       { excludeLavorazioneId: lav.id },
     );
     if (!match) {
-      window.alert("Nessuna scheda ingresso precedente trovata per questo mezzo (targa o matricola).");
+      gestToast.warning("Nessuna scheda ingresso precedente trovata per questo mezzo (targa o matricola).");
       return;
     }
     const u = currentUser.trim() || "Operatore";
@@ -791,7 +798,7 @@ export function SchedeLavorazioneModal({
 
         await onIngressoCommitted?.(campi);
       } catch {
-        window.alert("Salvataggio note non riuscito. Riprova.");
+        gestToast.errorOnce("schede-note-save", "Salvataggio note non riuscito. Riprova.", { module: "lavorazioni" });
       } finally {
         setPanoramicaNoteSaving(false);
       }
@@ -811,7 +818,7 @@ export function SchedeLavorazioneModal({
     const ig = ingressoF;
     const base = draftRef.current.ingresso;
     if (!ig || !base) return false;
-    if (!assertItalianDay("Data ingresso", ig.dataIngresso)) return false;
+    if (!assertItalianDay("Data ingresso", ig.dataIngresso, gestToast.validation)) return false;
     const prevCampi: SchedaIngressoFields | null = baselineIngressoJson.current
       ? (JSON.parse(baselineIngressoJson.current) as SchedaIngressoFields)
       : null;
@@ -859,7 +866,7 @@ export function SchedeLavorazioneModal({
     if (!doc || !draftRef.current.lavorazioni) return false;
     for (let i = 0; i < doc.campi.righe.length; i += 1) {
       const row = doc.campi.righe[i]!;
-      if (!assertItalianDay(`Data riga ${i + 1}`, row.dataLavorazione)) return false;
+      if (!assertItalianDay(`Data riga ${i + 1}`, row.dataLavorazione, gestToast.validation)) return false;
     }
     const prevDoc: SchedaLavorazioniDoc | null = baselineLavorazioniJson.current
       ? (JSON.parse(baselineLavorazioniJson.current) as SchedaLavorazioniDoc)
@@ -908,7 +915,7 @@ export function SchedeLavorazioneModal({
     if (!doc || !draftRef.current.ricambi) return false;
     for (let i = 0; i < doc.campi.righe.length; i += 1) {
       const row = doc.campi.righe[i]!;
-      if (!assertItalianDay(`Data utilizzo riga ${i + 1}`, row.dataUtilizzo)) return false;
+      if (!assertItalianDay(`Data utilizzo riga ${i + 1}`, row.dataUtilizzo, gestToast.validation)) return false;
     }
     const prevDoc: SchedaRicambiDoc | null = baselineRicambiJson.current
       ? (JSON.parse(baselineRicambiJson.current) as SchedaRicambiDoc)
@@ -1007,7 +1014,7 @@ export function SchedeLavorazioneModal({
   return (
     <>
       <LavorazioniModalShell wide maxWidthClass="max-w-4xl" onRequestClose={onClose} titleId="schede-lav-detail-title">
-        <div className="relative flex min-h-0 max-h-[min(92dvh,920px)] flex-1 flex-col">
+        <div className={`relative ${gestionaleModalBodyFlexClass}`}>
         <LavorazioniModalTitleBar title="Dettaglio lavorazione" titleId="schede-lav-detail-title" onRequestClose={onClose}>
           <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-[color:var(--cab-text-muted)]">
             <span className="rounded-full bg-[color:color-mix(in_srgb,var(--cab-surface-2)_80%,var(--cab-card))] px-2 py-0.5 font-semibold text-[color:var(--cab-text)]">
@@ -1204,7 +1211,7 @@ export function SchedeLavorazioneModal({
                     <li className="text-sm text-zinc-500">Nessun documento sul mezzo collegato.</li>
                   ) : (
                     documentiHubUi.map((d) => {
-                      const href = getDocumentApriHref(d);
+                      const canOpen = canOpenDocumento(d);
                       return (
                         <li
                           key={d.id}
@@ -1214,8 +1221,12 @@ export function SchedeLavorazioneModal({
                             <p className="text-[11px] font-semibold uppercase text-zinc-500">{formatDocumentoRigaSintetica(d)}</p>
                             <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{d.nome}</p>
                           </div>
-                          {href ? (
-                            <button type="button" className={dsBtnNeutral} onClick={() => openUrlInNewTab(href)}>
+                          {canOpen ? (
+                            <button
+                              type="button"
+                              className={dsBtnNeutral}
+                              onClick={() => void openDocumentoFile(d)}
+                            >
                               Apri
                             </button>
                           ) : null}
@@ -1267,56 +1278,35 @@ export function SchedeLavorazioneModal({
           ) : null}
         </div>
 
-        {unsavedPanel ? (
-          <div className="absolute inset-0 z-[120] flex items-center justify-center bg-black/35 p-4 backdrop-blur-[1px]">
-            <div className="w-full max-w-md rounded-xl border border-zinc-200 bg-white p-5 shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
-              <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Modifiche non salvate</h3>
-              <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">
-                Hai modifiche non salvate. Vuoi uscire senza salvare?
-              </p>
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-                <button type="button" className={dsBtnNeutral} onClick={() => setUnsavedPanel(null)}>
-                  Resta
-                </button>
-                <button
-                  type="button"
-                  className={dsBtnDanger}
-                  onClick={() => {
-                    const p = unsavedPanel;
-                    setUnsavedPanel(null);
-                    setStage({ kind: "hub" });
-                    if (p === "ingresso") closeIngressoEditor();
-                    if (p === "lav") setLavDoc(null);
-                    if (p === "ric") setRicDoc(null);
-                  }}
-                >
-                  Esci senza salvare
-                </button>
-                <button
-                  type="button"
-                  className={dsBtnPrimary}
-                  onClick={() => {
-                    const p = unsavedPanel;
-                    if (p === "ingresso") {
-                      if (!commitIngressoSave()) return;
-                      closeIngressoEditor();
-                    } else if (p === "lav") {
-                      if (!commitLavorazioniSave()) return;
-                      setLavDoc(null);
-                    } else if (p === "ric") {
-                      if (!commitRicambiSave()) return;
-                      setRicDoc(null);
-                    }
-                    setUnsavedPanel(null);
-                    setStage({ kind: "hub" });
-                  }}
-                >
-                  Salva ed esci
-                </button>
-              </div>
-            </div>
-          </div>
-        ) : null}
+        <GestionaleUnsavedChangesDialog
+          open={unsavedPanel != null}
+          placement="nested"
+          message="Hai modifiche non salvate. Vuoi uscire senza salvare?"
+          onStay={() => setUnsavedPanel(null)}
+          onDiscard={() => {
+            const p = unsavedPanel;
+            setUnsavedPanel(null);
+            setStage({ kind: "hub" });
+            if (p === "ingresso") closeIngressoEditor();
+            if (p === "lav") setLavDoc(null);
+            if (p === "ric") setRicDoc(null);
+          }}
+          onSaveAndExit={() => {
+            const p = unsavedPanel;
+            if (p === "ingresso") {
+              if (!commitIngressoSave()) return;
+              closeIngressoEditor();
+            } else if (p === "lav") {
+              if (!commitLavorazioniSave()) return;
+              setLavDoc(null);
+            } else if (p === "ric") {
+              if (!commitRicambiSave()) return;
+              setRicDoc(null);
+            }
+            setUnsavedPanel(null);
+            setStage({ kind: "hub" });
+          }}
+        />
         </div>
       </LavorazioniModalShell>
 
@@ -1351,6 +1341,7 @@ export function SchedeLavorazioneModal({
         onCancel={() => setEliminaConfirmTipo(null)}
         onConfirm={confirmDeleteSchedaTipo}
       />
+      {confirmDialog}
     </>
   );
 }
@@ -1590,6 +1581,7 @@ function LavorazioniPanel({
   onDelete: () => void;
   onSave: () => void;
 }) {
+  const { confirm: askConfirm, confirmDialog: lavorazioniConfirmDialog } = useGestionaleConfirm();
   const ro = doc.sorgente === "file_esterno";
   function patchRighe(righe: RigaLavorazioneScheda[]) {
     setDoc({ ...doc, campi: { ...doc.campi, righe } });
@@ -1629,10 +1621,10 @@ function LavorazioniPanel({
         <table className={`${dsTable} text-xs`}>
           <thead>
             <tr>
-              <th className={dsTableHeadCell}>Data</th>
-              <th className={`${dsTableHeadCell} min-w-[min(100%,28rem)] w-full`}>Lavorazioni effettuate</th>
-              <th className={`${dsTableHeadCell} min-w-[12rem]`}>Addetti (ore)</th>
-              {!ro ? <th className={`${dsTableHeadCell} w-24`} /> : null}
+              <GlobalTableHeadLabel label="Data" />
+              <GlobalTableHeadLabel label="Lavorazioni effettuate" thClassName="min-w-[min(100%,28rem)] w-full" />
+              <GlobalTableHeadLabel label="Addetti (ore)" thClassName="min-w-[12rem]" />
+              {!ro ? <GlobalTableHeadLabel label="" thClassName="w-24" /> : null}
             </tr>
           </thead>
           <tbody>
@@ -1705,9 +1697,16 @@ function LavorazioniPanel({
                               className="shrink-0 rounded p-1 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
                               aria-label="Rimuovi addetto"
                               onClick={() => {
-                                if (!window.confirm("Rimuovere questo addetto dalla riga?")) return;
-                                const next = (r.addettiAssegnati ?? []).filter((_, j) => j !== idx);
-                                patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
+                                void askConfirm({
+                                  title: "Rimuovere addetto?",
+                                  message: "L'addetto verrà rimosso dalla riga.",
+                                  destructive: true,
+                                  confirmLabel: "Rimuovi",
+                                }).then((ok) => {
+                                  if (!ok) return;
+                                  const next = (r.addettiAssegnati ?? []).filter((_, j) => j !== idx);
+                                  patchRiga(r.id, (row) => ({ ...row, addettiAssegnati: next }));
+                                });
                               }}
                             >
                               ✕
@@ -1738,9 +1737,16 @@ function LavorazioniPanel({
                         className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
                         aria-label="Rimuovi riga lavorazione"
                         onClick={() => {
-                        if (!window.confirm("Eliminare questa riga?")) return;
-                        patchRighe(doc.campi.righe.filter((x) => x.id !== r.id));
-                      }}
+                          void askConfirm({
+                            title: "Eliminare riga?",
+                            message: "La riga verrà rimossa dalla scheda.",
+                            destructive: true,
+                            confirmLabel: "Elimina",
+                          }).then((ok) => {
+                            if (!ok) return;
+                            patchRighe(doc.campi.righe.filter((x) => x.id !== r.id));
+                          });
+                        }}
                     >
                       ✕
                     </button>
@@ -1772,6 +1778,7 @@ function LavorazioniPanel({
         </button>
       ) : null}
       <SchedaEditorBottomSave readOnly={ro} onSave={onSave} />
+      {lavorazioniConfirmDialog}
     </div>
   );
 }
@@ -1799,6 +1806,8 @@ function RicambiPanel({
   onImmediatePersist: (d: SchedaRicambiDoc) => void;
   onDelete: () => void;
 }) {
+  const gestToast = useGestionaleToast();
+  const { confirm: askConfirm, confirmDialog: ricambiConfirmDialog } = useGestionaleConfirm();
   const ro = doc.sorgente === "file_esterno";
   const qc = useQueryClient();
   const magazzinoQ = useMagazzinoRicambiUIQuery();
@@ -1832,7 +1841,7 @@ function RicambiPanel({
 
   function addRicambioFromMag(p: RicambioMagazzino) {
     if (doc.campi.righe.some((r) => r.ricambioId === p.id)) {
-      window.alert("Ricambio già presente in scheda.");
+      gestToast.validation("Ricambio già presente in scheda.");
       return;
     }
     patchRighe([
@@ -1879,18 +1888,22 @@ function RicambiPanel({
       .slice(0, 12);
   }
 
-  function applyRowMagazzino(r: RigaRicambioScheda) {
+  async function applyRowMagazzino(r: RigaRicambioScheda) {
     if (!r.ricambioId) {
-      window.alert("Seleziona un ricambio dall'anagrafica magazzino o dai suggerimenti.");
+      gestToast.validation("Seleziona un ricambio dall'anagrafica magazzino o dai suggerimenti.");
       return;
     }
     if (r.scaricoMagazzinoApplicato) {
-      window.alert("Scarico già effettuato per questa riga.");
+      gestToast.validation("Scarico già effettuato per questa riga.");
       return;
     }
-    const ok = window.confirm(`Confermare scarico magazzino di ${r.quantita} pz. per ${r.ricambioNome}?`);
+    const ok = await askConfirm({
+      title: "Confermare scarico magazzino?",
+      message: `Scarico di ${r.quantita} pz. per ${r.ricambioNome}.`,
+      confirmLabel: "Conferma scarico",
+    });
     if (!ok) return;
-    void (async () => {
+    try {
       const res = await applyMagazzinoScaricoDaScheda({
         ricambioId: r.ricambioId!,
         lavorazioneId: lav.id,
@@ -1900,7 +1913,7 @@ function RicambiPanel({
         qc,
       });
       if (!res.ok) {
-        window.alert(res.error);
+        gestToast.error(res.error, { module: "magazzino" });
         return;
       }
       const righe = doc.campi.righe.map((x) => (x.id === r.id ? { ...x, scaricoMagazzinoApplicato: true } : x));
@@ -1914,7 +1927,10 @@ function RicambiPanel({
       };
       setDoc(nextDoc);
       onImmediatePersist(nextDoc);
-    })();
+      gestToast.successOnce("scheda-scarico", GESTIONALE_TOAST.successDone);
+    } catch (e) {
+      gestToast.errorOnce("scheda-scarico", e, { module: "magazzino" });
+    }
   }
 
   return (
@@ -1983,13 +1999,13 @@ function RicambiPanel({
         <table className={`${dsTable} text-xs`}>
           <thead>
             <tr>
-              <th className={`${dsTableHeadCell} min-w-[10rem]`}>Ricambio</th>
-              <th className={dsTableHeadCell}>Codice</th>
-              <th className={dsTableHeadCell}>Qtà</th>
-              <th className={dsTableHeadCell}>Addetto</th>
-              <th className={dsTableHeadCell}>Data</th>
-              {!ro ? <th className={dsTableHeadCell}>Magazzino</th> : null}
-              {!ro ? <th className={`${dsTableHeadCell} w-24`} /> : null}
+              <GlobalTableHeadLabel label="Ricambio" thClassName="min-w-[10rem]" />
+              <GlobalTableHeadLabel label="Codice" />
+              <GlobalTableHeadLabel label="Qtà" />
+              <GlobalTableHeadLabel label="Addetto" />
+              <GlobalTableHeadLabel label="Data" />
+              {!ro ? <GlobalTableHeadLabel label="Magazzino" /> : null}
+              {!ro ? <GlobalTableHeadLabel label="" thClassName="w-24" /> : null}
             </tr>
           </thead>
           <tbody>
@@ -2132,8 +2148,15 @@ function RicambiPanel({
                           className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
                           aria-label="Rimuovi riga ricambio"
                           onClick={() => {
-                            if (!window.confirm("Eliminare questa riga?")) return;
-                            patchRighe(doc.campi.righe.filter((x) => x.id !== r.id));
+                            void askConfirm({
+                              title: "Eliminare riga?",
+                              message: "La riga verrà rimossa dalla scheda.",
+                              destructive: true,
+                              confirmLabel: "Elimina",
+                            }).then((ok) => {
+                              if (!ok) return;
+                              patchRighe(doc.campi.righe.filter((x) => x.id !== r.id));
+                            });
                           }}
                         >
                           ✕
@@ -2170,6 +2193,7 @@ function RicambiPanel({
         </button>
       ) : null}
       <SchedaEditorBottomSave readOnly={ro} onSave={onSave} />
+      {ricambiConfirmDialog}
     </div>
   );
 }

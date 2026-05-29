@@ -1,19 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider, type QueryCacheNotifyEvent } from "@tanstack/react-query";
-import { useToast } from "@/context/toast-context";
+import {
+  QueryClient,
+  QueryClientProvider,
+  type MutationCacheNotifyEvent,
+  type QueryCacheNotifyEvent,
+} from "@tanstack/react-query";
+import { useToastContext } from "@/context/toast-context";
 
-import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
-
-const ROLE_DENIED_MESSAGE = RBAC_DENIED_MESSAGE;
-
-function permissionLikely(msg: string): boolean {
-  return /\b(401|403)\b|permesso|negato|\brls\b|unauthor|forbidden|jwt|sessione|non autenticat|not authorized|policy|insufficient/i.test(msg);
-}
+import { formatSupabaseError, isPermissionDeniedError } from "@/src/utils/supabaseErrorHandler";
 
 function QueryErrorToasts({ client }: { client: QueryClient }) {
-  const { push } = useToast();
+  const { push } = useToastContext();
   const pushRef = useRef(push);
   pushRef.current = push;
 
@@ -30,19 +29,18 @@ function QueryErrorToasts({ client }: { client: QueryClient }) {
       if (e.type !== "updated") return;
       const q = e.query;
       if (q.state.status !== "error" || !q.state.error) return;
-      const msg = q.state.error instanceof Error ? q.state.error.message : String(q.state.error);
-      if (!permissionLikely(msg)) return;
-      maybePush(`q:${JSON.stringify(q.queryKey)}`, ROLE_DENIED_MESSAGE);
+      if (!isPermissionDeniedError(q.state.error)) return;
+      maybePush(`q:${JSON.stringify(q.queryKey)}`, formatSupabaseError(q.state.error));
     };
 
     const uq = client.getQueryCache().subscribe(onQuery);
-    const um = client.getMutationCache().subscribe((ev) => {
+    const um = client.getMutationCache().subscribe((ev: MutationCacheNotifyEvent) => {
       if (ev.type !== "updated") return;
       const m = ev.mutation;
+      if (!m) return;
       if (m.state.status !== "error" || !m.state.error) return;
-      const msg = m.state.error instanceof Error ? m.state.error.message : String(m.state.error);
-      if (!permissionLikely(msg)) return;
-      maybePush(`m:${String(m.options.mutationKey ?? "mutation")}`, ROLE_DENIED_MESSAGE);
+      if (!isPermissionDeniedError(m.state.error)) return;
+      maybePush(`m:${String(m.options.mutationKey ?? "mutation")}`, formatSupabaseError(m.state.error));
     });
 
     return () => {

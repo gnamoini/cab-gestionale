@@ -1,0 +1,106 @@
+/**
+ * Scope liste dense gestionale — sticky colonna Azioni, hover riga, edge inset.
+ * Applicato via `gestionale-list-table-scope` (e alias `lavorazioni-scroll-scope`).
+ */
+
+.gestionale-list-table-scope,
+.lavorazioni-scroll-scope {
+  scrollbar-gutter: auto;
+  --gestionale-table-edge-inset: 1rem;
+  --gestionale-table-row-hover: color-mix(in srgb, var(--cab-primary) 4%, var(--cab-card));
+}
+
+@media (min-width: 640px) {
+  .gestionale-list-table-scope,
+  .lavorazioni-scroll-scope {
+    --gestionale-table-edge-inset: 1.25rem;
+  }
+}
+
+.dark .gestionale-list-table-scope,
+.dark .lavorazioni-scroll-scope {
+  --gestionale-table-row-hover: color-mix(in srgb, var(--cab-primary) 6%, var(--cab-card));
+}
+
+.gestionale-list-table-scope tbody tr > td,
+.lavorazioni-scroll-scope tbody tr > td {
+  background-color: rgb(255 255 255);
+  transition: background-color 150ms ease-out;
+}
+
+.dark .gestionale-list-table-scope tbody tr > td,
+.dark .lavorazioni-scroll-scope tbody tr > td {
+  background-color: rgb(24 24 27 / 0.4);
+}
+
+.gestionale-list-table-scope tbody tr:hover,
+.lavorazioni-scroll-scope tbody tr:hover {
+  background-color: transparent !important;
+}
+
+.gestionale-list-table-scope tbody tr:hover > td,
+.lavorazioni-scroll-scope tbody tr:hover > td {
+  background-color: var(--gestionale-table-row-hover) !important;
+}
+
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
+  background-color: rgb(254 242 242 / 0.5);
+}
+
+.dark .gestionale-list-table-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td,
+.dark .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
+  background-color: rgb(69 10 10 / 0.2);
+}
+
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td {
+  background-color: rgb(255 247 237 / 0.9);
+}
+
+.dark .gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td {
+  background-color: rgb(244 244 245 / 0.12);
+}
+
+.gestionale-list-table-scope tbody tr[data-selected="true"]:not(:hover) > td,
+.lavorazioni-scroll-scope tbody tr[data-selected="true"]:not(:hover) > td {
+  background-color: color-mix(in srgb, var(--cab-primary) 10%, var(--cab-card));
+}
+
+.gestionale-list-table-scope .gestionale-list-table-actions-cell,
+.lavorazioni-scroll-scope .gestionale-list-table-actions-cell {
+  position: sticky;
+  right: 0;
+  z-index: 1;
+  padding-top: 0.25rem;
+  padding-bottom: 0.25rem;
+  padding-left: calc(0.5rem + 3px);
+  padding-right: var(--gestionale-table-edge-inset) !important;
+  text-align: right;
+  white-space: nowrap;
+  vertical-align: middle;
+  border-left: 1px solid color-mix(in srgb, var(--cab-border) 70%, transparent);
+  box-shadow: -12px 0 16px -12px color-mix(in srgb, var(--cab-card) 94%, transparent);
+}
+
+.dark .gestionale-list-table-scope .gestionale-list-table-actions-cell,
+.dark .lavorazioni-scroll-scope .gestionale-list-table-actions-cell {
+  box-shadow: -12px 0 16px -12px color-mix(in srgb, rgb(9 9 11) 88%, transparent);
+}
+
+.gestionale-list-table-scope .gestionale-list-table-actions-head,
+.lavorazioni-scroll-scope .gestionale-list-table-actions-head {
+  position: sticky;
+  right: 0;
+  z-index: 3;
+  padding-top: 0.5rem;
+  padding-bottom: 0.5rem;
+  padding-left: calc(0.625rem + 3px);
+  padding-right: var(--gestionale-table-edge-inset) !important;
+  text-align: right;
+  white-space: nowrap;
+  vertical-align: middle;
+  background-color: inherit;
+  border-left: 1px solid color-mix(in srgb, var(--cab-border) 70%, transparent);
+}

@@ -18,6 +18,7 @@ import {
   dsTypoCardTitle,
 } from "@/lib/ui/design-system";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
+import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
 import { isNavTargetCurrent } from "@/src/lib/navigation/route-transition";
 
 const QUICK_NAV_DESC: Partial<Record<GestionaleNavHref, string>> = {
@@ -107,14 +108,20 @@ export function DashboardQuickNav() {
   const pathname = usePathname();
   const { user } = useAuth();
   const clientLav = useClientLavorazioniAccess();
+  const operatorPilot = useOperatorGlobalSettings();
   const items = useMemo(
     () =>
       resolveGestionaleNav({
         hideHref: (href) =>
-          shouldHideNavHref(user, href, {
-            clientLavorazioniAllowed: clientLav.allowed,
-            clientLavorazioniLoading: clientLav.isLoading,
-          }),
+          shouldHideNavHref(
+            user,
+            href,
+            {
+              clientLavorazioniAllowed: clientLav.allowed,
+              clientLavorazioniLoading: clientLav.isLoading,
+            },
+            { operatorGlobalSettingsDbEnabled: operatorPilot.dbEnabled },
+          ),
       }).filter(
         (item) =>
           item.href !== "/supporto" &&
@@ -122,7 +129,7 @@ export function DashboardQuickNav() {
           item.href !== "/impostazioni" &&
           item.href !== "/lavorazioni-clienti",
       ),
-    [user, clientLav.allowed, clientLav.isLoading],
+    [user, clientLav.allowed, clientLav.isLoading, operatorPilot.dbEnabled],
   );
 
   return (

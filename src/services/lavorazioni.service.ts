@@ -224,7 +224,8 @@ export const lavorazioniService = {
       if (e0) return err(e0.message);
       if (!existing) return err("Lavorazione non trovata");
       const { lavorazioneDocumentsService } = await import("@/src/services/lavorazione-documents.service");
-      await lavorazioneDocumentsService.purgeForLavorazione(id);
+      const purgeRes = await lavorazioneDocumentsService.purgeForLavorazione(id);
+      if (!purgeRes.success) return err(purgeRes.error ?? "Errore rimozione documenti lavorazione.");
       const now = new Date().toISOString();
       const { error } = await sb.rpc("soft_delete_lavorazione", { p_lavorazione_id: id });
       if (error) return err(error.message);

@@ -3,7 +3,8 @@
 import { useEffect, type ReactNode } from "react";
 import { CloseButton } from "@/components/design-system";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsBtnPrimary, dsZModalHigh } from "@/lib/ui/design-system";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 
 type MobileFilterDrawerProps = {
   open: boolean;
@@ -25,14 +26,7 @@ export function MobileFilterDrawer({
   onApply,
   applyLabel = "Applica",
 }: MobileFilterDrawerProps) {
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
+  useBodyScrollLock(open, "MobileFilterDrawer");
 
   useEffect(() => {
     if (!open) return;
@@ -52,15 +46,15 @@ export function MobileFilterDrawer({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] md:hidden" role="presentation">
+    <div className={`fixed inset-0 ${dsZModalHigh} touch-none overscroll-none md:hidden`} role="presentation">
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-[1px]"
+        className="absolute inset-0 bg-black/50 backdrop-blur-[1px] touch-manipulation"
         aria-label="Chiudi filtri"
         onClick={onClose}
       />
       <div
-        className="cab-drawer-panel absolute inset-y-0 right-0 flex w-[min(100%,22rem)] max-w-[100vw] flex-col border-l border-zinc-200 bg-white shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
+        className="cab-drawer-panel absolute inset-y-0 right-0 flex w-[min(100%,22rem)] max-w-[100vw] flex-col border-l border-zinc-200 bg-white pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-2xl dark:border-zinc-700 dark:bg-zinc-900"
         role="dialog"
         aria-modal="true"
         aria-labelledby="cab-filter-drawer-title"

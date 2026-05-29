@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useState } from "react";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { ReportYearlyForecastLineChart } from "@/components/report/report-charts";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/report/report-buttons";
 import type { ReportCompareDetail } from "@/lib/report/build-report-model";
@@ -30,6 +31,7 @@ import {
   dsTypoSmall,
   gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import {
   globalTableFixed,
   globalTableHeadEdgeInset,
@@ -142,6 +144,7 @@ export function ReportLavorazioniSection({
   }, [rows, filterRange]);
 
   const [open, setOpen] = useState(false);
+  useBodyScrollLock(open, "report-lavorazioni-manual");
   const [periodMonth, setPeriodMonth] = useState(monthOptions[0]?.value ?? "");
   const [completedCount, setCompletedCount] = useState("");
   const [note, setNote] = useState("");
@@ -390,14 +393,12 @@ export function ReportLavorazioniSection({
           <p className={`${dsTypoCaption} mb-2 font-semibold uppercase tracking-wide`}>Storico manuale registrato</p>
           <div className={`${dsTableWrap} ${dsScrollbar}`}>
             <table className="w-full min-w-[480px] text-sm">
-              <thead>
-                <tr className="text-left text-xs text-[color:var(--cab-text-muted)]">
-                  <th className="pb-2 pr-3 font-semibold">Periodo</th>
-                  <th className="pb-2 pr-3 font-semibold">Completate</th>
-                  <th className="pb-2 pr-3 font-semibold">Note</th>
-                  <th className="pb-2 font-semibold" />
-                </tr>
-              </thead>
+              <GlobalTableHead>
+                <GlobalTableHeadLabel label="Periodo" />
+                <GlobalTableHeadLabel label="Completate" />
+                <GlobalTableHeadLabel label="Note" />
+                <GlobalTableHeadLabel label="" thClassName="w-20" />
+              </GlobalTableHead>
               <tbody>
                 {manualEntries.map((e) => (
                   <tr key={e.id} className={dsTableRow}>
@@ -431,7 +432,7 @@ export function ReportLavorazioniSection({
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div className={dsModalPanel} onMouseDown={(e) => e.stopPropagation()}>
+          <div className={`${dsModalPanel} flex flex-col overflow-hidden`} onMouseDown={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Dati storici manuali</h3>
             <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
               Inserisci il numero di lavorazioni completate per un mese passato. Non modifica le lavorazioni operative

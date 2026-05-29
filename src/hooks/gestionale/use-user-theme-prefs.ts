@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/context/toast-context";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { isAuthSessionEstablished, type AuthStatus } from "@/src/lib/auth/auth-status";
 import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import { themeModeFromSettingsValue, type PersistedThemeMode } from "@/lib/theme/user-theme-prefs";
@@ -41,7 +41,7 @@ export function useUserThemePrefsQuery(userId: string | undefined, authStatus: A
 
 export function useUserThemeUpsertMutation(userId: string | undefined) {
   const qc = useQueryClient();
-  const { push } = useToast();
+  const gestToast = useGestionaleToast();
   return useServiceMutation(
     (theme: PersistedThemeMode) => {
       if (!userId) return Promise.resolve(err("Utente non autenticato."));
@@ -66,7 +66,7 @@ export function useUserThemeUpsertMutation(userId: string | undefined) {
       },
       onError: (e) => {
         if (e.message === SETTINGS_CONCURRENCY_CONFLICT) {
-          push("Preferenza tema aggiornata da un altro dispositivo", "warning", 5200);
+          gestToast.warning("Preferenza tema aggiornata da un altro dispositivo.");
           if (userId) void qc.invalidateQueries({ queryKey: userThemePrefsQueryKey(userId) });
         }
       },

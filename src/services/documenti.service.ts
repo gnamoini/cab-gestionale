@@ -2,6 +2,7 @@
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
+import { deleteDocumentoFully } from "@/lib/documenti/delete-documento-fully";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { CategoriaDocumento, DocumentoRow } from "@/src/types/supabase-tables";
@@ -91,7 +92,15 @@ export const documentiService = {
       const c = await sb();
       const { data: before, error: e0 } = await c.from("documenti").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
-      const merged = mergeDocumentoMeta({ ...(before as DocumentoRow), ...data }, { setUploadTimestamp: false });
+      const prevMeta =
+        before?.meta && typeof before.meta === "object" && !Array.isArray(before.meta)
+          ? (before.meta as Record<string, unknown>)
+          : {};
+      const nextMeta =
+        data.meta && typeof data.meta === "object" && !Array.isArray(data.meta)
+          ? (data.meta as Record<string, unknown>)
+          : {};
+      const merged = mergeDocumentoMeta({ ...data, meta: { ...prevMeta, ...nextMeta } }, { setUploadTimestamp: false });
       const { data: row, error } = await c.from("documenti").update(merged).eq("id", id).select("*").single();
       if (error) return err(error.message);
       const r = row as DocumentoRow;
@@ -112,12 +121,7 @@ export const documentiService = {
       const allowed = await ensurePermission("deleteRecords");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: existing, error: e0 } = await c.from("documenti").select("*").eq("id", id).maybeSingle();
-      if (e0) return err(e0.message);
-      if (existing) await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(existing) });
-      const { error } = await c.from("documenti").delete().eq("id", id);
-      if (error) return err(error.message);
-      return success(null);
+      return deleteDocumentoFully(c, id);
     } catch (e) {
       return serviceFailFromError(e);
     }

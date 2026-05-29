@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { recordHealthMetric } from "@/lib/observability/runtime-health";
 import type { LavorazioneAttiva, PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
@@ -22,6 +23,7 @@ import {
   prioritaLabel,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { useGestionaleModalDialogFocus } from "@/components/gestionale/gestionale-modal-focus";
 import { CloseButton } from "@/components/design-system/close-button";
 import {
   dsInput,
@@ -31,6 +33,7 @@ import {
 } from "@/lib/ui/design-system";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
+import { gestionaleModalBodyFlexClass, resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -149,9 +152,18 @@ export function LavorazioniModalShell({
   /** Id titolo per `aria-labelledby` (default se `title` è impostato). */
   titleId?: string;
 }) {
-  useBodyScrollLock(true);
+  useBodyScrollLock(true, "LavorazioniModalShell");
+  const dialogFocus = useGestionaleModalDialogFocus();
+  const modalOpenStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
+
+  useLayoutEffect(() => {
+    const durationMs = Math.round(performance.now() - modalOpenStartRef.current);
+    recordHealthMetric("modalOpenMs", durationMs);
+  }, []);
 
   const labelledBy = title ? (titleId ?? LAV_MODAL_TITLE_ID) : titleId;
+  const dialogMaxWidth = resolveModalMaxWidthClass(maxWidthClass, wide);
+  const layerAlignClass = alignTop ? "max-md:items-stretch md:items-start" : "";
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -163,7 +175,7 @@ export function LavorazioniModalShell({
 
   return (
     <div
-      className={`${dsLavorazioniModalLayer} ${layerClassName ?? ""} ${alignTop ? "!items-start" : ""}`}
+      className={`${dsLavorazioniModalLayer} ${layerClassName ?? ""} ${layerAlignClass}`}
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {
@@ -173,10 +185,12 @@ export function LavorazioniModalShell({
       }}
     >
       <div
-        className={`${dsLavorazioniModalDialog} flex max-h-[min(92dvh,900px)] flex-col overflow-hidden ${maxWidthClass ?? (wide ? "max-w-2xl" : "max-w-lg")}`}
+        ref={dialogFocus.ref}
+        className={`${dsLavorazioniModalDialog} ${dialogMaxWidth}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
+        onKeyDown={dialogFocus.onKeyDown}
         onMouseDown={(e) => e.stopPropagation()}
       >
         {header ?? (title ? <LavorazioniModalHeader title={title} subtitle={subtitle} onRequestClose={onRequestClose} onBack={onBack} titleId={labelledBy} /> : null)}
@@ -236,7 +250,7 @@ export function EditLavorazioneModal({
   return (
     <LavorazioniModalShell wide onRequestClose={onRequestClose} titleId="lav-edit-modal-title">
       <LavorazioniModalTitleBar title={title} titleId="lav-edit-modal-title" onRequestClose={onRequestClose} />
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
           <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
             <SectionTitle>Mezzo</SectionTitle>
@@ -470,7 +484,7 @@ export function NewLavorazioneModal({
   return (
     <LavorazioniModalShell wide onRequestClose={onRequestClose} titleId="lav-new-modal-title">
       <LavorazioniModalTitleBar title="Nuova lavorazione" titleId="lav-new-modal-title" onRequestClose={onRequestClose} />
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
           <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
             <SectionTitle>Mezzo</SectionTitle>
@@ -718,7 +732,7 @@ export function SettingsLavorazioniModal({
   const inner = (
       <div
         className={`flex min-h-0 w-full min-w-0 flex-col ${
-          lockedTab ? "max-h-none min-h-0 flex-1 overflow-hidden" : "max-h-[min(88dvh,820px)] overflow-hidden"
+          lockedTab ? "max-h-none min-h-0 flex-1 overflow-hidden" : `${gestionaleModalBodyFlexClass} overflow-hidden`
         }`}
       >
         <header className="shrink-0 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_92%,var(--cab-card))] px-4 py-3">

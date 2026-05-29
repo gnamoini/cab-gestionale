@@ -1,8 +1,8 @@
-import { findMezzoByTargaOrMatricola } from "@/lib/mezzi/find-mezzo-by-ident";
+import { findMezzoByIngressoIdent, findMezzoByTargaOrMatricola } from "@/lib/mezzi/find-mezzo-by-ident";
 import { mezzoMatchesSmartQuery } from "@/lib/mezzi/identificazione-mezzo";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
-export type SchedaIngressoIdentField = "targa" | "matricola";
+export type SchedaIngressoIdentField = "targa" | "matricola" | "nScuderia";
 
 const SUGGEST_CAP = 10;
 
@@ -11,7 +11,9 @@ function normIdent(v: string): string {
 }
 
 function identFieldValue(mezzo: MezzoGestito, field: SchedaIngressoIdentField): string {
-  return field === "targa" ? mezzo.targa?.trim() ?? "" : mezzo.matricola?.trim() ?? "";
+  if (field === "targa") return mezzo.targa?.trim() ?? "";
+  if (field === "matricola") return mezzo.matricola?.trim() ?? "";
+  return mezzo.numeroScuderia?.trim() ?? "";
 }
 
 function isEmptyIdent(v: string, field: SchedaIngressoIdentField): boolean {
@@ -56,19 +58,28 @@ export function suggestMezziForIngressoIdent(
   return scored.slice(0, SUGGEST_CAP);
 }
 
-/** Match esatto su targa o matricola digitata. */
+/** Match esatto su targa, matricola o n. scuderia digitata. */
 export function findExactMezzoForIngressoIdent(
   mezzi: readonly MezzoGestito[],
   field: SchedaIngressoIdentField,
   value: string,
-  otherFieldValue = "",
+  sibling: { targa?: string; matricola?: string; nScuderia?: string } = {},
 ): MezzoGestito | null {
   const v = value.trim();
-  if (!v) return null;
-  if (field === "targa") {
-    return findMezzoByTargaOrMatricola(mezzi, v, otherFieldValue.trim());
+  if (!v && field !== "nScuderia") return null;
+
+  const ident = {
+    targa: field === "targa" ? v : sibling.targa ?? "",
+    matricola: field === "matricola" ? v : sibling.matricola ?? "",
+    nScuderia: field === "nScuderia" ? v : sibling.nScuderia ?? "",
+  };
+
+  if (field === "targa" || field === "matricola") {
+    const hit = findMezzoByTargaOrMatricola(mezzi, ident.targa, ident.matricola);
+    if (hit) return hit;
   }
-  return findMezzoByTargaOrMatricola(mezzi, otherFieldValue.trim(), v);
+
+  return findMezzoByIngressoIdent(mezzi, ident);
 }
 
 export function mezzoIngressoSuggestLabel(mezzo: MezzoGestito): string {

@@ -4,7 +4,7 @@ import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { deltaPct, isoInRange, type DateRange } from "@/lib/report/date-ranges";
-import { extractScortaDelta } from "@/lib/report/magazzino-log-parse";
+import { aggregateMagazzinoQtyByProductInRange } from "@/lib/report/magazzino-period-aggregate";
 
 export type ReportRowCompare = {
   prior: number;
@@ -81,44 +81,20 @@ export function buildTopRicambiPeriodo(
   prodotti: RicambioMagazzino[],
   range: DateRange,
 ): TopRicambioReportRow[] {
-  const byId = new Map<string, { in: number; out: number }>();
-  const bump = (id: string) => {
-    if (!byId.has(id)) byId.set(id, { in: 0, out: 0 });
-    return byId.get(id)!;
-  };
-
-  for (const e of magLog) {
-    if (!isoInRange(e.at, range)) continue;
-    const row = bump(e.ricambioId);
-    const d = extractScortaDelta(e);
-    if (e.tipo === "aggiunta") {
-      const q = d != null && d > 0 ? d : 1;
-      row.in += q;
-      continue;
-    }
-    if (e.tipo === "rimozione") {
-      const q = d != null && d < 0 ? -d : 1;
-      row.out += q;
-      continue;
-    }
-    if (e.tipo === "update" && d != null) {
-      if (d > 0) row.in += d;
-      else row.out += -d;
-    }
-  }
+  const byId = aggregateMagazzinoQtyByProductInRange(magLog, range);
 
   const prod = new Map(prodotti.map((p) => [p.id, p]));
   const out: Array<Omit<TopRicambioReportRow, "rank">> = [];
   for (const [id, v] of byId) {
     const p = prod.get(id);
-    if (!p && v.in === 0 && v.out === 0) continue;
+    if (!p && v.entrate === 0 && v.uscite === 0) continue;
     out.push({
       id,
       codice: p?.codiceFornitoreOriginale ?? "—",
       nome: p?.descrizione ?? "Ricambio",
       marca: p?.marca ?? "—",
-      qtaEntrata: Math.round(v.in * 100) / 100,
-      qtaUscita: Math.round(v.out * 100) / 100,
+      qtaEntrata: Math.round(v.entrate * 100) / 100,
+      qtaUscita: Math.round(v.uscite * 100) / 100,
     });
   }
   out.sort((a, b) => b.qtaUscita + b.qtaEntrata - (a.qtaUscita + a.qtaEntrata));

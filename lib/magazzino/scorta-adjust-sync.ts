@@ -1,7 +1,9 @@
 "use client";
 
 import type { QueryClient } from "@tanstack/react-query";
-import { patchMagazzinoListCache } from "@/lib/magazzino/magazzino-list-cache";
+import { magazzinoListQueryKey, mapMagazzinoRowsToUI, patchMagazzinoListCache } from "@/lib/magazzino/magazzino-list-cache";
+import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
+import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { magazzinoService } from "@/src/services/magazzino.service";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
@@ -34,17 +36,10 @@ function getQueue(ricambioId: string): QueueEntry {
 }
 
 function readScortaFromCache(qc: QueryClient, ricambioId: string, autore: string): number | null {
-  let quantita: number | null = null;
-  patchMagazzinoListCache(
-    qc,
-    (prev) => {
-      const row = prev.find((p) => p.id === ricambioId);
-      if (row) quantita = Math.max(0, Math.round(row.scorta));
-      return prev;
-    },
-    autore,
-  );
-  return quantita;
+  const rows = qc.getQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey());
+  if (!rows) return null;
+  const row = mapMagazzinoRowsToUI(rows, autore).find((p) => p.id === ricambioId);
+  return row ? Math.max(0, Math.round(row.scorta)) : null;
 }
 
 /** Patch ottimistico scorta — usa sempre l’updater funzionale sulla cache. */
@@ -73,6 +68,10 @@ export function applyScortaOptimisticDelta(
     },
     autore,
   );
+
+  if (found) {
+    markRecentLocalGestionaleMutation(["magazzino_ricambi"], ricambioId);
+  }
 
   const q = getQueue(ricambioId);
   if (found) {

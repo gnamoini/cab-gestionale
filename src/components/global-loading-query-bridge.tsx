@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useGlobalLoadingContextBridge } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { readGlobalLoadingMeta } from "@/src/lib/react-query/global-loading-meta";
+import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 
 /**
  * Overlay globale per mutation/query con `meta.globalLoading: true` (opt-in).
@@ -13,6 +14,8 @@ import { readGlobalLoadingMeta } from "@/src/lib/react-query/global-loading-meta
 export function GlobalLoadingQueryBridge() {
   const client = useQueryClient();
   const syncFromCaches = useGlobalLoadingContextBridge();
+  const { gestionale } = useRealtimeStatus();
+  const realtimeConnected = gestionale === "connected";
 
   useEffect(() => {
     const recompute = () => {
@@ -23,7 +26,15 @@ export function GlobalLoadingQueryBridge() {
       const queries = client
         .getQueryCache()
         .getAll()
-        .filter((q) => q.state.fetchStatus === "fetching" && q.state.status === "pending");
+        .filter((q) => {
+          if (q.state.fetchStatus !== "fetching") return false;
+          const meta = q.meta as { suppressGlobalLoadingOnBackgroundRefetch?: boolean } | undefined;
+          const suppressBg =
+            meta?.suppressGlobalLoadingOnBackgroundRefetch === true ||
+            (realtimeConnected && q.state.data !== undefined);
+          if (suppressBg) return false;
+          return q.state.status === "pending" || q.state.status === "success";
+        });
 
       const pending = [
         ...mutations.map((m) => readGlobalLoadingMeta(m.options.meta)),
@@ -45,7 +56,7 @@ export function GlobalLoadingQueryBridge() {
       unsubM();
       unsubQ();
     };
-  }, [client, syncFromCaches]);
+  }, [client, realtimeConnected, syncFromCaches]);
 
   return null;
 }
