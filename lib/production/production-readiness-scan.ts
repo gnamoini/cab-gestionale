@@ -109,7 +109,11 @@ export function scanProductionReadinessCode(repoRoot = process.cwd()): Productio
   for (const { rel, content } of files) {
     if (SKIP_SCAN_PREFIXES.some((p) => rel.startsWith(p))) continue;
 
-    if (rel === "lib/rbac.ts" && content.includes("isOperatorGlobalSettingsEnabled")) {
+    if (
+      rel === "lib/rbac.ts" &&
+      (/operatore:\s*\{[\s\S]*?can_manage_settings:\s*true/.test(content) ||
+        content.includes("isOperatorGlobalSettingsEnabled"))
+    ) {
       isOperatorGlobalSettingsUsedInRbac = true;
     }
 

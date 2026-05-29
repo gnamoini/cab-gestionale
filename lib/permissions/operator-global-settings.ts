@@ -1,8 +1,7 @@
 /**
- * Override pilot: `can_manage_settings` per operatori.
- * Source of truth applicativa — env (deploy) AND flag DB devono essere entrambi attivi.
- *
- * RLS Postgres usa `rbac_operator_global_settings_db_enabled()` (solo DB; env non leggibile in SQL).
+ * Flag pilot legacy (`app_settings.system.enable_operator_global_settings`).
+ * RBAC: operatore ha `can_manage_settings` in lib/rbac.ts e DB (manager + operatore).
+ * Env+DB qui servono solo per badge/diagnostica pilot UI, non per bloccare l’accesso.
  */
 
 export const OPERATOR_GLOBAL_SETTINGS_MODULE = "system" as const;

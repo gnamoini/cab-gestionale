@@ -198,7 +198,7 @@ export function validateProductionReadiness(input: ProductionReadinessInput = {}
     pushFinding(blockers, {
       id: "rbac-central-function-missing",
       category: "rbac",
-      message: "lib/rbac.ts non usa isOperatorGlobalSettingsEnabled() per can_manage_settings.",
+      message: "lib/rbac.ts non abilita can_manage_settings per operatore (matrice o pilot centralizzato).",
     });
   }
 
