@@ -55,10 +55,18 @@ export {
   pdfFieldsToBody,
   drawGestionaleFieldSectionTable,
   drawGestionaleDataSectionTable,
+  headRowCellsForPdf,
   drawGestionaleSideBySideFieldSections,
   drawGestionaleSideBySideMetricBoxes,
   padPdfFieldsToEqualRows,
   gestionaleSectionTableHooks,
+  PDF_GESTIONALE_MUTED_FILL,
 } from "@/lib/pdf/gestionale-section-table";
 
-export type { GestionaleFieldSectionOpts, GestionaleDataSectionTotal, GestionaleSideBySidePanel, GestionaleMetricBox } from "@/lib/pdf/gestionale-section-table";
+export type {
+  GestionaleFieldSectionOpts,
+  GestionaleDataSectionTotal,
+  GestionaleDataSectionTableLayout,
+  GestionaleSideBySidePanel,
+  GestionaleMetricBox,
+} from "@/lib/pdf/gestionale-section-table";

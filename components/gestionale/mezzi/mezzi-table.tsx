@@ -17,8 +17,10 @@ import {
 } from "@/components/gestionale/global-table";
 import {
   gestionaleListColAzioniClass,
-  gestionaleListTableRowClass,
+  gestionaleListTableRowBaseClass,
+  gestionaleListTableRowTone,
   gestionaleListTableTd,
+  gestionaleListTableTdCenter,
   gestionaleListTableTdAzioni,
   gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
@@ -28,10 +30,16 @@ import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortP
 /** 5 icone × 36px + gap — larghezza fissa per non assorbire slack in `table-fixed`. */
 const mezziTableActionsColClass = gestionaleListColAzioniClass;
 
+/** Righe multi-riga: min-height + sfondo come Lavorazioni/Magazzino (hover via scroll scope). */
+const mezziTableRowClass = `${gestionaleListTableRowBaseClass} min-h-14 bg-white dark:bg-zinc-900/40`;
+
+/** Padding verticale leggermente maggiore per celle a due righe. */
+const mezziTableTd = `${gestionaleListTableTd} py-2`;
+
 const mezziCellStackClass = "flex min-w-0 flex-col gap-0.5";
-const mezziCellPrimaryClass = "break-words text-[13px] font-medium leading-snug text-zinc-800 dark:text-zinc-100";
-const mezziCellSecondaryClass = "break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400";
-const mezziCellIdentLineClass = "break-words text-[13px] font-medium leading-snug text-zinc-800 dark:text-zinc-100";
+const mezziCellPrimaryClass = "break-words text-sm font-medium leading-snug text-[color:var(--cab-text)]";
+const mezziCellSecondaryClass = "break-words text-xs leading-snug text-[color:var(--cab-text-muted)]";
+const mezziCellIdentLineClass = "break-words text-sm font-medium leading-snug text-[color:var(--cab-text)]";
 
 function IconInfo({ className = dsTableActionGlyph }: { className?: string }) {
   return (
@@ -214,16 +222,10 @@ function MezzoRowInner({
   return (
     <tr
       id={`mezzo-row-${m.id}`}
-      className={[
-        gestionaleListTableRowClass,
-        flash
-          ? "bg-white/95 shadow-[inset_0_0_0_1px_rgba(228,228,231,0.95),0_0_20px_rgba(255,255,255,0.65)] transition-[background-color,box-shadow] duration-200 ease-out dark:bg-zinc-100/12 dark:shadow-[inset_0_0_0_1px_rgba(82,82,91,0.45),0_0_18px_rgba(255,255,255,0.06)]"
-          : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      data-gestionale-row-tone={gestionaleListTableRowTone({ flash })}
+      className={mezziTableRowClass}
     >
-      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+      <td className={`min-w-0 ${mezziTableTd}`}>
         <div className={mezziCellStackClass}>
           <span className={mezziCellPrimaryClass}>{displayScalar(m.cliente)}</span>
           {hasUtilizzatore(m.utilizzatore) ? (
@@ -231,10 +233,10 @@ function MezzoRowInner({
           ) : null}
         </div>
       </td>
-      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+      <td className={`min-w-0 ${mezziTableTd}`}>
         <span className={mezziCellPrimaryClass}>{displayScalar(m.cantiere)}</span>
       </td>
-      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+      <td className={`min-w-0 ${mezziTableTd}`}>
         <MezziCellTwoLine
           primary={displayScalar(m.marca)}
           secondary={cellIdentValue(m.modello)}
@@ -245,25 +247,20 @@ function MezzoRowInner({
           }
         />
       </td>
-      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+      <td className={`min-w-0 ${mezziTableTd}`}>
         <MezziCellTwoLine
           primary={displayScalar(m.marcaTelaio)}
           secondary={displayScalar(m.modelloTelaio)}
         />
       </td>
-      <td className={`min-w-0 ${gestionaleListTableTd}`}>
+      <td className={`min-w-0 ${mezziTableTd}`}>
         <MezziCellIdentificazione lines={identLines} />
       </td>
-      <td className={`min-w-0 ${gestionaleListTableTd}`}>
-        <span className={`${mezziCellPrimaryClass} font-normal`}>{ultima}</span>
+      <td className={`min-w-0 ${mezziTableTd}`}>
+        <span className={`${mezziCellPrimaryClass} font-normal tabular-nums`}>{ultima}</span>
       </td>
-      <td className={`min-w-0 ${gestionaleListTableTd}`}>
-        <div className={mezziCellStackClass}>
-          <span className={`${mezziCellPrimaryClass} tabular-nums`}>{nLavorazioni}</span>
-          <span className={mezziCellSecondaryClass}>
-            {nLavorazioni === 1 ? "lavorazione" : "lavorazioni"}
-          </span>
-        </div>
+      <td className={`${gestionaleListTableTdCenter} py-2`}>
+        <span className={`${mezziCellPrimaryClass} tabular-nums`}>{nLavorazioni}</span>
       </td>
       <td className={gestionaleListTableTdAzioni}>
         <div className={gestionaleListTableActionsGroupEnd}>
@@ -292,43 +289,59 @@ function MezzoMobileCard({
   const ultima = ultimaLavorazioneLabel(interventi);
   const nLavorazioni = interventi.length;
   const identLines = identificazioneLines(m);
+  const sectionDivider = "border-b border-zinc-200/80 pb-2 dark:border-zinc-700/80";
+  const metaDt = "text-[10px] font-medium text-zinc-500 dark:text-zinc-400";
+  const metaDd = "mt-0.5 text-xs font-medium leading-snug text-zinc-800 dark:text-zinc-200";
   void _inOff;
   return (
     <CardMobile
       id={`mezzo-row-${m.id}`}
-      className={flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]" : ""}
+      className={[
+        "gap-0 !p-3 sm:!p-3.5",
+        flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
-      <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Cliente</p>
-        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{displayScalar(m.cliente)}</p>
-        {hasUtilizzatore(m.utilizzatore) ? (
-          <p className="text-xs text-zinc-500 dark:text-zinc-400">{m.utilizzatore.trim()}</p>
-        ) : null}
+      <div className={sectionDivider}>
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Cliente</p>
+            <p className="line-clamp-2 text-[1.05rem] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
+              {displayScalar(m.cliente)}
+            </p>
+            {hasUtilizzatore(m.utilizzatore) ? (
+              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{m.utilizzatore.trim()}</p>
+            ) : null}
+          </div>
+          <div className="shrink-0">
+            <p className="text-right text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">N. lavorazioni</p>
+            <span className="mt-1 inline-flex min-w-[2.5rem] justify-center rounded-[var(--ds-radius-lg)] bg-[var(--cab-surface-2)] px-2 py-1 font-mono text-base font-bold tabular-nums text-[color:var(--cab-text)]">
+              {nLavorazioni}
+            </span>
+          </div>
+        </div>
       </div>
-      <dl className="mt-3 grid grid-cols-2 gap-2 text-xs">
+      <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs">
         <div>
-          <dt className="text-zinc-500 dark:text-zinc-400">Cantiere</dt>
-          <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{displayScalar(m.cantiere)}</dd>
+          <dt className={metaDt}>Cantiere</dt>
+          <dd className={`${metaDd} text-sm text-zinc-900 dark:text-zinc-50`}>{displayScalar(m.cantiere)}</dd>
         </div>
         <div>
-          <dt className="text-zinc-500 dark:text-zinc-400">N. lavorazioni</dt>
-          <dd className="text-sm font-medium tabular-nums text-zinc-900 dark:text-zinc-50">{nLavorazioni}</dd>
-        </div>
-        <div>
-          <dt className="text-zinc-500 dark:text-zinc-400">Attrezzatura</dt>
-          <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{displayScalar(m.marca)}</dd>
+          <dt className={metaDt}>Attrezzatura</dt>
+          <dd className={`${metaDd} text-sm text-zinc-900 dark:text-zinc-50`}>{displayScalar(m.marca)}</dd>
           <dd className="text-xs text-zinc-500 dark:text-zinc-400">{cellIdentValue(m.modello)}</dd>
           {m.hubSynthetic ? (
             <dd className="mt-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Sintetico</dd>
           ) : null}
         </div>
         <div>
-          <dt className="text-zinc-500 dark:text-zinc-400">Telaio</dt>
-          <dd className="text-sm font-medium text-zinc-900 dark:text-zinc-50">{displayScalar(m.marcaTelaio)}</dd>
+          <dt className={metaDt}>Telaio</dt>
+          <dd className={`${metaDd} text-sm text-zinc-900 dark:text-zinc-50`}>{displayScalar(m.marcaTelaio)}</dd>
           <dd className="text-xs text-zinc-500 dark:text-zinc-400">{displayScalar(m.modelloTelaio)}</dd>
         </div>
         <div className="col-span-2">
-          <dt className="text-zinc-500 dark:text-zinc-400">Identificazione</dt>
+          <dt className={metaDt}>Identificazione</dt>
           <dd className="flex flex-col gap-0.5">
             {identLines.map((line, i) => (
               <span key={`${i}-${line}`} className="text-[13px] font-medium leading-snug text-zinc-800 dark:text-zinc-100">
@@ -338,11 +351,11 @@ function MezzoMobileCard({
           </dd>
         </div>
         <div className="col-span-2">
-          <dt className="text-zinc-500 dark:text-zinc-400">Ultima lavorazione</dt>
-          <dd className="text-sm font-medium text-zinc-800 dark:text-zinc-200">{ultima}</dd>
+          <dt className={metaDt}>Ultima lavorazione</dt>
+          <dd className={`${metaDd} text-sm`}>{ultima}</dd>
         </div>
       </dl>
-      <CardMobileActions>
+      <CardMobileActions spacing="tight" className="mt-2.5 border-t border-zinc-200/80 pt-2.5 dark:border-zinc-700/80">
         <MezzoRowActions m={m} onHub={onHub} onDelete={onDelete} />
       </CardMobileActions>
     </CardMobile>
@@ -355,6 +368,7 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
   return (
     <>
       <GestionaleListTable
+        wrapClassName="mt-0"
         visibilityClass="hidden md:block"
         colgroup={
           <>
@@ -371,7 +385,7 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
         headRow={
           <>
             <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-            <GlobalTableHeadLabel label="Cantiere" />
+            <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
             <GlobalTableSortTh label="Attrezzatura" columnKey="marca" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
             <GlobalTableHeadLabel label="Telaio" />
             <GlobalTableSortTh label="Identificazione" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
@@ -382,7 +396,14 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
               sortPhase={sortPhase}
               onSort={onSort}
             />
-            <GlobalTableHeadLabel label="N. lavorazioni" />
+            <GlobalTableSortTh
+              label="N. lavorazioni"
+              columnKey="numeroLavorazioni"
+              sortColumn={sortColumn}
+              sortPhase={sortPhase}
+              onSort={onSort}
+              align="center"
+            />
             <GestionaleListTableActionsHead />
           </>
         }

@@ -3,15 +3,15 @@ export function userProfileInitial(nome?: string | null, email?: string | null):
   return (nome?.trim()?.charAt(0) ?? email?.trim()?.charAt(0) ?? "?").toUpperCase();
 }
 
-/** Stesso token del nome in welcome (`text-[color:var(--cab-primary)]`); `bg-current` = sfondo identico al `color`. */
+/** Stesso token del nome in welcome (`text-[color:var(--cab-primary)]`). */
 const variantShell = {
-  header: "flex h-8 w-8 shrink-0 rounded-full bg-current text-[color:var(--cab-primary)]",
-  sidebar: "flex h-9 w-9 shrink-0 rounded-lg bg-current text-[color:var(--cab-primary)]",
+  header: "flex min-w-0 h-8 w-8 shrink-0 rounded-full bg-[color:var(--cab-primary)]",
+  sidebar: "flex min-w-0 h-9 w-9 shrink-0 rounded-lg bg-[color:var(--cab-primary)]",
 } as const;
 
 const variantInitial = {
-  header: "flex h-full w-full items-center justify-center text-[11px] font-bold text-white",
-  sidebar: "flex h-full w-full items-center justify-center text-xs font-bold text-white",
+  header: "flex min-w-0 h-full w-full items-center justify-center text-[11px] font-bold text-white",
+  sidebar: "flex min-w-0 h-full w-full items-center justify-center text-xs font-bold text-white",
 } as const;
 
 type UserProfileAvatarProps = {

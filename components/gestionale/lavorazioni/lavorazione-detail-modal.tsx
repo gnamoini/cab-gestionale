@@ -22,7 +22,7 @@ import { documentoRowToGestionale, preventivoRowToRecordStub } from "@/lib/mezzi
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
@@ -184,27 +184,18 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
   };
 
   const titolo = hub ? `Lavorazione · ${hub.kpi.statoLabel}` : "Lavorazione";
+  const sottotitolo = hub
+    ? `Ingresso ${fmtDay(hub.lavorazione.data_ingresso)} · Uscita ${fmtDay(hub.lavorazione.data_uscita)}`
+    : undefined;
 
   return (
-    <GestionaleModalShell onRequestClose={onClose} maxWidthClass="max-w-3xl" titleId="lav-hub-title">
-        <div className="flex shrink-0 flex-wrap items-start justify-between gap-2 border-b border-zinc-100 px-4 py-3 dark:border-zinc-800">
-          <div className="min-w-0">
-            <h2 id="lav-hub-title" className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              {titolo}
-            </h2>
-            {hub ? (
-              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-                Ingresso {fmtDay(hub.lavorazione.data_ingresso)} · Uscita {fmtDay(hub.lavorazione.data_uscita)}
-              </p>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <button type="button" className={erpBtnNeutral} onClick={onClose}>
-              Chiudi
-            </button>
-          </div>
-        </div>
-
+    <GestionaleModalShell
+      onRequestClose={onClose}
+      maxWidthClass="max-w-3xl"
+      title={titolo}
+      subtitle={sottotitolo}
+      titleId="lav-hub-title"
+    >
         {hubQuery.isError ? (
           <div className="shrink-0 border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100">
             {hubQuery.error?.message ?? "Errore caricamento hub lavorazione."}
@@ -220,7 +211,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
           {tabBtn("attivita", `Attività (${attivitaCount})`)}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-4">
           {hubQuery.isLoading && !hub ? <p className="text-sm text-zinc-500">Caricamento…</p> : null}
 
           {tab === "panoramica" && hub ? (
@@ -274,13 +265,11 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
           {tab === "schede" ? (
             <div className={`${dsTableWrap} ${dsScrollbar}`}>
               <table className={`${dsTable} min-w-[520px] text-xs`}>
-                <thead>
-                  <tr>
+                <GlobalTableHead>
                     <GlobalTableHeadLabel label="Tipo" />
                     <GlobalTableHeadLabel label="Creata" />
                     <GlobalTableHeadLabel label="Aggiornata" />
-                  </tr>
-                </thead>
+                </GlobalTableHead>
                 <tbody>
                   {(hub?.schede.length ?? 0) === 0 ? (
                     <tr>
@@ -306,14 +295,12 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
           {tab === "movimenti" ? (
             <div className={`${dsTableWrap} ${dsScrollbar}`}>
               <table className={`${dsTable} min-w-[520px] text-xs`}>
-                <thead>
-                  <tr>
+                <GlobalTableHead>
                     <GlobalTableHeadLabel label="Tipo" />
                     <GlobalTableHeadLabel label="Quantità" />
                     <GlobalTableHeadLabel label="Ricambio" />
                     <GlobalTableHeadLabel label="Quando" />
-                  </tr>
-                </thead>
+                </GlobalTableHead>
                 <tbody>
                   {(hub?.movimenti.length ?? 0) === 0 ? (
                     <tr>

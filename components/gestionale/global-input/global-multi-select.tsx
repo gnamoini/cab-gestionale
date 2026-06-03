@@ -16,6 +16,10 @@ export function GlobalMultiSelect({
   onRemove,
   className = "",
   emptyMessage = "Nessun risultato",
+  allowAdd = false,
+  canAdd = true,
+  addPending = false,
+  onAddToList,
 }: {
   ariaLabel: string;
   placeholder?: string;
@@ -26,6 +30,10 @@ export function GlobalMultiSelect({
   onRemove: (value: string) => void;
   className?: string;
   emptyMessage?: string;
+  allowAdd?: boolean;
+  canAdd?: boolean;
+  addPending?: boolean;
+  onAddToList?: (value: string) => Promise<string | null> | string | null;
 }) {
   const [draft, setDraft] = useState("");
 
@@ -33,42 +41,69 @@ export function GlobalMultiSelect({
   const filteredOptions = useMemo(() => options.filter((o) => !selectedSet.has(o)), [options, selectedSet]);
 
   const addValue = useCallback(
-    (v: string) => {
+    async (v: string) => {
       const clean = v.trim();
       if (!clean) return;
       if (selectedSet.has(clean)) {
         setDraft("");
         return;
       }
-      onAdd(clean);
+
+      const inOptions = options.some((o) => o.trim().toLowerCase() === clean.toLowerCase());
+      let canonical = clean;
+      if (!inOptions && onAddToList) {
+        const added = await onAddToList(clean);
+        if (!added) return;
+        canonical = added;
+      } else if (!inOptions && !allowAdd) {
+        return;
+      }
+
+      if (selectedSet.has(canonical)) {
+        setDraft("");
+        return;
+      }
+      onAdd(canonical);
       setDraft("");
     },
-    [onAdd, selectedSet],
+    [allowAdd, onAdd, onAddToList, options, selectedSet],
   );
 
   return (
     <div className={className}>
       <GlobalSelect
         value={draft}
-        onChange={addValue}
+        onChange={(next) => {
+          void addValue(next);
+        }}
         options={filteredOptions}
         placeholder={placeholder}
         disabled={disabled}
-        allowAdd={false}
-        strictFromList
+        allowAdd={allowAdd}
+        canAdd={canAdd}
+        addPending={addPending}
+        onAddToList={onAddToList ? (v) => void addValue(v) : undefined}
+        strictFromList={!allowAdd}
         emptyMessage={emptyMessage}
         invalidMessage="Seleziona un valore esistente"
         aria-label={ariaLabel}
       />
 
       {selected.length > 0 ? (
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div className="mt-2 flex min-w-0 flex-wrap gap-2">
           {selected.map((s) => (
             <button
               key={s.value}
               type="button"
               title="Rimuovi"
-              onClick={() => onRemove(s.value)}
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(s.value);
+              }}
               className={`${dsFocus} inline-flex max-w-full items-center gap-1.5 rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 py-2 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] active:bg-[var(--cab-hover)]`}
               disabled={disabled}
             >
@@ -83,4 +118,3 @@ export function GlobalMultiSelect({
     </div>
   );
 }
-

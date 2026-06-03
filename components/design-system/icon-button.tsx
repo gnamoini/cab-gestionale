@@ -2,7 +2,7 @@
 
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { Tooltip } from "@/components/design-system/tooltip";
-import { dsBtnIcon, dsDisabled, dsFocus, dsPageToolbarBtn } from "@/lib/ui/design-system";
+import { dsBtnIcon, dsDisabled, dsFocus, dsPageToolbarBtn, dsPageToolbarIconBtn } from "@/lib/ui/design-system";
 
 export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   children: ReactNode;
@@ -12,7 +12,7 @@ export type IconButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 export function IconButton({ children, toolbar, className = "", label, title, ...rest }: IconButtonProps) {
-  const base = toolbar ? `${dsPageToolbarBtn} h-11 min-w-[2.75rem] px-2.5` : dsBtnIcon;
+  const base = toolbar ? dsPageToolbarIconBtn : dsBtnIcon;
   return (
     <Tooltip content={title ?? label}>
       <button

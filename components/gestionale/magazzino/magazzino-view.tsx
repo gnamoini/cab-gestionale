@@ -2,18 +2,33 @@
 
 import "./magazzino-scroll.css";
 
-import type { ReactNode } from "react";
+import type { ReactElement, ReactNode } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { CardMobile, CloseButton, IconActionButton } from "@/components/design-system";
+import {
+  CardMobile,
+  CloseButton,
+  IconActionButton,
+  LoadingButton,
+  LoadingFormSkeleton,
+  LoadingMagazzinoListSkeleton,
+  Tooltip,
+} from "@/components/design-system";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
-import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
+import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { RicambioFormFields } from "@/components/gestionale/magazzino/ricambio-form-fields";
+import { RicambioConsumoInfoRows, RicambioInfoPanel } from "@/components/gestionale/magazzino/ricambio-info-panel";
 import {
-  magazzinoRowToRicambioUI,
+  GestionaleInfoCard,
+} from "@/components/design-system/gestionale-info-card";
+import { ricambioModalSectionClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
+import {
   ricambioUiToMagazzinoInsert,
   ricambioUiToMagazzinoUpdate,
 } from "@/lib/magazzino/magazzino-db-ui-adapter";
@@ -22,11 +37,10 @@ import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-li
 import { useQueryClient } from "@tanstack/react-query";
 import { QK, invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
 import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
-import { patchMagazzinoListCache } from "@/lib/magazzino/magazzino-list-cache";
+import { patchMagazzinoListCache, ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { flattenCompatDaAttrezzature, migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
 import {
   loadMagazzinoChangeLog,
   purgeMagazzinoLogEntriesForRicambioId,
@@ -36,31 +50,31 @@ import {
 import {
   emptyRicambioForm,
   formatMarkupDisplay,
-  compatDisplayLabel,
-  ricambioFromForm,
   ricambioFromFormLenient,
   toFormDraft,
   validateRicambioListFields,
   type RicambioFormState,
 } from "@/lib/magazzino/form";
+import { scheduleCompatBackgroundAudit } from "@/lib/magazzino/compat/compat-runtime-sanitize";
+import { readCompatDisplayForUi, readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
 import { latestUndoableScortaEntryForRicambio, parseScortaChange, entryMatchesMagazzinoUndoScope, type MagazzinoUndoScope } from "@/lib/magazzino/magazzino-scorta-undo";
 import { useUndoSessionId } from "@/lib/gestionale-log/use-undo-session-id";
 import {
   analyzeArchiveDuplicateCodes,
-  findFirstDuplicateByCodiceOriginale,
+  findDuplicateByCodici,
   type MagazzinoArchiveDuplicateCodeGroup,
 } from "@/lib/magazzino/duplicates";
 import { compareByColumn, compareNaturalOrder, type SortPhaseMagazzino } from "@/lib/magazzino/sort-order";
 import {
   buildConsumoMapMagazzinoRolling36ForProducts,
-  formatAutonomiaMesi,
   formatAvgMonthlyMagazzinoIt,
-  formatMonthKeyIt,
 } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
 import {
   dsPageToolbarBtn,
+  dsPageToolbarIconBtn,
+  dsPageToolbarCtaCompact,
   dsStackPage,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsBtnNeutral,
@@ -68,6 +82,7 @@ import {
   dsBtnPrimary,
   dsBtnSoftOrange,
   dsFocus,
+  dsModalFormFooter,
   dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
   dsTableActionBtnUndo,
@@ -82,6 +97,7 @@ import {
 import {
   gestionaleListTableRowClass,
   gestionaleListTableRowSurfaceClass,
+  gestionaleListTableRowTone,
   gestionaleListTableTd,
   gestionaleListTableTdAzioni,
   gestionaleListTableTdCenter,
@@ -95,7 +111,7 @@ import { TablePagination } from "@/components/gestionale/table-pagination";
 import {
   Drawer,
   PageToolbar,
-  PageToolbarActions,
+  PageToolbarCtaLabel,
   PageToolbarResultCount,
 } from "@/components/design-system";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
@@ -133,6 +149,8 @@ import {
 } from "@/lib/magazzino/scorta-adjust-sync";
 import { revealRicambioInTableAfterSave } from "@/lib/magazzino/magazzino-table-focus";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
+import type { TooltipSide } from "@/lib/ui/tooltip-portal";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -145,19 +163,20 @@ import { useCabAppSettingsPayloadQuery, useSettingsUpsertMutation } from "@/src/
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
+import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
 
 function eur(n: number) {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
 }
 
-function initialMasterFromProducts(rows: RicambioMagazzino[]) {
+function initialMasterFromProducts(rows: RicambioMagazzino[], mezziListePrefs?: import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs) {
   const marche = new Set<string>();
   const categorie = new Set<string>();
   const mezzi = new Set<string>();
   for (const r of rows) {
     marche.add(r.marca);
     categorie.add(r.categoria);
-    r.compatibilitaMezzi.forEach((m) => mezzi.add(m));
+    readCompatLabelsForUi(r, mezziListePrefs, "magazzino-view.initialMasterFromProducts").forEach((m) => mezzi.add(m));
   }
   return {
     marche: [...marche].sort((a, b) => a.localeCompare(b, "it")),
@@ -180,8 +199,14 @@ function mergeMasterWithRows(master: string[], rowValues: string[]) {
   return [...s].sort((a, b) => a.localeCompare(b, "it"));
 }
 
-function compatLabel(list: string[]) {
-  return compatDisplayLabel(list);
+function rowUsesCompatLabel(
+  row: RicambioMagazzino,
+  label: string,
+  liste: ReturnType<typeof migrateMezziListePrefs>,
+): boolean {
+  const resolved = readCompatLabelsForUi(row, liste, "magazzino-view.rowUsesCompatLabel");
+  const want = label.trim().toLowerCase();
+  return resolved.some((l) => l.trim().toLowerCase() === want);
 }
 
 function rowStockBg(r: RicambioMagazzino) {
@@ -216,25 +241,31 @@ function formatDataUltimaMain(iso: string) {
   });
 }
 
-/** Card mobile magazzino: `gg/mm/aa · Autore` (compatto, una riga). */
-function formatMagazzinoUltimaModificaMobile(iso: string, autore: string): string {
+/** Card mobile magazzino: data (gg/mm/aa) e autore su due righe. */
+function formatMagazzinoUltimaModificaMobileDate(iso: string): string {
   const d = new Date(iso);
-  const who = autore.trim() || "—";
-  if (Number.isNaN(d.getTime())) return who;
-  const datePart = d.toLocaleDateString("it-IT", {
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString("it-IT", {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
   });
-  return `${datePart} · ${who}`;
+}
+
+function formatMagazzinoUltimaModificaMobileAutore(autore: string): string {
+  return autore.trim() || "—";
 }
 
 function isModificaOlderThanMonths(iso: string, months: number) {
   const t = new Date(iso).getTime();
+  if (Number.isNaN(t)) return false;
   const limit = new Date();
   limit.setMonth(limit.getMonth() - months);
   return t < limit.getTime();
 }
+
+const MAGAZZINO_STALE_MODIFICA_MONTHS = 6;
+const MAGAZZINO_STALE_MODIFICA_HINT = "Ultima modifica oltre 6 mesi fa";
 
 const CAMPO_LABEL: Partial<Record<keyof RicambioMagazzino, string>> = {
   marca: "Marca",
@@ -368,11 +399,58 @@ function IconUndoMagazzino({ className = dsTableActionGlyph }: { className?: str
 
 const SEARCH_DEBOUNCE_MS = 320;
 
-function InfoRow({ label, value }: { label: string; value: ReactNode }) {
+function magazzinoConsumoMedioTooltip(
+  consumoRow: { insufficientReason?: string | null } | undefined,
+  avgM: number | null,
+): string | undefined {
+  return consumoRow?.insufficientReason ?? (avgM != null ? "Da log magazzino (uscite Δ scorta)" : undefined);
+}
+
+function MagazzinoOptionalTooltip({
+  content,
+  children,
+  side = "top",
+}: {
+  content?: string;
+  children: ReactElement;
+  side?: TooltipSide;
+}) {
+  if (!content?.trim()) return children;
   return (
-    <div className="grid grid-cols-[128px_1fr] gap-2 border-b border-zinc-100 py-2 text-sm last:border-b-0 dark:border-zinc-800">
-      <div className="font-medium text-zinc-500">{label}</div>
-      <div className="text-zinc-900 dark:text-zinc-100">{value}</div>
+    <Tooltip content={content} side={side}>
+      {children}
+    </Tooltip>
+  );
+}
+
+function MagazzinoDisabledButtonTooltip({
+  content,
+  disabled,
+  children,
+}: {
+  content: string;
+  disabled?: boolean;
+  children: ReactElement;
+}) {
+  return (
+    <Tooltip content={content}>
+      {disabled ? <span className="inline-flex w-full min-w-0">{children}</span> : children}
+    </Tooltip>
+  );
+}
+
+function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
+  const secondary = p.codiceFornitoreOriginaleSecondario.trim();
+  return (
+    <div className="space-y-0.5">
+      <span className="inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-xs font-semibold leading-snug tracking-wide dark:bg-zinc-800">
+        {p.codiceFornitoreOriginale}
+      </span>
+      {secondary ? (
+        <div className="break-all pl-0.5 font-mono text-[11px] font-medium leading-snug tracking-wide text-zinc-500 dark:text-zinc-400">
+          {secondary}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -417,6 +495,7 @@ export function MagazzinoView() {
   const settingsRows = settingsPayload.data?.rows ?? [];
   const magPerm = usePermissions("magazzino");
   const globalPerm = usePermissions();
+  const { clearMagazzinoNotifications } = useAdminNotificationStore();
   /** Creazione ricambio: `can_write` o `can_admin` sul modulo (viewer resta escluso). */
   const magCanCreateRicambio = magPerm.canWrite || magPerm.canAdmin;
   const magCanDeleteRicambio = globalPerm.canDeleteRecords;
@@ -442,6 +521,7 @@ export function MagazzinoView() {
   const queryClient = useQueryClient();
   const magazzinoListQ = useMagazzinoRicambiUIQuery();
   const prodotti = magazzinoListQ.data ?? [];
+  const magazzinoInitialLoading = magazzinoListQ.isLoading && magazzinoListQ.data === undefined;
   const [searchInput, setSearchInput] = useState("");
   const [searchApplied, setSearchApplied] = useState("");
   const searchInputRef = useRef(searchInput);
@@ -454,6 +534,7 @@ export function MagazzinoView() {
   const [soloSottoScorta, setSoloSottoScorta] = useState(false);
   const [nascondiScortaZero, setNascondiScortaZero] = useState(false);
   const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
 
   const patchAdvancedFilters = useCallback((patch: Partial<MagazzinoAdvancedFilters>) => {
     setAdvancedFilters((prev) => {
@@ -495,10 +576,9 @@ export function MagazzinoView() {
   const [eliminaRicambioTarget, setEliminaRicambioTarget] = useState<RicambioMagazzino | null>(null);
   const [newForm, setNewForm] = useState<RicambioFormState>(emptyRicambioForm());
   const [dupCheckModalOpen, setDupCheckModalOpen] = useState(false);
-  const [newIncompleteOpen, setNewIncompleteOpen] = useState(false);
-  const [newIncompleteList, setNewIncompleteList] = useState<string[]>([]);
 
   const [detail, setDetail] = useState<{ id: string; mode: "info" | "edit" } | null>(null);
+  useUIAutonomyFixEngine("/magazzino", [newOpen, detail, dupCheckModalOpen]);
   const [editDraft, setEditDraft] = useState<RicambioFormState | null>(null);
   const [newListFieldInvalid, setNewListFieldInvalid] = useState(false);
   const [editListFieldInvalid, setEditListFieldInvalid] = useState(false);
@@ -688,7 +768,19 @@ export function MagazzinoView() {
     (ricambioId: string, opts?: { applySottoScorta?: boolean; flashMs?: number }) => {
       flushPendingLog();
       setDupCheckModalOpen(false);
+      setNewRicambioDraftId((currentDraftId) => {
+        if (currentDraftId) {
+          purgeMagazzinoLogEntriesForRicambioId(currentDraftId);
+          setLogEntries(loadMagazzinoChangeLog());
+        }
+        return null;
+      });
+      setNewForm(emptyRicambioForm());
+      setNewListFieldInvalid(false);
       setNewOpen(false);
+      setDetail(null);
+      setEditDraft(null);
+      setEditListFieldInvalid(false);
       setAdvancedFilters(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
       saveMagazzinoAdvancedFiltersPersisted(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
       setSoloSottoScorta(Boolean(opts?.applySottoScorta));
@@ -732,6 +824,11 @@ export function MagazzinoView() {
   }, [searchParams, pathname, router, focusRicambioInTable]);
 
   useEffect(() => {
+    if (!globalPerm.isAdmin) return;
+    clearMagazzinoNotifications();
+  }, [globalPerm.isAdmin, clearMagazzinoNotifications]);
+
+  useEffect(() => {
     return () => {
       if (flashClearRef.current) clearTimeout(flashClearRef.current);
       const pend = pendingLogRef.current;
@@ -742,9 +839,9 @@ export function MagazzinoView() {
 
   const patchProdotti = useCallback(
     (updater: (prev: RicambioMagazzino[]) => RicambioMagazzino[]) => {
-      patchMagazzinoListCache(queryClient, updater, authorName);
+      patchMagazzinoListCache(queryClient, updater, authorName, mezziListePrefs);
     },
-    [queryClient, authorName],
+    [queryClient, authorName, mezziListePrefs],
   );
 
   useEffect(() => {
@@ -754,7 +851,7 @@ export function MagazzinoView() {
     lastMergedSigRef.current = sig;
 
     const src = prodotti;
-    const fromP = initialMasterFromProducts(src);
+    const fromP = initialMasterFromProducts(src, mezziListePrefs);
     const fromF = initialFornitoriFromProducts(src);
     const listeSrc = migrateMezziListePrefs(appSettings?.mezziListe ?? createMezziListePrefsDefault());
     const fromListe = flattenCompatDaAttrezzature(listeSrc);
@@ -777,7 +874,7 @@ export function MagazzinoView() {
       setMasterFornitori(fromF);
     }
     setMasterPrefsHydrated(true);
-  }, [appSettings, prodotti]);
+  }, [appSettings, prodotti, mezziListePrefs]);
 
   const magMasterSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const settingsRowsRef = useRef(settingsRows);
@@ -867,14 +964,11 @@ export function MagazzinoView() {
 
   const mezzi = useMemo(() => {
     const fromRows: string[] = [];
-    prodotti.forEach((p) => p.compatibilitaMezzi.forEach((m) => fromRows.push(m)));
+    prodotti.forEach((p) =>
+      readCompatLabelsForUi(p, mezziListePrefs, "magazzino-view.masterMezzi").forEach((m) => fromRows.push(m)),
+    );
     return mergeMasterWithRows(masterMezzi, fromRows);
-  }, [masterMezzi, prodotti]);
-
-  const mezziCompatOptions = useMemo(() => {
-    const fromAttrezzature = flattenCompatDaAttrezzature(migrateMezziListePrefs(mezziListePrefs));
-    return [...new Set([...mezzi, ...fromAttrezzature])].sort((a, b) => a.localeCompare(b, "it"));
-  }, [mezzi, mezziListePrefs]);
+  }, [masterMezzi, prodotti, mezziListePrefs]);
 
   const sottoScortaTotale = useMemo(
     () => prodotti.filter((p) => p.scorta < p.scortaMinima).length,
@@ -891,8 +985,10 @@ export function MagazzinoView() {
 
   const nuovoCodiceDupEsistente = useMemo(() => {
     if (!newOpen) return null;
-    return findFirstDuplicateByCodiceOriginale(prodotti, newForm.codiceFornitoreOriginale);
-  }, [newOpen, prodotti, newForm.codiceFornitoreOriginale]);
+    return findDuplicateByCodici(prodotti, newForm.codiceFornitoreOriginale, {
+      alsoCheckSecondary: newForm.codiceFornitoreOriginaleSecondario,
+    });
+  }, [newOpen, prodotti, newForm.codiceFornitoreOriginale, newForm.codiceFornitoreOriginaleSecondario]);
 
   const consumoMap = useMemo(
     () => buildConsumoMapMagazzinoRolling36ForProducts(logEntries, prodotti, new Date()),
@@ -923,8 +1019,8 @@ export function MagazzinoView() {
   }, [prodotti, logEntries, magUndoScope]);
 
   const filterCatalog = useMemo(
-    () => buildMagazzinoFilterCatalog(prodotti, mezziListePrefs, categorie),
-    [prodotti, mezziListePrefs, categorie],
+    () => buildMagazzinoFilterCatalog(prodotti, mezziListePrefs, categorie, masterFornitori),
+    [prodotti, mezziListePrefs, categorie, masterFornitori],
   );
 
   const pageFilters = useMemo(
@@ -937,26 +1033,36 @@ export function MagazzinoView() {
     [searchApplied, soloSottoScorta, nascondiScortaZero, advancedFilters],
   );
 
+  const compatDisplayFor = useCallback(
+    (row: RicambioMagazzino) => readCompatDisplayForUi(row, mezziListePrefs, "magazzino-view.compatDisplayFor"),
+    [mezziListePrefs],
+  );
+
+  useEffect(() => {
+    if (prodotti.length === 0) return;
+    scheduleCompatBackgroundAudit(prodotti, mezziListePrefs, "magazzino-view.load");
+  }, [prodotti, mezziListePrefs]);
+
   const searchSuggestionPool = useMemo(
-    () => buildMagazzinoSearchSuggestions(prodotti, searchInput),
-    [prodotti, searchInput],
+    () => buildMagazzinoSearchSuggestions(prodotti, searchInput, 8, mezziListePrefs),
+    [prodotti, searchInput, mezziListePrefs],
   );
 
   const filteredSorted = useMemo(() => {
     const orderMap = orderMapRef.current!;
-    let rows = prodotti.filter((p) => magazzinoRowMatchesPageFilters(p, pageFilters));
+    let rows = prodotti.filter((p) => magazzinoRowMatchesPageFilters(p, pageFilters, mezziListePrefs));
 
     rows = [...rows].sort((a, b) => {
       if (sortPhase === "natural" || sortColumn === null) {
         return compareNaturalOrder(a, b, orderMap);
       }
-      const primary = compareByColumn(a, b, sortColumn, sortPhase, consumoAvgById);
+      const primary = compareByColumn(a, b, sortColumn, sortPhase, consumoAvgById, mezziListePrefs);
       if (primary !== 0) return primary;
       return compareNaturalOrder(a, b, orderMap);
     });
 
     return rows;
-  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById]);
+  }, [prodotti, pageFilters, sortColumn, sortPhase, consumoAvgById, mezziListePrefs]);
 
   filteredSortedRef.current = filteredSorted;
 
@@ -999,7 +1105,7 @@ export function MagazzinoView() {
 
   function adjustScorta(id: string, delta: number) {
     if (!magCanCreateRicambio) return;
-    const applied = applyScortaOptimisticDelta(queryClient, id, delta, authorName, touch);
+    const applied = applyScortaOptimisticDelta(queryClient, id, delta, authorName, touch, mezziListePrefs);
     if (!applied.found) return;
     flashRow(id);
     enqueueScortaSync(queryClient, id, authorName, {
@@ -1023,7 +1129,7 @@ export function MagazzinoView() {
           cabSyncEventForEntity("magazzino_ricambi", id, "entity_updated", "magazzino_ricambi"),
         ]);
       },
-    });
+    }, mezziListePrefs);
   }
 
   async function undoLastScorta(id: string) {
@@ -1043,12 +1149,12 @@ export function MagazzinoView() {
       return;
     }
     const touched = touch({ ...row, scorta: parsed.prima });
-    const updated = await magazzinoService.update(id, ricambioUiToMagazzinoUpdate(touched));
+    const updated = await magazzinoService.update(id, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
     if (!updated.success || !updated.data) {
       toastError(updated.error ?? "Annullamento scorta non riuscito.");
       return;
     }
-    const ui = magazzinoRowToRicambioUI(updated.data, authorName);
+    const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
     patchProdotti((prev) => prev.map((p) => (p.id === id ? touch(ui) : p)));
     markMagazzinoLogEntryAnnullato(entry.id);
     flashRow(id);
@@ -1081,12 +1187,12 @@ export function MagazzinoView() {
       (next as unknown as Record<string, unknown>)[key] = parseUndoValue(key, ch.prima, row);
     }
     const touched = touch(next);
-    const updated = await magazzinoService.update(entry.ricambioId, ricambioUiToMagazzinoUpdate(touched));
+    const updated = await magazzinoService.update(entry.ricambioId, ricambioUiToMagazzinoUpdate(touched, mezziListePrefs));
     if (!updated.success || !updated.data) {
       toastError(updated.error ?? "Undo non riuscito.");
       return;
     }
-    const ui = magazzinoRowToRicambioUI(updated.data, authorName);
+    const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
     patchProdotti((prev) => prev.map((p) => (p.id === entry.ricambioId ? touch(ui) : p)));
     markMagazzinoLogEntryAnnullato(entry.id);
     flashRow(entry.ricambioId);
@@ -1099,8 +1205,6 @@ export function MagazzinoView() {
     if (!magCanCreateRicambio) return;
     flushPendingLog();
     setDupCheckModalOpen(false);
-    setNewIncompleteOpen(false);
-    setNewIncompleteList([]);
     setNewListFieldInvalid(false);
     setNewForm(emptyRicambioForm());
     setNewRicambioDraftId(crypto.randomUUID());
@@ -1114,6 +1218,8 @@ export function MagazzinoView() {
       setLogEntries(loadMagazzinoChangeLog());
     }
     setNewRicambioDraftId(null);
+    setNewForm(emptyRicambioForm());
+    setNewListFieldInvalid(false);
     setNewOpen(false);
   }
 
@@ -1130,9 +1236,9 @@ export function MagazzinoView() {
       flashRow,
       closeOverlays: () => {
         setNewOpen(false);
-        setNewIncompleteOpen(false);
         setDetail(null);
         setEditDraft(null);
+        setEditListFieldInvalid(false);
       },
     });
     toastSuccess(inView ? toastMessage : `${toastMessage} (fuori dai filtri attivi)`);
@@ -1143,24 +1249,32 @@ export function MagazzinoView() {
 
   async function finalizeNewRicambio() {
     if (saveBusy) return;
+    const listErr = validateRicambioListFields(newForm, {
+      marche,
+      categorie,
+      mezziListe: mezziListePrefs,
+    });
+    if (listErr) {
+      setNewListFieldInvalid(true);
+      toastError(listErr);
+      return;
+    }
     setNewListFieldInvalid(false);
     setSaveBusy(true);
     try {
       const r = ricambioFromFormLenient(newForm, newRicambioDraftId ?? undefined, authorName, {
         mezziListe: mezziListePrefs,
       });
-      const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r));
+      const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r, mezziListePrefs));
       if (!created.success || !created.data) {
         toastError(created.error ?? "Creazione ricambio non riuscita.");
         return;
       }
-      const ui = magazzinoRowToRicambioUI(created.data, authorName);
+      const ui = ricambioUiFromMagazzinoRow(created.data, authorName, mezziListePrefs);
       registerOrderIndex(ui.id);
       patchProdotti((prev) => [ui, ...prev]);
       setNewForm(emptyRicambioForm());
       setNewRicambioDraftId(null);
-      setNewIncompleteOpen(false);
-      setNewIncompleteList([]);
       completeMagazzinoSave(ui.id, "Ricambio creato in magazzino.", "entity_created");
     } finally {
       setSaveBusy(false);
@@ -1183,13 +1297,14 @@ export function MagazzinoView() {
     if (!magCanCreateRicambio) return;
     if (!detailRicambio) return;
     setEditListFieldInvalid(false);
-    setEditDraft(toFormDraft(detailRicambio));
+    setEditDraft(toFormDraft(detailRicambio, mezziListePrefs));
     setDetail({ id: detailRicambio.id, mode: "edit" });
   }
 
   function cancelEditBackToInfo() {
     if (!detail) return;
     setEditDraft(null);
+    setEditListFieldInvalid(false);
     setDetail({ id: detail.id, mode: "info" });
   }
 
@@ -1209,20 +1324,19 @@ export function MagazzinoView() {
     }
     setEditListFieldInvalid(false);
     const before = prodotti.find((p) => p.id === detail.id);
-    const next = ricambioFromForm(editDraft, detail.id, authorName, { mezziListe: mezziListePrefs });
-    if (!next || !before) {
-      toastValidation("Compila tutti i campi obbligatori.");
-      return;
-    }
+    if (!before) return;
+    const next = ricambioFromFormLenient(editDraft, detail.id, authorName, {
+      mezziListe: mezziListePrefs,
+    });
     const ricambioId = detail.id;
     setSaveBusy(true);
     try {
-      const updated = await magazzinoService.update(ricambioId, ricambioUiToMagazzinoUpdate(next));
+      const updated = await magazzinoService.update(ricambioId, ricambioUiToMagazzinoUpdate(next, mezziListePrefs));
       if (!updated.success || !updated.data) {
         toastError(updated.error ?? "Salvataggio non riuscito.");
         return;
       }
-      const ui = magazzinoRowToRicambioUI(updated.data, authorName);
+      const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
       patchProdotti((prev) => prev.map((p) => (p.id === ricambioId ? touch(ui) : p)));
       completeMagazzinoSave(ricambioId, "Modifiche salvate.");
     } finally {
@@ -1256,6 +1370,7 @@ export function MagazzinoView() {
   function closeDetail() {
     setDetail(null);
     setEditDraft(null);
+    setEditListFieldInvalid(false);
   }
 
   const infoTimeline = useMemo(() => {
@@ -1302,7 +1417,7 @@ export function MagazzinoView() {
     setMasterCategorie((prev) => prev.filter((x) => x !== c));
   }
   async function removeMasterMezzo(m: string) {
-    const n = prodotti.reduce((acc, p) => acc + (p.compatibilitaMezzi.includes(m) ? 1 : 0), 0);
+    const n = prodotti.reduce((acc, p) => acc + (rowUsesCompatLabel(p, m, mezziListePrefs) ? 1 : 0), 0);
     if (n > 0) {
       const ok = await confirm({
         title: "Rimuovere mezzo?",
@@ -1355,10 +1470,9 @@ export function MagazzinoView() {
 
   return (
     <GestionaleSectionGate module="magazzino">
-    <div className="magazzino-scroll-scope min-w-0">
+    <div className={`magazzino-scroll-scope ${layoutPageRoot}`}>
       <PageHeader
         title="Magazzino ricambi"
-        topRowClassName="max-sm:flex-nowrap max-sm:items-center max-sm:gap-1.5 [&_.cab-page-title-box]:max-sm:truncate"
         actions={
           <GestionalePageToolbarActions
             className="max-sm:flex-nowrap max-sm:gap-1"
@@ -1367,7 +1481,7 @@ export function MagazzinoView() {
                 count={sottoScortaTotale}
                 items={sottoScortaList}
                 onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
-                triggerClassName={`${dsPageToolbarBtn} shrink-0 px-2.5 sm:px-3`}
+                triggerClassName={dsPageToolbarIconBtn}
               />
             }
             canUndo={Boolean(undoableMagazzinoLog)}
@@ -1408,18 +1522,19 @@ export function MagazzinoView() {
         <section aria-label="Azioni e filtri magazzino">
           <PageToolbar
             primaryAction={
-              <button
-                type="button"
-                onClick={openNewModal}
+              <MagazzinoDisabledButtonTooltip
+                content={magCanCreateRicambio ? "Aggiungi un ricambio" : "Sola lettura"}
                 disabled={!magCanCreateRicambio}
-                className={`${erpBtnNuovaLavorazione} h-11 shrink-0 disabled:cursor-not-allowed disabled:opacity-50`}
-                title={magCanCreateRicambio ? "Aggiungi un ricambio" : "Sola lettura"}
               >
-                <span className="text-base font-semibold leading-none" aria-hidden>
-                  +
-                </span>
-                Nuovo ricambio
-              </button>
+                <button
+                  type="button"
+                  onClick={openNewModal}
+                  disabled={!magCanCreateRicambio}
+                  className={`${dsPageToolbarCtaCompact} disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo ricambio" />
+                </button>
+              </MagazzinoDisabledButtonTooltip>
             }
             search={
               <GestionaleListSearchField
@@ -1448,67 +1563,74 @@ export function MagazzinoView() {
                 catalog={filterCatalog}
               />
             }
-            meta={
+            onFilterReset={resetMagazzinoFilters}
+            overflowOpen={toolbarOverflowOpen}
+            onOverflowToggle={() => setToolbarOverflowOpen((o) => !o)}
+            overflowActions={
               <>
-                <PageToolbarResultCount count={filteredSorted.length} filtersActive={hasMagazzinoFilters} />
-                <PageToolbarActions>
-                  <button
-                    type="button"
-                    aria-pressed={soloSottoScorta}
-                    onClick={() => setSoloSottoScorta((v) => !v)}
-                    className={
+                <button
+                  type="button"
+                  aria-pressed={soloSottoScorta}
+                  onClick={() => setSoloSottoScorta((v) => !v)}
+                  className={
+                    soloSottoScorta
+                      ? `${dsPageToolbarBtn} w-full justify-center sm:w-auto border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
+                      : `${dsPageToolbarBtn} w-full justify-center sm:w-auto`
+                  }
+                >
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                       soloSottoScorta
-                        ? `${dsPageToolbarBtn} border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
-                        : dsPageToolbarBtn
-                    }
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                        soloSottoScorta
-                          ? "bg-[var(--cab-primary)]"
-                          : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
-                      }`}
-                      aria-hidden
-                    />
-                    Sotto scorta minima
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={nascondiScortaZero}
-                    onClick={() => setNascondiScortaZero((v) => !v)}
-                    className={
+                        ? "bg-[color:var(--cab-primary)]"
+                        : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
+                    }`}
+                    aria-hidden
+                  />
+                  Sotto scorta minima
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={nascondiScortaZero}
+                  onClick={() => setNascondiScortaZero((v) => !v)}
+                  className={
+                    nascondiScortaZero
+                      ? `${dsPageToolbarBtn} w-full justify-center sm:w-auto border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
+                      : `${dsPageToolbarBtn} w-full justify-center sm:w-auto`
+                  }
+                >
+                  <span
+                    className={`h-1.5 w-1.5 shrink-0 rounded-full ${
                       nascondiScortaZero
-                        ? `${dsPageToolbarBtn} border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]`
-                        : dsPageToolbarBtn
-                    }
-                  >
-                    <span
-                      className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                        nascondiScortaZero
-                          ? "bg-[var(--cab-primary)]"
-                          : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
-                      }`}
-                      aria-hidden
-                    />
-                    Nascondi scorta 0
-                  </button>
-                  <button type="button" className={dsPageToolbarBtn} onClick={resetMagazzinoRicerca}>
-                    Pulisci ricerca
-                  </button>
-                  <button type="button" className={dsPageToolbarBtn} onClick={resetMagazzinoFilters}>
-                    Reimposta filtri
-                  </button>
-                </PageToolbarActions>
+                        ? "bg-[color:var(--cab-primary)]"
+                        : "bg-[color:color-mix(in_srgb,var(--cab-text-muted)_55%,transparent)]"
+                    }`}
+                    aria-hidden
+                  />
+                  Nascondi scorta 0
+                </button>
               </>
+            }
+            meta={
+              <PageToolbarResultCount
+                count={filteredSorted.length}
+                filtersActive={hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero}
+                searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
+                onSearchReset={resetMagazzinoRicerca}
+                onFilterReset={resetMagazzinoFilters}
+              />
             }
           />
         </section>
 
+        {magazzinoInitialLoading ? (
+          <LoadingMagazzinoListSkeleton withToolbar={false} />
+        ) : (
+        <>
         <GestionaleListTable
           visibilityClass="mt-4 hidden xl:block"
           colgroup={
             <>
-              <col className="w-[12%]" />
+              <col style={{ width: "7.75rem" }} />
               <col className="w-[7%]" />
               <col className="w-[20%]" />
               <col className="w-[7%]" />
@@ -1528,7 +1650,7 @@ export function MagazzinoView() {
                 sortColumn={sortColumn}
                 sortPhase={sortPhase}
                 onSort={onSort}
-                contentChipInset
+                thClassName="w-[7.75rem] min-w-[7.75rem] max-w-[7.75rem]"
               />
               <GlobalTableSortTh
                 label="Marca"
@@ -1601,82 +1723,75 @@ export function MagazzinoView() {
                 const avgM = consumoRow?.avgMonthly ?? null;
                 const low = p.scorta < p.scortaMinima;
                 const flash = flashRowId === p.id;
-                const rowTone = low ? "low-stock" : flash ? "flash-mag" : undefined;
                 return (
                   <tr
                     id={`magazzino-row-${p.id}`}
                     key={p.id}
-                    data-gestionale-row-tone={rowTone}
-                    className={[
-                      gestionaleListTableRowClass,
-                      rowStockBg(p),
-                      flash
-                        ? "bg-white/95 shadow-[inset_0_0_0_1px_rgba(228,228,231,0.95),0_0_20px_rgba(255,255,255,0.65)] transition-[background-color,box-shadow] duration-200 ease-out dark:bg-zinc-100/12 dark:shadow-[inset_0_0_0_1px_rgba(82,82,91,0.45),0_0_18px_rgba(255,255,255,0.06)]"
-                        : "",
-                    ]
-                      .filter(Boolean)
-                      .join(" ")}
+                    data-gestionale-row-tone={gestionaleListTableRowTone({ flash, lowStock: low })}
+                    className={[gestionaleListTableRowClass, rowStockBg(p)].filter(Boolean).join(" ")}
                   >
-                    <td className={`min-w-0 ${gestionaleListTableTd} ${rowStockBorderFirstTd(p)}`}>
-                      <span className="inline-block max-w-full break-all rounded-md bg-zinc-100 px-2 py-1 font-mono text-[12px] font-semibold leading-snug tracking-wide dark:bg-zinc-800">
-                        {p.codiceFornitoreOriginale}
-                      </span>
+                    <td
+                      className={`min-w-0 w-[7.75rem] max-w-[7.75rem] overflow-hidden ${gestionaleListTableTd} ${rowStockBorderFirstTd(p)}`}
+                    >
+                      <RicambioCodiceCell p={p} />
                     </td>
                     <td className={`${gestionaleListTableTd} font-medium`}>{p.marca}</td>
                     <td className={`min-w-0 ${gestionaleListTableTd}`}>
                       <div className="break-words font-medium leading-snug">{p.descrizione}</div>
                       <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">
-                        {compatLabel(p.compatibilitaMezzi)}
+                        {compatDisplayFor(p)}
                       </div>
                     </td>
-                    <td
-                      className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-300`}
-                      title={p.categoria}
-                    >
-                      <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
+                    <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-300`}>
+                      <MagazzinoOptionalTooltip content={p.categoria}>
+                        <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
+                      </MagazzinoOptionalTooltip>
                     </td>
                     <td className={gestionaleListTableTdCenter}>
-                      <span
-                        className={`inline-flex min-w-[2.5rem] justify-center rounded-full px-2 py-0.5 font-mono text-xs font-semibold tabular-nums ${
-                          low
-                            ? "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-100"
-                            : "bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200"
-                        }`}
-                      >
-                        {p.scorta}
-                      </span>
+                      <MagazzinoScortaBadge value={p.scorta} low={low} variant="table" />
                     </td>
-                    <td className={`${gestionaleListTableTdCenter} font-mono text-zinc-700 dark:text-zinc-300`}>
-                      {p.scortaMinima}
+                    <td className={`${gestionaleListTableTdCenter} !text-inherit`}>
+                      <div className="flex justify-center">
+                        <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="table" />
+                      </div>
                     </td>
                     <td className={gestionaleListTableTdCenter}>
                       {(() => {
-                        const stale = isModificaOlderThanMonths(p.dataUltimaModifica, 6);
+                        const stale = isModificaOlderThanMonths(p.dataUltimaModifica, MAGAZZINO_STALE_MODIFICA_MONTHS);
                         return (
-                          <div
-                            title={formatTimestampHover(p.dataUltimaModifica)}
-                            className={`mx-auto inline-block max-w-full rounded-md px-1.5 py-1 text-center ${
+                          <Tooltip
+                            content={
                               stale
-                                ? "bg-amber-50/95 ring-1 ring-amber-200/80 dark:bg-amber-950/35 dark:ring-amber-800/55"
-                                : ""
-                            }`}
+                                ? `${formatTimestampHover(p.dataUltimaModifica)} · ${MAGAZZINO_STALE_MODIFICA_HINT}`
+                                : formatTimestampHover(p.dataUltimaModifica)
+                            }
+                            side="top"
                           >
-                            <div className="text-[13px] font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
-                              {formatDataUltimaMain(p.dataUltimaModifica)}
+                            <div
+                              className={`mx-auto inline-block max-w-full rounded-md px-1.5 py-1 text-center ${
+                                stale
+                                  ? "bg-amber-50/95 ring-1 ring-amber-200/80 dark:bg-amber-950/35 dark:ring-amber-800/55"
+                                  : ""
+                              }`}
+                            >
+                              <div className="text-[13px] font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+                                {formatDataUltimaMain(p.dataUltimaModifica)}
+                              </div>
+                              <div className="text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">
+                                {p.autoreUltimaModifica}
+                              </div>
                             </div>
-                            <div className="text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">
-                              {p.autoreUltimaModifica}
-                            </div>
-                          </div>
+                          </Tooltip>
                         );
                       })()}
                     </td>
                     <td className={`${gestionaleListTableTdCenter} font-medium`}>{eur(p.prezzoVendita)}</td>
-                    <td
-                      className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300`}
-                      title={consumoRow?.insufficientReason ?? (avgM != null ? "Da log magazzino (uscite Δ scorta)" : undefined)}
-                    >
-                      {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "dati insufficienti"}
+                    <td className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300`}>
+                      <MagazzinoOptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
+                        <span className="inline-block max-w-full truncate">
+                          {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "dati insufficienti"}
+                        </span>
+                      </MagazzinoOptionalTooltip>
                     </td>
                     <td className={gestionaleListTableTdAzioni}>
                       <div className={gestionaleListTableActionsGroupEnd}>
@@ -1723,6 +1838,7 @@ export function MagazzinoView() {
             const avgM = consumoRow?.avgMonthly ?? null;
             const low = p.scorta < p.scortaMinima;
             const flash = flashRowId === p.id;
+            const staleModifica = isModificaOlderThanMonths(p.dataUltimaModifica, MAGAZZINO_STALE_MODIFICA_MONTHS);
             return (
               <CardMobile
                 id={`magazzino-row-${p.id}`}
@@ -1744,22 +1860,20 @@ export function MagazzinoView() {
                     <p className="break-all font-mono text-sm font-medium tabular-nums tracking-wide text-[color:var(--cab-text)]">
                       {p.codiceFornitoreOriginale.trim() || "—"}
                     </p>
+                    {p.codiceFornitoreOriginaleSecondario.trim() ? (
+                      <p className="break-all font-mono text-xs font-medium tabular-nums tracking-wide text-zinc-500 dark:text-zinc-400">
+                        {p.codiceFornitoreOriginaleSecondario}
+                      </p>
+                    ) : null}
                     <p className="truncate text-[0.9375rem] font-medium leading-snug text-[color:var(--cab-text)]">
                       {p.marca.trim() || "—"}
                     </p>
                   </div>
-                  <span
-                    className={`mt-0.5 inline-flex min-h-11 min-w-[2.75rem] shrink-0 items-center justify-center rounded-full px-2 font-mono text-sm font-bold tabular-nums ring-2 ring-[var(--cab-card)] ${
-                      low
-                        ? "bg-red-100 text-red-900 dark:bg-red-950 dark:text-red-100"
-                        : "bg-[var(--cab-surface-2)] text-[color:var(--cab-text)]"
-                    }`}
-                    title={low ? "Sotto scorta minima" : "Giacenza"}
-                  >
-                    {p.scorta}
-                  </span>
+                  <Tooltip content={low ? "Sotto scorta minima" : "Giacenza"} side="top">
+                    <MagazzinoScortaBadge value={p.scorta} low={low} variant="mobile" />
+                  </Tooltip>
                 </div>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{compatLabel(p.compatibilitaMezzi)}</p>
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{compatDisplayFor(p)}</p>
                 <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                   <div>
                     <dt className="text-zinc-500 dark:text-zinc-400">Categoria</dt>
@@ -1767,7 +1881,9 @@ export function MagazzinoView() {
                   </div>
                   <div>
                     <dt className="text-zinc-500 dark:text-zinc-400">Scorta minima</dt>
-                    <dd className="font-mono font-medium tabular-nums text-zinc-800 dark:text-zinc-200">{p.scortaMinima}</dd>
+                    <dd>
+                      <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="table" />
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-zinc-500 dark:text-zinc-400">P. vendita</dt>
@@ -1775,21 +1891,49 @@ export function MagazzinoView() {
                   </div>
                   <div>
                     <dt className="text-zinc-500 dark:text-zinc-400">Consumo medio</dt>
-                    <dd
-                      className="font-medium tabular-nums text-zinc-700 dark:text-zinc-300"
-                      title={consumoRow?.insufficientReason ?? (avgM != null ? "Da log magazzino (uscite Δ scorta)" : undefined)}
-                    >
-                      {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "dati insufficienti"}
+                    <dd className="font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
+                      <MagazzinoOptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
+                        <span className="inline-block max-w-full truncate">
+                          {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "dati insufficienti"}
+                        </span>
+                      </MagazzinoOptionalTooltip>
                     </dd>
                   </div>
                 </dl>
                 <div className="mt-3 flex items-center justify-between gap-2 border-t border-zinc-200/90 pt-3 dark:border-zinc-700/80">
-                  <p
-                    className="min-w-0 flex-1 truncate text-xs font-medium tabular-nums text-[color:var(--cab-text-muted)]"
-                    title={formatTimestampHover(p.dataUltimaModifica)}
+                  <Tooltip
+                    content={
+                      staleModifica
+                        ? `${formatTimestampHover(p.dataUltimaModifica)} · ${MAGAZZINO_STALE_MODIFICA_HINT}`
+                        : formatTimestampHover(p.dataUltimaModifica)
+                    }
+                    side="top"
                   >
-                    {formatMagazzinoUltimaModificaMobile(p.dataUltimaModifica, p.autoreUltimaModifica)}
-                  </p>
+                    <div
+                      className={`min-w-0 flex-1 text-xs font-medium text-[color:var(--cab-text-muted)] ${
+                        staleModifica
+                          ? "rounded-md bg-amber-50/95 px-1.5 py-0.5 ring-1 ring-amber-200/80 dark:bg-amber-950/35 dark:ring-amber-800/55"
+                          : ""
+                      }`}
+                    >
+                      <div className="flex min-w-0 items-center gap-1">
+                        {staleModifica ? (
+                          <span
+                            className="shrink-0 text-[11px] leading-none text-amber-700 dark:text-amber-300"
+                            aria-hidden
+                          >
+                            ⚠
+                          </span>
+                        ) : null}
+                        <p className="truncate tabular-nums leading-tight">
+                          {formatMagazzinoUltimaModificaMobileDate(p.dataUltimaModifica)}
+                        </p>
+                      </div>
+                      <p className="truncate leading-tight">
+                        {formatMagazzinoUltimaModificaMobileAutore(p.autoreUltimaModifica)}
+                      </p>
+                    </div>
+                  </Tooltip>
                   <div className={`${gestionaleListTableActionsGroupEnd} shrink-0`} role="group" aria-label="Azioni">
                   <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                     <IconInfoMagazzino />
@@ -1830,6 +1974,8 @@ export function MagazzinoView() {
         {showPager ? (
           <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} />
         ) : null}
+        </>
+        )}
       </ShellCard>
       </div>
 
@@ -1839,11 +1985,12 @@ export function MagazzinoView() {
           title="Nuovo ricambio"
           titleId="new-ricambio-title"
         >
-            <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNew} className="flex min-h-0 flex-1 flex-col">
-              <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+            <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNew} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+              <GestionaleModalScrollBody className="space-y-4 p-4">
                 <RicambioFormFields
                   form={newForm}
                   setForm={setNewForm}
+                  formResetKey={newRicambioDraftId ?? "new"}
                   relaxHtmlValidation
                   codiceOriginaleAvvisoDuplicato={
                     nuovoCodiceDupEsistente
@@ -1856,61 +2003,29 @@ export function MagazzinoView() {
                   listFieldForceInvalid={newListFieldInvalid}
                 />
                 {newRicambioDraftId ? (
-                  <RecordImageManager
-                    scope="magazzino"
-                    recordId={newRicambioDraftId}
-                    title="Foto ricambio"
-                    canEdit={magCanCreateRicambio}
-                    auditLog={false}
-                  />
+                  <div className={ricambioModalSectionClass}>
+                    <RecordImageManager
+                      scope="magazzino"
+                      recordId={newRicambioDraftId}
+                      title="Foto ricambio"
+                      canEdit={magCanCreateRicambio}
+                      auditLog={false}
+                    />
+                  </div>
                 ) : null}
-              </div>
-              <div className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] p-4">
-                <button
+              </GestionaleModalScrollBody>
+              <footer className={`${dsModalFormFooter} flex-col items-stretch`}>
+                <LoadingButton
                   type="submit"
-                  disabled={saveBusy}
-                  aria-busy={saveBusy}
-                  className={`${erpBtnAccent} w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
+                  loading={saveBusy}
+                  preset="salva"
+                  loadingLabel="Salvataggio…"
+                  className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
                 >
-                  {saveBusy ? "Salvataggio…" : "Salva in magazzino"}
-                </button>
-              </div>
+                  Salva in magazzino
+                </LoadingButton>
+              </footer>
             </form>
-        </GestionaleModalShell>
-      ) : null}
-
-      {newIncompleteOpen ? (
-        <GestionaleModalShell
-          onRequestClose={() => setNewIncompleteOpen(false)}
-          title="Attenzione: mancano alcune informazioni"
-          titleId="ricambio-incomplete-title"
-          maxWidthClass="max-w-md"
-        >
-            <ul className="list-disc space-y-1 pl-5 text-sm text-zinc-700 dark:text-zinc-200">
-              {newIncompleteList.map((x) => (
-                <li key={x}>{x}</li>
-              ))}
-            </ul>
-            <div className="mt-4 flex flex-col gap-2 border-t border-[color:var(--cab-border)] p-4 sm:flex-row sm:justify-end">
-              <button
-                type="button"
-                className={`${erpBtnNeutral} w-full justify-center sm:w-auto`}
-                onClick={() => {
-                  setNewIncompleteOpen(false);
-                }}
-              >
-                Torna a completare
-              </button>
-              <button
-                type="button"
-                className={`${erpBtnAccent} w-full justify-center sm:w-auto`}
-                onClick={() => {
-                  finalizeNewRicambio();
-                }}
-              >
-                Conferma comunque
-              </button>
-            </div>
         </GestionaleModalShell>
       ) : null}
 
@@ -1922,192 +2037,92 @@ export function MagazzinoView() {
           maxWidthClass="max-w-lg"
         >
             {detail.mode === "info" ? (
-              <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
-                <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
-                    Dati principali ricambio
-                  </p>
-                  <InfoRow label="Marca" value={detailRicambio.marca} />
-                  <InfoRow
-                    label="Cod. OE"
-                    value={<span className="font-mono text-[13px] font-semibold tracking-wide">{detailRicambio.codiceFornitoreOriginale}</span>}
+              <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+                <GestionaleModalScrollBody className="p-4">
+                  <RicambioInfoPanel
+                    ricambio={detailRicambio}
+                    compatDisplay={compatDisplayFor(detailRicambio)}
+                    consumo={consumoMap.get(detailRicambio.id)}
+                    formatEur={eur}
+                    canEditPhotos={magCanCreateRicambio}
+                    onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
+                    logTimeline={infoTimeline}
+                    logLoading={magLogFeedLoading}
+                    onDismissLogEntry={removeMagazzinoLogEntry}
                   />
-                  <InfoRow label="Descrizione" value={detailRicambio.descrizione} />
-                  <InfoRow label="Note" value={detailRicambio.note || "—"} />
-                  <InfoRow label="Categoria" value={detailRicambio.categoria} />
-                  <InfoRow label="Compatibilità" value={compatLabel(detailRicambio.compatibilitaMezzi)} />
-                </div>
-                <RecordImageManager
-                  scope="magazzino"
-                  recordId={detailRicambio.id}
-                  title="Foto ricambio"
-                  canEdit={magCanCreateRicambio}
-                  onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
-                />
-                <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">Altri dettagli</p>
-                  <p className="mb-1 mt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Giacenza</p>
-                  <InfoRow label="Scorta" value={detailRicambio.scorta} />
-                  <InfoRow label="Scorta minima" value={detailRicambio.scortaMinima} />
-                  <p className="mb-1 mt-2 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Consumo (log magazzino)</p>
-                  {(() => {
-                    const cx = consumoMap.get(detailRicambio.id);
-                    return (
-                      <>
-                        <InfoRow
-                          label="Consumo medio mensile"
-                          value={cx?.avgMonthly != null ? formatAvgMonthlyMagazzinoIt(cx.avgMonthly) : "dati insufficienti"}
-                        />
-                        <InfoRow label="Ultimo mese consumato" value={formatMonthKeyIt(cx?.lastExitMonthKey ?? null)} />
-                        <InfoRow
-                          label="Mesi osservati"
-                          value={cx && cx.monthsObserved > 0 ? String(cx.monthsObserved) : "—"}
-                        />
-                        <InfoRow
-                          label="Autonomia stimata"
-                          value={
-                            <span title="Scorta attuale ÷ consumo medio mensile">
-                              {formatAutonomiaMesi(detailRicambio.scorta, cx?.avgMonthly ?? null)}
-                            </span>
-                          }
-                        />
-                      </>
-                    );
-                  })()}
-                  <InfoRow label="Capitale immob." value={eur(capitaleImmobilizzato(detailRicambio))} />
-                  <p className="mb-1 mt-3 text-[10px] font-semibold uppercase tracking-wide text-zinc-500">Audit</p>
-                  <InfoRow
-                    label="Ultima modifica"
-                    value={new Date(detailRicambio.dataUltimaModifica).toLocaleString("it-IT", {
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                    })}
-                  />
-                  <InfoRow label="Autore" value={detailRicambio.autoreUltimaModifica} />
-                </div>
-                <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">Fornitore alternativo</p>
-                  <InfoRow label="Nome" value={detailRicambio.fornitoreNonOriginale || "—"} />
-                  <InfoRow
-                    label="Codice"
-                    value={
-                      detailRicambio.codiceFornitoreNonOriginale ? (
-                        <span className="font-mono">{detailRicambio.codiceFornitoreNonOriginale}</span>
-                      ) : (
-                        "—"
-                      )
-                    }
-                  />
-                </div>
-                <MagazzinoPrezziLineari
-                  formatEur={eur}
-                  listinoOE={detailRicambio.prezzoFornitoreOriginale}
-                  scontoOE={detailRicambio.scontoFornitoreOriginale}
-                  listinoAlt={detailRicambio.prezzoFornitoreNonOriginale}
-                  scontoAlt={detailRicambio.scontoFornitoreNonOriginale}
-                  markupPct={detailRicambio.markupPercentuale}
-                  prezzoVendita={detailRicambio.prezzoVendita}
-                />
-                <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-                  <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">Storico modifiche</p>
-                  <ul className={`${gestionaleLogScrollEmbeddedClass} mt-2 max-h-56 space-y-2 pr-0.5`}>
-                    {infoTimeline.length === 0 ? (
-                      <li className="list-none text-sm text-zinc-500 dark:text-zinc-400">
-                        {magLogFeedLoading ? "Caricamento storico…" : "Nessuna modifica registrata."}
-                      </li>
-                    ) : (
-                      infoTimeline.map((ev) => (
-                        <li key={ev.id} className="list-none">
-                          <GestionaleLogEntryFourLines
-                            vm={ev.vm}
-                            trailing={
-                              ev.source === "local" ? (
-                                <GestionaleLogEntryDismissButton
-                                  onDismiss={() => removeMagazzinoLogEntry(ev.id)}
-                                />
-                              ) : undefined
-                            }
-                          />
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </div>
-                <button type="button" onClick={startEditFromInfo} className={`${erpBtnAccent} w-full justify-center`} disabled={!magCanCreateRicambio} title={!magCanCreateRicambio ? READONLY_PERMISSION_HINT : undefined}>
-                  Modifica
-                </button>
+                </GestionaleModalScrollBody>
+                <footer className={`${dsModalFormFooter} flex-col items-stretch`}>
+                  <MagazzinoDisabledButtonTooltip
+                    content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
+                    disabled={!magCanCreateRicambio}
+                  >
+                    <button
+                      type="button"
+                      onClick={startEditFromInfo}
+                      className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+                      disabled={!magCanCreateRicambio}
+                    >
+                      Modifica
+                    </button>
+                  </MagazzinoDisabledButtonTooltip>
+                </footer>
               </div>
             ) : (
-              <form {...gestionaleFormFocusScopeProps()} onSubmit={saveEdit} className="flex min-h-0 flex-1 flex-col">
+              <form {...gestionaleFormFocusScopeProps()} onSubmit={saveEdit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
                 {editDraft ? (
                   <>
-                    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+                    <GestionaleModalScrollBody className="space-y-4 p-4">
                       <RicambioFormFields
                         form={editDraft}
                         setForm={setEditForm}
+                        formResetKey={detail.id}
                         listFieldForceInvalid={editListFieldInvalid}
+                        relaxHtmlValidation
                       />
                       {detailRicambio ? (
-                        <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-                          <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
-                            Consumo e autonomia (stima)
-                          </p>
-                          {(() => {
-                            const cx = consumoMap.get(detailRicambio.id);
-                            const scortaDraft = Math.max(0, Math.round(Number.parseInt(editDraft.scorta, 10) || 0));
-                            return (
-                              <>
-                                <InfoRow
-                                  label="Consumo medio mensile"
-                                  value={cx?.avgMonthly != null ? formatAvgMonthlyMagazzinoIt(cx.avgMonthly) : "dati insufficienti"}
-                                />
-                                <InfoRow label="Ultimo mese consumato" value={formatMonthKeyIt(cx?.lastExitMonthKey ?? null)} />
-                                <InfoRow
-                                  label="Mesi osservati"
-                                  value={cx && cx.monthsObserved > 0 ? String(cx.monthsObserved) : "—"}
-                                />
-                                <InfoRow
-                                  label="Autonomia stimata"
-                                  value={
-                                    <span title="Scorta nel modulo ÷ consumo medio mensile">
-                                      {formatAutonomiaMesi(scortaDraft, cx?.avgMonthly ?? null)}
-                                    </span>
-                                  }
-                                />
-                              </>
-                            );
-                          })()}
-                        </div>
+                        <GestionaleInfoCard title="Consumo e autonomia (stima)">
+                          <RicambioConsumoInfoRows
+                            consumo={consumoMap.get(detailRicambio.id)}
+                            scorta={Math.max(0, Math.round(Number.parseInt(editDraft.scorta, 10) || 0))}
+                            autonomiaTooltip="Scorta nel modulo ÷ consumo medio mensile"
+                          />
+                        </GestionaleInfoCard>
                       ) : null}
-                    </div>
-                    <div className="shrink-0 space-y-2 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] p-4">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    </GestionaleModalScrollBody>
+                    <footer
+                      className={`${dsModalFormFooter} flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between`}
+                    >
+                      <MagazzinoDisabledButtonTooltip
+                        content={magCanDeleteRicambio ? "Elimina ricambio" : READONLY_PERMISSION_HINT}
+                        disabled={!magCanDeleteRicambio}
+                      >
                         <button
-                          type="submit"
-                          disabled={saveBusy}
-                          aria-busy={saveBusy}
-                          className={`${erpBtnAccent} w-full justify-center sm:w-auto disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+                          type="button"
+                          onClick={requestEliminaRicambio}
+                          disabled={!magCanDeleteRicambio}
+                          className={`${dsBtnDanger} min-h-11 w-full justify-center sm:w-auto`}
                         >
-                          {saveBusy ? "Salvataggio…" : "Salva"}
+                          Elimina ricambio
                         </button>
-                        <button type="button" onClick={cancelEditBackToInfo} className={`${erpBtnNeutral} w-full justify-center sm:w-auto`}>
+                      </MagazzinoDisabledButtonTooltip>
+                      <div className="flex w-full min-w-0 gap-2 sm:w-auto sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={cancelEditBackToInfo}
+                          className={`${erpBtnNeutral} min-h-11 min-w-0 flex-1 justify-center sm:min-w-[6.5rem] sm:flex-none`}
+                        >
                           Annulla
                         </button>
+                        <LoadingButton
+                          type="submit"
+                          loading={saveBusy}
+                          preset="salva"
+                          className={`${erpBtnAccent} min-h-11 min-w-0 flex-1 justify-center sm:min-w-[6.5rem] sm:flex-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+                        >
+                          Salva
+                        </LoadingButton>
                       </div>
-                      <button
-                        type="button"
-                        onClick={requestEliminaRicambio}
-                        disabled={!magCanDeleteRicambio}
-                        title={!magCanDeleteRicambio ? READONLY_PERMISSION_HINT : undefined}
-                        className={`${dsBtnDanger} w-full justify-center`}
-                      >
-                        Elimina ricambio
-                      </button>
-                    </div>
+                    </footer>
                   </>
                 ) : null}
               </form>
@@ -2120,12 +2135,11 @@ export function MagazzinoView() {
         onClose={() => setLogOpen(false)}
         title="Log modifiche magazzino"
         ariaLabel="Log modifiche magazzino"
-        lockScroll={false}
       >
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
-          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
               {magLogFeedLoading && magLogFeed.length === 0 ? (
-                <p className="px-1 py-2 text-sm text-zinc-500 dark:text-zinc-400">Caricamento storico…</p>
+                <LoadingFormSkeleton fields={2} className="px-1 py-2" />
               ) : magLogFeed.length === 0 ? (
                 <GestionaleLogEmpty message="Nessuna modifica registrata." />
               ) : (
@@ -2167,7 +2181,7 @@ export function MagazzinoView() {
           titleId="dup-magazzino-title"
           maxWidthClass="max-w-lg"
         >
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+            <GestionaleModalScrollBody className="space-y-3 p-4">
               {archivioDupCodeGroups.length === 0 ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">Nessun codice duplicato rilevato.</p>
               ) : (
@@ -2194,7 +2208,7 @@ export function MagazzinoView() {
                   ))}
                 </ul>
               )}
-            </div>
+            </GestionaleModalScrollBody>
         </GestionaleModalShell>
       ) : null}
       <SettingsEliminaConfirmDialog

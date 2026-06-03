@@ -23,7 +23,6 @@ export type LavorazioneAttivitaEvent = {
   tier: LavorazioneAttivitaTier;
   title: string;
   description: string;
-  details?: string;
   autore: string;
   tone: GestionaleLogEventTone;
   /** Valore stato (dopo cambio) per badge su eventi workflow. */
@@ -147,7 +146,6 @@ function eventFromLog(
     tier,
     title: displayTitle(summary, row),
     description,
-    details: summary.oggettoRiga !== "—" && summary.oggettoRiga !== "Lavorazione" ? summary.oggettoRiga : undefined,
     autore: resolveAutore(row),
     tone: summary.tone,
     statoId: tier === "stato" ? parseStatoAfterFromModifiche(summary.modifiche, statiOpts) : undefined,

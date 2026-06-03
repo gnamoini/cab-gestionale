@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { consolidateLogModificaRows, isNetNoOpUpdateRow } from "@/lib/gestionale-log/log-consolidate";
 import { classifyLogEvent } from "@/lib/gestionale-log/log-event-classify";
+import { buildLogModificaSummary } from "@/lib/gestionale-log/log-summary";
 import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
@@ -151,5 +152,37 @@ assert.equal(
   ),
   "STOCK_MOVEMENT",
 );
+
+{
+  const autoreOnly = row({
+    id: "mag-autore",
+    entita: "magazzino_ricambi",
+    entita_id: "ric-1",
+    created_at: "2026-06-01T04:09:00.000Z",
+    payload: updatePayload(
+      { nome: "Lampada", autoreUltimaModifica: "Gaetano", updated_at: "2026-06-01T03:00:00.000Z" },
+      { nome: "Lampada", autoreUltimaModifica: "Giorgio", updated_at: "2026-06-01T04:09:00.000Z" },
+    ),
+  });
+  assert.equal(reconcileLogModificaRows([autoreOnly]).length, 0);
+
+  const summary = buildLogModificaSummary({
+    entita: "magazzino_ricambi",
+    entita_id: "ric-1",
+    azione: "UPDATE",
+    payload: updatePayload(
+      { descrizione: "A", autoreUltimaModifica: "Gaetano" },
+      { descrizione: "B", autoreUltimaModifica: "Giorgio" },
+    ),
+  });
+  assert.ok(
+    summary.modifiche.some((m) => /descrizione/i.test(m)),
+    "expected descrizione change in summary",
+  );
+  assert.ok(
+    !summary.modifiche.some((m) => /AutoreUltimaModifica|Autore ultima modifica/i.test(m)),
+    "autore ultima modifica must not appear in summary",
+  );
+}
 
 console.log("log-event-pipeline.test.ts: ok");

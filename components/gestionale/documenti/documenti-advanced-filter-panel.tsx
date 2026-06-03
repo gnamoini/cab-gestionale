@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo } from "react";
+import {
+  GlobalHierarchyMarcaSelect,
+  GlobalHierarchyModelloSelect,
+} from "@/components/gestionale/global-input";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import {
   FILTER_ALL,
   type DocumentiAdvancedFilters,
@@ -17,22 +19,14 @@ const filterInputClass = `${globalInputFieldFilter} h-10 py-0 text-sm`;
 export function DocumentiAdvancedFilterPanel({
   filters,
   onChange,
-  catalog,
   sortSelectValue,
   onSortSelect,
 }: {
   filters: DocumentiAdvancedFilters;
   onChange: (patch: Partial<DocumentiAdvancedFilters>) => void;
-  catalog: CatalogMarca[];
   sortSelectValue: string;
   onSortSelect: (v: string) => void;
 }) {
-  const modelliFilterOptions = useMemo(() => {
-    if (filters.marca === FILTER_ALL) return [];
-    const mar = catalog.find((m) => m.id === filters.marca);
-    return (mar?.macchine ?? []).map((mac) => ({ id: mac.id, label: mac.nome }));
-  }, [catalog, filters.marca]);
-
   return (
     <div className="border-t border-[color:var(--cab-border)] pt-3" aria-label="Filtri documenti">
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -40,21 +34,17 @@ export function DocumentiAdvancedFilterPanel({
           <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Marca
           </label>
-          <GlobalSelect
+          <GlobalHierarchyMarcaSelect
+            tree="attrezzature"
             variant="filter"
             inputClassName={filterInputClass}
-            items={[
-              { value: FILTER_ALL, label: "Tutte le marche" },
-              ...catalog.map((m) => ({ value: m.id, label: m.nome })),
-            ]}
-            value={filters.marca}
+            value={filters.marca === FILTER_ALL ? "" : filters.marca}
             onChange={(v) => {
               const marca = v.trim() ? v : FILTER_ALL;
               onChange({ marca, modello: FILTER_ALL });
             }}
-            strictFromList
+            allowAdd={false}
             placeholder="Cerca e seleziona…"
-            filterNeutralValues={[FILTER_ALL]}
             aria-label="Filtra per marca"
           />
         </div>
@@ -62,19 +52,16 @@ export function DocumentiAdvancedFilterPanel({
           <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Modello
           </label>
-          <GlobalSelect
+          <GlobalHierarchyModelloSelect
+            tree="attrezzature"
             variant="filter"
             inputClassName={filterInputClass}
-            items={[
-              { value: FILTER_ALL, label: "Tutti i modelli" },
-              ...modelliFilterOptions.map((o) => ({ value: o.id, label: o.label })),
-            ]}
-            value={filters.modello}
+            marcaNome={filters.marca === FILTER_ALL ? "" : filters.marca}
+            value={filters.modello === FILTER_ALL ? "" : filters.modello}
             onChange={(v) => onChange({ modello: v.trim() ? v : FILTER_ALL })}
-            strictFromList
+            allowAdd={false}
             disabled={filters.marca === FILTER_ALL}
             placeholder={filters.marca === FILTER_ALL ? "Seleziona prima la marca" : "Cerca e seleziona…"}
-            filterNeutralValues={[FILTER_ALL]}
             aria-label="Filtra per modello"
           />
         </div>
@@ -84,7 +71,6 @@ export function DocumentiAdvancedFilterPanel({
           </label>
           <GlobalSelect
             variant="filter"
-            selectOnly
             inputClassName={filterInputClass}
             items={[
               { value: "natural", label: "Archivio (marca → modello)" },
@@ -99,6 +85,7 @@ export function DocumentiAdvancedFilterPanel({
             value={sortSelectValue}
             onChange={onSortSelect}
             strictFromList
+            selectOnly
             aria-label="Ordinamento"
           />
         </div>
@@ -106,7 +93,7 @@ export function DocumentiAdvancedFilterPanel({
           <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
             Categoria
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex min-w-0 flex-wrap gap-2">
             {(
               [
                 [FILTER_ALL, "Tutte"],

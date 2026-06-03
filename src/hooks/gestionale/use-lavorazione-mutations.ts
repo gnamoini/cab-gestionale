@@ -5,6 +5,7 @@ import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { cabSyncEventForEntity, invalidateAfterLavorazioneMutations } from "@/src/lib/react-query/invalidate-related";
 import {
   applyOptimisticLavorazioneUpdate,
+  buildConcludeOptimisticPatch,
   rollbackLavorazioneUpdateQueries,
   settleLavorazioneQuickUpdate,
   snapshotLavorazioneUpdateQueries,
@@ -86,6 +87,21 @@ export function useLavorazioneRestoreMutation() {
 export function useLavorazioneConcludeMutation() {
   const queryClient = useQueryClient();
   return useServiceMutation((id: string) => lavorazioniService.conclude(id), {
+    onMutate: async (id) => {
+      const context = await snapshotLavorazioneUpdateQueries(queryClient, id);
+      const existing = context.lists
+        .flatMap((s) => s.data ?? [])
+        .find((r) => r.id === id);
+      applyOptimisticLavorazioneUpdate(queryClient, id, buildConcludeOptimisticPatch(existing));
+      return context;
+    },
+    onSuccess: (serverRow, id) => {
+      applyOptimisticLavorazioneUpdate(queryClient, id, {}, serverRow);
+      markRecentLocalGestionaleMutation(["lavorazioni"], id);
+    },
+    onError: (_err, _id, context) => {
+      if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);
+    },
     onSettled: async (_data, error, id) => {
       if (error) return;
       await invalidateAfterLavorazioneMutations(queryClient, [

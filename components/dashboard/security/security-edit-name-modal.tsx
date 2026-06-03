@@ -44,7 +44,7 @@ export function SecurityEditNameModal({ open, initialNome, pending, onClose, onS
     >
       <form
         id="security-edit-name-form"
-        className="flex flex-col gap-3"
+        className="flex min-w-0 flex-col gap-3"
         onSubmit={(e) => {
           e.preventDefault();
           const t = nome.trim();

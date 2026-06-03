@@ -44,6 +44,8 @@ export function findItemByValue(
   value: string,
   items: readonly ListSelectItem[],
 ): ListSelectItem | null {
+  const exact = items.find((i) => i.value === value);
+  if (exact) return exact;
   const v = value.trim();
   if (!v) return null;
   return items.find((i) => i.value === v) ?? null;
@@ -59,7 +61,6 @@ export function findItemByLabel(
 }
 
 export function isValueInItems(value: string, items: readonly ListSelectItem[]): boolean {
-  if (!value.trim()) return false;
   return findItemByValue(value, items) !== null;
 }
 

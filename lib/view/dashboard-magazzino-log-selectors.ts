@@ -3,7 +3,9 @@ import { isImageLogAction } from "@/lib/gestionale-log/view-model";
 import { isLogReverted } from "@/lib/gestionale-log/undo";
 import { parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { isoInRange, todayUntilNowRange, type DateRange } from "@/lib/report/date-ranges";
 import type {
+  DashboardMagDailyMovements,
   DashboardMagMovementRow,
   DashboardMagRecentRicambioRow,
 } from "@/lib/view/dashboard-widgets-selectors";
@@ -187,4 +189,24 @@ export function computeDashboardMagFeedFromLogs(
   }
 
   return { movements, modified };
+}
+
+/** Entrate/uscite oggi (mezzanotte → adesso) da log magazzino e movimenti. */
+export function computeDashboardMagDailyMovementsFromLogs(
+  magLogs: readonly LogModificaRow[],
+  movLogs: readonly LogModificaRow[],
+  ricambiById: ReadonlyMap<string, RicambioMagazzino>,
+  range: DateRange = todayUntilNowRange(),
+): DashboardMagDailyMovements {
+  let entrate = 0;
+  let uscite = 0;
+  for (const row of [...magLogs, ...movLogs]) {
+    if (!isoInRange(row.created_at, range)) continue;
+    if (classifyDashboardMagazzinoLog(row) !== "stock") continue;
+    const movement = logRowToMovement(row, ricambiById);
+    if (!movement) continue;
+    if (movement.tipo === "entrata") entrate += movement.quantita;
+    else uscite += movement.quantita;
+  }
+  return { entrate, uscite };
 }

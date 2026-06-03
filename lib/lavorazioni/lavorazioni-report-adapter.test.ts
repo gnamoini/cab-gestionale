@@ -5,6 +5,7 @@ import {
   lavorazioneListRowToArchiviata,
   lavorazioneReportClosureIso,
   splitLavorazioniListRowsForReport,
+  filterReportLavorazioniRows,
 } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
@@ -99,6 +100,18 @@ assert.equal(
   ),
   false,
   "archived without persistent closure must not count as report completata",
+);
+
+const validMezzi = new Set(["mezzo-1"]);
+assert.equal(
+  filterReportLavorazioniRows([mockRow({ mezzo_id: "ghost", mezzo: null })], validMezzi).rows.length,
+  0,
+  "orphan mezzo_id excluded from report",
+);
+assert.equal(
+  filterReportLavorazioniRows([mockRow({ mezzo_id: "mezzo-1", mezzo: null })], validMezzi).rows.length,
+  1,
+  "mezzo_id in anagrafica kept even without join",
 );
 
 console.log("lavorazioni-report-adapter.test.ts OK");

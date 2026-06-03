@@ -1,14 +1,77 @@
-import { parseCompatMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
+import { migrateMezziListePrefs, parseCompatMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
 import {
-  compatLabelsPerMarcheHierarchy,
   flattenCompatFromHierarchyTree,
+  marcheFromHierarchyTree,
   type HierarchyTreeKey,
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { normalizeCompatList } from "@/lib/magazzino/form";
+import { normalizeCompatList } from "@/lib/magazzino/compat/compat-normalize";
+import {
+  isCompatMarcaUniversalLine,
+  marcaUniversalCompatLabel,
+} from "@/lib/magazzino/ricambio-compat-resolver";
 
 function normMarca(m: string): string {
   return m.trim().toLowerCase();
+}
+
+function canonicalMarcaInTree(marca: string, tree: HierarchyTreeKey, mezziListe: MezziListePrefs): string | null {
+  const marche = marcheFromHierarchyTree(migrateMezziListePrefs(mezziListe), tree);
+  return marche.find((m) => normMarca(m) === normMarca(marca)) ?? null;
+}
+
+/** Compat line appartiene ad attrezzature o telai (modello esplicito o universale marca). */
+export function lineBelongsToHierarchyTree(
+  line: string,
+  tree: HierarchyTreeKey,
+  mezziListe: MezziListePrefs,
+): boolean {
+  const p = migrateMezziListePrefs(mezziListe);
+  const labels = new Set(flattenCompatFromHierarchyTree(p, tree));
+  if (labels.has(line.trim())) return true;
+  if (!isCompatMarcaUniversalLine(line)) return false;
+  const { marca } = parseCompatMarcaModello(line);
+  return Boolean(canonicalMarcaInTree(marca, tree, mezziListe));
+}
+
+/** Rimuove compat (modelli + universale marca) di una marca in un albero. */
+export function stripCompatLinesForMarcaInTree(
+  lines: readonly string[],
+  marca: string,
+  tree: HierarchyTreeKey,
+  mezziListe: MezziListePrefs,
+): string[] {
+  return lines.filter((line) => {
+    if (!lineBelongsToHierarchyTree(line, tree, mezziListe)) return true;
+    return normMarca(parseCompatMarcaModello(line).marca) !== normMarca(marca);
+  });
+}
+
+/** Ricostruisce filtri marca attrezzatura/telaio da compat salvata (modifica ricambio). */
+export function deriveMarcheFiltroFromCompatLabels(
+  labels: readonly string[],
+  mezziListe: MezziListePrefs,
+): { attrezzature: string[]; telai: string[] } {
+  const attSet = new Set<string>();
+  const telSet = new Set<string>();
+
+  for (const line of normalizeCompatList(labels)) {
+    const { marca } = parseCompatMarcaModello(line);
+    if (!marca) continue;
+    const att = canonicalMarcaInTree(marca, "attrezzature", mezziListe);
+    const tel = canonicalMarcaInTree(marca, "telai", mezziListe);
+    if (att && (isCompatMarcaUniversalLine(line) || lineBelongsToHierarchyTree(line, "attrezzature", mezziListe))) {
+      attSet.add(att);
+    }
+    if (tel && (isCompatMarcaUniversalLine(line) || lineBelongsToHierarchyTree(line, "telai", mezziListe))) {
+      telSet.add(tel);
+    }
+  }
+
+  return {
+    attrezzature: [...attSet].sort((a, b) => a.localeCompare(b, "it")),
+    telai: [...telSet].sort((a, b) => a.localeCompare(b, "it")),
+  };
 }
 
 function linesForMarcaInTree(
@@ -18,7 +81,10 @@ function linesForMarcaInTree(
 ): string[] {
   const want = normMarca(marca);
   return selected.filter((line) => {
-    if (!allTreeLines.has(line)) return false;
+    if (!allTreeLines.has(line)) {
+      const parsed = parseCompatMarcaModello(line);
+      return normMarca(parsed.marca) === want && Boolean(parsed.modello);
+    }
     return normMarca(parseCompatMarcaModello(line).marca) === want;
   });
 }
@@ -37,9 +103,7 @@ function expandTreeMarcheSenzaModelli(
     if (!m) continue;
     const modelsForMarca = linesForMarcaInTree(selected, allLines, m);
     if (modelsForMarca.length > 0) continue;
-    for (const line of compatLabelsPerMarcheHierarchy(mezziListe, tree, [m])) {
-      result.add(line);
-    }
+    result.add(marcaUniversalCompatLabel(m));
   }
 }
 
@@ -50,8 +114,8 @@ export type ExpandRicambioCompatOpts = {
 };
 
 /**
- * Marca in filtro senza modelli espliciti → tutte le coppie «Marca — Modello» del dataset globale.
- * Se esiste almeno un modello selezionato per quella marca, non si espande.
+ * Marca in filtro senza modelli espliciti → riga «Marca — » (universale per marca).
+ * Se esiste almeno un modello selezionato per quella marca, non si aggiunge universale marca.
  */
 export function expandRicambioCompatibilitaMezzi(
   selected: readonly string[],
@@ -63,7 +127,7 @@ export function expandRicambioCompatibilitaMezzi(
   return [...result].sort((a, b) => a.localeCompare(b, "it"));
 }
 
-/** Marche in filtro che verranno espanse al salvataggio (nessun modello ancora selezionato). */
+/** Marche in filtro che verranno salvate come universale marca (nessun modello selezionato). */
 export function marchePendingUniversalCompatExpand(
   selected: readonly string[],
   opts: ExpandRicambioCompatOpts,

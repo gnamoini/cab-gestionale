@@ -12,17 +12,16 @@ import {
   type ReportPeriodPreset,
 } from "@/lib/report/date-ranges";
 import {
-  avgCloseDays,
-  countCompletedInRange,
   countOpenedInRange,
-  sparkFromDailyCompletions,
   uniqueClientiNelPeriodo,
   type ReportManualByMonth,
 } from "@/lib/report/lavorazioni-report-selectors";
-import { buildMagazzinoMonthlyRows } from "@/lib/report/magazzino-monthly-rows";
 import { sumMagazzinoUsciteQtyInRange } from "@/lib/report/magazzino-period-aggregate";
-import { loadMagazzinoManualMonthMap } from "@/lib/report/magazzino-manual-storage";
+import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
+import { getMagPeriodAgg } from "@/lib/report/report-derived-cache";
+import type { ReportSemanticIndex } from "@/lib/report/report-semantic-index";
 
+/** Input KPI report — dati devono provenire da `ReportDataIntegrityLayer.buildValidatedDataset`. */
 export type ReportLiveInput = {
   anchor: Date;
   preset: ReportPeriodPreset;
@@ -36,6 +35,8 @@ export type ReportLiveInput = {
   magazzino: RicambioMagazzino[];
   mezzi: MezzoGestito[];
   magLog: MagazzinoChangeLogEntry[];
+  semanticIndex: ReportSemanticIndex;
+  derivedBundle: ReportDerivedBundle;
 };
 
 export type KpiCompareRow = {
@@ -51,7 +52,8 @@ export type KpiCardModel = {
   value: string;
   sub?: string;
   compareRows: KpiCompareRow[] | null;
-  spark: number[];
+  /** Spark 7gg lavorazioni (solo card lav-periodo). */
+  spark?: number[];
 };
 
 export type ReportCompareDetail = {
@@ -81,24 +83,6 @@ function fmtEur(n: number): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
 }
 
-function sumMagazzinoPeriod(
-  magLog: MagazzinoChangeLogEntry[],
-  prodotti: RicambioMagazzino[],
-  r: DateRange,
-  anchor: Date,
-): { deltaCapitale: number; entrate: number; uscite: number } {
-  const manual = loadMagazzinoManualMonthMap();
-  const { rows } = buildMagazzinoMonthlyRows(magLog, prodotti, r, anchor, manual);
-  return rows.reduce(
-    (acc, row) => ({
-      deltaCapitale: acc.deltaCapitale + row.deltaCapitale,
-      entrate: acc.entrate + row.entrate,
-      uscite: acc.uscite + row.uscite,
-    }),
-    { deltaCapitale: 0, entrate: 0, uscite: 0 },
-  );
-}
-
 function fmtSignedInt(n: number): string {
   const s = n > 0 ? "+" : "";
   return `${s}${n}`;
@@ -113,28 +97,27 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const compareMode = input.compareMode ?? "none";
   const range = resolvePresetRange(input.anchor, input.preset, input.customFrom, input.customTo);
   const compareRange = compareMode === "none" ? null : compareRangeFor(range, compareMode);
-  const { attive, storico, completate, manualByMonth, magazzino, mezzi, magLog, anchor } = input;
+  const { attive, storico, completate, magazzino, mezzi, anchor, semanticIndex, derivedBundle } = input;
+  const magLogResolved = derivedBundle.magLogSorted;
 
   const opened = countOpenedInRange(attive, storico, range);
-  const completed = countCompletedInRange(completate, range, manualByMonth);
-  const tempoMedio = avgCloseDays(completate, range);
+  const completed = semanticIndex.completateTotal(range);
+  const tempoMedio = semanticIndex.tempoMedio(range);
   const cap = totalCapitale(magazzino);
-  const ricambi = sumMagazzinoUsciteQtyInRange(magLog, range);
+  const ricambi = sumMagazzinoUsciteQtyInRange(magLogResolved, range);
   const clienti = uniqueClientiNelPeriodo(attive, storico, completate, range);
   const mezziN = mezzi.length;
 
-  const magCur = sumMagazzinoPeriod(magLog, magazzino, range, anchor);
-  const magPrev = compareRange ? sumMagazzinoPeriod(magLog, magazzino, compareRange, anchor) : null;
+  const magCur = getMagPeriodAgg(derivedBundle, magazzino, range, anchor);
+  const magPrev = compareRange ? getMagPeriodAgg(derivedBundle, magazzino, compareRange, anchor) : null;
 
   const openedP = compareRange ? countOpenedInRange(attive, storico, compareRange) : null;
-  const completedP = compareRange ? countCompletedInRange(completate, compareRange, manualByMonth) : null;
-  const tempoP = compareRange ? avgCloseDays(completate, compareRange) : null;
-  const ricambiP = compareRange ? sumMagazzinoUsciteQtyInRange(magLog, compareRange) : null;
-  const clientiP = compareRange
-    ? uniqueClientiNelPeriodo(attive, storico, completate, compareRange)
-    : null;
+  const completedP = compareRange ? semanticIndex.completateTotal(compareRange) : null;
+  const tempoP = compareRange ? semanticIndex.tempoMedio(compareRange) : null;
+  const ricambiP = compareRange ? sumMagazzinoUsciteQtyInRange(magLogResolved, compareRange) : null;
+  const clientiP = compareRange ? uniqueClientiNelPeriodo(attive, storico, completate, compareRange) : null;
 
-  const spark = sparkFromDailyCompletions(completate, range.end);
+  const spark = semanticIndex.sparkSeries(range.end);
 
   const dOpened =
     compareRange && openedP != null
@@ -171,6 +154,7 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
   const lavSubParts = [
     `Archiviate ${completed}${pctChiusSuIngressi != null ? ` (${pctChiusSuIngressi}% degli ingressi)` : ""}`,
     tempoMedio > 0 ? `Tempo medio archivio ${tempoMedio} gg` : "Tempo medio archivio —",
+    "Mini-grafico 7gg: solo chiusure DB (senza override manuali)",
   ];
   const lavCompareRows: KpiCompareRow[] | null = compareRange
     ? [
@@ -198,7 +182,6 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
         compareRange != null
           ? [{ label: "Σ Δ capitale nel periodo", deltaAbs: dDeltaCap.abs, deltaPct: dDeltaCap.pct }]
           : null,
-      spark,
     },
     {
       id: "ric-usati",
@@ -209,7 +192,6 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
         compareRange != null
           ? [{ label: "Uscite nel periodo", deltaAbs: dRicambi.abs, deltaPct: dRicambi.pct }]
           : null,
-      spark,
     },
     {
       id: "clienti",
@@ -220,7 +202,6 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
         compareRange != null
           ? [{ label: "Clienti nel periodo", deltaAbs: dClienti.abs, deltaPct: dClienti.pct }]
           : null,
-      spark,
     },
     {
       id: "mezzi",
@@ -228,7 +209,6 @@ export function buildReportModel(input: ReportLiveInput): ReportModel {
       value: String(mezziN),
       sub: "Totale flotta (non legato al periodo)",
       compareRows: null,
-      spark,
     },
   ];
 

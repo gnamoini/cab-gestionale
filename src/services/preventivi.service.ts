@@ -1,7 +1,8 @@
 "use client";
 
+import { pickPreventivoWritePayload } from "@/lib/validation/services/preventivi-payload";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
+import { ensureSectionDelete, ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { PreventivoRow } from "@/src/types/supabase-tables";
@@ -86,10 +87,11 @@ export const preventiviService = {
 
   async create(data: PreventivoInsert): Promise<ServiceResult<PreventivoRow>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
+      const allowed = await ensureSectionWrite("preventivi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const merged = mergePreventivoPayload(data) as PreventivoInsert;
+      const picked = pickPreventivoWritePayload(data as Record<string, unknown>);
+      const merged = mergePreventivoPayload(picked as PreventivoInsert) as PreventivoInsert;
       const { data: row, error } = await c.from("preventivi").insert(merged).select("*").single();
       if (error) return err(error.message);
       const r = row as PreventivoRow;
@@ -102,15 +104,22 @@ export const preventiviService = {
 
   async update(id: string, data: PreventivoUpdate): Promise<ServiceResult<PreventivoRow>> {
     try {
-      const allowed = await ensurePermission("editWorkOrders");
+      const allowed = await ensureSectionWrite("preventivi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: before, error: e0 } = await c.from("preventivi").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
-      const base = { ...(before as PreventivoRow), ...data };
-      const merged =
-        data.dettagli !== undefined ? (mergePreventivoPayload(base) as PreventivoRow) : base;
-      let q = c.from("preventivi").update(merged).eq("id", id);
+      if (!before) return err("Preventivo non trovato.");
+      const patch = pickPreventivoWritePayload(data as Record<string, unknown>);
+      let updateBody: PreventivoUpdate = { ...patch };
+      if (patch.dettagli !== undefined) {
+        const merged = mergePreventivoPayload({
+          ...(before as PreventivoRow),
+          ...patch,
+        }) as PreventivoRow;
+        updateBody = { ...patch, totale: merged.totale, dettagli: merged.dettagli };
+      }
+      let q = c.from("preventivi").update(updateBody).eq("id", id);
       const expectedAt = (data as { updated_at?: string }).updated_at;
       if (expectedAt) q = q.eq("updated_at", expectedAt);
       const { data: row, error } = await q.select("*").single();
@@ -133,7 +142,7 @@ export const preventiviService = {
 
   async remove(id: string): Promise<ServiceResult<null>> {
     try {
-      const allowed = await ensurePermission("deleteRecords");
+      const allowed = await ensureSectionDelete("preventivi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const { data: existing, error: e0 } = await c.from("preventivi").select("*").eq("id", id).maybeSingle();

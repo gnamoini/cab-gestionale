@@ -72,6 +72,7 @@ export function lavorazioneListRowToArchiviata(row: LavorazioneListRow): Lavoraz
   return {
     id: a.id,
     codice: a.codice,
+    mezzoId: row.mezzo_id?.trim() || null,
     macchina: a.macchina,
     targa: a.targa,
     matricola: a.matricola,
@@ -99,6 +100,37 @@ export function isReportArchivioCompletataRow(
   if (row.deleted_at) return false;
   if (!isLavorazioneArchived(row)) return false;
   return Boolean(lavorazioneReportClosureIso(row));
+}
+
+/**
+ * Lavorazione ammissibile nel report: non eliminata; se ha `mezzo_id` il mezzo deve esistere (join o anagrafica).
+ */
+export function isReportValidLavorazioneRow(
+  row: Pick<LavorazioneListRow, "deleted_at" | "mezzo_id" | "mezzo">,
+  validMezzoIds: ReadonlySet<string>,
+): boolean {
+  if (row.deleted_at) return false;
+  const mezzoId = row.mezzo_id?.trim();
+  if (!mezzoId) return true;
+  if (row.mezzo != null) return true;
+  return validMezzoIds.has(mezzoId);
+}
+
+/** Esclude eliminate e relazioni mezzo orfane prima del bundle report. */
+export function filterReportLavorazioniRows(
+  rows: LavorazioneListRow[],
+  validMezzoIds: ReadonlySet<string>,
+): { rows: LavorazioneListRow[]; excludedCount: number } {
+  const out: LavorazioneListRow[] = [];
+  let excludedCount = 0;
+  for (const r of rows) {
+    if (!isReportValidLavorazioneRow(r, validMezzoIds)) {
+      excludedCount += 1;
+      continue;
+    }
+    out.push(r);
+  }
+  return { rows: out, excludedCount };
 }
 
 /**

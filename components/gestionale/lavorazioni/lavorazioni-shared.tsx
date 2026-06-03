@@ -19,6 +19,7 @@ import {
   selectLavorazioniInline,
   selectPillInner,
 } from "@/lib/ui/design-system";
+import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { pillStyleFromHex } from "@/lib/lavorazioni/color-utils";
 import type { SortKeyLavorazione, SortKeyStorico, SortPhaseLav } from "@/lib/lavorazioni/types";
 
@@ -130,6 +131,16 @@ export function addettoPillShellClassDynamic(): string {
 
 export function addettoPillShellStyle(hex: string | undefined): CSSProperties {
   return pillStyleFromHex(hex);
+}
+
+/** Stile pill addetto coerente in tabella (editabile e sola lettura). */
+export function addettoPillShellStyleForName(
+  nome: string,
+  addettoColors: Record<string, string | undefined>,
+): CSSProperties {
+  return addettoPillShellStyle(
+    addettoDisplayColor(nome, addettoColors as Record<string, string>),
+  );
 }
 
 /** Badge compatto (storico / filtri). */

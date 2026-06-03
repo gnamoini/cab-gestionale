@@ -16,8 +16,8 @@ import {
   clientPortalIngressoIso,
 } from "@/lib/lavorazioni/client-portal-row-fields";
 import {
-  lavRowIngressoInRange,
   lavRowMatchesGlobalSearch,
+  lavRowMatchesPageFilters,
 } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
@@ -96,7 +96,43 @@ const emptySchede: LavorazioneSchedeStore = {};
 // Ingresso range: no active date filters passes even with missing ingresso on row
 {
   const row = sampleRow({ data_ingresso: null, created_at: "" });
-  assert.equal(lavRowIngressoInRange(row, "", ""), true);
+  assert.equal(lavRowMatchesPageFilters({ ...row, note: "" }, { ...CLIENT_PORTAL_FILTERS_EMPTY, search: "" }, emptySchede, "", "in_corso"), true);
+}
+
+// Intervallo invertito: normalizzato al confronto
+{
+  const row = sampleRow({ data_ingresso: "2026-05-15T10:00:00.000Z" });
+  const filters = {
+    ...LAVORAZIONI_ADVANCED_FILTERS_EMPTY,
+    ingressoDa: "2026-05-31",
+    ingressoA: "2026-05-01",
+  };
+  assert.equal(
+    lavRowMatchesAdvancedFilters(row, filters, emptySchede, "", "in_corso"),
+    true,
+    "inverted ingresso range still matches mid-month row",
+  );
+}
+
+// Gestionale: completamento non filtra in corso
+{
+  const row = sampleRow({ data_uscita: null, archived: false });
+  const pageFilters = {
+    search: "",
+    ...LAVORAZIONI_ADVANCED_FILTERS_EMPTY,
+    completamentoDa: "2026-01-01",
+    completamentoA: "2026-12-31",
+  };
+  assert.equal(
+    lavRowMatchesPageFilters(row, pageFilters, emptySchede, "", "in_corso"),
+    true,
+    "page filter in_corso ignores completamento",
+  );
+  assert.equal(
+    lavRowMatchesPageFilters(row, pageFilters, emptySchede, "", "archivio"),
+    false,
+    "page filter archivio applies completamento",
+  );
 }
 
 // Scheda dataIngresso non parseabile → fallback DB per filtri portale

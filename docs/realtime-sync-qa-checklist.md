@@ -28,7 +28,7 @@ Admin + operatore, stesso ambiente Supabase.
 | Lavorazione | Cambio stato/priorità in A → tabella/card B senza refresh manuale |
 | Preventivo | Creazione/modifica in A → lista B aggiornata |
 | Ricambi | Movimento in A → giacenza B |
-| Supporto | Nota creata/risolta cross-user |
+| Supporto | ~~Nota creata/risolta cross-user~~ **Modulo rimosso** — tabelle `segnalazioni`/`support_notes` solo read admin (migration `20260704130000`) |
 | Anti-duplicazione | Bulk settings → un solo toast |
 | Fallback RT | Con Realtime disabilitato: polling ≤20s o focus ripristina dati |
 

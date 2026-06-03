@@ -3,12 +3,16 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 html {
-  scrollbar-gutter: stable;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  min-height: var(--cab-app-height, 100dvh);
+  min-width: var(--cab-app-width, 100vw);
+  background-color: var(--cab-bg-app);
 }
 
 :root {
+  --cab-app-width: 100vw;
+  --cab-app-height: 100dvh;
   --cab-vv-height: 100dvh;
   --cab-vv-offset-top: 0px;
   --cab-safe-top: env(safe-area-inset-top, 0px);
@@ -26,8 +30,10 @@ html {
   --cab-border: #e4e4e7;
   --cab-border-strong: #d4d4d8;
   /* Arancione logo CAB (monocolore — no gradient) */
-  --cab-primary: #f97316;
-  --cab-primary-hover: #ea580c;
+  --cab-primary: #ff6633;
+  --cab-primary-bg: var(--cab-primary);
+  --cab-primary-bg-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
+  --cab-primary-hover: #e05a2d;
   --cab-success: #059669;
   --cab-warning: #d97706;
   --cab-danger: #dc2626;
@@ -36,6 +42,7 @@ html {
   --cab-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.05), 0 1px 3px rgb(0 0 0 / 0.08);
   --cab-shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.06);
   --cab-overlay: rgb(0 0 0 / 0.48);
+  --cab-scrollbar-size: 10px;
   --cab-scrollbar-thumb: rgb(161 161 170 / 0.55);
   --cab-scrollbar-thumb-hover: rgb(113 113 122 / 0.75);
   --cab-scrollbar-track: rgb(244 244 245 / 0.65);
@@ -69,8 +76,10 @@ html {
   --cab-border-strong: rgb(63 63 70);
   /* Stesso arancio della light mode: CTA / primario identici in dark */
   /* Arancione logo CAB (monocolore — no gradient) */
-  --cab-primary: #f97316;
-  --cab-primary-hover: #ea580c;
+  --cab-primary: #ff6633;
+  --cab-primary-bg: var(--cab-primary);
+  --cab-primary-bg-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
+  --cab-primary-hover: #e05a2d;
   --cab-success: #34d399;
   --cab-warning: #fbbf24;
   --cab-danger: #f87171;
@@ -124,36 +133,142 @@ html {
   }
 }
 
-@keyframes cab-toast-in {
+@keyframes cab-nav-backdrop-in {
   from {
-    transform: translateY(0.5rem);
     opacity: 0;
   }
   to {
-    transform: translateY(0);
     opacity: 1;
   }
 }
 
+@keyframes cab-toast-in {
+  from {
+    transform: translate3d(0.75rem, 0.35rem, 0);
+    opacity: 0;
+  }
+  to {
+    transform: translate3d(0, 0, 0);
+    opacity: 1;
+  }
+}
+
+@keyframes promemoria-calendar-in {
+  from {
+    opacity: 0.35;
+    transform: translateX(var(--promemoria-cal-slide, 0));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.promemoria-calendar-grid-enter {
+  animation: promemoria-calendar-in 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promemoria-calendar-grid-enter {
+    animation: none;
+  }
+}
+
+@keyframes global-dropdown-portal-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.global-dropdown-portal-enter {
+  animation: global-dropdown-portal-in 150ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.origin-bottom.global-dropdown-portal-enter {
+  animation-name: global-dropdown-portal-in-top;
+}
+
+@keyframes global-dropdown-portal-in-top {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .global-dropdown-portal-enter {
+    animation: none;
+  }
+}
+
+.cab-toast-slot {
+  max-height: 6rem;
+  overflow: hidden;
+  pointer-events: none;
+  transition:
+    max-height 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    margin-bottom 220ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.cab-toast-slot:not(.cab-toast-slot--out) {
+  pointer-events: auto;
+  margin-bottom: 0.5rem;
+}
+
+.cab-toast-slot--out {
+  max-height: 0;
+  opacity: 0;
+  margin-bottom: 0;
+}
+
 .cab-toast-item {
-  animation: cab-toast-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: cab-toast-in 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
 .cab-drawer-panel {
   animation: cab-drawer-in 0.22s cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
+.cab-nav-drawer-panel,
+.cab-nav-drawer-backdrop {
+  --cab-nav-drawer-duration: 0.24s;
+  --cab-nav-drawer-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .cab-nav-drawer-panel {
-  animation: cab-nav-drawer-in 0.24s cubic-bezier(0.4, 0, 0.2, 1) both;
+  animation: cab-nav-drawer-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) both;
+}
+
+.cab-nav-drawer-panel[data-state="closing"] {
+  animation: cab-nav-drawer-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) reverse both;
+}
+
+.cab-nav-drawer-backdrop {
+  animation: cab-nav-backdrop-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) both;
+}
+
+.cab-nav-drawer-backdrop[data-state="closing"] {
+  animation: cab-nav-backdrop-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) reverse both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .cab-drawer-panel,
-  .cab-nav-drawer-panel {
+  .cab-nav-drawer-panel,
+  .cab-nav-drawer-backdrop {
     animation: none;
   }
   .cab-toast-item {
     animation: none;
+  }
+
+  .cab-toast-slot {
+    transition: none;
   }
 }
 
@@ -165,8 +280,8 @@ body {
 
 html::-webkit-scrollbar,
 body::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: var(--cab-scrollbar-size);
+  height: var(--cab-scrollbar-size);
 }
 
 html::-webkit-scrollbar-track,
@@ -179,7 +294,7 @@ html::-webkit-scrollbar-thumb,
 body::-webkit-scrollbar-thumb {
   background-color: var(--cab-scrollbar-thumb);
   border-radius: 9999px;
-  border: 2px solid transparent;
+  border: 1px solid transparent;
   background-clip: padding-box;
 }
 
@@ -228,8 +343,8 @@ html.dark select option {
     scrollbar-color: var(--cab-scrollbar-thumb) var(--cab-scrollbar-track);
   }
   .gestionale-scrollbar::-webkit-scrollbar {
-    width: 10px;
-    height: 10px;
+    width: var(--cab-scrollbar-size);
+    height: var(--cab-scrollbar-size);
   }
   .gestionale-scrollbar::-webkit-scrollbar-track {
     background: var(--cab-scrollbar-track);
@@ -238,7 +353,7 @@ html.dark select option {
   .gestionale-scrollbar::-webkit-scrollbar-thumb {
     background-color: var(--cab-scrollbar-thumb);
     border-radius: 9999px;
-    border: 2px solid transparent;
+    border: 1px solid transparent;
     background-clip: padding-box;
   }
   .gestionale-scrollbar::-webkit-scrollbar-thumb:hover {
@@ -260,6 +375,56 @@ html.dark select option {
       margin-bottom: -0.14em;
     }
   }
+
+  /* Flex containment utilities — Global Flex System */
+  .flex-safe {
+    display: flex;
+    min-width: 0;
+  }
+
+  .flex-safe-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .flex-safe-row > * {
+    min-width: 0;
+  }
+
+  .flex-safe-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .flex-safe-col > * {
+    min-width: 0;
+  }
+
+  .flex-safe-item {
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .flex-fill,
+  .flex-fill-safe {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .flex-shrink-safe {
+    flex-shrink: 0;
+  }
+
+  .text-safe {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -279,12 +444,40 @@ html.dark select option {
   backface-visibility: hidden;
 }
 
-.cab-ios-scroll-y {
+.cab-ios-scroll-y,
+.gestionale-scroll-y {
   max-width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+}
+
+/* ResponsiveLayoutCore — media e contenimento globale nel main gestionale */
+.gestionale-responsive-core img,
+.gestionale-responsive-core video,
+.gestionale-responsive-core canvas,
+.gestionale-responsive-core svg:not([class*="shrink-0"]) {
+  max-width: 100%;
+  height: auto;
+}
+
+.gestionale-responsive-core table {
+  max-width: 100%;
+}
+
+/* Global Flex System — scoped min-width containment, NO flex-wrap globale */
+.gestionale-responsive-core .flex > *:not(.shrink-0):not(.flex-shrink-safe),
+.gestionale-responsive-core .inline-flex > *:not(.shrink-0):not(.flex-shrink-safe),
+.gestionale-responsive-core .flex-safe-row > *,
+.gestionale-responsive-core .flex-safe-col > *,
+.gestionale-responsive-core .flex-safe > *:not(.flex-shrink-safe) {
+  min-width: 0;
+}
+
+[data-cab-modal-scroll] {
+  scroll-padding-bottom: var(--cab-keyboard-inset, 0px);
 }
 
 @media (max-width: 1023px) {
@@ -299,7 +492,89 @@ body[data-cab-scroll-lock-count] {
   overscroll-behavior: none;
 }
 
-/* Scroll principale gestionale: main in AppShell (.cab-ios-scroll-y) */
-html:not(:has(body[data-cab-scroll-lock-count])) body {
-  overflow-y: auto;
+/* Sidebar collapse — label fade + icone che si centrano con la larghezza */
+.cab-app-shell {
+  --cab-sidebar-motion: 250ms;
+}
+
+.cab-sidebar .cab-sidebar-nav {
+  transition: padding var(--cab-sidebar-motion) ease-out;
+}
+
+.cab-sidebar .cab-sidebar-nav-link {
+  transition:
+    padding var(--cab-sidebar-motion) ease-out,
+    gap var(--cab-sidebar-motion) ease-out,
+    background-color 200ms ease-out,
+    color 200ms ease-out,
+    box-shadow 200ms ease-out;
+}
+
+.cab-sidebar .cab-sidebar-nav-icon {
+  transition:
+    transform var(--cab-sidebar-motion) cubic-bezier(0.4, 0, 0.2, 1),
+    background-color 200ms ease-out,
+    color 200ms ease-out;
+}
+
+.cab-sidebar .cab-sidebar-nav-label {
+  flex: 1 1 auto;
+  max-width: 11rem;
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    max-width var(--cab-sidebar-motion) ease-out,
+    opacity 180ms ease-out,
+    margin-inline var(--cab-sidebar-motion) ease-out,
+    flex-grow var(--cab-sidebar-motion) ease-out;
+}
+
+.cab-sidebar .cab-sidebar-nav-badge {
+  transition:
+    max-width var(--cab-sidebar-motion) ease-out,
+    opacity 150ms ease-out,
+    margin-inline var(--cab-sidebar-motion) ease-out;
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav {
+  padding-inline: 0.5rem;
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-link {
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0.5rem;
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-label {
+  flex-grow: 0;
+  flex-basis: 0;
+  max-width: 0;
+  margin-inline: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-badge {
+  max-width: 0;
+  margin-inline: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cab-sidebar,
+  .cab-sidebar .cab-sidebar-nav,
+  .cab-sidebar .cab-sidebar-nav-link,
+  .cab-sidebar .cab-sidebar-nav-icon,
+  .cab-sidebar .cab-sidebar-nav-label,
+  .cab-sidebar .cab-sidebar-nav-badge {
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* App autenticata: scroll verticale solo su main (.gestionale-scroll-y), non su body. */
+body:has(.cab-app-shell) {
+  overflow-y: hidden;
 }

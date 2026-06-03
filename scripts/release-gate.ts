@@ -28,6 +28,8 @@ const STEPS: { label: string; cmd: string; args: string[]; env?: NodeJS.ProcessE
   },
   { label: "smoke:structural", cmd: "npm", args: ["run", "smoke:structural"] },
   { label: "smoke:regression", cmd: "npm", args: ["run", "smoke:regression"] },
+  { label: "flex:eslint:gate", cmd: "npm", args: ["run", "flex:eslint:gate"] },
+  { label: "flex:freeze:gate", cmd: "npm", args: ["run", "flex:freeze:gate"] },
 ];
 
 function smokePlaywrightSkip(): boolean {

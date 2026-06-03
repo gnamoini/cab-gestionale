@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconActionButton } from "@/components/design-system";
-import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { ensurePreventivoStruttura, partitionRigheRicambi, pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
 import { calcolaTotaliPreventivo, totaleNettoRigaRicambio } from "@/lib/preventivi/preventivi-totals";
@@ -43,6 +44,7 @@ import {
   dsTableRow,
   dsTableWrap,
 } from "@/lib/ui/design-system";
+import { sliceInputValue, TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
@@ -72,8 +74,8 @@ function cloneRecord(p: PreventivoRecord): PreventivoRecord {
 const ORE_MIN = 0.01;
 
 const preventivoIntestazioneSegmentWrap = `${dsSegmentedWrap} w-full gap-0.5 p-0.5`;
-const preventivoIntestazioneSegmentOn = `${dsSegmentedBtnOn} flex-1 px-2.5 py-1 text-xs`;
-const preventivoIntestazioneSegmentOff = `${dsSegmentedBtnOff} flex-1 px-2.5 py-1 text-xs`;
+const preventivoIntestazioneSegmentOn = `${dsSegmentedBtnOn} min-w-0 flex-1 px-2.5 py-1 text-xs`;
+const preventivoIntestazioneSegmentOff = `${dsSegmentedBtnOff} min-w-0 flex-1 px-2.5 py-1 text-xs`;
 const preventivoManodoperaRowGrid =
   "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7.5rem_2.25rem] sm:items-end sm:gap-2";
 
@@ -457,7 +459,7 @@ export function PreventiviEditorModal({
         onDismiss={mezzoPrompt.dismissPrompt}
       />
       <div className={`relative ${gestionaleModalBodyFlexClass}`}>
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar">
+        <GestionaleModalScrollBody className="px-4 py-3">
           <div className="sticky top-0 z-[2] -mx-4 mb-3 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_94%,transparent)] px-4 py-2 backdrop-blur-sm">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
               <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[color:var(--cab-text-muted)]">
@@ -550,8 +552,13 @@ export function PreventiviEditorModal({
                   className={`${dsInput} min-h-[6rem] resize-y`}
                   value={composeLavorazioniClienteEditorText(draft.descrizioneLavorazioniCliente)}
                   onChange={(e) =>
-                    patch({ descrizioneLavorazioniCliente: extractLavorazioniClienteSpecifiche(e.target.value) })
+                    patch({
+                      descrizioneLavorazioniCliente: extractLavorazioniClienteSpecifiche(
+                        sliceInputValue(e.target.value, TEXT_EXTRA),
+                      ),
+                    })
                   }
+                  maxLength={TEXT_EXTRA}
                 />
               </FormField>
               <p className="text-[11px] text-[color:var(--cab-text-muted)]">
@@ -569,8 +576,7 @@ export function PreventiviEditorModal({
             >
               <div className={`${dsTableWrap} ${dsScrollbar}`}>
                 <table className={`${dsTable} min-w-[960px]`}>
-                  <thead className="sticky top-0 z-[1] bg-[var(--cab-card)] shadow-[inset_0_-1px_0_0_var(--cab-border)]">
-                    <tr>
+                  <GlobalTableHead sticky>
                       <GlobalTableHeadLabel label="Codice OE" />
                       <GlobalTableHeadLabel label="Descrizione" thClassName="min-w-[140px]" />
                       <GlobalTableHeadLabel label="Qtà" align="right" thClassName="w-24" />
@@ -578,8 +584,7 @@ export function PreventiviEditorModal({
                       <GlobalTableHeadLabel label="Sconto %" align="right" thClassName="w-24" />
                       <GlobalTableHeadLabel label="Totale netto" align="right" thClassName="w-32" />
                       <GlobalTableHeadLabel label="" thClassName="w-10" />
-                    </tr>
-                  </thead>
+                  </GlobalTableHead>
                   <tbody>
                     {ricambiPart.standard.map((r) => (
                       <tr key={r.id} className={dsTableRow}>
@@ -819,12 +824,13 @@ export function PreventiviEditorModal({
                 <textarea
                   className={`${dsInput} min-h-[4rem] resize-y`}
                   value={draft.noteFinali}
-                  onChange={(e) => patch({ noteFinali: e.target.value })}
+                  onChange={(e) => patch({ noteFinali: sliceInputValue(e.target.value, TEXT_LONG) })}
+                  maxLength={TEXT_LONG}
                 />
               </FormField>
             </FormSection>
           </div>
-        </div>
+        </GestionaleModalScrollBody>
 
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
           <button type="button" className={dsBtnNeutral} onClick={() => openPreventivoPdfInNewTab(applyTotals(draft), autore)}>

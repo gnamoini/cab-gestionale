@@ -5,8 +5,11 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth, isAuthFullyAuthenticated } from "@/context/auth-context";
 import { resolvePostLoginRedirectPath } from "@/lib/auth/resolve-post-login-redirect";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
-import { CabLogo } from "@/components/gestionale/cab-logo";
-import { ThemeToggle } from "@/components/gestionale/theme-toggle";
+import {
+  AuthStandaloneCardHeader,
+  AuthStandalonePageShell,
+  authStandaloneCardClass,
+} from "@/components/gestionale/auth-standalone-page";
 import { CloseButton, GlobalLoadingSpinner } from "@/components/design-system";
 import { GlobalLoadingView } from "@/components/design-system/global-loading";
 import { useGlobalLoading } from "@/context/global-loading-context";
@@ -21,7 +24,6 @@ import {
   dsModalBackdrop,
   dsModalPanel,
   dsSearchFieldInput,
-  dsSurfaceCard,
   dsTypoCaption,
 } from "@/lib/ui/design-system";
 import { resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
@@ -62,47 +64,13 @@ function loginErrorUserMessage(raw: string): string {
   return "Accesso non riuscito. Riprova.";
 }
 
-function LoginPageShell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative isolate min-h-dvh overflow-hidden bg-[var(--cab-bg-app)]">
-      <div
-        className="pointer-events-none absolute inset-0 bg-[var(--cab-bg-app)]"
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.055]"
-        style={{
-          backgroundImage: "radial-gradient(circle at 1.5px 1.5px, currentColor 1px, transparent 0)",
-          backgroundSize: "24px 24px",
-        }}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.04] blur-[1px] dark:opacity-[0.06]"
-        aria-hidden
-      >
-        <CabLogo
-          height={240}
-          priority={false}
-          sizes="(max-width: 768px) 80vw, 240px"
-          className="mx-auto object-center dark:brightness-[1.15] dark:contrast-[0.92] dark:saturate-0"
-        />
-      </div>
-      <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
-        <ThemeToggle />
-      </div>
-      {children}
-    </div>
-  );
-}
-
 function LoginAuthWaitShell({ message }: { message: string }) {
   return (
-    <LoginPageShell>
+    <AuthStandalonePageShell>
       <div className="relative z-10 flex min-h-dvh items-center justify-center px-4 py-12">
         <GlobalLoadingView message={message} />
       </div>
-    </LoginPageShell>
+    </AuthStandalonePageShell>
   );
 }
 
@@ -140,8 +108,6 @@ function IconEyeOff({ className = "h-4 w-4" }: { className?: string }) {
 }
 
 const iconInset = "pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[color:var(--cab-text-muted)]";
-
-const loginCardClass = `${dsSurfaceCard} w-full max-w-[26rem] border-[color:color-mix(in_srgb,var(--cab-border)_70%,var(--cab-border-strong))] p-6 shadow-[var(--cab-shadow-md)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-border)_45%,transparent)] sm:p-8`;
 
 const loginAlertErrorClass =
   "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_8%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-danger)_90%,var(--cab-text))]";
@@ -234,7 +200,7 @@ export function LoginForm() {
     setResetPending(true);
     try {
       const sb = getBrowserSupabase();
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/login` : undefined;
+      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/login/reset-password` : undefined;
       const { error: err } = await sb.auth.resetPasswordForEmail(trimmed, { redirectTo });
       if (err) {
         setResetError("Impossibile completare la richiesta. Riprova tra poco.");
@@ -291,16 +257,10 @@ export function LoginForm() {
   const configBlocked = !!configurationError;
 
   return (
-    <LoginPageShell>
+    <AuthStandalonePageShell>
       <main className="relative z-10 flex min-h-dvh flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
-        <div className={loginCardClass}>
-          <header className="mb-7 flex flex-col items-center text-center">
-            <CabLogo height={56} priority className="mx-auto object-center dark:brightness-[1.08] dark:contrast-[0.95]" />
-            <p className="mt-2 text-xs font-semibold tracking-wide text-[color:var(--cab-text-muted)]">
-              Gestionale Officina
-            </p>
-            <h1 className="sr-only">Accedi al gestionale</h1>
-          </header>
+        <div className={authStandaloneCardClass}>
+          <AuthStandaloneCardHeader srOnlyTitle="Accedi al gestionale" />
 
           {configBlocked ? (
             <p
@@ -539,6 +499,6 @@ export function LoginForm() {
           </div>
         </div>
       ) : null}
-    </LoginPageShell>
+    </AuthStandalonePageShell>
   );
 }

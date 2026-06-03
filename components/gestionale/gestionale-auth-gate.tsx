@@ -36,7 +36,7 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
 
   if (configBlocked) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+      <div className="flex min-w-0 min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
         <p className="max-w-lg text-sm font-semibold text-[color:var(--cab-text)]" role="alert">
           {MISSING_SUPABASE_ENV_MESSAGE}
         </p>
@@ -68,7 +68,7 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
           role="status"
           aria-busy="true"
         >
-          <div className="mx-auto flex max-w-3xl items-center justify-center gap-2">
+          <div className="mx-auto flex min-w-0 max-w-3xl items-center justify-center gap-2">
             <GlobalLoadingView message={bannerMessage} spinnerSize="sm" className="flex-row gap-2 py-0" />
           </div>
         </div>

@@ -4,31 +4,15 @@ import { createClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { readSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
+import { clientKeyFromHeaders, isIpRateLimited, type IpRateLimitConfig } from "@/lib/security/ip-rate-limit";
 import { resolveSignInEmailLegacy } from "@/src/lib/auth/resolve-sign-in-email";
+import { validateResolveLoginIdentifier } from "@/lib/validation/admin-user-validation";
 
-const WINDOW_MS = 5 * 60 * 1000;
-const MAX_ATTEMPTS_PER_WINDOW = 30;
-
-type RateBucket = { count: number; windowStart: number };
-
-const rateByIp = new Map<string, RateBucket>();
-
-function clientIpFromHeaders(h: Headers): string {
-  const forwarded = h.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0]?.trim() || "unknown";
-  return h.get("x-real-ip")?.trim() || "unknown";
-}
-
-function isRateLimited(ip: string): boolean {
-  const now = Date.now();
-  const bucket = rateByIp.get(ip);
-  if (!bucket || now - bucket.windowStart > WINDOW_MS) {
-    rateByIp.set(ip, { count: 1, windowStart: now });
-    return false;
-  }
-  bucket.count += 1;
-  return bucket.count > MAX_ATTEMPTS_PER_WINDOW;
-}
+const LOGIN_RESOLVE_LIMIT: IpRateLimitConfig = {
+  namespace: "login-resolve-email",
+  windowMs: 5 * 60 * 1000,
+  maxAttempts: 30,
+};
 
 export type ResolveLoginEmailResult = { email: string };
 
@@ -38,12 +22,13 @@ export type ResolveLoginEmailResult = { email: string };
  */
 export async function resolveLoginEmailAction(identifier: string): Promise<ResolveLoginEmailResult> {
   const trimmed = identifier.trim();
-  if (!trimmed) return { email: "" };
+  const idErr = validateResolveLoginIdentifier(trimmed);
+  if (idErr) return { email: "" };
   if (trimmed.includes("@")) return { email: trimmed.toLowerCase() };
 
   const h = await headers();
-  const ip = clientIpFromHeaders(h);
-  if (isRateLimited(ip)) {
+  const ip = clientKeyFromHeaders(h);
+  if (await isIpRateLimited(LOGIN_RESOLVE_LIMIT, ip)) {
     return { email: "" };
   }
 

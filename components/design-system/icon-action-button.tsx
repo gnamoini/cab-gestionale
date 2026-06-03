@@ -4,11 +4,14 @@ import Link from "next/link";
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "react";
 import { Tooltip } from "@/components/design-system/tooltip";
 import type { TooltipSide } from "@/lib/ui/tooltip-portal";
+import { dsPageToolbarIconBtn } from "@/lib/ui/design-system";
 
 type IconActionButtonBase = {
   label: string;
   children: ReactNode;
   className?: string;
+  /** Toolbar header pagina — footprint quadrato 40×40 (`dsPageToolbarIconBtn`). */
+  toolbar?: boolean;
   tooltipSide?: TooltipSide;
   tooltipDisabled?: boolean;
   /** Tooltip alternativo (es. "Sola lettura" quando disabled). Default: label. */
@@ -33,6 +36,7 @@ export function IconActionButton(props: IconActionButtonProps) {
     label,
     children,
     className = "",
+    toolbar = false,
     tooltipSide,
     tooltipDisabled,
     tooltipContent,
@@ -41,11 +45,12 @@ export function IconActionButton(props: IconActionButtonProps) {
   } = props;
 
   const content = tooltipContent ?? label;
+  const resolvedClassName = `${toolbar ? dsPageToolbarIconBtn : ""} ${className}`.trim();
 
   if (as === "link") {
     const { href, ...linkRest } = rest as IconActionAsLink;
     const link = (
-      <Link href={href} aria-label={label} className={className} {...linkRest}>
+      <Link href={href} aria-label={label} className={resolvedClassName} {...linkRest}>
         {children}
       </Link>
     );
@@ -58,14 +63,14 @@ export function IconActionButton(props: IconActionButtonProps) {
 
   const buttonRest = rest as IconActionAsButton;
   const button = (
-    <button type="button" aria-label={label} className={className} {...buttonRest}>
+    <button type="button" aria-label={label} className={resolvedClassName} {...buttonRest}>
       {children}
     </button>
   );
 
   return (
     <Tooltip content={content} side={tooltipSide} disabled={tooltipDisabled}>
-      {buttonRest.disabled ? <span className="inline-flex">{button}</span> : button}
+      {buttonRest.disabled ? <span className="inline-flex min-w-0">{button}</span> : button}
     </Tooltip>
   );
 }

@@ -19,6 +19,24 @@ export function isoToItDisplay(iso: string): string {
   return `${day}/${mo}/${y}`;
 }
 
+/** yyyy-mm-dd → gg/mm/aaaa senza passare da UTC (filtri toolbar). */
+export function ymdToItDisplay(ymd: string): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+  if (!m) return "";
+  return `${m[3]}/${m[2]}/${m[1]}`;
+}
+
+/** Se entrambi valorizzati e da > a, scambia (confronto lessicografico su yyyy-mm-dd). */
+export function normalizeYmdRangeBounds(
+  daYmd: string,
+  aYmd: string,
+): { da: string; a: string } {
+  const da = daYmd.trim();
+  const a = aYmd.trim();
+  if (da && a && da > a) return { da: a, a: da };
+  return { da, a };
+}
+
 export function dateInputValueToIso(value: string): { ok: true; iso: string } | { ok: false } {
   const s = value.trim();
   if (!s) return { ok: false };

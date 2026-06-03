@@ -18,6 +18,16 @@ export function uniqueSortedOptions(options: readonly string[]): string[] {
   return [...new Set(options.map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
 }
 
+/** Include il valore selezionato nell'elenco UI finché il refetch non lo contiene (post-append). */
+export function mergeCurrentValueInOptions(value: string, options: readonly string[]): string[] {
+  const trimmed = value.trim();
+  if (!trimmed) return uniqueSortedOptions(options);
+  if (options.some((o) => normListSelectValue(o) === normListSelectValue(trimmed))) {
+    return uniqueSortedOptions(options);
+  }
+  return uniqueSortedOptions([...options, trimmed]);
+}
+
 export function scoreListSelectOption(query: string, option: string): number {
   return scoreEntityMatch(query, option);
 }

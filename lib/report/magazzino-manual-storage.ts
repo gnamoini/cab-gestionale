@@ -12,6 +12,17 @@ export type MagazzinoManualMonthPatch = {
 
 export type MagazzinoManualMonthMap = Record<string, MagazzinoManualMonthPatch>;
 
+/** Revisione cheap per invalidare cache derivata report al cambio override locali. */
+export function revisionMagazzinoManualMonthMap(map: MagazzinoManualMonthMap): number {
+  let sum = 0;
+  for (const patch of Object.values(map)) {
+    for (const v of Object.values(patch)) {
+      if (typeof v === "number" && Number.isFinite(v)) sum += v;
+    }
+  }
+  return Object.keys(map).length * 1000 + sum;
+}
+
 export function loadMagazzinoManualMonthMap(): MagazzinoManualMonthMap {
   if (typeof window === "undefined") return {};
   try {

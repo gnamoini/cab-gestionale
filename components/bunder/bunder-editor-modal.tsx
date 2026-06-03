@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
-import { erpBtnNeutral, erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { applicaHintCliente, hintsByCliente } from "@/lib/bunder/bunder-cliente-hints";
 import { appendBunderChangeLog } from "@/lib/bunder/bunder-change-log-storage";
@@ -11,12 +12,14 @@ import { openBunderPdfInNewTab } from "@/lib/bunder/bunder-pdf";
 import { openBunderWordInNewTab, openBunderPrintPreview } from "@/lib/bunder/bunder-html-document";
 import { righeFromPreventivo, totaleDocumento } from "@/lib/bunder/bunder-generate-default";
 import { BUNDER_DOC_KIND_OPTIONS } from "@/lib/bunder/doc-kind-meta";
+import { bunderDocumentSnapshot, isBunderDocumentDirty } from "@/lib/bunder/bunder-document-dirty";
 import { allocateNextNumero } from "@/lib/bunder/bunder-numbering";
+import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
 import type { BunderCommercialDocument, BunderDocKind, BunderProductRiga } from "@/lib/bunder/types";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
-import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
-import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GestionaleModalShell, GestionaleModalHeader } from "@/components/gestionale/gestionale-modal";
 import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 
 function nextRigaId(): string {
@@ -39,13 +42,30 @@ export function BunderEditorModal({
   onSave: (d: BunderCommercialDocument) => void;
 }) {
   const [local, setLocal] = useState<BunderCommercialDocument | null>(null);
+  const [baselineSnapshot, setBaselineSnapshot] = useState<string | null>(null);
+  const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
   const { records: preventivi } = usePreventiviRecordsQuery(open);
   const [prevPick, setPrevPick] = useState("");
 
   useEffect(() => {
-    if (open && doc) setLocal({ ...doc });
-    if (!open) setLocal(null);
+    if (open && doc) {
+      const copy = { ...doc };
+      setLocal(copy);
+      setBaselineSnapshot(bunderDocumentSnapshot(copy));
+    }
+    if (!open) {
+      setLocal(null);
+      setBaselineSnapshot(null);
+      setUnsavedExitOpen(false);
+    }
   }, [open, doc]);
+
+  const isDirty = useMemo(() => {
+    if (!local || !baselineSnapshot) return false;
+    return isBunderDocumentDirty(local, baselineSnapshot);
+  }, [local, baselineSnapshot]);
+
+  useBeforeUnloadWhenDirty(open && isDirty, "Hai modifiche non salvate nel documento BUNDER.");
 
   const hintMap = useMemo(() => hintsByCliente(allDocs), [allDocs]);
 
@@ -131,6 +151,15 @@ export function BunderEditorModal({
     onClose();
   }, [local, autore, onSave, onClose]);
 
+  const requestClose = useCallback(() => {
+    if (!isDirty) {
+      setUnsavedExitOpen(false);
+      onClose();
+      return;
+    }
+    setUnsavedExitOpen(true);
+  }, [isDirty, onClose]);
+
   const esportaPdf = useCallback(() => {
     if (!local) return;
     openBunderPdfInNewTab(local, autore);
@@ -175,32 +204,36 @@ export function BunderEditorModal({
   const tot = totaleDocumento(local);
 
   return (
-    <GestionaleModalShell onRequestClose={onClose} maxWidthClass="max-w-5xl" wide>
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-800">
-          <div className="min-w-0">
-            <h2 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50">Documento commerciale — {local.numeroProgressivo}</h2>
-            <p className="truncate text-xs text-zinc-500 dark:text-zinc-400">{bunderKindLabel(local.kind)}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className={dsBtnNeutral} onClick={esportaWord}>
-              Word
-            </button>
-            <button type="button" className={dsBtnNeutral} onClick={esportaPdf}>
-              PDF
-            </button>
-            <button type="button" className={dsBtnNeutral} onClick={stampa}>
-              Stampa
-            </button>
-            <button type="button" className={erpBtnNeutral} onClick={onClose}>
-              Chiudi
-            </button>
-            <button type="button" className={dsBtnPrimary} onClick={salva}>
-              Salva
-            </button>
-          </div>
-        </div>
-
-        <div className="gestionale-scrollbar min-h-0 flex-1 overflow-y-auto p-4 sm:p-5">
+    <>
+    <GestionaleModalShell
+      onRequestClose={requestClose}
+      maxWidthClass="max-w-5xl"
+      wide
+      header={
+        <GestionaleModalHeader
+          title={`Documento commerciale — ${local.numeroProgressivo}`}
+          subtitle={bunderKindLabel(local.kind)}
+          onRequestClose={requestClose}
+          actions={
+            <>
+              <button type="button" className={dsBtnNeutral} onClick={esportaWord}>
+                Word
+              </button>
+              <button type="button" className={dsBtnNeutral} onClick={esportaPdf}>
+                PDF
+              </button>
+              <button type="button" className={dsBtnNeutral} onClick={stampa}>
+                Stampa
+              </button>
+              <button type="button" className={dsBtnPrimary} onClick={salva}>
+                Salva
+              </button>
+            </>
+          }
+        />
+      }
+    >
+        <div className="gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto p-4 sm:p-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Tipo documento
@@ -334,8 +367,7 @@ export function BunderEditorModal({
             </div>
             <div className={`${dsTableWrap} ${dsScrollbar}`}>
               <table className={`${dsTable} min-w-[720px] text-[11px]`}>
-                <thead className="sticky top-0 z-[1] bg-[var(--cab-card)] shadow-[inset_0_-1px_0_0_var(--cab-border)]">
-                  <tr>
+                <GlobalTableHead sticky>
                     <GlobalTableHeadLabel label="Qtà" />
                     <GlobalTableHeadLabel label="Codice" />
                     <GlobalTableHeadLabel label="Nome" />
@@ -343,8 +375,7 @@ export function BunderEditorModal({
                     <GlobalTableHeadLabel label="Pr. unit." />
                     <GlobalTableHeadLabel label="Tot." />
                     <GlobalTableHeadLabel label="" thClassName="w-8" />
-                  </tr>
-                </thead>
+                </GlobalTableHead>
                 <tbody>
                   {local.righe.map((r) => (
                     <tr key={r.id} className={dsTableRow}>
@@ -439,5 +470,21 @@ export function BunderEditorModal({
           </label>
         </div>
     </GestionaleModalShell>
+    <GestionaleUnsavedChangesDialog
+      open={unsavedExitOpen}
+      placement="stacked"
+      title="Modifiche non salvate"
+      message="Hai modifiche non salvate nel documento commerciale. Come vuoi procedere?"
+      onStay={() => setUnsavedExitOpen(false)}
+      onDiscard={() => {
+        setUnsavedExitOpen(false);
+        onClose();
+      }}
+      onSaveAndExit={() => {
+        setUnsavedExitOpen(false);
+        salva();
+      }}
+    />
+    </>
   );
 }

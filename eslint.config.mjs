@@ -1,6 +1,7 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import cabLayout from "./eslint-rules/index.mjs";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -26,6 +27,14 @@ const eslintConfig = defineConfig([
           ],
         },
       ],
+    },
+  },
+  {
+    files: ["components/**/*.{tsx,jsx}", "app/**/*.{tsx,jsx}"],
+    plugins: { "cab-layout": cabLayout },
+    rules: {
+      "cab-layout/no-flex-overflow-risk": "error",
+      "cab-layout/no-ui-contract-violation": "error",
     },
   },
   {

@@ -61,9 +61,9 @@ export function LavorazioneMezzoPicker({
       <p className="mt-1 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-400">
         Cerca per targa, matricola, scuderia, cliente, marca o modello. Seleziona per compilare i campi, oppure inserisci una nuova macchina manualmente.
       </p>
-      <div className="mt-2 flex flex-wrap gap-2">
+      <div className="mt-2 flex min-w-0 max-w-full flex-nowrap items-center gap-2 sm:flex-wrap">
         <GestionaleSearchField
-          wrapperClassName="min-w-[12rem] flex-1"
+          wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Cerca mezzo…"

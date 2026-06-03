@@ -3,9 +3,7 @@
 import { useCallback, useMemo, type FormEvent, type ReactNode } from "react";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
-import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
-import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
@@ -19,6 +17,7 @@ import {
 } from "@/lib/schede/scheda-ingresso-ui-labels";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
+import { sliceInputValue, TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
 import {
@@ -27,18 +26,23 @@ import {
 } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { LoadingButton } from "@/components/design-system";
 import {
   addettoPillShellClass,
+  addettoPillShellStyleForName,
   erpBtnAccent,
   erpBtnNeutral,
   prioritaPillShellClass,
+  prioritaPillShellStyle,
   statoPillShellClass,
+  statoPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { GlobalDatePicker, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
 import { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
 import { dsBtnDanger, dsInput, dsModalFormFooter } from "@/lib/ui/design-system";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 
@@ -99,7 +103,7 @@ export function SchedaIngressoFormModalShell({
   open: boolean;
   onRequestClose: () => void;
   variant: SchedaIngressoFormVariant;
-  subtitle: string;
+  subtitle?: string;
   children: ReactNode;
   footer: ReactNode;
 }) {
@@ -108,11 +112,15 @@ export function SchedaIngressoFormModalShell({
   return (
     <LavorazioniModalShell
       wide
-      maxWidthClass="max-w-2xl"
+      maxWidthClass={
+        variant === "create-lavorazione"
+          ? "md:min-w-[min(100%,48rem)] md:max-w-4xl"
+          : "md:min-w-[min(100%,42rem)] md:max-w-3xl"
+      }
       layerClassName={variant === "edit-scheda" ? "z-[110]" : undefined}
       onRequestClose={onRequestClose}
       title={variant === "create-lavorazione" ? "Nuova lavorazione" : "Scheda di ingresso"}
-      subtitle={subtitle}
+      subtitle={subtitle?.trim() ? subtitle : undefined}
     >
       {children}
       {footer}
@@ -145,6 +153,7 @@ export function SchedaIngressoFormBody({
   onSaveMezzo,
   saveMezzoPending = false,
   mezzoLinked = false,
+  prependContent,
 }: {
   variant: SchedaIngressoFormVariant;
   fields: SchedaIngressoFields;
@@ -170,6 +179,8 @@ export function SchedaIngressoFormBody({
   onSaveMezzo?: () => void;
   saveMezzoPending?: boolean;
   mezzoLinked?: boolean;
+  /** Contenuto opzionale in cima allo scroll (banner, avvisi). */
+  prependContent?: ReactNode;
 }) {
   const disabled = pending || readOnly;
   const globalOpts = useGlobalOptions({
@@ -228,12 +239,12 @@ export function SchedaIngressoFormBody({
     [tablePillOptions, fields.addettoAccettazione],
   );
   const statoPillStyle = useMemo(
-    () => (stato ? readablePillStyleFromHex(statoDisplayColor(stato, stati)) : undefined),
+    () => (stato ? statoPillShellStyle(statoDisplayColor(stato, stati)) : undefined),
     [stato, stati],
   );
   const prioritaPillStyle = useMemo(
     () =>
-      readablePillStyleFromHex(
+      prioritaPillShellStyle(
         priorita === "urgente"
           ? "#b91c1c"
           : prioritaDisplayColor(priorita as PrioritaLav, globalOpts.lavorazioni.prioritaColors),
@@ -242,8 +253,9 @@ export function SchedaIngressoFormBody({
   );
   const addettoPillStyle = useMemo(
     () =>
-      readablePillStyleFromHex(
-        addettoDisplayColor(fields.addettoAccettazione, globalOpts.lavorazioni.addettoColors),
+      addettoPillShellStyleForName(
+        fields.addettoAccettazione,
+        globalOpts.lavorazioni.addettoColors,
       ),
     [fields.addettoAccettazione, globalOpts.lavorazioni.addettoColors],
   );
@@ -256,7 +268,8 @@ export function SchedaIngressoFormBody({
         onAccept={onMezzoDialogAccept ?? mezzoPrompt.acceptAutofill}
         onDismiss={onMezzoDialogDismiss ?? mezzoPrompt.dismissPrompt}
       />
-      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
+      <GestionaleModalScrollBody className="space-y-3 p-4">
+        {prependContent}
         {globalOpts.isError ? (
           <p className="text-sm text-red-600 dark:text-red-400">
             {globalOpts.error?.message ?? "Errore impostazioni."}
@@ -355,22 +368,24 @@ export function SchedaIngressoFormBody({
             <textarea
               className={`${dsInput} min-h-[72px] w-full resize-y`}
               value={fields.descrizioneAnomalia}
-              onChange={(e) => onPatch({ descrizioneAnomalia: e.target.value })}
+              onChange={(e) => onPatch({ descrizioneAnomalia: sliceInputValue(e.target.value, TEXT_EXTRA) })}
               disabled={disabled}
               rows={3}
+              maxLength={TEXT_EXTRA}
             />
           </FormField>
           <FormField label="Note">
             <textarea
               className={`${dsInput} min-h-[56px] w-full resize-y`}
               value={fields.noteIntervento ?? ""}
-              onChange={(e) => onPatch({ noteIntervento: e.target.value })}
+              onChange={(e) => onPatch({ noteIntervento: sliceInputValue(e.target.value, TEXT_LONG) })}
               disabled={disabled}
               rows={2}
+              maxLength={TEXT_LONG}
             />
           </FormField>
         </FormSection>
-      </div>
+      </GestionaleModalScrollBody>
     </>
   );
 }
@@ -471,9 +486,9 @@ export function SchedaIngressoEditModal({
               Annulla
             </button>
             {!ro ? (
-              <button type="submit" className={erpBtnAccent} disabled={pending}>
-                {pending ? "Salvataggio…" : "Salva scheda"}
-              </button>
+              <LoadingButton type="submit" className={erpBtnAccent} loading={pending} preset="salva">
+                Salva scheda
+              </LoadingButton>
             ) : null}
           </div>
         </footer>

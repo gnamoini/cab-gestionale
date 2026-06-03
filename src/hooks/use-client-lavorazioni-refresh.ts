@@ -2,31 +2,41 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { QK } from "@/src/lib/react-query/query-keys";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
+import {
+  refetchActiveClientPortalMedia,
+  refetchActiveSchedeBundles,
+  runLavorazioniToolbarRefresh,
+} from "@/src/lib/react-query/refetch-lavorazioni-operational-data";
 
-type Refetchable = Pick<UseQueryResult<unknown, Error>, "refetch" | "isFetching">;
+type Refetchable = Pick<UseQueryResult<unknown, Error>, "refetch" | "isFetching" | "isError" | "error">;
 
 export function useClientLavorazioniRefresh(...queries: (Refetchable | undefined)[]) {
   const qc = useQueryClient();
+  const gestToast = useGestionaleToast();
   const queriesRef = useRef(queries);
   queriesRef.current = queries;
 
-  const isFetching = queries.some((q) => q?.isFetching) ?? false;
-  const [manualPending, setManualPending] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const refresh = useCallback(async () => {
-    setManualPending(true);
+    setBusy(true);
     try {
       const active = queriesRef.current.filter((q): q is Refetchable => q != null);
-      await Promise.all(active.map((q) => q.refetch()));
-      void qc.invalidateQueries({ queryKey: QK.schede, refetchType: "active" });
+      await runLavorazioniToolbarRefresh([
+        ...active.map((q) => q.refetch()),
+        refetchActiveSchedeBundles(qc),
+        refetchActiveClientPortalMedia(qc),
+      ]);
+      gestToast.successOnce("client-lav-refresh", GESTIONALE_TOAST.successRefreshed);
+    } catch (e) {
+      gestToast.errorOnce("client-lav-refresh", e, { module: "lavorazioni" });
     } finally {
-      setManualPending(false);
+      setBusy(false);
     }
-  }, [qc]);
-
-  const busy = isFetching || manualPending;
+  }, [qc, gestToast]);
 
   return { refresh, busy, isFetching: busy };
 }

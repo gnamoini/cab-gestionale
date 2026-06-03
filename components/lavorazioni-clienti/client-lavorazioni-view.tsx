@@ -4,23 +4,33 @@ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { GestionaleRefreshToolbarButton } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
-import { buildLavorazioniFilterCatalog } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
+import { lavorazioniAdvancedFiltersActive } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
+import { ClientLavorazioniLoadingSkeleton } from "@/components/lavorazioni-clienti/client-lavorazioni-loading-skeleton";
 import {
-  CardMobile,
-  CardMobileActions,
   IconActionButton,
+  LoadingErrorState,
+  LoadingPageSkeleton,
   PageToolbar,
-  PageToolbarActions,
   PageToolbarResultCount,
 } from "@/components/design-system";
-import { IconGestionaleRefresh } from "@/components/gestionale/gestionale-log-ui";
-import { ClientLavorazioneIngressoDialog } from "@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog";
-import { ClientLavorazioneDocumentsDialog } from "@/components/lavorazioni-clienti/client-lavorazione-documents";
 import {
-  IconDocument,
+  formatLavorazioneMobileIdentLine,
+  LavMobileInlineField,
+  LavorazioneMobileCardFooter,
+  LavorazioneMobileCardHeader,
+  LavorazioneMobileCardShell,
+  LavorazioneMobileControlsPanel,
+  LavorazioneMobileMetaGrid,
+  LavorazioneMobileMetaItem,
+  LavorazioneMobileNote,
+  LavorazioneMobileStatusSlot,
+} from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
+import { ClientLavorazioneIngressoDialog } from "@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog";
+import {
   IconInfo,
   IconQrCode,
   IconSchedeIngresso,
@@ -29,12 +39,12 @@ import { ClientLavorazionePhotoStrip } from "@/components/lavorazioni-clienti/cl
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
 import {
   buildClientPortalRowFields,
-  clientPortalDataCompletamentoLabel,
   type ClientPortalRowFields,
 } from "@/lib/lavorazioni/client-portal-row-fields";
 import {
-  CLIENT_PORTAL_FILTERS_EMPTY,
+  buildClientPortalFilterCatalog,
   clientPortalFiltersActive,
+  CLIENT_PORTAL_FILTERS_EMPTY,
   filterClientPortalBundles,
   loadClientPortalFiltersPersisted,
   logClientPortalPipelineDebug,
@@ -42,7 +52,7 @@ import {
   type ClientPortalListFilters,
   type ClientPortalRowBundle,
 } from "@/lib/lavorazioni/client-portal-list-filters";
-import { clientLavorazioniDetailPath } from "@/lib/lavorazioni/client-portal-access";
+import { clientLavorazioniDetailPath, PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 import {
   filterClientPortalStatiOptions,
   resolveClientPortalStatoId,
@@ -50,7 +60,6 @@ import {
 import { lavorazioneRefLabel } from "@/lib/lavorazioni/client-portal-ui";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
-import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import {
   GestionaleListTable,
   GestionaleListTableActionsHead,
@@ -58,14 +67,20 @@ import {
   type GlobalTableSortPhase,
 } from "@/components/gestionale/global-table";
 import {
+  LavorazioneAddettoReadOnlyPill,
+  LavorazioneCompletamentoDatePill,
+  LavorazioneReadOnlyPill,
+} from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import {
   prioritaLabel,
   prioritaPillShellClass,
+  prioritaPillShellStyle,
   statoPillShellClassDynamic,
+  statoPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   LavorazioneIngressoDateCellFromIso,
   lavTableActionBtnInfo,
-  lavTableActionBtnPrimary,
   lavTableActionBtnSecondary,
   lavTableActionsRow,
   lavTableColAttrezzaturaClass,
@@ -77,10 +92,8 @@ import {
   lavTableColNoteClass,
   lavTableTd,
   lavTableTdAzioni,
-  lavTableTdCenter,
   lavTableTdPill,
   lavTableTdPillWrap,
-  lavTablePillTextClass,
   LavorazioniClienteUtilStack,
   LavorazioniMezzoIdentStack,
   cycleLavorazioniTableSort,
@@ -99,10 +112,8 @@ import {
 } from "@/lib/lavorazioni/client-portal-table-sort";
 import {
   dsBtnNeutral,
-  dsPageToolbarBtn,
   dsStackPage,
   dsTableRow,
-  dsTypoSectionTitle,
   GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
@@ -129,12 +140,11 @@ function StatoReadOnlyPill({ stato, statiOpts }: { stato: string; statiOpts: { i
   const resolvedStato = resolveClientPortalStatoId(stato, statiOpts);
   const label = statoLavorazioneLabel(resolvedStato, statiOpts) || resolvedStato;
   return (
-    <span
-      className={`${statoPillShellClassDynamic()} inline-flex w-full min-w-0 max-w-full justify-center px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`}
-      style={readablePillStyleFromHex(statoDisplayColor(resolvedStato, statiOpts))}
-    >
-      {label}
-    </span>
+    <LavorazioneReadOnlyPill
+      label={label}
+      shellClass={statoPillShellClassDynamic()}
+      shellStyle={statoPillShellStyle(statoDisplayColor(resolvedStato, statiOpts))}
+    />
   );
 }
 
@@ -150,52 +160,40 @@ function PrioritaReadOnlyPill({
   const hex =
     p === "urgente" ? "#b91c1c" : prioritaDisplayColor(p as PrioritaLav, prioritaColors);
   return (
-    <span
-      className={`${prioritaPillShellClass()} inline-flex w-full min-w-0 max-w-full justify-center px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`}
-      style={readablePillStyleFromHex(hex)}
-      title={label}
-    >
-      {label}
-    </span>
+    <LavorazioneReadOnlyPill
+      label={label}
+      shellClass={prioritaPillShellClass()}
+      shellStyle={prioritaPillShellStyle(hex)}
+    />
   );
 }
 
-function lavorazioneNoteText(row: LavorazioneListRow, fields: ClientPortalRowFields): string {
-  return (row.note ?? "").trim() || fields.descrizioneProblema.trim() || "—";
+/** Colonna Note — note intervento (scheda ingresso), come lavorazioni principali. */
+function lavorazioneNoteInterventoText(fields: ClientPortalRowFields): string {
+  const t = fields.noteIntervento.trim();
+  return t || "—";
 }
 
 function RowActions({
   rowId,
   onIngresso,
   onQr,
-  onDocuments,
 }: {
   rowId: string;
   onIngresso: () => void;
   onQr: () => void;
-  onDocuments: () => void;
 }) {
   return (
     <div className={lavTableActionsRow}>
       <IconActionButton
         label="Scheda ingresso"
-        className={lavTableActionBtnPrimary}
+        className={lavTableActionBtnSecondary}
         onClick={(e) => {
           e.stopPropagation();
           onIngresso();
         }}
       >
         <IconSchedeIngresso />
-      </IconActionButton>
-      <IconActionButton
-        label="Documenti PDF"
-        className={lavTableActionBtnSecondary}
-        onClick={(e) => {
-          e.stopPropagation();
-          onDocuments();
-        }}
-      >
-        <IconDocument />
       </IconActionButton>
       <IconActionButton
         label="QR lavorazione"
@@ -226,26 +224,26 @@ function DesktopTable({
   statiOpts,
   colStyles,
   prioritaColors,
+  addettoColors,
   emptyMessage,
   sortColumn,
   sortPhase,
   onSort,
   onIngresso,
   onQr,
-  onDocuments,
 }: {
   bundles: RowBundle[];
   variant: "active" | "archive";
   statiOpts: { id: string; label: string; color?: string }[];
   colStyles: LavorazioniListTableColStyles;
   prioritaColors: Record<string, string | undefined>;
+  addettoColors: Record<string, string | undefined>;
   emptyMessage: string;
   sortColumn: ClientPortalSortKey | null;
   sortPhase: GlobalTableSortPhase;
   onSort: (k: ClientPortalSortKey) => void;
   onIngresso: (row: LavorazioneListRow) => void;
   onQr: (row: LavorazioneListRow) => void;
-  onDocuments: (row: LavorazioneListRow) => void;
 }) {
   const colgroup =
     variant === "active" ? (
@@ -269,7 +267,7 @@ function DesktopTable({
         <col className={lavTableColAttrezzaturaClass} />
         <col className={lavTableColIdentificazioneClass} />
         <col className={lavTableColNoteClass} />
-        <col style={colStyles.archivioMiddleColStyle} />
+        <col style={colStyles.statoPillColStyle} />
         <col style={colStyles.addettoPillColStyle} />
         <col className={lavTableColAzioniClass} />
       </>
@@ -331,38 +329,37 @@ function DesktopTable({
             <LavorazioniMezzoIdentStack targa={fields.targa} matricola={fields.matricola} nScuderia={fields.nScuderia} />
           </td>
           <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-            <span className="line-clamp-2">{lavorazioneNoteText(row, fields)}</span>
+            <span className="line-clamp-2">{lavorazioneNoteInterventoText(fields)}</span>
           </td>
           {variant === "active" ? (
             <>
               <td className={lavTableTdPill}>
-                <div className={lavTableTdPillWrap} style={colStyles.statoPillWrapStyle}>
+                <div className={lavTableTdPillWrap}>
                   <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
                 </div>
               </td>
               <td className={lavTableTdPill}>
-                <div className={lavTableTdPillWrap} style={colStyles.prioritaPillWrapStyle}>
+                <div className={lavTableTdPillWrap}>
                   <PrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
                 </div>
               </td>
             </>
           ) : (
-            <td className={lavTableTdCenter}>
-              <LavorazioneIngressoDateCellFromIso iso={lavorazioneDataCompletamentoIso(row)} align="center" />
+            <td className={lavTableTdPill}>
+              <div className={lavTableTdPillWrap}>
+                <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
+              </div>
             </td>
           )}
           <td className={lavTableTdPill}>
-            <div className={lavTableTdPillWrap} style={colStyles.addettoPillWrapStyle}>
-              <span className={`whitespace-nowrap ${lavTablePillTextClass} text-zinc-800 dark:text-zinc-100`}>
-                {fields.addetto}
-              </span>
+            <div className={lavTableTdPillWrap}>
+              <LavorazioneAddettoReadOnlyPill addetto={fields.addetto} addettoColors={addettoColors} />
             </div>
           </td>
           <td className={lavTableTdAzioni}>
             <RowActions
               rowId={row.id}
               onIngresso={() => onIngresso(row)}
-              onDocuments={() => onDocuments(row)}
               onQr={() => onQr(row)}
             />
           </td>
@@ -377,19 +374,19 @@ function MobileCards({
   variant,
   statiOpts,
   prioritaColors,
+  addettoColors,
   emptyMessage,
   onIngresso,
   onQr,
-  onDocuments,
 }: {
   bundles: RowBundle[];
   variant: "active" | "archive";
   statiOpts: { id: string; label: string; color?: string }[];
   prioritaColors: Record<string, string | undefined>;
+  addettoColors: Record<string, string | undefined>;
   emptyMessage: string;
   onIngresso: (row: LavorazioneListRow) => void;
   onQr: (row: LavorazioneListRow) => void;
-  onDocuments: (row: LavorazioneListRow) => void;
 }) {
   if (bundles.length === 0) {
     return (
@@ -400,64 +397,90 @@ function MobileCards({
   }
 
   return (
-    <div className="mt-4 space-y-3 xl:hidden">
-      {bundles.map(({ row, fields }) => (
-        <CardMobile key={row.id}>
-          <p className="text-base font-semibold text-zinc-900 dark:text-zinc-50">{fields.attrezzatura}</p>
-          <LavorazioniMezzoIdentStack targa={fields.targa} matricola={fields.matricola} nScuderia={fields.nScuderia} />
-          <div className="mt-2 grid gap-1 text-xs text-zinc-600 dark:text-zinc-300">
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Ingresso</span>
-              <LavorazioneIngressoDateCellFromIso iso={fields.dataIngressoAt} />
-            </div>
-            {variant === "archive" ? (
-              <p>
-                <span className="font-semibold uppercase tracking-wide text-zinc-500">Completamento:</span>{" "}
-                {clientPortalDataCompletamentoLabel(row)}
-              </p>
-            ) : null}
-            <p>
-              <span className="font-semibold uppercase tracking-wide text-zinc-500">Cliente:</span> {fields.cliente}
-            </p>
-            <p className="pl-0 text-[11px] text-zinc-500">{fields.utilizzatore}</p>
-            <p>
-              <span className="font-semibold uppercase tracking-wide text-zinc-500">Cantiere:</span> {fields.cantiere}
-            </p>
-            <p>
-              <span className="font-semibold uppercase tracking-wide text-zinc-500">Addetto:</span> {fields.addetto}
-            </p>
-          </div>
-          <p className="mt-1 text-xs text-zinc-500 line-clamp-2">{lavorazioneNoteText(row, fields)}</p>
-          {variant === "active" ? (
-            <div className="mt-2 flex flex-wrap gap-2">
-              <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
-              <PrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
-            </div>
-          ) : null}
-          <div className="mt-2">
-            <ClientLavorazionePhotoStrip lavorazioneId={row.id} max={3} lazy={false} sizeClass="h-12 w-12" />
-          </div>
-          <CardMobileActions>
-            <RowActions
-              rowId={row.id}
-              onIngresso={() => onIngresso(row)}
-              onQr={() => onQr(row)}
-              onDocuments={() => onDocuments(row)}
+    <div className="mt-4 space-y-2 xl:hidden">
+      {bundles.map(({ row, fields }) => {
+        const identLine = formatLavorazioneMobileIdentLine({
+          targa: fields.targa,
+          matricola: fields.matricola,
+          scuderia: fields.nScuderia,
+        });
+        const utilizzatore =
+          fields.utilizzatore.trim() && fields.utilizzatore !== "—" ? fields.utilizzatore : null;
+
+        return (
+          <LavorazioneMobileCardShell key={row.id}>
+            <LavorazioneMobileCardHeader
+              macchina={fields.attrezzatura}
+              identLine={identLine}
+              ingresso={<LavorazioneIngressoDateCellFromIso iso={fields.dataIngressoAt} />}
+              secondaryDate={
+                variant === "archive"
+                  ? {
+                      label: "Completamento",
+                      value: (
+                        <LavorazioneCompletamentoDatePill
+                          iso={lavorazioneDataCompletamentoIso(row)}
+                          align="left"
+                          fullWidth={false}
+                        />
+                      ),
+                    }
+                  : undefined
+              }
+              statusSlot={
+                variant === "active" ? (
+                  <LavorazioneMobileStatusSlot>
+                    <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
+                  </LavorazioneMobileStatusSlot>
+                ) : undefined
+              }
             />
-          </CardMobileActions>
-        </CardMobile>
-      ))}
+            <LavorazioneMobileMetaGrid>
+              <LavorazioneMobileMetaItem label="Cliente" value={fields.cliente} />
+              <LavorazioneMobileMetaItem label="Cantiere" value={fields.cantiere} />
+              {variant === "archive" ? (
+                <LavorazioneMobileMetaItem label="Addetto" value={fields.addetto} />
+              ) : null}
+              {utilizzatore ? (
+                <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="col-span-2" />
+              ) : null}
+            </LavorazioneMobileMetaGrid>
+            <LavorazioneMobileNote text={lavorazioneNoteInterventoText(fields)} />
+            {variant === "active" ? (
+              <LavorazioneMobileControlsPanel>
+                <LavMobileInlineField label="Priorità" layout="stack">
+                  <PrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
+                </LavMobileInlineField>
+                <LavMobileInlineField label="Addetto" layout="stack">
+                  <LavorazioneAddettoReadOnlyPill addetto={fields.addetto} addettoColors={addettoColors} />
+                </LavMobileInlineField>
+              </LavorazioneMobileControlsPanel>
+            ) : null}
+            <div className="mt-2.5">
+              <ClientLavorazionePhotoStrip lavorazioneId={row.id} max={3} lazy={false} sizeClass="h-12 w-12" />
+            </div>
+            <LavorazioneMobileCardFooter meta={null}>
+              <RowActions
+                rowId={row.id}
+                onIngresso={() => onIngresso(row)}
+                onQr={() => onQr(row)}
+              />
+            </LavorazioneMobileCardFooter>
+          </LavorazioneMobileCardShell>
+        );
+      })}
     </div>
   );
 }
 
 function LavorazioniSection({
-  title,
+  sectionLabel,
   bundles,
   variant,
   statiOpts,
   colStyles,
   prioritaColors,
+  addettoColors,
   emptyDefault,
   filtersActive,
   sortColumn,
@@ -465,14 +488,15 @@ function LavorazioniSection({
   onSort,
   onIngresso,
   onQr,
-  onDocuments,
 }: {
-  title: string;
+  /** Etichetta accessibilità (titolo visibile sulla ShellCard). */
+  sectionLabel: string;
   bundles: RowBundle[];
   variant: "active" | "archive";
   statiOpts: { id: string; label: string; color?: string }[];
   colStyles: LavorazioniListTableColStyles;
   prioritaColors: Record<string, string | undefined>;
+  addettoColors: Record<string, string | undefined>;
   emptyDefault: string;
   filtersActive: boolean;
   sortColumn: ClientPortalSortKey | null;
@@ -480,38 +504,34 @@ function LavorazioniSection({
   onSort: (k: ClientPortalSortKey) => void;
   onIngresso: (row: LavorazioneListRow) => void;
   onQr: (row: LavorazioneListRow) => void;
-  onDocuments: (row: LavorazioneListRow) => void;
 }) {
   const emptyMessage = filtersActive ? "Nessun risultato con i filtri attuali." : emptyDefault;
 
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className={dsTypoSectionTitle}>{title}</h2>
-      </div>
+    <section className="min-w-0" aria-label={sectionLabel}>
       <DesktopTable
         bundles={bundles}
         variant={variant}
         statiOpts={statiOpts}
         colStyles={colStyles}
         prioritaColors={prioritaColors}
+        addettoColors={addettoColors}
         emptyMessage={emptyMessage}
         sortColumn={sortColumn}
         sortPhase={sortPhase}
         onSort={onSort}
         onIngresso={onIngresso}
         onQr={onQr}
-        onDocuments={onDocuments}
       />
       <MobileCards
         bundles={bundles}
         variant={variant}
         statiOpts={statiOpts}
         prioritaColors={prioritaColors}
+        addettoColors={addettoColors}
         emptyMessage={emptyMessage}
         onIngresso={onIngresso}
         onQr={onQr}
-        onDocuments={onDocuments}
       />
     </section>
   );
@@ -544,6 +564,7 @@ export function ClientLavorazioniView() {
   );
   const colStyles = useLavorazioniListTableColStyles(statiOpts, prioritaOpts, addettiGlobali);
   const prioritaColors = globalOpts.lavorazioni.prioritaColors;
+  const addettoColors = globalOpts.lavorazioni.addettoColors;
   const viewOpts = useViewQueryOpts();
   const { store: schedeStore } = useSchedeBundlesQuery(access.allowed, { viewLayer: true });
   const inCorsoQ = useClientLavorazioniInCorsoQuery(access.allowed);
@@ -595,7 +616,6 @@ export function ClientLavorazioniView() {
   }, [searchInput, patchFilters]);
 
   const [qrRow, setQrRow] = useState<LavorazioneListRow | null>(null);
-  const [docsRow, setDocsRow] = useState<LavorazioneListRow | null>(null);
   const [ingressoRow, setIngressoRow] = useState<LavorazioneListRow | null>(null);
 
   const [sortInCorsoCol, setSortInCorsoCol] = useState<ClientPortalSortKey | null>(null);
@@ -618,9 +638,14 @@ export function ClientLavorazioniView() {
   const defaultAddetto = addettiGlobali[0] ?? "";
 
   const filterCatalog = useMemo(() => {
-    const rows = [...allInCorsoBundles, ...allArchivioBundles].map((b) => b.row);
-    return buildLavorazioniFilterCatalog(rows, schedeStore, addettiGlobali, [], defaultAddetto);
-  }, [allInCorsoBundles, allArchivioBundles, schedeStore, addettiGlobali, defaultAddetto]);
+    return buildClientPortalFilterCatalog(
+      [...allInCorsoBundles, ...allArchivioBundles],
+      schedeStore,
+      addettiGlobali,
+      defaultAddetto,
+      logsByLav,
+    );
+  }, [allInCorsoBundles, allArchivioBundles, schedeStore, addettiGlobali, defaultAddetto, logsByLav]);
 
   const inCorsoBundles = useMemo(
     () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, defaultAddetto, "in_corso", logsByLav),
@@ -699,14 +724,15 @@ export function ClientLavorazioniView() {
     setSearchInput("");
     setFilters(CLIENT_PORTAL_FILTERS_EMPTY);
     saveClientPortalFiltersPersisted(CLIENT_PORTAL_FILTERS_EMPTY);
+    setFiltriEspansi(false);
   }, []);
 
   if (access.isLoading) {
     return (
       <>
-        <PageHeader title="Lavorazioni (Clienti)" />
+        <PageHeader title={PORTALE_CLIENTI_LABEL} />
         <div className={dsStackPage}>
-          <p className="text-sm text-zinc-500">Verifica accesso…</p>
+          <LoadingPageSkeleton variant="clienti" />
         </div>
       </>
     );
@@ -715,7 +741,7 @@ export function ClientLavorazioniView() {
   if (!access.allowed) {
     return (
       <>
-        <PageHeader title="Lavorazioni (Clienti)" />
+        <PageHeader title={PORTALE_CLIENTI_LABEL} />
         <div className={dsStackPage}>
           <ShellCard>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -733,119 +759,141 @@ export function ClientLavorazioniView() {
   const listLoading = !filtersHydrated || inCorsoQ.isLoading || archivioQ.isLoading;
   const listError = inCorsoQ.error ?? archivioQ.error;
 
+  const listInitialLoading =
+    listLoading && inCorsoQ.data === undefined && archivioQ.data === undefined;
+
   let bodyContent: ReactNode;
-  if (listLoading) {
-    bodyContent = <p className="text-sm text-zinc-500">Caricamento…</p>;
+  if (listInitialLoading) {
+    bodyContent = (
+      <ShellCard title="Lavorazioni in corso">
+        <ClientLavorazioniLoadingSkeleton />
+      </ShellCard>
+    );
+  } else if (listError) {
+    bodyContent = (
+      <ShellCard>
+        <LoadingErrorState
+          title="Impossibile caricare le lavorazioni"
+          description="Controlla la connessione e riprova."
+          onRetry={() => {
+            void inCorsoQ.refetch();
+            void archivioQ.refetch();
+          }}
+        />
+      </ShellCard>
+    );
   } else {
     bodyContent = (
-      <div className="space-y-8">
+      <>
         {showInCorso ? (
-          <LavorazioniSection
-            title="Lavorazioni in corso"
-            bundles={sortedInCorsoBundles}
-            variant="active"
-            statiOpts={statiOpts}
-            colStyles={colStyles}
-            prioritaColors={prioritaColors}
-            emptyDefault="Nessuna lavorazione in corso."
-            filtersActive={filtersActive}
-            sortColumn={sortInCorsoCol}
-            sortPhase={sortInCorsoPhase}
-            onSort={onSortInCorso}
-            onIngresso={setIngressoRow}
-            onQr={setQrRow}
-            onDocuments={setDocsRow}
-          />
+          <ShellCard
+            title={`Lavorazioni in corso (${sortedInCorsoBundles.length})`}
+            collapsible
+            defaultCollapsed={false}
+          >
+            <LavorazioniSection
+              sectionLabel="Lavorazioni in corso"
+              bundles={sortedInCorsoBundles}
+              variant="active"
+              statiOpts={statiOpts}
+              colStyles={colStyles}
+              prioritaColors={prioritaColors}
+              addettoColors={addettoColors}
+              emptyDefault="Nessuna lavorazione in corso."
+              filtersActive={filtersActive}
+              sortColumn={sortInCorsoCol}
+              sortPhase={sortInCorsoPhase}
+              onSort={onSortInCorso}
+              onIngresso={setIngressoRow}
+              onQr={setQrRow}
+            />
+          </ShellCard>
         ) : null}
         {showArchivio ? (
-          <LavorazioniSection
-            title="Lavorazioni completate"
-            bundles={sortedArchivioBundles}
-            variant="archive"
-            statiOpts={statiOpts}
-            colStyles={colStyles}
-            prioritaColors={prioritaColors}
-            emptyDefault="Nessuna lavorazione in archivio."
-            filtersActive={filtersActive}
-            sortColumn={sortArchivioCol}
-            sortPhase={sortArchivioPhase}
-            onSort={onSortArchivio}
-            onIngresso={setIngressoRow}
-            onQr={setQrRow}
-            onDocuments={setDocsRow}
-          />
+          <ShellCard
+            title={`Lavorazioni completate (${sortedArchivioBundles.length})`}
+            collapsible
+            defaultCollapsed={true}
+          >
+            <LavorazioniSection
+              sectionLabel="Lavorazioni completate"
+              bundles={sortedArchivioBundles}
+              variant="archive"
+              statiOpts={statiOpts}
+              colStyles={colStyles}
+              prioritaColors={prioritaColors}
+              addettoColors={addettoColors}
+              emptyDefault="Nessuna lavorazione in archivio."
+              filtersActive={filtersActive}
+              sortColumn={sortArchivioCol}
+              sortPhase={sortArchivioPhase}
+              onSort={onSortArchivio}
+              onIngresso={setIngressoRow}
+              onQr={setQrRow}
+            />
+          </ShellCard>
         ) : null}
-      </div>
+      </>
     );
   }
 
   return (
     <>
-      <PageHeader title="Lavorazioni (Clienti)" />
+      <PageHeader
+        title={PORTALE_CLIENTI_LABEL}
+        actions={
+          <GestionaleRefreshToolbarButton busy={refreshBusy} onClick={() => void refreshClientData()} />
+        }
+      />
 
       <div className={dsStackPage}>
-        {listError ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100">
-            {listError.message ?? "Errore caricamento."}
-          </div>
-        ) : null}
-
-        <PageToolbar
-          primaryAction={null}
-          search={
-            <GestionaleSearchField
-              id="client-lavorazioni-search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  patchFilters({ search: searchInput.trim() });
-                }
-              }}
-              placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-              aria-label="Cerca lavorazioni clienti"
-              wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+        <ShellCard>
+          <section aria-label="Azioni e filtri lavorazioni clienti">
+            <PageToolbar
+              primaryAction={null}
+              search={
+                <GestionaleSearchField
+                  id="client-lavorazioni-search"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      patchFilters({ search: searchInput.trim() });
+                    }
+                  }}
+                  placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+                  aria-label="Cerca lavorazioni clienti"
+                  wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+                />
+              }
+              filtersExpanded={filtriEspansi}
+              onFiltersToggle={() => setFiltriEspansi((o) => !o)}
+              filtersActive={filtersActive}
+              filtersPanel={
+                <LavorazioniAdvancedFilterPanel
+                  filters={filters}
+                  onChange={patchFilters}
+                  catalog={filterCatalog}
+                  statiOpts={statiOpts}
+                  showSectionFilter
+                />
+              }
+              onFilterReset={resetFiltri}
+              meta={
+                <PageToolbarResultCount
+                  count={totalResults}
+                  filtersActive={lavorazioniAdvancedFiltersActive(filters)}
+                  searchActive={filters.search.trim().length > 0 || searchInput.trim().length > 0}
+                  onSearchReset={resetRicerca}
+                  onFilterReset={resetFiltri}
+                />
+              }
             />
-          }
-          filtersExpanded={filtriEspansi}
-          onFiltersToggle={() => setFiltriEspansi((o) => !o)}
-          filtersActive={filtersActive}
-          filtersPanel={
-            <LavorazioniAdvancedFilterPanel
-              filters={filters}
-              onChange={patchFilters}
-              catalog={filterCatalog}
-              statiOpts={statiOpts}
-              showSectionFilter
-            />
-          }
-          meta={
-            <>
-              <PageToolbarResultCount count={totalResults} filtersActive={filtersActive} />
-              <PageToolbarActions>
-                <button
-                  type="button"
-                  className={dsPageToolbarBtn}
-                  onClick={() => void refreshClientData()}
-                  disabled={refreshBusy}
-                  aria-busy={refreshBusy}
-                >
-                  <IconGestionaleRefresh className={refreshBusy ? "animate-spin" : undefined} />
-                  {refreshBusy ? "Aggiornamento…" : "Aggiorna"}
-                </button>
-                <button type="button" className={dsPageToolbarBtn} onClick={resetRicerca}>
-                  Pulisci ricerca
-                </button>
-                <button type="button" className={dsPageToolbarBtn} onClick={resetFiltri}>
-                  Reimposta filtri
-                </button>
-              </PageToolbarActions>
-            </>
-          }
-        />
+          </section>
+        </ShellCard>
 
-        <ShellCard>{bodyContent}</ShellCard>
+        {bodyContent}
       </div>
 
       {qrRow ? (
@@ -865,15 +913,6 @@ export function ClientLavorazioniView() {
           schedeStore={schedeStore}
           logs={logsByLav.get(ingressoRow.id) ?? []}
           addettiGlobali={addettiGlobali}
-        />
-      ) : null}
-
-      {docsRow ? (
-        <ClientLavorazioneDocumentsDialog
-          open
-          onClose={() => setDocsRow(null)}
-          lavorazioneId={docsRow.id}
-          refLabel={lavorazioneRefLabel(docsRow.id, docsRow.codice)}
         />
       ) : null}
     </>

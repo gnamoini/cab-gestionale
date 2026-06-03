@@ -9,7 +9,7 @@ export function OperatorGlobalSettingsPilotBadge({ className = "" }: { className
 
   return (
     <span
-      className={`inline-flex items-center rounded-md border border-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)] ${className}`}
+      className={`inline-flex min-w-0 max-w-full items-center rounded-md border border-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)] ${className}`}
       title="Override pilot: operatori con impostazioni globali (env + flag database)"
     >
       Modalità pilot attiva

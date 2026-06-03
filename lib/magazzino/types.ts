@@ -1,11 +1,16 @@
+import type { RicambioCompatRef } from "@/lib/magazzino/ricambio-compat-resolver";
+
 export interface RicambioMagazzino {
   id: string;
   marca: string;
   codiceFornitoreOriginale: string;
+  codiceFornitoreOriginaleSecondario: string;
   descrizione: string;
   note: string;
   categoria: string;
   compatibilitaMezzi: string[];
+  /** Riferimenti ID stabili (persistiti in meta); risolti a label via settings. */
+  compatibilitaRefs?: RicambioCompatRef[];
   scorta: number;
   scortaMinima: number;
   dataUltimaModifica: string;

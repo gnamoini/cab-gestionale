@@ -2,12 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
-import { CabLogo, CabLogoFill } from "@/components/gestionale/cab-logo";
+import { CabLogo } from "@/components/gestionale/cab-logo";
 import { formatUserDisplayName } from "@/src/lib/auth/resolve-user-display-name";
 import { dsSkeletonPulse, dsTypoBody } from "@/lib/ui/design-system";
 
 const welcomeCardClass =
-  "relative overflow-hidden rounded-2xl border-2 border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))] px-5 py-5 shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,#fff_7%,transparent)] dark:border-[color:color-mix(in_srgb,var(--cab-primary)_26%,var(--cab-border))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-card))] dark:shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,var(--cab-primary)_14%,transparent)]";
+  "relative min-w-0 max-w-full overflow-hidden rounded-2xl border-2 border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_5%,var(--cab-card))] px-4 py-2.5 shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,#fff_7%,transparent)] sm:px-5 sm:py-3 dark:border-[color:color-mix(in_srgb,var(--cab-primary)_26%,var(--cab-border))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_7%,var(--cab-card))] dark:shadow-[var(--cab-shadow-md),inset_0_1px_0_0_color-mix(in_srgb,var(--cab-primary)_14%,transparent)]";
 
 function timeGreeting(hour: number): string {
   if (hour >= 5 && hour < 12) return "Buongiorno";
@@ -36,29 +36,17 @@ function formatWelcomeDate(d: Date): {
   return { iso, day, weekday, month, year };
 }
 
-/** Logo CAB decorativo in filigrana — sfondo uniforme, senza bande o scrim verticali. */
-function WelcomeLogoBackdrop() {
-  return (
-    <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden>
-      <div className="absolute inset-y-0 right-0 w-[min(62%,16rem)] opacity-[0.07] dark:opacity-[0.045]">
-        <CabLogoFill className="object-center" />
-      </div>
-    </div>
-  );
-}
-
 function WelcomeSkeleton() {
   return (
     <div className={welcomeCardClass} aria-hidden>
-      <WelcomeLogoBackdrop />
-      <div className="relative z-[1] grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-4 sm:flex sm:items-center sm:gap-4">
-        <div className={`h-10 w-28 shrink-0 self-center ${dsSkeletonPulse}`} />
-        <div className="min-w-0 space-y-2 self-center sm:flex-1">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-3 sm:flex sm:items-center sm:gap-4">
+        <div className={`h-9 w-24 shrink-0 self-center ${dsSkeletonPulse}`} />
+        <div className="min-w-0 space-y-1.5 self-center sm:flex-1">
           <div className={`h-3 w-24 ${dsSkeletonPulse} opacity-60`} />
-          <div className={`h-7 w-56 max-w-full ${dsSkeletonPulse}`} />
+          <div className={`h-6 w-56 max-w-full ${dsSkeletonPulse}`} />
           <div className={`h-4 w-40 max-w-full ${dsSkeletonPulse} opacity-70`} />
         </div>
-        <div className={`col-span-2 h-14 border-t border-[var(--cab-border)] pt-4 sm:col-span-1 sm:h-10 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-4 ${dsSkeletonPulse} opacity-50`} />
+        <div className={`col-span-2 h-12 border-t border-[var(--cab-border)] pt-3 sm:col-span-1 sm:h-9 sm:border-t-0 sm:border-l sm:pt-0 sm:pl-4 ${dsSkeletonPulse} opacity-50`} />
       </div>
     </div>
   );
@@ -98,32 +86,31 @@ export function DashboardWelcome() {
 
   return (
     <div className={welcomeCardClass}>
-      <WelcomeLogoBackdrop />
-      <div className="relative z-[1] grid grid-cols-[auto_minmax(0,1fr)] items-start gap-x-4 gap-y-4 sm:flex sm:flex-row sm:items-center sm:gap-5">
-        <div className="flex shrink-0 items-center self-center py-0.5">
-          <CabLogo height={40} priority className="relative z-[1]" />
+      <div className="grid min-w-0 max-w-full grid-cols-[auto_minmax(0,1fr)] items-start gap-x-3 gap-y-3 sm:flex sm:flex-row sm:items-center sm:gap-4">
+        <div className="flex shrink-0 items-center self-center">
+          <CabLogo height={36} priority sizes="126px" />
         </div>
         <div className="min-w-0 self-center sm:flex-1">
-          <h2 className="text-xl font-semibold leading-tight tracking-tight text-[color:var(--cab-text)] md:text-2xl">
+          <h2 className="break-words text-lg font-semibold leading-tight tracking-tight text-[color:var(--cab-text)] md:text-xl">
             {greeting},{" "}
             <span className="font-bold text-[color:var(--cab-primary)]">{who}</span>
           </h2>
-          <p className={`${dsTypoBody} mt-1.5 text-[color:var(--cab-text-muted)]`}>
+          <p className={`${dsTypoBody} mt-0.5 text-[color:var(--cab-text-muted)]`}>
             Benvenuto nel gestionale officina.
           </p>
         </div>
         <time
           dateTime={welcomeDate.iso}
-          className="col-span-2 shrink-0 border-t-2 border-[color:color-mix(in_srgb,var(--cab-primary)_50%,transparent)] pt-4 text-left sm:col-span-1 sm:border-t-0 sm:border-l-2 sm:pt-0 sm:pl-5"
+          className="col-span-2 min-w-0 w-full shrink-0 border-t-2 border-[color:color-mix(in_srgb,var(--cab-primary)_50%,transparent)] pt-3 text-left max-sm:max-w-full sm:col-span-1 sm:w-auto sm:border-t-0 sm:border-l-2 sm:pt-0 sm:pl-4"
           aria-label={`${welcomeDate.weekday}, ${welcomeDate.day} ${welcomeDate.month} ${welcomeDate.year}`}
         >
-          <span className="block text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--cab-text-muted)]">
+          <span className="block max-w-full truncate text-[10px] font-semibold uppercase tracking-[0.22em] text-[color:var(--cab-text-muted)]">
             {welcomeDate.weekday}
           </span>
-          <span className="mt-1.5 block text-3xl font-semibold tabular-nums leading-none tracking-tight text-[color:var(--cab-text)] sm:text-4xl md:text-[2.75rem]">
+          <span className="mt-1 block text-2xl font-semibold tabular-nums leading-none tracking-tight text-[color:var(--cab-text)] sm:text-3xl md:text-4xl">
             {welcomeDate.day}
           </span>
-          <span className="mt-1 block text-sm leading-snug text-[color:var(--cab-text-muted)] sm:text-[0.9375rem]">
+          <span className="mt-0.5 block text-xs leading-snug text-[color:var(--cab-text-muted)] sm:text-sm">
             <span className="capitalize">{welcomeDate.month}</span>
             <span className="mx-1 tabular-nums">{welcomeDate.year}</span>
           </span>

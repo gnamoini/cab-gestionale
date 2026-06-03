@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "frozenAt": "2026-05-30",
+  "absoluteFinalState": true,
+  "globalScores": {
+    "flexStability": 100,
+    "uiOsHealth": 90,
+    "overflowRiskScore": 94,
+    "layoutDriftScore": 99,
+    "recommendation": "NEEDS CONSOLIDATION"
+  },
+  "routeScores": {
+    "/report": {
+      "flexSafety": 100,
+      "overflowSafety": 100,
+      "uiOsCompatibility": 100,
+      "layoutStability": 100,
+      "overall": 100,
+      "status": "OK"
+    },
+    "/magazzino": {
+      "flexSafety": 100,
+      "overflowSafety": 83,
+      "uiOsCompatibility": 100,
+      "layoutStability": 97,
+      "overall": 94,
+      "status": "WARNING"
+    },
+    "/lavorazioni": {
+      "flexSafety": 100,
+      "overflowSafety": 100,
+      "uiOsCompatibility": 100,
+      "layoutStability": 100,
+      "overall": 100,
+      "status": "OK"
+    },
+    "/dipendenti": {
+      "flexSafety": 100,
+      "overflowSafety": 83,
+      "uiOsCompatibility": 70,
+      "layoutStability": 97,
+      "overall": 90,
+      "status": "DEGRADED"
+    },
+    "/dashboard": {
+      "flexSafety": 100,
+      "overflowSafety": 100,
+      "uiOsCompatibility": 70,
+      "layoutStability": 100,
+      "overall": 96,
+      "status": "DEGRADED"
+    },
+    "/kanban": {
+      "flexSafety": 100,
+      "overflowSafety": 100,
+      "uiOsCompatibility": 100,
+      "layoutStability": 100,
+      "overall": 100,
+      "status": "OK"
+    }
+  },
+  "checksum": "e83133479ad9e6cdc1da8eda95c1b7b3d691665bbb853a6b0839b64c88388511"
+}

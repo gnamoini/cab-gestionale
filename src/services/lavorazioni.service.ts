@@ -1,5 +1,6 @@
 "use client";
 
+import { pickLavorazioneWritePayload } from "@/lib/validation/services/lavorazioni-payload";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-log-oggetto";
@@ -99,7 +100,8 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
-      const { data: row, error } = await sb.from("lavorazioni").insert(data).select("*").single();
+      const picked = pickLavorazioneWritePayload(data as Record<string, unknown>);
+      const { data: row, error } = await sb.from("lavorazioni").insert(picked as LavorazioneInsert).select("*").single();
       if (error) return err(error.message);
       const r = row as LavorazioneRow;
       const ctx = await oggettoContextForLavorazione(sb, r);
@@ -117,8 +119,9 @@ export const lavorazioniService = {
       const sb = await c();
       const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
+      const picked = pickLavorazioneWritePayload(data as Record<string, unknown>);
       const { data: row, error } = await applyLavorazioniNotDeletedFilter(
-        sb.from("lavorazioni").update(data).eq("id", id),
+        sb.from("lavorazioni").update(picked).eq("id", id),
       )
         .select("*")
         .single();

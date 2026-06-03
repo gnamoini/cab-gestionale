@@ -1,11 +1,11 @@
 import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
-import { isoToDateInputValue } from "@/lib/lavorazioni/date-day-only";
+import { clientPortalIngressoIso } from "@/lib/lavorazioni/client-portal-row-fields";
+import { isoToDateInputValue, normalizeYmdRangeBounds } from "@/lib/lavorazioni/date-day-only";
 import { migrateStatoConfigId } from "@/lib/lavorazioni/stati-dynamic";
 import { lavRowIngressoInRange } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
-import type { MezzoGestito } from "@/lib/mezzi/types";
 
 export const FILTER_ALL = "__tutti__" as const;
 
@@ -121,7 +121,7 @@ export function buildLavorazioniFilterCatalog(
   rows: readonly LavorazioneListRow[],
   schedeStore: LavorazioneSchedeStore | undefined,
   addettiGlobali: readonly string[],
-  mezziCatalog: readonly MezzoGestito[],
+  mezziCatalog: readonly { marca?: string | null; modello?: string | null }[],
   defaultAddetto: string,
 ): LavorazioniFilterCatalog {
   const clienti: string[] = [];
@@ -185,17 +185,18 @@ function dayEndMs(ymd: string): number {
 }
 
 export function lavRowCompletamentoInRange(row: LavorazioneListRow, daYmd: string, aYmd: string): boolean {
-  if (!daYmd.trim() && !aYmd.trim()) return true;
+  const { da, a } = normalizeYmdRangeBounds(daYmd, aYmd);
+  if (!da && !a) return true;
   const raw = row.archived_at?.trim() || row.data_uscita?.trim();
   if (!raw) return false;
   const t = new Date(raw).getTime();
   if (!Number.isFinite(t)) return false;
-  if (daYmd.trim()) {
-    const d0 = dayStartMs(daYmd);
+  if (da) {
+    const d0 = dayStartMs(da);
     if (Number.isFinite(d0) && t < d0) return false;
   }
-  if (aYmd.trim()) {
-    const d1 = dayEndMs(aYmd);
+  if (a) {
+    const d1 = dayEndMs(a);
     if (Number.isFinite(d1) && t > d1) return false;
   }
   return true;
@@ -245,8 +246,14 @@ export function lavRowMatchesAdvancedFilters(
   if (!listFilterMatches(f.modello, entity.modello)) return false;
   if (f.stato !== FILTER_ALL && row.stato !== f.stato && row.stato !== migrateStatoConfigId(f.stato)) return false;
 
-  if (!lavRowIngressoInRange(row, f.ingressoDa, f.ingressoA)) return false;
-  if (variant !== "in_corso" && !lavRowCompletamentoInRange(row, f.completamentoDa, f.completamentoA)) return false;
+  if (!lavRowIngressoInRange(
+    { ...row, data_ingresso: clientPortalIngressoIso(row, schedeStore) },
+    f.ingressoDa,
+    f.ingressoA,
+  )) {
+    return false;
+  }
+  if (variant === "archivio" && !lavRowCompletamentoInRange(row, f.completamentoDa, f.completamentoA)) return false;
 
   return true;
 }

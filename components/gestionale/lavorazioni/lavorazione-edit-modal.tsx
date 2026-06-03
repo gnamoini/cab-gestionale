@@ -11,8 +11,11 @@ import {
   GlobalHierarchyModelloSelect,
   GlobalSettingsListSelect,
 } from "@/components/gestionale/global-input";
+import { sliceInputValue, TEXT_LONG } from "@/lib/validation/text-field-limits";
+import { LoadingButton } from "@/components/design-system";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnDanger, dsInput, dsLabel } from "@/lib/ui/design-system";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -80,7 +83,7 @@ export function LavorazioneEditModal({
       subtitle="Modifica controllata di anagrafica mezzo e note lavorazione."
     >
       <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        <GestionaleModalScrollBody className="space-y-4 p-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className={dsLabel}>Cliente</span>
@@ -149,17 +152,22 @@ export function LavorazioneEditModal({
 
           <label className="block">
             <span className={dsLabel}>Note</span>
-            <textarea className={`${dsInput} mt-1 min-h-[100px] w-full resize-y`} value={note} onChange={(e) => setNote(e.target.value)} disabled={update.isPending || updateMezzo.isPending} rows={4} />
+            <textarea className={`${dsInput} mt-1 min-h-[100px] w-full resize-y`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} disabled={update.isPending || updateMezzo.isPending} rows={4} maxLength={TEXT_LONG} />
           </label>
-        </div>
+        </GestionaleModalScrollBody>
 
-        <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
+        <footer className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
           <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={update.isPending || updateMezzo.isPending}>
             Annulla
           </button>
-          <button type="submit" className={erpBtnAccent} disabled={update.isPending || updateMezzo.isPending}>
-            {update.isPending || updateMezzo.isPending ? "Salvataggio…" : "Salva"}
-          </button>
+          <LoadingButton
+            type="submit"
+            className={erpBtnAccent}
+            loading={update.isPending || updateMezzo.isPending}
+            preset="salva"
+          >
+            Salva
+          </LoadingButton>
           {canDelete && onDelete ? (
             <button
               type="button"

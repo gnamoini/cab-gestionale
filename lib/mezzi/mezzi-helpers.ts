@@ -87,6 +87,7 @@ export function compareMezzi(
   sortPhase: MezziSortPhase,
   naturalOrder: (x: MezzoGestito, y: MezzoGestito) => number,
   ultimaSortValue?: (x: MezzoGestito) => string,
+  numeroLavorazioniSortValue?: (x: MezzoGestito) => number,
 ): number {
   if (sortPhase === "natural" || sortColumn === null) {
     return naturalOrder(a, b);
@@ -96,6 +97,9 @@ export function compareMezzi(
   switch (sortColumn) {
     case "cliente":
       cmp = a.cliente.localeCompare(b.cliente, "it");
+      break;
+    case "cantiere":
+      cmp = (a.cantiere ?? "").localeCompare(b.cantiere ?? "", "it");
       break;
     case "marca":
       cmp = `${a.marca} ${a.modello}`.localeCompare(`${b.marca} ${b.modello}`, "it");
@@ -114,6 +118,9 @@ export function compareMezzi(
       break;
     case "ultimaLavorazione":
       cmp = (ultimaSortValue?.(a) ?? "").localeCompare(ultimaSortValue?.(b) ?? "");
+      break;
+    case "numeroLavorazioni":
+      cmp = (numeroLavorazioniSortValue?.(a) ?? 0) - (numeroLavorazioniSortValue?.(b) ?? 0);
       break;
     default:
       cmp = 0;

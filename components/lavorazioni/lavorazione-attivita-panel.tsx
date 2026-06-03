@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { statoPillShellClassDynamic } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   buildLavorazioneAttivitaFeed,
@@ -12,35 +13,37 @@ import {
 } from "@/lib/lavorazioni/lavorazione-attivita-feed";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
-import { formatGestionaleLogMetaLine } from "@/lib/gestionale-log/view-model";
+import { formatGestionaleLogMetaLine, type GestionaleLogEventTone } from "@/lib/gestionale-log/view-model";
+import {
+  dsFocus,
+  dsSegmentedBtnOff,
+  dsSegmentedBtnOn,
+  dsSegmentedWrap,
+} from "@/lib/ui/design-system";
 
-const FILTER_OPTIONS: { id: LavorazioneAttivitaFilter; label: string }[] = [
-  { id: "all", label: "Tutto" },
-  { id: "stati", label: "Solo stati" },
-  { id: "important", label: "Solo importanti" },
+const FILTER_OPTIONS: { id: LavorazioneAttivitaFilter; label: string; shortLabel: string }[] = [
+  { id: "all", label: "Tutto", shortLabel: "Tutto" },
+  { id: "stati", label: "Solo stati", shortLabel: "Stati" },
+  { id: "important", label: "Solo importanti", shortLabel: "Importanti" },
 ];
 
-function tierDotClass(tier: LavorazioneAttivitaEvent["tier"]): string {
-  if (tier === "stato") return "h-3 w-3 bg-[var(--cab-primary)] ring-[3px]";
-  if (tier === "secondary") return "h-2 w-2 bg-zinc-400/80 ring-2 opacity-70";
-  return "h-2.5 w-2.5 bg-[var(--cab-primary)] ring-2";
-}
+const TIMELINE_RING =
+  "ring-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))]";
 
-function tierTitleClass(tier: LavorazioneAttivitaEvent["tier"]): string {
-  if (tier === "stato") return "text-sm font-bold uppercase tracking-wide text-zinc-900 dark:text-zinc-50";
-  if (tier === "secondary") return "text-[11px] font-medium uppercase tracking-wide text-zinc-500/90 dark:text-zinc-500";
-  return "text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-100";
-}
+const TONE_DOT: Record<GestionaleLogEventTone, string> = {
+  create: "bg-emerald-500",
+  update: "bg-[color:var(--cab-primary)]",
+  delete: "bg-red-500",
+  complete: "bg-sky-500",
+  archive: "bg-[color:var(--cab-text-muted)]",
+  reopen: "bg-indigo-500",
+  neutral: "bg-[color:var(--cab-text-muted)]",
+};
 
-function tierBodyClass(tier: LavorazioneAttivitaEvent["tier"]): string {
-  if (tier === "stato") return "mt-1 text-sm leading-relaxed text-zinc-700 dark:text-zinc-300";
-  if (tier === "secondary") return "mt-0.5 text-[11px] leading-relaxed text-zinc-500 dark:text-zinc-500";
-  return "mt-1 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400";
-}
-
-function tierRowPad(tier: LavorazioneAttivitaEvent["tier"]): string {
-  if (tier === "secondary") return "pb-4 last:pb-0 pl-1";
-  return "pb-6 last:pb-0";
+function timelineDotClass(tier: LavorazioneAttivitaEvent["tier"], tone: GestionaleLogEventTone): string {
+  if (tier === "stato") return `h-3 w-3 bg-[color:var(--cab-primary)] ring-[3px] ${TIMELINE_RING}`;
+  if (tier === "secondary") return `h-2 w-2 bg-[color:var(--cab-text-muted)] opacity-50 ring-2 ${TIMELINE_RING}`;
+  return `h-2.5 w-2.5 ring-2 ${TIMELINE_RING} ${TONE_DOT[tone]}`;
 }
 
 function AttivitaEventRow({
@@ -58,22 +61,45 @@ function AttivitaEventRow({
   const statoStyle = ev.statoId
     ? readablePillStyleFromHex(statoDisplayColor(ev.statoId, statiOpts))
     : undefined;
+  const isStato = ev.tier === "stato";
+  const isSecondary = ev.tier === "secondary";
 
   return (
-    <li className={`grid grid-cols-[1.125rem_minmax(0,1fr)] gap-x-4 ${tierRowPad(ev.tier)}`}>
-      <div className="relative flex justify-center">
+    <li className="relative flex gap-3 py-3.5 first:pt-0 last:pb-0">
+      <div className="relative flex w-5 shrink-0 justify-center pt-1">
         {index < total - 1 ? (
-          <span className="absolute top-3 bottom-0 w-px bg-zinc-200 dark:bg-zinc-700" aria-hidden />
+          <span
+            className="absolute top-4 bottom-0 left-1/2 w-px -translate-x-1/2 bg-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)]"
+            aria-hidden
+          />
         ) : null}
         <span
-          className={`relative z-10 mt-1.5 shrink-0 rounded-full ring-white dark:ring-zinc-900 ${tierDotClass(ev.tier)}`}
+          className={`relative z-10 shrink-0 rounded-full ${timelineDotClass(ev.tier, ev.tone)}`}
           aria-hidden
         />
       </div>
-      <div className={`min-w-0 pt-0.5 ${ev.tier === "secondary" ? "opacity-80" : ""}`}>
-        <div className="flex flex-wrap items-start gap-2">
-          <p className={tierTitleClass(ev.tier)}>{ev.title}</p>
-          {statoLabel && ev.tier === "stato" ? (
+      <div
+        className={`min-w-0 flex-1 ${
+          isStato
+            ? "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))] px-2.5 py-2"
+            : isSecondary
+              ? "opacity-75"
+              : ""
+        }`}
+      >
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <p
+            className={`min-w-0 uppercase tracking-wide ${
+              isStato
+                ? "text-xs font-bold text-[color:var(--cab-text)]"
+                : isSecondary
+                  ? "text-[10px] font-semibold text-[color:var(--cab-text-muted)]"
+                  : "text-xs font-bold text-[color:var(--cab-text)]"
+            }`}
+          >
+            {ev.title}
+          </p>
+          {statoLabel && isStato ? (
             <span
               className={`${statoPillShellClassDynamic()} inline-flex px-2 py-0.5 text-[10px] font-semibold whitespace-nowrap`}
               style={statoStyle}
@@ -82,11 +108,58 @@ function AttivitaEventRow({
             </span>
           ) : null}
         </div>
-        <p className={`whitespace-pre-wrap ${tierBodyClass(ev.tier)}`}>{ev.description}</p>
-        {ev.details ? <p className="mt-0.5 text-[11px] text-zinc-500 dark:text-zinc-500">{ev.details}</p> : null}
-        <p className="mt-1.5 text-[11px] tabular-nums text-zinc-500">{formatGestionaleLogMetaLine(ev.autore, ev.at)}</p>
+        <p
+          className={`whitespace-pre-wrap leading-relaxed text-[color:var(--cab-text-muted)] ${
+            isSecondary ? "mt-0.5 text-[11px]" : "mt-1 text-sm"
+          }`}
+        >
+          {ev.description}
+        </p>
+        <p className="mt-1.5 text-[10px] tabular-nums text-[color:var(--cab-text-muted)]">
+          {formatGestionaleLogMetaLine(ev.autore, ev.at)}
+        </p>
       </div>
     </li>
+  );
+}
+
+function AttivitaFilterSegmented({
+  filter,
+  onChange,
+}: {
+  filter: LavorazioneAttivitaFilter;
+  onChange: (next: LavorazioneAttivitaFilter) => void;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+        Visualizza
+      </p>
+      <div
+        className={`${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`}
+        role="group"
+        aria-label="Filtro attività"
+      >
+        {FILTER_OPTIONS.map((opt) => {
+          const active = filter === opt.id;
+          return (
+            <button
+              key={opt.id}
+              type="button"
+              className={`flex min-h-10 min-w-0 flex-1 items-center justify-center px-2 text-center text-xs font-semibold sm:min-h-9 sm:px-3 sm:text-sm ${
+                active ? dsSegmentedBtnOn : dsSegmentedBtnOff
+              } ${dsFocus}`}
+              aria-pressed={active}
+              title={opt.label}
+              onClick={() => onChange(opt.id)}
+            >
+              <span className="sm:hidden">{opt.shortLabel}</span>
+              <span className="hidden sm:inline">{opt.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -106,40 +179,42 @@ export function LavorazioneAttivitaPanel({
 
   const events = useMemo(() => filterLavorazioneAttivita(allEvents, filter), [allEvents, filter]);
 
-  return (
-    <section aria-label="Attività lavorazione">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[10px] font-bold uppercase tracking-wide text-zinc-500">Attività lavorazione</h3>
-        <div className="flex flex-wrap gap-1" role="group" aria-label="Filtro attività">
-          {FILTER_OPTIONS.map((opt) => {
-            const active = filter === opt.id;
-            return (
-              <button
-                key={opt.id}
-                type="button"
-                className={`rounded-lg border px-2 py-1 text-[10px] font-semibold transition-colors ${
-                  active
-                    ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]"
-                    : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-                }`}
-                onClick={() => setFilter(opt.id)}
-              >
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+  const subtitle =
+    filter === "all"
+      ? allEvents.length === 1
+        ? "1 evento registrato"
+        : `${allEvents.length} eventi registrati`
+      : events.length === 1
+        ? `1 di ${allEvents.length} eventi`
+        : `${events.length} di ${allEvents.length} eventi`;
 
-      {events.length === 0 ? (
-        <p className="text-sm text-zinc-500">{emptyMessage}</p>
-      ) : (
-        <ol className="space-y-0">
-          {events.map((ev, index) => (
-            <AttivitaEventRow key={ev.id} ev={ev} index={index} total={events.length} statiOpts={feedInput?.statiOpts ?? []} />
-          ))}
-        </ol>
-      )}
-    </section>
+  return (
+    <GestionaleInfoCard compact title="Attività lavorazione" subtitle={subtitle}>
+      <AttivitaFilterSegmented filter={filter} onChange={setFilter} />
+      <div className="mt-3.5 border-t border-[color:var(--cab-border)] pt-3.5">
+        {events.length === 0 ? (
+          <div className="rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-3 py-4 text-center">
+            <p className="text-sm font-medium text-[color:var(--cab-text)]">
+              {allEvents.length === 0 ? "Nessuna attività" : "Nessun evento per questo filtro"}
+            </p>
+            <p className="mt-1 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+              {allEvents.length === 0 ? emptyMessage : "Prova un altro filtro per vedere più eventi."}
+            </p>
+          </div>
+        ) : (
+          <ol className="divide-y divide-[color:var(--cab-border)]">
+            {events.map((ev, index) => (
+              <AttivitaEventRow
+                key={ev.id}
+                ev={ev}
+                index={index}
+                total={events.length}
+                statiOpts={feedInput?.statiOpts ?? []}
+              />
+            ))}
+          </ol>
+        )}
+      </div>
+    </GestionaleInfoCard>
   );
 }

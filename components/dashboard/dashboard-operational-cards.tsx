@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Badge } from "@/components/design-system";
+import { Badge, LoadingCardSkeleton } from "@/components/design-system";
 import { DashboardTasksPanel } from "@/components/dashboard/dashboard-tasks-panel";
 import {
+  dsDashboardWidgetTitle,
   dsFocus,
   dsSurfaceInteractiveKpi,
   dsSurfacePanel,
@@ -12,7 +13,7 @@ import {
   dsTypoSmall,
 } from "@/lib/ui/design-system";
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
-import { prioritaLabel, statoPillShellClassDynamic } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { prioritaLabel, statoPillShellClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { lavTablePillTextClass } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
@@ -25,26 +26,25 @@ import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 
-const kpiCardClass = `${dsSurfaceInteractiveKpi} ${dsFocus}`;
-const panelCardClass = `${dsSurfacePanel} flex min-h-[220px] flex-col p-4`;
+const kpiCardClass = `${dsSurfaceInteractiveKpi} min-w-0 max-w-full overflow-hidden ${dsFocus}`;
+const panelCardClass = `${dsSurfacePanel} flex min-h-[220px] min-w-0 max-w-full flex-col p-4`;
 
-const kpiCardBadgeClass =
-  "rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[color:var(--cab-text-muted)]";
-
-const widgetTitleClass = `${dsTypoSmall} font-bold uppercase tracking-wide text-[color:var(--cab-primary)]`;
+const widgetTitleClass = dsDashboardWidgetTitle;
 
 const magSottoScortaPillHex = "#b91c1c";
 
-/** Larghezza condivisa pill priorità/stato nel widget Lavorazioni dashboard. */
-const dashboardLavMiniPillColClass = "w-[6.75rem]";
-const dashboardLavMiniPillClass = `${statoPillShellClassDynamic()} inline-flex w-full min-h-[1.375rem] items-center justify-center px-1.5 py-0.5 ${lavTablePillTextClass} text-[10px] whitespace-nowrap`;
+/** Colonna pill priorità/stato: larghezza al contenuto (etichette lunghe es. «Attesa Ricambi»). */
+const dashboardLavMiniPillColClass =
+  "flex w-max max-w-[min(11.5rem,48%)] shrink-0 flex-col items-stretch justify-between gap-1.5 self-stretch py-0.5";
+const dashboardLavMiniPillShellClass = `${statoPillShellClass()} min-h-[1.375rem] w-full justify-center px-2 py-0.5 text-[10px]`;
+const dashboardLavMiniPillTextClass = `block whitespace-nowrap text-center ${lavTablePillTextClass}`;
 
 /** Righe secondarie pill lavorazioni dashboard — ereditano contrasto dal colore priorità. */
 const dashboardLavRowMetaClass =
   "mt-0.5 truncate text-[11px] font-normal leading-snug text-inherit opacity-95";
 
 function WidgetLoading() {
-  return <p className={dsTypoCaption}>Caricamento…</p>;
+  return <LoadingCardSkeleton minHeightClass="min-h-[220px]" rows={3} />;
 }
 
 function WidgetError() {
@@ -58,7 +58,7 @@ function WidgetEmpty({ message }: { message: string }) {
 function KpiStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <p className={dsTypoCaption}>{label}</p>
+      <p className={`${dsTypoCaption} truncate`}>{label}</p>
       <p className="mt-0.5 text-lg font-semibold tabular-nums text-[color:var(--cab-text)]">{value}</p>
     </div>
   );
@@ -92,9 +92,13 @@ function DashboardLavRowPill({
 }
 
 function PrioritaMiniPill({ priorita }: { priorita: string }) {
+  const label = prioritaLabel(priorita);
   return (
-    <span className={`${dashboardLavMiniPillClass} border-current/30 bg-black/15 backdrop-blur-[1px]`}>
-      {prioritaLabel(priorita)}
+    <span
+      className={`${dashboardLavMiniPillShellClass} border-current/30 bg-black/15 backdrop-blur-[1px]`}
+      title={label}
+    >
+      <span className={dashboardLavMiniPillTextClass}>{label}</span>
     </span>
   );
 }
@@ -102,8 +106,8 @@ function PrioritaMiniPill({ priorita }: { priorita: string }) {
 function StatoMiniPill({ stato, statiOpts }: { stato: string; statiOpts: { id: string; label: string; color?: string }[] }) {
   const label = statoLavorazioneLabel(stato, statiOpts) || stato;
   return (
-    <span className={dashboardLavMiniPillClass} style={readablePillStyleFromHex(statoDisplayColor(stato, statiOpts))}>
-      {label}
+    <span className={dashboardLavMiniPillShellClass} style={readablePillStyleFromHex(statoDisplayColor(stato, statiOpts))} title={label}>
+      <span className={dashboardLavMiniPillTextClass}>{label}</span>
     </span>
   );
 }
@@ -125,10 +129,7 @@ function DashboardLavorazioniWidget({
 }) {
   return (
     <Link href="/lavorazioni" className={kpiCardClass} aria-label="Apri lavorazioni">
-      <div className="flex items-start justify-between gap-2">
-        <h2 className={widgetTitleClass}>Lavorazioni</h2>
-        <span className={kpiCardBadgeClass}>Operativo</span>
-      </div>
+      <h2 className={`${widgetTitleClass} min-w-0 truncate`}>Lavorazioni</h2>
       {loading ? (
         <div className="mt-4">
           <WidgetLoading />
@@ -139,12 +140,12 @@ function DashboardLavorazioniWidget({
         </div>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="mt-4 grid min-w-0 grid-cols-3 gap-2 sm:gap-3">
             <KpiStat label="In corso" value={String(stats.inCorso)} />
             <KpiStat label="Urgenti" value={String(stats.urgenti)} />
             <KpiStat label="Entrati oggi" value={String(stats.entratiOggi)} />
           </div>
-          <ul className="mt-4 flex-1 space-y-2.5">
+          <ul className="mt-4 min-w-0 flex-1 space-y-2.5">
             {rows.length === 0 ? (
               <li>
                 <WidgetEmpty message="Nessuna lavorazione attiva." />
@@ -162,9 +163,7 @@ function DashboardLavorazioniWidget({
                     {subtitle ? <p className={dashboardLavRowMetaClass}>{subtitle}</p> : null}
                     {row.addetto ? <p className={dashboardLavRowMetaClass}>{row.addetto}</p> : null}
                   </div>
-                  <span
-                    className={`flex shrink-0 flex-col items-stretch justify-between gap-1.5 self-stretch py-0.5 ${dashboardLavMiniPillColClass}`}
-                  >
+                  <span className={dashboardLavMiniPillColClass}>
                     <PrioritaMiniPill priorita={row.priorita} />
                     <StatoMiniPill stato={row.stato} statiOpts={statiOpts} />
                   </span>
@@ -231,10 +230,7 @@ function DashboardMagazzinoWidget({
 }) {
   return (
     <Link href="/magazzino" className={kpiCardClass} aria-label="Apri magazzino">
-      <div className="flex items-start justify-between gap-2">
-        <h2 className={widgetTitleClass}>Magazzino</h2>
-        <span className={kpiCardBadgeClass}>Stock</span>
-      </div>
+      <h2 className={`${widgetTitleClass} min-w-0 truncate`}>Magazzino</h2>
       {staging ? (
         <p className={`${dsTypoCaption} mt-4`}>Anteprima disabilitata in staging pubblico.</p>
       ) : loading ? (
@@ -247,7 +243,7 @@ function DashboardMagazzinoWidget({
         </div>
       ) : (
         <>
-          <div className="mt-4 grid grid-cols-3 gap-3">
+          <div className="mt-4 grid min-w-0 grid-cols-3 gap-2 sm:gap-3">
             <KpiStat label="Sotto scorta" value={String(stats.sottoScorta)} />
             <KpiStat label="Entrate oggi" value={String(daily.entrate)} />
             <KpiStat label="Uscite oggi" value={String(daily.uscite)} />
@@ -303,11 +299,8 @@ function DashboardMagazzinoWidget({
 function DashboardLocalNotesWidget() {
   return (
     <div className={panelCardClass}>
-      <div className="flex items-start justify-between gap-2">
-        <h2 className={widgetTitleClass}>Note</h2>
-        <span className={kpiCardBadgeClass}>Appunti</span>
-      </div>
-      <div className="mt-3 min-h-0 flex-1">
+      <h2 className={`${widgetTitleClass} min-w-0 shrink-0 truncate`}>Note</h2>
+      <div className="mt-4 flex min-h-0 min-w-0 flex-1 flex-col">
         <DashboardTasksPanel />
       </div>
     </div>
@@ -332,7 +325,7 @@ export function DashboardOperationalCards() {
   } = useDashboardMetrics();
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
       <DashboardLavorazioniWidget
         loading={lavLoading}
         error={lavError}

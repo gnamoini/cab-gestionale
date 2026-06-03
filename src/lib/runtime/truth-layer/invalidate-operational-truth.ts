@@ -3,6 +3,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
+import { invalidateReportUniverse } from "@/lib/report/invalidate-report-universe";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
 import { QK } from "@/src/lib/react-query/query-keys";
@@ -10,6 +11,19 @@ import { QK } from "@/src/lib/react-query/query-keys";
 export type OperationalTruthDomain = "documenti" | "lavorazioni" | "mezzi" | "magazzino" | "report";
 
 const REPORT_LOG_ENTITA = new Set(["magazzino_ricambi", "movimenti_ricambi"]);
+
+/** @deprecated Preferire invalidateReportUniverse — mantenuto per compat log feed legacy. */
+async function invalidateReportLogQueries(queryClient: QueryClient): Promise<void> {
+  await queryClient.invalidateQueries({
+    predicate: (query) => {
+      if (query.queryKey[0] !== QK.log[0]) return false;
+      const filters = query.queryKey[1] as { entita?: string } | null | undefined;
+      const entita = filters?.entita;
+      return typeof entita === "string" && REPORT_LOG_ENTITA.has(entita);
+    },
+    refetchType: "active",
+  });
+}
 
 export type InvalidateOperationalTruthOptions = {
   queryClient: QueryClient;
@@ -50,19 +64,10 @@ export async function invalidateOperationalTruth(opts: InvalidateOperationalTrut
       if (!skipReportBroadcast) bumpReportDataRefresh();
       break;
     case "report":
-      if (!skipReportBroadcast) bumpReportDataRefresh();
-      await Promise.all([
-        queryClient.invalidateQueries({
-          predicate: (query) => {
-            if (query.queryKey[0] !== QK.log[0]) return false;
-            const filters = query.queryKey[1] as { entita?: string } | null | undefined;
-            const entita = filters?.entita;
-            return typeof entita === "string" && REPORT_LOG_ENTITA.has(entita);
-          },
-          refetchType: "active",
-        }),
-        queryClient.invalidateQueries({ queryKey: QK.reportManualEntries, refetchType: "active" }),
-      ]);
+      await invalidateReportUniverse(queryClient, {
+        skipReportBroadcast: skipReportBroadcast ?? true,
+      });
+      await invalidateReportLogQueries(queryClient);
       break;
     default:
       break;

@@ -6,12 +6,24 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Tooltip } from "@/components/design-system/tooltip";
+import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
+import { SchedaIngressoPanoramicaAnagraficaContent } from "@/components/gestionale/lavorazioni/scheda-ingresso-panoramica-view";
+import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
+import {
+  HubModalPanoramicaNoteEditor,
+  HubModalPanoramicaPanel,
+} from "@/components/design-system/hub-modal-panoramica";
 import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
-import { LavorazioniModalShell, LavorazioniModalTitleBar } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { HubIconOpen, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
+import {
+  LavorazioniModalHeader,
+  LavorazioniModalShell,
+  type LavorazioniModalDialogSize,
+} from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
 import { SchedaEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/scheda-elimina-confirm-dialog";
 import { normalizeSchedaIngressoFields } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
-import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import {
   GlobalSettingsListSelect,
@@ -23,7 +35,7 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/schede/schede-badges";
-import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
@@ -32,6 +44,7 @@ import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-li
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
   formatIdentificazioneMezzoLine,
+  formatLavorazioneDetailHeaderSubtitle,
   identificazionePartsFromLavorazione,
   identificazionePartsFromSchedaIngresso,
 } from "@/lib/mezzi/identificazione-mezzo";
@@ -67,7 +80,7 @@ import {
 import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioniLogChange, LavorazioniLogTipo } from "@/lib/lavorazioni/lavorazioni-change-log";
-import { LavorazionePreventiviHubList } from "@/components/lavorazioni/schede/lavorazione-preventivi-hub-list";
+import { LavorazionePreventiviHubList, CreaPreventivoDaSchedeCta } from "@/components/lavorazioni/schede/lavorazione-preventivi-hub-list";
 import {
   buildPreventiviArchivioFilterHref,
   buildPreventiviOpenHrefForRecord,
@@ -84,13 +97,16 @@ import {
   dsBtnNeutral,
   dsBtnPrimary,
   dsBtnSoftOrange,
+  dsGestionaleInfoCardCompact,
+  dsGestionaleInfoCardTitle,
+  dsHubModalFieldLabel,
   dsInput,
+  dsLabel,
   dsScrollbar,
   dsTable,
-  dsTableActionGlyph,
-  dsSchedaHubBtn,
-  dsSchedaHubBtnDanger,
-  dsSchedaHubBtnPrimary,
+  dsTableActionTextBtn,
+  dsTableActionTextBtnDanger,
+  dsTableActionTextBtnPrimary,
   dsTableRow,
   dsTableWrap,
   GESTIONALE_SEARCH_PLACEHOLDER,
@@ -98,7 +114,6 @@ import {
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { LavorazioneAttivitaPanel } from "@/components/lavorazioni/lavorazione-attivita-panel";
 import { buildLavorazioneAttivitaFeed } from "@/lib/lavorazioni/lavorazione-attivita-feed";
-import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { useAuth } from "@/context/auth-context";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
@@ -129,6 +144,16 @@ type HubTabInput = HubTab | "timeline" | "log";
 function normalizeHubTab(tab: HubTabInput | undefined): HubTab {
   if (tab === "timeline" || tab === "log") return "attivita";
   return tab ?? "schede";
+}
+
+export type SchedeLavorazioneDialogSize = LavorazioniModalDialogSize;
+
+function resolveSchedeDialogSize(
+  dialogSize: SchedeLavorazioneDialogSize | undefined,
+  initialTab: HubTab,
+): SchedeLavorazioneDialogSize {
+  if (dialogSize) return dialogSize;
+  return initialTab === "panoramica" ? "compact" : "hub";
 }
 
 function IconCopiaIngressoPrecedente({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
@@ -190,101 +215,6 @@ function assertItalianDay(label: string, value: string, notify: (message: string
   return true;
 }
 
-function panoramicaDisplayValue(value: string | undefined | null): string {
-  const t = value?.trim();
-  return t || "—";
-}
-
-function PanoramicaNoteOperativeEditor({
-  value,
-  canEdit,
-  saving,
-  onSave,
-}: {
-  value: string;
-  canEdit: boolean;
-  saving: boolean;
-  onSave: (note: string) => void | Promise<void>;
-}) {
-  const [text, setText] = useState(value);
-  const [dirty, setDirty] = useState(false);
-
-  useEffect(() => {
-    setText(value);
-    setDirty(false);
-  }, [value]);
-
-  if (!canEdit) {
-    return (
-      <p className="mt-1 whitespace-pre-wrap text-xs leading-snug text-[color:var(--cab-text)]">
-        {panoramicaDisplayValue(value)}
-      </p>
-    );
-  }
-
-  return (
-    <div className="mt-1 space-y-2">
-      <textarea
-        className={`${dsInput} min-h-[5.5rem] w-full resize-none overflow-y-auto text-xs leading-snug`}
-        value={text}
-        onChange={(e) => {
-          setText(e.target.value);
-          setDirty(true);
-        }}
-        rows={4}
-        aria-label="Note operative"
-        disabled={saving}
-        placeholder="Note intervento visibili in elenco lavorazioni…"
-      />
-      {dirty ? (
-        <div className="flex flex-wrap justify-end gap-2">
-          <button
-            type="button"
-            className={dsBtnNeutral}
-            disabled={saving}
-            onClick={() => {
-              setText(value);
-              setDirty(false);
-            }}
-          >
-            Annulla
-          </button>
-          <button
-            type="button"
-            className={dsBtnPrimary}
-            disabled={saving}
-            onClick={() => void onSave(text)}
-          >
-            {saving ? "Salvataggio…" : "Salva note"}
-          </button>
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-function PanoramicaField({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="min-w-0">
-      <dt className="text-[9px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">{label}</dt>
-      <dd
-        className={`mt-0.5 text-xs font-semibold leading-tight text-[color:var(--cab-text)] ${mono ? "font-mono tabular-nums" : ""}`}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
-
-function PanoramicaSection({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)]">
-      <h3 className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-primary)]">{title}</h3>
-      <dl className="mt-1.5 grid gap-x-3 gap-y-2 sm:grid-cols-3">{children}</dl>
-    </section>
-  );
-}
-
 function normalizeOreText(raw: string): string {
   const t = raw.trim().replace(",", ".");
   if (!t) return "";
@@ -323,7 +253,7 @@ function SchedaOreTextInput({
   if (!label) return field;
   return (
     <label className="block text-xs">
-      <span className="text-zinc-500">{label}</span>
+      <span className={dsLabel}>{label}</span>
       {field}
     </label>
   );
@@ -381,6 +311,7 @@ export function SchedeLavorazioneModal({
   lav,
   origine,
   initialTab: initialTabProp = "schede",
+  dialogSize: dialogSizeProp,
   bundle,
   onPersist,
   attive,
@@ -391,12 +322,17 @@ export function SchedeLavorazioneModal({
   schedeStore,
   onSchedaLog,
   onIngressoCommitted,
+  canDeleteLavorazione = false,
+  onDeleteLavorazione,
+  deleteLavorazionePending = false,
 }: {
   open: boolean;
   onClose: () => void;
   lav: LavRow;
   origine?: PreventivoLavorazioneOrigine;
   initialTab?: HubTabInput;
+  /** Fissato all'apertura: `compact` per Informazioni, `hub` per Schede. */
+  dialogSize?: SchedeLavorazioneDialogSize;
   bundle: LavorazioneSchedeBundle;
   onPersist: (next: LavorazioneSchedeBundle) => void;
   attive: LavorazioneAttiva[];
@@ -407,6 +343,9 @@ export function SchedeLavorazioneModal({
   schedeStore: Record<string, LavorazioneSchedeBundle>;
   onSchedaLog?: (ev: SchedaLogEv) => void;
   onIngressoCommitted?: (campi: SchedaIngressoFields) => void | Promise<void>;
+  canDeleteLavorazione?: boolean;
+  onDeleteLavorazione?: () => void;
+  deleteLavorazionePending?: boolean;
 }) {
   const router = useRouter();
   const { authorName, user } = useAuth();
@@ -422,11 +361,8 @@ export function SchedeLavorazioneModal({
   const qc = useQueryClient();
   const hubData = hubQuery.data;
   const initialTab = normalizeHubTab(initialTabProp);
+  const [frozenDialogSize] = useState(() => resolveSchedeDialogSize(dialogSizeProp, initialTab));
   const mezzo = useMemo(() => findMezzoForLavorazione(mezzi, lav), [mezzi, lav]);
-  const identSubtitle = useMemo(
-    () => formatIdentificazioneMezzoLine(identificazionePartsFromLavorazione(lav, mezzo)),
-    [lav, mezzo],
-  );
   const [stage, setStage] = useState<Stage>({ kind: "hub" });
   const [hubTab, setHubTab] = useState<HubTab>(initialTab);
   const [unsavedPanel, setUnsavedPanel] = useState<null | "ingresso" | "lav" | "ric">(null);
@@ -711,10 +647,17 @@ export function SchedeLavorazioneModal({
   }, [hubData?.documenti]);
 
   function generaPreventivoDaHub() {
+    const snap = draftRef.current;
     writePendingPreventivoPayload({
       lav,
       origine: lavOrigine,
-      bundle: { ...draftRef.current, lavorazioneId: lav.id },
+      bundle: {
+        ...snap,
+        lavorazioneId: lav.id,
+        ingresso: snap.ingresso ?? draft.ingresso ?? null,
+        lavorazioni: lavDoc ?? snap.lavorazioni ?? draft.lavorazioni ?? null,
+        ricambi: ricDoc ?? snap.ricambi ?? draft.ricambi ?? null,
+      },
     });
     onClose();
     router.push(`/preventivi?${Q_PREVENTIVI_NUOVO}=1`);
@@ -726,6 +669,28 @@ export function SchedeLavorazioneModal({
     if (ig && ig.sorgente !== "file_esterno") return ig.campi;
     return buildSchedaIngressoFieldsFromContext(lav, mezzo, lav.addetto.trim() || addetti[0] || "");
   }, [hub.ingresso, lav, mezzo, addetti]);
+
+  const panoramicaDisplayFields = useMemo(
+    (): SchedaIngressoFields => ({
+      ...panoramicaCampi,
+      cliente: panoramicaCampi.cliente.trim() || lav.cliente.trim(),
+      cantiere: panoramicaCampi.cantiere.trim() || lav.cantiere.trim(),
+      utilizzatore: panoramicaCampi.utilizzatore.trim() || lav.utilizzatore.trim(),
+      targa: panoramicaCampi.targa.trim() || lav.targa.trim(),
+      matricola: panoramicaCampi.matricola.trim() || lav.matricola.trim(),
+      nScuderia: panoramicaCampi.nScuderia.trim() || lav.nScuderia.trim(),
+    }),
+    [panoramicaCampi, lav],
+  );
+
+  const identSubtitle = useMemo(
+    () =>
+      formatLavorazioneDetailHeaderSubtitle(
+        identificazionePartsFromSchedaIngresso(panoramicaCampi),
+        lav,
+      ),
+    [panoramicaCampi, lav],
+  );
 
   const panoramicaNoteValue = useMemo(
     () => panoramicaCampi.noteIntervento?.trim() || lav.noteInterne?.trim() || "",
@@ -990,56 +955,65 @@ export function SchedeLavorazioneModal({
     setStage({ kind: "ricambi" });
   }
 
-  const hubTabButton = (id: HubTab, label: string) => {
-    const active = hubTab === id;
-    return (
-      <button
-        type="button"
-        key={id}
-        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
-          active
-            ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]"
-            : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
-        }`}
-        onClick={() => {
-          setStage({ kind: "hub" });
-          setHubTab(id);
-        }}
-      >
-        {label}
-      </button>
-    );
+  const hubTabPanelId = `schede-lav-hub-panel-${hubTab}`;
+  const hubTabLabel = (id: HubTab) => {
+    switch (id) {
+      case "panoramica":
+        return "Panoramica";
+      case "schede":
+        return `Schede (${nOk}/3)`;
+      case "preventivi":
+        return `Preventivi (${preventiviPerMacchina.length})`;
+      case "documenti":
+        return `Documenti (${documentiHubUi.length})`;
+      case "attivita":
+        return `Attività (${attivitaCount})`;
+    }
+  };
+  const selectHubTab = (id: HubTab) => {
+    setStage({ kind: "hub" });
+    setHubTab(id);
   };
 
   return (
     <>
-      <LavorazioniModalShell wide maxWidthClass="max-w-4xl" onRequestClose={onClose} titleId="schede-lav-detail-title">
+      <LavorazioniModalShell
+        wide={frozenDialogSize === "hub"}
+        maxWidthClass={frozenDialogSize === "hub" ? "max-w-4xl" : "max-w-xl"}
+        dialogSize={frozenDialogSize}
+        onRequestClose={onClose}
+        titleId="schede-lav-detail-title"
+        header={
+          <LavorazioniModalHeader
+            title="Dettaglio lavorazione"
+            subtitle={identSubtitle || undefined}
+            titleId="schede-lav-detail-title"
+            onRequestClose={onClose}
+          />
+        }
+      >
         <div className={`relative ${gestionaleModalBodyFlexClass}`}>
-        <LavorazioniModalTitleBar title="Dettaglio lavorazione" titleId="schede-lav-detail-title" onRequestClose={onClose}>
-          <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-[color:var(--cab-text-muted)]">
-            <span className="rounded-full bg-[color:color-mix(in_srgb,var(--cab-surface-2)_80%,var(--cab-card))] px-2 py-0.5 font-semibold text-[color:var(--cab-text)]">
-              Preventivi collegati: {preventiviCollegati.length}
-            </span>
-            <Link
-              href={buildPreventiviArchivioFilterHref(lav.id, lavOrigine)}
-              className="font-semibold text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
-            >
-              Apri archivio preventivi
-            </Link>
-          </div>
-        </LavorazioniModalTitleBar>
+        <HubModalTabBar aria-label="Sezioni dettaglio lavorazione">
+          {(["panoramica", "schede", "preventivi", "documenti", "attivita"] as const).map((id) => (
+            <HubModalTab
+              key={id}
+              id={`schede-lav-tab-${id}`}
+              panelId={hubTab === id ? hubTabPanelId : undefined}
+              label={hubTabLabel(id)}
+              active={stage.kind === "hub" && hubTab === id}
+              onSelect={() => selectHubTab(id)}
+            />
+          ))}
+        </HubModalTabBar>
 
-        <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/80">
-          {hubTabButton("panoramica", "Panoramica")}
-          {hubTabButton("schede", `Schede (${nOk}/3)`)}
-          {hubTabButton("preventivi", `Preventivi (${preventiviPerMacchina.length})`)}
-          {hubTabButton("documenti", `Documenti (${documentiHubUi.length})`)}
-          {hubTabButton("attivita", `Attività (${attivitaCount})`)}
-        </div>
-
-        <div className={`min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar`}>
+        <GestionaleModalScrollBody
+          className="p-4"
+          role={stage.kind === "hub" ? "tabpanel" : undefined}
+          aria-labelledby={stage.kind === "hub" ? `schede-lav-tab-${hubTab}` : undefined}
+          id={stage.kind === "hub" ? hubTabPanelId : undefined}
+        >
           {stage.kind === "hub" && hubTab === "schede" ? (
-            <div className="space-y-4">
+            <div className="flex flex-col gap-5">
               {hubLastIngressoMatch ? (
                 <CopiaUltimaSchedaIngressoBanner
                   visible
@@ -1108,139 +1082,186 @@ export function SchedeLavorazioneModal({
                 }}
                 onElimina={hub.ricambi ? () => requestDeleteSchedaTipo("ricambi") : undefined}
               />
-              <div className="flex justify-end border-t border-zinc-100 pt-3 dark:border-zinc-800">
-                <button
-                  type="button"
-                  className={dsBtnPrimary}
-                  disabled={!canEditWorkOrders}
-                  title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : undefined}
-                  onClick={generaPreventivoDaHub}
-                >
-                  <IconBtnPreventivo />
-                  Crea preventivo
-                </button>
-              </div>
+              <CreaPreventivoDaSchedeCta
+                onClick={generaPreventivoDaHub}
+                disabled={!canEditWorkOrders}
+                disabledTitle={READONLY_PERMISSION_HINT}
+              />
             </div>
           ) : null}
 
           {stage.kind === "hub" && hubTab === "panoramica" ? (
-            <div className="space-y-2 text-sm">
+            <HubModalPanoramicaPanel>
               {hubQuery.isError ? (
                 <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100">
                   {hubQuery.error?.message ?? "Errore caricamento dettaglio lavorazione."}
                 </p>
               ) : null}
-              {hubQuery.isLoading && !hubData ? <p className="text-sm text-zinc-500">Caricamento dettaglio…</p> : null}
-              <div className="space-y-2">
-                <div className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)]/60 px-2.5 py-2">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Note operative</p>
-                  <PanoramicaNoteOperativeEditor
-                    value={panoramicaNoteValue}
-                    canEdit={canEditWorkOrders}
-                    saving={panoramicaNoteSaving}
-                    onSave={async (note) => {
-                      await commitPanoramicaNote(note);
-                    }}
-                  />
-                </div>
-                <PanoramicaSection title="Lavorazione">
-                  <PanoramicaField
-                    label="Stato"
-                    value={statoLavorazioneLabel(
-                      "statoId" in lav ? lav.statoId : lav.statoFinaleId,
-                      statiOpts,
-                    )}
-                  />
-                  <PanoramicaField
-                    label="Priorità"
-                    value={prioritaLabel("priorita" in lav ? lav.priorita : lav.prioritaFinale)}
-                  />
-                  <PanoramicaField label="Addetto" value={panoramicaDisplayValue(lav.addetto)} />
-                </PanoramicaSection>
-                <PanoramicaSection title="Cliente">
-                  <PanoramicaField label="Cliente" value={panoramicaDisplayValue(lav.cliente)} />
-                  <PanoramicaField label="Cantiere" value={panoramicaDisplayValue(lav.cantiere)} />
-                  <PanoramicaField label="Utilizzatore" value={panoramicaDisplayValue(lav.utilizzatore)} />
-                </PanoramicaSection>
-                <PanoramicaSection title="Identificazione">
-                  <PanoramicaField label="Targa" value={panoramicaDisplayValue(panoramicaCampi.targa || lav.targa)} mono />
-                  <PanoramicaField
-                    label="Matricola"
-                    value={panoramicaDisplayValue(panoramicaCampi.matricola || lav.matricola)}
-                    mono
-                  />
-                  <PanoramicaField
-                    label="Scuderia"
-                    value={panoramicaDisplayValue(panoramicaCampi.nScuderia || lav.nScuderia)}
-                    mono
-                  />
-                </PanoramicaSection>
-                <PanoramicaSection title="Attrezzatura">
-                  <PanoramicaField label="Tipo" value={panoramicaDisplayValue(panoramicaCampi.tipoAttrezzatura)} />
-                  <PanoramicaField label="Marca" value={panoramicaDisplayValue(panoramicaCampi.marcaAttrezzatura)} />
-                  <PanoramicaField label="Modello" value={panoramicaDisplayValue(panoramicaCampi.modelloAttrezzatura)} />
-                </PanoramicaSection>
-                <PanoramicaSection title="Telaio">
-                  <PanoramicaField label="Tipo" value={panoramicaDisplayValue(panoramicaCampi.tipoTelaio)} />
-                  <PanoramicaField label="Marca" value={panoramicaDisplayValue(panoramicaCampi.marcaTelaio)} />
-                  <PanoramicaField label="Modello" value={panoramicaDisplayValue(panoramicaCampi.modelloTelaio)} />
-                </PanoramicaSection>
-                <LavorazioneCostoDiscreto costo={costoLavorazione} variant="section" />
-              </div>
-            </div>
+              {hubQuery.isLoading && !hubData ? (
+                <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento dettaglio…</p>
+              ) : null}
+              <GestionaleInfoCard title="Note operative">
+                <HubModalPanoramicaNoteEditor
+                  value={panoramicaNoteValue}
+                  canEdit={canEditWorkOrders}
+                  saving={panoramicaNoteSaving}
+                  onSave={async (note) => {
+                    await commitPanoramicaNote(note);
+                  }}
+                />
+              </GestionaleInfoCard>
+              <GestionaleInfoCard
+                title="Anagrafica intervento"
+                actions={
+                  hub.ingresso ? (
+                    <button
+                      type="button"
+                      className={dsTableActionTextBtnPrimary}
+                      disabled={!canEditWorkOrders}
+                      title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : "Modifica scheda ingresso"}
+                      aria-label="Modifica scheda ingresso"
+                      onClick={apriSchedaIngresso}
+                    >
+                      <IconBtnEdit />
+                      Modifica
+                    </button>
+                  ) : null
+                }
+              >
+                <SchedaIngressoPanoramicaAnagraficaContent fields={panoramicaDisplayFields} />
+              </GestionaleInfoCard>
+              <LavorazioneCostoDiscreto costo={costoLavorazione} variant="section" />
+              {canDeleteLavorazione && onDeleteLavorazione ? (
+                <GestionaleInfoCard
+                  compact
+                  title="Elimina lavorazione"
+                  subtitle="Operazione irreversibile: rimuove la lavorazione e i dati collegati."
+                  actions={
+                    <button
+                      type="button"
+                      className={dsTableActionTextBtnDanger}
+                      disabled={deleteLavorazionePending}
+                      title="Elimina lavorazione"
+                      onClick={onDeleteLavorazione}
+                    >
+                      <HubIconTrash />
+                      Elimina
+                    </button>
+                  }
+                />
+              ) : null}
+            </HubModalPanoramicaPanel>
           ) : null}
 
           {stage.kind === "hub" && hubTab === "preventivi" ? (
-            <LavorazionePreventiviHubList rows={preventiviPerMacchina} onApriNeiPreventivi={apriPreventivoNeiPreventivi} />
-          ) : null}
-
-          {stage.kind === "hub" && hubTab === "documenti" ? (
-            <div className="space-y-4">
-              <LavorazioneMediaPanel
-                lavorazioneId={lav.id}
-                canEdit={canEditWorkOrders}
-                onImageEvent={() => void hubQuery.refetch()}
-                onDocumentEvent={() => void hubQuery.refetch()}
-              />
-              <div>
-                <p className="mb-2 text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
-                  Archivio mezzo
+            <div className="flex flex-col gap-5">
+              <section className={dsGestionaleInfoCardCompact}>
+                <div className="flex min-w-0 items-start gap-2.5">
+                  <div className="min-w-0 flex-1">
+                    <h3 className={dsGestionaleInfoCardTitle}>Preventivi</h3>
+                    <p className="mt-1 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+                      {preventiviCollegati.length > 0
+                        ? `${preventiviCollegati.length} collegati a questa lavorazione · `
+                        : "Nessuno collegato a questa lavorazione · "}
+                      {preventiviPerMacchina.length}{" "}
+                      {preventiviPerMacchina.length === 1 ? "preventivo sul mezzo" : "preventivi sul mezzo"}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
+                    <button
+                      type="button"
+                      className={dsTableActionTextBtnPrimary}
+                      disabled={!canEditWorkOrders}
+                      title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : "Crea preventivo da schede lavorazione"}
+                      onClick={generaPreventivoDaHub}
+                    >
+                      <IconBtnPreventivo className="h-3.5 w-3.5 shrink-0" />
+                      Crea
+                    </button>
+                    <Link
+                      href={buildPreventiviArchivioFilterHref(lav.id, lavOrigine)}
+                      className={dsTableActionTextBtn}
+                      title="Apri archivio preventivi filtrato per questa lavorazione"
+                    >
+                      Archivio
+                    </Link>
+                  </div>
+                </div>
+              </section>
+              <GestionaleInfoCard title="Storico mezzo">
+                <p className="mb-3 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+                  Preventivi con gli stessi identificativi del mezzo (targa, matricola o scuderia).
                 </p>
-                <ul className="space-y-2">
-                  {documentiHubUi.length === 0 ? (
-                    <li className="text-sm text-zinc-500">Nessun documento sul mezzo collegato.</li>
-                  ) : (
-                    documentiHubUi.map((d) => {
-                      const canOpen = canOpenDocumento(d);
-                      return (
-                        <li
-                          key={d.id}
-                          className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
-                        >
-                          <div className="min-w-0">
-                            <p className="text-[11px] font-semibold uppercase text-zinc-500">{formatDocumentoRigaSintetica(d)}</p>
-                            <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{d.nome}</p>
-                          </div>
-                          {canOpen ? (
-                            <button
-                              type="button"
-                              className={dsBtnNeutral}
-                              onClick={() => void openDocumentoFile(d)}
-                            >
-                              Apri
-                            </button>
-                          ) : null}
-                        </li>
-                      );
-                    })
-                  )}
-                </ul>
-              </div>
+                <LavorazionePreventiviHubList
+                  rows={preventiviPerMacchina}
+                  lavorazioneId={lav.id}
+                  onApriNeiPreventivi={apriPreventivoNeiPreventivi}
+                  onCreaPreventivo={canEditWorkOrders ? generaPreventivoDaHub : undefined}
+                />
+              </GestionaleInfoCard>
             </div>
           ) : null}
 
           {stage.kind === "hub" && hubTab === "attivita" ? (
             <LavorazioneAttivitaPanel feedInput={attivitaFeedInput} />
+          ) : null}
+
+          {stage.kind === "hub" && hubTab === "documenti" ? (
+            <div className="flex flex-col gap-5">
+              {canEditWorkOrders ? (
+                <p className="text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+                  Trascina PDF o foto sulle rispettive card per caricarle.
+                </p>
+              ) : null}
+              <LavorazioneMediaPanel
+                variant="hub"
+                lavorazioneId={lav.id}
+                canEdit={canEditWorkOrders}
+                onImageEvent={() => void hubQuery.refetch()}
+                onDocumentEvent={() => void hubQuery.refetch()}
+              />
+              <GestionaleInfoCard title="Archivio mezzo">
+                <p className="mb-3 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+                  Documenti generici associati al mezzo in anagrafica.
+                </p>
+                {documentiHubUi.length === 0 ? (
+                  <div className="rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-3 py-4 text-center">
+                    <p className="text-sm font-medium text-[color:var(--cab-text)]">Nessun documento in archivio</p>
+                    <p className="mt-1 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+                      I documenti del mezzo collegato compariranno qui.
+                    </p>
+                  </div>
+                ) : (
+                  <ul className="min-w-0 divide-y divide-[color:var(--cab-border)]">
+                    {documentiHubUi.map((d) => {
+                      const canOpen = canOpenDocumento(d);
+                      return (
+                        <li
+                          key={d.id}
+                          className="flex min-w-0 items-start justify-between gap-2.5 py-2.5 first:pt-0 last:pb-0"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className={dsHubModalFieldLabel}>{formatDocumentoRigaSintetica(d)}</p>
+                            <p className="mt-0.5 truncate text-sm font-medium text-[color:var(--cab-text)]">{d.nome}</p>
+                          </div>
+                          {canOpen ? (
+                            <button
+                              type="button"
+                              className={dsTableActionTextBtn}
+                              title="Apri documento"
+                              onClick={() => void openDocumentoFile(d)}
+                            >
+                              <HubIconOpen />
+                              Apri
+                            </button>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </GestionaleInfoCard>
+            </div>
           ) : null}
 
           {stage.kind === "lavorazioni" && hub.lavorazioni && lavDoc ? (
@@ -1276,7 +1297,7 @@ export function SchedeLavorazioneModal({
               }}
             />
           ) : null}
-        </div>
+        </GestionaleModalScrollBody>
 
         <GestionaleUnsavedChangesDialog
           open={unsavedPanel != null}
@@ -1354,6 +1375,18 @@ function IconBtnPlus({ className = "h-4 w-4 shrink-0" }: { className?: string })
   );
 }
 
+function IconBtnEdit({ className = "h-3.5 w-3.5 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+      />
+    </svg>
+  );
+}
+
 /** Documento con righe — allineato alle icone PDF/Modifica del hub. */
 function IconBtnPreventivo({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
@@ -1387,30 +1420,30 @@ function SchedaSectionHub({
   onElimina?: () => void;
 }) {
   return (
-    <div className="rounded-xl border border-zinc-200 bg-zinc-50/40 p-4 shadow-sm dark:border-zinc-700 dark:bg-zinc-950/40">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{title}</h3>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+    <section className={dsGestionaleInfoCardCompact}>
+      <div className="flex min-w-0 items-start gap-2.5">
+        <div className="min-w-0 flex-1">
+          <h3 className={dsGestionaleInfoCardTitle}>{title}</h3>
+          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
             <SchedaStatoBadge stato={stato} />
             {doc?.sorgente === "file_esterno" ? <FileEsternoBadge /> : null}
             {doc ? (
-              <span className="text-[10px] text-zinc-500">
+              <span className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
                 Agg. {fmtItShort(doc.updatedAt)} · {doc.updatedBy}
               </span>
             ) : null}
           </div>
         </div>
-        <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:ms-auto sm:w-auto">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
           {!doc ? (
             <button
               type="button"
-              className={dsBtnPrimary}
+              className={dsTableActionTextBtnPrimary}
               disabled={!canEdit}
               title={!canEdit ? READONLY_PERMISSION_HINT : undefined}
               onClick={onCrea}
             >
-              <IconBtnPlus />
+              <IconBtnPlus className="h-3.5 w-3.5 shrink-0" />
               Crea nuova
             </button>
           ) : (
@@ -1418,31 +1451,31 @@ function SchedaSectionHub({
               {onElimina ? (
                 <button
                   type="button"
-                  className={dsSchedaHubBtnDanger}
+                  className={dsTableActionTextBtnDanger}
                   disabled={!canEdit}
                   title={!canEdit ? READONLY_PERMISSION_HINT : "Elimina scheda"}
                   aria-label="Elimina scheda"
                   onClick={onElimina}
                 >
-                  <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                     <path
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
                     />
                   </svg>
-                  Elimina
+                  <span className="max-md:sr-only">Elimina</span>
                 </button>
               ) : null}
               <button
                 type="button"
-                className={dsSchedaHubBtn}
+                className={dsTableActionTextBtn}
                 disabled={!doc}
                 title="Esporta PDF"
                 aria-label="Esporta PDF scheda"
                 onClick={onPdf}
               >
-                <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                <svg className="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -1453,26 +1486,20 @@ function SchedaSectionHub({
               </button>
               <button
                 type="button"
-                className={dsSchedaHubBtnPrimary}
+                className={dsTableActionTextBtnPrimary}
                 disabled={!canEdit}
                 title={!canEdit ? READONLY_PERMISSION_HINT : "Modifica scheda"}
                 aria-label="Modifica scheda"
                 onClick={onApri}
               >
-                <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                  />
-                </svg>
+                <IconBtnEdit />
                 Modifica
               </button>
             </>
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -1525,16 +1552,16 @@ function SchedaDayField({
   if (readOnly) {
     return (
       <label className="block text-xs">
-        {showLabel ? <span className="text-zinc-500">{label}</span> : null}
+        {showLabel ? <span className={dsLabel}>{label}</span> : null}
         <input className={`${dsInput} mt-1`} readOnly value={value} />
       </label>
     );
   }
   return (
     <label className="block text-xs">
-      {showLabel ? <span className="text-zinc-500">{label}</span> : null}
-      <div className={`flex flex-wrap items-stretch gap-2 ${showLabel ? "mt-1" : ""}`}>
-        <div className="min-w-[11rem] flex-1">
+      {showLabel ? <span className={dsLabel}>{label}</span> : null}
+      <div className={`flex flex-nowrap items-stretch gap-2 sm:flex-wrap ${showLabel ? "mt-1" : ""}`}>
+        <div className="min-w-0 flex-1">
           <input
             ref={inputRef}
             type="text"
@@ -1558,7 +1585,7 @@ function SchedaDayField({
 function SchedaEditorBottomSave({ readOnly, onSave }: { readOnly: boolean; onSave: () => void }) {
   if (readOnly) return null;
   return (
-    <div className="flex justify-end border-t border-zinc-100 pt-3 dark:border-zinc-800">
+    <div className="flex justify-end border-t border-[color:var(--cab-border)] pt-3">
       <button type="button" className={dsBtnPrimary} onClick={onSave}>
         Salva scheda
       </button>
@@ -1591,11 +1618,11 @@ function LavorazioniPanel({
   }
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-between gap-2">
+      <div className="flex flex-nowrap justify-between gap-2 sm:flex-wrap">
         <button type="button" className={dsBtnNeutral} onClick={onBack}>
           ← Indietro
         </button>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-nowrap items-center gap-2 sm:flex-wrap">
           {doc.sorgente !== "file_esterno" ? (
             <button type="button" className={dsBtnDanger} onClick={onDelete}>
               Elimina scheda
@@ -1609,7 +1636,7 @@ function LavorazioniPanel({
         </div>
       </div>
       <label className="block text-xs">
-        <span className="text-zinc-500">Identificazione macchina</span>
+        <span className={dsLabel}>Identificazione macchina</span>
         <input
           className={`${dsInput} mt-1`}
           readOnly={ro}
@@ -1619,20 +1646,18 @@ function LavorazioniPanel({
       </label>
       <div className={`${dsTableWrap} ${dsScrollbar}`}>
         <table className={`${dsTable} text-xs`}>
-          <thead>
-            <tr>
+          <GlobalTableHead>
               <GlobalTableHeadLabel label="Data" />
               <GlobalTableHeadLabel label="Lavorazioni effettuate" thClassName="min-w-[min(100%,28rem)] w-full" />
               <GlobalTableHeadLabel label="Addetti (ore)" thClassName="min-w-[12rem]" />
               {!ro ? <GlobalTableHeadLabel label="" thClassName="w-24" /> : null}
-            </tr>
-          </thead>
+          </GlobalTableHead>
           <tbody>
             {doc.campi.righe.map((r) => (
               <tr key={r.id} className={dsTableRow}>
                 <td className="px-2 py-2 align-top">
                   {ro ? (
-                    <span className="text-zinc-800 dark:text-zinc-100">{r.dataLavorazione}</span>
+                    <span className="text-[color:var(--cab-text)]">{r.dataLavorazione}</span>
                   ) : (
                     <SchedaDayField
                       label="Data"
@@ -1652,7 +1677,7 @@ function LavorazioniPanel({
                 </td>
                 <td className="px-2 py-2 align-top">
                   {ro ? (
-                    <div className="space-y-0.5 text-zinc-800 dark:text-zinc-100">
+                    <div className="space-y-0.5 text-[color:var(--cab-text)]">
                       {(r.addettiAssegnati ?? []).length ? (
                         r.addettiAssegnati!.map((a, i) => (
                           <div key={i}>
@@ -1660,14 +1685,14 @@ function LavorazioniPanel({
                           </div>
                         ))
                       ) : (
-                        <span className="text-zinc-400">—</span>
+                        <span className="text-[color:var(--cab-text-muted)]">—</span>
                       )}
                     </div>
                   ) : (
                     <div className="space-y-2">
                       {(r.addettiAssegnati ?? []).map((a, idx) => (
-                        <div key={`${r.id}-a-${idx}`} className="flex flex-wrap items-end gap-1">
-                          <div className="min-w-[9rem] flex-1">
+                        <div key={`${r.id}-a-${idx}`} className="flex flex-nowrap items-end gap-1 sm:flex-wrap">
+                          <div className="min-w-0 flex-1">
                             <GlobalSettingsListSelect
                               listKey="lavorazioni:addetti"
                               className="w-full"
@@ -1694,7 +1719,7 @@ function LavorazioniPanel({
                           <Tooltip content="Rimuovi">
                             <button
                               type="button"
-                              className="shrink-0 rounded p-1 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                              className="shrink-0 rounded p-1 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
                               aria-label="Rimuovi addetto"
                               onClick={() => {
                                 void askConfirm({
@@ -1734,7 +1759,7 @@ function LavorazioniPanel({
                     <Tooltip content="Rimuovi">
                       <button
                         type="button"
-                        className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                        className="rounded p-1.5 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
                         aria-label="Rimuovi riga lavorazione"
                         onClick={() => {
                           void askConfirm({
@@ -1822,7 +1847,10 @@ function RicambiPanel({
     return prodotti
       .filter((p) => {
         const d = (p.descrizione ?? "").toLowerCase();
-        const c = (p.codiceFornitoreOriginale ?? "").toLowerCase();
+        const c = [p.codiceFornitoreOriginale, p.codiceFornitoreOriginaleSecondario]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
         return d.includes(q) || c.includes(q) || q.split(/\s+/).every((w) => w && (d.includes(w) || c.includes(w)));
       })
       .slice(0, 16);
@@ -1881,7 +1909,10 @@ function RicambiPanel({
     return prodotti
       .filter((p) => {
         const d = (p.descrizione ?? "").toLowerCase();
-        const c = (p.codiceFornitoreOriginale ?? "").toLowerCase();
+        const c = [p.codiceFornitoreOriginale, p.codiceFornitoreOriginaleSecondario]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
         const m = (p.marca ?? "").toLowerCase();
         return d.includes(q) || c.includes(q) || m.includes(q) || q.split(/\s+/).every((w) => w && (d.includes(w) || c.includes(w) || m.includes(w)));
       })
@@ -1935,11 +1966,11 @@ function RicambiPanel({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap justify-between gap-2">
+      <div className="flex flex-nowrap justify-between gap-2 sm:flex-wrap">
         <button type="button" className={dsBtnNeutral} onClick={onBack}>
           ← Indietro
         </button>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-nowrap items-center gap-2 sm:flex-wrap">
           {doc.sorgente !== "file_esterno" ? (
             <button type="button" className={dsBtnDanger} onClick={onDelete}>
               Elimina scheda
@@ -1952,12 +1983,12 @@ function RicambiPanel({
           ) : null}
         </div>
       </div>
-      <p className="text-xs text-zinc-500">
+      <p className="text-xs text-[color:var(--cab-text-muted)]">
         Identificazione:{" "}
-        <span className="font-medium text-zinc-800 dark:text-zinc-100">{identLine}</span>
+        <span className="font-medium text-[color:var(--cab-text)]">{identLine}</span>
       </p>
       {!ro ? (
-        <div className="relative max-w-xl" data-ricambi-mag-search="1">
+        <div className="relative max-w-xl max-md:overflow-visible" data-ricambi-mag-search="1">
           <GestionaleSearchField
             wrapperClassName="w-full"
             placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
@@ -1971,7 +2002,7 @@ function RicambiPanel({
             aria-label="Cerca ricambio in magazzino per nome o codice"
           />
           {magSearchOpen && magSearch.trim() && magSearchHits.length > 0 ? (
-            <ul className="absolute left-0 right-0 top-full z-[90] mt-1 max-h-52 overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 text-[11px] shadow-lg dark:border-zinc-600 dark:bg-zinc-900">
+            <ul data-cab-ios-no-focus-scroll className="absolute left-0 right-0 top-full z-[90] mt-1 max-h-52 overflow-y-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] py-1 text-[11px] shadow-lg">
               {magSearchHits.map((p) => (
                 <li key={p.id}>
                   <button
@@ -1980,8 +2011,8 @@ function RicambiPanel({
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => addRicambioFromMag(p)}
                   >
-                    <span className="font-medium text-zinc-900 dark:text-zinc-100">{p.descrizione || "—"}</span>
-                    <span className="text-zinc-500">
+                    <span className="font-medium text-[color:var(--cab-text)]">{p.descrizione || "—"}</span>
+                    <span className="text-[color:var(--cab-text-muted)]">
                       {p.codiceFornitoreOriginale || "—"} · {p.marca || "—"}
                     </span>
                   </button>
@@ -1989,7 +2020,7 @@ function RicambiPanel({
               ))}
             </ul>
           ) : magSearchOpen && magSearch.trim().length >= 1 && magSearchHits.length === 0 ? (
-            <p className="absolute left-0 right-0 top-full z-[90] mt-1 rounded-lg border border-zinc-200 bg-white px-3 py-2 text-[11px] text-zinc-500 shadow-lg dark:border-zinc-600 dark:bg-zinc-900">
+            <p className="absolute left-0 right-0 top-full z-[90] mt-1 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 py-2 text-[11px] text-[color:var(--cab-text-muted)] shadow-lg">
               Nessun ricambio trovato.
             </p>
           ) : null}
@@ -1997,8 +2028,7 @@ function RicambiPanel({
       ) : null}
       <div className={`${dsTableWrap} ${dsScrollbar}`}>
         <table className={`${dsTable} text-xs`}>
-          <thead>
-            <tr>
+          <GlobalTableHead>
               <GlobalTableHeadLabel label="Ricambio" thClassName="min-w-[10rem]" />
               <GlobalTableHeadLabel label="Codice" />
               <GlobalTableHeadLabel label="Qtà" />
@@ -2006,8 +2036,7 @@ function RicambiPanel({
               <GlobalTableHeadLabel label="Data" />
               {!ro ? <GlobalTableHeadLabel label="Magazzino" /> : null}
               {!ro ? <GlobalTableHeadLabel label="" thClassName="w-24" /> : null}
-            </tr>
-          </thead>
+          </GlobalTableHead>
           <tbody>
             {doc.campi.righe.map((r) => {
               const sug = !ro && acRowId === r.id ? suggestionsForRow(r) : [];
@@ -2017,7 +2046,7 @@ function RicambiPanel({
                     {ro ? (
                       <span>{r.ricambioNome || "—"}</span>
                     ) : (
-                      <div className="relative">
+                      <div className="relative max-md:overflow-visible">
                         <input
                           className={`${dsInput} !py-1.5 !text-xs`}
                           value={r.ricambioNome}
@@ -2030,7 +2059,7 @@ function RicambiPanel({
                           placeholder="Nome / descrizione"
                         />
                         {sug.length > 0 ? (
-                          <ul className="absolute left-0 top-full z-[80] mt-0.5 max-h-48 min-w-full overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 text-[11px] shadow-lg dark:border-zinc-600 dark:bg-zinc-900">
+                          <ul data-cab-ios-no-focus-scroll className="absolute left-0 top-full z-[80] mt-0.5 max-h-48 min-w-full overflow-y-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] py-1 text-[11px] shadow-lg">
                             {sug.map((p) => (
                               <li key={p.id}>
                                 <button
@@ -2053,8 +2082,8 @@ function RicambiPanel({
                                     setAcRowId(null);
                                   }}
                                 >
-                                  <span className="font-medium text-zinc-900 dark:text-zinc-50">{p.descrizione}</span>
-                                  <span className="text-zinc-500">
+                                  <span className="font-medium text-[color:var(--cab-text)]">{p.descrizione}</span>
+                                  <span className="text-[color:var(--cab-text-muted)]">
                                     {p.marca} · {p.codiceFornitoreOriginale}
                                   </span>
                                 </button>
@@ -2145,7 +2174,7 @@ function RicambiPanel({
                       <Tooltip content="Rimuovi">
                         <button
                           type="button"
-                          className="rounded p-1.5 text-sm text-zinc-400 transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
+                          className="rounded p-1.5 text-sm text-[color:var(--cab-text-muted)] transition hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400"
                           aria-label="Rimuovi riga ricambio"
                           onClick={() => {
                             void askConfirm({

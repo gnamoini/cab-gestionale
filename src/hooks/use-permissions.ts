@@ -63,7 +63,7 @@ export function usePermissions(module?: GestionalePermissionModule): GlobalPermi
 
   if (!module) {
     return {
-      role: rbac.role,
+      role: resolveRole(user),
       isAdmin: rbac.isAdmin,
       isOperatore: rbac.isOperatore,
       isOspite: rbac.isOspite,
@@ -94,6 +94,7 @@ const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>
   mezzi: "mezzi",
   report: "report",
   documenti: "documenti",
+  dipendenti: "dipendenti",
 };
 
 /** Nav ERP: `user_permissions` per modulo operativo; capability RBAC per security/impostazioni. */

@@ -1,5 +1,6 @@
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { normalizeEntityString, scoreEntityMatch } from "@/lib/validation/global-entity-validation";
+import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -39,6 +40,36 @@ export function formatIdentificazioneMezzoLine(parts: MezzoIdentificazioneParts)
     if (v) segments.push(`${label}: ${v}`);
   }
   return segments.join(" • ");
+}
+
+/** Subtitle modale hub lavorazione: `Cliente • Marca • Targa · Matricola · Scud. …`. */
+export function formatLavorazioneHubSubtitle(parts: MezzoIdentificazioneParts): string {
+  const segments: string[] = [];
+  const cliente = clean(parts.cliente);
+  const marca = clean(parts.marcaAttrezzatura) ?? clean(parts.modelloAttrezzatura);
+  if (cliente) segments.push(cliente);
+  if (marca) segments.push(marca);
+
+  const identSegs: string[] = [];
+  const targa = clean(parts.targa);
+  const matricola = clean(parts.matricola);
+  const nScuderia = clean(parts.nScuderia);
+  if (targa) identSegs.push(targa);
+  if (matricola) identSegs.push(matricola);
+  if (nScuderia) identSegs.push(`Scud. ${nScuderia}`);
+  if (identSegs.length > 0) segments.push(identSegs.join(" · "));
+
+  return segments.join(" • ");
+}
+
+/** Subtitle modale dettaglio: `26-0001 · Cliente • Marca • Targa …`. */
+export function formatLavorazioneDetailHeaderSubtitle(
+  parts: MezzoIdentificazioneParts,
+  lavorazione: { id: string; codice?: string | null },
+): string {
+  const codice = lavorazioneDisplayCodice(lavorazione);
+  const ident = formatLavorazioneHubSubtitle(parts);
+  return ident ? `${codice} · ${ident}` : codice;
 }
 
 export function identificazionePartsFromLavorazione(

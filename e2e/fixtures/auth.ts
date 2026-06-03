@@ -21,6 +21,13 @@ export function operatorCredentials(): SmokeCredentials | null {
   return { email, password };
 }
 
+export function clientCredentials(): SmokeCredentials | null {
+  const email = process.env.SMOKE_CLIENT_EMAIL?.trim();
+  const password = process.env.SMOKE_CLIENT_PASSWORD?.trim();
+  if (!email || !password) return null;
+  return { email, password };
+}
+
 export async function loginViaUi(page: Page, creds: SmokeCredentials): Promise<void> {
   await page.goto("/login");
   await page.getByTestId("smoke-login-identifier").fill(creds.email);

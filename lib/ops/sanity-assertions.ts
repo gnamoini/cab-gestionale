@@ -1,21 +1,39 @@
+import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
+import type { ReportTruthDataset } from "@/lib/report/report-truth-dataset";
 import type { ReportLavorazioniBundle } from "@/lib/report/lavorazioni-report-selectors";
-import { cabDevWarn } from "@/src/lib/observability/dev-warn";
+import { ReportIntegrityAudit } from "@/lib/report/report-integrity-audit";
 
-const REPORT_BUNDLE_WARN_SCOPE = "ops.sanity.report_bundle";
-
-/** Warn once per session se bundle report sembra incoerente (non blocca UI). */
+/** @deprecated Usare `ReportIntegrityAudit` via `ReportDataIntegrityLayer`. */
 export function assertReportBundleSane(
   bundle: ReportLavorazioniBundle,
   lavRowCount: number,
 ): void {
-  if (lavRowCount === 0) return;
-  const archivedInSource = bundle.storico.length + bundle.completate.length;
-  if (bundle.completate.length > 0 && archivedInSource === 0 && lavRowCount > 5) {
-    cabDevWarn(
-      REPORT_BUNDLE_WARN_SCOPE,
-      "Report bundle: completate presenti ma storico vuoto con molte lavorazioni in lista",
-      { lavRowCount, completate: bundle.completate.length },
-      { oncePerSession: true },
-    );
-  }
+  const stub: ReportTruthDataset = {
+    ...bundle,
+    magazzino: [],
+    mezzi: [],
+    manualEntries: [],
+    manualByMonth: new Map(),
+    magLog: [],
+    validRicambioIds: new Set(),
+    validLavorazioneIds: new Set(),
+    validMezzoIds: new Set(),
+    movimentiExcludedCount: 0,
+    lavorazioniExcludedCount: 0,
+  };
+  void lavRowCount;
+  ReportIntegrityAudit.emitDevWarnings(ReportIntegrityAudit.run(stub));
+}
+
+/** @deprecated Coperto da `ReportIntegrityAudit.run`. */
+export function assertReportMagLogSane(
+  _magLog: readonly MagazzinoChangeLogEntry[],
+  _validRicambioIds: ReadonlySet<string>,
+): void {
+  /* no-op — audit integrato nel layer */
+}
+
+/** @deprecated Usare `ReportDataIntegrityLayer.buildValidatedDataset`. */
+export function assertReportTruthDatasetSane(dataset: ReportTruthDataset): void {
+  ReportIntegrityAudit.emitDevWarnings(ReportIntegrityAudit.run(dataset));
 }

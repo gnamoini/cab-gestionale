@@ -6,6 +6,7 @@ export const GESTIONALE_PERMISSION_MODULES = [
   "mezzi",
   "report",
   "documenti",
+  "dipendenti",
 ] as const;
 
 export type GestionalePermissionModule = (typeof GESTIONALE_PERMISSION_MODULES)[number];
@@ -19,5 +20,6 @@ export function gestionaleNavHrefToModule(href: string): GestionalePermissionMod
   if (href.startsWith("/mezzi")) return "mezzi";
   if (href.startsWith("/report")) return "report";
   if (href.startsWith("/documenti")) return "documenti";
+  if (href.startsWith("/dipendenti")) return "dipendenti";
   return null;
 }

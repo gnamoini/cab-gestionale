@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { APP_ROLES, hasPermission, roleLabel, type AppRole } from "@/lib/auth/rbac";
+import { PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 import type { SecurityUserPermissionRow } from "@/src/actions/security-users-permissions";
 import { SecurityEditNameModal } from "@/components/dashboard/security/security-edit-name-modal";
 import { SecurityRoleBadge, SecurityStatusBadge } from "@/components/dashboard/security/security-role-badge";
@@ -147,7 +148,7 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
 
   return (
     <>
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
+      <div className="mb-3 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <label className="block min-w-0 flex-1 sm:max-w-xs">
           <span className="sr-only">Cerca utente</span>
           <input
@@ -204,7 +205,7 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
                 <ReportSortTh label="Email" columnKey="email" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                 <ReportSortTh label="Ruolo" columnKey="ruolo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                 <ReportSortTh
-                  label="Accesso Lavorazioni (Clienti)"
+                  label={`Accesso ${PORTALE_CLIENTI_LABEL}`}
                   columnKey="clientAccess"
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
@@ -257,7 +258,7 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
                         )}
                       </td>
                       <td className={dsTableTd}>
-                        <div className="flex items-center gap-2">
+                        <div className="flex min-w-0 items-center gap-2">
                           <SecurityToggle
                             checked={row.clientLavorazioniAccess}
                             disabled={readOnly || portalLocked}

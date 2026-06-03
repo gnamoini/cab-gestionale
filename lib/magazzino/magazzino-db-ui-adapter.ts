@@ -5,6 +5,8 @@ import {
   parseMagazzinoRicambioMeta,
   ricambioUiToMagazzinoMeta,
 } from "@/lib/magazzino/magazzino-meta";
+import { readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
+import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MagazzinoInsert, MagazzinoUpdate } from "@/src/services/magazzino.service";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
@@ -21,7 +23,11 @@ function num(v: unknown, fallback = 0): number {
 }
 
 /** Riga Supabase → modello UI magazzino. */
-export function magazzinoRowToRicambioUI(row: MagazzinoRicambioRow, autore = "Sistema"): RicambioMagazzino {
+export function magazzinoRowToRicambioUI(
+  row: MagazzinoRicambioRow,
+  autore = "Sistema",
+  mezziListe?: MezziListePrefs,
+): RicambioMagazzino {
   const listino = num(row.costo, 0);
   const vendita = num(row.prezzo_vendita, listino);
   const markup =
@@ -30,14 +36,22 @@ export function magazzinoRowToRicambioUI(row: MagazzinoRicambioRow, autore = "Si
   const fromMeta = metaFieldsToRicambioUi(meta);
   const autoreSalvato = meta.autoreUltimaModifica?.trim();
 
+  const compatibilitaMezzi = readCompatLabelsForUi(
+    { compatibilitaMezzi: fromMeta.compatibilitaMezzi, compatibilitaRefs: fromMeta.compatibilitaRefs },
+    mezziListe,
+    "magazzino-db-ui-adapter.magazzinoRowToRicambioUI",
+  );
+
   return {
     id: row.id,
     marca: row.marca?.trim() || "—",
     codiceFornitoreOriginale: normalizeRicambioCodice(row.codice?.trim() ?? ""),
+    codiceFornitoreOriginaleSecondario: fromMeta.codiceFornitoreOriginaleSecondario,
     descrizione: row.nome,
     note: fromMeta.note,
     categoria: fromMeta.categoria,
-    compatibilitaMezzi: fromMeta.compatibilitaMezzi,
+    compatibilitaMezzi,
+    compatibilitaRefs: fromMeta.compatibilitaRefs,
     scorta: Math.max(0, Math.round(num(row.quantita, 0))),
     scortaMinima: fromMeta.scortaMinima,
     dataUltimaModifica: row.updated_at ?? row.created_at,
@@ -54,7 +68,10 @@ export function magazzinoRowToRicambioUI(row: MagazzinoRicambioRow, autore = "Si
 }
 
 /** Modello UI → insert Supabase. */
-export function ricambioUiToMagazzinoInsert(r: RicambioMagazzino): MagazzinoInsert {
+export function ricambioUiToMagazzinoInsert(
+  r: RicambioMagazzino,
+  mezziListe?: MezziListePrefs,
+): MagazzinoInsert {
   const row: MagazzinoInsert = {
     codice: normalizeRicambioCodice(r.codiceFornitoreOriginale.trim()),
     nome: r.descrizione.trim(),
@@ -63,7 +80,7 @@ export function ricambioUiToMagazzinoInsert(r: RicambioMagazzino): MagazzinoInse
     costo: r.prezzoFornitoreOriginale > 0 ? r.prezzoFornitoreOriginale : null,
     prezzo_vendita: r.prezzoVendita > 0 ? r.prezzoVendita : null,
     consumo_medio_mensile: null,
-    meta: ricambioUiToMagazzinoMeta(r) as Record<string, unknown>,
+    meta: ricambioUiToMagazzinoMeta(r, mezziListe) as Record<string, unknown>,
   };
   if (isMagazzinoUuid(r.id)) {
     return { ...row, id: r.id } as MagazzinoInsert & { id: string };
@@ -71,6 +88,6 @@ export function ricambioUiToMagazzinoInsert(r: RicambioMagazzino): MagazzinoInse
   return row;
 }
 
-export function ricambioUiToMagazzinoUpdate(r: RicambioMagazzino): MagazzinoUpdate {
-  return ricambioUiToMagazzinoInsert(r);
+export function ricambioUiToMagazzinoUpdate(r: RicambioMagazzino, mezziListe?: MezziListePrefs): MagazzinoUpdate {
+  return ricambioUiToMagazzinoInsert(r, mezziListe);
 }

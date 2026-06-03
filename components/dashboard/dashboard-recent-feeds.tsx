@@ -7,8 +7,8 @@ import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
-  gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
+import { layoutScrollYSafe } from "@/lib/ui/responsive-layout-core";
 import {
   buildLogModificheDisplayEntries,
   buildLogModificheFocusHref,
@@ -16,10 +16,13 @@ import {
   logAutoreLabel,
 } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
-import { dsSurfaceCard, dsTypoCardTitle } from "@/lib/ui/design-system";
+import { LoadingFormSkeleton } from "@/components/design-system";
+import { dsDashboardWidgetTitle, dsSurfaceCard } from "@/lib/ui/design-system";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
+
+const dashboardFeedScrollClass = layoutScrollYSafe;
 
 export function DashboardRecentFeeds() {
   const router = useRouter();
@@ -65,18 +68,18 @@ export function DashboardRecentFeeds() {
   if (staging) return null;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <section className={`flex min-h-[280px] flex-col ${dsSurfaceCard} p-4 sm:p-5`}>
-        <h2 className={dsTypoCardTitle}>Ultime modifiche lavorazioni</h2>
-        <div className={`${gestionaleLogScrollEmbeddedClass} mt-3 max-h-[min(360px,52vh)] min-h-0 flex-1 pr-1`}>
+    <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+      <section className={`flex min-h-[280px] min-w-0 max-w-full flex-col overflow-hidden ${dsSurfaceCard} p-4 sm:p-5`}>
+        <h2 className={dsDashboardWidgetTitle}>Ultime modifiche lavorazioni</h2>
+        <div className={`${dashboardFeedScrollClass} mt-3 max-h-[min(360px,52vh)] min-h-0 min-w-0 flex-1 pr-1`}>
           {lavLogsQ.isLoading ? (
-            <p className="text-sm text-zinc-500">Caricamento log…</p>
+            <LoadingFormSkeleton fields={2} className="py-1" />
           ) : lavSlice.length === 0 ? (
             <GestionaleLogEmpty message="Nessuna modifica registrata. Le operazioni su Lavorazioni compaiono qui automaticamente." />
           ) : (
             <GestionaleLogList>
               {lavSlice.map(({ id, vm, href }) => (
-                <li key={id} className="list-none">
+                <li key={id} className="list-none min-w-0 max-w-full">
                   <GestionaleLogEntryFourLines
                     vm={vm}
                     onClick={href ? () => router.push(href) : undefined}
@@ -89,17 +92,17 @@ export function DashboardRecentFeeds() {
         </div>
       </section>
 
-      <section className={`flex min-h-[280px] flex-col ${dsSurfaceCard} p-4 sm:p-5`}>
-        <h2 className={dsTypoCardTitle}>Ultime modifiche ricambi</h2>
-        <div className={`${gestionaleLogScrollEmbeddedClass} mt-3 max-h-[min(360px,52vh)] min-h-0 flex-1 pr-1`}>
+      <section className={`flex min-h-[280px] min-w-0 max-w-full flex-col overflow-hidden ${dsSurfaceCard} p-4 sm:p-5`}>
+        <h2 className={dsDashboardWidgetTitle}>Ultime modifiche ricambi</h2>
+        <div className={`${dashboardFeedScrollClass} mt-3 max-h-[min(360px,52vh)] min-h-0 min-w-0 flex-1 pr-1`}>
           {magLogsQ.isLoading ? (
-            <p className="text-sm text-zinc-500">Caricamento log…</p>
+            <LoadingFormSkeleton fields={2} className="py-1" />
           ) : magSlice.length === 0 ? (
             <GestionaleLogEmpty message="Nessuna modifica registrata. Le operazioni su Magazzino compaiono qui automaticamente." />
           ) : (
             <GestionaleLogList>
               {magSlice.map(({ id, vm, href }) => (
-                <li key={id} className="list-none">
+                <li key={id} className="list-none min-w-0 max-w-full">
                   <GestionaleLogEntryFourLines
                     vm={vm}
                     onClick={href ? () => router.push(href) : undefined}

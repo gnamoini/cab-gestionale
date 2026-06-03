@@ -7,21 +7,6 @@ export const CAB_MAGAZZINO_MASTER_REFRESH = "cab-magazzino-master-refresh";
 /** Evento: ricarica elenchi mezzi (clienti, marche, tipi, stati) da localStorage. */
 export const CAB_MEZZI_LISTE_REFRESH = "cab-mezzi-liste-refresh";
 
-/** @deprecated Preferire `dispatchGestionaleAction` + `persistSettingsRecord`. Nessun listener attivo. */
-export function dispatchLavorazioniPrefsRefresh(): void {
-  /* legacy no-op */
-}
-
-/** @deprecated Preferire `dispatchGestionaleAction` + `persistSettingsRecord`. Nessun listener attivo. */
-export function dispatchMagazzinoMasterRefresh(): void {
-  /* legacy no-op */
-}
-
-/** @deprecated Preferire `dispatchGestionaleAction` + `persistSettingsRecord`. Nessun listener attivo. */
-export function dispatchMezziListeRefresh(): void {
-  /* legacy no-op */
-}
-
 /** Rinomina addetto su record lavorazioni (attive + storico) quando la vista è montata. */
 export const CAB_ADDETTO_DISPLAY_RENAME = "cab-addetto-display-rename";
 

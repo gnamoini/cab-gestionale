@@ -79,6 +79,7 @@ export type PreventivoRecord = {
 
 export type PreventivoSortKey =
   | "numero"
+  | "tipoDocumento"
   | "dataCreazione"
   | "cliente"
   | "cantiere"

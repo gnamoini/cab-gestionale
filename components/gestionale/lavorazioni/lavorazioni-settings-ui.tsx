@@ -1,16 +1,105 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SettingsColorPickerPopover } from "@/components/gestionale/settings-color-picker-popover";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
+import { sortAddettiRecordsByNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { PageToolbarCtaLabel } from "@/components/design-system";
+import { LavorazioneAddettoReadOnlyPill } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { lavTableTdPillWrap } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
+import { dsInput, dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
+import { gestionaleListTableRowBaseClass } from "@/lib/ui/gestionale-list-table";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { STATO_LAVORAZIONE_COMPLETATA_ID } from "@/lib/lavorazioni/stati-dynamic";
-import { sortStringsItCaseInsensitive } from "@/lib/ui/sort-strings-it";
-import { addettoBadgeStyle } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
-import { SettingsEditableStringRow } from "@/components/dashboard/settings-list-ui";
+/** Contenitore colonne condiviso (insert + righe elenco via subgrid). */
+export const ADDETTI_SETTINGS_TABLE_CLASS =
+  "grid w-full min-w-0 grid-cols-1 gap-x-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(6.5rem,1.2fr)_auto]";
+
+/** Riga allineata alle colonne del contenitore — no `flex` (conflitto con grid). */
+export const ADDETTI_SETTINGS_ROW_CLASS = `${gestionaleListTableRowBaseClass} col-span-full grid min-h-[2.75rem] min-w-0 grid-cols-1 gap-x-2 gap-y-2 px-2 py-1.5 sm:grid-cols-subgrid sm:items-center sm:gap-y-0 sm:px-3`;
+
+const ADDETTI_SETTINGS_INPUT_CLASS = `${dsInput} h-8 min-h-8 w-full min-w-0 py-1 text-sm`;
+
+const ADDETTI_PREVIEW_COL_CLASS = "flex min-w-0 items-center gap-1.5";
+
+const ADDETTI_PILL_SLOT_CLASS = `${lavTableTdPillWrap} min-w-0 flex-1 overflow-hidden`;
+
+/** Shell addetti: larghezza pannello, scroll orizzontale solo su viewport stretti. */
+export const ADDETTI_SETTINGS_PANEL_CLASS = "w-full min-w-0 overflow-x-auto";
+
+/** Azione elimina — colori/hover come `dsTableActionBtnDanger`, formato testo compatto. */
+const ADDETTI_DELETE_BTN =
+  "inline-flex h-8 min-h-8 shrink-0 items-center rounded-md bg-transparent px-2.5 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] opacity-70 transition-[opacity,background-color] duration-150 ease-out group-hover:opacity-100 hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))]";
+
+export function AddettiInsertRow({
+  nome,
+  cognome,
+  onNomeChange,
+  onCognomeChange,
+  onAdd,
+}: {
+  nome: string;
+  cognome: string;
+  onNomeChange: (v: string) => void;
+  onCognomeChange: (v: string) => void;
+  onAdd: () => void;
+}) {
+  const canAdd = nome.trim().length > 0;
+
+  const submit = () => {
+    if (!canAdd) return;
+    onAdd();
+  };
+
+  return (
+    <div className={ADDETTI_SETTINGS_ROW_CLASS}>
+      <input
+        className={ADDETTI_SETTINGS_INPUT_CLASS}
+        placeholder="Nome"
+        aria-label="Nome addetto"
+        value={nome}
+        onChange={(e) => onNomeChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          }
+        }}
+      />
+      <input
+        className={ADDETTI_SETTINGS_INPUT_CLASS}
+        placeholder="Cognome (opz.)"
+        aria-label="Cognome addetto"
+        value={cognome}
+        onChange={(e) => onCognomeChange(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            submit();
+          }
+        }}
+      />
+      <div className={`${ADDETTI_PREVIEW_COL_CLASS} hidden sm:flex`} aria-hidden>
+        <div className={`${ADDETTI_PILL_SLOT_CLASS} opacity-0`}>
+          <span className="block h-8" />
+        </div>
+        <span className="inline-block h-7 w-7 shrink-0" />
+      </div>
+      <button
+        type="button"
+        className={`${dsPageToolbarCtaCompact} h-8 min-h-8 w-full shrink-0 px-2 text-xs sm:w-auto sm:justify-self-end`}
+        disabled={!canAdd}
+        onClick={submit}
+      >
+        <PageToolbarCtaLabel short="+ Addetto" full="Aggiungi addetto" />
+      </button>
+    </div>
+  );
+}
 
 export function ColorSwatchButton({
   value,
@@ -33,7 +122,7 @@ export function ColorSwatchButton({
         aria-label={ariaLabel}
         aria-expanded={open}
         title={ariaLabel}
-        className="h-8 w-8 rounded-md border-2 border-zinc-300 shadow-sm transition hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] dark:border-zinc-600"
+        className="h-7 w-7 rounded-md border-2 border-[color:var(--cab-border)] shadow-sm transition hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)]"
         style={{ backgroundColor: hex }}
         onClick={() => setOpen((o) => !o)}
       />
@@ -160,57 +249,134 @@ export function StatoSettingsList({
   );
 }
 
-export function AddettiSettingsList({
-  addetti,
+function AddettoSettingsRow({
+  record,
   addettoColors,
   onChangeAddettoColor,
-  onRenameBlur,
+  onUpdate,
+  onRemove,
+}: {
+  record: AddettoRecord;
+  addettoColors: Record<string, string>;
+  onChangeAddettoColor: (nome: string, hex: string) => void;
+  onUpdate: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
+  onRemove: (id: string) => void;
+}) {
+  const [nome, setNome] = useState(record.nome);
+  const [cognome, setCognome] = useState(record.cognome ?? "");
+
+  useEffect(() => {
+    setNome(record.nome);
+    setCognome(record.cognome ?? "");
+  }, [record.nome, record.cognome, record.id]);
+
+  /** In tabella lavorazioni la pill usa il nome (chiave colori), non nome+cognome. */
+  const tableAddettoLabel = nome.trim() || "—";
+  const colorKey = nome.trim() || record.nome;
+  const displayHex = addettoDisplayColor(colorKey, addettoColors);
+
+  return (
+    <li className={ADDETTI_SETTINGS_ROW_CLASS}>
+      <input
+        className={ADDETTI_SETTINGS_INPUT_CLASS}
+        value={nome}
+        placeholder="Nome"
+        required
+        onChange={(e) => setNome(e.target.value)}
+        onBlur={() => {
+          const t = nome.trim();
+          if (t && t !== record.nome) onUpdate(record.id, { nome: t });
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+        aria-label="Nome addetto"
+      />
+      <input
+        className={ADDETTI_SETTINGS_INPUT_CLASS}
+        value={cognome}
+        placeholder="Cognome (opz.)"
+        onChange={(e) => setCognome(e.target.value)}
+        onBlur={() => {
+          const t = cognome.trim();
+          const prev = (record.cognome ?? "").trim();
+          if (t !== prev) onUpdate(record.id, { cognome: t || null });
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.currentTarget.blur();
+          }
+        }}
+        aria-label="Cognome addetto"
+      />
+      <div className={ADDETTI_PREVIEW_COL_CLASS} title="Anteprima come in tabella lavorazioni">
+        <div className={ADDETTI_PILL_SLOT_CLASS}>
+          <LavorazioneAddettoReadOnlyPill
+            addetto={tableAddettoLabel}
+            addettoColors={addettoColors}
+            fullWidth
+          />
+        </div>
+        <ColorSwatchButton
+          value={displayHex}
+          ariaLabel={`Colore addetto ${tableAddettoLabel}`}
+          onChange={(hex) => onChangeAddettoColor(record.nome, hex)}
+        />
+      </div>
+      <button
+        type="button"
+        className={`${ADDETTI_DELETE_BTN} ${erpFocus} w-full sm:w-auto`}
+        onClick={() => onRemove(record.id)}
+      >
+        Elimina
+      </button>
+    </li>
+  );
+}
+
+export function AddettiSettingsList({
+  addettiRecords,
+  addettoColors,
+  onChangeAddettoColor,
+  onUpdateAddetto,
   onRemove,
   attiviAddetti: _attiviAddetti,
   storicoAddetti: _storicoAddetti,
-  inputClass: _inputClass,
 }: {
-  addetti: string[];
+  addettiRecords: AddettoRecord[];
   addettoColors: Record<string, string>;
   onChangeAddettoColor: (nome: string, hex: string) => void;
-  onRenameBlur: (previousName: string, nextName: string) => void;
-  onRemove: (name: string) => void;
+  onUpdateAddetto: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
+  onRemove: (id: string) => void;
   attiviAddetti: Set<string>;
   storicoAddetti: Set<string>;
-  inputClass: string;
 }) {
-  const sortedAddetti = useMemo(() => sortStringsItCaseInsensitive(addetti), [addetti]);
+  const sorted = useMemo(() => sortAddettiRecordsByNome(addettiRecords), [addettiRecords]);
+
+  if (sorted.length === 0) {
+    return (
+      <p className="col-span-full px-3 py-6 text-center text-sm text-[color:var(--cab-text-muted)] sm:px-4">
+        Nessun addetto. Aggiungi il primo con il modulo sopra.
+      </p>
+    );
+  }
 
   return (
-    <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
-      {sortedAddetti.map((a) => {
-        const displayHex = addettoDisplayColor(a, addettoColors);
-        return (
-          <SettingsEditableStringRow
-            key={a}
-            value={a}
-            onRenameBlur={onRenameBlur}
-            onRemove={() => onRemove(a)}
-            trailing={
-              <div className="flex shrink-0 items-center gap-2">
-                <span
-                  className="inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-black/10"
-                  style={addettoBadgeStyle(displayHex)}
-                  title="Anteprima pill in tabella"
-                  aria-hidden
-                >
-                  {a}
-                </span>
-                <ColorSwatchButton
-                  value={displayHex}
-                  ariaLabel={`Colore addetto ${a}`}
-                  onChange={(hex) => onChangeAddettoColor(a, hex)}
-                />
-              </div>
-            }
-          />
-        );
-      })}
+    <ul className="contents">
+      {sorted.map((rec) => (
+        <AddettoSettingsRow
+          key={rec.id}
+          record={rec}
+          addettoColors={addettoColors}
+          onChangeAddettoColor={onChangeAddettoColor}
+          onUpdate={onUpdateAddetto}
+          onRemove={onRemove}
+        />
+      ))}
     </ul>
   );
 }

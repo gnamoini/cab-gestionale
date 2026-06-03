@@ -1,6 +1,7 @@
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
-import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
+import { mapMagazzinoRowsToUI } from "@/lib/magazzino/magazzino-list-cache";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import type { AuthLogAction, AuthLogWithProfileRow } from "@/src/types/supabase-tables";
@@ -48,9 +49,10 @@ function macchinaLabelFromLavRow(row: LavorazioneListRow): string {
 export function computeDashboardMagStatsFromRows(
   rows: readonly MagazzinoRicambioRow[],
   staging = false,
+  mezziListe?: MezziListePrefs,
 ): DashboardMagStats {
   if (staging) return { sotto: 0, cap: 0, tot: 0 };
-  const items = rows.map((row) => magazzinoRowToRicambioUI(row));
+  const items = mapMagazzinoRowsToUI(rows, "Sistema", mezziListe);
   return computeDashboardMagStatsFromUi(items);
 }
 

@@ -1,5 +1,8 @@
 import { CLIENTE_HOME_PATH, hasPermission } from "@/lib/auth/rbac";
 
+/** Etichetta UI: nav laterale, titoli pagina, impostazioni accesso. */
+export const PORTALE_CLIENTI_LABEL = "Portale Clienti";
+
 /** Persistenza in `app_settings` (module lavorazioni, key client_portal_access). */
 export const CLIENT_LAVORAZIONI_SETTINGS_MODULE = "lavorazioni";
 export const CLIENT_LAVORAZIONI_SETTINGS_KEY = "client_portal_access";

@@ -13,6 +13,7 @@ import {
   listUsersByAdminAction,
   type SecurityUserAdminRow,
 } from "@/src/actions/admin-users";
+import { validateSecurityUserBatchPatches } from "@/lib/validation/security-actions-validation";
 import type { ProfileRow } from "@/src/types/supabase-tables";
 
 export type SecurityUserPermissionRow = SecurityUserAdminRow & {
@@ -97,7 +98,9 @@ async function writeSecurityBatchLog(
 export async function batchUpdateSecurityUsersAction(
   patches: SecurityUserBatchPatch[],
 ): Promise<BatchUpdateSecurityUsersResult> {
-  if (!patches.length) return { ok: true, updatedCount: 0 };
+  const validated = validateSecurityUserBatchPatches(patches);
+  if (!validated.ok) return { ok: false, message: validated.message };
+  if (!validated.patches.length) return { ok: true, updatedCount: 0 };
 
   const caller = await assertAdminCaller();
   if (!caller.ok) return { ok: false, message: caller.message };
@@ -108,10 +111,10 @@ export async function batchUpdateSecurityUsersAction(
   });
   const sbUser = await createSupabaseServerUserClient();
 
-  const normalized = patches
+  const normalized = validated.patches
     .map((p) => ({
-      userId: p.userId?.trim() ?? "",
-      nome: p.nome?.trim(),
+      userId: p.userId,
+      nome: p.nome,
       ruolo: p.ruolo != null ? resolveRole(p.ruolo) : undefined,
       clientLavorazioniAccess: p.clientLavorazioniAccess,
     }))

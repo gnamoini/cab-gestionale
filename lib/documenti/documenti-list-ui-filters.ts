@@ -76,7 +76,7 @@ export function docRowMatchesPageFilters(
 ): boolean {
   if (!docRowMatchesGlobalSearch(doc, catalog, filters.search)) return false;
   const { search: _s, ...advanced } = filters;
-  return documentoRowMatchesAdvancedFilters(doc, advanced, catalog);
+  return documentoRowMatchesAdvancedFilters(doc, advanced);
 }
 
 export function buildDocumentiFilteredView(

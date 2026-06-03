@@ -1,10 +1,17 @@
 import { normalizeRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { writeCompatibilitaRicambio } from "@/lib/magazzino/compat/compat-write-gate";
+import {
+  parseCompatRefs,
+  type RicambioCompatRef,
+} from "@/lib/magazzino/ricambio-compat-resolver";
 
 export type MagazzinoRicambioMeta = {
   note?: string;
   categoria?: string;
   compatibilitaMezzi?: string[];
+  compatibilitaRefs?: RicambioCompatRef[];
+  codiceOriginaleSecondario?: string;
   scortaMinima?: number;
   scontoFornitoreOriginale?: number;
   fornitoreNonOriginale?: string;
@@ -35,11 +42,15 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const m = raw as Record<string, unknown>;
   const compat = strArray(m.compatibilitaMezzi);
+  const refs = parseCompatRefs(m.compatibilitaRefs);
   const scortaMinima = num(m.scortaMinima, NaN);
+  const codiceSecondario = str(m.codiceOriginaleSecondario);
   return {
     note: str(m.note) || undefined,
     categoria: str(m.categoria) || undefined,
     compatibilitaMezzi: compat.length ? compat : undefined,
+    compatibilitaRefs: refs.length ? refs : undefined,
+    codiceOriginaleSecondario: codiceSecondario ? normalizeRicambioCodice(codiceSecondario) : undefined,
     scortaMinima: Number.isFinite(scortaMinima) ? Math.max(0, scortaMinima) : undefined,
     scontoFornitoreOriginale: num(m.scontoFornitoreOriginale, NaN) || undefined,
     fornitoreNonOriginale: str(m.fornitoreNonOriginale) || undefined,
@@ -53,12 +64,25 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
   };
 }
 
-export function ricambioUiToMagazzinoMeta(r: RicambioMagazzino): MagazzinoRicambioMeta {
-  const compat = r.compatibilitaMezzi.map((x) => x.trim()).filter((x) => x && x !== "—");
+export function ricambioUiToMagazzinoMeta(r: RicambioMagazzino, mezziListe?: import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs): MagazzinoRicambioMeta {
+  const compatMeta = writeCompatibilitaRicambio(
+    {
+      compatibilitaMezzi: r.compatibilitaMezzi,
+      compatibilitaRefs: r.compatibilitaRefs,
+      ricambioId: r.id,
+    },
+    mezziListe,
+    "magazzino-meta.ricambioUiToMagazzinoMeta",
+  );
+
+  const compat = compatMeta.compatibilitaMezzi?.map((x) => x.trim()).filter((x) => x && x !== "—") ?? [];
+  const codiceSecondario = r.codiceFornitoreOriginaleSecondario.trim();
   return {
     note: r.note.trim() || undefined,
     categoria: r.categoria.trim() || undefined,
     compatibilitaMezzi: compat.length ? compat : undefined,
+    compatibilitaRefs: compatMeta.compatibilitaRefs,
+    codiceOriginaleSecondario: codiceSecondario ? normalizeRicambioCodice(codiceSecondario) : undefined,
     scortaMinima: Math.max(0, r.scortaMinima),
     scontoFornitoreOriginale: r.scontoFornitoreOriginale > 0 ? r.scontoFornitoreOriginale : undefined,
     fornitoreNonOriginale: r.fornitoreNonOriginale.trim() || undefined,
@@ -77,6 +101,8 @@ export function metaFieldsToRicambioUi(meta: MagazzinoRicambioMeta): Pick<
   | "note"
   | "categoria"
   | "compatibilitaMezzi"
+  | "compatibilitaRefs"
+  | "codiceFornitoreOriginaleSecondario"
   | "scortaMinima"
   | "scontoFornitoreOriginale"
   | "fornitoreNonOriginale"
@@ -88,6 +114,8 @@ export function metaFieldsToRicambioUi(meta: MagazzinoRicambioMeta): Pick<
     note: meta.note ?? "",
     categoria: meta.categoria?.trim() || "Generale",
     compatibilitaMezzi: meta.compatibilitaMezzi?.filter((x) => x && x !== "—") ?? [],
+    compatibilitaRefs: meta.compatibilitaRefs,
+    codiceFornitoreOriginaleSecondario: meta.codiceOriginaleSecondario ?? "",
     scortaMinima: Math.max(0, meta.scortaMinima ?? 0),
     scontoFornitoreOriginale: Math.min(100, Math.max(0, meta.scontoFornitoreOriginale ?? 0)),
     fornitoreNonOriginale: meta.fornitoreNonOriginale ?? "",

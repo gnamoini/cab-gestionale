@@ -53,6 +53,14 @@ export function LavorazioniAdvancedFilterPanel({
     [statiOpts],
   );
 
+  const addettoItems = useMemo(
+    () => [
+      { value: FILTER_ALL, label: "Tutti gli addetti" },
+      ...catalog.addetti.map((a) => ({ value: a, label: a })),
+    ],
+    [catalog.addetti],
+  );
+
   const sectionItems = useMemo(
     () => [
       { value: "", label: "In corso e completate" },
@@ -130,13 +138,15 @@ export function LavorazioniAdvancedFilterPanel({
           />
         </LavorazioniFilterField>
         <LavorazioniFilterField label="Addetto">
-          <GlobalSettingsListSelect
-            listKey="lavorazioni:addetti"
-            value={filters.addetto === FILTER_ALL ? "" : filters.addetto}
-            onChange={(v) => onChange({ addetto: v.trim() ? v : FILTER_ALL })}
-            placeholder="Tutti gli addetti — cerca…"
+          <GlobalSelect
+            items={addettoItems}
+            value={filters.addetto}
+            onChange={(v) => onChange({ addetto: v })}
             inputClassName={gestionaleFilterFieldInputClass}
+            strictFromList
+            selectOnly
             variant="filter"
+            filterNeutralValues={[FILTER_ALL]}
             aria-label="Filtra addetto"
           />
         </LavorazioniFilterField>
@@ -160,6 +170,7 @@ export function LavorazioniAdvancedFilterPanel({
               onChange={(v) => onChange({ stato: v })}
               inputClassName={gestionaleFilterFieldInputClass}
               strictFromList
+              selectOnly
               variant="filter"
               filterNeutralValues={[FILTER_ALL]}
               aria-label="Filtra stato"
@@ -205,6 +216,7 @@ export function LavorazioniAdvancedFilterPanel({
               onChange={(v) => onChange({ stato: v })}
               inputClassName={gestionaleFilterFieldInputClass}
               strictFromList
+              selectOnly
               variant="filter"
               filterNeutralValues={[FILTER_ALL]}
               aria-label="Filtra stato"

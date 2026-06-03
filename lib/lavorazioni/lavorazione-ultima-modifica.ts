@@ -61,6 +61,17 @@ export function formatLavorazioneUltimaModificaLine(info: LavorazioneUltimaModif
   return parts.length > 0 ? parts.join(" · ") : "—";
 }
 
+/** Card mobile: data · ora e autore su due righe (come magazzino). */
+export function formatLavorazioneUltimaModificaMobileLines(info: LavorazioneUltimaModificaInfo): {
+  dateTime: string;
+  autore: string;
+} {
+  const { date, time } = formatLavorazioneIngressoDisplay(info.iso);
+  const dateTime = [date, time].filter((p) => p && p !== "—").join(" · ");
+  const autore = info.autore.trim() || "—";
+  return { dateTime: dateTime || "—", autore };
+}
+
 /** Prima voce log per entità (lista già ordinata per `created_at` desc). */
 export function buildLatestLogAutoreByEntitaId(
   rows: readonly LogModificaAutoreSource[],

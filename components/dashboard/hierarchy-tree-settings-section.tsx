@@ -1,9 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type Dispatch,
+  type KeyboardEvent,
+  type SetStateAction,
+} from "react";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
-import { SETTINGS_LIST_ROW } from "@/components/dashboard/settings-list-ui";
+import {
+  SETTINGS_LIST_UL,
+  SETTINGS_PANEL_SHELL,
+  SettingsEditableStringRow,
+  SettingsQuickAddRow,
+} from "@/components/dashboard/settings-list-ui";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { ShellCard } from "@/components/gestionale/shell-card";
+import { handleSettingsInlineEditKeyDown } from "@/lib/settings/settings-inline-edit-keyboard";
 import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
 import {
   aggiungiMarcaHierarchy,
@@ -16,15 +32,137 @@ import {
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import {
-  handleSettingsAddRowEnter,
-  handleSettingsInlineEditKeyDown,
-} from "@/lib/settings/settings-inline-edit-keyboard";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
-import { erpBtnNeutral, erpBtnSoftOrange, erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+  dsLabel,
+  dsPageToolbarCtaCompact,
+  dsPageToolbarMetaChip,
+  dsPageToolbarMetaChipAccent,
+  dsTypoSmall,
+} from "@/lib/ui/design-system";
+import { PageToolbarCtaLabel } from "@/components/design-system";
 
-const PANEL = "w-full rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-700 dark:bg-zinc-900";
-const INPUT =
-  "min-h-10 min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-sm outline-none focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_25%,transparent)] dark:border-zinc-700 dark:bg-zinc-950";
+/** Box unificato per riga modello e riga “aggiungi modello”. */
+const HIERARCHY_MODEL_BOX =
+  "group flex min-h-8 items-center gap-1.5 rounded-[var(--ds-radius-md)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2 transition-colors duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-card))]";
+
+const HIERARCHY_MODEL_INPUT =
+  "min-h-8 min-w-0 flex-1 border-0 bg-transparent px-1 py-0 text-sm font-medium text-[color:var(--cab-text)] outline-none placeholder:font-normal placeholder:text-[color:var(--cab-text-muted)] focus:bg-[color:color-mix(in_srgb,var(--cab-surface)_85%,var(--cab-card))] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]";
+
+const HIERARCHY_DELETE_BTN =
+  "shrink-0 rounded-md bg-transparent px-2 py-1 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-danger)_90%,var(--cab-text))] opacity-80 transition-[opacity,background-color] duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-card))] hover:opacity-100";
+
+function HierarchyModelRow({
+  value,
+  ariaLabel,
+  onRenameBlur,
+  onRemove,
+}: {
+  value: string;
+  ariaLabel?: string;
+  onRenameBlur: (previous: string, next: string) => void;
+  onRemove: () => void;
+}) {
+  return (
+    <li className={HIERARCHY_MODEL_BOX}>
+      <input
+        className={HIERARCHY_MODEL_INPUT}
+        defaultValue={value}
+        key={`${value}-hierarchy`}
+        aria-label={ariaLabel ?? `Modifica ${value}`}
+        onBlur={(e) => onRenameBlur(value, e.target.value)}
+        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => handleSettingsInlineEditKeyDown(e, value)}
+      />
+      <button type="button" className={`${HIERARCHY_DELETE_BTN} ${erpFocus}`} onClick={onRemove}>
+        Elimina
+      </button>
+    </li>
+  );
+}
+
+function ModelCountChip({ count }: { count: number }) {
+  if (count === 0) {
+    return <span className={dsPageToolbarMetaChip}>Nessun modello</span>;
+  }
+  return (
+    <span className={dsPageToolbarMetaChipAccent}>
+      {count} modell{count === 1 ? "o" : "i"}
+    </span>
+  );
+}
+
+function MarcaModelsPanel({
+  marcaId,
+  modelli,
+  modelDraft,
+  onModelDraftChange,
+  onAddModello,
+  onRenameModello,
+  onRemoveModello,
+  gate,
+  treeKey,
+  setListe,
+}: {
+  marcaId: string;
+  modelli: { id: string; nome: string }[];
+  modelDraft: string;
+  onModelDraftChange: (v: string) => void;
+  onAddModello: () => void;
+  onRenameModello: (from: string, to: string) => void;
+  onRemoveModello: (modelloId: string, label: string) => void;
+  gate: ReturnType<typeof useSettingsSimilarGate>["gate"];
+  treeKey: HierarchyTreeKey;
+  setListe: Dispatch<SetStateAction<MezziListePrefs>>;
+}) {
+  const modelNames = modelli.map((x) => x.nome);
+  const sortedModelli = [...modelli].sort((a, b) =>
+    a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }),
+  );
+  const draftTrimmed = modelDraft.trim();
+
+  return (
+    <ul className="space-y-1.5">
+      {sortedModelli.map((mod) => (
+        <HierarchyModelRow
+          key={mod.id}
+          value={mod.nome}
+          ariaLabel={`Nome modello ${mod.nome}`}
+          onRenameBlur={(from, raw) => {
+            const t = raw.trim();
+            if (!t || t === from) return;
+            gate(modelNames, t, from, () => {
+              setListe((prev) => rinominaModelloHierarchy(prev, treeKey, marcaId, mod.id, t));
+              onRenameModello(from, t);
+            });
+          }}
+          onRemove={() => onRemoveModello(mod.id, mod.nome)}
+        />
+      ))}
+      <li className={`${HIERARCHY_MODEL_BOX} gap-2 sm:gap-1.5`}>
+        <input
+          className={HIERARCHY_MODEL_INPUT}
+          value={modelDraft}
+          onChange={(e) => onModelDraftChange(e.target.value)}
+          placeholder={sortedModelli.length === 0 ? "Primo modello…" : "Nuovo modello…"}
+          autoComplete="off"
+          aria-label="Nome nuovo modello"
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (draftTrimmed) onAddModello();
+            }
+          }}
+        />
+        <button
+          type="button"
+          className={`${dsPageToolbarCtaCompact} h-7 min-h-7 shrink-0 px-2.5 text-xs sm:w-auto`}
+          disabled={!draftTrimmed}
+          onClick={onAddModello}
+        >
+          <PageToolbarCtaLabel short="+ Modello" full="Aggiungi modello" />
+        </button>
+      </li>
+    </ul>
+  );
+}
 
 export function HierarchyTreeSettingsSection({
   treeKey,
@@ -35,12 +173,11 @@ export function HierarchyTreeSettingsSection({
   onRenameModello,
 }: {
   treeKey: HierarchyTreeKey;
-  /** "marca" = gestione marche; "modello" = gerarchia modelli sotto marca. */
   variant: "marca" | "modello";
   liste: MezziListePrefs;
   setListe: Dispatch<SetStateAction<MezziListePrefs>>;
   onRenameMarca?: (from: string, to: string) => void;
-  onRenameModello?: (from: string, to: string) => void;
+  onRenameModello?: (marcaContext: string, from: string, to: string) => void;
 }) {
   const tree = useMemo(() => getHierarchyTree(liste, treeKey), [liste, treeKey]);
   const marcaNames = useMemo(() => tree.map((m) => m.nome), [tree]);
@@ -77,11 +214,16 @@ export function HierarchyTreeSettingsSection({
     });
   }, [variant, filteredTree]);
 
-  function toggleMarcaExpand(id: string) {
+  useEffect(() => {
+    if (variant !== "modello" || !q.trim()) return;
+    setExpandedMarcaIds(new Set(filteredTree.map((m) => m.id)));
+  }, [variant, q, filteredTree]);
+
+  function setMarcaExpanded(marcaId: string, expanded: boolean) {
     setExpandedMarcaIds((prev) => {
       const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
+      if (expanded) n.add(marcaId);
+      else n.delete(marcaId);
       return n;
     });
   }
@@ -90,218 +232,133 @@ export function HierarchyTreeSettingsSection({
     setNuovoModelloByMarca((prev) => ({ ...prev, [marcaId]: value }));
   }
 
+  function tryAddMarca() {
+    const t = nuovaMarca.trim();
+    if (!t) return;
+    gate(marcaNames, t, undefined, () => {
+      setListe((prev) => aggiungiMarcaHierarchy(prev, treeKey, t));
+      setNuovaMarca("");
+    });
+  }
+
+  function tryAddModello(marcaId: string, modelNames: string[]) {
+    const t = (nuovoModelloByMarca[marcaId] ?? "").trim();
+    if (!t) return;
+    gate(modelNames, t, undefined, () => {
+      setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, marcaId, t));
+      setModelDraft(marcaId, "");
+    });
+  }
+
   return (
-    <div className="w-full space-y-3">
-      <GestionaleSearchField value={q} onChange={(e) => setQ(e.target.value)} placeholder="Cerca marca o modello…" autoComplete="off" />
+    <div className="w-full space-y-4">
+      {variant === "modello" ? (
+        <p className={`${dsTypoSmall} text-[color:var(--cab-text-muted)]`}>
+          Modifica il nome nel campo e conferma uscendo dal campo (Invio o clic fuori). La riga in basso aggiunge un
+          modello alla marca.
+        </p>
+      ) : null}
+
+      <GestionaleSearchField
+        wrapperClassName="w-full"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Cerca marca o modello…"
+        autoComplete="off"
+        aria-label="Cerca marca o modello"
+      />
 
       {variant === "marca" ? (
-        <div className={PANEL}>
-          <div className="flex flex-col gap-2 border-b border-zinc-100 p-3 dark:border-zinc-800 sm:flex-row">
-            <input
-              className={INPUT}
-              value={nuovaMarca}
-              onChange={(e) => setNuovaMarca(e.target.value)}
-              placeholder="Nuova marca"
-              autoComplete="off"
-              onKeyDown={(e) =>
-                handleSettingsAddRowEnter(e, () => {
-                  const t = nuovaMarca.trim();
-                  if (!t) return;
-                  gate(marcaNames, t, undefined, () => {
-                    setListe((prev) => aggiungiMarcaHierarchy(prev, treeKey, t));
-                    setNuovaMarca("");
-                  });
-                })
-              }
-            />
-            <button
-              type="button"
-              className={`${erpBtnSoftOrange} min-h-10 shrink-0 px-3 text-xs`}
-              onClick={() => {
-                const t = nuovaMarca.trim();
-                if (!t) return;
-                gate(marcaNames, t, undefined, () => {
-                  setListe((prev) => aggiungiMarcaHierarchy(prev, treeKey, t));
-                  setNuovaMarca("");
-                });
-              }}
-            >
-              Aggiungi
-            </button>
-          </div>
+        <div className={`${SETTINGS_PANEL_SHELL} p-3 sm:p-4`}>
+          <label className="block">
+            <span className={dsLabel}>Nuova marca</span>
+            <div className="mt-2">
+              <SettingsQuickAddRow
+                placeholder="Es. Iveco, Volvo…"
+                value={nuovaMarca}
+                onChange={setNuovaMarca}
+                onAdd={tryAddMarca}
+                addLabelShort="+ Marca"
+                addLabel="Aggiungi marca"
+                inputAriaLabel="Nome nuova marca"
+              />
+            </div>
+          </label>
         </div>
       ) : null}
 
       {filteredTree.length === 0 ? (
-        <p className="text-center text-sm text-zinc-500 dark:text-zinc-400">
-          {variant === "marca" ? "Nessuna marca. Aggiungi la prima marca sopra." : "Nessun modello configurato. Aggiungi prima le marche nella sezione Marca."}
+        <p className={`text-center ${dsTypoSmall} text-[color:var(--cab-text-muted)]`}>
+          {variant === "marca"
+            ? "Nessuna marca. Aggiungi la prima marca sopra."
+            : "Nessun risultato. Prova un altro testo o aggiungi marche nella sezione Marca."}
         </p>
-      ) : (
-        <ul className={`${PANEL} divide-y divide-zinc-100 dark:divide-zinc-800`}>
+      ) : variant === "modello" ? (
+        <div className="space-y-2">
           {filteredTree.map((m) => {
-            const modelliOpen = variant === "modello" ? expandedMarcaIds.has(m.id) : false;
-            const sortedModelli = [...m.modelli].sort((a, b) =>
-              a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }),
-            );
-            return (
-              <li key={m.id} className="px-1 py-2">
-                {variant === "modello" ? (
-                  <div className="flex flex-col gap-0">
-                    <div
-                      className={`flex w-full items-center gap-2 rounded-lg border border-zinc-100 bg-zinc-50/90 px-2 py-2 dark:border-zinc-800 dark:bg-zinc-800/60 ${SETTINGS_LIST_ROW}`}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => toggleMarcaExpand(m.id)}
-                        className={`inline-flex h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-white text-sm font-bold text-zinc-600 shadow-sm hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 ${erpFocus}`}
-                        aria-expanded={modelliOpen}
-                        title={modelliOpen ? "Comprimi modelli" : "Espandi modelli"}
-                      >
-                        <span aria-hidden>{modelliOpen ? "▼" : "▶"}</span>
-                      </button>
-                      <span
-                        className="min-w-0 flex-1 truncate text-sm font-semibold text-zinc-900 dark:text-zinc-50"
-                        title={m.nome}
-                      >
-                        {m.nome}
-                      </span>
-                      <span className="shrink-0 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-                        {m.modelli.length} modell{m.modelli.length === 1 ? "o" : "i"}
-                      </span>
-                    </div>
+            const modelliOpen = expandedMarcaIds.has(m.id);
+            const modelDraft = nuovoModelloByMarca[m.id] ?? "";
+            const modelNames = m.modelli.map((x) => x.nome);
 
-                    {modelliOpen ? (
-                      <div className="mt-2 space-y-1 border-l-2 border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] pl-4 ml-2">
-                        <ul className="space-y-1">
-                          {sortedModelli.map((mod) => (
-                            <li key={mod.id} className={`${SETTINGS_LIST_ROW} bg-zinc-50/80 px-2 dark:bg-zinc-800/50`}>
-                              <input
-                                className={`${INPUT} min-w-0 flex-1 text-zinc-800 dark:text-zinc-100`}
-                                defaultValue={mod.nome}
-                                key={`${mod.id}-${mod.nome}`}
-                                onBlur={(e) => {
-                                  const t = e.target.value.trim();
-                                  if (!t || t === mod.nome) return;
-                                  const input = e.target;
-                                  const modelNames = m.modelli.map((x) => x.nome);
-                                  gate(
-                                    modelNames,
-                                    t,
-                                    mod.nome,
-                                    () => {
-                                      setListe((prev) => rinominaModelloHierarchy(prev, treeKey, m.id, mod.id, t));
-                                      onRenameModello?.(mod.nome, t);
-                                    },
-                                    () => {
-                                      input.value = mod.nome;
-                                    },
-                                  );
-                                }}
-                                onKeyDown={(e) => handleSettingsInlineEditKeyDown(e, mod.nome)}
-                                aria-label={`Modello sotto ${m.nome}`}
-                              />
-                              <button
-                                type="button"
-                                className={`shrink-0 text-xs text-red-600 hover:underline dark:text-red-400 ${erpFocus}`}
-                                onClick={() => {
-                                  setPendingDelete({
-                                    kind: "modello",
-                                    marcaId: m.id,
-                                    modelloId: mod.id,
-                                    label: mod.nome,
-                                  });
-                                }}
-                              >
-                                Elimina
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                        <div className="flex flex-col gap-2 sm:flex-row">
-                          <input
-                            className={INPUT}
-                            value={nuovoModelloByMarca[m.id] ?? ""}
-                            onChange={(e) => setModelDraft(m.id, e.target.value)}
-                            placeholder="Nuovo modello"
-                            autoComplete="off"
-                            onKeyDown={(e) =>
-                              handleSettingsAddRowEnter(e, () => {
-                                const t = (nuovoModelloByMarca[m.id] ?? "").trim();
-                                if (!t) return;
-                                const modelNames = m.modelli.map((x) => x.nome);
-                                gate(modelNames, t, undefined, () => {
-                                  setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, m.id, t));
-                                  setModelDraft(m.id, "");
-                                });
-                              })
-                            }
-                          />
-                          <button
-                            type="button"
-                            className={`${erpBtnSoftOrange} min-h-10 shrink-0 px-2.5 text-xs`}
-                            onClick={() => {
-                              const t = (nuovoModelloByMarca[m.id] ?? "").trim();
-                              if (!t) return;
-                              const modelNames = m.modelli.map((x) => x.nome);
-                              gate(modelNames, t, undefined, () => {
-                                setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, m.id, t));
-                                setModelDraft(m.id, "");
-                              });
-                            }}
-                          >
-                            Aggiungi
-                          </button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : (
-                  <div className={`flex w-full items-center gap-2 ${SETTINGS_LIST_ROW}`}>
-                    <input
-                      className={`${INPUT} font-semibold text-zinc-900 dark:text-zinc-50`}
-                      defaultValue={m.nome}
-                      key={`${m.id}-${m.nome}`}
-                      onBlur={(e) => {
-                        const t = e.target.value.trim();
-                        if (!t || t === m.nome) return;
-                        const input = e.target;
-                        gate(
-                          marcaNames,
-                          t,
-                          m.nome,
-                          () => {
-                            setListe((prev) => rinominaMarcaHierarchy(prev, treeKey, m.id, t));
-                            onRenameMarca?.(m.nome, t);
-                          },
-                          () => {
-                            input.value = m.nome;
-                          },
-                        );
-                      }}
-                      onKeyDown={(e) => handleSettingsInlineEditKeyDown(e, m.nome)}
-                      aria-label={`Nome marca ${m.nome}`}
-                    />
-                    <button
-                      type="button"
-                      className={`${erpBtnNeutral} min-h-9 shrink-0 px-2 py-1.5 text-xs text-red-600 dark:text-red-400`}
-                      onClick={() => {
-                        setPendingDelete({
-                          kind: "marca",
-                          marcaId: m.id,
-                          label: m.nome,
-                          modelCount: m.modelli.length,
-                        });
-                      }}
-                    >
-                      Elimina
-                    </button>
-                  </div>
-                )}
-              </li>
+            return (
+              <ShellCard
+                key={m.id}
+                title={m.nome}
+                collapsible
+                compactContent
+                compactHeader
+                headerActionsDivider={false}
+                collapsed={!modelliOpen}
+                onCollapsedChange={(collapsed) => setMarcaExpanded(m.id, !collapsed)}
+                headerActions={<ModelCountChip count={m.modelli.length} />}
+              >
+                <MarcaModelsPanel
+                  marcaId={m.id}
+                  modelli={m.modelli}
+                  modelDraft={modelDraft}
+                  onModelDraftChange={(v) => setModelDraft(m.id, v)}
+                  onAddModello={() => tryAddModello(m.id, modelNames)}
+                  onRenameModello={(from, to) => onRenameModello?.(m.nome, from, to)}
+                  onRemoveModello={(modelloId, label) =>
+                    setPendingDelete({ kind: "modello", marcaId: m.id, modelloId, label })
+                  }
+                  gate={gate}
+                  treeKey={treeKey}
+                  setListe={setListe}
+                />
+              </ShellCard>
             );
           })}
-        </ul>
+        </div>
+      ) : (
+        <div className={SETTINGS_PANEL_SHELL}>
+          <ul className={`${SETTINGS_LIST_UL} p-2 sm:p-3`}>
+            {filteredTree.map((m) => (
+              <SettingsEditableStringRow
+                key={m.id}
+                value={m.nome}
+                onRenameBlur={(from, raw) => {
+                  const t = raw.trim();
+                  if (!t || t === from) return;
+                  gate(marcaNames, t, from, () => {
+                    setListe((prev) => rinominaMarcaHierarchy(prev, treeKey, m.id, t));
+                    onRenameMarca?.(from, t);
+                  });
+                }}
+                onRemove={() =>
+                  setPendingDelete({
+                    kind: "marca",
+                    marcaId: m.id,
+                    label: m.nome,
+                    modelCount: m.modelli.length,
+                  })
+                }
+              />
+            ))}
+          </ul>
+        </div>
       )}
+
       <SettingsEliminaConfirmDialog
         open={pendingDelete != null}
         itemLabel={pendingDelete?.label}

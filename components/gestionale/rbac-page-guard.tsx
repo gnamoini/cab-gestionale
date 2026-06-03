@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
@@ -12,13 +12,15 @@ import {
 import { canAccessRoute } from "@/src/lib/auth/can-access-route";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+import { LoadingView } from "@/components/design-system/loading";
+import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 
 const RBAC_LOADING_FAILSAFE_MS = 8_000;
 
 function AccessDeniedPanel({ homePath }: { homePath: string }) {
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+    <div className="flex min-w-0 min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
       <div className="rounded-2xl border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-8 py-10 shadow-sm">
         <p className="text-lg font-semibold text-[color:var(--cab-text)]">Accesso non autorizzato</p>
         <p className="mt-2 max-w-md text-sm text-[color:var(--cab-text-muted)]">
@@ -43,6 +45,7 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
   const clientLav = useClientLavorazioniAccess();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
   const [loadingFailsafe, setLoadingFailsafe] = useState(false);
+  const loadingGateStartedRef = useRef<number | null>(null);
 
   const sessionReady = isAuthSessionEstablished(status);
   const checkingClientLav =
@@ -52,10 +55,16 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!showLoadingGate) {
+      loadingGateStartedRef.current = null;
       setLoadingFailsafe(false);
       return;
     }
-    const id = window.setTimeout(() => setLoadingFailsafe(true), RBAC_LOADING_FAILSAFE_MS);
+    if (loadingGateStartedRef.current == null) {
+      loadingGateStartedRef.current = Date.now();
+    }
+    const elapsed = Date.now() - loadingGateStartedRef.current;
+    const remaining = Math.max(0, RBAC_LOADING_FAILSAFE_MS - elapsed);
+    const id = window.setTimeout(() => setLoadingFailsafe(true), remaining);
     return () => window.clearTimeout(id);
   }, [showLoadingGate]);
 
@@ -79,23 +88,30 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
 
   if (showLoadingGate && !loadingFailsafe) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-sm text-[color:var(--cab-text-muted)]">Verifica permessi…</p>
+      <div className="flex min-w-0 min-h-[40vh] items-center justify-center" aria-busy="true">
+        <LoadingView message={GLOBAL_LOADING_MESSAGES.permessi} spinnerSize="md" />
       </div>
     );
   }
 
   if (showLoadingGate && loadingFailsafe) {
     return (
-      <>
-        <div
-          className="border-b border-amber-200 bg-amber-50 px-4 py-2 text-center text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"
-          role="status"
-        >
-          Verifica permessi in ritardo — accesso con profilo base. Ricarica se qualcosa non funziona.
+      <div className="flex min-w-0 min-h-[40vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
+        <div className="rounded-2xl border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-8 py-10 shadow-sm">
+          <p className="text-lg font-semibold text-[color:var(--cab-text)]">Verifica permessi non completata</p>
+          <p className="mt-2 max-w-md text-sm text-[color:var(--cab-text-muted)]">
+            Impossibile confermare i permessi in tempo utile. Ricarica la pagina o contatta un amministratore se il
+            problema persiste.
+          </p>
+          <button
+            type="button"
+            className={`mt-6 inline-flex ${dsBtnNeutral}`}
+            onClick={() => window.location.reload()}
+          >
+            Ricarica pagina
+          </button>
         </div>
-        {children}
-      </>
+      </div>
     );
   }
 

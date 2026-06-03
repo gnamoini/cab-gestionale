@@ -1,17 +1,28 @@
 "use client";
 
+import { LoadingFormSkeleton } from "@/components/design-system/loading";
+import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
+import {
+  HubIconDownload,
+  HubIconOpen,
+  HubIconReplace,
+  HubIconTrash,
+  HubIconUpload,
+} from "@/components/design-system/hub-table-action-icons";
+
 import { useCallback, useEffect, useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useUploadFeedback } from "@/context/upload-feedback-context";
-import { UploadStatusInline } from "@/components/gestionale/upload";
+import { UploadStatusInline, GestionaleUploadDropExpand } from "@/components/gestionale/upload";
 import {
   isPdfFile,
+  isValidPdfFile,
   LAVORAZIONE_DOCUMENT_SLOTS,
   lavorazioneDocumentByTipo,
 } from "@/lib/lavorazioni/lavorazione-documents";
-import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
+import { dsBtnDanger, dsBtnNeutral, dsHubModalFieldLabel, dsHubModalNestedCard, dsHubModalSectionTitle, dsTableActionTextBtn, dsTableActionTextBtnDanger, dsTableActionTextBtnPrimary } from "@/lib/ui/design-system";
 import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
 import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { reconcileGestionaleEntity } from "@/lib/sync/gestionale-reconcile";
@@ -43,6 +54,9 @@ function DocumentSlotRow({
   canEdit,
   uploading,
   uploadError,
+  flatInInfoCard,
+  hideSlotLabel,
+  hubCardLayout,
   onUpload,
   onRetryUpload,
   onRemove,
@@ -55,6 +69,9 @@ function DocumentSlotRow({
   canEdit: boolean;
   uploading: boolean;
   uploadError?: string | null;
+  flatInInfoCard?: boolean;
+  hideSlotLabel?: boolean;
+  hubCardLayout?: boolean;
   onUpload: (file: File) => void;
   onRetryUpload?: () => void;
   onRemove: () => void;
@@ -62,35 +79,150 @@ function DocumentSlotRow({
   onDownload: () => void;
 }) {
   const inputId = useId();
+  const useHubBtns = hubCardLayout || flatInInfoCard;
+  const btnNeutral = useHubBtns ? dsTableActionTextBtn : dsBtnNeutral;
+  const btnPrimary = useHubBtns ? dsTableActionTextBtnPrimary : dsBtnNeutral;
+  const btnDanger = useHubBtns ? dsTableActionTextBtnDanger : dsBtnDanger;
+  const shellClass = flatInInfoCard && hideSlotLabel
+    ? "min-w-0"
+    : flatInInfoCard
+      ? "border-b border-[color:var(--cab-border)] py-2.5 last:border-b-0"
+      : `${dsHubModalNestedCard} flex flex-nowrap items-start justify-between gap-3 max-sm:flex-col sm:flex-wrap`;
+  const labelClass = flatInInfoCard ? dsHubModalFieldLabel : dsHubModalSectionTitle;
+
+  const uploadInput = (
+    <input
+      id={inputId}
+      type="file"
+      accept="application/pdf,.pdf"
+      className="sr-only"
+      disabled={uploading}
+      onChange={(e) => {
+        const file = e.currentTarget.files?.[0];
+        e.currentTarget.value = "";
+        if (file) onUpload(file);
+      }}
+    />
+  );
+
+  const actions = doc ? (
+    <>
+      <button type="button" className={btnNeutral} onClick={onOpen} title="Apri documento">
+        <HubIconOpen />
+        Apri
+      </button>
+      <button type="button" className={btnNeutral} onClick={onDownload} title="Scarica documento">
+        <HubIconDownload />
+        <span className="max-sm:sr-only">Scarica</span>
+      </button>
+      {canEdit ? (
+        <>
+          <label
+            className={`${btnNeutral} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
+            title={`Sostituisci ${label}`}
+          >
+            <HubIconReplace />
+            <span className="max-sm:sr-only">Sostituisci</span>
+            {uploadInput}
+          </label>
+          <button
+            type="button"
+            className={btnDanger}
+            disabled={uploading}
+            onClick={onRemove}
+            title={`Elimina ${label}`}
+            aria-label={`Elimina ${label}`}
+          >
+            <HubIconTrash />
+            <span className="max-md:sr-only">Elimina</span>
+          </button>
+        </>
+      ) : null}
+    </>
+  ) : canEdit ? (
+    <label
+      className={`${btnPrimary} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
+      title={uploadLabel}
+    >
+      <HubIconUpload />
+      Carica
+      {uploadInput}
+    </label>
+  ) : null;
+
+  const statusBlock = uploading || uploadError ? (
+    <UploadStatusInline
+      phase={uploading ? "uploading" : "error"}
+      fileName={doc?.filename}
+      error={uploadError}
+      onRetry={onRetryUpload}
+      compact
+    />
+  ) : null;
+
+  const dropExpandProps = {
+    accept: "application/pdf,.pdf",
+    disabled: !canEdit || uploading,
+    dropTitle: "Rilascia per caricare",
+    dropHint: "Solo PDF",
+    overlay: !!hubCardLayout,
+    validateFile: (file: File) => (isPdfFile(file) ? null : "Seleziona un file PDF."),
+    onFile: onUpload,
+  };
+
+  if (hubCardLayout) {
+    const subtitle = doc ? (
+      <span className="block truncate font-medium text-[color:var(--cab-text)]" title={doc.filename}>
+        {doc.filename}
+      </span>
+    ) : (
+      "Nessun documento caricato"
+    );
+
+    return (
+      <GestionaleUploadDropExpand {...dropExpandProps}>
+        <GestionaleInfoCard compact title={label} subtitle={subtitle} actions={actions}>
+          {statusBlock}
+        </GestionaleInfoCard>
+      </GestionaleUploadDropExpand>
+    );
+  }
 
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-zinc-100 bg-white/80 px-3 py-2.5 dark:border-zinc-700/80 dark:bg-zinc-900/50 max-sm:flex-col">
-      <div className="flex min-w-0 items-start gap-2">
-        <IconPdf />
-        <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">{label}</p>
-          {doc ? (
-            <p className="mt-0.5 truncate text-[11px] text-zinc-500" title={doc.filename}>
-              {doc.filename}
-            </p>
-          ) : (
-            <p className="mt-0.5 text-[11px] text-zinc-500">Nessun documento caricato</p>
-          )}
+    <GestionaleUploadDropExpand {...dropExpandProps}>
+    <div className={shellClass}>
+      <div className="flex min-w-0 items-start justify-between gap-2.5">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          {!flatInInfoCard ? <IconPdf /> : null}
+          <div className="min-w-0">
+            {hideSlotLabel ? null : <p className={labelClass}>{label}</p>}
+            {doc ? (
+              <p
+                className={`${hideSlotLabel ? "truncate text-sm font-medium text-[color:var(--cab-text)]" : "mt-0.5 truncate text-[11px] text-[color:var(--cab-text-muted)]"}`}
+                title={doc.filename}
+              >
+                {doc.filename}
+              </p>
+            ) : (
+              <p className={`${hideSlotLabel ? "text-sm" : "mt-0.5 text-[11px]"} text-[color:var(--cab-text-muted)]`}>
+                Nessun documento caricato
+              </p>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="flex flex-wrap items-center gap-1.5">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-1.5">
         {doc ? (
           <>
-            <button type="button" className={dsBtnNeutral} onClick={onOpen}>
+            <button type="button" className={btnNeutral} onClick={onOpen}>
               Apri
             </button>
-            <button type="button" className={dsBtnNeutral} onClick={onDownload}>
+            <button type="button" className={btnNeutral} onClick={onDownload}>
               Scarica
             </button>
             {canEdit ? (
               <>
                 <label
-                  className={`${dsBtnNeutral} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
+                  className={`${btnNeutral} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
                   title={`Sostituisci ${label}`}
                 >
                   Sostituisci
@@ -107,7 +239,7 @@ function DocumentSlotRow({
                     }}
                   />
                 </label>
-                <button type="button" className={dsBtnDanger} disabled={uploading} onClick={onRemove}>
+                <button type="button" className={btnDanger} disabled={uploading} onClick={onRemove}>
                   Elimina
                 </button>
               </>
@@ -115,7 +247,7 @@ function DocumentSlotRow({
           </>
         ) : canEdit ? (
           <label
-            className={`${dsBtnNeutral} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
+            className={`${btnPrimary} ${uploading ? "cursor-wait opacity-60" : "cursor-pointer"}`}
             title={uploadLabel}
           >
             {uploadLabel}
@@ -133,9 +265,10 @@ function DocumentSlotRow({
             />
           </label>
         ) : null}
+        </div>
       </div>
       {uploading || uploadError ? (
-        <div className="mt-2 w-full basis-full">
+        <div className="mt-2 w-full">
           <UploadStatusInline
             phase={uploading ? "uploading" : "error"}
             fileName={doc?.filename}
@@ -146,16 +279,25 @@ function DocumentSlotRow({
         </div>
       ) : null}
     </div>
+    </GestionaleUploadDropExpand>
   );
 }
 
 export function LavorazioneDocumentsManager({
   lavorazioneId,
   canEdit = true,
+  flatInInfoCard = false,
+  hideSlotLabel = false,
+  hubCardLayout = false,
+  onlyTipo,
   onDocumentEvent,
 }: {
   lavorazioneId: string;
   canEdit?: boolean;
+  flatInInfoCard?: boolean;
+  hideSlotLabel?: boolean;
+  hubCardLayout?: boolean;
+  onlyTipo?: LavorazioneDocumentTipo;
   onDocumentEvent?: () => void;
 }) {
   const qc = useQueryClient();
@@ -225,9 +367,18 @@ export function LavorazioneDocumentsManager({
   }, [docsQ.isSuccess, lavorazioneId, rows.length]);
 
   async function handleUpload(tipo: LavorazioneDocumentTipo, file: File) {
-    if (!isPdfFile(file)) {
-      setUploadErrorByTipo((prev) => ({ ...prev, [tipo]: "Seleziona un file PDF." }));
+    if (!(await isValidPdfFile(file))) {
+      setUploadErrorByTipo((prev) => ({ ...prev, [tipo]: "Seleziona un file PDF valido." }));
       return;
+    }
+    const existing = lavorazioneDocumentByTipo(rows, tipo);
+    if (existing) {
+      const ok = await confirm({
+        title: "Sostituire documento?",
+        message: `«${existing.filename}» verrà sostituito con «${file.name}».`,
+        confirmLabel: "Sostituisci",
+      });
+      if (!ok) return;
     }
     const slot = LAVORAZIONE_DOCUMENT_SLOTS.find((s) => s.tipo === tipo);
     setUploadingTipo(tipo);
@@ -313,10 +464,10 @@ export function LavorazioneDocumentsManager({
     a.click();
   }
 
-  return (
-    <section className="space-y-2">
-      {docsQ.isLoading ? <p className="text-xs text-zinc-500">Caricamento documenti…</p> : null}
-      {LAVORAZIONE_DOCUMENT_SLOTS.map((slot) => {
+  const rowsContent = (
+    <>
+      {docsQ.isLoading ? <LoadingFormSkeleton fields={onlyTipo ? 1 : 2} className="py-1" /> : null}
+      {LAVORAZIONE_DOCUMENT_SLOTS.filter((slot) => !onlyTipo || slot.tipo === onlyTipo).map((slot) => {
         const doc = lavorazioneDocumentByTipo(rows, slot.tipo);
         const busy = uploadingTipo === slot.tipo;
         return (
@@ -328,6 +479,9 @@ export function LavorazioneDocumentsManager({
             canEdit={canEdit}
             uploading={busy}
             uploadError={uploadErrorByTipo[slot.tipo]}
+            flatInInfoCard={flatInInfoCard}
+            hideSlotLabel={hideSlotLabel}
+            hubCardLayout={hubCardLayout}
             onUpload={(file) => void handleUpload(slot.tipo, file)}
             onRetryUpload={() => retryUpload(slot.tipo)}
             onRemove={() => void handleRemove(slot.tipo)}
@@ -336,6 +490,21 @@ export function LavorazioneDocumentsManager({
           />
         );
       })}
+    </>
+  );
+
+  if (hubCardLayout) {
+    return (
+      <>
+        {rowsContent}
+        {confirmDialog}
+      </>
+    );
+  }
+
+  return (
+    <section className={flatInInfoCard ? "min-w-0" : "space-y-2"}>
+      {rowsContent}
       {confirmDialog}
     </section>
   );

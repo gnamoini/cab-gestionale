@@ -7,6 +7,7 @@ import {
   type HierarchyTreeKey,
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
+import { createAddettoId, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
@@ -188,17 +189,39 @@ export function buildAppendGlobalListUpsert(
 
   switch (listKey) {
     case "lavorazioni:addetti": {
-      const { next, canonical } = appendUniqueSorted(resolved.lavorazioni.addetti, value);
-      if (!canonical) return { ok: false, reason: "empty" };
-      const addetti = next;
+      const nome = value.trim();
+      if (!nome) return { ok: false, reason: "empty" };
+      const existing = resolved.lavorazioni.addettiRecords;
+      const hit = existing.find((x) => x.nome.trim().toLowerCase() === nome.toLowerCase());
+      if (hit) {
+        return {
+          ok: true,
+          canonicalValue: hit.nome,
+          upsert: {
+            module: CAB_SETTINGS_MODULE.lavorazioni,
+            key: CAB_SETTINGS_KEY.prefs,
+            value: {
+              stati: resolved.lavorazioni.stati,
+              addettiRecords: existing,
+              addetti: resolved.lavorazioni.addetti,
+              addettoColors: resolved.lavorazioni.addettoColors,
+              prioritaColors: resolved.lavorazioni.prioritaColors,
+              prioritaDb: resolved.lavorazioni.prioritaDb,
+            },
+          },
+        };
+      }
+      const addettiRecords: AddettoRecord[] = [...existing, { id: createAddettoId(), nome, cognome: null }];
+      const addetti = addettiRecords.map((r) => r.nome.trim()).filter(Boolean);
       return {
         ok: true,
-        canonicalValue: canonical,
+        canonicalValue: nome,
         upsert: {
           module: CAB_SETTINGS_MODULE.lavorazioni,
           key: CAB_SETTINGS_KEY.prefs,
           value: {
             stati: resolved.lavorazioni.stati,
+            addettiRecords,
             addetti,
             addettoColors: syncAddettoColorMap(addetti, resolved.lavorazioni.addettoColors),
             prioritaColors: resolved.lavorazioni.prioritaColors,

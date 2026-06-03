@@ -57,6 +57,8 @@ export function clearBodyScrollLockStyles(): void {
   document.body.style.paddingRight = "";
   document.body.style.position = "";
   document.body.style.top = "";
+  document.body.style.left = "";
+  document.body.style.right = "";
   document.body.style.width = "";
   document.body.removeAttribute(BODY_LOCK_SCROLL_Y);
 
@@ -78,7 +80,9 @@ function applyBodyScrollLock(): void {
     document.body.setAttribute(BODY_LOCK_SCROLL_Y, String(savedScrollY));
     document.body.style.position = "fixed";
     document.body.style.top = `-${savedScrollY}px`;
-    document.body.style.width = "100%";
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "";
   }
 }
 
@@ -109,6 +113,7 @@ export function acquireBodyScrollLock(source?: string): () => void {
 
   lockStack.push({ id, source: source ?? "unknown", epoch });
   syncLockAttr();
+  debugScrollLockLog("acquire", { source: source ?? "unknown", count: lockStack.length, useFixedLock }, "H1");
 
   let released = false;
   return () => {
@@ -128,8 +133,23 @@ function releaseBodyScrollLock(lockId: number, epoch: number): void {
     clearBodyScrollLockStyles();
     scheduleAutoHeal();
   }
+  debugScrollLockLog("release", { lockId, remaining: lockStack.length }, "H1");
 }
 
+/** Pulisce lock fantasma: stack vuoto ma stili inline o attr residui. */
+export function healBodyScrollLockState(_reason?: string): void {
+  if (typeof document === "undefined") return;
+  if (lockStack.length > 0) return;
+
+  const attr = document.body.getAttribute(BODY_LOCK_ATTR);
+  if (attr) {
+    document.body.removeAttribute(BODY_LOCK_ATTR);
+  }
+  if (isDomScrollLocked()) {
+    clearBodyScrollLockStyles();
+  }
+  syncLockAttr();
+}
 /** Reset totale — route change, error boundary, stuck probe. */
 export function forceReleaseAllBodyScrollLocks(_reason?: string): void {
   if (typeof document === "undefined") return;
@@ -144,6 +164,37 @@ export function getBodyScrollLockCount(): number {
   return lockStack.length;
 }
 
+export function getBodyScrollLockDebugState(): {
+  count: number;
+  sources: string[];
+  useFixedLock: boolean;
+} {
+  return {
+    count: lockStack.length,
+    sources: lockStack.map((entry) => entry.source),
+    useFixedLock,
+  };
+}
+
+function debugScrollLockLog(message: string, data: Record<string, unknown>, hypothesisId: string) {
+  if (typeof window === "undefined") return;
+  // #region agent log
+  fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1d6c0" },
+    body: JSON.stringify({
+      sessionId: "b1d6c0",
+      runId: "scroll-lock",
+      hypothesisId,
+      location: "body-scroll-lock-manager.ts",
+      message,
+      data,
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+}
+
 export function probeBodyScrollLockStuck(): boolean {
   if (typeof document === "undefined") return false;
   const attr = document.body.getAttribute(BODY_LOCK_ATTR);
@@ -151,4 +202,23 @@ export function probeBodyScrollLockStuck(): boolean {
   if (!stuck) return false;
   forceReleaseAllBodyScrollLocks("stuck-probe");
   return true;
+}
+
+import { syncAppViewportFill } from "@/lib/ui/viewport-fill-sync";
+
+/** Re-applica lock attivo o cura stili fantasma dopo resize/orientationchange. */
+export function refreshBodyScrollLockOnViewportChange(reason = "viewport-resize"): void {
+  if (typeof window === "undefined" || typeof document === "undefined") return;
+  syncAppViewportFill();
+  if (lockStack.length > 0) {
+    applyBodyScrollLock();
+    debugScrollLockLog(
+      "viewport-refresh",
+      { reason, count: lockStack.length, useFixedLock, innerWidth: window.innerWidth },
+      "H1",
+    );
+    return;
+  }
+  healBodyScrollLockState(reason);
+  probeBodyScrollLockStuck();
 }

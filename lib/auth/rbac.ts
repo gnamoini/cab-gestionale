@@ -52,7 +52,7 @@ export type RbacSection =
   | "mezzi"
   | "bunder"
   | "report"
-  | "supporto"
+  | "dipendenti"
   | "impostazioni"
   | "security";
 
@@ -180,7 +180,7 @@ export function pathnameToSection(pathname: string): RbacSection | null {
   if (path.startsWith("/mezzi")) return "mezzi";
   if (path.startsWith("/bunder")) return "bunder";
   if (path.startsWith("/report")) return "report";
-  if (path.startsWith("/supporto")) return "supporto";
+  if (path.startsWith("/dipendenti")) return "dipendenti";
   if (path.startsWith("/impostazioni")) return "impostazioni";
   return null;
 }
@@ -220,7 +220,8 @@ export type GestionalePermissionModule =
   | "lavorazioni"
   | "mezzi"
   | "report"
-  | "documenti";
+  | "documenti"
+  | "dipendenti";
 
 const MODULE_TO_SECTION: Record<GestionalePermissionModule, RbacSection> = {
   magazzino: "magazzino",
@@ -229,6 +230,7 @@ const MODULE_TO_SECTION: Record<GestionalePermissionModule, RbacSection> = {
   mezzi: "mezzi",
   report: "report",
   documenti: "documenti",
+  dipendenti: "dipendenti",
 };
 
 export function canReadModule(

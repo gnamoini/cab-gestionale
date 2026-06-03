@@ -1,13 +1,20 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { CloseButton } from "@/components/design-system/close-button";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnDanger, dsBtnNeutral } from "@/lib/ui/design-system";
+import {
+  dsBtnDanger,
+  dsBtnNeutral,
+  dsModalCloseBtn,
+  dsZModalHigh,
+} from "@/lib/ui/design-system";
+import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 
 /** Layout azioni conferma — mobile: Annulla sotto, desktop: Annulla | Conferma a destra. */
 export const gestionaleConfirmActionsClass =
-  "mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end";
+  "mt-5 flex min-w-0 shrink-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end";
 
 export function GestionaleConfirmDialog({
   open,
@@ -43,11 +50,22 @@ export function GestionaleConfirmDialog({
   onCancel: () => void;
   onConfirm?: () => void;
 }) {
-  if (!open) return null;
+  useBodyScrollLock(open, "GestionaleConfirmDialog");
+
+  useEffect(() => {
+    if (!open || pending) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, pending, onCancel]);
+
+  if (!open || typeof document === "undefined") return null;
 
   const confirmClass = destructive ? dsBtnDanger : erpBtnAccent;
   const body = children ?? (message ? (
-    <p className="text-sm leading-relaxed text-zinc-700 dark:text-zinc-300">{message}</p>
+    <p className="text-sm leading-relaxed text-[color:var(--cab-text-muted)]">{message}</p>
   ) : null);
 
   const defaultFooter = (
@@ -71,17 +89,36 @@ export function GestionaleConfirmDialog({
     </div>
   );
 
-  return (
-    <LavorazioniModalShell
-      layerClassName={layerClassName}
-      onRequestClose={pending ? () => {} : onCancel}
-      title={title}
-      subtitle={subtitle}
+  return createPortal(
+    <div
+      className={`fixed inset-0 flex min-w-0 items-center justify-center overflow-x-hidden bg-[var(--cab-overlay)] p-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] backdrop-blur-[2px] ${layerClassName ?? dsZModalHigh}`}
+      role="presentation"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !pending) onCancel();
+      }}
     >
-      <div className="p-4 sm:p-6">
-        {body}
-        {footer ?? defaultFooter}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="gestionale-confirm-title"
+        className="flex max-h-[min(92dvh,calc(var(--cab-vv-height,100dvh)-2rem))] w-full max-w-md flex-col overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl"
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--cab-border)] px-4 py-3">
+          <div className="min-w-0">
+            <h2 id="gestionale-confirm-title" className="truncate text-base font-semibold text-[color:var(--cab-text)]">
+              {title}
+            </h2>
+            {subtitle ? <p className="mt-0.5 truncate text-sm text-[color:var(--cab-text-muted)]">{subtitle}</p> : null}
+          </div>
+          <CloseButton onClick={onCancel} disabled={pending} className={dsModalCloseBtn} label="Annulla" />
+        </header>
+        <div className="min-h-0 overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-5">
+          {body}
+          {footer ?? defaultFooter}
+        </div>
       </div>
-    </LavorazioniModalShell>
+    </div>,
+    document.body,
   );
 }

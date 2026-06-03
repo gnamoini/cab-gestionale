@@ -9,9 +9,14 @@ import {
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { moduleAllows, type ModulePermissionOp } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
-import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
+import { hasCapability, RBAC_DENIED_MESSAGE, type Capability } from "@/lib/rbac";
+import type { RbacEvaluationContext } from "@/lib/rbac";
 import { canRead, canWrite, canDelete, hasPermission, type PermissionKey, type RbacSection } from "@/lib/auth/rbac";
 import { fetchClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/fetch-client-effective-permissions";
+import {
+  readAuthRoleHint,
+  readClientEffectivePermissionsSnapshotCache,
+} from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 
 const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>> = {
@@ -21,6 +26,7 @@ const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>
   mezzi: "mezzi",
   report: "report",
   documenti: "documenti",
+  dipendenti: "dipendenti",
 };
 
 const DENIED_MESSAGE = RBAC_DENIED_MESSAGE;
@@ -31,10 +37,34 @@ export async function getCurrentRoleForPermissionCheck(): Promise<string | null>
   return snap?.role ?? null;
 }
 
-export async function ensurePermission(permission: PermissionKey): Promise<ServiceResult<true>> {
+/** Cache → auth hint → fetch profilo (stesso ordine di `useRbac` / UI). */
+async function ensureWithRoleResolution(
+  check: (role: string, ctx?: RbacEvaluationContext) => boolean,
+): Promise<ServiceResult<true>> {
+  const cached = readClientEffectivePermissionsSnapshotCache();
+  if (cached && check(cached.role, cached.rbacContext)) return success(true);
+
+  const hint = readAuthRoleHint();
+  if (hint && check(hint.ruolo)) return success(true);
+
   const snap = await fetchClientEffectivePermissionsSnapshot();
-  if (!snap || !hasPermission(snap.role, permission, snap.rbacContext)) return err(DENIED_MESSAGE);
-  return success(true);
+  if (snap && check(snap.role, snap.rbacContext)) return success(true);
+
+  const cachedAfter = readClientEffectivePermissionsSnapshotCache();
+  if (cachedAfter && check(cachedAfter.role, cachedAfter.rbacContext)) return success(true);
+
+  if (hint && check(hint.ruolo)) return success(true);
+
+  return err(DENIED_MESSAGE);
+}
+
+export async function ensurePermission(permission: PermissionKey): Promise<ServiceResult<true>> {
+  return ensureWithRoleResolution((role, ctx) => hasPermission(role, permission, ctx));
+}
+
+/** Allineato a RLS `can_write_operational` (promemoria dashboard, bunder, ecc.). */
+export async function ensureOperationalWrite(): Promise<ServiceResult<true>> {
+  return ensureWithRoleResolution((role, ctx) => hasCapability(role, "can_write_operational", ctx));
 }
 
 export async function ensurePermissionOrError(permission: PermissionKey): Promise<void> {
@@ -54,25 +84,19 @@ export async function ensureModuleCan(
 export async function ensureSectionRead(section: RbacSection): Promise<ServiceResult<true>> {
   const mod = SECTION_TO_MODULE[section];
   if (mod) return ensureModuleCan(mod, "read");
-  const snap = await fetchClientEffectivePermissionsSnapshot();
-  if (!snap || !canRead(snap.role, section, snap.rbacContext)) return err(DENIED_MESSAGE);
-  return success(true);
+  return ensureWithRoleResolution((role, ctx) => canRead(role, section, ctx));
 }
 
 export async function ensureSectionWrite(section: RbacSection): Promise<ServiceResult<true>> {
   const mod = SECTION_TO_MODULE[section];
   if (mod) return ensureModuleCan(mod, "write");
-  const snap = await fetchClientEffectivePermissionsSnapshot();
-  if (!snap || !canWrite(snap.role, section, snap.rbacContext)) return err(DENIED_MESSAGE);
-  return success(true);
+  return ensureWithRoleResolution((role, ctx) => canWrite(role, section, ctx));
 }
 
 export async function ensureSectionDelete(section: RbacSection): Promise<ServiceResult<true>> {
   const mod = SECTION_TO_MODULE[section];
   if (mod) return ensureModuleCan(mod, "write");
-  const snap = await fetchClientEffectivePermissionsSnapshot();
-  if (!snap || !canDelete(snap.role, section, snap.rbacContext)) return err(DENIED_MESSAGE);
-  return success(true);
+  return ensureWithRoleResolution((role, ctx) => canDelete(role, section, ctx));
 }
 
 export async function ensureSectionWriteOrError(section: RbacSection): Promise<void> {

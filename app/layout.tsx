@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AppProviders } from "@/components/app-providers";
 import { getServerSession } from "@/src/lib/auth/get-server-session";
@@ -16,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CAB — Gestionale manutenzione igiene urbana",
+  title: "CAB Gestionale Officina",
   description:
     "Gestionale web per officina: magazzino ricambi, lavorazioni, ERP/CRM, report e documentale.",
   icons: {
@@ -43,13 +44,19 @@ export default async function RootLayout({
     <html
       lang="it"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full min-h-[var(--cab-app-height,100dvh)] w-full min-w-full bg-[var(--cab-bg-app)] antialiased`}
     >
-      <head>
-        {/* Blocking boot: tema da localStorage prima di React — non impostare `dark` lato SSR (mismatch). */}
-        <script dangerouslySetInnerHTML={{ __html: CAB_THEME_BOOT_INLINE_SCRIPT }} />
+      <head suppressHydrationWarning>
+        <Script
+          id="cab-theme-boot"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: CAB_THEME_BOOT_INLINE_SCRIPT }}
+        />
       </head>
-      <body className="gestionale-scrollbar flex h-dvh min-h-0 flex-col overflow-x-hidden font-sans antialiased">
+      <body
+        suppressHydrationWarning
+        className="gestionale-scrollbar flex h-[var(--cab-app-height,100dvh)] min-h-[var(--cab-app-height,100dvh)] w-full min-w-full flex-col overflow-x-hidden bg-[var(--cab-bg-app)] font-sans antialiased"
+      >
         <AppProviders initialAuthSnapshot={initialAuthSnapshot}>{children}</AppProviders>
       </body>
     </html>

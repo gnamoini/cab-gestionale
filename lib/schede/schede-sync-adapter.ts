@@ -15,6 +15,7 @@ import {
   saveLavorazioneSchedeStore,
 } from "@/lib/schede/lavorazioni-schede-storage";
 import { schedeService } from "@/src/services/schede.service";
+import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
 import type { LavorazioneSchedeBundle, LavorazioneSchedeStore } from "@/types/schede";
 
 export const SCHEDE_CONCURRENCY_CONFLICT =
@@ -110,19 +111,20 @@ export async function fetchSchedeStoreMerged(): Promise<LavorazioneSchedeStore> 
 export async function persistSchedeBundle(
   bundle: LavorazioneSchedeBundle,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
+  const safe = clampSchedeBundle(bundle);
   if (isSchedeDbPrimary()) {
-    const db = await syncBundleToDb(bundle);
+    const db = await syncBundleToDb(safe);
     if (!db.ok) return db;
     const store = loadLavorazioneSchedeStore();
-    store[bundle.lavorazioneId] = bundle;
+    store[safe.lavorazioneId] = safe;
     cacheStoreLocally(store);
     return { ok: true };
   }
 
   const store = loadLavorazioneSchedeStore();
-  store[bundle.lavorazioneId] = bundle;
+  store[safe.lavorazioneId] = safe;
   cacheStoreLocally(store);
-  const db = await syncBundleToDb(bundle);
+  const db = await syncBundleToDb(safe);
   if (!db.ok) return db;
   return { ok: true };
 }

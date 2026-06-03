@@ -10,7 +10,15 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { dsZToast } from "@/lib/ui/design-system";
+import {
+  dsFocus,
+  dsToastDismiss,
+  dsToastIconWrap,
+  dsToastItem,
+  dsToastMessage,
+  dsToastViewport,
+  dsZToast,
+} from "@/lib/ui/design-system";
 import {
   warnDirectUseToast,
   warnTechnicalErrorToast,
@@ -20,12 +28,57 @@ export type CabToastTone = "success" | "warning" | "error" | "info";
 
 type ToastItem = { id: string; message: string; tone: CabToastTone; duration: number };
 
-const TONE_BAR: Record<CabToastTone, string> = {
-  success: "border-l-[color:var(--cab-success)]",
-  warning: "border-l-[color:var(--cab-warning)]",
-  error: "border-l-[color:var(--cab-danger)]",
-  info: "border-l-[color:var(--cab-info)]",
+const TONE_SURFACE: Record<CabToastTone, string> = {
+  success:
+    "border-[color:color-mix(in_srgb,var(--cab-success)_38%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-success)_11%,var(--cab-card))]",
+  warning:
+    "border-[color:color-mix(in_srgb,var(--cab-warning)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-card))]",
+  error:
+    "border-[color:color-mix(in_srgb,var(--cab-danger)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_11%,var(--cab-card))]",
+  info:
+    "border-[color:color-mix(in_srgb,var(--cab-info)_38%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-info)_10%,var(--cab-card))]",
 };
+
+const TONE_ICON_WRAP: Record<CabToastTone, string> = {
+  success: "bg-[color:color-mix(in_srgb,var(--cab-success)_18%,transparent)] text-[color:var(--cab-success)]",
+  warning: "bg-[color:color-mix(in_srgb,var(--cab-warning)_20%,transparent)] text-[color:var(--cab-warning)]",
+  error: "bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,transparent)] text-[color:var(--cab-danger)]",
+  info: "bg-[color:color-mix(in_srgb,var(--cab-info)_18%,transparent)] text-[color:var(--cab-info)]",
+};
+
+function CabToastToneIcon({ tone }: { tone: CabToastTone }) {
+  const className = "h-[1.125rem] w-[1.125rem] shrink-0";
+  if (tone === "success") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    );
+  }
+  if (tone === "warning") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"
+        />
+      </svg>
+    );
+  }
+  if (tone === "error") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" d="m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
+      </svg>
+    );
+  }
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.25} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z" />
+    </svg>
+  );
+}
 
 type ToastContextValue = {
   push: (message: string, tone?: CabToastTone, durationMs?: number) => void;
@@ -51,51 +104,98 @@ export function clearGestionaleToasts() {
   externalToastClear?.();
 }
 
+const TOAST_EXIT_MS = 220;
+
 function CabToastViewport({
   toasts,
+  exitingIds,
   onDismiss,
 }: {
   toasts: ToastItem[];
+  exitingIds: ReadonlySet<string>;
   onDismiss: (id: string) => void;
 }) {
   if (toasts.length === 0) return null;
   return (
     <div
-      className={`pointer-events-none fixed bottom-0 right-0 flex max-h-[min(50dvh,22rem)] w-full max-w-sm flex-col-reverse gap-2 overflow-hidden p-3 sm:p-4 ${dsZToast}`}
+      className={`${dsToastViewport} ${dsZToast}`}
       aria-live="polite"
       aria-relevant="additions text"
     >
-      {toasts.map((t) => (
-        <div
-          key={t.id}
-          role="status"
-          className={`cab-toast-item pointer-events-auto flex items-start gap-2 rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] py-2.5 pl-3 pr-2 shadow-[var(--cab-shadow-md)] ${TONE_BAR[t.tone]} border-l-[3px]`}
-        >
-          <p className="min-w-0 flex-1 text-xs font-medium leading-snug text-[color:var(--cab-text)]">{t.message}</p>
-          <button
-            type="button"
-            className="shrink-0 rounded-md px-1.5 py-0.5 text-xs font-semibold text-[color:var(--cab-text-muted)] transition-colors hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)]"
-            onClick={() => onDismiss(t.id)}
-            aria-label="Chiudi notifica"
+      {toasts.map((t) => {
+        const exiting = exitingIds.has(t.id);
+        return (
+          <div
+            key={t.id}
+            className={`cab-toast-slot ${exiting ? "cab-toast-slot--out" : ""}`}
           >
-            ×
-          </button>
-        </div>
-      ))}
+            <div
+              role={t.tone === "error" ? "alert" : "status"}
+              className={`cab-toast-item ${dsToastItem} ${TONE_SURFACE[t.tone]}`}
+            >
+              <span className={`${dsToastIconWrap} ${TONE_ICON_WRAP[t.tone]}`} aria-hidden>
+                <CabToastToneIcon tone={t.tone} />
+              </span>
+              <p className={dsToastMessage}>{t.message}</p>
+              <button
+                type="button"
+                className={`${dsToastDismiss} ${dsFocus}`}
+                onClick={() => onDismiss(t.id)}
+                aria-label="Chiudi notifica"
+              >
+                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [exitingIds, setExitingIds] = useState<Set<string>>(() => new Set());
   const timers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const exitTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const remove = useCallback((id: string) => {
     setToasts((prev) => prev.filter((x) => x.id !== id));
+    setExitingIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
     const tm = timers.current.get(id);
     if (tm) clearTimeout(tm);
     timers.current.delete(id);
+    const exitTm = exitTimers.current.get(id);
+    if (exitTm) clearTimeout(exitTm);
+    exitTimers.current.delete(id);
   }, []);
+
+  const dismiss = useCallback(
+    (id: string) => {
+      let shouldAnimate = false;
+      setExitingIds((prev) => {
+        if (prev.has(id)) return prev;
+        shouldAnimate = true;
+        return new Set(prev).add(id);
+      });
+      if (!shouldAnimate) return;
+      const tm = timers.current.get(id);
+      if (tm) clearTimeout(tm);
+      timers.current.delete(id);
+      exitTimers.current.set(
+        id,
+        setTimeout(() => remove(id), TOAST_EXIT_MS),
+      );
+    },
+    [remove],
+  );
 
   const recentPushRef = useRef<Map<string, number>>(new Map());
   const DEDUP_MS = 3000;
@@ -103,6 +203,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const clear = useCallback(() => {
     timers.current.forEach((tm) => clearTimeout(tm));
     timers.current.clear();
+    exitTimers.current.forEach((tm) => clearTimeout(tm));
+    exitTimers.current.clear();
+    setExitingIds(new Set());
     setToasts([]);
     recentPushRef.current.clear();
   }, []);
@@ -122,16 +225,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       const id = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
       const duration = Math.max(1800, Math.min(durationMs, 12000));
       setToasts((prev) => [...prev, { id, message, tone, duration }].slice(-5));
-      const tm = setTimeout(() => remove(id), duration);
+      const tm = setTimeout(() => dismiss(id), duration);
       timers.current.set(id, tm);
     },
-    [remove],
+    [dismiss],
   );
 
   useEffect(() => {
     return () => {
       timers.current.forEach((t) => clearTimeout(t));
       timers.current.clear();
+      exitTimers.current.forEach((t) => clearTimeout(t));
+      exitTimers.current.clear();
     };
   }, []);
 
@@ -149,7 +254,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <CabToastViewport toasts={toasts} onDismiss={remove} />
+      <CabToastViewport toasts={toasts} exitingIds={exitingIds} onDismiss={dismiss} />
     </ToastContext.Provider>
   );
 }

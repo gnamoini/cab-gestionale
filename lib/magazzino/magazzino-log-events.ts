@@ -17,6 +17,20 @@ export type BuildMagazzinoLocalLogInput = {
 };
 
 /** Etichette campi UI magazzino (allineate a `CAMPO_LABEL` in magazzino-view). */
+/** Campi aggiornati automaticamente a ogni salvataggio — non mostrare nel log modifiche. */
+export const MAGAZZINO_AUTOMATIC_LOG_FIELD_KEYS = new Set(["autoreUltimaModifica", "dataUltimaModifica"]);
+
+const MAGAZZINO_AUTO_MODIFICA_LINE_RE =
+  /^(?:AutoreUltimaModifica|Autore ultima modifica|DataUltimaModifica|Data ultima modifica)\b/i;
+
+export function isMagazzinoAutomaticLogField(key: string): boolean {
+  return MAGAZZINO_AUTOMATIC_LOG_FIELD_KEYS.has(key.trim());
+}
+
+export function filterMagazzinoAutomaticModifiche(lines: readonly string[]): string[] {
+  return lines.filter((line) => !MAGAZZINO_AUTO_MODIFICA_LINE_RE.test(line.replace(/^•\s*/, "").trim()));
+}
+
 export const MAGAZZINO_CAMPO_LABEL: Record<string, string> = {
   marca: "Marca",
   codiceFornitoreOriginale: "Codice",

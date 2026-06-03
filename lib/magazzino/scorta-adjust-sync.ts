@@ -5,6 +5,7 @@ import { magazzinoListQueryKey, mapMagazzinoRowsToUI, patchMagazzinoListCache } 
 import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { magazzinoService } from "@/src/services/magazzino.service";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 
@@ -35,10 +36,15 @@ function getQueue(ricambioId: string): QueueEntry {
   return q;
 }
 
-function readScortaFromCache(qc: QueryClient, ricambioId: string, autore: string): number | null {
+function readScortaFromCache(
+  qc: QueryClient,
+  ricambioId: string,
+  autore: string,
+  mezziListe?: MezziListePrefs,
+): number | null {
   const rows = qc.getQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey());
   if (!rows) return null;
-  const row = mapMagazzinoRowsToUI(rows, autore).find((p) => p.id === ricambioId);
+  const row = mapMagazzinoRowsToUI(rows, autore, mezziListe).find((p) => p.id === ricambioId);
   return row ? Math.max(0, Math.round(row.scorta)) : null;
 }
 
@@ -49,6 +55,7 @@ export function applyScortaOptimisticDelta(
   delta: number,
   autore: string,
   touch: ScortaOptimisticTouch,
+  mezziListe?: MezziListePrefs,
 ): ApplyScortaDeltaResult {
   let prima = 0;
   let dopo = 0;
@@ -67,6 +74,7 @@ export function applyScortaOptimisticDelta(
       return prev.map((p) => (p.id === ricambioId ? touch({ ...p, scorta: dopo }) : p));
     },
     autore,
+    mezziListe,
   );
 
   if (found) {
@@ -114,6 +122,7 @@ async function revertScortaFromServer(
   qc: QueryClient,
   ricambioId: string,
   autore: string,
+  mezziListe?: MezziListePrefs,
 ): Promise<void> {
   const got = await magazzinoService.getById(ricambioId);
   if (!got.success || !got.data) return;
@@ -122,6 +131,7 @@ async function revertScortaFromServer(
     qc,
     (prev) => prev.map((p) => (p.id === ricambioId ? { ...p, scorta: q } : p)),
     autore,
+    mezziListe,
   );
 }
 
@@ -130,6 +140,7 @@ async function runScortaSyncWorker(
   ricambioId: string,
   autore: string,
   callbacks: ScortaSyncCallbacks,
+  mezziListe?: MezziListePrefs,
 ): Promise<void> {
   const q = getQueue(ricambioId);
   q.syncing = true;
@@ -137,24 +148,25 @@ async function runScortaSyncWorker(
 
   try {
     for (;;) {
-      const targetQuantita = readScortaFromCache(qc, ricambioId, autore);
+      const targetQuantita = readScortaFromCache(qc, ricambioId, autore, mezziListe);
       if (targetQuantita === null) break;
 
       const res = await magazzinoService.update(ricambioId, { quantita: targetQuantita });
       if (!res.success) {
         hadError = true;
         callbacks.onError?.({ ricambioId, error: res.error ?? "Aggiornamento scorta non riuscito." });
-        await revertScortaFromServer(qc, ricambioId, autore);
+        await revertScortaFromServer(qc, ricambioId, autore, mezziListe);
         break;
       }
 
       const serverQ = Math.max(0, Math.round(Number(res.data!.quantita) || 0));
-      let cacheAfter = readScortaFromCache(qc, ricambioId, autore);
+      let cacheAfter = readScortaFromCache(qc, ricambioId, autore, mezziListe);
       if (cacheAfter === serverQ) {
         patchMagazzinoListCache(
           qc,
           (prev) => prev.map((p) => (p.id === ricambioId ? { ...p, scorta: serverQ } : p)),
           autore,
+          mezziListe,
         );
         cacheAfter = serverQ;
       }
@@ -165,7 +177,7 @@ async function runScortaSyncWorker(
     if (!hadError) {
       const burstPrima = q.primaAtBurstStart;
       const burstLabel = q.label;
-      const finalDopo = readScortaFromCache(qc, ricambioId, autore);
+      const finalDopo = readScortaFromCache(qc, ricambioId, autore, mezziListe);
 
       if (burstPrima !== null && finalDopo !== null && burstPrima !== finalDopo) {
         callbacks.onPersisted?.({
@@ -190,10 +202,11 @@ export function enqueueScortaSync(
   ricambioId: string,
   autore: string,
   callbacks: ScortaSyncCallbacks = {},
+  mezziListe?: MezziListePrefs,
 ): void {
   const q = getQueue(ricambioId);
   if (q.syncing) return;
-  void runScortaSyncWorker(qc, ricambioId, autore, callbacks);
+  void runScortaSyncWorker(qc, ricambioId, autore, callbacks, mezziListe);
 }
 
 /** Solo per test — reset stato globale code. */

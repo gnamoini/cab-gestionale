@@ -20,7 +20,7 @@ export function SecurityToggle({ checked, onChange, disabled, id, label }: Props
       aria-label={label}
       disabled={disabled}
       onClick={() => !disabled && onChange(!checked)}
-      className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors duration-200 ease-out ${dsFocus} ${
+      className={`relative inline-flex min-w-0 h-6 w-10 shrink-0 items-center rounded-full transition-colors duration-200 ease-out ${dsFocus} ${
         disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer"
       } ${checked ? "bg-[color:var(--cab-primary)]" : "bg-zinc-300 dark:bg-zinc-600"}`}
     >

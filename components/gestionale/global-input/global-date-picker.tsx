@@ -12,6 +12,7 @@ import {
   isoToDateInputValue,
   isoToItDisplay,
   parseItalianDayToIso,
+  ymdToItDisplay,
 } from "@/lib/lavorazioni/date-day-only";
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
 import {
@@ -104,9 +105,13 @@ export function GlobalDatePicker({
 
   const onTextBlur = () => {
     const trimmed = value.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      onChange("");
+      return;
+    }
     const r = parseItalianDayToIso(trimmed);
     if (r.ok) onChange(isoToItDisplay(r.iso));
+    else onChange("");
   };
 
   const calendarPortal =
@@ -198,9 +203,7 @@ export function GlobalDatePickerYmd({
   "aria-label"?: string;
   variant?: "default" | "filter";
 }) {
-  const display = valueYmd
-    ? isoToItDisplay(new Date(`${valueYmd}T12:00:00`).toISOString())
-    : "";
+  const display = valueYmd ? ymdToItDisplay(valueYmd) : "";
 
   return (
     <GlobalDatePicker

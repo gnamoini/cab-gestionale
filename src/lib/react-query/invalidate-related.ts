@@ -1,7 +1,8 @@
 "use client";
 
 import type { SettingsRenameKind } from "@/lib/settings/settings-rename-types";
-import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
+import { scheduleReportBroadcastRefresh } from "@/lib/report/report-refresh";
+import { settingsRenameKindsAffectReport } from "@/lib/report/report-universe-constants";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 import {
   cabSyncEventForEntity,
@@ -21,21 +22,31 @@ export {
   invalidateGestionaleTablesTargeted,
 } from "@/src/lib/react-query/invalidate-batch";
 export {
+  invalidateReportUniverse,
+} from "@/lib/report/invalidate-report-universe";
+export {
+  REPORT_UNIVERSE_GESTIONALE_TABLES,
+  settingsRenameKindsAffectReport,
+} from "@/lib/report/report-universe-constants";
+export {
   dispatchGestionaleAction,
   dispatchGestionaleLocalMutation,
   cabSyncEventForEntity,
 } from "@/lib/sync/gestionale-sync-dispatch";
 
 export async function invalidateAfterMezzoMutations(qc: QueryClient) {
-  await invalidateOperationalTruth({ queryClient: qc, domain: "mezzi" });
+  await invalidateOperationalTruth({ queryClient: qc, domain: "mezzi", skipReportBroadcast: true });
+  scheduleReportBroadcastRefresh(qc);
 }
 
 export async function invalidateAfterLavorazioneMutations(qc: QueryClient, cabSyncEvents?: CabSyncEvent[]) {
-  await invalidateOperationalTruth({ queryClient: qc, domain: "lavorazioni", cabSyncEvents });
+  await invalidateOperationalTruth({ queryClient: qc, domain: "lavorazioni", cabSyncEvents, skipReportBroadcast: true });
+  scheduleReportBroadcastRefresh(qc);
 }
 
 export async function invalidateAfterMagazzinoOrMovimenti(qc: QueryClient, cabSyncEvents?: CabSyncEvent[]) {
-  await invalidateOperationalTruth({ queryClient: qc, domain: "magazzino", cabSyncEvents });
+  await invalidateOperationalTruth({ queryClient: qc, domain: "magazzino", cabSyncEvents, skipReportBroadcast: true });
+  scheduleReportBroadcastRefresh(qc);
 }
 
 export function invalidateAfterPreventiviMutations(
@@ -105,7 +116,7 @@ export function invalidateAfterSettingsRenamePropagation(
   dispatchGestionaleAction(qc, tables, {
     source: "local_mutation",
   });
-  if (tables.some((t) => t === "lavorazioni" || t === "magazzino_ricambi" || t === "movimenti_ricambi")) {
-    bumpReportDataRefresh();
+  if (settingsRenameKindsAffectReport(kinds)) {
+    scheduleReportBroadcastRefresh(qc);
   }
 }

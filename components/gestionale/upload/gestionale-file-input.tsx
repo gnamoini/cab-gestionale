@@ -42,7 +42,7 @@ export function GestionaleFileInput({
   const inputDisabled = disabled || busy;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-w-0 flex-col gap-2">
       <label
         htmlFor={inputId}
         title={title}

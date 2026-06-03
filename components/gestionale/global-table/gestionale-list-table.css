@@ -7,7 +7,10 @@
 .lavorazioni-scroll-scope {
   scrollbar-gutter: auto;
   --gestionale-table-edge-inset: 1rem;
-  --gestionale-table-row-hover: color-mix(in srgb, var(--cab-primary) 4%, var(--cab-card));
+  --gestionale-table-row-base: var(--cab-card);
+  --gestionale-table-row-hover: var(--cab-hover);
+  --gestionale-table-row-flash: color-mix(in srgb, var(--cab-primary) 9%, var(--cab-card));
+  --gestionale-table-row-flash-ring: color-mix(in srgb, var(--cab-primary) 32%, transparent);
 }
 
 @media (min-width: 640px) {
@@ -19,18 +22,22 @@
 
 .dark .gestionale-list-table-scope,
 .dark .lavorazioni-scroll-scope {
-  --gestionale-table-row-hover: color-mix(in srgb, var(--cab-primary) 6%, var(--cab-card));
+  --gestionale-table-row-hover: var(--cab-hover);
+  --gestionale-table-row-flash: color-mix(in srgb, var(--cab-primary) 14%, var(--cab-card));
+  --gestionale-table-row-flash-ring: color-mix(in srgb, var(--cab-primary) 38%, transparent);
 }
 
 .gestionale-list-table-scope tbody tr > td,
 .lavorazioni-scroll-scope tbody tr > td {
-  background-color: rgb(255 255 255);
-  transition: background-color 150ms ease-out;
+  background-color: var(--gestionale-table-row-base);
+  transition: background-color 200ms ease-out, box-shadow 200ms ease-out;
 }
 
-.dark .gestionale-list-table-scope tbody tr > td,
-.dark .lavorazioni-scroll-scope tbody tr > td {
-  background-color: rgb(24 24 27 / 0.4);
+@media (prefers-reduced-motion: reduce) {
+  .gestionale-list-table-scope tbody tr > td,
+  .lavorazioni-scroll-scope tbody tr > td {
+    transition: none;
+  }
 }
 
 .gestionale-list-table-scope tbody tr:hover,
@@ -54,13 +61,11 @@
 }
 
 .gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td,
-.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td {
-  background-color: rgb(255 247 237 / 0.9);
-}
-
-.dark .gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td,
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td,
 .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td {
-  background-color: rgb(244 244 245 / 0.12);
+  background-color: var(--gestionale-table-row-flash);
+  box-shadow: inset 0 0 0 1px var(--gestionale-table-row-flash-ring);
 }
 
 .gestionale-list-table-scope tbody tr[data-selected="true"]:not(:hover) > td,
@@ -75,12 +80,11 @@
   z-index: 1;
   padding-top: 0.25rem;
   padding-bottom: 0.25rem;
-  padding-left: calc(0.5rem + 3px);
+  padding-left: 0.5rem;
   padding-right: var(--gestionale-table-edge-inset) !important;
   text-align: right;
   white-space: nowrap;
   vertical-align: middle;
-  border-left: 1px solid color-mix(in srgb, var(--cab-border) 70%, transparent);
   box-shadow: -12px 0 16px -12px color-mix(in srgb, var(--cab-card) 94%, transparent);
 }
 
@@ -96,11 +100,166 @@
   z-index: 3;
   padding-top: 0.5rem;
   padding-bottom: 0.5rem;
-  padding-left: calc(0.625rem + 3px);
+  padding-left: 0.625rem;
   padding-right: var(--gestionale-table-edge-inset) !important;
   text-align: right;
   white-space: nowrap;
   vertical-align: middle;
   background-color: inherit;
-  border-left: 1px solid color-mix(in srgb, var(--cab-border) 70%, transparent);
+}
+
+/* Timesheet dipendenti — colonna «Oggi»: cornice overlay (verticale + orizzontale sopra data e sotto footer) */
+.timesheet-presenze-grid {
+  --timesheet-today-edge: color-mix(in srgb, var(--cab-primary) 62%, transparent);
+  --timesheet-today-ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes timesheet-today-rail-in {
+  0% {
+    opacity: 0;
+    transform: scaleY(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.timesheet-today-column-rail {
+  position: absolute;
+  pointer-events: none;
+  z-index: 6;
+  box-sizing: border-box;
+  border: 2px solid var(--timesheet-today-edge);
+  background: transparent;
+  transform-origin: center top;
+  opacity: 0;
+  animation: timesheet-today-rail-in 900ms var(--timesheet-today-ease) forwards;
+}
+
+.timesheet-presenze-grid thead th[data-timesheet-day-accent="true"] .gestionale-timesheet-day-accent-day {
+  color: var(--cab-primary);
+  font-weight: 700;
+  transition: color 520ms var(--timesheet-today-ease);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .timesheet-today-column-rail {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Tabella presenze — niente hover riga nativo (crosshair gestito a parte) */
+.gestionale-list-table-scope.timesheet-presenze-grid tbody tr:hover > td,
+.lavorazioni-scroll-scope.timesheet-presenze-grid tbody tr:hover > td {
+  background-color: var(--gestionale-table-row-base) !important;
+}
+
+/* Sab/dom — più scuri dei feriali (override `tbody tr > td` row-base) */
+.timesheet-presenze-grid {
+  --timesheet-weekend-cell: color-mix(in srgb, var(--cab-bg-app) 72%, var(--cab-card));
+  --timesheet-weekend-chrome: color-mix(in srgb, var(--cab-bg-app) 65%, var(--cab-surface-2));
+}
+
+.timesheet-presenze-grid thead th[data-timesheet-weekend="true"] {
+  background-color: var(--timesheet-weekend-chrome) !important;
+}
+
+.timesheet-presenze-grid tbody td[data-timesheet-weekend="true"] {
+  background-color: var(--timesheet-weekend-cell) !important;
+}
+
+.timesheet-presenze-grid tfoot td[data-timesheet-weekend="true"] {
+  background-color: var(--timesheet-weekend-chrome) !important;
+}
+
+/* Crosshair riga+colonna — stesso grigio neutro (non primary/arancione) */
+.timesheet-presenze-grid {
+  --timesheet-crosshair-ease: 70ms ease-out;
+  --timesheet-crosshair-fill: var(--gestionale-table-row-hover);
+  --timesheet-crosshair-fill-weekend: color-mix(
+    in srgb,
+    var(--gestionale-table-row-hover) 100%,
+    var(--timesheet-weekend-cell)
+  );
+  --timesheet-crosshair-fill-chrome: var(--gestionale-table-row-hover);
+  --timesheet-crosshair-fill-chrome-weekend: color-mix(
+    in srgb,
+    var(--gestionale-table-row-hover) 100%,
+    var(--timesheet-weekend-chrome)
+  );
+  --timesheet-crosshair-edge: color-mix(in srgb, var(--cab-text-muted) 48%, transparent);
+}
+
+.timesheet-presenze-grid [data-timesheet-column-active],
+.timesheet-presenze-grid [data-timesheet-row-active] {
+  transition:
+    background-color var(--timesheet-crosshair-ease),
+    box-shadow var(--timesheet-crosshair-ease);
+}
+
+.timesheet-presenze-grid thead th[data-timesheet-column-active] {
+  background-color: var(--timesheet-crosshair-fill-chrome) !important;
+}
+
+.timesheet-presenze-grid thead th[data-timesheet-column-active][data-timesheet-weekend="true"] {
+  background-color: var(--timesheet-crosshair-fill-chrome-weekend) !important;
+}
+
+.timesheet-presenze-grid tbody td[data-timesheet-column-active]:not([data-timesheet-day-accent="true"]):not(
+    [data-timesheet-weekend="true"]
+  ),
+.timesheet-presenze-grid tbody tr[data-timesheet-row-active] > td:not([data-timesheet-day-accent="true"]):not(
+    [data-timesheet-weekend="true"]
+  ) {
+  background-color: var(--timesheet-crosshair-fill) !important;
+}
+
+.timesheet-presenze-grid tbody td[data-timesheet-column-active][data-timesheet-weekend="true"]:not(
+    [data-timesheet-day-accent="true"]
+  ),
+.timesheet-presenze-grid tbody tr[data-timesheet-row-active] > td[data-timesheet-weekend="true"]:not(
+    [data-timesheet-day-accent="true"]
+  ) {
+  background-color: var(--timesheet-crosshair-fill-weekend) !important;
+}
+
+.timesheet-presenze-grid tbody td[data-timesheet-row-active][data-timesheet-sticky-name]:not(
+    [data-timesheet-day-accent="true"]
+  ) {
+  background-color: var(--timesheet-crosshair-fill) !important;
+}
+
+.timesheet-presenze-grid tbody td[data-timesheet-row-active][data-timesheet-total]:not(
+    [data-timesheet-day-accent="true"]
+  ) {
+  background-color: var(--timesheet-crosshair-fill) !important;
+}
+
+.timesheet-presenze-grid tfoot td[data-timesheet-column-active] {
+  background-color: var(--timesheet-crosshair-fill-chrome) !important;
+}
+
+.timesheet-presenze-grid tfoot td[data-timesheet-column-active][data-timesheet-weekend="true"] {
+  background-color: var(--timesheet-crosshair-fill-chrome-weekend) !important;
+}
+
+/* Cella sotto il puntatore — bordo sul td (allineato alla griglia, non sul pulsante interno) */
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell]:hover:not(:disabled)) {
+  box-shadow: inset 0 0 0 1.5px var(--timesheet-crosshair-edge) !important;
+  position: relative;
+  z-index: 1;
+}
+
+.timesheet-presenze-grid tbody td[data-timesheet-column-active] > button[data-timesheet-cell][data-timesheet-cell-empty],
+.timesheet-presenze-grid tbody td[data-timesheet-row-active] > button[data-timesheet-cell][data-timesheet-cell-empty],
+.timesheet-presenze-grid
+  tbody
+  td[data-timesheet-day]:has(> button[data-timesheet-cell]:hover:not(:disabled))
+  > button[data-timesheet-cell][data-timesheet-cell-empty] {
+  border-color: transparent !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
 }

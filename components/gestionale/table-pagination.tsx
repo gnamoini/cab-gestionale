@@ -1,7 +1,7 @@
 "use client";
 
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnNeutral } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsPageToolbarBtn } from "@/lib/ui/design-system";
 
 type Props = {
   page: number;
@@ -51,23 +51,60 @@ function visibleNumberedPages(page: number, pageCount: number) {
   };
 }
 
+const pageBtnBase = `${dsBtnNeutral} min-h-9 min-w-9 shrink-0 px-0 text-xs font-semibold sm:min-h-9 sm:min-w-9`;
+const pageBtnActive =
+  "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]";
+
 export function TablePagination({ page, pageCount, onPageChange, label, className }: Props) {
   if (pageCount <= 1) return null;
 
   const { mid, showFirst, showFirstGap, showLast, showLastGap } = visibleNumberedPages(page, pageCount);
 
-  const btn =
-    "inline-flex min-h-9 min-w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-xs font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800";
+  const iconBtn = `${pageBtnBase} text-base leading-none sm:text-sm`;
+  const mobileStepBtn = `${dsPageToolbarBtn} h-11 min-h-11 w-full touch-manipulation sm:hidden`;
 
   return (
     <div
-      className={`flex flex-col gap-2 border-t border-zinc-100 px-2 py-3 sm:flex-row sm:items-center sm:justify-between dark:border-zinc-800 ${className ?? ""}`}
+      className={`flex min-w-0 max-w-full flex-col gap-3 border-t border-[color:var(--cab-border)] px-2 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:pb-3 ${className ?? ""}`}
     >
-      <p className="text-center text-xs text-zinc-500 dark:text-zinc-400 sm:text-left">{label}</p>
-      <nav className="flex flex-wrap items-center justify-center gap-1 sm:justify-end" aria-label="Paginazione">
+      <p className="text-center text-xs leading-snug text-[color:var(--cab-text-muted)] sm:text-left">{label}</p>
+
+      <nav
+        className="grid w-full grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 sm:hidden"
+        aria-label="Paginazione"
+      >
         <button
           type="button"
-          className={`${btn} ${erpFocus}`}
+          className={`${mobileStepBtn} ${erpFocus}`}
+          aria-label="Pagina precedente"
+          disabled={page <= 1}
+          onClick={() => onPageChange(page - 1)}
+        >
+          ‹ Prec.
+        </button>
+        <span className="inline-flex h-11 min-w-[4.5rem] shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-3 text-sm font-semibold tabular-nums text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]">
+          {page}
+          <span className="mx-1 text-[color:var(--cab-text-muted)]">/</span>
+          {pageCount}
+        </span>
+        <button
+          type="button"
+          className={`${mobileStepBtn} ${erpFocus}`}
+          aria-label="Pagina successiva"
+          disabled={page >= pageCount}
+          onClick={() => onPageChange(page + 1)}
+        >
+          Succ. ›
+        </button>
+      </nav>
+
+      <nav
+        className="hidden min-w-0 shrink-0 flex-wrap items-center justify-end gap-1 sm:flex"
+        aria-label="Paginazione"
+      >
+        <button
+          type="button"
+          className={`${iconBtn} ${erpFocus}`}
           aria-label="Prima pagina"
           disabled={page <= 1}
           onClick={() => onPageChange(1)}
@@ -76,7 +113,7 @@ export function TablePagination({ page, pageCount, onPageChange, label, classNam
         </button>
         <button
           type="button"
-          className={`${btn} ${erpFocus}`}
+          className={`${iconBtn} ${erpFocus}`}
           aria-label="Pagina precedente"
           disabled={page <= 1}
           onClick={() => onPageChange(page - 1)}
@@ -84,35 +121,31 @@ export function TablePagination({ page, pageCount, onPageChange, label, classNam
           ‹
         </button>
         {showFirst ? (
-          <button type="button" className={`${dsBtnNeutral} min-h-9 min-w-9 px-0 text-xs font-semibold`} onClick={() => onPageChange(1)}>
+          <button type="button" className={`${pageBtnBase} ${erpFocus}`} onClick={() => onPageChange(1)}>
             1
           </button>
         ) : null}
-        {showFirstGap ? <span className="px-0.5 text-xs text-zinc-400">…</span> : null}
+        {showFirstGap ? <span className="px-0.5 text-xs text-[color:var(--cab-text-muted)]">…</span> : null}
         {mid.map((p) => (
           <button
             key={p}
             type="button"
-            className={`${btn} ${erpFocus} ${p === page ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]" : ""}`}
+            className={`${pageBtnBase} ${erpFocus} ${p === page ? pageBtnActive : ""}`}
             aria-current={p === page ? "page" : undefined}
             onClick={() => onPageChange(p)}
           >
             {p}
           </button>
         ))}
-        {showLastGap ? <span className="px-0.5 text-xs text-zinc-400">…</span> : null}
+        {showLastGap ? <span className="px-0.5 text-xs text-[color:var(--cab-text-muted)]">…</span> : null}
         {showLast ? (
-          <button
-            type="button"
-            className={`${dsBtnNeutral} min-h-9 min-w-9 px-0 text-xs font-semibold`}
-            onClick={() => onPageChange(pageCount)}
-          >
+          <button type="button" className={`${pageBtnBase} ${erpFocus}`} onClick={() => onPageChange(pageCount)}>
             {pageCount}
           </button>
         ) : null}
         <button
           type="button"
-          className={`${btn} ${erpFocus}`}
+          className={`${iconBtn} ${erpFocus}`}
           aria-label="Pagina successiva"
           disabled={page >= pageCount}
           onClick={() => onPageChange(page + 1)}
@@ -121,7 +154,7 @@ export function TablePagination({ page, pageCount, onPageChange, label, classNam
         </button>
         <button
           type="button"
-          className={`${btn} ${erpFocus}`}
+          className={`${iconBtn} ${erpFocus}`}
           aria-label="Ultima pagina"
           disabled={page >= pageCount}
           onClick={() => onPageChange(pageCount)}

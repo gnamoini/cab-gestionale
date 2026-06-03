@@ -1,16 +1,19 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { sliceInputValue, TEXT_LONG } from "@/lib/validation/text-field-limits";
+import { memo, useCallback, useMemo, useState } from "react";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import { ShellCard } from "@/components/gestionale/shell-card";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { ReportCompareBanner } from "@/components/report/report-compare-banner";
 import { ReportYearlyForecastLineChart } from "@/components/report/report-charts";
+import { reportChartShellClass } from "@/components/report/report-ui-tokens";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/report/report-buttons";
 import type { ReportCompareDetail } from "@/lib/report/build-report-model";
-import { deltaPct } from "@/lib/report/date-ranges";
-import type { DateRange } from "@/lib/report/date-ranges";
-import { endOfLocalDay, startOfLocalDay } from "@/lib/report/date-ranges";
-import type { ReportManualByMonth } from "@/lib/report/lavorazioni-report-selectors";
-import { buildLavorazioniYearMatrix, yearlyForecastLineModel, type LavorazioniYearRow } from "@/lib/report/lavorazioni-year-matrix";
+import { deltaPct, type DateRange } from "@/lib/report/date-ranges";
+import type { ReportSemanticIndex } from "@/lib/report/report-semantic-index";
+import { monthInReportRange } from "@/lib/report/report-temporal-filter";
+import { yearlyForecastLineModel, type LavorazioniYearRow } from "@/lib/report/lavorazioni-year-matrix";
 import { formatPeriodMonthLabel, periodMonthToKey } from "@/lib/report/report-manual-entries-map";
 import {
   useReportManualEntryRemoveMutation,
@@ -22,8 +25,6 @@ import {
   dsModalBackdrop,
   dsModalPanel,
   dsScrollbar,
-  dsSectionTitle,
-  dsSurfaceCard,
   dsTableRow,
   dsTableTd,
   dsTableWrap,
@@ -38,8 +39,6 @@ import {
   globalTableRow,
   globalTableThCell,
   globalTableThLabel,
-  globalTableTheadClass,
-  globalTableTheadSticky,
   globalTableWrap,
 } from "@/lib/ui/global-table";
 
@@ -49,10 +48,12 @@ function ymKey(y: number, m0: number): string {
   return `${y}-${String(m0 + 1).padStart(2, "0")}`;
 }
 
-function cellInFilter(y: number, m0: number, r: DateRange): boolean {
-  const cellStart = startOfLocalDay(new Date(y, m0, 1));
-  const cellEnd = endOfLocalDay(new Date(y, m0 + 1, 0));
-  return cellStart.getTime() <= r.end.getTime() && cellEnd.getTime() >= r.start.getTime();
+function rowHeatMax(row: LavorazioniYearRow, filterRange: DateRange): number {
+  const vals: number[] = [];
+  for (let mi = 0; mi < 12; mi += 1) {
+    if (monthInReportRange(row.year, mi, filterRange)) vals.push(row.months[mi] ?? 0);
+  }
+  return Math.max(1, ...vals, 0);
 }
 
 function heatTextClass(v: number, rowMax: number): string {
@@ -62,33 +63,6 @@ function heatTextClass(v: number, rowMax: number): string {
   if (t > 0.65) return "font-medium text-[color:color-mix(in_srgb,var(--cab-primary)_82%,var(--cab-text))]";
   if (t > 0.45) return "text-[color:var(--cab-text)]";
   return "text-[color:var(--cab-text-muted)]";
-}
-
-function rowHeatMeta(row: LavorazioniYearRow, filterRange: DateRange) {
-  const inMonths: { mi: number; v: number }[] = [];
-  for (let mi = 0; mi < 12; mi += 1) {
-    if (cellInFilter(row.year, mi, filterRange)) inMonths.push({ mi, v: row.months[mi] ?? 0 });
-  }
-  const pool = inMonths.length > 0 ? inMonths : row.months.map((v, mi) => ({ mi, v: v ?? 0 }));
-  const rowMax = Math.max(1, ...pool.map((p) => p.v));
-  let bestMi: number | null = null;
-  let worstMi: number | null = null;
-  let bestV = -1;
-  let worstV = Number.POSITIVE_INFINITY;
-  for (const { mi, v } of pool) {
-    if (v > bestV) {
-      bestV = v;
-      bestMi = mi;
-    }
-    if (v < worstV) {
-      worstV = v;
-      worstMi = mi;
-    }
-  }
-  if (bestV <= 0) bestMi = null;
-  if (!Number.isFinite(worstV) || worstV === Number.POSITIVE_INFINITY) worstMi = null;
-  if (bestMi !== null && worstMi !== null && bestMi === worstMi) worstMi = null;
-  return { rowMax, bestMi, worstMi };
 }
 
 function fmtPct(p: number | null): string {
@@ -110,38 +84,40 @@ function pastMonthOptions(anchor: Date, count = 48): { value: string; label: str
   return out;
 }
 
-export function ReportLavorazioniSection({
+function ReportLavorazioniSectionInner({
   attive,
   completate,
   manualEntries,
-  manualByMonth,
   anchor,
   filterRange,
   compareDetail,
+  semanticIndex,
 }: {
   attive: LavorazioneAttiva[];
   completate: LavorazioneArchiviata[];
   manualEntries: ReportManualEntryRow[];
-  manualByMonth: ReportManualByMonth;
   anchor: Date;
   filterRange: DateRange;
   compareDetail: ReportCompareDetail | null;
+  semanticIndex: ReportSemanticIndex;
 }) {
   const upsertMutation = useReportManualEntryUpsertMutation();
   const removeMutation = useReportManualEntryRemoveMutation();
 
   const monthOptions = useMemo(() => pastMonthOptions(anchor), [anchor]);
-  const { rows, monthLabels, hasAnyData, manualMonthKeys } = useMemo(
-    () => buildLavorazioniYearMatrix(completate, anchor, manualByMonth),
-    [completate, anchor, manualByMonth],
-  );
-  const forecast = useMemo(() => yearlyForecastLineModel(rows, anchor), [rows, anchor]);
-
-  const heatByYear = useMemo(() => {
-    const m = new Map<number, ReturnType<typeof rowHeatMeta>>();
-    for (const row of rows) m.set(row.year, rowHeatMeta(row, filterRange));
-    return m;
-  }, [rows, filterRange]);
+  const { rows, monthLabels, hasAnyData, manualMonthKeys, matrixMode, forecastRows, heatByYear } = useMemo(() => {
+    const matrix = semanticIndex.buildYearMatrix(anchor, filterRange);
+    const heat = new Map<number, { rowMax: number; bestMi: number | null; worstMi: number | null }>();
+    for (const row of matrix.rows) {
+      heat.set(row.year, {
+        rowMax: rowHeatMax(row, filterRange),
+        bestMi: row.bestMonthIdx,
+        worstMi: row.worstMonthIdx,
+      });
+    }
+    return { ...matrix, heatByYear: heat };
+  }, [semanticIndex, anchor, filterRange]);
+  const forecast = useMemo(() => yearlyForecastLineModel(forecastRows, anchor), [forecastRows, anchor]);
 
   const [open, setOpen] = useState(false);
   useBodyScrollLock(open, "report-lavorazioni-manual");
@@ -201,45 +177,37 @@ export function ReportLavorazioniSection({
     [removeMutation],
   );
 
-  const inCorsoCount = attive.length;
-  const completateCount = completate.length;
-
   const cmpLine =
     compareDetail != null ? (
-      <div className="mb-3 rounded-lg border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-3 py-2 text-xs text-[color:var(--cab-text)]">
-        <span className="font-semibold text-[color:var(--cab-text)]">Confronto periodo</span>
+      <ReportCompareBanner>
+        <span className="font-semibold">Confronto periodo</span>
         {" · "}
-        Archiviate nel periodo: {compareDetail.completedCur} vs {compareDetail.completedPrev} (
+        Archiviate: {compareDetail.completedCur} vs {compareDetail.completedPrev} (
         {fmtPct(deltaPct(compareDetail.completedCur, compareDetail.completedPrev))}
         {compareDetail.completedCur - compareDetail.completedPrev !== 0 ? (
           <span className="tabular-nums">
             {" "}
-            · Δ ass. {compareDetail.completedCur - compareDetail.completedPrev > 0 ? "+" : ""}
+            · Δ {compareDetail.completedCur - compareDetail.completedPrev > 0 ? "+" : ""}
             {compareDetail.completedCur - compareDetail.completedPrev}
           </span>
         ) : null}
-        ) — Ingressi: {compareDetail.openedCur} vs {compareDetail.openedPrev} (
+        ) · Ingressi: {compareDetail.openedCur} vs {compareDetail.openedPrev} (
         {fmtPct(deltaPct(compareDetail.openedCur, compareDetail.openedPrev))})
-      </div>
+      </ReportCompareBanner>
     ) : null;
 
   return (
-    <div className={`${dsSurfaceCard} p-4`}>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className={dsSectionTitle}>Andamento lavorazioni</h2>
-          <p className={dsTypoSmall}>
-            Solo lavorazioni reali (escluse eliminate):{" "}
-            <span className="font-medium">{inCorsoCount}</span> in corso,{" "}
-            <span className="font-medium">{completateCount}</span> archiviate con data di chiusura. Chiusure mensili =
-            completate DB + eventuali dati storici manuali.
-          </p>
-        </div>
+    <ShellCard
+      id="report-lavorazioni"
+      title="Andamento lavorazioni"
+      collapsible
+      defaultCollapsed={false}
+      headerActions={
         <button type="button" onClick={openModal} className={`${erpBtnNeutral} shrink-0 sm:text-sm`}>
           Dati storici manuali
         </button>
-      </div>
-
+      }
+    >
       {cmpLine}
 
       {!hasAnyData ? (
@@ -249,11 +217,16 @@ export function ReportLavorazioniSection({
         </p>
       ) : null}
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_minmax(260px,0.55fr)]">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-1 xl:grid-cols-[minmax(0,1.35fr)_minmax(240px,0.65fr)]">
         <div className="min-w-0">
-          <div className={`${globalTableWrap} ${dsScrollbar} overflow-x-auto`}>
+          {matrixMode === "filtered" ? (
+            <p className={`mb-2 ${dsTypoCaption}`}>
+              Matrice filtrata sul periodo selezionato: totali e variazioni includono solo i mesi nel filtro.
+            </p>
+          ) : null}
+          <div className={`${globalTableWrap} ${dsScrollbar}`}>
             <table className={`${globalTableFixed} min-w-[720px]`}>
-              <thead className={`${globalTableTheadClass} ${globalTableTheadSticky}`}>
+              <GlobalTableHead sticky>
                 <tr className={`h-14 ${globalTableHeadEdgeInset}`}>
                   <th
                     scope="col"
@@ -285,7 +258,7 @@ export function ReportLavorazioniSection({
                     Vs prec.
                   </th>
                 </tr>
-              </thead>
+              </GlobalTableHead>
               <tbody>
                 {rows.map((row) => {
                   const hm = heatByYear.get(row.year)!;
@@ -297,7 +270,7 @@ export function ReportLavorazioniSection({
                       {row.months.map((v, mi) => {
                         const mk = ymKey(row.year, mi);
                         const isManual = manualMonthKeys.has(mk);
-                        const inF = cellInFilter(row.year, mi, filterRange);
+                        const inF = monthInReportRange(row.year, mi, filterRange);
                         const heatTxt = heatTextClass(v, hm.rowMax);
                         const isBest = inF && hm.bestMi === mi && v > 0;
                         const isWorst = inF && hm.worstMi === mi && v > 0 && hm.worstMi !== hm.bestMi;
@@ -345,8 +318,10 @@ export function ReportLavorazioniSection({
           ) : null}
         </div>
 
-        <div className="min-w-0">
-          <p className={`${dsTypoCaption} mb-2 font-semibold uppercase tracking-wide`}>Andamento annuale e previsione</p>
+        <div className={`min-w-0 ${reportChartShellClass}`}>
+          <p className={`${dsTypoCaption} mb-2 font-semibold uppercase tracking-wide text-[color:var(--cab-text)]`}>
+            Andamento annuale e previsione
+          </p>
           {forecast.solid.length === 0 ? (
             <p className={dsTypoSmall}>Nessun dato disponibile per il grafico.</p>
           ) : (
@@ -383,6 +358,11 @@ export function ReportLavorazioniSection({
                   </>
                 ) : null}
               </p>
+              {matrixMode === "filtered" ? (
+                <p className={`mt-1 ${dsTypoCaption}`}>
+                  Previsione su anno solare completo (non filtrata per periodo).
+                </p>
+              ) : null}
             </>
           )}
         </div>
@@ -432,7 +412,7 @@ export function ReportLavorazioniSection({
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div className={`${dsModalPanel} flex flex-col overflow-hidden`} onMouseDown={(e) => e.stopPropagation()}>
+          <div className={`${dsModalPanel} flex min-w-0 w-full max-w-full flex-col overflow-hidden overflow-x-hidden`} onMouseDown={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Dati storici manuali</h3>
             <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
               Inserisci il numero di lavorazioni completate per un mese passato. Non modifica le lavorazioni operative
@@ -465,7 +445,7 @@ export function ReportLavorazioniSection({
             </label>
             <label className="mt-3 block text-xs text-[color:var(--cab-text-muted)]">
               Note (opzionale)
-              <input className={`${dsInput} mt-1`} value={note} onChange={(e) => setNote(e.target.value)} />
+              <input className={`${dsInput} mt-1`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} maxLength={TEXT_LONG} />
             </label>
             {formError ? <p className="mt-2 text-xs text-[color:var(--cab-danger)]">{formError}</p> : null}
             <div className="mt-4 flex justify-end gap-2">
@@ -484,6 +464,8 @@ export function ReportLavorazioniSection({
           </div>
         </div>
       ) : null}
-    </div>
+    </ShellCard>
   );
 }
+
+export const ReportLavorazioniSection = memo(ReportLavorazioniSectionInner);

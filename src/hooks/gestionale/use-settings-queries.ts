@@ -6,7 +6,11 @@ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { persistSettingsRecord } from "@/lib/sync/persist-settings-record";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { resolveCabAppSettingsFromRows, type CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
-import { setRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
+import {
+  getRuntimeCabAppSettingsPayload,
+  setRuntimeCabAppSettings,
+  setRuntimeCabAppSettingsPayload,
+} from "@/src/lib/app-settings/runtime-settings-cache";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
 import {
@@ -23,10 +27,16 @@ export type CabAppSettingsQueryPayload = {
 };
 
 async function fetchCabAppSettingsPayload(): Promise<CabAppSettingsQueryPayload> {
-  const r = await settingsService.getAllSettings();
-  if (!r.success) throw new Error(r.error ?? "Errore lettura impostazioni");
-  const rows: AppSettingRow[] = r.data ?? [];
-  return { rows, resolved: resolveCabAppSettingsFromRows(rows, null) };
+  const startedAt = Date.now();
+  try {
+    const r = await settingsService.getAllSettings();
+    if (!r.success) throw new Error(r.error ?? "Errore lettura impostazioni");
+    const rows: AppSettingRow[] = r.data ?? [];
+    const result = { rows, resolved: resolveCabAppSettingsFromRows(rows, null) };
+    return result;
+  } catch (error) {
+    throw error;
+  }
 }
 
 /** Impostazioni globali: righe DB + oggetto risolto (OCC su `rows[].updated_at`). */
@@ -36,6 +46,7 @@ export function useCabAppSettingsPayloadQuery(options?: {
   staleTime?: number;
 }): UseQueryResult<CabAppSettingsQueryPayload, Error> {
   const enabled = (options?.enabled ?? true) && isSupabasePublicEnvConfigured();
+  const cachedPayload = getRuntimeCabAppSettingsPayload();
   const q = useQuery({
     queryKey: [...QK.settings, "payload"] as const,
     queryFn: fetchCabAppSettingsPayload,
@@ -46,10 +57,14 @@ export function useCabAppSettingsPayloadQuery(options?: {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
     retry: 1,
+    initialData: cachedPayload ?? undefined,
+    placeholderData: (previousData) => previousData ?? cachedPayload ?? undefined,
   });
   useLayoutEffect(() => {
-    if (q.data?.resolved) setRuntimeCabAppSettings(q.data.resolved);
-  }, [q.data?.resolved]);
+    if (!q.data?.resolved) return;
+    setRuntimeCabAppSettings(q.data.resolved);
+    setRuntimeCabAppSettingsPayload(q.data);
+  }, [q.data]);
   return q;
 }
 

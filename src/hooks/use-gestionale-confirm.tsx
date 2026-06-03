@@ -26,8 +26,10 @@ export function useGestionaleConfirm() {
 
   const confirm = useCallback((options: GestionaleConfirmOptions): Promise<boolean> => {
     return new Promise((resolve) => {
-      const entry: PendingConfirm = { ...options, resolve };
-      setPending(entry);
+      setPending((prev) => {
+        if (prev) prev.resolve(false);
+        return { ...options, resolve };
+      });
     });
   }, []);
 

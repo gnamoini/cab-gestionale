@@ -31,28 +31,6 @@ function delay(ms: number): Promise<void> {
   return new Promise((r) => setTimeout(r, ms));
 }
 
-// #region agent log
-function debugRtLog(
-  location: string,
-  message: string,
-  data: Record<string, unknown>,
-  hypothesisId: string,
-): void {
-  fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e701ad" },
-    body: JSON.stringify({
-      sessionId: "e701ad",
-      location,
-      message,
-      data,
-      hypothesisId,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-}
-// #endregion
-
 export function postgresChangeFingerprint(
   table: string,
   payload: PostgresChangePayload,
@@ -92,15 +70,6 @@ export function buildPostgresChangesChannel(
     );
   }
 
-  // #region agent log
-  debugRtLog(
-    "postgres-changes-channel.ts:buildPostgresChangesChannel",
-    "listeners attached before subscribe",
-    { channelName, listenerCount: tables.length },
-    "H1",
-  );
-  // #endregion
-
   return channel;
 }
 
@@ -128,15 +97,6 @@ export function subscribeRealtimeChannelOnly(
     return result;
   };
 
-  // #region agent log
-  debugRtLog(
-    "postgres-changes-channel.ts:subscribeRealtimeChannelOnly",
-    "subscribe() invoked",
-    { channelName },
-    "H1",
-  );
-  // #endregion
-
   return Promise.race([
     new Promise<boolean>((resolve) => {
       channel.subscribe((st, err) => {
@@ -144,14 +104,6 @@ export function subscribeRealtimeChannelOnly(
 
         if (st === "SUBSCRIBED") {
           subscribedOnce = true;
-          // #region agent log
-          debugRtLog(
-            "postgres-changes-channel.ts:subscribeRealtimeChannelOnly",
-            "SUBSCRIBED",
-            { channelName },
-            "H1",
-          );
-          // #endregion
           resolve(settle(true));
           return;
         }
@@ -168,14 +120,6 @@ export function subscribeRealtimeChannelOnly(
     }),
     new Promise<boolean>((resolve) => {
       setTimeout(() => {
-        // #region agent log
-        debugRtLog(
-          "postgres-changes-channel.ts:subscribeRealtimeChannelOnly",
-          "subscribe timeout",
-          { channelName, subscribeTimeoutMs },
-          "H5",
-        );
-        // #endregion
         resolve(settle(false));
       }, subscribeTimeoutMs);
     }),
@@ -202,15 +146,6 @@ export async function subscribePostgresChangesChannel(
   for (let attempt = 0; attempt < retryAttempts; attempt++) {
     const uniqueName = `${channelName}-${attempt}-${Date.now()}`;
 
-    // #region agent log
-    debugRtLog(
-      "postgres-changes-channel.ts:subscribePostgresChangesChannel",
-      "attempt start",
-      { baseName: channelName, uniqueName, attempt },
-      "H2",
-    );
-    // #endregion
-
     const channel = buildPostgresChangesChannel(sb, {
       channelName: uniqueName,
       tables,
@@ -230,14 +165,6 @@ export async function subscribePostgresChangesChannel(
 
     try {
       await sb.removeChannel(channel);
-      // #region agent log
-      debugRtLog(
-        "postgres-changes-channel.ts:subscribePostgresChangesChannel",
-        "attempt cleanup removeChannel",
-        { uniqueName, attempt },
-        "H4",
-      );
-      // #endregion
     } catch {
       /* ignore */
     }

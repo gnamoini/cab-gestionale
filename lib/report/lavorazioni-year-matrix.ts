@@ -20,13 +20,14 @@ export function buildLavorazioniYearMatrix(
   completate: LavorazioneArchiviata[],
   anchor: Date,
   manualByMonth?: ReportManualByMonth,
+  monthMap?: Map<string, number>,
 ): {
   rows: LavorazioniYearRow[];
   monthLabels: readonly string[];
   hasAnyData: boolean;
   manualMonthKeys: Set<string>;
 } {
-  const sys = countCompletedByMonth(completate, manualByMonth);
+  const sys = monthMap ?? countCompletedByMonth(completate, manualByMonth);
   const manualMonthKeys = new Set(manualByMonth ? [...manualByMonth.keys()] : []);
   const years = new Set<number>();
   for (const k of sys.keys()) years.add(Number(k.slice(0, 4)));

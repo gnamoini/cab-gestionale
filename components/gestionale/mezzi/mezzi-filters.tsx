@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
-import { dsInput, dsStickyToolbar, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
+import { dsInput, dsPageToolbar, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
 import type { UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
 import { gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 
@@ -163,7 +163,7 @@ export function MezziFilters(props: MezziFiltersProps) {
     onFiltroUltimaLav,
   } = props;
   return (
-    <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
+    <div className={`${dsPageToolbar} -mx-1 sm:mx-0`}>
       <div className="flex flex-col gap-3">
         <MezziSearchBar search={search} onSearch={onSearch} />
         <MezziFilterFields

@@ -7,20 +7,15 @@ import { useCallback, useMemo } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 
 import {
-
   isStructuredListKey,
-
   listKeyAllowsDynamicAppend,
-
   type GlobalSettingsListContext,
-
   type GlobalSettingsListKey,
-
 } from "@/src/lib/global-list/global-settings-list-keys";
-
 import { useAppendGlobalListValue } from "@/src/hooks/use-append-global-list-value";
-
 import { useGlobalListOptions } from "@/src/hooks/use-global-list-options";
+import { mergeCurrentValueInOptions } from "@/lib/ui/list-select-utils";
+import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 
 
 
@@ -108,28 +103,38 @@ export function GlobalSettingsListSelect({
   "aria-label": ariaLabel,
 
 }: GlobalSettingsListSelectProps) {
-
+  const hydrated = useClientHydrated();
   const list = useGlobalListOptions(listKey, context);
-
   const structured = isStructuredListKey(listKey);
-
   const canAppendList = listKeyAllowsDynamicAppend(listKey);
-
   const { append, canAppend, isPending } = useAppendGlobalListValue(listKey, context);
 
-
+  const listPending = list.isLoading || !list.ready;
+  const deferListUi = hydrated && listPending;
 
   const onAddToList = useCallback(
 
-    async (raw: string) => {
+    async (raw: string): Promise<string | null> => {
 
       const canonical = await append(raw);
 
       if (canonical) onChange(canonical);
 
+      return canonical ?? null;
+
     },
 
     [append, onChange],
+
+  );
+
+
+
+  const optionsForUi = useMemo(
+
+    () => mergeCurrentValueInOptions(value, list.options),
+
+    [list.options, value],
 
   );
 
@@ -171,7 +176,7 @@ export function GlobalSettingsListSelect({
 
     onChange,
 
-    disabled: disabled || hierarchyBlocked || !list.ready,
+    disabled: disabled || hierarchyBlocked || deferListUi,
 
     required,
 
@@ -179,7 +184,7 @@ export function GlobalSettingsListSelect({
 
     "aria-label": ariaLabel,
 
-    isLoading: list.isLoading || !list.ready,
+    isLoading: deferListUi,
 
     strictFromList: true as const,
 
@@ -228,7 +233,7 @@ export function GlobalSettingsListSelect({
 
 
 
-  return <GlobalSelect {...sharedProps} options={list.options} />;
+  return <GlobalSelect {...sharedProps} options={optionsForUi} />;
 
 }
 
@@ -237,81 +242,49 @@ export function GlobalSettingsListSelect({
 /** Marca da gerarchia attrezzature/telai (impostazioni globali). */
 
 export function GlobalHierarchyMarcaSelect({
-
   tree,
-
   value,
-
   onChange,
-
   disabled,
-
   required,
-
   className,
-
   inputClassName,
-
   variant = "default",
-
   placeholder,
-
+  allowAdd = false,
+  selectOnly,
   "aria-label": ariaLabel,
-
 }: {
-
   tree: "attrezzature" | "telai";
-
   value: string;
-
   onChange: (value: string) => void;
-
   disabled?: boolean;
-
   required?: boolean;
-
   className?: string;
-
   inputClassName?: string;
-
   variant?: "default" | "filter";
-
   placeholder?: string;
-
+  allowAdd?: boolean;
+  selectOnly?: boolean;
   "aria-label"?: string;
-
 }) {
-
   return (
-
     <GlobalSettingsListSelect
-
       listKey="mezzi:clienti"
-
       value={value}
-
       onChange={onChange}
-
       context={{ hierarchyTree: tree, hierarchyKind: "marca" }}
-
       disabled={disabled}
-
       required={required}
-
       className={className}
-
       inputClassName={inputClassName}
-
       variant={variant}
-
       placeholder={placeholder}
-
+      allowAdd={allowAdd}
+      selectOnly={selectOnly}
       aria-label={ariaLabel}
-
     />
-
   );
-
 }
 
 
@@ -319,85 +292,51 @@ export function GlobalHierarchyMarcaSelect({
 /** Modello per marca (gerarchia attrezzature/telai). */
 
 export function GlobalHierarchyModelloSelect({
-
   tree,
-
   marcaNome,
-
   value,
-
   onChange,
-
   disabled,
-
   required,
-
   className,
-
   inputClassName,
-
   variant = "default",
-
   placeholder,
-
+  allowAdd = false,
+  selectOnly,
   "aria-label": ariaLabel,
-
 }: {
-
   tree: "attrezzature" | "telai";
-
   marcaNome: string;
-
   value: string;
-
   onChange: (value: string) => void;
-
   disabled?: boolean;
-
   required?: boolean;
-
   className?: string;
-
   inputClassName?: string;
-
   variant?: "default" | "filter";
-
   placeholder?: string;
-
+  allowAdd?: boolean;
+  selectOnly?: boolean;
   "aria-label"?: string;
-
 }) {
-
   return (
-
     <GlobalSettingsListSelect
-
       listKey="mezzi:clienti"
-
       value={value}
-
       onChange={onChange}
-
       context={{ hierarchyTree: tree, hierarchyKind: "modello", marcaNome }}
-
       disabled={disabled}
-
       required={required}
-
       className={className}
-
       inputClassName={inputClassName}
-
       variant={variant}
-
       placeholder={placeholder}
-
+      allowAdd={allowAdd}
+      selectOnly={selectOnly}
       aria-label={ariaLabel}
-
     />
-
   );
-
 }
 
 

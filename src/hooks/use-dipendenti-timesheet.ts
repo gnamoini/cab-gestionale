@@ -1,0 +1,444 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  employeeIdsWithEntriesInPeriod,
+  selectTimesheetEmployeesForDisplay,
+  sortTimesheetEmployeesForDisplay,
+} from "@/lib/dipendenti/dipendenti-employee-display";
+import { entryToCellValue } from "@/lib/dipendenti/timesheet-totals";
+import type {
+  DipendenteTimesheetEmployeeRow,
+  DipendenteTimesheetEntryRow,
+  TimesheetCellValue,
+  TimesheetEntryUpsert,
+  TimesheetMonthKey,
+} from "@/lib/dipendenti/types";
+import {
+  buildPeriodDays,
+  monthKeyFromDate,
+  resolvePeriodRange,
+  shiftMonthKey,
+  type TimesheetPeriodMode,
+} from "@/lib/dipendenti/timesheet-month";
+import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
+import { useAddettiRecords, useTipiAssenza } from "@/src/hooks/use-global-options";
+import { useServiceMutation } from "@/src/hooks/use-service-mutation";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { QK } from "@/src/lib/react-query/query-keys";
+import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
+import {
+  dispatchTimesheetEmployeesChanged,
+  dispatchTimesheetEntryChanged,
+} from "@/lib/dipendenti/dipendenti-timesheet-sync-dispatch";
+
+const DEBOUNCE_MS = 400;
+
+export type TimesheetLoadPhase = "settings" | "registry" | "entries" | "ready" | "error";
+export type TimesheetErrorKind = "rbac" | "network" | "sync" | "unknown";
+
+export type UseDipendentiTimesheetOptions = {
+  monthKey: TimesheetMonthKey;
+  periodMode?: TimesheetPeriodMode;
+  weekAnchor?: string;
+  dayDate?: string;
+};
+
+function normalizeOptions(
+  monthKeyOrOptions: TimesheetMonthKey | UseDipendentiTimesheetOptions,
+): Required<UseDipendentiTimesheetOptions> {
+  if (typeof monthKeyOrOptions === "string") {
+    return { monthKey: monthKeyOrOptions, periodMode: "month", weekAnchor: "", dayDate: "" };
+  }
+  return {
+    monthKey: monthKeyOrOptions.monthKey,
+    periodMode: monthKeyOrOptions.periodMode ?? "month",
+    weekAnchor: monthKeyOrOptions.weekAnchor ?? "",
+    dayDate: monthKeyOrOptions.dayDate ?? "",
+  };
+}
+
+function entriesQueryKey(from: string, to: string) {
+  return [...QK.dipendentiTimesheetEntries, from, to] as const;
+}
+
+function classifyError(message: string | null): TimesheetErrorKind {
+  if (!message) return "unknown";
+  if (message === RBAC_DENIED_MESSAGE || /permess/i.test(message)) return "rbac";
+  if (/fetch|network|failed/i.test(message)) return "network";
+  return "unknown";
+}
+
+function queryErrorMessage(error: Error | null): string | null {
+  if (!error) return null;
+  return error.message || "Errore di caricamento.";
+}
+
+function canSyncFromAddetti(addettiOpts: {
+  source: "app_settings" | "fallback" | "unavailable";
+  isLoading: boolean;
+  records: readonly AddettoRecord[];
+}): boolean {
+  return addettiOpts.source === "app_settings" && !addettiOpts.isLoading && addettiOpts.records.length > 0;
+}
+
+export function useDipendentiTimesheet(
+  monthKeyOrOptions: TimesheetMonthKey | UseDipendentiTimesheetOptions,
+) {
+  const { monthKey, periodMode, weekAnchor, dayDate } = normalizeOptions(monthKeyOrOptions);
+  const queryClient = useQueryClient();
+  const addettiOpts = useAddettiRecords();
+  const tipiOpts = useTipiAssenza();
+  const [saveStatus, setSaveStatus] = useState<"idle" | "pending" | "saved" | "error">("idle");
+  const [syncError, setSyncError] = useState<string | null>(null);
+  /** Solo durante mutateAsync sync (non include refetch post-invalidate). */
+  const [syncInProgress, setSyncInProgress] = useState(false);
+  const pendingRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const pendingInputsRef = useRef<Map<string, TimesheetEntryUpsert>>(new Map());
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSyncKeyRef = useRef<string | null>(null);
+
+  const periodRange = useMemo(
+    () =>
+      resolvePeriodRange(
+        periodMode,
+        monthKey,
+        weekAnchor || undefined,
+        dayDate || undefined,
+      ),
+    [periodMode, monthKey, weekAnchor, dayDate],
+  );
+
+  const periodDays = useMemo(
+    () => buildPeriodDays(periodMode, monthKey, weekAnchor || undefined, dayDate || undefined),
+    [periodMode, monthKey, weekAnchor, dayDate],
+  );
+
+  const previousMonthKey = useMemo(() => shiftMonthKey(monthKey, -1), [monthKey]);
+
+  const addettiReady = addettiOpts.source === "app_settings" && !addettiOpts.isLoading;
+  const hasRealAddetti = addettiReady && addettiOpts.records.length > 0;
+  const realAddettiRecords = addettiReady ? addettiOpts.records : [];
+
+  const currentAddettiIds = useMemo(
+    () => new Set(realAddettiRecords.map((r) => r.id)),
+    [realAddettiRecords],
+  );
+
+  const employeesQuery = useServiceQuery(QK.dipendentiTimesheetEmployees, () =>
+    dipendentiTimesheetService.listEmployees(),
+  );
+
+  const registryReady = employeesQuery.isSuccess && !employeesQuery.isError;
+
+  const entriesQuery = useServiceQuery(
+    entriesQueryKey(periodRange.from, periodRange.to),
+    () => dipendentiTimesheetService.listEntriesForRange(periodRange.from, periodRange.to),
+    { enabled: registryReady && addettiReady },
+  );
+
+  const previousMonthQuery = useServiceQuery(
+    [...QK.dipendentiTimesheetEntries, "prev", previousMonthKey] as const,
+    () => dipendentiTimesheetService.listEntriesForMonth(previousMonthKey),
+    { enabled: registryReady && addettiReady && periodMode === "month" },
+  );
+
+  const syncMutation = useServiceMutation(
+    (records: readonly AddettoRecord[]) =>
+      dipendentiTimesheetService.syncFromAddettiRecords(records),
+    {
+      onSuccess: (rows) => {
+        queryClient.setQueryData(QK.dipendentiTimesheetEmployees, rows);
+        dispatchTimesheetEmployeesChanged(queryClient);
+      },
+    },
+  );
+
+  const runSyncFromAddetti = useCallback(
+    async (records: readonly AddettoRecord[]) => {
+      setSyncInProgress(true);
+      try {
+        return await syncMutation.mutateAsync(records);
+      } finally {
+        setSyncInProgress(false);
+      }
+    },
+    [syncMutation],
+  );
+
+  const bootstrapEmployees = useCallback(async () => {
+    if (addettiOpts.isLoading) {
+      setSyncError("Attendere il caricamento degli addetti dalle Impostazioni.");
+      return false;
+    }
+    if (addettiOpts.source !== "app_settings") {
+      setSyncError("Impossibile sincronizzare: addetti non disponibili dalle Impostazioni.");
+      return false;
+    }
+    if (!addettiOpts.records.length) {
+      setSyncError("Nessun addetto configurato in Impostazioni.");
+      return false;
+    }
+    setSyncError(null);
+    try {
+      await runSyncFromAddetti(addettiOpts.records);
+      return true;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Impossibile inizializzare il registro dipendenti.";
+      setSyncError(msg);
+      return false;
+    }
+  }, [addettiOpts.isLoading, addettiOpts.records, addettiOpts.source, runSyncFromAddetti]);
+
+  const addettiRecordsSyncKey = useMemo(
+    () => addettiOpts.records.map((r) => `${r.id}|${r.nome}|${r.cognome ?? ""}`).join(";"),
+    [addettiOpts.records],
+  );
+
+  useEffect(() => {
+    if (!canSyncFromAddetti(addettiOpts)) return;
+    if (autoSyncKeyRef.current === addettiRecordsSyncKey) return;
+    autoSyncKeyRef.current = addettiRecordsSyncKey;
+    void runSyncFromAddetti(addettiOpts.records).catch((e: unknown) => {
+      const msg = e instanceof Error ? e.message : "Sincronizzazione addetti non riuscita.";
+      setSyncError(msg);
+    });
+  }, [addettiOpts.source, addettiOpts.isLoading, addettiRecordsSyncKey, runSyncFromAddetti]);
+
+  const upsertMutation = useServiceMutation(
+    (input: TimesheetEntryUpsert) =>
+      dipendentiTimesheetService.upsertEntry(input, tipiOpts.tipi),
+    {
+      onMutate: () => {
+        setSaveStatus("pending");
+        if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      },
+      onSuccess: (row, input) => {
+        if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+        const updateList = (key: readonly unknown[]) => {
+          queryClient.setQueryData<DipendenteTimesheetEntryRow[]>(key, (prev) => {
+            const list = prev ?? [];
+            if (!row) {
+              return list.filter(
+                (e) => !(e.dipendente_id === input.dipendenteId && e.work_date === input.workDate),
+              );
+            }
+            const idx = list.findIndex(
+              (e) => e.dipendente_id === row.dipendente_id && e.work_date === row.work_date,
+            );
+            if (idx >= 0) {
+              const next = [...list];
+              next[idx] = row;
+              return next;
+            }
+            return [...list, row];
+          });
+        };
+        updateList(entriesQueryKey(periodRange.from, periodRange.to));
+        if (periodMode === "month") {
+          updateList([...QK.dipendentiTimesheetEntries, "prev", previousMonthKey]);
+        }
+        if (row) {
+          dispatchTimesheetEntryChanged(queryClient, row.id, "entity_updated");
+        } else {
+          dispatchTimesheetEntryChanged(
+            queryClient,
+            `${input.dipendenteId}|${input.workDate}`,
+            "entity_deleted",
+          );
+        }
+        setSaveStatus("saved");
+        savedTimerRef.current = setTimeout(() => setSaveStatus("idle"), 2000);
+      },
+      onError: () => setSaveStatus("error"),
+    },
+  );
+
+  const entriesByKey = useMemo(() => {
+    const map = new Map<string, DipendenteTimesheetEntryRow>();
+    for (const e of entriesQuery.data ?? []) {
+      map.set(`${e.dipendente_id}|${e.work_date}`, e);
+    }
+    return map;
+  }, [entriesQuery.data]);
+
+  const getCellValue = useCallback(
+    (dipendenteId: string, workDate: string): TimesheetCellValue => {
+      return entryToCellValue(entriesByKey.get(`${dipendenteId}|${workDate}`));
+    },
+    [entriesByKey],
+  );
+
+  const flushPending = useCallback(() => {
+    for (const t of pendingRef.current.values()) clearTimeout(t);
+    pendingRef.current.clear();
+    for (const input of pendingInputsRef.current.values()) {
+      void upsertMutation.mutateAsync(input);
+    }
+    pendingInputsRef.current.clear();
+  }, [upsertMutation]);
+
+  useEffect(() => {
+    const onLeave = () => {
+      for (const t of pendingRef.current.values()) clearTimeout(t);
+      pendingRef.current.clear();
+      for (const input of pendingInputsRef.current.values()) {
+        void upsertMutation.mutate(input);
+      }
+      pendingInputsRef.current.clear();
+    };
+    window.addEventListener("beforeunload", onLeave);
+    window.addEventListener("pagehide", onLeave);
+    return () => {
+      window.removeEventListener("beforeunload", onLeave);
+      window.removeEventListener("pagehide", onLeave);
+    };
+  }, [upsertMutation]);
+
+  useEffect(
+    () => () => {
+      flushPending();
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    },
+    [flushPending],
+  );
+
+  const scheduleSave = useCallback(
+    (input: TimesheetEntryUpsert) => {
+      const key = `${input.dipendenteId}|${input.workDate}`;
+      pendingInputsRef.current.set(key, input);
+      const existing = pendingRef.current.get(key);
+      if (existing) clearTimeout(existing);
+      const timer = setTimeout(() => {
+        pendingRef.current.delete(key);
+        pendingInputsRef.current.delete(key);
+        void upsertMutation.mutateAsync(input);
+      }, DEBOUNCE_MS);
+      pendingRef.current.set(key, timer);
+    },
+    [upsertMutation],
+  );
+
+  const saveNow = useCallback(
+    (input: TimesheetEntryUpsert) => {
+      const key = `${input.dipendenteId}|${input.workDate}`;
+      const existing = pendingRef.current.get(key);
+      if (existing) clearTimeout(existing);
+      pendingRef.current.delete(key);
+      pendingInputsRef.current.delete(key);
+      return upsertMutation.mutateAsync(input);
+    },
+    [upsertMutation],
+  );
+
+  const employees = (employeesQuery.data ?? []) as DipendenteTimesheetEmployeeRow[];
+  const employeeIdsWithEntriesInPeriodSet = useMemo(
+    () => employeeIdsWithEntriesInPeriod(entriesQuery.data ?? []),
+    [entriesQuery.data],
+  );
+
+  const sortedEmployees = useMemo(
+    () => sortTimesheetEmployeesForDisplay(employees, realAddettiRecords),
+    [employees, realAddettiRecords],
+  );
+
+  const displayEmployees = useMemo(
+    () =>
+      addettiReady
+        ? selectTimesheetEmployeesForDisplay(
+            sortedEmployees,
+            employeeIdsWithEntriesInPeriodSet,
+            currentAddettiIds,
+          )
+        : [],
+    [addettiReady, sortedEmployees, employeeIdsWithEntriesInPeriodSet, currentAddettiIds],
+  );
+
+  const employeesError = employeesQuery.isError ? queryErrorMessage(employeesQuery.error) : null;
+  const entriesError = entriesQuery.isError ? queryErrorMessage(entriesQuery.error) : null;
+  const entriesDegraded = entriesError != null && Boolean(entriesQuery.data?.length);
+
+  const loadPhase = useMemo((): TimesheetLoadPhase => {
+    if (employeesError) return "error";
+    if (!addettiReady || addettiOpts.isLoading) return "settings";
+    if (employeesQuery.isLoading) return "registry";
+    if (entriesQuery.isLoading && entriesQuery.data == null) return "entries";
+    if (entriesError && entriesQuery.data == null) return "error";
+    return "ready";
+  }, [
+    employeesError,
+    entriesError,
+    entriesQuery.data,
+    addettiReady,
+    addettiOpts.isLoading,
+    employeesQuery.isLoading,
+    entriesQuery.isLoading,
+  ]);
+
+  const errorKind = useMemo((): TimesheetErrorKind | null => {
+    if (syncError) return "sync";
+    const msg = employeesError ?? entriesError;
+    if (!msg) return null;
+    return classifyError(msg);
+  }, [syncError, employeesError, entriesError]);
+
+  const isInitialLoading = loadPhase !== "ready" && loadPhase !== "error";
+  const isSyncing = syncInProgress;
+  /** Sync in background dopo il primo caricamento (es. addetti aggiornati in Impostazioni). */
+  const showBackgroundSyncInToolbar = syncInProgress && loadPhase === "ready";
+
+  return {
+    monthKey,
+    periodMode,
+    periodRange,
+    periodDays,
+    weekAnchor,
+    dayDate,
+    employees,
+    displayEmployees,
+    employeeIdsWithEntriesInPeriod: employeeIdsWithEntriesInPeriodSet,
+    entries: entriesQuery.data ?? [],
+    previousMonthEntries: previousMonthQuery.data ?? [],
+    tipiAssenza: tipiOpts.tipi,
+    addettiRecords: realAddettiRecords,
+    addettiReady,
+    addettiSource: addettiOpts.source,
+    hasRealAddetti,
+    loadPhase,
+    errorKind,
+    isInitialLoading,
+    isSyncing,
+    showBackgroundSyncInToolbar,
+    employeesError,
+    entriesError,
+    entriesDegraded,
+    syncError,
+    bootstrapEmployees,
+    refetch: () => {
+      void employeesQuery.refetch();
+      void entriesQuery.refetch();
+      void previousMonthQuery.refetch();
+    },
+    refetchEmployees: () => {
+      void employeesQuery.refetch();
+    },
+    refetchEntries: () => {
+      void entriesQuery.refetch();
+    },
+    getCellValue,
+    scheduleSave,
+    saveNow,
+    saveStatus,
+    canWrite: !upsertMutation.isPending,
+    upsertPending: upsertMutation.isPending,
+  };
+}
+
+export function useDefaultTimesheetMonthKey(): TimesheetMonthKey {
+  const [key, setKey] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));
+  return key;
+}
+
+export type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow, TimesheetEntryUpsert, TimesheetPeriodMode };

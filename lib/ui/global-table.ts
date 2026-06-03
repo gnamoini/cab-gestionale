@@ -9,10 +9,10 @@
 
 /** Sfondo riga intestazione (`<thead>`). */
 export const globalTableTheadClass =
-  "border-b border-zinc-100 bg-[var(--cab-surface-2)] dark:border-zinc-800";
+  "min-w-0 border-b border-zinc-100 bg-[var(--cab-surface-2)] dark:border-zinc-800";
 
 /** Padding e allineamento base ogni `<th>`. */
-export const globalTableThCell = "px-2.5 py-2 align-middle";
+export const globalTableThCell = "min-w-0 px-2.5 py-2 align-middle";
 
 /**
  * Header allineato al testo in chip/pill (`px-2`) dentro cella compatta (`px-2`).
@@ -25,11 +25,15 @@ export const globalTableThLabel =
   "text-[13px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400";
 
 /** Etichetta singola riga nel pulsante sort (no troncamento). */
-export const globalTableSortLabelSingle = "whitespace-nowrap";
+export const globalTableSortLabelSingle = "whitespace-nowrap leading-none";
 
 /** Pulsante ordinamento dentro `<th>`. */
 export const globalTableSortButton =
-  "inline-flex w-full items-center gap-1 text-[13px] font-semibold uppercase tracking-wide transition-colors duration-200 ease-out";
+  "inline-flex w-full items-center gap-1 text-[13px] font-semibold uppercase leading-none tracking-wide transition-colors duration-200 ease-out";
+
+/** Contenitore icona sort: stessa altezza cap del testo header (`1em`). */
+export const globalTableSortIconWrap =
+  "inline-flex shrink-0 items-center justify-center leading-none h-[1em] w-[0.75em]";
 
 /** Etichetta header su due righe (es. Data / ingresso). */
 export const globalTableSortLabelStack =
@@ -44,7 +48,7 @@ export const globalTableSortIdle =
 
 /** Contenitore scroll + card tabella (desktop liste). */
 export const globalTableWrap =
-  "max-w-full overflow-x-auto rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]";
+  "min-w-0 max-w-full overflow-x-auto rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]";
 
 /**
  * @deprecated Non usare sul wrap: inset solo sul body (`globalTableTbodyInset`).
@@ -61,10 +65,10 @@ export const globalTableTbodyInset =
  * con sfondo thead a tutta larghezza.
  */
 export const globalTableHeadEdgeInset =
-  "[&>th:first-child]:pl-[calc(0.5rem+0.625rem)] sm:[&>th:first-child]:pl-[calc(0.75rem+0.625rem)] [&>th:last-child]:pr-[calc(0.5rem+0.625rem)] sm:[&>th:last-child]:pr-[calc(0.75rem+0.625rem)]";
+  "min-w-0 [&>th:first-child]:pl-[calc(0.5rem+0.625rem)] sm:[&>th:first-child]:pl-[calc(0.75rem+0.625rem)] [&>th:last-child]:pr-[calc(0.5rem+0.625rem)] sm:[&>th:last-child]:pr-[calc(0.75rem+0.625rem)]";
 
 /** Celle corpo liste lavorazioni — allineamento sinistra. */
-export const globalTableTdBody = "px-2 py-1 align-middle text-left";
+export const globalTableTdBody = "min-w-0 px-2 py-1 align-middle text-left";
 
 /** Colonna azioni (header + celle) — allineata al preset `dsTableTdActions`. */
 export const globalTableTdActions =

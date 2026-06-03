@@ -132,6 +132,39 @@ function scanFile(file: string, findings: Finding[]) {
         message: `Molti elementi fixed (${fixedCount}) — verificare stacking Safari`,
       });
     }
+
+    if (/-modal|ModalShell|modals\.tsx/.test(r)) {
+      if (/\b100vh\b/.test(content) && !/100dvh/.test(content)) {
+        findings.push({
+          severity: "warning",
+          file: r,
+          line: lineOf(content, content.search(/\b100vh\b/)),
+          rule: "modal-viewport-100vh",
+          message: "Modale con 100vh — preferire dvh e --cab-vv-height",
+        });
+      }
+      if (/GestionaleModalShell|LavorazioniModalShell/.test(content)) {
+        if (!/gestionaleModalBodyFlexClass|data-cab-modal-scroll|GestionaleModalScrollBody/.test(content)) {
+          findings.push({
+            severity: "warning",
+            file: r,
+            line: 1,
+            rule: "modal-scroll-pattern",
+            message: "Shell modale senza gestionaleModalBodyFlexClass o GestionaleModalScrollBody",
+          });
+        }
+      }
+      const lowZ = content.match(/layerClassName=\"z-\[(?:calc\(var\(--ds-z-modal[^)]+\)|[1-9]?[0-9])\]/);
+      if (lowZ && /ConfirmDialog|GestionaleConfirmDialog/.test(content)) {
+        findings.push({
+          severity: "warning",
+          file: r,
+          line: lineOf(content, content.indexOf(lowZ[0])),
+          rule: "modal-nested-z-low",
+          message: "Confirm nested con z-index basso — usare z-[120] sopra shell gestionale",
+        });
+      }
+    }
   }
 }
 

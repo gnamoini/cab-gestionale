@@ -7,12 +7,13 @@ import { useAuth } from "@/context/auth-context";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { roleLabel } from "@/src/lib/auth/permissions";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
-import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityUsersPermissionsPanel } from "@/components/dashboard/security/security-users-permissions-panel";
 import { SecurityRoleBadge } from "@/components/dashboard/security/security-role-badge";
-import { Drawer } from "@/components/design-system";
+import { Drawer, LoadingFormSkeleton } from "@/components/design-system";
 import {
   type SecurityUserPermissionRow,
 } from "@/src/actions/security-users-permissions";
@@ -131,14 +132,12 @@ function LogTable({ rows, columns }: { rows: AuthLogWithProfileRow[]; columns: "
   return (
     <div className={`${dsTableWrap} max-h-[min(28rem,55vh)] ${dsScrollbar}`}>
       <table className={`${dsTable} text-xs`}>
-        <thead>
-          <tr>
+        <GlobalTableHead>
             <GlobalTableHeadLabel label="Data/ora" />
             {columns === "login" ? <GlobalTableHeadLabel label="Utente" /> : null}
             <GlobalTableHeadLabel label="Email" />
             {columns === "failed" ? <GlobalTableHeadLabel label="User agent" /> : <GlobalTableHeadLabel label="Azione" />}
-          </tr>
-        </thead>
+        </GlobalTableHead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.id} className={dsTableRow}>
@@ -183,14 +182,12 @@ function LastAccessTable({
   return (
     <div className={`${dsTableWrap} max-h-[min(28rem,55vh)] ${dsScrollbar}`}>
       <table className={`${dsTable} text-xs`}>
-        <thead>
-          <tr>
+        <GlobalTableHead>
             <GlobalTableHeadLabel label="Utente" />
             <GlobalTableHeadLabel label="Email log" />
             <GlobalTableHeadLabel label="Ultimo evento" />
             <GlobalTableHeadLabel label="Azione" />
-          </tr>
-        </thead>
+        </GlobalTableHead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.userId} className={dsTableRow}>
@@ -299,7 +296,7 @@ function UserDetailDrawer({
   return (
     <Drawer open={open && !!user} onClose={onClose} title="Scheda utente" ariaLabel="Scheda utente">
       {!user ? null : (
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden p-3">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden p-3">
           <div className="rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
@@ -324,13 +321,15 @@ function UserDetailDrawer({
             </dl>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)]">
+          <div className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)]">
             <div className="border-b border-[color:var(--cab-border)] px-3 py-2">
               <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Ultime azioni / modifiche</h3>
             </div>
             <div className="gestionale-scrollbar max-h-[min(62dvh,34rem)] overflow-y-auto">
               {activityQ.isLoading ? (
-                <p className="p-3 text-sm text-[color:var(--cab-text-muted)]">Caricamento…</p>
+                <div className="p-3" aria-busy="true" role="status" aria-label="Caricamento attività">
+                  <LoadingFormSkeleton fields={4} />
+                </div>
               ) : activityQ.isError ? (
                 <p className="p-3 text-sm text-[color:var(--cab-danger)]">{activityQ.error.message}</p>
               ) : (activityQ.data ?? []).length === 0 ? (
@@ -555,7 +554,7 @@ export function SecurityDashboardView() {
       <PageHeader
         title="Sicurezza"
         actions={
-          <>
+          <div className={gestionalePageToolbarActionsClass}>
             <button
               type="button"
               className={dsPageToolbarBtn}
@@ -572,7 +571,7 @@ export function SecurityDashboardView() {
             <button type="button" className={dsBtnDanger} onClick={() => void handleResetChangeLogs()} disabled={resettingLogs}>
               {resettingLogs ? "Reset…" : "Resetta log modifiche"}
             </button>
-          </>
+          </div>
         }
       />
 
@@ -784,15 +783,13 @@ export function SecurityDashboardView() {
         ) : (
           <div className={`${dsTableWrap} max-h-[min(28rem,55vh)] ${dsScrollbar}`}>
             <table className={`${dsTable} text-xs`}>
-              <thead>
-                <tr>
+              <GlobalTableHead>
                   <GlobalTableHeadLabel label="Data/ora" />
                   <GlobalTableHeadLabel label="Entità" />
                   <GlobalTableHeadLabel label="Azione" />
                   <GlobalTableHeadLabel label="Responsabile" />
                   <GlobalTableHeadLabel label="Dettaglio" />
-                </tr>
-              </thead>
+              </GlobalTableHead>
               <tbody>
                 {(recentActivityQ.data ?? []).map((row) => (
                   <tr key={row.id} className={dsTableRow}>
@@ -833,7 +830,7 @@ export function SecurityDashboardView() {
               />
             </label>
           </div>
-          <label className="block min-w-[12rem] flex-1 lg:max-w-xs">
+          <label className="block min-w-0 flex-1 lg:max-w-xs">
             <span className={dsSectionTitle}>Utente</span>
             <select
               className={`${gestionaleSelectNativePlainClass} mt-1 w-full`}
@@ -875,12 +872,10 @@ export function SecurityDashboardView() {
         ) : (
           <div className={`${dsTableWrap} max-h-[min(16rem,40vh)] ${dsScrollbar}`}>
             <table className={`${dsTable} text-xs`}>
-              <thead>
-                <tr>
+              <GlobalTableHead>
                   <GlobalTableHeadLabel label="Nome" />
                   <GlobalTableHeadLabel label="Id profilo" />
-                </tr>
-              </thead>
+              </GlobalTableHead>
               <tbody>
                 {activeTodayRows.map((r) => (
                   <tr key={r.id} className={dsTableRow}>

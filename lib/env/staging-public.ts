@@ -16,7 +16,7 @@ const STAGING_BLOCKED_PREFIXES = [
   "/magazzino",
   "/bunder",
   "/report",
-  "/supporto",
+  "/dipendenti",
 ] as const;
 
 export function isStagingBlockedPathname(pathname: string): boolean {

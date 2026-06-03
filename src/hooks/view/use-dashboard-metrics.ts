@@ -4,21 +4,19 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { useQueryClient } from "@tanstack/react-query";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
-import { computeDashboardMagFeedFromLogs } from "@/lib/view/dashboard-magazzino-log-selectors";
+import {
+  computeDashboardMagDailyMovementsFromLogs,
+  computeDashboardMagFeedFromLogs,
+} from "@/lib/view/dashboard-magazzino-log-selectors";
 import {
   computeDashboardLavWidgetRows,
   computeDashboardLavWidgetStats,
-  computeDashboardMagDailyMovements,
   computeDashboardMagSottoScortaRicambi,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { computeReportMagazzinoKpiWidgetFromUi } from "@/lib/report/report-kpi-selectors";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
-import {
-  useLogListQuery,
-  useMagazzinoRicambiUIQuery,
-  useMovimentiListQuery,
-} from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useLogListQuery, useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
@@ -57,7 +55,6 @@ export function useDashboardMetrics() {
 
   const lavQuery = useLavorazioniList(LAV_FILTERS, viewOpts);
   const magQuery = useMagazzinoRicambiUIQuery(undefined, viewOpts);
-  const movQuery = useMovimentiListQuery(undefined, viewOpts);
   const magLogsQ = useLogListQuery(
     { entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
     { enabled: !staging, ...viewOpts },
@@ -106,14 +103,19 @@ export function useDashboardMetrics() {
   const magRecentMovements = magLogFeed.movements;
 
   const magDailyMovements = useMemo(
-    () => (staging ? { entrate: 0, uscite: 0 } : computeDashboardMagDailyMovements(movQuery.data ?? [])),
-    [movQuery.data, staging],
+    () =>
+      staging
+        ? { entrate: 0, uscite: 0 }
+        : computeDashboardMagDailyMovementsFromLogs(
+            magLogsQ.data ?? [],
+            movLogsQ.data ?? [],
+            ricambiById,
+          ),
+    [magLogsQ.data, movLogsQ.data, ricambiById, staging],
   );
 
-  const isLoading =
-    lavQuery.isLoading || magQuery.isLoading || movQuery.isLoading || magLogsQ.isLoading || movLogsQ.isLoading;
-  const isError =
-    lavQuery.isError || magQuery.isError || movQuery.isError || magLogsQ.isError || movLogsQ.isError;
+  const isLoading = lavQuery.isLoading || magQuery.isLoading || magLogsQ.isLoading || movLogsQ.isLoading;
+  const isError = lavQuery.isError || magQuery.isError || magLogsQ.isError || movLogsQ.isError;
 
   useEffect(() => {
     if (staging || loadLoggedRef.current) return;
@@ -128,7 +130,6 @@ export function useDashboardMetrics() {
     staging,
     lavQuery,
     magQuery,
-    movQuery,
     lavRows,
     lavStats,
     magStats,
@@ -138,8 +139,8 @@ export function useDashboardMetrics() {
     magRecentMovements,
     lavLoading: lavQuery.isLoading,
     lavError: lavQuery.isError,
-    magLoading: magQuery.isLoading || movQuery.isLoading || magLogsQ.isLoading || movLogsQ.isLoading,
-    magError: magQuery.isError || movQuery.isError || magLogsQ.isError || movLogsQ.isError,
+    magLoading: magQuery.isLoading || magLogsQ.isLoading || movLogsQ.isLoading,
+    magError: magQuery.isError || magLogsQ.isError || movLogsQ.isError,
     isLoading,
     isError,
   };

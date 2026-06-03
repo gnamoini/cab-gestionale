@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useMemo, type KeyboardEvent } from "react";
+import { LoadingKanbanSkeleton } from "@/components/design-system";
 import { KanbanColumnScroll } from "@/components/gestionale/lavorazioni/kanban-column-scroll";
 import { LavorazioniKanbanMobileBoard } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-board";
 import type { KanbanMobileSection } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-types";
@@ -14,7 +15,7 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
-import { comparePrioritaLavorazione } from "@/lib/lavorazioni/priorita-order";
+import { partitionKanbanRows, sortKanbanCards } from "@/lib/lavorazioni/kanban-operational";
 import {
   DEFAULT_LAVORAZIONE_STATO_ID,
   isStatoClosed,
@@ -60,14 +61,6 @@ function findCompletateColumnConfig(stati: readonly StatoLavorazioneConfig[]): S
       closed: true,
     }
   );
-}
-
-function sortKanbanCards(rows: LavorazioneListRow[]): LavorazioneListRow[] {
-  return [...rows].sort((a, b) => {
-    const byPriority = comparePrioritaLavorazione(b.priorita, a.priorita);
-    if (byPriority !== 0) return byPriority;
-    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-  });
 }
 
 function macchinaLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
@@ -276,7 +269,6 @@ KanbanCard.displayName = "KanbanCard";
 
 export function LavorazioniKanbanView({
   rows,
-  closedRows = [],
   columns,
   statiOpts,
   schedeStore,
@@ -292,7 +284,6 @@ export function LavorazioniKanbanView({
   onOpenClosedRow,
 }: {
   rows: readonly LavorazioneListRow[];
-  closedRows?: readonly LavorazioneListRow[];
   columns: readonly StatoLavorazioneConfig[];
   statiOpts: readonly StatoLavorazioneConfig[];
   schedeStore: LavorazioneSchedeStore;
@@ -324,6 +315,11 @@ export function LavorazioniKanbanView({
     [operationalColumns],
   );
 
+  const { operational: operationalRows, completate: completateRows } = useMemo(
+    () => partitionKanbanRows(rows, statiOpts),
+    [rows, statiOpts],
+  );
+
   const { byStato, attesaPreventivoByStato } = useMemo(() => {
     const statiList = [...statiOpts];
     const map = new Map<string, LavorazioneListRow[]>();
@@ -332,7 +328,7 @@ export function LavorazioniKanbanView({
     for (const col of attesaPreventivoColumns) attesaMap.set(col.id, []);
     const fallbackAttesaId = attesaPreventivoColumns[0]?.id;
 
-    for (const row of rows) {
+    for (const row of operationalRows) {
       const statoId = resolveStatoId(row.stato, statiList);
       const statoCol = statiList.find((c) => c.id === statoId);
       if (statoCol && isAttesaPreventivoStato(statoCol)) {
@@ -352,10 +348,10 @@ export function LavorazioniKanbanView({
     }
 
     return { byStato: map, attesaPreventivoByStato: attesaMap };
-  }, [rows, kanbanColumns, attesaPreventivoColumns, statiOpts]);
+  }, [operationalRows, kanbanColumns, attesaPreventivoColumns, statiOpts]);
 
   const completateColumn = useMemo(() => findCompletateColumnConfig(statiOpts), [statiOpts]);
-  const completateItems = useMemo(() => sortKanbanCards([...closedRows]), [closedRows]);
+  const completateItems = useMemo(() => sortKanbanCards(completateRows), [completateRows]);
   const openClosedRow = onOpenClosedRow ?? onOpenRow;
 
   const mobileSections = useMemo((): KanbanMobileSection[] => {
@@ -411,11 +407,7 @@ export function LavorazioniKanbanView({
   );
 
   if (loading) {
-    return (
-      <div className="lavorazioni-kanban-loading">
-        <p className="text-sm text-zinc-500">Caricamento…</p>
-      </div>
-    );
+    return <LoadingKanbanSkeleton />;
   }
 
   if (rows.length === 0 && completateItems.length === 0) {

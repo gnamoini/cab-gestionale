@@ -32,6 +32,12 @@ Template: [`.env.smoke.example`](../../.env.smoke.example)
 ## Supabase production
 
 - [ ] Backup / PITR abilitato nel dashboard
+- [ ] Migration pending applicate:
+  - [ ] `20260704120000_bunder_documents.sql`
+  - [ ] `20260704130000_deprecate_supporto_tables.sql`
+  - [ ] `20260705120000_gestionale_sync_realtime_gaps.sql`
+  - [ ] `20260706120000_input_text_limits.sql`
+- [ ] Supabase Auth → Redirect URLs include `https://<dominio>/login/reset-password`
 - [ ] Bucket `documenti` privato
 - [ ] RLS attivo su `user_permissions`, `profiles`, `documenti`, `app_settings`
 - [ ] `app_settings.system.enable_operator_global_settings` = **off**
@@ -74,7 +80,12 @@ $env:OPS_DIAGNOSTICS_REQUIRE_DB=1; npm run ops:diagnostics
 npm run release:gate
 ```
 
-## Riferimenti
+## Post-deploy verify (input security + sync)
+
+- [ ] `npm run audit:rls` — PASS
+- [ ] Smoke manuale: recovery password → `/login/reset-password` → nuova password
+- [ ] Smoke BUNDER persist (migration `bunder_documents`)
+- [ ] Realtime dipendenti/permissions attivo (migration sync gaps)
 
 - [rollout-checklist.md](./rollout-checklist.md)
 - [release-gate.md](../release-gate.md)

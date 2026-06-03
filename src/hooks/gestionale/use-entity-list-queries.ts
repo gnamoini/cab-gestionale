@@ -9,11 +9,13 @@
  */
 
 import type { UseQueryOptions } from "@tanstack/react-query";
-import { useMemo } from "react";
-import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
+import { useMemo, useEffect, useRef } from "react";
+import { mapMagazzinoRowsToUI } from "@/lib/magazzino/magazzino-list-cache";
+import { scheduleCompatBackgroundAudit } from "@/lib/magazzino/compat/compat-runtime-sanitize";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
+import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { documentiService, type DocumentiFilters } from "@/src/services/documenti.service";
 import { logService, type LogFilters } from "@/src/services/log.service";
@@ -41,10 +43,20 @@ export function useMagazzinoListQuery(filters?: MagazzinoFilters, options?: RqOp
 /** Lista magazzino mappata al modello UI — unica source per componenti gestionali. */
 export function useMagazzinoRicambiUIQuery(filters?: MagazzinoFilters, options?: RqOpts<import("@/src/types/supabase-tables").MagazzinoRicambioRow[]>) {
   const q = useMagazzinoListQuery(filters, options);
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const mezziListe = settingsPayload?.resolved?.mezziListe;
   const data = useMemo(
-    (): RicambioMagazzino[] => (q.data ?? []).map((row) => magazzinoRowToRicambioUI(row)),
-    [q.data],
+    (): RicambioMagazzino[] => mapMagazzinoRowsToUI(q.data ?? [], "Sistema", mezziListe),
+    [q.data, mezziListe],
   );
+  const lastAuditSigRef = useRef<string>("");
+  useEffect(() => {
+    if (data.length === 0) return;
+    const sig = `${data.length}:${data.map((r) => r.id).join(",")}`;
+    if (sig === lastAuditSigRef.current) return;
+    lastAuditSigRef.current = sig;
+    scheduleCompatBackgroundAudit(data, mezziListe, "useMagazzinoRicambiUIQuery");
+  }, [data, mezziListe]);
   return { ...q, data };
 }
 

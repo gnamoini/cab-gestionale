@@ -12,8 +12,11 @@ export type CabSyncEntity =
   | "documenti"
   | "scheda_lavorazione"
   | "log_modifiche"
-  | "support_notes"
-  | "segnalazioni";
+  | "dashboard_promemoria"
+  | "bunder_documents"
+  | "dipendenti_timesheet_employees"
+  | "dipendenti_timesheet_entries"
+  | "user_permissions";
 
 export type CabSyncEvent =
   | { type: "entity_created"; entity: CabSyncEntity; id: string; table?: string }
@@ -32,8 +35,11 @@ const TABLE_ENTITY: Record<string, CabSyncEntity> = {
   documenti: "documenti",
   scheda_lavorazione: "scheda_lavorazione",
   log_modifiche: "log_modifiche",
-  support_notes: "support_notes",
-  segnalazioni: "segnalazioni",
+  dashboard_promemoria: "dashboard_promemoria",
+  bunder_documents: "bunder_documents",
+  dipendenti_timesheet_employees: "dipendenti_timesheet_employees",
+  dipendenti_timesheet_entries: "dipendenti_timesheet_entries",
+  user_permissions: "user_permissions",
 };
 
 type Listener = (event: CabSyncEvent) => void;

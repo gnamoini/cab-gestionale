@@ -8,6 +8,8 @@ import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import {
   buildStatiLavorazioniOptions,
   debugSelectOptions,
@@ -32,6 +34,7 @@ export type GlobalOptionsSlice = {
     statiChiusi: StatoLavorazioneConfig[];
     statiRapidi: StatoLavorazioneConfig[];
     addetti: string[];
+    addettiRecords: AddettoRecord[];
     addettoColors: Record<string, string>;
     prioritaColors: Partial<Record<PrioritaLav, string>>;
     prioritaDb: PrioritaLavorazione[];
@@ -40,6 +43,9 @@ export type GlobalOptionsSlice = {
   mezziListe: MezziListePrefs;
   magazzinoMaster: MagazzinoMasterPrefs;
   preventiviDefaults: SistemaPreventiviDefaults;
+  dipendenti: {
+    tipiAssenza: TipoAssenzaConfig[];
+  };
 };
 
 function sliceFromResolved(resolved: CabAppSettingsResolved, source: GlobalOptionsSlice["source"]): GlobalOptionsSlice {
@@ -60,6 +66,7 @@ function sliceFromResolved(resolved: CabAppSettingsResolved, source: GlobalOptio
       statiChiusi,
       statiRapidi,
       addetti: resolved.lavorazioni.addetti,
+      addettiRecords: resolved.lavorazioni.addettiRecords,
       addettoColors: resolved.lavorazioni.addettoColors,
       prioritaColors: resolved.lavorazioni.prioritaColors,
       prioritaDb: resolved.lavorazioni.prioritaDb.length ? resolved.lavorazioni.prioritaDb : DEFAULT_PRIORITA_LAVORAZIONI_DB,
@@ -70,6 +77,7 @@ function sliceFromResolved(resolved: CabAppSettingsResolved, source: GlobalOptio
     mezziListe,
     magazzinoMaster: resolved.magazzinoMaster,
     preventiviDefaults: resolved.preventiviDefaults,
+    dipendenti: resolved.dipendenti,
   };
 }
 
@@ -143,6 +151,17 @@ export const useEmployeesOptions = () => {
     [g],
   );
 };
+
+export const useAddettiRecords = () => {
+  const g = useGlobalOptions({ debugTag: "useAddettiRecords" });
+  return useMemo(
+    () => ({
+      ...g,
+      records: g.lavorazioni.addettiRecords,
+    }),
+    [g],
+  );
+};
 export const useUtilizzatoriOptions = () => {
   const g = useGlobalOptions({ debugTag: "useUtilizzatoriOptions" });
   return useMemo(
@@ -169,6 +188,17 @@ export const useCantieriOptions = () => {
     () => ({
       ...g,
       options: g.mezziListe.cantieri,
+    }),
+    [g],
+  );
+};
+
+export const useTipiAssenza = () => {
+  const g = useGlobalOptions({ debugTag: "useTipiAssenza" });
+  return useMemo(
+    () => ({
+      ...g,
+      tipi: g.dipendenti.tipiAssenza,
     }),
     [g],
   );

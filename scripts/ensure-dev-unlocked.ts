@@ -1,0 +1,46 @@
+/**
+ * Evita crash Turbopack HMR (NextSegmentConfig) da lock stale o seconda istanza dev.
+ * Legge `.next/dev/lock` e fallisce con messaggio chiaro se un next dev è già attivo.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+const LOCK_PATH = path.join(ROOT, ".next", "dev", "lock");
+
+type DevLock = { pid?: number; port?: number };
+
+function pidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+if (!fs.existsSync(LOCK_PATH)) {
+  process.exit(0);
+}
+
+let lock: DevLock = {};
+try {
+  lock = JSON.parse(fs.readFileSync(LOCK_PATH, "utf8")) as DevLock;
+} catch {
+  fs.unlinkSync(LOCK_PATH);
+  console.warn("[dev] Removed unreadable .next/dev/lock");
+  process.exit(0);
+}
+
+const pid = lock.pid;
+if (pid && pidAlive(pid)) {
+  console.error(`[dev] Next.js dev server already running (PID ${pid}, port ${lock.port ?? "?"}).`);
+  console.error(`[dev] Stop it first: taskkill /PID ${pid} /F`);
+  console.error("[dev] Or use: npm run dev:webpack while editing proxy.ts / proxy-handler.ts");
+  console.error("[dev] After Turbopack SST/crash errors: npm run clean:next && npm run dev");
+  process.exit(1);
+}
+
+fs.unlinkSync(LOCK_PATH);
+console.warn(`[dev] Removed stale .next/dev/lock (PID ${pid ?? "?"} not running).`);

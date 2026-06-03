@@ -13,7 +13,10 @@ export function IconGestionaleSearchMagnifier({ className = "h-4 w-4" }: { class
 }
 
 const iconWrapClass =
-  "pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[color:var(--cab-text-muted)]";
+  "pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-[color:var(--cab-text-muted)] transition-colors duration-200 group-focus-within:text-[color:color-mix(in_srgb,var(--cab-primary)_78%,var(--cab-text-muted))]";
+
+const searchWrapClass =
+  "group relative min-h-11 min-w-0 w-full rounded-[var(--ds-radius-lg)] transition-[box-shadow] duration-200 focus-within:shadow-[0_0_0_3px_color-mix(in_srgb,var(--cab-primary)_12%,transparent)]";
 
 export type GestionaleSearchFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, "type" | "className"> & {
   className?: string;
@@ -27,7 +30,7 @@ export function GestionaleSearchField({
   ...rest
 }: GestionaleSearchFieldProps) {
   return (
-    <div className={`relative min-h-11 min-w-0 w-full ${wrapperClassName}`.trim()}>
+    <div className={`${searchWrapClass} ${wrapperClassName}`.trim()}>
       <span className={iconWrapClass} aria-hidden>
         <IconGestionaleSearchMagnifier />
       </span>

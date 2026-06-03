@@ -4,6 +4,7 @@ export const CAB_SETTINGS_MODULE = {
   mezzi: "mezzi",
   magazzino: "magazzino",
   preventivi: "preventivi",
+  dipendenti: "dipendenti",
 } as const;
 
 /** Chiavi `app_settings.key` per modulo */

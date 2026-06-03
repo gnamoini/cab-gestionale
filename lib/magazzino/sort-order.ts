@@ -1,5 +1,6 @@
+import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
-
+import { readCompatSortKeyForUi } from "@/lib/magazzino/compat/compat-read-guard";
 export type SortPhaseMagazzino = "asc" | "desc" | "natural";
 
 export function nextSortPhase(p: SortPhaseMagazzino): SortPhaseMagazzino {
@@ -21,7 +22,11 @@ export function compareNaturalOrder(
   return a.id.localeCompare(b.id);
 }
 
-export function sortValueForKey(r: RicambioMagazzino, key: SortKeyMagazzino): string | number {
+export function sortValueForKey(
+  r: RicambioMagazzino,
+  key: SortKeyMagazzino,
+  mezziListe?: import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs,
+): string | number {
   switch (key) {
     case "prezzoVendita":
       return r.prezzoVendita;
@@ -33,12 +38,15 @@ export function sortValueForKey(r: RicambioMagazzino, key: SortKeyMagazzino): st
       return r.marca.toLowerCase();
     case "categoria":
       return r.categoria.toLowerCase();
-    case "codiceFornitoreOriginale":
-      return r.codiceFornitoreOriginale.toLowerCase();
+    case "codiceFornitoreOriginale": {
+      const primary = r.codiceFornitoreOriginale.toLowerCase();
+      const secondary = r.codiceFornitoreOriginaleSecondario.toLowerCase();
+      return secondary ? `${primary}\0${secondary}` : primary;
+    }
     case "descrizione":
       return r.descrizione.toLowerCase();
     case "compatibilitaMezzi":
-      return r.compatibilitaMezzi.join(", ").toLowerCase();
+      return readCompatSortKeyForUi(r, mezziListe, "sort-order.compatibilitaMezzi");
     case "dataUltimaModifica":
       return r.dataUltimaModifica;
     case "autoreUltimaModifica":
@@ -58,8 +66,8 @@ export function compareByColumn(
   key: SortKeyMagazzino,
   phase: "asc" | "desc",
   consumoMedioById?: Map<string, number | null>,
-): number {
-  if (key === "consumoMedioMensile" && consumoMedioById) {
+  mezziListe?: import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs,
+): number {  if (key === "consumoMedioMensile" && consumoMedioById) {
     const va = consumoMedioById.get(a.id);
     const vb = consumoMedioById.get(b.id);
     const ma = va == null || !Number.isFinite(va);
@@ -70,9 +78,8 @@ export function compareByColumn(
     const cmp = va - vb;
     return phase === "asc" ? cmp : -cmp;
   }
-  const va = sortValueForKey(a, key);
-  const vb = sortValueForKey(b, key);
-  let cmp = 0;
+  const va = sortValueForKey(a, key, mezziListe);
+  const vb = sortValueForKey(b, key, mezziListe);  let cmp = 0;
   if (typeof va === "number" && typeof vb === "number") cmp = va - vb;
   else cmp = String(va).localeCompare(String(vb), "it");
   return phase === "asc" ? cmp : -cmp;

@@ -7,7 +7,13 @@ import { TablePagination } from "@/components/gestionale/table-pagination";
 import { cycleReportSort, ReportSortTh, type ReportSortPhase } from "@/components/report/report-sort-th";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import type { ReportRowCompare, TopClienteReportRow, TopMezzoReportRow, TopRicambioReportRow } from "@/lib/report/report-classifiche";
+import {
+  formatTopMezzoIdentificazione,
+  type ReportRowCompare,
+  type TopClienteReportRow,
+  type TopMezzoReportRow,
+  type TopRicambioReportRow,
+} from "@/lib/report/report-classifiche";
 import {
   dsScrollbar,
   dsTableEmptyCell,
@@ -35,8 +41,31 @@ function cmpCell(a: unknown, b: unknown): number {
 }
 
 type RicKey = "codice" | "nome" | "marca" | "qtaEntrata" | "qtaUscita";
-type MezKey = "mezzo" | "targa" | "matricola" | "nScuderia" | "cliente" | "interventi";
+type MezKey = "mezzo" | "identificazione" | "cliente" | "interventi";
 type CliKey = "cliente" | "interventi" | "ultimoIso";
+
+function mezzoSortValue(row: TopMezzoReportRow, key: MezKey): string | number {
+  if (key === "identificazione") return formatTopMezzoIdentificazione(row);
+  return row[key];
+}
+
+function ReportRankMetricCell({ value, max }: { value: number; max: number }) {
+  const pct = max > 0 ? Math.min(100, Math.round((value / max) * 100)) : 0;
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <div
+        className="hidden h-1.5 w-14 max-w-[3.5rem] shrink overflow-hidden rounded-full bg-[color:color-mix(in_srgb,var(--cab-surface-2)_70%,var(--cab-card))] md:block"
+        aria-hidden
+      >
+        <div
+          className="h-full rounded-full bg-[color:color-mix(in_srgb,var(--cab-primary)_72%,transparent)]"
+          style={{ width: `${pct}%` }}
+        />
+      </div>
+      <span className="min-w-[1.25rem] tabular-nums font-semibold text-[color:var(--cab-text)]">{value}</span>
+    </div>
+  );
+}
 
 export function ReportTopRicambi({ rows, showCompare }: { rows: TopRicambioReportRow[]; showCompare: boolean }) {
   const [sortColumn, setSortColumn] = useState<RicKey | null>(null);
@@ -144,8 +173,8 @@ export function ReportTopMezzi({ rows, showCompare }: { rows: TopMezzoReportRow[
     if (sortPhase === "natural" || sortColumn == null) return [...rows];
     const c = [...rows];
     c.sort((a, b) => {
-      const va = a[sortColumn];
-      const vb = b[sortColumn];
+      const va = mezzoSortValue(a, sortColumn);
+      const vb = mezzoSortValue(b, sortColumn);
       const m = cmpCell(va, vb);
       const p = sortPhase === "asc" ? m : -m;
       if (p !== 0) return p;
@@ -154,6 +183,8 @@ export function ReportTopMezzi({ rows, showCompare }: { rows: TopMezzoReportRow[
     return c;
   }, [rows, sortColumn, sortPhase]);
 
+  const maxInterventi = useMemo(() => Math.max(1, ...data.map((r) => r.interventi)), [data]);
+
   const pageSize = useResponsiveListPageSize();
   const { page, setPage, pageCount, sliceItems, showPager, label, resetPage } = useClientPagination(data.length, pageSize);
   useEffect(() => {
@@ -161,29 +192,25 @@ export function ReportTopMezzi({ rows, showCompare }: { rows: TopMezzoReportRow[
   }, [rows, sortColumn, sortPhase, pageSize, resetPage]);
   const paged = useMemo(() => sliceItems(data), [data, sliceItems, page]);
 
-  const colSpan = showCompare ? 8 : 7;
+  const colSpan = showCompare ? 6 : 5;
 
   return (
     <div className={wrap}>
-      <table className="w-full min-w-[640px] table-fixed border-separate border-spacing-0 text-left text-sm">
+      <table className="w-full min-w-[36rem] border-separate border-spacing-0 text-left text-xs sm:text-sm">
         <colgroup>
-          <col className="w-6 min-w-[1.5rem] max-w-[1.75rem]" />
-          <col style={{ width: "18%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "10%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "18%" }} />
-          <col style={{ width: "10%" }} />
-          {showCompare ? <col style={{ width: "19%" }} /> : null}
+          <col className="w-8" />
+          <col className="min-w-[10rem]" />
+          <col className="min-w-[9rem]" />
+          <col className="min-w-[8rem]" />
+          <col className="w-[7.5rem]" />
+          {showCompare ? <col className="min-w-[7rem]" /> : null}
         </colgroup>
         <GlobalTableHead>
-          <GlobalTableHeadLabel label="#" thClassName="w-6 min-w-[1.5rem] max-w-[1.75rem] px-0.5 text-center" align="center" />
+          <GlobalTableHeadLabel label="#" thClassName="w-8 px-1 text-center" align="center" />
           <ReportSortTh label="Mezzo" columnKey="mezzo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-          <ReportSortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-          <ReportSortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
           <ReportSortTh
-            label="N. scuderia"
-            columnKey="nScuderia"
+            label="Identificazione"
+            columnKey="identificazione"
             sortColumn={sortColumn}
             sortPhase={sortPhase}
             onSort={onSort}
@@ -200,28 +227,45 @@ export function ReportTopMezzi({ rows, showCompare }: { rows: TopMezzoReportRow[
               </td>
             </tr>
           ) : (
-            paged.map((r) => (
-              <tr key={r.id} className={tbodyTr}>
-                <td className={`${tdBase} px-0.5 text-center text-[10px] tabular-nums text-[color:var(--cab-text-muted)]`}>{r.rank}</td>
-                <td className={`${tdBase} min-w-0`}>
-                  <Link href="/mezzi" className="line-clamp-2 font-medium text-[color:var(--cab-primary)] hover:underline">
-                    {r.mezzo}
-                  </Link>
-                </td>
-                <td className={`${tdBase} whitespace-nowrap font-mono text-xs`}>{r.targa}</td>
-                <td className={`${tdBase} whitespace-nowrap font-mono text-xs`}>{r.matricola}</td>
-                <td className={`${tdBase} max-w-0 truncate text-xs`} title={r.nScuderia}>
-                  {r.nScuderia}
-                </td>
-                <td className={`${tdBase} min-w-0 truncate text-xs`} title={r.cliente}>
-                  {r.cliente}
-                </td>
-                <td className={`${tdBase} text-right tabular-nums font-medium`}>{r.interventi}</td>
-                {showCompare ? (
-                  <td className={`${tdBase} text-right text-xs tabular-nums text-[color:color-mix(in_srgb,var(--cab-text-muted)_92%,var(--cab-text))]`}>{fmtCmpLine(r.compare)}</td>
-                ) : null}
-              </tr>
-            ))
+            paged.map((r) => {
+              const ident = formatTopMezzoIdentificazione(r);
+              return (
+                <tr key={r.id} className={tbodyTr}>
+                  <td className={`${tdBase} px-1 text-center text-[11px] tabular-nums text-[color:var(--cab-text-muted)]`}>
+                    {r.rank}
+                  </td>
+                  <td className={`${tdBase} min-w-0 max-w-[14rem]`}>
+                    <Link
+                      href="/mezzi"
+                      className="line-clamp-2 font-medium leading-snug text-[color:var(--cab-primary)] hover:underline"
+                      title={r.mezzo}
+                    >
+                      {r.mezzo}
+                    </Link>
+                  </td>
+                  <td className={`${tdBase} min-w-0 max-w-[11rem]`}>
+                    <span className="block truncate font-mono text-[11px] leading-snug text-[color:var(--cab-text-muted)]" title={ident}>
+                      {ident}
+                    </span>
+                  </td>
+                  <td className={`${tdBase} min-w-0 max-w-[10rem]`}>
+                    <span className="block truncate text-[color:var(--cab-text)]" title={r.cliente}>
+                      {r.cliente}
+                    </span>
+                  </td>
+                  <td className={`${tdBase} text-right`}>
+                    <ReportRankMetricCell value={r.interventi} max={maxInterventi} />
+                  </td>
+                  {showCompare ? (
+                    <td
+                      className={`${tdBase} text-right text-[11px] tabular-nums text-[color:color-mix(in_srgb,var(--cab-text-muted)_92%,var(--cab-text))]`}
+                    >
+                      {fmtCmpLine(r.compare)}
+                    </td>
+                  ) : null}
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>
@@ -264,11 +308,13 @@ export function ReportTopClienti({ rows, showCompare }: { rows: TopClienteReport
   }, [rows, sortColumn, sortPhase, pageSize, resetPage]);
   const paged = useMemo(() => sliceItems(data), [data, sliceItems, page]);
 
+  const maxInterventi = useMemo(() => Math.max(1, ...data.map((r) => r.interventi)), [data]);
+
   const colSpan = showCompare ? 5 : 4;
 
   return (
     <div className={wrap}>
-      <table className="w-full min-w-[520px] table-fixed border-separate border-spacing-0 text-left text-sm">
+      <table className="w-full min-w-[28rem] border-separate border-spacing-0 text-left text-xs sm:text-sm">
         <colgroup>
           <col className="w-6 min-w-[1.5rem] max-w-[1.75rem]" />
           <col style={{ width: "38%" }} />
@@ -299,7 +345,9 @@ export function ReportTopClienti({ rows, showCompare }: { rows: TopClienteReport
                     {r.cliente}
                   </span>
                 </td>
-                <td className={`${tdBase} text-right tabular-nums`}>{r.interventi}</td>
+                <td className={`${tdBase} text-right`}>
+                  <ReportRankMetricCell value={r.interventi} max={maxInterventi} />
+                </td>
                 <td className={`${tdBase} whitespace-nowrap text-right text-xs tabular-nums text-[color:color-mix(in_srgb,var(--cab-text-muted)_92%,var(--cab-text))]`}>
                   {r.ultimoIso ? new Date(r.ultimoIso).toLocaleDateString("it-IT") : "—"}
                 </td>

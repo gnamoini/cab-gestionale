@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import { todayUntilNowRange } from "@/lib/report/date-ranges";
 import {
   classifyDashboardMagazzinoLog,
+  computeDashboardMagDailyMovementsFromLogs,
   computeDashboardMagFeedFromLogs,
 } from "@/lib/view/dashboard-magazzino-log-selectors";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -10,6 +12,7 @@ const ricambio: RicambioMagazzino = {
   id: "r1",
   marca: "Bosch",
   codiceFornitoreOriginale: "X1",
+  codiceFornitoreOriginaleSecondario: "",
   descrizione: "Filtro",
   note: "",
   categoria: "",
@@ -110,5 +113,40 @@ assert.equal(feed.movements.length, 1);
 assert.equal(feed.movements[0]?.tipo, "entrata");
 assert.equal(feed.movements[0]?.quantita, 2);
 assert.equal(feed.modified.length, 0);
+
+const now = new Date();
+const todayIso = now.toISOString();
+const dailyToday = computeDashboardMagDailyMovementsFromLogs(
+  [
+    {
+      id: "stock-today",
+      entita: "magazzino_ricambi",
+      entita_id: "r1",
+      azione: "UPDATE",
+      autore_id: null,
+      created_at: todayIso,
+      payload: { before: { quantita: 3 }, after: { quantita: 8 } },
+    },
+  ],
+  [
+    {
+      id: "mov-today",
+      entita: "movimenti_ricambi",
+      entita_id: "mov-2",
+      azione: "CREATE",
+      autore_id: null,
+      created_at: todayIso,
+      payload: { snapshot: { ricambio_id: "r1", tipo: "uscita", quantita: 2 } },
+    },
+  ],
+  byId,
+  todayUntilNowRange(now),
+);
+assert.equal(dailyToday.entrate, 5);
+assert.equal(dailyToday.uscite, 2);
+
+const dailyOld = computeDashboardMagDailyMovementsFromLogs([], [movRow], byId, todayUntilNowRange(now));
+assert.equal(dailyOld.entrate, 0);
+assert.equal(dailyOld.uscite, 0);
 
 console.log("dashboard-magazzino-log-selectors.test.ts OK");

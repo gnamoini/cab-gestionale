@@ -1,5 +1,6 @@
 "use client";
 
+import { TruncatedTextTooltip } from "@/components/design-system";
 import { useMemo, type CSSProperties, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
@@ -86,8 +87,8 @@ export const lavTableColPillMinStyle = lavTableColStatoClass;
 export const lavTableTdPill = gestionaleListTableTdPill;
 export const lavTableTdPillWrap = gestionaleListTableTdPillWrap;
 
-/** Padding orizzontale celle pill (px-1.5 × 2) + margine ai bordi colonna. */
-const LAV_TABLE_PILL_COL_PAD_REM = 0.75;
+/** Padding orizzontale celle pill (px-2.5 × 2, allineato a `globalTableThCell`). */
+const LAV_TABLE_PILL_COL_PAD_REM = 1.25;
 
 function lavTablePillContentWidthRem(labels: readonly string[]): number {
   const maxLen = labels.reduce((m, l) => Math.max(m, l.trim().length), 0);
@@ -118,11 +119,6 @@ export const lavTableColNoteClass = gestionaleListColNoteClass;
 export const lavTableColAzioniClass = gestionaleListColAzioniClass;
 export const lavTableThAzioni = gestionaleListTableThAzioni;
 export const lavTableTdAzioni = gestionaleListTableTdAzioni;
-
-/** Archivio: Completamento + Ore = larghezza combinata Stato + Priorità (tabella attive). */
-export function lavTableArchivioMiddleColStyle(statoColRem: number, prioritaColRem: number): CSSProperties {
-  return { width: `${(statoColRem + prioritaColRem) / 2}rem` };
-}
 
 /** @deprecated Alias di `lavTableTdAzioni`. */
 export const lavTableTdActionsAttive = lavTableTdAzioni;
@@ -199,6 +195,11 @@ export function LavTableActionsCell({ children }: { children: ReactNode }) {
   return <td className={lavTableTdAzioni}>{children}</td>;
 }
 
+function utilizzatoreStackVisible(utilizzatore: string): boolean {
+  const t = utilizzatore.trim();
+  return t.length > 0 && t !== "—";
+}
+
 /** Stack cliente / utilizzatore — stesso markup tabella Lavorazioni. */
 export function LavorazioniClienteUtilStack({
   cliente,
@@ -209,9 +210,15 @@ export function LavorazioniClienteUtilStack({
 }) {
   return (
     <div className="min-w-0 leading-tight">
-      <div className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100">{cliente}</div>
-      {utilizzatore.trim() ? (
-        <div className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{utilizzatore}</div>
+      <TruncatedTextTooltip
+        text={cliente}
+        className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100"
+      />
+      {utilizzatoreStackVisible(utilizzatore) ? (
+        <TruncatedTextTooltip
+          text={utilizzatore.trim()}
+          className="truncate text-[10px] text-zinc-500 dark:text-zinc-400"
+        />
       ) : null}
     </div>
   );
@@ -242,25 +249,30 @@ export function LavorazioniMezzoIdentStack({
   return (
     <div className="min-w-0 leading-snug">
       {lines.map((text, index) => (
-        <div
+        <TruncatedTextTooltip
           key={`${text}-${index}`}
+          text={text}
           className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100"
-        >
-          {text}
-        </div>
+        />
       ))}
     </div>
   );
+}
+
+/** Larghezza wrap pill completamento archivio = media pill Stato + Priorità (tabella in corso). */
+export function lavTableArchivioMiddlePillWrapStyle(
+  statoLabels: readonly string[],
+  prioritaLabels: readonly string[],
+): CSSProperties {
+  const w =
+    (lavTablePillContentWidthRem(statoLabels) + lavTablePillContentWidthRem(prioritaLabels)) / 2;
+  return { width: `${w}rem` };
 }
 
 export type LavorazioniListTableColStyles = {
   statoPillColStyle: CSSProperties;
   prioritaPillColStyle: CSSProperties;
   addettoPillColStyle: CSSProperties;
-  archivioMiddleColStyle: CSSProperties;
-  statoPillWrapStyle: CSSProperties;
-  prioritaPillWrapStyle: CSSProperties;
-  addettoPillWrapStyle: CSSProperties;
 };
 
 /** Larghezze colonne pill — condivise tra Lavorazioni e portale clienti. */
@@ -276,20 +288,13 @@ export function useLavorazioniListTableColStyles(
   const prioritaLabels = useMemo(() => prioritaOpts.map((p) => prioritaLabel(p)), [prioritaOpts]);
   const addettoLabels = useMemo(() => ["—", ...addetti], [addetti]);
 
-  const statoColRem = useMemo(() => lavTablePillColWidthRem(statoLabels), [statoLabels]);
-  const prioritaColRem = useMemo(() => lavTablePillColWidthRem(prioritaLabels), [prioritaLabels]);
-
   return useMemo(
     () => ({
       statoPillColStyle: lavTablePillColStyleFromLabels(statoLabels),
       prioritaPillColStyle: lavTablePillColStyleFromLabels(prioritaLabels),
       addettoPillColStyle: lavTablePillColStyleFromLabels(addettoLabels),
-      archivioMiddleColStyle: lavTableArchivioMiddleColStyle(statoColRem, prioritaColRem),
-      statoPillWrapStyle: lavTablePillWrapStyleFromLabels(statoLabels),
-      prioritaPillWrapStyle: lavTablePillWrapStyleFromLabels(prioritaLabels),
-      addettoPillWrapStyle: lavTablePillWrapStyleFromLabels(addettoLabels),
     }),
-    [statoLabels, prioritaLabels, addettoLabels, statoColRem, prioritaColRem],
+    [statoLabels, prioritaLabels, addettoLabels],
   );
 }
 

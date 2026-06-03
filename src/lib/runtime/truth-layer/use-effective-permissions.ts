@@ -5,6 +5,7 @@ import { cabDevWarn } from "@/src/lib/observability/dev-warn";
 import { useAuth } from "@/context/auth-context";
 import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
 import { useUserPermissionsQuery } from "@/src/hooks/use-permissions";
+import { publishClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
 
@@ -25,13 +26,20 @@ export function useEffectivePermissions(): {
 
   const snapshot = useMemo(() => {
     if (!user?.id) return EMPTY_SNAPSHOT;
-    return resolveEffectivePermissions({
+    const snap = resolveEffectivePermissions({
       userId: user.id,
       ruolo: user.ruolo,
       permissionRows: permsQuery.data,
       pilotDbEnabled: operatorPilot.dbEnabled,
     });
+    publishClientEffectivePermissionsSnapshot(snap);
+    return snap;
   }, [user?.id, user?.ruolo, permsQuery.data, operatorPilot.dbEnabled]);
+
+  useEffect(() => {
+    /* snapshot già pubblicato in useMemo; effect mantenuto per compat hot reload */
+    if (snapshot) publishClientEffectivePermissionsSnapshot(snapshot);
+  }, [snapshot]);
 
   useEffect(() => {
     if (!permsQuery.isError || !permsQuery.dataUpdatedAt) return;

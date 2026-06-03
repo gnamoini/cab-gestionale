@@ -65,10 +65,9 @@ export function queueModificaLog(
   flush: FlushModificaLogFn,
   client: SupabaseClient,
   input: FlushInput,
-): void {
+): Promise<void> {
   if (!shouldBatch(input.azione)) {
-    void flush(input);
-    return;
+    return flush(input);
   }
 
   const key = batchKey(input.entita, input.entita_id, input.azione, input.autore_id);
@@ -77,7 +76,7 @@ export function queueModificaLog(
     clearTimeout(existing.timer);
     existing.payload = mergeAuditDiffPayload(existing.payload, input.payload);
     existing.timer = setTimeout(() => void flushPending(key, flush), BATCH_DEBOUNCE_MS);
-    return;
+    return Promise.resolve();
   }
 
   const entry: PendingLog = {
@@ -90,6 +89,7 @@ export function queueModificaLog(
     timer: setTimeout(() => void flushPending(key, flush), BATCH_DEBOUNCE_MS),
   };
   pending.set(key, entry);
+  return Promise.resolve();
 }
 
 async function flushPending(key: string, flush: FlushModificaLogFn): Promise<void> {
@@ -110,5 +110,11 @@ async function flushPending(key: string, flush: FlushModificaLogFn): Promise<voi
 /** Per test o logout: scrive subito tutti i log in coda. */
 export async function flushAllModificaLogs(flush: FlushModificaLogFn): Promise<void> {
   const keys = [...pending.keys()];
-  await Promise.all(keys.map((k) => flushPending(k, flush)));
+  await Promise.all(
+    keys.map((k) =>
+      flushPending(k, flush).catch(() => {
+        /* errori gestiti dal chiamante del flush */
+      }),
+    ),
+  );
 }

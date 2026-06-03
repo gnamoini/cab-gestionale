@@ -1,3 +1,5 @@
+import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
+
 /** Tipi di rinomina impostazioni da propagare ai record operativi. */
 export type SettingsRenameKind =
   | "cliente"
@@ -18,6 +20,9 @@ export type SettingsRenameEntry = {
   kind: SettingsRenameKind;
   from: string;
   to: string;
+  /** Marca parent per rename modello (evita ambiguità). */
+  marcaContext?: string;
+  tree?: HierarchyTreeKey;
 };
 
 export type SettingsRenamePropagationResult = {

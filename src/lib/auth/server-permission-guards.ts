@@ -21,6 +21,7 @@ const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>
   mezzi: "mezzi",
   report: "report",
   documenti: "documenti",
+  dipendenti: "dipendenti",
 };
 
 async function requireServerPermissions() {

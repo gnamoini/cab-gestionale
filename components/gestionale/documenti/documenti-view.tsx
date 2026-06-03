@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { documentiService } from "@/src/services/documenti.service";
@@ -34,16 +35,25 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   dsPageToolbarBtn,
+  dsPageToolbarCtaCompact,
   dsStackPage,
-  dsStickyToolbar,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsTableActionsGroupEnd,
   dsTableActionBtnPrimary,
-  dsTableActionBtnDanger,
   dsTableActionBtnInfo,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
-import { Drawer, IconActionButton } from "@/components/design-system";
+import {
+  Drawer,
+  IconActionButton,
+  LoadingButton,
+  LoadingErrorState,
+  LoadingSkeletonBlock,
+  LoadingTableSkeleton,
+  PageToolbar,
+  PageToolbarCtaLabel,
+  PageToolbarResultCount,
+} from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
@@ -85,7 +95,18 @@ import {
   sliceDocumentiTreePage,
   type DocumentiPageFilters,
 } from "@/lib/documenti/documenti-list-ui-filters";
-import { DocumentoEditModal, DocumentoInfoModal, UploadDocumentoModal } from "@/components/gestionale/documenti/documenti-modals";
+const UploadDocumentoModal = dynamic(
+  () => import("@/components/gestionale/documenti/documenti-modals").then((m) => m.UploadDocumentoModal),
+  { ssr: false },
+);
+const DocumentoEditModal = dynamic(
+  () => import("@/components/gestionale/documenti/documenti-modals").then((m) => m.DocumentoEditModal),
+  { ssr: false },
+);
+const DocumentoInfoModal = dynamic(
+  () => import("@/components/gestionale/documenti/documenti-modals").then((m) => m.DocumentoInfoModal),
+  { ssr: false },
+);
 import { buildDocumentiCatalogFromImpostazioni } from "@/lib/documenti/documenti-catalog";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
@@ -93,6 +114,7 @@ import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settin
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -199,39 +221,28 @@ function ArchiveDocRow({
   doc,
   selected,
   onSelect,
-  onEdit,
-  onDelete,
   onInfo,
   onFileUnavailable,
   onApri,
-  canEdit,
-  canDelete,
 }: {
   doc: DocumentoGestionale;
   selected: boolean;
   onSelect: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
   onInfo: () => void;
   onFileUnavailable?: () => void;
   onApri: () => void;
-  canEdit: boolean;
-  canDelete: boolean;
 }) {
   const canOpen = Boolean(doc.urlBlob?.trim() || doc.urlDocumento?.trim());
   const stop = (e: MouseEvent) => e.stopPropagation();
   const senzaMarca = documentoSenzaMarca(doc);
+  const rowToneClass = senzaMarca
+    ? "border-l-4 border-l-[color:var(--cab-warning)] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-surface))] hover:bg-[color:color-mix(in_srgb,var(--cab-warning)_16%,var(--cab-surface))]"
+    : "hover:bg-[var(--cab-hover)]";
 
-  const handleEditClick = (e: MouseEvent) => {
-    e.stopPropagation();
-    if (!canEdit) return;
-    onEdit();
-  };
-
-  const handleDeleteClick = (e: MouseEvent) => {
-    e.stopPropagation();
-    if (!canDelete) return;
-    onDelete();
+  const handleRowClick = () => {
+    // Evita setState/rerender inutili quando la riga e' gia' attiva.
+    if (selected) return;
+    onSelect();
   };
 
   const actionButtons = (
@@ -251,30 +262,7 @@ function ArchiveDocRow({
       </IconActionButton>
       <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={onInfo}>
         <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-        </svg>
-      </IconActionButton>
-      <IconActionButton
-        label="Modifica"
-        tooltipContent={canEdit ? "Modifica" : "Sola lettura"}
-        className={dsTableActionBtnPrimary}
-        disabled={!canEdit}
-        onClick={handleEditClick}
-      >
-        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-        </svg>
-      </IconActionButton>
-      <IconActionButton
-        label="Elimina"
-        tooltipContent={canDelete ? "Elimina" : "Sola lettura"}
-        className={dsTableActionBtnDanger}
-        disabled={!canDelete}
-        onClick={handleDeleteClick}
-      >
-        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
         </svg>
       </IconActionButton>
     </>
@@ -285,20 +273,32 @@ function ArchiveDocRow({
       id={`documento-row-${doc.id}`}
       role="option"
       aria-selected={selected}
-      className={`group flex w-full cursor-pointer flex-col gap-2 border-b border-[color:var(--cab-border)] px-2.5 py-2 transition-[background-color] duration-150 last:border-b-0 md:flex-row md:items-center md:justify-between md:gap-3 ${
-        senzaMarca
-          ? "border-l-4 border-l-[color:var(--cab-warning)] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-surface))]"
-          : selected
-            ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]"
-            : "hover:bg-[var(--cab-hover)]"
-      } ${selected && !senzaMarca ? "ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]" : ""}`}
-      onClick={onSelect}
+      tabIndex={0}
+      className={`group flex w-full cursor-pointer flex-col gap-2 border-b border-[color:var(--cab-border)] px-2.5 py-2 outline-none transition-[background-color,box-shadow] duration-150 focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_38%,transparent)] focus-visible:ring-inset last:border-b-0 md:flex-row md:items-center md:justify-between md:gap-3 ${rowToneClass}`}
+      onClick={handleRowClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          handleRowClick();
+        }
+      }}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
         <DocGlyph doc={doc} />
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <p className="truncate text-sm font-semibold text-[color:var(--cab-text)]">{doc.nome}</p>
+          <div className="flex min-w-0 flex-nowrap items-center gap-2 sm:flex-wrap">
+            <button
+              type="button"
+              className="truncate text-left text-sm font-semibold text-[color:var(--cab-text)] underline-offset-2 hover:underline focus-visible:outline-none"
+              title={doc.nome}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!canOpen) onFileUnavailable?.();
+                else onApri();
+              }}
+            >
+              {doc.nome}
+            </button>
             {senzaMarca ? (
               <span
                 className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[color:color-mix(in_srgb,var(--cab-warning)_22%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-warning)_50%,var(--cab-border))]"
@@ -315,10 +315,10 @@ function ArchiveDocRow({
         </div>
       </div>
       <div
-        className={`${dsTableActionsGroupEnd} w-full shrink-0 justify-end pt-2 md:ml-auto md:w-auto md:pt-0`}
+        className="flex w-full shrink-0 justify-end pt-2 md:ml-auto md:w-auto md:pt-0"
         onClick={stop}
       >
-        {actionButtons}
+        <div className={dsTableActionsGroupEnd}>{actionButtons}</div>
       </div>
     </li>
   );
@@ -343,6 +343,7 @@ export function DocumentiView() {
   const appSettings = settingsPayload?.resolved;
   const mezziQuery = useMezziListQuery();
   const documentiQuery = useDocumentiListQuery();
+  const documentiInitialLoading = documentiQuery.isLoading && documentiQuery.data === undefined;
   const mezziSnap = useMemo(() => (mezziQuery.data ?? []).map(toMezzoUI), [mezziQuery.data]);
   const { runUpload, isUploading: docUploadInFlight } = useUploadFeedback();
   const [docMutating, setDocMutating] = useState(false);
@@ -367,6 +368,7 @@ export function DocumentiView() {
     () => loadDocumentiAdvancedFiltersPersisted() ?? DOCUMENTI_ADVANCED_FILTERS_EMPTY,
   );
   const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
 
   const [sortColumn, setSortColumn] = useState<DocumentiSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<DocumentiSortPhase>("natural");
@@ -420,7 +422,7 @@ export function DocumentiView() {
   }, [logOpen]);
 
   useEffect(() => {
-    if (urlHydratedRef.current || catalog.length === 0) return;
+    if (urlHydratedRef.current) return;
     urlHydratedRef.current = true;
 
     const rawQ = searchParams.get("q");
@@ -437,24 +439,24 @@ export function DocumentiView() {
     const marcaNome = marcaQ || mezzo?.marca?.trim() || "";
     if (!marcaNome) return;
 
-    const mar = catalog.find((c) => c.nome.trim().toLowerCase() === marcaNome.toLowerCase());
-    if (!mar) return;
-
-    let modelloId: string = FILTER_ALL;
     const modelloNome = modelloQ || mezzo?.modello?.trim() || "";
-    if (modelloNome) {
-      const mac = mar.macchine.find((x) => x.nome.trim().toLowerCase() === modelloNome.toLowerCase());
-      if (mac) {
-        modelloId = mac.id;
-        setExpandedModelli((p) => new Set(p).add(`${mar.id}::${mac.id}`));
-      }
-    }
+    const mar = catalog.find((c) => c.nome.trim().toLowerCase() === marcaNome.toLowerCase());
 
     setAdvancedFilters((prev) => {
-      const next = { ...prev, marca: mar.id, modello: modelloId };
+      const next = {
+        ...prev,
+        marca: marcaNome,
+        modello: modelloNome || FILTER_ALL,
+      };
       saveDocumentiAdvancedFiltersPersisted(next);
       return next;
     });
+
+    if (!mar) return;
+    if (modelloNome) {
+      const mac = mar.macchine.find((x) => x.nome.trim().toLowerCase() === modelloNome.toLowerCase());
+      if (mac) setExpandedModelli((p) => new Set(p).add(`${mar.id}::${mac.id}`));
+    }
     setExpandedMarche((p) => new Set(p).add(mar.id));
   }, [searchParams, mezziSnap, catalog]);
 
@@ -792,6 +794,7 @@ export function DocumentiView() {
 
   return (
     <GestionaleSectionGate module="documenti">
+    <div className={layoutPageRoot}>
     <>
       <PageHeader
         title="Documenti"
@@ -807,170 +810,146 @@ export function DocumentiView() {
 
       <div className={dsStackPage}>
         <ShellCard>
-        <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-              <button
-                type="button"
-                onClick={() => setUploadOpen(true)}
-                disabled={docBusy || documentiQuery.isLoading || !canUploadDocuments}
-                title={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}
-                className={`${erpBtnNuovaLavorazione} h-11 shrink-0 disabled:opacity-60`}
-              >
-                {docBusy ? (
-                  <>
-                    <svg
-                      className="h-5 w-5 shrink-0 animate-spin"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      aria-hidden
-                    >
-                      <circle
-                        cx="12"
-                        cy="12"
-                        r="9"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        opacity="0.25"
-                      />
-                      <path
-                        d="M21 12a9 9 0 0 0-9-9"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    Caricamento…
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="h-5 w-5 shrink-0"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                      strokeWidth={2}
-                      aria-hidden
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
-                      />
-                    </svg>
-                    Carica documento
-                  </>
-                )}
-              </button>
-              <GestionaleSearchField
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    flushPageSearch();
-                  }
-                }}
-                placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-                aria-label="Cerca documenti"
-                wrapperClassName="flex-1 sm:min-w-[12rem]"
-              />
-              <button
-                type="button"
-                onClick={() => setFiltriEspansi((o) => !o)}
-                className={`${dsPageToolbarBtn} relative h-11 min-w-[8.25rem] shrink-0 gap-2 px-3 text-sm sm:ml-auto`}
-                aria-expanded={filtriEspansi}
-              >
-                Filtri
-                <svg
-                  className={`h-4 w-4 shrink-0 text-[color:var(--cab-primary)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${filtriEspansi ? "rotate-180" : ""}`}
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  aria-hidden
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-                {hasAdvancedPanelFilters ? (
-                  <span
-                    className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]"
-                    title="Filtri attivi"
+        <PageToolbar
+          className="sm:mx-0"
+          primaryAction={
+            <button
+              type="button"
+              onClick={() => setUploadOpen(true)}
+              disabled={docBusy || documentiQuery.isLoading || !canUploadDocuments}
+              title={!canUploadDocuments ? READONLY_PERMISSION_HINT : undefined}
+              className={`${dsPageToolbarCtaCompact} disabled:opacity-60`}
+            >
+              {docBusy ? (
+                <>
+                  <svg
+                    className="h-5 w-5 shrink-0 animate-spin"
+                    viewBox="0 0 24 24"
+                    fill="none"
                     aria-hidden
-                  ></span>
-                ) : null}
-              </button>
-            </div>
-
-            <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-              <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
-                  <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">
-                    {totalDocs}
-                  </span>
-                  <span>risultat{totalDocs === 1 ? "o" : "i"}</span>
-                </span>
-                {hasPageClientFilters ? (
-                  <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
-                    Filtri attivi
-                  </span>
-                ) : null}
-              </div>
-              <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                <button type="button" className={dsPageToolbarBtn} onClick={resetRicerca}>
-                  Pulisci ricerca
-                </button>
-                <button type="button" className={dsPageToolbarBtn} onClick={resetFiltri}>
-                  Reimposta filtri
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-          <div
-            className={`mt-3 grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-              filtriEspansi ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-            }`}
-          >
-            <div className="min-h-0 overflow-hidden">
-              <DocumentiAdvancedFilterPanel
-                filters={advancedFilters}
-                onChange={patchAdvancedFilters}
-                catalog={catalog}
-                sortSelectValue={sortSelectValue}
-                onSortSelect={onSortSelect}
-              />
-            </div>
-          </div>
+                  >
+                    <circle
+                      cx="12"
+                      cy="12"
+                      r="9"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      opacity="0.25"
+                    />
+                    <path
+                      d="M21 12a9 9 0 0 0-9-9"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  <span className="sm:hidden">…</span>
+                  <span className="hidden sm:inline">Caricamento…</span>
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="h-5 w-5 shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    aria-hidden
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"
+                    />
+                  </svg>
+                  <PageToolbarCtaLabel short="Carica" full="Carica documento" />
+                </>
+              )}
+            </button>
+          }
+          search={
+            <GestionaleSearchField
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  flushPageSearch();
+                }
+              }}
+              placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+              aria-label="Cerca documenti"
+              wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+            />
+          }
+          filtersExpanded={filtriEspansi}
+          onFiltersToggle={() => setFiltriEspansi((o) => !o)}
+          filtersActive={hasPageClientFilters}
+          filtersPanel={
+            <DocumentiAdvancedFilterPanel
+              filters={advancedFilters}
+              onChange={patchAdvancedFilters}
+              sortSelectValue={sortSelectValue}
+              onSortSelect={onSortSelect}
+            />
+          }
+          onFilterReset={resetFiltri}
+          overflowOpen={toolbarOverflowOpen}
+          onOverflowToggle={() => setToolbarOverflowOpen((o) => !o)}
+          overflowActions={
+            <>
+              {hasDocumentiInLista ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={collapseAllTreeGroups}
+                    className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
+                    title="Chiudi tutti i gruppi"
+                  >
+                    Comprimi tutto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={expandAllTreeGroups}
+                    className={`${dsPageToolbarBtn} h-9 w-full justify-center px-3 text-xs sm:w-auto`}
+                    title="Apri tutti i gruppi della pagina"
+                  >
+                    Espandi tutto
+                  </button>
+                </>
+              ) : null}
+            </>
+          }
+          meta={
+            <PageToolbarResultCount
+              count={totalDocs}
+              filtersActive={hasAdvancedPanelFilters}
+              searchActive={searchActive}
+              onSearchReset={resetRicerca}
+              onFilterReset={resetFiltri}
+            />
+          }
+        />
 
         <section className="mt-4 min-w-0" aria-label="Albero documenti">
-          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-            {hasDocumentiInLista ? (
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={collapseAllTreeGroups} className={`${dsPageToolbarBtn} h-9 px-3 text-xs`} title="Chiudi tutti i gruppi">
-                  Comprimi tutto
-                </button>
-                <button type="button" onClick={expandAllTreeGroups} className={`${dsPageToolbarBtn} h-9 px-3 text-xs`} title="Apri tutti i gruppi della pagina">
-                  Espandi tutto
-                </button>
-              </div>
-            ) : null}
-          </div>
           <div className="overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]">
-              {documentiQuery.isLoading ? (
-                <p className="p-8 text-center text-sm text-[color:var(--cab-text-muted)]">Caricamento documenti…</p>
+              {documentiInitialLoading ? (
+                <div className="p-4" aria-busy="true" role="status" aria-label="Caricamento documenti">
+                  <LoadingTableSkeleton preset="documenti" rows={6} />
+                </div>
               ) : documentiQuery.isError ? (
-                <p className="p-8 text-center text-sm text-[color:var(--cab-danger)]">
-                  Impossibile caricare i documenti. Riprova più tardi.
-                </p>
+                <LoadingErrorState
+                  title="Impossibile caricare i documenti"
+                  description="Controlla la connessione e riprova."
+                  onRetry={() => void documentiQuery.refetch()}
+                />
               ) : !hasDocumentiInLista ? (
                 <p className="p-8 text-center text-sm text-[color:var(--cab-text-muted)]">Nessun documento corrisponde ai filtri.</p>
               ) : (
                 <div className="divide-y divide-[color:var(--cab-border)]">
                   {documentiSenzaMarca.length > 0 ? (
                     <div className="rounded-t-[var(--ds-radius-xl)] border-b-2 border-[color:color-mix(in_srgb,var(--cab-warning)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-surface))] p-3 sm:p-4">
-                      <div className="mb-2 flex flex-wrap items-center gap-2">
+                      <div className="mb-2 flex min-w-0 flex-nowrap items-center gap-2 sm:flex-wrap">
                         <span className="text-base" aria-hidden>
                           ⚠️
                         </span>
@@ -991,13 +970,9 @@ export function DocumentiView() {
                             doc={d}
                             selected={selectedDocId === d.id}
                             onSelect={() => setSelectedDocId(d.id)}
-                            onEdit={() => setEditDoc(d)}
-                            onDelete={() => handleDelete(d)}
                             onInfo={() => setInfoDoc(d)}
                             onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                             onApri={() => openDoc(d)}
-                            canEdit={canUploadDocuments}
-                            canDelete={canDeleteRecords}
                           />
                         ))}
                       </ul>
@@ -1028,12 +1003,12 @@ export function DocumentiView() {
                         <button
                           type="button"
                           onClick={() => toggleMarca(marca.id)}
-                          className="flex w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)] sm:px-4"
+                          className="group flex min-w-0 w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_36%,transparent)] focus-visible:ring-inset sm:px-4"
                           aria-expanded={marcaOpen(marca.id)}
                         >
                           <MarcaGlyph nome={marca.nome} />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-[color:var(--cab-text)]">{marca.nome}</p>
+                            <p className="truncate text-sm font-semibold text-[color:var(--cab-text)]">{marca.nome}</p>
                             <p className="text-[11px] text-[color:var(--cab-text-muted)]">
                               <span className="font-medium tabular-nums text-[color:var(--cab-text)]">{docCountMarca}</span>{" "}
                               document{docCountMarca === 1 ? "o" : "i"}
@@ -1045,21 +1020,23 @@ export function DocumentiView() {
                               ) : null}
                             </p>
                           </div>
-                          <svg
-                            className={`h-5 w-5 shrink-0 text-[color:var(--cab-text-muted)] transition-transform duration-200 ${marcaOpen(marca.id) ? "rotate-180" : ""}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                            aria-hidden
-                          >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                          </svg>
+                          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-[color:var(--cab-text-muted)] transition-colors group-hover:bg-[var(--cab-hover)]">
+                            <svg
+                              className={`h-4 w-4 transition-transform duration-200 ${marcaOpen(marca.id) ? "rotate-180" : ""}`}
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              aria-hidden
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </span>
                         </button>
                         <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${marcaOpen(marca.id) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                           <div className="min-h-0 overflow-hidden">
                             <div
-                              className={`space-y-4 border-t border-[color:var(--cab-border)] bg-[var(--cab-surface-2)]/50 px-3 pb-3 pt-3 sm:px-4 ${
+                              className={`space-y-3.5 border-t border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_72%,var(--cab-card))] px-3 pb-3 pt-3 sm:px-4 ${
                                 isLastMarcaInTree ? "rounded-b-[var(--ds-radius-xl)]" : ""
                               }`}
                             >
@@ -1076,13 +1053,9 @@ export function DocumentiView() {
                                         doc={d}
                                         selected={selectedDocId === d.id}
                                         onSelect={() => setSelectedDocId(d.id)}
-                                        onEdit={() => setEditDoc(d)}
-                                        onDelete={() => handleDelete(d)}
                                         onInfo={() => setInfoDoc(d)}
                                         onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                                         onApri={() => openDoc(d)}
-                                        canEdit={canUploadDocuments}
-                                        canDelete={canDeleteRecords}
                                       />
                                     ))}
                                   </ul>
@@ -1102,13 +1075,9 @@ export function DocumentiView() {
                                         doc={d}
                                         selected={selectedDocId === d.id}
                                         onSelect={() => setSelectedDocId(d.id)}
-                                        onEdit={() => setEditDoc(d)}
-                                        onDelete={() => handleDelete(d)}
                                         onInfo={() => setInfoDoc(d)}
                                         onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                                         onApri={() => openDoc(d)}
-                                        canEdit={canUploadDocuments}
-                                        canDelete={canDeleteRecords}
                                       />
                                     ))}
                                   </ul>
@@ -1132,13 +1101,13 @@ export function DocumentiView() {
                                         <button
                                           type="button"
                                           onClick={() => toggleModello(mk)}
-                                          className="flex w-full items-center gap-2 bg-[var(--cab-surface)]/60 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)]"
+                                          className="flex min-w-0 w-full items-center gap-2 bg-[var(--cab-surface)]/60 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)]"
                                           aria-expanded={modelloOpen(marca.id, modello.id)}
                                         >
                                           <span className="w-4 shrink-0 text-center text-xs font-medium text-[color:var(--cab-text-muted)]" aria-hidden>
                                             ·
                                           </span>
-                                          <span className="flex-1 text-sm font-medium text-[color:var(--cab-text)]">{modello.nome}</span>
+                                          <span className="min-w-0 flex-1 truncate text-sm font-medium text-[color:var(--cab-text)]">{modello.nome}</span>
                                           <span className="rounded-full bg-[var(--cab-surface-2)] px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[color:var(--cab-text-muted)]">
                                             {files.length}
                                           </span>
@@ -1163,13 +1132,9 @@ export function DocumentiView() {
                                                   doc={d}
                                                   selected={selectedDocId === d.id}
                                                   onSelect={() => setSelectedDocId(d.id)}
-                                                  onEdit={() => setEditDoc(d)}
-                                                  onDelete={() => handleDelete(d)}
                                                   onInfo={() => setInfoDoc(d)}
                                                   onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                                                   onApri={() => openDoc(d)}
-                                                  canEdit={canUploadDocuments}
-                                                  canDelete={canDeleteRecords}
                                                 />
                                               ))}
                                             </ul>
@@ -1203,13 +1168,9 @@ export function DocumentiView() {
                             doc={d}
                             selected={selectedDocId === d.id}
                             onSelect={() => setSelectedDocId(d.id)}
-                            onEdit={() => setEditDoc(d)}
-                            onDelete={() => handleDelete(d)}
                             onInfo={() => setInfoDoc(d)}
                             onFileUnavailable={() => gestToast.warning("File non disponibile.")}
                             onApri={() => openDoc(d)}
-                            canEdit={canUploadDocuments}
-                            canDelete={canDeleteRecords}
                           />
                         ))}
                       </ul>
@@ -1233,7 +1194,6 @@ export function DocumentiView() {
 
       {uploadOpen && canUploadDocuments ? (
         <UploadDocumentoModal
-          catalog={catalog}
           isUploading={docUploadInFlight}
           onRequestClose={() => setUploadOpen(false)}
           onSubmit={handleUpload}
@@ -1249,16 +1209,23 @@ export function DocumentiView() {
             setInfoDoc(null);
             setEditDoc(d);
           }}
+          onDelete={() => {
+            const d = infoDoc;
+            setInfoDoc(null);
+            handleDelete(d);
+          }}
+          canEdit={canUploadDocuments}
+          canDelete={canDeleteRecords}
         />
       ) : null}
 
       {editDoc && canUploadDocuments ? (
-        <DocumentoEditModal key={editDoc.id} doc={editDoc} catalog={catalog} onRequestClose={() => setEditDoc(null)} onSave={handleSaveEdit} />
+        <DocumentoEditModal key={editDoc.id} doc={editDoc} onRequestClose={() => setEditDoc(null)} onSave={handleSaveEdit} />
       ) : null}
 
       <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche documenti" ariaLabel="Log modifiche documenti">
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
-          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
             {logEntries.length === 0 ? (
                   <GestionaleLogEmpty message="Nessuna modifica registrata." />
                 ) : (
@@ -1309,6 +1276,7 @@ export function DocumentiView() {
       />
       {confirmDialog}
     </>
+    </div>
     </GestionaleSectionGate>
   );
 }

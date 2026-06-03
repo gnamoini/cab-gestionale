@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "npx tsx scripts/ensure-dev-unlocked.ts && next dev",
+    "dev:fresh": "npx tsx scripts/ensure-dev-unlocked.ts && npx tsx scripts/clean-next-dev-cache.ts && next dev",
     "dev:webpack": "next dev --webpack",
+    "clean:next": "npx tsx scripts/clean-next-dev-cache.ts",
+    "clean:next:all": "npx tsx scripts/clean-next-dev-cache.ts --all",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -22,8 +25,17 @@
     "smoke:structural": "npx tsx scripts/smoke-structural-gate.ts",
     "smoke:playwright": "npx playwright test -c e2e/playwright.config.ts",
     "smoke:gate": "npx tsx scripts/smoke-gate.ts",
+    "flex:baseline:generate": "npx tsx scripts/generate-flex-baseline.ts --update",
+    "flex:baseline:diff": "npx tsx scripts/diff-flex-baseline.ts",
+    "flex:eslint:gate": "npx tsx scripts/flex-eslint-gate.ts",
+    "flex:freeze:gate": "npx tsx scripts/flex-freeze-gate.ts",
+    "ui:flex-route:audit": "npx tsx scripts/ui-flex-route-audit.ts",
+    "ui:final-stability:audit": "npx tsx scripts/ui-final-stability-audit.ts",
+    "ui:final-stability:manifest:generate": "npx tsx scripts/generate-ui-final-stability-manifest.ts --update",
+    "global-table-head:audit": "npx tsx scripts/global-table-head-audit.ts",
     "ops:diagnostics": "npx tsx scripts/ops-diagnostics.ts",
-    "ops:env-check": "npx tsx scripts/ops-env-check.ts"
+    "ops:env-check": "npx tsx scripts/ops-env-check.ts",
+    "audit:rls": "npx tsx scripts/rls-service-audit.ts"
   },
   "dependencies": {
     "@floating-ui/react-dom": "^2.1.8",

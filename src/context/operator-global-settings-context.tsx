@@ -5,6 +5,7 @@ import { readOperatorGlobalSettingsDbEnabledFromRows } from "@/lib/permissions/o
 import { resolvePilotSettingsState } from "@/src/lib/runtime/truth-layer/resolve-pilot-settings-state";
 import type { PilotSettingsState } from "@/src/lib/runtime/truth-layer/resolve-pilot-settings-state";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 
 export type OperatorGlobalSettingsContextValue = PilotSettingsState & {
   /** @deprecated Usare effectiveEnabled */
@@ -25,7 +26,7 @@ export function OperatorGlobalSettingsProvider({ children }: { children: ReactNo
     (): OperatorGlobalSettingsContextValue => ({
       ...pilot,
       isPilotActive: pilot.effectiveEnabled,
-      isLoading: q.isPending && !q.data,
+      isLoading: q.isPending && !q.data && !getRuntimeCabAppSettings(),
     }),
     [pilot, q.isPending, q.data],
   );

@@ -18,9 +18,16 @@ export const GESTIONALE_TABLE_QUERY_KEYS: Record<string, readonly QueryKeyTuple[
   documenti: [QK.documenti, QK.mezzoQueries, QK.lavorazioniQueries],
   scheda_lavorazione: [QK.schede, QK.lavorazioniQueries],
   log_modifiche: [QK.log],
-  support_notes: [QK.supportNotes],
+  dashboard_promemoria: [["dashboard-promemoria"]],
   app_settings: [QK.settings],
   profiles: [QK.profiles],
+  bunder_documents: [QK.bunder],
+  dipendenti_timesheet_employees: [
+    QK.dipendentiTimesheetEmployees,
+    QK.dipendentiTimesheetEmployeeIdsWithEntries,
+  ],
+  dipendenti_timesheet_entries: [QK.dipendentiTimesheetEntries],
+  user_permissions: [QK.userPermissions],
 };
 
 /** Chiavi portale clienti (dedupe con le chiavi tabella). */

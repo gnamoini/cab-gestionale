@@ -1,9 +1,11 @@
 "use client";
 
 import { pushGestionaleToast } from "@/context/toast-context";
+import {
+  PDF_PREVIEW_API_PATH,
+  PDF_PREVIEW_LEGACY_API_PATH,
+} from "@/lib/pdf/pdf-preview-config";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
-
-const PREVIEW_ACTION = "/api/preventivi/pdf-anteprima";
 
 /** Nome file sicuro per download (spazi → underscore). */
 export function normalizePdfDownloadFileName(fileName: string): string {
@@ -32,9 +34,17 @@ function openPdfBlobViaObjectUrl(
   return opened;
 }
 
+function previewPostErrorMessage(status: number): string {
+  if (status === 413) return "PDF troppo grande per l'anteprima server. Apertura locale.";
+  if (status === 429) return "Troppe richieste PDF. Apertura locale.";
+  if (status === 400) return "Anteprima PDF non valida. Apertura locale.";
+  if (status === 403) return "Non autorizzato all'anteprima PDF. Apertura locale.";
+  return "Anteprima PDF non disponibile. Apertura locale.";
+}
+
 /**
  * Anteprima PDF in nuova scheda con nome file corretto al download.
- * POST multipart → token → GET con Content-Disposition.
+ * POST multipart → risposta PDF inline con Content-Disposition (multi-istanza safe).
  */
 export async function openPdfBlobInNewTab(
   blob: Blob,
@@ -42,7 +52,12 @@ export async function openPdfBlobInNewTab(
   options?: {
     revokeBlobUrlAfterMs?: number;
     blockedMessage?: string;
+    /** Override endpoint (default {@link PDF_PREVIEW_API_PATH}). */
     previewAction?: string;
+    /** Toast info durante generazione/POST (default true). */
+    showLoadingFeedback?: boolean;
+    /** Callback busy state (es. overlay globale). */
+    onBusyChange?: (busy: boolean) => void;
   },
 ): Promise<boolean> {
   if (typeof window === "undefined") return false;
@@ -53,7 +68,17 @@ export async function openPdfBlobInNewTab(
       ? blob
       : new File([blob], downloadName, { type: "application/pdf" });
 
-  const previewAction = options?.previewAction ?? PREVIEW_ACTION;
+  const previewAction = options?.previewAction ?? PDF_PREVIEW_API_PATH;
+  const showLoading = options?.showLoadingFeedback !== false;
+
+  const setBusy = (busy: boolean) => {
+    options?.onBusyChange?.(busy);
+  };
+
+  if (showLoading) {
+    pushGestionaleToast("Apertura PDF in corso…", "info", 6000);
+  }
+  setBusy(true);
 
   try {
     const formData = new FormData();
@@ -66,19 +91,21 @@ export async function openPdfBlobInNewTab(
       credentials: "same-origin",
     });
 
-    if (res.ok) {
-      const payload = (await res.json()) as { previewUrl?: string; error?: string };
-      const previewUrl = payload.previewUrl?.trim();
-      if (previewUrl) {
-        const absolute = new URL(previewUrl, window.location.origin).href;
-        return openUrlInNewTab(absolute, {
-          blockedMessage: options?.blockedMessage,
-        });
-      }
+    if (res.ok && res.headers.get("content-type")?.includes("application/pdf")) {
+      const responseBlob = await res.blob();
+      const named = new File([responseBlob], downloadName, { type: "application/pdf" });
+      return openPdfBlobViaObjectUrl(named, options);
     }
+
+    pushGestionaleToast(previewPostErrorMessage(res.status), "warning", 5200);
   } catch {
-    /* fallback locale */
+    pushGestionaleToast("Anteprima PDF non disponibile. Apertura locale.", "warning", 5200);
+  } finally {
+    setBusy(false);
   }
 
   return openPdfBlobViaObjectUrl(pdfFile, options);
 }
+
+/** @deprecated Usare {@link PDF_PREVIEW_API_PATH}. */
+export const PDF_PREVIEW_LEGACY_ACTION = PDF_PREVIEW_LEGACY_API_PATH;

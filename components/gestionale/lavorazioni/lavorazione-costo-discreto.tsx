@@ -2,39 +2,54 @@
 
 import { useState } from "react";
 import {
+  GestionaleInfoCard,
+  GestionaleInfoMetricRow,
+} from "@/components/design-system/gestionale-info-card";
+import {
   formatLavorazioneCostoEuro,
   type LavorazioneCostoBreakdown,
 } from "@/lib/lavorazioni/lavorazione-costo";
 import { useRbac } from "@/src/hooks/use-rbac";
 
-function CostoDettaglio({ costo, section }: { costo: LavorazioneCostoBreakdown; section?: boolean }) {
-  const labelClass = section
-    ? "text-[color:var(--cab-text-muted)]"
-    : "text-zinc-500 dark:text-zinc-400";
-  const valueClass = section
-    ? "text-[color:var(--cab-text)]"
-    : "text-zinc-700 dark:text-zinc-300";
-  const totalLabelClass = section
-    ? "text-sm font-semibold text-[color:var(--cab-text)]"
-    : "font-medium text-zinc-600 dark:text-zinc-300";
-  const totalValueClass = section ? "text-base font-semibold" : "text-sm font-semibold";
-  const borderClass = section
-    ? "border-[color:var(--cab-border)]"
-    : "border-zinc-100 dark:border-zinc-800";
+function CostoDettaglioSection({ costo }: { costo: LavorazioneCostoBreakdown }) {
+  return (
+    <>
+      <GestionaleInfoMetricRow
+        label="Manodopera"
+        detail={`${costo.oreTotali} h × ${formatLavorazioneCostoEuro(costo.costoOrario)}/h`}
+        value={formatLavorazioneCostoEuro(costo.manodoperaTotale)}
+      />
+      <GestionaleInfoMetricRow
+        label="Ricambi"
+        detail={`${costo.righeRicambi} righe, prezzo acquisto`}
+        value={formatLavorazioneCostoEuro(costo.ricambiTotale)}
+      />
+      <GestionaleInfoMetricRow
+        label="Totale"
+        value={formatLavorazioneCostoEuro(costo.costoTotale)}
+        total
+      />
+    </>
+  );
+}
+
+function CostoDettaglioFooter({ costo }: { costo: LavorazioneCostoBreakdown }) {
+  const labelClass = "text-zinc-500 dark:text-zinc-400";
+  const valueClass = "text-zinc-700 dark:text-zinc-300";
 
   return (
-    <dl className={`grid gap-1.5 text-[11px] ${section ? "mt-1.5" : "mt-2"} ${labelClass}`}>
-      <div className="flex justify-between gap-3">
+    <dl className={`mt-2 grid gap-1.5 text-[11px] ${labelClass}`}>
+      <div className="flex min-w-0 justify-between gap-3">
         <dt>Manodopera ({costo.oreTotali} h × {formatLavorazioneCostoEuro(costo.costoOrario)}/h)</dt>
         <dd className={`tabular-nums ${valueClass}`}>{formatLavorazioneCostoEuro(costo.manodoperaTotale)}</dd>
       </div>
-      <div className="flex justify-between gap-3">
+      <div className="flex min-w-0 justify-between gap-3">
         <dt>Ricambi ({costo.righeRicambi} righe, prezzo acquisto)</dt>
         <dd className={`tabular-nums ${valueClass}`}>{formatLavorazioneCostoEuro(costo.ricambiTotale)}</dd>
       </div>
-      <div className={`flex justify-between gap-3 border-t pt-1.5 ${borderClass}`}>
-        <dt className={totalLabelClass}>Totale</dt>
-        <dd className={`tabular-nums ${totalValueClass} ${valueClass}`}>
+      <div className="flex min-w-0 justify-between gap-3 border-t border-zinc-100 pt-1.5 dark:border-zinc-800">
+        <dt className="font-medium text-zinc-600 dark:text-zinc-300">Totale</dt>
+        <dd className={`tabular-nums text-sm font-semibold ${valueClass}`}>
           {formatLavorazioneCostoEuro(costo.costoTotale)}
         </dd>
       </div>
@@ -60,13 +75,11 @@ export function LavorazioneCostoDiscreto({
 
   if (variant === "section") {
     return (
-      <section
-        className={`rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2.5 py-2 shadow-[var(--cab-shadow-sm)] ${className}`}
-        data-internal-cost
-      >
-        <h3 className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-primary)]">Costo totale</h3>
-        <CostoDettaglio costo={costo} section />
-      </section>
+      <GestionaleInfoCard title="Costo totale" className={className}>
+        <div data-internal-cost>
+          <CostoDettaglioSection costo={costo} />
+        </div>
+      </GestionaleInfoCard>
     );
   }
 
@@ -77,7 +90,7 @@ export function LavorazioneCostoDiscreto({
     >
       <button
         type="button"
-        className="flex w-full items-center justify-between gap-2 text-left text-[11px] text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300"
+        className="flex min-w-0 w-full items-center justify-between gap-2 text-left text-[11px] text-zinc-500 transition-colors hover:text-zinc-700 dark:text-zinc-500 dark:hover:text-zinc-300"
         aria-expanded={open}
         title="Costo interno lavorazione (solo staff)"
         onClick={() => setOpen((o) => !o)}
@@ -90,7 +103,7 @@ export function LavorazioneCostoDiscreto({
         </span>
         <span className="tabular-nums text-zinc-600 dark:text-zinc-400">{formatLavorazioneCostoEuro(costo.costoTotale)}</span>
       </button>
-      {open ? <CostoDettaglio costo={costo} /> : null}
+      {open ? <CostoDettaglioFooter costo={costo} /> : null}
     </div>
   );
 }

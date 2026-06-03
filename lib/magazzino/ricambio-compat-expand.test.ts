@@ -2,9 +2,11 @@ import assert from "node:assert/strict";
 import { compatLabelMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import {
+  deriveMarcheFiltroFromCompatLabels,
   expandRicambioCompatibilitaMezzi,
   marchePendingUniversalCompatExpand,
 } from "@/lib/magazzino/ricambio-compat-expand";
+import { marcaUniversalCompatLabel } from "@/lib/magazzino/ricambio-compat-resolver";
 
 const mezziListe: MezziListePrefs = {
   clienti: [],
@@ -33,7 +35,7 @@ const mezziListe: MezziListePrefs = {
 };
 
 const ivecoDaily = compatLabelMarcaModello("Iveco", "Daily");
-const ivecoEuro = compatLabelMarcaModello("Iveco", "Eurocargo");
+const ivecoUniversal = marcaUniversalCompatLabel("Iveco");
 
 const expanded = expandRicambioCompatibilitaMezzi([], {
   marcheAttrezzaturaFiltro: ["Iveco"],
@@ -41,9 +43,8 @@ const expanded = expandRicambioCompatibilitaMezzi([], {
   mezziListe,
 });
 
-assert.equal(expanded.length, 2);
-assert.ok(expanded.includes(ivecoDaily));
-assert.ok(expanded.includes(ivecoEuro));
+assert.equal(expanded.length, 1);
+assert.ok(expanded.includes(ivecoUniversal));
 
 const partial = expandRicambioCompatibilitaMezzi([ivecoDaily], {
   marcheAttrezzaturaFiltro: ["Iveco"],
@@ -59,5 +60,9 @@ const pending = marchePendingUniversalCompatExpand([], {
 });
 assert.deepEqual(pending.attrezzature, ["Iveco", "CAT"]);
 assert.equal(pending.telai.length, 0);
+
+const derived = deriveMarcheFiltroFromCompatLabels([ivecoUniversal, ivecoDaily], mezziListe);
+assert.deepEqual(derived.attrezzature, ["Iveco"]);
+assert.equal(derived.telai.length, 0);
 
 console.log("ricambio-compat-expand.test.ts OK");

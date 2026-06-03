@@ -20,7 +20,7 @@ const TONE_BADGE: Record<GestionaleLogEventTone, string> = {
 
 const TONE_DOT: Record<GestionaleLogEventTone, string> = {
   create: "bg-emerald-500",
-  update: "bg-[var(--cab-primary)]",
+  update: "bg-[color:var(--cab-primary)]",
   delete: "bg-red-500",
   complete: "bg-sky-500",
   archive: "bg-zinc-400",

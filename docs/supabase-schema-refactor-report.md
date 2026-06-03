@@ -25,9 +25,9 @@
 | `app_settings_audit` | `app-settings-audit.service` (admin) | — |
 | `user_permissions` | `admin-users`, override granulari | — |
 | `auth_logs` | `auth-logs.service`, dashboard sicurezza | ✅ |
-| `support_notes` | **Supporto (attivo)** `support-notes.service` | ✅ |
+| `support_notes` | **DEPRECATED** — modulo Supporto rimosso; SELECT admin only (`20260704130000`) | ⚠️ |
 | `lavorazione_documents` | PDF lavorazione `lavorazione-documents.service` | ✅ |
-| `segnalazioni` | **LEGACY** — solo `segnalazioni.service.ts` (non usato in UI) | ✅ (da rimuovere) |
+| `segnalazioni` | **DEPRECATED** — modulo Supporto rimosso; SELECT admin only | ⚠️ (drop pianificato) |
 
 **View:** `lavorazioni_clienti` (security invoker) — non usata direttamente dal client TS (query su `lavorazioni` + RLS).
 

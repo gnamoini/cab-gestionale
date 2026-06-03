@@ -109,10 +109,3 @@ export function subscribeGestionaleBroadcast(handler: GestionaleBroadcastHandler
   ch.addEventListener("message", listener);
   return () => ch.removeEventListener("message", listener);
 }
-
-/** @deprecated Usare `subscribeGestionaleBroadcast`. */
-export function subscribeGestionaleBroadcastLegacy(onInvalidate: (tables: string[]) => void): () => void {
-  return subscribeGestionaleBroadcast({
-    onInvalidate: (tables) => onInvalidate(tables),
-  });
-}

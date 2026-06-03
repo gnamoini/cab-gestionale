@@ -43,6 +43,10 @@ export type UseGlobalDropdownPortalOptions = {
 export type UseGlobalDropdownPortalResult = {
   coords: GlobalDropdownCoords | null;
   style: CSSProperties | undefined;
+  /** True quando Floating UI ha calcolato x/y (evita flash in posizione errata). */
+  isPositioned: boolean;
+  /** Callback ref per il pannello portal — sincronizza `contentRef` e `refs.setFloating`. */
+  floatingRef: (node: HTMLElement | null) => void;
   scrollInside: boolean;
   placement: Placement;
   placementOriginClass: string;
@@ -64,10 +68,18 @@ export function useGlobalDropdownPortal({
 }: UseGlobalDropdownPortalOptions): UseGlobalDropdownPortalResult {
   const [scrollInside, setScrollInside] = useState(false);
 
-  const { refs, floatingStyles, placement: resolvedPlacement, update } = useFloating({
+  const {
+    refs,
+    floatingStyles,
+    placement: resolvedPlacement,
+    update,
+    isPositioned: floatingIsPositioned,
+  } = useFloating({
     open,
     placement,
     strategy: "fixed",
+    /** `top`/`left` invece di `transform` — evita conflitto con animazioni CSS sui menu portal. */
+    transform: false,
     middleware: [
       offset(GLOBAL_DROPDOWN_MENU_GAP),
       flip({
@@ -103,8 +115,22 @@ export function useGlobalDropdownPortal({
       : undefined,
   });
 
+  const floatingRef = useCallback(
+    (node: HTMLElement | null) => {
+      if (contentRef) {
+        (contentRef as { current: HTMLElement | null }).current = node;
+      }
+      refs.setFloating(node);
+    },
+    [contentRef, refs],
+  );
+
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open) {
+      refs.setReference(null);
+      refs.setFloating(null);
+      return;
+    }
     const anchor = anchorRef.current;
     if (anchor) refs.setReference(anchor);
   }, [open, anchorRef, refs, ...repositionDeps]);
@@ -113,7 +139,7 @@ export function useGlobalDropdownPortal({
     if (!open) return;
     const panel = contentRef?.current;
     if (panel) refs.setFloating(panel);
-  }, [open, contentRef, refs, ...repositionDeps]);
+  }, [open, contentRef, refs, floatingIsPositioned, ...repositionDeps]);
 
   useLayoutEffect(() => {
     if (!open) return;
@@ -135,13 +161,17 @@ export function useGlobalDropdownPortal({
     return () => ro?.disconnect();
   }, [open, contentRef, floatingStyles, ...repositionDeps]);
 
+  const isPositioned = open && floatingIsPositioned;
+
   const style: CSSProperties | undefined = useMemo(() => {
     if (!open) return undefined;
     return {
       ...floatingStyles,
       zIndex: GLOBAL_DROPDOWN_PORTAL_Z,
+      visibility: isPositioned ? "visible" : "hidden",
+      pointerEvents: isPositioned ? undefined : "none",
     };
-  }, [open, floatingStyles]);
+  }, [open, floatingStyles, isPositioned]);
 
   const coords: GlobalDropdownCoords | null = useMemo(() => {
     if (!open || !anchorRef.current) return null;
@@ -172,6 +202,8 @@ export function useGlobalDropdownPortal({
   return {
     coords,
     style,
+    isPositioned,
+    floatingRef,
     scrollInside,
     placement: resolvedPlacement,
     placementOriginClass,

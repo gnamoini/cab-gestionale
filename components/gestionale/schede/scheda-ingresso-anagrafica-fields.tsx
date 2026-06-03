@@ -240,7 +240,7 @@ export function SchedaIngressoAnagraficaFields({
       ) : null}
 
       {onSaveMezzo ? (
-        <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+        <div className="flex min-w-0 flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
           {mezzoLinked ? (
             <p className="order-2 w-full text-xs text-[color:var(--cab-text-muted)] sm:order-1 sm:mr-auto sm:w-auto">
               Mezzo collegato in anagrafica.

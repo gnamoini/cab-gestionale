@@ -1,28 +1,15 @@
 "use client";
 
-import { LavorazioniModalShell, LavorazioniModalTitleBar } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { ShellCard } from "@/components/gestionale/shell-card";
+import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
+import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
 import { CLIENT_PORTAL_DOCUMENT_SLOTS } from "@/lib/lavorazioni/client-portal-documents";
 import { lavorazioneDocumentByTipo } from "@/lib/lavorazioni/lavorazione-documents";
-import { dsBtnNeutral } from "@/lib/ui/design-system";
+import { dsGapMd, dsTableActionTextBtn } from "@/lib/ui/design-system";
 import { useClientLavorazioneDocumentsQuery } from "@/src/hooks/gestionale/use-client-lavorazione-media-queries";
 import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
 
-function IconPdf() {
-  return (
-    <svg className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path d="M14 3v5h5" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function ClientDocumentRow({
+function ClientDocumentSlotCard({
   label,
   doc,
   url,
@@ -35,33 +22,27 @@ function ClientDocumentRow({
   onOpen: () => void;
   onDownload: () => void;
 }) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-800/40">
-      <div className="flex min-w-0 items-center gap-2">
-        <IconPdf />
-        <div>
-          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{label}</p>
-          {doc ? (
-            <p className="truncate text-xs text-zinc-500" title={doc.filename}>
-              {doc.filename}
-            </p>
-          ) : (
-            <p className="text-xs text-zinc-500">Nessun documento caricato</p>
-          )}
-        </div>
-      </div>
-      {doc && url ? (
-        <div className="flex shrink-0 gap-1.5">
-          <button type="button" className={dsBtnNeutral} onClick={onOpen}>
-            Apri
-          </button>
-          <button type="button" className={dsBtnNeutral} onClick={onDownload}>
-            Scarica
-          </button>
-        </div>
-      ) : null}
-    </div>
+  const subtitle = doc ? (
+    <span className="block truncate font-medium text-[color:var(--cab-text)]" title={doc.filename}>
+      {doc.filename}
+    </span>
+  ) : (
+    "Nessun documento caricato"
   );
+
+  const actions =
+    doc && url ? (
+      <>
+        <button type="button" className={dsTableActionTextBtn} onClick={onOpen}>
+          Apri
+        </button>
+        <button type="button" className={dsTableActionTextBtn} onClick={onDownload}>
+          Scarica
+        </button>
+      </>
+    ) : null;
+
+  return <GestionaleInfoCard compact title={label} subtitle={subtitle} actions={actions} />;
 }
 
 export function ClientLavorazioneDocumentsPanel({
@@ -69,7 +50,7 @@ export function ClientLavorazioneDocumentsPanel({
   embedded = false,
 }: {
   lavorazioneId: string;
-  /** Senza card esterna (es. dentro pannello Documenti unificato). */
+  /** Senza card esterna (es. dentro panoramica dettaglio). */
   embedded?: boolean;
 }) {
   const docsQ = useClientLavorazioneDocumentsQuery(lavorazioneId);
@@ -77,12 +58,27 @@ export function ClientLavorazioneDocumentsPanel({
   const rows = docsQ.data?.rows ?? [];
   const urls = docsQ.data?.urls ?? {};
 
-  if (loading) return <p className="text-sm text-zinc-500">Caricamento documenti…</p>;
+  if (loading) {
+    const loadingCard = (
+      <GestionaleInfoCard
+        compact
+        title="Documenti"
+        subtitle={
+          <span className="inline-flex items-center gap-1.5">
+            <LoadingSpinner size="sm" label="Caricamento documenti…" />
+            Caricamento documenti…
+          </span>
+        }
+      />
+    );
+    if (embedded) return loadingCard;
+    return <div className={`flex flex-col ${dsGapMd}`}>{loadingCard}</div>;
+  }
 
   const body = (
-    <div className="space-y-2">
+    <div className={`flex flex-col ${dsGapMd}`}>
       {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
-        <ClientDocumentRow
+        <ClientDocumentSlotCard
           key={slot.tipo}
           label={slot.label}
           doc={lavorazioneDocumentByTipo(rows, slot.tipo)}
@@ -106,18 +102,7 @@ export function ClientLavorazioneDocumentsPanel({
     </div>
   );
 
-  if (embedded) return body;
-
-  return (
-    <ShellCard>
-      <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-zinc-500">Documenti</p>
-      {rows.length === 0 ? (
-        <p className="text-sm text-zinc-500">Nessun documento disponibile per questa lavorazione.</p>
-      ) : (
-        body
-      )}
-    </ShellCard>
-  );
+  return body;
 }
 
 export function ClientLavorazioneDocumentsDialog({
@@ -134,11 +119,13 @@ export function ClientLavorazioneDocumentsDialog({
   if (!open) return null;
 
   return (
-    <LavorazioniModalShell onRequestClose={onClose} titleId="client-lav-docs-title">
-      <LavorazioniModalTitleBar title="Documenti lavorazione" titleId="client-lav-docs-title" onRequestClose={onClose}>
-        {refLabel ? <p className="mt-1 text-xs text-zinc-500">{refLabel}</p> : null}
-      </LavorazioniModalTitleBar>
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar">
+    <LavorazioniModalShell
+      onRequestClose={onClose}
+      title="Documenti lavorazione"
+      subtitle={refLabel}
+      titleId="client-lav-docs-title"
+    >
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar">
         <ClientLavorazioneDocumentsPanel lavorazioneId={lavorazioneId} />
       </div>
     </LavorazioniModalShell>

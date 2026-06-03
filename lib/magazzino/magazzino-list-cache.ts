@@ -1,6 +1,8 @@
 import type { QueryClient } from "@tanstack/react-query";
 import { magazzinoRowToRicambioUI, ricambioUiToMagazzinoInsert } from "@/lib/magazzino/magazzino-db-ui-adapter";
+import { sanitizeCompatRicambioUiBatch } from "@/lib/magazzino/compat/compat-runtime-sanitize";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { QK } from "@/src/lib/react-query/query-keys";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
@@ -8,12 +10,30 @@ export function magazzinoListQueryKey() {
   return [...QK.magazzino, null] as const;
 }
 
-export function mapMagazzinoRowsToUI(rows: readonly MagazzinoRicambioRow[], autore = "Sistema"): RicambioMagazzino[] {
-  return rows.map((row) => magazzinoRowToRicambioUI(row, autore));
+export function mapMagazzinoRowsToUI(
+  rows: readonly MagazzinoRicambioRow[],
+  autore = "Sistema",
+  mezziListe?: MezziListePrefs,
+): RicambioMagazzino[] {
+  const ui = rows.map((row) => magazzinoRowToRicambioUI(row, autore, mezziListe));
+  return sanitizeCompatRicambioUiBatch(ui, mezziListe, "magazzino-list-cache.mapMagazzinoRowsToUI");
 }
 
-function uiItemToRow(ui: RicambioMagazzino, existing?: MagazzinoRicambioRow): MagazzinoRicambioRow {
-  const patch = ricambioUiToMagazzinoInsert(ui);
+/** Singola riga DB → UI con sanitize compat SSOT (post-save / patch puntuali). */
+export function ricambioUiFromMagazzinoRow(
+  row: MagazzinoRicambioRow,
+  autore = "Sistema",
+  mezziListe?: MezziListePrefs,
+): RicambioMagazzino {
+  return mapMagazzinoRowsToUI([row], autore, mezziListe)[0]!;
+}
+
+function uiItemToRow(
+  ui: RicambioMagazzino,
+  existing?: MagazzinoRicambioRow,
+  mezziListe?: MezziListePrefs,
+): MagazzinoRicambioRow {
+  const patch = ricambioUiToMagazzinoInsert(ui, mezziListe);
   if (existing) {
     return {
       ...existing,
@@ -48,12 +68,13 @@ export function patchMagazzinoListCache(
   qc: QueryClient,
   updater: (prev: RicambioMagazzino[]) => RicambioMagazzino[],
   autore = "Sistema",
+  mezziListe?: MezziListePrefs,
 ): void {
   qc.setQueryData<MagazzinoRicambioRow[]>(magazzinoListQueryKey(), (old) => {
-    const ui = mapMagazzinoRowsToUI(old ?? [], autore);
+    const ui = mapMagazzinoRowsToUI(old ?? [], autore, mezziListe);
     const next = updater(ui);
     const rowById = new Map((old ?? []).map((row) => [row.id, row]));
-    return next.map((item) => uiItemToRow(item, rowById.get(item.id)));
+    return next.map((item) => uiItemToRow(item, rowById.get(item.id), mezziListe));
   });
 }
 

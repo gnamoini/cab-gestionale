@@ -1,15 +1,17 @@
 "use client";
 
+import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import {
   GlobalLoadingOverlay,
   GlobalLoadingSpinner,
   GlobalLoadingView,
-} from "@/components/design-system/global-loading";
-import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
+  LoadingOverlay,
+  LoadingSpinner,
+} from "@/components/design-system/loading";
 
-/** @deprecated Usare `GlobalLoadingSpinner`. */
-export function LoadingSpinner({ label = GLOBAL_LOADING_MESSAGES.default }: { label?: string }) {
-  return <GlobalLoadingSpinner size="md" label={label} />;
+/** @deprecated Usare `LoadingSpinner` / `GlobalLoadingSpinner`. */
+export function LoadingSpinnerDeprecated({ label = GLOBAL_LOADING_MESSAGES.default }: { label?: string }) {
+  return <LoadingSpinner size="md" label={label} />;
 }
 
 /** Overlay route-level — delega al loading globale (stesso aspetto). */
@@ -20,7 +22,9 @@ export function PageLoadingOverlay({
   show: boolean;
   label?: string;
 }) {
-  return <GlobalLoadingOverlay visible={show} message={label} />;
+  return <LoadingOverlay visible={show} message={label} />;
 }
 
+/** @deprecated Usare `LoadingSpinnerDeprecated` o import diretto da `./loading`. */
+export { LoadingSpinnerDeprecated as LoadingSpinner };
 export { GlobalLoadingView, GlobalLoadingOverlay, GlobalLoadingSpinner };

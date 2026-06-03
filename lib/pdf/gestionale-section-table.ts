@@ -1,5 +1,5 @@
 import type { jsPDF } from "jspdf";
-import autoTable, { type CellHookData } from "jspdf-autotable";
+import autoTable, { type CellHookData, type CellInput, type RowInput } from "jspdf-autotable";
 import {
   ensurePdfSpace,
   getAutoTableFinalY,
@@ -22,6 +22,9 @@ const C_PRIMARY: [number, number, number] = [24, 24, 27];
 const C_LABEL: [number, number, number] = [0, 0, 0];
 const C_RULE: [number, number, number] = [229, 229, 229];
 const C_HEAD_ACCENT_FILL: [number, number, number] = [255, 247, 240];
+/** Sfondo grigio chiaro (weekend, righe assenze PDF timesheet). */
+export const PDF_GESTIONALE_MUTED_FILL: [number, number, number] = [236, 237, 240];
+const C_WEEKEND_FILL = PDF_GESTIONALE_MUTED_FILL;
 const C_ACCENT: [number, number, number] = [249, 115, 22];
 
 export type GestionaleSideBySidePanel = { title: string; fields: PdfField[] };
@@ -32,6 +35,15 @@ const PDF_DS_SIDE_GAP = 3;
 
 export type GestionaleDataSectionTotal = { label?: string; value: string };
 
+/** Layout opzionale (es. griglia timesheet più larga dei margini standard). */
+export type GestionaleDataSectionTableLayout = {
+  tableWidth?: number;
+  marginLeft?: number;
+  marginRight?: number;
+  /** Indici colonna (0-based) sab/dom — sfondo grigio chiaro su header righe giorni e body. */
+  weekendColumnIndexes?: readonly number[];
+};
+
 export type GestionaleFieldSectionOpts = { multiline?: boolean };
 
 type DataColumnStyles = Record<
@@ -39,11 +51,29 @@ type DataColumnStyles = Record<
   Partial<{
     cellWidth: number | "auto" | "wrap";
     halign: "left" | "center" | "right" | "justify";
+    overflow: "linebreak" | "ellipsize" | "visible" | "hidden";
+    fontSize: number;
+    valign: "top" | "middle" | "bottom";
   }>
 >;
 
 function isSectionTitleHeadRow(data: CellHookData): boolean {
   return data.section === "head" && data.row.index === 0;
+}
+
+function headRowCells(headColumns: RowInput): CellInput[] {
+  return Array.isArray(headColumns) ? headColumns : [headColumns];
+}
+
+export function headRowCellsForPdf(headColumns: RowInput): CellInput[] {
+  return headRowCells(headColumns);
+}
+
+function columnHeadFontSizeFromRaw(data: CellHookData): number | undefined {
+  const raw = data.cell.raw;
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return undefined;
+  const fs = (raw as { styles?: { fontSize?: number } }).styles?.fontSize;
+  return typeof fs === "number" ? fs : undefined;
 }
 
 export function cleanPdfFieldValue(v: string | undefined | null): string | undefined {
@@ -202,7 +232,6 @@ function fieldColumnStyles(contentW: number, multiline: boolean) {
 function baseTableStyles() {
   return {
     theme: "grid" as const,
-    margin: pdfTableDefaults.margin,
     tableLineWidth: 0.1,
     tableLineColor: C_RULE,
     styles: {
@@ -347,17 +376,22 @@ export function drawGestionaleDataSectionTable(
   startY: number,
   pageW: number,
   title: string,
-  headColumns: readonly string[],
-  body: string[][],
+  headColumns: RowInput,
+  body: RowInput[],
   columnStyles?: DataColumnStyles,
   sectionTotal?: GestionaleDataSectionTotal,
+  layout?: GestionaleDataSectionTableLayout,
 ): number {
-  if (!headColumns.length) return startY;
+  const headCells = headRowCells(headColumns);
+  if (!headCells.length) return startY;
 
-  const colCount = headColumns.length;
+  const colCount = headCells.length;
   const y = ensurePdfSpace(doc, startY, 18);
   const baseHooks = gestionaleSectionTableHooks(doc);
   const totalLabel = sectionTotal?.label?.trim() || "TOTALE";
+  const tableWidth = layout?.tableWidth ?? pdfContentWidth(pageW);
+  const marginLeft = layout?.marginLeft ?? pdfTableDefaults.margin.left;
+  const marginRight = layout?.marginRight ?? pdfTableDefaults.margin.right;
 
   const mergedColumnStyles: Record<number, object> = {};
   for (let i = 0; i < colCount; i += 1) {
@@ -373,8 +407,9 @@ export function drawGestionaleDataSectionTable(
 
   autoTable(doc, {
     startY: y,
-    tableWidth: pdfContentWidth(pageW),
-    head: [[{ content: title.toUpperCase(), colSpan: colCount }], [...headColumns]],
+    tableWidth,
+    margin: { left: marginLeft, right: marginRight },
+    head: [[{ content: title.toUpperCase(), colSpan: colCount }], headCells],
     body,
     foot: sectionTotal
       ? [
@@ -403,6 +438,16 @@ export function drawGestionaleDataSectionTable(
     columnStyles: mergedColumnStyles,
     didParseCell: (data: CellHookData) => {
       baseHooks.didParseCell(data);
+      const customHeadFontSize = columnHeadFontSizeFromRaw(data);
+      if (data.section === "head" && data.row.index === 1 && customHeadFontSize != null) {
+        data.cell.styles.fontSize = customHeadFontSize;
+      }
+      const weekendCols = layout?.weekendColumnIndexes;
+      const isWeekendCol = weekendCols?.includes(data.column.index) ?? false;
+      const isDayHeaderRow = data.section === "head" && data.row.index === 1;
+      if (isWeekendCol && (data.section === "body" || isDayHeaderRow)) {
+        data.cell.styles.fillColor = C_WEEKEND_FILL;
+      }
       if (data.section === "foot") {
         data.cell.styles.fillColor = 255;
         data.cell.styles.textColor = C_PRIMARY;

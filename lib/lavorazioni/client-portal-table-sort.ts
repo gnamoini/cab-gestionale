@@ -18,9 +18,7 @@ function cmpStr(a: string, b: string): number {
 }
 
 function noteText(bundle: ClientPortalRowBundle): string {
-  const n = bundle.row.note?.trim();
-  if (n) return n;
-  return bundle.fields.descrizioneProblema.trim();
+  return bundle.fields.noteIntervento.trim();
 }
 
 function cmpBundle(

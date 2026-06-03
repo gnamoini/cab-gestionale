@@ -17,6 +17,7 @@ import { usePermissions } from "@/src/hooks/use-permissions";
 import { findSimilarSettingsDuplicate } from "@/lib/settings/settings-list-duplicate";
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { findExactEntityInPool } from "@/lib/validation/global-entity-validation";
+import { appendGlobalListSuccessMessage } from "@/lib/global-list/append-success-message";
 
 export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: GlobalSettingsListContext) {
   const { canManageSettings } = usePermissions();
@@ -66,6 +67,7 @@ export function useAppendGlobalListValue(listKey: GlobalSettingsListKey, ctx?: G
         return null;
       }
 
+      gestToast.success(appendGlobalListSuccessMessage(listKey, ctx));
       return built.canonicalValue;
     },
     [canManageSettings, ctx, listKey, payload?.resolved, payload?.rows, gestToast, upsert],

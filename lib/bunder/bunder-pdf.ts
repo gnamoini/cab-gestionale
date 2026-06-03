@@ -1,7 +1,7 @@
 import { bunderKindLabel } from "@/lib/bunder/doc-kind-meta";
 import { totaleDocumento } from "@/lib/bunder/bunder-generate-default";
 import type { BunderCommercialDocument } from "@/lib/bunder/types";
-import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
+import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -13,7 +13,13 @@ function fmtIt(d: string): string {
   }
 }
 
-export function openBunderPdfInNewTab(doc: BunderCommercialDocument, autore: string): void {
+function bunderPdfFileName(doc: BunderCommercialDocument): string {
+  const kind = bunderKindLabel(doc.kind).replace(/\s+/g, "_");
+  const num = doc.numeroProgressivo.trim().replace(/\s+/g, "_") || "documento";
+  return `${kind}_${num}.pdf`;
+}
+
+export async function openBunderPdfInNewTab(doc: BunderCommercialDocument, autore: string): Promise<boolean> {
   const ts = new Date().toLocaleString("it-IT");
   const j = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = j.internal.pageSize.getWidth();
@@ -136,6 +142,5 @@ export function openBunderPdfInNewTab(doc: BunderCommercialDocument, autore: str
   }
 
   const blob = j.output("blob");
-  const url = URL.createObjectURL(blob);
-  openUrlInNewTab(url, { revokeBlobUrlAfterMs: 120_000 });
+  return openPdfBlobInNewTab(blob, bunderPdfFileName(doc));
 }

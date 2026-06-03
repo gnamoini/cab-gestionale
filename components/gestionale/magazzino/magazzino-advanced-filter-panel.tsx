@@ -5,6 +5,7 @@ import { GlobalSelect } from "@/components/gestionale/global-input/global-select
 import {
   GlobalHierarchyMarcaSelect,
   GlobalHierarchyModelloSelect,
+  GlobalSettingsListSelect,
 } from "@/components/gestionale/global-input/global-settings-list-select";
 import { useGlobalListOptions } from "@/src/hooks/use-global-list-options";
 import {
@@ -27,6 +28,7 @@ export function MagazzinoAdvancedFilterPanel({
   onChange: (patch: Partial<MagazzinoAdvancedFilters>) => void;
   catalog: MagazzinoFilterCatalog;
 }) {
+  void catalog;
   const categoriaList = useGlobalListOptions("magazzino:categorie");
   const categoriaItems = useMemo(
     () => [
@@ -38,37 +40,20 @@ export function MagazzinoAdvancedFilterPanel({
 
   return (
     <div className="space-y-3" aria-label="Filtri avanzati magazzino">
-      <LavorazioniFilterGroup title="Compatibilità attrezzatura">
-        <LavorazioniFilterField label="Marca (compatibilità)">
-          <GlobalHierarchyMarcaSelect
-            tree="attrezzature"
-            value={filters.compatMarca === FILTER_ALL ? "" : filters.compatMarca}
-            onChange={(v) => {
-              const compatMarca = v.trim() ? v : FILTER_ALL;
-              onChange({ compatMarca, compatModello: FILTER_ALL });
-            }}
-            inputClassName={gestionaleFilterFieldInputClass}
-            variant="filter"
-            placeholder="Cerca e seleziona…"
-            aria-label="Filtra marca compatibilità"
-          />
-        </LavorazioniFilterField>
-        <LavorazioniFilterField label="Modello (compatibilità)">
-          <GlobalHierarchyModelloSelect
-            tree="attrezzature"
-            marcaNome={filters.compatMarca === FILTER_ALL ? "" : filters.compatMarca}
-            value={filters.compatModello === FILTER_ALL ? "" : filters.compatModello}
-            onChange={(v) => onChange({ compatModello: v.trim() ? v : FILTER_ALL })}
-            inputClassName={gestionaleFilterFieldInputClass}
-            variant="filter"
-            placeholder={filters.compatMarca === FILTER_ALL ? "Seleziona prima la marca" : "Cerca e seleziona…"}
-            disabled={filters.compatMarca === FILTER_ALL}
-            aria-label="Filtra modello compatibilità"
-          />
-        </LavorazioniFilterField>
-      </LavorazioniFilterGroup>
-
       <LavorazioniFilterGroup title="Anagrafica prodotto">
+        <LavorazioniFilterField label="Marca ricambio">
+          <GlobalSettingsListSelect
+            listKey="magazzino:marche"
+            value={filters.marcaRicambio === FILTER_ALL ? "" : filters.marcaRicambio}
+            onChange={(v) => onChange({ marcaRicambio: v.trim() ? v : FILTER_ALL })}
+            inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            filterNeutralValues={[FILTER_ALL, ""]}
+            allowAdd={false}
+            placeholder="Cerca marca…"
+            aria-label="Filtra marca ricambio"
+          />
+        </LavorazioniFilterField>
         <LavorazioniFilterField label="Categoria">
           <GlobalSelect
             items={categoriaItems}
@@ -80,6 +65,83 @@ export function MagazzinoAdvancedFilterPanel({
             variant="filter"
             filterNeutralValues={[FILTER_ALL]}
             aria-label="Filtra categoria ricambio"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Fornitore non originale">
+          <GlobalSettingsListSelect
+            listKey="magazzino:fornitori"
+            value={filters.fornitoreNonOriginale === FILTER_ALL ? "" : filters.fornitoreNonOriginale}
+            onChange={(v) => onChange({ fornitoreNonOriginale: v.trim() ? v : FILTER_ALL })}
+            inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            filterNeutralValues={[FILTER_ALL, ""]}
+            allowAdd={false}
+            placeholder="Cerca fornitore…"
+            aria-label="Filtra fornitore non originale"
+          />
+        </LavorazioniFilterField>
+      </LavorazioniFilterGroup>
+
+      <LavorazioniFilterGroup title="Compatibilità attrezzatura">
+        <LavorazioniFilterField label="Marca (compatibilità)">
+          <GlobalHierarchyMarcaSelect
+            tree="attrezzature"
+            value={filters.compatMarca === FILTER_ALL ? "" : filters.compatMarca}
+            onChange={(v) => {
+              const compatMarca = v.trim() ? v : FILTER_ALL;
+              onChange({ compatMarca, compatModello: FILTER_ALL });
+            }}
+            inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            allowAdd={false}
+            placeholder="Cerca marca…"
+            aria-label="Filtra marca compatibilità"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Modello (compatibilità)">
+          <GlobalHierarchyModelloSelect
+            tree="attrezzature"
+            marcaNome={filters.compatMarca === FILTER_ALL ? "" : filters.compatMarca}
+            value={filters.compatModello === FILTER_ALL ? "" : filters.compatModello}
+            onChange={(v) => onChange({ compatModello: v.trim() ? v : FILTER_ALL })}
+            inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            allowAdd={false}
+            placeholder={filters.compatMarca === FILTER_ALL ? "Seleziona prima la marca" : "Cerca modello…"}
+            disabled={filters.compatMarca === FILTER_ALL}
+            aria-label="Filtra modello compatibilità"
+          />
+        </LavorazioniFilterField>
+      </LavorazioniFilterGroup>
+
+      <LavorazioniFilterGroup title="Compatibilità telaio">
+        <LavorazioniFilterField label="Marca telaio">
+          <GlobalHierarchyMarcaSelect
+            tree="telai"
+            value={filters.telaioMarca === FILTER_ALL ? "" : filters.telaioMarca}
+            onChange={(v) => {
+              const telaioMarca = v.trim() ? v : FILTER_ALL;
+              onChange({ telaioMarca, telaioModello: FILTER_ALL });
+            }}
+            inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            allowAdd={false}
+            placeholder="Cerca marca…"
+            aria-label="Filtra marca telaio"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Modello telaio">
+          <GlobalHierarchyModelloSelect
+            tree="telai"
+            marcaNome={filters.telaioMarca === FILTER_ALL ? "" : filters.telaioMarca}
+            value={filters.telaioModello === FILTER_ALL ? "" : filters.telaioModello}
+            onChange={(v) => onChange({ telaioModello: v.trim() ? v : FILTER_ALL })}
+            inputClassName={gestionaleFilterFieldInputClass}
+            variant="filter"
+            allowAdd={false}
+            placeholder={filters.telaioMarca === FILTER_ALL ? "Seleziona prima la marca" : "Cerca modello…"}
+            disabled={filters.telaioMarca === FILTER_ALL}
+            aria-label="Filtra modello telaio"
           />
         </LavorazioniFilterField>
       </LavorazioniFilterGroup>

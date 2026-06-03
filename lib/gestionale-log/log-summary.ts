@@ -11,7 +11,11 @@ import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
-import { MAGAZZINO_CAMPO_LABEL } from "@/lib/magazzino/magazzino-log-events";
+import {
+  filterMagazzinoAutomaticModifiche,
+  isMagazzinoAutomaticLogField,
+  MAGAZZINO_CAMPO_LABEL,
+} from "@/lib/magazzino/magazzino-log-events";
 
 /** Summary persistito in `log_modifiche.payload.summary` (generato al write). */
 export type LogModificaSummary = {
@@ -33,6 +37,10 @@ const SKIP_DIFF_KEYS = new Set([
   "id",
   "deleted_at",
   "undo_session_id",
+  "autoreUltimaModifica",
+  "autore_ultima_modifica",
+  "dataUltimaModifica",
+  "data_ultima_modifica",
 ]);
 
 const FIELD_LABELS: Record<string, string> = {
@@ -149,6 +157,10 @@ export function entityKindLabel(entita: string): string {
       return "PROFILO UTENTE";
     case "security":
       return "SICUREZZA";
+    case "dipendenti":
+      return "TIMESHEET DIPENDENTE";
+    case "bunder_documents":
+      return "DOCUMENTO BUNDER";
     default:
       return entita.replace(/_/g, " ").toUpperCase();
   }
@@ -235,6 +247,16 @@ function buildOggettoFromRecord(entita: string, raw: Record<string, unknown>): s
       return `Scheda · ${pickStr(raw, ["tipo"]) || "lavorazione"}`;
     case "profiles":
       return formatTitleCasePhrase(pickStr(raw, ["nome", "email"]) || "Utente");
+    case "bunder_documents": {
+      const numero = pickStr(raw, ["numero_progressivo"]);
+      const dest = formatTitleCasePhrase(pickStr(raw, ["azienda_destinatario"]));
+      return joinOggetto([numero, dest]);
+    }
+    case "dipendenti": {
+      const nome = formatTitleCasePhrase(pickStr(raw, ["employee_display_name_snapshot"]));
+      const data = pickStr(raw, ["work_date"]);
+      return joinOggetto([nome, data]);
+    }
     default:
       return joinOggetto([pickStr(raw, ["nome", "codice", "descrizione", "marca"])]);
   }
@@ -376,6 +398,7 @@ function diffMagazzinoMetaModifiche(before: unknown, after: unknown): string[] {
   ]);
   const lines: string[] = [];
   for (const key of keys) {
+    if (isMagazzinoAutomaticLogField(key)) continue;
     const bv = (b as Record<string, unknown>)[key];
     const av = (a as Record<string, unknown>)[key];
     if (JSON.stringify(bv) === JSON.stringify(av)) continue;
@@ -438,6 +461,11 @@ function resolveOggettoRiga(
   return resolved;
 }
 
+function filterModificheForDisplay(entita: string, lines: string[]): string[] {
+  if (entita !== "magazzino_ricambi") return lines;
+  return filterMagazzinoAutomaticModifiche(lines);
+}
+
 function diffToModifiche(
   payload: Record<string, unknown>,
   stati?: StatoLavorazioneConfig[],
@@ -458,7 +486,7 @@ function diffToModifiche(
     }
     lines.push(modificaLineForFieldChange(change, stati));
   }
-  return lines;
+  return entita ? filterModificheForDisplay(entita, lines) : lines;
 }
 
 const STATO_MODIFICATO_LINE_RE =
@@ -580,8 +608,11 @@ export function buildLogModificaSummary(input: {
       let resolvedModifiche =
         input.entita === "lavorazioni"
           ? remapLavorazioneStatoInModifiche(modifiche as string[], payload, stati)
-          : (modifiche as string[]);
+          : filterModificheForDisplay(input.entita, modifiche as string[]);
       resolvedModifiche = refreshGenericModifiche(resolvedModifiche, payload, stati);
+      if (resolvedModifiche.length === 0 && input.entita === "magazzino_ricambi") {
+        resolvedModifiche = defaultModificheForCreate(input.entita, input.azione, recordFromPayload(payload), stati);
+      }
       return {
         tipoRiga,
         oggettoRiga: resolvedOggetto,
@@ -614,6 +645,11 @@ export function buildLogModificaSummary(input: {
 
   if (modifiche.length === 0) {
     modifiche = defaultModificheForCreate(input.entita, input.azione, record, stati);
+  } else if (input.entita === "magazzino_ricambi") {
+    modifiche = filterMagazzinoAutomaticModifiche(modifiche);
+    if (modifiche.length === 0) {
+      modifiche = defaultModificheForCreate(input.entita, input.azione, record, stati);
+    }
   }
 
   if (input.entita === "magazzino_ricambi" && safeStr(input.azione).toUpperCase() === "DELETE") {

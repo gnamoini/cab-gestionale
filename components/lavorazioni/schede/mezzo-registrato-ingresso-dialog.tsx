@@ -21,7 +21,7 @@ export function MezzoRegistratoIngressoDialog({
     <GestionaleConfirmDialog
       open={open}
       title="Mezzo già presente"
-      layerClassName="z-[calc(var(--ds-z-modal,80)+1)]"
+      layerClassName="z-[120]"
       cancelLabel="Continua manualmente"
       confirmLabel="Compila automaticamente"
       onCancel={onDismiss}

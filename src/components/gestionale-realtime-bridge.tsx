@@ -226,20 +226,6 @@ export function GestionaleRealtimeBridge() {
     const removeActiveChannel = async (reason: string) => {
       const sb = getBrowserSupabase();
       if (activeChannel) {
-        // #region agent log
-        fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e701ad" },
-          body: JSON.stringify({
-            sessionId: "e701ad",
-            location: "gestionale-realtime-bridge.tsx:removeActiveChannel",
-            message: "removeChannel start",
-            data: { reason, connectGeneration },
-            hypothesisId: "H4",
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-        // #endregion
         try {
           await sb.removeChannel(activeChannel);
         } catch {
@@ -253,21 +239,6 @@ export function GestionaleRealtimeBridge() {
       if (cancelled || reconnecting) return;
       reconnecting = true;
       const gen = ++connectGeneration;
-
-      // #region agent log
-      fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "e701ad" },
-        body: JSON.stringify({
-          sessionId: "e701ad",
-          location: "gestionale-realtime-bridge.tsx:connectRealtime",
-          message: "connect start",
-          data: { gen, reconnecting: true },
-          hypothesisId: "H3",
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
 
       await removeActiveChannel("pre-connect");
       if (cancelled || gen !== connectGeneration) {

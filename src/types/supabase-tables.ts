@@ -122,6 +122,37 @@ export type MovimentoRicambioRow = {
   created_at: string;
 };
 
+/** Registry snapshot dipendenti timesheet. */
+export type DipendenteTimesheetEmployeeRow = {
+  id: string;
+  display_name: string;
+  source_addetto_name: string | null;
+  source_addetto_id: string | null;
+  in_settings: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+/** Entry giornaliera timesheet dipendente. */
+export type DipendenteTimesheetEntryRow = {
+  id: string;
+  dipendente_id: string;
+  work_date: string;
+  ore_ordinarie: number;
+  ore_straordinarie: number;
+  assenza: boolean;
+  motivo_assenza: string | null;
+  ore_assenza: number;
+  note: string | null;
+  tipo_assenza_id: string | null;
+  tipo_assenza_label: string | null;
+  employee_display_name_snapshot: string;
+  employee_source_addetto_id_snapshot: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 /** Dati storici manuali Report lavorazioni (`report_manual_entries`). */
 export type ReportManualEntryRow = {
   id: string;
@@ -219,37 +250,16 @@ export type AuthLogWithProfileRow = AuthLogRow & {
   profiles: { id: string; nome: string } | null;
 };
 
-/** Riga `support_notes` — note condivise pagina Supporto. */
-export type SupportNoteRow = {
+/** Documenti commerciali BUNDER (`bunder_documents`). */
+export type BunderDocumentRow = {
   id: string;
-  content: string;
+  kind: string;
+  numero_progressivo: string;
+  data_documento: string;
+  azienda_destinatario: string;
+  payload: Record<string, unknown>;
   created_by: string;
+  last_edited_by: string;
   created_at: string;
   updated_at: string;
-  resolved_at: string | null;
-  deleted_at: string | null;
-};
-
-/** `support_notes` con join autore (`profiles`). */
-export type SupportNoteWithProfileRow = SupportNoteRow & {
-  profiles: { id: string; nome: string } | null;
-};
-
-export type SegnalazioneStato = "attiva" | "risolta";
-
-export type SegnalazioneRow = {
-  id: string;
-  created_at: string;
-  created_by: string;
-  tipo: string;
-  messaggio: string;
-  entita_tipo: string | null;
-  entita_id: string | null;
-  stato: SegnalazioneStato;
-  deleted_at: string | null;
-};
-
-/** Riga `segnalazioni` con join autore (`profiles`). */
-export type SegnalazioneWithProfileRow = SegnalazioneRow & {
-  profiles: { id: string; nome: string } | null;
 };

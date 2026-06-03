@@ -4,12 +4,12 @@ import {
   CLIENT_LAVORAZIONI_SETTINGS_KEY,
   CLIENT_LAVORAZIONI_SETTINGS_MODULE,
   parseClientPortalAccess,
-  userHasClientLavorazioniAccess,
 } from "@/lib/lavorazioni/client-portal-access";
 import { hasPermission } from "@/lib/auth/rbac";
 import { loadClientPortalAccessSettingsServer, verifyClientLavorazioniAccessServer } from "@/src/lib/auth/client-lavorazioni-access-server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { assertAdminCaller, listUsersByAdminAction, type SecurityUserAdminRow } from "@/src/actions/admin-users";
+import { validateSetClientLavorazioniAccessInput } from "@/lib/validation/security-actions-validation";
 
 export type ClientLavorazioniAccessRow = SecurityUserAdminRow & {
   enabled: boolean;
@@ -50,8 +50,9 @@ export async function setClientLavorazioniAccessByAdminAction(input: {
   userId: string;
   enabled: boolean;
 }): Promise<{ ok: true } | { ok: false; message: string }> {
-  const userId = input.userId?.trim();
-  if (!userId) return { ok: false, message: "Utente non valido." };
+  const parsed = validateSetClientLavorazioniAccessInput(input);
+  if (!parsed.ok) return { ok: false, message: parsed.message };
+  const { userId, enabled } = parsed;
 
   const admin = await assertAdminCaller();
   if (!admin.ok) return { ok: false, message: admin.message };
@@ -72,7 +73,7 @@ export async function setClientLavorazioniAccessByAdminAction(input: {
 
   const settings = parseClientPortalAccess(row?.value);
   const set = new Set(settings.enabledUserIds);
-  if (input.enabled) set.add(userId);
+  if (enabled) set.add(userId);
   else set.delete(userId);
 
   const value = { enabledUserIds: [...set] };

@@ -5,6 +5,15 @@ import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import type { SettingsRenameEntry, SettingsRenameKind, SettingsRenamePropagationResult } from "@/lib/settings/settings-rename-types";
+import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import {
+  regenerateCompatLegacyFromRefs,
+  warnIfCompatImpact,
+} from "@/lib/magazzino/compat/compat-rename-guard";
+import { auditCompatConsistency } from "@/lib/magazzino/compat/compat-consistency-auditor";
+import { metaFieldsToRicambioUi, parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
+import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 
 async function sb() {
   return getBrowserSupabase();
@@ -39,25 +48,16 @@ function patchMetaString(meta: unknown, key: string, from: string, to: string): 
   return { next: base, changed: false };
 }
 
-function patchCompatExact(meta: unknown, from: string, to: string): { next: Record<string, unknown>; changed: boolean } {
-  const base = meta && typeof meta === "object" && !Array.isArray(meta) ? { ...(meta as Record<string, unknown>) } : {};
-  const arr = base.compatibilitaMezzi;
-  if (!Array.isArray(arr)) return { next: base, changed: false };
-  let changed = false;
-  const nextArr = arr.map((v) => {
-    if (typeof v !== "string") return v;
-    if (v === from) {
-      changed = true;
-      return to;
-    }
-    if (v.startsWith(`${from} | `)) {
-      changed = true;
-      return v.replace(from, to);
-    }
-    return v;
-  });
-  if (!changed) return { next: base, changed: false };
-  return { next: { ...base, compatibilitaMezzi: nextArr }, changed: true };
+async function loadMezziListePrefs(): Promise<MezziListePrefs> {
+  const c = await sb();
+  const { data, error } = await c
+    .from("app_settings")
+    .select("value")
+    .eq("module", CAB_SETTINGS_MODULE.mezzi)
+    .eq("key", CAB_SETTINGS_KEY.liste)
+    .maybeSingle();
+  if (error || !data?.value) return createMezziListePrefsDefault();
+  return migrateMezziListePrefs(data.value as MezziListePrefs);
 }
 
 async function countUpdate(
@@ -180,18 +180,31 @@ async function propagateMagazzinoMetaField(metaKey: string, from: string, to: st
   return updated;
 }
 
-async function propagateMagazzinoCompat(from: string, to: string): Promise<number> {
+async function propagateMagazzinoCompat(entry: SettingsRenameEntry): Promise<number> {
   const c = await sb();
+  const liste = await loadMezziListePrefs();
   const { data, error } = await c.from("magazzino_ricambi").select("id, meta");
   if (error) throw new Error(error.message);
   let updated = 0;
   for (const row of data ?? []) {
-    const { next, changed } = patchCompatExact(row.meta, from, to);
+    const { next, changed } = regenerateCompatLegacyFromRefs(row.meta, liste, entry);
     if (!changed) continue;
+    if (process.env.NODE_ENV !== "production") {
+      const parsed = parseMagazzinoRicambioMeta(next);
+      const report = auditCompatConsistency(
+        { id: row.id, ...metaFieldsToRicambioUi(parsed) },
+        liste,
+        "settings-rename-propagation.propagateMagazzinoCompat",
+      );
+      if (report.status !== "ok") {
+        console.debug("[compat-rename-audit]", row.id, report.issues);
+      }
+    }
     const { error: upErr } = await c.from("magazzino_ricambi").update({ meta: next }).eq("id", row.id);
     if (upErr) throw new Error(upErr.message);
     updated += 1;
   }
+  warnIfCompatImpact(entry, updated);
   return updated;
 }
 
@@ -241,13 +254,13 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
     case "hierarchy_marca_telai":
       out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "marca"));
       out.push(await propagateSimpleColumn(kind, from, to, "documenti", "marca"));
-      out.push({ kind, from, to, updated: await propagateMagazzinoCompat(from, to) });
+      out.push({ kind, from, to, updated: await propagateMagazzinoCompat(entry) });
       break;
     case "hierarchy_modello_attrezzature":
     case "hierarchy_modello_telai":
       out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "modello"));
       out.push(await propagateSimpleColumn(kind, from, to, "documenti", "modello"));
-      out.push({ kind, from, to, updated: await propagateMagazzinoCompat(from, to) });
+      out.push({ kind, from, to, updated: await propagateMagazzinoCompat(entry) });
       break;
     default:
       break;

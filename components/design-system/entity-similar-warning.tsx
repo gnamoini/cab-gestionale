@@ -15,7 +15,7 @@ export function EntitySimilarWarning({
   if (!similarTo?.trim()) return null;
   return (
     <p
-      className={`mt-1 flex items-start gap-1.5 text-[11px] font-medium leading-snug text-[color:color-mix(in_srgb,var(--cab-warning)_88%,var(--cab-text))] ${className ?? ""}`.trim()}
+      className={`mt-1 flex min-w-0 items-start gap-1.5 text-[11px] font-medium leading-snug text-[color:color-mix(in_srgb,var(--cab-warning)_88%,var(--cab-text))] ${className ?? ""}`.trim()}
       role="status"
     >
       <span aria-hidden className="shrink-0">

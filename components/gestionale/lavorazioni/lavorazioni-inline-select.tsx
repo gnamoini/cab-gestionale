@@ -5,7 +5,16 @@ import {
   GlobalFixedListPillSelect,
   type FixedListPillOption,
 } from "@/components/gestionale/global-input/global-fixed-list-pill";
-import { selectPillInner } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import {
+  addettoPillShellClass,
+  addettoPillShellStyleForName,
+  selectPillInner,
+  statoPillShellClass,
+  statoPillShellStyle,
+} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { LAVORAZIONE_STATO_COMPLETATA_ID } from "@/lib/lavorazioni/constants";
+import { formatLavorazioneIngressoDisplay } from "@/lib/lavorazioni/lavorazione-ingresso-display";
+import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { dsFocus } from "@/lib/ui/design-system";
 import {
   lavTablePillMinH,
@@ -47,6 +56,94 @@ const pillChevron = (
     <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
   </svg>
 );
+
+/** Pill solo lettura (card mobile / portale): niente tooltip, testo non selezionabile. */
+export function LavorazioneReadOnlyPill({
+  label,
+  shellClass,
+  shellStyle,
+  fullWidth = true,
+}: {
+  label: string;
+  shellClass: string;
+  shellStyle?: CSSProperties;
+  /** Larghezza piena nella cella/card; disabilita per badge fit-content (es. stato in header). */
+  fullWidth?: boolean;
+}) {
+  const widthClass = fullWidth
+    ? "w-full min-w-0 max-w-full"
+    : "w-fit min-w-0 max-w-full";
+  return (
+    <span
+      className={`${shellClass} ${widthClass} inline-flex select-none touch-manipulation cursor-default justify-center overflow-hidden ${
+        fullWidth ? "" : `px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`
+      }`}
+      style={shellStyle}
+    >
+      {fullWidth ? (
+        <span
+          className={`flex ${lavTablePillMinH} w-full items-center justify-center px-2 py-0.5 ${lavTablePillTextClass} whitespace-nowrap`}
+        >
+          {label}
+        </span>
+      ) : (
+        label
+      )}
+    </span>
+  );
+}
+
+const completamentoDatePillStyle = statoPillShellStyle(
+  statoThemeColor(LAVORAZIONE_STATO_COMPLETATA_ID),
+);
+
+/** Addetto in pill colorata, sola lettura (archivio / portale). */
+export function LavorazioneAddettoReadOnlyPill({
+  addetto,
+  addettoColors,
+  fullWidth = true,
+}: {
+  addetto: string;
+  addettoColors: Record<string, string | undefined>;
+  fullWidth?: boolean;
+}) {
+  const label = addetto.trim() || "—";
+  return (
+    <LavorazioneReadOnlyPill
+      label={label}
+      shellClass={addettoPillShellClass()}
+      shellStyle={addettoPillShellStyleForName(label, addettoColors)}
+      fullWidth={fullWidth}
+    />
+  );
+}
+
+/** Data completamento in pill verde (stesso stile stato «Completata»). */
+export function LavorazioneCompletamentoDatePill({
+  iso,
+  align = "center",
+  fullWidth = true,
+}: {
+  iso: string;
+  align?: "left" | "center";
+  fullWidth?: boolean;
+}) {
+  const { date } = formatLavorazioneIngressoDisplay(iso);
+  const pill = (
+    <LavorazioneReadOnlyPill
+      label={date}
+      shellClass={statoPillShellClass()}
+      shellStyle={completamentoDatePillStyle}
+      fullWidth={fullWidth}
+    />
+  );
+  if (fullWidth) return pill;
+  return (
+    <div className={`flex min-w-0 ${align === "center" ? "justify-center" : "justify-start"}`}>
+      {pill}
+    </div>
+  );
+}
 
 /** Pill colorata solo lettura (storico): stessa silhouette delle celle tabella principale. */
 export function TablePillReadonly({

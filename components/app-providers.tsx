@@ -17,7 +17,8 @@ import { IosInteractionStability } from "@/src/components/ios-interaction-stabil
 import { GestionaleClientErrorBoundary } from "@/components/observability/gestionale-client-error-boundary";
 import { ObservabilityProvider } from "@/components/observability/observability-provider";
 import { RuntimeHealthBridge } from "@/components/observability/runtime-health-bridge";
-import { BodyScrollLockRouteGuard } from "@/lib/ui/use-body-scroll-lock";
+import { BodyScrollLockRouteGuard, BodyScrollLockHealGuard } from "@/lib/ui/use-body-scroll-lock";
+import { ResizeLayoutDebugProbe } from "@/components/debug/resize-layout-debug-probe";
 import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 
 export function AppProviders({
@@ -39,6 +40,8 @@ export function AppProviders({
                 <ObservabilityProvider>
                   <RuntimeHealthBridge />
                   <BodyScrollLockRouteGuard />
+                  <BodyScrollLockHealGuard />
+                  <ResizeLayoutDebugProbe />
                   <GestionaleClientErrorBoundary>
                     <ThemeProvider>
                       <SettingsModalOpenProvider>

@@ -1,10 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
+import { registerCompatDevTools } from "@/lib/magazzino/compat/compat-dev-tools";
+import { AdminLavorazioniNotificationBridge } from "@/src/components/admin-lavorazioni-notification-bridge";
+import { AdminDashboardPromemoriaReminderBridge } from "@/src/components/admin-dashboard-promemoria-reminder-bridge";
+import { AdminDipendentiPresenzeReminderBridge } from "@/src/components/admin-dipendenti-presenze-reminder-bridge";
+import { AdminMagazzinoNotificationBridge } from "@/src/components/admin-magazzino-notification-bridge";
 import { GestionaleNotificationsBridge } from "@/src/components/gestionale-notifications-bridge";
 import { GestionaleRealtimeBridge } from "@/src/components/gestionale-realtime-bridge";
 import { GestionaleSnapshotRecoveryBridge } from "@/src/components/gestionale-snapshot-recovery-bridge";
+import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 
 /**
  * Monta i bridge realtime/notifiche solo dopo sessione stabile e primo frame,
@@ -14,6 +21,9 @@ export function DeferredGestionaleBridges() {
   const { status, user } = useAuth();
   const authReady = isAuthSessionEstablished(status) && !!user?.id;
   const [mounted, setMounted] = useState(false);
+  const queryClient = useQueryClient();
+  const settingsPayload = useCabAppSettingsPayloadQuery();
+  const mezziListe = settingsPayload.data?.resolved?.mezziListe;
 
   useEffect(() => {
     if (!authReady) {
@@ -27,12 +37,24 @@ export function DeferredGestionaleBridges() {
     };
   }, [authReady]);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV === "production" || !mounted) return;
+    return registerCompatDevTools({
+      queryClient,
+      getMezziListe: () => mezziListe,
+    });
+  }, [mounted, queryClient, mezziListe]);
+
   if (!mounted) return null;
 
   return (
     <>
       <GestionaleRealtimeBridge />
       <GestionaleNotificationsBridge />
+      <AdminLavorazioniNotificationBridge />
+      <AdminMagazzinoNotificationBridge />
+      <AdminDipendentiPresenzeReminderBridge />
+      <AdminDashboardPromemoriaReminderBridge />
       <GestionaleSnapshotRecoveryBridge />
     </>
   );

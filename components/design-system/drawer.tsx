@@ -1,14 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
-import { dsZDrawer } from "@/lib/ui/design-system";
+import { useRef, type ReactNode } from "react";
+import { dsModalCloseBtn, dsModalHeader, dsModalHeaderInner, dsModalHeaderLead, dsModalTitle, dsModalTitleBlock, dsZDrawer } from "@/lib/ui/design-system";
 import { cabIosOverlaySurface } from "@/lib/ui/ios-mobile-tokens";
+import { CAB_MODAL_ROOT_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 import { CloseButton } from "@/components/design-system/close-button";
-import {
-  gestionaleLogPanelAsideClass,
-  gestionaleLogPanelHeaderClass,
-} from "@/components/gestionale/gestionale-log-ui";
+import { gestionaleLogPanelAsideClass } from "@/components/gestionale/gestionale-log-ui";
 
 export type DrawerProps = {
   open: boolean;
@@ -31,7 +30,9 @@ export function Drawer({
   ariaLabel,
   lockScroll = true,
 }: DrawerProps) {
+  const asideRef = useRef<HTMLElement>(null);
   useBodyScrollLock(lockScroll && open, "design-system-Drawer");
+  useMobileModalKeyboard(asideRef);
 
   if (!open) return null;
 
@@ -47,15 +48,23 @@ export function Drawer({
       }}
     >
       <aside
+        ref={asideRef}
+        {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
         className={asideClassName}
         aria-label={ariaLabel ?? title}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <header className={gestionaleLogPanelHeaderClass}>
-          <h2 className="text-sm font-semibold text-[color:var(--cab-text)]">{title}</h2>
-          <CloseButton onClick={onClose} />
+        <header className={dsModalHeader}>
+          <div className={dsModalHeaderInner}>
+            <div className={dsModalHeaderLead}>
+              <div className={dsModalTitleBlock}>
+                <h2 className={dsModalTitle}>{title}</h2>
+              </div>
+            </div>
+            <CloseButton onClick={onClose} className={dsModalCloseBtn} />
+          </div>
         </header>
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
       </aside>
     </div>
   );

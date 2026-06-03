@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { GlobalTableSortIcon } from "@/components/gestionale/global-table/global-table-sort-icon";
 import { dsFocus } from "@/lib/ui/design-system";
 import {
   globalTableSortActive,
@@ -24,18 +24,22 @@ export function MagazzinoDescrizioneSortTh({
 }) {
   const renderBtn = (label: string, columnKey: SortKeyMagazzino, compact?: boolean) => {
     const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
-    let icon: ReactNode = <span className="shrink-0 opacity-40">↕</span>;
-    if (active) icon = sortPhase === "asc" ? <span className="shrink-0">↑</span> : <span className="shrink-0">↓</span>;
+    const sortHint = active
+      ? sortPhase === "asc"
+        ? "ordinato crescente"
+        : "ordinato decrescente"
+      : "non ordinato";
     return (
       <button
         type="button"
         onClick={() => onSort(columnKey)}
+        aria-label={`${label}: ${sortHint}. Clic per cambiare ordinamento`}
         className={`${globalTableSortButton} w-full justify-start ${compact ? "text-[10px] font-semibold normal-case tracking-normal" : ""} ${dsFocus} ${
           active ? globalTableSortActive : globalTableSortIdle
         }`}
       >
         <span className={globalTableSortLabelSingle}>{label}</span>
-        {icon}
+        <GlobalTableSortIcon active={active} phase={sortPhase} />
       </button>
     );
   };

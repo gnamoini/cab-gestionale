@@ -66,7 +66,7 @@ export function SettingsColorPickerPopover({
       ref={panelRef}
       role="dialog"
       aria-label={ariaLabel}
-      className="flex min-w-[9rem] flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
+      className="flex min-w-0 min-w-[9rem] max-w-full flex-col gap-2 rounded-lg border border-zinc-200 bg-white p-3 shadow-xl dark:border-zinc-700 dark:bg-zinc-900"
       style={{ ...style, zIndex: GLOBAL_DROPDOWN_PORTAL_Z }}
       onMouseDown={(e) => e.stopPropagation()}
     >

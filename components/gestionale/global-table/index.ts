@@ -11,14 +11,19 @@ export {
   GestionaleListTableMobileEmpty,
   type GestionaleListTableProps,
 } from "@/components/gestionale/global-table/gestionale-list-table-shell";
+export { GlobalTableSortIcon } from "@/components/gestionale/global-table/global-table-sort-icon";
 export {
   GlobalTableHead,
   GlobalTableSortTh,
   GlobalTableHeadLabel,
+  GlobalTableHeadLabelContent,
+  globalTableHeadLabelCell,
+  normalizeGlobalTableHeadChildren,
   cycleGestionaleSort,
   gestionaleTableTheadClass,
   GestionaleSortTh,
   GestionaleTableHeadLabel,
+  type GlobalTableHeadLabelProps,
   type GlobalTableSortPhase,
   type GestionaleSortPhase,
 } from "@/components/gestionale/global-table/global-table-header";

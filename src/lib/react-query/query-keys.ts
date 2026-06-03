@@ -28,12 +28,16 @@ export const QK = {
   clientLavorazionePhotos: ["client_lavorazione_photos"] as const,
   /** Log eventi autenticazione (`auth_logs`). */
   authLogs: ["auth_logs"] as const,
-  /** Note condivise (modulo Supporto). */
-  supportNotes: ["support_notes"] as const,
   /** Dati storici manuali Report lavorazioni. */
   reportManualEntries: ["report_manual_entries"] as const,
-  /** @deprecated Usare `supportNotes` — tabella legacy `segnalazioni`. */
-  segnalazioni: ["segnalazioni"] as const,
+  /** Registry dipendenti timesheet. */
+  dipendentiTimesheetEmployees: ["dipendenti_timesheet_employees"] as const,
+  /** Dipendente IDs con almeno una entry timesheet (storico). */
+  dipendentiTimesheetEmployeeIdsWithEntries: ["dipendenti_timesheet_employee_ids_with_entries"] as const,
+  /** Entries timesheet per mese. */
+  dipendentiTimesheetEntries: ["dipendenti_timesheet_entries"] as const,
+  /** Documenti commerciali BUNDER. */
+  bunder: ["bunder_documents"] as const,
 };
 
 /** Bundle schede per lavorazione — unica cache React Query (derivata da DB). */

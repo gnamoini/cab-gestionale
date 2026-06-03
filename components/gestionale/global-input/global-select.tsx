@@ -22,10 +22,12 @@ import {
   globalAutocompleteOptionPillClass,
   globalInputEmptyMessage,
   globalInputFieldDefault,
-  globalInputFieldFilter,
+  globalInputFieldFilterSearch,
+  globalInputFieldFilterSelect,
   globalInputInvalidRing,
 } from "@/lib/ui/global-input";
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
+import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import type { ListSelectItem } from "@/lib/ui/list-select-items";
 import { normListSelectValue } from "@/lib/ui/list-select-utils";
 import { findSimilarEntityInPool } from "@/lib/validation/global-entity-validation";
@@ -55,7 +57,7 @@ type GlobalSelectBaseProps = {
   allowAdd?: boolean;
   canAdd?: boolean;
   addPending?: boolean;
-  onAddToList?: (value: string) => void | Promise<void>;
+  onAddToList?: (value: string) => void | Promise<string | null | void> | string | null;
   /** Opzioni con pill colorate (stile stato lavorazione). */
   coloredOptions?: boolean;
   /** Valori filtro "neutrali" (es. FILTER_ALL): al focus svuotano il campo per cercare. */
@@ -88,9 +90,13 @@ export type GlobalSelectProps = GlobalSelectStringProps | GlobalSelectItemsProps
 function fieldClassForVariant(
   variant: "default" | "filter",
   inputClassName?: string,
+  selectOnly?: boolean,
 ): string {
   if (inputClassName) return inputClassName;
-  return variant === "filter" ? globalInputFieldFilter : globalInputFieldDefault;
+  if (variant === "filter") {
+    return selectOnly ? globalInputFieldFilterSelect : globalInputFieldFilterSearch;
+  }
+  return globalInputFieldDefault;
 }
 
 function isFilterNeutralValue(value: string, neutralValues?: readonly string[]): boolean {
@@ -141,8 +147,10 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const autoId = useId();
   const inputId = idProp ?? autoId;
   const listboxId = `${inputId}-listbox`;
+  const hydrated = useClientHydrated();
+  const showLoadingUi = hydrated && isLoading;
   const fieldClass = useMemo(() => {
-    const base = fieldClassForVariant(variant, inputClassName);
+    const base = fieldClassForVariant(variant, inputClassName, selectOnly);
     if (!selectOnly) return base;
     const normalized = base
       .replace(/\bcursor-text\b/g, "")
@@ -155,6 +163,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editSessionRef = useRef({ modified: false });
+  const addInFlightRef = useRef(false);
 
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -235,8 +244,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
       standardizeLegalSuffix: similarStandardizeLegalSuffix,
     });
   }, [isFilterVariant, showSimilarWarning, similarPool, activeTextForSimilar, value, similarStandardizeLegalSuffix]);
-  const showDropdown = open && !disabled && !isLoading;
-  const listEmpty = !isLoading && suggestions.length === 0 && !showAddOption && addCandidate.length > 0;
+  const showDropdown = open && !disabled && !showLoadingUi;
+  const listEmpty = !showLoadingUi && suggestions.length === 0 && !showAddOption && addCandidate.length > 0;
   const portalOpen = showDropdown && (totalNavigableOptions > 0 || listEmpty);
 
   const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
@@ -292,10 +301,25 @@ export function GlobalSelect(props: GlobalSelectProps) {
   );
 
   const runAdd = useCallback(async () => {
-    if (!onAddToList || !addCandidate || addPending) return;
-    await onAddToList(addCandidate);
-    closeAndReset();
-  }, [addCandidate, addPending, onAddToList, closeAndReset]);
+    if (!onAddToList || !addCandidate || addPending || addInFlightRef.current) return;
+    addInFlightRef.current = true;
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    try {
+      const result = await onAddToList(addCandidate);
+      const canonical =
+        typeof result === "string" && result.trim()
+          ? result.trim()
+          : addCandidate.trim();
+      editSessionRef.current.modified = false;
+      if (canonical && normListSelectValue(canonical) !== normListSelectValue(value)) {
+        onChange(canonical);
+      }
+      closeAndReset();
+      setTouched(true);
+    } finally {
+      addInFlightRef.current = false;
+    }
+  }, [addCandidate, addPending, onAddToList, closeAndReset, onChange, value]);
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
@@ -543,13 +567,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
       </div>
     ) : null;
 
+  const loadingPlaceholder = "Caricamento elenco…";
+  const resolvedPlaceholder = showLoadingUi ? loadingPlaceholder : placeholder;
+
   return (
     <div ref={wrapRef} className={`relative w-full ${className}`.trim()}>
-      {isLoading ? (
-        <p className="mb-1 text-xs text-[color:var(--cab-text-muted)]" role="status">
-          Caricamento elenco…
-        </p>
-      ) : null}
       <input
         ref={inputRef}
         id={inputId}
@@ -583,9 +605,9 @@ export function GlobalSelect(props: GlobalSelectProps) {
           blurTimer.current = setTimeout(commitBlur, 120);
         }}
         onKeyDown={onInputKeyDown}
-        disabled={disabled || isLoading}
+        disabled={disabled || showLoadingUi}
         required={required && !strictFromList}
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         autoComplete="off"
         role="combobox"
         aria-expanded={showDropdown && (totalNavigableOptions > 0 || listEmpty)}
@@ -593,7 +615,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         aria-invalid={showInvalid || undefined}
         aria-autocomplete={selectOnly ? "none" : "list"}
         aria-readonly={selectOnly || undefined}
-        aria-busy={isLoading || addPending || undefined}
+        aria-busy={showLoadingUi || addPending || undefined}
       />
       {typeof document !== "undefined" && dropdownPortal ? createPortal(dropdownPortal, document.body) : null}
       {showInvalid ? (

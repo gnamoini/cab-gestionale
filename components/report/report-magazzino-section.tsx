@@ -1,9 +1,11 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
-import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { ShellCard } from "@/components/gestionale/shell-card";
+import { ReportCompareBanner } from "@/components/report/report-compare-banner";
 import { MagazzinoCapitalLineChart, MagazzinoEntrateUsciteBars } from "@/components/report/report-charts";
+import { reportChartShellClass } from "@/components/report/report-ui-tokens";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/report/report-buttons";
 import { GlobalTableHead } from "@/components/gestionale/global-table";
 import { cycleReportSort, ReportSortTh, type ReportSortPhase } from "@/components/report/report-sort-th";
@@ -11,22 +13,26 @@ import type { ReportCompareDetail } from "@/lib/report/build-report-model";
 import { deltaPct } from "@/lib/report/date-ranges";
 import type { DateRange } from "@/lib/report/date-ranges";
 import type { MagazzinoMonthRow } from "@/lib/report/magazzino-monthly-rows";
-import { buildMagazzinoMonthlyRows, magazzinoLogTouchesRange } from "@/lib/report/magazzino-monthly-rows";
+import { magazzinoLogTouchesRange } from "@/lib/report/magazzino-monthly-rows";
 import {
   loadMagazzinoManualMonthMap,
   saveMagazzinoManualMonthMap,
   type MagazzinoManualMonthMap,
 } from "@/lib/report/magazzino-manual-storage";
 import {
+  migrateMagazzinoManualLocalToDb,
+  saveMagazzinoManualToDb,
+} from "@/lib/report/magazzino-manual-db-sync";
+import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
+import { getMagazzinoMonthlyRowsForRange } from "@/lib/report/report-derived-cache";
+import {
   dsInput,
   dsModalBackdrop,
   dsModalPanel,
-  dsSurfaceCard,
   dsTableRow,
   dsTableTd,
   dsTableWrap,
   dsScrollbar,
-  dsSectionTitle,
   dsTypoSmall,
   gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
@@ -60,7 +66,7 @@ function magCell(r: MagazzinoMonthRow, k: MagSortKey): string | number {
 }
 
 export function ReportMagazzinoSection({
-  magLog,
+  derivedBundle,
   prodotti,
   anchor,
   range,
@@ -68,7 +74,7 @@ export function ReportMagazzinoSection({
   histRev,
   onHistRev,
 }: {
-  magLog: MagazzinoChangeLogEntry[];
+  derivedBundle: ReportDerivedBundle;
   prodotti: RicambioMagazzino[];
   anchor: Date;
   range: DateRange;
@@ -76,13 +82,28 @@ export function ReportMagazzinoSection({
   histRev: number;
   onHistRev: () => void;
 }) {
-  const manual = useMemo(() => loadMagazzinoManualMonthMap(), [histRev]);
+  const magLogSorted = derivedBundle.magLogSorted;
+  const [manualMap, setManualMap] = useState<MagazzinoManualMonthMap>(() => loadMagazzinoManualMonthMap());
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const local = loadMagazzinoManualMonthMap();
+      const merged = await migrateMagazzinoManualLocalToDb(local);
+      if (!cancelled) setManualMap(merged);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [histRev]);
+
+  const manual = manualMap;
   const { rows, hasRawLog, note } = useMemo(
-    () => buildMagazzinoMonthlyRows(magLog, prodotti, range, anchor, manual),
-    [magLog, prodotti, range, anchor, manual],
+    () => getMagazzinoMonthlyRowsForRange(derivedBundle, prodotti, range, anchor, manual),
+    [derivedBundle, prodotti, range, anchor, manual],
   );
 
-  const logInRange = useMemo(() => magazzinoLogTouchesRange(magLog, range), [magLog, range]);
+  const logInRange = useMemo(() => magazzinoLogTouchesRange(magLogSorted, range), [magLogSorted, range]);
   const hasManualInRange = useMemo(() => {
     for (const r of rows) {
       const p = manual[r.key];
@@ -160,6 +181,8 @@ export function ReportMagazzinoSection({
     if (Object.keys(patch).length === 0) delete next[key];
     else next[key] = patch;
     saveMagazzinoManualMonthMap(next);
+    void saveMagazzinoManualToDb(next);
+    setManualMap(next);
     onHistRev();
     setOpen(false);
   }
@@ -169,8 +192,8 @@ export function ReportMagazzinoSection({
     : 0;
   const cmpMag =
     compareDetail != null ? (
-      <div className="mb-3 rounded-lg border border-zinc-200 bg-zinc-50/80 px-3 py-2 text-xs text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/50 dark:text-zinc-200">
-        <span className="font-semibold text-zinc-900 dark:text-zinc-50">Confronto periodo (magazzino)</span>
+      <ReportCompareBanner>
+        <span className="font-semibold">Confronto periodo (magazzino)</span>
         {" · "}
         Somma Δ capitale: {compareDetail.magDeltaCapCur.toLocaleString("it-IT", { style: "currency", currency: "EUR" })}{" "}
         vs {compareDetail.magDeltaCapPrev.toLocaleString("it-IT", { style: "currency", currency: "EUR" })} (
@@ -178,30 +201,35 @@ export function ReportMagazzinoSection({
         {dAbsCap !== 0 ? (
           <span className="tabular-nums">
             {" "}
-            · Δ ass. {dAbsCap > 0 ? "+" : ""}
+            · Δ {dAbsCap > 0 ? "+" : ""}
             {dAbsCap.toLocaleString("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 })}
           </span>
         ) : null}
         )
-      </div>
+      </ReportCompareBanner>
     ) : null;
 
   return (
-    <div className={`${dsSurfaceCard} p-4`}>
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className={dsSectionTitle}>Magazzino / ricambi</h2>
-          <p className={dsTypoSmall}>{note}</p>
-        </div>
+    <ShellCard
+      id="report-magazzino"
+      title="Magazzino / ricambi"
+      collapsible
+      defaultCollapsed={false}
+      headerActions={
         <button type="button" onClick={openModal} className={`${erpBtnNeutral} shrink-0 sm:text-sm`}>
           Gestisci storico magazzino
         </button>
-      </div>
-
+      }
+    >
       {cmpMag}
+      {note ? (
+        <ReportCompareBanner>
+          <p className="text-xs leading-relaxed">{note}</p>
+        </ReportCompareBanner>
+      ) : null}
 
       {showEmpty ? (
-        <p className="mb-4 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-3 text-sm text-zinc-600 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-300">
+        <p className="mb-4 rounded-lg border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] p-3 text-sm text-[color:var(--cab-text-muted)]">
           Nessun dato disponibile: nessun movimento di magazzino nel periodo selezionato. Puoi inserire dati manuali per
           ricostruire mesi mancanti.
         </p>
@@ -281,19 +309,21 @@ export function ReportMagazzinoSection({
         </table>
       </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="min-w-0">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Entrate vs uscite</p>
+      <div className="mt-6 grid min-w-0 gap-6 lg:grid-cols-1 xl:grid-cols-2">
+        <div className={`min-w-0 ${reportChartShellClass}`}>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Entrate vs uscite</p>
           {rows.length === 0 ? (
-            <p className="text-sm text-zinc-500">Nessun dato.</p>
+            <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun dato.</p>
           ) : (
             <MagazzinoEntrateUsciteBars rows={rows.map((r) => ({ label: r.label, entrate: r.entrate, uscite: r.uscite }))} />
           )}
         </div>
-        <div className="min-w-0">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">Capitale immobilizzato (fine mese)</p>
+        <div className={`min-w-0 ${reportChartShellClass}`}>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+            Capitale immobilizzato (fine mese)
+          </p>
           {rows.length === 0 ? (
-            <p className="text-sm text-zinc-500">Nessun dato.</p>
+            <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun dato.</p>
           ) : (
             <MagazzinoCapitalLineChart rows={rows.map((r) => ({ label: r.label, capitaleFinale: r.capitaleFinale }))} />
           )}
@@ -307,7 +337,7 @@ export function ReportMagazzinoSection({
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div className={`${dsModalPanel} flex flex-col overflow-hidden`} onMouseDown={(e) => e.stopPropagation()}>
+          <div className={`${dsModalPanel} flex min-w-0 w-full max-w-full flex-col overflow-hidden overflow-x-hidden`} onMouseDown={(e) => e.stopPropagation()}>
             <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Storico manuale magazzino</h3>
             <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
               Opzionale: sovrascrivi i valori calcolati per un mese. Lascia vuoto un campo per usare il valore automatico.
@@ -368,6 +398,6 @@ export function ReportMagazzinoSection({
           </div>
         </div>
       ) : null}
-    </div>
+    </ShellCard>
   );
 }

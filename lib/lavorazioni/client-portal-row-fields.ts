@@ -36,7 +36,10 @@ export type ClientPortalRowFields = {
   matricola: string;
   nScuderia: string;
   addetto: string;
+  /** Descrizione anomalia (scheda ingresso) — ricerca/filtri. */
   descrizioneProblema: string;
+  /** Note intervento — colonna tabella (come lavorazioni principali). */
+  noteIntervento: string;
 };
 
 export function clientPortalClienteLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
@@ -45,7 +48,9 @@ export function clientPortalClienteLabel(row: LavorazioneListRow, schedeStore?: 
 }
 
 export function clientPortalUtilizzatoreLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  return dash(schedeStore?.[row.id]?.ingresso?.campi.utilizzatore?.trim() || row.mezzo?.utilizzatore);
+  const raw =
+    schedeStore?.[row.id]?.ingresso?.campi.utilizzatore?.trim() || row.mezzo?.utilizzatore?.trim() || "";
+  return raw && raw !== "—" ? raw : "";
 }
 
 export function clientPortalCantiereLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
@@ -129,8 +134,14 @@ export function clientPortalMarcaModello(
 
 export function clientPortalDescrizioneProblema(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const fromScheda = schedeStore?.[row.id]?.ingresso?.campi.descrizioneAnomalia?.trim();
-  const fromNote = row.note?.trim();
-  return dash(fromScheda || fromNote);
+  return dash(fromScheda);
+}
+
+export function clientPortalNoteIntervento(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
+  const fromScheda = schedeStore?.[row.id]?.ingresso?.campi.noteIntervento?.trim();
+  if (fromScheda) return fromScheda;
+  const fromRow = row.note?.trim();
+  return fromRow && fromRow !== "—" ? fromRow : "";
 }
 
 export function clientPortalAddettoLabel(
@@ -181,6 +192,7 @@ export function buildClientPortalRowFields(
     nScuderia: ident.nScuderia,
     addetto: clientPortalAddettoLabel(row, schedeStore, logs, addettiGlobali),
     descrizioneProblema: clientPortalDescrizioneProblema(row, schedeStore),
+    noteIntervento: clientPortalNoteIntervento(row, schedeStore),
   };
 }
 
@@ -212,6 +224,7 @@ export function clientPortalRowSearchHaystack(fields: ClientPortalRowFields): st
     fields.nScuderia,
     fields.addetto,
     fields.descrizioneProblema,
+    fields.noteIntervento,
   ]
     .join(" ")
     .toLowerCase();

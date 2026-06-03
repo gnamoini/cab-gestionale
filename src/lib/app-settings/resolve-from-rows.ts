@@ -1,7 +1,13 @@
 "use client";
 
 import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
-import { DEFAULT_ADDETTI_LAVORAZIONI } from "@/lib/lavorazioni/constants";
+import {
+  defaultAddettiRecords,
+  migrateLegacyAddettiStrings,
+  parseAddettiRecordsFromPayload,
+  syncLavorazioniAddettiFromRecords,
+  type AddettoRecord,
+} from "@/lib/lavorazioni/addetto-model";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { DEFAULT_STATI_LAVORAZIONI_WORKFLOW, normalizeStatiList } from "@/lib/lavorazioni/stati-dynamic";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
@@ -11,6 +17,11 @@ import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
+import {
+  defaultTipiAssenza,
+  parseTipiAssenzaFromPayload,
+  type TipoAssenzaConfig,
+} from "@/lib/dipendenti/tipi-assenza-model";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
@@ -20,6 +31,7 @@ export const DEFAULT_PRIORITA_LAVORAZIONI_DB: PrioritaLavorazione[] = ["bassa", 
 export type CabAppSettingsResolved = {
   lavorazioni: {
     stati: StatoLavorazioneConfig[];
+    addettiRecords: AddettoRecord[];
     addetti: string[];
     addettoColors: Record<string, string>;
     prioritaColors: Partial<Record<PrioritaLav, string>>;
@@ -28,19 +40,43 @@ export type CabAppSettingsResolved = {
   mezziListe: MezziListePrefs;
   magazzinoMaster: MagazzinoMasterPrefs;
   preventiviDefaults: SistemaPreventiviDefaults;
+  dipendenti: {
+    tipiAssenza: TipoAssenzaConfig[];
+  };
 };
 
 const FALLBACK_PREVENTIVI: SistemaPreventiviDefaults = { costoOrarioDefault: 48 };
 
 function defaultLavorazioni(): CabAppSettingsResolved["lavorazioni"] {
-  const addetti = [...DEFAULT_ADDETTI_LAVORAZIONI];
+  const { addettiRecords, addetti } = syncLavorazioniAddettiFromRecords(defaultAddettiRecords());
   return {
     stati: [...DEFAULT_STATI_LAVORAZIONI_WORKFLOW],
+    addettiRecords,
     addetti,
     addettoColors: syncAddettoColorMap(addetti, undefined),
     prioritaColors: {},
     prioritaDb: [...DEFAULT_PRIORITA_LAVORAZIONI_DB],
   };
+}
+
+function resolveAddettiFromPayload(o: Record<string, unknown>): {
+  addettiRecords: AddettoRecord[];
+  addetti: string[];
+} {
+  const fromRecords = parseAddettiRecordsFromPayload(o.addettiRecords);
+  if (fromRecords) {
+    return syncLavorazioniAddettiFromRecords(fromRecords);
+  }
+  if (Array.isArray(o.addetti)) {
+    const legacy = (o.addetti as unknown[])
+      .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
+      .map((x) => x.trim());
+    if (legacy.length) {
+      return syncLavorazioniAddettiFromRecords(migrateLegacyAddettiStrings(legacy));
+    }
+  }
+  const fallback = syncLavorazioniAddettiFromRecords(defaultAddettiRecords());
+  return fallback;
 }
 
 function parsePrioritaDb(raw: unknown): PrioritaLavorazione[] {
@@ -58,20 +94,15 @@ function parseLavorazioniPayload(raw: unknown): CabAppSettingsResolved["lavorazi
     const stati = normalizeStatiList(o.stati as StatoLavorazioneConfig[]);
     if (stati.length) base.stati = stati;
   }
-  if (Array.isArray(o.addetti)) {
-    const addetti = (o.addetti as unknown[])
-      .filter((x): x is string => typeof x === "string" && x.trim().length > 0)
-      .map((x) => x.trim());
-    if (addetti.length) {
-      base.addetti = addetti;
-      base.addettoColors = syncAddettoColorMap(
-        addetti,
-        o.addettoColors && typeof o.addettoColors === "object" && !Array.isArray(o.addettoColors)
-          ? (o.addettoColors as Record<string, string>)
-          : undefined,
-      );
-    }
-  }
+  const addettiResolved = resolveAddettiFromPayload(o);
+  base.addettiRecords = addettiResolved.addettiRecords;
+  base.addetti = addettiResolved.addetti;
+  base.addettoColors = syncAddettoColorMap(
+    base.addetti,
+    o.addettoColors && typeof o.addettoColors === "object" && !Array.isArray(o.addettoColors)
+      ? (o.addettoColors as Record<string, string>)
+      : undefined,
+  );
   if (o.addettoColors && typeof o.addettoColors === "object" && !Array.isArray(o.addettoColors)) {
     base.addettoColors = { ...base.addettoColors, ...(o.addettoColors as Record<string, string>) };
   }
@@ -168,7 +199,15 @@ export function resolveCabAppSettingsFromRows(
         ? legacy.preventiviDefaults
         : { ...FALLBACK_PREVENTIVI };
 
-  return { lavorazioni, mezziListe, magazzinoMaster, preventiviDefaults };
+  const dipRow = pick(CAB_SETTINGS_MODULE.dipendenti, CAB_SETTINGS_KEY.prefs);
+  const dipendenti = {
+    tipiAssenza:
+      dipRow != null
+        ? parseTipiAssenzaFromPayload((dipRow.value as Record<string, unknown>).tipiAssenza)
+        : defaultTipiAssenza(),
+  };
+
+  return { lavorazioni, mezziListe, magazzinoMaster, preventiviDefaults, dipendenti };
 }
 
 export function buildBulkRowsFromResolved(r: CabAppSettingsResolved): { module: string; key: string; value: Record<string, unknown> }[] {
@@ -178,6 +217,7 @@ export function buildBulkRowsFromResolved(r: CabAppSettingsResolved): { module: 
       key: CAB_SETTINGS_KEY.prefs,
       value: {
         stati: r.lavorazioni.stati,
+        addettiRecords: r.lavorazioni.addettiRecords,
         addetti: r.lavorazioni.addetti,
         addettoColors: r.lavorazioni.addettoColors,
         prioritaColors: r.lavorazioni.prioritaColors,
@@ -198,6 +238,11 @@ export function buildBulkRowsFromResolved(r: CabAppSettingsResolved): { module: 
       module: CAB_SETTINGS_MODULE.preventivi,
       key: CAB_SETTINGS_KEY.defaults,
       value: { ...(r.preventiviDefaults as unknown as Record<string, unknown>) },
+    },
+    {
+      module: CAB_SETTINGS_MODULE.dipendenti,
+      key: CAB_SETTINGS_KEY.prefs,
+      value: { tipiAssenza: r.dipendenti.tipiAssenza },
     },
   ];
 }

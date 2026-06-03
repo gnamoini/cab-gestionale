@@ -10,6 +10,10 @@ import {
   ymdToLocalDate,
 } from "@/components/gestionale/global-input/calendar-utils";
 import {
+  CalendarNavChevronLeft,
+  CalendarNavChevronRight,
+} from "@/components/gestionale/global-input/calendar-nav-icons";
+import {
   globalInputCalendarDayBtn,
   globalInputCalendarDaySelected,
   globalInputCalendarDayToday,
@@ -59,9 +63,7 @@ export function GlobalCalendarPanel({
             onViewChange(n.year, n.month);
           }}
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-          </svg>
+          <CalendarNavChevronLeft />
         </button>
         <span className="min-w-0 flex-1 truncate text-center text-xs font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
           {formatMonthTitle(viewYear, viewMonth)}
@@ -75,9 +77,7 @@ export function GlobalCalendarPanel({
             onViewChange(n.year, n.month);
           }}
         >
-          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
+          <CalendarNavChevronRight />
         </button>
       </div>
       <div className="mb-1 grid grid-cols-7 gap-0.5">

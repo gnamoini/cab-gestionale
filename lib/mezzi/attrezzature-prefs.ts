@@ -25,10 +25,17 @@ export function compatLabelMarcaModello(marcaNome: string, modelloNome: string):
 
 /** Parsa etichette "Marca — Modello" o testo libero (marca vuota). */
 export function parseCompatMarcaModello(label: string): { marca: string; modello: string } {
-  const t = label.trim();
-  const i = t.indexOf(COMPAT_SEP);
-  if (i === -1) return { marca: "", modello: t };
-  return { marca: t.slice(0, i).trim(), modello: t.slice(i + COMPAT_SEP.length).trim() };
+  const raw = label.trim();
+  const i = raw.indexOf(COMPAT_SEP);
+  if (i !== -1) {
+    return { marca: raw.slice(0, i).trim(), modello: raw.slice(i + COMPAT_SEP.length).trim() };
+  }
+  // Marca universale: «Marca —» (modello assente; lo spazio finale può essere perso da trim)
+  const loose = raw.match(/^(.+?)\s[\u2014\u2013-]\s*$/);
+  if (loose) {
+    return { marca: loose[1]!.trim(), modello: "" };
+  }
+  return { marca: "", modello: raw };
 }
 
 function withoutLegacyStatiMezzo(liste: MezziListePrefs): MezziListePrefs {

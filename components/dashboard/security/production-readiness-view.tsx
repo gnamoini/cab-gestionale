@@ -78,7 +78,7 @@ export function ProductionReadinessView() {
         title="Production Readiness"
         description="Gate automatico pilot → production: verifica flag, storage, RBAC e coerenza codice prima del deploy."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Link href="/dashboard/security" className={dsBtnNeutral}>
               ← Sicurezza
             </Link>
@@ -101,7 +101,7 @@ export function ProductionReadinessView() {
       {report && !error ? (
         <>
           <ShellCard title="Esito">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-3">
               <span
                 className={`inline-flex items-center rounded-lg px-3 py-1.5 text-sm font-bold ${
                   ready

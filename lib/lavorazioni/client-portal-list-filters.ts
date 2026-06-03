@@ -2,12 +2,15 @@ import {
   clientPortalRowMatchesSearch,
   type ClientPortalRowFields,
 } from "@/lib/lavorazioni/client-portal-row-fields";
+import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
 import {
+  buildLavorazioniFilterCatalog,
   FILTER_ALL,
   lavRowMatchesAdvancedFilters,
   LAVORAZIONI_ADVANCED_FILTERS_EMPTY,
   lavorazioniAdvancedFiltersActive,
   type LavorazioniAdvancedFilters,
+  type LavorazioniFilterCatalog,
   type LavorazioniListFilterVariant,
   type LavorazioniSectionFilter,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
@@ -28,17 +31,18 @@ export const CLIENT_PORTAL_FILTERS_EMPTY: ClientPortalListFilters = {
   search: "",
 };
 
-const STORAGE_KEY = "gestionale-client-lavorazioni-filters-v4";
+const STORAGE_KEY = "gestionale-client-lavorazioni-filters-v5";
 const LEGACY_STORAGE_KEYS = [
+  "gestionale-client-lavorazioni-filters-v4",
   "gestionale-client-lavorazioni-filters-v3",
   "gestionale-client-lavorazioni-filters-v2",
   "gestionale-client-lavorazioni-filters-v1",
 ] as const;
 
-type PersistedClientPortalFilters = Omit<ClientPortalListFilters, "section" | "completamentoDa" | "completamentoA">;
+type PersistedClientPortalFilters = Omit<ClientPortalListFilters, "section">;
 
 function toPersisted(f: ClientPortalListFilters): PersistedClientPortalFilters {
-  const { section: _s, completamentoDa: _c0, completamentoA: _c1, ...rest } = f;
+  const { section: _s, ...rest } = f;
   return rest;
 }
 
@@ -57,8 +61,6 @@ export function sanitizePersistedPortalFilters(
     ...CLIENT_PORTAL_FILTERS_EMPTY,
     ...raw,
     section: "",
-    completamentoDa: "",
-    completamentoA: "",
   };
 
   if (options?.resetListFilters) {
@@ -97,19 +99,30 @@ function readLegacyPersistedRaw(): Partial<PersistedClientPortalFilters> | null 
   return null;
 }
 
+function legacyStorageKeyHit(): string | null {
+  if (typeof window === "undefined") return null;
+  for (const key of LEGACY_STORAGE_KEYS) {
+    if (window.sessionStorage.getItem(key)) return key;
+  }
+  return null;
+}
+
 export function loadClientPortalFiltersPersisted(): ClientPortalListFilters | null {
   if (typeof window === "undefined") return null;
   try {
-    const rawV4 = window.sessionStorage.getItem(STORAGE_KEY);
-    if (rawV4) {
-      const o = JSON.parse(rawV4) as Partial<PersistedClientPortalFilters>;
+    const rawCurrent = window.sessionStorage.getItem(STORAGE_KEY);
+    if (rawCurrent) {
+      const o = JSON.parse(rawCurrent) as Partial<PersistedClientPortalFilters>;
       return sanitizePersistedPortalFilters(o);
     }
 
     const legacy = readLegacyPersistedRaw();
     if (!legacy) return null;
 
-    const migrated = sanitizePersistedPortalFilters(legacy, { resetListFilters: true });
+    const legacyKey = legacyStorageKeyHit();
+    const migrated = sanitizePersistedPortalFilters(legacy, {
+      resetListFilters: legacyKey != null && legacyKey !== "gestionale-client-lavorazioni-filters-v4",
+    });
     saveClientPortalFiltersPersisted(migrated);
     return migrated;
   } catch {
@@ -127,6 +140,45 @@ export function saveClientPortalFiltersPersisted(f: ClientPortalListFilters): vo
 }
 
 export type ClientPortalRowBundle = { row: LavorazioneListRow; fields: ClientPortalRowFields };
+
+/** Catalogo filtri portale — mezzi dalle righe + addetti arricchiti dai log. */
+export function buildClientPortalFilterCatalog(
+  bundles: readonly ClientPortalRowBundle[],
+  schedeStore: LavorazioneSchedeStore,
+  addettiGlobali: readonly string[],
+  defaultAddetto: string,
+  logsByLav?: ReadonlyMap<string, readonly LogModificaRow[]>,
+): LavorazioniFilterCatalog {
+  const rows = bundles.map((b) => b.row);
+  const mezziById = new Map<string, NonNullable<LavorazioneListRow["mezzo"]>>();
+  for (const row of rows) {
+    const mezzo = row.mezzo;
+    if (mezzo?.id && !mezziById.has(mezzo.id)) mezziById.set(mezzo.id, mezzo);
+  }
+
+  const catalog = buildLavorazioniFilterCatalog(
+    rows,
+    schedeStore,
+    addettiGlobali,
+    [...mezziById.values()],
+    defaultAddetto,
+  );
+
+  if (!logsByLav?.size) return catalog;
+
+  const addettiSet = new Set(catalog.addetti);
+  for (const row of rows) {
+    const logs = logsByLav.get(row.id);
+    if (!logs?.length) continue;
+    const fromLog = latestAddettoFromLogs(logs);
+    if (fromLog !== "—") addettiSet.add(fromLog);
+  }
+
+  return {
+    ...catalog,
+    addetti: [...addettiSet].sort((a, b) => a.localeCompare(b, "it")),
+  };
+}
 
 export function clientPortalBundleMatchesFilters(
   bundle: ClientPortalRowBundle,

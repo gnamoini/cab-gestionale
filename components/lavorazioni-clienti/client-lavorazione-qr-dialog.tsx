@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { HubIconCopy, HubIconDownload } from "@/components/design-system/hub-table-action-icons";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { clientLavorazioniPublicUrl } from "@/lib/lavorazioni/client-portal-access";
-import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsBtnPrimary, dsModalFormFooter } from "@/lib/ui/design-system";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 export function ClientLavorazioneQrDialog({
@@ -62,7 +63,7 @@ export function ClientLavorazioneQrDialog({
 
   return (
     <LavorazioniModalShell onRequestClose={onClose} title="QR lavorazione">
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="flex flex-col items-center gap-4 p-6">
           {dataUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -75,11 +76,18 @@ export function ClientLavorazioneQrDialog({
           <p className="max-w-sm break-all text-center text-xs text-zinc-500 dark:text-zinc-400">{url}</p>
         </div>
       </div>
-      <footer className="flex shrink-0 flex-wrap items-center justify-center gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-        <button type="button" className={dsBtnNeutral} onClick={() => void copyLink()} disabled={!url}>
+      <footer className={`${dsModalFormFooter} justify-center`}>
+        <button
+          type="button"
+          className={`${dsBtnNeutral} min-h-11 gap-2 px-4 py-2.5 text-sm font-semibold`}
+          onClick={() => void copyLink()}
+          disabled={!url}
+        >
+          <HubIconCopy className="h-4 w-4 shrink-0 opacity-90" />
           Copia link
         </button>
-        <button type="button" className={dsBtnPrimary} onClick={downloadQr} disabled={!dataUrl}>
+        <button type="button" className={`${dsBtnPrimary} min-h-11`} onClick={downloadQr} disabled={!dataUrl}>
+          <HubIconDownload className="h-4 w-4 shrink-0 opacity-90" />
           Scarica PNG
         </button>
       </footer>

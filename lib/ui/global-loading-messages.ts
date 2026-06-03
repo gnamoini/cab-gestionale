@@ -12,7 +12,16 @@ export const GLOBAL_LOADING_MESSAGES = {
   redirectWorkspace: "Reindirizzamento alla tua area di lavoro…",
   saving: "Salvataggio modifiche…",
   syncing: "Sincronizzazione dati…",
-  dashboard: "Aggiornamento dashboard…",
+  dashboard: "Caricamento dashboard…",
+  lavorazioni: "Caricamento lavorazioni…",
+  clienti: "Recupero dati clienti…",
+  magazzino: "Aggiornamento magazzino…",
+  mezzi: "Caricamento mezzi…",
+  documenti: "Caricamento documenti…",
+  report: "Generazione report…",
+  permessi: "Verifica permessi…",
+  log: "Caricamento storico…",
+  upload: "Caricamento file…",
 } as const;
 
 export type GlobalLoadingMessageKey = keyof typeof GLOBAL_LOADING_MESSAGES;

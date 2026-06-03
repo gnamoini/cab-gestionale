@@ -7,6 +7,7 @@ export const GESTIONALE_MODULE_LABELS: Record<GestionalePermissionModule, string
   documenti: "Documenti",
   preventivi: "Preventivi",
   report: "Report",
+  dipendenti: "Dipendenti",
 };
 
 export function gestionaleModuleLabel(module: GestionalePermissionModule): string {

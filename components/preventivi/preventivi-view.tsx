@@ -2,6 +2,7 @@
 
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -15,7 +16,10 @@ import { IconNavLavorazioni } from "@/components/gestionale/gestionale-nav-confi
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { PreventiviEditorModal } from "@/components/preventivi/preventivi-editor-modal";
+const PreventiviEditorModal = dynamic(
+  () => import("@/components/preventivi/preventivi-editor-modal").then((m) => m.PreventiviEditorModal),
+  { ssr: false },
+);
 import { PreventivoEliminaConfirmDialog } from "@/components/preventivi/preventivo-elimina-confirm-dialog";
 import { PreventiviAdvancedFilterPanel } from "@/components/preventivi/preventivi-advanced-filter-panel";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
@@ -62,6 +66,10 @@ import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gesti
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { LoadingCardSkeleton, LoadingTableSkeleton } from "@/components/design-system";
+import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
+import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
+import { usePreventiviListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
 import {
@@ -73,6 +81,7 @@ import type { PreventivoLavorazioneOrigine, PreventivoRecord, PreventivoSortKey,
 import {
   dsBtnNeutral,
   dsPageToolbarBtn,
+  dsPageToolbarCtaCompact,
   dsStackPage,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsTableRow,
@@ -93,13 +102,15 @@ import {
   Drawer,
   IconActionButton,
   PageToolbar,
-  PageToolbarActions,
+  PageToolbarCtaLabel,
   PageToolbarResultCount,
 } from "@/components/design-system";
 import {
+  gestionaleListTableMobileEmptyClass,
   gestionaleListTableRowClass,
   gestionaleListTableTd,
   gestionaleListTableTdAzioni,
+  gestionaleListTableTdPill,
 } from "@/lib/ui/gestionale-list-table";
 import {
   GestionaleLogEmpty,
@@ -124,7 +135,7 @@ function fmtDataCreazioneTabella(iso: string): string {
 }
 
 const prevTableTd = gestionaleListTableTd;
-const prevTableTdCliente = `${gestionaleListTableTd} min-w-0 border-l border-zinc-200/90 pl-3 text-zinc-800 dark:border-zinc-700/90 dark:text-zinc-100`;
+const prevTableTdText = `${gestionaleListTableTd} min-w-0 text-sm text-zinc-800 dark:text-zinc-100`;
 
 function IconPreventivoEdit({ className = dsTableActionGlyph }: { className?: string }) {
   return (
@@ -213,6 +224,8 @@ function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: Preven
   switch (key) {
     case "numero":
       return a.numero.localeCompare(b.numero, "it", { numeric: true }) * dir;
+    case "tipoDocumento":
+      return a.tipoDocumento.localeCompare(b.tipoDocumento, "it") * dir;
     case "dataCreazione":
       return (new Date(a.dataCreazione).getTime() - new Date(b.dataCreazione).getTime()) * dir;
     case "cliente":
@@ -248,7 +261,10 @@ export function PreventiviView() {
   const { authorName: autore } = useAuth();
   const gestToast = useGestionaleToast();
   const queryClient = useQueryClient();
+  const gestOpts = useGestionaleQueryOpts();
+  const pvListQ = usePreventiviListQuery(undefined, { ...gestOpts });
   const { records: rows, refetch: refetchPreventivi } = usePreventiviRecordsQuery();
+  const preventiviInitialLoading = pvListQ.isLoading && pvListQ.data === undefined;
   const mezziListQ = useMezziListQuery();
   const mezziRows = mezziListQ.data ?? [];
   const mezziSnap = useMemo(() => mezziRows.map(toMezzoUI), [mezziRows]);
@@ -277,6 +293,7 @@ export function PreventiviView() {
   const searchInputRef = useRef(searchInput);
   searchInputRef.current = searchInput;
   const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
   const [advancedFilters, setAdvancedFilters] = useState<PreventiviAdvancedFilters>(
     () => loadPreventiviAdvancedFiltersPersisted() ?? PREVENTIVI_ADVANCED_FILTERS_EMPTY,
   );
@@ -527,6 +544,10 @@ export function PreventiviView() {
     Boolean(filterLavId) ||
     Boolean(filterMezzoRaw);
 
+  const tableEmptyMessage = hasPreventiviListFilters
+    ? "Nessun preventivo corrisponde alla ricerca o ai filtri selezionati."
+    : "Nessun preventivo in archivio.";
+
   function resetPreventiviRicerca() {
     setSearchInput("");
     setSearchApplied("");
@@ -654,6 +675,7 @@ export function PreventiviView() {
 
   return (
     <GestionaleSectionGate module="preventivi">
+    <div className={`lavorazioni-scroll-scope ${layoutPageRoot}`}>
     <>
       <PageHeader
         title="Preventivi"
@@ -687,14 +709,11 @@ export function PreventiviView() {
                     isRollbackDraft: false,
                   })
                 }
-                className={`${erpBtnNuovaLavorazione} h-11 shrink-0`}
+                className={dsPageToolbarCtaCompact}
                 disabled={!canEditWorkOrders}
                 title={canEditWorkOrders ? "Crea un preventivo senza collegamento a lavorazione" : READONLY_PERMISSION_HINT}
               >
-                <span className="text-base font-semibold leading-none" aria-hidden>
-                  +
-                </span>
-                Nuovo preventivo
+                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo preventivo" />
               </button>
             }
             search={
@@ -724,22 +743,30 @@ export function PreventiviView() {
                 catalog={filterCatalog}
               />
             }
+            onFilterReset={resetPreventiviFiltriPagina}
             meta={
-              <>
-                <PageToolbarResultCount count={sortedRows.length} filtersActive={hasPreventiviListFilters} />
-                <PageToolbarActions>
-                  <button type="button" className={dsPageToolbarBtn} onClick={resetPreventiviRicerca}>
-                    Pulisci ricerca
-                  </button>
-                  <button type="button" className={dsPageToolbarBtn} onClick={resetPreventiviFiltriPagina}>
-                    Reimposta filtri
-                  </button>
-                </PageToolbarActions>
-              </>
+              <PageToolbarResultCount
+                count={sortedRows.length}
+                filtersActive={hasAdvancedPanelFilters || Boolean(filterLavId) || Boolean(filterMezzoRaw)}
+                searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
+                onSearchReset={resetPreventiviRicerca}
+                onFilterReset={resetPreventiviFiltriPagina}
+              />
             }
           />
         </section>
 
+        {preventiviInitialLoading ? (
+          <>
+            <LoadingTableSkeleton preset="generic" wrapClassName="mt-4" visibilityClass="hidden xl:block" actionButtonCount={3} />
+            <div className="mt-4 space-y-3 xl:hidden" aria-hidden>
+              {Array.from({ length: 3 }).map((_, i) => (
+                <LoadingCardSkeleton key={i} minHeightClass="min-h-[140px]" rows={3} />
+              ))}
+            </div>
+          </>
+        ) : (
+        <>
         <GestionaleListTable
           masterScrollScope={false}
           wrapClassName="mt-4"
@@ -747,7 +774,7 @@ export function PreventiviView() {
           colgroup={
             <>
               <col className="w-[5.25rem]" />
-              <col className="w-[4.5rem]" />
+              <col className="w-[5rem]" />
               <col className="w-[5.75rem]" />
               <col className="w-[12%]" />
               <col className="w-[10%]" />
@@ -770,9 +797,15 @@ export function PreventiviView() {
                   onSort={onSortMain}
                   thClassName="w-[5.25rem] min-w-[5.25rem]"
                 />
-                <th className="w-[4.5rem] min-w-[4.5rem] px-2 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                  Tipo
-                </th>
+                <GlobalTableSortTh
+                  label="Tipo"
+                  columnKey="tipoDocumento"
+                  sortColumn={sortColumn}
+                  sortPhase={sortPhase}
+                  onSort={onSortMain}
+                  contentChipInset
+                  thClassName="w-[5rem] min-w-[5rem]"
+                />
                 <GlobalTableSortTh
                   label="Data"
                   columnKey="dataCreazione"
@@ -787,7 +820,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="border-l border-zinc-200/90 pl-3 dark:border-zinc-700/90"
+                  thClassName="min-w-0"
                 />
                 <GlobalTableSortTh
                   label="Cantiere"
@@ -795,7 +828,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="min-w-0 px-2"
+                  thClassName="min-w-0"
                 />
                 <GlobalTableSortTh
                   label="Utilizzatore"
@@ -803,7 +836,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="min-w-0 px-2"
+                  thClassName="min-w-0"
                 />
                 <GlobalTableSortTh
                   label="Mezzo"
@@ -811,7 +844,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="min-w-0 px-2"
+                  thClassName="min-w-0"
                 />
                 <GlobalTableSortTh
                   label="Targa"
@@ -819,7 +852,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[4.5rem] min-w-[4.5rem] px-2"
+                  thClassName="w-[4.5rem] min-w-[4.5rem]"
                 />
                 <GlobalTableSortTh
                   label="Matricola"
@@ -827,7 +860,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[5.25rem] min-w-[5.25rem] px-2"
+                  thClassName="w-[5.25rem] min-w-[5.25rem]"
                 />
                 <GlobalTableSortTh
                   label="Scud."
@@ -835,7 +868,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[4.25rem] min-w-[4.25rem] px-2"
+                  thClassName="w-[4.25rem] min-w-[4.25rem]"
                 />
                 <GlobalTableSortTh
                   label="Totale"
@@ -849,7 +882,7 @@ export function PreventiviView() {
             </>
           }
           empty={pagedRows.length === 0}
-          emptyMessage="Nessun preventivo in archivio."
+          emptyMessage={tableEmptyMessage}
           colSpan={12}
         >
               {pagedRows.map((p) => {
@@ -868,7 +901,7 @@ export function PreventiviView() {
                     <td className={`whitespace-nowrap ${prevTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
                       {p.numero}
                     </td>
-                    <td className={`whitespace-nowrap ${prevTableTd} px-2`}>
+                    <td className={`whitespace-nowrap ${gestionaleListTableTdPill}`}>
                       <span className={preventivoTipoDocumentoBadgeClass(p.tipoDocumento)} title={preventivoTipoDocumentoLabel(p.tipoDocumento)}>
                         {preventivoTipoDocumentoLabel(p.tipoDocumento, "short")}
                       </span>
@@ -876,8 +909,8 @@ export function PreventiviView() {
                     <td className={`whitespace-nowrap ${prevTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
                       {fmtDataCreazioneTabella(p.dataCreazione)}
                     </td>
-                    <td className={prevTableTdCliente}>
-                      <span className="line-clamp-2 break-words text-sm leading-snug">{p.cliente || "—"}</span>
+                    <td className={prevTableTdText}>
+                      <span className="line-clamp-2 break-words leading-snug">{p.cliente || "—"}</span>
                     </td>
                     <td className={`min-w-0 ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
                       <span className="line-clamp-2 break-words text-xs leading-snug">{p.cantiere || "—"}</span>
@@ -920,11 +953,7 @@ export function PreventiviView() {
 
         <div className="mt-4 space-y-3 xl:hidden">
           {pagedRows.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-              {hasPreventiviListFilters
-                ? "Nessun preventivo corrisponde alla ricerca o ai filtri selezionati."
-                : "Nessun preventivo in archivio."}
-            </p>
+            <p className={gestionaleListTableMobileEmptyClass}>{tableEmptyMessage}</p>
           ) : (
             pagedRows.map((p) => {
               const hrefLav = p.lavorazioneId.trim()
@@ -1006,6 +1035,8 @@ export function PreventiviView() {
         </div>
 
         {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
+        </>
+        )}
       </ShellCard>
 
       <PreventiviEditorModal
@@ -1044,8 +1075,8 @@ export function PreventiviView() {
         ariaLabel="Log modifiche preventivi"
         lockScroll={!(editor.open && canEditWorkOrders)}
       >
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
-          <div className={gestionaleLogScrollEmbeddedClass}>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
             {logEntries.length === 0 ? (
                 <GestionaleLogEmpty message="Nessuna modifica registrata." />
               ) : (
@@ -1080,6 +1111,7 @@ export function PreventiviView() {
         </div>
       </Drawer>
     </>
+    </div>
     </GestionaleSectionGate>
   );
 }

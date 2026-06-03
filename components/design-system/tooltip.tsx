@@ -86,8 +86,8 @@ export function Tooltip({
   }
 
   const child = children as ReactElement<Record<string, unknown>>;
-  const childRef = (child as ReactElement & { ref?: React.Ref<HTMLElement> }).ref;
   const childProps = child.props as Record<string, unknown>;
+  const childRef = childProps.ref as React.Ref<HTMLElement> | undefined;
 
   const trigger = cloneElement(child, {
     ref: mergeRefs(childRef, anchorRef),

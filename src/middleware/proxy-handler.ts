@@ -10,20 +10,20 @@ import {
 } from "@/lib/lavorazioni/client-portal-access";
 import {
   ACCESS_DENIED_PATH,
-  canAccessPage,
   defaultHomePathForRole,
   hasPermission,
   pathnameToSection,
   resolveClientLavorazioniPortalAccess,
 } from "@/lib/auth/rbac";
+import { evaluateGestionaleRouteAccess } from "@/src/lib/auth/evaluate-gestionale-route-access";
 import {
   OPERATOR_GLOBAL_SETTINGS_KEY,
   OPERATOR_GLOBAL_SETTINGS_MODULE,
   parseOperatorGlobalSettingsDbEnabled,
 } from "@/lib/permissions/operator-global-settings";
-import { rbacContextFromPilotDb } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 
 const LOGIN_PATH = "/login";
+const RESET_PASSWORD_PATH = "/login/reset-password";
 
 function isStaticAsset(pathname: string): boolean {
   if (pathname.startsWith("/_next")) return true;
@@ -61,7 +61,8 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
   const role = activeUser?.ruolo ?? null;
 
   if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
-    if (activeUser) {
+    const isResetPassword = pathname === RESET_PASSWORD_PATH;
+    if (activeUser && !isResetPassword) {
       const home = defaultHomePathForRole(role);
       return NextResponse.redirect(new URL(home, request.url));
     }
@@ -105,7 +106,7 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
   }
 
   const section = pathnameToSection(pathname);
-  let rbacCtx = undefined;
+  let pilotDbEnabled = false;
   if (section === "impostazioni") {
     const { data: pilotRow } = await supabase
       .from("app_settings")
@@ -113,10 +114,20 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
       .eq("module", OPERATOR_GLOBAL_SETTINGS_MODULE)
       .eq("key", OPERATOR_GLOBAL_SETTINGS_KEY)
       .maybeSingle();
-    rbacCtx = rbacContextFromPilotDb(parseOperatorGlobalSettingsDbEnabled(pilotRow?.value));
+    pilotDbEnabled = parseOperatorGlobalSettingsDbEnabled(pilotRow?.value);
   }
 
-  if (section && !canAccessPage(role, pathname, { clientLavorazioniAllowed }, rbacCtx)) {
+  if (
+    section &&
+    !evaluateGestionaleRouteAccess({
+      user: activeUser,
+      userId: activeUser.id,
+      pathname,
+      permissionRows: auth.permissions ?? [],
+      pilotDbEnabled,
+      clientLavorazioniAllowed,
+    })
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = ACCESS_DENIED_PATH;
     url.searchParams.set("from", defaultHomePathForRole(role));

@@ -107,6 +107,7 @@ const ricambi: RicambioMagazzino[] = [
     id: "r1",
     marca: "OEM",
     codiceFornitoreOriginale: "X1",
+    codiceFornitoreOriginaleSecondario: "",
     descrizione: "Filtro",
     note: "",
     categoria: "",
@@ -153,7 +154,7 @@ const movs: MovimentoRicambioRow[] = [
   { id: "m3", ricambio_id: "r1", lavorazione_id: null, tipo: "entrata", quantita: 1, created_at: "2020-01-01T00:00:00.000Z" },
 ];
 const daily = computeDashboardMagDailyMovements(movs);
-assert.equal(daily.entrate, 1);
+assert.equal(daily.entrate, 2);
 assert.equal(daily.uscite, 1);
 
 console.log("dashboard-widgets-selectors.test.ts OK");

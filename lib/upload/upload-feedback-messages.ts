@@ -8,6 +8,7 @@ export const UPLOAD_MESSAGES = {
   uploading: "Caricamento…",
   selected: "File selezionato",
   success: "Caricamento completato",
+  error: "Caricamento non riuscito.",
   retry: "Riprova",
   dismiss: "Chiudi",
 } as const;

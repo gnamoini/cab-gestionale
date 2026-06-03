@@ -1,3 +1,12 @@
 "use client";
 
-export { ReportAnalyticsView as ReportView } from "@/components/report/report-analytics-view";
+import dynamic from "next/dynamic";
+
+const ReportAnalyticsView = dynamic(
+  () => import("@/components/report/report-analytics-view").then((m) => m.ReportAnalyticsView),
+  { ssr: false },
+);
+
+export function ReportView() {
+  return <ReportAnalyticsView />;
+}

@@ -1,0 +1,53 @@
+{
+  "version": 4,
+  "frozenAt": "2026-06-02",
+  "entryCount": 9,
+  "checksum": "9fe0b264d5e4ef8379624dcb0e1be53d50b573cbca4c579b1dbb5253686b4a5b",
+  "entries": [
+    {
+      "file": "app/login/login-form.tsx",
+      "line": 293,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "app/login/login-form.tsx",
+      "line": 327,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "app/login/login-form.tsx",
+      "line": 459,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/dashboard/sistema-impostazioni-modal.tsx",
+      "line": 361,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/gestionale/dipendenti/timesheet-header.tsx",
+      "line": 200,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
+      "line": 110,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
+      "line": 120,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
+      "line": 129,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/gestionale/page-header.tsx",
+      "line": 36,
+      "reason": "toolbar-without-containment"
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import {
   type AuditLogContext,
 } from "@/lib/gestionale-log/log-summary";
 import { getOrCreateUndoSessionId } from "@/lib/gestionale-log/undo-session";
-import { queueModificaLog } from "@/src/services/internal/log-modifiche-batcher";
+import { flushAllModificaLogs, queueModificaLog } from "@/src/services/internal/log-modifiche-batcher";
 
 export type AuditAzione = "CREATE" | "UPDATE" | "DELETE" | "RESTORE";
 
@@ -37,6 +37,11 @@ function enrichPayloadWithUndoSession(payload: AuditPayload | undefined): AuditP
   return { ...base, undo_session_id: sessionId };
 }
 
+function logModificaWriteError(error: unknown, meta: Record<string, unknown>): void {
+  const msg = error instanceof Error ? error.message : String(error);
+  console.warn("[audit-log] Scrittura log_modifiche fallita:", msg, meta);
+}
+
 async function writeModificaLogImmediate(
   client: SupabaseClient,
   input: {
@@ -52,7 +57,14 @@ async function writeModificaLogImmediate(
     const { data: userData } = await client.auth.getUser();
     autore = userData.user?.id ?? null;
   }
-  if (!autore) return;
+  if (!autore) {
+    console.warn("[audit-log] autore_id assente, log saltato:", {
+      entita: input.entita,
+      entita_id: input.entita_id,
+      azione: input.azione,
+    });
+    return;
+  }
 
   const enriched = enrichPayloadWithUndoSession(input.payload);
   const summary = buildLogModificaSummary({
@@ -63,12 +75,38 @@ async function writeModificaLogImmediate(
   });
   const payload = mergePayloadWithSummary(enriched, summary);
 
-  await client.from("log_modifiche").insert({
+  const { error } = await client.from("log_modifiche").insert({
     entita: input.entita,
     entita_id: input.entita_id,
     azione: input.azione,
     autore_id: autore,
     payload,
+  });
+  if (error) {
+    logModificaWriteError(error, {
+      entita: input.entita,
+      entita_id: input.entita_id,
+      azione: input.azione,
+    });
+  }
+}
+
+function safeWriteModificaLogImmediate(
+  client: SupabaseClient,
+  input: {
+    entita: string;
+    entita_id: string;
+    azione: AuditAzione;
+    payload?: AuditPayload;
+    autore_id?: string | null;
+  },
+): Promise<void> {
+  return writeModificaLogImmediate(client, input).catch((error) => {
+    logModificaWriteError(error, {
+      entita: input.entita,
+      entita_id: input.entita_id,
+      azione: input.azione,
+    });
   });
 }
 
@@ -82,11 +120,16 @@ export function writeModificaLog(
     payload?: AuditPayload;
     autore_id?: string | null;
   },
-): void {
-  queueModificaLog((item) => writeModificaLogImmediate(item.client, item), client, {
+): Promise<void> {
+  return queueModificaLog((item) => safeWriteModificaLogImmediate(item.client, item), client, {
     client,
     ...input,
   });
+}
+
+/** Scrive subito tutti i log UPDATE in coda (es. logout). Non propaga errori al chiamante. */
+export async function flushPendingModificaLogs(client: SupabaseClient): Promise<void> {
+  await flushAllModificaLogs((item) => safeWriteModificaLogImmediate(item.client, item));
 }
 
 export { auditContext };

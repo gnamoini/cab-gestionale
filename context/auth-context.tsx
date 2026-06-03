@@ -21,11 +21,14 @@ import { isTransientNetworkAuthError, shouldClearSessionOnAuthError } from "@/sr
 import { mapDegradedPublicAuthUser, mapSupabaseUserToPublicAuthUser } from "@/src/lib/auth/map-auth-user";
 import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 import { beginUndoSession, resetUndoSession } from "@/lib/gestionale-log/undo-session";
+import { flushPendingModificaLogs } from "@/src/services/internal/audit-log";
 import { notifyUndoSessionChanged } from "@/lib/gestionale-log/use-undo-session-id";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
+import { clearClientEffectivePermissionsSnapshotCache, publishAuthRoleHint } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { clearInvalidAuthSession } from "@/src/lib/auth/clear-invalid-auth-session";
+import { clearRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { authLogsService } from "@/src/services/auth-logs.service";
 import type { AuthStatus } from "@/src/lib/auth/auth-status";
@@ -126,6 +129,13 @@ export function AuthProvider({
   const authRestoreLoggedRef = useRef(skipInitGetSessionRef.current);
   const authInitFailsafeFiredRef = useRef(false);
 
+  if (initialSnapshot?.user?.id) {
+    const permissionsKey = [...QK.userPermissions, initialSnapshot.user.id] as const;
+    if (queryClient.getQueryData(permissionsKey) === undefined) {
+      queryClient.setQueryData(permissionsKey, initialSnapshot.permissions ?? []);
+    }
+  }
+
   useLayoutEffect(() => {
     if (!initialSnapshot?.user?.id) return;
     queryClient.setQueryData(
@@ -133,6 +143,10 @@ export function AuthProvider({
       initialSnapshot.permissions ?? [],
     );
   }, [initialSnapshot, queryClient]);
+
+  useLayoutEffect(() => {
+    if (user?.id && user.ruolo) publishAuthRoleHint(user.id, user.ruolo);
+  }, [user?.id, user?.ruolo]);
 
   useEffect(() => {
     userIdRef.current = user?.id ?? null;
@@ -150,6 +164,7 @@ export function AuthProvider({
         setUser(null);
         lastStableUserRef.current = null;
         setStatus("anonymous");
+        clearRuntimeCabAppSettings();
         queryClient.clear();
         clearGestionaleToasts();
         return;
@@ -295,9 +310,13 @@ export function AuthProvider({
             return;
           }
           if (event === "SIGNED_IN" && session?.user) {
-            authLogsService.logLoginFireAndForget(session.user.id, session.user.email ?? "");
-            beginUndoSession();
-            notifyUndoSessionChanged();
+            const onResetPassword =
+              typeof window !== "undefined" && window.location.pathname.startsWith("/login/reset-password");
+            if (!onResetPassword) {
+              authLogsService.logLoginFireAndForget(session.user.id, session.user.email ?? "");
+              beginUndoSession();
+              notifyUndoSessionChanged();
+            }
           }
           if (event === "SIGNED_OUT") {
             resetUndoSession();
@@ -423,6 +442,7 @@ export function AuthProvider({
     if (isSupabasePublicEnvConfigured()) {
       try {
         const sb = getBrowserSupabase();
+        await flushPendingModificaLogs(sb);
         if (uid) {
           authLogsService.logLogoutFireAndForget(uid, email);
         }
@@ -432,6 +452,7 @@ export function AuthProvider({
       }
     }
     trackRuntimeEvent(RuntimeEvents.authLogout, { userId: uid ?? "anon" });
+    clearClientEffectivePermissionsSnapshotCache();
     await invalidateRuntimeTruth({ reason: "logout", queryClient });
     setUser(null);
     lastStableUserRef.current = null;

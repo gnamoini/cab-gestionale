@@ -6,6 +6,7 @@ import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow } from "@/src/types/supabase-tables";
 import { attachMezzoEntityKey } from "@/lib/validation/entity-persistence";
+import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
 import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
@@ -135,7 +136,7 @@ export const mezziService = {
       const allowed = await ensurePermission("editVehicles");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const payload = attachMezzoEntityKey(data);
+      const payload = attachMezzoEntityKey(sanitizeMezzoWritePayload(data));
       const { data: row, error } = await c.from("mezzi").insert(payload).select("*").single();
       if (error) return err(error.message);
       const r = row as MezzoRow;
@@ -151,7 +152,8 @@ export const mezziService = {
       const allowed = await ensurePermission("editVehicles");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const payload = Object.keys(data).length > 0 ? attachMezzoEntityKey(data) : data;
+      const payload =
+        Object.keys(data).length > 0 ? attachMezzoEntityKey(sanitizeMezzoWritePayload(data)) : data;
       const { data: before, error: e0 } = await c.from("mezzi").select("*").eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       const { data: row, error } = await c.from("mezzi").update(payload).eq("id", id).select("*").single();

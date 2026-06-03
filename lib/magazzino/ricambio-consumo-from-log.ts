@@ -135,17 +135,16 @@ export function buildRicambiConsumoRanking(
   opts?: { minTotalUscite?: number; limit?: number },
 ): RicambioConsumoRankingRow[] {
   const map = buildConsumoMapFromMagLog(magLog, range);
-  const byId = new Map(prodotti.map((p) => [p.id, p]));
   const rows: RicambioConsumoRankingRow[] = [];
-  for (const [id, c] of map) {
-    if (c.avgMonthly == null) continue;
-    const p = byId.get(id);
+  for (const p of prodotti) {
+    const c = map.get(p.id);
+    if (!c || c.avgMonthly == null) continue;
     rows.push({
       rank: 0,
-      id,
-      codice: p?.codiceFornitoreOriginale ?? "—",
-      nome: p?.descrizione ?? "Ricambio",
-      marca: p?.marca ?? "—",
+      id: p.id,
+      codice: p.codiceFornitoreOriginale ?? "—",
+      nome: p.descrizione ?? "—",
+      marca: p.marca ?? "—",
       avgMonthly: c.avgMonthly,
       totalUscite: c.totalUscite,
       monthsObserved: c.monthsObserved,

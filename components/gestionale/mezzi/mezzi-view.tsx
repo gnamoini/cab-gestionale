@@ -16,7 +16,7 @@ import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-det
 import { MezzoEliminaConfirmDialog } from "@/components/gestionale/mezzi/mezzo-elimina-confirm-dialog";
 import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpBtnAccent, erpBtnNeutral, erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { modelliVisibiliPerMarca } from "@/lib/mezzi/attrezzature-prefs";
 import { marcheFromHierarchyTree, modelliVisibiliPerMarcaHierarchy } from "@/lib/mezzi/hierarchy-list-prefs";
 import { mezzoFormToMeta, metaToMezzoFormFields } from "@/lib/mezzi/mezzi-meta";
@@ -25,8 +25,10 @@ import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb, mezzoHaLavo
 import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
-import { dsInput, dsPageToolbarBtn, dsStackPage, dsStickyToolbar } from "@/lib/ui/design-system";
-import { Drawer } from "@/components/design-system";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+import { dsInput, dsPageToolbarBtn, dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
+import { Drawer, LoadingButton, LoadingErrorState, LoadingFormSkeleton, LoadingTableSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
 import {
   GestionaleLogChangeList,
   GestionaleLogEmpty,
@@ -45,9 +47,10 @@ import {
 } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
-import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { useMezzoRemoveMutation } from "@/src/hooks/gestionale/use-mezzo-remove-mutation";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
+import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
@@ -58,6 +61,7 @@ import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
 import { EntitySimilarWarning } from "@/components/design-system/entity-similar-warning";
 import { findMezzoBySimilarIdent } from "@/lib/validation/services/mezzi-validation";
 import { useAuth } from "@/context/auth-context";
+import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
 function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
   return a.id.localeCompare(b.id, "en");
@@ -143,6 +147,7 @@ export function MezziView() {
   const [filtroNumeroScuderia, setFiltroNumeroScuderia] = useState("");
   const [filtroUltimaLav, setFiltroUltimaLav] = useState<UltimaLavorazioneFilter>("");
   const [filtriEspansi, setFiltriEspansi] = useState(false);
+  const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
 
   const serviceFilters = useMemo((): MezzoFilters => {
     return {
@@ -156,12 +161,14 @@ export function MezziView() {
   }, [search, filtroCliente, filtroMarca, filtroModello, filtroTarga, filtroNumeroScuderia]);
 
   const {
-    data: mezzoRows = [],
+    data: mezzoRowsRaw,
     isLoading: mezziLoading,
     isError: mezziError,
     error: mezziErr,
     refetch: refetchMezzi,
   } = useMezziListQuery(serviceFilters);
+  const mezzoRows = mezzoRowsRaw ?? [];
+  const mezziInitialLoading = mezziLoading && mezzoRowsRaw === undefined && !mezziError;
 
   const { data: lavRows = [] } = useLavorazioniList({ includeMezzo: true });
   const mezziUi = useMemo(() => mezzoRows.map(toMezzoUI), [mezzoRows]);
@@ -216,6 +223,7 @@ export function MezziView() {
         sortPhase,
         naturalMezziOrder,
         (m) => interventiByMezzoId.get(m.id)?.[0]?.dataIngresso ?? "",
+        (m) => interventiByMezzoId.get(m.id)?.length ?? 0,
       ),
     );
     return rows;
@@ -241,6 +249,8 @@ export function MezziView() {
   const pagedSorted = useMemo(() => sliceItems(sorted), [sliceItems, sorted, page]);
 
   const [hubMezzo, setHubMezzo] = useState<MezzoGestito | null>(null);
+  const [nuovoOpen, setNuovoOpen] = useState(false);
+  const [nuovoForm, setNuovoForm] = useState(getEmptyNuovo);
   const [editMezzo, setEditMezzo] = useState<MezzoGestito | null>(null);
   const [editForm, setEditForm] = useState(() => getEmptyNuovo());
 
@@ -267,6 +277,7 @@ export function MezziView() {
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const createMut = useMezzoCreateMutation();
   const updateMut = useMezzoUpdateMutation();
   const removeMut = useMezzoRemoveMutation();
   const { success: toastSuccess, error: toastError, validation: toastValidation, successOnce, errorOnce } =
@@ -290,6 +301,7 @@ export function MezziView() {
     (id: string) => {
       setHubMezzo(null);
       setEditMezzo(null);
+      setNuovoOpen(false);
       setFiltroCliente("");
       setFiltroMarca("");
       setFiltroModello("");
@@ -377,7 +389,7 @@ export function MezziView() {
     };
   }, []);
 
-  const scrollLockActive = Boolean(hubMezzo || editMezzo || logOpen);
+  const scrollLockActive = Boolean(hubMezzo || nuovoOpen || editMezzo || logOpen);
   const anyOverlay = scrollLockActive || Boolean(eliminaConfirmMezzo);
   useEffect(() => {
     const id = searchParams.get(Q_FOCUS_MEZZO)?.trim();
@@ -394,12 +406,31 @@ export function MezziView() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
       setHubMezzo(null);
+      setNuovoOpen(false);
       setEditMezzo(null);
       setLogOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [anyOverlay]);
+
+  function submitNuovo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!canEditVehicles) return;
+    const marca = nuovoForm.marca.trim();
+    if (!marca || !nuovoForm.cliente.trim()) {
+      toastValidation("Compila almeno cliente e marca attrezzatura.");
+      return;
+    }
+    createMut.mutate(formToMezzoInsert(nuovoForm), {
+      onSuccess: (row) => {
+        setNuovoForm(getEmptyNuovo());
+        setNuovoOpen(false);
+        flashRow(row.id);
+      },
+      onError: (err) => toastError(err, { entity: "mezzo", action: "create" }),
+    });
+  }
 
   function submitEdit(e: React.FormEvent) {
     e.preventDefault();
@@ -486,6 +517,7 @@ export function MezziView() {
 
   return (
     <GestionaleSectionGate module="mezzi">
+    <div className={layoutPageRoot}>
     <>
       <PageHeader
         title="Mezzi"
@@ -503,108 +535,93 @@ export function MezziView() {
 
       <div className={dsStackPage}>
         <ShellCard>
-          <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <MezziSearchBar search={search} onSearch={setSearch} wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]" />
+          <PageToolbar
+            className="sm:mx-0"
+            primaryAction={
+              <button
+                type="button"
+                onClick={() => {
+                  if (!canEditVehicles) return;
+                  setNuovoForm(getEmptyNuovo());
+                  setNuovoOpen(true);
+                }}
+                className={dsPageToolbarCtaCompact}
+                disabled={!canEditVehicles}
+                title={canEditVehicles ? "Registra un nuovo mezzo in anagrafica" : READONLY_PERMISSION_HINT}
+              >
+                <PageToolbarCtaLabel short="+ Nuovo" full="+ Nuovo mezzo" />
+              </button>
+            }
+            search={
+              <MezziSearchBar search={search} onSearch={setSearch} wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]" />
+            }
+            filtersExpanded={filtriEspansi}
+            onFiltersToggle={() => setFiltriEspansi((o) => !o)}
+            filtersActive={hasMezziFilters}
+            filtersPanel={
+              <MezziFilterFields
+                embedded
+                filtroCliente={filtroCliente}
+                onFiltroCliente={setFiltroCliente}
+                filtroMarca={filtroMarca}
+                onFiltroMarca={setFiltroMarca}
+                filtroModello={filtroModello}
+                onFiltroModello={setFiltroModello}
+                filtroTarga={filtroTarga}
+                onFiltroTarga={setFiltroTarga}
+                filtroNumeroScuderia={filtroNumeroScuderia}
+                onFiltroNumeroScuderia={setFiltroNumeroScuderia}
+                filtroUltimaLav={filtroUltimaLav}
+                onFiltroUltimaLav={setFiltroUltimaLav}
+              />
+            }
+            onFilterReset={resetMezziToolbarFilters}
+            overflowOpen={toolbarOverflowOpen}
+            onOverflowToggle={() => setToolbarOverflowOpen((o) => !o)}
+            overflowActions={
+              <>
                 <button
                   type="button"
-                  onClick={() => setFiltriEspansi((o) => !o)}
-                  className={`${dsPageToolbarBtn} relative h-11 min-w-[8.25rem] shrink-0 gap-2 px-3 text-sm sm:ml-auto`}
-                  aria-expanded={filtriEspansi}
+                  className={`${dsPageToolbarBtn} w-full justify-center sm:w-auto`}
+                  onClick={() => {
+                    setSortColumn("ultimaLavorazione");
+                    setSortPhase("desc");
+                  }}
                 >
-                  Filtri
-                  <svg
-                    className={`h-4 w-4 shrink-0 text-[color:var(--cab-primary)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${filtriEspansi ? "rotate-180" : ""}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                  {hasMezziFilters ? (
-                    <span
-                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]"
-                      title="Filtri attivi"
-                      aria-hidden
-                    />
-                  ) : null}
+                  Ultima lav. ↓
                 </button>
-              </div>
-              <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                  <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
-                    <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{sorted.length}</span>
-                    <span>risultat{sorted.length === 1 ? "o" : "i"}</span>
-                  </span>
-                  {hasMezziFilters ? (
-                    <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
-                      Filtri attivi
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                  <button
-                    type="button"
-                    className={dsPageToolbarBtn}
-                    onClick={() => {
-                      setSortColumn("ultimaLavorazione");
-                      setSortPhase("desc");
-                    }}
-                  >
-                    Ultima lav. ↓
-                  </button>
-                  <button type="button" className={dsPageToolbarBtn} onClick={() => setSearch("")}>
-                    Pulisci ricerca
-                  </button>
-                  <button type="button" className={dsPageToolbarBtn} onClick={resetMezziToolbarFilters}>
-                    Reimposta filtri
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-                filtriEspansi ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-              }`}
-            >
-              <div className="min-h-0 overflow-hidden">
-                <div className="border-t border-[color:var(--cab-border)] pt-3" aria-label="Filtri mezzi">
-                  <MezziFilterFields
-                    embedded
-                    filtroCliente={filtroCliente}
-                    onFiltroCliente={setFiltroCliente}
-                    filtroMarca={filtroMarca}
-                    onFiltroMarca={setFiltroMarca}
-                    filtroModello={filtroModello}
-                    onFiltroModello={setFiltroModello}
-                    filtroTarga={filtroTarga}
-                    onFiltroTarga={setFiltroTarga}
-                    filtroNumeroScuderia={filtroNumeroScuderia}
-                    onFiltroNumeroScuderia={setFiltroNumeroScuderia}
-                    filtroUltimaLav={filtroUltimaLav}
-                    onFiltroUltimaLav={setFiltroUltimaLav}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+              </>
+            }
+            meta={
+              <PageToolbarResultCount
+                count={sorted.length}
+                filtersActive={
+                  filtroCliente.trim().length > 0 ||
+                  filtroMarca.trim().length > 0 ||
+                  filtroModello.trim().length > 0 ||
+                  filtroTarga.trim().length > 0 ||
+                  filtroNumeroScuderia.trim().length > 0 ||
+                  Boolean(filtroUltimaLav)
+                }
+                searchActive={search.trim().length > 0}
+                onSearchReset={() => setSearch("")}
+                onFilterReset={resetMezziToolbarFilters}
+              />
+            }
+          />
 
           {mezziError ? (
-            <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-900 dark:border-red-900/50 dark:bg-red-950/40 dark:text-red-100">
-              <p>{mezziErr?.message ?? "Errore caricamento mezzi."}</p>
-              <button type="button" className={`${erpBtnNeutral} mt-2`} onClick={() => void refetchMezzi()}>
-                Riprova
-              </button>
-            </div>
+            <LoadingErrorState
+              title="Impossibile caricare i mezzi"
+              description={mezziErr?.message ?? "Errore caricamento mezzi."}
+              onRetry={() => void refetchMezzi()}
+              className="mt-4"
+            />
           ) : null}
 
           <div className="mt-4">
-            {mezziLoading ? (
-              <p className="text-sm text-zinc-500">Caricamento…</p>
+            {mezziInitialLoading ? (
+              <LoadingTableSkeleton preset="mezzi" />
             ) : (
               <MezziTable
                 rows={pagedSorted}
@@ -654,11 +671,11 @@ export function MezziView() {
         onConfirm={confirmEliminaMezzo}
       />
 
-      <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche" ariaLabel="Log modifiche mezzi" lockScroll={false}>
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
-              <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
+      <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche" ariaLabel="Log modifiche mezzi">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+              <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
                 {logQuery.isLoading ? (
-                  <p className="text-sm text-zinc-500">Caricamento…</p>
+                  <LoadingFormSkeleton fields={2} className="px-1 py-2" />
                 ) : logEntriesUi.length === 0 ? (
                   <GestionaleLogEmpty message="Nessuna modifica registrata su Supabase." />
                 ) : (
@@ -689,26 +706,54 @@ export function MezziView() {
         </div>
       </Drawer>
 
+      {nuovoOpen ? (
+        <GestionaleModalShell title="Nuovo mezzo" titleId="mezzo-nuovo-title" onRequestClose={() => setNuovoOpen(false)}>
+          <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNuovo} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+            <GestionaleModalScrollBody className="space-y-3 p-4">
+              <MezzoFormFields form={nuovoForm} setForm={setNuovoForm} />
+            </GestionaleModalScrollBody>
+            <div className="shrink-0 border-t border-[color:var(--cab-border)] p-4">
+              <LoadingButton
+                type="submit"
+                loading={createMut.isPending}
+                preset="salva"
+                loadingLabel="Salvataggio…"
+                className={`${erpBtnAccent} w-full disabled:opacity-60`}
+              >
+                Salva mezzo
+              </LoadingButton>
+            </div>
+          </form>
+        </GestionaleModalShell>
+      ) : null}
+
       {editMezzo ? (
         <GestionaleModalShell
           title="Modifica mezzo"
           titleId="mezzo-edit-title"
           onRequestClose={() => setEditMezzo(null)}
         >
-          <form {...gestionaleFormFocusScopeProps()} onSubmit={submitEdit} className="flex min-h-0 flex-1 flex-col">
-            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
+          <form {...gestionaleFormFocusScopeProps()} onSubmit={submitEdit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+            <GestionaleModalScrollBody className="space-y-3 p-4">
               <MezzoFormFields form={editForm} setForm={setEditForm} excludeMezzoId={editMezzo.id} />
-            </div>
+            </GestionaleModalScrollBody>
             <div className="shrink-0 border-t border-[color:var(--cab-border)] p-4">
-              <button type="submit" disabled={updateMut.isPending} className={`${erpBtnAccent} w-full disabled:opacity-60`}>
-                {updateMut.isPending ? "Salvataggio…" : "Salva modifiche"}
-              </button>
+              <LoadingButton
+                type="submit"
+                loading={updateMut.isPending}
+                preset="salva"
+                loadingLabel="Salvataggio…"
+                className={`${erpBtnAccent} w-full disabled:opacity-60`}
+              >
+                Salva modifiche
+              </LoadingButton>
             </div>
           </form>
         </GestionaleModalShell>
       ) : null}
       {confirmDialog}
     </>
+    </div>
     </GestionaleSectionGate>
   );
 }
@@ -778,7 +823,7 @@ function MezzoFormFields({
   }, [mezziListQ.data, form.targa, form.matricola, excludeMezzoId]);
 
   if (globalOpts.isLoading) {
-    return <p className="text-sm text-zinc-500 dark:text-zinc-400">Caricamento impostazioni…</p>;
+    return <LoadingFormSkeleton fields={3} className="py-2" />;
   }
 
   return (

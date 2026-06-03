@@ -7,9 +7,9 @@ export const dsIosInputTextSize = "text-base md:text-sm";
 export const cabIosScrollContainer =
   "max-w-full overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]";
 
-/** Overlay modale/drawer: blocca scroll chaining sul backdrop. */
+/** Overlay modale/drawer: blocca scroll chaining sul backdrop (scroll solo nel dialog). */
 export const cabIosOverlaySurface =
-  "touch-none overscroll-none overflow-x-hidden overflow-y-auto overscroll-contain";
+  "touch-none overscroll-none overflow-hidden";
 
 /** Pannello modale (legacy): preferire cabModalDialogDesktop su md+. */
 export const cabIosModalPanelMaxH =
@@ -31,6 +31,10 @@ export const cabModalLayerMobile =
 export const cabModalLayerDesktop =
   "md:items-center md:justify-center md:p-4 md:pt-[max(1rem,env(safe-area-inset-top))] md:pb-[max(1rem,env(safe-area-inset-bottom))]";
 
+/** Layer modale gestionale: colonna full-viewport, header edge-to-edge (safe-area nel header). */
+export const cabModalLayerGestionale =
+  `${cabModalLayerShared} flex flex-col items-stretch justify-stretch p-0 max-md:pb-[env(safe-area-inset-bottom)]`;
+
 /** Dialog modale: base strutturale (senza max-width globale). */
 export const cabModalDialogBase =
   "relative z-[1] flex w-full min-h-0 flex-col overflow-hidden";
@@ -41,3 +45,7 @@ export const cabModalDialogMobile =
 
 /** Dialog desktop: altezza windowed (max-width da prop md:max-w-*). */
 export const cabModalDialogDesktop = "md:flex-none md:max-h-[min(92dvh,920px)]";
+
+/** Padding keyboard sul corpo scroll modale (mobile) — var impostata da MobileModalBehaviorLayer. */
+export const cabModalScrollKeyboardPad =
+  "max-md:pb-[var(--cab-keyboard-inset,0px)]";

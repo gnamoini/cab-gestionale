@@ -1,6 +1,6 @@
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
-import { magazzinoRowToRicambioUI } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import {
   computeDashboardMagStatsFromRows,
   computeDashboardMagStatsFromUi,
@@ -18,8 +18,9 @@ export type ReportMagazzinoKpi = {
 export function computeReportMagazzinoKpiFromRows(
   rows: readonly MagazzinoRicambioRow[],
   staging = false,
+  mezziListe?: MezziListePrefs,
 ): ReportMagazzinoKpi {
-  const stats: DashboardMagStats = computeDashboardMagStatsFromRows(rows, staging);
+  const stats: DashboardMagStats = computeDashboardMagStatsFromRows(rows, staging, mezziListe);
   return { sottoScorta: stats.sotto, capitale: stats.cap, tot: stats.tot };
 }
 
@@ -35,5 +36,3 @@ export function computeReportMagazzinoKpiWidgetFromUi(
   const capitale = items.reduce((acc, r) => acc + capitaleImmobilizzato(r), 0);
   return { sottoScorta, capitale };
 }
-
-export { magazzinoRowToRicambioUI };

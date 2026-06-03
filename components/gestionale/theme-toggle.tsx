@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { useTheme } from "@/context/theme-context";
-import { dsPageToolbarBtn } from "@/lib/ui/design-system";
+import { dsFocus, dsPageToolbarBtn } from "@/lib/ui/design-system";
 
 function IconSun({ className }: { className?: string }) {
   return (
@@ -22,7 +22,29 @@ function IconMoon({ className }: { className?: string }) {
   );
 }
 
-export function ThemeToggle() {
+/** Icona stato tema corrente (sole = chiaro, luna = scuro) per sidebar e label. */
+export function ThemeModeIcon({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
+  const { resolved, themeReady } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
+
+  if (!mounted || !themeReady) {
+    return <span className={`inline-block rounded-full bg-zinc-300/80 dark:bg-zinc-600/80 ${className}`} aria-hidden />;
+  }
+
+  return resolved === "dark" ? (
+    <IconMoon className={className} />
+  ) : (
+    <IconSun className={className} />
+  );
+}
+
+export function ThemeToggle({
+  variant = "button",
+}: {
+  variant?: "button" | "switch";
+}) {
   const { resolved, themeReady, themeSaving, toggleLightDark } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -34,9 +56,36 @@ export function ThemeToggle() {
   if (!mounted || !themeReady) {
     return (
       <span
-        className="inline-flex h-11 min-w-[2.75rem] shrink-0 items-center justify-center rounded-lg border border-transparent bg-transparent"
+        className={`inline-flex min-w-0 shrink-0 items-center justify-center border border-transparent bg-transparent ${variant === "switch" ? "h-6 w-10 rounded-full" : "h-11 min-w-[2.75rem] rounded-lg"}`}
         aria-hidden
       />
+    );
+  }
+
+  if (variant === "switch") {
+    const checked = resolved === "dark";
+    return (
+      <Tooltip content={tip} showOnFocus={false}>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={checked}
+          onClick={toggleLightDark}
+          disabled={themeSaving}
+          className={`relative inline-flex h-6 w-10 shrink-0 items-center rounded-full transition-colors duration-200 ease-out ${dsFocus} ${
+            themeSaving ? "cursor-not-allowed opacity-55" : "cursor-pointer"
+          } ${checked ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_85%,var(--cab-surface))]" : "bg-zinc-300 dark:bg-zinc-600"}`}
+          aria-label={label}
+          aria-busy={themeSaving}
+        >
+          <span
+            className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 ease-out ${
+              checked ? "translate-x-[1.125rem]" : "translate-x-1"
+            }`}
+            aria-hidden
+          />
+        </button>
+      </Tooltip>
     );
   }
 

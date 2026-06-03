@@ -25,6 +25,9 @@ function prune(now: number) {
 
 function eventLabel(event: CabSyncEvent): string | null {
   if (event.type === "settings_updated") return null;
+  if (event.entity === "lavorazioni" && event.type === "entity_created") return null;
+  /** Promemoria: feedback utente solo via toast locali in DashboardPromemoriaSection. */
+  if (event.entity === "dashboard_promemoria") return null;
   const verb =
     event.type === "entity_created"
       ? "creata"
@@ -49,10 +52,8 @@ function eventLabel(event: CabSyncEvent): string | null {
       return "Documento lavorazione aggiornato";
     case "documenti":
       return `Documento ${verb}`;
-    case "support_notes":
-      return "Nota supporto aggiornata";
-    case "segnalazioni":
-      return "Segnalazione aggiornata";
+    case "bunder_documents":
+      return `Documento BUNDER ${verb}`;
     case "log_modifiche":
     case "app_settings":
     default:

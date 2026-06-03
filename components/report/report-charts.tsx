@@ -1,13 +1,14 @@
 "use client";
 
+import { memo } from "react";
 import type { YearForecastLinePoint } from "@/lib/report/lavorazioni-year-matrix";
 
-const ORANGE = "#f97316";
+const ORANGE = "#ff6633";
 const ZINC = "#71717a";
 const SKY = "#0ea5e9";
 const EMERALD = "#22c55e";
 
-export function ReportYearlyForecastLineChart({
+function ReportYearlyForecastLineChartInner({
   solid,
   dashed,
   forecastYear,
@@ -71,9 +72,9 @@ export function ReportYearlyForecastLineChart({
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-56 w-full max-w-full" role="img" aria-label="Andamento annuale lavorazioni e previsione">
       {gridY.map((gy) => (
-        <line key={gy} x1={padL} y1={gy} x2={W - padR} y2={gy} stroke="currentColor" className="text-zinc-100 dark:text-zinc-800/90" strokeDasharray="3 5" />
+        <line key={gy} x1={padL} y1={gy} x2={W - padR} y2={gy} stroke="currentColor" className="text-[color:color-mix(in_srgb,var(--cab-border)_65%,transparent)]" strokeDasharray="3 5" />
       ))}
-      <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="currentColor" className="text-zinc-200 dark:text-zinc-800" />
+      <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="currentColor" className="text-[color:var(--cab-border)]" />
       {solidD ? <polyline fill="none" stroke={SKY} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" points={solidD} /> : null}
       {dashedD ? (
         <polyline fill="none" stroke={ORANGE} strokeWidth={2.5} strokeDasharray="7 5" strokeLinejoin="round" strokeLinecap="round" points={dashedD} />
@@ -83,7 +84,7 @@ export function ReportYearlyForecastLineChart({
       {solid.map((p) => {
         const { px } = xy(p);
         return (
-          <text key={`t-${p.kind}-${p.year}-${p.x}`} x={px} y={H - 10} textAnchor="middle" className="fill-zinc-600 dark:fill-zinc-300" style={{ fontSize: 18, fontWeight: 700 }}>
+          <text key={`t-${p.kind}-${p.year}-${p.x}`} x={px} y={H - 10} textAnchor="middle" className="fill-[color:var(--cab-text)]" style={{ fontSize: 18, fontWeight: 700 }}>
             {p.kind === "history" ? String(p.year) : p.kind === "ytd" ? `${p.year}` : ""}
           </text>
         );
@@ -103,7 +104,7 @@ export function ReportYearlyForecastLineChart({
   );
 }
 
-export function MagazzinoEntrateUsciteBars({
+function MagazzinoEntrateUsciteBarsInner({
   rows,
 }: {
   rows: { label: string; entrate: number; uscite: number }[];
@@ -122,7 +123,7 @@ export function MagazzinoEntrateUsciteBars({
   const w = Math.min(16, bw * 0.28);
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-56 w-full max-w-full" role="img" aria-label="Entrate vs uscite">
-      <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="currentColor" className="text-zinc-200 dark:text-zinc-800" />
+      <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="currentColor" className="text-[color:var(--cab-border)]" />
       {rows.map((r, i) => {
         const cx = padL + bw * i + bw / 2;
         const he = (r.entrate / maxY) * innerH;
@@ -136,7 +137,7 @@ export function MagazzinoEntrateUsciteBars({
             <rect x={cx + 2} y={base - hu} width={w} height={hu} fill={ORANGE} rx={2}>
               <title>{`Uscite: ${r.uscite}`}</title>
             </rect>
-            <text x={cx} y={H - 10} textAnchor="middle" className="fill-zinc-500" style={{ fontSize: 9 }}>
+            <text x={cx} y={H - 10} textAnchor="middle" className="fill-[color:var(--cab-text-muted)]" style={{ fontSize: 9 }}>
               {r.label}
             </text>
           </g>
@@ -146,7 +147,7 @@ export function MagazzinoEntrateUsciteBars({
   );
 }
 
-export function MagazzinoCapitalLineChart({ rows }: { rows: { label: string; capitaleFinale: number }[] }) {
+function MagazzinoCapitalLineChartInner({ rows }: { rows: { label: string; capitaleFinale: number }[] }) {
   const W = 720;
   const H = 240;
   const padL = 48;
@@ -168,7 +169,7 @@ export function MagazzinoCapitalLineChart({ rows }: { rows: { label: string; cap
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="h-60 w-full max-w-full" role="img" aria-label="Andamento capitale immobilizzato">
-      <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="currentColor" className="text-zinc-200 dark:text-zinc-800" />
+      <line x1={padL} y1={padT + innerH} x2={W - padR} y2={padT + innerH} stroke="currentColor" className="text-[color:var(--cab-border)]" />
       {d ? <path d={d} fill="none" stroke={ORANGE} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" opacity={0.95} /> : null}
       {pts.map((p, i) => {
         const px = padL + (n === 1 ? innerW / 2 : (i / (n - 1)) * innerW);
@@ -177,10 +178,10 @@ export function MagazzinoCapitalLineChart({ rows }: { rows: { label: string; cap
         const eur = p.value.toLocaleString("it-IT", { style: "currency", currency: "EUR", maximumFractionDigits: 0 });
         return (
           <g key={p.label}>
-            <circle cx={px} cy={py} r={last ? 6 : 3.5} fill={last ? ORANGE : "#fff"} stroke={ORANGE} strokeWidth={last ? 2 : 1.5} className={last ? "" : "dark:fill-zinc-900"}>
+            <circle cx={px} cy={py} r={last ? 6 : 3.5} fill={last ? ORANGE : "#fff"} stroke={ORANGE} strokeWidth={last ? 2 : 1.5} className={last ? "" : "fill-[var(--cab-card)]"}>
               <title>{last ? `Capitale attuale (${p.label}): ${eur}` : `${p.label}: ${eur}`}</title>
             </circle>
-            <text x={px} y={H - 8} textAnchor="middle" className="fill-zinc-500" style={{ fontSize: 9 }}>
+            <text x={px} y={H - 8} textAnchor="middle" className="fill-[color:var(--cab-text-muted)]" style={{ fontSize: 9 }}>
               {p.label}
             </text>
           </g>
@@ -189,3 +190,57 @@ export function MagazzinoCapitalLineChart({ rows }: { rows: { label: string; cap
     </svg>
   );
 }
+
+function ReportTemporalMonthlyBarsInner({
+  rows,
+}: {
+  rows: { label: string; count: number; muted?: boolean }[];
+}) {
+  const W = 720;
+  const H = 220;
+  const padL = 36;
+  const padR = 12;
+  const padT = 12;
+  const padB = 48;
+  const innerW = W - padL - padR;
+  const innerH = H - padT - padB;
+  const n = Math.max(rows.length, 1);
+  const maxY = Math.max(1, ...rows.map((r) => r.count));
+  const bw = innerW / n;
+  const w = Math.min(28, bw * 0.55);
+  const base = padT + innerH;
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-56 w-full max-w-full" role="img" aria-label="Lavorazioni completate per mese">
+      <line x1={padL} y1={base} x2={W - padR} y2={base} stroke="currentColor" className="text-[color:var(--cab-border)]" />
+      {rows.map((r, i) => {
+        const cx = padL + bw * i + bw / 2;
+        const h = (r.count / maxY) * innerH;
+        const fill = r.muted ? ZINC : SKY;
+        return (
+          <g key={`${r.label}-${i}`}>
+            <rect
+              x={cx - w / 2}
+              y={base - h}
+              width={w}
+              height={h}
+              fill={fill}
+              rx={3}
+              opacity={r.muted ? 0.45 : 1}
+            >
+              <title>{`${r.label}: ${r.count} lavorazioni`}</title>
+            </rect>
+            <text x={cx} y={H - 10} textAnchor="middle" className="fill-[color:var(--cab-text-muted)]" style={{ fontSize: 9 }}>
+              {r.label}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+export const ReportYearlyForecastLineChart = memo(ReportYearlyForecastLineChartInner);
+export const MagazzinoEntrateUsciteBars = memo(MagazzinoEntrateUsciteBarsInner);
+export const MagazzinoCapitalLineChart = memo(MagazzinoCapitalLineChartInner);
+export const ReportTemporalMonthlyBars = memo(ReportTemporalMonthlyBarsInner);

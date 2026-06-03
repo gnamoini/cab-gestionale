@@ -2,9 +2,9 @@
 
 import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
+import { sliceInputValue, TEXT_LONG, TEXT_MEDIUM } from "@/lib/validation/text-field-limits";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { GlobalLoadingSpinner } from "@/components/design-system/loading-indicator";
-import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
+import { LoadingButton } from "@/components/design-system";
 import { defaultApplicabilitaForCategoria } from "@/lib/documenti/documenti-applicabilita";
 import {
   effectiveDocumentoApplicabilita,
@@ -16,10 +16,15 @@ import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestional
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { GlobalHierarchyMarcaSelect, GlobalHierarchyModelloSelect } from "@/components/gestionale/global-input";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import {
+  GlobalAttrezzatureMarcaSelect,
+  GlobalAttrezzatureModelloSelect,
+} from "@/components/gestionale/global-input";
 import { DocumentoFileDropzone } from "@/components/gestionale/documenti/documento-file-dropzone";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useAuth } from "@/context/auth-context";
+import { dsBtnDanger } from "@/lib/ui/design-system";
 import {
   documentoSenzaMarca,
   extractFileExtension,
@@ -108,7 +113,7 @@ function ApplicabilitaField({
   return (
     <fieldset className="space-y-2">
       <legend className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Applicabilità</legend>
-      <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_60%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]">
+      <label className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_60%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]">
         <input
           type="radio"
           name="doc-applicabilita"
@@ -119,7 +124,7 @@ function ApplicabilitaField({
         <span className="text-sm text-zinc-200">Tutta la marca</span>
       </label>
       {allowModello ? (
-        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_60%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]">
+        <label className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border border-zinc-700/50 px-3 py-2.5 has-[:checked]:border-[color:color-mix(in_srgb,var(--cab-primary)_60%,var(--cab-border))] has-[:checked]:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]">
           <input
             type="radio"
             name="doc-applicabilita"
@@ -137,12 +142,10 @@ function ApplicabilitaField({
 }
 
 export function UploadDocumentoModal({
-  catalog: _catalog,
   isUploading = false,
   onRequestClose,
   onSubmit,
 }: {
-  catalog: CatalogMarca[];
   isUploading?: boolean;
   onRequestClose: () => void;
   onSubmit: (payload: Omit<DocumentoGestionale, "id">) => void | Promise<void>;
@@ -247,7 +250,7 @@ export function UploadDocumentoModal({
   return (
     <DocumentiModalShell title="Carica documento" onRequestClose={onRequestClose} wide>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <div className="lavorazioni-scroll-scope min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+        <GestionaleModalScrollBody className="space-y-3 p-4">
           <DocumentoFileDropzone
             pickedName={pickedName}
             pickedSizeKb={pickedSizeKb}
@@ -258,7 +261,7 @@ export function UploadDocumentoModal({
 
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Nome file
-            <input className={`${inputClass} mt-1`} value={nome} onChange={(e) => setNome(e.target.value)} required />
+            <input className={`${inputClass} mt-1`} value={nome} onChange={(e) => setNome(sliceInputValue(e.target.value, TEXT_MEDIUM))} required maxLength={TEXT_MEDIUM} />
           </label>
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Tipo documento
@@ -281,9 +284,8 @@ export function UploadDocumentoModal({
 
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
-            <GlobalHierarchyMarcaSelect
+            <GlobalAttrezzatureMarcaSelect
               className={listSelectWrapClass}
-              tree="attrezzature"
               value={marca}
               onChange={(v) => {
                 setMarca(v);
@@ -291,6 +293,7 @@ export function UploadDocumentoModal({
                 setMarcaInvalid(false);
                 setModelloInvalid(false);
               }}
+              selectOnly
               aria-label="Marca documento"
               aria-invalid={marcaInvalid || undefined}
             />
@@ -299,9 +302,8 @@ export function UploadDocumentoModal({
           {effectiveApp === "modello" ? (
             <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Modello
-              <GlobalHierarchyModelloSelect
+              <GlobalAttrezzatureModelloSelect
                 className={listSelectWrapClass}
-                tree="attrezzature"
                 marcaNome={marca}
                 value={modello}
                 onChange={(v) => {
@@ -309,6 +311,7 @@ export function UploadDocumentoModal({
                   setModelloInvalid(false);
                 }}
                 required
+                selectOnly
                 aria-label="Modello documento"
                 aria-invalid={modelloInvalid || undefined}
               />
@@ -324,20 +327,19 @@ export function UploadDocumentoModal({
           </p>
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note (facoltative)
-            <textarea className={`${inputClass} mt-1 min-h-[72px] resize-y`} value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
+            <textarea className={`${inputClass} mt-1 min-h-[72px] resize-y`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} rows={3} maxLength={TEXT_LONG} />
           </label>
-        </div>
+        </GestionaleModalScrollBody>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <button type="submit" className={`${erpBtnAccent} flex w-full min-h-11 items-center justify-center gap-2`} disabled={!canSubmit}>
-            {isUploading ? (
-              <>
-                <GlobalLoadingSpinner size="sm" label="Caricamento…" />
-                Caricamento…
-              </>
-            ) : (
-              "Conferma caricamento"
-            )}
-          </button>
+          <LoadingButton
+            type="submit"
+            className={`${erpBtnAccent} flex w-full min-h-11 items-center justify-center gap-2`}
+            loading={isUploading}
+            loadingLabel="Caricamento…"
+            disabled={!canSubmit}
+          >
+            Conferma caricamento
+          </LoadingButton>
         </div>
       </form>
     </DocumentiModalShell>
@@ -348,10 +350,16 @@ export function DocumentoInfoModal({
   doc,
   onRequestClose,
   onEdit,
+  onDelete,
+  canEdit = true,
+  canDelete = true,
 }: {
   doc: DocumentoGestionale;
   onRequestClose: () => void;
   onEdit: () => void;
+  onDelete: () => void;
+  canEdit?: boolean;
+  canDelete?: boolean;
 }) {
   const r = resolveDocumentoApplicazione(doc);
   const canOpenFile = Boolean(doc.urlBlob?.trim() || doc.urlDocumento?.trim());
@@ -364,7 +372,7 @@ export function DocumentoInfoModal({
   return (
     <DocumentiModalShell title="Dettaglio documento" onRequestClose={onRequestClose} wide>
       <div className={`lavorazioni-scroll-scope ${gestionaleModalBodyFlexClass}`}>
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4 text-sm">
+        <GestionaleModalScrollBody className="space-y-3 p-4 text-sm">
           <InfoRow label="Riepilogo" value={<span className="font-semibold">{formatDocumentoRigaSintetica(doc)}</span>} />
           <InfoRow label="Nome file" value={doc.nome} />
           <InfoRow
@@ -407,16 +415,31 @@ export function DocumentoInfoModal({
               )
             }
           />
-          <InfoRow label="Data caricamento" value={doc.caricatoIl} />
-          <InfoRow label="Ultima modifica" value={doc.ultimaModifica} />
           <InfoRow label="Autore" value={doc.autoreCaricamento} />
           <InfoRow label="Note" value={doc.note?.trim() ? doc.note : "—"} />
           <InfoRow label="Dimensione" value={`${doc.dimensioneKb} KB`} />
-        </div>
+        </GestionaleModalScrollBody>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <button type="button" className={`${erpBtnAccent} w-full`} onClick={onEdit}>
-            Modifica
-          </button>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className={dsBtnDanger}
+              onClick={onDelete}
+              disabled={!canDelete}
+              title={canDelete ? "Elimina" : "Sola lettura"}
+            >
+              Elimina
+            </button>
+            <button
+              type="button"
+              className={erpBtnAccent}
+              onClick={onEdit}
+              disabled={!canEdit}
+              title={canEdit ? "Modifica" : "Sola lettura"}
+            >
+              Modifica
+            </button>
+          </div>
         </div>
       </div>
     </DocumentiModalShell>
@@ -425,12 +448,10 @@ export function DocumentoInfoModal({
 
 export function DocumentoEditModal({
   doc,
-  catalog: _catalog,
   onRequestClose,
   onSave,
 }: {
   doc: DocumentoGestionale;
-  catalog: CatalogMarca[];
   onRequestClose: () => void;
   onSave: (next: DocumentoGestionale) => boolean | void | Promise<boolean | void>;
 }) {
@@ -501,10 +522,10 @@ export function DocumentoEditModal({
   return (
     <DocumentiModalShell title="Modifica documento" onRequestClose={onRequestClose} wide>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <div className="lavorazioni-scroll-scope min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-4">
+        <GestionaleModalScrollBody className="space-y-3 p-4">
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Nome file
-            <input className={`${inputClass} mt-1`} value={nome} onChange={(e) => setNome(e.target.value)} required />
+            <input className={`${inputClass} mt-1`} value={nome} onChange={(e) => setNome(sliceInputValue(e.target.value, TEXT_MEDIUM))} required maxLength={TEXT_MEDIUM} />
           </label>
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Tipo documento
@@ -527,9 +548,8 @@ export function DocumentoEditModal({
 
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
-            <GlobalHierarchyMarcaSelect
+            <GlobalAttrezzatureMarcaSelect
               className={listSelectWrapClass}
-              tree="attrezzature"
               value={marca}
               onChange={(v) => {
                 setMarca(v);
@@ -537,6 +557,7 @@ export function DocumentoEditModal({
                 setMarcaInvalid(false);
                 setModelloInvalid(false);
               }}
+              selectOnly
               aria-label="Marca documento"
               aria-invalid={marcaInvalid || undefined}
             />
@@ -545,9 +566,8 @@ export function DocumentoEditModal({
           {effectiveApp === "modello" && marca.trim() ? (
             <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
               Modello
-              <GlobalHierarchyModelloSelect
+              <GlobalAttrezzatureModelloSelect
                 className={listSelectWrapClass}
-                tree="attrezzature"
                 marcaNome={marca}
                 value={modello}
                 onChange={(v) => {
@@ -555,6 +575,7 @@ export function DocumentoEditModal({
                   setModelloInvalid(false);
                 }}
                 required
+                selectOnly
                 aria-label="Modello documento"
                 aria-invalid={modelloInvalid || undefined}
               />
@@ -564,20 +585,18 @@ export function DocumentoEditModal({
 
           <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note
-            <textarea className={`${inputClass} mt-1 min-h-[72px] resize-y`} value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
+            <textarea className={`${inputClass} mt-1 min-h-[72px] resize-y`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} rows={3} maxLength={TEXT_LONG} />
           </label>
-        </div>
+        </GestionaleModalScrollBody>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <button type="submit" className={`${erpBtnAccent} flex w-full min-h-11 items-center justify-center gap-2`} disabled={saving}>
-            {saving ? (
-              <>
-                <GlobalLoadingSpinner size="sm" label="Salvataggio…" />
-                Salvataggio…
-              </>
-            ) : (
-              "Salva modifiche"
-            )}
-          </button>
+          <LoadingButton
+            type="submit"
+            className={`${erpBtnAccent} flex w-full min-h-11 items-center justify-center gap-2`}
+            loading={saving}
+            preset="salva"
+          >
+            Salva modifiche
+          </LoadingButton>
         </div>
       </form>
     </DocumentiModalShell>

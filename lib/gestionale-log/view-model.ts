@@ -349,8 +349,10 @@ export function buildMagazzinoGestionaleLogViewModel(entry: MagazzinoLogEntryLik
   } else if (entry.tipo === "rimozione") {
     modificaRiga = toBulletModificaRiga([lead ?? "Ricambio eliminato dal magazzino"]);
   } else if (entry.changes.length) {
-    const lines = entry.changes.map(sentenceForCampoChange);
-    modificaRiga = toBulletModificaRiga(lines);
+    const lines = entry.changes
+      .filter((c) => c.campo !== "Sincronizzazione" && !/^(Autore|Data)\s*(ultima\s*)?modifica$/i.test(c.campo.trim()))
+      .map(sentenceForCampoChange);
+    modificaRiga = toBulletModificaRiga(lines.length ? lines : ["Modifica registrata"]);
   } else {
     const fb = stripAutoreFromRiepilogo(entry.riepilogo, entry.autore);
     modificaRiga = fb ? toBulletModificaRiga([fb]) : "—";

@@ -16,7 +16,7 @@ export const CAB_LOGO_ASPECT = CAB_LOGO_INTRINSIC_WIDTH / CAB_LOGO_INTRINSIC_HEI
 
 
 
-export const CAB_APP_PRODUCT_NAME = "Gestionale Officina v1.01 Pilot";
+export const CAB_APP_PRODUCT_NAME = "CAB Gestionale Officina";
 
 
 
@@ -62,7 +62,7 @@ export function CabLogo({ className = "", height = 28, priority = true, sizes }:
 
       sizes={sizes ?? `${displayWidth}px`}
 
-      className={`block h-auto w-auto max-w-full object-contain object-left ${className}`}
+      className={`block h-auto w-auto max-w-full shrink-0 object-contain ${className}`}
 
       style={{ maxHeight: height }}
 

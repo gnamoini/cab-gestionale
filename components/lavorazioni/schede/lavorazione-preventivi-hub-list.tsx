@@ -7,9 +7,12 @@ import {
   GlobalTableHeadLabel,
 } from "@/components/gestionale/global-table";
 import {
+  dsBtnPrimary,
+  dsHubModalMetaChip,
   dsScrollbar,
   dsTableActionBtnPrimary,
   dsTableActionGlyph,
+  dsTableActionTextBtnPrimary,
   dsTableActionsGroup,
   dsTableRow,
   dsTableTdActions,
@@ -19,16 +22,27 @@ import {
   fmtPreventivoDataTabella,
   fmtPreventivoMarcaModello,
 } from "@/lib/preventivi/preventivi-per-macchina";
+import { gestionaleListTableTd } from "@/lib/ui/gestionale-list-table";
 
 /** Allineato a `preventivi-view` (archivio). */
-const prevTableTd = "px-2 align-middle text-center";
-const prevTableTdCliente =
-  "min-w-0 border-l border-zinc-200/90 px-3 align-middle text-center text-zinc-800 dark:border-zinc-700/90 dark:text-zinc-100";
+const prevTableTd = gestionaleListTableTd;
+const prevTableTdText = `${gestionaleListTableTd} min-w-0 text-sm text-zinc-800 dark:text-zinc-100`;
 
 type LavorazionePreventiviHubListProps = {
   rows: PreventivoRecord[];
+  /** Evidenzia i preventivi collegati a questa lavorazione. */
+  lavorazioneId?: string;
   onApriNeiPreventivi: (p: PreventivoRecord) => void;
+  onCreaPreventivo?: () => void;
 };
+
+function isPreventivoCollegato(p: PreventivoRecord, lavorazioneId?: string): boolean {
+  return Boolean(lavorazioneId && p.lavorazioneId === lavorazioneId);
+}
+
+function PreventivoCollegatoBadge() {
+  return <span className={dsHubModalMetaChip}>Collegato</span>;
+}
 
 function PreventivoIdentCell({ p }: { p: PreventivoRecord }) {
   const targa = p.targa?.trim() || "—";
@@ -45,9 +59,77 @@ function PreventivoIdentCell({ p }: { p: PreventivoRecord }) {
   );
 }
 
-export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: LavorazionePreventiviHubListProps) {
+function PreventiviHubEmptyState({ onCreaPreventivo }: { onCreaPreventivo?: () => void }) {
+  return (
+    <div className="rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-3 py-4 text-center">
+      <p className="text-sm font-medium text-[color:var(--cab-text)]">Nessun preventivo per questo mezzo</p>
+      <p className="mt-1 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+        I preventivi creati con targa, matricola o scuderia uguali compariranno qui.
+      </p>
+      {onCreaPreventivo ? <CreaPreventivoButton className="mt-3" onClick={onCreaPreventivo} /> : null}
+    </div>
+  );
+}
+
+/** Pulsante primario condiviso (tab Preventivi empty state e tab Schede). */
+export function CreaPreventivoButton({
+  onClick,
+  disabled,
+  disabledTitle,
+  className = "",
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  disabledTitle?: string;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      className={`${dsBtnPrimary}${className ? ` ${className}` : ""}`}
+      disabled={disabled}
+      title={disabled ? disabledTitle : "Crea preventivo da schede lavorazione"}
+      onClick={onClick}
+    >
+      Crea preventivo
+    </button>
+  );
+}
+
+/** CTA tab Schede: stesso stile del empty state Preventivi, con copy su import schede. */
+export function CreaPreventivoDaSchedeCta({
+  onClick,
+  disabled,
+  disabledTitle,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+  disabledTitle?: string;
+}) {
+  return (
+    <div className="rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-3 py-4 text-center">
+      <p className="text-sm font-medium text-[color:var(--cab-text)]">Genera preventivo</p>
+      <p className="mt-1 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+        Importa ingresso, lavorazioni e ricambi già compilati in questo intervento.
+      </p>
+      <CreaPreventivoButton
+        className="mt-3"
+        onClick={onClick}
+        disabled={disabled}
+        disabledTitle={disabledTitle}
+      />
+    </div>
+  );
+}
+
+export function LavorazionePreventiviHubList({
+  rows,
+  lavorazioneId,
+  onApriNeiPreventivi,
+  onCreaPreventivo,
+}: LavorazionePreventiviHubListProps) {
   if (rows.length === 0) {
-    return <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun preventivo passato per questa macchina.</p>;
+    return <PreventiviHubEmptyState onCreaPreventivo={onCreaPreventivo} />;
   }
 
   return (
@@ -72,14 +154,11 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
           <>
             <GlobalTableHeadLabel label="N." thClassName="w-[5.25rem] min-w-[5.25rem]" />
             <GlobalTableHeadLabel label="Data" thClassName="w-[5.75rem] min-w-[5.75rem]" />
-            <GlobalTableHeadLabel
-              label="Cliente"
-              thClassName="border-l border-zinc-200/90 pl-3 dark:border-zinc-700/90"
-            />
-            <GlobalTableHeadLabel label="Cantiere" thClassName="min-w-0 px-2" />
-            <GlobalTableHeadLabel label="Utilizzatore" thClassName="min-w-0 px-2" />
-            <GlobalTableHeadLabel label="Attrezzatura" thClassName="min-w-0 px-2" />
-            <GlobalTableHeadLabel label="Targa / Matricola" thClassName="w-[9.75rem] min-w-[9.75rem] px-2" />
+            <GlobalTableHeadLabel label="Cliente" thClassName="min-w-0" />
+            <GlobalTableHeadLabel label="Cantiere" thClassName="min-w-0" />
+            <GlobalTableHeadLabel label="Utilizzatore" thClassName="min-w-0" />
+            <GlobalTableHeadLabel label="Attrezzatura" thClassName="min-w-0" />
+            <GlobalTableHeadLabel label="Targa / Matricola" thClassName="w-[9.75rem] min-w-[9.75rem]" />
             <GestionaleListTableActionsHead />
           </>
         }
@@ -91,12 +170,15 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
             <td
               className={`whitespace-nowrap ${prevTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}
             >
-              {p.numero}
+              <div className="flex flex-col items-center gap-1">
+                <span>{p.numero}</span>
+                {isPreventivoCollegato(p, lavorazioneId) ? <PreventivoCollegatoBadge /> : null}
+              </div>
             </td>
             <td className={`whitespace-nowrap ${prevTableTd} text-xs tabular-nums text-zinc-600 dark:text-zinc-300`}>
               {fmtPreventivoDataTabella(p.dataCreazione)}
             </td>
-            <td className={prevTableTdCliente}>
+            <td className={prevTableTdText}>
               <span className="line-clamp-2 break-words text-sm leading-snug">{p.cliente || "—"}</span>
             </td>
             <td className={`min-w-0 ${prevTableTd} text-zinc-700 dark:text-zinc-200`}>
@@ -133,7 +215,10 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
           <CardMobile key={p.id}>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <p className="font-mono text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]">{p.numero}</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-mono text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]">{p.numero}</p>
+                  {isPreventivoCollegato(p, lavorazioneId) ? <PreventivoCollegatoBadge /> : null}
+                </div>
                 <p className="mt-1 text-sm font-semibold text-[color:var(--cab-text)]">{p.cliente || "—"}</p>
                 <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">{fmtPreventivoMarcaModello(p)}</p>
               </div>
@@ -158,15 +243,13 @@ export function LavorazionePreventiviHubList({ rows, onApriNeiPreventivi }: Lavo
               </div>
             </dl>
             <CardMobileActions>
-              <IconActionButton label="Apri" className={dsTableActionBtnPrimary} onClick={() => onApriNeiPreventivi(p)}>
-                <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 0L21 3m0 0h-5.25M21 3v5.25"
-                  />
-                </svg>
-              </IconActionButton>
+              <button
+                type="button"
+                className={dsTableActionTextBtnPrimary}
+                onClick={() => onApriNeiPreventivi(p)}
+              >
+                Apri
+              </button>
             </CardMobileActions>
           </CardMobile>
         ))}

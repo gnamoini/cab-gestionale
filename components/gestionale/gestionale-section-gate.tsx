@@ -2,17 +2,15 @@
 
 import type { ReactNode } from "react";
 import { GestionaleAccessLimited } from "@/components/gestionale/gestionale-access-limited";
-import { ShellCard } from "@/components/gestionale/shell-card";
-import { dsStackPage, dsTypoSmall } from "@/lib/ui/design-system";
+import { LoadingPageSkeleton } from "@/components/design-system";
+import { dsStackPage } from "@/lib/ui/design-system";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 
 function GestionaleSectionLoading() {
   return (
-    <div className={dsStackPage}>
-      <ShellCard title="Caricamento">
-        <p className={dsTypoSmall}>Caricamento dati…</p>
-      </ShellCard>
+    <div className={dsStackPage} aria-busy="true" role="status" aria-label="Caricamento sezione">
+      <LoadingPageSkeleton variant="compact" />
     </div>
   );
 }

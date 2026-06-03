@@ -6,6 +6,7 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { LogEntry } from "@/components/design-system/log-entry";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import { dsModalHeader } from "@/lib/ui/design-system";
 
 /** Icona unificata “log / cronologia” (stroke 2, stile coerente con impostazioni e toolbar). */
 export function IconGestionaleLog(props: SVGProps<SVGSVGElement>) {
@@ -73,16 +74,16 @@ export function IconGestionaleRefresh(props: SVGProps<SVGSVGElement>) {
 }
 
 export const gestionaleLogScrollClass =
-  "gestionale-scrollbar min-h-0 flex-1 overflow-y-scroll overscroll-contain [scrollbar-gutter:stable]";
+  "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-scroll overscroll-contain [scrollbar-gutter:stable]";
 
 export const gestionaleLogScrollEmbeddedClass =
-  "gestionale-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]";
+  "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]";
 
 export const gestionaleLogPanelAsideClass =
   "flex h-full max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden border-l border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl";
 
-export const gestionaleLogPanelHeaderClass =
-  "flex shrink-0 items-center justify-between border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,var(--cab-card))] px-4 py-3 backdrop-blur-sm";
+/** @deprecated — usare token `dsModalHeader` (allineato a `Drawer` / modali gestionale). */
+export const gestionaleLogPanelHeaderClass = dsModalHeader;
 
 export type CampoChangeLine = { campo: string; prima: string; dopo: string };
 

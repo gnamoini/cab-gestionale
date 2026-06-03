@@ -33,6 +33,8 @@ export {
   globalInputFieldDefault,
   globalInputFieldFilter,
   globalInputFieldFilterDate,
+  globalInputFieldFilterSearch,
+  globalInputFieldFilterSelect,
   globalInputDropdownPanel,
   globalAutocompleteDropdownPanel,
   globalAutocompleteOptionClass,

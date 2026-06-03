@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { useDevModalLayoutLint } from "@/lib/ui-visual-linter/use-visual-layout-linter";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
 import type { LavorazioneAttiva, PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -14,11 +15,18 @@ import {
 import { LavorazioniDateField } from "@/components/gestionale/lavorazioni/lavorazioni-date-field";
 import { LavorazioneMezzoPicker } from "@/components/gestionale/lavorazioni/lavorazione-mezzo-picker";
 import { LavorazioniModalSelect } from "@/components/gestionale/lavorazioni/lavorazioni-modal-select";
-import { AddettiSettingsList, ColorSwatchButton, StatoSettingsList } from "@/components/gestionale/lavorazioni/lavorazioni-settings-ui";
+import {
+  ADDETTI_SETTINGS_PANEL_CLASS,
+  ADDETTI_SETTINGS_TABLE_CLASS,
+  AddettiInsertRow,
+  AddettiSettingsList,
+  ColorSwatchButton,
+  StatoSettingsList,
+} from "@/components/gestionale/lavorazioni/lavorazioni-settings-ui";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   erpBtnAccent,
   erpBtnNeutral,
-  erpBtnSoftOrange,
   prioritaBadgeStyle,
   prioritaLabel,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -30,10 +38,24 @@ import {
   dsLavorazioniModalDialog,
   dsLavorazioniModalLayer,
   dsLabel,
+  dsModalBackBtn,
+  dsModalCloseBtn,
+  dsLavorazioniModalWindowHeader,
+  dsModalHeaderInner,
+  dsModalHeaderLead,
+  dsModalSubtitle,
+  dsModalTitle,
+  dsModalTitleBlock,
+  dsHubModalTabBar,
+  dsLavorazioniModalDialogCompact,
+  dsSegmentedBtnOn,
 } from "@/lib/ui/design-system";
+import { SETTINGS_PANEL_SHELL } from "@/components/dashboard/settings-list-ui";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { gestionaleModalBodyFlexClass, resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
+import { CAB_MODAL_ROOT_ATTR } from "@/lib/ui/mobile-modal-behavior";
+import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -66,36 +88,45 @@ export function LavorazioniModalHeader({
   onRequestClose,
   onBack,
   titleId = LAV_MODAL_TITLE_ID,
+  actions,
+  belowTitle,
 }: {
   title: string;
   subtitle?: string;
   onRequestClose: () => void;
   onBack?: () => void;
   titleId?: string;
+  /** Azioni tra titolo e pulsante chiudi (es. Salva, Modifica). */
+  actions?: React.ReactNode;
+  /** Contenuto sotto titolo/sottotitolo (meta, link). */
+  belowTitle?: React.ReactNode;
 }) {
+  const stacked = Boolean(belowTitle);
   return (
-    <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
-      <div className="min-w-0 flex-1">
-        {onBack ? (
-          <button
-            type="button"
-            className={`${erpBtnNeutral} mb-2 px-2 py-1 text-xs`}
-            onClick={onBack}
-          >
-            ← Torna indietro
-          </button>
-        ) : null}
-        <h2 id={titleId} className="truncate text-sm font-semibold text-[color:var(--cab-text)]">
-          {title}
-        </h2>
-        {subtitle ? <p className="mt-0.5 text-xs text-[color:var(--cab-text-muted)]">{subtitle}</p> : null}
+    <header className={dsLavorazioniModalWindowHeader}>
+      <div className={`${dsModalHeaderInner}${stacked ? " items-start sm:items-center" : ""}`}>
+        <div className={`${dsModalHeaderLead}${stacked ? " flex-col items-stretch sm:flex-row sm:items-center" : ""}`}>
+          {onBack ? (
+            <button type="button" className={dsModalBackBtn} onClick={onBack}>
+              ← Indietro
+            </button>
+          ) : null}
+          <div className={dsModalTitleBlock}>
+            <h2 id={titleId} className={dsModalTitle}>
+              {title}
+            </h2>
+            {subtitle ? <p className={dsModalSubtitle}>{subtitle}</p> : null}
+            {belowTitle}
+          </div>
+        </div>
+        {actions ? <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex-wrap">{actions}</div> : null}
+        <CloseButton onClick={onRequestClose} className={dsModalCloseBtn} />
       </div>
-      <CloseButton onClick={onRequestClose} className="shrink-0" />
     </header>
   );
 }
 
-/** Barra titolo custom con pulsante X (allineata al design system modale). */
+/** @deprecated Preferire `LavorazioniModalShell` con `title` / `header` — wrapper compat per meta sotto titolo. */
 export function LavorazioniModalTitleBar({
   title,
   titleId,
@@ -107,26 +138,25 @@ export function LavorazioniModalTitleBar({
   onRequestClose: () => void;
   children?: React.ReactNode;
 }) {
+  if (!title) return null;
   return (
-    <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
-      <div className="min-w-0 flex-1">
-        {title ? (
-          <h2 id={titleId} className="text-sm font-semibold text-[color:var(--cab-text)]">
-            {title}
-          </h2>
-        ) : null}
-        {children}
-      </div>
-      <CloseButton onClick={onRequestClose} className="shrink-0" />
-    </header>
+    <LavorazioniModalHeader
+      title={title}
+      titleId={titleId}
+      onRequestClose={onRequestClose}
+      belowTitle={children}
+    />
   );
 }
+
+export type LavorazioniModalDialogSize = "hub" | "compact";
 
 /** Chiusura: click fuori, ESC, X in header; scroll lock come `Modal` globale. */
 export function LavorazioniModalShell({
   children,
   wide,
   maxWidthClass,
+  dialogSize = "hub",
   alignTop,
   layerClassName,
   onRequestClose,
@@ -139,6 +169,8 @@ export function LavorazioniModalShell({
   children: React.ReactNode;
   wide?: boolean;
   maxWidthClass?: string;
+  /** `compact`: dialog più basso su desktop (hub schede resta `hub`). */
+  dialogSize?: LavorazioniModalDialogSize;
   alignTop?: boolean;
   /** Es. `z-[110]` quando la modale si apre sopra un'altra modale gestionale. */
   layerClassName?: string;
@@ -153,7 +185,9 @@ export function LavorazioniModalShell({
   titleId?: string;
 }) {
   useBodyScrollLock(true, "LavorazioniModalShell");
+  useDevModalLayoutLint(true, "lavorazioni-modal-shell");
   const dialogFocus = useGestionaleModalDialogFocus();
+  useMobileModalKeyboard(dialogFocus.ref);
   const modalOpenStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
 
   useLayoutEffect(() => {
@@ -163,7 +197,19 @@ export function LavorazioniModalShell({
 
   const labelledBy = title ? (titleId ?? LAV_MODAL_TITLE_ID) : titleId;
   const dialogMaxWidth = resolveModalMaxWidthClass(maxWidthClass, wide);
-  const layerAlignClass = alignTop ? "max-md:items-stretch md:items-start" : "";
+  const dialogSurfaceClass =
+    dialogSize === "compact" ? dsLavorazioniModalDialogCompact : dsLavorazioniModalDialog;
+  const headerNode =
+    header ??
+    (title ? (
+      <LavorazioniModalHeader
+        title={title}
+        subtitle={subtitle}
+        onRequestClose={onRequestClose}
+        onBack={onBack}
+        titleId={labelledBy}
+      />
+    ) : null);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -175,7 +221,7 @@ export function LavorazioniModalShell({
 
   return (
     <div
-      className={`${dsLavorazioniModalLayer} ${layerClassName ?? ""} ${layerAlignClass}`}
+      className={`${dsLavorazioniModalLayer} ${layerClassName ?? ""}`}
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {
@@ -186,15 +232,16 @@ export function LavorazioniModalShell({
     >
       <div
         ref={dialogFocus.ref}
-        className={`${dsLavorazioniModalDialog} ${dialogMaxWidth}`}
+        {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
+        className={`${dialogSurfaceClass} flex-safe-col cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
         onKeyDown={dialogFocus.onKeyDown}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {header ?? (title ? <LavorazioniModalHeader title={title} subtitle={subtitle} onRequestClose={onRequestClose} onBack={onBack} titleId={labelledBy} /> : null)}
-        {children}
+        {headerNode}
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
       </div>
     </div>
   );
@@ -248,10 +295,9 @@ export function EditLavorazioneModal({
   }
 
   return (
-    <LavorazioniModalShell wide onRequestClose={onRequestClose} titleId="lav-edit-modal-title">
-      <LavorazioniModalTitleBar title={title} titleId="lav-edit-modal-title" onRequestClose={onRequestClose} />
+    <LavorazioniModalShell wide onRequestClose={onRequestClose} title={title} titleId="lav-edit-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
+        <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
           <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
             <SectionTitle>Mezzo</SectionTitle>
             <div className="grid gap-3 sm:grid-cols-12">
@@ -482,10 +528,9 @@ export function NewLavorazioneModal({
   }
 
   return (
-    <LavorazioniModalShell wide onRequestClose={onRequestClose} titleId="lav-new-modal-title">
-      <LavorazioniModalTitleBar title="Nuova lavorazione" titleId="lav-new-modal-title" onRequestClose={onRequestClose} />
+    <LavorazioniModalShell wide onRequestClose={onRequestClose} title="Nuova lavorazione" titleId="lav-new-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
+        <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
           <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
             <SectionTitle>Mezzo</SectionTitle>
             <LavorazioneMezzoPicker mezzi={mezzi} draft={d} setDraft={setDraft} />
@@ -653,14 +698,14 @@ export function SettingsLavorazioniModal({
   onChangeStatoClosed,
   onRemoveStato,
   onReorderStato,
-  addetti,
+  addettiRecords,
   addettoColors,
   prioritaColors,
   prioritaDb,
   onChangePrioritaDb,
   onChangePrioritaColor,
   onAddAddetto,
-  onRenameAddettoBlur,
+  onUpdateAddetto,
   onChangeAddettoColor,
   onRemoveAddetto,
   attiviStatoIds,
@@ -679,16 +724,16 @@ export function SettingsLavorazioniModal({
   onChangeStatoClosed?: (id: string, closed: boolean) => void;
   onRemoveStato: (id: string) => void;
   onReorderStato?: (fromIndex: number, toIndex: number) => void;
-  addetti: string[];
+  addettiRecords: AddettoRecord[];
   addettoColors: Record<string, string>;
   prioritaColors: Partial<Record<PrioritaLav, string>>;
   prioritaDb?: string[];
   onChangePrioritaDb?: (next: string[]) => void;
   onChangePrioritaColor: (p: PrioritaLav, hex: string) => void;
-  onAddAddetto: (name: string) => void;
-  onRenameAddettoBlur: (previousName: string, nextName: string) => void;
+  onAddAddetto: (input: { nome: string; cognome?: string | null }) => void;
+  onUpdateAddetto: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
   onChangeAddettoColor: (nome: string, hex: string) => void;
-  onRemoveAddetto: (name: string) => void;
+  onRemoveAddetto: (id: string) => void;
   attiviStatoIds: Set<string>;
   storicoStatoIds: Set<string>;
   attiviAddetti: Set<string>;
@@ -700,10 +745,19 @@ export function SettingsLavorazioniModal({
 }) {
   const [tab, setTab] = useState<SettingsTab>("stati");
   const [nuovoStato, setNuovoStato] = useState("");
-  const [nuovoAddetto, setNuovoAddetto] = useState("");
+  const [nuovoAddettoNome, setNuovoAddettoNome] = useState("");
+  const [nuovoAddettoCognome, setNuovoAddettoCognome] = useState("");
 
   const lockedTab = layout === "embedded" && embeddedFocus ? embeddedFocus : null;
   const settingsTabPanelClass = lockedTab ? "w-full space-y-4" : "mx-auto w-full max-w-xl space-y-4";
+  const settingsTitle =
+    lockedTab === "stati"
+      ? "Stati lavorazioni"
+      : lockedTab === "priorita"
+        ? "Priorità"
+        : lockedTab === "addetti"
+          ? "Addetti"
+          : "Impostazioni lavorazioni";
 
   useEffect(() => {
     if (lockedTab) setTab(lockedTab);
@@ -718,9 +772,7 @@ export function SettingsLavorazioniModal({
         role="tab"
         aria-selected={active}
         className={`rounded-lg px-3 py-2 text-xs font-semibold transition-[background-color,color,box-shadow] duration-150 ${
-          active
-            ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:bg-[var(--cab-primary-hover)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]"
-            : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/90"
+          active ? dsSegmentedBtnOn : "text-zinc-600 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800/90"
         }`}
         onClick={() => setTab(id)}
       >
@@ -732,26 +784,16 @@ export function SettingsLavorazioniModal({
   const inner = (
       <div
         className={`flex min-h-0 w-full min-w-0 flex-col ${
-          lockedTab ? "max-h-none min-h-0 flex-1 overflow-hidden" : `${gestionaleModalBodyFlexClass} overflow-hidden`
+          lockedTab
+            ? "max-h-none min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-visible"
+            : `${gestionaleModalBodyFlexClass} overflow-hidden`
         }`}
       >
-        <header className="shrink-0 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_92%,var(--cab-card))] px-4 py-3">
-          <h2 id="lavorazioni-settings-title" className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-            {lockedTab === "stati"
-              ? "Stati lavorazioni"
-              : lockedTab === "priorita"
-                ? "Priorità"
-                : lockedTab === "addetti"
-                  ? "Addetti"
-                  : "Impostazioni Lavorazioni"}
-          </h2>
-        </header>
-
         {!lockedTab ? (
           <div
             role="tablist"
             aria-labelledby="lavorazioni-settings-title"
-            className="flex shrink-0 flex-wrap gap-1 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 py-2"
+            className={`hub-modal-tab-bar ${dsHubModalTabBar} px-3 py-2`}
           >
             {tabBtn("stati", "Stati lavorazione")}
             {tabBtn("priorita", "Priorità")}
@@ -762,15 +804,15 @@ export function SettingsLavorazioniModal({
         <div
           role="tabpanel"
           aria-label={tab === "stati" ? "Stati lavorazione" : tab === "priorita" ? "Priorità" : "Addetti"}
-          className={`min-h-0 flex-1 overflow-x-hidden bg-zinc-50/50 p-3 dark:bg-zinc-950/50 sm:p-4 ${
+          className={`min-h-0 min-w-0 flex-1 overflow-x-hidden bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-3 sm:p-4 ${
             lockedTab ? "overflow-visible" : "overflow-y-auto overscroll-contain [scrollbar-gutter:stable]"
           }`}
         >
           {tab === "stati" ? (
             <div className={settingsTabPanelClass}>
-              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+              <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
                 <input
-                  className={`${dsInput} min-w-0 flex-1 sm:max-w-md`}
+                  className={`${dsInput} min-h-10 min-w-0 w-full`}
                   value={nuovoStato}
                   placeholder="Nuovo stato (es. Diagnosi, Attesa ricambi…)"
                   aria-label="Nome nuovo stato"
@@ -786,7 +828,7 @@ export function SettingsLavorazioniModal({
                 />
                 <button
                   type="button"
-                  className={erpBtnSoftOrange}
+                  className={`${erpBtnAccent} min-h-10 shrink-0 px-4 text-xs sm:text-sm`}
                   disabled={!nuovoStato.trim()}
                   onClick={() => {
                     const t = nuovoStato.trim();
@@ -795,7 +837,7 @@ export function SettingsLavorazioniModal({
                     setNuovoStato("");
                   }}
                 >
-                  Aggiungi
+                  Aggiungi stato
                 </button>
               </div>
               <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
@@ -862,45 +904,32 @@ export function SettingsLavorazioniModal({
 
           {tab === "addetti" ? (
             <div className={settingsTabPanelClass}>
-              <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-                <input
-                  className={`${dsInput} min-w-0 flex-1 sm:max-w-md`}
-                  placeholder="Nuovo addetto"
-                  value={nuovoAddetto}
-                  onChange={(e) => setNuovoAddetto(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const name = nuovoAddetto.trim();
-                      if (!name) return;
-                      onAddAddetto(name);
-                      setNuovoAddetto("");
-                    }
+              <div className={`${SETTINGS_PANEL_SHELL} ${ADDETTI_SETTINGS_PANEL_CLASS}`}>
+                <div className={ADDETTI_SETTINGS_TABLE_CLASS}>
+                <AddettiInsertRow
+                  nome={nuovoAddettoNome}
+                  cognome={nuovoAddettoCognome}
+                  onNomeChange={setNuovoAddettoNome}
+                  onCognomeChange={setNuovoAddettoCognome}
+                  onAdd={() => {
+                    const nome = nuovoAddettoNome.trim();
+                    if (!nome) return;
+                    onAddAddetto({ nome, cognome: nuovoAddettoCognome.trim() || null });
+                    setNuovoAddettoNome("");
+                    setNuovoAddettoCognome("");
                   }}
                 />
-                <button
-                  type="button"
-                  className={erpBtnSoftOrange}
-                  onClick={() => {
-                    const name = nuovoAddetto.trim();
-                    if (!name) return;
-                    onAddAddetto(name);
-                    setNuovoAddetto("");
-                  }}
-                >
-                  Aggiungi addetto
-                </button>
+                <AddettiSettingsList
+                  addettiRecords={addettiRecords}
+                  addettoColors={addettoColors}
+                  onChangeAddettoColor={onChangeAddettoColor}
+                  onUpdateAddetto={onUpdateAddetto}
+                  onRemove={onRemoveAddetto}
+                  attiviAddetti={attiviAddetti}
+                  storicoAddetti={storicoAddetti}
+                />
+                </div>
               </div>
-              <AddettiSettingsList
-                addetti={addetti}
-                addettoColors={addettoColors}
-                onChangeAddettoColor={onChangeAddettoColor}
-                onRenameBlur={onRenameAddettoBlur}
-                onRemove={onRemoveAddetto}
-                attiviAddetti={attiviAddetti}
-                storicoAddetti={storicoAddetti}
-                inputClass={dsInput}
-              />
             </div>
           ) : null}
         </div>
@@ -920,7 +949,13 @@ export function SettingsLavorazioniModal({
   }
 
   return (
-    <LavorazioniModalShell wide maxWidthClass="max-w-3xl" onRequestClose={onRequestClose}>
+    <LavorazioniModalShell
+      wide
+      maxWidthClass="max-w-3xl"
+      onRequestClose={onRequestClose}
+      title={settingsTitle}
+      titleId="lavorazioni-settings-title"
+    >
       {inner}
     </LavorazioniModalShell>
   );

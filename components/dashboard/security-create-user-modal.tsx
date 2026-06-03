@@ -110,7 +110,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
         Creazione tramite Supabase Auth e tabella <code className="rounded bg-[var(--cab-surface-2)] px-1">profiles</code>.
         Ruoli ufficiali: admin, manager, operatore, cliente e guest.
       </p>
-      <form id="security-create-user-form" className="flex flex-col gap-3" onSubmit={(ev) => void handleSubmit(ev)}>
+      <form id="security-create-user-form" className="flex min-w-0 flex-col gap-3" onSubmit={(ev) => void handleSubmit(ev)}>
         <label className="block min-w-0">
           <span className={dsSectionTitle}>Nome</span>
           <input
@@ -179,7 +179,8 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
             required
-            minLength={6}
+            minLength={8}
+            maxLength={128}
             disabled={pending}
           />
           <span className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]">

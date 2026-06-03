@@ -71,7 +71,7 @@ export const KanbanCardMobile = memo(function KanbanCardMobile({
         </div>
       </div>
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+      <div className="mt-2.5 flex min-w-0 max-w-full flex-nowrap items-center gap-2 sm:flex-wrap">
         <TablePillReadonly
           shellClass={prioritaPillShellClassDynamic()}
           shellStyle={readablePillStyleFromHex(prioHex)}

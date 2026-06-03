@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { dsStackPage } from "@/lib/ui/design-system";
+import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 
 export type PageLayoutProps = {
   title: string;
@@ -20,7 +21,7 @@ export function PageLayout({ title, description, actions, children, beforeConten
   return (
     <>
       <PageHeader title={title} description={description} actions={actions} />
-      <div className={`${dsStackPage} ${className}`.trim()}>
+      <div className={`${dsStackPage} ${layoutPageRoot} ${className}`.trim()}>
         {beforeContent}
         {children}
       </div>

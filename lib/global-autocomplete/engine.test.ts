@@ -66,6 +66,22 @@ assert.equal(
   "Attesa",
 );
 
+// Valore vuoto con opzione sentinel (es. "Tutti i dipendenti")
+assert.equal(
+  autocompleteCommittedDisplayValue({
+    mode: "items",
+    value: "",
+    searchText: "",
+    focused: false,
+    open: false,
+    items: [
+      { value: "", label: "Tutti i dipendenti" },
+      { value: "e1", label: "Mario Rossi" },
+    ],
+  }),
+  "Tutti i dipendenti",
+);
+
 // Commit fuzzy/exact
 assert.equal(
   autocompleteCommitFromSearchText("beta", "strings", ["Alpha", "Beta"], [], true),

@@ -1,6 +1,6 @@
 "use client";
 
-import { GlobalLoadingSpinner } from "@/components/design-system/loading-indicator";
+import { LoadingProgressBar, LoadingSpinner } from "@/components/design-system/loading";
 import { UPLOAD_MESSAGES } from "@/lib/upload/upload-feedback-messages";
 import type { UploadFeedbackPhase } from "@/lib/upload/upload-feedback-types";
 import { dsBtnGhost } from "@/lib/ui/design-system";
@@ -9,6 +9,7 @@ export function UploadStatusInline({
   phase,
   fileName,
   error,
+  progress = null,
   onRetry,
   className = "",
   compact = false,
@@ -16,6 +17,7 @@ export function UploadStatusInline({
   phase: UploadFeedbackPhase;
   fileName?: string;
   error?: string | null;
+  progress?: number | null;
   onRetry?: () => void;
   className?: string;
   compact?: boolean;
@@ -45,24 +47,29 @@ export function UploadStatusInline({
   }
 
   if (phase === "uploading") {
+    const pctLabel = progress != null ? `${Math.round(progress)}%` : null;
     return (
-      <p
+      <div
         role="status"
         aria-live="polite"
         aria-busy="true"
-        className={`${className} flex items-center gap-2 ${pad} ${textSize} rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-[color:var(--cab-text-muted)]`}
+        className={`${className} ${pad} ${textSize} rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-[color:var(--cab-text-muted)]`}
       >
-        <GlobalLoadingSpinner size="sm" label={UPLOAD_MESSAGES.uploading} />
-        <span>
-          {UPLOAD_MESSAGES.uploading}
-          {name ? (
-            <>
-              {" "}
-              <span className="font-medium text-[color:var(--cab-text)]">{name}</span>
-            </>
-          ) : null}
-        </span>
-      </p>
+        <p className="flex min-w-0 items-center gap-2">
+          <LoadingSpinner size="sm" label={UPLOAD_MESSAGES.uploading} />
+          <span>
+            {UPLOAD_MESSAGES.uploading}
+            {pctLabel ? ` ${pctLabel}` : null}
+            {name ? (
+              <>
+                {" "}
+                <span className="font-medium text-[color:var(--cab-text)]">{name}</span>
+              </>
+            ) : null}
+          </span>
+        </p>
+        <LoadingProgressBar progress={progress} className="mt-1.5" label={name ?? UPLOAD_MESSAGES.uploading} />
+      </div>
     );
   }
 

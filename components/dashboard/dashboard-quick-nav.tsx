@@ -12,10 +12,10 @@ import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared
 import { useAuth } from "@/context/auth-context";
 import { shouldHideNavHref } from "@/lib/auth/rbac";
 import {
+  dsDashboardWidgetTitle,
   dsSurfaceCard,
   dsSurfaceQuickNavTile,
   dsSurfaceQuickNavTileDisabled,
-  dsTypoCardTitle,
 } from "@/lib/ui/design-system";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
@@ -28,13 +28,13 @@ const QUICK_NAV_DESC: Partial<Record<GestionaleNavHref, string>> = {
   "/documenti": "Archivio documenti",
   "/magazzino": "Ricambi e giacenze",
   "/mezzi": "Anagrafica mezzi e attrezzature",
-  "/bunder": "Modulo BUNDER",
+  "/dipendenti": "Presenze e ore mensili",
   "/report": "Statistiche e reportistica",
 };
 
 function tileActiveClass(active: boolean): string {
   if (!active) return "";
-  return "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-card))] shadow-[var(--cab-shadow-sm)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)]";
+  return "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-card))] shadow-[var(--cab-shadow-sm)] ring-2 ring-inset ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)]";
 }
 
 function tileIconClass(active: boolean): string {
@@ -84,7 +84,7 @@ function QuickNavTile({
   return (
     <Link
       href={href}
-      className={`${dsSurfaceQuickNavTile} ${tileActiveClass(active)} ${erpFocus}`}
+      className={`${dsSurfaceQuickNavTile} min-w-0 max-w-full ${tileActiveClass(active)} ${erpFocus}`}
       aria-current={active ? "page" : undefined}
     >
       <span className={tileIconClass(active)} aria-hidden>
@@ -124,20 +124,20 @@ export function DashboardQuickNav() {
           ),
       }).filter(
         (item) =>
-          item.href !== "/supporto" &&
           item.href !== "/dashboard/security" &&
           item.href !== "/impostazioni" &&
-          item.href !== "/lavorazioni-clienti",
+          item.href !== "/lavorazioni-clienti" &&
+          item.href !== "/bunder",
       ),
     [user, clientLav.allowed, clientLav.isLoading, operatorPilot.dbEnabled],
   );
 
   return (
-    <section className={`${dsSurfaceCard} p-4 sm:p-5`} aria-labelledby="dashboard-quick-nav-title">
-      <h2 id="dashboard-quick-nav-title" className={dsTypoCardTitle}>
+    <section className={`${dsSurfaceCard} min-w-0 max-w-full overflow-hidden p-4 sm:p-5`} aria-labelledby="dashboard-quick-nav-title">
+      <h2 id="dashboard-quick-nav-title" className={dsDashboardWidgetTitle}>
         Navigazione rapida
       </h2>
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="mt-4 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
         {items.map((item) => {
           const active = isNavTargetCurrent(pathname, item.href);
           const description = QUICK_NAV_DESC[item.href] ?? "Apri modulo";

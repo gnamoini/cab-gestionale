@@ -16,6 +16,7 @@ import {
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { DateRange } from "@/lib/report/date-ranges";
 import { rangeToYmKeys } from "@/lib/report/magazzino-monthly-rows";
+import { yearsInReportRange } from "@/lib/report/report-temporal-filter";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import {
@@ -48,77 +49,61 @@ function fmtYmHuman(k: string): string {
   return new Date(p.y, p.m - 1, 1).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
 }
 
-function fmtRangeLine(r: DateRange): string {
-  const o = { day: "2-digit" as const, month: "short" as const, year: "numeric" as const };
-  return `${r.start.toLocaleDateString("it-IT", o)} — ${r.end.toLocaleDateString("it-IT", o)}`;
-}
-
-function yearsInRange(r: DateRange): number[] {
-  const y0 = r.start.getFullYear();
-  const y1 = r.end.getFullYear();
-  const out: number[] = [];
-  for (let y = y0; y <= y1; y++) out.push(y);
-  return out;
-}
-
 export function ReportRicambiConsumoSection({
-  magLog,
+  magLogSorted,
   prodotti,
   filterRange,
   anchor,
 }: {
-  magLog: MagazzinoChangeLogEntry[];
+  /** Log magazzino ordinato — stessa fonte di KPI/sezione magazzino (`derivedBundle.magLogSorted`). */
+  magLogSorted: MagazzinoChangeLogEntry[];
   prodotti: RicambioMagazzino[];
   filterRange: DateRange;
   anchor: Date;
 }) {
   const monthKeys = useMemo(() => rangeToYmKeys(filterRange), [filterRange]);
-  const years = useMemo(() => yearsInRange(filterRange), [filterRange]);
+  const years = useMemo(() => yearsInReportRange(filterRange), [filterRange]);
 
   const [vista, setVista] = useState<VistaMode>("periodo");
   const [selMonthKey, setSelMonthKey] = useState<string>("");
   const [selYear, setSelYear] = useState(() => filterRange.end.getFullYear());
 
-  useEffect(() => {
-    if (monthKeys.length > 0) {
-      setSelMonthKey((cur) => (cur && monthKeys.includes(cur) ? cur : monthKeys[monthKeys.length - 1]!));
-    } else {
-      setSelMonthKey("");
-    }
-  }, [monthKeys]);
+  const effectiveMonthKey = useMemo(() => {
+    if (monthKeys.length === 0) return "";
+    if (selMonthKey && monthKeys.includes(selMonthKey)) return selMonthKey;
+    return monthKeys[monthKeys.length - 1]!;
+  }, [monthKeys, selMonthKey]);
 
-  useEffect(() => {
+  const effectiveYear = useMemo(() => {
     const y = filterRange.end.getFullYear();
-    setSelYear((cur) => {
-      if (years.length === 0) return y;
-      if (years.includes(cur)) return cur;
-      if (years.includes(y)) return y;
-      return years[years.length - 1]!;
-    });
-  }, [filterRange, years]);
+    if (years.length === 0) return y;
+    if (years.includes(selYear)) return selYear;
+    if (years.includes(y)) return y;
+    return years[years.length - 1]!;
+  }, [filterRange, years, selYear]);
 
   const effectiveRange = useMemo((): DateRange => {
     if (vista === "periodo") return filterRange;
     if (vista === "mese") {
-      const p = parseYm(selMonthKey);
+      const p = parseYm(effectiveMonthKey);
       if (!p) return filterRange;
       const mBound = monthBoundsLocal(p.y, p.m);
       return intersectDateRanges(filterRange, mBound) ?? filterRange;
     }
-    const yBound = yearBoundsLocal(selYear);
+    const yBound = yearBoundsLocal(effectiveYear);
     return intersectDateRanges(filterRange, yBound) ?? filterRange;
-  }, [vista, filterRange, selMonthKey, selYear]);
+  }, [vista, filterRange, effectiveMonthKey, effectiveYear]);
 
   const ranking = useMemo(
-    () => buildRicambiConsumoRanking(magLog, prodotti, effectiveRange, { limit: 200 }),
-    [magLog, prodotti, effectiveRange],
+    () => buildRicambiConsumoRanking(magLogSorted, prodotti, effectiveRange, { limit: 200 }),
+    [magLogSorted, prodotti, effectiveRange],
   );
 
   const listPageSize = useResponsiveListPageSize();
   const rankingPagerDeps = useMemo(
     () =>
-      `${effectiveRange.start.getTime()}|${effectiveRange.end.getTime()}|${vista}|${selMonthKey}|${selYear}|${ranking.length}`,
-    [effectiveRange.start, effectiveRange.end, vista, selMonthKey, selYear, ranking.length],
+      `${effectiveRange.start.getTime()}|${effectiveRange.end.getTime()}|${vista}|${effectiveMonthKey}|${effectiveYear}|${ranking.length}`,
+    [effectiveRange.start, effectiveRange.end, vista, effectiveMonthKey, effectiveYear, ranking.length],
   );
   const {
     page: rankingPage,
@@ -135,25 +120,22 @@ export function ReportRicambiConsumoSection({
   const rankingPaged = useMemo(() => sliceRankingPage(ranking), [ranking, sliceRankingPage]);
 
   const rollingConsumoMap = useMemo(
-    () => buildConsumoMapMagazzinoRolling36ForProducts(magLog, prodotti, anchor),
-    [magLog, prodotti, anchor],
+    () => buildConsumoMapMagazzinoRolling36ForProducts(magLogSorted, prodotti, anchor),
+    [magLogSorted, prodotti, anchor],
   );
 
-  const hasLog = magLog.length > 0;
+  const hasLog = magLogSorted.length > 0;
 
   return (
     <ShellCard
+      id="report-magazzino-consumo"
       title="Ricambi a maggior consumo"
-      subtitle="Consumo medio mensile: stesso indicatore della pagina Magazzino (ultimi 36 mesi, 2 decimali). «Totale consumo» e la classifica per posizione si riferiscono alle uscite nel periodo / vista selezionata."
+      collapsible
+      defaultCollapsed={false}
     >
-      <p className="mb-4 text-xs leading-relaxed text-zinc-600 dark:text-zinc-400">
-        Periodo del report: <span className="font-medium text-zinc-800 dark:text-zinc-200">{fmtRangeLine(filterRange)}</span>.
-        Con le viste «Per mese» o «Per anno» la colonna uscite si limita al sotto-intervallo scelto (sempre contenuto nel filtro globale). Vista
-        attiva: <span className="font-medium text-zinc-800 dark:text-zinc-200">{fmtRangeLine(effectiveRange)}</span>.
-      </p>
-      <div className="flex flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
+      <div className="flex min-w-0 max-w-full flex-col gap-4 lg:flex-row lg:flex-wrap lg:items-end">
         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Aggregazione</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Aggregazione</span>
           <div className={dsSegmentedWrap}>
             {(
               [
@@ -176,9 +158,9 @@ export function ReportRicambiConsumoSection({
 
         {vista === "mese" ? (
           <div className="w-full min-w-[12rem] lg:w-auto">
-            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Mese (nel periodo)</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Mese (nel periodo)</label>
             <select
-              value={selMonthKey}
+              value={effectiveMonthKey}
               onChange={(e) => setSelMonthKey(e.target.value)}
               className={`${gestionaleSelectNativePlainClass} mt-1 block h-10 w-full py-0`}
               disabled={monthKeys.length === 0}
@@ -194,9 +176,9 @@ export function ReportRicambiConsumoSection({
 
         {vista === "anno" ? (
           <div className="w-full min-w-[8rem] lg:w-auto">
-            <label className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Anno (nel periodo)</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Anno (nel periodo)</label>
             <select
-              value={String(selYear)}
+              value={String(effectiveYear)}
               onChange={(e) => setSelYear(Number(e.target.value))}
               className={`${gestionaleSelectNativePlainClass} mt-1 block h-10 w-full py-0`}
               disabled={years.length === 0}
@@ -212,7 +194,7 @@ export function ReportRicambiConsumoSection({
       </div>
 
       {!hasLog ? (
-        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-300">
+        <p className="mt-4 text-sm text-[color:var(--cab-text-muted)]">
           Dati insufficienti: non è presente uno storico movimenti magazzino. I consumi si popolano quando registrate
           variazioni di scorta nei log.
         </p>
@@ -277,7 +259,7 @@ export function ReportRicambiConsumoSection({
                 pageCount={rankingPageCount}
                 onPageChange={setRankingPage}
                 label={rankingPagerLabel}
-                className="mt-2 rounded-lg border border-zinc-100 bg-zinc-50/50 px-2 dark:border-zinc-800 dark:bg-zinc-900/30"
+                className="mt-2 rounded-lg border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_50%,var(--cab-card))] px-2"
               />
             ) : null}
           </div>

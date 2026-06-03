@@ -1,7 +1,14 @@
 "use client";
 
-import type { ReactNode } from "react";
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+} from "react";
 import { dsFocus } from "@/lib/ui/design-system";
+import { GlobalTableSortIcon } from "@/components/gestionale/global-table/global-table-sort-icon";
 import {
   cycleGlobalTableSort,
   globalTableButtonJustify,
@@ -29,6 +36,97 @@ export type GestionaleSortPhase = GlobalTableSortPhase;
 /** @deprecated Usare `globalTableTheadClass`. */
 export const gestionaleTableTheadClass = globalTableTheadClass;
 
+export type GlobalTableHeadLabelProps = {
+  label: string;
+  align?: "left" | "center" | "right";
+  thClassName?: string;
+  scope?: "col" | "row" | "colgroup" | "rowgroup";
+  "aria-label"?: string;
+};
+
+/** Solo contenuto titolo — mai un `<th>` (wrapping a cura di GlobalTableHead o cella manuale). */
+export function GlobalTableHeadLabelContent({ label }: { label: string }) {
+  return (
+    <span className={`${globalTableThLabel} block min-w-0 truncate whitespace-nowrap`}>{label}</span>
+  );
+}
+
+/** Cella header statica — SSOT per markup `<th>`. */
+export function globalTableHeadLabelCell({
+  label,
+  align = "left",
+  thClassName = "",
+  scope,
+  "aria-label": ariaLabel,
+}: GlobalTableHeadLabelProps) {
+  return (
+    <th
+      scope={scope}
+      aria-label={ariaLabel}
+      className={`${globalTableThCell} ${globalTableThAlign(align)} ${thClassName}`.trim()}
+    >
+      {label ? <GlobalTableHeadLabelContent label={label} /> : null}
+    </th>
+  );
+}
+
+function isTableRowElement(node: ReactNode): node is ReactElement<{ children?: ReactNode }> {
+  return isValidElement(node) && node.type === "tr";
+}
+
+function isTableCellElement(node: ReactNode): boolean {
+  return isValidElement(node) && (node.type === "th" || node.type === "td");
+}
+
+function isHeadLabelElement(el: ReactElement): boolean {
+  if (typeof el.type !== "function") return false;
+  return (el.type as { displayName?: string }).displayName === "GlobalTableHeadLabel";
+}
+
+function cellFromChild(child: ReactNode, index: number): ReactNode {
+  if (child == null || child === false) return null;
+  if (!isValidElement(child)) return null;
+
+  const el = child as ReactElement;
+  const key = el.key ?? index;
+
+  if (isTableCellElement(el)) {
+    return cloneElement(el, { key });
+  }
+
+  if (isHeadLabelElement(el)) {
+    return cloneElement(
+      globalTableHeadLabelCell(el.props as GlobalTableHeadLabelProps) as ReactElement,
+      { key },
+    );
+  }
+
+  return cloneElement(el, { key });
+}
+
+/** Normalizza figli header: evita `<tr>` duplicati e `<th>` annidati. */
+export function normalizeGlobalTableHeadChildren(children: ReactNode): ReactNode {
+  const items = Children.toArray(children).filter(Boolean) as ReactNode[];
+
+  if (items.length === 0) {
+    return <tr className={globalTableHeadEdgeInset} />;
+  }
+
+  if (items.length === 1 && isTableRowElement(items[0])) {
+    return items[0];
+  }
+
+  if (items.every(isTableRowElement)) {
+    return items.map((row, index) => cloneElement(row, { key: row.key ?? index }));
+  }
+
+  return (
+    <tr className={globalTableHeadEdgeInset}>
+      {items.map((child, index) => cellFromChild(child, index))}
+    </tr>
+  );
+}
+
 export function GlobalTableHead({
   children,
   sticky,
@@ -38,7 +136,7 @@ export function GlobalTableHead({
 }) {
   return (
     <thead className={`${globalTableTheadClass} ${sticky ? globalTableTheadSticky : ""}`.trim()}>
-      <tr className={globalTableHeadEdgeInset}>{children}</tr>
+      {normalizeGlobalTableHeadChildren(children)}
     </thead>
   );
 }
@@ -70,8 +168,13 @@ export function GlobalTableSortTh<K extends string>({
   const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
   const stacked = labelLines != null;
   const resolvedAlign = contentChipInset || stacked ? "left" : align;
-  let icon: ReactNode = <span className="shrink-0 opacity-40">↕</span>;
-  if (active) icon = sortPhase === "asc" ? <span className="shrink-0">↑</span> : <span className="shrink-0">↓</span>;
+  const ariaSort = active ? (sortPhase === "asc" ? "ascending" : "descending") : "none";
+  const sortHint = active
+    ? sortPhase === "asc"
+      ? "ordinato crescente"
+      : "ordinato decrescente"
+    : "non ordinato";
+  const sortLabel = stacked ? `${labelLines[0]} ${labelLines[1]}` : label;
   const labelNode = stacked ? (
     <span className={globalTableSortLabelStack}>
       <span className={globalTableSortLabelStackLine}>{labelLines[0]}</span>
@@ -82,38 +185,33 @@ export function GlobalTableSortTh<K extends string>({
   );
   return (
     <th
+      aria-sort={ariaSort}
       className={`${globalTableThCell} ${contentChipInset ? globalTableThCellChipInset : globalTableThAlign(resolvedAlign)} ${thClassName}`}
     >
       <button
         type="button"
         onClick={() => onSort(columnKey)}
+        aria-label={`${sortLabel}: ${sortHint}. Clic per cambiare ordinamento`}
         className={`${globalTableSortButton} ${stacked ? "items-start gap-1.5 py-0.5" : ""} ${globalTableButtonJustify(resolvedAlign)} ${dsFocus} ${
           active ? globalTableSortActive : globalTableSortIdle
         }`}
       >
         {labelNode}
-        {icon}
+        <GlobalTableSortIcon active={active} phase={sortPhase} className={stacked ? "self-center" : undefined} />
       </button>
     </th>
   );
 }
 
-/** Colonna statica (es. Azioni). */
-export function GlobalTableHeadLabel({
-  label,
-  align = "left",
-  thClassName = "",
-}: {
-  label: string;
-  align?: "left" | "center" | "right";
-  thClassName?: string;
-}) {
-  return (
-    <th className={`${globalTableThCell} ${globalTableThAlign(align)} ${thClassName}`}>
-      <span className={`${globalTableThLabel} block min-w-0 truncate whitespace-nowrap`}>{label}</span>
-    </th>
-  );
+/**
+ * Colonna statica (es. Azioni).
+ * In `<thead><tr>` manuali restituisce la cella `<th>` completa.
+ * Usato come figlio di `GlobalTableHead`, la cella è materializzata dal normalizer (no doppio `<th>`).
+ */
+export function GlobalTableHeadLabel(props: GlobalTableHeadLabelProps) {
+  return globalTableHeadLabelCell(props);
 }
+GlobalTableHeadLabel.displayName = "GlobalTableHeadLabel";
 
 /** Alias retrocompatibilità. */
 export const GestionaleSortTh = GlobalTableSortTh;

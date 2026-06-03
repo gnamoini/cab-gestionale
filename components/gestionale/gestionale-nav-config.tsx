@@ -1,5 +1,6 @@
 import type { ReactNode, SVGProps } from "react";
 import { isStagingPublicSlice, STAGING_MODULE_BADGE, STAGING_SAFE_HREFS } from "@/lib/env/staging-public";
+import { PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 
 function SvgIcon(props: SVGProps<SVGSVGElement> & { children: ReactNode }) {
   const { children, className, ...rest } = props;
@@ -98,15 +99,6 @@ export function IconNavBunder(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconNavSupporto(props: SVGProps<SVGSVGElement>) {
-  return (
-    <SvgIcon {...props}>
-      <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" />
-      <circle cx="12" cy="12" r="10" />
-    </SvgIcon>
-  );
-}
-
 export function IconNavSettings(props: SVGProps<SVGSVGElement>) {
   return (
     <SvgIcon {...props}>
@@ -128,17 +120,27 @@ export function IconNavLavorazioniClient(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconNavDipendenti(props: SVGProps<SVGSVGElement>) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
+    </SvgIcon>
+  );
+}
+
 export const GESTIONALE_NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: IconNavDashboard },
   { href: "/lavorazioni", label: "Lavorazioni", Icon: IconNavLavorazioni },
-  { href: "/lavorazioni-clienti", label: "Lavorazioni (Clienti)", Icon: IconNavLavorazioniClient },
+  { href: "/lavorazioni-clienti", label: PORTALE_CLIENTI_LABEL, Icon: IconNavLavorazioniClient },
   { href: "/preventivi", label: "Preventivi", Icon: IconNavPreventivi },
   { href: "/documenti", label: "Documenti", Icon: IconNavDocumenti },
   { href: "/magazzino", label: "Magazzino", Icon: IconNavMagazzino },
   { href: "/mezzi", label: "Mezzi", Icon: IconNavMezzi },
+  { href: "/dipendenti", label: "Dipendenti", Icon: IconNavDipendenti },
   { href: "/bunder", label: "BUNDER", Icon: IconNavBunder },
   { href: "/report", label: "Report", Icon: IconNavReport },
-  { href: "/supporto", label: "Supporto", Icon: IconNavSupporto },
   { href: "/impostazioni", label: "Configurazione", Icon: IconNavSettings },
   { href: "/dashboard/security", label: "Sicurezza", Icon: IconNavSecurity },
 ] as const;

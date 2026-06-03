@@ -23,10 +23,8 @@ export function aggregateMagazzinoQtyByProductInRange(
 
 /** Somma uscite (Δ scorta negativo) nel periodo — KPI report «Ricambi movimentati». */
 export function sumMagazzinoUsciteQtyInRange(magLog: MagazzinoChangeLogEntry[], range: DateRange): number {
+  const byProduct = aggregateMagazzinoQtyByProductInRange(magLog, range);
   let q = 0;
-  for (const e of magLog) {
-    if (!isoInRange(e.at, range)) continue;
-    q += usciteQtyFromMagazzinoEntry(e);
-  }
+  for (const agg of byProduct.values()) q += agg.uscite;
   return Math.round(q * 10) / 10;
 }

@@ -3,12 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import {
-  erpBtnAccent,
-  erpBtnNeutral,
-  erpBtnSoftOrange,
-  erpFocus,
-} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpBtnSoftOrange } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   GestionaleLogChangeList,
   GestionaleLogEmpty,
@@ -18,40 +13,68 @@ import {
 } from "@/components/gestionale/gestionale-log-ui";
 import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } from "@/components/gestionale/documenti/documenti-helpers";
 import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
-import { buildPreventiviArchivioFilterHref } from "@/lib/preventivi/preventivi-lavorazione-href";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import { buildPreventiviArchivioFilterHref, buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
 import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
-import {
-  hrefDocumentiPerMezzo,
-  hrefLavorazioniPerMezzo,
-  hrefPreventiviPerMezzo,
-  ultimaLavorazioneLabel,
-} from "@/lib/mezzi/mezzi-helpers";
+import { ultimaLavorazioneLabel } from "@/lib/mezzi/mezzi-helpers";
+import { hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useMezzoHub } from "@/src/hooks/gestionale/use-mezzo-hub";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
-import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
-import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { dsScrollbar, dsTable, dsTableRow, dsTableWrap, dsBtnDanger } from "@/lib/ui/design-system";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { LavorazioniModalHeader, LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
+import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
+import {
+  HubModalPanoramicaField,
+  HubModalPanoramicaFieldGrid,
+  HubModalPanoramicaFieldGroup,
+  HubModalPanoramicaPanel,
+  HubModalPanoramicaSummary,
+  HubModalPanoramicaSummaryItem,
+} from "@/components/design-system/hub-modal-panoramica";
+import {
+  MEZZI_HUB_TAB_ORDER,
+  MezziHubErrorBanner,
+  MezziHubFooter,
+  MezziHubList,
+  MezziHubListItem,
+  MezziHubListMeta,
+  MezziHubListSubtitle,
+  MezziHubListTitle,
+  MezziHubQuickLinks,
+  MezziHubSyntheticBanner,
+  MezziHubTabEmpty,
+  MezziHubTabJumpButton,
+  MezziHubTimelineKindBadge,
+  fmtMezziHubDt,
+  type MezziHubTabId,
+} from "@/components/gestionale/mezzi/mezzi-hub-ui";
+import {
+  dsScrollbar,
+  dsTable,
+  dsTableRow,
+  dsTableWrap,
+  dsBtnDanger,
+  dsTableActionTextBtn,
+  dsTableActionTextBtnPrimary,
+} from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+import type { CSSProperties } from "react";
 
-type TabId = "panoramica" | "foto" | "lavorazioni" | "timeline" | "preventivi" | "documenti" | "log";
-
-function fmtDt(iso: string) {
-  try {
-    return new Date(iso).toLocaleString("it-IT", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return iso;
-  }
-}
+const lavorazioneAttivaPillStyle = (active: boolean): CSSProperties | undefined =>
+  active
+    ? {
+        background: "color-mix(in srgb, var(--cab-success) 22%, var(--cab-card))",
+        color: "color-mix(in srgb, var(--cab-success) 92%, var(--cab-text))",
+      }
+    : {
+        background: "color-mix(in srgb, var(--cab-surface-2) 88%, var(--cab-card))",
+        color: "var(--cab-text-muted)",
+      };
 
 export function MezziHubDetailModal({
   mezzo,
@@ -66,7 +89,7 @@ export function MezziHubDetailModal({
   onDelete?: () => void;
   canEdit?: boolean;
 }) {
-  const [tab, setTab] = useState<TabId>("panoramica");
+  const [tab, setTab] = useState<MezziHubTabId>("panoramica");
 
   const hubQuery = useMezzoHub(mezzo.id);
   const hubData = hubQuery.data;
@@ -164,156 +187,191 @@ export function MezziHubDetailModal({
   }, [mezzo.id, timeline.length, listPageSize, resetTlPage]);
   const pagedTimeline = useMemo(() => sliceTl(timeline), [timeline, sliceTl, tlPage]);
 
-  const tabBtn = (id: TabId, label: string) => {
-    const on = tab === id;
-    return (
-      <button
-        type="button"
-        key={id}
-        onClick={() => setTab(id)}
-        className={`shrink-0 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${on ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_15%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]" : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:border-zinc-300 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"} ${erpFocus}`}
-      >
-        {label}
-      </button>
-    );
+  const mezzoTabPanelId = `mezzi-hub-panel-${tab}`;
+  const mezzoTabLabel = (id: MezziHubTabId) => {
+    switch (id) {
+      case "panoramica":
+        return "Panoramica";
+      case "foto":
+        return "Foto";
+      case "lavorazioni":
+        return `Lavorazioni (${interventi.length})`;
+      case "timeline":
+        return `Timeline (${nTimeline})`;
+      case "preventivi":
+        return `Preventivi (${nPv})`;
+      case "documenti":
+        return `Documenti (${nDoc})`;
+      case "log":
+        return `Log (${hubLogEntries.length})`;
+    }
   };
+
+  const mezzoTitolo = `${mezzo.marca} ${mezzo.modello !== "—" ? mezzo.modello : ""}`.trim();
+  const mezzoSottotitolo = [
+    mezzo.cliente?.trim() && mezzo.cliente !== "—" ? mezzo.cliente : null,
+    mezzo.cantiere?.trim() ? mezzo.cantiere : null,
+    mezzo.targa?.trim() && mezzo.targa !== "—" ? mezzo.targa : null,
+    mezzo.matricola?.trim() && mezzo.matricola !== "—" ? mezzo.matricola : null,
+    mezzo.numeroScuderia?.trim() ? `sc. ${mezzo.numeroScuderia}` : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
+  const footerNode = <MezziHubFooter tab={tab} mezzo={mezzo} onClose={onClose} />;
 
   return (
     <LavorazioniModalShell
       wide
-      maxWidthClass="max-w-3xl"
+      maxWidthClass="max-w-4xl"
       onRequestClose={onClose}
       titleId="mezzi-hub-title"
       header={
-        <div className="flex w-full shrink-0 flex-wrap items-start justify-between gap-2 border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
-          <div className="min-w-0">
-            <h2 id="mezzi-hub-title" className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              {mezzo.marca} {mezzo.modello !== "—" ? mezzo.modello : ""}
-            </h2>
-            <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">
-              {mezzo.targa?.trim() && mezzo.targa !== "—" ? `${mezzo.targa} · ` : ""}
-              {mezzo.matricola?.trim() && mezzo.matricola !== "—" ? `${mezzo.matricola}` : ""}
-              {mezzo.numeroScuderia?.trim() ? ` · sc. ${mezzo.numeroScuderia}` : ""}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <button
-              type="button"
-              className={erpBtnSoftOrange}
-              onClick={onEdit}
-              disabled={Boolean(mezzo.hubSynthetic) || !canEdit}
-              title={!canEdit ? READONLY_PERMISSION_HINT : mezzo.hubSynthetic ? "Registra il mezzo in anagrafica per abilitare la modifica" : undefined}
-            >
-              Modifica
-            </button>
-            {onDelete && !mezzo.hubSynthetic ? (
-              <button type="button" className={dsBtnDanger} onClick={onDelete} disabled={!canEdit}>
-                Elimina
+        <LavorazioniModalHeader
+          title={mezzoTitolo || "Mezzo"}
+          subtitle={mezzoSottotitolo || undefined}
+          titleId="mezzi-hub-title"
+          onRequestClose={onClose}
+          actions={
+            <>
+              <button
+                type="button"
+                className={erpBtnSoftOrange}
+                onClick={onEdit}
+                disabled={Boolean(mezzo.hubSynthetic) || !canEdit}
+                title={
+                  !canEdit
+                    ? READONLY_PERMISSION_HINT
+                    : mezzo.hubSynthetic
+                      ? "Registra il mezzo in anagrafica per abilitare la modifica"
+                      : undefined
+                }
+              >
+                Modifica
               </button>
-            ) : null}
-            <button type="button" className={erpBtnNeutral} onClick={onClose}>
-              Chiudi
-            </button>
-          </div>
-        </div>
+              {onDelete && !mezzo.hubSynthetic ? (
+                <button type="button" className={dsBtnDanger} onClick={onDelete} disabled={!canEdit}>
+                  Elimina
+                </button>
+              ) : null}
+            </>
+          }
+        />
       }
     >
-        {hubQuery.isError ? (
-          <div className="shrink-0 border-b border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900 dark:border-red-900/40 dark:bg-red-950/40 dark:text-red-100">
-            {hubQuery.error?.message ?? "Errore caricamento hub mezzo."}
-          </div>
+      {hubQuery.isError ? (
+        <MezziHubErrorBanner message={hubQuery.error?.message ?? "Errore caricamento hub mezzo."} />
+      ) : null}
+
+      <HubModalTabBar aria-label="Sezioni dettaglio mezzo">
+        {MEZZI_HUB_TAB_ORDER.map((id) => (
+          <HubModalTab
+            key={id}
+            id={`mezzi-hub-tab-${id}`}
+            panelId={tab === id ? mezzoTabPanelId : undefined}
+            label={mezzoTabLabel(id)}
+            active={tab === id}
+            onSelect={() => setTab(id)}
+          />
+        ))}
+      </HubModalTabBar>
+
+      <GestionaleModalScrollBody
+        className="p-4"
+        role="tabpanel"
+        id={mezzoTabPanelId}
+        aria-labelledby={`mezzi-hub-tab-${tab}`}
+      >
+        {hubQuery.isLoading && !hubData ? (
+          <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento dati mezzo…</p>
         ) : null}
 
-        <div className="flex shrink-0 flex-wrap gap-1.5 border-b border-zinc-100 bg-zinc-50/50 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900/80">
-          {tabBtn("panoramica", "Panoramica")}
-          {tabBtn("foto", "Foto")}
-          {tabBtn("lavorazioni", `Lavorazioni (${interventi.length})`)}
-          {tabBtn("timeline", `Timeline (${nTimeline})`)}
-          {tabBtn("preventivi", `Preventivi (${nPv})`)}
-          {tabBtn("documenti", `Documenti (${nDoc})`)}
-          {tabBtn("log", `Log (${hubLogEntries.length})`)}
-        </div>
+        {tab === "panoramica" ? (
+          <HubModalPanoramicaPanel>
+            {mezzo.hubSynthetic ? <MezziHubSyntheticBanner /> : null}
+            {hubData ? (
+              <HubModalPanoramicaSummary>
+                <MezziHubTabJumpButton onJump={() => setTab("lavorazioni")}>
+                  <HubModalPanoramicaSummaryItem
+                    label="Lavorazioni"
+                    value={String(hubData.kpi.totaleLavorazioni)}
+                  />
+                </MezziHubTabJumpButton>
+                <HubModalPanoramicaSummaryItem
+                  label="Lavorazione attiva"
+                  value={hubData.kpi.lavorazioneAttiva ? "Sì" : "No"}
+                  pillStyle={lavorazioneAttivaPillStyle(hubData.kpi.lavorazioneAttiva)}
+                />
+                <MezziHubTabJumpButton onJump={() => setTab("preventivi")}>
+                  <HubModalPanoramicaSummaryItem label="Preventivi" value={String(hubData.kpi.preventiviCount)} />
+                </MezziHubTabJumpButton>
+                <MezziHubTabJumpButton onJump={() => setTab("documenti")}>
+                  <HubModalPanoramicaSummaryItem label="Documenti" value={String(hubData.kpi.documentiCount)} />
+                </MezziHubTabJumpButton>
+              </HubModalPanoramicaSummary>
+            ) : null}
 
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4">
-          {hubQuery.isLoading && !hubData ? (
-            <p className="text-sm text-zinc-500">Caricamento dati mezzo…</p>
-          ) : null}
-          {tab === "panoramica" ? (
-            <div className="space-y-4 text-sm">
-              {mezzo.hubSynthetic ? (
-                <p className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-2 text-xs text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
-                  Riga sintetica: crea il mezzo in anagrafica con gli stessi identificativi (targa / matricola) per unificare il parco e abilitare la modifica.
-                </p>
-              ) : null}
-              {hubData ? (
-                <div className="grid gap-2 rounded-lg border border-zinc-200 bg-white p-3 text-xs dark:border-zinc-700 dark:bg-zinc-950/40 sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
-                    <p className="font-semibold uppercase tracking-wide text-zinc-500">Lavorazioni</p>
-                    <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">{hubData.kpi.totaleLavorazioni}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold uppercase tracking-wide text-zinc-500">Lavorazione attiva</p>
-                    <p className="mt-0.5 font-semibold text-zinc-900 dark:text-zinc-50">{hubData.kpi.lavorazioneAttiva ? "Sì" : "No"}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold uppercase tracking-wide text-zinc-500">Preventivi</p>
-                    <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">{hubData.kpi.preventiviCount}</p>
-                  </div>
-                  <div>
-                    <p className="font-semibold uppercase tracking-wide text-zinc-500">Documenti</p>
-                    <p className="mt-0.5 text-lg font-semibold tabular-nums text-zinc-900 dark:text-zinc-50">{hubData.kpi.documentiCount}</p>
-                  </div>
-                </div>
-              ) : null}
-              <dl className="grid gap-2 sm:grid-cols-2">
-                <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-                  <dt className="text-[10px] font-bold uppercase text-zinc-500">Cliente</dt>
-                  <dd className="mt-1 font-medium text-zinc-900 dark:text-zinc-100">{mezzo.cliente}</dd>
-                </div>
-                <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-                  <dt className="text-[10px] font-bold uppercase text-zinc-500">Ultima lavorazione</dt>
-                  <dd className="mt-1 font-medium text-zinc-900 dark:text-zinc-100">{ultimaLavorazioneLabel(interventi)}</dd>
-                </div>
-                <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
-                  <dt className="text-[10px] font-bold uppercase text-zinc-500">Utilizzatore</dt>
-                  <dd className="mt-1 text-zinc-800 dark:text-zinc-200">{mezzo.utilizzatore}</dd>
-                </div>
-              </dl>
-              <div className="flex flex-wrap gap-2">
-                <Link href={hrefDocumentiPerMezzo(mezzo)} className={`${erpBtnNeutral} inline-flex no-underline`} onClick={onClose}>
-                  Apri documenti filtrati
-                </Link>
-                <Link href={hrefLavorazioniPerMezzo(mezzo)} className={`${erpBtnNeutral} inline-flex no-underline`} onClick={onClose} title="Apri la pagina Lavorazioni filtrata per questo mezzo">
-                  Lavorazioni
-                </Link>
-                <Link href={hrefPreventiviPerMezzo(mezzo)} className={`${erpBtnNeutral} inline-flex no-underline`} onClick={onClose}>
-                  Vai a preventivi
-                </Link>
-              </div>
-            </div>
-          ) : null}
+            <HubModalPanoramicaFieldGroup title="Anagrafica">
+              <HubModalPanoramicaFieldGrid>
+                <HubModalPanoramicaField label="Cliente" value={hubPanoramicaDisplayValue(mezzo.cliente)} />
+                <HubModalPanoramicaField label="Cantiere" value={hubPanoramicaDisplayValue(mezzo.cantiere)} />
+                <HubModalPanoramicaField label="Utilizzatore" value={hubPanoramicaDisplayValue(mezzo.utilizzatore)} />
+                <HubModalPanoramicaField label="Tipo attrezzatura" value={hubPanoramicaDisplayValue(mezzo.tipoAttrezzatura)} />
+                <HubModalPanoramicaField
+                  label="Telaio"
+                  value={hubPanoramicaDisplayValue(
+                    [mezzo.marcaTelaio, mezzo.modelloTelaio].filter((v) => v?.trim() && v !== "—").join(" ") || undefined,
+                  )}
+                />
+                <HubModalPanoramicaField label="Ultima lavorazione" value={ultimaLavorazioneLabel(interventi)} />
+              </HubModalPanoramicaFieldGrid>
+            </HubModalPanoramicaFieldGroup>
 
-          {tab === "foto" ? (
-            <RecordImageManager
-              scope="mezzi"
-              recordId={mezzo.id}
-              title="Foto mezzo"
-              canEdit={canEdit && !mezzo.hubSynthetic}
-              onImageEvent={() => void hubQuery.refetch()}
-            />
-          ) : null}
+            {mezzo.note?.trim() ? (
+              <GestionaleInfoCard title="Note mezzo">
+                <p className="whitespace-pre-wrap text-xs leading-snug text-[color:var(--cab-text)]">{mezzo.note.trim()}</p>
+              </GestionaleInfoCard>
+            ) : null}
 
-          {tab === "lavorazioni" ? (
+            <MezziHubQuickLinks mezzo={mezzo} onClose={onClose} onGoTab={setTab} />
+          </HubModalPanoramicaPanel>
+        ) : null}
+
+        {tab === "foto" ? (
+          <RecordImageManager
+            scope="mezzi"
+            recordId={mezzo.id}
+            title="Foto mezzo"
+            hubCardLayout
+            canEdit={canEdit && !mezzo.hubSynthetic}
+            onImageEvent={() => void hubQuery.refetch()}
+          />
+        ) : null}
+
+        {tab === "lavorazioni" ? (
+          <GestionaleInfoCard
+            title="Lavorazioni collegate"
+            subtitle={`${sortedLav.length} ${sortedLav.length === 1 ? "record" : "record"}`}
+            actions={
+              sortedLav.length > 0 ? (
+                <Link
+                  href={buildPreventiviLavorazioneFocusHref(sortedLav[0]!.id, sortedLav[0]!.origine)}
+                  className={dsTableActionTextBtn}
+                  onClick={onClose}
+                >
+                  Ultima lavorazione
+                </Link>
+              ) : null
+            }
+          >
             <div className={`${dsTableWrap} ${dsScrollbar}`}>
               <table className={`${dsTable} min-w-[640px] text-xs`}>
-                <thead>
-                  <tr>
-                    <GlobalTableHeadLabel label="Ingresso" />
-                    <GlobalTableHeadLabel label="Stato" />
-                    <GlobalTableHeadLabel label="Note" />
-                    <GlobalTableHeadLabel label="" thClassName="w-16" />
-                  </tr>
-                </thead>
+                <GlobalTableHead>
+                  <GlobalTableHeadLabel label="Ingresso" />
+                  <GlobalTableHeadLabel label="Stato" />
+                  <GlobalTableHeadLabel label="Descrizione" />
+                  <GlobalTableHeadLabel label="" thClassName="w-28" align="right" />
+                </GlobalTableHead>
                 <tbody>
                   {sortedLav.length === 0 ? (
                     <tr>
@@ -324,17 +382,28 @@ export function MezziHubDetailModal({
                   ) : (
                     pagedLav.map((r) => (
                       <tr key={r.id} className={dsTableRow}>
-                        <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px]">{fmtDt(r.dataIngresso)}</td>
-                        <td className="px-2 py-2">{r.statoFinale}</td>
-                        <td className="max-w-[280px] px-2 py-2 text-zinc-600 dark:text-zinc-400">{r.descrizione}</td>
+                        <td className="whitespace-nowrap px-2 py-2 font-mono text-[11px] text-[color:var(--cab-text-muted)]">
+                          {fmtMezziHubDt(r.dataIngresso)}
+                        </td>
+                        <td className="px-2 py-2 text-[color:var(--cab-text)]">{r.statoFinale}</td>
+                        <td className="max-w-[280px] px-2 py-2 text-[color:var(--cab-text-muted)]">{r.descrizione || "—"}</td>
                         <td className="whitespace-nowrap px-2 py-2 text-right">
-                          <Link
-                            href={buildPreventiviArchivioFilterHref(r.id, r.origine === "attiva" ? "attiva" : "storico")}
-                            className="text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
-                            onClick={onClose}
-                          >
-                            Preventivi
-                          </Link>
+                          <div className="flex flex-nowrap justify-end gap-1">
+                            <Link
+                              href={buildPreventiviLavorazioneFocusHref(r.id, r.origine)}
+                              className={dsTableActionTextBtnPrimary}
+                              onClick={onClose}
+                            >
+                              Apri
+                            </Link>
+                            <Link
+                              href={buildPreventiviArchivioFilterHref(r.id, r.origine)}
+                              className={dsTableActionTextBtn}
+                              onClick={onClose}
+                            >
+                              Preventivi
+                            </Link>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -345,158 +414,183 @@ export function MezziHubDetailModal({
                 <TablePagination page={lavPage} pageCount={lavPageCount} onPageChange={setLavPage} label={lavPagerLabel} />
               ) : null}
             </div>
-          ) : null}
+          </GestionaleInfoCard>
+        ) : null}
 
-          {tab === "timeline" ? (
-            <>
-              {pagedTimeline.length === 0 ? (
-                <p className="text-sm text-zinc-500">Nessun evento in timeline.</p>
-              ) : (
-                <ul className="space-y-2">
-                  {pagedTimeline.map((ev) => (
-                    <li
-                      key={ev.id}
-                      className="flex flex-col gap-1 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
-                    >
-                      <p className="text-[11px] font-mono text-zinc-500">{fmtDt(ev.at)}</p>
-                      <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">{ev.title}</p>
-                      {ev.subtitle ? <p className="text-xs text-zinc-600 dark:text-zinc-400">{ev.subtitle}</p> : null}
-                      {ev.ref?.lavorazioneId && ev.ref.origine ? (
-                        <Link
-                          href={buildPreventiviArchivioFilterHref(ev.ref.lavorazioneId, ev.ref.origine)}
-                          className="text-xs font-medium text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
-                          onClick={onClose}
-                        >
-                          Preventivi collegati
-                        </Link>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {showTlPager ? (
-                <TablePagination page={tlPage} pageCount={tlPageCount} onPageChange={setTlPage} label={tlPagerLabel} />
-              ) : null}
-            </>
-          ) : null}
-
-          {tab === "preventivi" ? (
-            <>
-            <ul className="space-y-2">
-              {sortedPv.length === 0 ? (
-                <li className="text-sm text-zinc-500">Nessun preventivo collegato.</li>
-              ) : (
-                pagedPv.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
+        {tab === "timeline" ? (
+          <GestionaleInfoCard title="Timeline" subtitle={`${timeline.length} eventi ordinati per data`}>
+            {pagedTimeline.length === 0 ? (
+              <MezziHubTabEmpty message="Nessun evento in timeline per questo mezzo." />
+            ) : (
+              <MezziHubList>
+                {pagedTimeline.map((ev) => (
+                  <MezziHubListItem
+                    key={ev.id}
+                    actions={
+                      ev.ref?.lavorazioneId && ev.ref.origine ? (
+                        <>
+                          <Link
+                            href={buildPreventiviLavorazioneFocusHref(ev.ref.lavorazioneId, ev.ref.origine)}
+                            className={dsTableActionTextBtnPrimary}
+                            onClick={onClose}
+                          >
+                            Apri
+                          </Link>
+                          <Link
+                            href={buildPreventiviArchivioFilterHref(ev.ref.lavorazioneId, ev.ref.origine)}
+                            className={dsTableActionTextBtn}
+                            onClick={onClose}
+                          >
+                            Preventivi
+                          </Link>
+                        </>
+                      ) : null
+                    }
                   >
-                    <div className="min-w-0">
-                      <p className="font-semibold text-zinc-900 dark:text-zinc-50">
-                        {p.numero} · {fmtDt(p.dataCreazione)}
-                      </p>
-                      <p className="text-xs text-zinc-500">{p.cliente}</p>
-                    </div>
-                    <div className="flex shrink-0 flex-wrap gap-1">
-                      <button
-                        type="button"
-                        className={erpBtnNeutral}
-                        onClick={() => {
-                          const sp = new URLSearchParams();
-                          sp.set(Q_PREVENTIVI_OPEN, p.id);
-                          openUrlInNewTab(`/preventivi?${sp.toString()}`);
-                        }}
-                      >
-                        Dettaglio
-                      </button>
-                      <button type="button" className={erpBtnSoftOrange} onClick={() => openPreventivoPdfInNewTab(p, "Gestionale")}>
-                        PDF
-                      </button>
-                    </div>
-                  </li>
-                ))
-              )}
-            </ul>
-            {showPvPager ? <TablePagination page={pvPage} pageCount={pvPageCount} onPageChange={setPvPage} label={pvPagerLabel} /> : null}
-            </>
-          ) : null}
-
-          {tab === "documenti" ? (
-            <>
-            <ul className="space-y-2">
-              {documenti.length === 0 ? (
-                <li className="text-sm text-zinc-500">Nessun documento collegato a questo mezzo.</li>
-              ) : (
-                pagedDoc.map((d) => {
-                  const canOpen = canOpenDocumento(d);
-                  return (
-                    <li
-                      key={d.id}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-zinc-100 bg-zinc-50/60 px-3 py-2 dark:border-zinc-800 dark:bg-zinc-800/40"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase text-zinc-500">{formatDocumentoRigaSintetica(d)}</p>
-                        <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{d.nome}</p>
+                    <div className="flex min-w-0 items-start gap-2">
+                      <MezziHubTimelineKindBadge kind={ev.kind} />
+                      <div className="min-w-0 flex-1">
+                        <MezziHubListMeta>{fmtMezziHubDt(ev.at)}</MezziHubListMeta>
+                        <MezziHubListTitle>{ev.title}</MezziHubListTitle>
+                        {ev.subtitle ? <MezziHubListSubtitle>{ev.subtitle}</MezziHubListSubtitle> : null}
                       </div>
-                      {canOpen ? (
+                    </div>
+                  </MezziHubListItem>
+                ))}
+              </MezziHubList>
+            )}
+            {showTlPager ? (
+              <TablePagination page={tlPage} pageCount={tlPageCount} onPageChange={setTlPage} label={tlPagerLabel} />
+            ) : null}
+          </GestionaleInfoCard>
+        ) : null}
+
+        {tab === "preventivi" ? (
+          <GestionaleInfoCard title="Preventivi" subtitle={`${sortedPv.length} collegati al mezzo`}>
+            {sortedPv.length === 0 ? (
+              <MezziHubTabEmpty message="Nessun preventivo collegato a questo mezzo." />
+            ) : (
+              <MezziHubList>
+                {pagedPv.map((p) => (
+                  <MezziHubListItem
+                    key={p.id}
+                    actions={
+                      <>
                         <button
                           type="button"
-                          className={`${erpBtnNeutral} shrink-0`}
-                          onClick={() => void openDocumentoFile(d)}
+                          className={dsTableActionTextBtn}
+                          onClick={() => {
+                            const sp = new URLSearchParams();
+                            sp.set(Q_PREVENTIVI_OPEN, p.id);
+                            openUrlInNewTab(`/preventivi?${sp.toString()}`);
+                          }}
                         >
-                          Apri
+                          Dettaglio
                         </button>
-                      ) : (
-                        <span className="text-xs text-zinc-400">—</span>
-                      )}
-                    </li>
-                  );
-                })
-              )}
-            </ul>
-            {showDocPager ? <TablePagination page={docPage} pageCount={docPageCount} onPageChange={setDocPage} label={docPagerLabel} /> : null}
-            </>
-          ) : null}
+                        <button
+                          type="button"
+                          className={dsTableActionTextBtnPrimary}
+                          onClick={() => openPreventivoPdfInNewTab(p, "Gestionale")}
+                        >
+                          PDF
+                        </button>
+                      </>
+                    }
+                  >
+                    <MezziHubListTitle>
+                      {p.numero} · {fmtMezziHubDt(p.dataCreazione)}
+                    </MezziHubListTitle>
+                    <MezziHubListSubtitle>{p.cliente}</MezziHubListSubtitle>
+                  </MezziHubListItem>
+                ))}
+              </MezziHubList>
+            )}
+            {showPvPager ? <TablePagination page={pvPage} pageCount={pvPageCount} onPageChange={setPvPage} label={pvPagerLabel} /> : null}
+          </GestionaleInfoCard>
+        ) : null}
 
-          {tab === "log" ? (
-            hubQuery.isLoading && !hubData ? (
-              <p className="text-sm text-zinc-500">Caricamento log…</p>
+        {tab === "documenti" ? (
+          <GestionaleInfoCard title="Documenti" subtitle={`${documenti.length} file collegati`}>
+            {documenti.length === 0 ? (
+              <MezziHubTabEmpty message="Nessun documento collegato a questo mezzo." />
+            ) : (
+              <MezziHubList>
+                {pagedDoc.map((d) => {
+                  const canOpen = canOpenDocumento(d);
+                  return (
+                    <MezziHubListItem
+                      key={d.id}
+                      actions={
+                        canOpen ? (
+                          <button
+                            type="button"
+                            className={dsTableActionTextBtnPrimary}
+                            onClick={() => void openDocumentoFile(d)}
+                          >
+                            Apri
+                          </button>
+                        ) : (
+                          <span className="text-xs text-[color:var(--cab-text-muted)]">—</span>
+                        )
+                      }
+                    >
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                        {formatDocumentoRigaSintetica(d)}
+                      </p>
+                      <MezziHubListTitle>{d.nome}</MezziHubListTitle>
+                    </MezziHubListItem>
+                  );
+                })}
+              </MezziHubList>
+            )}
+            {showDocPager ? <TablePagination page={docPage} pageCount={docPageCount} onPageChange={setDocPage} label={docPagerLabel} /> : null}
+          </GestionaleInfoCard>
+        ) : null}
+
+        {tab === "log" ? (
+          <GestionaleInfoCard title="Log anagrafica" subtitle={`${hubLogEntries.length} eventi`}>
+            {hubQuery.isLoading && !hubData ? (
+              <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento log…</p>
             ) : hubLogEntries.length === 0 ? (
               <GestionaleLogEmpty message="Nessuna modifica anagrafica registrata per questo mezzo." />
             ) : (
               <>
                 <GestionaleLogList>
                   {pagedHubLog.map((e) => {
-                  const vm = buildMezziGestionaleLogViewModel({
-                    tipo: e.tipo,
-                    mezzo: e.mezzo,
-                    riepilogo: e.riepilogo,
-                    autore: e.autore,
-                    at: e.at,
-                    changes: e.changes,
-                  });
-                  return (
-                    <li key={e.id}>
-                      <GestionaleLogEntryFourLines vm={vm}>
-                        <GestionaleLogChangeList changes={e.changes} compact />
-                      </GestionaleLogEntryFourLines>
-                    </li>
-                  );
-                })}
+                    const vm = buildMezziGestionaleLogViewModel({
+                      tipo: e.tipo,
+                      mezzo: e.mezzo,
+                      riepilogo: e.riepilogo,
+                      autore: e.autore,
+                      at: e.at,
+                      changes: e.changes,
+                    });
+                    return (
+                      <li key={e.id}>
+                        <GestionaleLogEntryFourLines vm={vm}>
+                          <GestionaleLogChangeList changes={e.changes} compact />
+                        </GestionaleLogEntryFourLines>
+                      </li>
+                    );
+                  })}
                 </GestionaleLogList>
                 {showHubLogPager ? (
-                  <TablePagination page={hubLogPage} pageCount={hubLogPageCount} onPageChange={setHubLogPage} label={hubLogPagerLabel} />
+                  <TablePagination
+                    page={hubLogPage}
+                    pageCount={hubLogPageCount}
+                    onPageChange={setHubLogPage}
+                    label={hubLogPagerLabel}
+                  />
                 ) : null}
               </>
-            )
-          ) : null}
-        </div>
+            )}
+          </GestionaleInfoCard>
+        ) : null}
+      </GestionaleModalScrollBody>
 
-        <div className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] px-4 py-3">
-          <Link href={hrefDocumentiPerMezzo(mezzo)} className={`${erpBtnAccent} inline-flex w-full justify-center no-underline sm:w-auto`} onClick={onClose}>
-            Documenti (pagina completa)
-          </Link>
-        </div>
+      {footerNode ? (
+        <div className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">{footerNode}</div>
+      ) : null}
     </LavorazioniModalShell>
   );
 }

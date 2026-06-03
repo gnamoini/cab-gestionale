@@ -11,7 +11,7 @@ import type { Placement } from "@floating-ui/react-dom";
 
 /**
  * Menu/listbox ancorato al trigger via portal + Floating UI.
- * Per sostituire dropdown `absolute top-full` legacy senza cambiare la logica dati.
+ * Con `listbox` (default) il pannello è `<ul role="listbox">` — voci in `<li role="presentation">`.
  */
 export function GlobalAnchoredMenu({
   open,
@@ -23,7 +23,8 @@ export function GlobalAnchoredMenu({
   matchAnchorWidth = true,
   panelWidth,
   maxHeight,
-  role = "listbox",
+  listbox = true,
+  listId,
   "aria-label": ariaLabel,
 }: {
   open: boolean;
@@ -35,12 +36,14 @@ export function GlobalAnchoredMenu({
   matchAnchorWidth?: boolean;
   panelWidth?: number;
   maxHeight?: number;
-  role?: string;
+  /** Se true, contenitore `<ul role="listbox">` (pattern dropdown globale). */
+  listbox?: boolean;
+  listId?: string;
   "aria-label"?: string;
 }) {
-  const panelRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLUListElement | HTMLDivElement>(null);
 
-  const { style, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
+  const { style, scrollInside, placementOriginClass, floatingRef } = useGlobalDropdownPortal({
     open,
     anchorRef,
     contentRef: panelRef,
@@ -55,15 +58,28 @@ export function GlobalAnchoredMenu({
 
   if (!open || !style) return null;
 
-  const menu = (
-    <div
-      ref={panelRef}
+  const panelClass = `${panelClassName} ${placementOriginClass} ${
+    scrollInside ? "overflow-y-auto gestionale-scrollbar" : "overflow-hidden"
+  }`;
+
+  const menu = listbox ? (
+    <ul
+      ref={floatingRef}
+      id={listId}
       style={style}
-      role={role}
+      role="listbox"
       aria-label={ariaLabel}
-      className={`${panelClassName} ${placementOriginClass} ${
-        scrollInside ? "overflow-y-auto" : "overflow-hidden"
-      }`}
+      className={panelClass}
+    >
+      {children}
+    </ul>
+  ) : (
+    <div
+      ref={floatingRef}
+      style={style}
+      role="presentation"
+      aria-label={ariaLabel}
+      className={panelClass}
     >
       {children}
     </div>

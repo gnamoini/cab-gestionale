@@ -19,7 +19,7 @@ export function formatMonthTitle(year: number, monthIndex: number): string {
   return `${MONTHS_IT[monthIndex]} ${year}`;
 }
 
-export { WEEKDAYS_IT };
+export { WEEKDAYS_IT, MONTHS_IT };
 
 export type CalendarCell = {
   date: Date;

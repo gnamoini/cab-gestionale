@@ -25,8 +25,8 @@ import {
   dsBtnGhost,
   dsBtnNeutral,
   dsBtnPrimary,
+  dsPageToolbar,
   dsPageToolbarBtn,
-  dsStickyToolbar,
 } from "@/lib/ui/design-system";
 
 type Props = {
@@ -129,9 +129,9 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
 
   return (
     <ShellCard title="Gestione Utenti e Permessi">
-      <div className={`${dsStickyToolbar} -mx-1 mb-4 sm:mx-0`}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
+      <div className={`${dsPageToolbar} -mx-1 mb-4 sm:mx-0`}>
+        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             {!readOnly ? (
               <button type="button" className={dsBtnPrimary} onClick={() => setCreateOpen(true)}>
                 Nuovo utente
@@ -142,7 +142,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
             </button>
           </div>
           {!readOnly ? (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2">
               {isDirty ? (
                 <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))]">
                   Modifiche non salvate

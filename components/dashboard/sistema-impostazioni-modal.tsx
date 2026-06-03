@@ -8,11 +8,20 @@ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { LavorazioniModalHeader, LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { CAB_MODAL_SCROLL_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import {
   DEFAULT_ADDETTI_LAVORAZIONI,
 } from "@/lib/lavorazioni/constants";
+import {
+  addettiLegacyNomi,
+  createAddettoId,
+  defaultAddettiRecords,
+  findAddettoById,
+  syncLavorazioniAddettiFromRecords,
+  type AddettoRecord,
+} from "@/lib/lavorazioni/addetto-model";
 import {
   assignColorForNewAddetto,
   removeAddettoFromColorMap,
@@ -23,7 +32,9 @@ import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import { readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
+import type { RicambioCompatRef } from "@/lib/magazzino/ricambio-compat-resolver";
 import {
   getScontoFornitoreMarca,
   registerMarcaInMagazzinoMaster,
@@ -45,10 +56,19 @@ import { appendDashboardSettingsSavedLog } from "@/lib/dashboard/dashboard-siste
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
-import { SettingsEditableStringRow } from "@/components/dashboard/settings-list-ui";
+import { SettingsDipendentiAssenzeSection } from "@/components/dashboard/settings-dipendenti-assenze-section";
+import {
+  SettingsEditableStringRow,
+  SETTINGS_DISCOUNT_INPUT,
+  SETTINGS_LIST_DIVIDER_UL,
+  SETTINGS_SECTION_CARD,
+  SETTINGS_SECTION_HINT,
+  SETTINGS_SECTION_TITLE,
+} from "@/components/dashboard/settings-list-ui";
+import { defaultTipiAssenza, type TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import { SettingsRinominaPropagaDialog } from "@/components/dashboard/settings-rinomina-propaga-dialog";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
-import { CloseButton } from "@/components/design-system";
+import { CloseButton, LoadingImpostazioniSkeleton } from "@/components/design-system";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import {
   dispatchAddettoDisplayRename,
@@ -81,6 +101,8 @@ import { cancelRouteTransition } from "@/src/lib/navigation/route-transition";
 import {
   dsBtnPrimary,
   dsFocus,
+  dsInput,
+  dsPageToolbarMetaChipAccent,
   dsStackPage,
   dsTypoSmall,
   gestionaleSelectFilterClass,
@@ -92,20 +114,23 @@ function mergeMaster(a: string[], b: string[]) {
 
 type SistemaSettingsSnapshot = {
   stati: StatoLavorazioneConfig[];
-  addetti: string[];
+  addettiRecords: AddettoRecord[];
   addettoColors: Record<string, string>;
   prioritaColors: Partial<Record<PrioritaLav, string>>;
   prioritaDb: PrioritaLavorazione[];
   mag: MagazzinoMasterPrefs;
   liste: MezziListePrefs;
   eco: SistemaPreventiviDefaults;
+  tipiAssenza: TipoAssenzaConfig[];
 };
 
 function buildResolvedFromModalSnapshot(s: SistemaSettingsSnapshot): CabAppSettingsResolved {
+  const synced = syncLavorazioniAddettiFromRecords(s.addettiRecords);
   return {
     lavorazioni: {
       stati: normalizeStatiList(s.stati),
-      addetti: s.addetti,
+      addettiRecords: synced.addettiRecords,
+      addetti: synced.addetti,
       addettoColors: s.addettoColors,
       prioritaColors: s.prioritaColors,
       prioritaDb: s.prioritaDb,
@@ -113,17 +138,24 @@ function buildResolvedFromModalSnapshot(s: SistemaSettingsSnapshot): CabAppSetti
     mezziListe: migrateMezziListePrefs(s.liste),
     magazzinoMaster: s.mag,
     preventiviDefaults: s.eco,
+    dipendenti: { tipiAssenza: s.tipiAssenza },
   };
 }
 
 function snapshotFromResolved(r: CabAppSettingsResolved): SistemaSettingsSnapshot {
-  const addetti =
-    r.lavorazioni.addetti?.length && r.lavorazioni.addetti.some((a) => a.trim().length > 0)
-      ? r.lavorazioni.addetti.map((a) => a.trim()).filter((a) => a.length > 0)
-      : [...DEFAULT_ADDETTI_LAVORAZIONI];
+  const addettiRecords =
+    r.lavorazioni.addettiRecords?.length &&
+    r.lavorazioni.addettiRecords.some((a) => a.nome.trim().length > 0)
+      ? r.lavorazioni.addettiRecords.map((a) => ({
+          id: a.id,
+          nome: a.nome.trim(),
+          cognome: a.cognome?.trim() ? a.cognome.trim() : null,
+        }))
+      : defaultAddettiRecords();
+  const addetti = addettiLegacyNomi(addettiRecords);
   return {
     stati: r.lavorazioni.stati?.length ? normalizeStatiList(r.lavorazioni.stati) : [...DEFAULT_STATI_LAVORAZIONI_DB],
-    addetti,
+    addettiRecords,
     addettoColors: syncAddettoColorMap(addetti, r.lavorazioni.addettoColors),
     prioritaColors: r.lavorazioni.prioritaColors ?? {},
     prioritaDb: r.lavorazioni.prioritaDb?.length ? [...r.lavorazioni.prioritaDb] : [...DEFAULT_PRIORITA_LAVORAZIONI_DB],
@@ -136,6 +168,7 @@ function snapshotFromResolved(r: CabAppSettingsResolved): SistemaSettingsSnapsho
     },
     liste: migrateMezziListePrefs(r.mezziListe),
     eco: { ...r.preventiviDefaults },
+    tipiAssenza: r.dipendenti.tipiAssenza?.length ? [...r.dipendenti.tipiAssenza] : defaultTipiAssenza(),
   };
 }
 
@@ -145,11 +178,14 @@ function snapshotKey(s: SistemaSettingsSnapshot): string {
 
 function initialMasterFromProducts(
   src: Array<{
+    id?: string;
     marca: string;
     categoria: string;
     compatibilitaMezzi: string[];
+    compatibilitaRefs?: RicambioCompatRef[];
     fornitoreNonOriginale?: string;
   }> = [],
+  mezziListePrefs?: MezziListePrefs,
 ) {
   const marche = new Set<string>();
   const categorie = new Set<string>();
@@ -158,9 +194,11 @@ function initialMasterFromProducts(
   for (const r of src) {
     if (r.marca?.trim()) marche.add(r.marca.trim());
     if (r.categoria?.trim()) categorie.add(r.categoria.trim());
-    r.compatibilitaMezzi.forEach((m) => {
-      if (m.trim()) mezzi.add(m.trim());
-    });
+    readCompatLabelsForUi(r, mezziListePrefs, "sistema-impostazioni-modal.initialMasterFromProducts").forEach(
+      (m) => {
+        if (m.trim()) mezzi.add(m.trim());
+      },
+    );
     if (r.fornitoreNonOriginale?.trim()) fornitori.add(r.fornitoreNonOriginale.trim());
   }
   return {
@@ -173,6 +211,7 @@ function initialMasterFromProducts(
 
 type SistemaSectionId =
   | "op-addetti"
+  | "op-dipendenti-assenze"
   | "op-stati"
   | "op-priorita"
   | "mag-marche"
@@ -196,6 +235,7 @@ type NavEntry =
 const NAV_STRUCTURE: NavEntry[] = [
   { kind: "group", label: "Operatività" },
   { kind: "item", id: "op-addetti", label: "Addetti" },
+  { kind: "item", id: "op-dipendenti-assenze", label: "Tipi assenza dipendenti" },
   { kind: "item", id: "op-stati", label: "Stati lavorazioni" },
   { kind: "item", id: "op-priorita", label: "Priorità" },
   { kind: "group", label: "Magazzino" },
@@ -220,24 +260,47 @@ const NAV_STRUCTURE: NavEntry[] = [
 
 const SETTINGS_NAV_ITEM_COUNT = NAV_STRUCTURE.filter((e) => e.kind === "item").length;
 
+const SETTINGS_NAV_GROUP_LABEL = `${dsTypoSmall} px-2 pt-2 pb-0.5 font-bold uppercase tracking-wider text-[color:var(--cab-text-muted)] first:pt-0`;
+
+const SETTINGS_NAV_BTN =
+  "flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-medium transition-colors duration-150 ease-out";
+
+function settingsNavBtnClass(active: boolean) {
+  return active
+    ? `${SETTINGS_NAV_BTN} bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] font-semibold text-[color:var(--cab-text)]`
+    : `${SETTINGS_NAV_BTN} text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]`;
+}
+
+function settingsNavGroupForSection(sectionId: SistemaSectionId): string {
+  let lastGroup = "";
+  for (const e of NAV_STRUCTURE) {
+    if (e.kind === "group") lastGroup = e.label;
+    else if (e.id === sectionId) return lastGroup;
+  }
+  return "";
+}
+
 function SettingsNavMenuList({
   filteredNav,
   section,
   onPickSection,
+  navClassName,
 }: {
   filteredNav: NavEntry[];
   section: SistemaSectionId;
   onPickSection: (id: SistemaSectionId) => void;
+  /** Es. drawer modale: `min-h-0 flex-1 max-h-none` */
+  navClassName?: string;
 }) {
   return (
-    <nav className="gestionale-scrollbar max-h-[min(60vh,22rem)] space-y-1 overflow-y-auto p-2" aria-label="Elenco sezioni configurazione">
+    <nav
+      className={`gestionale-scrollbar space-y-1 overflow-y-auto p-2 ${navClassName ?? "max-h-[min(60vh,22rem)]"}`}
+      aria-label="Elenco sezioni configurazione"
+    >
       {filteredNav.map((e, i) => {
         if (e.kind === "group") {
           return (
-            <p
-              key={`nav-g-${e.label}-${i}`}
-              className={`${dsTypoSmall} px-2 pt-2 pb-0.5 font-bold uppercase tracking-wider text-[color:var(--cab-text-muted)] first:pt-0`}
-            >
+            <p key={`nav-g-${e.label}-${i}`} className={SETTINGS_NAV_GROUP_LABEL}>
               {e.label}
             </p>
           );
@@ -248,11 +311,7 @@ function SettingsNavMenuList({
             key={e.id}
             type="button"
             onClick={() => onPickSection(e.id)}
-            className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-medium transition-colors ${
-              active
-                ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] font-semibold text-[color:var(--cab-text)]"
-                : "text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]"
-            }`}
+            className={settingsNavBtnClass(active)}
           >
             {e.label}
           </button>
@@ -349,17 +408,11 @@ function SettingsMobileSectionPicker({
   );
 }
 
-const SETTINGS_CARD =
-  "w-full rounded-xl border border-zinc-200 bg-white p-3 shadow-sm dark:border-zinc-700 dark:bg-zinc-900";
-const LIST_UL =
-  "mt-3 divide-y divide-zinc-100 dark:divide-zinc-800";
+const SETTINGS_ADD_INPUT = `${dsInput} min-h-9 min-w-0 flex-1 text-sm`;
 
 function useSimilarGate() {
   return useSettingsSimilarGate();
 }
-
-const INPUT_ROW =
-  "min-w-0 flex-1 rounded-lg border border-zinc-200 bg-white px-2 py-1.5 text-xs outline-none focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_25%,transparent)] dark:border-zinc-700 dark:bg-zinc-950";
 
 function ClientiCommercialiList({
   liste,
@@ -404,9 +457,9 @@ function ClientiCommercialiList({
   };
 
   return (
-    <div className={SETTINGS_CARD}>
-      <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">Clienti</h3>
-      <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+    <div className={SETTINGS_SECTION_CARD}>
+      <h3 className={SETTINGS_SECTION_TITLE}>Clienti</h3>
+      <p className={SETTINGS_SECTION_HINT}>
         Sconto ricambi % applicato automaticamente nei preventivi (solo ricambi, non manodopera).
       </p>
       <GestionaleSearchField
@@ -422,7 +475,7 @@ function ClientiCommercialiList({
           value={nuovo}
           onChange={(e) => setNuovo(e.target.value)}
           placeholder="Nuovo cliente"
-          className={INPUT_ROW}
+          className={SETTINGS_ADD_INPUT}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -438,7 +491,7 @@ function ClientiCommercialiList({
           Aggiungi
         </button>
       </div>
-      <ul className={LIST_UL}>
+      <ul className={SETTINGS_LIST_DIVIDER_UL}>
         {filtered.map((nome) => {
           const sconto = getScontoRicambiCliente(liste, nome);
           return (
@@ -448,7 +501,7 @@ function ClientiCommercialiList({
               onRenameBlur={tryRename}
               onRemove={() => setPendingDelete(nome)}
               trailing={
-                <label className="flex shrink-0 items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                <label className="flex shrink-0 items-center gap-1 text-xs text-[color:var(--cab-text-muted)]">
                   Sconto ricambi %
                   <input
                     type="number"
@@ -460,7 +513,7 @@ function ClientiCommercialiList({
                       const n = clampScontoRicambiPercent(Number(e.target.value));
                       setListe((prev) => setScontoRicambiCliente(prev, nome, n));
                     }}
-                    className="w-16 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-950"
+                    className={SETTINGS_DISCOUNT_INPUT}
                     aria-label={`Sconto ricambi per ${nome}`}
                   />
                 </label>
@@ -524,9 +577,9 @@ function MagazzinoMarcheList({
   };
 
   return (
-    <div className={SETTINGS_CARD}>
-      <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">Marche ricambi</h3>
-      <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+    <div className={SETTINGS_SECTION_CARD}>
+      <h3 className={SETTINGS_SECTION_TITLE}>Marche ricambi</h3>
+      <p className={SETTINGS_SECTION_HINT}>
         Sconto % sul prezzo di listino fornitore originale, applicato automaticamente ai ricambi con la stessa marca.
       </p>
       <GestionaleSearchField
@@ -542,7 +595,7 @@ function MagazzinoMarcheList({
           value={nuovo}
           onChange={(e) => setNuovo(e.target.value)}
           placeholder="Nuova marca"
-          className={INPUT_ROW}
+          className={SETTINGS_ADD_INPUT}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -558,7 +611,7 @@ function MagazzinoMarcheList({
           Aggiungi
         </button>
       </div>
-      <ul className={LIST_UL}>
+      <ul className={SETTINGS_LIST_DIVIDER_UL}>
         {filtered.map((nome) => {
           const sconto = getScontoFornitoreMarca(mag, nome);
           return (
@@ -568,7 +621,7 @@ function MagazzinoMarcheList({
               onRenameBlur={tryRename}
               onRemove={() => setPendingDelete(nome)}
               trailing={
-                <label className="flex shrink-0 items-center gap-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                <label className="flex shrink-0 items-center gap-1 text-xs text-[color:var(--cab-text-muted)]">
                   Sconto listino %
                   <input
                     type="number"
@@ -580,7 +633,7 @@ function MagazzinoMarcheList({
                       const n = clampScontoRicambiPercent(Number(e.target.value));
                       setMag((prev) => setScontoFornitoreMarca(prev, nome, n));
                     }}
-                    className="w-16 rounded border border-zinc-200 bg-white px-1.5 py-0.5 text-xs dark:border-zinc-700 dark:bg-zinc-950"
+                    className={SETTINGS_DISCOUNT_INPUT}
                     aria-label={`Sconto listino per ${nome}`}
                   />
                 </label>
@@ -645,8 +698,8 @@ function UnifiedStringList({
   };
 
   return (
-    <div className={SETTINGS_CARD}>
-      <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">{title}</h3>
+    <div className={SETTINGS_SECTION_CARD}>
+      <h3 className={SETTINGS_SECTION_TITLE}>{title}</h3>
       <GestionaleSearchField
         wrapperClassName="mt-2 w-full"
         value={q}
@@ -660,7 +713,7 @@ function UnifiedStringList({
           value={nuovo}
           onChange={(e) => setNuovo(e.target.value)}
           placeholder={placeholder}
-          className={INPUT_ROW}
+          className={SETTINGS_ADD_INPUT}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -676,7 +729,7 @@ function UnifiedStringList({
           Aggiungi
         </button>
       </div>
-      <ul className={LIST_UL}>
+      <ul className={SETTINGS_LIST_DIVIDER_UL}>
         {filtered.map((m) => (
           <SettingsEditableStringRow
             key={m}
@@ -752,7 +805,7 @@ function SistemaImpostazioniWorkspace({
   const storicoAddetti = useMemo(() => new Set<string>(), []);
 
   const [stati, setStati] = useState<StatoLavorazioneConfig[]>(() => [...DEFAULT_STATI_LAVORAZIONI_DB]);
-  const [addetti, setAddetti] = useState<string[]>(() => [...DEFAULT_ADDETTI_LAVORAZIONI]);
+  const [addettiRecords, setAddettiRecords] = useState<AddettoRecord[]>(() => defaultAddettiRecords());
   const [addettoColors, setAddettoColors] = useState<Record<string, string>>(() =>
     syncAddettoColorMap([...DEFAULT_ADDETTI_LAVORAZIONI], undefined),
   );
@@ -781,13 +834,15 @@ function SistemaImpostazioniWorkspace({
 
   const [eco, setEco] = useState<SistemaPreventiviDefaults>(() => ({ costoOrarioDefault: 48 }));
   const [ecoHydrated, setEcoHydrated] = useState(false);
+  const [tipiAssenza, setTipiAssenza] = useState<TipoAssenzaConfig[]>(() => defaultTipiAssenza());
+  const [dipHydrated, setDipHydrated] = useState(false);
 
-  snapshotRef.current = { stati, addetti, addettoColors, prioritaColors, prioritaDb, mag, liste, eco };
+  snapshotRef.current = { stati, addettiRecords, addettoColors, prioritaColors, prioritaDb, mag, liste, eco, tipiAssenza };
   const currentSnapshotKey = useMemo(
-    () => snapshotKey({ stati, addetti, addettoColors, prioritaColors, prioritaDb, mag, liste, eco }),
-    [stati, addetti, addettoColors, prioritaColors, prioritaDb, mag, liste, eco],
+    () => snapshotKey({ stati, addettiRecords, addettoColors, prioritaColors, prioritaDb, mag, liste, eco, tipiAssenza }),
+    [stati, addettiRecords, addettoColors, prioritaColors, prioritaDb, mag, liste, eco, tipiAssenza],
   );
-  const allHydrated = lavPrefsHydrated && magHydrated && mezziHydrated && ecoHydrated;
+  const allHydrated = lavPrefsHydrated && magHydrated && mezziHydrated && ecoHydrated && dipHydrated;
   const isDirty = allHydrated && savedSnapshotKey != null && currentSnapshotKey !== savedSnapshotKey;
 
   const handleAddStatoFromLabel = useCallback(
@@ -833,6 +888,7 @@ function SistemaImpostazioniWorkspace({
     setMagHydrated(false);
     setMezziHydrated(false);
     setEcoHydrated(false);
+    setDipHydrated(false);
 
     const r = resolvedSettings ?? resolveCabAppSettingsFromRows([], null);
     const next = snapshotFromResolved(r);
@@ -840,18 +896,20 @@ function SistemaImpostazioniWorkspace({
     setSavedSnapshotKey(snapshotKey(next));
 
     setStati(next.stati);
-    setAddetti(next.addetti);
+    setAddettiRecords(next.addettiRecords);
     setAddettoColors(next.addettoColors);
     setPrioritaColors(next.prioritaColors);
     setPrioritaDb(next.prioritaDb);
     setMag(next.mag);
     setListe(next.liste);
     setEco(next.eco);
+    setTipiAssenza(next.tipiAssenza);
 
     setLavPrefsHydrated(true);
     setMagHydrated(true);
     setMezziHydrated(true);
     setEcoHydrated(true);
+    setDipHydrated(true);
   }, [open, resolvedSettings, settingsPayload.isPending]);
 
   const renameQueueRef = useRef<SettingsRenameEntry[]>([]);
@@ -870,7 +928,7 @@ function SistemaImpostazioniWorkspace({
 
   const saveNow = useCallback(async (): Promise<boolean> => {
     const s = snapshotRef.current;
-    if (!s || !lavPrefsHydrated || !magHydrated || !mezziHydrated || !ecoHydrated) return false;
+    if (!s || !lavPrefsHydrated || !magHydrated || !mezziHydrated || !ecoHydrated || !dipHydrated) return false;
     const payload = mergeAppSettingsUpsertWithVersions(
       buildBulkRowsFromResolved(buildResolvedFromModalSnapshot(s)),
       settingsRows,
@@ -886,7 +944,7 @@ function SistemaImpostazioniWorkspace({
     savedSnapshotRef.current = s;
     setSavedSnapshotKey(snapshotKey(s));
     return true;
-  }, [bulkSave, lavPrefsHydrated, magHydrated, mezziHydrated, ecoHydrated, settingsRows, authorName]);
+  }, [bulkSave, lavPrefsHydrated, magHydrated, mezziHydrated, ecoHydrated, dipHydrated, settingsRows, authorName]);
 
   const finalizePropaga = useCallback(async (propagate: boolean) => {
     if (!propagate) {
@@ -958,18 +1016,21 @@ function SistemaImpostazioniWorkspace({
     setMagHydrated(false);
     setMezziHydrated(false);
     setEcoHydrated(false);
+    setDipHydrated(false);
     setStati(s.stati);
-    setAddetti(s.addetti);
+    setAddettiRecords(s.addettiRecords);
     setAddettoColors(s.addettoColors);
     setPrioritaColors(s.prioritaColors);
     setPrioritaDb(s.prioritaDb);
     setMag(s.mag);
     setListe(s.liste);
     setEco(s.eco);
+    setTipiAssenza(s.tipiAssenza);
     setLavPrefsHydrated(true);
     setMagHydrated(true);
     setMezziHydrated(true);
     setEcoHydrated(true);
+    setDipHydrated(true);
   }, []);
 
   const confirmDiscardChanges = useCallback(async () => {
@@ -1104,55 +1165,55 @@ function SistemaImpostazioniWorkspace({
 
   if (!open) return null;
 
+  const settingsModalHeader = !pageMode ? (
+    <LavorazioniModalHeader
+      title="Configurazione globale"
+      subtitle={activeSectionLabel}
+      onRequestClose={handleRequestClose}
+      actions={
+        <>
+          <button
+            type="button"
+            className={`${erpBtnNeutral} h-9 min-w-9 shrink-0 px-2 text-base md:hidden`}
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Apri sezioni configurazione"
+            aria-expanded={mobileNavOpen}
+          >
+            ☰
+          </button>
+          <button
+            type="button"
+            className={`${erpBtnNeutral} hidden h-9 min-w-9 shrink-0 px-2 text-base md:inline-flex`}
+            onClick={() => setDesktopNavOpen((v) => !v)}
+            aria-label={desktopNavOpen ? "Comprimi sezioni configurazione" : "Espandi sezioni configurazione"}
+            aria-expanded={desktopNavOpen}
+          >
+            ☰
+          </button>
+        </>
+      }
+    />
+  ) : null;
+
   const content = (
     <>
       <div
         className={`relative flex min-h-0 w-full min-w-0 flex-col ${
           pageMode
             ? "overflow-visible rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)]"
-            : "max-md:h-[calc(100dvh-1.5rem)] max-md:overflow-hidden md:h-[min(88dvh,900px)] md:overflow-hidden"
+            : "max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:min-h-0 max-md:flex-1 max-md:overflow-hidden md:h-[min(88dvh,900px)] md:overflow-hidden"
         }`}
       >
-        <header className={`${pageMode ? "hidden" : "shrink-0 border-b border-zinc-200 bg-[var(--cab-card)] px-3 py-2.5 dark:border-zinc-800 sm:px-4 sm:py-3"}`}>
-          <div className="flex min-w-0 items-center justify-between gap-2">
-            <div className="flex min-w-0 items-center gap-2">
-              <button
-                type="button"
-                className={`${erpBtnNeutral} h-9 min-w-9 shrink-0 px-2 text-base md:hidden`}
-                onClick={() => setMobileNavOpen(true)}
-                aria-label="Apri sezioni configurazione"
-                aria-expanded={mobileNavOpen}
-              >
-                ☰
-              </button>
-              <button
-                type="button"
-                className={`${erpBtnNeutral} hidden h-9 min-w-9 shrink-0 px-2 text-base md:inline-flex`}
-                onClick={() => setDesktopNavOpen((v) => !v)}
-                aria-label={desktopNavOpen ? "Comprimi sezioni configurazione" : "Espandi sezioni configurazione"}
-                aria-expanded={desktopNavOpen}
-              >
-                ☰
-              </button>
-              <div className="min-w-0">
-                <h2 className="truncate text-sm font-semibold text-zinc-900 dark:text-zinc-100">Configurazione globale</h2>
-                <p className="mt-0.5 truncate text-[11px] text-zinc-500 dark:text-zinc-400">{activeSectionLabel}</p>
-              </div>
-            </div>
-            <CloseButton onClick={handleRequestClose} />
-          </div>
-        </header>
-
         {mobileNavOpen && !pageMode ? (
           <div className="absolute inset-0 z-20 bg-[var(--cab-overlay)] backdrop-blur-[1px] md:hidden" role="presentation" onMouseDown={(e) => {
             if (e.target === e.currentTarget) setMobileNavOpen(false);
           }}>
-            <aside className="flex h-full w-[min(82vw,20rem)] flex-col border-r border-zinc-200 bg-[var(--cab-card)] shadow-2xl dark:border-zinc-800" aria-label="Sezioni configurazione">
-              <header className="flex shrink-0 items-center justify-between border-b border-zinc-200 px-3 py-2.5 dark:border-zinc-800">
+            <aside className="flex h-full w-[min(82vw,20rem)] flex-col border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl" aria-label="Sezioni configurazione">
+              <header className="flex shrink-0 items-center justify-between border-b border-[color:var(--cab-border)] px-3 py-2.5">
                 <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Sezioni</h3>
                 <CloseButton onClick={() => setMobileNavOpen(false)} />
               </header>
-              <div className="shrink-0 border-b border-zinc-100 p-2 dark:border-zinc-800">
+              <div className="shrink-0 border-b border-[color:var(--cab-border)] p-2">
                 <GestionaleSearchField
                   value={navQ}
                   onChange={(e) => setNavQ(e.target.value)}
@@ -1161,40 +1222,24 @@ function SistemaImpostazioniWorkspace({
                   aria-label="Cerca nelle sezioni configurazione"
                 />
               </div>
-              <nav className="gestionale-scrollbar flex-1 space-y-1 overflow-y-auto p-2" aria-label="Sezioni configurazione mobile">
-                {filteredNav.map((e, i) => {
-                  if (e.kind === "group") {
-                    return (
-                      <p key={`mg-${e.label}-${i}`} className="px-2 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 first:pt-0 dark:text-zinc-500">
-                        {e.label}
-                      </p>
-                    );
-                  }
-                  const active = section === e.id;
-                  return (
-                    <button
-                      key={e.id}
-                      type="button"
-                      onClick={() => {
-                        setSection(e.id);
-                        setMobileNavOpen(false);
-                      }}
-                      className={`flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-semibold transition-colors ${
-                        active ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:bg-[var(--cab-primary-hover)]" : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
-                      }`}
-                    >
-                      {e.label}
-                    </button>
-                  );
-                })}
-              </nav>
+              <SettingsNavMenuList
+                filteredNav={filteredNav}
+                section={section}
+                navClassName="min-h-0 flex-1 max-h-none"
+                onPickSection={(id) => {
+                  setSection(id);
+                  setMobileNavOpen(false);
+                }}
+              />
             </aside>
           </div>
         ) : null}
 
-        <div className={pageMode ? "grid gap-4 p-3 md:grid-cols-[15rem_minmax(0,1fr)] md:p-4" : "flex min-h-0 flex-1 overflow-hidden"}>
-          <aside className={`${desktopNavOpen ? "md:flex" : "md:hidden"} hidden w-[13.75rem] shrink-0 flex-col border-r border-zinc-200 bg-[var(--cab-card)] dark:border-zinc-800 ${pageMode ? "md:sticky md:top-4 md:h-fit md:w-auto md:rounded-xl md:border md:shadow-sm" : ""}`}>
-            <div className="shrink-0 border-b border-zinc-100 p-2 dark:border-zinc-800">
+        <div className={pageMode ? "grid gap-4 p-3 md:grid-cols-[15rem_minmax(0,1fr)] md:p-4" : "flex min-h-0 min-w-0 flex-1 overflow-hidden"}>
+          <aside
+            className={`${desktopNavOpen ? "md:flex" : "md:hidden"} hidden w-[13.75rem] shrink-0 flex-col border-[color:var(--cab-border)] bg-[var(--cab-card)] ${pageMode ? "md:sticky md:top-4 md:h-fit md:w-[15rem] md:rounded-xl md:border md:shadow-[var(--cab-shadow-sm)]" : "border-r"}`}
+          >
+            <div className="shrink-0 border-b border-[color:var(--cab-border)] p-2">
               <GestionaleSearchField
                 value={navQ}
                 onChange={(e) => setNavQ(e.target.value)}
@@ -1203,14 +1248,14 @@ function SistemaImpostazioniWorkspace({
                 aria-label="Cerca nelle sezioni configurazione"
               />
             </div>
-            <nav className={`${pageMode ? "space-y-0.5 p-2" : "gestionale-scrollbar flex-1 space-y-0.5 overflow-y-auto p-2"}`} aria-label="Sezioni configurazione">
+            <nav
+              className={`min-w-0 space-y-1 p-2 ${pageMode ? "" : "gestionale-scrollbar min-h-0 flex-1 overflow-y-auto"}`}
+              aria-label="Sezioni configurazione"
+            >
               {filteredNav.map((e, i) => {
                 if (e.kind === "group") {
                   return (
-                    <p
-                      key={`g-${e.label}-${i}`}
-                      className="px-2 pt-2 pb-0.5 text-[10px] font-bold uppercase tracking-wider text-zinc-400 first:pt-0 dark:text-zinc-500"
-                    >
+                    <p key={`g-${e.label}-${i}`} className={SETTINGS_NAV_GROUP_LABEL}>
                       {e.label}
                     </p>
                   );
@@ -1221,11 +1266,7 @@ function SistemaImpostazioniWorkspace({
                     key={e.id}
                     type="button"
                     onClick={() => setSection(e.id)}
-                    className={`flex w-full rounded-lg px-2.5 py-1.5 text-left text-xs font-semibold transition-colors ${
-                      active
-                        ? "border border-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))] bg-[var(--cab-primary)] text-white shadow-sm hover:bg-[var(--cab-primary-hover)]"
-                        : "text-zinc-700 hover:bg-zinc-100 dark:text-zinc-200 dark:hover:bg-zinc-800/90"
-                    }`}
+                    className={settingsNavBtnClass(active)}
                   >
                     {e.label}
                   </button>
@@ -1234,7 +1275,28 @@ function SistemaImpostazioniWorkspace({
             </nav>
           </aside>
 
-          <div className={pageMode ? "min-w-0 bg-transparent" : "gestionale-scrollbar min-h-0 flex-1 overflow-y-auto overscroll-contain bg-zinc-50/60 p-2.5 [scrollbar-gutter:stable] dark:bg-zinc-950/50 sm:p-4"}>
+          <div
+            {...(!pageMode ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
+            className={
+              pageMode
+                ? "min-w-0 max-w-full bg-transparent"
+                : "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-2.5 max-sm:[scrollbar-gutter:auto] sm:p-4"
+            }
+          >
+            {pageMode ? (
+              <header className="mb-4 min-w-0 border-b border-[color:var(--cab-border)] pb-3">
+                <p className={SETTINGS_NAV_GROUP_LABEL}>{settingsNavGroupForSection(section)}</p>
+                <h2 className="mt-0.5 text-base font-semibold text-[color:var(--cab-text)]">{activeSectionLabel}</h2>
+                {isDirty ? (
+                  <p className="mt-2">
+                    <span className={dsPageToolbarMetaChipAccent} role="status">
+                      Modifiche non salvate
+                    </span>
+                  </p>
+                ) : null}
+              </header>
+            ) : null}
+
             {lavEmbeddedFocus ? (
               <SettingsLavorazioniModal
                 layout="embedded"
@@ -1291,32 +1353,54 @@ function SistemaImpostazioniWorkspace({
                     },
                   });
                 }}
-                addetti={addetti}
+                addettiRecords={addettiRecords}
                 addettoColors={addettoColors}
-                onAddAddetto={(name) => {
-                  const t = name.trim();
+                onAddAddetto={({ nome, cognome }) => {
+                  const t = nome.trim();
                   if (!t) return;
-                  addettiGate(addetti, t, undefined, () => {
-                    setAddetti((prev) => [...prev, t]);
+                  const legacyNomi = addettiLegacyNomi(addettiRecords);
+                  addettiGate(legacyNomi, t, undefined, () => {
+                    setAddettiRecords((prev) => [
+                      ...prev,
+                      { id: createAddettoId(), nome: t, cognome: cognome?.trim() || null },
+                    ]);
                     setAddettoColors((prev) => assignColorForNewAddetto(prev, t));
                   });
                 }}
-                onRenameAddettoBlur={(previousName, nextName) => {
-                  const t = nextName.trim();
-                  if (!t || t === previousName) return;
-                  addettiGate(addetti, t, previousName, () => {
-                    setAddetti((prev) => prev.map((a) => (a === previousName ? t : a)));
-                    setAddettoColors((prev) => renameAddettoInColorMap(prev, previousName, t));
-                    queueRename({ kind: "addetto", from: previousName, to: t });
-                    dispatchAddettoDisplayRename({ previousName, nextName: t });
-                  });
+                onUpdateAddetto={(id, patch) => {
+                  const rec = findAddettoById(addettiRecords, id);
+                  if (!rec) return;
+                  if (patch.nome !== undefined) {
+                    const t = patch.nome.trim();
+                    if (!t || t === rec.nome) return;
+                    const legacyNomi = addettiLegacyNomi(addettiRecords);
+                    addettiGate(legacyNomi, t, rec.nome, () => {
+                      setAddettiRecords((prev) =>
+                        prev.map((r) => (r.id === id ? { ...r, nome: t } : r)),
+                      );
+                      setAddettoColors((prev) => renameAddettoInColorMap(prev, rec.nome, t));
+                      queueRename({ kind: "addetto", from: rec.nome, to: t });
+                      dispatchAddettoDisplayRename({ previousName: rec.nome, nextName: t });
+                    });
+                    return;
+                  }
+                  if (patch.cognome !== undefined) {
+                    setAddettiRecords((prev) =>
+                      prev.map((r) =>
+                        r.id === id ? { ...r, cognome: patch.cognome?.trim() ? patch.cognome.trim() : null } : r,
+                      ),
+                    );
+                  }
                 }}
                 onChangeAddettoColor={(nome, hex) => {
                   const nh = normalizeHex(hex);
                   if (!nh) return;
                   setAddettoColors((prev) => ({ ...prev, [nome]: nh }));
                 }}
-                onRemoveAddetto={(name) => {
+                onRemoveAddetto={(id) => {
+                  const rec = findAddettoById(addettiRecords, id);
+                  if (!rec) return;
+                  const name = rec.nome;
                   const inUse = attiviAddetti.has(name) || storicoAddetti.has(name);
                   setSettingsDeleteConfirm({
                     label: name,
@@ -1324,7 +1408,7 @@ function SistemaImpostazioniWorkspace({
                       ? "Compare in lavorazioni già registrate. Verrà rimosso solo dalle liste di selezione future; i record esistenti manterranno il nome."
                       : undefined,
                     onConfirm: () => {
-                      setAddetti((prev) => prev.filter((a) => a !== name));
+                      setAddettiRecords((prev) => prev.filter((r) => r.id !== id));
                       setAddettoColors((prev) => removeAddettoFromColorMap(prev, name));
                       setSettingsDeleteConfirm(null);
                     },
@@ -1336,6 +1420,12 @@ function SistemaImpostazioniWorkspace({
                 storicoAddetti={storicoAddetti}
                 onRequestClose={handleRequestClose}
               />
+            ) : null}
+
+            {section === "op-dipendenti-assenze" ? (
+              <div className="w-full min-w-0 max-w-2xl">
+                <SettingsDipendentiAssenzeSection tipi={tipiAssenza} onChange={setTipiAssenza} />
+              </div>
             ) : null}
 
             {section === "mag-marche" ? (
@@ -1428,8 +1518,10 @@ function SistemaImpostazioniWorkspace({
                 variant="marca"
                 liste={liste}
                 setListe={setListe}
-                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_attrezzature", from, to })}
-                onRenameModello={(from, to) => queueRename({ kind: "hierarchy_modello_attrezzature", from, to })}
+                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_attrezzature", from, to, tree: "attrezzature" })}
+                onRenameModello={(marcaContext, from, to) =>
+                  queueRename({ kind: "hierarchy_modello_attrezzature", from, to, marcaContext, tree: "attrezzature" })
+                }
               />
             ) : null}
 
@@ -1439,8 +1531,10 @@ function SistemaImpostazioniWorkspace({
                 variant="modello"
                 liste={liste}
                 setListe={setListe}
-                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_attrezzature", from, to })}
-                onRenameModello={(from, to) => queueRename({ kind: "hierarchy_modello_attrezzature", from, to })}
+                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_attrezzature", from, to, tree: "attrezzature" })}
+                onRenameModello={(marcaContext, from, to) =>
+                  queueRename({ kind: "hierarchy_modello_attrezzature", from, to, marcaContext, tree: "attrezzature" })
+                }
               />
             ) : null}
 
@@ -1479,8 +1573,10 @@ function SistemaImpostazioniWorkspace({
                 variant="marca"
                 liste={liste}
                 setListe={setListe}
-                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_telai", from, to })}
-                onRenameModello={(from, to) => queueRename({ kind: "hierarchy_modello_telai", from, to })}
+                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_telai", from, to, tree: "telai" })}
+                onRenameModello={(marcaContext, from, to) =>
+                  queueRename({ kind: "hierarchy_modello_telai", from, to, marcaContext, tree: "telai" })
+                }
               />
             ) : null}
 
@@ -1490,8 +1586,10 @@ function SistemaImpostazioniWorkspace({
                 variant="modello"
                 liste={liste}
                 setListe={setListe}
-                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_telai", from, to })}
-                onRenameModello={(from, to) => queueRename({ kind: "hierarchy_modello_telai", from, to })}
+                onRenameMarca={(from, to) => queueRename({ kind: "hierarchy_marca_telai", from, to, tree: "telai" })}
+                onRenameModello={(marcaContext, from, to) =>
+                  queueRename({ kind: "hierarchy_modello_telai", from, to, marcaContext, tree: "telai" })
+                }
               />
             ) : null}
 
@@ -1570,11 +1668,9 @@ function SistemaImpostazioniWorkspace({
 
             {section === "sys-economici" ? (
               <div className="w-full">
-                <div className={SETTINGS_CARD}>
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
-                    Parametri economici
-                  </h3>
-                  <label className="mt-4 block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+                <div className={SETTINGS_SECTION_CARD}>
+                  <h3 className={SETTINGS_SECTION_TITLE}>Parametri economici</h3>
+                  <label className="mt-4 block text-xs font-medium text-[color:var(--cab-text-muted)]">
                     Costo manodopera default (€/h)
                     <input
                       type="number"
@@ -1586,20 +1682,18 @@ function SistemaImpostazioniWorkspace({
                         if (!Number.isFinite(v) || v <= 0) return;
                         setEco({ costoOrarioDefault: Math.round(v * 100) / 100 });
                       }}
-                      className="mt-1 w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm tabular-nums dark:border-zinc-700 dark:bg-zinc-950"
+                      className={`${dsInput} mt-1.5 w-full max-w-xs tabular-nums`}
                     />
                   </label>
                 </div>
                 {/* Admin-only: migrazione one-shot localStorage → DB (non automatica al boot). */}
-                <div className={`${SETTINGS_CARD} mt-4`}>
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">
-                    Migrazione preventivi
-                  </h3>
-                  <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
+                <div className={`${SETTINGS_SECTION_CARD} mt-4`}>
+                  <h3 className={SETTINGS_SECTION_TITLE}>Migrazione preventivi</h3>
+                  <p className={SETTINGS_SECTION_HINT}>
                     Importa i preventivi ancora presenti in localStorage verso Supabase. Operazione idempotente, da
                     eseguire una sola volta per ambiente.
                   </p>
-                  <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-300">
+                  <p className="mt-2 text-xs text-[color:var(--cab-text)]">
                     In localStorage: <strong>{localPreventiviCount}</strong> record
                   </p>
                   <button
@@ -1640,7 +1734,6 @@ function SistemaImpostazioniWorkspace({
       <div className={dsStackPage}>
         <PageHeader
           title="Configurazione"
-          description="Configurazione globale del gestionale."
           belowTitle={
             <>
               <OperatorGlobalSettingsPilotBadge />
@@ -1659,6 +1752,11 @@ function SistemaImpostazioniWorkspace({
           }
           actions={
             <>
+              {isDirty ? (
+                <span className={`${dsPageToolbarMetaChipAccent} hidden sm:inline-flex`} role="status">
+                  Modifiche non salvate
+                </span>
+              ) : null}
               <button
                 type="button"
                 className={erpBtnNeutral}
@@ -1674,8 +1772,9 @@ function SistemaImpostazioniWorkspace({
                 onClick={handleSaveNow}
                 disabled={!isDirty || bulkSave.isPending}
                 title="Salva tutte le modifiche alla configurazione globale"
+                aria-busy={bulkSave.isPending}
               >
-                {bulkSave.isPending ? "Salvataggio…" : "Salva"}
+                {bulkSave.isPending ? "Salvataggio…" : isDirty ? "Salva modifiche" : "Salva"}
               </button>
             </>
           }
@@ -1686,7 +1785,13 @@ function SistemaImpostazioniWorkspace({
   }
 
   return (
-    <LavorazioniModalShell wide alignTop maxWidthClass="max-w-6xl" onRequestClose={handleRequestClose}>
+    <LavorazioniModalShell
+      wide
+      alignTop
+      maxWidthClass="max-w-6xl"
+      onRequestClose={handleRequestClose}
+      header={settingsModalHeader ?? undefined}
+    >
       {content}
     </LavorazioniModalShell>
   );
@@ -1700,15 +1805,7 @@ export function SistemaImpostazioniPageView() {
   const permissions = usePermissions();
 
   if (permissions.isLoading) {
-    return (
-      <div className={dsStackPage}>
-        <PageHeader
-          title="Configurazione"
-          description="Caricamento permessi…"
-          belowTitle={<OperatorGlobalSettingsPilotBadge />}
-        />
-      </div>
-    );
+    return <LoadingImpostazioniSkeleton />;
   }
 
   if (!permissions.canManageSettings) {

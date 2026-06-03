@@ -1,6 +1,8 @@
 "use client";
 
 import { Tooltip } from "@/components/design-system/tooltip";
+import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
+import { HubIconPhoto } from "@/components/design-system/hub-table-action-icons";
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { dispatchGestionaleLocalMutation } from "@/src/lib/react-query/invalidate-related";
@@ -13,10 +15,12 @@ import {
   type StoredImage,
 } from "@/lib/media/image-storage";
 import { prefetchStorageBuckets } from "@/src/services/storage.service";
-import { GestionaleFileInput } from "@/components/gestionale/upload";
+import { LoadingSpinner } from "@/components/design-system/loading";
+import { GestionaleFileInput, GestionaleUploadDropExpand } from "@/components/gestionale/upload";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
-import { dsBtnDanger, dsBtnNeutral, dsScrollbar } from "@/lib/ui/design-system";
+import { cabModalZStacked } from "@/lib/ui/mobile-modal-behavior";
+import { dsBtnNeutral, dsBtnDanger, dsHubModalFieldLabel, dsHubModalNestedCard, dsHubModalSection, dsHubModalSectionTitle, dsScrollbar, dsTableActionTextBtn, dsTableActionTextBtnPrimary } from "@/lib/ui/design-system";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -40,18 +44,9 @@ function logEntitaForScope(scope: ImageScope): string {
   return "mezzi";
 }
 
-function IconFoto() {
-  return (
-    <svg className="h-5 w-5 shrink-0 text-sky-600 dark:text-sky-400" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <path
-        d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.4-2h5.2L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinejoin="round"
-      />
-      <path d="M12 15.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="1.6" />
-    </svg>
-  );
+function recordImageSectionShellClass(embedded: boolean, flatInInfoCard: boolean): string {
+  if (flatInInfoCard) return "min-w-0";
+  return embedded ? dsHubModalNestedCard : dsHubModalSection;
 }
 
 export function RecordImageManager({
@@ -61,6 +56,10 @@ export function RecordImageManager({
   canEdit = true,
   maxImages = MAX_IMAGES_PER_RECORD,
   auditLog = true,
+  embedded = false,
+  flatInInfoCard = false,
+  hideTitle = false,
+  hubCardLayout = false,
   onImageEvent,
 }: {
   scope: ImageScope;
@@ -70,6 +69,14 @@ export function RecordImageManager({
   maxImages?: number;
   /** Se false, nessuna riga in log_modifiche finché il record non è persistito (es. draft nuovo ricambio). */
   auditLog?: boolean;
+  /** Senza card esterna (es. dentro LavorazioneMediaPanel). */
+  embedded?: boolean;
+  /** Dentro GestionaleInfoCard hub: niente card annidata, layout compatto. */
+  flatInInfoCard?: boolean;
+  /** Titolo esterno sulla card (es. sezione Foto hub). */
+  hideTitle?: boolean;
+  /** Card hub compatta con azioni in header (tab Documenti lavorazione). */
+  hubCardLayout?: boolean;
   onImageEvent?: (event: RecordImageLogEvent) => void;
 }) {
   const qc = useQueryClient();
@@ -175,42 +182,76 @@ export function RecordImageManager({
   const uploadTitle = limitReached ? `Limite massimo ${maxImages} immagini raggiunto` : "Aggiungi foto";
   const uploadError = imageUpload.error ?? error;
 
-  return (
-    <section className="rounded-lg border border-zinc-100 bg-white/80 px-3 py-2.5 dark:border-zinc-700/80 dark:bg-zinc-900/50">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex min-w-0 items-start gap-2">
-          <IconFoto />
-          <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-zinc-800 dark:text-zinc-100">{title}</p>
-            <p className="mt-0.5 text-[11px] text-zinc-500">
-              {loading ? "Caricamento..." : `${images.length}/${maxImages} immagini`}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <GestionaleFileInput
-            accept="image/*"
-            disabled={!canUpload}
-            buttonLabel="Aggiungi foto"
-            title={uploadTitle}
-            phase={imageUpload.phase}
-            fileName={imageUpload.file?.name}
-            error={imageUpload.error}
-            onRetry={imageUpload.retry}
-            onChange={imageUpload.onFileInputChange}
-            showInlineStatus={false}
-          />
-        </div>
-      </div>
+  const handleDropFile = useCallback(
+    (file: File) => {
+      imageUpload.selectFile(file);
+      void imageUpload.upload(file);
+    },
+    [imageUpload],
+  );
+
+  const dropExpandProps = {
+    accept: "image/*" as const,
+    disabled: !canUpload,
+    dropTitle: "Rilascia per caricare",
+    dropHint: `Immagini · max ${maxImages}`,
+    overlay: !!hubCardLayout,
+    validateFile: () =>
+      images.length >= maxImages ? `Limite massimo ${maxImages} immagini raggiunto` : null,
+    onFile: handleDropFile,
+  };
+
+  const titleClass = flatInInfoCard || embedded ? dsHubModalFieldLabel : dsHubModalSectionTitle;
+  const ShellTag = flatInInfoCard ? "div" : "section";
+  const uploadBtnClass = hubCardLayout || flatInInfoCard ? dsTableActionTextBtnPrimary : dsBtnNeutral;
+  const uploadBtnExtra = hubCardLayout || flatInInfoCard ? "" : " px-2.5 py-1.5 text-xs";
+
+  const uploadButton =
+    canEdit ? (
+      <GestionaleFileInput
+        accept="image/*"
+        disabled={!canUpload}
+        buttonClassName={`${uploadBtnClass} shrink-0${uploadBtnExtra}`}
+        buttonLabel={
+          <span className="inline-flex items-center gap-1">
+            <HubIconPhoto />
+            {hubCardLayout ? "Aggiungi" : "Aggiungi foto"}
+          </span>
+        }
+        title={uploadTitle}
+        phase={imageUpload.phase}
+        fileName={imageUpload.file?.name}
+        error={imageUpload.error}
+        onRetry={imageUpload.retry}
+        onChange={imageUpload.onFileInputChange}
+        showInlineStatus={false}
+      />
+    ) : null;
+
+  const subtitleContent =
+    loading || imageUpload.phase === "uploading" ? (
+      <span className="inline-flex items-center gap-1.5">
+        <LoadingSpinner size="sm" label="Caricamento foto…" />
+        Caricamento foto…
+      </span>
+    ) : (
+      `${images.length}/${maxImages} immagini`
+    );
+
+  const bodyContent = (
+    <>
       {uploadError ? (
-        <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
           {uploadError}
         </p>
       ) : null}
       {images.length > 0 ? (
-        <div className={`mt-2.5 flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}`}>
+        <div className={`flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}${uploadError ? " mt-2" : ""}`}>
           {images.map((img) => (
-            <div key={img.path} className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+            <div
+              key={img.path}
+              className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)]"
+            >
               <Tooltip content="Apri">
                 <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} aria-label="Apri foto">
                   {/* eslint-disable-next-line @next/next/no-img-element -- Signed Storage URLs are short-lived and already lazy-loaded thumbnails. */}
@@ -232,16 +273,114 @@ export function RecordImageManager({
             </div>
           ))}
         </div>
-      ) : (
-        <p className="mt-2.5 text-[11px] text-zinc-500">Nessuna foto caricata.</p>
-      )}
+      ) : !uploadError ? (
+        <p className="text-[11px] text-[color:var(--cab-text-muted)]">Nessuna foto caricata.</p>
+      ) : null}
+    </>
+  );
+
+  if (hubCardLayout) {
+    return (
+      <>
+        <GestionaleUploadDropExpand {...dropExpandProps}>
+          <GestionaleInfoCard compact title="Foto" subtitle={subtitleContent} actions={uploadButton}>
+            {bodyContent}
+          </GestionaleInfoCard>
+        </GestionaleUploadDropExpand>
+        {preview ? (
+          <GestionaleModalShell
+            onRequestClose={() => setPreview(null)}
+            maxWidthClass="max-w-4xl"
+            title="Anteprima foto"
+            layerClassName={`!bg-black/70 ${cabModalZStacked}`}
+          >
+            <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center p-4">
+              {/* eslint-disable-next-line @next/next/no-img-element -- Preview uses short-lived Supabase signed URLs. */}
+              <img src={preview.signedUrl} alt={preview.name} className="max-h-[min(72dvh,640px)] rounded-xl object-contain shadow-2xl" />
+              <div className="mt-3 flex w-full justify-end gap-2 border-t border-[color:var(--cab-border)] pt-3">
+                {canEdit ? (
+                  <button type="button" className={dsBtnDanger} onClick={() => void removeImage(preview)}>
+                    Elimina
+                  </button>
+                ) : null}
+                <button type="button" className={dsBtnNeutral} onClick={() => setPreview(null)}>
+                  Chiudi
+                </button>
+              </div>
+            </div>
+          </GestionaleModalShell>
+        ) : null}
+        {confirmDialog}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <GestionaleUploadDropExpand {...dropExpandProps}>
+        <ShellTag className={recordImageSectionShellClass(embedded, flatInInfoCard)} aria-label={title}>
+          <div className="flex min-w-0 items-start justify-between gap-2.5">
+            <div className="min-w-0 flex-1">
+              {hideTitle ? null : <p className={titleClass}>{title}</p>}
+              <p className={`${hideTitle ? "" : "mt-1 "}flex items-center gap-1.5 text-[11px] text-[color:var(--cab-text-muted)]`}>
+                {loading || imageUpload.phase === "uploading" ? (
+                  <>
+                    <LoadingSpinner size="sm" label="Caricamento foto…" />
+                    Caricamento foto…
+                  </>
+                ) : (
+                  `${images.length}/${maxImages} immagini`
+                )}
+              </p>
+            </div>
+            {canEdit ? uploadButton : null}
+          </div>
+          {uploadError ? (
+            <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+              {uploadError}
+            </p>
+          ) : null}
+          {images.length > 0 ? (
+            <div className={`mt-3 flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}`}>
+              {images.map((img) => (
+                <div
+                  key={img.path}
+                  className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)]"
+                >
+                  <Tooltip content="Apri">
+                    <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} aria-label="Apri foto">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- Signed Storage URLs are short-lived and already lazy-loaded thumbnails. */}
+                      <img src={img.signedUrl} alt={img.name} loading="lazy" className="h-full w-full object-cover" />
+                    </button>
+                  </Tooltip>
+                  {canEdit ? (
+                    <Tooltip content="Elimina">
+                      <button
+                        type="button"
+                        className="absolute right-1 top-1 hidden rounded bg-black/60 px-1 text-[11px] font-bold text-white group-hover:block"
+                        onClick={() => void removeImage(img)}
+                        aria-label="Elimina foto"
+                      >
+                        ×
+                      </button>
+                    </Tooltip>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] text-[color:var(--cab-text-muted)]">Nessuna foto caricata.</p>
+          )}
+        </ShellTag>
+      </GestionaleUploadDropExpand>
       {preview ? (
         <GestionaleModalShell
           onRequestClose={() => setPreview(null)}
           maxWidthClass="max-w-4xl"
-          layerClassName="!bg-black/70"
+          title="Anteprima foto"
+          layerClassName={`!bg-black/70 ${cabModalZStacked}`}
         >
-          <div className="flex min-h-0 flex-1 flex-col items-center justify-center p-4">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center p-4">
             {/* eslint-disable-next-line @next/next/no-img-element -- Preview uses short-lived Supabase signed URLs. */}
             <img src={preview.signedUrl} alt={preview.name} className="max-h-[min(72dvh,640px)] rounded-xl object-contain shadow-2xl" />
             <div className="mt-3 flex w-full justify-end gap-2 border-t border-[color:var(--cab-border)] pt-3">
@@ -258,6 +397,6 @@ export function RecordImageManager({
         </GestionaleModalShell>
       ) : null}
       {confirmDialog}
-    </section>
+    </>
   );
 }

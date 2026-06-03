@@ -66,7 +66,7 @@ export function GestionaleUnsavedChangesDialog({
 
   return (
     <div
-      className="absolute inset-0 z-[120] flex items-center justify-center bg-black/35 p-4 backdrop-blur-[1px]"
+      className="absolute inset-0 z-[120] flex min-w-0 items-center justify-center overflow-x-hidden bg-black/35 p-4 backdrop-blur-[1px]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="gestionale-unsaved-title"

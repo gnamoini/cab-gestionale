@@ -1,18 +1,36 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { ReportControls } from "@/components/report/report-controls";
-import { ReportKpiGrid } from "@/components/report/report-kpi-grid";
-import { ReportLavorazioniSection } from "@/components/report/report-lavorazioni-section";
-import { ReportMagazzinoSection } from "@/components/report/report-magazzino-section";
-import { ReportRicambiConsumoSection } from "@/components/report/report-ricambi-consumo-section";
-import { ReportTopClienti, ReportTopMezzi } from "@/components/report/report-tops";
+import { ReportComplianceZone } from "@/components/report/layout/report-compliance-zone";
+import { ReportEconomicZone } from "@/components/report/layout/report-economic-zone";
+import { ReportExecutiveOverview } from "@/components/report/layout/report-executive-overview";
+import { ReportFleetZone } from "@/components/report/layout/report-fleet-zone";
+import { ReportMaintenanceZone } from "@/components/report/layout/report-maintenance-zone";
+import { ReportOperationsZone } from "@/components/report/layout/report-operations-zone";
+import { ReportPerformanceGate } from "@/components/report/layout/report-performance-gate";
+import { ReportTeamTimesheetZone } from "@/components/report/layout/report-team-timesheet-zone";
+import { ReportToolbar } from "@/components/report/layout/report-toolbar";
+import { ReportZoneNav } from "@/components/report/layout/report-zone-nav";
+import { ReportIntegrityStatusBadge } from "@/components/report/report-integrity-status-badge";
 import { buildReportModel } from "@/lib/report/build-report-model";
 import { endOfLocalDay, startOfLocalDay, type ReportCompareMode, type ReportPeriodPreset } from "@/lib/report/date-ranges";
-import { buildTopClientiPeriodo, buildTopMezziPeriodo, mergeTopClientiCompare, mergeTopMezziCompare } from "@/lib/report/report-classifiche";
+import type { DateRange } from "@/lib/report/date-ranges";
+import {
+  buildTopRicambiPeriodo,
+  mergeTopClientiCompare,
+  mergeTopMezziCompare,
+  mergeTopRicambiCompare,
+} from "@/lib/report/report-classifiche";
+import { buildReportDerivedBundle } from "@/lib/report/report-derived-cache";
+import {
+  loadMagazzinoManualMonthMap,
+  revisionMagazzinoManualMonthMap,
+} from "@/lib/report/magazzino-manual-storage";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
+import { LoadingErrorState, LoadingReportSkeleton } from "@/components/design-system";
 import { dsStackPage } from "@/lib/ui/design-system";
 
 function fmtYmd(d: Date): string {
@@ -24,34 +42,89 @@ function addDaysLocal(d: Date, n: number): Date {
 }
 
 function ReportSkeleton() {
-  return (
-    <div className="animate-pulse space-y-4">
-      <div className="h-9 w-40 rounded-lg bg-zinc-200 dark:bg-zinc-800" />
-      <div className="h-24 rounded-xl bg-zinc-100 dark:bg-zinc-900" />
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-32 rounded-xl bg-zinc-100 dark:bg-zinc-900" />
-        ))}
-      </div>
-    </div>
+  return <LoadingReportSkeleton />;
+}
+
+function useStableDateRange(range: DateRange | null | undefined): DateRange | null {
+  const startMs = range?.start.getTime();
+  const endMs = range?.end.getTime();
+  return useMemo(() => {
+    if (startMs == null || endMs == null) return null;
+    return { start: new Date(startMs), end: new Date(endMs) };
+  }, [startMs, endMs]);
+}
+
+function useClientMounted(): boolean {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
   );
 }
 
 export function ReportAnalyticsView() {
-  const [mounted, setMounted] = useState(false);
-  const [anchor, setAnchor] = useState<Date | null>(null);
+  const mounted = useClientMounted();
+  const anchor = useMemo(() => (mounted ? new Date() : null), [mounted]);
   const [preset, setPreset] = useState<ReportPeriodPreset>("last_3_months");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [compareMode, setCompareMode] = useState<ReportCompareMode>("none");
   const [histRev, setHistRev] = useState(0);
-
-  useEffect(() => {
-    setMounted(true);
-    setAnchor(new Date());
-  }, []);
+  useUIAutonomyFixEngine("/report", [preset, compareMode, histRev]);
 
   const live = useReportLiveData();
+
+  const magManualRevision = useMemo(
+    () => revisionMagazzinoManualMonthMap(loadMagazzinoManualMonthMap()),
+    [histRev],
+  );
+
+  const derivedBundle = useMemo(
+    () =>
+      buildReportDerivedBundle({
+        completate: live.completate,
+        manualByMonth: live.manualByMonth,
+        mezzi: live.mezzi,
+        magLog: live.magLog,
+        magazzino: live.magazzino,
+        queryMeta: live.integrityView.queryMeta,
+        magManualRevision,
+      }),
+    [
+      live.completate,
+      live.manualByMonth,
+      live.mezzi,
+      live.magLog,
+      live.magazzino,
+      live.integrityView.queryMeta,
+      live.snapshotFingerprint,
+      magManualRevision,
+    ],
+  );
+
+  const semanticIndex = derivedBundle.semanticIndex;
+
+  const integrityBadge = useMemo(
+    () => <ReportIntegrityStatusBadge view={live.integrityView} />,
+    [live.integrityView],
+  );
+
+  const onPreset = useCallback(
+    (p: ReportPeriodPreset) => {
+      setPreset(p);
+      if (p === "custom" && anchor) {
+        const end = endOfLocalDay(anchor);
+        const start = startOfLocalDay(addDaysLocal(end, -30));
+        setCustomFrom(fmtYmd(start));
+        setCustomTo(fmtYmd(end));
+      }
+    },
+    [anchor],
+  );
+
+  const onHistRev = useCallback(() => {
+    setHistRev((v) => v + 1);
+  }, []);
 
   const model = useMemo(() => {
     if (!anchor) return null;
@@ -68,25 +141,69 @@ export function ReportAnalyticsView() {
       magazzino: live.magazzino,
       mezzi: live.mezzi,
       magLog: live.magLog,
+      semanticIndex,
+      derivedBundle,
     });
-  }, [anchor, preset, customFrom, customTo, compareMode, live]);
+  }, [
+    anchor,
+    preset,
+    customFrom,
+    customTo,
+    compareMode,
+    live.attive,
+    live.storico,
+    live.completate,
+    live.manualByMonth,
+    live.magazzino,
+    live.mezzi,
+    live.magLog,
+    semanticIndex,
+    derivedBundle,
+  ]);
+
+  const filterRange = useStableDateRange(model?.range ?? null);
 
   const tops = useMemo(() => {
-    if (!model) return null;
-    const mezzi = buildTopMezziPeriodo(live.mezzi, live.completate, model.range);
-    const clienti = buildTopClientiPeriodo(live.completate, model.range);
-    if (!model.compareRange) return { mezzi, clienti };
+    if (!model || !filterRange) return null;
+    const mezzi = semanticIndex.topMezzi(filterRange);
+    const clienti = semanticIndex.topClienti(filterRange);
+    const ricambi = buildTopRicambiPeriodo(derivedBundle.magLogSorted, live.magazzino, filterRange);
+    if (!model.compareRange) return { mezzi, clienti, ricambi };
     const r = model.compareRange;
     return {
-      mezzi: mergeTopMezziCompare(mezzi, buildTopMezziPeriodo(live.mezzi, live.completate, r)),
-      clienti: mergeTopClientiCompare(clienti, buildTopClientiPeriodo(live.completate, r)),
+      mezzi: mergeTopMezziCompare(mezzi, semanticIndex.topMezzi(r)),
+      clienti: mergeTopClientiCompare(clienti, semanticIndex.topClienti(r)),
+      ricambi: mergeTopRicambiCompare(ricambi, buildTopRicambiPeriodo(derivedBundle.magLogSorted, live.magazzino, r)),
     };
-  }, [model, live.mezzi, live.completate]);
+  }, [model, filterRange, semanticIndex, derivedBundle.magLogSorted, live.magazzino]);
 
-  if (!mounted || !anchor || live.isLoading || !model || !tops) {
+  const toolbarProps =
+    anchor && filterRange && model
+      ? {
+          titleAddon: integrityBadge,
+          preset,
+          onPreset,
+          customFrom,
+          customTo,
+          onCustomFrom: setCustomFrom,
+          onCustomTo: setCustomTo,
+          compareMode,
+          onCompareMode: setCompareMode,
+          range: filterRange,
+          compareRange: model.compareRange,
+        }
+      : null;
+
+  if (!mounted || !anchor || live.isLoading || !model || !tops || !filterRange || !toolbarProps) {
     return (
       <div className={dsStackPage}>
-        <PageHeader title="Report" />
+        {toolbarProps ? (
+          <ReportToolbar {...toolbarProps} />
+        ) : (
+          <>
+            <PageHeader title="Report" titleAddon={integrityBadge} />
+          </>
+        )}
         <ReportSkeleton />
       </div>
     );
@@ -95,79 +212,57 @@ export function ReportAnalyticsView() {
   if (live.isError) {
     return (
       <div className={dsStackPage}>
-        <PageHeader title="Report" />
+        <ReportToolbar {...toolbarProps} />
         <ShellCard title="Caricamento non riuscito">
-          <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            Impossibile caricare i dati del report. Riprova più tardi.
-          </p>
+          <LoadingErrorState
+            title="Impossibile caricare i dati del report"
+            description="Controlla la connessione e riprova."
+            onRetry={() => window.location.reload()}
+          />
         </ShellCard>
       </div>
     );
   }
 
-  function onPreset(p: ReportPeriodPreset) {
-    setPreset(p);
-    if (p === "custom" && anchor) {
-      const end = endOfLocalDay(anchor);
-      const start = startOfLocalDay(addDaysLocal(end, -30));
-      setCustomFrom(fmtYmd(start));
-      setCustomTo(fmtYmd(end));
-    }
-  }
-
   return (
     <div className={dsStackPage}>
-      <PageHeader title="Report" />
+      <ReportToolbar {...toolbarProps} />
+      <ReportZoneNav />
 
-      <ReportControls
-        preset={preset}
-        onPreset={onPreset}
-        customFrom={customFrom}
-        customTo={customTo}
-        onCustomFrom={setCustomFrom}
-        onCustomTo={setCustomTo}
-        compareMode={compareMode}
-        onCompareMode={setCompareMode}
-      />
-
-      <ShellCard title="Indicatori periodo">
-        <ReportKpiGrid items={model.kpis} />
-      </ShellCard>
-
-      <ReportLavorazioniSection
-        attive={live.attive}
-        completate={live.completate}
-        manualEntries={live.manualEntries}
-        manualByMonth={live.manualByMonth}
+      <ReportPerformanceGate
         anchor={anchor}
-        filterRange={model.range}
-        compareDetail={model.compareDetail}
-      />
-
-      <ReportMagazzinoSection
-        magLog={live.magLog}
-        prodotti={live.magazzino}
-        anchor={anchor}
-        range={model.range}
-        compareDetail={model.compareDetail}
-        histRev={histRev}
-        onHistRev={() => setHistRev((v) => v + 1)}
-      />
-
-      <ReportRicambiConsumoSection magLog={live.magLog} prodotti={live.magazzino} filterRange={model.range} anchor={anchor} />
-
-      <ShellCard title="Classifiche operative" subtitle="Completate archiviate nel periodo selezionato; con confronto attivo le colonne Δ si riferiscono alla metrica principale della classifica.">
-        <div className="grid gap-8 lg:grid-cols-2">
-          <div className="min-w-0">
-            <h3 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Mezzi più lavorati</h3>
-            <ReportTopMezzi rows={tops.mezzi} showCompare={Boolean(model.compareRange)} />
-          </div>
-          <div className="min-w-0">
-            <h3 className="mb-2 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Clienti più attivi</h3>
-            <ReportTopClienti rows={tops.clienti} showCompare={Boolean(model.compareRange)} />
-          </div>
+        filterRange={filterRange}
+        compareRange={model.compareRange}
+        periodKpis={model.kpis}
+        live={live}
+        semanticIndex={semanticIndex}
+      >
+        <div className="min-w-0 space-y-4">
+          <ReportExecutiveOverview compareMode={compareMode} />
+          <ReportOperationsZone filterRange={filterRange} anchor={anchor} semanticIndex={semanticIndex} />
+          <ReportFleetZone />
+          <ReportEconomicZone />
+          <ReportMaintenanceZone
+            attive={live.attive}
+            completate={live.completate}
+            manualEntries={live.manualEntries}
+            anchor={anchor}
+            filterRange={filterRange}
+            compareDetail={model.compareDetail}
+            semanticIndex={semanticIndex}
+            derivedBundle={derivedBundle}
+            prodotti={live.magazzino}
+            histRev={histRev}
+            onHistRev={onHistRev}
+            topsMezzi={tops.mezzi}
+            topsClienti={tops.clienti}
+            topsRicambi={tops.ricambi}
+            showCompare={Boolean(model.compareRange)}
+          />
+          <ReportComplianceZone />
+          <ReportTeamTimesheetZone filterRange={filterRange} />
         </div>
-      </ShellCard>
+      </ReportPerformanceGate>
     </div>
   );
 }

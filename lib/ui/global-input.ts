@@ -3,6 +3,7 @@
  * Unica fonte per radius, ombre, z-index e stati hover/focus dei dropdown.
  */
 import { dsInput, gestionaleSelectFilterClass, dsZDropdown } from "@/lib/ui/design-system";
+import { dsIosInputTextSize } from "@/lib/ui/ios-mobile-tokens";
 
 export const globalInputZDropdown = dsZDropdown;
 
@@ -16,13 +17,17 @@ const globalAutocompleteDropdownChrome = [
   "origin-top transition-[opacity,transform] duration-150 ease-out",
 ].join(" ");
 
+/** Animazione apertura menu portal (dropdown globali). */
+export const globalDropdownPortalEnterClass = "global-dropdown-portal-enter";
+
 const globalInputDropdownChrome = [
   "max-h-52 overflow-y-auto",
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]",
   "bg-[var(--cab-card)] py-1",
   "shadow-[var(--cab-shadow-lg)]",
   "gestionale-scrollbar",
-  "origin-top transition-[opacity,transform] duration-150 ease-out",
+  "origin-top transition-opacity duration-150 ease-out",
+  globalDropdownPortalEnterClass,
 ].join(" ");
 
 export const globalInputDropdownPanel = [
@@ -68,6 +73,34 @@ export function globalInputDropdownOptionClass(active: boolean, selected?: boole
   return `${globalInputDropdownOptionBase} text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]`;
 }
 
+/** Pannello portal mese/anno calendario promemoria (altezza da Floating UI, non `max-h-52`). */
+export const promemoriaPickerMenuPanel = [
+  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]",
+  "bg-[var(--cab-card)] p-1.5",
+  "shadow-[var(--cab-shadow-lg)]",
+  "gestionale-scrollbar",
+  "origin-top transition-opacity duration-150 ease-out",
+  globalDropdownPortalEnterClass,
+].join(" ");
+
+const promemoriaPickerOptionBase =
+  "flex w-full min-h-10 items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors duration-150 sm:min-h-9 sm:py-1.5";
+
+/** Voce listbox picker promemoria — peso tipografico solo sulla selezione corrente. */
+export function promemoriaPickerOptionClass(active: boolean, selected: boolean): string {
+  if (active) {
+    return `${promemoriaPickerOptionBase} bg-[var(--cab-hover)] font-medium text-[color:var(--cab-text)]`;
+  }
+  if (selected) {
+    return `${promemoriaPickerOptionBase} bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] font-semibold text-[color:var(--cab-text)]`;
+  }
+  return `${promemoriaPickerOptionBase} font-normal text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]`;
+}
+
+/** Badge «Oggi» nel picker mese/anno. */
+export const promemoriaPickerTodayBadge =
+  "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)] bg-[color:color-mix(in_srgb,var(--cab-text-muted)_14%,transparent)]";
+
 const autocompleteOptionBase =
   "w-full min-h-11 cursor-pointer rounded-md border px-2 py-2.5 text-center text-sm font-medium leading-tight tracking-wide transition-[filter,box-shadow] duration-150 hover:brightness-[1.06] outline-none sm:min-h-0 sm:py-1.5 sm:text-[13px]";
 
@@ -105,11 +138,31 @@ export const globalAutocompleteAddBtnClass = [
 
 export const globalInputFieldDefault = dsInput;
 
-/** Campo combobox in toolbar filtri — stessa altezza dei select filtro legacy. */
-export const globalInputFieldFilter = `${gestionaleSelectFilterClass} min-h-10 cursor-text appearance-auto py-2`;
+/** Combobox filtri con ricerca/suggerimenti — no chevron select. */
+export const globalInputFieldFilterSearch = [
+  "min-h-10 w-full min-w-0 cursor-text appearance-auto rounded-[var(--ds-radius-lg)]",
+  "border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))]",
+  "bg-[var(--cab-surface)] py-2 px-3",
+  dsIosInputTextSize,
+  "font-medium leading-snug text-[color:var(--cab-text)]",
+  "shadow-[var(--cab-shadow-sm)] outline-none",
+  "transition-[border-color,box-shadow,background-color] duration-200 ease-out",
+  "placeholder:text-[color:var(--cab-text-muted)]",
+  "hover:border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))]",
+  "hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]",
+  "focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))]",
+  "focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]",
+  "touch-manipulation",
+].join(" ");
+
+/** Select nativo / combobox selectOnly in filtri — chevron a destra. */
+export const globalInputFieldFilterSelect = gestionaleSelectFilterClass;
+
+/** Combobox filtri searchable (GlobalSelect default). */
+export const globalInputFieldFilter = globalInputFieldFilterSearch;
 
 /** Campo data in filtri (icona calendario a destra). */
-export const globalInputFieldFilterDate = `${globalInputFieldFilter} pr-11`;
+export const globalInputFieldFilterDate = `${globalInputFieldFilterSearch} pr-11`;
 
 export const globalInputInvalidRing =
   " border-[color:color-mix(in_srgb,var(--cab-danger)_55%,var(--cab-border))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-danger)_28%,transparent)]";
@@ -141,10 +194,17 @@ export const globalInputCalendarPanel = [
 
 export const globalInputCalendarPortalPanel = globalInputCalendarChrome;
 
+/** Contenitore griglia calendario embedded (dashboard promemoria, senza posizionamento popup). */
+export const globalInputCalendarGridShell = [
+  "overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]",
+  "bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]",
+].join(" ");
+
 export const globalInputCalendarDayBtn = [
-  "flex h-9 w-9 items-center justify-center rounded-md text-xs font-semibold transition-colors",
+  "flex h-9 w-9 cursor-pointer items-center justify-center rounded-md text-xs font-semibold transition-colors",
   "text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]",
+  "disabled:pointer-events-none disabled:cursor-default disabled:opacity-25",
 ].join(" ");
 
 export const globalInputCalendarDaySelected =
@@ -154,7 +214,7 @@ export const globalInputCalendarDayToday =
   "ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))]";
 
 export const globalInputCalendarNavBtn = [
-  "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[color:var(--cab-border)]",
+  "flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-[color:var(--cab-border)]",
   "text-[color:var(--cab-text)] transition hover:bg-[var(--cab-hover)]",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]",
 ].join(" ");

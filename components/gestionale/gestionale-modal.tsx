@@ -6,11 +6,13 @@ import {
   LavorazioniModalShell,
   LavorazioniModalTitleBar,
 } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 
 export {
   LavorazioniModalShell as GestionaleModalShell,
   LavorazioniModalHeader as GestionaleModalHeader,
   LavorazioniModalTitleBar as GestionaleModalTitleBar,
+  GestionaleModalScrollBody,
 };
 
 /** Stato open/close per modali gestionale. Lo scroll lock è gestito da `GestionaleModalShell`. */

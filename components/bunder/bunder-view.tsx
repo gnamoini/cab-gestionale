@@ -1,5 +1,7 @@
 "use client";
 
+import dynamic from "next/dynamic";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   GestionaleListTable,
@@ -7,11 +9,19 @@ import {
   GlobalTableSortTh,
 } from "@/components/gestionale/global-table";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import {
+  PageToolbar,
+  PageToolbarCtaLabel,
+  PageToolbarResultCount,
+} from "@/components/design-system";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { BunderEditorModal } from "@/components/bunder/bunder-editor-modal";
+const BunderEditorModal = dynamic(
+  () => import("@/components/bunder/bunder-editor-modal").then((m) => m.BunderEditorModal),
+  { ssr: false },
+);
 import { useAuth } from "@/context/auth-context";
 import { appendBunderChangeLog, loadBunderChangeLog, removeBunderChangeLogEntryById, type BunderLogStored } from "@/lib/bunder/bunder-change-log-storage";
 import { cloneBunderDocument, createNuovoBunderDocument, documentoMatchesSearch, totaleDocumento } from "@/lib/bunder/bunder-generate-default";
@@ -19,16 +29,18 @@ import { openBunderPdfInNewTab } from "@/lib/bunder/bunder-pdf";
 import { openBunderWordInNewTab } from "@/lib/bunder/bunder-html-document";
 import { bunderKindLabel, BUNDER_DOC_KIND_OPTIONS } from "@/lib/bunder/doc-kind-meta";
 import type { BunderCommercialDocument, BunderDocKind } from "@/lib/bunder/types";
-import { loadBunderDocuments, saveBunderDocuments } from "@/lib/bunder/bunder-storage";
+import { persistBunderDocument, removeBunderDocument } from "@/lib/bunder/bunder-sync-adapter";
 import { CAB_BUNDER_LOG_REFRESH } from "@/lib/sistema/cab-events";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useBunderDocumentsQuery } from "@/src/hooks/gestionale/use-bunder-documents-query";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import {
   dsBtnNeutral,
   dsBtnPrimary,
+  dsInput,
   dsPageToolbarBtn,
+  dsPageToolbarCtaCompact,
   dsStackPage,
-  dsStickyToolbar,
   dsFocus,
   dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
@@ -49,6 +61,8 @@ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
+import { SkeletonTable } from "@/components/design-system/loading";
+import { SKELETON_MIN_HEIGHT } from "@/components/design-system/loading/skeleton-layout-presets";
 import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -178,15 +192,18 @@ function compareBunder(
 
 export function BunderView() {
   const { authorName: autore } = useAuth();
+  const queryClient = useQueryClient();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const gestToast = useGestionaleToast();
   const authorTrim = autore.trim() || "Operatore";
-  const [docs, setDocs] = useState<BunderCommercialDocument[]>([]);
+  const bunderQuery = useBunderDocumentsQuery();
+  const docs = bunderQuery.data ?? [];
   const viewOpts = useViewQueryOpts({ staleTime: 90_000 });
   const magazzinoQ = useMagazzinoRicambiUIQuery(undefined, viewOpts);
   const mag = magazzinoQ.data ?? [];
   const [search, setSearch] = useState("");
   const [filtriOpen, setFiltriOpen] = useState(false);
+  const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
   const [filtroDraft, setFiltroDraft] = useState<FiltriDraft>(DRAFT_EMPTY);
   const [filtroTipo, setFiltroTipo] = useState<BunderDocKind | "__tutti__">("__tutti__");
   const [filtroAzienda, setFiltroAzienda] = useState("");
@@ -216,7 +233,6 @@ export function BunderView() {
   const [logEntries, setLogEntries] = useState<BunderLogStored[]>([]);
 
   useEffect(() => {
-    setDocs(loadBunderDocuments());
     setLogEntries(loadBunderChangeLog());
   }, []);
 
@@ -232,10 +248,17 @@ export function BunderView() {
     if (logOpen) setLogEntries(loadBunderChangeLog());
   }, [logOpen]);
 
-  const persist = useCallback((next: BunderCommercialDocument[]) => {
-    setDocs(next);
-    saveBunderDocuments(next);
-  }, []);
+  const persistDoc = useCallback(
+    async (doc: BunderCommercialDocument, isNew: boolean) => {
+      try {
+        await persistBunderDocument(doc, { queryClient, isNew });
+        await bunderQuery.refetch();
+      } catch (e) {
+        gestToast.error(e instanceof Error ? e.message : "Salvataggio non riuscito.");
+      }
+    },
+    [bunderQuery, gestToast, queryClient],
+  );
 
   const autoriOpts = useMemo(() => {
     const s = new Set<string>();
@@ -471,50 +494,53 @@ export function BunderView() {
       existing: docs,
       magazzino: mag,
     });
-    persist([nu, ...docs]);
-    appendBunderChangeLog({
-      tone: "create",
-      tipoRiga: "CREATO DOCUMENTO",
-      oggettoRiga: `${nu.numeroProgressivo} · ${bunderKindLabel(nu.kind)}`,
-      modificaRiga: `Creato da procedura guidata BUNDER.`,
-      autore: authorTrim,
-      atIso: new Date().toISOString(),
+    void persistDoc(nu, true).then(() => {
+      appendBunderChangeLog({
+        tone: "create",
+        tipoRiga: "CREATO DOCUMENTO",
+        oggettoRiga: `${nu.numeroProgressivo} · ${bunderKindLabel(nu.kind)}`,
+        modificaRiga: `Creato da procedura guidata BUNDER.`,
+        autore: authorTrim,
+        atIso: new Date().toISOString(),
+      });
+      setWizardOpen(false);
+      setEditor({ open: true, doc: nu });
     });
-    setWizardOpen(false);
-    setEditor({ open: true, doc: nu });
   }
 
   function onSaveEdited(d: BunderCommercialDocument) {
-    const next = docs.some((x) => x.id === d.id) ? docs.map((x) => (x.id === d.id ? d : x)) : [d, ...docs];
-    persist(next);
+    const isNew = !docs.some((x) => x.id === d.id);
+    void persistDoc(d, isNew);
   }
 
   function duplica(d: BunderCommercialDocument) {
     const cl = cloneBunderDocument(d, { allDocs: docs, autore: authorTrim, mode: "duplica" });
-    persist([cl, ...docs]);
-    appendBunderChangeLog({
-      tone: "create",
-      tipoRiga: "DUPLICATO DOCUMENTO",
-      oggettoRiga: `${cl.numeroProgressivo}`,
-      modificaRiga: `Origine: ${d.numeroProgressivo}.`,
-      autore: authorTrim,
-      atIso: new Date().toISOString(),
+    void persistDoc(cl, true).then(() => {
+      appendBunderChangeLog({
+        tone: "create",
+        tipoRiga: "DUPLICATO DOCUMENTO",
+        oggettoRiga: `${cl.numeroProgressivo}`,
+        modificaRiga: `Origine: ${d.numeroProgressivo}.`,
+        autore: authorTrim,
+        atIso: new Date().toISOString(),
+      });
+      setEditor({ open: true, doc: cl });
     });
-    setEditor({ open: true, doc: cl });
   }
 
   function nuovoDa(d: BunderCommercialDocument) {
     const cl = cloneBunderDocument(d, { allDocs: docs, autore: authorTrim, mode: "nuovo_da_modello", refreshPricesFrom: mag });
-    persist([cl, ...docs]);
-    appendBunderChangeLog({
-      tone: "create",
-      tipoRiga: "NUOVO DA DOCUMENTO",
-      oggettoRiga: `${cl.numeroProgressivo}`,
-      modificaRiga: `Modello: ${d.numeroProgressivo}. Prezzi listino aggiornati ove codice presente a magazzino.`,
-      autore: authorTrim,
-      atIso: new Date().toISOString(),
+    void persistDoc(cl, true).then(() => {
+      appendBunderChangeLog({
+        tone: "create",
+        tipoRiga: "NUOVO DA DOCUMENTO",
+        oggettoRiga: `${cl.numeroProgressivo}`,
+        modificaRiga: `Modello: ${d.numeroProgressivo}. Prezzi listino aggiornati ove codice presente a magazzino.`,
+        autore: authorTrim,
+        atIso: new Date().toISOString(),
+      });
+      setEditor({ open: true, doc: cl });
     });
-    setEditor({ open: true, doc: cl });
   }
 
   function elimina(d: BunderCommercialDocument) {
@@ -525,16 +551,22 @@ export function BunderView() {
       confirmLabel: "Elimina",
     }).then((ok) => {
       if (!ok) return;
-      persist(docs.filter((x) => x.id !== d.id));
-      appendBunderChangeLog({
-        tone: "delete",
-        tipoRiga: "ELIMINATO DOCUMENTO",
-        oggettoRiga: d.numeroProgressivo,
-        modificaRiga: `Tipo: ${bunderKindLabel(d.kind)}. Destinatario: ${d.aziendaDestinatario}.`,
-        autore: authorTrim,
-        atIso: new Date().toISOString(),
-      });
-      gestToast.successOnce("bunder-delete", GESTIONALE_TOAST.successDeleted);
+      void removeBunderDocument(d.id, { queryClient })
+        .then(() => bunderQuery.refetch())
+        .then(() => {
+          appendBunderChangeLog({
+            tone: "delete",
+            tipoRiga: "ELIMINATO DOCUMENTO",
+            oggettoRiga: d.numeroProgressivo,
+            modificaRiga: `Tipo: ${bunderKindLabel(d.kind)}. Destinatario: ${d.aziendaDestinatario}.`,
+            autore: authorTrim,
+            atIso: new Date().toISOString(),
+          });
+          gestToast.successOnce("bunder-delete", GESTIONALE_TOAST.successDeleted);
+        })
+        .catch((e) => {
+          gestToast.error(e instanceof Error ? e.message : "Eliminazione non riuscita.");
+        });
     });
   }
 
@@ -562,6 +594,14 @@ export function BunderView() {
     });
   }
 
+  if (bunderQuery.isLoading && docs.length === 0) {
+    return (
+      <div className="min-h-[40vh]" aria-busy="true" aria-label="Caricamento documenti BUNDER">
+        <SkeletonTable minHeightClass={SKELETON_MIN_HEIGHT.bunderList} />
+      </div>
+    );
+  }
+
   return (
     <>
       <PageHeader
@@ -578,12 +618,14 @@ export function BunderView() {
 
       <div className={dsStackPage}>
       <ShellCard>
-        <div className={`${dsStickyToolbar} -mx-1 sm:mx-0`}>
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <button type="button" className={`${erpBtnNuovaLavorazione} h-11 shrink-0 px-4`} onClick={() => setWizardOpen(true)}>
-              Nuovo documento
+        <PageToolbar
+          className="sm:mx-0"
+          primaryAction={
+            <button type="button" className={dsPageToolbarCtaCompact} onClick={() => setWizardOpen(true)}>
+              <PageToolbarCtaLabel short="+ Nuovo" full="Nuovo documento" />
             </button>
+          }
+          search={
             <GestionaleSearchField
               wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
               placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
@@ -591,187 +633,161 @@ export function BunderView() {
               onChange={(e) => setSearch(e.target.value)}
               aria-label="Cerca documenti BUNDER"
             />
-              <button
-                type="button"
-                onClick={() => (filtriOpen ? setFiltriOpen(false) : openFiltri())}
-                className={`${dsPageToolbarBtn} relative h-11 min-w-[8.25rem] shrink-0 gap-2 px-3 text-sm sm:ml-auto`}
-                aria-expanded={filtriOpen}
-              >
-                Filtri
-                <svg className={`h-4 w-4 shrink-0 text-[color:var(--cab-primary)] transition-transform ${filtriOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                </svg>
-                {hasFiltriAvanzati || search.trim() ? (
-                  <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[var(--cab-primary)] ring-2 ring-[var(--cab-surface)]" aria-hidden />
-                ) : null}
-              </button>
-          </div>
-          <div className="flex flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <span className="inline-flex items-baseline gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-2.5 py-1 text-xs text-[color:var(--cab-text-muted)] shadow-[var(--cab-shadow-sm)]">
-                <span className="tabular-nums text-sm font-semibold text-[color:var(--cab-text)]">{filtered.length}</span>
-                <span>document{filtered.length === 1 ? "o" : "i"}</span>
-              </span>
-              {hasFiltriAvanzati || search.trim() ? (
-                <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]">
-                  Filtri attivi
-                </span>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-              <button type="button" className={dsPageToolbarBtn} onClick={() => setSearch("")}>
-                Pulisci ricerca
-              </button>
-              <button type="button" className={dsPageToolbarBtn} onClick={resetFiltriAll}>
-                Reimposta filtri
-              </button>
-            </div>
-          </div>
-        </div>
-        <div
-          className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] ${
-            filtriOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
-          }`}
-        >
-          <div className="min-h-0 overflow-hidden">
-            <div className="border-t border-[color:var(--cab-border)] pt-3" aria-label="Filtri Bunder">
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                      Tipo
-                      <div className="mt-1">
-                        <GlobalSelect
-                          variant="filter"
-                          inputClassName={globalInputFieldFilter}
-                          items={[
-                            { value: "__tutti__", label: "Tutti" },
-                            ...BUNDER_DOC_KIND_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
-                          ]}
-                          value={filtroDraft.tipo}
-                          onChange={(v) => setFiltroDraft((f) => ({ ...f, tipo: v as FiltriDraft["tipo"] }))}
-                          strictFromList
-                          aria-label="Filtra tipo documento"
-                        />
-                      </div>
-                    </label>
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                      Azienda (contiene)
-                      <input className={`mt-1 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900`} value={filtroDraft.azienda} onChange={(e) => setFiltroDraft((f) => ({ ...f, azienda: e.target.value }))} />
-                    </label>
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                      Referente
-                      <input className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900" value={filtroDraft.referente} onChange={(e) => setFiltroDraft((f) => ({ ...f, referente: e.target.value }))} />
-                    </label>
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                      Prodotto (nel testo righe)
-                      <input className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900" value={filtroDraft.prodotto} onChange={(e) => setFiltroDraft((f) => ({ ...f, prodotto: e.target.value }))} />
-                    </label>
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                      Codice articolo
-                      <input className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900" value={filtroDraft.codice} onChange={(e) => setFiltroDraft((f) => ({ ...f, codice: e.target.value }))} />
-                    </label>
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                      Settore
-                      <input className="mt-1 w-full rounded-lg border border-zinc-200 px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900" value={filtroDraft.settore} onChange={(e) => setFiltroDraft((f) => ({ ...f, settore: e.target.value }))} />
-                    </label>
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                      Creato da
-                      <div className="mt-1">
-                        <GlobalSelect
-                          variant="filter"
-                          inputClassName={globalInputFieldFilter}
-                          items={[
-                            { value: "", label: "Tutti" },
-                            ...autoriOpts.map((a) => ({ value: a, label: a })),
-                          ]}
-                          value={filtroDraft.autore}
-                          onChange={(v) => setFiltroDraft((f) => ({ ...f, autore: v }))}
-                          strictFromList
-                          aria-label="Filtra autore"
-                        />
-                      </div>
-                    </label>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                        Importo min
-                        <input className="mt-1 w-full rounded-lg border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900" value={filtroDraft.imin} onChange={(e) => setFiltroDraft((f) => ({ ...f, imin: e.target.value }))} />
-                      </label>
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                        Importo max
-                        <input className="mt-1 w-full rounded-lg border px-2 py-1.5 text-xs dark:border-zinc-700 dark:bg-zinc-900" value={filtroDraft.imax} onChange={(e) => setFiltroDraft((f) => ({ ...f, imax: e.target.value }))} />
-                      </label>
-                    </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                        Data da
-                        <div className="mt-1">
-                          <GlobalDatePickerYmd
-                            valueYmd={filtroDraft.dataDa}
-                            onChangeYmd={(v) => setFiltroDraft((f) => ({ ...f, dataDa: v }))}
-                            aria-label="Data da"
-                          />
-                        </div>
-                      </label>
-                      <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                        Data a
-                        <div className="mt-1">
-                          <GlobalDatePickerYmd
-                            valueYmd={filtroDraft.dataA}
-                            onChangeYmd={(v) => setFiltroDraft((f) => ({ ...f, dataA: v }))}
-                            aria-label="Data a"
-                          />
-                        </div>
-                      </label>
-                    </div>
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                      Mese
-                      <div className="mt-1">
-                        <GlobalSelect
-                          variant="filter"
-                          inputClassName={globalInputFieldFilter}
-                          items={[
-                            { value: "__tutti__", label: "Tutti" },
-                            ...Array.from({ length: 12 }, (_, i) => ({
-                              value: String(i + 1),
-                              label: String(i + 1),
-                            })),
-                          ]}
-                          value={filtroDraft.mese}
-                          onChange={(v) => setFiltroDraft((f) => ({ ...f, mese: v }))}
-                          strictFromList
-                          aria-label="Filtra mese"
-                        />
-                      </div>
-                    </label>
-                    <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                      Anno
-                      <div className="mt-1">
-                        <GlobalSelect
-                          variant="filter"
-                          inputClassName={globalInputFieldFilter}
-                          items={[
-                            { value: "__tutti__", label: "Tutti" },
-                            ...anniOpts.map((y) => ({ value: String(y), label: String(y) })),
-                          ]}
-                          value={filtroDraft.anno}
-                          onChange={(v) => setFiltroDraft((f) => ({ ...f, anno: v }))}
-                          strictFromList
-                          aria-label="Filtra anno"
-                        />
-                      </div>
-                    </label>
+          }
+          filtersExpanded={filtriOpen}
+          onFiltersToggle={() => (filtriOpen ? setFiltriOpen(false) : openFiltri())}
+          filtersActive={hasFiltriAvanzati || search.trim().length > 0}
+          filtersPanel={
+            <>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Tipo
+                  <div className="mt-1">
+                    <GlobalSelect
+                      variant="filter"
+                      inputClassName={globalInputFieldFilter}
+                      items={[
+                        { value: "__tutti__", label: "Tutti" },
+                        ...BUNDER_DOC_KIND_OPTIONS.map((o) => ({ value: o.id, label: o.label })),
+                      ]}
+                      value={filtroDraft.tipo}
+                      onChange={(v) => setFiltroDraft((f) => ({ ...f, tipo: v as FiltriDraft["tipo"] }))}
+                      strictFromList
+                      aria-label="Filtra tipo documento"
+                    />
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <button type="button" className={dsBtnNeutral} onClick={() => setFiltroDraft({ ...DRAFT_EMPTY })}>
-                      Reimposta
-                    </button>
-                    <button type="button" className={dsBtnPrimary} onClick={applyFiltri}>
-                      Applica
-                    </button>
+                </label>
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Azienda (contiene)
+                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.azienda} onChange={(e) => setFiltroDraft((f) => ({ ...f, azienda: e.target.value }))} />
+                </label>
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Referente
+                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.referente} onChange={(e) => setFiltroDraft((f) => ({ ...f, referente: e.target.value }))} />
+                </label>
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Prodotto (nel testo righe)
+                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.prodotto} onChange={(e) => setFiltroDraft((f) => ({ ...f, prodotto: e.target.value }))} />
+                </label>
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Codice articolo
+                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.codice} onChange={(e) => setFiltroDraft((f) => ({ ...f, codice: e.target.value }))} />
+                </label>
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Settore
+                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.settore} onChange={(e) => setFiltroDraft((f) => ({ ...f, settore: e.target.value }))} />
+                </label>
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Creato da
+                  <div className="mt-1">
+                    <GlobalSelect
+                      variant="filter"
+                      inputClassName={globalInputFieldFilter}
+                      items={[
+                        { value: "", label: "Tutti" },
+                        ...autoriOpts.map((a) => ({ value: a, label: a })),
+                      ]}
+                      value={filtroDraft.autore}
+                      onChange={(v) => setFiltroDraft((f) => ({ ...f, autore: v }))}
+                      strictFromList
+                      aria-label="Filtra autore"
+                    />
                   </div>
-            </div>
-          </div>
-        </div>
-        </div>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                    Importo min
+                    <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.imin} onChange={(e) => setFiltroDraft((f) => ({ ...f, imin: e.target.value }))} />
+                  </label>
+                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                    Importo max
+                    <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.imax} onChange={(e) => setFiltroDraft((f) => ({ ...f, imax: e.target.value }))} />
+                  </label>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                    Data da
+                    <div className="mt-1">
+                      <GlobalDatePickerYmd
+                        valueYmd={filtroDraft.dataDa}
+                        onChangeYmd={(v) => setFiltroDraft((f) => ({ ...f, dataDa: v }))}
+                        aria-label="Data da"
+                      />
+                    </div>
+                  </label>
+                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                    Data a
+                    <div className="mt-1">
+                      <GlobalDatePickerYmd
+                        valueYmd={filtroDraft.dataA}
+                        onChangeYmd={(v) => setFiltroDraft((f) => ({ ...f, dataA: v }))}
+                        aria-label="Data a"
+                      />
+                    </div>
+                  </label>
+                </div>
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Mese
+                  <div className="mt-1">
+                    <GlobalSelect
+                      variant="filter"
+                      inputClassName={globalInputFieldFilter}
+                      items={[
+                        { value: "__tutti__", label: "Tutti" },
+                        ...Array.from({ length: 12 }, (_, i) => ({
+                          value: String(i + 1),
+                          label: String(i + 1),
+                        })),
+                      ]}
+                      value={filtroDraft.mese}
+                      onChange={(v) => setFiltroDraft((f) => ({ ...f, mese: v }))}
+                      strictFromList
+                      aria-label="Filtra mese"
+                    />
+                  </div>
+                </label>
+                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  Anno
+                  <div className="mt-1">
+                    <GlobalSelect
+                      variant="filter"
+                      inputClassName={globalInputFieldFilter}
+                      items={[
+                        { value: "__tutti__", label: "Tutti" },
+                        ...anniOpts.map((y) => ({ value: String(y), label: String(y) })),
+                      ]}
+                      value={filtroDraft.anno}
+                      onChange={(v) => setFiltroDraft((f) => ({ ...f, anno: v }))}
+                      strictFromList
+                      aria-label="Filtra anno"
+                    />
+                  </div>
+                </label>
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" className={dsBtnNeutral} onClick={() => setFiltroDraft({ ...DRAFT_EMPTY })}>
+                  Reimposta
+                </button>
+                <button type="button" className={dsBtnPrimary} onClick={applyFiltri}>
+                  Applica
+                </button>
+              </div>
+            </>
+          }
+          onFilterReset={resetFiltriAll}
+          onFilterApply={applyFiltri}
+          meta={
+            <PageToolbarResultCount
+              count={filtered.length}
+              filtersActive={hasFiltriAvanzati}
+              searchActive={search.trim().length > 0}
+              onSearchReset={() => setSearch("")}
+              onFilterReset={resetFiltriAll}
+              singularLabel="documento"
+              pluralLabel="documenti"
+            />
+          }
+        />
 
         <GestionaleListTable
           visibilityClass="mt-4"
@@ -956,8 +972,8 @@ export function BunderView() {
       />
 
       <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche BUNDER" ariaLabel="Log modifiche BUNDER">
-        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-hidden p-3">
-          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1`}>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
                 {logEntries.length === 0 ? (
                   <GestionaleLogEmpty message="Nessuna voce registrata." />
                 ) : (

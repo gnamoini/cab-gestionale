@@ -12,3 +12,10 @@ test("login redirect and logout", async ({ page }) => {
   await logoutViaUi(page);
   await expect(page).toHaveURL(/\/login/);
 });
+
+test("reset password page renders form", async ({ page }) => {
+  attachConsoleGuards(page);
+  await page.goto("/login/reset-password");
+  await expect(page.getByTestId("smoke-reset-password")).toBeVisible();
+  await expect(page.getByTestId("smoke-reset-password-confirm")).toBeVisible();
+});

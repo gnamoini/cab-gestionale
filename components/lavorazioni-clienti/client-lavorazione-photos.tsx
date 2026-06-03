@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ShellCard } from "@/components/gestionale/shell-card";
+import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
+import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { dsScrollbar } from "@/lib/ui/design-system";
 import { useClientLavorazionePhotosQuery } from "@/src/hooks/gestionale/use-client-lavorazione-media-queries";
 import type { StoredImage } from "@/lib/media/image-storage";
 
@@ -11,12 +13,12 @@ const DEFAULT_MAX = 5;
 function PhotoLightbox({ image, onClose }: { image: StoredImage; onClose: () => void }) {
   return (
     <LavorazioniModalShell onRequestClose={onClose} title="Foto lavorazione">
-      <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain p-4 sm:p-6">
+      <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain p-4 sm:p-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={image.signedUrl}
           alt={image.name}
-          className="max-h-[70vh] max-w-full rounded-lg border border-zinc-200 object-contain dark:border-zinc-700"
+          className="max-h-[70vh] max-w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] object-contain"
         />
       </div>
     </LavorazioniModalShell>
@@ -26,7 +28,7 @@ function PhotoLightbox({ image, onClose }: { image: StoredImage; onClose: () => 
 function PhotoThumb({
   image,
   onOpen,
-  sizeClass = "h-10 w-10",
+  sizeClass = "h-16 w-16",
 }: {
   image: StoredImage;
   onOpen: () => void;
@@ -35,7 +37,7 @@ function PhotoThumb({
   return (
     <button
       type="button"
-      className={`${sizeClass} shrink-0 overflow-hidden rounded-md border border-zinc-200 bg-zinc-100 ring-offset-2 transition hover:ring-2 hover:ring-orange-400/50 dark:border-zinc-700 dark:bg-zinc-800`}
+      className={`${sizeClass} shrink-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] ring-offset-2 transition hover:ring-2 hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)]`}
       title={image.name}
       aria-label={`Apri foto ${image.name}`}
       onClick={onOpen}
@@ -105,27 +107,59 @@ export function ClientLavorazionePhotoStrip({
 export function ClientLavorazionePhotoGallery({
   lavorazioneId,
   max = DEFAULT_MAX,
+  embedded = false,
 }: {
   lavorazioneId: string;
   max?: number;
+  /** Dentro panoramica dettaglio: GestionaleInfoCard compatto, senza ShellCard. */
+  embedded?: boolean;
 }) {
   const [preview, setPreview] = useState<StoredImage | null>(null);
   const photosQ = useClientLavorazionePhotosQuery(lavorazioneId, { max });
   const loading = photosQ.isLoading && photosQ.data == null;
   const images = photosQ.data ?? [];
 
-  if (loading) return <p className="text-sm text-zinc-500">Caricamento foto…</p>;
+  const subtitle = loading ? (
+    <span className="inline-flex items-center gap-1.5">
+      <LoadingSpinner size="sm" label="Caricamento foto…" />
+      Caricamento foto…
+    </span>
+  ) : images.length === 0 ? (
+    "Nessuna foto caricata"
+  ) : (
+    `${images.length}/${max} immagini`
+  );
+
+  const galleryBody =
+    images.length > 0 ? (
+      <div className={`flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}`}>
+        {images.map((img) => (
+          <PhotoThumb key={img.path} image={img} onOpen={() => setPreview(img)} />
+        ))}
+      </div>
+    ) : null;
+
+  if (embedded) {
+    return (
+      <>
+        <GestionaleInfoCard compact title="Foto" subtitle={subtitle}>
+          {galleryBody}
+        </GestionaleInfoCard>
+        {preview ? <PhotoLightbox image={preview} onClose={() => setPreview(null)} /> : null}
+      </>
+    );
+  }
+
+  if (loading) return <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento foto…</p>;
   if (images.length === 0) return null;
 
   return (
     <>
-      <ShellCard>
-        <div className="flex flex-wrap gap-2">
-          {images.map((img) => (
-            <PhotoThumb key={img.path} image={img} sizeClass="h-16 w-16 sm:h-20 sm:w-20" onOpen={() => setPreview(img)} />
-          ))}
-        </div>
-      </ShellCard>
+      <div className="flex flex-wrap gap-2">
+        {images.map((img) => (
+          <PhotoThumb key={img.path} image={img} sizeClass="h-16 w-16 sm:h-20 sm:w-20" onOpen={() => setPreview(img)} />
+        ))}
+      </div>
       {preview ? <PhotoLightbox image={preview} onClose={() => setPreview(null)} /> : null}
     </>
   );

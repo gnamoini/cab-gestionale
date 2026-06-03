@@ -1,4 +1,3 @@
-import type { CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
 import { resolveDocumentoApplicazione } from "@/lib/documenti/documenti-applicabilita";
 import { documentoSenzaMarca } from "@/components/gestionale/documenti/documenti-helpers";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
@@ -6,9 +5,9 @@ import type { DocumentoGestionale } from "@/lib/types/gestionale";
 export const FILTER_ALL = "__tutti__" as const;
 
 export type DocumentiAdvancedFilters = {
-  /** Id marca catalogo o FILTER_ALL. */
+  /** Nome marca (impostazioni globali) o FILTER_ALL. */
   marca: string;
-  /** Id modello catalogo o FILTER_ALL. */
+  /** Nome modello (impostazioni globali) o FILTER_ALL. */
   modello: string;
   categoria: DocumentoGestionale["categoria"] | typeof FILTER_ALL;
 };
@@ -29,6 +28,19 @@ function sameModello(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
+/** Migra filtri persistiti che usavano id catalogo (`marca-*`, `mdl-*`). */
+function migratePersistedMarcaModello(
+  raw: Partial<DocumentiAdvancedFilters>,
+): Pick<DocumentiAdvancedFilters, "marca" | "modello"> {
+  const marca = raw.marca?.trim() ?? FILTER_ALL;
+  const modello = raw.modello?.trim() ?? FILTER_ALL;
+  const marcaNome =
+    marca !== FILTER_ALL && marca.startsWith("marca-") ? FILTER_ALL : marca;
+  const modelloNome =
+    modello !== FILTER_ALL && modello.startsWith("mdl-") ? FILTER_ALL : modello;
+  return { marca: marcaNome || FILTER_ALL, modello: modelloNome || FILTER_ALL };
+}
+
 export function documentiAdvancedFiltersActive(f: DocumentiAdvancedFilters): boolean {
   return (
     (f.marca.trim() !== "" && f.marca !== FILTER_ALL) ||
@@ -41,7 +53,6 @@ export function documentiAdvancedFiltersActive(f: DocumentiAdvancedFilters): boo
 export function documentoRowMatchesAdvancedFilters(
   doc: DocumentoGestionale,
   f: DocumentiAdvancedFilters,
-  catalog: CatalogMarca[],
 ): boolean {
   const r = resolveDocumentoApplicazione(doc);
 
@@ -49,17 +60,11 @@ export function documentoRowMatchesAdvancedFilters(
 
   if (documentoSenzaMarca(doc)) return true;
 
-  if (f.marca !== FILTER_ALL) {
-    const mar = catalog.find((m) => m.id === f.marca);
-    if (!mar || !sameMarca(r.marcaKey ?? r.marca, mar.nome)) return false;
-  }
+  if (f.marca !== FILTER_ALL && !sameMarca(r.marcaKey ?? r.marca, f.marca)) return false;
+
   if (f.modello !== FILTER_ALL) {
-    const mar = f.marca !== FILTER_ALL ? catalog.find((m) => m.id === f.marca) : null;
-    const modelliScope = mar?.macchine ?? catalog.flatMap((m) => m.macchine);
-    const mac = modelliScope.find((x) => x.id === f.modello);
-    if (!mac) return false;
     if (r.applicabilita === "marca") return true;
-    if (!sameModello(r.modelloKey ?? r.macchina, mac.nome)) return false;
+    if (!sameModello(r.modelloKey ?? r.macchina, f.modello)) return false;
   }
   return true;
 }
@@ -70,7 +75,8 @@ export function loadDocumentiAdvancedFiltersPersisted(): DocumentiAdvancedFilter
     const raw = window.sessionStorage.getItem(GESTIONALE_STORAGE_KEY);
     if (!raw) return null;
     const o = JSON.parse(raw) as Partial<DocumentiAdvancedFilters>;
-    return { ...DOCUMENTI_ADVANCED_FILTERS_EMPTY, ...o };
+    const migrated = migratePersistedMarcaModello(o);
+    return { ...DOCUMENTI_ADVANCED_FILTERS_EMPTY, ...o, ...migrated };
   } catch {
     return null;
   }

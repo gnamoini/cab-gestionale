@@ -150,12 +150,12 @@ export function DashboardSistemaLogListEmbedded({
 
   if (paged) {
     return (
-      <div className={`flex min-h-0 flex-1 flex-col gap-2 ${className ?? ""}`}>
-        <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1 pr-1`}>{list}</div>
+      <div className={`flex min-h-0 min-w-0 flex-1 flex-col gap-2 ${className ?? ""}`}>
+        <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1 pr-1`}>{list}</div>
         {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
       </div>
     );
   }
 
-  return <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1 pr-1 ${className ?? ""}`}>{list}</div>;
+  return <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1 pr-1 ${className ?? ""}`}>{list}</div>;
 }

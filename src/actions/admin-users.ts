@@ -7,6 +7,8 @@ import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-c
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
 import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
+import { validateCreateUserInput } from "@/lib/validation/admin-user-validation";
+import { validateUpdateUserRoleInput } from "@/lib/validation/security-actions-validation";
 import type { ProfileRow } from "@/src/types/supabase-tables";
 import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
 import { invalidateServerRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth.server";
@@ -156,13 +158,15 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
   const password = input.password ?? "";
   const ruolo = resolveRole(input.ruolo);
 
+  const validationErr = validateCreateUserInput({ nome, username, email, password, ruolo });
+  if (validationErr) return { ok: false, message: validationErr };
+
   if (!nome) return { ok: false, message: "Il nome è obbligatorio." };
   const usernameErr = usernameFieldError(username);
   if (usernameErr) {
     return { ok: false, message: usernameErr };
   }
   if (!email || !isValidEmail(email)) return { ok: false, message: "Email non valida." };
-  if (password.length < 6) return { ok: false, message: "La password deve avere almeno 6 caratteri." };
   if (!RUOLI.includes(ruolo)) return { ok: false, message: "Ruolo non valido." };
 
   const caller = await assertAdminCaller();
@@ -298,10 +302,9 @@ export async function listUsersByAdminAction(): Promise<ListUsersByAdminResult> 
 }
 
 export async function updateUserRoleByAdminAction(input: { userId: string; role: AppRole }): Promise<UpdateUserRoleByAdminResult> {
-  const userId = input.userId?.trim();
-  const nextRole = resolveRole(input.role);
-  if (!userId) return { ok: false, message: "Utente non valido." };
-  if (!APP_ROLES.includes(nextRole)) return { ok: false, message: "Ruolo non valido." };
+  const parsed = validateUpdateUserRoleInput(input);
+  if (!parsed.ok) return { ok: false, message: parsed.message };
+  const { userId, role: nextRole } = parsed;
 
   const caller = await assertAdminCaller();
   if (!caller.ok) return { ok: false, message: caller.message };

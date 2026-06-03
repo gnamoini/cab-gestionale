@@ -20,20 +20,50 @@ function codiceMatchKey(codiceRaw: string): string {
   return normalizeMagazzinoCodiceOE(codiceRaw);
 }
 
+function ricambioCodiciForMatch(item: RicambioMagazzino): string[] {
+  const codes: string[] = [];
+  const primary = item.codiceFornitoreOriginale.trim();
+  const secondary = item.codiceFornitoreOriginaleSecondario.trim();
+  if (primary) codes.push(primary);
+  if (secondary) codes.push(secondary);
+  return codes;
+}
+
 /** Primo ricambio in elenco con stesso codice OE normalizzato (escluso `excludeId` se presente). */
 export function findFirstDuplicateByCodiceOriginale(
   items: RicambioMagazzino[],
   codiceRaw: string,
   options?: { excludeId?: string },
 ): RicambioMagazzino | null {
-  const key = codiceMatchKey(codiceRaw);
-  const looseKey = entityAutocompleteKey(codiceRaw);
-  if (!key && !looseKey) return null;
+  return findDuplicateByCodici(items, codiceRaw, options);
+}
+
+/** Cerca duplicato su codice primario o secondario (cross-field). */
+export function findDuplicateByCodici(
+  items: RicambioMagazzino[],
+  codiceRaw: string,
+  options?: { excludeId?: string; alsoCheckSecondary?: string },
+): RicambioMagazzino | null {
+  const keysToMatch = new Set<string>();
+  const looseToMatch = new Set<string>();
+
+  for (const raw of [codiceRaw, options?.alsoCheckSecondary].filter(Boolean) as string[]) {
+    const key = codiceMatchKey(raw);
+    const looseKey = entityAutocompleteKey(raw);
+    if (key) keysToMatch.add(key);
+    if (looseKey) looseToMatch.add(looseKey);
+  }
+
+  if (keysToMatch.size === 0 && looseToMatch.size === 0) return null;
+
   for (const item of items) {
     if (options?.excludeId && item.id === options.excludeId) continue;
-    const itemKey = codiceMatchKey(item.codiceFornitoreOriginale);
-    if (key && itemKey === key) return item;
-    if (looseKey && entityAutocompleteKey(item.codiceFornitoreOriginale) === looseKey) return item;
+    for (const code of ricambioCodiciForMatch(item)) {
+      const itemKey = codiceMatchKey(code);
+      if (itemKey && keysToMatch.has(itemKey)) return item;
+      const itemLoose = entityAutocompleteKey(code);
+      if (itemLoose && looseToMatch.has(itemLoose)) return item;
+    }
   }
   return null;
 }
@@ -52,11 +82,16 @@ export type MagazzinoArchiveDuplicateCodeGroup = {
 export function analyzeArchiveDuplicateCodes(items: RicambioMagazzino[]): MagazzinoArchiveDuplicateCodeGroup[] {
   const map = new Map<string, RicambioMagazzino[]>();
   for (const it of items) {
-    const k = codiceMatchKey(it.codiceFornitoreOriginale);
-    if (!k) continue;
-    const arr = map.get(k);
-    if (arr) arr.push(it);
-    else map.set(k, [it]);
+    for (const code of ricambioCodiciForMatch(it)) {
+      const k = codiceMatchKey(code);
+      if (!k) continue;
+      const arr = map.get(k);
+      if (arr) {
+        if (!arr.some((x) => x.id === it.id)) arr.push(it);
+      } else {
+        map.set(k, [it]);
+      }
+    }
   }
   const groups: MagazzinoArchiveDuplicateCodeGroup[] = [];
   for (const [normalizedKey, groupItems] of map) {

@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { listClientLavorazioniAccessByAdminAction, setClientLavorazioniAccessByAdminAction, type ClientLavorazioniAccessRow } from "@/src/actions/client-lavorazioni-access";
-import { GlobalTableHeadLabel } from "@/components/gestionale/global-table";
+import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { roleLabel, type AppRole, hasPermission } from "@/lib/auth/rbac";
+import { PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
@@ -72,10 +73,10 @@ export function ClientLavorazioniAccessPanel() {
   return (
     <ShellCard title="Accesso Lavorazioni Clienti">
       <p className="mb-4 text-sm text-[color:var(--cab-text-muted)]">
-        Abilita la dashboard read-only <strong className="text-[color:var(--cab-text)]">Lavorazioni (Clienti)</strong> per utenti
+        Abilita la dashboard read-only <strong className="text-[color:var(--cab-text)]">{PORTALE_CLIENTI_LABEL}</strong> per utenti
         selezionati. Gli admin hanno sempre accesso; default disabilitato per gli altri.
       </p>
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex min-w-0 justify-end">
         <button type="button" className={dsPageToolbarBtn} onClick={() => void load()} disabled={loading}>
           {loading ? "Aggiornamento…" : "Aggiorna"}
         </button>
@@ -83,14 +84,12 @@ export function ClientLavorazioniAccessPanel() {
       {error ? <p className="mb-3 text-sm text-red-600 dark:text-red-400">{error}</p> : null}
       <div className={dsTableWrap}>
         <table className={`${dsTable} text-xs`}>
-          <thead>
-            <tr>
+          <GlobalTableHead>
               <GlobalTableHeadLabel label="Utente" />
               <GlobalTableHeadLabel label="Email" />
               <GlobalTableHeadLabel label="Ruolo" />
               <GlobalTableHeadLabel label="Accesso portale" />
-            </tr>
-          </thead>
+          </GlobalTableHead>
           <tbody>
             {loading ? (
               <tr>
@@ -115,7 +114,7 @@ export function ClientLavorazioniAccessPanel() {
                       <RoleBadge role={row.ruolo} />
                     </td>
                     <td className={dsTableTd}>
-                      <label className="inline-flex cursor-pointer items-center gap-2">
+                      <label className="inline-flex min-w-0 cursor-pointer items-center gap-2">
                         <input
                           type="checkbox"
                           className="h-4 w-4 rounded border-zinc-300"

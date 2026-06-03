@@ -149,12 +149,40 @@ export function partitionMarcaLevelDocs(filesMarca: DocumentoGestionale[]): {
   return { listini, altriMarca };
 }
 
-function sameMarca(a: string, b: string): boolean {
-  return a.trim().toLowerCase() === b.trim().toLowerCase();
+function normalizeKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
-function sameModello(a: string, b: string): boolean {
-  return a.trim().toLowerCase() === b.trim().toLowerCase();
+function sameMarca(a: string, b: string): boolean {
+  return normalizeKey(a) === normalizeKey(b);
+}
+
+function removeMarcaPrefix(modelName: string, marcaName: string): string {
+  const model = modelName.trim();
+  const marca = marcaName.trim();
+  if (!model || !marca) return model;
+  const modelNorm = normalizeKey(model);
+  const marcaNorm = normalizeKey(marca);
+  if (!modelNorm.startsWith(marcaNorm)) return model;
+  const re = new RegExp(`^${marca.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*[-:]?\\s*`, "i");
+  return model.replace(re, "").trim();
+}
+
+function sameModello(a: string, b: string, marcaName?: string): boolean {
+  const left = normalizeKey(a);
+  const right = normalizeKey(b);
+  if (left === right) return true;
+  if (!marcaName?.trim()) return false;
+  const leftNoBrand = normalizeKey(removeMarcaPrefix(a, marcaName));
+  const rightNoBrand = normalizeKey(removeMarcaPrefix(b, marcaName));
+  return leftNoBrand.length > 0 && rightNoBrand.length > 0 && leftNoBrand === rightNoBrand;
 }
 
 /**
@@ -175,7 +203,7 @@ export function documentoCollocatoInCatalogo(
   const modNome = (r.modelloKey ?? r.macchina).trim();
   if (r.applicabilita === "modello") {
     if (!modNome || modNome === "—") return false;
-    return mar.macchine.some((mac) => sameModello(mac.nome, modNome));
+    return mar.macchine.some((mac) => sameModello(mac.nome, modNome, mar.nome));
   }
   return false;
 }
@@ -207,7 +235,7 @@ export function buildDocumentiViewTree(
         const r = resolveDocumentoApplicazione(d);
         if (r.applicabilita !== "modello") continue;
         if (!sameMarca(r.marcaKey ?? r.marca, marca.nome)) continue;
-        if (!sameModello(r.modelloKey ?? r.macchina, mac.nome)) continue;
+        if (!sameModello(r.modelloKey ?? r.macchina, mac.nome, marca.nome)) continue;
         filesModello.push(d);
       }
       filesModello.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase, { skipSenzaMarcaPartition: true }));

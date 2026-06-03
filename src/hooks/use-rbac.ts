@@ -21,8 +21,9 @@ export function useRbac() {
   const clientLav = useClientLavorazioniAccess();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
   const isLoading = status === "loading" || permsLoading;
-  const role = snapshot?.role ?? "guest";
+  const role = snapshot?.role ?? user?.ruolo ?? "guest";
   const rbacCtx = snapshot?.rbacContext ?? { operatorGlobalSettingsDbEnabled: false };
+  const rbacUser = snapshot ? snapshot.role : user;
 
   const pageOpts: CanAccessPageOptions = {
     clientLavorazioniAllowed: clientLav.allowed,
@@ -34,18 +35,18 @@ export function useRbac() {
     isLoading,
     operatorGlobalSettingsPilotActive: snapshot?.pilot.effectiveEnabled ?? false,
     clientLavorazioniLoading: clientLav.isLoading,
-    hasPermission: (permission: PermissionKey) => checkPermission(user, permission, rbacCtx),
-    hasCapability: (capability: Capability) => hasCapability(user, capability, rbacCtx),
-    canRead: (section: RbacSection) => canRead(user, section, rbacCtx),
-    canWrite: (section: RbacSection) => canWrite(user, section, rbacCtx),
-    canDelete: (section: RbacSection) => canDelete(user, section, rbacCtx),
+    hasPermission: (permission: PermissionKey) => checkPermission(rbacUser, permission, rbacCtx),
+    hasCapability: (capability: Capability) => hasCapability(rbacUser, capability, rbacCtx),
+    canRead: (section: RbacSection) => canRead(rbacUser, section, rbacCtx),
+    canWrite: (section: RbacSection) => canWrite(rbacUser, section, rbacCtx),
+    canDelete: (section: RbacSection) => canDelete(rbacUser, section, rbacCtx),
     canAccessPage: (pathname: string, opts?: CanAccessPageOptions) =>
-      canAccessPage(user, pathname, { ...pageOpts, ...opts }, rbacCtx),
+      canAccessPage(rbacUser, pathname, { ...pageOpts, ...opts }, rbacCtx),
     guardWrite: (section: RbacSection, onDenied?: (msg: string) => void) =>
-      denyUnless(canWrite(user, section, rbacCtx), onDenied),
+      denyUnless(canWrite(rbacUser, section, rbacCtx), onDenied),
     guardRead: (section: RbacSection, onDenied?: (msg: string) => void) =>
-      denyUnless(canRead(user, section, rbacCtx), onDenied),
-    assertWrite: (section: RbacSection) => assertAllowed(canWrite(user, section, rbacCtx)),
+      denyUnless(canRead(rbacUser, section, rbacCtx), onDenied),
+    assertWrite: (section: RbacSection) => assertAllowed(canWrite(rbacUser, section, rbacCtx)),
     isAdmin: role === "admin",
     isManager: role === "manager",
     isOperatore: role === "operatore" || role === "manager",

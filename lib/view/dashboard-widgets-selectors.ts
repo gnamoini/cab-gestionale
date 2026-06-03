@@ -3,6 +3,7 @@ import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazione-display-h
 import { comparePrioritaLavorazione } from "@/lib/lavorazioni/priorita-order";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import { isoInRange, todayUntilNowRange, type DateRange } from "@/lib/report/date-ranges";
 import type { MovimentoRicambioRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
@@ -184,13 +185,15 @@ export function computeDashboardMagRecentRicambi(
 
 export function computeDashboardMagDailyMovements(
   rows: readonly MovimentoRicambioRow[],
+  range: DateRange = todayUntilNowRange(),
 ): DashboardMagDailyMovements {
   let entrate = 0;
   let uscite = 0;
   for (const m of rows) {
-    if (!isTodayLocal(m.created_at)) continue;
-    if (m.tipo === "entrata") entrate += 1;
-    else uscite += 1;
+    if (!isoInRange(m.created_at, range)) continue;
+    const q = Math.max(1, Math.round(Number(m.quantita) || 0));
+    if (m.tipo === "entrata") entrate += q;
+    else uscite += q;
   }
   return { entrate, uscite };
 }

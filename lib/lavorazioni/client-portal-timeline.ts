@@ -6,6 +6,13 @@ import {
   clientPortalDataIngressoLabel,
   clientPortalMezzoIdent,
 } from "@/lib/lavorazioni/client-portal-row-fields";
+import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
+import {
+  DEFAULT_LAVORAZIONE_STATO_ID,
+  DEFAULT_STATI_LAVORAZIONI_WORKFLOW,
+  migrateStatoConfigId,
+} from "@/lib/lavorazioni/stati-dynamic";
+import { isLogReverted } from "@/lib/gestionale-log/undo";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -18,7 +25,7 @@ export type ClientTimelineHeader = {
   attrezzatura: string;
   targa: string;
   matricola: string;
-  /** Etichetta leggibile senza codici tecnici (Cliente · Attrezzatura · Targa). */
+  /** Titolo pagina / sottotitolo: Cliente · Lavorazione codice. */
   identificativo: string;
 };
 
@@ -33,6 +40,12 @@ export type ClientTimelineEvent = {
   at: string;
   title: string;
   subtitle?: string;
+};
+
+type StatoTimelineStep = {
+  id: string;
+  at: string;
+  statoId: string;
 };
 
 const INGRESSO_LABELS: { key: keyof SchedaIngressoFields; label: string; multiline?: boolean }[] = [
@@ -57,7 +70,118 @@ const INGRESSO_LABELS: { key: keyof SchedaIngressoFields; label: string; multili
   { key: "noteIntervento", label: "Note intervento", multiline: true },
 ];
 
-function ingressoFieldsFromRow(
+function readStatoId(raw: unknown): string | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  return migrateStatoConfigId(raw.trim());
+}
+
+function readSnapshotRecord(row: LogModificaRow): Record<string, unknown> | null {
+  const p = row.payload;
+  if (!p || typeof p !== "object" || Array.isArray(p)) return null;
+  const snap = (p as Record<string, unknown>).snapshot;
+  if (snap && typeof snap === "object" && !Array.isArray(snap)) return snap as Record<string, unknown>;
+  return null;
+}
+
+function readAuditBeforeAfter(row: LogModificaRow): {
+  before?: Record<string, unknown>;
+  after?: Record<string, unknown>;
+} {
+  const p = row.payload;
+  if (!p || typeof p !== "object" || Array.isArray(p)) return {};
+  const o = p as Record<string, unknown>;
+  const before = o.before;
+  const after = o.after;
+  return {
+    before:
+      before && typeof before === "object" && !Array.isArray(before)
+        ? (before as Record<string, unknown>)
+        : undefined,
+    after:
+      after && typeof after === "object" && !Array.isArray(after) ? (after as Record<string, unknown>) : undefined,
+  };
+}
+
+function statoWorkflowIndex(
+  statoId: string,
+  statiOpts: { id: string; label: string; color?: string }[],
+): number {
+  const migrated = migrateStatoConfigId(statoId);
+  const fromOpts = statiOpts.findIndex((s) => migrateStatoConfigId(s.id) === migrated);
+  if (fromOpts >= 0) return fromOpts;
+  const fromDefault = DEFAULT_STATI_LAVORAZIONI_WORKFLOW.findIndex((s) => s.id === migrated);
+  return fromDefault >= 0 ? fromDefault : 999;
+}
+
+function compareStatoSteps(
+  a: StatoTimelineStep,
+  b: StatoTimelineStep,
+  statiOpts: { id: string; label: string; color?: string }[],
+): number {
+  const ta = new Date(a.at).getTime();
+  const tb = new Date(b.at).getTime();
+  if (ta !== tb) return ta - tb;
+  const order = statoWorkflowIndex(a.statoId, statiOpts) - statoWorkflowIndex(b.statoId, statiOpts);
+  if (order !== 0) return order;
+  return a.id.localeCompare(b.id);
+}
+
+function pushStatoStep(steps: StatoTimelineStep[], step: StatoTimelineStep): void {
+  const last = steps[steps.length - 1];
+  if (last && last.statoId === step.statoId) return;
+  steps.push(step);
+}
+
+function ensureAccettazioneFirst(
+  steps: StatoTimelineStep[],
+  anchorAt: string,
+): StatoTimelineStep[] {
+  const accId = migrateStatoConfigId(DEFAULT_LAVORAZIONE_STATO_ID);
+  if (steps.some((s) => s.statoId === accId)) return steps;
+  return [{ id: "stato-synthetic-accettazione", at: anchorAt, statoId: accId }, ...steps];
+}
+
+function buildStatoTimelineSteps(
+  logs: readonly LogModificaRow[],
+  anchorAt: string,
+): StatoTimelineStep[] {
+  const steps: StatoTimelineStep[] = [];
+  const sorted = [...logs]
+    .filter((row) => !isLogReverted(row))
+    .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id));
+
+  for (const lg of sorted) {
+    if (lg.azione === "CREATE") {
+      const snap = readSnapshotRecord(lg);
+      const stato = readStatoId(snap?.stato) ?? readStatoId(readAuditBeforeAfter(lg).after?.stato);
+      if (stato) {
+        pushStatoStep(steps, { id: `stato-create-${lg.id}`, at: lg.created_at, statoId: stato });
+      }
+      continue;
+    }
+
+    if (lg.azione !== "UPDATE") continue;
+
+    const { before, after } = readAuditBeforeAfter(lg);
+    const beforeStato = readStatoId(before?.stato);
+    const afterStato = readStatoId(after?.stato);
+    if (!afterStato || beforeStato === afterStato) continue;
+
+    if (beforeStato) {
+      const last = steps[steps.length - 1];
+      if (!last || last.statoId !== beforeStato) {
+        pushStatoStep(steps, { id: `stato-before-${lg.id}`, at: lg.created_at, statoId: beforeStato });
+      }
+    }
+
+    pushStatoStep(steps, { id: `stato-${lg.id}`, at: lg.created_at, statoId: afterStato });
+  }
+
+  const withAccettazione = ensureAccettazioneFirst(steps, anchorAt);
+  return withAccettazione;
+}
+
+export function resolveClientPortalSchedaIngressoFields(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore,
   logs: readonly LogModificaRow[],
@@ -100,16 +224,25 @@ export function buildClientTimelineHeader(
   const cantiere = clientPortalCantiereLabel(row, schedeStore);
   const attrezzatura = clientPortalAttrezzaturaLabel(row, schedeStore);
   const targa = ident.targa;
-  const parts = [cliente !== "—" ? cliente : null, attrezzatura !== "—" ? attrezzatura : null, targa !== "—" ? targa : null].filter(
-    Boolean,
-  );
+  const codice = lavorazioneDisplayCodice({ id: row.id, codice: row.codice });
+  const clienteOk = cliente !== "—" ? cliente : null;
+  let identificativo: string;
+  if (clienteOk && codice) {
+    identificativo = `${clienteOk} · Lavorazione ${codice}`;
+  } else if (codice) {
+    identificativo = `Lavorazione ${codice}`;
+  } else if (clienteOk) {
+    identificativo = clienteOk;
+  } else {
+    identificativo = "Lavorazione in corso";
+  }
   return {
     cliente,
     cantiere,
     attrezzatura,
     targa,
     matricola: ident.matricola,
-    identificativo: parts.length > 0 ? parts.join(" · ") : "Lavorazione in corso",
+    identificativo,
   };
 }
 
@@ -119,7 +252,7 @@ export function buildClientTimelineIngressoFields(
   logs: readonly LogModificaRow[],
   addettiGlobali: readonly string[],
 ): ClientTimelineIngressoField[] {
-  const fields = ingressoFieldsFromRow(row, schedeStore, logs, addettiGlobali);
+  const fields = resolveClientPortalSchedaIngressoFields(row, schedeStore, logs, addettiGlobali);
   return INGRESSO_LABELS.map(({ key, label, multiline }) => ({
     label,
     value: fields[key]?.trim() || "—",
@@ -130,34 +263,16 @@ export function buildClientTimelineIngressoFields(
 export function buildClientTimelineEvents(
   logs: readonly LogModificaRow[],
   statiOpts: { id: string; label: string; color?: string }[] = [],
+  options?: { anchorAt?: string },
 ): ClientTimelineEvent[] {
-  const items: ClientTimelineEvent[] = [];
+  const anchorAt = options?.anchorAt ?? logs[0]?.created_at ?? new Date(0).toISOString();
+  const steps = buildStatoTimelineSteps(logs, anchorAt).sort((a, b) => compareStatoSteps(a, b, statiOpts));
 
-  for (const lg of logs) {
-    if (lg.azione === "RESTORE") {
-      items.push({
-        id: `restore-${lg.id}`,
-        at: lg.created_at,
-        title: "Lavorazione ripristinata",
-      });
-      continue;
-    }
-    if (lg.azione !== "UPDATE") continue;
-    const payload = lg.payload as { before?: Record<string, unknown>; after?: Record<string, unknown> } | null | undefined;
-    const before = payload?.before;
-    const after = payload?.after;
-    if (before?.stato !== after?.stato && typeof after?.stato === "string") {
-      const statoLabel = statoLavorazioneLabel(after.stato, statiOpts);
-      items.push({
-        id: `stato-${lg.id}`,
-        at: lg.created_at,
-        title: `Stato · ${statoLabel}`,
-      });
-    }
-  }
-
-  items.sort((a, b) => b.at.localeCompare(a.at));
-  return items;
+  return steps.map((step) => ({
+    id: step.id,
+    at: step.at,
+    title: `Stato · ${statoLavorazioneLabel(step.statoId, statiOpts)}`,
+  }));
 }
 
 export function fmtClientTimelineWhen(iso: string): string {

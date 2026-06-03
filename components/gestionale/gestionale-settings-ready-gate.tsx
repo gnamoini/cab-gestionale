@@ -1,10 +1,16 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/context/auth-context";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
-import { GlobalLoadingView } from "@/components/design-system/global-loading";
+import { LoadingProgressBar } from "@/components/design-system/loading";
+import { loadingCaptionClass } from "@/components/design-system/loading/loading-tokens";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
+import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+
+const SETTINGS_LOADING_FAILSAFE_MS = 5_000;
 
 /**
  * Dopo autenticazione, carica le impostazioni business da Supabase in parallelo alla shell.
@@ -12,13 +18,41 @@ import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settin
  */
 export function GestionaleSettingsReadyGate({ children }: { children: React.ReactNode }) {
   const { configurationError } = useAuth();
+  const toast = useGestionaleToast();
   const settingsBlocked = !isSupabasePublicEnvConfigured() || !!configurationError;
   const q = useCabAppSettingsPayloadQuery({ enabled: !settingsBlocked });
-  const settingsLoading = q.isPending && !q.data;
+  const hasRuntimeCache = Boolean(getRuntimeCabAppSettings());
+  const settingsLoading = q.isPending && !q.data && !hasRuntimeCache;
+  const [hydrated, setHydrated] = useState(false);
+  const [loadingFailsafe, setLoadingFailsafe] = useState(false);
+  const failsafeToastShownRef = useRef(false);
+  const showSettingsBanner = hydrated && settingsLoading && !loadingFailsafe;
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (!settingsLoading) {
+      setLoadingFailsafe(false);
+      failsafeToastShownRef.current = false;
+      return;
+    }
+    const id = window.setTimeout(() => setLoadingFailsafe(true), SETTINGS_LOADING_FAILSAFE_MS);
+    return () => window.clearTimeout(id);
+  }, [settingsLoading]);
+
+  useEffect(() => {
+    if (!loadingFailsafe || failsafeToastShownRef.current) return;
+    failsafeToastShownRef.current = true;
+    toast.warning(
+      "Caricamento impostazioni lento: l'app usa i valori già disponibili finché la sincronizzazione non termina.",
+    );
+  }, [loadingFailsafe, toast]);
 
   if (settingsBlocked) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
+      <div className="flex min-w-0 min-h-[50vh] flex-col items-center justify-center gap-3 px-4 py-16 text-center">
         <p className="max-w-md text-sm font-semibold text-[color:var(--cab-text)]" role="alert">
           {MISSING_SUPABASE_ENV_MESSAGE}
         </p>
@@ -31,14 +65,15 @@ export function GestionaleSettingsReadyGate({ children }: { children: React.Reac
 
   return (
     <>
-      {settingsLoading ? (
+      {showSettingsBanner ? (
         <div
           className="border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-card))] px-4 py-2"
           role="status"
           aria-busy="true"
         >
-          <div className="mx-auto flex max-w-3xl items-center justify-center gap-2">
-            <GlobalLoadingView message={GLOBAL_LOADING_MESSAGES.settings} spinnerSize="sm" className="flex-row gap-2 py-0" />
+          <div className="mx-auto min-w-0 max-w-3xl space-y-1.5">
+            <p className={`text-center ${loadingCaptionClass}`}>{GLOBAL_LOADING_MESSAGES.settings}</p>
+            <LoadingProgressBar label={GLOBAL_LOADING_MESSAGES.settings} className="max-w-md mx-auto" />
           </div>
         </div>
       ) : null}

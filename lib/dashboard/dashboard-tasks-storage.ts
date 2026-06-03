@@ -62,3 +62,11 @@ export function createDashboardTask(text: string): DashboardTask {
     createdAt: new Date().toISOString(),
   };
 }
+
+/** Attive in cima, completate in fondo; più recenti prima in ogni gruppo. */
+export function sortDashboardTasks(tasks: DashboardTask[]): DashboardTask[] {
+  return [...tasks].sort((a, b) => {
+    if (a.done !== b.done) return a.done ? 1 : -1;
+    return Date.parse(b.createdAt) - Date.parse(a.createdAt);
+  });
+}

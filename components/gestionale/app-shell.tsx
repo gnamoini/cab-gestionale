@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { CloseButton, Tooltip } from "@/components/design-system";
 import { useAuth } from "@/context/auth-context";
 import { useGlobalLoading, useShowGlobalLoading } from "@/context/global-loading-context";
@@ -13,11 +13,16 @@ import { CLIENTE_HOME_PATH, shouldHideNavHref, isClienteRole } from "@/lib/auth/
 import { useRbac } from "@/src/hooks/use-rbac";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
-import { ThemeToggle } from "@/components/gestionale/theme-toggle";
+import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
 import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
-import { dsPageToolbarBtn, dsZModalHigh } from "@/lib/ui/design-system";
+import { dsGestionaleContentMax, dsPageToolbarBtn, dsZModalHigh } from "@/lib/ui/design-system";
+import { layoutPageRoot, layoutResponsiveCoreScope } from "@/lib/ui/responsive-layout-core";
+import { ResponsiveLayoutAuditMount } from "@/components/gestionale/responsive-layout-audit-mount";
+import { VisualLayoutLinterMount } from "@/components/gestionale/visual-layout-linter-mount";
+import { DesignSystemLockMount } from "@/components/gestionale/design-system-lock-mount";
+import { UiOsShadowMount } from "@/components/gestionale/ui-os-shadow-mount";
 import {
   isNavTargetCurrent,
   ROUTE_LOADING_FAILSAFE_MS,
@@ -26,21 +31,22 @@ import {
 } from "@/src/lib/navigation/route-transition";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
+import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
+import { useSidebarCollapsed } from "@/lib/ui/use-sidebar-collapsed";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
-
-const SIDEBAR_COLLAPSED_KEY = "cab-sidebar-collapsed";
 
 const shellTopBarClass =
   "flex h-14 shrink-0 items-center border-b border-[color:var(--cab-border)]";
 
 const navLinkBase =
-  "group relative flex min-h-10 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium transition-colors duration-200 ease-out";
+  "cab-sidebar-nav-link group relative flex min-h-10 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium";
 
 const navLinkInactive =
   "text-zinc-600 hover:bg-zinc-100/95 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/90 dark:hover:text-zinc-100";
 
 const navLinkActive =
-  "bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_22%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-8 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[var(--cab-primary)] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-card))] dark:text-white dark:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,transparent)]";
+  "bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_22%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-8 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[color:var(--cab-primary)] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-card))] dark:text-white dark:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,transparent)]";
 
 function NavLink({
   href,
@@ -64,7 +70,7 @@ function NavLink({
 
   const iconWrap = (
     <span
-      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-md transition-colors duration-200 ${
+      className={`cab-sidebar-nav-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
         active && !disabled
           ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-surface-2))] text-[color:var(--cab-primary)]"
           : "bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200 group-hover:text-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:group-hover:bg-zinc-700 dark:group-hover:text-zinc-200"
@@ -80,12 +86,12 @@ function NavLink({
       <div
         role="link"
         aria-disabled="true"
-        className={`${navLinkBase} cursor-not-allowed opacity-75 ${collapsed ? "justify-center px-2" : ""}`}
+        className={`${navLinkBase} cursor-not-allowed opacity-75`}
       >
         {iconWrap}
-        <span className={`min-w-0 flex-1 truncate leading-tight ${collapsed ? "sr-only" : ""}`}>{label}</span>
-        {!collapsed && badge ? (
-          <span className="ml-auto shrink-0 rounded bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200">
+        <span className="cab-sidebar-nav-label min-w-0 truncate leading-tight">{label}</span>
+        {badge ? (
+          <span className="cab-sidebar-nav-badge ml-auto max-w-[4rem] shrink-0 overflow-hidden rounded bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200">
             {badge}
           </span>
         ) : null}
@@ -106,10 +112,10 @@ function NavLink({
         if (isNavTargetCurrent(pathname, href)) return;
         scheduleRouteTransitionBegin(e, () => onNavigate?.(href));
       }}
-      className={`${navLinkBase} ${active ? navLinkActive : navLinkInactive} ${collapsed ? "justify-center px-2" : ""} ${erpFocus}`}
+      className={`${navLinkBase} ${active ? navLinkActive : navLinkInactive} ${erpFocus}`}
     >
       {iconWrap}
-      <span className={`min-w-0 flex-1 truncate leading-tight ${collapsed ? "sr-only" : ""}`}>{label}</span>
+      <span className="cab-sidebar-nav-label min-w-0 truncate leading-tight">{label}</span>
     </Link>
   );
 
@@ -190,6 +196,28 @@ function AccountMenu() {
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function SidebarThemeSection({ collapsed = false }: { collapsed?: boolean }) {
+  if (collapsed) {
+    return (
+      <div className="hidden shrink-0 justify-center border-t border-zinc-200 p-2 dark:border-zinc-800 md:flex">
+        <ThemeToggle />
+      </div>
+    );
+  }
+
+  return (
+    <div className="shrink-0 border-t border-zinc-200 px-3 py-2 dark:border-zinc-800">
+      <div className="flex min-h-9 items-center justify-between gap-2 rounded-lg px-2.5">
+        <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+          <ThemeModeIcon className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
+          Aspetto
+        </span>
+        <ThemeToggle variant="switch" />
+      </div>
     </div>
   );
 }
@@ -293,6 +321,13 @@ function MobileNavRow({
   );
 }
 
+const NAV_DRAWER_MS = 240;
+
+function navDrawerAnimMs(): number {
+  if (typeof window === "undefined") return NAV_DRAWER_MS;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : NAV_DRAWER_MS;
+}
+
 function MobileNavDrawer({
   open,
   onClose,
@@ -305,10 +340,62 @@ function MobileNavDrawer({
   onNavigate?: (href: string) => void;
 }) {
   const pathname = usePathname();
-  useBodyScrollLock(open, "MobileNavDrawer");
+  const [mounted, setMounted] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const panelState = closing ? "closing" : "open";
 
   useEffect(() => {
-    if (!open) return;
+    if (open) {
+      setMounted(true);
+      setClosing(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!mounted || open) return;
+    setClosing(true);
+    const id = window.setTimeout(() => {
+      setMounted(false);
+      setClosing(false);
+    }, navDrawerAnimMs());
+    return () => window.clearTimeout(id);
+  }, [mounted, open]);
+
+  useBodyScrollLock(mounted, "MobileNavDrawer");
+
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 768px)");
+    function dismissForDesktop() {
+      if (!mq.matches) return;
+      setClosing(false);
+      setMounted(false);
+      onClose();
+    }
+    dismissForDesktop();
+    mq.addEventListener("change", dismissForDesktop);
+    return () => mq.removeEventListener("change", dismissForDesktop);
+  }, [onClose]);
+
+  useEffect(() => {
+    // #region agent log
+    fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1d6c0" },
+      body: JSON.stringify({
+        sessionId: "b1d6c0",
+        runId: "drawer-state",
+        hypothesisId: "H2",
+        location: "app-shell.tsx:MobileNavDrawer",
+        message: "drawer state",
+        data: { open, mounted, closing },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+    // #endregion
+  }, [open, mounted, closing]);
+
+  useEffect(() => {
+    if (!mounted || closing || !open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
       const target = e.target;
@@ -320,31 +407,40 @@ function MobileNavDrawer({
     }
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [mounted, closing, open, onClose]);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   return (
     <div className={`fixed inset-0 ${dsZModalHigh} touch-none overscroll-none md:hidden`} role="presentation">
-      <button type="button" className="absolute inset-0 bg-black/50 backdrop-blur-[1px] touch-manipulation" aria-label="Chiudi menu" onClick={onClose} />
+      <button
+        type="button"
+        className="cab-nav-drawer-backdrop absolute inset-0 bg-black/50 backdrop-blur-[1px] touch-manipulation"
+        data-state={panelState}
+        aria-label="Chiudi menu"
+        onClick={onClose}
+      />
       <div
-        className="cab-nav-drawer-panel absolute inset-y-0 left-0 flex w-[min(19.5rem,88vw)] max-w-[100vw] flex-col border-r border-zinc-200 bg-white pt-[env(safe-area-inset-top)] shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+        className="cab-nav-drawer-panel absolute inset-y-0 left-0 flex w-[min(19.5rem,88vw)] max-w-full flex-col border-r border-zinc-200 bg-white pt-[env(safe-area-inset-top)] shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+        data-state={panelState}
         role="dialog"
         aria-modal="true"
         aria-label="Menu principale"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className="relative flex h-14 shrink-0 items-center justify-center border-b border-zinc-200 px-4 dark:border-zinc-800">
-          <CabLogo height={22} className="shrink-0" priority />
-          <div className="absolute right-4 top-1/2 -translate-y-1/2">
+        <div className={`${shellTopBarClass} grid grid-cols-[1fr_auto_1fr] items-center px-4`}>
+          <span className="min-w-0" aria-hidden />
+          <CabLogo height={32} className="shrink-0" sizes="112px" priority />
+          <div className="flex min-w-0 items-center justify-end">
             <CloseButton onClick={onClose} />
           </div>
         </div>
-        <nav className="gestionale-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3" aria-label="Sezioni principali">
+        <nav className="gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto p-3" aria-label="Sezioni principali">
           {navItems.map((item) => (
             <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} onNavigate={onNavigate} />
           ))}
         </nav>
+        <SidebarThemeSection />
       </div>
     </div>
   );
@@ -352,7 +448,7 @@ function MobileNavDrawer({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
+  const { collapsed, toggleCollapsed } = useSidebarCollapsed();
   const [routeLoading, setRouteLoading] = useState(false);
   const routeTransitionStartRef = useRef<number | null>(null);
   const { user } = useAuth();
@@ -363,6 +459,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const clienteOnly = isClienteRole(user);
   const homePath = clienteOnly ? CLIENTE_HOME_PATH : "/dashboard";
   useGlobalLoading(routeLoading ? GLOBAL_LOADING_MESSAGES.navigation : null);
+
+  useLayoutEffect(() => {
+    healBodyScrollLockState("app-shell-mount");
+  }, []);
+
   const navItems = useMemo(
     () =>
       resolveGestionaleNav({
@@ -379,14 +480,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       }),
     [user, clientLavAccess.allowed, clientLavAccess.isLoading, operatorPilot.dbEnabled],
   );
-
-  useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
-    } catch {
-      /* ignore */
-    }
-  }, []);
 
   useEffect(() => {
     if (routeTransitionStartRef.current != null) {
@@ -454,30 +547,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [beginRouteTransition, pathname, homePath],
   );
 
-  const toggleCollapsed = useCallback(() => {
-    setCollapsed((c) => {
-      const next = !c;
-      try {
-        localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }, []);
-
   const asideW = collapsed ? "md:w-[4.25rem]" : "md:w-[12.75rem]";
   const mainPad = collapsed ? "md:pl-[4.25rem]" : "md:pl-[12.75rem]";
 
   return (
-    <div className="flex h-dvh min-h-0 max-w-[100vw] overflow-x-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]">
+    <div className={`cab-app-shell flex min-h-0 ${cabAppViewportFillClass} max-w-full overflow-x-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]`}>
       <aside
-        className={`fixed inset-y-0 left-0 z-40 hidden flex-col border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width] duration-200 ease-out md:flex ${asideW}`}
+        data-sidebar-collapsed={collapsed ? "" : undefined}
+        className={`cab-sidebar fixed inset-y-0 left-0 z-40 hidden flex-col overflow-x-hidden border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width] duration-250 ease-out md:flex ${asideW}`}
       >
-        <div className={`${shellTopBarClass} ${collapsed ? "justify-center px-1.5" : "gap-2 px-2.5"}`}>
+        <div
+          className={
+            collapsed
+              ? `${shellTopBarClass} justify-center px-1.5`
+              : "grid h-14 shrink-0 grid-cols-[1fr_auto] items-center gap-2 border-b border-[color:var(--cab-border)] px-3"
+          }
+        >
           {!collapsed ? (
-            <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center self-stretch py-1">
-              <CabLogo height={30} className="min-w-0 shrink-0 translate-x-[2px] translate-y-[4px] object-center" priority />
+            <div className="flex h-9 min-w-0 items-center justify-center">
+              <Link
+                href={homePath}
+                onClick={onHeaderHomeClick}
+                aria-label={CAB_APP_PRODUCT_NAME}
+                className={`${erpFocus} flex h-9 min-w-0 items-center rounded-lg`}
+              >
+                <CabLogo height={32} priority sizes="112px" />
+              </Link>
             </div>
           ) : null}
           <Tooltip content={collapsed ? "Espandi" : "Comprimi"} side="right">
@@ -485,14 +580,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               type="button"
               onClick={toggleCollapsed}
               aria-label={collapsed ? "Espandi menu laterale" : "Comprimi menu laterale"}
-              className={`${erpFocus} hidden min-h-9 min-w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-sm text-[color:var(--cab-text-muted)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:bg-[var(--cab-hover)] md:inline-flex dark:border-[color:var(--cab-border-strong)]`}
+              className={`${erpFocus} hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-sm text-[color:var(--cab-text-muted)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:bg-[var(--cab-hover)] md:inline-flex dark:border-[color:var(--cab-border-strong)]`}
             >
               {collapsed ? "⟩" : "⟨"}
             </button>
           </Tooltip>
         </div>
         <nav
-          className="gestionale-scrollbar flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-3"
+          className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden p-3"
           aria-label="Sezioni principali"
         >
           {navItems.map((item) => (
@@ -508,55 +603,66 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           ))}
         </nav>
+        <SidebarThemeSection collapsed={collapsed} />
         <div className={collapsed ? "hidden" : "block"}>
           <SidebarAccountFooter />
         </div>
       </aside>
 
-      <div className={`flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-200 ease-out ${mainPad}`}>
-        <header className="cab-ios-sticky-header flex h-14 shrink-0 items-center gap-2.5 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_92%,transparent)] px-2.5 backdrop-blur-md sm:px-4 md:justify-between md:gap-3 md:px-5 supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
-          <div className="flex shrink-0 items-center justify-start">
-            <button
-              type="button"
-              data-testid="smoke-nav-drawer-open"
-              className={`inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] md:hidden dark:border-[color:var(--cab-border-strong)] ${erpFocus}`}
-              aria-label="Apri menu"
-              onClick={() => setMobileOpen(true)}
-            >
-              ☰
-            </button>
-
-            <Link
-              href={homePath}
-              onClick={onHeaderHomeClick}
-              className={`${erpFocus} hidden min-w-0 items-center gap-2.5 rounded-lg py-1 pr-2 md:inline-flex`}
-            >
-              <CabLogo height={28} className="shrink-0 translate-y-[2px]" priority />
-              <span className="truncate text-xs font-semibold text-[color:var(--cab-text)] sm:text-sm">{CAB_APP_PRODUCT_NAME}</span>
-            </Link>
-          </div>
-
-          <div className="flex min-w-0 flex-1 justify-center md:hidden">
-            <Link
-              href={homePath}
-              onClick={onHeaderHomeClick}
-              aria-label={CAB_APP_PRODUCT_NAME}
-              className={`${erpFocus} inline-flex min-h-11 items-center justify-center rounded-lg px-1`}
-            >
-              <CabLogo height={22} className="shrink-0 translate-y-1 object-center" priority />
-            </Link>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2.5">
-            <ThemeToggle />
-            <AccountMenu />
+      <div
+        className={`flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-250 ease-out ${mainPad}`}
+      >
+        <header className="cab-ios-sticky-header shrink-0 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_92%,transparent)] backdrop-blur-md supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
+          <div
+            className={`${dsGestionaleContentMax} flex h-14 w-full min-w-0 items-center gap-3 px-2 max-md:grid max-md:grid-cols-[auto_1fr_auto] max-md:items-center max-md:gap-0 sm:px-3 md:justify-between md:px-4`}
+          >
+            <div className="flex min-w-0 items-center justify-start gap-3 max-md:contents">
+              <button
+                type="button"
+                data-testid="smoke-nav-drawer-open"
+                className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] md:hidden dark:border-[color:var(--cab-border-strong)] ${erpFocus}`}
+                aria-label="Apri menu"
+                onClick={() => setMobileOpen(true)}
+              >
+                ☰
+              </button>
+              <Link
+                href={homePath}
+                onClick={onHeaderHomeClick}
+                aria-label={CAB_APP_PRODUCT_NAME}
+                className={`${erpFocus} inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg transition-opacity duration-200 hover:opacity-90 max-md:justify-self-center md:justify-start md:py-2`}
+              >
+                <CabLogo
+                  height={32}
+                  className="shrink-0 md:hidden"
+                  sizes="112px"
+                  priority
+                />
+                <CabLogo
+                  height={32}
+                  className="hidden shrink-0 md:block"
+                  sizes="112px"
+                  priority
+                />
+              </Link>
+            </div>
+            <div className="flex min-w-0 items-center justify-end">
+              <AccountMenu />
+            </div>
           </div>
         </header>
 
         <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} onNavigate={beginRouteTransition} />
 
-        <main className="cab-ios-scroll-y gestionale-scrollbar mx-auto min-h-0 w-full max-w-[min(100%,100rem)] flex-1 px-2 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-3 md:px-4 md:py-4">
-          {children}
+        <ResponsiveLayoutAuditMount />
+        <VisualLayoutLinterMount />
+        <DesignSystemLockMount />
+        <UiOsShadowMount />
+
+        <main
+          className={`gestionale-scroll-y gestionale-scrollbar ${layoutResponsiveCoreScope} ${dsGestionaleContentMax} min-h-0 min-w-0 flex-1 px-2 pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-3 md:px-4 md:pb-[max(1rem,env(safe-area-inset-bottom))]`}
+        >
+          <div className={layoutPageRoot}>{children}</div>
         </main>
       </div>
     </div>

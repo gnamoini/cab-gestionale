@@ -1,8 +1,11 @@
-import { prioritaLabel } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import {
+  addettoPillShellStyleForName,
+  prioritaLabel,
+  prioritaPillShellStyle,
+  statoPillShellStyle,
+} from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import type { FixedListPillOption } from "@/components/gestionale/global-input/global-fixed-list-pill";
-import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
-import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
@@ -15,7 +18,7 @@ export function buildStatoTablePillOptions(
   return statiIds.map((s) => ({
     value: s.id,
     label: statoLavorazioneLabel(s.id, statiOpts),
-    pillStyle: readablePillStyleFromHex(statoDisplayColor(s.id, statiOpts)),
+    pillStyle: statoPillShellStyle(statoDisplayColor(s.id, statiOpts)),
   }));
 }
 
@@ -26,7 +29,7 @@ export function buildPrioritaTablePillOptions(
   return prioritaList.map((p) => ({
     value: p,
     label: prioritaLabel(p),
-    pillStyle: readablePillStyleFromHex(
+    pillStyle: prioritaPillShellStyle(
       p === "urgente" ? "#b91c1c" : prioritaDisplayColor(p as PrioritaLav, prioritaColors),
     ),
   }));
@@ -43,14 +46,14 @@ export function buildAddettoTablePillOptions(
     items.push({
       value: label,
       label,
-      pillStyle: readablePillStyleFromHex(addettoColors[label]),
+      pillStyle: addettoPillShellStyleForName(label, addettoColors),
     });
   }
   for (const a of addetti) {
     items.push({
       value: a,
       label: a,
-      pillStyle: readablePillStyleFromHex(addettoDisplayColor(a, addettoColors)),
+      pillStyle: addettoPillShellStyleForName(a, addettoColors),
     });
   }
   return items;

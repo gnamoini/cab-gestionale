@@ -117,3 +117,11 @@ export {
   type InvalidateOperationalTruthOptions,
   type OperationalTruthDomain,
 } from "@/src/lib/runtime/truth-layer/invalidate-operational-truth";
+export {
+  invalidateReportUniverse,
+  type InvalidateReportUniverseOptions,
+} from "@/lib/report/invalidate-report-universe";
+export {
+  REPORT_UNIVERSE_GESTIONALE_TABLES,
+  settingsRenameKindsAffectReport,
+} from "@/lib/report/report-universe-constants";

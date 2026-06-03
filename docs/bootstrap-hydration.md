@@ -5,9 +5,10 @@
 Se in console compaiono warning di hydration con attributi come:
 
 - `bis_skin_checked`, `bis_register`, `data-bis-config`
+- `data-cursor-ref` su link, bottoni e testi della sidebar (anteprima / automazione **Cursor Browser**)
 - prefissi `chrome-extension://` nello stack o nel DOM
 
-la causa è quasi sempre un’**estensione** (es. Bitdefender / BIS) che modifica `<html>` o `<body>` **prima** che React idrati. Non è un bug dell’app.
+la causa è quasi sempre un’**estensione** o il **browser integrato dell’IDE** che modifica il DOM **prima** che React idrati. Non è un bug dell’app (`data-cursor-ref` non esiste nel repository).
 
 **Come verificare**
 
@@ -16,10 +17,10 @@ la causa è quasi sempre un’**estensione** (es. Bitdefender / BIS) che modific
 
 **Mitigazione in app**
 
-- [`app/layout.tsx`](../app/layout.tsx): `suppressHydrationWarning` su `<html>` (theme + injection esterna).
+- [`app/layout.tsx`](../app/layout.tsx): `suppressHydrationWarning` su `<html>`, `<head>`, `<body>`; script `cab-theme-boot` in `<head>` via `next/script` `beforeInteractive`.
 - Script blocking in [`lib/theme/theme-boot-inline-script.ts`](../lib/theme/theme-boot-inline-script.ts) applica tema prima dell’hydration.
 
-Non usare `suppressHydrationWarning` su `<body>` come workaround generico.
+`suppressHydrationWarning` su `<body>` copre solo attributi del body (es. `bis_register`), non i discendenti. I warning su `bis_skin_checked` nei `<div>` interni spariscono solo disabilitando l'estensione.
 
 ## Mismatch interni (codice)
 
@@ -31,7 +32,7 @@ Pattern da evitare nel render iniziale:
 | `Date.now()` / `new Date()` per UI “oggi” | `mounted` + calcolo dopo mount |
 | `Math.random()` in render | Solo in callback / effect |
 
-View già allineate: `ThemeToggle`, `DashboardWelcome`, sidebar collapse (`useEffect`), `useUndoSessionId` (`useSyncExternalStore`).
+View già allineate: `ThemeToggle`, `DashboardWelcome`, sidebar collapse (`useSidebarCollapsed` / `useSyncExternalStore`), `useUndoSessionId` (`useSyncExternalStore`).
 
 ## Theme SSR vs client
 

@@ -31,6 +31,7 @@ type UploadFeedbackContextValue = {
   isUploading: boolean;
   trackUpload: <T>(params: TrackUploadParams<T>) => Promise<{ ok: true; data: T } | { ok: false; error: string }>;
   runUpload: <T>(params: RunUploadParams<T>) => Promise<{ ok: true; data: T } | { ok: false; error: string }>;
+  setProgress: (id: string, pct: number | null) => void;
   clearItem: (id: string) => void;
 };
 
@@ -67,11 +68,16 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
     setItems((prev) => patchItem(prev, id, { phase, error }));
   }, []);
 
+  const setProgress = useCallback((id: string, pct: number | null) => {
+    setItems((prev) => patchItem(prev, id, { progress: pct }));
+  }, []);
+
   const executeTracked = useCallback(
     async <T,>(
       meta: { id: string; fileName: string; label: string; file: File | null },
       params: {
         run: () => Promise<T>;
+        onProgress?: (pct: number) => void;
         onSuccess?: (data: T) => void;
         onError?: (message: string) => void;
         successToast?: string | false;
@@ -80,9 +86,16 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
     ): Promise<{ ok: true; data: T } | { ok: false; error: string }> => {
       const startedAt = Date.now();
       setPhase(meta.id, "uploading", null);
+      setProgress(meta.id, null);
+
+      const reportProgress = (pct: number) => {
+        setProgress(meta.id, pct);
+        params.onProgress?.(pct);
+      };
 
       try {
         const data = await params.run();
+        reportProgress(100);
         await ensureMinUploadLoading(startedAt);
         setPhase(meta.id, "success", null);
         params.onSuccess?.(data);
@@ -102,7 +115,7 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
         return { ok: false, error: message };
       }
     },
-    [pushToast, scheduleRemove, setPhase],
+    [pushToast, scheduleRemove, setPhase, setProgress],
   );
 
   const trackUpload = useCallback(
@@ -124,6 +137,7 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
         phase: "selected",
         error: null,
         startedAt: Date.now(),
+        progress: null,
         file: params.file,
         retry,
       };
@@ -134,6 +148,7 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
         { id, fileName, label, file: params.file },
         {
           run: () => params.run(params.file),
+          onProgress: params.onProgress,
           onSuccess: params.onSuccess,
           onError: params.onError,
           successToast: params.successToast,
@@ -163,6 +178,7 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
           phase: "uploading" as const,
           error: null,
           startedAt: Date.now(),
+          progress: null,
           file: null,
           retry,
         },
@@ -172,6 +188,7 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
         { id, fileName, label, file: null },
         {
           run: params.run,
+          onProgress: params.onProgress,
           onSuccess: params.onSuccess,
           onError: params.onError,
           successToast: params.successToast,
@@ -192,9 +209,10 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
       isUploading,
       trackUpload,
       runUpload,
+      setProgress,
       clearItem,
     }),
-    [items, activeCount, isUploading, trackUpload, runUpload, clearItem],
+    [items, activeCount, isUploading, trackUpload, runUpload, setProgress, clearItem],
   );
 
   return <UploadFeedbackContext.Provider value={value}>{children}</UploadFeedbackContext.Provider>;

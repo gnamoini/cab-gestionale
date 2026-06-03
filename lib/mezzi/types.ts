@@ -33,7 +33,16 @@ export type MezzoGestito = {
   hubSynthetic?: boolean;
 };
 
-export type MezziSortKey = "cliente" | "marca" | "modello" | "targa" | "matricola" | "numeroScuderia" | "ultimaLavorazione";
+export type MezziSortKey =
+  | "cliente"
+  | "cantiere"
+  | "marca"
+  | "modello"
+  | "targa"
+  | "matricola"
+  | "numeroScuderia"
+  | "ultimaLavorazione"
+  | "numeroLavorazioni";
 
 export type MezziSortPhase = "natural" | "asc" | "desc";
 

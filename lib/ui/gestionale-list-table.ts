@@ -68,8 +68,11 @@ export const gestionaleListTableWrapClass = `${globalTableWrap} ${dsScrollbar}`;
 export const gestionaleListTableScrollScopeClass =
   "gestionale-list-table-scope lavorazioni-scroll-scope max-w-full min-w-0";
 
-/** Preset completo wrap desktop (Lavorazioni master). */
-export const gestionaleListTableMasterWrapClass = `${gestionaleListTableScrollScopeClass} ${gestionaleListTableWrapClass}`;
+/**
+ * Scope scroll/sticky azioni sul wrap tabella.
+ * `GlobalTable` applica già `globalTableWrap` + scrollbar — non ripetere qui (evita doppio bordo/card).
+ */
+export const gestionaleListTableMasterWrapClass = gestionaleListTableScrollScopeClass;
 
 /** Tabella densa Lavorazioni — scroll orizzontale sotto ~lg, colonne nascoste via CSS. */
 export const gestionaleLavorazioniDenseTableClass = "gestionale-lavorazioni-dense-table";
@@ -105,11 +108,13 @@ export const gestionaleListTableTd = globalTableTdBody;
 
 /** Celle centrate (date, numeri). */
 export const gestionaleListTableTdCenter =
-  "px-2 py-1 align-middle text-center text-xs font-medium tabular-nums text-zinc-800 dark:text-zinc-100";
+  "box-border px-2.5 py-1 align-middle text-center text-xs font-medium tabular-nums text-zinc-800 dark:text-zinc-100";
 
-/** Celle pill (stato, priorità, addetto). */
-export const gestionaleListTableTdPill = "px-1.5 py-1 align-middle text-center";
-export const gestionaleListTableTdPillWrap = "mx-auto max-w-full";
+/** Celle pill (stato, priorità, addetto) — stesso padding orizzontale di `globalTableThCell` (px-2.5). */
+export const gestionaleListTableTdPill =
+  "box-border overflow-hidden px-2.5 py-1 align-middle text-center";
+/** Pill a tutta larghezza colonna (larghezza da `<col>` / colgroup). */
+export const gestionaleListTableTdPillWrap = "box-border w-full min-w-0 max-w-full";
 
 // —— Colonna Azioni (titolo a destra, sticky — stili in `lavorazioni-scroll.css`) ——
 
@@ -158,6 +163,24 @@ export const gestionaleListColAzioniClass = "w-[11.5rem] min-w-[11.5rem]";
 /** Utility: combina classi riga con stato highlight (navigazione da URL). */
 export function gestionaleListTableRowClassNames(extra?: string): string {
   return [gestionaleListTableRowClass, extra].filter(Boolean).join(" ");
+}
+
+/** Valori `data-gestionale-row-tone` — stili in `gestionale-list-table.css`. */
+export const gestionaleListTableRowToneFlash = "flash" as const;
+export const gestionaleListTableRowToneLowStock = "low-stock" as const;
+
+export type GestionaleListTableRowTone =
+  | typeof gestionaleListTableRowToneFlash
+  | typeof gestionaleListTableRowToneLowStock;
+
+/** Tone riga per flash realtime / sotto-scorta (priorità: low-stock > flash). */
+export function gestionaleListTableRowTone(opts: {
+  flash?: boolean;
+  lowStock?: boolean;
+}): GestionaleListTableRowTone | undefined {
+  if (opts.lowStock) return gestionaleListTableRowToneLowStock;
+  if (opts.flash) return gestionaleListTableRowToneFlash;
+  return undefined;
 }
 
 export { globalTableBase, globalTableFixed };

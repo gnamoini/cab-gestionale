@@ -44,7 +44,7 @@ export function useSchedeBundlesQuery(enabled = true, options?: SchedeBundlesQue
     void qc.invalidateQueries({ queryKey: QK.schede, refetchType: "active" });
   }, [qc]);
 
-  return { store, isLoading: q.isLoading, invalidate, refetch: q.refetch };
+  return { store, isLoading: q.isLoading, isFetching: q.isFetching, invalidate, refetch: q.refetch };
 }
 
 /** @deprecated Usare `useSchedeBundlesQuery`. */

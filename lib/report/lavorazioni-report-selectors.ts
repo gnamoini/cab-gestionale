@@ -11,6 +11,8 @@ import {
   startOfLocalDay,
   type DateRange,
 } from "@/lib/report/date-ranges";
+import { buildCompletateDbMaps, mergeManualMonthMap } from "@/lib/report/report-completate-maps";
+import { monthKeyFromIso, monthKeysOverlappingRange } from "@/lib/report/month-keys";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
 export type ReportLavorazioniBundle = {
@@ -45,40 +47,11 @@ export function buildReportLavorazioniBundle(
   return { attive, storico, completate };
 }
 
-function monthKeyFromIso(iso: string): string | null {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return null;
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-}
-
 function countDbCompletedByMonth(completate: LavorazioneArchiviata[]): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const x of completate) {
-    if (!x.dataCompletamento) continue;
-    const mk = monthKeyFromIso(x.dataCompletamento);
-    if (!mk) continue;
-    map.set(mk, (map.get(mk) ?? 0) + 1);
-  }
-  return map;
+  return buildCompletateDbMaps(completate).byMonth;
 }
 
-/** Mesi YYYY-MM che intersecano il range (inclusivo). */
-export function monthKeysOverlappingRange(range: DateRange): string[] {
-  const keys: string[] = [];
-  let y = range.start.getFullYear();
-  let mo = range.start.getMonth();
-  const endY = range.end.getFullYear();
-  const endMo = range.end.getMonth();
-  while (y < endY || (y === endY && mo <= endMo)) {
-    keys.push(`${y}-${String(mo + 1).padStart(2, "0")}`);
-    mo += 1;
-    if (mo > 11) {
-      mo = 0;
-      y += 1;
-    }
-  }
-  return keys;
-}
+export { monthKeysOverlappingRange } from "@/lib/report/month-keys";
 
 function countCompletateInMonthWithinRange(
   completate: LavorazioneArchiviata[],
@@ -100,10 +73,7 @@ export function countCompletedByMonth(
   completate: LavorazioneArchiviata[],
   manualByMonth?: ReportManualByMonth,
 ): Map<string, number> {
-  const merged = countDbCompletedByMonth(completate);
-  if (!manualByMonth) return merged;
-  for (const [k, v] of manualByMonth) merged.set(k, v);
-  return merged;
+  return mergeManualMonthMap(countDbCompletedByMonth(completate), manualByMonth);
 }
 
 /** Completate nel periodo: per mesi con override manuale usa il valore manuale. */

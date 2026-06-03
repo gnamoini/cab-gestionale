@@ -1,4 +1,14 @@
-export type ReportPeriodPreset = "current_month" | "last_3_months" | "last_12_months" | "ytd" | "custom";
+export type ReportPeriodPreset =
+  | "today"
+  | "last_30_days"
+  | "current_week"
+  | "current_month"
+  | "last_month"
+  | "last_3_months"
+  | "last_12_months"
+  | "last_3_years"
+  | "ytd"
+  | "custom";
 export type ReportCompareMode = "none" | "prev_year" | "prev_period";
 
 export type DateRange = { start: Date; end: Date };
@@ -11,6 +21,11 @@ export function endOfLocalDay(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
 }
 
+/** Giorno corrente in locale: da mezzanotte fino al momento indicato (incluso). */
+export function todayUntilNowRange(anchor = new Date()): DateRange {
+  return { start: startOfLocalDay(anchor), end: anchor };
+}
+
 function addLocalDays(d: Date, days: number): Date {
   return new Date(
     d.getFullYear(),
@@ -21,6 +36,13 @@ function addLocalDays(d: Date, days: number): Date {
     d.getSeconds(),
     d.getMilliseconds(),
   );
+}
+
+/** Lunedì 00:00 della settimana locale che contiene `d`. */
+function startOfLocalWeekMonday(d: Date): Date {
+  const day = d.getDay();
+  const daysSinceMonday = day === 0 ? 6 : day - 1;
+  return startOfLocalDay(addLocalDays(d, -daysSinceMonday));
 }
 
 function parseYmd(ymd: string): Date | null {
@@ -49,8 +71,24 @@ export function resolvePresetRange(
     if (start.getTime() <= end2.getTime()) return { start, end: end2 };
     return { start: startOfLocalDay(end2), end: endOfLocalDay(start) };
   }
+  if (preset === "today") {
+    return { start: startOfLocalDay(end), end };
+  }
+  if (preset === "last_30_days") {
+    return { start: startOfLocalDay(addLocalDays(end, -29)), end };
+  }
+  if (preset === "current_week") {
+    return { start: startOfLocalWeekMonday(end), end };
+  }
   if (preset === "current_month") {
     return { start: startOfLocalDay(new Date(end.getFullYear(), end.getMonth(), 1)), end };
+  }
+  if (preset === "last_month") {
+    const y = end.getFullYear();
+    const m = end.getMonth();
+    const start = startOfLocalDay(new Date(y, m - 1, 1));
+    const monthEnd = endOfLocalDay(new Date(y, m, 0));
+    return { start, end: monthEnd };
   }
   if (preset === "last_3_months") {
     const start = startOfLocalDay(new Date(end.getFullYear(), end.getMonth() - 2, 1));
@@ -58,6 +96,10 @@ export function resolvePresetRange(
   }
   if (preset === "last_12_months") {
     const start = startOfLocalDay(new Date(end.getFullYear(), end.getMonth() - 11, 1));
+    return { start, end };
+  }
+  if (preset === "last_3_years") {
+    const start = startOfLocalDay(new Date(end.getFullYear(), end.getMonth() - 35, 1));
     return { start, end };
   }
   if (preset === "ytd") {

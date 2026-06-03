@@ -38,6 +38,8 @@ export interface LavorazioneArchiviata {
   id: string;
   /** Codice umano display (es. 26-0001). */
   codice?: string | null;
+  /** FK mezzo in anagrafica, se presente in archivio. */
+  mezzoId?: string | null;
   macchina: string;
   targa: string;
   matricola: string;

@@ -1,0 +1,790 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "file": "app/login/login-form.tsx",
+      "line": 460,
+      "rule": "modal-custom-shell"
+    },
+    {
+      "file": "app/login/login-form.tsx",
+      "line": 514,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 594,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 731,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 945,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/admin-notifications-bell.tsx",
+      "line": 206,
+      "rule": "modal-custom-shell"
+    },
+    {
+      "file": "components/dashboard/admin-notifications-bell.tsx",
+      "line": 238,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/dashboard-recent-feeds.tsx",
+      "line": 74,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-recent-feeds.tsx",
+      "line": 97,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-sistema-log-section.tsx",
+      "line": 153,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-sistema-log-section.tsx",
+      "line": 154,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-sistema-log-section.tsx",
+      "line": 160,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-tasks-panel.tsx",
+      "line": 91,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-tasks-panel.tsx",
+      "line": 137,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-tasks-panel.tsx",
+      "line": 155,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/dashboard-view.tsx",
+      "line": 53,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/hierarchy-tree-settings-section.tsx",
+      "line": 27,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/hierarchy-tree-settings-section.tsx",
+      "line": 179,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/security-dashboard-view.tsx",
+      "line": 304,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security-dashboard-view.tsx",
+      "line": 342,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security-dashboard-view.tsx",
+      "line": 582,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security-dashboard-view.tsx",
+      "line": 651,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security-dashboard-view.tsx",
+      "line": 688,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security-dashboard-view.tsx",
+      "line": 722,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security-dashboard-view.tsx",
+      "line": 852,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security/production-readiness-view.tsx",
+      "line": 81,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security/production-readiness-view.tsx",
+      "line": 104,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security/security-users-permissions-panel.tsx",
+      "line": 134,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/security/security-users-permissions-panel.tsx",
+      "line": 145,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/settings-dipendenti-assenze-section.tsx",
+      "line": 43,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/settings-dipendenti-assenze-section.tsx",
+      "line": 57,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/dashboard/settings-dipendenti-assenze-section.tsx",
+      "line": 88,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/dashboard/settings-list-ui.tsx",
+      "line": 11,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/design-system/loading/loading-page-skeleton.tsx",
+      "line": 45,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/design-system/loading/loading-page-skeleton.tsx",
+      "line": 57,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/design-system/log-entry.tsx",
+      "line": 47,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/design-system/modal.tsx",
+      "line": 67,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/design-system/page-toolbar.tsx",
+      "line": 9,
+      "rule": "toolbar-missing-flex-safe-row"
+    },
+    {
+      "file": "components/design-system/page-toolbar.tsx",
+      "line": 10,
+      "rule": "toolbar-missing-flex-safe-row"
+    },
+    {
+      "file": "components/design-system/page-toolbar.tsx",
+      "line": 38,
+      "rule": "toolbar-missing-flex-safe-row"
+    },
+    {
+      "file": "components/design-system/page-toolbar.tsx",
+      "line": 46,
+      "rule": "toolbar-missing-flex-safe-row"
+    },
+    {
+      "file": "components/design-system/page-toolbar.tsx",
+      "line": 47,
+      "rule": "toolbar-missing-flex-safe-row"
+    },
+    {
+      "file": "components/design-system/page-toolbar.tsx",
+      "line": 67,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/design-system/page-toolbar.tsx",
+      "line": 82,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/design-system/toolbar-group.tsx",
+      "line": 26,
+      "rule": "toolbar-missing-flex-safe-row"
+    },
+    {
+      "file": "components/design-system/toolbar-group.tsx",
+      "line": 81,
+      "rule": "toolbar-missing-flex-safe-row"
+    },
+    {
+      "file": "components/design-system/toolbar-group.tsx",
+      "line": 92,
+      "rule": "toolbar-missing-flex-safe-row"
+    },
+    {
+      "file": "components/gestionale/dipendenti/dipendenti-scheda-section.tsx",
+      "line": 73,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/dipendenti/dipendenti-storico-section.tsx",
+      "line": 64,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/dipendenti/dipendenti-toolbar.tsx",
+      "line": 183,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/dipendenti/dipendenti-view.tsx",
+      "line": 301,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/dipendenti/timesheet-cell-editor.tsx",
+      "line": 43,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/documenti/documenti-advanced-filter-panel.tsx",
+      "line": 109,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/documenti/documenti-view.tsx",
+      "line": 311,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/documenti/documenti-view.tsx",
+      "line": 891,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/documenti/documenti-view.tsx",
+      "line": 960,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/documenti/documenti-view.tsx",
+      "line": 1248,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/gestionale-log-ui.tsx",
+      "line": 76,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/gestionale-log-ui.tsx",
+      "line": 79,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/gestionale-unsaved-changes-dialog.tsx",
+      "line": 70,
+      "rule": "modal-custom-shell"
+    },
+    {
+      "file": "components/gestionale/global-input/global-calendar-panel.tsx",
+      "line": 48,
+      "rule": "modal-custom-shell"
+    },
+    {
+      "file": "components/gestionale/global-input/global-multi-select.tsx",
+      "line": 93,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-detail-modal.tsx",
+      "line": 190,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-detail-modal.tsx",
+      "line": 201,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-detail-modal.tsx",
+      "line": 214,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-detail-modal.tsx",
+      "line": 258,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-detail-modal.tsx",
+      "line": 349,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-detail-modal.tsx",
+      "line": 357,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-detail-modal.tsx",
+      "line": 388,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-edit-modal.tsx",
+      "line": 158,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-mezzo-picker.tsx",
+      "line": 64,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-mezzo-picker.tsx",
+      "line": 66,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazione-mobile-card.tsx",
+      "line": 83,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-inline-select.tsx",
+      "line": 67,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-inline-select.tsx",
+      "line": 68,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-kanban-mobile-card.tsx",
+      "line": 74,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-modals.tsx",
+      "line": 743,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-modals.tsx",
+      "line": 762,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-modals.tsx",
+      "line": 773,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-modals.tsx",
+      "line": 781,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-modals.tsx",
+      "line": 834,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-modals.tsx",
+      "line": 875,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-modals.tsx",
+      "line": 891,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-settings-ui.tsx",
+      "line": 97,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-settings-ui.tsx",
+      "line": 111,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-settings-ui.tsx",
+      "line": 188,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-settings-ui.tsx",
+      "line": 190,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-settings-ui.tsx",
+      "line": 208,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-settings-ui.tsx",
+      "line": 261,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-view.tsx",
+      "line": 1405,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-view.tsx",
+      "line": 1455,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-view.tsx",
+      "line": 1497,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-view.tsx",
+      "line": 1513,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/lavorazioni-view.tsx",
+      "line": 2251,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx",
+      "line": 466,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/magazzino/magazzino-giacenza-bell.tsx",
+      "line": 91,
+      "rule": "modal-custom-shell"
+    },
+    {
+      "file": "components/gestionale/magazzino/magazzino-giacenza-bell.tsx",
+      "line": 109,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/magazzino/magazzino-view.tsx",
+      "line": 1496,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/magazzino/magazzino-view.tsx",
+      "line": 1679,
+      "rule": "toolbar-without-containment"
+    },
+    {
+      "file": "components/gestionale/magazzino/magazzino-view.tsx",
+      "line": 2174,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/magazzino/ricambio-form-fields.tsx",
+      "line": 88,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/magazzino/ricambio-form-fields.tsx",
+      "line": 337,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/magazzino/ricambio-form-fields.tsx",
+      "line": 364,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/media/lavorazione-documents-manager.tsx",
+      "line": 69,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/media/lavorazione-documents-manager.tsx",
+      "line": 83,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/media/record-image-manager.tsx",
+      "line": 182,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/media/record-image-manager.tsx",
+      "line": 199,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
+      "line": 23,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
+      "line": 80,
+      "rule": "toolbar-without-containment"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
+      "line": 90,
+      "rule": "toolbar-without-containment"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
+      "line": 100,
+      "rule": "toolbar-without-containment"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-hub-detail-modal.tsx",
+      "line": 189,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-hub-detail-modal.tsx",
+      "line": 200,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-hub-detail-modal.tsx",
+      "line": 228,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-hub-detail-modal.tsx",
+      "line": 283,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-hub-detail-modal.tsx",
+      "line": 393,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-hub-detail-modal.tsx",
+      "line": 401,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-hub-detail-modal.tsx",
+      "line": 436,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-view.tsx",
+      "line": 557,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/mezzi/mezzi-view.tsx",
+      "line": 670,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/gestionale/mobile-filter-drawer.tsx",
+      "line": 58,
+      "rule": "modal-custom-shell"
+    },
+    {
+      "file": "components/gestionale/page-header-toolbar.tsx",
+      "line": 10,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/gestionale/settings-color-picker-popover.tsx",
+      "line": 67,
+      "rule": "modal-custom-shell"
+    },
+    {
+      "file": "components/gestionale/table-pagination.tsx",
+      "line": 67,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni-clienti/client-lavorazione-documents.tsx",
+      "line": 39,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni-clienti/client-lavorazione-informazioni-panel.tsx",
+      "line": 50,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni-clienti/client-lavorazione-photos.tsx",
+      "line": 95,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni-clienti/client-lavorazione-photos.tsx",
+      "line": 123,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni-clienti/client-lavorazione-qr-dialog.tsx",
+      "line": 78,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni-clienti/client-lavorazioni-view.tsx",
+      "line": 436,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni-clienti/client-lavorazioni-view.tsx",
+      "line": 825,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/lavorazioni/lavorazione-attivita-panel.tsx",
+      "line": 74,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/lavorazione-attivita-panel.tsx",
+      "line": 111,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/lavorazione-attivita-panel.tsx",
+      "line": 113,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/lavorazione-preventivi-hub-list.tsx",
+      "line": 99,
+      "rule": "table-prev-token"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 241,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1020,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1033,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1219,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1392,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1395,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1405,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1537,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1595,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1599,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1670,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1945,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
+      "line": 1949,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/observability/gestionale-error-fallback.tsx",
+      "line": 23,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/preventivi/preventivi-view.tsx",
+      "line": 637,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/preventivi/preventivi-view.tsx",
+      "line": 641,
+      "rule": "toolbar-without-containment"
+    },
+    {
+      "file": "components/preventivi/preventivi-view.tsx",
+      "line": 648,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/preventivi/preventivi-view.tsx",
+      "line": 650,
+      "rule": "toolbar-without-containment"
+    },
+    {
+      "file": "components/preventivi/preventivi-view.tsx",
+      "line": 705,
+      "rule": "flex-no-containment"
+    },
+    {
+      "file": "components/preventivi/preventivi-view.tsx",
+      "line": 880,
+      "rule": "table-prev-token"
+    },
+    {
+      "file": "components/preventivi/preventivi-view.tsx",
+      "line": 943,
+      "rule": "flex-wrap-unscoped"
+    },
+    {
+      "file": "components/preventivi/preventivi-view.tsx",
+      "line": 1049,
+      "rule": "flex-no-containment"
+    }
+  ]
+}

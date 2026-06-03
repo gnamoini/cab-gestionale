@@ -33,7 +33,7 @@ export function isLavorazioneStoricoDb(_stato: string): boolean {
 
 export function interventiMezzoDaLavorazioniDb(
   m: MezzoGestito,
-  rows: LavorazioneListRow[],
+  rows: readonly LavorazioneListRow[],
 ): MezzoInterventoLavorazione[] {
   const out: MezzoInterventoLavorazione[] = [];
   for (const row of rows) {
@@ -81,7 +81,7 @@ export function interventiMezzoDaLavorazioniDb(
   return out;
 }
 
-export function mezzoHaLavorazioneAttivaDb(m: MezzoGestito, rows: LavorazioneListRow[]): boolean {
+export function mezzoHaLavorazioneAttivaDb(m: MezzoGestito, rows: readonly LavorazioneListRow[]): boolean {
   return rows.some((row) => {
     if (isLavorazioneArchived(row)) return false;
     return lavorazioneMatchesMezzo(m, lavRowToMatchShape(row));
