@@ -98,11 +98,13 @@ export function PageToolbar({
                   {filterActions}
                 </ToolbarGroupPrimaryRow>
               </div>
-              <ToolbarGroupPrimaryRow className="hidden sm:flex sm:flex-nowrap sm:justify-start">
-                <div className="shrink-0">{primaryAction}</div>
-                <div className="min-w-0 flex-1">{search}</div>
-                {filterActions}
-              </ToolbarGroupPrimaryRow>
+              <div className="hidden min-w-0 w-full sm:flex">
+                <ToolbarGroupPrimaryRow className="min-w-0 w-full sm:flex-nowrap sm:justify-start">
+                  <div className="shrink-0">{primaryAction}</div>
+                  <div className="min-w-0 flex-1">{search}</div>
+                  {filterActions}
+                </ToolbarGroupPrimaryRow>
+              </div>
             </>
           ) : (
             <div className="flex-safe-row min-w-0 w-full flex-row flex-nowrap items-stretch gap-2">
@@ -145,6 +147,7 @@ export function PageToolbar({
           title="Altro"
           applyLabel="Chiudi"
           onApply={closeOverflowDrawer}
+          closeOnBodyButtonClick
         >
           {meta ? <div className="mb-3 min-w-0 border-b border-[color:var(--cab-border)] pb-3">{meta}</div> : null}
           <div className="flex flex-col gap-2">{overflowActions}</div>

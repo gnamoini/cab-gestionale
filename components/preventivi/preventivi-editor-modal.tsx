@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconActionButton } from "@/components/design-system";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
@@ -74,8 +74,8 @@ function cloneRecord(p: PreventivoRecord): PreventivoRecord {
 const ORE_MIN = 0.01;
 
 const preventivoIntestazioneSegmentWrap = `${dsSegmentedWrap} w-full gap-0.5 p-0.5`;
-const preventivoIntestazioneSegmentOn = `${dsSegmentedBtnOn} min-w-0 flex-1 px-2.5 py-1 text-xs`;
-const preventivoIntestazioneSegmentOff = `${dsSegmentedBtnOff} min-w-0 flex-1 px-2.5 py-1 text-xs`;
+const preventivoIntestazioneSegmentOn = `${dsSegmentedBtnOn} min-w-0 flex-1 px-2.5 py-1 text-xs max-sm:min-h-11 max-sm:py-2`;
+const preventivoIntestazioneSegmentOff = `${dsSegmentedBtnOff} min-w-0 flex-1 px-2.5 py-1 text-xs max-sm:min-h-11 max-sm:py-2`;
 const preventivoManodoperaRowGrid =
   "grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7.5rem_2.25rem] sm:items-end sm:gap-2";
 
@@ -166,6 +166,10 @@ export function PreventiviEditorModal({
   const draftRef = useRef<PreventivoRecord | null>(null);
   const [draft, setDraft] = useState<PreventivoRecord | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+  const dataCreazioneFieldId = useId();
+  const lavorazioniFieldId = useId();
+  const costoOrarioFieldId = useId();
+  const noteFieldId = useId();
 
   const applyTotals = useCallback((d: PreventivoRecord): PreventivoRecord => {
     const s = ensurePreventivoStruttura(d);
@@ -507,8 +511,9 @@ export function PreventiviEditorModal({
                     })}
                   </div>
                 </FormField>
-                <FormField label="Data creazione">
+                <FormField label="Data creazione" htmlFor={dataCreazioneFieldId}>
                   <GlobalDatePickerYmd
+                    id={dataCreazioneFieldId}
                     variant="default"
                     valueYmd={isoToDateInputValue(draft.dataCreazione)}
                     onChangeYmd={(ymd) => {
@@ -547,8 +552,9 @@ export function PreventiviEditorModal({
             ) : null}
 
             <FormSection title="Lavorazioni effettuate">
-              <FormField label="Lavorazioni specifiche (testo cliente)">
+              <FormField label="Lavorazioni specifiche (testo cliente)" htmlFor={lavorazioniFieldId}>
                 <textarea
+                  id={lavorazioniFieldId}
                   className={`${dsInput} min-h-[6rem] resize-y`}
                   value={composeLavorazioniClienteEditorText(draft.descrizioneLavorazioniCliente)}
                   onChange={(e) =>
@@ -574,7 +580,11 @@ export function PreventiviEditorModal({
                 </button>
               }
             >
-              <div className={`${dsTableWrap} ${dsScrollbar}`}>
+              <div
+                className={`${dsTableWrap} ${dsScrollbar}`}
+                role="region"
+                aria-label="Righe ricambi e materiali, scorrimento orizzontale su schermi piccoli"
+              >
                 <table className={`${dsTable} min-w-[960px]`}>
                   <GlobalTableHead sticky>
                       <GlobalTableHeadLabel label="Codice OE" />
@@ -586,13 +596,23 @@ export function PreventiviEditorModal({
                       <GlobalTableHeadLabel label="" thClassName="w-10" />
                   </GlobalTableHead>
                   <tbody>
-                    {ricambiPart.standard.map((r) => (
+                    {ricambiPart.standard.map((r, idx) => (
                       <tr key={r.id} className={dsTableRow}>
                         <td className="px-2 py-1.5 align-top">
-                          <input className={dsInput} value={r.codiceOE} onChange={(e) => patchRiga(r.id, { codiceOE: e.target.value })} />
+                          <input
+                            className={dsInput}
+                            value={r.codiceOE}
+                            onChange={(e) => patchRiga(r.id, { codiceOE: e.target.value })}
+                            aria-label={`Codice OE riga ${idx + 1}`}
+                          />
                         </td>
                         <td className="px-2 py-1.5 align-top">
-                          <input className={dsInput} value={r.descrizione} onChange={(e) => patchRiga(r.id, { descrizione: e.target.value })} />
+                          <input
+                            className={dsInput}
+                            value={r.descrizione}
+                            onChange={(e) => patchRiga(r.id, { descrizione: e.target.value })}
+                            aria-label={`Descrizione riga ${idx + 1}`}
+                          />
                         </td>
                         <td className="px-2 py-1.5 align-top">
                           <input
@@ -600,8 +620,10 @@ export function PreventiviEditorModal({
                             type="number"
                             min={0.01}
                             step={0.01}
+                            inputMode="decimal"
                             value={r.quantita}
                             onChange={(e) => patchRiga(r.id, { quantita: Math.max(0.01, parseFloat(e.target.value) || 0) })}
+                            aria-label={`Quantità riga ${idx + 1}`}
                           />
                         </td>
                         <td className="px-2 py-1.5 align-top">
@@ -610,8 +632,10 @@ export function PreventiviEditorModal({
                             type="number"
                             min={0}
                             step={0.01}
+                            inputMode="decimal"
                             value={r.prezzoUnitario}
                             onChange={(e) => patchRiga(r.id, { prezzoUnitario: Math.max(0, parseFloat(e.target.value) || 0) })}
+                            aria-label={`Prezzo unitario riga ${idx + 1}`}
                           />
                         </td>
                         <td className="px-2 py-1.5 align-top">
@@ -621,10 +645,12 @@ export function PreventiviEditorModal({
                             min={0}
                             max={100}
                             step={0.5}
+                            inputMode="decimal"
                             value={r.scontoPercent ?? 0}
                             onChange={(e) =>
                               patchRiga(r.id, { scontoPercent: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) })
                             }
+                            aria-label={`Sconto percentuale riga ${idx + 1}`}
                           />
                         </td>
                         <td className="px-2 py-1.5 align-middle text-right text-sm tabular-nums font-medium text-[color:var(--cab-text)]">
@@ -650,12 +676,14 @@ export function PreventiviEditorModal({
                     <FormField label="Qtà">
                       <input className={`${dsInput} w-20 text-right tabular-nums`} readOnly value="1" />
                     </FormField>
-                    <FormField label="Prezzo (€)">
+                    <FormField label="Prezzo (€)" htmlFor="preventivo-materiali-prezzo">
                       <input
+                        id="preventivo-materiali-prezzo"
                         className={`${dsInput} w-28 text-right tabular-nums`}
                         type="number"
                         min={0}
                         step={0.01}
+                        inputMode="decimal"
                         value={ricambiPart.materialiConsumo.prezzoUnitario}
                         onChange={(e) =>
                           patchRiga(ricambiPart.materialiConsumo!.id, {
@@ -679,12 +707,14 @@ export function PreventiviEditorModal({
               }
             >
               <div className="grid gap-3 sm:grid-cols-3">
-                <FormField label="Costo orario (€/h)">
+                <FormField label="Costo orario (€/h)" htmlFor={costoOrarioFieldId}>
                   <input
+                    id={costoOrarioFieldId}
                     className={`${dsInput} text-right tabular-nums`}
                     type="number"
                     min={0}
                     step={0.5}
+                    inputMode="decimal"
                     value={draft.manodopera.costoOrario}
                     onChange={(e) => {
                       const v = Math.max(0, parseFloat(e.target.value) || 0);
@@ -769,13 +799,16 @@ export function PreventiviEditorModal({
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
                   <span className="font-medium text-[color:var(--cab-text)]">{PREVENTIVO_COLLAUDO_DESCRIZIONE}</span>
                   <span className="text-[color:var(--cab-text-muted)]">Qtà: 1</span>
-                  <label className="ml-auto flex items-center gap-2">
+                  <label htmlFor="preventivo-collaudo-prezzo" className="ml-auto flex items-center gap-2">
                     <span className="whitespace-nowrap text-[color:var(--cab-text-muted)]">Prezzo (€)</span>
                     <input
+                      id="preventivo-collaudo-prezzo"
                       className={`${dsInput} w-28 text-right tabular-nums`}
                       type="number"
                       min={0}
                       step={0.01}
+                      inputMode="decimal"
+                      aria-label="Prezzo collaudo"
                       value={draft.collaudoPrezzo ?? 0}
                       onChange={(e) => patch({ collaudoPrezzo: Math.max(0, parseFloat(e.target.value) || 0) })}
                     />
@@ -820,8 +853,9 @@ export function PreventiviEditorModal({
             </FormSection>
 
             <FormSection title="Note">
-              <FormField label="Note finali">
+              <FormField label="Note finali" htmlFor={noteFieldId}>
                 <textarea
+                  id={noteFieldId}
                   className={`${dsInput} min-h-[4rem] resize-y`}
                   value={draft.noteFinali}
                   onChange={(e) => patch({ noteFinali: sliceInputValue(e.target.value, TEXT_LONG) })}

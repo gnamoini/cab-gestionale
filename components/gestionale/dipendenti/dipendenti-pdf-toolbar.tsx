@@ -30,7 +30,7 @@ export function DipendentiPdfToolbar({
   const needsAddetto = !filterEmployeeId;
   return (
     <div
-      className={`${gestionalePageToolbarActionsClass} min-w-0 max-sm:flex-nowrap max-sm:gap-1.5`}
+      className={`${gestionalePageToolbarActionsClass} min-w-0`}
       role="group"
       aria-label="Export PDF presenze"
     >

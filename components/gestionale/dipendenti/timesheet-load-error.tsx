@@ -48,7 +48,7 @@ export function TimesheetLoadError({
       <p className="text-sm font-semibold text-rose-800 dark:text-rose-200">{title}</p>
       <p className="mt-1 text-xs text-rose-700 dark:text-rose-300">{message}</p>
       <p className="mt-2 text-xs text-rose-600/90 dark:text-rose-400/90">{hint}</p>
-      <div className="mt-3 flex min-w-0 flex-safe-row flex-wrap gap-2">
+      <div className="mt-3 flex min-w-0 max-w-full flex-safe-row gap-2 sm:flex-wrap">
         {onRetryEmployees && employeesError ? (
           <button type="button" className={`${dsBtnNeutral} text-xs`} onClick={onRetryEmployees}>
             Riprova registro

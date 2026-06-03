@@ -11,7 +11,7 @@ import { useSmUp } from "@/lib/ui/use-sm-up";
 
 /** Toolbar azioni header: wrap interno se molti pulsanti; il blocco va sotto il titolo quando manca spazio (PageHeader). */
 export const gestionalePageToolbarActionsClass =
-  "flex min-w-0 max-w-full flex-nowrap items-center justify-end gap-2 sm:flex-wrap";
+  "flex-safe-row min-w-0 max-w-full flex-nowrap items-center justify-end gap-2 sm:flex-wrap";
 
 export function GestionaleRefreshToolbarButton({
   busy = false,
@@ -148,7 +148,14 @@ export function GestionalePageToolbarActions({
       </div>
 
       {showOverflowDrawer ? (
-        <MobileFilterDrawer open onClose={closeOverflow} title="Altro" applyLabel="Chiudi" onApply={closeOverflow}>
+        <MobileFilterDrawer
+          open
+          onClose={closeOverflow}
+          title="Altro"
+          applyLabel="Chiudi"
+          onApply={closeOverflow}
+          closeOnBodyButtonClick
+        >
           <div className="flex flex-col gap-2 [&_button]:w-full [&_button]:justify-center">{overflowActions}</div>
         </MobileFilterDrawer>
       ) : null}

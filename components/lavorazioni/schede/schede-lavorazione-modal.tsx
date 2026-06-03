@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode, Ref } from "react";
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -25,9 +25,7 @@ import { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/lav
 import { SchedaEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/scheda-elimina-confirm-dialog";
 import { normalizeSchedaIngressoFields } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
-import {
-  GlobalSettingsListSelect,
-} from "@/components/gestionale/global-input";
+import { GlobalDatePicker, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
 import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
 import { useLavorazioneCosto } from "@/src/hooks/gestionale/use-lavorazione-costo";
@@ -1539,14 +1537,12 @@ function SchedaDayField({
   value,
   onChange,
   readOnly,
-  inputRef,
   showLabel = true,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   readOnly?: boolean;
-  inputRef?: Ref<HTMLInputElement>;
   showLabel?: boolean;
 }) {
   if (readOnly) {
@@ -1558,27 +1554,23 @@ function SchedaDayField({
     );
   }
   return (
-    <label className="block text-xs">
+    <div className="block text-xs">
       {showLabel ? <span className={dsLabel}>{label}</span> : null}
       <div className={`flex flex-nowrap items-stretch gap-2 sm:flex-wrap ${showLabel ? "mt-1" : ""}`}>
         <div className="min-w-0 flex-1">
-          <input
-            ref={inputRef}
-            type="text"
-            inputMode="numeric"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="GG/MM/AAAA"
-            className={`${dsInput}`}
+          <GlobalDatePicker
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={onChange}
+            inputClassName={`${dsInput} !py-1.5 !text-xs`}
+            placeholder="GG/MM/AAAA"
+            aria-label={label}
           />
         </div>
         <button type="button" className={`${dsBtnNeutral} shrink-0 self-end`} onClick={() => onChange(todayItDate())}>
           Oggi
         </button>
       </div>
-    </label>
+    </div>
   );
 }
 
@@ -2127,19 +2119,15 @@ function RicambiPanel({
                     {ro ? (
                       <span>{r.addetto}</span>
                     ) : (
-                      <>
-                        <input
-                          className={`${dsInput} !py-1.5 !text-xs`}
-                          list={`ric-addetti-${r.id}`}
-                          value={r.addetto}
-                          onChange={(e) => patchRighe(doc.campi.righe.map((x) => (x.id === r.id ? { ...x, addetto: e.target.value } : x)))}
-                        />
-                        <datalist id={`ric-addetti-${r.id}`}>
-                          {addettiLista.map((a) => (
-                            <option key={a} value={a} />
-                          ))}
-                        </datalist>
-                      </>
+                      <GlobalSettingsListSelect
+                        listKey="lavorazioni:addetti"
+                        className="w-full min-w-[8rem]"
+                        inputClassName={`${dsInput} !py-1.5 !text-xs`}
+                        value={r.addetto}
+                        onChange={(v) => patchRighe(doc.campi.righe.map((x) => (x.id === r.id ? { ...x, addetto: v } : x)))}
+                        placeholder="Addetto…"
+                        aria-label="Addetto riga ricambio"
+                      />
                     )}
                   </td>
                   <td className="px-2 py-2 align-top">

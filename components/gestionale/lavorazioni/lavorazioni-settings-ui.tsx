@@ -203,7 +203,7 @@ export function StatoSettingsList({
                   e.currentTarget.blur();
                 }
               }}
-              aria-label="Nome stato"
+              aria-label={`Nome stato ${s.label || s.id}`}
             />
             <div className="flex shrink-0 items-center gap-2">
               <span
@@ -222,12 +222,15 @@ export function StatoSettingsList({
             </div>
             {onChangeStatoClosed ? (
               <label
+                htmlFor={`stato-closed-${s.id}`}
                 className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-zinc-400"
                 title="Solo workflow visuale (dropdown/filtri). L'archivio lavorazioni usa il campo archived in database."
               >
                 <input
+                  id={`stato-closed-${s.id}`}
                   type="checkbox"
                   checked={s.closed === true}
+                  aria-label={`Stato finale workflow per ${s.label || s.id}`}
                   onChange={(e) => onChangeStatoClosed(s.id, e.target.checked)}
                 />
                 Stato finale workflow

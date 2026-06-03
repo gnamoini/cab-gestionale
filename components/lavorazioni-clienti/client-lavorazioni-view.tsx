@@ -22,6 +22,7 @@ import {
   LavMobileInlineField,
   LavorazioneMobileCardFooter,
   LavorazioneMobileCardHeader,
+  LavorazioneMobileUltimaModifica,
   LavorazioneMobileCardShell,
   LavorazioneMobileControlsPanel,
   LavorazioneMobileMetaGrid,
@@ -69,6 +70,7 @@ import {
 import {
   LavorazioneAddettoReadOnlyPill,
   LavorazioneCompletamentoDatePill,
+  LavorazionePrioritaReadOnlyPill,
   LavorazioneReadOnlyPill,
 } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import {
@@ -101,6 +103,7 @@ import {
   type LavorazioniListTableColStyles,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
+import { resolveLavorazioneUltimaModifica } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { gestionaleLavorazioniDenseTableClass } from "@/lib/ui/gestionale-list-table";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
@@ -144,26 +147,6 @@ function StatoReadOnlyPill({ stato, statiOpts }: { stato: string; statiOpts: { i
       label={label}
       shellClass={statoPillShellClassDynamic()}
       shellStyle={statoPillShellStyle(statoDisplayColor(resolvedStato, statiOpts))}
-    />
-  );
-}
-
-function PrioritaReadOnlyPill({
-  priorita,
-  prioritaColors,
-}: {
-  priorita: string;
-  prioritaColors: Record<string, string | undefined>;
-}) {
-  const p = priorita as PrioritaLavorazione;
-  const label = prioritaLabel(p);
-  const hex =
-    p === "urgente" ? "#b91c1c" : prioritaDisplayColor(p as PrioritaLav, prioritaColors);
-  return (
-    <LavorazioneReadOnlyPill
-      label={label}
-      shellClass={prioritaPillShellClass()}
-      shellStyle={prioritaPillShellStyle(hex)}
     />
   );
 }
@@ -340,7 +323,7 @@ function DesktopTable({
               </td>
               <td className={lavTableTdPill}>
                 <div className={lavTableTdPillWrap}>
-                  <PrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
+                  <LavorazionePrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
                 </div>
               </td>
             </>
@@ -375,6 +358,7 @@ function MobileCards({
   statiOpts,
   prioritaColors,
   addettoColors,
+  schedeStore,
   emptyMessage,
   onIngresso,
   onQr,
@@ -384,6 +368,7 @@ function MobileCards({
   statiOpts: { id: string; label: string; color?: string }[];
   prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
+  schedeStore: LavorazioneSchedeStore;
   emptyMessage: string;
   onIngresso: (row: LavorazioneListRow) => void;
   onQr: (row: LavorazioneListRow) => void;
@@ -413,53 +398,44 @@ function MobileCards({
               macchina={fields.attrezzatura}
               identLine={identLine}
               ingresso={<LavorazioneIngressoDateCellFromIso iso={fields.dataIngressoAt} />}
-              secondaryDate={
-                variant === "archive"
-                  ? {
-                      label: "Completamento",
-                      value: (
-                        <LavorazioneCompletamentoDatePill
-                          iso={lavorazioneDataCompletamentoIso(row)}
-                          align="left"
-                          fullWidth={false}
-                        />
-                      ),
-                    }
-                  : undefined
-              }
               statusSlot={
-                variant === "active" ? (
+                variant === "archive" ? (
+                  <LavorazioneMobileStatusSlot>
+                    <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
+                  </LavorazioneMobileStatusSlot>
+                ) : (
                   <LavorazioneMobileStatusSlot>
                     <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
                   </LavorazioneMobileStatusSlot>
-                ) : undefined
+                )
               }
             />
             <LavorazioneMobileMetaGrid>
               <LavorazioneMobileMetaItem label="Cliente" value={fields.cliente} />
               <LavorazioneMobileMetaItem label="Cantiere" value={fields.cantiere} />
-              {variant === "archive" ? (
-                <LavorazioneMobileMetaItem label="Addetto" value={fields.addetto} />
-              ) : null}
               {utilizzatore ? (
                 <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="col-span-2" />
               ) : null}
             </LavorazioneMobileMetaGrid>
             <LavorazioneMobileNote text={lavorazioneNoteInterventoText(fields)} />
-            {variant === "active" ? (
-              <LavorazioneMobileControlsPanel>
-                <LavMobileInlineField label="Priorità" layout="stack">
-                  <PrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
-                </LavMobileInlineField>
-                <LavMobileInlineField label="Addetto" layout="stack">
-                  <LavorazioneAddettoReadOnlyPill addetto={fields.addetto} addettoColors={addettoColors} />
-                </LavMobileInlineField>
-              </LavorazioneMobileControlsPanel>
-            ) : null}
+            <LavorazioneMobileControlsPanel>
+              <LavMobileInlineField label="Priorità" layout="stack">
+                <LavorazionePrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
+              </LavMobileInlineField>
+              <LavMobileInlineField label="Addetto" layout="stack">
+                <LavorazioneAddettoReadOnlyPill addetto={fields.addetto} addettoColors={addettoColors} />
+              </LavMobileInlineField>
+            </LavorazioneMobileControlsPanel>
             <div className="mt-2.5">
               <ClientLavorazionePhotoStrip lavorazioneId={row.id} max={3} lazy={false} sizeClass="h-12 w-12" />
             </div>
-            <LavorazioneMobileCardFooter meta={null}>
+            <LavorazioneMobileCardFooter
+              meta={
+                <LavorazioneMobileUltimaModifica
+                  info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id])}
+                />
+              }
+            >
               <RowActions
                 rowId={row.id}
                 onIngresso={() => onIngresso(row)}
@@ -488,6 +464,7 @@ function LavorazioniSection({
   onSort,
   onIngresso,
   onQr,
+  schedeStore,
 }: {
   /** Etichetta accessibilità (titolo visibile sulla ShellCard). */
   sectionLabel: string;
@@ -497,6 +474,7 @@ function LavorazioniSection({
   colStyles: LavorazioniListTableColStyles;
   prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
+  schedeStore: LavorazioneSchedeStore;
   emptyDefault: string;
   filtersActive: boolean;
   sortColumn: ClientPortalSortKey | null;
@@ -529,6 +507,7 @@ function LavorazioniSection({
         statiOpts={statiOpts}
         prioritaColors={prioritaColors}
         addettoColors={addettoColors}
+        schedeStore={schedeStore}
         emptyMessage={emptyMessage}
         onIngresso={onIngresso}
         onQr={onQr}
@@ -799,6 +778,7 @@ export function ClientLavorazioniView() {
               colStyles={colStyles}
               prioritaColors={prioritaColors}
               addettoColors={addettoColors}
+              schedeStore={schedeStore}
               emptyDefault="Nessuna lavorazione in corso."
               filtersActive={filtersActive}
               sortColumn={sortInCorsoCol}
@@ -823,6 +803,7 @@ export function ClientLavorazioniView() {
               colStyles={colStyles}
               prioritaColors={prioritaColors}
               addettoColors={addettoColors}
+              schedeStore={schedeStore}
               emptyDefault="Nessuna lavorazione in archivio."
               filtersActive={filtersActive}
               sortColumn={sortArchivioCol}

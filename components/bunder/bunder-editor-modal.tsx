@@ -19,7 +19,12 @@ import type { BunderCommercialDocument, BunderDocKind, BunderProductRiga } from 
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
-import { GestionaleModalShell, GestionaleModalHeader } from "@/components/gestionale/gestionale-modal";
+import {
+  GestionaleModalShell,
+  GestionaleModalHeader,
+  GestionaleModalScrollBody,
+} from "@/components/gestionale/gestionale-modal";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsInput, dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 
 function nextRigaId(): string {
@@ -233,12 +238,14 @@ export function BunderEditorModal({
         />
       }
     >
-        <div className="gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto p-4 sm:p-5">
+        <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+          <GestionaleModalScrollBody className="p-4 sm:p-5">
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+            <label htmlFor="bunder-edit-tipo" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Tipo documento
               <div className="mt-1">
                 <GlobalSelect
+                  id="bunder-edit-tipo"
                   variant="filter"
                   inputClassName={globalInputFieldFilter}
                   items={BUNDER_DOC_KIND_OPTIONS.map((o) => ({ value: o.id, label: o.label }))}
@@ -249,27 +256,40 @@ export function BunderEditorModal({
                 />
               </div>
             </label>
-            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+            <label htmlFor="bunder-edit-numero" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Numero (automatico)
-              <input className={`${dsInput} mt-1 w-full`} readOnly value={local.numeroProgressivo} />
+              <input
+                id="bunder-edit-numero"
+                className={`${dsInput} mt-1 w-full`}
+                readOnly
+                aria-readonly="true"
+                value={local.numeroProgressivo}
+              />
             </label>
-            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+            <label htmlFor="bunder-edit-data" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Data documento
               <div className="mt-1">
                 <GlobalDatePickerYmd
+                  id="bunder-edit-data"
                   valueYmd={local.dataDocumento}
                   onChangeYmd={(v) => setLocal({ ...local, dataDocumento: v })}
                   aria-label="Data documento"
                 />
               </div>
             </label>
-            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+            <label htmlFor="bunder-edit-luogo" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Luogo
-              <input className={`${dsInput} mt-1 w-full`} value={local.luogo} onChange={(e) => setLocal({ ...local, luogo: e.target.value })} />
+              <input
+                id="bunder-edit-luogo"
+                className={`${dsInput} mt-1 w-full`}
+                value={local.luogo}
+                onChange={(e) => setLocal({ ...local, luogo: e.target.value })}
+              />
             </label>
-            <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 sm:col-span-2">
+            <label htmlFor="bunder-edit-riferimento" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 sm:col-span-2">
               Riferimento interno
               <input
+                id="bunder-edit-riferimento"
                 className={`${dsInput} mt-1 w-full`}
                 value={local.riferimentoInterno}
                 onChange={(e) => setLocal({ ...local, riferimentoInterno: e.target.value })}
@@ -285,33 +305,59 @@ export function BunderEditorModal({
               </button>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 sm:col-span-2">
+              <label htmlFor="bunder-edit-azienda" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 sm:col-span-2">
                 Ragione sociale
                 <input
+                  id="bunder-edit-azienda"
                   className={`${dsInput} mt-1 w-full`}
                   value={local.aziendaDestinatario}
                   onChange={(e) => setLocal({ ...local, aziendaDestinatario: e.target.value })}
                 />
               </label>
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 sm:col-span-2">
+              <label htmlFor="bunder-edit-indirizzo" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300 sm:col-span-2">
                 Indirizzo
-                <input className={`${dsInput} mt-1 w-full`} value={local.indirizzo} onChange={(e) => setLocal({ ...local, indirizzo: e.target.value })} />
+                <input
+                  id="bunder-edit-indirizzo"
+                  className={`${dsInput} mt-1 w-full`}
+                  value={local.indirizzo}
+                  onChange={(e) => setLocal({ ...local, indirizzo: e.target.value })}
+                />
               </label>
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+              <label htmlFor="bunder-edit-cap" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                 CAP
-                <input className={`${dsInput} mt-1 w-full`} value={local.cap} onChange={(e) => setLocal({ ...local, cap: e.target.value })} />
+                <input
+                  id="bunder-edit-cap"
+                  className={`${dsInput} mt-1 w-full`}
+                  value={local.cap}
+                  onChange={(e) => setLocal({ ...local, cap: e.target.value })}
+                />
               </label>
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+              <label htmlFor="bunder-edit-citta" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                 Città
-                <input className={`${dsInput} mt-1 w-full`} value={local.citta} onChange={(e) => setLocal({ ...local, citta: e.target.value })} />
+                <input
+                  id="bunder-edit-citta"
+                  className={`${dsInput} mt-1 w-full`}
+                  value={local.citta}
+                  onChange={(e) => setLocal({ ...local, citta: e.target.value })}
+                />
               </label>
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+              <label htmlFor="bunder-edit-referente" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                 Referente (C.a.)
-                <input className={`${dsInput} mt-1 w-full`} value={local.referente} onChange={(e) => setLocal({ ...local, referente: e.target.value })} />
+                <input
+                  id="bunder-edit-referente"
+                  className={`${dsInput} mt-1 w-full`}
+                  value={local.referente}
+                  onChange={(e) => setLocal({ ...local, referente: e.target.value })}
+                />
               </label>
-              <label className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+              <label htmlFor="bunder-edit-settore" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                 Settore / ambito
-                <input className={`${dsInput} mt-1 w-full`} value={local.settore} onChange={(e) => setLocal({ ...local, settore: e.target.value })} />
+                <input
+                  id="bunder-edit-settore"
+                  className={`${dsInput} mt-1 w-full`}
+                  value={local.settore}
+                  onChange={(e) => setLocal({ ...local, settore: e.target.value })}
+                />
               </label>
             </div>
           </div>
@@ -319,10 +365,11 @@ export function BunderEditorModal({
           <div className="mt-4 rounded-xl border border-zinc-200 p-3 dark:border-zinc-800">
             <p className="mb-2 text-[11px] font-bold uppercase tracking-wide text-zinc-500">Importa righe da preventivo CAB</p>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-              <label className="min-w-0 flex-1 text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+              <label htmlFor="bunder-edit-preventivo" className="min-w-0 flex-1 text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                 Preventivo
                 <div className="mt-1">
                   <GlobalSelect
+                    id="bunder-edit-preventivo"
                     variant="filter"
                     inputClassName={globalInputFieldFilter}
                     items={[
@@ -345,13 +392,19 @@ export function BunderEditorModal({
             </div>
           </div>
 
-          <label className="mt-4 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+          <label htmlFor="bunder-edit-oggetto" className="mt-4 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
             Oggetto
-            <input className={`${dsInput} mt-1 w-full`} value={local.oggetto} onChange={(e) => setLocal({ ...local, oggetto: e.target.value })} />
+            <input
+              id="bunder-edit-oggetto"
+              className={`${dsInput} mt-1 w-full`}
+              value={local.oggetto}
+              onChange={(e) => setLocal({ ...local, oggetto: e.target.value })}
+            />
           </label>
-          <label className="mt-3 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+          <label htmlFor="bunder-edit-intro" className="mt-3 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
             Introduzione
             <textarea
+              id="bunder-edit-intro"
               className={`${dsInput} mt-1 min-h-[72px] w-full resize-y`}
               value={local.intro}
               onChange={(e) => setLocal({ ...local, intro: e.target.value })}
@@ -365,7 +418,11 @@ export function BunderEditorModal({
                 + Riga
               </button>
             </div>
-            <div className={`${dsTableWrap} ${dsScrollbar}`}>
+            <div
+              className={`${dsTableWrap} ${dsScrollbar}`}
+              role="region"
+              aria-label="Righe prodotto, scorrimento orizzontale su schermi piccoli"
+            >
               <table className={`${dsTable} min-w-[720px] text-[11px]`}>
                 <GlobalTableHead sticky>
                     <GlobalTableHeadLabel label="Qtà" />
@@ -377,7 +434,7 @@ export function BunderEditorModal({
                     <GlobalTableHeadLabel label="" thClassName="w-8" />
                 </GlobalTableHead>
                 <tbody>
-                  {local.righe.map((r) => (
+                  {local.righe.map((r, idx) => (
                     <tr key={r.id} className={dsTableRow}>
                       <td className="px-1 py-1">
                         <input
@@ -386,19 +443,32 @@ export function BunderEditorModal({
                           value={r.quantita}
                           min={0.01}
                           step={0.01}
+                          inputMode="decimal"
+                          aria-label={`Quantità riga ${idx + 1}`}
                           onChange={(e) => updateRiga(r.id, { quantita: Math.max(0.01, Number(e.target.value) || 1) })}
                         />
                       </td>
                       <td className="px-1 py-1">
-                        <input className={`${dsInput} w-24 py-1 text-xs`} value={r.codice} onChange={(e) => updateRiga(r.id, { codice: e.target.value })} />
+                        <input
+                          className={`${dsInput} w-24 py-1 text-xs`}
+                          value={r.codice}
+                          aria-label={`Codice riga ${idx + 1}`}
+                          onChange={(e) => updateRiga(r.id, { codice: e.target.value })}
+                        />
                       </td>
                       <td className="px-1 py-1">
-                        <input className={`${dsInput} min-w-[8rem] py-1 text-xs`} value={r.nome} onChange={(e) => updateRiga(r.id, { nome: e.target.value })} />
+                        <input
+                          className={`${dsInput} min-w-[8rem] py-1 text-xs`}
+                          value={r.nome}
+                          aria-label={`Nome prodotto riga ${idx + 1}`}
+                          onChange={(e) => updateRiga(r.id, { nome: e.target.value })}
+                        />
                       </td>
                       <td className="px-1 py-1">
                         <textarea
                           className={`${dsInput} min-h-[48px] min-w-[12rem] resize-y py-1 text-xs`}
                           value={r.descrizioneTecnica}
+                          aria-label={`Descrizione tecnica riga ${idx + 1}`}
                           onChange={(e) => updateRiga(r.id, { descrizioneTecnica: e.target.value })}
                         />
                       </td>
@@ -409,6 +479,8 @@ export function BunderEditorModal({
                           value={r.prezzoUnitario}
                           min={0}
                           step={0.01}
+                          inputMode="decimal"
+                          aria-label={`Prezzo unitario riga ${idx + 1}`}
                           onChange={(e) => updateRiga(r.id, { prezzoUnitario: Math.max(0, Number(e.target.value) || 0) })}
                         />
                       </td>
@@ -441,9 +513,10 @@ export function BunderEditorModal({
                 ["validitaOfferta", "Validità offerta"],
               ] as const
             ).map(([k, lab]) => (
-              <label key={k} className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+              <label key={k} htmlFor={`bunder-edit-cond-${k}`} className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
                 {lab}
                 <input
+                  id={`bunder-edit-cond-${k}`}
                   className={`${dsInput} mt-1 w-full`}
                   value={local.condizioni[k]}
                   onChange={(e) => setLocal({ ...local, condizioni: { ...local.condizioni, [k]: e.target.value } })}
@@ -452,22 +525,34 @@ export function BunderEditorModal({
             ))}
           </div>
 
-          <label className="mt-4 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+          <label htmlFor="bunder-edit-clausole" className="mt-4 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
             Clausole legali
             <textarea
+              id="bunder-edit-clausole"
               className={`${dsInput} mt-1 min-h-[120px] w-full resize-y`}
               value={local.clausoleLegali}
               onChange={(e) => setLocal({ ...local, clausoleLegali: e.target.value })}
             />
           </label>
-          <label className="mt-3 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+          <label htmlFor="bunder-edit-chiusura" className="mt-3 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
             Chiusura
-            <input className={`${dsInput} mt-1 w-full`} value={local.chiusura} onChange={(e) => setLocal({ ...local, chiusura: e.target.value })} />
+            <input
+              id="bunder-edit-chiusura"
+              className={`${dsInput} mt-1 w-full`}
+              value={local.chiusura}
+              onChange={(e) => setLocal({ ...local, chiusura: e.target.value })}
+            />
           </label>
-          <label className="mt-3 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+          <label htmlFor="bunder-edit-note-firma" className="mt-3 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
             Firma / note piè pagina
-            <textarea className={`${dsInput} mt-1 min-h-[56px] w-full resize-y`} value={local.noteFirma} onChange={(e) => setLocal({ ...local, noteFirma: e.target.value })} />
+            <textarea
+              id="bunder-edit-note-firma"
+              className={`${dsInput} mt-1 min-h-[56px] w-full resize-y`}
+              value={local.noteFirma}
+              onChange={(e) => setLocal({ ...local, noteFirma: e.target.value })}
+            />
           </label>
+          </GestionaleModalScrollBody>
         </div>
     </GestionaleModalShell>
     <GestionaleUnsavedChangesDialog

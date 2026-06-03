@@ -56,15 +56,17 @@ export function PreventiviAdvancedFilterPanel({
   return (
     <div className="space-y-3" aria-label="Filtri avanzati preventivi">
       <LavorazioniFilterGroup title="Data creazione">
-        <LavorazioniFilterField label="Data creazione da">
+        <LavorazioniFilterField label="Data creazione da" htmlFor="prev-filter-data-da">
           <GlobalFilterDateField
+            id="prev-filter-data-da"
             valueYmd={filters.dataCreazioneDa}
             onChangeYmd={(v) => onChange({ dataCreazioneDa: v })}
             aria-label="Data creazione preventivo da"
           />
         </LavorazioniFilterField>
-        <LavorazioniFilterField label="Data creazione a">
+        <LavorazioniFilterField label="Data creazione a" htmlFor="prev-filter-data-a">
           <GlobalFilterDateField
+            id="prev-filter-data-a"
             valueYmd={filters.dataCreazioneA}
             onChangeYmd={(v) => onChange({ dataCreazioneA: v })}
             aria-label="Data creazione preventivo a"

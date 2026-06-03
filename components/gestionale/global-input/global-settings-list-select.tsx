@@ -250,8 +250,8 @@ export function GlobalHierarchyMarcaSelect({
   className,
   inputClassName,
   variant = "default",
-  placeholder,
-  allowAdd = false,
+  placeholder = "Digita o seleziona…",
+  allowAdd,
   selectOnly,
   "aria-label": ariaLabel,
 }: {
@@ -264,6 +264,7 @@ export function GlobalHierarchyMarcaSelect({
   inputClassName?: string;
   variant?: "default" | "filter";
   placeholder?: string;
+  /** Consente «Aggiungi …» se il valore non è in elenco (richiede permesso configurazione). Default: true. */
   allowAdd?: boolean;
   selectOnly?: boolean;
   "aria-label"?: string;
@@ -280,7 +281,7 @@ export function GlobalHierarchyMarcaSelect({
       inputClassName={inputClassName}
       variant={variant}
       placeholder={placeholder}
-      allowAdd={allowAdd}
+      allowAdd={allowAdd ?? true}
       selectOnly={selectOnly}
       aria-label={ariaLabel}
     />
@@ -301,8 +302,8 @@ export function GlobalHierarchyModelloSelect({
   className,
   inputClassName,
   variant = "default",
-  placeholder,
-  allowAdd = false,
+  placeholder = "Digita o seleziona…",
+  allowAdd,
   selectOnly,
   "aria-label": ariaLabel,
 }: {
@@ -316,6 +317,7 @@ export function GlobalHierarchyModelloSelect({
   inputClassName?: string;
   variant?: "default" | "filter";
   placeholder?: string;
+  /** Consente «Aggiungi …» se il valore non è in elenco (richiede permesso configurazione). Default: true. */
   allowAdd?: boolean;
   selectOnly?: boolean;
   "aria-label"?: string;
@@ -332,7 +334,7 @@ export function GlobalHierarchyModelloSelect({
       inputClassName={inputClassName}
       variant={variant}
       placeholder={placeholder}
-      allowAdd={allowAdd}
+      allowAdd={allowAdd ?? true}
       selectOnly={selectOnly}
       aria-label={ariaLabel}
     />

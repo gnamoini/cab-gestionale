@@ -2,11 +2,32 @@
 
 import type { ReactNode } from "react";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { dsInput, dsPageToolbar, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
 import type { UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
-import { gestionaleSelectFilterClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 
-function MezziFieldWrap({ label, children }: { label: string; children: ReactNode }) {
+function MezziFieldWrap({
+  label,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  children: ReactNode;
+}) {
+  if (htmlFor) {
+    return (
+      <div className="flex min-w-0 flex-1 flex-col gap-1">
+        <label
+          htmlFor={htmlFor}
+          className="cursor-default text-[11px] font-medium text-[color:var(--cab-text-muted)]"
+        >
+          {label}
+        </label>
+        {children}
+      </div>
+    );
+  }
   return (
     <label className="flex min-w-0 flex-1 flex-col gap-1">
       <span className="text-[11px] font-medium text-[color:var(--cab-text-muted)]">{label}</span>
@@ -15,7 +36,7 @@ function MezziFieldWrap({ label, children }: { label: string; children: ReactNod
   );
 }
 
-const filterTextInputClass = `${dsInput} min-h-10 py-2 text-sm font-semibold`;
+const filterTextInputClass = `${dsInput} min-h-11 py-2 text-sm font-semibold`;
 
 export type MezziSearchBarProps = {
   search: string;
@@ -27,6 +48,7 @@ export type MezziSearchBarProps = {
 export function MezziSearchBar({ search, onSearch, wrapperClassName = "" }: MezziSearchBarProps) {
   return (
     <GestionaleSearchField
+      id="mezzi-search"
       wrapperClassName={wrapperClassName}
       value={search}
       onChange={(e) => onSearch(e.target.value)}
@@ -72,69 +94,74 @@ export function MezziFilterFields({
     <div className={embedded ? "" : "border-t border-[color:var(--cab-border)] pt-3"}>
       <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Campi filtro</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-        <MezziFieldWrap label="Cliente">
+        <MezziFieldWrap label="Cliente" htmlFor="mezzi-filter-cliente">
           <input
+            id="mezzi-filter-cliente"
             type="text"
             value={filtroCliente}
             onChange={(e) => onFiltroCliente(e.target.value)}
             className={filterTextInputClass}
             placeholder="Contiene…"
-            aria-label="Filtra cliente"
           />
         </MezziFieldWrap>
-        <MezziFieldWrap label="Marca">
+        <MezziFieldWrap label="Marca" htmlFor="mezzi-filter-marca">
           <input
+            id="mezzi-filter-marca"
             type="text"
             value={filtroMarca}
             onChange={(e) => onFiltroMarca(e.target.value)}
             className={filterTextInputClass}
             placeholder="Contiene…"
-            aria-label="Filtra marca"
           />
         </MezziFieldWrap>
-        <MezziFieldWrap label="Modello">
+        <MezziFieldWrap label="Modello" htmlFor="mezzi-filter-modello">
           <input
+            id="mezzi-filter-modello"
             type="text"
             value={filtroModello}
             onChange={(e) => onFiltroModello(e.target.value)}
             className={filterTextInputClass}
             placeholder="Contiene…"
-            aria-label="Filtra modello"
           />
         </MezziFieldWrap>
-        <MezziFieldWrap label="Targa">
+        <MezziFieldWrap label="Targa" htmlFor="mezzi-filter-targa">
           <input
+            id="mezzi-filter-targa"
             type="text"
             value={filtroTarga}
             onChange={(e) => onFiltroTarga(e.target.value)}
             className={`${filterTextInputClass} font-mono`}
             placeholder="Contiene…"
-            aria-label="Filtra targa"
           />
         </MezziFieldWrap>
-        <MezziFieldWrap label="N. scuderia">
+        <MezziFieldWrap label="N. scuderia" htmlFor="mezzi-filter-numero-scuderia">
           <input
+            id="mezzi-filter-numero-scuderia"
             type="text"
             value={filtroNumeroScuderia}
             onChange={(e) => onFiltroNumeroScuderia(e.target.value)}
             className={`${filterTextInputClass} font-mono`}
             placeholder="Contiene…"
-            aria-label="Filtra numero scuderia"
           />
         </MezziFieldWrap>
-        <MezziFieldWrap label="Ultima lavorazione">
-          <select
+        <MezziFieldWrap label="Ultima lavorazione" htmlFor="mezzi-filter-ultima-lav">
+          <GlobalSelect
+            id="mezzi-filter-ultima-lav"
+            variant="filter"
+            inputClassName={filterTextInputClass}
+            items={[
+              { value: "", label: "Tutti" },
+              { value: "con", label: "Con lavorazione" },
+              { value: "senza", label: "Senza lavorazione" },
+              { value: "recenti12m", label: "Ultimi 12 mesi" },
+              { value: "oltre12m", label: "Oltre 12 mesi" },
+            ]}
             value={filtroUltimaLav}
-            onChange={(e) => onFiltroUltimaLav(e.target.value as UltimaLavorazioneFilter)}
-            className={`${filterTextInputClass} ${gestionaleSelectFilterClass}`}
+            onChange={(v) => onFiltroUltimaLav(v as UltimaLavorazioneFilter)}
+            strictFromList
+            selectOnly
             aria-label="Filtra per ultima lavorazione"
-          >
-            <option value="">Tutti</option>
-            <option value="con">Con lavorazione</option>
-            <option value="senza">Senza lavorazione</option>
-            <option value="recenti12m">Ultimi 12 mesi</option>
-            <option value="oltre12m">Oltre 12 mesi</option>
-          </select>
+          />
         </MezziFieldWrap>
       </div>
     </div>

@@ -1,12 +1,63 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { GlobalMultiSelect } from "@/components/gestionale/global-input/global-multi-select";
+import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
 import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { GlobalSettingsHierarchyKind } from "@/src/lib/global-list/global-settings-list-keys";
 import { useAppendGlobalListValue } from "@/src/hooks/use-append-global-list-value";
 
 type SelectedChip = { value: string; label?: string };
+
+function compatHierarchyPlaceholder(
+  tree: HierarchyTreeKey,
+  hierarchyKind: GlobalSettingsHierarchyKind,
+): string {
+  if (hierarchyKind === "marca") {
+    return tree === "attrezzature" ? "Cerca marca attrezzatura…" : "Cerca marca telaio…";
+  }
+  return tree === "attrezzature" ? "Cerca modello attrezzatura…" : "Cerca modello telaio…";
+}
+
+/** Select singolo gerarchia attrezzature/telai con append inline (scheda ingresso, anagrafica). */
+export function CompatHierarchySelect({
+  tree,
+  hierarchyKind,
+  marcaNome,
+  value,
+  onChange,
+  ariaLabel,
+  placeholder,
+  disabled,
+  required,
+  className,
+}: {
+  tree: HierarchyTreeKey;
+  hierarchyKind: GlobalSettingsHierarchyKind;
+  marcaNome?: string;
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  placeholder?: string;
+  disabled?: boolean;
+  required?: boolean;
+  className?: string;
+}) {
+  return (
+    <GlobalSettingsListSelect
+      listKey="mezzi:clienti"
+      value={value}
+      onChange={onChange}
+      context={{ hierarchyTree: tree, hierarchyKind, marcaNome }}
+      disabled={disabled}
+      required={required}
+      className={className}
+      placeholder={placeholder ?? compatHierarchyPlaceholder(tree, hierarchyKind)}
+      allowAdd
+      aria-label={ariaLabel}
+    />
+  );
+}
 
 /** Multi-select compatibilità con append inline su gerarchia attrezzature/telai. */
 export function CompatHierarchyMultiSelect({

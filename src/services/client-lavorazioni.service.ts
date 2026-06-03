@@ -7,6 +7,7 @@ import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-f
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { logService } from "@/src/services/log.service";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LogModificaRow, LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
@@ -51,7 +52,11 @@ export const clientLavorazioniService = {
         settingsStati,
       );
 
-      const logsRes = await logService.getAll({ entita: "lavorazioni", entita_id: id, limit: 200 });
+      const logsRes = await logService.getAll({
+        entita: "lavorazioni",
+        entita_id: id,
+        limit: LOG_MODIFICHE_RETENTION_PER_ENTITA,
+      });
       if (!logsRes.success) return err(logsRes.error ?? "Errore log.");
 
       return success({ row, logs: logsRes.data ?? [] });

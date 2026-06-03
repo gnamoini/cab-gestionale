@@ -96,7 +96,7 @@ export function Modal({ open, onClose, title, children, footer, panelClassName =
               {children}
             </div>
             {footer ? (
-              <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[color:var(--cab-border)] px-4 py-3">
+              <footer className="flex shrink-0 flex-nowrap items-center justify-end gap-2 border-t border-[color:var(--cab-border)] px-4 py-3 sm:flex-wrap">
                 {footer}
               </footer>
             ) : null}

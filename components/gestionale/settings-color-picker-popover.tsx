@@ -76,6 +76,7 @@ export function SettingsColorPickerPopover({
       <input
         type="color"
         value={hex}
+        aria-label={ariaLabel}
         className="h-10 w-full max-w-[10rem] cursor-pointer overflow-hidden rounded border border-zinc-200 bg-zinc-50 p-0 dark:border-zinc-600 dark:bg-zinc-800"
         onChange={(e) => {
           const nh = normalizeHex(e.target.value);

@@ -829,24 +829,53 @@ function MezzoFormFields({
   return (
     <>
       <MezzoFormSection title="Cliente">
-        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label htmlFor="mezzo-form-cliente" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Cliente *
-          <GlobalSettingsListSelect listKey="mezzi:clienti" className={listSelectWrapClass} value={form.cliente} onChange={(v) => setForm((f) => ({ ...f, cliente: v }))} required aria-label="Cliente" />
+          <GlobalSettingsListSelect
+            id="mezzo-form-cliente"
+            listKey="mezzi:clienti"
+            className={listSelectWrapClass}
+            value={form.cliente}
+            onChange={(v) => setForm((f) => ({ ...f, cliente: v }))}
+            required
+            aria-label="Cliente"
+          />
         </label>
-        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label htmlFor="mezzo-form-cantiere" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Cantiere
-          <GlobalSettingsListSelect listKey="mezzi:cantieri" className="mt-1" value={form.cantiere} onChange={(v) => setForm((f) => ({ ...f, cantiere: v }))} aria-label="Cantiere" />
+          <GlobalSettingsListSelect
+            id="mezzo-form-cantiere"
+            listKey="mezzi:cantieri"
+            className="mt-1"
+            value={form.cantiere}
+            onChange={(v) => setForm((f) => ({ ...f, cantiere: v }))}
+            aria-label="Cantiere"
+          />
         </label>
-        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label htmlFor="mezzo-form-utilizzatore" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Utilizzatore
-          <GlobalSettingsListSelect listKey="mezzi:utilizzatori" className="mt-1" value={form.utilizzatore} onChange={(v) => setForm((f) => ({ ...f, utilizzatore: v }))} aria-label="Utilizzatore" />
+          <GlobalSettingsListSelect
+            id="mezzo-form-utilizzatore"
+            listKey="mezzi:utilizzatori"
+            className="mt-1"
+            value={form.utilizzatore}
+            onChange={(v) => setForm((f) => ({ ...f, utilizzatore: v }))}
+            aria-label="Utilizzatore"
+          />
         </label>
       </MezzoFormSection>
 
       <MezzoFormSection title="Attrezzatura">
-        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label htmlFor="mezzo-form-tipo-attrezzatura" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Tipo attrezzatura
-          <GlobalSettingsListSelect listKey="mezzi:tipiAttrezzatura" className="mt-1" value={form.tipoAttrezzatura} onChange={(v) => setForm((f) => ({ ...f, tipoAttrezzatura: v }))} aria-label="Tipo attrezzatura" />
+          <GlobalSettingsListSelect
+            id="mezzo-form-tipo-attrezzatura"
+            listKey="mezzi:tipiAttrezzatura"
+            className="mt-1"
+            value={form.tipoAttrezzatura}
+            onChange={(v) => setForm((f) => ({ ...f, tipoAttrezzatura: v }))}
+            aria-label="Tipo attrezzatura"
+          />
         </label>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -866,26 +895,52 @@ function MezzoFormFields({
           </label>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label htmlFor="mezzo-form-matricola" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Matricola
-            <input value={form.matricola} onChange={(e) => setForm((f) => ({ ...f, matricola: e.target.value }))} className={`${dsInput} mt-1 font-mono`} />
+            <input
+              id="mezzo-form-matricola"
+              value={form.matricola}
+              onChange={(e) => setForm((f) => ({ ...f, matricola: e.target.value }))}
+              className={`${dsInput} mt-1 font-mono`}
+            />
           </label>
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label htmlFor="mezzo-form-numero-scuderia" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             N. scuderia
-            <input value={form.numeroScuderia} onChange={(e) => setForm((f) => ({ ...f, numeroScuderia: e.target.value }))} className={`${dsInput} mt-1 font-mono`} />
+            <input
+              id="mezzo-form-numero-scuderia"
+              value={form.numeroScuderia}
+              onChange={(e) => setForm((f) => ({ ...f, numeroScuderia: e.target.value }))}
+              className={`${dsInput} mt-1 font-mono`}
+            />
           </label>
         </div>
         <EntitySimilarWarning similarTo={similarMezzoIdent} />
-        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label htmlFor="mezzo-form-ore-lavoro" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Ore lavoro
-          <input type="number" min={0} step={1} value={form.oreLavoro} onChange={(e) => setForm((f) => ({ ...f, oreLavoro: e.target.value }))} className={`${dsInput} mt-1`} />
+          <input
+            id="mezzo-form-ore-lavoro"
+            type="number"
+            min={0}
+            step={1}
+            inputMode="numeric"
+            value={form.oreLavoro}
+            onChange={(e) => setForm((f) => ({ ...f, oreLavoro: e.target.value }))}
+            className={`${dsInput} mt-1`}
+          />
         </label>
       </MezzoFormSection>
 
       <MezzoFormSection title="Telaio">
-        <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <label htmlFor="mezzo-form-tipo-telaio" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
           Tipo telaio
-          <GlobalSettingsListSelect listKey="mezzi:tipiTelaio" className="mt-1" value={form.tipoTelaio} onChange={(v) => setForm((f) => ({ ...f, tipoTelaio: v }))} aria-label="Tipo telaio" />
+          <GlobalSettingsListSelect
+            id="mezzo-form-tipo-telaio"
+            listKey="mezzi:tipiTelaio"
+            className="mt-1"
+            value={form.tipoTelaio}
+            onChange={(v) => setForm((f) => ({ ...f, tipoTelaio: v }))}
+            aria-label="Tipo telaio"
+          />
         </label>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
@@ -905,13 +960,27 @@ function MezzoFormFields({
           </label>
         </div>
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label htmlFor="mezzo-form-targa" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             Targa
-            <input value={form.targa} onChange={(e) => setForm((f) => ({ ...f, targa: e.target.value }))} className={`${dsInput} mt-1 font-mono`} />
+            <input
+              id="mezzo-form-targa"
+              value={form.targa}
+              onChange={(e) => setForm((f) => ({ ...f, targa: e.target.value }))}
+              className={`${dsInput} mt-1 font-mono`}
+            />
           </label>
-          <label className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
+          <label htmlFor="mezzo-form-km" className="block text-xs font-medium text-zinc-600 dark:text-zinc-400">
             KM
-            <input type="number" min={0} step={1} value={form.km} onChange={(e) => setForm((f) => ({ ...f, km: e.target.value }))} className={`${dsInput} mt-1`} />
+            <input
+              id="mezzo-form-km"
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              value={form.km}
+              onChange={(e) => setForm((f) => ({ ...f, km: e.target.value }))}
+              className={`${dsInput} mt-1`}
+            />
           </label>
         </div>
       </MezzoFormSection>

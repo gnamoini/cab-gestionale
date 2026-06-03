@@ -870,10 +870,15 @@ export function SettingsLavorazioniModal({
                         {prioritaLabel(p)}
                       </span>
                       {onChangePrioritaDb ? (
-                        <label className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
+                        <label
+                          htmlFor={`priorita-attiva-${pl}`}
+                          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400"
+                        >
                           <input
+                            id={`priorita-attiva-${pl}`}
                             type="checkbox"
                             checked={active}
+                            aria-label={`Priorità ${prioritaLabel(p)}: attiva`}
                             onChange={(e) => {
                               const next = e.target.checked
                                 ? [...new Set([...(prioritaDb ?? []), p])]

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, type FormEvent, type ReactNode } from "react";
+import { useCallback, useId, useMemo, type FormEvent, type ReactNode } from "react";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
@@ -183,6 +183,9 @@ export function SchedaIngressoFormBody({
   prependContent?: ReactNode;
 }) {
   const disabled = pending || readOnly;
+  const dataIngressoFieldId = useId();
+  const anomaliaFieldId = useId();
+  const noteFieldId = useId();
   const globalOpts = useGlobalOptions({
     enabled: true,
     debugTag: variant === "create-lavorazione" ? "LavorazioneCreateModal" : "SchedaIngressoEditModal",
@@ -288,8 +291,9 @@ export function SchedaIngressoFormBody({
         ) : null}
 
         <FormSection title="Ingresso">
-          <FormField label="Data ingresso *">
+          <FormField label="Data ingresso" htmlFor={dataIngressoFieldId} required>
             <GlobalDatePicker
+              id={dataIngressoFieldId}
               value={fields.dataIngresso}
               onChange={(v) => onPatch({ dataIngresso: v })}
               inputClassName={dsInput}
@@ -364,8 +368,9 @@ export function SchedaIngressoFormBody({
         />
 
         <FormSection title="Intervento">
-          <FormField label="Descrizione anomalia">
+          <FormField label="Descrizione anomalia" htmlFor={anomaliaFieldId}>
             <textarea
+              id={anomaliaFieldId}
               className={`${dsInput} min-h-[72px] w-full resize-y`}
               value={fields.descrizioneAnomalia}
               onChange={(e) => onPatch({ descrizioneAnomalia: sliceInputValue(e.target.value, TEXT_EXTRA) })}
@@ -374,8 +379,9 @@ export function SchedaIngressoFormBody({
               maxLength={TEXT_EXTRA}
             />
           </FormField>
-          <FormField label="Note">
+          <FormField label="Note" htmlFor={noteFieldId}>
             <textarea
+              id={noteFieldId}
               className={`${dsInput} min-h-[56px] w-full resize-y`}
               value={fields.noteIntervento ?? ""}
               onChange={(e) => onPatch({ noteIntervento: sliceInputValue(e.target.value, TEXT_LONG) })}

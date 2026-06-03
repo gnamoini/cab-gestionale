@@ -153,7 +153,7 @@ function MarcaModelsPanel({
         />
         <button
           type="button"
-          className={`${dsPageToolbarCtaCompact} h-7 min-h-7 shrink-0 px-2.5 text-xs sm:w-auto`}
+          className={`${dsPageToolbarCtaCompact} min-h-10 shrink-0 px-2.5 text-xs sm:w-auto`}
           disabled={!draftTrimmed}
           onClick={onAddModello}
         >

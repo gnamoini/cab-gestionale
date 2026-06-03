@@ -99,14 +99,30 @@ function humanFieldLabel(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+function isLogPlaceholderValue(s: string): boolean {
+  const t = safeStr(s).trim();
+  return !t || t === "—" || t === "–" || t === "-";
+}
+
+/** Rimuove segmenti vuoti/placeholder (—) dall'etichetta oggetto log. */
+export function sanitizeLogOggettoRiga(raw: string): string {
+  const s = safeStr(raw).trim();
+  if (isLogPlaceholderValue(s)) return "—";
+  const parts = s.split(/\s—\s/).map((p) => p.trim()).filter((p) => !isLogPlaceholderValue(p));
+  return parts.length ? parts.join(" — ") : "—";
+}
+
 function joinOggetto(parts: string[]): string {
-  return parts.map((p) => safeStr(p).trim()).filter((p) => p && p !== "—").join(" — ") || "—";
+  return parts.map((p) => safeStr(p).trim()).filter((p) => !isLogPlaceholderValue(p)).join(" — ") || "—";
 }
 
 function pickStr(obj: Record<string, unknown>, keys: string[]): string {
   for (const k of keys) {
     const v = obj[k];
-    if (typeof v === "string" && v.trim()) return v.trim();
+    if (typeof v === "string") {
+      const t = v.trim();
+      if (!isLogPlaceholderValue(t)) return t;
+    }
   }
   return "";
 }
@@ -458,7 +474,7 @@ function resolveOggettoRiga(
       if (rebuilt !== "Lavorazione") resolved = rebuilt;
     }
   }
-  return resolved;
+  return sanitizeLogOggettoRiga(resolved);
 }
 
 function filterModificheForDisplay(entita: string, lines: string[]): string[] {

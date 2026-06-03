@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import {
   buildLogModificheDisplayEntries,
   logAutoreLabel,
@@ -34,8 +35,14 @@ export function useMagazzinoLogFeed(opts: {
   const gestOpts = useGestionaleQueryOpts();
   const prodottiById = useMemo(() => new Map(opts.prodotti.map((p) => [p.id, p])), [opts.prodotti]);
 
-  const magLogsQ = useLogListQuery({ entita: "magazzino_ricambi", limit: 200 }, gestOpts);
-  const movLogsQ = useLogListQuery({ entita: "movimenti_ricambi", limit: 120 }, gestOpts);
+  const magLogsQ = useLogListQuery(
+    { entita: "magazzino_ricambi", limit: LOG_MODIFICHE_RETENTION_PER_ENTITA },
+    gestOpts,
+  );
+  const movLogsQ = useLogListQuery(
+    { entita: "movimenti_ricambi", limit: LOG_MODIFICHE_RETENTION_PER_ENTITA },
+    gestOpts,
+  );
 
   const invalidateLogs = () => {
     void qc.invalidateQueries({ queryKey: QK.log, refetchType: "active" });

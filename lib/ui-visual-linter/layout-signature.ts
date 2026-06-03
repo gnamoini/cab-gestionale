@@ -390,6 +390,11 @@ export function collectLayoutSignatures(
     if (options.shouldSkip?.(el)) continue;
 
     if (isToolbarCandidate(el)) {
+      const cn = typeof el.className === "string" ? el.className : "";
+      const parentRow = el.parentElement?.closest(".flex-safe-row");
+      const nestedInToolbarRow =
+        cn.includes("flex-safe-row") && parentRow instanceof HTMLElement && parentRow !== el;
+      if (nestedInToolbarRow) continue;
       const sig = extractToolbarSignature(el);
       if (sig) push(sig);
       continue;

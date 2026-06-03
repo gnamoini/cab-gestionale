@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
@@ -28,8 +29,8 @@ import {
   dsTableRow,
   dsTableTd,
   dsTableWrap,
-  gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 
 const ricambiTableWrap = `${dsTableWrap} ${dsScrollbar}`;
 const ricambiTbodyTr = dsTableRow;
@@ -147,6 +148,7 @@ export function ReportRicambiConsumoSection({
               <button
                 key={id}
                 type="button"
+                aria-pressed={vista === id}
                 onClick={() => setVista(id)}
                 className={vista === id ? dsSegmentedBtnOn : dsSegmentedBtnOff}
               >
@@ -158,37 +160,39 @@ export function ReportRicambiConsumoSection({
 
         {vista === "mese" ? (
           <div className="w-full min-w-[12rem] lg:w-auto">
-            <label className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Mese (nel periodo)</label>
-            <select
-              value={effectiveMonthKey}
-              onChange={(e) => setSelMonthKey(e.target.value)}
-              className={`${gestionaleSelectNativePlainClass} mt-1 block h-10 w-full py-0`}
+            <label htmlFor="report-ricambi-mese" className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+              Mese (nel periodo)
+            </label>
+            <GlobalSelect
+              id="report-ricambi-mese"
+              variant="filter"
+              selectOnly
               disabled={monthKeys.length === 0}
-            >
-              {monthKeys.map((k) => (
-                <option key={k} value={k}>
-                  {fmtYmHuman(k)}
-                </option>
-              ))}
-            </select>
+              inputClassName={`${globalInputFieldFilter} mt-1 h-10 w-full`}
+              items={monthKeys.map((k) => ({ value: k, label: fmtYmHuman(k) }))}
+              value={effectiveMonthKey}
+              onChange={setSelMonthKey}
+              strictFromList
+            />
           </div>
         ) : null}
 
         {vista === "anno" ? (
           <div className="w-full min-w-[8rem] lg:w-auto">
-            <label className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Anno (nel periodo)</label>
-            <select
-              value={String(effectiveYear)}
-              onChange={(e) => setSelYear(Number(e.target.value))}
-              className={`${gestionaleSelectNativePlainClass} mt-1 block h-10 w-full py-0`}
+            <label htmlFor="report-ricambi-anno" className="text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+              Anno (nel periodo)
+            </label>
+            <GlobalSelect
+              id="report-ricambi-anno"
+              variant="filter"
+              selectOnly
               disabled={years.length === 0}
-            >
-              {years.map((y) => (
-                <option key={y} value={String(y)}>
-                  {y}
-                </option>
-              ))}
-            </select>
+              inputClassName={`${globalInputFieldFilter} mt-1 h-10 w-full`}
+              items={years.map((y) => ({ value: String(y), label: String(y) }))}
+              value={String(effectiveYear)}
+              onChange={(v) => setSelYear(Number(v))}
+              strictFromList
+            />
           </div>
         ) : null}
       </div>

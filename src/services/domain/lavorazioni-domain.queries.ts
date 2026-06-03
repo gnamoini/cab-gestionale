@@ -10,6 +10,7 @@ import { documentiService } from "@/src/services/documenti.service";
 import { mezziService } from "@/src/services/mezzi.service";
 import { err, success } from "@/src/services/service-result";
 import { lavorazioniService, type LavorazioneFilters, type LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { logService } from "@/src/services/log.service";
 import { movimentiService } from "@/src/services/movimenti.service";
 import { preventiviService } from "@/src/services/preventivi.service";
@@ -149,10 +150,14 @@ export function useDocumentiByLavorazione(lavorazioneId: string | undefined) {
 /** Log modifiche entità `lavorazioni`. */
 export function useLogByLavorazione(lavorazioneId: string | undefined) {
   const id = lavIdOrEmpty(lavorazioneId);
-  return useServiceQuery(lavorazioniDomainQueryKeys.log(id), () => logService.getAll({ entita: "lavorazioni", entita_id: id, limit: 200 }), {
-    enabled: id.length > 0,
-    staleTime: LA_STALE_MS,
-  });
+  return useServiceQuery(
+    lavorazioniDomainQueryKeys.log(id),
+    () => logService.getAll({ entita: "lavorazioni", entita_id: id, limit: LOG_MODIFICHE_RETENTION_PER_ENTITA }),
+    {
+      enabled: id.length > 0,
+      staleTime: LA_STALE_MS,
+    },
+  );
 }
 
 /** PDF preventivo esterno + DDT (`lavorazione_documents`). */

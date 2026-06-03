@@ -10,6 +10,7 @@ import { SecurityToggle } from "@/components/dashboard/security/security-toggle"
 import { GlobalTableHead, GestionaleListTableActionsHead } from "@/components/gestionale/global-table";
 import { cycleReportSort, ReportSortTh, type ReportSortPhase } from "@/components/report/report-sort-th";
 import { TablePagination } from "@/components/gestionale/table-pagination";
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import {
   dsBtnGhost,
   dsInput,
@@ -20,7 +21,6 @@ import {
   dsTableRow,
   dsTableTd,
   dsTableWrap,
-  gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 
@@ -161,23 +161,22 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
             }}
           />
         </label>
-        <label className="block min-w-[10rem]">
+        <label className="block min-w-[10rem] sm:min-w-[12rem]">
           <span className="sr-only">Filtra ruolo</span>
-          <select
-            className={`${gestionaleSelectNativePlainClass} w-full`}
+          <GlobalSelect
+            selectOnly
+            variant="filter"
             value={roleFilter}
-            onChange={(e) => {
-              setRoleFilter(e.target.value as "all" | AppRole);
+            onChange={(v) => {
+              setRoleFilter(v as "all" | AppRole);
               resetPage();
             }}
-          >
-            <option value="all">Tutti i ruoli</option>
-            {APP_ROLES.map((role) => (
-              <option key={role} value={role}>
-                {roleLabel(role)}
-              </option>
-            ))}
-          </select>
+            aria-label="Filtra ruolo"
+            items={[
+              { value: "all", label: "Tutti i ruoli" },
+              ...APP_ROLES.map((role) => ({ value: role, label: roleLabel(role) })),
+            ]}
+          />
         </label>
         <span className="text-xs text-[color:var(--cab-text-muted)]">
           <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">{filtered.length}</span> utent
@@ -243,18 +242,18 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
                         {readOnly ? (
                           <SecurityRoleBadge role={row.ruolo} />
                         ) : (
-                          <select
-                            className={`${gestionaleSelectNativePlainClass} min-w-[7.5rem] py-1 text-xs`}
+                          <GlobalSelect
+                            selectOnly
+                            variant="default"
                             value={row.ruolo}
-                            onChange={(e) => handleRoleChange(row.id, e.target.value as AppRole)}
+                            onChange={(v) => handleRoleChange(row.id, v as AppRole)}
                             aria-label={`Ruolo ${row.nome}`}
-                          >
-                            {APP_ROLES.map((role) => (
-                              <option key={role} value={role}>
-                                {roleLabel(role)}
-                              </option>
-                            ))}
-                          </select>
+                            inputClassName="min-h-8 py-1 text-xs"
+                            items={APP_ROLES.map((role) => ({
+                              value: role,
+                              label: roleLabel(role),
+                            }))}
+                          />
                         )}
                       </td>
                       <td className={dsTableTd}>

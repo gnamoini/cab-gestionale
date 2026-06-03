@@ -39,8 +39,8 @@ import {
 const promemoriaDayBtnClass = `${globalInputCalendarDayBtn} relative touch-manipulation motion-reduce:transition-none`;
 
 const pickerTriggerClass = [
-  "inline-flex h-10 min-w-0 shrink-0 items-center gap-1 rounded-[var(--ds-radius-lg)] px-2",
-  "text-sm font-semibold uppercase tracking-wide text-[color:var(--cab-text)]",
+  "inline-flex h-10 min-w-0 flex-1 items-center justify-center gap-0.5 rounded-[var(--ds-radius-lg)] px-1.5",
+  "text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text)] sm:flex-none sm:gap-1 sm:px-2 sm:text-sm",
   "transition-[background-color,opacity] duration-150 hover:bg-[var(--cab-hover)]",
 ].join(" ");
 
@@ -275,7 +275,7 @@ function PromemoriaMonthYearPickers({
 
   return (
     <div
-      className={`flex min-w-0 flex-1 items-center justify-center gap-0.5 ${isMonthLoading ? "opacity-60" : "opacity-100"}`}
+      className={`flex min-w-0 flex-1 items-center justify-center gap-0.5 max-sm:min-w-0 ${isMonthLoading ? "opacity-60" : "opacity-100"}`}
     >
       <button
           ref={monthTriggerRef}
@@ -435,11 +435,11 @@ export function DashboardPromemoriaCalendar({
 
   return (
     <div className="min-w-0" aria-label="Calendario promemoria">
-      <div className="mb-4 flex min-w-0 flex-wrap items-center gap-2 sm:flex-nowrap">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
+      <div className="mb-4 flex min-w-0 flex-col gap-2 sm:flex-row sm:flex-nowrap sm:items-center sm:gap-2">
+        <div className="flex min-w-0 w-full items-center gap-1 sm:flex-1 sm:gap-2">
           <button
             type="button"
-            className={`${dsPageToolbarIconBtn} ${dsFocus}`}
+            className={`${dsPageToolbarIconBtn} ${dsFocus} shrink-0`}
             aria-label="Mese precedente"
             onClick={() => shiftViewMonth(-1)}
           >
@@ -453,7 +453,7 @@ export function DashboardPromemoriaCalendar({
           />
           <button
             type="button"
-            className={`${dsPageToolbarIconBtn} ${dsFocus}`}
+            className={`${dsPageToolbarIconBtn} ${dsFocus} shrink-0`}
             aria-label="Mese successivo"
             onClick={() => shiftViewMonth(1)}
           >
@@ -472,7 +472,7 @@ export function DashboardPromemoriaCalendar({
                   : "Torna al mese corrente"
             }
             disabled={isOnTodayView}
-            className={`${dsPageToolbarBtn} ${dsFocus} shrink-0 touch-manipulation ${isOnTodayView ? "cursor-default opacity-70" : ""}`}
+            className={`${dsPageToolbarBtn} ${dsFocus} w-full min-h-[2.5rem] shrink-0 touch-manipulation sm:w-auto sm:min-h-0 ${isOnTodayView ? "cursor-default opacity-70" : ""}`}
             onClick={onGoToday}
           >
             <CalendarTodayIcon />

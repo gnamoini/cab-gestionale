@@ -12,9 +12,34 @@ export type LavorazioneUltimaModificaInfo = {
   autore: string;
 };
 
+const USER_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function isStoredUserId(value: string): boolean {
+  return USER_ID_RE.test(value.trim());
+}
+
+/** Etichetta leggibile per `updatedBy` / `createdBy` (nome, UUID profilo o fallback log). */
+export function displayLavorazioneAutore(
+  raw: string,
+  autoreLog: string,
+  resolveUserId?: (userId: string) => string | undefined,
+): string {
+  const t = raw.trim();
+  if (!t) return autoreLog.trim() || "—";
+  if (!isStoredUserId(t)) return t;
+  const resolved = resolveUserId?.(t)?.trim();
+  if (resolved) return resolved;
+  const log = autoreLog.trim();
+  if (log) return log;
+  return `Utente ${t.slice(0, 8)}…`;
+}
+
 export type ResolveLavorazioneUltimaModificaOptions = {
   /** Autore dell'ultima voce `log_modifiche` per la lavorazione (operatore di sistema). */
   autoreLog?: string | null;
+  /** Risolve `updatedBy` salvati come UUID profilo (es. da log `profiles.nome`). */
+  resolveUserId?: (userId: string) => string | undefined;
 };
 
 type SchedaDoc = SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc;
@@ -51,7 +76,7 @@ export function resolveLavorazioneUltimaModifica(
   const best = candidates.reduce((a, b) =>
     new Date(a.iso).getTime() >= new Date(b.iso).getTime() ? a : b,
   );
-  const autore = best.autore || autoreLog || "—";
+  const autore = displayLavorazioneAutore(best.autore || autoreLog, autoreLog, options?.resolveUserId);
   return { iso: best.iso, autore };
 }
 
@@ -70,6 +95,22 @@ export function formatLavorazioneUltimaModificaMobileLines(info: LavorazioneUlti
   const dateTime = [date, time].filter((p) => p && p !== "—").join(" · ");
   const autore = info.autore.trim() || "—";
   return { dateTime: dateTime || "—", autore };
+}
+
+/** Prima etichetta autore per `autore_id` (lista già ordinata per `created_at` desc). */
+export function buildLogAutoreByUserId(
+  rows: readonly LogModificaAutoreSource[],
+  resolveAutore: (row: LogModificaAutoreSource) => string,
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const row of rows) {
+    const id = row.autore_id?.trim();
+    if (!id || map.has(id)) continue;
+    const label = resolveAutore(row).trim();
+    if (!label || label.startsWith("Utente ")) continue;
+    map.set(id, label);
+  }
+  return map;
 }
 
 /** Prima voce log per entità (lista già ordinata per `created_at` desc). */

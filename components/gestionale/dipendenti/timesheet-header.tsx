@@ -40,7 +40,7 @@ function TimesheetPeriodNav({
   onNext: () => void;
 }) {
   return (
-    <div className="flex shrink-0 items-center gap-1" role="group" aria-label="Navigazione periodo">
+    <div className="flex shrink-0 items-center gap-2" role="group" aria-label="Navigazione periodo">
       <button type="button" className={dsPageToolbarBtn} onClick={onPrevious} aria-label="Periodo precedente">
         ←
       </button>
@@ -141,7 +141,7 @@ export function TimesheetHeader({
       <section aria-label="Filtri timesheet" className="min-w-0">
         <ToolbarGroup>
           <ToolbarGroupBody>
-            <ToolbarGroupPrimaryRow className="!flex-wrap items-end gap-3">
+            <ToolbarGroupPrimaryRow className="items-end gap-2 !sm:flex-nowrap !sm:justify-start">
               {periodMode !== "month" ? (
                 <TimesheetPeriodNav
                   periodLabel={periodLabel}
@@ -150,7 +150,7 @@ export function TimesheetHeader({
                 />
               ) : null}
               <div
-                className={`grid min-w-0 w-full flex-1 grid-cols-1 gap-3 ${periodMode === "month" ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
+                className={`grid min-w-0 w-full flex-1 grid-cols-1 gap-2 ${periodMode === "month" ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
               >
                 <label className="flex min-w-0 flex-col gap-1">
                   <span className={filterLabelClass}>Anno</span>
@@ -212,27 +212,25 @@ export function TimesheetHeader({
                 ) : null}
               </div>
             </ToolbarGroupPrimaryRow>
-            <ToolbarGroupMetaRow>
-              <div className="flex min-w-0 flex-wrap items-center gap-3">
-                <PageToolbarResultCount
-                  count={filteredCount}
-                  filtersActive={filtersActive}
-                  singularLabel="dipendente"
-                  pluralLabel="dipendenti"
-                  onFilterReset={filtersActive ? () => onFilterEmployeeId("") : undefined}
-                />
-                {saveLabel ? (
-                  <p role="status" aria-live="polite" className={`text-xs font-medium ${saveClass}`}>
-                    {saveLabel}
-                  </p>
-                ) : null}
-                {showBackgroundSync ? (
-                  <span className={dsPageToolbarMetaChip} role="status" aria-live="polite">
-                    <GlobalLoadingSpinner size="sm" className="shrink-0" label="Registro in aggiornamento" />
-                    <span>Registro in aggiornamento</span>
-                  </span>
-                ) : null}
-              </div>
+            <ToolbarGroupMetaRow className="!justify-start gap-2">
+              <PageToolbarResultCount
+                count={filteredCount}
+                filtersActive={filtersActive}
+                singularLabel="dipendente"
+                pluralLabel="dipendenti"
+                onFilterReset={filtersActive ? () => onFilterEmployeeId("") : undefined}
+              />
+              {saveLabel ? (
+                <p role="status" aria-live="polite" className={`text-xs font-medium ${saveClass}`}>
+                  {saveLabel}
+                </p>
+              ) : null}
+              {showBackgroundSync ? (
+                <span className={dsPageToolbarMetaChip} role="status" aria-live="polite">
+                  <GlobalLoadingSpinner size="sm" className="shrink-0" label="Registro in aggiornamento" />
+                  <span>Registro in aggiornamento</span>
+                </span>
+              ) : null}
             </ToolbarGroupMetaRow>
           </ToolbarGroupBody>
         </ToolbarGroup>

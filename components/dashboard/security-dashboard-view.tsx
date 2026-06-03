@@ -19,11 +19,11 @@ import {
 } from "@/src/actions/security-users-permissions";
 import { resetGlobalChangeLogsByAdminAction } from "@/src/actions/admin-users";
 import { useSecurityUsersPermissionsQuery } from "@/src/hooks/use-security-users-permissions-query";
+import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
 import {
   dsBtnDanger,
   dsBtnGhost,
   dsBtnNeutral,
-  dsInput,
   dsPageToolbarBtn,
   dsScrollbar,
   dsSectionTitle,
@@ -34,7 +34,6 @@ import {
   dsTableRow,
   dsTableTd,
   dsTableWrap,
-  gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -813,38 +812,47 @@ export function SecurityDashboardView() {
           <div className="grid min-w-0 flex-1 gap-3 sm:grid-cols-2 lg:max-w-md">
             <label className="block min-w-0">
               <span className={dsSectionTitle}>Da data</span>
-              <input
-                type="date"
-                className={`${dsInput} mt-1`}
-                value={range.dateFromYmd}
-                onChange={(e) => setRange((r) => ({ ...r, dateFromYmd: e.target.value }))}
-              />
+              <div className="mt-1">
+                <GlobalDatePickerYmd
+                  valueYmd={range.dateFromYmd}
+                  onChangeYmd={(ymd) => setRange((r) => ({ ...r, dateFromYmd: ymd }))}
+                  variant="default"
+                  aria-label="Da data"
+                />
+              </div>
             </label>
             <label className="block min-w-0">
               <span className={dsSectionTitle}>A data</span>
-              <input
-                type="date"
-                className={`${dsInput} mt-1`}
-                value={range.dateToYmd}
-                onChange={(e) => setRange((r) => ({ ...r, dateToYmd: e.target.value }))}
-              />
+              <div className="mt-1">
+                <GlobalDatePickerYmd
+                  valueYmd={range.dateToYmd}
+                  onChangeYmd={(ymd) => setRange((r) => ({ ...r, dateToYmd: ymd }))}
+                  variant="default"
+                  aria-label="A data"
+                />
+              </div>
             </label>
           </div>
           <label className="block min-w-0 flex-1 lg:max-w-xs">
             <span className={dsSectionTitle}>Utente</span>
-            <select
-              className={`${gestionaleSelectNativePlainClass} mt-1 w-full`}
-              value={filterUserId ?? ""}
-              onChange={(e) => setFilterUserId(e.target.value || null)}
-              disabled={profilesQ.isPending}
-            >
-              <option value="">Tutti gli utenti</option>
-              {(profilesQ.data ?? []).map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nome} ({roleLabel(p.ruolo)})
-                </option>
-              ))}
-            </select>
+            <div className="mt-1">
+              <GlobalSelect
+                selectOnly
+                variant="filter"
+                value={filterUserId ?? ""}
+                onChange={(id) => setFilterUserId(id || null)}
+                disabled={profilesQ.isPending}
+                isLoading={profilesQ.isPending}
+                aria-label="Filtra per utente"
+                items={[
+                  { value: "", label: "Tutti gli utenti" },
+                  ...(profilesQ.data ?? []).map((p) => ({
+                    value: p.id,
+                    label: `${p.nome} (${roleLabel(p.ruolo)})`,
+                  })),
+                ]}
+              />
+            </div>
           </label>
           <div className="flex flex-wrap gap-2">
             <button

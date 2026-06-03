@@ -63,6 +63,7 @@ export function ReportControls({
               <button
                 key={id}
                 type="button"
+                aria-pressed={preset === id}
                 onClick={() => onPreset(id)}
                 className={`${preset === id ? dsSegmentedBtnOn : dsSegmentedBtnOff} ${dsFocus}`}
               >
@@ -71,7 +72,8 @@ export function ReportControls({
             ))}
           </div>
         </div>
-        <div className="flex w-full min-w-0 shrink-0 flex-col gap-1 sm:w-auto sm:min-w-[11.5rem]">
+        <label htmlFor="report-compare" className={`flex w-full min-w-0 shrink-0 flex-col gap-1 sm:w-auto sm:min-w-[11.5rem] ${dsTypoSmall}`}>
+          <span className="text-[color:var(--cab-text-muted)]">Confronto</span>
           <GlobalSelect
             id="report-compare"
             variant="filter"
@@ -85,13 +87,12 @@ export function ReportControls({
             value={compareMode}
             onChange={(v) => onCompareMode(v as ReportCompareMode)}
             strictFromList
-            aria-label="Confronto periodi"
           />
-        </div>
+        </label>
       </ToolbarGroupPrimaryRow>
 
       <div className="flex min-w-0 flex-col gap-2 border-t border-[color:var(--cab-border)] pt-2 sm:flex-row sm:flex-wrap sm:items-end sm:gap-3">
-        <label className={`block min-w-0 flex-1 sm:max-w-[14rem] ${dsTypoSmall}`}>
+        <label htmlFor="report-preset-more" className={`block min-w-0 flex-1 sm:max-w-[14rem] ${dsTypoSmall}`}>
           <span className="mb-1 block text-[color:var(--cab-text-muted)]">Altro periodo</span>
           <GlobalSelect
             id="report-preset-more"
@@ -104,18 +105,17 @@ export function ReportControls({
               if (v) onPreset(v as ReportPeriodPreset);
             }}
             strictFromList
-            aria-label="Altro periodo analisi"
           />
         </label>
         {preset === "custom" ? (
           <>
-            <label className={`block min-w-0 sm:max-w-[11rem] ${dsTypoSmall} text-[color:var(--cab-text)]`}>
+            <label htmlFor="report-period-da" className={`block min-w-0 sm:max-w-[11rem] ${dsTypoSmall} text-[color:var(--cab-text)]`}>
               <span className="mb-1 block text-[color:var(--cab-text-muted)]">Da</span>
-              <GlobalDatePickerYmd valueYmd={customFrom} onChangeYmd={onCustomFrom} aria-label="Periodo da" />
+              <GlobalDatePickerYmd id="report-period-da" valueYmd={customFrom} onChangeYmd={onCustomFrom} />
             </label>
-            <label className={`block min-w-0 sm:max-w-[11rem] ${dsTypoSmall} text-[color:var(--cab-text)]`}>
+            <label htmlFor="report-period-a" className={`block min-w-0 sm:max-w-[11rem] ${dsTypoSmall} text-[color:var(--cab-text)]`}>
               <span className="mb-1 block text-[color:var(--cab-text-muted)]">A</span>
-              <GlobalDatePickerYmd valueYmd={customTo} onChangeYmd={onCustomTo} aria-label="Periodo a" />
+              <GlobalDatePickerYmd id="report-period-a" valueYmd={customTo} onChangeYmd={onCustomTo} />
             </label>
           </>
         ) : null}

@@ -115,6 +115,7 @@ function StockStepper({
   ariaDecrease,
   ariaIncrease,
   inputClass,
+  inputId,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -124,6 +125,7 @@ function StockStepper({
   ariaDecrease: string;
   ariaIncrease: string;
   inputClass: string;
+  inputId?: string;
 }) {
   return (
     <div role="group" aria-label={groupLabel} className="flex max-w-full items-center gap-2">
@@ -143,12 +145,15 @@ function StockStepper({
         −
       </button>
       <input
+        id={inputId}
         type="number"
         min={0}
         step={1}
+        inputMode="numeric"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={`${inputClass} relative z-0 min-w-0 flex-1 text-center font-mono tabular-nums`}
+        aria-label={groupLabel}
       />
       <button
         type="button"
@@ -172,10 +177,23 @@ function StockStepper({
 export function RicambioField({
   label,
   children,
+  htmlFor,
 }: {
   label: string;
   children: React.ReactNode;
+  /** Id del controllo per associazione label (a11y). */
+  htmlFor?: string;
 }) {
+  if (htmlFor) {
+    return (
+      <div className="block min-w-0">
+        <label htmlFor={htmlFor} className={`${dsLabel} cursor-default`}>
+          {label}
+        </label>
+        <div className="mt-1">{children}</div>
+      </div>
+    );
+  }
   return (
     <div className="block min-w-0">
       <span className={dsLabel}>{label}</span>
@@ -390,7 +408,7 @@ export function RicambioFormFields({
       <div className={ricambioModalSectionClass}>
         <RicambioSectionTitle>Identificazione</RicambioSectionTitle>
         <div className="grid gap-3">
-      <RicambioField label={fieldsOptional ? "Marca" : "Marca *"}>
+      <RicambioField label={fieldsOptional ? "Marca" : "Marca *"} htmlFor="magazzino-ricambio-marca">
         <GlobalSettingsListSelect
           listKey="magazzino:marche"
           id="magazzino-ricambio-marca"
@@ -409,10 +427,14 @@ export function RicambioFormFields({
           aria-label="Marca ricambio"
         />
       </RicambioField>
-      <RicambioField label={fieldsOptional ? "Codice fornitore originale" : "Codice fornitore originale *"}>
+      <RicambioField
+        label={fieldsOptional ? "Codice fornitore originale" : "Codice fornitore originale *"}
+        htmlFor="magazzino-ricambio-codice-oe"
+      >
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <input
+              id="magazzino-ricambio-codice-oe"
               required={!relaxHtmlValidation}
               value={form.codiceFornitoreOriginale}
               onChange={(e) =>
@@ -438,6 +460,7 @@ export function RicambioFormFields({
           {showCodiceSecondario ? (
             <div className="flex items-center gap-2">
               <input
+                id="magazzino-ricambio-codice-secondario"
                 value={form.codiceFornitoreOriginaleSecondario}
                 onChange={(e) =>
                   applyRicambioCodiceInputChange(e, (codiceFornitoreOriginaleSecondario) =>
@@ -498,25 +521,31 @@ export function RicambioFormFields({
           </div>
         ) : null}
       </RicambioField>
-      <RicambioField label={fieldsOptional ? "Descrizione" : "Descrizione *"}>
+      <RicambioField
+        label={fieldsOptional ? "Descrizione" : "Descrizione *"}
+        htmlFor="magazzino-ricambio-descrizione"
+      >
         <input
+          id="magazzino-ricambio-descrizione"
           required={!relaxHtmlValidation}
           value={form.descrizione}
           onChange={(e) => setForm((f) => ({ ...f, descrizione: e.target.value }))}
           className={ricambioFormInputClass}
         />
       </RicambioField>
-      <RicambioField label="Note">
+      <RicambioField label="Note" htmlFor="magazzino-ricambio-note">
         <textarea
+          id="magazzino-ricambio-note"
           value={form.note}
           onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
           rows={2}
           className={`${ricambioFormInputClass} min-h-[4.5rem] resize-y`}
         />
       </RicambioField>
-      <RicambioField label={fieldsOptional ? "Categoria" : "Categoria *"}>
+      <RicambioField label={fieldsOptional ? "Categoria" : "Categoria *"} htmlFor="magazzino-ricambio-categoria">
         <GlobalSettingsListSelect
           listKey="magazzino:categorie"
+          id="magazzino-ricambio-categoria"
           value={form.categoria}
           onChange={(categoria) => setForm((f) => ({ ...f, categoria }))}
           required={!fieldsOptional}
@@ -647,8 +676,9 @@ export function RicambioFormFields({
       <div className={ricambioModalSectionClass}>
         <RicambioSectionTitle>Giacenza</RicambioSectionTitle>
       <div className="grid grid-cols-2 gap-3">
-        <RicambioField label="Scorta">
+        <RicambioField label="Scorta" htmlFor="magazzino-ricambio-scorta">
           <StockStepper
+            inputId="magazzino-ricambio-scorta"
             groupLabel="Scorta"
             value={form.scorta}
             onChange={(v) => setForm((f) => ({ ...f, scorta: v }))}
@@ -658,8 +688,9 @@ export function RicambioFormFields({
             inputClass={stepperInputClass}
           />
         </RicambioField>
-        <RicambioField label="Scorta minima">
+        <RicambioField label="Scorta minima" htmlFor="magazzino-ricambio-scorta-minima">
           <StockStepper
+            inputId="magazzino-ricambio-scorta-minima"
             groupLabel="Scorta minima"
             value={form.scortaMinima}
             onChange={(v) => setForm((f) => ({ ...f, scortaMinima: v }))}
@@ -676,8 +707,9 @@ export function RicambioFormFields({
         <RicambioSectionTitle>Fornitore originale</RicambioSectionTitle>
         <div className="grid gap-3">
       <div className="grid grid-cols-2 gap-3">
-        <RicambioField label="Prezzo listino €">
+        <RicambioField label="Prezzo listino €" htmlFor="magazzino-ricambio-prezzo-listino">
           <input
+            id="magazzino-ricambio-prezzo-listino"
             type="number"
             min={0}
             step={0.01}
@@ -689,8 +721,9 @@ export function RicambioFormFields({
             className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
           />
         </RicambioField>
-        <RicambioField label="Sconto %">
+        <RicambioField label="Sconto %" htmlFor="magazzino-ricambio-sconto-oe">
           <input
+            id="magazzino-ricambio-sconto-oe"
             type="number"
             min={0}
             max={100}
@@ -702,8 +735,9 @@ export function RicambioFormFields({
           />
         </RicambioField>
       </div>
-      <RicambioField label="Markup % sul listino OE">
+      <RicambioField label="Markup % sul listino OE" htmlFor="magazzino-ricambio-markup">
         <input
+          id="magazzino-ricambio-markup"
           type="number"
           min={0}
           step="any"
@@ -739,9 +773,10 @@ export function RicambioFormFields({
       <div className={ricambioModalSectionClass}>
         <RicambioSectionTitle>Alternativo</RicambioSectionTitle>
         <div className="grid gap-3">
-      <RicambioField label="Fornitore non originale">
+      <RicambioField label="Fornitore non originale" htmlFor="magazzino-ricambio-fornitore-alt">
         <GlobalSettingsListSelect
           listKey="magazzino:fornitori"
+          id="magazzino-ricambio-fornitore-alt"
           value={form.fornitoreNonOriginale}
           onChange={(fornitoreNonOriginale) => setForm((f) => ({ ...f, fornitoreNonOriginale }))}
           placeholder="Cerca o seleziona fornitore…"
@@ -749,8 +784,9 @@ export function RicambioFormFields({
           aria-label="Fornitore non originale"
         />
       </RicambioField>
-      <RicambioField label="Codice alternativo">
+      <RicambioField label="Codice alternativo" htmlFor="magazzino-ricambio-codice-alt">
         <input
+          id="magazzino-ricambio-codice-alt"
           value={form.codiceFornitoreNonOriginale}
           onChange={(e) =>
             applyRicambioCodiceInputChange(e, (codiceFornitoreNonOriginale) =>
@@ -761,8 +797,9 @@ export function RicambioFormFields({
         />
       </RicambioField>
       <div className="grid grid-cols-2 gap-3">
-        <RicambioField label="Prezzo alternativo €">
+        <RicambioField label="Prezzo alternativo €" htmlFor="magazzino-ricambio-prezzo-alt">
           <input
+            id="magazzino-ricambio-prezzo-alt"
             type="number"
             min={0}
             step={0.01}
@@ -772,8 +809,9 @@ export function RicambioFormFields({
             className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
           />
         </RicambioField>
-        <RicambioField label="Sconto alt. %">
+        <RicambioField label="Sconto alt. %" htmlFor="magazzino-ricambio-sconto-alt">
           <input
+            id="magazzino-ricambio-sconto-alt"
             type="number"
             min={0}
             max={100}

@@ -114,7 +114,7 @@ function DashboardNoteRow({
         />
       ) : (
         <span
-          className={`min-w-0 flex-1 truncate px-0.5 text-sm leading-snug ${task.done ? "text-[color:var(--cab-text-muted)] line-through" : "text-[color:var(--cab-text)]"}`}
+          className={`min-w-0 flex-1 break-words px-0.5 text-sm leading-snug ${task.done ? "text-[color:var(--cab-text-muted)] line-through" : "text-[color:var(--cab-text)]"}`}
           title={task.text}
         >
           {task.text}
@@ -242,7 +242,7 @@ export function DashboardTasksPanel() {
           onKeyDown={(e) => handleSettingsAddRowEnter(e, add)}
           placeholder="Aggiungi nota…"
           className={`${dsInput} min-h-9 min-w-0 flex-1 py-2 ${dsFocus}`}
-          maxLength={240}
+          maxLength={500}
           aria-label="Testo nuova nota"
         />
         <Button size="sm" className="shrink-0 px-3" disabled={!draft.trim()} onClick={add}>

@@ -1,8 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { CloseButton, Tooltip } from "@/components/design-system";
+import {
+  useDropdownOutsideDismiss,
+  useGlobalDropdownPortal,
+} from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import {
   adminNotificationBadgeLabel,
   buildAdminNotificationDipendentiHref,
@@ -19,11 +24,56 @@ import {
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
 import { buildAdminNotificationDashboardHref } from "@/lib/lavorazioni/admin-notifications";
+import { GLOBAL_DROPDOWN_VIEWPORT_PAD } from "@/lib/ui/global-dropdown-portal";
 import { dsPageToolbarIconBtn, dsScrollbar } from "@/lib/ui/design-system";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
 
 const PANEL_TITLE_ID = "admin-notifications-panel-title";
+
+/** Fallback se la sezione calendario promemoria non è nel DOM. */
+const NOTIFICATIONS_PANEL_WIDTH_FALLBACK_PX = 352;
+
+const NOTIFICATIONS_PANEL_MIN_WIDTH_PX = 280;
+
+/** Altezza max area lista (~24rem) + header/footer nel cap del pannello. */
+const NOTIFICATIONS_PANEL_MAX_HEIGHT_PX = 480;
+
+const PROMEMORIA_SECTION_SELECTOR = 'section[aria-label="Calendario promemoria"]';
+
+/** Larghezza colonna calendario promemoria (stesso blocco della dashboard). */
+function measurePromemoriaCalendarColumnWidth(): number | null {
+  if (typeof document === "undefined") return null;
+  const section = document.querySelector(PROMEMORIA_SECTION_SELECTOR);
+  if (!(section instanceof HTMLElement)) return null;
+
+  const calendarCol = section.querySelector(
+    ':scope > div.grid > [aria-label="Calendario promemoria"], :scope > div.grid > div:first-child',
+  );
+  if (calendarCol instanceof HTMLElement) {
+    const w = calendarCol.getBoundingClientRect().width;
+    if (w > 0) return Math.round(w);
+  }
+
+  const innerCalendar = section.querySelector('div[aria-label="Calendario promemoria"]');
+  if (innerCalendar instanceof HTMLElement && innerCalendar !== section) {
+    const w = innerCalendar.getBoundingClientRect().width;
+    if (w > 0) return Math.round(w);
+  }
+
+  const sectionW = section.getBoundingClientRect().width;
+  return sectionW > 0 ? Math.round(sectionW) : null;
+}
+
+function resolveNotificationsPanelWidth(measured: number | null): number {
+  const vwCap = Math.max(
+    NOTIFICATIONS_PANEL_MIN_WIDTH_PX,
+    (typeof document !== "undefined" ? document.documentElement.clientWidth : 0) -
+      GLOBAL_DROPDOWN_VIEWPORT_PAD * 2,
+  );
+  const base = measured ?? NOTIFICATIONS_PANEL_WIDTH_FALLBACK_PX;
+  return Math.min(Math.max(base, NOTIFICATIONS_PANEL_MIN_WIDTH_PX), vwCap);
+}
 
 function DismissReadButton({ onDismiss }: { onDismiss: () => void }) {
   return (
@@ -274,6 +324,8 @@ function NotificationRow({
 export function AdminNotificationsBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const anchorRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const {
     notifications,
@@ -292,6 +344,44 @@ export function AdminNotificationsBell() {
   const badge = adminNotificationBadgeLabel(unreadCount);
   const close = useCallback(() => setOpen(false), []);
 
+  const [panelWidthPx, setPanelWidthPx] = useState(NOTIFICATIONS_PANEL_WIDTH_FALLBACK_PX);
+
+  const syncPanelWidth = useCallback(() => {
+    setPanelWidthPx(resolveNotificationsPanelWidth(measurePromemoriaCalendarColumnWidth()));
+  }, []);
+
+  const { style, floatingRef } = useGlobalDropdownPortal({
+    open: open && mounted,
+    anchorRef,
+    contentRef: panelRef,
+    placement: "bottom-end",
+    matchAnchorWidth: false,
+    panelWidth: panelWidthPx,
+    maxHeight: NOTIFICATIONS_PANEL_MAX_HEIGHT_PX,
+    repositionDeps: [open, notifications.length, panelWidthPx],
+  });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    syncPanelWidth();
+    const section = document.querySelector(PROMEMORIA_SECTION_SELECTOR);
+    if (!(section instanceof HTMLElement)) return;
+    const ro = new ResizeObserver(() => syncPanelWidth());
+    ro.observe(section);
+    const grid = section.querySelector(":scope > div.grid");
+    if (grid instanceof HTMLElement) {
+      ro.observe(grid);
+      if (grid.firstElementChild instanceof HTMLElement) ro.observe(grid.firstElementChild);
+    }
+    return () => ro.disconnect();
+  }, [open, syncPanelWidth]);
+
+  useDropdownOutsideDismiss(open, anchorRef, panelRef, close);
+
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -299,17 +389,6 @@ export function AdminNotificationsBell() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, close]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onPointerDown(e: MouseEvent) {
-      const el = panelRef.current;
-      if (!el) return;
-      if (!el.contains(e.target as Node)) close();
-    }
-    document.addEventListener("mousedown", onPointerDown);
-    return () => document.removeEventListener("mousedown", onPointerDown);
   }, [open, close]);
 
   const onNavigate = useCallback(
@@ -344,10 +423,83 @@ export function AdminNotificationsBell() {
 
   if (permLoading || !enabled) return null;
 
+  const panelShellClass = [
+    "flex min-w-0 flex-col overflow-hidden rounded-xl border border-[color:var(--cab-border)]",
+    "bg-[var(--cab-card)] shadow-[var(--cab-shadow-lg)]",
+    dsScrollbar,
+  ].join(" ");
+
+  const panel =
+    open && mounted && style ? (
+      <div
+        ref={floatingRef}
+        role="dialog"
+        aria-modal="false"
+        aria-labelledby={PANEL_TITLE_ID}
+        className={panelShellClass}
+        style={style}
+        onMouseDown={(e) => e.stopPropagation()}
+      >
+        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] px-3 py-2.5">
+          <div className="min-w-0 flex-1">
+            <h2 id={PANEL_TITLE_ID} className="truncate text-sm font-semibold text-[color:var(--cab-text)]">
+              Notifiche
+            </h2>
+            <p className="truncate text-[11px] text-[color:var(--cab-text-muted)]">
+              {unreadCount > 0 ? `${unreadCount} non lette` : "Nessuna notifica non letta"}
+            </p>
+          </div>
+          <CloseButton onClick={close} className="shrink-0" />
+        </header>
+
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
+          {notifications.length === 0 ? (
+            <p className="py-6 text-center text-xs text-[color:var(--cab-text-muted)]">Nessuna notifica.</p>
+          ) : (
+            notifications.map((row) => (
+              <NotificationRow
+                key={
+                  row.kind === "lavorazione_created"
+                    ? row.lavorazioneId
+                    : row.kind === "magazzino_sotto_scorta"
+                      ? row.ricambioId
+                      : row.id
+                }
+                row={row}
+                unread={isUnread(row)}
+                onNavigate={onNavigate}
+                onDismiss={handleDismiss}
+              />
+            ))
+          )}
+        </div>
+
+        <footer className="flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+          <button
+            type="button"
+            className="min-h-[2.5rem] w-full rounded-lg text-[11px] font-medium text-[color:var(--cab-primary)] hover:bg-[var(--cab-hover)] hover:underline disabled:opacity-50 sm:min-h-0 sm:w-auto sm:rounded-none sm:hover:bg-transparent"
+            disabled={unreadCount === 0}
+            onClick={() => markAllRead()}
+          >
+            Segna tutte lette
+          </button>
+          <button
+            type="button"
+            className="min-h-[2.5rem] w-full rounded-lg text-[11px] font-medium text-[color:var(--cab-text-muted)] hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] hover:underline disabled:opacity-50 sm:min-h-0 sm:w-auto sm:rounded-none sm:hover:bg-transparent"
+            disabled={readCount === 0}
+            onClick={() => removeReadNotifications()}
+          >
+            Elimina lette
+          </button>
+        </footer>
+      </div>
+    ) : null;
+
   return (
-    <div ref={panelRef} className="relative shrink-0">
+    <div className="relative shrink-0">
       <Tooltip content={unreadCount > 0 ? `Notifiche (${unreadCount})` : "Notifiche"}>
         <button
+          ref={anchorRef}
           type="button"
           onClick={() => setOpen((v) => !v)}
           className={[
@@ -379,67 +531,7 @@ export function AdminNotificationsBell() {
         </button>
       </Tooltip>
 
-      {open ? (
-        <div
-          role="dialog"
-          aria-modal="false"
-          aria-labelledby={PANEL_TITLE_ID}
-          className={`absolute right-0 top-[calc(100%+0.35rem)] z-50 flex w-[min(100vw-1.5rem,22rem)] flex-col overflow-hidden rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-lg)] ${dsScrollbar}`}
-        >
-          <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] px-3 py-2.5">
-            <div className="min-w-0">
-              <h2 id={PANEL_TITLE_ID} className="text-sm font-semibold text-[color:var(--cab-text)]">
-                Notifiche
-              </h2>
-              <p className="text-[11px] text-[color:var(--cab-text-muted)]">
-                {unreadCount > 0 ? `${unreadCount} non lette` : "Nessuna notifica non letta"}
-              </p>
-            </div>
-            <CloseButton onClick={close} className="shrink-0" />
-          </header>
-
-          <div className="max-h-[min(24rem,60vh)] space-y-2 overflow-y-auto overscroll-contain p-2">
-            {notifications.length === 0 ? (
-              <p className="py-6 text-center text-xs text-[color:var(--cab-text-muted)]">Nessuna notifica.</p>
-            ) : (
-              notifications.map((row) => (
-                <NotificationRow
-                  key={
-                    row.kind === "lavorazione_created"
-                      ? row.lavorazioneId
-                      : row.kind === "magazzino_sotto_scorta"
-                        ? row.ricambioId
-                        : row.id
-                  }
-                  row={row}
-                  unread={isUnread(row)}
-                  onNavigate={onNavigate}
-                  onDismiss={handleDismiss}
-                />
-              ))
-            )}
-          </div>
-
-          <footer className="flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-            <button
-              type="button"
-              className="text-[11px] font-medium text-[color:var(--cab-primary)] hover:underline disabled:opacity-50"
-              disabled={unreadCount === 0}
-              onClick={() => markAllRead()}
-            >
-              Segna tutte lette
-            </button>
-            <button
-              type="button"
-              className="text-[11px] font-medium text-[color:var(--cab-text-muted)] hover:underline hover:text-[color:var(--cab-text)] disabled:opacity-50"
-              disabled={readCount === 0}
-              onClick={() => removeReadNotifications()}
-            >
-              Elimina lette
-            </button>
-          </footer>
-        </div>
-      ) : null}
+      {typeof document !== "undefined" && panel ? createPortal(panel, document.body) : null}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 import { attachMagazzinoEntityKey } from "@/lib/validation/entity-persistence";
@@ -11,8 +12,10 @@ import { errMessageFromSupabase, serviceFailFromError } from "@/src/utils/supaba
 const ENTITA = "magazzino_ricambi";
 
 function oggettoRicambio(r: MagazzinoRicambioRow) {
-  const parts = [r.marca?.trim(), r.nome?.trim()].filter(Boolean);
-  return parts.length ? auditContext(parts.join(" — ")) : undefined;
+  const parts = [r.marca?.trim(), r.nome?.trim()].filter((p): p is string => !!p);
+  if (!parts.length) return undefined;
+  const label = sanitizeLogOggettoRiga(parts.join(" — "));
+  return label !== "—" ? auditContext(label) : undefined;
 }
 
 export type MagazzinoFilters = {

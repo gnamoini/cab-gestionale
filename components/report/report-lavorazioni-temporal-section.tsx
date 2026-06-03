@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, memo, useCallback, useMemo, useState } from "react";
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { ReportKpiCard } from "@/components/report/report-kpi-card";
@@ -16,8 +17,8 @@ import {
   dsTableWrap,
   dsTypoCaption,
   dsTypoSmall,
-  gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { globalTableRow, globalTableWrap } from "@/lib/ui/global-table";
 
 const MONTHS_SHORT = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", "Lug", "Ago", "Set", "Ott", "Nov", "Dic"] as const;
@@ -76,8 +77,8 @@ function ReportLavorazioniTemporalSectionInner({
     return { monthMax: max, chartRows: rows };
   }, [model.months]);
 
-  const onYearChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelYear(Number(e.target.value));
+  const onYearChange = useCallback((value: string) => {
+    setSelYear(Number(value));
     setExpandedMonthIndex(null);
   }, []);
 
@@ -92,18 +93,16 @@ function ReportLavorazioniTemporalSectionInner({
           <label htmlFor={yearSelectId} className={`mb-1 block ${dsTypoCaption}`}>
             Anno
           </label>
-          <select
+          <GlobalSelect
             id={yearSelectId}
-            className={gestionaleSelectNativePlainClass}
-            value={effectiveYear}
+            variant="filter"
+            selectOnly
+            inputClassName={`${globalInputFieldFilter} h-10 w-full min-w-[6rem]`}
+            items={years.map((y) => ({ value: String(y), label: String(y) }))}
+            value={String(effectiveYear)}
             onChange={onYearChange}
-          >
-            {years.map((y) => (
-              <option key={y} value={y}>
-                {y}
-              </option>
-            ))}
-          </select>
+            strictFromList
+          />
         </div>
         <p className={dsTypoSmall}>
           Totale anno: <span className="font-semibold tabular-nums">{kpis.total}</span> lavorazioni

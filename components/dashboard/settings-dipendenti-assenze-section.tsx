@@ -81,6 +81,8 @@ export function SettingsDipendentiAssenzeSection({
                 className={`${SETTINGS_DISCOUNT_INPUT} w-full font-mono uppercase`}
                 value={t.abbrev}
                 maxLength={6}
+                inputMode="text"
+                autoCapitalize="characters"
                 aria-label={`Sigla ${t.label}`}
                 onChange={(e) =>
                   onChange(
@@ -120,7 +122,7 @@ export function SettingsDipendentiAssenzeSection({
 
       <div className="mt-3 flex min-w-0 items-center gap-2">
         <input
-          className={`${dsInput} h-8 min-h-8 min-w-0 flex-1 text-xs`}
+          className={`${dsInput} min-h-10 min-w-0 flex-1 text-xs`}
           value={nuovo}
           placeholder="Nuovo tipo, es. Formazione"
           aria-label="Nome nuovo tipo assenza"

@@ -12,6 +12,10 @@ const bridgesSrc = fs.readFileSync(
   path.join(ROOT, "src/components/deferred-gestionale-bridges.tsx"),
   "utf8",
 );
+const bellSrc = fs.readFileSync(
+  path.join(ROOT, "components/dashboard/admin-notifications-bell.tsx"),
+  "utf8",
+);
 
 assert.ok(ADMIN_NOTIFICATION_STORE_MAX_ITEMS >= 50 && ADMIN_NOTIFICATION_STORE_MAX_ITEMS <= 500);
 
@@ -32,5 +36,12 @@ assert.match(
   /if \(event\.entity === "dashboard_promemoria"\) return null/,
   "dashboard_promemoria must not emit cab-sync toasts (local UI toasts only)",
 );
+
+assert.match(bellSrc, /useGlobalDropdownPortal/);
+assert.match(bellSrc, /createPortal/);
+assert.match(bellSrc, /placement: "bottom-end"/);
+assert.match(bellSrc, /useDropdownOutsideDismiss/);
+assert.doesNotMatch(bellSrc, /absolute right-0/);
+assert.doesNotMatch(bellSrc, /100vw/);
 
 console.log("notifications-policy.test.ts OK");

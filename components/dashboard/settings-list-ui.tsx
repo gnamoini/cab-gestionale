@@ -25,7 +25,7 @@ export const SETTINGS_SECTION_HINT = "mt-1 text-xs text-[color:var(--cab-text-mu
 
 /** Input numerico compatto (sconti % in elenchi). */
 export const SETTINGS_DISCOUNT_INPUT =
-  "w-16 min-h-8 rounded-[var(--ds-radius-md)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-1.5 py-0.5 text-xs tabular-nums text-[color:var(--cab-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)]";
+  "w-16 min-h-10 rounded-[var(--ds-radius-md)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-1.5 py-0.5 text-xs tabular-nums text-[color:var(--cab-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)]";
 
 export const SETTINGS_LIST_ROW =
   "group flex min-h-[2.75rem] items-center justify-between gap-2 px-2 py-1.5 transition-colors duration-150 ease-out hover:bg-[var(--cab-hover)]";

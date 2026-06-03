@@ -4,6 +4,8 @@ import { sliceInputValue, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import { memo, useCallback, useMemo, useState } from "react";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { ShellCard } from "@/components/gestionale/shell-card";
+import { GlobalSelect } from "@/components/gestionale/global-input";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { ReportCompareBanner } from "@/components/report/report-compare-banner";
 import { ReportYearlyForecastLineChart } from "@/components/report/report-charts";
@@ -30,8 +32,9 @@ import {
   dsTableWrap,
   dsTypoCaption,
   dsTypoSmall,
-  gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
+import { globalInputFieldFilter } from "@/lib/ui/global-input";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import {
   globalTableFixed,
@@ -412,43 +415,59 @@ function ReportLavorazioniSectionInner({
             if (e.target === e.currentTarget) setOpen(false);
           }}
         >
-          <div className={`${dsModalPanel} flex min-w-0 w-full max-w-full flex-col overflow-hidden overflow-x-hidden`} onMouseDown={(e) => e.stopPropagation()}>
-            <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Dati storici manuali</h3>
-            <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
-              Inserisci il numero di lavorazioni completate per un mese passato. Non modifica le lavorazioni operative
-              nel gestionale.
-            </p>
-            <label className="mt-3 block text-xs text-[color:var(--cab-text-muted)]">
-              Periodo (solo mesi precedenti)
-              <select
-                className={`${gestionaleSelectNativePlainClass} mt-1 w-full`}
-                value={periodMonth}
-                onChange={(e) => onPeriodChange(e.target.value)}
-              >
-                {monthOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="mt-3 block text-xs text-[color:var(--cab-text-muted)]">
-              Lavorazioni completate
-              <input
-                className={`${dsInput} mt-1`}
-                type="number"
-                min={0}
-                step={1}
-                value={completedCount}
-                onChange={(e) => setCompletedCount(e.target.value)}
-              />
-            </label>
-            <label className="mt-3 block text-xs text-[color:var(--cab-text-muted)]">
-              Note (opzionale)
-              <input className={`${dsInput} mt-1`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} maxLength={TEXT_LONG} />
-            </label>
-            {formError ? <p className="mt-2 text-xs text-[color:var(--cab-danger)]">{formError}</p> : null}
-            <div className="mt-4 flex justify-end gap-2">
+          <div
+            className={`${dsModalPanel} ${gestionaleModalBodyFlexClass} min-w-0 w-full max-w-full overflow-hidden overflow-x-hidden`}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <GestionaleModalScrollBody className="space-y-0">
+              <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Dati storici manuali</h3>
+              <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
+                Inserisci il numero di lavorazioni completate per un mese passato. Non modifica le lavorazioni operative
+                nel gestionale.
+              </p>
+              <label htmlFor="report-manual-period" className="mt-3 block text-xs text-[color:var(--cab-text-muted)]">
+                Periodo (solo mesi precedenti)
+                <GlobalSelect
+                  id="report-manual-period"
+                  variant="default"
+                  selectOnly
+                  inputClassName={`${globalInputFieldFilter} mt-1 w-full`}
+                  items={monthOptions.map((o) => ({ value: o.value, label: o.label }))}
+                  value={periodMonth}
+                  onChange={onPeriodChange}
+                  strictFromList
+                />
+              </label>
+              <label htmlFor="report-manual-count" className="mt-3 block text-xs text-[color:var(--cab-text-muted)]">
+                Lavorazioni completate
+                <input
+                  id="report-manual-count"
+                  className={`${dsInput} mt-1`}
+                  type="number"
+                  inputMode="numeric"
+                  min={0}
+                  step={1}
+                  value={completedCount}
+                  onChange={(e) => setCompletedCount(e.target.value)}
+                />
+              </label>
+              <label htmlFor="report-manual-note" className="mt-3 block text-xs text-[color:var(--cab-text-muted)]">
+                Note (opzionale)
+                <input
+                  id="report-manual-note"
+                  className={`${dsInput} mt-1`}
+                  value={note}
+                  onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))}
+                  maxLength={TEXT_LONG}
+                />
+              </label>
+              {formError ? (
+                <p role="alert" className="mt-2 text-xs text-[color:var(--cab-danger)]">
+                  {formError}
+                </p>
+              ) : null}
+            </GestionaleModalScrollBody>
+            <div className="mt-4 flex shrink-0 justify-end gap-2 border-t border-[color:var(--cab-border)] pt-4">
               <button type="button" className={erpBtnNeutral} onClick={() => setOpen(false)}>
                 Annulla
               </button>

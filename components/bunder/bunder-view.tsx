@@ -109,6 +109,8 @@ const DRAFT_EMPTY: FiltriDraft = {
   anno: "__tutti__",
 };
 
+const bunderFilterTextInputClass = `${globalInputFieldFilter} min-h-11`;
+
 function parseYmdLocal(ymd: string): Date | null {
   const t = ymd.trim();
   if (!t) return null;
@@ -627,6 +629,7 @@ export function BunderView() {
           }
           search={
             <GestionaleSearchField
+              id="bunder-search"
               wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
               placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
               value={search}
@@ -640,10 +643,11 @@ export function BunderView() {
           filtersPanel={
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="bunder-filter-tipo" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                   Tipo
                   <div className="mt-1">
                     <GlobalSelect
+                      id="bunder-filter-tipo"
                       variant="filter"
                       inputClassName={globalInputFieldFilter}
                       items={[
@@ -657,30 +661,56 @@ export function BunderView() {
                     />
                   </div>
                 </label>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="bunder-filter-azienda" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                   Azienda (contiene)
-                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.azienda} onChange={(e) => setFiltroDraft((f) => ({ ...f, azienda: e.target.value }))} />
+                  <input
+                    id="bunder-filter-azienda"
+                    className={`${bunderFilterTextInputClass} mt-1`}
+                    value={filtroDraft.azienda}
+                    onChange={(e) => setFiltroDraft((f) => ({ ...f, azienda: e.target.value }))}
+                  />
                 </label>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="bunder-filter-referente" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                   Referente
-                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.referente} onChange={(e) => setFiltroDraft((f) => ({ ...f, referente: e.target.value }))} />
+                  <input
+                    id="bunder-filter-referente"
+                    className={`${bunderFilterTextInputClass} mt-1`}
+                    value={filtroDraft.referente}
+                    onChange={(e) => setFiltroDraft((f) => ({ ...f, referente: e.target.value }))}
+                  />
                 </label>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="bunder-filter-prodotto" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                   Prodotto (nel testo righe)
-                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.prodotto} onChange={(e) => setFiltroDraft((f) => ({ ...f, prodotto: e.target.value }))} />
+                  <input
+                    id="bunder-filter-prodotto"
+                    className={`${bunderFilterTextInputClass} mt-1`}
+                    value={filtroDraft.prodotto}
+                    onChange={(e) => setFiltroDraft((f) => ({ ...f, prodotto: e.target.value }))}
+                  />
                 </label>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="bunder-filter-codice" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                   Codice articolo
-                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.codice} onChange={(e) => setFiltroDraft((f) => ({ ...f, codice: e.target.value }))} />
+                  <input
+                    id="bunder-filter-codice"
+                    className={`${bunderFilterTextInputClass} mt-1`}
+                    value={filtroDraft.codice}
+                    onChange={(e) => setFiltroDraft((f) => ({ ...f, codice: e.target.value }))}
+                  />
                 </label>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="bunder-filter-settore" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                   Settore
-                  <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.settore} onChange={(e) => setFiltroDraft((f) => ({ ...f, settore: e.target.value }))} />
+                  <input
+                    id="bunder-filter-settore"
+                    className={`${bunderFilterTextInputClass} mt-1`}
+                    value={filtroDraft.settore}
+                    onChange={(e) => setFiltroDraft((f) => ({ ...f, settore: e.target.value }))}
+                  />
                 </label>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="bunder-filter-autore" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                   Creato da
                   <div className="mt-1">
                     <GlobalSelect
+                      id="bunder-filter-autore"
                       variant="filter"
                       inputClassName={globalInputFieldFilter}
                       items={[
@@ -695,30 +725,44 @@ export function BunderView() {
                   </div>
                 </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  <label htmlFor="bunder-filter-importo-min" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                     Importo min
-                    <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.imin} onChange={(e) => setFiltroDraft((f) => ({ ...f, imin: e.target.value }))} />
+                    <input
+                      id="bunder-filter-importo-min"
+                      className={`${bunderFilterTextInputClass} mt-1`}
+                      inputMode="decimal"
+                      value={filtroDraft.imin}
+                      onChange={(e) => setFiltroDraft((f) => ({ ...f, imin: e.target.value }))}
+                    />
                   </label>
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  <label htmlFor="bunder-filter-importo-max" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                     Importo max
-                    <input className={`${dsInput} mt-1 px-2 py-1.5 md:text-xs`} value={filtroDraft.imax} onChange={(e) => setFiltroDraft((f) => ({ ...f, imax: e.target.value }))} />
+                    <input
+                      id="bunder-filter-importo-max"
+                      className={`${bunderFilterTextInputClass} mt-1`}
+                      inputMode="decimal"
+                      value={filtroDraft.imax}
+                      onChange={(e) => setFiltroDraft((f) => ({ ...f, imax: e.target.value }))}
+                    />
                   </label>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  <label htmlFor="bunder-filter-data-da" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                     Data da
                     <div className="mt-1">
                       <GlobalDatePickerYmd
+                        id="bunder-filter-data-da"
                         valueYmd={filtroDraft.dataDa}
                         onChangeYmd={(v) => setFiltroDraft((f) => ({ ...f, dataDa: v }))}
                         aria-label="Data da"
                       />
                     </div>
                   </label>
-                  <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  <label htmlFor="bunder-filter-data-a" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                     Data a
                     <div className="mt-1">
                       <GlobalDatePickerYmd
+                        id="bunder-filter-data-a"
                         valueYmd={filtroDraft.dataA}
                         onChangeYmd={(v) => setFiltroDraft((f) => ({ ...f, dataA: v }))}
                         aria-label="Data a"
@@ -726,10 +770,11 @@ export function BunderView() {
                     </div>
                   </label>
                 </div>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="bunder-filter-mese" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                   Mese
                   <div className="mt-1">
                     <GlobalSelect
+                      id="bunder-filter-mese"
                       variant="filter"
                       inputClassName={globalInputFieldFilter}
                       items={[
@@ -746,10 +791,11 @@ export function BunderView() {
                     />
                   </div>
                 </label>
-                <label className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                <label htmlFor="bunder-filter-anno" className="text-xs font-medium text-zinc-600 dark:text-zinc-300">
                   Anno
                   <div className="mt-1">
                     <GlobalSelect
+                      id="bunder-filter-anno"
                       variant="filter"
                       inputClassName={globalInputFieldFilter}
                       items={[
@@ -936,10 +982,11 @@ export function BunderView() {
               Seleziona il tipo. Il testo e le righe saranno generate con impostazione professionale; potrai modificarle
               nell&apos;editor.
             </p>
-            <label className="mt-4 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
+            <label htmlFor="bunder-wizard-tipo" className="mt-4 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Tipo
               <div className="mt-1">
                 <GlobalSelect
+                  id="bunder-wizard-tipo"
                   variant="filter"
                   inputClassName={globalInputFieldFilter}
                   items={BUNDER_DOC_KIND_OPTIONS.map((o) => ({ value: o.id, label: o.label }))}

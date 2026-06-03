@@ -38,7 +38,8 @@ assert.match(toolbarGroup, /ToolbarGroupSearchRow/);
 assert.match(toolbarGroup, /ToolbarGroupSearchRow[\s\S]*min-w-0 w-full/);
 assert.match(toolbarGroup, /ToolbarGroupPrimaryRow[\s\S]*sm:justify-between/);
 assert.match(pageToolbar, /flex-col items-stretch gap-2 sm:hidden/);
-assert.match(pageToolbar, /ToolbarGroupPrimaryRow className="hidden sm:flex sm:flex-nowrap sm:justify-start"/);
+assert.match(pageToolbar, /hidden min-w-0 w-full sm:flex/);
+assert.match(pageToolbar, /ToolbarGroupPrimaryRow className="min-w-0 w-full sm:flex-nowrap sm:justify-start"/);
 assert.match(pageToolbar, /shrink-0">\{primaryAction\}/);
 assert.match(pageToolbar, /min-w-0 flex-1">\{search\}/);
 assert.match(toolbarGroup, /ToolbarGroupUtilityRow/);
@@ -51,5 +52,9 @@ assert.match(dsIndex, /PageToolbarCtaLabel/);
 
 assert.match(headerToolbar, /overflowActions/);
 assert.match(headerToolbar, /MobileFilterDrawer/);
+assert.match(headerToolbar, /closeOnBodyButtonClick/);
+
+const mobileDrawer = read("components/gestionale/mobile-filter-drawer.tsx");
+assert.match(mobileDrawer, /closeOnBodyButtonClick/);
 
 console.log("toolbar-structure.test.ts OK");

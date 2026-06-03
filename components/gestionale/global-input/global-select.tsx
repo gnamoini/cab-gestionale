@@ -356,7 +356,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
     }
     if (e.key !== "Enter") return;
     e.preventDefault();
-    if (showAddOption && activeIndex === addOptionIndex && addOptionEnabled) {
+    if (
+      showAddOption &&
+      addOptionEnabled &&
+      (activeIndex === addOptionIndex || (suggestions.length === 0 && addCandidate))
+    ) {
       void runAdd();
       return;
     }
@@ -549,7 +553,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
                   onMouseEnter={() => setActiveIndex(addOptionIndex)}
                 >
                   <span aria-hidden>+</span>
-                  {addPending ? "Aggiunta in corso…" : "Aggiungi all'elenco"}
+                  {addPending ? "Aggiunta in corso…" : addCandidate ? `Aggiungi «${addCandidate}»` : "Aggiungi all'elenco"}
                 </button>
               </li>
             ) : null}

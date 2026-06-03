@@ -5,6 +5,12 @@ import { CloseButton } from "@/components/design-system";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnNeutral, dsBtnPrimary, dsZModalHigh } from "@/lib/ui/design-system";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import {
+  CAB_MODAL_ROOT_ATTR,
+  CAB_MODAL_SCROLL_ATTR,
+  gestionaleModalScrollBodyMobileClass,
+} from "@/lib/ui/mobile-modal-behavior";
+import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
 
 type MobileFilterDrawerProps = {
   open: boolean;
@@ -15,6 +21,8 @@ type MobileFilterDrawerProps = {
   onApply?: () => void;
   /** Se omesso, il pulsante "Applica" chiude il drawer. */
   applyLabel?: string;
+  /** Chiude il drawer dopo un click su un pulsante nel corpo (es. azioni «Altro» su mobile). */
+  closeOnBodyButtonClick?: boolean;
 };
 
 export function MobileFilterDrawer({
@@ -25,6 +33,7 @@ export function MobileFilterDrawer({
   onReset,
   onApply,
   applyLabel = "Applica",
+  closeOnBodyButtonClick = false,
 }: MobileFilterDrawerProps) {
   useBodyScrollLock(open, "MobileFilterDrawer");
 
@@ -58,6 +67,7 @@ export function MobileFilterDrawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="cab-filter-drawer-title"
+        {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] px-4 py-3">
@@ -66,10 +76,25 @@ export function MobileFilterDrawer({
           </h2>
           <CloseButton onClick={onClose} />
         </div>
-        <div className="gestionale-scrollbar min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 [&_fieldset>div]:!grid-cols-1">
+        <div
+          {...{ [CAB_MODAL_SCROLL_ATTR]: "" }}
+          className={`gestionale-scrollbar min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 [&_fieldset>div]:!grid-cols-1 ${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad}`}
+          onClick={
+            closeOnBodyButtonClick
+              ? (e) => {
+                  const btn = (e.target as HTMLElement).closest("button");
+                  if (!btn || btn.disabled || btn.closest("[data-cab-drawer-footer]")) return;
+                  onClose();
+                }
+              : undefined
+          }
+        >
           {children}
         </div>
-        <div className="flex min-w-0 shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] p-4">
+        <div
+          data-cab-drawer-footer
+          className="flex min-w-0 shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] p-4"
+        >
           {onReset ? (
             <button type="button" onClick={onReset} className={`${dsBtnNeutral} min-h-11 w-full justify-center`}>
               Reimposta

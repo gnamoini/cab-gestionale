@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { memo } from "react";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { parseModificheLines } from "@/lib/gestionale-log/log-summary";
+import { parseModificheLines, sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import type { GestionaleLogEventTone, GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { formatGestionaleLogMetaLine } from "@/lib/gestionale-log/view-model";
 
@@ -56,7 +56,7 @@ function LogEntryBody({ vm, trailing }: { vm: GestionaleLogViewModel; trailing?:
         <p
           className={`text-sm font-semibold leading-snug text-[color:var(--cab-text)] ${voided ? "line-through" : ""}`}
         >
-          {vm.oggettoRiga}
+          {sanitizeLogOggettoRiga(vm.oggettoRiga)}
         </p>
 
         {modifiche.length > 0 ? (

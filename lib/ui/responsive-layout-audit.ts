@@ -49,6 +49,35 @@ export function detectPageHorizontalOverflow(): boolean {
   return doc.scrollWidth > doc.clientWidth + 1;
 }
 
+const HORIZONTAL_SCROLL_SCOPE_MARKERS = [
+  "timesheet-presenze-grid",
+  "gestionale-list-table-scope",
+  "lavorazioni-scroll-scope",
+  "overflow-x-auto",
+];
+
+function isInsideIntentionalHorizontalScroll(el: HTMLElement): boolean {
+  let node: HTMLElement | null = el.parentElement;
+  while (node) {
+    const cn = typeof node.className === "string" ? node.className : "";
+    const markedScope = HORIZONTAL_SCROLL_SCOPE_MARKERS.some((m) => cn.includes(m));
+    if (markedScope) return true;
+    const style = window.getComputedStyle(node);
+    const overflowX = style.overflowX;
+    const overflow = style.overflow;
+    const scrollsX =
+      overflowX === "auto" ||
+      overflowX === "scroll" ||
+      overflow === "auto" ||
+      overflow === "scroll";
+    if (scrollsX && node.scrollWidth > node.clientWidth + 1) {
+      return true;
+    }
+    node = node.parentElement;
+  }
+  return false;
+}
+
 /** Elementi il cui bordo destro supera il viewport (esclusi overlay fixed fuori main). */
 export function findViewportOverflowElements(limit = 12): Element[] {
   if (typeof document === "undefined") return [];
@@ -62,6 +91,7 @@ export function findViewportOverflowElements(limit = 12): Element[] {
   for (const el of walk) {
     if (!(el instanceof HTMLElement)) continue;
     if (el.closest("[role='dialog'], [aria-modal='true']")) continue;
+    if (isInsideIntentionalHorizontalScroll(el)) continue;
     const style = window.getComputedStyle(el);
     if (style.position === "fixed" || style.display === "none" || style.visibility === "hidden") continue;
 

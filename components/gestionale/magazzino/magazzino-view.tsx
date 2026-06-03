@@ -27,7 +27,6 @@ import { RicambioConsumoInfoRows, RicambioInfoPanel } from "@/components/gestion
 import {
   GestionaleInfoCard,
 } from "@/components/design-system/gestionale-info-card";
-import { ricambioModalSectionClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import {
   ricambioUiToMagazzinoInsert,
   ricambioUiToMagazzinoUpdate,
@@ -2003,15 +2002,13 @@ export function MagazzinoView() {
                   listFieldForceInvalid={newListFieldInvalid}
                 />
                 {newRicambioDraftId ? (
-                  <div className={ricambioModalSectionClass}>
-                    <RecordImageManager
-                      scope="magazzino"
-                      recordId={newRicambioDraftId}
-                      title="Foto ricambio"
-                      canEdit={magCanCreateRicambio}
-                      auditLog={false}
-                    />
-                  </div>
+                  <RecordImageManager
+                    scope="magazzino"
+                    recordId={newRicambioDraftId}
+                    canEdit={magCanCreateRicambio}
+                    auditLog={false}
+                    hubCardLayout
+                  />
                 ) : null}
               </GestionaleModalScrollBody>
               <footer className={`${dsModalFormFooter} flex-col items-stretch`}>

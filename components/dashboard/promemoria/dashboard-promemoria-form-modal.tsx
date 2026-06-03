@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, LoadingButton } from "@/components/design-system";
 import { GlobalDatePickerYmd } from "@/components/gestionale/global-input";
@@ -50,6 +50,10 @@ export function DashboardPromemoriaFormModal({
   const [baselineSnapshot, setBaselineSnapshot] = useState("");
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const dataFieldId = useId();
+  const timeFieldId = useId();
+  const titleFieldId = useId();
+  const descriptionFieldId = useId();
 
   useEffect(() => {
     const nextDate = editing?.event_date ?? initialDate;
@@ -123,26 +127,28 @@ export function DashboardPromemoriaFormModal({
           onSubmit={handleSubmit}
         >
           <GestionaleModalScrollBody className="space-y-4 p-4">
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1" htmlFor={dataFieldId}>
               <span
                 className={`${dsTypoSmall} font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}
               >
                 Data
               </span>
               <GlobalDatePickerYmd
+                id={dataFieldId}
                 valueYmd={eventDate}
                 onChangeYmd={setEventDate}
                 aria-label="Data promemoria"
                 variant="default"
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1" htmlFor={timeFieldId}>
               <span
                 className={`${dsTypoSmall} font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}
               >
                 Orario (facoltativo)
               </span>
               <input
+                id={timeFieldId}
                 type="time"
                 className={dsInput}
                 value={eventTime}
@@ -153,13 +159,14 @@ export function DashboardPromemoriaFormModal({
                 Se impostato, la notifica arriva 30 minuti prima; altrimenti alle 09:00.
               </span>
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1" htmlFor={titleFieldId}>
               <span
                 className={`${dsTypoSmall} font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}
               >
                 Titolo
               </span>
               <input
+                id={titleFieldId}
                 className={dsInput}
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
@@ -169,13 +176,14 @@ export function DashboardPromemoriaFormModal({
                 autoFocus
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1" htmlFor={descriptionFieldId}>
               <span
                 className={`${dsTypoSmall} font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}
               >
                 Descrizione (facoltativa)
               </span>
               <textarea
+                id={descriptionFieldId}
                 className={`${dsInput} min-h-[5rem] resize-y`}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

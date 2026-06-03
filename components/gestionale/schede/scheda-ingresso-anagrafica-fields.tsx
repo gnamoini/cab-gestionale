@@ -3,12 +3,8 @@
 import { useCallback, useRef } from "react";
 import { findExactMezzoForIngressoIdent } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
-import {
-  GlobalHierarchyMarcaSelect,
-  GlobalHierarchyModelloSelect,
-  GlobalSelect,
-  GlobalSettingsListSelect,
-} from "@/components/gestionale/global-input";
+import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { CompatHierarchySelect } from "@/components/gestionale/magazzino/compat-hierarchy-multi-select";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
 import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
@@ -132,25 +128,27 @@ export function SchedaIngressoAnagraficaFields({
           </FormField>
           <div className="grid gap-2 sm:grid-cols-2">
             <FormField label="Marca" required={marcaAttrezzaturaRequired}>
-              <GlobalHierarchyMarcaSelect
+              <CompatHierarchySelect
                 tree="attrezzature"
+                hierarchyKind="marca"
                 className={listSelectWrapClass}
                 value={value.marcaAttrezzatura}
                 onChange={(v) => onPatch({ marcaAttrezzatura: v, modelloAttrezzatura: "" })}
                 disabled={disabled}
                 required={marcaAttrezzaturaRequired}
-                aria-label="Marca attrezzatura"
+                ariaLabel="Marca attrezzatura"
               />
             </FormField>
             <FormField label="Modello">
-              <GlobalHierarchyModelloSelect
+              <CompatHierarchySelect
                 tree="attrezzature"
+                hierarchyKind="modello"
                 marcaNome={value.marcaAttrezzatura}
                 className={listSelectWrapClass}
                 value={value.modelloAttrezzatura}
                 onChange={(v) => onPatch({ modelloAttrezzatura: v })}
                 disabled={disabled}
-                aria-label="Modello attrezzatura"
+                ariaLabel="Modello attrezzatura"
               />
             </FormField>
           </div>
@@ -205,24 +203,26 @@ export function SchedaIngressoAnagraficaFields({
           </FormField>
           <div className="grid gap-2 sm:grid-cols-2">
             <FormField label="Marca">
-              <GlobalHierarchyMarcaSelect
+              <CompatHierarchySelect
                 tree="telai"
+                hierarchyKind="marca"
                 className={listSelectWrapClass}
                 value={value.marcaTelaio}
                 onChange={(v) => onPatch({ marcaTelaio: v, modelloTelaio: "" })}
                 disabled={disabled}
-                aria-label="Marca telaio"
+                ariaLabel="Marca telaio"
               />
             </FormField>
             <FormField label="Modello">
-              <GlobalHierarchyModelloSelect
+              <CompatHierarchySelect
                 tree="telai"
+                hierarchyKind="modello"
                 marcaNome={value.marcaTelaio}
                 className={listSelectWrapClass}
                 value={value.modelloTelaio}
                 onChange={(v) => onPatch({ modelloTelaio: v })}
                 disabled={disabled}
-                aria-label="Modello telaio"
+                ariaLabel="Modello telaio"
               />
             </FormField>
           </div>
@@ -264,6 +264,7 @@ export function SchedaIngressoAnagraficaFields({
               <input
                 type="number"
                 min={0}
+                inputMode="decimal"
                 className={inputFieldClass}
                 value={value.oreLavoro}
                 onChange={(e) => onPatch({ oreLavoro: e.target.value })}
@@ -275,6 +276,7 @@ export function SchedaIngressoAnagraficaFields({
               <input
                 type="number"
                 min={0}
+                inputMode="numeric"
                 className={inputFieldClass}
                 value={value.km}
                 onChange={(e) => onPatch({ km: e.target.value })}

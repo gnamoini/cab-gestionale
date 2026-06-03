@@ -28,12 +28,26 @@ export function FormField({
   children,
   className = "",
   required,
+  htmlFor,
 }: {
   label: string;
   children: ReactNode;
   className?: string;
   required?: boolean;
+  /** Id del controllo per `htmlFor` (evita label wrapper su combobox custom). */
+  htmlFor?: string;
 }) {
+  if (htmlFor) {
+    return (
+      <div className={`block min-w-0 text-xs font-medium text-zinc-600 dark:text-zinc-400 ${className}`.trim()}>
+        <label htmlFor={htmlFor} className="cursor-default">
+          {label}
+          {required ? <span className="text-[color:var(--cab-primary)]"> *</span> : null}
+        </label>
+        <div className="mt-1">{children}</div>
+      </div>
+    );
+  }
   return (
     <label className={`block min-w-0 text-xs font-medium text-zinc-600 dark:text-zinc-400 ${className}`.trim()}>
       {label}

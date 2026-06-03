@@ -1,8 +1,9 @@
+import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 
 export const LAVORAZIONI_CHANGE_LOG_STORAGE_KEY = "gestionale-lavorazioni-change-log-v1";
-export const LAVORAZIONI_LOG_MAX = 200;
+export const LAVORAZIONI_LOG_MAX = LOG_MODIFICHE_RETENTION_PER_ENTITA;
 export const LAVORAZIONI_LOG_GROUP_WINDOW_MS = 6500;
 
 export type LavorazioniLogTipo =

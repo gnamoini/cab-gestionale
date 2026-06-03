@@ -10,12 +10,12 @@ import { useUsernameAvailability } from "@/src/hooks/use-username-availability";
 import { sanitizeUsernameInput, usernameFieldError } from "@/src/lib/auth/username";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { APP_ROLES, roleLabel, type AppRole } from "@/src/lib/auth/permissions";
+import { GlobalSelect } from "@/components/gestionale/global-input";
 import {
   dsBtnGhost,
   dsBtnPrimary,
   dsInput,
   dsSectionTitle,
-  gestionaleSelectNativePlainClass,
 } from "@/lib/ui/design-system";
 
 const RUOLI: { value: AppRole; label: string }[] = APP_ROLES.map((role) => ({ value: role, label: roleLabel(role) }));
@@ -184,23 +184,22 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
             disabled={pending}
           />
           <span className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]">
-            Minimo 6 caratteri (requisito Supabase Auth).
+            Minimo 8 caratteri.
           </span>
         </label>
         <label className="block min-w-0">
           <span className={dsSectionTitle}>Ruolo profilo</span>
-          <select
-            className={`${gestionaleSelectNativePlainClass} mt-1 w-full`}
-            value={ruolo}
-            onChange={(e) => setRuolo(e.target.value as AppRole)}
-            disabled={pending}
-          >
-            {RUOLI.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label}
-              </option>
-            ))}
-          </select>
+          <div className="mt-1">
+            <GlobalSelect
+              selectOnly
+              variant="default"
+              value={ruolo}
+              onChange={(v) => setRuolo(v as AppRole)}
+              disabled={pending}
+              aria-label="Ruolo profilo"
+              items={RUOLI.map((r) => ({ value: r.value, label: r.label }))}
+            />
+          </div>
         </label>
 
         {error ? (

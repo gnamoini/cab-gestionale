@@ -8,10 +8,16 @@ import {
 import {
   addettoPillShellClass,
   addettoPillShellStyleForName,
+  prioritaLabel,
+  prioritaPillShellClass,
+  prioritaPillShellStyle,
   selectPillInner,
   statoPillShellClass,
   statoPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
+import type { PrioritaLav } from "@/lib/lavorazioni/types";
+import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { LAVORAZIONE_STATO_COMPLETATA_ID } from "@/lib/lavorazioni/constants";
 import { formatLavorazioneIngressoDisplay } from "@/lib/lavorazioni/lavorazione-ingresso-display";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
@@ -96,6 +102,29 @@ export function LavorazioneReadOnlyPill({
 const completamentoDatePillStyle = statoPillShellStyle(
   statoThemeColor(LAVORAZIONE_STATO_COMPLETATA_ID),
 );
+
+/** Priorità in pill colorata, sola lettura (archivio mobile). */
+export function LavorazionePrioritaReadOnlyPill({
+  priorita,
+  prioritaColors,
+  fullWidth = true,
+}: {
+  priorita: string;
+  prioritaColors: Record<string, string | undefined>;
+  fullWidth?: boolean;
+}) {
+  const p = priorita as PrioritaLavorazione;
+  const label = prioritaLabel(p);
+  const hex = p === "urgente" ? "#b91c1c" : prioritaDisplayColor(p as PrioritaLav, prioritaColors);
+  return (
+    <LavorazioneReadOnlyPill
+      label={label}
+      shellClass={prioritaPillShellClass()}
+      shellStyle={prioritaPillShellStyle(hex)}
+      fullWidth={fullWidth}
+    />
+  );
+}
 
 /** Addetto in pill colorata, sola lettura (archivio / portale). */
 export function LavorazioneAddettoReadOnlyPill({

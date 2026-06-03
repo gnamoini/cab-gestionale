@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useAuth } from "@/context/auth-context";
@@ -9,8 +9,8 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { LavorazioniModalHeader, LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { CAB_MODAL_SCROLL_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
   DEFAULT_ADDETTI_LAVORAZIONI,
 } from "@/lib/lavorazioni/constants";
@@ -265,6 +265,19 @@ const SETTINGS_NAV_GROUP_LABEL = `${dsTypoSmall} px-2 pt-2 pb-0.5 font-bold uppe
 const SETTINGS_NAV_BTN =
   "flex min-h-10 w-full items-center rounded-lg px-3 text-left text-sm font-medium transition-colors duration-150 ease-out";
 
+function SettingsMainPanel({
+  pageMode,
+  className,
+  children,
+}: {
+  pageMode: boolean;
+  className: string;
+  children: ReactNode;
+}) {
+  if (pageMode) return <div className={className}>{children}</div>;
+  return <GestionaleModalScrollBody className={className}>{children}</GestionaleModalScrollBody>;
+}
+
 function settingsNavBtnClass(active: boolean) {
   return active
     ? `${SETTINGS_NAV_BTN} bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] font-semibold text-[color:var(--cab-text)]`
@@ -310,6 +323,7 @@ function SettingsNavMenuList({
           <button
             key={e.id}
             type="button"
+            aria-current={active ? "true" : undefined}
             onClick={() => onPickSection(e.id)}
             className={settingsNavBtnClass(active)}
           >
@@ -408,7 +422,12 @@ function SettingsMobileSectionPicker({
   );
 }
 
-const SETTINGS_ADD_INPUT = `${dsInput} min-h-9 min-w-0 flex-1 text-sm`;
+const SETTINGS_ADD_INPUT = `${dsInput} min-h-10 min-w-0 flex-1 text-sm`;
+
+function configFieldId(prefix: string, raw: string): string {
+  const safe = raw.trim().toLowerCase().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || "item";
+  return `${prefix}-${safe}`;
+}
 
 function useSimilarGate() {
   return useSettingsSimilarGate();
@@ -476,6 +495,7 @@ function ClientiCommercialiList({
           onChange={(e) => setNuovo(e.target.value)}
           placeholder="Nuovo cliente"
           className={SETTINGS_ADD_INPUT}
+          aria-label="Nuovo cliente"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -501,10 +521,15 @@ function ClientiCommercialiList({
               onRenameBlur={tryRename}
               onRemove={() => setPendingDelete(nome)}
               trailing={
-                <label className="flex shrink-0 items-center gap-1 text-xs text-[color:var(--cab-text-muted)]">
+                <label
+                  htmlFor={configFieldId("config-sconto-cliente", nome)}
+                  className="flex shrink-0 items-center gap-1 text-xs text-[color:var(--cab-text-muted)]"
+                >
                   Sconto ricambi %
                   <input
+                    id={configFieldId("config-sconto-cliente", nome)}
                     type="number"
+                    inputMode="decimal"
                     min={0}
                     max={100}
                     step={1}
@@ -596,6 +621,7 @@ function MagazzinoMarcheList({
           onChange={(e) => setNuovo(e.target.value)}
           placeholder="Nuova marca"
           className={SETTINGS_ADD_INPUT}
+          aria-label="Nuova marca"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -621,10 +647,15 @@ function MagazzinoMarcheList({
               onRenameBlur={tryRename}
               onRemove={() => setPendingDelete(nome)}
               trailing={
-                <label className="flex shrink-0 items-center gap-1 text-xs text-[color:var(--cab-text-muted)]">
+                <label
+                  htmlFor={configFieldId("config-sconto-marca", nome)}
+                  className="flex shrink-0 items-center gap-1 text-xs text-[color:var(--cab-text-muted)]"
+                >
                   Sconto listino %
                   <input
+                    id={configFieldId("config-sconto-marca", nome)}
                     type="number"
+                    inputMode="decimal"
                     min={0}
                     max={100}
                     step={0.1}
@@ -662,6 +693,7 @@ function UnifiedStringList({
   nuovo,
   setNuovo,
   placeholder,
+  addAriaLabel,
   onAdd,
   onRemove,
   onRename,
@@ -671,6 +703,7 @@ function UnifiedStringList({
   nuovo: string;
   setNuovo: (v: string) => void;
   placeholder: string;
+  addAriaLabel?: string;
   onAdd: (trimmed: string) => void;
   onRemove: (v: string) => void;
   onRename?: (from: string, to: string) => void;
@@ -714,6 +747,7 @@ function UnifiedStringList({
           onChange={(e) => setNuovo(e.target.value)}
           placeholder={placeholder}
           className={SETTINGS_ADD_INPUT}
+          aria-label={addAriaLabel ?? placeholder}
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -1265,6 +1299,7 @@ function SistemaImpostazioniWorkspace({
                   <button
                     key={e.id}
                     type="button"
+                    aria-current={active ? "true" : undefined}
                     onClick={() => setSection(e.id)}
                     className={settingsNavBtnClass(active)}
                   >
@@ -1275,8 +1310,8 @@ function SistemaImpostazioniWorkspace({
             </nav>
           </aside>
 
-          <div
-            {...(!pageMode ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
+          <SettingsMainPanel
+            pageMode={pageMode}
             className={
               pageMode
                 ? "min-w-0 max-w-full bg-transparent"
@@ -1670,10 +1705,12 @@ function SistemaImpostazioniWorkspace({
               <div className="w-full">
                 <div className={SETTINGS_SECTION_CARD}>
                   <h3 className={SETTINGS_SECTION_TITLE}>Parametri economici</h3>
-                  <label className="mt-4 block text-xs font-medium text-[color:var(--cab-text-muted)]">
+                  <label htmlFor="config-costo-orario-default" className="mt-4 block text-xs font-medium text-[color:var(--cab-text-muted)]">
                     Costo manodopera default (€/h)
                     <input
+                      id="config-costo-orario-default"
                       type="number"
+                      inputMode="decimal"
                       min={1}
                       step={0.5}
                       value={eco.costoOrarioDefault}
@@ -1707,7 +1744,7 @@ function SistemaImpostazioniWorkspace({
                 </div>
               </div>
             ) : null}
-          </div>
+          </SettingsMainPanel>
         </div>
       </div>
       <SettingsEliminaConfirmDialog

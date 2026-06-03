@@ -1,9 +1,10 @@
 import type { GestionaleLogEventTone, GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import { dispatchPreventiviLogRefresh } from "@/lib/sistema/cab-events";
 
 export const PREVENTIVI_CHANGE_LOG_STORAGE_KEY = "gestionale-preventivi-change-log-v1";
-export const PREVENTIVI_CHANGE_LOG_MAX = 200;
+export const PREVENTIVI_CHANGE_LOG_MAX = LOG_MODIFICHE_RETENTION_PER_ENTITA;
 
 export type PreventiviLogStored = GestionaleLogViewModel & { id: string };
 

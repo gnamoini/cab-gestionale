@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { KanbanCardMobile } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-card";
 import type { KanbanMobileSection } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-mobile-types";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
@@ -79,12 +79,18 @@ export function LavorazioniKanbanMobileBoard({
 }: MobileBoardProps) {
   const sectionIdsKey = useMemo(() => sections.map((s) => s.id).join("|"), [sections]);
   const [openSectionId, setOpenSectionId] = useState("");
+  /** Evita di ri-sincronizzare ad ogni render quando `sections` è un nuovo array con gli stessi id. */
+  const lastSyncedSectionIdsKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (sections.length === 0) {
       setOpenSectionId("");
+      lastSyncedSectionIdsKeyRef.current = null;
       return;
     }
+    if (lastSyncedSectionIdsKeyRef.current === sectionIdsKey) return;
+    lastSyncedSectionIdsKeyRef.current = sectionIdsKey;
+
     setOpenSectionId((prev) => {
       if (prev && sections.some((s) => s.id === prev)) return prev;
       const stored = readStoredOpenSectionId(sections);

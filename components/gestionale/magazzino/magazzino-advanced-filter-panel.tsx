@@ -41,8 +41,9 @@ export function MagazzinoAdvancedFilterPanel({
   return (
     <div className="space-y-3" aria-label="Filtri avanzati magazzino">
       <LavorazioniFilterGroup title="Anagrafica prodotto">
-        <LavorazioniFilterField label="Marca ricambio">
+        <LavorazioniFilterField label="Marca ricambio" htmlFor="mag-filter-marca-ricambio">
           <GlobalSettingsListSelect
+            id="mag-filter-marca-ricambio"
             listKey="magazzino:marche"
             value={filters.marcaRicambio === FILTER_ALL ? "" : filters.marcaRicambio}
             onChange={(v) => onChange({ marcaRicambio: v.trim() ? v : FILTER_ALL })}
@@ -54,8 +55,9 @@ export function MagazzinoAdvancedFilterPanel({
             aria-label="Filtra marca ricambio"
           />
         </LavorazioniFilterField>
-        <LavorazioniFilterField label="Categoria">
+        <LavorazioniFilterField label="Categoria" htmlFor="mag-filter-categoria">
           <GlobalSelect
+            id="mag-filter-categoria"
             items={categoriaItems}
             value={filters.categoria}
             onChange={(v) => onChange({ categoria: v })}
@@ -67,8 +69,9 @@ export function MagazzinoAdvancedFilterPanel({
             aria-label="Filtra categoria ricambio"
           />
         </LavorazioniFilterField>
-        <LavorazioniFilterField label="Fornitore non originale">
+        <LavorazioniFilterField label="Fornitore non originale" htmlFor="mag-filter-fornitore-no">
           <GlobalSettingsListSelect
+            id="mag-filter-fornitore-no"
             listKey="magazzino:fornitori"
             value={filters.fornitoreNonOriginale === FILTER_ALL ? "" : filters.fornitoreNonOriginale}
             onChange={(v) => onChange({ fornitoreNonOriginale: v.trim() ? v : FILTER_ALL })}

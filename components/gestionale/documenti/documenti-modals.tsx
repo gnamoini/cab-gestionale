@@ -259,13 +259,21 @@ export function UploadDocumentoModal({
             uploadPhase={isUploading ? "uploading" : undefined}
           />
 
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <label htmlFor="doc-upload-nome" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Nome file
-            <input className={`${inputClass} mt-1`} value={nome} onChange={(e) => setNome(sliceInputValue(e.target.value, TEXT_MEDIUM))} required maxLength={TEXT_MEDIUM} />
+            <input
+              id="doc-upload-nome"
+              className={`${inputClass} mt-1`}
+              value={nome}
+              onChange={(e) => setNome(sliceInputValue(e.target.value, TEXT_MEDIUM))}
+              required
+              maxLength={TEXT_MEDIUM}
+            />
           </label>
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <label htmlFor="doc-upload-categoria" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Tipo documento
             <GlobalSelect
+              id="doc-upload-categoria"
               className={listSelectWrapClass}
               items={CATEGORIE.map((c) => ({ value: c, label: labelCategoria(c) }))}
               value={categoria}
@@ -325,9 +333,16 @@ export function UploadDocumentoModal({
               {previewNomeFile(nome || pickedName || "file", effectiveApp, marca, modello)}
             </span>
           </p>
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <label htmlFor="doc-upload-note" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note (facoltative)
-            <textarea className={`${inputClass} mt-1 min-h-[72px] resize-y`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} rows={3} maxLength={TEXT_LONG} />
+            <textarea
+              id="doc-upload-note"
+              className={`${inputClass} mt-1 min-h-[72px] resize-y`}
+              value={note}
+              onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))}
+              rows={3}
+              maxLength={TEXT_LONG}
+            />
           </label>
         </GestionaleModalScrollBody>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
@@ -523,13 +538,21 @@ export function DocumentoEditModal({
     <DocumentiModalShell title="Modifica documento" onRequestClose={onRequestClose} wide>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <GestionaleModalScrollBody className="space-y-3 p-4">
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <label htmlFor="doc-edit-nome" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Nome file
-            <input className={`${inputClass} mt-1`} value={nome} onChange={(e) => setNome(sliceInputValue(e.target.value, TEXT_MEDIUM))} required maxLength={TEXT_MEDIUM} />
+            <input
+              id="doc-edit-nome"
+              className={`${inputClass} mt-1`}
+              value={nome}
+              onChange={(e) => setNome(sliceInputValue(e.target.value, TEXT_MEDIUM))}
+              required
+              maxLength={TEXT_MEDIUM}
+            />
           </label>
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <label htmlFor="doc-edit-categoria" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Tipo documento
             <GlobalSelect
+              id="doc-edit-categoria"
               className={listSelectWrapClass}
               items={CATEGORIE.map((c) => ({ value: c, label: labelCategoria(c) }))}
               value={categoria}
@@ -583,9 +606,16 @@ export function DocumentoEditModal({
             </label>
           ) : null}
 
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+          <label htmlFor="doc-edit-note" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note
-            <textarea className={`${inputClass} mt-1 min-h-[72px] resize-y`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} rows={3} maxLength={TEXT_LONG} />
+            <textarea
+              id="doc-edit-note"
+              className={`${inputClass} mt-1 min-h-[72px] resize-y`}
+              value={note}
+              onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))}
+              rows={3}
+              maxLength={TEXT_LONG}
+            />
           </label>
         </GestionaleModalScrollBody>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">

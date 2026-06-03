@@ -1,5 +1,6 @@
 "use client";
 
+import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { buildLogModificaSummary, mergePayloadWithSummary } from "@/lib/gestionale-log/log-summary";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
@@ -30,7 +31,9 @@ export const logService = {
       let q = c.from("log_modifiche").select(LOG_MODIFICHE_SELECT).order("created_at", { ascending: false });
       if (filters?.entita) q = q.eq("entita", filters.entita);
       if (filters?.entita_id) q = q.eq("entita_id", filters.entita_id);
-      if (filters?.limit != null) q = q.limit(Math.min(Math.max(filters.limit, 1), 500));
+      if (filters?.limit != null) {
+        q = q.limit(Math.min(Math.max(filters.limit, 1), LOG_MODIFICHE_RETENTION_PER_ENTITA));
+      }
       const { data, error } = await q;
       if (error) return err(errMessageFromSupabase(error, { action: "read" }));
       return success((data ?? []) as LogModificaWithProfileRow[]);
@@ -40,7 +43,11 @@ export const logService = {
   },
 
   /** Cronologia per una singola entità (append + query). */
-  async getByEntita(entita: string, entita_id: string, limit = 200): Promise<ServiceResult<LogModificaWithProfileRow[]>> {
+  async getByEntita(
+    entita: string,
+    entita_id: string,
+    limit = LOG_MODIFICHE_RETENTION_PER_ENTITA,
+  ): Promise<ServiceResult<LogModificaWithProfileRow[]>> {
     return logService.getAll({ entita, entita_id, limit });
   },
 

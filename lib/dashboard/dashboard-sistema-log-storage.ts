@@ -1,9 +1,10 @@
 import type { GestionaleLogEventTone, GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import { dispatchDashboardSistemaLogRefresh } from "@/lib/sistema/cab-events";
 
 export const DASHBOARD_SISTEMA_LOG_STORAGE_KEY = "gestionale-dashboard-sistema-log-v1";
-export const DASHBOARD_SISTEMA_LOG_MAX = 400;
+export const DASHBOARD_SISTEMA_LOG_MAX = LOG_MODIFICHE_RETENTION_PER_ENTITA;
 
 export type DashboardSistemaLogStored = GestionaleLogViewModel & { id: string };
 

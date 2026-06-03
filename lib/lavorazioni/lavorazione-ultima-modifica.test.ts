@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import {
   buildLatestLogAutoreByEntitaId,
+  buildLogAutoreByUserId,
+  displayLavorazioneAutore,
   formatLavorazioneUltimaModificaLine,
   resolveLavorazioneUltimaModifica,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 
 const rowUpdatedAt = "2026-05-25T15:14:00.000Z";
+const sampleUserUuid = "5d421a15-bc22-4759-b3f5-39aaff40b05c";
 
 function ingressoBundle(overrides: {
   updatedAt?: string;
@@ -87,6 +90,49 @@ function ingressoBundle(overrides: {
   });
   assert.ok(line.includes("Marco Rossi"));
   assert.ok(line.includes("·"));
+}
+
+{
+  const schedaUpdatedAt = "2026-06-03T09:37:00.000Z";
+  const info = resolveLavorazioneUltimaModifica(
+    { updated_at: rowUpdatedAt },
+    ingressoBundle({ updatedAt: schedaUpdatedAt, updatedBy: sampleUserUuid }),
+    {
+      autoreLog: "Marco Rossi",
+      resolveUserId: (id) => (id === sampleUserUuid ? "Donato Verdi" : undefined),
+    },
+  );
+  assert.equal(info.autore, "Donato Verdi");
+  assert.equal(info.iso, schedaUpdatedAt);
+}
+
+{
+  assert.equal(
+    displayLavorazioneAutore(sampleUserUuid, "Marco Rossi", (id) =>
+      id === sampleUserUuid ? "Donato Verdi" : undefined,
+    ),
+    "Donato Verdi",
+  );
+  assert.equal(displayLavorazioneAutore(sampleUserUuid, "Marco Rossi"), "Marco Rossi");
+}
+
+{
+  const map = buildLogAutoreByUserId(
+    [
+      {
+        id: "1",
+        entita: "lavorazioni",
+        entita_id: "a",
+        azione: "UPDATE",
+        autore_id: "u1",
+        payload: null,
+        created_at: "2026-05-25T10:00:00.000Z",
+        profiles: { id: "u1", nome: "Donato" },
+      },
+    ],
+    () => "Donato",
+  );
+  assert.equal(map.get("u1"), "Donato");
 }
 
 {

@@ -66,10 +66,14 @@ export function DocumentiAdvancedFilterPanel({
           />
         </div>
         <div>
-          <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+          <label
+            htmlFor="doc-filter-sort"
+            className="mb-1 block cursor-default text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+          >
             Ordinamento
           </label>
           <GlobalSelect
+            id="doc-filter-sort"
             variant="filter"
             inputClassName={filterInputClass}
             items={[
@@ -108,8 +112,9 @@ export function DocumentiAdvancedFilterPanel({
                 <button
                   key={value}
                   type="button"
+                  aria-pressed={on}
                   onClick={() => onChange({ categoria: value as DocumentiAdvancedFilters["categoria"] })}
-                  className={`rounded-[var(--ds-radius-lg)] border px-3 py-2 text-xs font-semibold transition-colors ${
+                  className={`min-h-11 rounded-[var(--ds-radius-lg)] border px-3 py-2 text-xs font-semibold transition-colors ${
                     on
                       ? "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)]"
                       : "border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-[color:var(--cab-text)] hover:border-[color:var(--cab-border-strong)] hover:bg-[var(--cab-hover)]"

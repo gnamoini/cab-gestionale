@@ -76,7 +76,12 @@ export function DocumentoFileDropzone({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium text-[color:var(--cab-text-muted)]">File</p>
+      <label
+        htmlFor="doc-upload-file"
+        className="text-xs font-medium text-[color:var(--cab-text-muted)] cursor-default"
+      >
+        File
+      </label>
       <div
         role="button"
         tabIndex={disabled ? -1 : 0}
@@ -113,6 +118,7 @@ export function DocumentoFileDropzone({
         </p>
       </div>
       <input
+        id="doc-upload-file"
         ref={fileRef}
         type="file"
         className="sr-only"

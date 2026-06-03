@@ -96,6 +96,7 @@ export function GlobalMultiSelect({
               key={s.value}
               type="button"
               title="Rimuovi"
+              aria-label={`Rimuovi ${s.label ?? s.value}`}
               onMouseDown={(e) => {
                 e.preventDefault();
                 e.stopPropagation();

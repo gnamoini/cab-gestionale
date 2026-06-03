@@ -25,7 +25,7 @@ function LavorazioneMobileCardTitle({
 }) {
   return (
     <p
-      className={`min-w-0 truncate text-sm font-semibold leading-tight text-zinc-900 dark:text-zinc-50 ${className}`.trim()}
+      className={`min-w-0 break-words text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50 ${className}`.trim()}
       title={macchina}
     >
       {macchina}
@@ -213,13 +213,15 @@ export function LavorazioneMobileControlsPanel({ children }: { children: ReactNo
   );
 }
 
+/** Footer card mobile: solo data e ora ultimo aggiornamento (senza autore). */
 export function LavorazioneMobileUltimaModifica({ info }: { info: LavorazioneUltimaModificaInfo }) {
-  const { dateTime, autore } = formatLavorazioneUltimaModificaMobileLines(info);
+  const { dateTime } = formatLavorazioneUltimaModificaMobileLines(info);
+  if (!dateTime || dateTime === "—") return null;
   return (
-    <div className="min-w-0 flex-1 text-xs font-medium text-[color:var(--cab-text-muted)]">
-      <p className="truncate tabular-nums leading-tight text-zinc-900 dark:text-zinc-100">{dateTime}</p>
-      <p className="truncate leading-tight">{autore}</p>
-    </div>
+    <p className="min-w-0 truncate text-xs font-medium tabular-nums leading-tight text-[color:var(--cab-text-muted)]">
+      <span className="sr-only">Ultimo aggiornamento: </span>
+      {dateTime}
+    </p>
   );
 }
 
@@ -233,9 +235,9 @@ export function LavorazioneMobileCardFooter({
 }) {
   return (
     <div
-      className="mt-auto flex w-full min-w-0 shrink-0 items-center justify-between gap-2 border-t border-zinc-200/80 pt-2 dark:border-zinc-700/80"
+      className="mt-auto flex w-full min-w-0 shrink-0 items-center justify-between gap-2 pt-2.5"
       role="group"
-      aria-label="Ultima modifica e azioni"
+      aria-label="Ultimo aggiornamento e azioni"
     >
       <div className="min-w-0 flex-1">{meta}</div>
       <div className={`${dsCardMobileActionsGroup} shrink-0`}>{children}</div>

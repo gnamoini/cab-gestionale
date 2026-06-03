@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildLogModificaSummary } from "@/lib/gestionale-log/log-summary";
+import { buildLogModificaSummary, sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 
@@ -106,6 +106,30 @@ assert.equal(
   schedaAddetto.modifiche[0],
   "Addetto accettazione modificato da “Mario” a “Luigi”",
   "scheda contenuto diff must expand nested campi",
+);
+
+assert.equal(
+  sanitizeLogOggettoRiga("— — Connettori con Luce a Led"),
+  "Connettori con Luce a Led",
+  "placeholder dashes must be stripped from oggetto label",
+);
+
+const magPlaceholder = buildLogModificaSummary({
+  entita: "magazzino_ricambi",
+  entita_id: "ric-1",
+  azione: "UPDATE",
+  payload: {
+    summary: {
+      tipoRiga: "AGGIORNAMENTO RICAMBIO",
+      oggettoRiga: "— — Connettori con Luce a Led",
+      modifiche: ["Modifica registrata"],
+    },
+  },
+});
+assert.equal(
+  magPlaceholder.oggettoRiga,
+  "Connettori con Luce a Led",
+  "cached summary oggetto must drop placeholder dashes",
 );
 
 console.log("log-summary-stato.test.ts OK");

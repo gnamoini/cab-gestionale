@@ -37,6 +37,7 @@ import {
   InlineSelectField,
   LavorazioneAddettoReadOnlyPill,
   LavorazioneCompletamentoDatePill,
+  LavorazionePrioritaReadOnlyPill,
   type TablePillOption,
 } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import {
@@ -72,7 +73,11 @@ import {
   formatIdentificazionePdfCell,
   openLavorazioniInCorsoPdfInNewTab,
 } from "@/lib/lavorazioni/lavorazioni-list-pdf";
-import { resolveLavorazioneUltimaModifica, buildLatestLogAutoreByEntitaId } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
+import {
+  buildLatestLogAutoreByEntitaId,
+  buildLogAutoreByUserId,
+  resolveLavorazioneUltimaModifica,
+} from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { lavRowMatchesPageFilters, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import {
   buildLavorazioniFilterCatalog,
@@ -1302,6 +1307,24 @@ export function LavorazioniView() {
     [lavModificheLogQuery.data, user?.id, authorName],
   );
 
+  const logAutoreByUserId = useMemo(
+    () =>
+      buildLogAutoreByUserId(lavModificheLogQuery.data ?? [], (row) =>
+        logAutoreLabel(row, user?.id ?? null, authorName),
+      ),
+    [lavModificheLogQuery.data, user?.id, authorName],
+  );
+
+  const resolveUltimaModificaUserId = useCallback(
+    (userId: string) => {
+      const fromLog = logAutoreByUserId.get(userId);
+      if (fromLog) return fromLog;
+      if (user?.id && userId === user.id) return authorName.trim() || undefined;
+      return undefined;
+    },
+    [logAutoreByUserId, user?.id, authorName],
+  );
+
   const hasPageClientFilters =
     searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
 
@@ -1914,6 +1937,7 @@ export function LavorazioniView() {
                       <LavorazioneMobileUltimaModifica
                         info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
                           autoreLog: ultimaModificaAutoreByLavId.get(row.id),
+                          resolveUserId: resolveUltimaModificaUserId,
                         })}
                       />
                     }
@@ -2172,52 +2196,24 @@ export function LavorazioniView() {
               </p>
             ) : (
               pagedChiuse.map((row) => {
-              const telaio = telaioLabel(row, schedeStore);
               const macchina = macchinaLabel(row, schedeStore);
               const utilizzatore = utilizzatoreLabel(row, schedeStore);
-              const identBase = formatLavorazioneMobileIdentLine(mezzoIdentParts(row, schedeStore));
-              const identLine =
-                telaio !== "—"
-                  ? [identBase, `Telaio: ${telaio}`].filter(Boolean).join(" · ") || null
-                  : identBase;
+              const addetto = addettoLabel(row, schedeStore, defaultAddetto);
               return (
                 <LavorazioneMobileCardShell key={row.id}>
                   <LavorazioneMobileCardHeader
                     macchina={macchina}
-                    identLine={identLine}
-                    ingresso={
-                      <div className="text-right [&_div]:text-right">
-                        <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
-                      </div>
+                    identLine={formatLavorazioneMobileIdentLine(mezzoIdentParts(row, schedeStore))}
+                    ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
+                    statusSlot={
+                      <LavorazioneMobileStatusSlot>
+                        <LavorazioneCompletamentoDatePill iso={dataCompletamentoIso(row)} />
+                      </LavorazioneMobileStatusSlot>
                     }
-                    secondaryDate={{
-                      label: "Completamento",
-                      value: (
-                        <LavorazioneCompletamentoDatePill
-                          iso={dataCompletamentoIso(row)}
-                          align="left"
-                          fullWidth={false}
-                        />
-                      ),
-                    }}
                   />
                   <LavorazioneMobileMetaGrid>
                     <LavorazioneMobileMetaItem label="Cliente" value={clienteLabel(row, schedeStore)} />
                     <LavorazioneMobileMetaItem label="Cantiere" value={cantiereLabel(row, schedeStore)} />
-                    <LavorazioneMobileMetaItem
-                      label="Ore lavoro"
-                      value={<LavorazioneOrePermanenzaCell row={row} schedeStore={schedeStore} align="start" />}
-                    />
-                    <LavorazioneMobileMetaItem
-                      label="Addetto"
-                      value={
-                        <LavorazioneAddettoReadOnlyPill
-                          addetto={addettoLabel(row, schedeStore, defaultAddetto)}
-                          addettoColors={globalOpts.lavorazioni.addettoColors}
-                          fullWidth={false}
-                        />
-                      }
-                    />
                     {utilizzatore ? (
                       <LavorazioneMobileMetaItem
                         label="Utilizzatore"
@@ -2227,11 +2223,26 @@ export function LavorazioniView() {
                     ) : null}
                   </LavorazioneMobileMetaGrid>
                   <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
+                  <LavorazioneMobileControlsPanel>
+                    <LavMobileInlineField label="Priorità" layout="stack">
+                      <LavorazionePrioritaReadOnlyPill
+                        priorita={row.priorita}
+                        prioritaColors={globalOpts.lavorazioni.prioritaColors}
+                      />
+                    </LavMobileInlineField>
+                    <LavMobileInlineField label="Addetto" layout="stack">
+                      <LavorazioneAddettoReadOnlyPill
+                        addetto={addetto}
+                        addettoColors={globalOpts.lavorazioni.addettoColors}
+                      />
+                    </LavMobileInlineField>
+                  </LavorazioneMobileControlsPanel>
                   <LavorazioneMobileCardFooter
                     meta={
                       <LavorazioneMobileUltimaModifica
                         info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
                           autoreLog: ultimaModificaAutoreByLavId.get(row.id),
+                          resolveUserId: resolveUltimaModificaUserId,
                         })}
                       />
                     }

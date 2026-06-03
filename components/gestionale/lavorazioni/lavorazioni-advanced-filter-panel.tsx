@@ -73,29 +73,33 @@ export function LavorazioniAdvancedFilterPanel({
   return (
     <div className="space-y-3" aria-label="Filtri avanzati">
       <LavorazioniFilterGroup title="Filtri temporali">
-        <LavorazioniFilterField label="Data ingresso da">
+        <LavorazioniFilterField label="Data ingresso da" htmlFor="lav-filter-ingresso-da">
           <GlobalFilterDateField
+            id="lav-filter-ingresso-da"
             valueYmd={filters.ingressoDa}
             onChangeYmd={(v) => onChange({ ingressoDa: v })}
             aria-label="Data ingresso da"
           />
         </LavorazioniFilterField>
-        <LavorazioniFilterField label="Data ingresso a">
+        <LavorazioniFilterField label="Data ingresso a" htmlFor="lav-filter-ingresso-a">
           <GlobalFilterDateField
+            id="lav-filter-ingresso-a"
             valueYmd={filters.ingressoA}
             onChangeYmd={(v) => onChange({ ingressoA: v })}
             aria-label="Data ingresso a"
           />
         </LavorazioniFilterField>
-        <LavorazioniFilterField label="Data completamento da">
+        <LavorazioniFilterField label="Data completamento da" htmlFor="lav-filter-completamento-da">
           <GlobalFilterDateField
+            id="lav-filter-completamento-da"
             valueYmd={filters.completamentoDa}
             onChangeYmd={(v) => onChange({ completamentoDa: v })}
             aria-label="Data completamento da"
           />
         </LavorazioniFilterField>
-        <LavorazioniFilterField label="Data completamento a">
+        <LavorazioniFilterField label="Data completamento a" htmlFor="lav-filter-completamento-a">
           <GlobalFilterDateField
+            id="lav-filter-completamento-a"
             valueYmd={filters.completamentoA}
             onChangeYmd={(v) => onChange({ completamentoA: v })}
             aria-label="Data completamento a"

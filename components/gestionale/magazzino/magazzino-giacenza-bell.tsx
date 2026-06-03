@@ -68,6 +68,47 @@ function MagazzinoSottoScortaAlertRow({
   );
 }
 
+function formatGiacenzaBadgeCount(count: number): string {
+  if (count > 99) return "99+";
+  return String(count);
+}
+
+function MagazzinoGiacenzaBellIcon({ active }: { active: boolean }) {
+  return (
+    <svg
+      className={`h-[1.375rem] w-[1.375rem] ${active ? "text-red-700 dark:text-red-200" : "text-[color:var(--cab-text-muted)]"}`}
+      viewBox="0 0 24 24"
+      fill={active ? "currentColor" : "none"}
+      fillOpacity={active ? 0.12 : undefined}
+      stroke="currentColor"
+      strokeWidth={active ? 2.25 : 2}
+      aria-hidden
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0"
+      />
+    </svg>
+  );
+}
+
+function MagazzinoGiacenzaCountBadge({ count }: { count: number }) {
+  const label = formatGiacenzaBadgeCount(count);
+  const wide = count > 9;
+  return (
+    <span
+      className={[
+        "pointer-events-none absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-red-600 font-bold tabular-nums leading-none text-white ring-2 ring-[var(--cab-card)]",
+        wide ? "h-[1.125rem] min-w-[1.375rem] px-1 text-[9px]" : "size-[1.125rem] text-[10px]",
+      ].join(" ")}
+      aria-hidden
+    >
+      {label}
+    </span>
+  );
+}
+
 function MagazzinoSottoScortaEmptyState() {
   return (
     <div className="flex flex-col items-center gap-2 px-2 py-12 text-center">
@@ -136,29 +177,11 @@ export function MagazzinoGiacenzaBell({
           aria-haspopup="dialog"
           aria-label={alertLabel}
         >
-          <span
-            className={`relative inline-flex h-5 w-5 shrink-0 items-center justify-center ${
-              hasAlerts ? "text-red-700 dark:text-red-200" : "text-[color:var(--cab-text-muted)]"
-            }`}
-            aria-hidden
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-              />
-            </svg>
-            {hasAlerts ? (
-              <span className="pointer-events-none absolute right-0 top-0 flex h-[1.125rem] min-w-[1.125rem] translate-x-1/3 -translate-y-1/3 items-center justify-center rounded-full bg-red-600 px-0.5 text-[10px] font-bold leading-none text-white ring-2 ring-[var(--cab-card)]">
-                {count > 99 ? "99+" : count}
-              </span>
-            ) : null}
+          <span className="relative inline-flex shrink-0 items-center justify-center" aria-hidden>
+            <MagazzinoGiacenzaBellIcon active={hasAlerts} />
+            {hasAlerts ? <MagazzinoGiacenzaCountBadge count={count} /> : null}
           </span>
-          <span className="hidden max-w-[11rem] truncate text-xs font-semibold sm:inline">
-            Avvisi giacenza{hasAlerts ? ` (${count})` : ""}
-          </span>
-          <span className="sr-only sm:hidden">{alertLabel}</span>
+          <span className="hidden truncate text-xs font-semibold sm:inline">Avvisi giacenza</span>
         </button>
       </Tooltip>
 
