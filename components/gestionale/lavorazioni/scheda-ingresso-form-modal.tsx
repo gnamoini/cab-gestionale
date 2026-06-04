@@ -271,7 +271,7 @@ export function SchedaIngressoFormBody({
         onAccept={onMezzoDialogAccept ?? mezzoPrompt.acceptAutofill}
         onDismiss={onMezzoDialogDismiss ?? mezzoPrompt.dismissPrompt}
       />
-      <GestionaleModalScrollBody className="space-y-3 p-4">
+      <GestionaleModalScrollBody className="space-y-3">
         {prependContent}
         {globalOpts.isError ? (
           <p className="text-sm text-red-600 dark:text-red-400">

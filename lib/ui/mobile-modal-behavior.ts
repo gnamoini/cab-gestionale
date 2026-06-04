@@ -8,10 +8,12 @@ import { gestionaleModalScrollBodyClass } from "@/lib/ui/modal-max-width-class";
 export const CAB_MODAL_ROOT_ATTR = "data-cab-modal-root";
 export const CAB_MODAL_SCROLL_ATTR = "data-cab-modal-scroll";
 export const CAB_IOS_NO_FOCUS_SCROLL_ATTR = "data-cab-ios-no-focus-scroll";
-/** Contenitore sezione/card: scroll focus include titolo gruppo + etichetta campo. */
+/** Contenitore sezione/card (marker layout; lo scroll focus usa solo etichetta campo). */
 export const CAB_FOCUS_SCROLL_GROUP_ATTR = "data-cab-focus-scroll-group";
 /** Titolo esplicito nel gruppo (se non è h3/h4). */
 export const CAB_FOCUS_SCROLL_TITLE_ATTR = "data-cab-focus-scroll-title";
+/** Etichetta campo (es. `<p>` sopra combobox / multi-select in modale). */
+export const CAB_FIELD_LABEL_ATTR = "data-cab-field-label";
 
 export type FocusScrollRect = {
   top: number;
@@ -31,7 +33,38 @@ export const gestionaleModalScrollBodyMobileClass = `${gestionaleModalScrollBody
 export type ScrollFieldIntoModalOptions = {
   behavior?: ScrollBehavior;
   extraBottom?: number;
+  extraTop?: number;
 };
+
+const MOBILE_FOCUS_SCROLL_MQ = "(max-width: 767px)";
+
+function isMobileFocusScrollViewport(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia(MOBILE_FOCUS_SCROLL_MQ).matches;
+}
+
+function getVisualViewportBand(): { top: number; bottom: number } {
+  if (typeof window === "undefined") return { top: 0, bottom: 0 };
+  const vv = window.visualViewport;
+  if (!vv) return { top: 0, bottom: window.innerHeight };
+  return { top: vv.offsetTop, bottom: vv.offsetTop + vv.height };
+}
+
+/** Bordo inferiore header modale (evita che il campo finisca sotto la barra titolo). */
+export function findModalHeaderBottom(field: HTMLElement): number | null {
+  const root = field.closest(`[${CAB_MODAL_ROOT_ATTR}]`);
+  if (!(root instanceof HTMLElement)) return null;
+  const header = root.querySelector(":scope > header");
+  if (header instanceof HTMLElement) {
+    return header.getBoundingClientRect().bottom;
+  }
+  return null;
+}
+
+/** Tastiera in chiusura (back hardware, dismiss): non riscrollare il modale. */
+export function isVirtualKeyboardClosing(prevInset: number, nextInset: number): boolean {
+  return nextInset < prevInset;
+}
 
 /** Inset tastiera virtuale (px) — 0 se visualViewport assente o desktop. */
 export function computeKeyboardInset(): number {
@@ -59,10 +92,71 @@ export function syncKeyboardCssVars(): void {
   root.style.setProperty("--cab-keyboard-inset", `${computeKeyboardInset()}px`);
 }
 
-function isFocusableField(el: EventTarget | null): el is HTMLElement {
+function isFieldCaptionElement(el: HTMLElement): boolean {
+  if (el.tagName === "LABEL") return true;
+  if (el.hasAttribute(CAB_FIELD_LABEL_ATTR)) return true;
+  if (el.tagName === "P" || el.tagName === "SPAN") {
+    const cls = typeof el.className === "string" ? el.className : "";
+    return cls.includes("font-medium");
+  }
+  return false;
+}
+
+/** Contenitore minimo etichetta + controllo (RicambioField, combobox, multi-select, …). */
+export function findGestionaleFieldContainer(field: HTMLElement): HTMLElement | null {
+  const modalRoot = field.closest(`[${CAB_MODAL_ROOT_ATTR}]`);
+  let node: HTMLElement | null = field;
+  while (node?.parentElement) {
+    const parent = node.parentElement;
+    const hasCaption = Array.from(parent.children).some(
+      (ch) =>
+        ch instanceof HTMLElement &&
+        ch !== node &&
+        !node.contains(ch) &&
+        isFieldCaptionElement(ch) &&
+        isBeforeInDocument(ch, field),
+    );
+    if (hasCaption) return parent;
+    if (parent === modalRoot) break;
+    node = parent;
+  }
+  return null;
+}
+
+function isGestionaleListTriggerButton(el: HTMLElement): boolean {
+  if (el.tagName !== "BUTTON") return false;
+  if (!el.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) return false;
+  const popup = el.getAttribute("aria-haspopup");
+  return popup === "listbox" || popup === "combobox";
+}
+
+/** Tutti i controlli che meritano scroll in modale (mobile e desktop). */
+export function isGestionaleFocusableField(el: EventTarget | null): el is HTMLElement {
   if (!(el instanceof HTMLElement)) return false;
   const tag = el.tagName;
-  return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (el.isContentEditable) return true;
+  const role = el.getAttribute("role");
+  if (role === "combobox" || role === "searchbox" || role === "spinbutton") return true;
+  if (tag === "BUTTON") {
+    if (el.closest('[role="group"]')) return true;
+    if (isGestionaleListTriggerButton(el)) return true;
+  }
+  return false;
+}
+
+/** Normalizza il target focus (stepper ± → input, ecc.). */
+export function resolveFocusScrollTarget(el: HTMLElement): HTMLElement {
+  if (el.tagName === "BUTTON") {
+    const group = el.closest('[role="group"]');
+    const input = group?.querySelector('input:not([type="hidden"])');
+    if (input instanceof HTMLElement) return input;
+  }
+  return el;
+}
+
+function isFocusableField(el: EventTarget | null): el is HTMLElement {
+  return isGestionaleFocusableField(el);
 }
 
 function findModalScrollContainer(field: HTMLElement): HTMLElement | null {
@@ -112,11 +206,22 @@ function findGroupTitleElement(group: HTMLElement, field: HTMLElement): HTMLElem
   return null;
 }
 
-/** Blocco etichetta + controllo (label wrapper o FormField div.block). */
+/** Blocco etichetta + controllo (label[for] + wrapper RicambioField / mt-1). */
 export function findFieldLabelBlock(field: HTMLElement): HTMLElement | null {
   const labelWrap = field.closest("label");
   if (labelWrap instanceof HTMLElement && labelWrap.contains(field)) {
     return labelWrap;
+  }
+
+  const fieldId = field.id;
+  if (fieldId) {
+    const scope = field.closest(`[${CAB_MODAL_ROOT_ATTR}]`) ?? field.getRootNode();
+    const root = scope instanceof HTMLElement ? scope : document.body;
+    const linked = root.querySelector(`label[for="${fieldId}"]`);
+    if (linked instanceof HTMLElement) {
+      const block = linked.parentElement;
+      if (block instanceof HTMLElement && block.contains(field)) return block;
+    }
   }
 
   const fieldParent = field.parentElement;
@@ -125,6 +230,17 @@ export function findFieldLabelBlock(field: HTMLElement): HTMLElement | null {
     if (block instanceof HTMLElement) {
       if (block.tagName === "LABEL") return block;
       if (block.querySelector("label, span")) return block;
+    }
+  }
+
+  const gestionaleContainer = findGestionaleFieldContainer(field);
+  if (gestionaleContainer) return gestionaleContainer;
+
+  const labelledBy = field.getAttribute("aria-labelledby");
+  if (labelledBy) {
+    for (const id of labelledBy.split(/\s+/)) {
+      const el = document.getElementById(id);
+      if (el instanceof HTMLElement) return el;
     }
   }
 
@@ -140,16 +256,10 @@ export function minFocusScrollTop(fieldTop: number, anchorTops: number[]): numbe
   return top;
 }
 
-/** Rettangolo scroll: top = min(titolo sezione, blocco label, campo); bottom = campo. */
+/** Rettangolo scroll: top = min(etichetta campo, campo); bottom = campo (no titolo sezione). */
 export function getFocusScrollRect(field: HTMLElement): FocusScrollRect {
   const fieldRect = field.getBoundingClientRect();
   const anchorTops: number[] = [];
-
-  const group = findFocusScrollGroup(field);
-  if (group) {
-    const title = findGroupTitleElement(group, field);
-    if (title) anchorTops.push(title.getBoundingClientRect().top);
-  }
 
   const labelBlock = findFieldLabelBlock(field);
   if (labelBlock) {
@@ -183,13 +293,21 @@ export function scrollFieldIntoModalView(
   if (!container) return false;
 
   const extraBottom = options.extraBottom ?? 12;
-  const keyboardInset = computeKeyboardInset();
+  const extraTop = options.extraTop ?? 8;
   const containerRect = container.getBoundingClientRect();
   const scrollRect = getFocusScrollRect(field);
+  const headerBottom = findModalHeaderBottom(field);
+  const vv = isMobileFocusScrollViewport() ? getVisualViewportBand() : null;
 
-  const visibleBottom =
-    containerRect.bottom - keyboardInset - extraBottom;
-  const visibleTop = containerRect.top + extraBottom;
+  const visibleBottom = vv
+    ? Math.min(containerRect.bottom, vv.bottom) - extraBottom
+    : containerRect.bottom - computeKeyboardInset() - extraBottom;
+
+  const visibleTop = Math.max(
+    containerRect.top,
+    headerBottom ?? containerRect.top,
+    vv?.top ?? 0,
+  ) + extraTop;
 
   let delta = 0;
   if (scrollRect.bottom > visibleBottom) {
@@ -197,6 +315,38 @@ export function scrollFieldIntoModalView(
   } else if (scrollRect.top < visibleTop) {
     delta = scrollRect.top - visibleTop;
   }
+
+  // #region agent log
+  if (isMobileFocusScrollViewport()) {
+    fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Debug-Session-Id": "929eab",
+      },
+      body: JSON.stringify({
+        sessionId: "929eab",
+        runId: "focus-scroll",
+        hypothesisId: "G",
+        location: "mobile-modal-behavior.ts:scrollFieldIntoModalView",
+        message: "modal focus scroll band",
+        data: {
+          delta,
+          visibleTop,
+          visibleBottom,
+          scrollTop: scrollRect.top,
+          scrollBottom: scrollRect.bottom,
+          headerBottom,
+          keyboardInset: computeKeyboardInset(),
+          tag: field.tagName,
+          role: field.getAttribute("role"),
+          hasLabelBlock: Boolean(findFieldLabelBlock(field)),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {});
+  }
+  // #endregion
 
   if (Math.abs(delta) < 2) return true;
 
@@ -225,17 +375,37 @@ export function scrollFieldIntoDocumentView(field: HTMLElement): void {
   });
 }
 
+/** Scroll modale per qualsiasi controllo gestionale (focus già risolto). */
+export function scrollGestionaleFieldIntoModal(
+  field: HTMLElement,
+  options: ScrollFieldIntoModalOptions = {},
+): boolean {
+  return scrollFieldIntoModalView(resolveFocusScrollTarget(field), options);
+}
+
+/** Doppio rAF: scroll dopo layout tastiera / apertura dropdown. */
+export function scheduleGestionaleFieldScroll(
+  field: HTMLElement | null | undefined,
+  options: ScrollFieldIntoModalOptions = {},
+): void {
+  if (!field || typeof window === "undefined") return;
+  const run = (behavior: ScrollBehavior) => scrollGestionaleFieldIntoModal(field, { ...options, behavior });
+  window.requestAnimationFrame(() => {
+    run("smooth");
+    window.requestAnimationFrame(() => run("auto"));
+  });
+}
+
 /** Handler focusin unificato (mobile + desktop safe). */
 export function handleFocusInForMobileModal(e: FocusEvent): void {
-  const target = e.target;
-  if (target == null || !isFocusableField(target)) return;
+  const raw = e.target;
+  if (raw == null || !isFocusableField(raw)) return;
+  const target = resolveFocusScrollTarget(raw);
 
   syncKeyboardCssVars();
 
   if (target.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) {
-    window.requestAnimationFrame(() => {
-      scrollFieldIntoModalView(target, { behavior: "smooth" });
-    });
+    scheduleGestionaleFieldScroll(target);
     return;
   }
 
@@ -252,10 +422,17 @@ export const MobileModalBehaviorLayer = {
   focusScrollGroupAttr: CAB_FOCUS_SCROLL_GROUP_ATTR,
   focusScrollTitleAttr: CAB_FOCUS_SCROLL_TITLE_ATTR,
   computeKeyboardInset,
+  isVirtualKeyboardClosing,
   syncKeyboardCssVars,
   getFocusScrollRect,
   findFocusScrollGroup,
   findFieldLabelBlock,
+  findGestionaleFieldContainer,
+  findModalHeaderBottom,
+  isGestionaleFocusableField,
+  resolveFocusScrollTarget,
+  scrollGestionaleFieldIntoModal,
+  scheduleGestionaleFieldScroll,
   scrollFieldIntoModalView,
   scrollFieldIntoDocumentView,
   handleFocusInForMobileModal,

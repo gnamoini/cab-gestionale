@@ -83,7 +83,7 @@ export function LavorazioneEditModal({
       subtitle="Modifica controllata di anagrafica mezzo e note lavorazione."
     >
       <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <GestionaleModalScrollBody className="space-y-4 p-4">
+        <GestionaleModalScrollBody className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
               <span className={dsLabel}>Cliente</span>

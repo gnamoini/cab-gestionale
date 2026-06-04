@@ -16,6 +16,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { dsFocus } from "@/lib/ui/design-system";
+import { scheduleGestionaleFieldScroll } from "@/lib/ui/mobile-modal-behavior";
 import { globalFixedListPillMenuPanel } from "@/lib/ui/global-input";
 import {
   useDropdownOutsideDismiss,
@@ -141,8 +142,14 @@ export function GlobalFixedListPillSelect({
         aria-controls={listId}
         disabled={disabled}
         title={title}
+        onFocus={() => {
+          scheduleGestionaleFieldScroll(triggerRef.current, { extraTop: 8, extraBottom: 20 });
+        }}
         onClick={() => {
-          if (!disabled) setOpen((o) => !o);
+          if (!disabled) {
+            setOpen((o) => !o);
+            scheduleGestionaleFieldScroll(triggerRef.current, { extraTop: 8, extraBottom: 20 });
+          }
         }}
       >
         <span className="min-w-0 truncate">{selected?.label ?? value}</span>

@@ -46,7 +46,7 @@ export function DipendenteDetailModal({
       subtitle={formatMonthLabel(monthKey)}
       maxWidthClass="max-w-3xl"
     >
-      <GestionaleModalScrollBody className="px-4 py-3 sm:px-5">
+      <GestionaleModalScrollBody className="py-3">
         <div className="mb-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
           <div className="rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-2">
             <p className="text-[10px] uppercase text-[color:var(--cab-text-muted)]">Ordinarie</p>

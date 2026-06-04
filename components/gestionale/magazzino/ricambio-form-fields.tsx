@@ -25,6 +25,7 @@ import { globalInputInvalidRing } from "@/lib/ui/global-input";
 import { getScontoFornitoreMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import {
+  CAB_FIELD_LABEL_ATTR,
   CAB_FOCUS_SCROLL_GROUP_ATTR,
   CAB_FOCUS_SCROLL_TITLE_ATTR,
 } from "@/lib/ui/mobile-modal-behavior";
@@ -136,7 +137,7 @@ export function RicambioField({
   if (htmlFor) {
     return (
       <div className="block min-w-0">
-        <label htmlFor={htmlFor} className={`${dsLabel} cursor-default`}>
+        <label htmlFor={htmlFor} {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`${dsLabel} cursor-default`}>
           {label}
         </label>
         <div className="mt-1">{children}</div>
@@ -145,7 +146,9 @@ export function RicambioField({
   }
   return (
     <div className="block min-w-0">
-      <span className={dsLabel}>{label}</span>
+      <span {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={dsLabel}>
+        {label}
+      </span>
       <div className="mt-1">{children}</div>
     </div>
   );

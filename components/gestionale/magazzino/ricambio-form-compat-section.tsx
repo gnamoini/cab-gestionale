@@ -24,7 +24,7 @@ import {
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import { compatLineDisplayText } from "@/lib/magazzino/form";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
-import { CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
+import { CAB_FIELD_LABEL_ATTR, CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import { dsLabel, dsTypoSmall } from "@/lib/ui/design-system";
 import { probeRicambioInputLag } from "@/lib/debug/ricambio-input-lag-probe";
 
@@ -247,7 +247,9 @@ function RicambioFormCompatSectionInner({
         ) : null}
         <div className="space-y-3">
           <div>
-            <p className={`mb-1.5 ${dsLabel}`}>Marca attrezzatura</p>
+            <p {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`mb-1.5 ${dsLabel}`}>
+              Marca attrezzatura
+            </p>
             <CompatHierarchyMultiSelect
               tree="attrezzature"
               hierarchyKind="marca"
@@ -269,7 +271,9 @@ function RicambioFormCompatSectionInner({
             />
           </div>
           <div>
-            <p className={`mb-1.5 ${dsLabel}`}>Modello attrezzatura</p>
+            <p {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`mb-1.5 ${dsLabel}`}>
+              Modello attrezzatura
+            </p>
             <CompatHierarchyMultiSelect
               tree="attrezzature"
               hierarchyKind="modello"
@@ -289,7 +293,9 @@ function RicambioFormCompatSectionInner({
             />
           </div>
           <div>
-            <p className={`mb-1.5 ${dsLabel}`}>Marca telaio</p>
+            <p {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`mb-1.5 ${dsLabel}`}>
+              Marca telaio
+            </p>
             <CompatHierarchyMultiSelect
               tree="telai"
               hierarchyKind="marca"
@@ -311,7 +317,9 @@ function RicambioFormCompatSectionInner({
             />
           </div>
           <div>
-            <p className={`mb-1.5 ${dsLabel}`}>Modello telaio</p>
+            <p {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`mb-1.5 ${dsLabel}`}>
+              Modello telaio
+            </p>
             <CompatHierarchyMultiSelect
               tree="telai"
               hierarchyKind="modello"

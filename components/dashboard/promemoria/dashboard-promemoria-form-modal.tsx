@@ -195,7 +195,7 @@ export function DashboardPromemoriaFormModal({
           className={`${gestionaleModalBodyFlexClass} min-w-0 overflow-hidden`}
           onSubmit={handleSubmit}
         >
-          <GestionaleModalScrollBody className="space-y-4 p-4">
+          <GestionaleModalScrollBody className="space-y-4">
             <label className="flex flex-col gap-1" htmlFor={dataFieldId}>
               <span
                 className={`${dsTypoSmall} font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}

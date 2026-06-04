@@ -32,6 +32,29 @@ const behaviorSrc = readFileSync(join(root, "lib/ui/mobile-modal-behavior.ts"), 
 assert.match(behaviorSrc, /getFocusScrollRect\(field\)/);
 assert.match(behaviorSrc, /scrollRect\.top < visibleTop/);
 assert.match(behaviorSrc, /findFieldLabelBlock/);
+assert.match(behaviorSrc, /findModalHeaderBottom/);
+assert.match(behaviorSrc, /findGestionaleFieldContainer/);
+assert.match(behaviorSrc, /isGestionaleFocusableField/);
+assert.match(behaviorSrc, /scrollGestionaleFieldIntoModal/);
+assert.match(behaviorSrc, /scheduleGestionaleFieldScroll/);
+assert.match(behaviorSrc, /isGestionaleListTriggerButton/);
+assert.doesNotMatch(
+  behaviorSrc,
+  /getFocusScrollRect[\s\S]*findGroupTitleElement/,
+  "focus scroll must not pull section title into view",
+);
+
+const selectSrc = readFileSync(
+  join(root, "components/gestionale/global-input/global-select.tsx"),
+  "utf8",
+);
+assert.match(selectSrc, /scheduleGestionaleFieldScroll/);
+
+const pillSrc = readFileSync(
+  join(root, "components/gestionale/global-input/global-fixed-list-pill.tsx"),
+  "utf8",
+);
+assert.match(pillSrc, /scheduleGestionaleFieldScroll/);
 
 const formSectionSrc = readFileSync(
   join(root, "components/gestionale/schede/gestionale-form-section.tsx"),
@@ -55,8 +78,13 @@ const ricambioSrc = readFileSync(
 );
 assert.match(ricambioSrc, /CAB_FOCUS_SCROLL_GROUP_ATTR/);
 assert.match(ricambioSrc, /CAB_FOCUS_SCROLL_TITLE_ATTR/);
+assert.match(ricambioSrc, /CAB_FIELD_LABEL_ATTR/);
 
 const keyboardHookSrc = readFileSync(join(root, "lib/ui/use-mobile-modal-keyboard.ts"), "utf8");
-assert.match(keyboardHookSrc, /scrollFieldIntoModalView\(focused/);
+assert.match(keyboardHookSrc, /scrollGestionaleFieldIntoModal\(resolveFocusScrollTarget\(focused\)/);
+assert.match(keyboardHookSrc, /isVirtualKeyboardClosing/);
+assert.match(keyboardHookSrc, /keyboardClosing/);
+assert.match(keyboardHookSrc, /preserveModalScrollTop/);
+assert.match(keyboardHookSrc, /if \(closing\)/);
 
 console.log("mobile-modal-behavior.test.ts OK");

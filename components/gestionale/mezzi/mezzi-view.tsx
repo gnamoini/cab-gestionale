@@ -710,7 +710,7 @@ export function MezziView() {
       {nuovoOpen ? (
         <GestionaleModalShell title="Nuovo mezzo" titleId="mezzo-nuovo-title" onRequestClose={() => setNuovoOpen(false)}>
           <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNuovo} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-            <GestionaleModalScrollBody className="space-y-3 p-4">
+            <GestionaleModalScrollBody className="space-y-3">
               <MezzoFormFields form={nuovoForm} setForm={setNuovoForm} />
             </GestionaleModalScrollBody>
             <div className="shrink-0 border-t border-[color:var(--cab-border)] p-4">
@@ -735,7 +735,7 @@ export function MezziView() {
           onRequestClose={() => setEditMezzo(null)}
         >
           <form {...gestionaleFormFocusScopeProps()} onSubmit={submitEdit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-            <GestionaleModalScrollBody className="space-y-3 p-4">
+            <GestionaleModalScrollBody className="space-y-3">
               <MezzoFormFields form={editForm} setForm={setEditForm} excludeMezzoId={editMezzo.id} />
             </GestionaleModalScrollBody>
             <div className="shrink-0 border-t border-[color:var(--cab-border)] p-4">

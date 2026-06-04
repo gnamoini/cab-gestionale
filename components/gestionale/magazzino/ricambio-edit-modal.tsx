@@ -141,7 +141,7 @@ export function RicambioEditModal({
       maxWidthClass="max-w-lg"
     >
       <form {...gestionaleFormFocusScopeProps()} onSubmit={saveEdit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <GestionaleModalScrollBody className="space-y-4 p-4">
+        <GestionaleModalScrollBody className="space-y-4">
           <RicambioFormFields
             form={editDraft}
             setForm={setEditForm}

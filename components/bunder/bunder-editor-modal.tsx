@@ -239,7 +239,7 @@ export function BunderEditorModal({
       }
     >
         <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-          <GestionaleModalScrollBody className="p-4 sm:p-5">
+          <GestionaleModalScrollBody className="sm:pb-5">
           <div className="grid gap-4 sm:grid-cols-2">
             <label htmlFor="bunder-edit-tipo" className="block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
               Tipo documento

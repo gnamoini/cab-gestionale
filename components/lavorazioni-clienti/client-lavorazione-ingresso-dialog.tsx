@@ -50,7 +50,7 @@ export function ClientLavorazioneIngressoDialog({
       footer={null}
     >
       <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <GestionaleModalScrollBody className="p-4">
+        <GestionaleModalScrollBody>
           <HubModalPanoramicaPanel>
             {!ingressoDoc ? (
               <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-100">

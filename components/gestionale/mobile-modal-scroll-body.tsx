@@ -11,6 +11,10 @@ export type GestionaleModalScrollBodyProps = HTMLAttributes<HTMLDivElement> & {
   children: ReactNode;
 };
 
+/** Padding sul contenuto interno — il corpo scroll resta edge-to-edge (scrollbar a destra). */
+export const gestionaleModalScrollContentPad =
+  "min-w-0 px-2 sm:px-3 md:px-4 pt-4 pb-4";
+
 /** Corpo scroll standard modali gestionale — keyboard-aware su mobile. */
 export function GestionaleModalScrollBody({
   className = "",
@@ -21,9 +25,9 @@ export function GestionaleModalScrollBody({
     <div
       {...rest}
       {...{ [CAB_MODAL_SCROLL_ATTR]: "" }}
-      className={`${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} ${className}`.trim()}
+      className={`${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} [scrollbar-gutter:auto] max-md:scroll-pt-1`.trim()}
     >
-      {children}
+      <div className={`${gestionaleModalScrollContentPad} ${className}`.trim()}>{children}</div>
     </div>
   );
 }

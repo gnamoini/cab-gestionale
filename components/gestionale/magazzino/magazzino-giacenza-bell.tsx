@@ -6,7 +6,6 @@ import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-import { dsScrollbar } from "@/lib/ui/design-system";
 
 function sottoScortaDeficit(p: RicambioMagazzino): number {
   return Math.max(0, p.scortaMinima - p.scorta);
@@ -194,7 +193,7 @@ export function MagazzinoGiacenzaBell({
           subtitle={subtitle}
           titleId="magazzino-giacenza-modal-title"
         >
-          <GestionaleModalScrollBody className={`space-y-3 p-4 sm:p-5 ${dsScrollbar}`}>
+          <GestionaleModalScrollBody className="space-y-3 sm:pb-5">
             {sortedItems.length === 0 ? (
               <MagazzinoSottoScortaEmptyState />
             ) : (

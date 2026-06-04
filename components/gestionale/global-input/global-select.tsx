@@ -27,6 +27,7 @@ import {
   globalInputInvalidRing,
 } from "@/lib/ui/global-input";
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
+import { scheduleGestionaleFieldScroll } from "@/lib/ui/mobile-modal-behavior";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import type { ListSelectItem } from "@/lib/ui/list-select-items";
 import { normListSelectValue } from "@/lib/ui/list-select-utils";
@@ -395,16 +396,17 @@ export function GlobalSelect(props: GlobalSelectProps) {
     if (selectOnly) {
       setOpen(true);
       setActiveIndex(-1);
-      return;
-    }
-    editSessionRef.current.modified = false;
-    setFocused(true);
-    setOpen(true);
-    if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) {
-      setSearchText("");
     } else {
-      seedSearchFromCommitted();
+      editSessionRef.current.modified = false;
+      setFocused(true);
+      setOpen(true);
+      if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) {
+        setSearchText("");
+      } else {
+        seedSearchFromCommitted();
+      }
     }
+    scheduleGestionaleFieldScroll(inputRef.current, { extraTop: 8, extraBottom: 20 });
   }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, selectOnly, value]);
 
   const commitBlur = () => {
@@ -602,6 +604,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
           if (selectOnly) {
             setOpen(true);
             setActiveIndex(-1);
+            scheduleGestionaleFieldScroll(inputRef.current, { extraTop: 8, extraBottom: 20 });
             return;
           }
           if (!open) beginEditing();

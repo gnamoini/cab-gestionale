@@ -1985,7 +1985,7 @@ export function MagazzinoView() {
           titleId="new-ricambio-title"
         >
             <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNew} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-              <GestionaleModalScrollBody className="space-y-4 p-4">
+              <GestionaleModalScrollBody className="space-y-4">
                 <RicambioFormFields
                   form={newForm}
                   setForm={setNewForm}
@@ -2034,7 +2034,7 @@ export function MagazzinoView() {
           maxWidthClass="max-w-lg"
         >
           <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-            <GestionaleModalScrollBody className="p-4">
+            <GestionaleModalScrollBody>
               <RicambioInfoPanel
                 ricambio={detailRicambio}
                 compatDisplay={compatDisplayFor(detailRicambio)}
@@ -2139,7 +2139,7 @@ export function MagazzinoView() {
           titleId="dup-magazzino-title"
           maxWidthClass="max-w-lg"
         >
-            <GestionaleModalScrollBody className="space-y-3 p-4">
+            <GestionaleModalScrollBody className="space-y-3">
               {archivioDupCodeGroups.length === 0 ? (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">Nessun codice duplicato rilevato.</p>
               ) : (

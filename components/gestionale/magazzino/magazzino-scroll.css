@@ -1,8 +1,4 @@
-/* Scope Magazzino — layout scroll (stile thumb: .gestionale-scrollbar globale) */
-
-.magazzino-scroll-scope {
-  scrollbar-gutter: stable;
-}
+/* Scope Magazzino — scroll verticale su main.gestionale-scroll-y (no gutter duplicato qui). */
 
 /* Badge scorta: pop + slide numero su +/- */
 @keyframes magazzino-scorta-badge-pop {

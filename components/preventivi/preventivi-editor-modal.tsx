@@ -463,7 +463,7 @@ export function PreventiviEditorModal({
         onDismiss={mezzoPrompt.dismissPrompt}
       />
       <div className={`relative ${gestionaleModalBodyFlexClass}`}>
-        <GestionaleModalScrollBody className="px-4 py-3">
+        <GestionaleModalScrollBody className="py-3">
           <div className="sticky top-0 z-[2] -mx-4 mb-3 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_94%,transparent)] px-4 py-2 backdrop-blur-sm">
             <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-sm">
               <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-[color:var(--cab-text-muted)]">

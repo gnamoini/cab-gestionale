@@ -252,7 +252,7 @@ export function UploadDocumentoModal({
   return (
     <DocumentiModalShell title="Carica documento" onRequestClose={onRequestClose} wide>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <GestionaleModalScrollBody className="space-y-3 p-4">
+        <GestionaleModalScrollBody className="space-y-3">
           <DocumentoFileDropzone
             pickedName={pickedName}
             pickedSizeKb={pickedSizeKb}
@@ -391,7 +391,7 @@ export function DocumentoInfoModal({
   return (
     <DocumentiModalShell title="Dettaglio documento" onRequestClose={onRequestClose} wide>
       <div className={`lavorazioni-scroll-scope ${gestionaleModalBodyFlexClass}`}>
-        <GestionaleModalScrollBody className="space-y-3 p-4 text-sm">
+        <GestionaleModalScrollBody className="space-y-3 text-sm">
           <InfoRow label="Riepilogo" value={<span className="font-semibold">{formatDocumentoRigaSintetica(doc)}</span>} />
           <InfoRow label="Nome file" value={doc.nome} />
           <InfoRow
@@ -545,7 +545,7 @@ export function DocumentoEditModal({
   return (
     <DocumentiModalShell title="Modifica documento" onRequestClose={onRequestClose} wide>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <GestionaleModalScrollBody className="space-y-3 p-4">
+        <GestionaleModalScrollBody className="space-y-3">
           <label htmlFor="doc-edit-nome" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Nome file
             <input
