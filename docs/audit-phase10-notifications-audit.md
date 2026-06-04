@@ -133,12 +133,12 @@ Montaggio: `DeferredGestionaleBridges` (post-auth, rAF defer).
 | **Stato** | ⚠️ by-design — polling 60s su bridge; no push server / service worker. |
 | **Azione** | 📋 backlog push/email se requisito business. |
 
-### P10-006 — Desktop permission una tantum
+### P10-006 — Permesso notifiche desktop (gesto utente)
 
 | | |
 |---|---|
 | **Severità** | P3 |
-| **Stato** | ✅ `requestDesktopNotificationPermissionOnce` + flag `cab-desktop-notifications-asked`; retry interattivo da UI test. |
+| **Stato** | ✅ Banner proattivo (`DesktopNotificationPermissionPrompt`) per utenti con `canRead("dashboard")`; `requestDesktopNotificationPermissionInteractive` su click; dispatch campanella solo se `granted` (niente `requestPermission` in background). Dismiss: `cab-desktop-notifications-prompt-dismissed`. Campanella: stato + Abilita + Invia test. |
 
 ### P10-007 — Logout non cancella store
 

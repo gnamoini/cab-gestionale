@@ -11,6 +11,7 @@ import {
   isDashboardNotificationsPath,
   isMagazzinoNotificationsPath,
 } from "@/lib/lavorazioni/admin-notifications";
+import { markCabSyncToastSuppressed } from "@/lib/notifications/cab-sync-toast-suppress";
 import { publishAdminDashboardNotification } from "@/lib/notifications/admin-dashboard-desktop";
 import {
   findRicambioInListCache,
@@ -71,7 +72,7 @@ export function AdminMagazzinoNotificationBridge() {
 
       const resolveAndNotify = () => {
         const curr = stockSnapshotFromListCache(queryClient, ricambioId, mezziListe);
-        if (!curr) return;
+        if (!curr) return false;
 
         const ricambio = findRicambioInListCache(queryClient, ricambioId, mezziListe);
         const notification = magazzinoCrossingToNotification({
@@ -85,17 +86,22 @@ export function AdminMagazzinoNotificationBridge() {
 
         setRicambioStockSnapshot(ricambioId, curr);
 
-        if (!notification) return;
+        if (!notification) return false;
+
+        markCabSyncToastSuppressed("magazzino_ricambi", "entity_updated", ricambioId);
 
         void publishAdminDashboardNotification(userId, notification);
 
-        if (isDashboardNotificationsPath(pathname) || isMagazzinoNotificationsPath(pathname)) return;
+        if (isDashboardNotificationsPath(pathname) || isMagazzinoNotificationsPath(pathname)) return true;
 
         push(formatMagazzinoSottoScortaToastMessage(notification), "info", 5000);
+        return true;
       };
 
+      if (resolveAndNotify()) return;
+
       queueMicrotask(() => {
-        setTimeout(resolveAndNotify, 0);
+        resolveAndNotify();
       });
     },
     [isAdmin, mezziListe, pathname, push, queryClient, user?.id],

@@ -1,6 +1,14 @@
 /** Validazione input server actions sicurezza / impostazioni portale clienti. */
 
 import { APP_ROLES, type AppRole } from "@/lib/auth/rbac";
+import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
+import { GESTIONALE_PERMISSION_MODULES, type GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
+
+export type ValidatedModulePermissionEntry = {
+  module: GestionalePermissionModule;
+  canRead: boolean;
+  canWrite: boolean;
+};
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -11,8 +19,51 @@ export type ValidatedSecurityUserBatchPatch = {
   userId: string;
   nome?: string;
   ruolo?: AppRole;
+  clienteRef?: string | null;
   clientLavorazioniAccess?: boolean;
+  /** null = ripristina permessi da ruolo (delete overrides). */
+  modulePermissions?: ValidatedModulePermissionEntry[] | null;
+  /** Se true con cambio ruolo, elimina override moduli prima del nuovo ruolo. */
+  clearModulePermissions?: boolean;
 };
+
+function validateModulePermissionsPayload(
+  raw: unknown,
+): { ok: true; value: ValidatedModulePermissionEntry[] | null } | { ok: false; message: string } {
+  if (raw === null) return { ok: true, value: null };
+  if (!Array.isArray(raw)) return { ok: false, message: "Permessi pagine non validi." };
+  if (raw.length > GESTIONALE_PERMISSION_MODULES.length) {
+    return { ok: false, message: "Troppi permessi modulo." };
+  }
+
+  const seen = new Set<string>();
+  const out: ValidatedModulePermissionEntry[] = [];
+
+  for (const item of raw) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return { ok: false, message: "Voce permesso modulo non valida." };
+    }
+    const row = item as Record<string, unknown>;
+    const module = typeof row.module === "string" ? row.module : "";
+    if (!(GESTIONALE_PERMISSION_MODULES as readonly string[]).includes(module)) {
+      return { ok: false, message: "Modulo permesso non valido." };
+    }
+    if (seen.has(module)) return { ok: false, message: "Modulo permesso duplicato." };
+    seen.add(module);
+    if (typeof row.canRead !== "boolean" || typeof row.canWrite !== "boolean") {
+      return { ok: false, message: "Flag permesso modulo non valido." };
+    }
+    const canRead = row.canRead;
+    const canWrite = canRead ? row.canWrite : false;
+    out.push({
+      module: module as GestionalePermissionModule,
+      canRead,
+      canWrite,
+    });
+  }
+
+  return { ok: true, value: out };
+}
 
 export function validateUserId(userId: string | null | undefined): string | null {
   const t = userId?.trim() ?? "";
@@ -32,6 +83,15 @@ export function validateOptionalDisplayName(nome: string | null | undefined): st
 export function validateAppRoleValue(ruolo: string | null | undefined): ruolo is AppRole {
   if (!ruolo) return false;
   return (APP_ROLES as readonly string[]).includes(ruolo);
+}
+
+export function validateOptionalClienteRef(clienteRef: string | null | undefined): string | null {
+  if (clienteRef == null) return null;
+  if (typeof clienteRef !== "string") return "Cliente associato non valido.";
+  const t = clienteRef.trim();
+  if (!t) return null;
+  if (t.length > 120) return "Nome cliente troppo lungo.";
+  return null;
 }
 
 export function validateSecurityUserBatchPatches(
@@ -74,11 +134,35 @@ export function validateSecurityUserBatchPatches(
       patch.ruolo = p.ruolo;
     }
 
+    if (p.clienteRef !== undefined) {
+      if (p.clienteRef !== null && typeof p.clienteRef !== "string") {
+        return { ok: false, message: "Cliente associato non valido." };
+      }
+      const clienteRefErr = validateOptionalClienteRef(
+        p.clienteRef === null ? null : (p.clienteRef as string),
+      );
+      if (clienteRefErr) return { ok: false, message: clienteRefErr };
+      patch.clienteRef = normalizeClienteRef(p.clienteRef as string | null | undefined);
+    }
+
     if (p.clientLavorazioniAccess !== undefined) {
       if (typeof p.clientLavorazioniAccess !== "boolean") {
         return { ok: false, message: "Flag accesso clienti non valido." };
       }
       patch.clientLavorazioniAccess = p.clientLavorazioniAccess;
+    }
+
+    if (p.modulePermissions !== undefined) {
+      const modRes = validateModulePermissionsPayload(p.modulePermissions);
+      if (!modRes.ok) return modRes;
+      patch.modulePermissions = modRes.value;
+    }
+
+    if (p.clearModulePermissions !== undefined) {
+      if (typeof p.clearModulePermissions !== "boolean") {
+        return { ok: false, message: "Flag ripristino permessi non valido." };
+      }
+      patch.clearModulePermissions = p.clearModulePermissions;
     }
 
     out.push(patch);

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { LoadingSuspenseFallback } from "@/components/design-system";
-import { SistemaImpostazioniPageView } from "@/components/dashboard/sistema-impostazioni-modal";
+import { SistemaImpostazioniPageView } from "@/components/configurazione/sistema-impostazioni-page";
 
 export default function ImpostazioniPage() {
   return (

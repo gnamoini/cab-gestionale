@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { APP_ROLES, hasPermission, roleLabel, type AppRole } from "@/lib/auth/rbac";
+import { APP_ROLES, hasPermission, resolveRole, roleLabel, type AppRole } from "@/lib/auth/rbac";
+import { buildInitialModuleDraft } from "@/components/dashboard/security/security-user-module-permissions-editor";
+import { snapshotModuleDraft } from "@/lib/security/user-module-permissions";
+import { modulePermissionsPayloadFromDraft } from "@/lib/security/user-module-permissions";
+import type { ModulePermissionDraftRow } from "@/lib/security/user-module-permissions";
+import type { UserPermissionRow } from "@/src/types/supabase-tables";
 import { PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 import type { SecurityUserPermissionRow } from "@/src/actions/security-users-permissions";
 import { SecurityEditNameModal } from "@/components/dashboard/security/security-edit-name-modal";
@@ -10,7 +15,7 @@ import { SecurityToggle } from "@/components/dashboard/security/security-toggle"
 import { GlobalTableHead, GestionaleListTableActionsHead } from "@/components/gestionale/global-table";
 import { cycleReportSort, ReportSortTh, type ReportSortPhase } from "@/components/report/report-sort-th";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { GlobalSelect } from "@/components/gestionale/global-input";
+import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import {
   dsBtnGhost,
   dsInput,
@@ -24,7 +29,7 @@ import {
 } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 
-export type SecurityUserSortKey = "nome" | "username" | "email" | "ruolo" | "clientAccess" | "stato";
+export type SecurityUserSortKey = "nome" | "username" | "email" | "ruolo" | "clienteRef" | "clientAccess" | "stato";
 
 export type EditableSecurityUser = SecurityUserPermissionRow;
 
@@ -39,6 +44,8 @@ function compareUsers(a: EditableSecurityUser, b: EditableSecurityUser, key: Sec
       return dir * (a.email || "").localeCompare(b.email || "", "it");
     case "ruolo":
       return dir * a.ruolo.localeCompare(b.ruolo, "it");
+    case "clienteRef":
+      return dir * (a.clienteRef ?? "").localeCompare(b.clienteRef ?? "", "it");
     case "clientAccess":
       return dir * (Number(a.clientLavorazioniAccess) - Number(b.clientLavorazioniAccess));
     case "stato": {
@@ -68,7 +75,7 @@ function SecurityUsersTableSkeleton() {
         <tbody>
           {Array.from({ length: 6 }).map((_, i) => (
             <tr key={i} className={dsTableRow}>
-              <td colSpan={7} className="px-3 py-3">
+              <td colSpan={9} className="px-3 py-3">
                 <div className={`h-4 w-full ${dsSkeletonPulse}`} />
               </td>
             </tr>
@@ -83,11 +90,21 @@ type Props = {
   rows: EditableSecurityUser[];
   loading: boolean;
   readOnly: boolean;
+  permissionRows: UserPermissionRow[];
   onRowsChange: (rows: EditableSecurityUser[]) => void;
   onOpenDetail: (userId: string) => void;
+  onRoleChange?: (userId: string, ruolo: AppRole) => void;
 };
 
-export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOpenDetail }: Props) {
+export function SecurityUsersTable({
+  rows,
+  loading,
+  readOnly,
+  permissionRows,
+  onRowsChange,
+  onOpenDetail,
+  onRoleChange,
+}: Props) {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
   const [sortColumn, setSortColumn] = useState<SecurityUserSortKey | null>(null);
@@ -104,7 +121,8 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
           r.nome.toLowerCase().includes(q) ||
           (r.username ?? "").toLowerCase().includes(q) ||
           r.email.toLowerCase().includes(q) ||
-          r.ruolo.toLowerCase().includes(q),
+          r.ruolo.toLowerCase().includes(q) ||
+          (r.clienteRef ?? "").toLowerCase().includes(q),
       );
     }
     if (sortColumn && (sortPhase === "asc" || sortPhase === "desc")) {
@@ -142,6 +160,7 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
 
   function handleRoleChange(userId: string, ruolo: AppRole) {
     onRowsChange(rows.map((r) => (r.id === userId ? applyRoleToRow(r, ruolo) : r)));
+    onRoleChange?.(userId, ruolo);
   }
 
   if (loading) return <SecurityUsersTableSkeleton />;
@@ -204,12 +223,22 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
                 <ReportSortTh label="Email" columnKey="email" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                 <ReportSortTh label="Ruolo" columnKey="ruolo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                 <ReportSortTh
+                  label="Cliente associato"
+                  columnKey="clienteRef"
+                  sortColumn={sortColumn}
+                  sortPhase={sortPhase}
+                  onSort={handleSort}
+                />
+                <ReportSortTh
                   label={`Accesso ${PORTALE_CLIENTI_LABEL}`}
                   columnKey="clientAccess"
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={handleSort}
                 />
+                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                  Permessi
+                </th>
                 <ReportSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                 <GestionaleListTableActionsHead />
               </GlobalTableHead>
@@ -257,6 +286,24 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
                         )}
                       </td>
                       <td className={dsTableTd}>
+                        {readOnly ? (
+                          <span className="max-w-[12rem] truncate" title={row.clienteRef ?? undefined}>
+                            {row.clienteRef || "—"}
+                          </span>
+                        ) : (
+                          <GlobalSettingsListSelect
+                            selectOnly
+                            variant="default"
+                            listKey="mezzi:clienti"
+                            value={row.clienteRef ?? ""}
+                            onChange={(v) => patchRow(row.id, { clienteRef: v.trim() || null })}
+                            aria-label={`Cliente associato ${row.nome}`}
+                            inputClassName="min-h-8 py-1 text-xs"
+                            placeholder="—"
+                          />
+                        )}
+                      </td>
+                      <td className={dsTableTd}>
                         <div className="flex min-w-0 items-center gap-2">
                           <SecurityToggle
                             checked={row.clientLavorazioniAccess}
@@ -268,6 +315,15 @@ export function SecurityUsersTable({ rows, loading, readOnly, onRowsChange, onOp
                             {portalLocked ? "Da ruolo" : row.clientLavorazioniAccess ? "ON" : "OFF"}
                           </span>
                         </div>
+                      </td>
+                      <td className={dsTableTd}>
+                        {row.hasModulePermissionOverrides ? (
+                          <span className="rounded bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--cab-primary)]">
+                            Personalizzati
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-[color:var(--cab-text-muted)]">Da ruolo</span>
+                        )}
                       </td>
                       <td className={dsTableTd}>
                         <SecurityStatusBadge lastSignInAt={row.lastSignInAt} />
@@ -306,6 +362,7 @@ export function rowsSnapshot(rows: EditableSecurityUser[]): string {
       id: r.id,
       nome: r.nome.trim(),
       ruolo: r.ruolo,
+      clienteRef: r.clienteRef,
       clientLavorazioniAccess: r.clientLavorazioniAccess,
       clientLavorazioniAccessFromRole: r.clientLavorazioniAccessFromRole,
     })),
@@ -315,6 +372,9 @@ export function rowsSnapshot(rows: EditableSecurityUser[]): string {
 export function buildSecurityUserPatches(
   saved: EditableSecurityUser[],
   draft: EditableSecurityUser[],
+  savedModuleSnapshots: Record<string, string>,
+  draftModuleDrafts: Record<string, ModulePermissionDraftRow[]>,
+  permissionRows: UserPermissionRow[],
 ): import("@/src/actions/security-users-permissions").SecurityUserBatchPatch[] {
   const savedById = new Map(saved.map((r) => [r.id, r]));
   const patches: import("@/src/actions/security-users-permissions").SecurityUserBatchPatch[] = [];
@@ -329,14 +389,30 @@ export function buildSecurityUserPatches(
       patch.nome = row.nome.trim();
       dirty = true;
     }
-    if (row.ruolo !== orig.ruolo) {
+    const roleChanged = row.ruolo !== orig.ruolo;
+    if (roleChanged) {
       patch.ruolo = row.ruolo;
+      patch.clearModulePermissions = true;
+      dirty = true;
+    }
+    const clienteRefChanged = (row.clienteRef ?? null) !== (orig.clienteRef ?? null);
+    if (clienteRefChanged) {
+      patch.clienteRef = row.clienteRef ?? null;
       dirty = true;
     }
     if (!row.clientLavorazioniAccessFromRole && row.clientLavorazioniAccess !== orig.clientLavorazioniAccess) {
       patch.clientLavorazioniAccess = row.clientLavorazioniAccess;
       dirty = true;
     }
+
+    const savedModSnap = savedModuleSnapshots[row.id] ?? snapshotModuleDraft(buildInitialModuleDraft(orig.ruolo, orig.id, permissionRows));
+    const draftMod = draftModuleDrafts[row.id];
+    const draftModSnap = draftMod ? snapshotModuleDraft(draftMod) : savedModSnap;
+    if (!roleChanged && draftModSnap !== savedModSnap && draftMod) {
+      patch.modulePermissions = modulePermissionsPayloadFromDraft(resolveRole(row.ruolo), draftMod);
+      dirty = true;
+    }
+
     if (dirty) patches.push(patch);
   }
   return patches;

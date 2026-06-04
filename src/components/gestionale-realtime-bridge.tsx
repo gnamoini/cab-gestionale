@@ -106,7 +106,7 @@ export function GestionaleRealtimeBridge() {
         remoteSettingsNotifyTimer = null;
         if (cancelled || isSettingsEditorActive()) return;
         if (!shouldShowRemoteSettingsToast()) return;
-        pushRef.current("Un utente ha aggiornato le impostazioni", "info", 4500);
+        pushRef.current("Impostazioni aggiornate da un altro utente", "info", 4500);
       }, REMOTE_SETTINGS_NOTIFY_DEBOUNCE_MS);
     };
 

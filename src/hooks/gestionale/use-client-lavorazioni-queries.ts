@@ -6,16 +6,22 @@ import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { clientLavorazioniService } from "@/src/services/client-lavorazioni.service";
 
-/** In corso — stessa cache React Query della pagina Lavorazioni principale (VIEW layer). */
+/** In corso — cache dedicata portale (`clientPortal`) con eventuale filtro `cliente_ref`. */
 export function useClientLavorazioniInCorsoQuery(enabled: boolean) {
   const opts = useViewQueryOpts();
-  return useLavorazioniList({ archived: false, includeMezzo: true }, { enabled, ...opts });
+  return useLavorazioniList(
+    { archived: false, includeMezzo: true },
+    { enabled, clientPortal: true, ...opts },
+  );
 }
 
-/** Archivio — stessa cache React Query della pagina Lavorazioni principale (VIEW layer). */
+/** Archivio — cache dedicata portale (`clientPortal`) con eventuale filtro `cliente_ref`. */
 export function useClientLavorazioniArchivioQuery(enabled: boolean) {
   const opts = useViewQueryOpts();
-  return useLavorazioniList({ archived: true, includeMezzo: true }, { enabled, ...opts });
+  return useLavorazioniList(
+    { archived: true, includeMezzo: true },
+    { enabled, clientPortal: true, ...opts },
+  );
 }
 
 export function useClientLavorazioneDetailQuery(lavorazioneId: string | undefined, enabled: boolean) {

@@ -4,29 +4,15 @@ import { useState } from "react";
 import {
   SETTINGS_DISCOUNT_INPUT,
   SETTINGS_LIST_INPUT,
+  SETTINGS_ROW_BTN_DANGER,
   SETTINGS_SECTION_CARD,
   SETTINGS_SECTION_HINT,
 } from "@/components/dashboard/settings-list-ui";
 import { createTipoAssenzaId, type TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
-import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsInput, dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
 
 const ROW_GRID =
-  "grid grid-cols-[2.75rem_minmax(0,1fr)_2.25rem_1.75rem] items-center gap-x-2 px-2 py-1";
-
-function RemoveTipoButton({ label, onClick }: { label: string; onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      aria-label={`Rimuovi ${label}`}
-      title="Rimuovi"
-      className={`flex h-7 w-7 items-center justify-center rounded-md text-sm font-semibold leading-none text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))] opacity-70 transition-opacity hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] hover:opacity-100 ${erpFocus}`}
-      onClick={onClick}
-    >
-      ×
-    </button>
-  );
-}
+  "grid grid-cols-[2.75rem_minmax(0,1fr)_2.25rem_auto] items-center gap-x-2 px-2 py-1";
 
 export function SettingsDipendentiAssenzeSection({
   tipi,
@@ -114,7 +100,14 @@ export function SettingsDipendentiAssenzeSection({
                   }
                 />
               </label>
-              <RemoveTipoButton label={t.label} onClick={() => onChange(tipi.filter((x) => x.id !== t.id))} />
+              <button
+                type="button"
+                className={SETTINGS_ROW_BTN_DANGER}
+                aria-label={`Elimina ${t.label}`}
+                onClick={() => onChange(tipi.filter((x) => x.id !== t.id))}
+              >
+                Elimina
+              </button>
             </li>
           ))}
         </ul>

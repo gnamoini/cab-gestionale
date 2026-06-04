@@ -3,6 +3,8 @@
 import { useEffect, type RefObject } from "react";
 import {
   applyKeyboardPadToScrollContainer,
+  CAB_MODAL_ROOT_ATTR,
+  scrollFieldIntoModalView,
   syncKeyboardCssVars,
 } from "@/lib/ui/mobile-modal-behavior";
 
@@ -45,6 +47,13 @@ export function useMobileModalKeyboard(rootRef: RefObject<HTMLElement | null>): 
         if (scrollEl instanceof HTMLElement) {
           activeScrollEl = scrollEl;
           applyKeyboardPadToScrollContainer(scrollEl);
+        }
+        const tag = focused.tagName;
+        if (
+          (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") &&
+          focused.closest(`[${CAB_MODAL_ROOT_ATTR}]`)
+        ) {
+          scrollFieldIntoModalView(focused, { behavior: "auto" });
         }
       }
     }

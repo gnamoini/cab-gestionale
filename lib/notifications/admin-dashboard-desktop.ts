@@ -17,7 +17,7 @@ import {
   formatMagazzinoSottoScortaToastMessage,
 } from "@/lib/lavorazioni/admin-notifications";
 import {
-  requestDesktopNotificationPermissionOnce,
+  getDesktopNotificationPermissionState,
   showDesktopAdminNotification,
 } from "@/lib/lavorazioni/desktop-notifications";
 import {
@@ -97,11 +97,10 @@ export function adminDashboardNotificationDesktopPayload(
  * Mostra notifica desktop per una voce della campanella admin.
  * Non usare per toast/sync di altre pagine (GestionaleNotificationsBridge).
  */
-export async function dispatchAdminDashboardDesktopNotification(
+export function dispatchAdminDashboardDesktopNotification(
   notification: AdminDashboardNotification,
-): Promise<boolean> {
-  const perm = await requestDesktopNotificationPermissionOnce();
-  if (perm !== "granted") return false;
+): boolean {
+  if (getDesktopNotificationPermissionState() !== "granted") return false;
   const payload = adminDashboardNotificationDesktopPayload(notification);
   showDesktopAdminNotification(payload);
   return true;
@@ -115,6 +114,6 @@ export async function publishAdminDashboardNotification(
   const key = notificationStoreKey(notification);
   const existed = Boolean(loadAdminNotificationStore(userId).items[key]);
   upsertAdminNotification(userId, notification);
-  const desktop = await dispatchAdminDashboardDesktopNotification(notification);
+  const desktop = dispatchAdminDashboardDesktopNotification(notification);
   return { added: !existed, desktop };
 }

@@ -16,6 +16,26 @@ const bellSrc = fs.readFileSync(
   path.join(ROOT, "components/dashboard/admin-notifications-bell.tsx"),
   "utf8",
 );
+const magBridgeSrc = fs.readFileSync(
+  path.join(ROOT, "src/components/admin-magazzino-notification-bridge.tsx"),
+  "utf8",
+);
+const realtimeSrc = fs.readFileSync(
+  path.join(ROOT, "src/components/gestionale-realtime-bridge.tsx"),
+  "utf8",
+);
+const desktopDispatchSrc = fs.readFileSync(
+  path.join(ROOT, "lib/notifications/admin-dashboard-desktop.ts"),
+  "utf8",
+);
+const desktopNotifSrc = fs.readFileSync(
+  path.join(ROOT, "lib/lavorazioni/desktop-notifications.ts"),
+  "utf8",
+);
+const bridgesPromptSrc = fs.readFileSync(
+  path.join(ROOT, "src/components/desktop-notification-permission-prompt.tsx"),
+  "utf8",
+);
 
 assert.ok(ADMIN_NOTIFICATION_STORE_MAX_ITEMS >= 50 && ADMIN_NOTIFICATION_STORE_MAX_ITEMS <= 500);
 
@@ -43,5 +63,32 @@ assert.match(bellSrc, /placement: "bottom-end"/);
 assert.match(bellSrc, /useDropdownOutsideDismiss/);
 assert.doesNotMatch(bellSrc, /absolute right-0/);
 assert.doesNotMatch(bellSrc, /100vw/);
+
+assert.match(dispatchSrc, /isCabSyncToastSuppressed/);
+assert.match(magBridgeSrc, /markCabSyncToastSuppressed/);
+assert.match(realtimeSrc, /Impostazioni aggiornate da un altro utente/);
+
+assert.doesNotMatch(
+  desktopDispatchSrc,
+  /requestDesktopNotificationPermissionOnce/,
+  "dispatch must not auto-request browser permission",
+);
+assert.match(desktopDispatchSrc, /getDesktopNotificationPermissionState/);
+const onceMarker = "export async function requestDesktopNotificationPermissionOnce";
+const interactiveMarker = "export async function requestDesktopNotificationPermissionInteractive";
+const onceFnStart = desktopNotifSrc.indexOf(onceMarker);
+const interactiveFnStart = desktopNotifSrc.indexOf(interactiveMarker);
+assert.ok(onceFnStart >= 0 && interactiveFnStart > onceFnStart);
+const onceFnBody = desktopNotifSrc.slice(onceFnStart, interactiveFnStart);
+assert.doesNotMatch(onceFnBody, /Notification\.requestPermission/, "once helper must not call requestPermission");
+assert.match(
+  desktopNotifSrc.slice(interactiveFnStart),
+  /Notification\.requestPermission/,
+);
+assert.match(bridgesSrc, /DesktopNotificationPermissionPrompt/);
+assert.match(bridgesPromptSrc, /requestDesktopNotificationPermissionInteractive/);
+assert.match(bellSrc, /DesktopNotificationPanelFooter/);
+assert.match(bellSrc, /Abilita notifiche desktop/);
+assert.match(bellSrc, /buildAdminDashboardTestNotification/);
 
 console.log("notifications-policy.test.ts OK");

@@ -649,6 +649,7 @@ export function ClientLavorazioniView() {
       filtersActive,
       queryKeyInCorso: lavorazioniDomainQueryKeys.list(
         stableLavorazioniFiltersKey({ archived: false, includeMezzo: true }),
+        true,
       ),
     });
   }, [

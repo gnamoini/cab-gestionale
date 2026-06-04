@@ -10,7 +10,8 @@ import { useUsernameAvailability } from "@/src/hooks/use-username-availability";
 import { sanitizeUsernameInput, usernameFieldError } from "@/src/lib/auth/username";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { APP_ROLES, roleLabel, type AppRole } from "@/src/lib/auth/permissions";
-import { GlobalSelect } from "@/components/gestionale/global-input";
+import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
 import {
   dsBtnGhost,
   dsBtnPrimary,
@@ -33,6 +34,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [ruolo, setRuolo] = useState<AppRole>("operatore");
+  const [clienteRef, setClienteRef] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const usernameAvailability = useUsernameAvailability(username, { enabled: open });
@@ -44,6 +46,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
     setEmail("");
     setPassword("");
     setRuolo("operatore");
+    setClienteRef("");
     setError(null);
     setPending(false);
   }, [open]);
@@ -64,6 +67,12 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
       setError("Attendi la verifica del nome utente.");
       return;
     }
+    const clienteErr = validateClienteRefForRole(ruolo, clienteRef.trim() || null);
+    if (clienteErr) {
+      setError(clienteErr);
+      return;
+    }
+
     setPending(true);
     const res = await createUserByAdminAction({
       nome: nome.trim(),
@@ -71,6 +80,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
       email: email.trim(),
       password,
       ruolo,
+      clienteRef: clienteRef.trim() || null,
     });
     setPending(false);
     if (!res.ok) {
@@ -200,6 +210,25 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
               items={RUOLI.map((r) => ({ value: r.value, label: r.label }))}
             />
           </div>
+        </label>
+        <label className="block min-w-0">
+          <span className={dsSectionTitle}>Cliente associato</span>
+          <div className="mt-1">
+            <GlobalSettingsListSelect
+              selectOnly
+              variant="default"
+              listKey="mezzi:clienti"
+              value={clienteRef}
+              onChange={setClienteRef}
+              disabled={pending}
+              aria-label="Cliente associato"
+              placeholder={ruolo === "cliente" ? "Obbligatorio per ruolo Cliente" : "—"}
+              required={ruolo === "cliente"}
+            />
+          </div>
+          <span className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]">
+            Obbligatorio se il ruolo è Cliente. Limita il portale lavorazioni al cliente scelto.
+          </span>
         </label>
 
         {error ? (

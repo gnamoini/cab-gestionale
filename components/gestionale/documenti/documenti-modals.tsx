@@ -26,6 +26,8 @@ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useAuth } from "@/context/auth-context";
 import { dsBtnDanger } from "@/lib/ui/design-system";
 import {
+  canOpenDocumento,
+  documentoFileUnavailableLabel,
   documentoSenzaMarca,
   extractFileExtension,
   formatDocumentoRigaSintetica,
@@ -376,8 +378,10 @@ export function DocumentoInfoModal({
   canEdit?: boolean;
   canDelete?: boolean;
 }) {
+  const gestToast = useGestionaleToast();
   const r = resolveDocumentoApplicazione(doc);
-  const canOpenFile = Boolean(doc.urlBlob?.trim() || doc.urlDocumento?.trim());
+  const canOpenFile = canOpenDocumento(doc);
+  const fileUnavailableLabel = documentoFileUnavailableLabel(doc);
   const entita = documentoSenzaMarcaUi(doc)
     ? "— (assegna marca dalla modifica)"
     : r.applicabilita === "marca"
@@ -397,12 +401,16 @@ export function DocumentoInfoModal({
                 <button
                   type="button"
                   className="font-medium text-[color:var(--cab-primary)] underline decoration-[color:color-mix(in_srgb,var(--cab-primary)_50%,transparent)] underline-offset-2 hover:text-[color:var(--cab-primary-hover)]"
-                  onClick={() => void openDocumentoFile(doc)}
+                  onClick={() => {
+                    void openDocumentoFile(doc).then((result) => {
+                      if (!result.ok) gestToast.warning(result.message);
+                    });
+                  }}
                 >
                   Apri in nuova scheda
                 </button>
               ) : (
-                "—"
+                <span className="text-[color:var(--cab-text-muted)]">{fileUnavailableLabel ?? "—"}</span>
               )
             }
           />

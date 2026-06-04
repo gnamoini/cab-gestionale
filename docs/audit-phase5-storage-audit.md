@@ -82,7 +82,8 @@ Inventario completo di **localStorage**, **sessionStorage**, **cache React Query
 | `cab-theme` | dark/light | BASSO |
 | `cab-theme-default-dark-v1` | migration one-shot default dark | BASSO |
 | `cab-sidebar-collapsed` | `"1"` sidebar desktop | BASSO |
-| `cab-desktop-notifications-asked` | permesso Notification API chiesto | BASSO |
+| `cab-desktop-notifications-prompt-dismissed` | banner «Abilita notifiche» chiuso con «Più tardi» | BASSO |
+| `cab-desktop-notifications-asked` | legacy (auto-ask); non usato per nascondere il banner | BASSO |
 | `cab-documenti-tree-pref` | preferenza albero documenti | BASSO |
 | `gestionale-lavorazioni-prefs-v1` | prefs lista/kanban legacy | BASSO |
 | `gestionale-magazzino-master-prefs-v1` | prefs master lists (legacy parziale) | MEDIO drift vs DB |

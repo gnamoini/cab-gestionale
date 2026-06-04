@@ -1,10 +1,23 @@
 import type { RicambioCompatRef } from "@/lib/magazzino/ricambio-compat-resolver";
 
+export type RicambioFornitoreAlternativo = {
+  id: string;
+  fornitore: string;
+  produttore: string;
+  codice: string;
+  prezzo: number;
+  sconto: number;
+};
+
 export interface RicambioMagazzino {
   id: string;
   marca: string;
   codiceFornitoreOriginale: string;
   codiceFornitoreOriginaleSecondario: string;
+  /** Marca associata al codice OE secondario (opzionale). */
+  marcaOriginaleSecondaria: string;
+  /** Ricambio impiegato nelle manutenzioni tagliando. */
+  usatoInTagliandi: boolean;
   descrizione: string;
   note: string;
   categoria: string;
@@ -20,6 +33,9 @@ export interface RicambioMagazzino {
   /** Markup % sul listino OE: vendita = listino + listino × markup/100 */
   markupPercentuale: number;
   prezzoVendita: number;
+  /** Elenco fornitori alternativi (fonte di verità in meta). */
+  fornitoriAlternativi: RicambioFornitoreAlternativo[];
+  /** Primo fornitore alternativo — mirror per compat / filtri legacy. */
   fornitoreNonOriginale: string;
   codiceFornitoreNonOriginale: string;
   prezzoFornitoreNonOriginale: number;

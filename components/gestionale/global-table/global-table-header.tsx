@@ -78,6 +78,19 @@ function isTableCellElement(node: ReactNode): boolean {
   return isValidElement(node) && (node.type === "th" || node.type === "td");
 }
 
+/** `Tooltip` restituisce un Fragment — non può essere figlio diretto di `<tr>`. */
+function isTooltipElement(el: ReactElement): boolean {
+  if (typeof el.type !== "function") return false;
+  return (el.type as { name?: string }).name === "Tooltip";
+}
+
+function unwrapTooltipTableCell(child: ReactNode): ReactNode {
+  if (!isValidElement(child) || !isTooltipElement(child)) return child;
+  const inner = (child.props as { children?: ReactNode }).children;
+  if (isValidElement(inner) && isTableCellElement(inner)) return inner;
+  return child;
+}
+
 function isHeadLabelElement(el: ReactElement): boolean {
   if (typeof el.type !== "function") return false;
   return (el.type as { displayName?: string }).displayName === "GlobalTableHeadLabel";
@@ -87,7 +100,7 @@ function cellFromChild(child: ReactNode, index: number): ReactNode {
   if (child == null || child === false) return null;
   if (!isValidElement(child)) return null;
 
-  const el = child as ReactElement;
+  const el = unwrapTooltipTableCell(child) as ReactElement;
   const key = el.key ?? index;
 
   if (isTableCellElement(el)) {

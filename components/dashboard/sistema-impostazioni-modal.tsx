@@ -3,10 +3,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { Drawer } from "@/components/design-system";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { LavorazioniModalHeader, LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
@@ -33,6 +36,11 @@ import { normalizeStatiList } from "@/lib/lavorazioni/stati-normalize";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
+import {
+  MagazzinoFornitoriProduttoriSettings,
+  magazzinoMasterOnFornitoreRemove,
+  magazzinoMasterOnFornitoreRename,
+} from "@/components/dashboard/magazzino-fornitori-produttori-settings";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import type { RicambioCompatRef } from "@/lib/magazzino/ricambio-compat-resolver";
 import {
@@ -52,7 +60,14 @@ import {
   setScontoRicambiCliente,
 } from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
-import { appendDashboardSettingsSavedLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
+import { ConfigurazioneLogListEmbedded } from "@/components/configurazione/configurazione-log-section";
+import {
+  appendConfigurazioneLogs,
+} from "@/lib/configurazione/configurazione-log-storage";
+import {
+  buildConfigurazioneLogEntriesFromSnapshotDiff,
+  type ConfigurazioneSettingsSnapshot,
+} from "@/lib/configurazione/settings-snapshot-log";
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
@@ -97,6 +112,7 @@ import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context"
 import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { usePermissions } from "@/src/hooks/use-permissions";
+import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { cancelRouteTransition } from "@/src/lib/navigation/route-transition";
 import {
   dsBtnPrimary,
@@ -112,17 +128,7 @@ function mergeMaster(a: string[], b: string[]) {
   return [...new Set([...a, ...b])].sort((x, y) => x.localeCompare(y, "it"));
 }
 
-type SistemaSettingsSnapshot = {
-  stati: StatoLavorazioneConfig[];
-  addettiRecords: AddettoRecord[];
-  addettoColors: Record<string, string>;
-  prioritaColors: Partial<Record<PrioritaLav, string>>;
-  prioritaDb: PrioritaLavorazione[];
-  mag: MagazzinoMasterPrefs;
-  liste: MezziListePrefs;
-  eco: SistemaPreventiviDefaults;
-  tipiAssenza: TipoAssenzaConfig[];
-};
+type SistemaSettingsSnapshot = ConfigurazioneSettingsSnapshot;
 
 function buildResolvedFromModalSnapshot(s: SistemaSettingsSnapshot): CabAppSettingsResolved {
   const synced = syncLavorazioniAddettiFromRecords(s.addettiRecords);
@@ -165,6 +171,7 @@ function snapshotFromResolved(r: CabAppSettingsResolved): SistemaSettingsSnapsho
       categorie: [...r.magazzinoMaster.categorie],
       mezziCompatibili: [...r.magazzinoMaster.mezziCompatibili],
       fornitori: [...(r.magazzinoMaster.fornitori ?? [])],
+      produttoriByFornitore: { ...(r.magazzinoMaster.produttoriByFornitore ?? {}) },
     },
     liste: migrateMezziListePrefs(r.mezziListe),
     eco: { ...r.preventiviDefaults },
@@ -799,6 +806,7 @@ function SistemaImpostazioniWorkspace({
   const { authorName } = useAuth();
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
+  const router = useRouter();
   const queryClient = useQueryClient();
   const mezziListQ = useMezziListQuery(undefined, { enabled: open });
   const [migratePreventiviPending, setMigratePreventiviPending] = useState(false);
@@ -824,6 +832,12 @@ function SistemaImpostazioniWorkspace({
   const [navQ, setNavQ] = useState("");
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopNavOpen, setDesktopNavOpen] = useState(true);
+  const [configLogOpen, setConfigLogOpen] = useState(false);
+  const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+
+  type PendingSettingsExit = { kind: "close" } | { kind: "navigate"; href: string };
+  const pendingExitRef = useRef<PendingSettingsExit | null>(null);
+  const exitAfterSaveRef = useRef(false);
 
   const attiveStatoIds = useMemo(() => {
     const d = statiInUsoQ.data;
@@ -973,18 +987,36 @@ function SistemaImpostazioniWorkspace({
     } catch {
       return false;
     }
-    appendDashboardSettingsSavedLog(authorName);
+    const before = savedSnapshotRef.current;
+    if (before) {
+      appendConfigurazioneLogs(buildConfigurazioneLogEntriesFromSnapshotDiff(before, s, authorName));
+    }
     suppressSettingsRemoteNotify(8000);
     savedSnapshotRef.current = s;
     setSavedSnapshotKey(snapshotKey(s));
     return true;
   }, [bulkSave, lavPrefsHydrated, magHydrated, mezziHydrated, ecoHydrated, dipHydrated, settingsRows, authorName]);
 
+  const completePendingExit = useCallback(() => {
+    const action = pendingExitRef.current;
+    pendingExitRef.current = null;
+    exitAfterSaveRef.current = false;
+    setUnsavedExitOpen(false);
+    if (!action) return;
+    if (action.kind === "close") {
+      onClose?.();
+      return;
+    }
+    router.push(action.href);
+  }, [onClose, router]);
+
   const finalizePropaga = useCallback(async (propagate: boolean) => {
+    const shouldExitAfter = exitAfterSaveRef.current;
     if (!propagate) {
       renameQueueRef.current = [];
       setPropagaOpen(false);
       gestToast.successSaved();
+      if (shouldExitAfter) completePendingExit();
       return;
     }
     setPropagaPending(true);
@@ -993,6 +1025,7 @@ function SistemaImpostazioniWorkspace({
     setPropagaOpen(false);
     if (!res.success) {
       gestToast.errorOnce("settings-propaga", res.error ?? "Propagazione non riuscita", { action: "update" });
+      exitAfterSaveRef.current = false;
       return;
     }
     const propagatedKinds = renameQueueRef.current.map((e) => e.kind);
@@ -1003,7 +1036,8 @@ function SistemaImpostazioniWorkspace({
       "settings-propaga",
       total > 0 ? `Salvataggio completato — ${total} record aggiornati` : "Salvataggio completato",
     );
-  }, [gestToast, queryClient]);
+    if (shouldExitAfter) completePendingExit();
+  }, [completePendingExit, gestToast, queryClient]);
 
   const runPreventiviLocalMigration = useCallback(async () => {
     if (migratePreventiviPending) return;
@@ -1067,22 +1101,51 @@ function SistemaImpostazioniWorkspace({
     setDipHydrated(true);
   }, []);
 
-  const confirmDiscardChanges = useCallback(async () => {
-    if (!isDirty) return true;
-    return confirm({
-      title: "Uscire senza salvare?",
-      message: "Hai modifiche non salvate. Vuoi davvero uscire?",
-      destructive: true,
-      confirmLabel: "Esci",
-    });
-  }, [confirm, isDirty]);
+  const openUnsavedExitDialog = useCallback((action: PendingSettingsExit) => {
+    pendingExitRef.current = action;
+    setUnsavedExitOpen(true);
+  }, []);
 
   const handleRequestClose = useCallback(() => {
-    void confirmDiscardChanges().then((ok) => {
-      if (!ok) return;
+    if (!isDirty) {
       onClose?.();
+      return;
+    }
+    openUnsavedExitDialog({ kind: "close" });
+  }, [isDirty, onClose, openUnsavedExitDialog]);
+
+  const handleUnsavedStay = useCallback(() => {
+    pendingExitRef.current = null;
+    exitAfterSaveRef.current = false;
+    setUnsavedExitOpen(false);
+  }, []);
+
+  const handleUnsavedDiscard = useCallback(() => {
+    const s = savedSnapshotRef.current;
+    if (s) {
+      applySnapshot(s);
+      setSavedSnapshotKey(snapshotKey(s));
+    }
+    completePendingExit();
+  }, [applySnapshot, completePendingExit]);
+
+  const handleUnsavedSaveAndExit = useCallback(() => {
+    void saveNow().then((ok) => {
+      if (!ok) {
+        gestToast.errorOnce("settings-save", "Salvataggio configurazione non riuscito");
+        return;
+      }
+      if (renameQueueRef.current.length > 0) {
+        exitAfterSaveRef.current = true;
+        setPropagaEntries([...renameQueueRef.current]);
+        setPropagaOpen(true);
+        setUnsavedExitOpen(false);
+        return;
+      }
+      gestToast.successSaved();
+      completePendingExit();
     });
-  }, [confirmDiscardChanges, onClose]);
+  }, [completePendingExit, gestToast, saveNow]);
 
   const handleSaveNow = useCallback(() => {
     void saveNow().then((ok) => {
@@ -1138,17 +1201,15 @@ function SistemaImpostazioniWorkspace({
       if (anchor.target && anchor.target !== "_self") return;
       if (anchor.origin !== window.location.origin) return;
       if (anchor.pathname === window.location.pathname && anchor.search === window.location.search && anchor.hash === window.location.hash) return;
-      void confirmDiscardChanges().then((ok) => {
-        if (!ok) return;
-        e.preventDefault();
-        e.stopPropagation();
-        cancelRouteTransition();
-      });
-      return;
+      e.preventDefault();
+      e.stopPropagation();
+      cancelRouteTransition();
+      const href = `${anchor.pathname}${anchor.search}${anchor.hash}`;
+      openUnsavedExitDialog({ kind: "navigate", href });
     }
     document.addEventListener("click", onDocumentClick, true);
     return () => document.removeEventListener("click", onDocumentClick, true);
-  }, [isDirty, confirmDiscardChanges]);
+  }, [isDirty, openUnsavedExitDialog]);
 
   useEffect(() => () => cancelRouteTransition(), []);
 
@@ -1488,13 +1549,25 @@ function SistemaImpostazioniWorkspace({
                     }
                   }}
                   onRemove={(m) => {
-                    patchMag((prev) => ({ ...prev, fornitori: prev.fornitori.filter((x) => x !== m) }));
+                    patchMag((prev) =>
+                      magazzinoMasterOnFornitoreRemove(
+                        { ...prev, fornitori: prev.fornitori.filter((x) => x !== m) },
+                        m,
+                      ),
+                    );
                   }}
                   onRename={(from, to) => {
-                    patchMag((prev) => ({ ...prev, fornitori: renameInStringList(prev.fornitori, from, to) }));
+                    patchMag((prev) =>
+                      magazzinoMasterOnFornitoreRename(
+                        { ...prev, fornitori: renameInStringList(prev.fornitori, from, to) },
+                        from,
+                        to,
+                      ),
+                    );
                     queueRename({ kind: "mag_fornitore", from, to });
                   }}
                 />
+                <MagazzinoFornitoriProduttoriSettings mag={mag} patchMag={patchMag} />
               </div>
             ) : null}
 
@@ -1763,12 +1836,25 @@ function SistemaImpostazioniWorkspace({
       />
       {addettiSimilarDialog}
       {confirmDialog}
+      <GestionaleUnsavedChangesDialog
+        open={unsavedExitOpen}
+        placement="stacked"
+        title="Modifiche non salvate"
+        message="Hai modifiche non salvate alla configurazione. Come vuoi procedere?"
+        stayLabel="Torna indietro"
+        discardLabel="Esci senza salvare"
+        saveAndExitLabel="Salva ed esci"
+        pending={bulkSave.isPending}
+        onStay={handleUnsavedStay}
+        onDiscard={handleUnsavedDiscard}
+        onSaveAndExit={handleUnsavedSaveAndExit}
+      />
     </>
   );
 
   if (pageMode) {
     return (
-      <div className={dsStackPage}>
+      <>
         <PageHeader
           title="Configurazione"
           belowTitle={
@@ -1788,36 +1874,54 @@ function SistemaImpostazioniWorkspace({
             </>
           }
           actions={
-            <>
-              {isDirty ? (
-                <span className={`${dsPageToolbarMetaChipAccent} hidden sm:inline-flex`} role="status">
-                  Modifiche non salvate
-                </span>
-              ) : null}
-              <button
-                type="button"
-                className={erpBtnNeutral}
-                onClick={handleCancelChanges}
-                disabled={!isDirty || bulkSave.isPending}
-                title="Ripristina le modifiche non salvate"
-              >
-                Annulla modifiche
-              </button>
-              <button
-                type="button"
-                className={dsBtnPrimary}
-                onClick={handleSaveNow}
-                disabled={!isDirty || bulkSave.isPending}
-                title="Salva tutte le modifiche alla configurazione globale"
-                aria-busy={bulkSave.isPending}
-              >
-                {bulkSave.isPending ? "Salvataggio…" : isDirty ? "Salva modifiche" : "Salva"}
-              </button>
-            </>
+            <GestionalePageToolbarActions
+              canUndo={false}
+              undoDisabled
+              onOpenLog={() => setConfigLogOpen(true)}
+              logTitle="Storico modifiche configurazione"
+              overflowActions={
+                <>
+                  {isDirty ? (
+                    <span className={`${dsPageToolbarMetaChipAccent} hidden sm:inline-flex`} role="status">
+                      Modifiche non salvate
+                    </span>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={erpBtnNeutral}
+                    onClick={handleCancelChanges}
+                    disabled={!isDirty || bulkSave.isPending}
+                    title="Ripristina le modifiche non salvate"
+                  >
+                    Annulla modifiche
+                  </button>
+                  <button
+                    type="button"
+                    className={dsBtnPrimary}
+                    onClick={handleSaveNow}
+                    disabled={!isDirty || bulkSave.isPending}
+                    title="Salva tutte le modifiche alla configurazione globale"
+                    aria-busy={bulkSave.isPending}
+                  >
+                    {bulkSave.isPending ? "Salvataggio…" : isDirty ? "Salva modifiche" : "Salva"}
+                  </button>
+                </>
+              }
+            />
           }
         />
         {content}
-      </div>
+        <Drawer
+          open={configLogOpen}
+          onClose={() => setConfigLogOpen(false)}
+          title="Log modifiche"
+          ariaLabel="Log modifiche configurazione"
+        >
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3">
+            <ConfigurazioneLogListEmbedded paged />
+          </div>
+        </Drawer>
+      </>
     );
   }
 

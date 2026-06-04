@@ -6,4 +6,6 @@ export type PublicAuthUser = {
   email: string;
   nome: string;
   ruolo: RuoloUtente;
+  /** Label cliente (`mezzi.cliente`) per portale e RLS. */
+  clienteRef: string | null;
 };

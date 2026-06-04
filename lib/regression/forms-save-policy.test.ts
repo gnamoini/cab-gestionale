@@ -15,6 +15,8 @@ const impostazioni = read("components/dashboard/sistema-impostazioni-modal.tsx")
 const preventivi = read("components/preventivi/preventivi-editor-modal.tsx");
 const schede = read("components/lavorazioni/schede/schede-lavorazione-modal.tsx");
 const promemoria = read("components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx");
+const securityBatch = read("src/actions/security-users-permissions.ts");
+const securityTable = read("components/dashboard/security/security-users-table.tsx");
 
 assert.match(bunderEditor, /GestionaleUnsavedChangesDialog/);
 assert.match(bunderEditor, /useBeforeUnloadWhenDirty/);
@@ -27,9 +29,18 @@ assert.match(dipendentiHook, /pagehide/);
 assert.match(dipendentiHook, /beforeunload/);
 
 assert.match(impostazioni, /beforeunload/);
+assert.match(impostazioni, /GestionaleUnsavedChangesDialog/);
+assert.match(impostazioni, /Torna indietro/);
+assert.match(impostazioni, /Salva ed esci/);
+assert.match(impostazioni, /Esci senza salvare/);
 assert.match(preventivi, /GestionaleUnsavedChangesDialog/);
 assert.match(schede, /GestionaleUnsavedChangesDialog/);
 assert.match(promemoria, /GestionaleUnsavedChangesDialog/);
 assert.match(promemoria, /useBeforeUnloadWhenDirty/);
+
+assert.match(securityBatch, /cliente_ref/);
+assert.match(securityBatch, /clienteRef/);
+assert.match(securityTable, /clienteRef/);
+assert.match(securityTable, /mezzi:clienti/);
 
 console.log("forms-save-policy.test.ts OK");

@@ -3,6 +3,10 @@ import type { DocumentoInsert, DocumentoUpdate } from "@/src/services/documenti.
 import type { CategoriaDocumento, DocumentoRow } from "@/src/types/supabase-tables";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { mapStorageError } from "@/src/lib/storage/storage-errors";
+import {
+  classifyDocumentoStorageOpenError,
+  type DocumentoFileOpenResult,
+} from "@/lib/documenti/documento-file-access";
 import { documentoStoragePathFromStored } from "@/lib/documenti/storage-path-from-stored";
 import {
   buildDocumentoStoragePath,
@@ -109,20 +113,47 @@ export async function uploadDocumentoFile(file: File): Promise<ServiceResult<str
 }
 
 /** URL firmato (unica modalità di accesso file persistiti su bucket `documenti`). */
+export async function resolveDocumentoFileUrlSignedResult(
+  row: Pick<DocumentoRow, "url_file">,
+  doc?: DocumentoGestionale,
+): Promise<DocumentoFileOpenResult> {
+  const blob = doc?.urlBlob?.trim();
+  if (blob && /^blob:/i.test(blob)) return { ok: true, href: blob };
+
+  const raw = row.url_file?.trim() || doc?.urlDocumento?.trim() || "";
+  if (!raw) {
+    return { ok: false, code: "no_path", message: "File non collegato al documento." };
+  }
+
+  const path = documentoStoragePathFromStored(raw);
+  if (!path) {
+    const legacy = /^https?:\/\//i.test(raw);
+    return {
+      ok: false,
+      code: legacy ? "legacy_unparsed" : "no_path",
+      message: legacy
+        ? "URL archivio obsoleto. Ricarica il documento."
+        : "Percorso file non valido in archivio.",
+    };
+  }
+
+  try {
+    const href = await storageCreateSignedUrl(STORAGE_BUCKETS.documenti, path, DOCUMENTO_SIGNED_URL_TTL_SEC);
+    return { ok: true, href };
+  } catch (e) {
+    const code = classifyDocumentoStorageOpenError(e);
+    return {
+      ok: false,
+      code,
+      message: mapStorageError(e, STORAGE_BUCKETS.documenti),
+    };
+  }
+}
+
 export async function resolveDocumentoFileUrlSigned(
   row: Pick<DocumentoRow, "url_file">,
   doc?: DocumentoGestionale,
 ): Promise<string | null> {
-  const blob = doc?.urlBlob?.trim();
-  if (blob && /^blob:/i.test(blob)) return blob;
-
-  const raw = row.url_file?.trim() || doc?.urlDocumento?.trim() || "";
-  const path = documentoStoragePathFromStored(raw);
-  if (!path) return null;
-
-  try {
-    return await storageCreateSignedUrl(STORAGE_BUCKETS.documenti, path, DOCUMENTO_SIGNED_URL_TTL_SEC);
-  } catch {
-    return null;
-  }
+  const result = await resolveDocumentoFileUrlSignedResult(row, doc);
+  return result.ok ? result.href : null;
 }

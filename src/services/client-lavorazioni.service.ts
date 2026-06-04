@@ -2,7 +2,8 @@
 
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
-import { ensureClientLavorazioniAccess } from "@/src/lib/auth/permission-guards";
+import { lavorazioneMatchesClienteScope, normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
+import { ensureClientLavorazioniAccess, loadCallerClienteRef } from "@/src/lib/auth/permission-guards";
 import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
@@ -51,6 +52,11 @@ export const clientLavorazioniService = {
         { ...rest, archived: rest.archived === true, mezzo } as LavorazioneListRow,
         settingsStati,
       );
+
+      const clienteRef = await loadCallerClienteRef();
+      if (normalizeClienteRef(clienteRef) && !lavorazioneMatchesClienteScope(row, clienteRef)) {
+        return err("Lavorazione non trovata.");
+      }
 
       const logsRes = await logService.getAll({
         entita: "lavorazioni",

@@ -4,30 +4,18 @@ import {
   CACHE_DRIFT_WARN_MS,
   detectCacheDrift,
 } from "@/lib/report/report-data-integrity-layer";
+import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 
-const ricambio: RicambioMagazzino = {
+const ricambio: RicambioMagazzino = defaultRicambioMagazzinoFields({
   id: "r1",
   marca: "Bosch",
   codiceFornitoreOriginale: "X1",
-  codiceFornitoreOriginaleSecondario: "",
   descrizione: "Filtro",
-  note: "",
-  categoria: "",
-  compatibilitaMezzi: [],
   scorta: 5,
-  scortaMinima: 0,
-  dataUltimaModifica: "2026-01-01T00:00:00.000Z",
-  autoreUltimaModifica: "",
   prezzoFornitoreOriginale: 10,
-  scontoFornitoreOriginale: 0,
-  markupPercentuale: 0,
   prezzoVendita: 12,
-  fornitoreNonOriginale: "",
-  codiceFornitoreNonOriginale: "",
-  prezzoFornitoreNonOriginale: 0,
-  scontoFornitoreNonOriginale: 0,
-};
+});
 
 const baseInput = {
   lavorazioniRaw: [],

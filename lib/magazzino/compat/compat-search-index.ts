@@ -19,15 +19,21 @@ export function normalizedSearchIndex(
 
   const resolved = resolveCompatibilitaRicambio(ricambio, liste);
 
+  const alt = ricambio.fornitoriAlternativi ?? [];
   return buildNormalizedSearchHaystack([
     ricambio.marca,
     ricambio.codiceFornitoreOriginale,
     ricambio.codiceFornitoreOriginaleSecondario,
+    ricambio.marcaOriginaleSecondaria,
+    ricambio.usatoInTagliandi ? "tagliando" : "",
     ricambio.codiceFornitoreNonOriginale,
     ricambio.descrizione,
     ricambio.note,
     ricambio.categoria,
     ricambio.fornitoreNonOriginale,
+    ...alt.map((a) => a.fornitore),
+    ...alt.map((a) => a.produttore),
+    ...alt.map((a) => a.codice),
     ...resolved.labels,
     ...resolved.displayLines,
     resolved.display,

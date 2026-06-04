@@ -12,6 +12,7 @@ import { GestionaleNotificationsBridge } from "@/src/components/gestionale-notif
 import { GestionaleRealtimeBridge } from "@/src/components/gestionale-realtime-bridge";
 import { GestionaleSnapshotRecoveryBridge } from "@/src/components/gestionale-snapshot-recovery-bridge";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
+import { DesktopNotificationPermissionPrompt } from "@/src/components/desktop-notification-permission-prompt";
 
 /**
  * Monta i bridge realtime/notifiche solo dopo sessione stabile e primo frame,
@@ -49,6 +50,7 @@ export function DeferredGestionaleBridges() {
 
   return (
     <>
+      <DesktopNotificationPermissionPrompt />
       <GestionaleRealtimeBridge />
       <GestionaleNotificationsBridge />
       <AdminLavorazioniNotificationBridge />

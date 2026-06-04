@@ -15,6 +15,7 @@ import {
   removeDashboardSistemaLogEntryById,
   type DashboardSistemaLogStored,
 } from "@/lib/dashboard/dashboard-sistema-log-storage";
+import { migrateLegacyDashboardSettingsLogsToConfigurazione } from "@/lib/configurazione/configurazione-log-storage";
 import { CAB_DASHBOARD_SISTEMA_LOG_REFRESH } from "@/lib/sistema/cab-events";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -72,6 +73,7 @@ function useDashboardSistemaLogEntries(): DashboardSistemaLogStored[] {
 
   useEffect(() => {
     function refresh() {
+      migrateLegacyDashboardSettingsLogsToConfigurazione();
       setEntries(loadDashboardSistemaLog());
     }
     refresh();
@@ -126,7 +128,7 @@ export function DashboardSistemaLogListEmbedded({
   const list = (
     <>
       {slice.length === 0 ? (
-        <GestionaleLogEmpty message="Nessuna attività registrata. Le modifiche da Impostazioni e dalle attività compaiono qui." />
+        <GestionaleLogEmpty message="Nessuna attività registrata. Le modifiche ai widget della dashboard (es. Cose da fare) compaiono qui." />
       ) : (
         <GestionaleLogList>
           {slice.map((e) => (

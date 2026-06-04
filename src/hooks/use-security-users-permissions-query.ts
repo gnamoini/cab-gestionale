@@ -6,11 +6,13 @@ import {
   type SecurityUserPermissionRow,
 } from "@/src/actions/security-users-permissions";
 import { QK } from "@/src/lib/react-query/invalidate-related";
+import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
 /** Dato normalizzato in cache React Query — sempre stessa shape. */
 export type SecurityUsersQueryData = {
   users: SecurityUserPermissionRow[];
   portalSettingsUpdatedAt: string | null;
+  permissionRows: UserPermissionRow[];
 };
 
 export async function fetchSecurityUsersPermissionsQuery(): Promise<SecurityUsersQueryData> {
@@ -19,6 +21,7 @@ export async function fetchSecurityUsersPermissionsQuery(): Promise<SecurityUser
   return {
     users: res.users,
     portalSettingsUpdatedAt: res.portalSettingsUpdatedAt,
+    permissionRows: res.permissionRows,
   };
 }
 
@@ -43,5 +46,6 @@ export function useSecurityUsersPermissionsQuery(enabled = true) {
     ...query,
     users,
     portalSettingsUpdatedAt: query.data?.portalSettingsUpdatedAt ?? null,
+    permissionRows: query.data?.permissionRows ?? [],
   };
 }

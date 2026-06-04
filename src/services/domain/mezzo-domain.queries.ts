@@ -48,7 +48,7 @@ export function useMezzoLavorazioni(mezzoId: string | undefined) {
   const id = mezzoIdOrEmpty(mezzoId);
   const filters = useMemo((): LavorazioneFilters | undefined => (id ? { mezzo_id: id, includeMezzo: true } : undefined), [id]);
   const fk = stableLavorazioniFiltersKey(filters);
-  return useServiceQuery(lavorazioniDomainQueryKeys.list(fk), () => lavorazioniService.getAll(filters!), {
+  return useServiceQuery(lavorazioniDomainQueryKeys.list(fk, false), () => lavorazioniService.getAll(filters!), {
     enabled: id.length > 0,
     staleTime: MEZZO_ATOMIC_STALE_MS,
   });

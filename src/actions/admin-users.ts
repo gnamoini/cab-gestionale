@@ -7,6 +7,7 @@ import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-c
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
 import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
+import { normalizeClienteRef, validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
 import { validateCreateUserInput } from "@/lib/validation/admin-user-validation";
 import { validateUpdateUserRoleInput } from "@/lib/validation/security-actions-validation";
 import type { ProfileRow } from "@/src/types/supabase-tables";
@@ -19,6 +20,7 @@ export type CreateUserByAdminInput = {
   email: string;
   password: string;
   ruolo: AppRole;
+  clienteRef?: string | null;
 };
 
 export type CreateUserByAdminResult =
@@ -35,6 +37,7 @@ export type SecurityUserAdminRow = {
   username: string | null;
   email: string;
   ruolo: AppRole;
+  clienteRef: string | null;
   createdAt: string | null;
   lastSignInAt: string | null;
 };
@@ -142,6 +145,7 @@ function userRowFrom(profile: ProfileRow | undefined, authUser?: { id: string; e
     username: profile?.username?.trim() || null,
     email: authUser?.email ?? "",
     ruolo: resolveRole(profile?.ruolo),
+    clienteRef: normalizeClienteRef(profile?.cliente_ref),
     createdAt: authUser?.created_at ?? profile?.created_at ?? null,
     lastSignInAt: authUser?.last_sign_in_at ?? null,
   };
@@ -157,9 +161,13 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
   const email = input.email?.trim().toLowerCase() ?? "";
   const password = input.password ?? "";
   const ruolo = resolveRole(input.ruolo);
+  const clienteRef = normalizeClienteRef(input.clienteRef);
 
   const validationErr = validateCreateUserInput({ nome, username, email, password, ruolo });
   if (validationErr) return { ok: false, message: validationErr };
+
+  const clienteRefErr = validateClienteRefForRole(ruolo, clienteRef);
+  if (clienteRefErr) return { ok: false, message: clienteRefErr };
 
   if (!nome) return { ok: false, message: "Il nome è obbligatorio." };
   const usernameErr = usernameFieldError(username);
@@ -223,6 +231,11 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
       message:
         "Utente Auth creato ma il profilo non risulta presente. Verifica trigger `handle_new_user` e migrazioni; potrebbe essere necessario aggiornare il profilo da Supabase Dashboard.",
     };
+  }
+
+  if (clienteRef != null || ruolo === "cliente") {
+    const { error: clienteErr } = await admin.from("profiles").update({ cliente_ref: clienteRef }).eq("id", userId);
+    if (clienteErr) return { ok: false, message: clienteErr.message };
   }
 
   if (row.username !== username) {

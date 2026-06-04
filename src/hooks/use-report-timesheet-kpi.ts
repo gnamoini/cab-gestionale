@@ -2,8 +2,10 @@
 
 import { useMemo } from "react";
 import type { DateRange } from "@/lib/report/date-ranges";
+import { filterEntriesForReportTimesheetKpi } from "@/lib/dipendenti/timesheet-report-kpi-filter";
 import { dateYmdFromDate, formatMonthLabel, monthKeyFromDate, shiftMonthKey } from "@/lib/dipendenti/timesheet-month";
 import type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
@@ -20,6 +22,9 @@ function reportTimesheetPeriodLabel(range: DateRange): string {
 }
 
 export function useReportTimesheetKpi(filterRange: DateRange) {
+  const { dipendenti: dipendentiOpts } = useGlobalOptions({ debugTag: "useReportTimesheetKpi" });
+  const tipiAssenza = dipendentiOpts.tipiAssenza;
+
   const from = dateYmdFromDate(filterRange.start);
   const to = dateYmdFromDate(filterRange.end);
   const monthKeyEnd = monthKeyFromDate(filterRange.end);
@@ -47,16 +52,28 @@ export function useReportTimesheetKpi(filterRange: DateRange) {
     employeesQuery.isPending || entriesQuery.isPending || (singleMonth && previousMonthQuery.isPending);
   const isError = employeesQuery.isError || entriesQuery.isError;
 
+  const rawEntries = (entriesQuery.data ?? []) as DipendenteTimesheetEntryRow[];
+  const rawPreviousEntries = singleMonth
+    ? ((previousMonthQuery.data ?? []) as DipendenteTimesheetEntryRow[])
+    : [];
+
+  const entries = useMemo(
+    () => filterEntriesForReportTimesheetKpi(rawEntries, tipiAssenza),
+    [rawEntries, tipiAssenza],
+  );
+  const previousMonthEntries = useMemo(
+    () => filterEntriesForReportTimesheetKpi(rawPreviousEntries, tipiAssenza),
+    [rawPreviousEntries, tipiAssenza],
+  );
+
   return {
     periodLabel,
     singleMonth,
     isLoading,
     isError,
     employees: (employeesQuery.data ?? []) as DipendenteTimesheetEmployeeRow[],
-    entries: (entriesQuery.data ?? []) as DipendenteTimesheetEntryRow[],
-    previousMonthEntries: singleMonth
-      ? ((previousMonthQuery.data ?? []) as DipendenteTimesheetEntryRow[])
-      : [],
+    entries,
+    previousMonthEntries,
     refetch: () => {
       void employeesQuery.refetch();
       void entriesQuery.refetch();

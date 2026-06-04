@@ -28,7 +28,8 @@ export function ReportTeamTimesheetZone({ filterRange }: { filterRange: DateRang
           <Link href="/dipendenti" className="font-medium text-[color:var(--cab-text)] underline-offset-2 hover:underline">
             Dipendenti
           </Link>
-          , allineate al periodo selezionato in toolbar.
+          , allineate al periodo selezionato in toolbar. Negli indicatori non si contano le assenze registrate nei
+          weekend né quelle di tipo festività.
         </p>
 
         <div className="mt-4 min-w-0">

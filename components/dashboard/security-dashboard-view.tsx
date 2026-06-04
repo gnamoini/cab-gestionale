@@ -12,11 +12,7 @@ import { PageHeader } from "@/components/gestionale/page-header";
 import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityUsersPermissionsPanel } from "@/components/dashboard/security/security-users-permissions-panel";
-import { SecurityRoleBadge } from "@/components/dashboard/security/security-role-badge";
-import { Drawer, LoadingFormSkeleton } from "@/components/design-system";
-import {
-  type SecurityUserPermissionRow,
-} from "@/src/actions/security-users-permissions";
+import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
 import { resetGlobalChangeLogsByAdminAction } from "@/src/actions/admin-users";
 import { useSecurityUsersPermissionsQuery } from "@/src/hooks/use-security-users-permissions-query";
 import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
@@ -39,7 +35,7 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { useSecurityViewQueryOpts } from "@/lib/view/view-query-opts";
-import { useSecurityDashboardData, useSecurityProfilesQuery } from "@/src/hooks/use-security-dashboard-data";
+import { useSecurityDashboardData } from "@/src/hooks/use-security-dashboard-data";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { AuthLogWithProfileRow, LogModificaRow } from "@/src/types/supabase-tables";
 import {
@@ -49,25 +45,17 @@ import {
   type PilotControlStatus,
 } from "@/src/actions/security-release-control";
 
-type UserActivityRow =
-  | {
-      id: string;
-      source: "audit";
-      action: string;
-      entita: string;
-      when: string;
-      actor: string;
-      detail: string;
-    }
-  | {
-      id: string;
-      source: "auth";
-      action: string;
-      entita: string;
-      when: string;
-      actor: string;
-      detail: string;
-    };
+type SecurityDashboardTab = "users" | "monitoring" | "release";
+
+type RecentActivityRow = {
+  id: string;
+  source: "audit";
+  action: string;
+  entita: string;
+  when: string;
+  actor: string;
+  detail: string;
+};
 
 function fmtYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -92,10 +80,6 @@ function truncateUa(ua: string | null, max = 72): string {
   const t = ua.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max - 1)}…`;
-}
-
-function fmtNullableWhen(iso: string | null): string {
-  return iso ? fmtWhen(iso) : "—";
 }
 
 function payloadDetail(payload: unknown): string {
@@ -202,65 +186,13 @@ function LastAccessTable({
   );
 }
 
-function useUserActivity(userId: string | null, enabled: boolean) {
-  const securityOpts = useSecurityViewQueryOpts();
-  return useQuery({
-    queryKey: [...QK.log, "user-activity", userId ?? "none"],
-    enabled: enabled && !!userId,
-    ...securityOpts,
-    queryFn: async (): Promise<UserActivityRow[]> => {
-      if (!userId) return [];
-      const sb = getBrowserSupabase();
-      const [audit, auth] = await Promise.all([
-        sb
-          .from("log_modifiche")
-          .select("*, profiles!log_modifiche_autore_id_fkey(id,nome)")
-          .eq("autore_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(35),
-        sb
-          .from("auth_logs")
-          .select("*")
-          .eq("user_id", userId)
-          .order("created_at", { ascending: false })
-          .limit(20),
-      ]);
-      if (audit.error) throw new Error(audit.error.message);
-      if (auth.error) throw new Error(auth.error.message);
-      const auditRows = ((audit.data ?? []) as Array<LogModificaRow & { profiles?: { nome?: string | null } | null }>).map(
-        (r): UserActivityRow => ({
-          id: `audit-${r.id}`,
-          source: "audit",
-          action: r.azione,
-          entita: r.entita,
-          when: r.created_at,
-          actor: r.profiles?.nome?.trim() || "—",
-          detail: payloadDetail(r.payload),
-        }),
-      );
-      const authRows = ((auth.data ?? []) as AuthLogWithProfileRow[]).map(
-        (r): UserActivityRow => ({
-          id: `auth-${r.id}`,
-          source: "auth",
-          action: r.action.toUpperCase(),
-          entita: "auth",
-          when: r.created_at,
-          actor: r.email,
-          detail: r.action === "login" ? "Login" : r.action === "logout" ? "Logout" : "Login fallito",
-        }),
-      );
-      return [...auditRows, ...authRows].sort((a, b) => (a.when < b.when ? 1 : -1)).slice(0, 50);
-    },
-  });
-}
-
 function useRecentSystemActivity(enabled: boolean) {
   const securityOpts = useSecurityViewQueryOpts();
   return useQuery({
     queryKey: [...QK.log, "security-recent"],
     enabled,
     ...securityOpts,
-    queryFn: async (): Promise<UserActivityRow[]> => {
+    queryFn: async (): Promise<RecentActivityRow[]> => {
       const sb = getBrowserSupabase();
       const { data, error } = await sb
         .from("log_modifiche")
@@ -281,81 +213,6 @@ function useRecentSystemActivity(enabled: boolean) {
   });
 }
 
-function UserDetailDrawer({
-  user,
-  open,
-  onClose,
-}: {
-  user: SecurityUserPermissionRow | null;
-  open: boolean;
-  onClose: () => void;
-}) {
-  const activityQ = useUserActivity(user?.id ?? null, open && !!user);
-
-  return (
-    <Drawer open={open && !!user} onClose={onClose} title="Scheda utente" ariaLabel="Scheda utente">
-      {!user ? null : (
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-3 overflow-hidden p-3">
-          <div className="rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3">
-            <div className="flex flex-wrap items-start justify-between gap-2">
-              <div className="min-w-0">
-                <h3 className="truncate text-base font-semibold text-[color:var(--cab-text)]">{user.nome}</h3>
-                <p className="mt-0.5 truncate text-xs text-[color:var(--cab-text-muted)]">{user.email || "Email non disponibile"}</p>
-              </div>
-              <SecurityRoleBadge role={user.ruolo} />
-            </div>
-            <dl className="mt-3 grid gap-2 text-xs">
-              <div className="flex justify-between gap-3">
-                <dt className="text-[color:var(--cab-text-muted)]">Creato</dt>
-                <dd className="text-right tabular-nums text-[color:var(--cab-text)]">{fmtNullableWhen(user.createdAt)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-[color:var(--cab-text-muted)]">Ultimo accesso</dt>
-                <dd className="text-right tabular-nums text-[color:var(--cab-text)]">{fmtNullableWhen(user.lastSignInAt)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt className="text-[color:var(--cab-text-muted)]">Id profilo</dt>
-                <dd className="max-w-[12rem] truncate text-right font-mono text-[10px] text-[color:var(--cab-text)]">{user.id}</dd>
-              </div>
-            </dl>
-          </div>
-
-          <div className="min-h-0 min-w-0 flex-1 overflow-hidden rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)]">
-            <div className="border-b border-[color:var(--cab-border)] px-3 py-2">
-              <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Ultime azioni / modifiche</h3>
-            </div>
-            <div className="gestionale-scrollbar max-h-[min(62dvh,34rem)] overflow-y-auto">
-              {activityQ.isLoading ? (
-                <div className="p-3" aria-busy="true" role="status" aria-label="Caricamento attività">
-                  <LoadingFormSkeleton fields={4} />
-                </div>
-              ) : activityQ.isError ? (
-                <p className="p-3 text-sm text-[color:var(--cab-danger)]">{activityQ.error.message}</p>
-              ) : (activityQ.data ?? []).length === 0 ? (
-                <p className="p-3 text-sm text-[color:var(--cab-text-muted)]">Nessuna attività recente.</p>
-              ) : (
-                <ul className="divide-y divide-[color:var(--cab-border)]">
-                  {(activityQ.data ?? []).map((row) => (
-                    <li key={row.id} className="px-3 py-2 text-xs">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <span className="font-semibold text-[color:var(--cab-text)]">{row.action}</span>
-                        <span className="tabular-nums text-[color:var(--cab-text-muted)]">{fmtWhen(row.when)}</span>
-                      </div>
-                      <p className="mt-1 text-[color:var(--cab-text-muted)]">
-                        {row.entita} · {row.detail}
-                      </p>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-    </Drawer>
-  );
-}
-
 export function SecurityDashboardView() {
   const { user } = useAuth();
   const permissions = usePermissions();
@@ -365,8 +222,8 @@ export function SecurityDashboardView() {
   const securityAccessLoggedRef = useRef(false);
   const hasReadinessSnapshotRef = useRef(false);
   const [range, setRange] = useState(defaultRange);
+  const [activeTab, setActiveTab] = useState<SecurityDashboardTab>("users");
   const [filterUserId, setFilterUserId] = useState<string | null>(null);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [resettingLogs, setResettingLogs] = useState(false);
   const queryClient = useQueryClient();
   const [pilotInfoExpanded, setPilotInfoExpanded] = useState(false);
@@ -387,15 +244,9 @@ export function SecurityDashboardView() {
     [range.dateFromYmd, range.dateToYmd, filterUserId],
   );
 
-  const profilesQ = useSecurityProfilesQuery(!!isAdmin);
   const dash = useSecurityDashboardData(filters);
   const usersQ = useSecurityUsersPermissionsQuery(!!isAdmin);
-  const recentActivityQ = useRecentSystemActivity(!!isAdmin);
-
-  const selectedUser = useMemo(
-    () => usersQ.users.find((u) => u.id === selectedUserId) ?? null,
-    [usersQ.users, selectedUserId],
-  );
+  const recentActivityQ = useRecentSystemActivity(!!isAdmin && activeTab === "monitoring");
 
   const runControlCenterCheck = useCallback(async (includeBuildChecks = false) => {
     setReadinessLoading(true);
@@ -521,11 +372,22 @@ export function SecurityDashboardView() {
   }
 
   const activeTodayRows = useMemo(() => {
-    const pmap = new Map((profilesQ.data ?? []).map((p) => [p.id, p.nome]));
+    const umap = new Map(usersQ.users.map((u) => [u.id, u.nome]));
     return activeTodayIds
-      .map((id) => ({ id, nome: pmap.get(id)?.trim() || "—" }))
+      .map((id) => ({ id, nome: umap.get(id)?.trim() || "—" }))
       .sort((a, b) => a.nome.localeCompare(b.nome, "it"));
-  }, [activeTodayIds, profilesQ.data]);
+  }, [activeTodayIds, usersQ.users]);
+
+  const filterUserItems = useMemo(
+    () => [
+      { value: "", label: "Tutti gli utenti" },
+      ...usersQ.users.map((u) => ({
+        value: u.id,
+        label: `${u.nome} (${roleLabel(u.ruolo)})`,
+      })),
+    ],
+    [usersQ.users],
+  );
 
   if (!isAdmin) {
     return (
@@ -550,61 +412,50 @@ export function SecurityDashboardView() {
 
   return (
     <div className={dsStackPage}>
-      <PageHeader
-        title="Sicurezza"
-        actions={
-          <div className={gestionalePageToolbarActionsClass}>
-            <button
-              type="button"
-              className={dsPageToolbarBtn}
-              onClick={() =>
-                void Promise.all([logsQuery.refetch(), recentActivityQ.refetch(), profilesQ.refetch()])
-              }
-              disabled={logsQuery.isFetching || recentActivityQ.isFetching}
-            >
-              {logsQuery.isFetching || recentActivityQ.isFetching ? "Aggiornamento…" : "Aggiorna dati"}
-            </button>
+      <PageHeader title="Sicurezza" />
+
+      <HubModalTabBar aria-label="Sezioni sicurezza" className="mb-1">
+        <HubModalTab
+          id="security-tab-users"
+          label="Utenti e permessi"
+          active={activeTab === "users"}
+          onSelect={() => setActiveTab("users")}
+          panelId="security-panel-users"
+        />
+        <HubModalTab
+          id="security-tab-monitoring"
+          label="Monitoraggio accessi"
+          active={activeTab === "monitoring"}
+          onSelect={() => setActiveTab("monitoring")}
+          panelId="security-panel-monitoring"
+        />
+        <HubModalTab
+          id="security-tab-release"
+          label="Release e pilot"
+          active={activeTab === "release"}
+          onSelect={() => setActiveTab("release")}
+          panelId="security-panel-release"
+        />
+      </HubModalTabBar>
+
+      {activeTab === "users" ? (
+        <div id="security-panel-users" role="tabpanel" aria-labelledby="security-tab-users">
+          <SecurityUsersPermissionsPanel readOnly={!isAdmin} />
+        </div>
+      ) : null}
+
+      {activeTab === "release" ? (
+        <ShellCard
+          id="security-panel-release"
+          title="Release e pilot"
+          subtitle="Pilot mode per operatori e checklist di readiness di produzione."
+        >
+          <div className={`${gestionalePageToolbarActionsClass} mb-4`}>
             <button type="button" className={dsPageToolbarBtn} onClick={() => void runControlCenterCheck(true)} disabled={readinessLoading}>
               {readinessLoading ? "Controllo…" : "Esegui checklist completa"}
             </button>
-            <button type="button" className={dsBtnDanger} onClick={() => void handleResetChangeLogs()} disabled={resettingLogs}>
-              {resettingLogs ? "Reset…" : "Resetta log modifiche"}
-            </button>
           </div>
-        }
-      />
-
-      <ShellCard title="Security & Release Control Center" subtitle="Single source of truth per permessi, pilot mode e readiness di produzione.">
-        <div className="space-y-6">
-          <section className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">1) RBAC & Permissions</h3>
-              <span className="rounded-md border border-[color:var(--cab-border)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
-                Gestione utenti + coerenza RLS
-              </span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className={dsSurfaceInteractiveKpi}>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Utenti gestiti</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-[color:var(--cab-text)]">{usersQ.users.length}</p>
-              </div>
-              <div className={dsSurfaceInteractiveKpi}>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Stato RLS</p>
-                <p className="mt-1 text-base font-bold text-[color:var(--cab-text)]">
-                  {pilotStatus ? "Verificato" : "Da verificare"}
-                </p>
-              </div>
-              <div className={dsSurfaceInteractiveKpi}>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">Mismatch UI/DB</p>
-                <p className="mt-1 text-base font-bold text-[color:var(--cab-text)]">
-                  {checklist.filter((c) => c.status === "fail" && (c.category === "rbac" || c.category === "security")).length}
-                </p>
-              </div>
-            </div>
-            <SecurityUsersPermissionsPanel readOnly={!isAdmin} onOpenDetail={setSelectedUserId} />
-            <UserDetailDrawer user={selectedUser} open={!!selectedUser} onClose={() => setSelectedUserId(null)} />
-          </section>
-
+          <div className="space-y-6">
           <section className="space-y-3">
             <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">PILOT MODE — Override funzionalità operatori</h3>
             <p className="text-xs text-[color:var(--cab-text-muted)]">
@@ -741,7 +592,24 @@ export function SecurityDashboardView() {
             ) : null}
           </section>
         </div>
-      </ShellCard>
+        </ShellCard>
+      ) : null}
+
+      {activeTab === "monitoring" ? (
+        <div id="security-panel-monitoring" role="tabpanel" aria-labelledby="security-tab-monitoring" className="space-y-4">
+          <div className={gestionalePageToolbarActionsClass}>
+            <button
+              type="button"
+              className={dsPageToolbarBtn}
+              onClick={() => void Promise.all([logsQuery.refetch(), recentActivityQ.refetch()])}
+              disabled={logsQuery.isFetching || recentActivityQ.isFetching}
+            >
+              {logsQuery.isFetching || recentActivityQ.isFetching ? "Aggiornamento…" : "Aggiorna dati"}
+            </button>
+            <button type="button" className={dsBtnDanger} onClick={() => void handleResetChangeLogs()} disabled={resettingLogs}>
+              {resettingLogs ? "Reset…" : "Resetta log modifiche"}
+            </button>
+          </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className={dsSurfaceInteractiveKpi}>
@@ -841,16 +709,10 @@ export function SecurityDashboardView() {
                 variant="filter"
                 value={filterUserId ?? ""}
                 onChange={(id) => setFilterUserId(id || null)}
-                disabled={profilesQ.isPending}
-                isLoading={profilesQ.isPending}
+                disabled={usersQ.isLoading}
+                isLoading={usersQ.isLoading}
                 aria-label="Filtra per utente"
-                items={[
-                  { value: "", label: "Tutti gli utenti" },
-                  ...(profilesQ.data ?? []).map((p) => ({
-                    value: p.id,
-                    label: `${p.nome} (${roleLabel(p.ruolo)})`,
-                  })),
-                ]}
+                items={filterUserItems}
               />
             </div>
           </label>
@@ -908,6 +770,8 @@ export function SecurityDashboardView() {
       <ShellCard title="Ultimo accesso per utente" subtitle="Per ogni user_id: ultimo login o logout nel periodo filtrato.">
         <LastAccessTable rows={lastAccessPerUser} />
       </ShellCard>
+        </div>
+      ) : null}
       {confirmDialog}
     </div>
   );

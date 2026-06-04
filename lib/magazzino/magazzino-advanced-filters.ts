@@ -9,7 +9,8 @@ import {
   type HierarchyTreeKey,
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import { resolveFornitoriAlternativiFromMeta } from "@/lib/magazzino/ricambio-fornitori-alternativi";
+import type { RicambioFornitoreAlternativo, RicambioMagazzino } from "@/lib/magazzino/types";
 import { isRicambioCompatUniversal } from "@/lib/magazzino/compat/compat-normalize";
 import { readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
 import {
@@ -21,6 +22,8 @@ import {
 } from "@/lib/magazzino/ricambio-compat-resolver";
 
 export const FILTER_ALL = "__tutti__" as const;
+
+export type MagazzinoTagliandoFilter = typeof FILTER_ALL | "solo" | "escludi";
 
 export type MagazzinoAdvancedFilters = {
   /** Marca attrezzatura (compatibilità). */
@@ -35,6 +38,8 @@ export type MagazzinoAdvancedFilters = {
   marcaRicambio: string;
   categoria: string;
   fornitoreNonOriginale: string;
+  produttoreAlternativo: string;
+  tagliando: MagazzinoTagliandoFilter;
 };
 
 export const MAGAZZINO_ADVANCED_FILTERS_EMPTY: MagazzinoAdvancedFilters = {
@@ -45,6 +50,8 @@ export const MAGAZZINO_ADVANCED_FILTERS_EMPTY: MagazzinoAdvancedFilters = {
   marcaRicambio: FILTER_ALL,
   categoria: FILTER_ALL,
   fornitoreNonOriginale: FILTER_ALL,
+  produttoreAlternativo: FILTER_ALL,
+  tagliando: FILTER_ALL,
 };
 
 const GESTIONALE_STORAGE_KEY = "gestionale-magazzino-advanced-filters-v1";
@@ -56,6 +63,7 @@ export type MagazzinoFilterCatalog = {
   telaioModelliByMarca: Record<string, string[]>;
   categorie: string[];
   fornitoriNonOriginali: string[];
+  produttoriAlternativi: string[];
 };
 
 function norm(s: string): string {
@@ -69,6 +77,16 @@ function resolvedCompatLabels(row: RicambioMagazzino, listePrefs?: MezziListePre
 function dash(v: string): string {
   const t = v.trim();
   return t && t !== "—" ? t : "";
+}
+
+export function fornitoriAlternativiForRow(row: RicambioMagazzino): RicambioFornitoreAlternativo[] {
+  if (row.fornitoriAlternativi?.length) return row.fornitoriAlternativi;
+  return resolveFornitoriAlternativiFromMeta({
+    fornitoreNonOriginale: row.fornitoreNonOriginale,
+    codiceFornitoreNonOriginale: row.codiceFornitoreNonOriginale,
+    prezzoFornitoreNonOriginale: row.prezzoFornitoreNonOriginale,
+    scontoFornitoreNonOriginale: row.scontoFornitoreNonOriginale,
+  });
 }
 
 function pushUnique(sorted: string[], value: string) {
@@ -155,8 +173,15 @@ export function buildMagazzinoFilterCatalog(
   for (const p of prodotti) pushUnique(categorie, dash(p.categoria));
 
   const fornitoriNonOriginali: string[] = [];
+  const produttoriAlternativi: string[] = [];
   for (const f of masterFornitori) pushUnique(fornitoriNonOriginali, f);
-  for (const p of prodotti) pushUnique(fornitoriNonOriginali, dash(p.fornitoreNonOriginale));
+  for (const p of prodotti) {
+    pushUnique(fornitoriNonOriginali, dash(p.fornitoreNonOriginale));
+    for (const alt of fornitoriAlternativiForRow(p)) {
+      pushUnique(fornitoriNonOriginali, dash(alt.fornitore));
+      pushUnique(produttoriAlternativi, dash(alt.produttore));
+    }
+  }
 
   const sortIt = (a: string, b: string) => a.localeCompare(b, "it");
   const toSortedRecord = (marche: Set<string>, modelli: Record<string, Set<string>>) => {
@@ -174,6 +199,7 @@ export function buildMagazzinoFilterCatalog(
     telaioModelliByMarca: toSortedRecord(telaioMarcheSet, telaioModelliByMarca),
     categorie: categorie.sort(sortIt),
     fornitoriNonOriginali: fornitoriNonOriginali.sort(sortIt),
+    produttoriAlternativi: produttoriAlternativi.sort(sortIt),
   };
 }
 
@@ -262,8 +288,35 @@ export function magazzinoAdvancedFiltersActive(f: MagazzinoAdvancedFilters): boo
     (f.telaioModello.trim() !== "" && f.telaioModello !== FILTER_ALL) ||
     (f.marcaRicambio.trim() !== "" && f.marcaRicambio !== FILTER_ALL) ||
     (f.categoria.trim() !== "" && f.categoria !== FILTER_ALL) ||
-    (f.fornitoreNonOriginale.trim() !== "" && f.fornitoreNonOriginale !== FILTER_ALL)
+    (f.fornitoreNonOriginale.trim() !== "" && f.fornitoreNonOriginale !== FILTER_ALL) ||
+    (f.produttoreAlternativo.trim() !== "" && f.produttoreAlternativo !== FILTER_ALL) ||
+    (f.tagliando !== FILTER_ALL)
   );
+}
+
+function rowMatchesFornitoreFilter(row: RicambioMagazzino, fornitoreFilter: string): boolean {
+  if (fornitoreFilter === FILTER_ALL || !fornitoreFilter.trim()) return true;
+  const want = norm(fornitoreFilter);
+  if (norm(dash(row.fornitoreNonOriginale)) === want) return true;
+  return fornitoriAlternativiForRow(row).some((a) => norm(dash(a.fornitore)) === want);
+}
+
+function rowMatchesProduttoreFilter(row: RicambioMagazzino, produttoreFilter: string, fornitoreFilter: string): boolean {
+  if (produttoreFilter === FILTER_ALL || !produttoreFilter.trim()) return true;
+  const want = norm(produttoreFilter);
+  const fornWant = fornitoreFilter !== FILTER_ALL && fornitoreFilter.trim() ? norm(fornitoreFilter) : null;
+  return fornitoriAlternativiForRow(row).some((a) => {
+    if (norm(dash(a.produttore)) !== want) return false;
+    if (fornWant != null && norm(dash(a.fornitore)) !== fornWant) return false;
+    return true;
+  });
+}
+
+function rowMatchesTagliandoFilter(row: RicambioMagazzino, tagliando: MagazzinoTagliandoFilter): boolean {
+  if (tagliando === FILTER_ALL) return true;
+  if (tagliando === "solo") return row.usatoInTagliandi === true;
+  if (tagliando === "escludi") return row.usatoInTagliandi !== true;
+  return true;
 }
 
 export function magazzinoRowMatchesAdvancedFilters(
@@ -273,7 +326,9 @@ export function magazzinoRowMatchesAdvancedFilters(
 ): boolean {
   if (!listFilterMatches(f.marcaRicambio, row.marca)) return false;
   if (!listFilterMatches(f.categoria, row.categoria)) return false;
-  if (!listFilterMatches(f.fornitoreNonOriginale, row.fornitoreNonOriginale)) return false;
+  if (!rowMatchesTagliandoFilter(row, f.tagliando)) return false;
+  if (!rowMatchesFornitoreFilter(row, f.fornitoreNonOriginale)) return false;
+  if (!rowMatchesProduttoreFilter(row, f.produttoreAlternativo, f.fornitoreNonOriginale)) return false;
   if (
     f.compatMarca !== FILTER_ALL &&
     f.compatModello !== FILTER_ALL &&

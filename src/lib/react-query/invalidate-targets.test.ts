@@ -52,9 +52,11 @@ assert.equal(portalBatch.length, expectedPortalKeys.length + 1);
 
 const portalInCorsoKey = lavorazioniDomainQueryKeys.list(
   stableLavorazioniFiltersKey({ archived: false, includeMezzo: true }),
+  true,
 );
 const portalArchivioKey = lavorazioniDomainQueryKeys.list(
   stableLavorazioniFiltersKey({ archived: true, includeMezzo: true }),
+  true,
 );
 assert.ok(portalInCorsoKey[0] === QK.lavorazioniQueries[0]);
 assert.ok(portalArchivioKey[0] === QK.lavorazioniQueries[0]);

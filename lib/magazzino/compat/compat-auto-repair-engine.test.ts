@@ -5,6 +5,7 @@ import {
   repairCompatIfNeededSync,
   simulateRepair,
 } from "@/lib/magazzino/compat/compat-auto-repair-engine";
+import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 
 const mezziListe: MezziListePrefs = {
@@ -29,30 +30,18 @@ const fiat500 = compatLabelMarcaModello("FIAT", "500");
 const refs = [{ tree: "attrezzature" as const, marcaId: "m-fiat", modelloId: "mod-500" }];
 
 function baseRicambio(over: Partial<RicambioMagazzino> = {}): RicambioMagazzino {
-  return {
+  return defaultRicambioMagazzinoFields({
     id: "r1",
     marca: "BOSCH",
     codiceFornitoreOriginale: "ABC",
-    codiceFornitoreOriginaleSecondario: "",
     descrizione: "Test",
-    note: "",
-    categoria: "Generale",
     compatibilitaMezzi: [fiat500],
     compatibilitaRefs: refs,
     scorta: 1,
-    scortaMinima: 0,
-    dataUltimaModifica: "",
-    autoreUltimaModifica: "",
     prezzoFornitoreOriginale: 10,
-    scontoFornitoreOriginale: 0,
-    markupPercentuale: 0,
     prezzoVendita: 10,
-    fornitoreNonOriginale: "",
-    codiceFornitoreNonOriginale: "",
-    prezzoFornitoreNonOriginale: 0,
-    scontoFornitoreNonOriginale: 0,
     ...over,
-  };
+  });
 }
 
 const sim = simulateRepair(

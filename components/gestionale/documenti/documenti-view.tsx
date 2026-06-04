@@ -64,8 +64,10 @@ import {
 import { buildModificaRigaFromChanges, type CampoChangeLike } from "@/lib/gestionale-log/view-model";
 import { useAuth } from "@/context/auth-context";
 import {
+  canOpenDocumento,
   countDocsInMarcaNode,
   documentoSenzaMarca,
+  documentoFileUnavailableLabel,
   formatDocumentoRigaSintetica,
   openDocumentoFile,
   labelCategoria,
@@ -229,10 +231,11 @@ function ArchiveDocRow({
   selected: boolean;
   onSelect: () => void;
   onInfo: () => void;
-  onFileUnavailable?: () => void;
+  onFileUnavailable?: (message: string) => void;
   onApri: () => void;
 }) {
-  const canOpen = Boolean(doc.urlBlob?.trim() || doc.urlDocumento?.trim());
+  const canOpen = canOpenDocumento(doc);
+  const unavailableHint = documentoFileUnavailableLabel(doc) ?? "File non disponibile.";
   const stop = (e: MouseEvent) => e.stopPropagation();
   const senzaMarca = documentoSenzaMarca(doc);
   const rowToneClass = senzaMarca
@@ -248,11 +251,11 @@ function ArchiveDocRow({
   const actionButtons = (
     <>
       <IconActionButton
-        label="Apri"
+        label={canOpen ? "Apri" : unavailableHint}
         className={dsTableActionBtnPrimary}
         disabled={!canOpen}
         onClick={() => {
-          if (!canOpen) onFileUnavailable?.();
+          if (!canOpen) onFileUnavailable?.(unavailableHint);
           else onApri();
         }}
       >
@@ -293,12 +296,20 @@ function ArchiveDocRow({
               title={doc.nome}
               onClick={(e) => {
                 e.stopPropagation();
-                if (!canOpen) onFileUnavailable?.();
+                if (!canOpen) onFileUnavailable?.(unavailableHint);
                 else onApri();
               }}
             >
               {doc.nome}
             </button>
+            {!canOpen && doc.urlDocumento?.trim() ? (
+              <span
+                className="inline-flex shrink-0 items-center rounded-md bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-danger)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))]"
+                title={unavailableHint}
+              >
+                File non collegato
+              </span>
+            ) : null}
             {senzaMarca ? (
               <span
                 className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[color:color-mix(in_srgb,var(--cab-warning)_22%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-warning)_50%,var(--cab-border))]"
@@ -724,8 +735,8 @@ export function DocumentiView() {
   );
 
   async function openDoc(doc: DocumentoGestionale) {
-    const ok = await openDocumentoFile(doc);
-    if (!ok) gestToast.warning("File non disponibile.");
+    const result = await openDocumentoFile(doc);
+    if (!result.ok) gestToast.warning(result.message);
   }
 
   function toggleMarca(id: string) {
@@ -971,7 +982,7 @@ export function DocumentiView() {
                             selected={selectedDocId === d.id}
                             onSelect={() => setSelectedDocId(d.id)}
                             onInfo={() => setInfoDoc(d)}
-                            onFileUnavailable={() => gestToast.warning("File non disponibile.")}
+                            onFileUnavailable={(msg) => gestToast.warning(msg)}
                             onApri={() => openDoc(d)}
                           />
                         ))}
@@ -1054,7 +1065,7 @@ export function DocumentiView() {
                                         selected={selectedDocId === d.id}
                                         onSelect={() => setSelectedDocId(d.id)}
                                         onInfo={() => setInfoDoc(d)}
-                                        onFileUnavailable={() => gestToast.warning("File non disponibile.")}
+                                        onFileUnavailable={(msg) => gestToast.warning(msg)}
                                         onApri={() => openDoc(d)}
                                       />
                                     ))}
@@ -1076,7 +1087,7 @@ export function DocumentiView() {
                                         selected={selectedDocId === d.id}
                                         onSelect={() => setSelectedDocId(d.id)}
                                         onInfo={() => setInfoDoc(d)}
-                                        onFileUnavailable={() => gestToast.warning("File non disponibile.")}
+                                        onFileUnavailable={(msg) => gestToast.warning(msg)}
                                         onApri={() => openDoc(d)}
                                       />
                                     ))}
@@ -1133,7 +1144,7 @@ export function DocumentiView() {
                                                   selected={selectedDocId === d.id}
                                                   onSelect={() => setSelectedDocId(d.id)}
                                                   onInfo={() => setInfoDoc(d)}
-                                                  onFileUnavailable={() => gestToast.warning("File non disponibile.")}
+                                                  onFileUnavailable={(msg) => gestToast.warning(msg)}
                                                   onApri={() => openDoc(d)}
                                                 />
                                               ))}
@@ -1169,7 +1180,7 @@ export function DocumentiView() {
                             selected={selectedDocId === d.id}
                             onSelect={() => setSelectedDocId(d.id)}
                             onInfo={() => setInfoDoc(d)}
-                            onFileUnavailable={() => gestToast.warning("File non disponibile.")}
+                            onFileUnavailable={(msg) => gestToast.warning(msg)}
                             onApri={() => openDoc(d)}
                           />
                         ))}

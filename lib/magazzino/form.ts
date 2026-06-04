@@ -1,5 +1,10 @@
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
-import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import {
+  newFornitoreAlternativoId,
+  sanitizeFornitoriAlternativiForPersist,
+  syncFlatFornitoreFieldsOnRicambio,
+} from "@/lib/magazzino/ricambio-fornitori-alternativi";
+import type { RicambioFornitoreAlternativo, RicambioMagazzino } from "@/lib/magazzino/types";
 import {
   flattenCompatDaAttrezzature,
   migrateMezziListePrefs,
@@ -68,10 +73,60 @@ export function normalizeMarkupInputString(raw: string): string {
   return String(c);
 }
 
+export type RicambioFornitoreAlternativoFormRow = {
+  id: string;
+  fornitore: string;
+  produttore: string;
+  codice: string;
+  prezzo: string;
+  sconto: string;
+};
+
+export function emptyFornitoreAlternativoFormRow(): RicambioFornitoreAlternativoFormRow {
+  return {
+    id: newFornitoreAlternativoId(),
+    fornitore: "",
+    produttore: "",
+    codice: "",
+    prezzo: "0",
+    sconto: "0",
+  };
+}
+
+export function fornitoriAlternativiToFormRows(
+  rows: RicambioFornitoreAlternativo[],
+): RicambioFornitoreAlternativoFormRow[] {
+  return rows.map((r) => ({
+    id: r.id,
+    fornitore: r.fornitore,
+    produttore: r.produttore,
+    codice: r.codice,
+    prezzo: String(r.prezzo),
+    sconto: String(r.sconto),
+  }));
+}
+
+export function fornitoriAlternativiFromFormRows(
+  rows: RicambioFornitoreAlternativoFormRow[],
+): RicambioFornitoreAlternativo[] {
+  return sanitizeFornitoriAlternativiForPersist(
+    rows.map((r) => ({
+      id: r.id.trim() || newFornitoreAlternativoId(),
+      fornitore: r.fornitore.trim(),
+      produttore: r.produttore.trim(),
+      codice: normalizeRicambioCodice(r.codice.trim()),
+      prezzo: Math.max(0, parseFloat(r.prezzo) || 0),
+      sconto: Math.min(100, Math.max(0, parseFloat(r.sconto) || 0)),
+    })),
+  );
+}
+
 export type RicambioFormState = {
   marca: string;
   codiceFornitoreOriginale: string;
   codiceFornitoreOriginaleSecondario: string;
+  marcaOriginaleSecondaria: string;
+  usatoInTagliandi: boolean;
   descrizione: string;
   note: string;
   categoria: string;
@@ -87,6 +142,8 @@ export type RicambioFormState = {
   markupPercentuale: string;
   /** Allineato al calcolo listino + markup (sola lettura in UI) */
   prezzoVendita: string;
+  fornitoriAlternativi: RicambioFornitoreAlternativoFormRow[];
+  /** Mirror primo alternativo — aggiornato da fornitoriAlternativi. */
   fornitoreNonOriginale: string;
   codiceFornitoreNonOriginale: string;
   prezzoFornitoreNonOriginale: string;
@@ -106,6 +163,8 @@ export function emptyRicambioForm(): RicambioFormState {
     marca: "",
     codiceFornitoreOriginale: "",
     codiceFornitoreOriginaleSecondario: "",
+    marcaOriginaleSecondaria: "",
+    usatoInTagliandi: false,
     descrizione: "",
     note: "",
     categoria: "",
@@ -118,6 +177,7 @@ export function emptyRicambioForm(): RicambioFormState {
     scontoFornitoreOriginale: "0",
     markupPercentuale: "45",
     prezzoVendita: "0",
+    fornitoriAlternativi: [],
     fornitoreNonOriginale: "",
     codiceFornitoreNonOriginale: "",
     prezzoFornitoreNonOriginale: "0",
@@ -208,11 +268,14 @@ export function ricambioFromFormLenient(
   const markup = clampMarkupPercentuale(parseFloat(String(f.markupPercentuale).replace(",", ".")) || 0);
   const prezzoVendita = prezzoVenditaDaListinoEMarkup(listino, markup);
   const codiceSecondario = normalizeRicambioCodice(f.codiceFornitoreOriginaleSecondario.trim());
-  return {
+  const fornitoriAlternativi = fornitoriAlternativiFromFormRows(f.fornitoriAlternativi);
+  const partial: RicambioMagazzino = {
     id: id ?? `r-${Date.now()}`,
     marca: f.marca.trim() || "—",
     codiceFornitoreOriginale: normalizeRicambioCodice(f.codiceFornitoreOriginale.trim()) || "—",
     codiceFornitoreOriginaleSecondario: codiceSecondario,
+    marcaOriginaleSecondaria: f.marcaOriginaleSecondaria.trim(),
+    usatoInTagliandi: f.usatoInTagliandi,
     descrizione: f.descrizione.trim() || "Senza descrizione",
     note: f.note.trim(),
     categoria: f.categoria.trim() || "—",
@@ -226,11 +289,14 @@ export function ricambioFromFormLenient(
     scontoFornitoreOriginale: Math.min(100, Math.max(0, parseFloat(f.scontoFornitoreOriginale) || 0)),
     markupPercentuale: markup,
     prezzoVendita,
-    fornitoreNonOriginale: f.fornitoreNonOriginale.trim(),
-    codiceFornitoreNonOriginale: normalizeRicambioCodice(f.codiceFornitoreNonOriginale.trim()),
-    prezzoFornitoreNonOriginale: Math.max(0, parseFloat(f.prezzoFornitoreNonOriginale) || 0),
-    scontoFornitoreNonOriginale: Math.min(100, Math.max(0, parseFloat(f.scontoFornitoreNonOriginale) || 0)),
+    fornitoriAlternativi,
+    fornitoreNonOriginale: "",
+    codiceFornitoreNonOriginale: "",
+    prezzoFornitoreNonOriginale: 0,
+    scontoFornitoreNonOriginale: 0,
   };
+  syncFlatFornitoreFieldsOnRicambio(partial);
+  return partial;
 }
 
 function markupToFormString(n: number): string {
@@ -254,6 +320,8 @@ export function toFormDraft(
     marca: r.marca,
     codiceFornitoreOriginale: r.codiceFornitoreOriginale,
     codiceFornitoreOriginaleSecondario: r.codiceFornitoreOriginaleSecondario,
+    marcaOriginaleSecondaria: r.marcaOriginaleSecondaria,
+    usatoInTagliandi: r.usatoInTagliandi,
     descrizione: r.descrizione,
     note: r.note,
     categoria: r.categoria,
@@ -266,6 +334,7 @@ export function toFormDraft(
     scontoFornitoreOriginale: String(r.scontoFornitoreOriginale),
     markupPercentuale: markupToFormString(r.markupPercentuale),
     prezzoVendita: String(r.prezzoVendita),
+    fornitoriAlternativi: fornitoriAlternativiToFormRows(r.fornitoriAlternativi ?? []),
     fornitoreNonOriginale: r.fornitoreNonOriginale,
     codiceFornitoreNonOriginale: r.codiceFornitoreNonOriginale,
     prezzoFornitoreNonOriginale: String(r.prezzoFornitoreNonOriginale),

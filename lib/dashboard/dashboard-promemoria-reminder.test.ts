@@ -4,6 +4,7 @@ import {
   computePromemoriaReminderMoment,
   dashboardPromemoriaReminderStoreKey,
   formatDashboardPromemoriaReminderMessage,
+  formatDashboardPromemoriaReminderToastMessage,
   isAtOrAfterPromemoriaReminderTime,
   normalizePromemoriaEventTime,
   promemoriaNeedsReminderToday,
@@ -81,6 +82,15 @@ assert.equal(promemoriaNeedsReminderToday({ event_date: "2026-06-01", notified_o
 assert.equal(
   promemoriaNeedsReminderToday({ event_date: "2026-06-01", notified_on: "2026-06-01" }, "2026-06-01"),
   false,
+);
+
+assert.equal(
+  formatDashboardPromemoriaReminderToastMessage(["Promemoria: Solo oggi."]),
+  "Promemoria: Solo oggi.",
+);
+assert.equal(
+  formatDashboardPromemoriaReminderToastMessage(["A", "B", "C"]),
+  "Hai 3 promemoria oggi. Apri la Dashboard per i dettagli.",
 );
 
 console.log("dashboard-promemoria-reminder.test.ts: ok");

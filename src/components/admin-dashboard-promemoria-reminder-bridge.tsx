@@ -6,7 +6,7 @@ import { useToastContext } from "@/context/toast-context";
 import { useAuth } from "@/context/auth-context";
 import {
   buildDashboardPromemoriaReminderNotification,
-  DASHBOARD_PROMEMORIA_REMINDER_TOAST,
+  formatDashboardPromemoriaReminderToastMessage,
   shouldNotifyPromemoriaNow,
 } from "@/lib/dashboard/dashboard-promemoria-reminder";
 import {
@@ -55,7 +55,7 @@ export function AdminDashboardPromemoriaReminderBridge() {
 
       const store = loadAdminNotificationStore(userId);
       const now = new Date();
-      let notifiedAny = false;
+      const newToastMessages: string[] = [];
 
       for (const row of res.data) {
         if (!shouldNotifyPromemoriaNow(row, now)) continue;
@@ -64,16 +64,16 @@ export function AdminDashboardPromemoriaReminderBridge() {
 
         await publishAdminDashboardNotification(userId, notification);
         await dashboardPromemoriaService.markNotified(row.id, row.event_date);
-        notifiedAny = true;
+        newToastMessages.push(notification.message);
       }
 
-      if (!notifiedAny) return;
+      if (newToastMessages.length === 0) return;
 
       applyUnreadDocumentTitle(userId);
 
       if (isDashboardNotificationsPath(pathname)) return;
       if (shouldShowLightLavorazioneAlert(pathname)) {
-        push(DASHBOARD_PROMEMORIA_REMINDER_TOAST, "info", 6000);
+        push(formatDashboardPromemoriaReminderToastMessage(newToastMessages), "info", 6000);
       }
     } finally {
       checkInFlightRef.current = false;

@@ -6,6 +6,7 @@ import {
   CLIENT_LAVORAZIONI_SETTINGS_MODULE,
   parseClientPortalAccess,
 } from "@/lib/lavorazioni/client-portal-access";
+import { normalizeClienteRef, validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
 import { hasPermission, resolveRole, type AppRole } from "@/lib/auth/rbac";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import {
@@ -13,24 +14,42 @@ import {
   listUsersByAdminAction,
   type SecurityUserAdminRow,
 } from "@/src/actions/admin-users";
+import { hasModulePermissionOverrides } from "@/lib/security/user-module-permissions";
 import { validateSecurityUserBatchPatches } from "@/lib/validation/security-actions-validation";
-import type { ProfileRow } from "@/src/types/supabase-tables";
+import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
+import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
+import type { ProfileRow, UserPermissionRow } from "@/src/types/supabase-tables";
+
+export type SecurityUserModulePermissionEntry = {
+  module: GestionalePermissionModule;
+  canRead: boolean;
+  canWrite: boolean;
+};
 
 export type SecurityUserPermissionRow = SecurityUserAdminRow & {
   clientLavorazioniAccess: boolean;
   /** Accesso garantito dal ruolo (toggle non modificabile). */
   clientLavorazioniAccessFromRole: boolean;
+  hasModulePermissionOverrides: boolean;
 };
 
 export type SecurityUserBatchPatch = {
   userId: string;
   nome?: string;
   ruolo?: AppRole;
+  clienteRef?: string | null;
   clientLavorazioniAccess?: boolean;
+  modulePermissions?: SecurityUserModulePermissionEntry[] | null;
+  clearModulePermissions?: boolean;
 };
 
 export type ListSecurityUsersPermissionsResult =
-  | { ok: true; users: SecurityUserPermissionRow[]; portalSettingsUpdatedAt: string | null }
+  | {
+      ok: true;
+      users: SecurityUserPermissionRow[];
+      portalSettingsUpdatedAt: string | null;
+      permissionRows: UserPermissionRow[];
+    }
   | { ok: false; message: string };
 
 export type BatchUpdateSecurityUsersResult =
@@ -44,13 +63,51 @@ function roleGrantsClientPortal(role: AppRole): boolean {
 function toPermissionRow(
   user: SecurityUserAdminRow,
   enabledUserIds: Set<string>,
+  permissionRows: UserPermissionRow[],
 ): SecurityUserPermissionRow {
   const fromRole = roleGrantsClientPortal(user.ruolo);
   return {
     ...user,
     clientLavorazioniAccessFromRole: fromRole,
     clientLavorazioniAccess: fromRole || enabledUserIds.has(user.id),
+    hasModulePermissionOverrides: hasModulePermissionOverrides(user.ruolo, user.id, permissionRows),
   };
+}
+
+async function loadAllUserPermissionRows(
+  admin: SupabaseClient,
+  userIds: string[],
+): Promise<UserPermissionRow[]> {
+  if (userIds.length === 0) return [];
+  const { data, error } = await admin.from("user_permissions").select("*").in("user_id", userIds);
+  if (error) throw new Error(error.message);
+  return (data ?? []) as UserPermissionRow[];
+}
+
+async function deleteUserModulePermissions(admin: SupabaseClient, userId: string): Promise<void> {
+  const { error } = await admin.from("user_permissions").delete().eq("user_id", userId);
+  if (error) throw new Error(error.message);
+}
+
+async function applyUserModulePermissions(
+  admin: SupabaseClient,
+  userId: string,
+  modulePermissions: SecurityUserModulePermissionEntry[] | null,
+): Promise<boolean> {
+  await deleteUserModulePermissions(admin, userId);
+  if (!modulePermissions?.length) return true;
+
+  const rows = modulePermissions.map((entry) => ({
+    user_id: userId,
+    module: entry.module,
+    can_read: entry.canRead,
+    can_write: entry.canWrite,
+    can_admin: false,
+  }));
+
+  const { error } = await admin.from("user_permissions").upsert(rows, { onConflict: "user_id,module" });
+  if (error) throw new Error(error.message);
+  return true;
 }
 
 export async function listSecurityUsersPermissionsAction(): Promise<ListSecurityUsersPermissionsResult> {
@@ -71,8 +128,24 @@ export async function listSecurityUsersPermissionsAction(): Promise<ListSecurity
   const settings = parseClientPortalAccess(row?.value);
   const enabled = new Set(settings.enabledUserIds);
 
-  const users = usersRes.users.map((u) => toPermissionRow(u, enabled));
-  return { ok: true, users, portalSettingsUpdatedAt: row?.updated_at ?? null };
+  const { createClient } = await import("@supabase/supabase-js");
+  const serviceAdmin = createClient(admin.url, admin.serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+
+  const userIds = usersRes.users.map((u) => u.id);
+  let permissionRows: UserPermissionRow[] = [];
+  try {
+    permissionRows = await loadAllUserPermissionRows(serviceAdmin, userIds);
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Errore caricamento permessi modulo.",
+    };
+  }
+
+  const users = usersRes.users.map((u) => toPermissionRow(u, enabled, permissionRows));
+  return { ok: true, users, portalSettingsUpdatedAt: row?.updated_at ?? null, permissionRows };
 }
 
 async function writeSecurityBatchLog(
@@ -116,7 +189,10 @@ export async function batchUpdateSecurityUsersAction(
       userId: p.userId,
       nome: p.nome,
       ruolo: p.ruolo != null ? resolveRole(p.ruolo) : undefined,
+      clienteRef: p.clienteRef,
       clientLavorazioniAccess: p.clientLavorazioniAccess,
+      modulePermissions: p.modulePermissions,
+      clearModulePermissions: p.clearModulePermissions,
     }))
     .filter((p) => p.userId);
 
@@ -141,7 +217,27 @@ export async function batchUpdateSecurityUsersAction(
       updatedCount += 1;
     }
 
-    if (patch.ruolo != null && resolveRole(profile.ruolo) !== patch.ruolo) {
+    const effectiveRole = patch.ruolo != null ? patch.ruolo : resolveRole(profile.ruolo);
+    const effectiveClienteRef =
+      patch.clienteRef !== undefined ? patch.clienteRef : normalizeClienteRef(profile.cliente_ref);
+    const clienteRefErr = validateClienteRefForRole(effectiveRole, effectiveClienteRef);
+    if (clienteRefErr) return { ok: false, message: clienteRefErr };
+
+    if (patch.clienteRef !== undefined) {
+      const currentRef = normalizeClienteRef(profile.cliente_ref);
+      if (patch.clienteRef !== currentRef) {
+        const { error } = await admin
+          .from("profiles")
+          .update({ cliente_ref: patch.clienteRef })
+          .eq("id", patch.userId);
+        if (error) return { ok: false, message: error.message };
+        clearServerAuthSnapshotCacheForUser(patch.userId);
+        updatedCount += 1;
+      }
+    }
+
+    const roleChanged = patch.ruolo != null && resolveRole(profile.ruolo) !== patch.ruolo;
+    if (roleChanged) {
       const { error } = await admin.from("profiles").update({ ruolo: patch.ruolo }).eq("id", patch.userId);
       if (error) return { ok: false, message: error.message };
       const authLookup = await admin.auth.admin.getUserById(patch.userId).catch(() => null);
@@ -150,7 +246,26 @@ export async function batchUpdateSecurityUsersAction(
           app_metadata: { ...(authLookup?.data.user?.app_metadata ?? {}), cab_ruolo: patch.ruolo },
         })
         .catch(() => {});
+      clearServerAuthSnapshotCacheForUser(patch.userId);
       updatedCount += 1;
+    }
+
+    if (patch.modulePermissions !== undefined) {
+      try {
+        if (await applyUserModulePermissions(admin, patch.userId, patch.modulePermissions)) {
+          updatedCount += 1;
+        }
+      } catch (e) {
+        return { ok: false, message: e instanceof Error ? e.message : "Errore salvataggio permessi pagine." };
+      }
+    } else if (patch.clearModulePermissions === true || roleChanged) {
+      try {
+        if (await applyUserModulePermissions(admin, patch.userId, null)) {
+          updatedCount += 1;
+        }
+      } catch (e) {
+        return { ok: false, message: e instanceof Error ? e.message : "Errore permessi modulo." };
+      }
     }
   }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { isCabSyncToastSuppressed } from "@/lib/notifications/cab-sync-toast-suppress";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 import type { CabToastTone } from "@/context/toast-context";
 
@@ -17,48 +18,83 @@ const recentFingerprints = new Map<string, number>();
 const DEDUP_MS = 5000;
 const BUCKET_MS = 3000;
 
+const REMOTE_SUFFIX = " da un altro dispositivo";
+
 function prune(now: number) {
   for (const [k, ts] of recentFingerprints) {
     if (now - ts > DEDUP_MS) recentFingerprints.delete(k);
   }
 }
 
-function eventLabel(event: CabSyncEvent): string | null {
+function entityVerb(event: CabSyncEvent): string | null {
+  if (event.type === "entity_created") return "creato";
+  if (event.type === "entity_deleted") return "eliminato";
+  if (event.type === "entity_updated") return "aggiornato";
+  return null;
+}
+
+function feminineEntityVerb(event: CabSyncEvent): string | null {
+  if (event.type === "entity_created") return "creata";
+  if (event.type === "entity_deleted") return "eliminata";
+  if (event.type === "entity_updated") return "aggiornata";
+  return null;
+}
+
+/** Messaggio toast per evento cab-sync (null = nessun toast). Esportato per test copy. */
+export function gestionaleCabSyncToastMessage(event: CabSyncEvent): string | null {
   if (event.type === "settings_updated") return null;
   if (event.entity === "lavorazioni" && event.type === "entity_created") return null;
   /** Promemoria: feedback utente solo via toast locali in DashboardPromemoriaSection. */
   if (event.entity === "dashboard_promemoria") return null;
-  const verb =
-    event.type === "entity_created"
-      ? "creata"
-      : event.type === "entity_deleted"
-        ? "eliminata"
-        : "aggiornata";
 
   switch (event.entity) {
-    case "lavorazioni":
-      return `Lavorazione ${verb}`;
+    case "lavorazioni": {
+      const verb = feminineEntityVerb(event);
+      return verb ? `Lavorazione ${verb}${REMOTE_SUFFIX}` : null;
+    }
     case "scheda_lavorazione":
-      return "Scheda ingresso/lavorazione aggiornata";
+      if (event.type !== "entity_updated") return null;
+      return `Scheda lavorazione aggiornata${REMOTE_SUFFIX}`;
     case "movimenti_ricambi":
-      return event.type === "entity_created" ? "Movimento magazzino registrato" : `Movimento magazzino ${verb}`;
-    case "magazzino_ricambi":
-      return event.type === "entity_updated" ? "Ricambio aggiornato" : `Ricambio ${verb}`;
-    case "preventivi":
-      return `Preventivo ${verb}`;
-    case "mezzi":
-      return `Mezzo ${verb}`;
+      if (event.type === "entity_created") return "Movimento magazzino registrato";
+      {
+        const verb = entityVerb(event);
+        return verb ? `Movimento magazzino ${verb}${REMOTE_SUFFIX}` : null;
+      }
+    case "magazzino_ricambi": {
+      const verb = entityVerb(event);
+      return verb ? `Ricambio ${verb}${REMOTE_SUFFIX}` : null;
+    }
+    case "preventivi": {
+      const verb = entityVerb(event);
+      return verb ? `Preventivo ${verb}${REMOTE_SUFFIX}` : null;
+    }
+    case "mezzi": {
+      const verb = entityVerb(event);
+      return verb ? `Mezzo ${verb}${REMOTE_SUFFIX}` : null;
+    }
     case "lavorazione_documents":
-      return "Documento lavorazione aggiornato";
-    case "documenti":
-      return `Documento ${verb}`;
-    case "bunder_documents":
-      return `Documento BUNDER ${verb}`;
+      if (event.type === "entity_created") return `Documento lavorazione caricato${REMOTE_SUFFIX}`;
+      if (event.type === "entity_updated") return `Documento lavorazione aggiornato${REMOTE_SUFFIX}`;
+      if (event.type === "entity_deleted") return `Documento lavorazione eliminato${REMOTE_SUFFIX}`;
+      return null;
+    case "documenti": {
+      const verb = entityVerb(event);
+      return verb ? `Documento ${verb}${REMOTE_SUFFIX}` : null;
+    }
+    case "bunder_documents": {
+      const verb = entityVerb(event);
+      return verb ? `Documento BUNDER ${verb}${REMOTE_SUFFIX}` : null;
+    }
     case "log_modifiche":
     case "app_settings":
     default:
       return null;
   }
+}
+
+function eventLabel(event: CabSyncEvent): string | null {
+  return gestionaleCabSyncToastMessage(event);
 }
 
 function toneForEvent(event: CabSyncEvent): CabToastTone {
@@ -78,6 +114,7 @@ function fingerprintForEvent(event: CabSyncEvent, now: number): string {
  * Usare solo questo dispatcher per creare notifiche da eventi gestionale.
  */
 export function dispatchNotificaGestionale(event: CabSyncEvent): void {
+  if (isCabSyncToastSuppressed(event)) return;
   const message = eventLabel(event);
   if (!message) return;
   const now = Date.now();

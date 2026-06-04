@@ -17,6 +17,7 @@ import {
   readAuthRoleHint,
   readClientEffectivePermissionsSnapshotCache,
 } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
+import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 
 const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>> = {
@@ -118,6 +119,15 @@ async function loadClientPortalAccessForCurrentUser(): Promise<{ role: string | 
     .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
     .maybeSingle();
   return { role, userId, settings: parseClientPortalAccess(row?.value) };
+}
+
+/** `profiles.cliente_ref` dell'utente corrente (portale / filtri lista). */
+export async function loadCallerClienteRef(): Promise<string | null> {
+  const sb = getBrowserSupabase();
+  const { data: auth } = await sb.auth.getUser();
+  if (!auth.user?.id) return null;
+  const { data: prof } = await sb.from("profiles").select("cliente_ref").eq("id", auth.user.id).maybeSingle();
+  return normalizeClienteRef(prof?.cliente_ref);
 }
 
 /** Portale lavorazioni clienti: admin o utente abilitato in Sicurezza. */

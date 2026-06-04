@@ -61,7 +61,9 @@ assertRouteProtection(
   "cliente",
   [
     { pathname: "/dashboard", allowed: false },
+    { pathname: "/mezzi", allowed: false },
     { pathname: "/lavorazioni-clienti", allowed: true },
+    { pathname: "/lavorazioni-clienti/abc", allowed: true },
   ],
   null,
 );

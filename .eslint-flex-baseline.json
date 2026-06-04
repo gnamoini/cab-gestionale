@@ -1,8 +1,8 @@
 {
-  "version": 4,
-  "frozenAt": "2026-06-02",
-  "entryCount": 9,
-  "checksum": "9fe0b264d5e4ef8379624dcb0e1be53d50b573cbca4c579b1dbb5253686b4a5b",
+  "version": 5,
+  "frozenAt": "2026-06-04",
+  "entryCount": 17,
+  "checksum": "bc70e9db58084d36314209b9a3fcf4647a318a521622131ca03034a33cbb186f",
   "entries": [
     {
       "file": "app/login/login-form.tsx",
@@ -20,8 +20,53 @@
       "reason": "toolbar-without-containment"
     },
     {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 668,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 677,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 686,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 695,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 704,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 732,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/bunder/bunder-view.tsx",
+      "line": 742,
+      "reason": "toolbar-without-containment"
+    },
+    {
+      "file": "components/dashboard/admin-notifications-bell.tsx",
+      "line": 556,
+      "reason": "flex-grow-without-containment"
+    },
+    {
+      "file": "components/dashboard/security-dashboard-view.tsx",
+      "line": 453,
+      "reason": "toolbar-without-containment"
+    },
+    {
       "file": "components/dashboard/sistema-impostazioni-modal.tsx",
-      "line": 361,
+      "line": 382,
       "reason": "toolbar-without-containment"
     },
     {
@@ -31,17 +76,12 @@
     },
     {
       "file": "components/gestionale/mezzi/mezzi-filters.tsx",
-      "line": 110,
+      "line": 133,
       "reason": "toolbar-without-containment"
     },
     {
       "file": "components/gestionale/mezzi/mezzi-filters.tsx",
-      "line": 120,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
-      "line": 129,
+      "line": 143,
       "reason": "toolbar-without-containment"
     },
     {

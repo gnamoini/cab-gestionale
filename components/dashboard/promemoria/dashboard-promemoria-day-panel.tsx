@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { Button, IconActionButton, LoadingErrorState } from "@/components/design-system";
 import { HubIconPencil, HubIconPlus, HubIconTrash } from "@/components/design-system/hub-table-action-icons";
 import type { DashboardPromemoriaRow } from "@/lib/dashboard/dashboard-promemoria-types";
+import { formatRecurrenceSummary } from "@/lib/dashboard/dashboard-promemoria-recurrence";
 import { formatPromemoriaEventTimeDisplay } from "@/lib/dashboard/dashboard-promemoria-reminder";
 import {
   dsTableActionBtnDanger,
@@ -36,15 +37,31 @@ function PromemoriaRow({
   onDelete: (row: DashboardPromemoriaRow) => void;
 }) {
   const timeLabel = formatPromemoriaEventTimeDisplay(row.event_time);
+  const seriesSummary = row.series_id
+    ? formatRecurrenceSummary(row.recurrence_frequency, row.recurrence_interval, row.recurrence_until)
+    : null;
   return (
     <article className="cursor-default rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-3 py-2.5 shadow-[var(--cab-shadow-sm)]">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <h3 className="min-w-0 text-sm font-semibold leading-snug text-[color:var(--cab-text)]">{row.title}</h3>
+          <div className="flex min-w-0 items-center gap-1.5">
+            <h3 className="min-w-0 text-sm font-semibold leading-snug text-[color:var(--cab-text)]">{row.title}</h3>
+            {row.series_id ? (
+              <span
+                className={`${dsTypoCaption} shrink-0 rounded-md border border-[color:var(--cab-border)] px-1.5 py-0.5 font-semibold text-[color:var(--cab-primary)]`}
+                title={seriesSummary ?? "Serie ricorrente"}
+              >
+                ↻
+              </span>
+            ) : null}
+          </div>
           {timeLabel ? (
             <p className={`mt-0.5 ${dsTypoCaption} font-medium tabular-nums text-[color:var(--cab-primary)]`}>
               {timeLabel}
             </p>
+          ) : null}
+          {seriesSummary ? (
+            <p className={`mt-0.5 ${dsTypoCaption} text-[color:var(--cab-text-muted)]`}>{seriesSummary}</p>
           ) : null}
         </div>
         {!readOnly ? (

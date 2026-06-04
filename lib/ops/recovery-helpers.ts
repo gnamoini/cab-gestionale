@@ -1,7 +1,7 @@
 "use client";
 
 import type { QueryClient } from "@tanstack/react-query";
-import { documentoStoragePathFromStored } from "@/lib/documenti/documenti-db-mapper";
+import { classifyDocumentoUrlRow } from "@/lib/ops/documenti-url-inventory";
 import { removeDocumentoStoragePathsBestEffort } from "@/lib/documenti/delete-documento-fully";
 import { gestionaleLogger } from "@/lib/observability/logger";
 import {
@@ -40,13 +40,11 @@ export async function retryStorageRemove(paths: string[]): Promise<{ attempted: 
 
 /** Diagnostica riga documento (path vs legacy URL). */
 export function diagnoseDocumentoRow(row: Pick<DocumentoRow, "id" | "url_file">): DocumentoDiagnostic {
-  const raw = row.url_file?.trim() ?? "";
-  const isLegacyHttpUrl = /^https?:\/\//i.test(raw);
-  const storagePath = documentoStoragePathFromStored(raw);
+  const c = classifyDocumentoUrlRow({ id: row.id, url_file: row.url_file ?? "" });
   return {
-    id: row.id,
-    hasResolvablePath: Boolean(storagePath),
-    isLegacyHttpUrl,
-    storagePath,
+    id: c.id,
+    hasResolvablePath: c.hasResolvablePath,
+    isLegacyHttpUrl: c.isLegacyHttpUrl,
+    storagePath: c.storagePath,
   };
 }

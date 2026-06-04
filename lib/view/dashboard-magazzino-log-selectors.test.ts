@@ -5,31 +5,19 @@ import {
   computeDashboardMagDailyMovementsFromLogs,
   computeDashboardMagFeedFromLogs,
 } from "@/lib/view/dashboard-magazzino-log-selectors";
+import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
-const ricambio: RicambioMagazzino = {
+const ricambio: RicambioMagazzino = defaultRicambioMagazzinoFields({
   id: "r1",
   marca: "Bosch",
   codiceFornitoreOriginale: "X1",
-  codiceFornitoreOriginaleSecondario: "",
   descrizione: "Filtro",
-  note: "",
-  categoria: "",
-  compatibilitaMezzi: [],
   scorta: 5,
-  scortaMinima: 0,
-  dataUltimaModifica: "2026-01-01T00:00:00.000Z",
-  autoreUltimaModifica: "",
   prezzoFornitoreOriginale: 10,
-  scontoFornitoreOriginale: 0,
-  markupPercentuale: 0,
   prezzoVendita: 12,
-  fornitoreNonOriginale: "",
-  codiceFornitoreNonOriginale: "",
-  prezzoFornitoreNonOriginale: 0,
-  scontoFornitoreNonOriginale: 0,
-};
+});
 
 const byId = new Map([["r1", ricambio]]);
 

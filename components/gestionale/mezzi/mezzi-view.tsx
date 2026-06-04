@@ -27,6 +27,7 @@ import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortP
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+import { CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import { dsInput, dsPageToolbarBtn, dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
 import { Drawer, LoadingButton, LoadingErrorState, LoadingFormSkeleton, LoadingTableSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
 import {
@@ -766,7 +767,10 @@ function sortedUniqueStrings(list: string[]): string[] {
 
 function MezzoFormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2 border-b border-zinc-100 pb-3 last:border-b-0 dark:border-zinc-800">
+    <section
+      {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+      className="space-y-2 border-b border-zinc-100 pb-3 last:border-b-0 dark:border-zinc-800"
+    >
       <h3 className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{title}</h3>
       <div className="space-y-2">{children}</div>
     </section>

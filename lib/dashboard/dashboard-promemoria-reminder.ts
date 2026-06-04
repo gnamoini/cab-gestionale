@@ -141,3 +141,11 @@ export const DASHBOARD_PROMEMORIA_REMINDER_TOAST =
   "Hai promemoria in calendario per oggi. Apri la Dashboard per i dettagli.";
 
 export const DASHBOARD_PROMEMORIA_REMINDER_DESKTOP_TITLE = "Promemoria di oggi";
+
+export function formatDashboardPromemoriaReminderToastMessage(
+  messages: readonly string[],
+): string {
+  if (messages.length === 0) return DASHBOARD_PROMEMORIA_REMINDER_TOAST;
+  if (messages.length === 1) return messages[0]!;
+  return `Hai ${messages.length} promemoria oggi. Apri la Dashboard per i dettagli.`;
+}

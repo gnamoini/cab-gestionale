@@ -29,25 +29,6 @@ export function VisualLayoutLinterMount() {
       emitVisualLayoutLinterWarnings(lint);
       const fixResult = runUIAutonomyFixEngineFromMain(pathname, lint);
       emitUIAutonomyFixReport(fixResult);
-      // #region agent log
-      fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bb7cdf" },
-        body: JSON.stringify({
-          sessionId: "bb7cdf",
-          runId: "post-fix",
-          hypothesisId: "H4-H5",
-          location: "visual-layout-linter-mount.tsx:run",
-          message: "layout linter summary",
-          data: {
-            pathname,
-            issueCount: lint.issues.length,
-            toolbarIssues: lint.issues.filter((i) => i.category === "toolbar").map((i) => i.rule),
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     }
 
     function schedule() {

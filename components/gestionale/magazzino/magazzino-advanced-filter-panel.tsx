@@ -17,6 +17,7 @@ import {
   FILTER_ALL,
   type MagazzinoAdvancedFilters,
   type MagazzinoFilterCatalog,
+  type MagazzinoTagliandoFilter,
 } from "@/lib/magazzino/magazzino-advanced-filters";
 
 export function MagazzinoAdvancedFilterPanel({
@@ -36,6 +37,23 @@ export function MagazzinoAdvancedFilterPanel({
       ...categoriaList.options.map((c) => ({ value: c, label: c })),
     ],
     [categoriaList.options],
+  );
+
+  const tagliandoItems = useMemo(
+    () => [
+      { value: FILTER_ALL, label: "Tutti" },
+      { value: "solo" as MagazzinoTagliandoFilter, label: "Solo tagliandi" },
+      { value: "escludi" as MagazzinoTagliandoFilter, label: "Escludi tagliandi" },
+    ],
+    [],
+  );
+
+  const produttoreItems = useMemo(
+    () => [
+      { value: FILTER_ALL, label: "Tutti i produttori" },
+      ...catalog.produttoriAlternativi.map((p) => ({ value: p, label: p })),
+    ],
+    [catalog.produttoriAlternativi],
   );
 
   return (
@@ -69,18 +87,52 @@ export function MagazzinoAdvancedFilterPanel({
             aria-label="Filtra categoria ricambio"
           />
         </LavorazioniFilterField>
-        <LavorazioniFilterField label="Fornitore non originale" htmlFor="mag-filter-fornitore-no">
+        <LavorazioniFilterField label="Tagliando" htmlFor="mag-filter-tagliando">
+          <GlobalSelect
+            id="mag-filter-tagliando"
+            items={tagliandoItems}
+            value={filters.tagliando}
+            onChange={(v) => onChange({ tagliando: v as MagazzinoTagliandoFilter })}
+            inputClassName={gestionaleFilterFieldInputClass}
+            selectOnly
+            variant="filter"
+            aria-label="Filtra tagliando"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Fornitore alternativo" htmlFor="mag-filter-fornitore-no">
           <GlobalSettingsListSelect
             id="mag-filter-fornitore-no"
             listKey="magazzino:fornitori"
             value={filters.fornitoreNonOriginale === FILTER_ALL ? "" : filters.fornitoreNonOriginale}
-            onChange={(v) => onChange({ fornitoreNonOriginale: v.trim() ? v : FILTER_ALL })}
+            onChange={(v) =>
+              onChange({
+                fornitoreNonOriginale: v.trim() ? v : FILTER_ALL,
+                produttoreAlternativo: FILTER_ALL,
+              })
+            }
             inputClassName={gestionaleFilterFieldInputClass}
             variant="filter"
             filterNeutralValues={[FILTER_ALL, ""]}
             allowAdd={false}
             placeholder="Cerca fornitore…"
-            aria-label="Filtra fornitore non originale"
+            aria-label="Filtra fornitore alternativo"
+          />
+        </LavorazioniFilterField>
+        <LavorazioniFilterField label="Produttore alternativo" htmlFor="mag-filter-produttore-alt">
+          <GlobalSelect
+            id="mag-filter-produttore-alt"
+            items={produttoreItems}
+            value={filters.produttoreAlternativo}
+            onChange={(v) => onChange({ produttoreAlternativo: v })}
+            inputClassName={gestionaleFilterFieldInputClass}
+            selectOnly
+            variant="filter"
+            filterNeutralValues={[FILTER_ALL]}
+            disabled={filters.fornitoreNonOriginale === FILTER_ALL}
+            placeholder={
+              filters.fornitoreNonOriginale === FILTER_ALL ? "Seleziona prima il fornitore" : "Produttore…"
+            }
+            aria-label="Filtra produttore alternativo"
           />
         </LavorazioniFilterField>
       </LavorazioniFilterGroup>

@@ -453,42 +453,46 @@ export function DipendentiTimesheetGrid({
               thClassName={`sticky left-0 z-[4] ${timesheetStickyNameCol} bg-[var(--cab-surface-2)] py-2`}
             />
             {days.map((d) => (
-              <Tooltip
+              <th
                 key={d.dateYmd}
-                content={formatTimesheetDayColumnTooltip(d, monthKey)}
+                data-timesheet-day={d.dateYmd}
+                data-timesheet-weekend={d.isWeekend ? "true" : undefined}
+                {...dayAccentProps(d.dateYmd)}
+                className={dayHeaderClass(d.isWeekend)}
+                aria-current={isTodayAccentColumn(d.dateYmd) ? "date" : undefined}
+              >
+                <Tooltip
+                  content={formatTimesheetDayColumnTooltip(d, monthKey)}
+                  side="bottom"
+                  showOnFocus={false}
+                  delayMs={220}
+                >
+                  <span className="block w-full min-w-0 text-center">
+                    <span className="gestionale-timesheet-day-accent-day block text-xs font-semibold tabular-nums">
+                      {d.day}
+                    </span>
+                    <span className="mt-0.5 block text-[10px] font-normal normal-case opacity-80">
+                      {d.weekdayShort}
+                    </span>
+                  </span>
+                </Tooltip>
+              </th>
+            ))}
+            <th
+              className={`${timesheetHeaderThBase} ${timesheetTotalsColBorder} min-w-[4.5rem] whitespace-nowrap px-1 text-center`}
+            >
+              <Tooltip
+                content="Totali ore del mese (presenze in riga sopra, assenze in riga sotto)"
                 side="bottom"
                 showOnFocus={false}
                 delayMs={220}
               >
-                <th
-                  data-timesheet-day={d.dateYmd}
-                  data-timesheet-weekend={d.isWeekend ? "true" : undefined}
-                  {...dayAccentProps(d.dateYmd)}
-                  className={dayHeaderClass(d.isWeekend)}
-                  aria-current={isTodayAccentColumn(d.dateYmd) ? "date" : undefined}
-                >
-                  <span className="gestionale-timesheet-day-accent-day block text-xs font-semibold tabular-nums">
-                    {d.day}
-                  </span>
-                  <span className="mt-0.5 block text-[10px] font-normal normal-case opacity-80">
-                    {d.weekdayShort}
-                  </span>
-                </th>
+                <span className="block w-full min-w-0 text-center">
+                  <span className="block normal-case">Tot.</span>
+                  <span className="mt-0.5 block text-[10px] font-normal normal-case opacity-80">ore</span>
+                </span>
               </Tooltip>
-            ))}
-            <Tooltip
-              content="Totali ore del mese (presenze in riga sopra, assenze in riga sotto)"
-              side="bottom"
-              showOnFocus={false}
-              delayMs={220}
-            >
-              <th
-                className={`${timesheetHeaderThBase} ${timesheetTotalsColBorder} min-w-[4.5rem] whitespace-nowrap px-1 text-center`}
-              >
-                <span className="block normal-case">Tot.</span>
-                <span className="mt-0.5 block text-[10px] font-normal normal-case opacity-80">ore</span>
-              </th>
-            </Tooltip>
+            </th>
           </GlobalTableHead>
           {visibleEmployees.map((emp) => {
             const totals = totalsByEmployee.get(emp.id)!;
@@ -559,20 +563,22 @@ export function DipendentiTimesheetGrid({
                         />
                       </td>
                     ))}
-                    <Tooltip
-                      content={`${emp.display_name} · Totale presenze mese: ${totals.totaleLavorato > 0 ? `${totals.totaleLavorato}h` : "—"}`}
-                      side="left"
-                      showOnFocus={false}
-                      delayMs={220}
+                    <td
+                      data-timesheet-employee-row={emp.id}
+                      data-timesheet-total=""
+                      className={`${timesheetTotalsColBorder} ${totalTd}`}
                     >
-                      <td
-                        data-timesheet-employee-row={emp.id}
-                        data-timesheet-total=""
-                        className={`${timesheetTotalsColBorder} ${totalTd}`}
+                      <Tooltip
+                        content={`${emp.display_name} · Totale presenze mese: ${totals.totaleLavorato > 0 ? `${totals.totaleLavorato}h` : "—"}`}
+                        side="left"
+                        showOnFocus={false}
+                        delayMs={220}
                       >
-                        {totals.totaleLavorato || "—"}
-                      </td>
-                    </Tooltip>
+                        <span className="block w-full text-center tabular-nums">
+                          {totals.totaleLavorato || "—"}
+                        </span>
+                      </Tooltip>
+                    </td>
                   </tr>
                   <tr className={empBodyRowClass} data-timesheet-employee-row={emp.id}>
                     {days.map((d) => (
@@ -602,20 +608,22 @@ export function DipendentiTimesheetGrid({
                         />
                       </td>
                     ))}
-                    <Tooltip
-                      content={`${emp.display_name} · Totale assenze mese: ${totals.oreAssenza > 0 ? `${totals.oreAssenza}h` : "—"}`}
-                      side="left"
-                      showOnFocus={false}
-                      delayMs={220}
+                    <td
+                      data-timesheet-employee-row={emp.id}
+                      data-timesheet-total=""
+                      className={`${timesheetTotalsColBorder} ${totalTd} text-[color:var(--cab-text-muted)]`}
                     >
-                      <td
-                        data-timesheet-employee-row={emp.id}
-                        data-timesheet-total=""
-                        className={`${timesheetTotalsColBorder} ${totalTd} text-[color:var(--cab-text-muted)]`}
+                      <Tooltip
+                        content={`${emp.display_name} · Totale assenze mese: ${totals.oreAssenza > 0 ? `${totals.oreAssenza}h` : "—"}`}
+                        side="left"
+                        showOnFocus={false}
+                        delayMs={220}
                       >
-                        {totals.oreAssenza || "—"}
-                      </td>
-                    </Tooltip>
+                        <span className="block w-full text-center tabular-nums">
+                          {totals.oreAssenza || "—"}
+                        </span>
+                      </Tooltip>
+                    </td>
                   </tr>
               </tbody>
             );
@@ -631,87 +639,95 @@ export function DipendentiTimesheetGrid({
               {days.map((d, index) => {
                 const dayTotal = dailyTotals[index]!;
                 return (
-                  <Tooltip
+                  <td
                     key={d.dateYmd}
-                    content={formatTimesheetFooterDayTooltip(
-                      d,
-                      monthKey,
-                      "work",
-                      dayTotal.totaleLavorato,
-                    )}
-                    side="top"
-                    showOnFocus={false}
-                    delayMs={220}
+                    data-timesheet-day={d.dateYmd}
+                    data-timesheet-weekend={d.isWeekend ? "true" : undefined}
+                    {...dayAccentProps(d.dateYmd)}
+                    className={[
+                      timesheetFooterTdBase,
+                      "px-0.5 text-center text-xs font-semibold tabular-nums",
+                    ].join(" ")}
                   >
-                    <td
-                      data-timesheet-day={d.dateYmd}
-                      data-timesheet-weekend={d.isWeekend ? "true" : undefined}
-                      {...dayAccentProps(d.dateYmd)}
-                      className={[
-                        timesheetFooterTdBase,
-                        "px-0.5 text-center text-xs font-semibold tabular-nums",
-                      ].join(" ")}
+                    <Tooltip
+                      content={formatTimesheetFooterDayTooltip(
+                        d,
+                        monthKey,
+                        "work",
+                        dayTotal.totaleLavorato,
+                      )}
+                      side="top"
+                      showOnFocus={false}
+                      delayMs={220}
                     >
-                      {formatDayWorkFooter(dayTotal)}
-                    </td>
-                  </Tooltip>
+                      <span className="block w-full text-center tabular-nums">
+                        {formatDayWorkFooter(dayTotal)}
+                      </span>
+                    </Tooltip>
+                  </td>
                 );
               })}
-              <Tooltip
-                content={formatTimesheetFooterMonthTooltip(monthKey, "work", globalTotals.totaleLavorato)}
-                side="left"
-                showOnFocus={false}
-                delayMs={220}
+              <td
+                className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} px-1 text-center text-xs font-semibold tabular-nums`}
               >
-                <td
-                  className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} px-1 text-center text-xs font-semibold tabular-nums`}
+                <Tooltip
+                  content={formatTimesheetFooterMonthTooltip(monthKey, "work", globalTotals.totaleLavorato)}
+                  side="left"
+                  showOnFocus={false}
+                  delayMs={220}
                 >
-                  {globalTotals.totaleLavorato || "—"}
-                </td>
-              </Tooltip>
+                  <span className="block w-full text-center tabular-nums">
+                    {globalTotals.totaleLavorato || "—"}
+                  </span>
+                </Tooltip>
+              </td>
             </tr>
             <tr>
               {days.map((d, index) => {
                 const dayTotal = dailyTotals[index]!;
                 return (
-                  <Tooltip
+                  <td
                     key={d.dateYmd}
-                    content={formatTimesheetFooterDayTooltip(
-                      d,
-                      monthKey,
-                      "absence",
-                      dayTotal.oreAssenza,
-                    )}
-                    side="top"
-                    showOnFocus={false}
-                    delayMs={220}
+                    data-timesheet-day={d.dateYmd}
+                    data-timesheet-weekend={d.isWeekend ? "true" : undefined}
+                    {...dayAccentProps(d.dateYmd)}
+                    className={[
+                      timesheetFooterTdBase,
+                      "px-0.5 text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]",
+                    ].join(" ")}
                   >
-                    <td
-                      data-timesheet-day={d.dateYmd}
-                      data-timesheet-weekend={d.isWeekend ? "true" : undefined}
-                      {...dayAccentProps(d.dateYmd)}
-                      className={[
-                        timesheetFooterTdBase,
-                        "px-0.5 text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]",
-                      ].join(" ")}
+                    <Tooltip
+                      content={formatTimesheetFooterDayTooltip(
+                        d,
+                        monthKey,
+                        "absence",
+                        dayTotal.oreAssenza,
+                      )}
+                      side="top"
+                      showOnFocus={false}
+                      delayMs={220}
                     >
-                      {formatDayAbsenceFooter(dayTotal)}
-                    </td>
-                  </Tooltip>
+                      <span className="block w-full text-center tabular-nums">
+                        {formatDayAbsenceFooter(dayTotal)}
+                      </span>
+                    </Tooltip>
+                  </td>
                 );
               })}
-              <Tooltip
-                content={formatTimesheetFooterMonthTooltip(monthKey, "absence", globalTotals.oreAssenza)}
-                side="left"
-                showOnFocus={false}
-                delayMs={220}
+              <td
+                className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} px-1 text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]`}
               >
-                <td
-                  className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} px-1 text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]`}
+                <Tooltip
+                  content={formatTimesheetFooterMonthTooltip(monthKey, "absence", globalTotals.oreAssenza)}
+                  side="left"
+                  showOnFocus={false}
+                  delayMs={220}
                 >
-                  {globalTotals.oreAssenza || "—"}
-                </td>
-              </Tooltip>
+                  <span className="block w-full text-center tabular-nums">
+                    {globalTotals.oreAssenza || "—"}
+                  </span>
+                </Tooltip>
+              </td>
             </tr>
           </tfoot>
         </table>

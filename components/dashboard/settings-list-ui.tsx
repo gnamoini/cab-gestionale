@@ -3,8 +3,7 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import { PageToolbarCtaLabel } from "@/components/design-system";
 import { erpBtnNeutral, erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { handleSettingsInlineEditKeyDown } from "@/lib/settings/settings-inline-edit-keyboard";
-import { dsInput, dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
+import { dsBtnPrimary, dsInput, dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
 
 /** Shell pannelli elenco impostazioni (clienti, gerarchie, …). */
 export const SETTINGS_PANEL_SHELL =
@@ -33,15 +32,82 @@ export const SETTINGS_LIST_ROW =
 export const SETTINGS_LIST_INPUT =
   "min-w-0 flex-1 rounded-lg border border-transparent bg-transparent px-1.5 py-1 text-xs font-medium text-[color:var(--cab-text)] outline-none transition-[border-color,background-color,box-shadow] duration-150 focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:bg-[var(--cab-surface)] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_25%,transparent)]";
 
-export const SETTINGS_LIST_ACTION =
-  "shrink-0 rounded-md px-2 py-1 text-xs font-medium opacity-70 transition-opacity duration-150 group-hover:opacity-100";
+/** Pulsanti azione riga impostazioni (allineati a lavorazioni-settings-ui). */
+export const SETTINGS_ROW_BTN_BASE =
+  "shrink-0 rounded-md px-2.5 py-1 text-xs font-medium min-h-[2.25rem] sm:min-h-9";
 
-function IconPencil({ className = "" }: { className?: string }) {
+export const SETTINGS_ROW_BTN_NEUTRAL = `${SETTINGS_ROW_BTN_BASE} ${erpBtnNeutral} border-transparent`;
+
+export const SETTINGS_ROW_BTN_PRIMARY = `${SETTINGS_ROW_BTN_BASE} ${dsBtnPrimary}`;
+
+export const SETTINGS_ROW_BTN_DANGER =
+  `${SETTINGS_ROW_BTN_BASE} border-transparent text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] ${erpFocus}`;
+
+export function SettingsRowActionButtons({
+  mode,
+  itemLabel,
+  onEdit,
+  onConfirm,
+  onCancelEdit,
+  onRemove,
+  showRemoveInEdit = false,
+}: {
+  mode: "view" | "edit";
+  itemLabel: string;
+  onEdit: () => void;
+  onConfirm: () => void;
+  onCancelEdit: () => void;
+  onRemove: () => void;
+  /** Righe sempre in edit (es. gerarchie): mostra Elimina accanto a Conferma/Annulla. */
+  showRemoveInEdit?: boolean;
+}) {
+  if (mode === "edit") {
+    return (
+      <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+        <button
+          type="button"
+          className={SETTINGS_ROW_BTN_PRIMARY}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onConfirm}
+        >
+          Conferma
+        </button>
+        <button
+          type="button"
+          className={SETTINGS_ROW_BTN_NEUTRAL}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={onCancelEdit}
+        >
+          Annulla
+        </button>
+        {showRemoveInEdit ? (
+          <button
+            type="button"
+            className={SETTINGS_ROW_BTN_DANGER}
+            onClick={onRemove}
+            aria-label={`Elimina ${itemLabel}`}
+          >
+            Elimina
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <svg className={className} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.25" aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 7.125L16.862 4.487" />
-    </svg>
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
+      <button
+        type="button"
+        className={SETTINGS_ROW_BTN_NEUTRAL}
+        onClick={onEdit}
+        aria-label={`Modifica ${itemLabel}`}
+      >
+        Modifica
+      </button>
+      <button type="button" className={SETTINGS_ROW_BTN_DANGER} onClick={onRemove} aria-label={`Elimina ${itemLabel}`}>
+        Elimina
+      </button>
+    </div>
   );
 }
 
@@ -57,25 +123,48 @@ export function SettingsInlineStringRow({
   onRemove: () => void;
   ariaLabel?: string;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const commit = () => {
+    const next = inputRef.current?.value ?? value;
+    onRenameBlur(value, next);
+  };
+
+  const cancel = () => {
+    if (inputRef.current) inputRef.current.value = value;
+  };
+
   return (
     <li className={`${SETTINGS_LIST_ROW} gap-2 py-2`}>
       <input
+        ref={inputRef}
         className={`${dsInput} min-h-9 min-w-0 flex-1 py-1.5 text-sm`}
         defaultValue={value}
         key={`${value}-inline`}
         aria-label={ariaLabel ?? `Modifica ${value}`}
-        onBlur={(e) => onRenameBlur(value, e.target.value)}
-        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) =>
-          handleSettingsInlineEditKeyDown(e, value)
-        }
+        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            commit();
+            return;
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            cancel();
+          }
+        }}
       />
-      <button
-        type="button"
-        className={`${erpBtnNeutral} min-h-9 shrink-0 border-transparent px-2.5 text-xs text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] ${erpFocus}`}
-        onClick={onRemove}
-      >
-        Elimina
-      </button>
+      <SettingsRowActionButtons
+        mode="edit"
+        itemLabel={value}
+        showRemoveInEdit
+        onEdit={() => {}}
+        onConfirm={commit}
+        onCancelEdit={cancel}
+        onRemove={onRemove}
+      />
     </li>
   );
 }
@@ -139,49 +228,53 @@ export function SettingsEditableStringRow({
   trailing?: React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
-  const initialValueRef = useRef(value);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const commitEdit = () => {
+    const next = inputRef.current?.value ?? value;
+    setEditing(false);
+    onRenameBlur(value, next);
+  };
+
+  const cancelEdit = () => {
+    setEditing(false);
+  };
 
   return (
     <li className={SETTINGS_LIST_ROW}>
       {editing ? (
         <input
+          ref={inputRef}
           className={SETTINGS_LIST_INPUT}
           defaultValue={value}
           autoFocus
           aria-label={`Modifica ${value}`}
-          onBlur={(e) => {
-            setEditing(false);
-            onRenameBlur(value, e.target.value);
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              e.stopPropagation();
+              commitEdit();
+              return;
+            }
+            if (e.key === "Escape") {
+              e.preventDefault();
+              e.stopPropagation();
+              cancelEdit();
+            }
           }}
-          onKeyDown={(e) =>
-            handleSettingsInlineEditKeyDown(e, initialValueRef.current, () => setEditing(false))
-          }
         />
       ) : (
         <span className="min-w-0 flex-1 truncate px-1.5 text-xs font-medium text-[color:var(--cab-text)]">{value}</span>
       )}
       {trailing}
-      <div className="flex shrink-0 items-center gap-0.5">
-        <button
-          type="button"
-          className={`${SETTINGS_LIST_ACTION} text-[color:var(--cab-text-muted)] hover:text-[color:var(--cab-primary)] ${erpFocus}`}
-          title="Modifica"
-          aria-label={`Modifica ${value}`}
-          onClick={() => {
-            initialValueRef.current = value;
-            setEditing(true);
-          }}
-        >
-          <IconPencil />
-        </button>
-        <button
-          type="button"
-          className={`${SETTINGS_LIST_ACTION} text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))] hover:underline ${erpFocus}`}
-          onClick={onRemove}
-        >
-          Elimina
-        </button>
-      </div>
+      <SettingsRowActionButtons
+        mode={editing ? "edit" : "view"}
+        itemLabel={value}
+        onEdit={() => setEditing(true)}
+        onConfirm={commitEdit}
+        onCancelEdit={cancelEdit}
+        onRemove={onRemove}
+      />
     </li>
   );
 }

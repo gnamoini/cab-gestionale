@@ -37,4 +37,36 @@ const role = validateUpdateUserRoleInput({ userId: USER_ID, role: "manager" });
 assert(role.ok === true, "role update valid");
 if (role.ok) assert(role.role === "manager", "manager role");
 
+const moduleRestore = validateSecurityUserBatchPatches([
+  { userId: USER_ID, modulePermissions: null },
+]);
+assert(moduleRestore.ok === true, "modulePermissions null restores from role");
+
+const modulePatch = validateSecurityUserBatchPatches([
+  {
+    userId: USER_ID,
+    modulePermissions: [{ module: "documenti", canRead: true, canWrite: false }],
+  },
+]);
+assert(modulePatch.ok === true, "valid module permission patch");
+if (modulePatch.ok) {
+  assert(modulePatch.patches[0]?.modulePermissions?.[0]?.module === "documenti", "documenti module");
+}
+
+const badModule = validateSecurityUserBatchPatches([
+  { userId: USER_ID, modulePermissions: [{ module: "sicurezza", canRead: true, canWrite: false }] },
+]);
+assert(badModule.ok === false, "invalid module rejected");
+
+const clienteRefPatch = validateSecurityUserBatchPatches([
+  { userId: USER_ID, clienteRef: "Rossi SRL" },
+]);
+assert(clienteRefPatch.ok === true, "clienteRef patch valid");
+if (clienteRefPatch.ok) {
+  assert(clienteRefPatch.patches[0]?.clienteRef === "Rossi SRL", "clienteRef normalized");
+}
+
+const clearClienteRef = validateSecurityUserBatchPatches([{ userId: USER_ID, clienteRef: null }]);
+assert(clearClienteRef.ok === true, "clienteRef null clears association");
+
 console.log("security-actions-validation.test.ts OK");

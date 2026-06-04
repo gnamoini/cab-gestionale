@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
+import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { buildKpiPerformanceModel } from "@/lib/report/kpi-performance/build-kpi-performance-model";
@@ -100,28 +101,17 @@ const lavRowOpen: LavorazioneListRow = {
   },
 };
 
-const ricambio: RicambioMagazzino = {
+const ricambio: RicambioMagazzino = defaultRicambioMagazzinoFields({
   id: "r1",
   marca: "X",
   codiceFornitoreOriginale: "C1",
-  codiceFornitoreOriginaleSecondario: "",
   descrizione: "Filtro",
-  note: "",
-  categoria: "",
-  compatibilitaMezzi: [],
   scorta: 2,
   scortaMinima: 5,
   dataUltimaModifica: "2026-01-01",
-  autoreUltimaModifica: "",
   prezzoFornitoreOriginale: 10,
-  scontoFornitoreOriginale: 0,
-  markupPercentuale: 0,
   prezzoVendita: 12,
-  fornitoreNonOriginale: "",
-  codiceFornitoreNonOriginale: "",
-  prezzoFornitoreNonOriginale: 0,
-  scontoFornitoreNonOriginale: 0,
-};
+});
 
 const magLog: MagazzinoChangeLogEntry[] = [
   {

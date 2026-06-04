@@ -20,6 +20,9 @@ function mockRicambio(partial: Partial<RicambioMagazzino> & Pick<RicambioMagazzi
     scontoFornitoreOriginale: 0,
     markupPercentuale: 0,
     prezzoVendita: 0,
+    marcaOriginaleSecondaria: "",
+    usatoInTagliandi: false,
+    fornitoriAlternativi: partial.fornitoriAlternativi ?? [],
     fornitoreNonOriginale: "",
     codiceFornitoreNonOriginale: "",
     prezzoFornitoreNonOriginale: 0,
@@ -36,5 +39,17 @@ assert.equal(findDuplicateByCodici(items, "ABC123")?.id, "1");
 assert.equal(findDuplicateByCodici(items, "ABC123A")?.id, "2");
 assert.equal(findDuplicateByCodici(items, "ABC123", { excludeId: "1" }), null);
 assert.equal(findDuplicateByCodici(items, "ABC123A", { excludeId: "2" }), null);
+
+const withAlt = [
+  ...items,
+  mockRicambio({
+    id: "3",
+    codiceFornitoreOriginale: "ZZ",
+    fornitoriAlternativi: [
+      { id: "a", fornitore: "F", produttore: "", codice: "ALT-99", prezzo: 0, sconto: 0 },
+    ],
+  }),
+];
+assert.equal(findDuplicateByCodici(withAlt, "ALT-99")?.id, "3");
 
 console.log("duplicates.test.ts OK");

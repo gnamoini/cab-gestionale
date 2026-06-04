@@ -7,6 +7,7 @@ import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { sortAddettiRecordsByNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { PageToolbarCtaLabel } from "@/components/design-system";
 import { LavorazioneAddettoReadOnlyPill } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { SETTINGS_ROW_BTN_DANGER } from "@/components/dashboard/settings-list-ui";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { lavTableTdPillWrap } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { dsInput, dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
@@ -30,10 +31,6 @@ const ADDETTI_PILL_SLOT_CLASS = `${lavTableTdPillWrap} min-w-0 flex-1 overflow-h
 
 /** Shell addetti: larghezza pannello, scroll orizzontale solo su viewport stretti. */
 export const ADDETTI_SETTINGS_PANEL_CLASS = "w-full min-w-0 overflow-x-auto";
-
-/** Azione elimina — colori/hover come `dsTableActionBtnDanger`, formato testo compatto. */
-const ADDETTI_DELETE_BTN =
-  "inline-flex h-8 min-h-8 shrink-0 items-center rounded-md bg-transparent px-2.5 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))] opacity-70 transition-[opacity,background-color] duration-150 ease-out group-hover:opacity-100 hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))]";
 
 export function AddettiInsertRow({
   nome,
@@ -239,7 +236,7 @@ export function StatoSettingsList({
             <button
               type="button"
               disabled={!canDelete}
-              className="ml-auto shrink-0 rounded-lg border border-zinc-200 bg-white px-2.5 py-1.5 text-xs font-medium text-zinc-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-45 dark:border-zinc-600 dark:bg-zinc-900 dark:text-zinc-200"
+              className={`${SETTINGS_ROW_BTN_DANGER} ml-auto disabled:cursor-not-allowed disabled:opacity-45`}
               title={canDelete ? "Elimina stato" : "Stato in uso o obbligatorio"}
               onClick={() => onRemove(s.id)}
             >
@@ -332,7 +329,7 @@ function AddettoSettingsRow({
       </div>
       <button
         type="button"
-        className={`${ADDETTI_DELETE_BTN} ${erpFocus} w-full sm:w-auto`}
+        className={`${SETTINGS_ROW_BTN_DANGER} ${erpFocus} w-full sm:w-auto`}
         onClick={() => onRemove(record.id)}
       >
         Elimina

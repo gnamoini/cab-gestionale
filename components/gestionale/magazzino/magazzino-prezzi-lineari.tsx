@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { ricambioModalSectionClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import { prezzoNetto } from "@/lib/magazzino/calculations";
 import { formatMarkupDisplay } from "@/lib/magazzino/form";
+import type { RicambioFornitoreAlternativo } from "@/lib/magazzino/types";
 
 function defaultEur(n: number) {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
@@ -31,6 +32,7 @@ export function MagazzinoPrezziLineari({
   formatEur = defaultEur,
   listinoOE,
   scontoOE,
+  fornitoriAlternativi = [],
   listinoAlt,
   scontoAlt,
   markupPct,
@@ -40,15 +42,34 @@ export function MagazzinoPrezziLineari({
   formatEur?: (n: number) => string;
   listinoOE: number;
   scontoOE: number;
-  listinoAlt: number;
-  scontoAlt: number;
+  fornitoriAlternativi?: RicambioFornitoreAlternativo[];
+  /** @deprecated Usare fornitoriAlternativi; fallback primo alternativo. */
+  listinoAlt?: number;
+  scontoAlt?: number;
   markupPct: number;
   prezzoVendita: number;
   title?: string;
 }) {
   const nettoOE = prezzoNetto(listinoOE, scontoOE);
-  const nettoAlt = prezzoNetto(listinoAlt, scontoAlt);
   const margine = Math.round((prezzoVendita - nettoOE) * 100) / 100;
+
+  const altRows =
+    fornitoriAlternativi.length > 0
+      ? fornitoriAlternativi
+      : listinoAlt != null && scontoAlt != null
+        ? [
+            {
+              id: "legacy",
+              fornitore: "",
+              produttore: "",
+              codice: "",
+              prezzo: listinoAlt,
+              sconto: scontoAlt,
+            },
+          ]
+        : [];
+
+  const altWithPrice = altRows.filter((r) => r.prezzo > 0 || r.fornitore.trim() || r.codice.trim());
 
   return (
     <div className={ricambioModalSectionClass}>
@@ -59,11 +80,26 @@ export function MagazzinoPrezziLineari({
           <PrezzoRow label="Sconto originale" value={`${scontoOE}%`} />
           <PrezzoRow label="Netto originale" value={formatEur(nettoOE)} />
         </PrezzoGroup>
-        <PrezzoGroup title="Alternativo">
-          <PrezzoRow label="Prezzo alternativo" value={formatEur(listinoAlt)} />
-          <PrezzoRow label="Sconto alternativo" value={`${scontoAlt}%`} />
-          <PrezzoRow label="Netto alternativo" value={formatEur(nettoAlt)} />
-        </PrezzoGroup>
+        {altWithPrice.length > 0 ? (
+          <PrezzoGroup title={altWithPrice.length > 1 ? "Alternativi" : "Alternativo"}>
+            {altWithPrice.map((row, i) => {
+              const nettoAlt = prezzoNetto(row.prezzo, row.sconto);
+              const label =
+                row.fornitore.trim() ||
+                row.produttore.trim() ||
+                row.codice.trim() ||
+                `Alternativo ${i + 1}`;
+              return (
+                <div key={row.id || i} className={i > 0 ? "mt-2 border-t border-zinc-100 pt-2 dark:border-zinc-800" : ""}>
+                  <p className="mb-1 text-xs font-semibold text-zinc-700 dark:text-zinc-300">{label}</p>
+                  <PrezzoRow label="Prezzo" value={formatEur(row.prezzo)} />
+                  <PrezzoRow label="Sconto" value={`${row.sconto}%`} />
+                  <PrezzoRow label="Netto" value={formatEur(nettoAlt)} />
+                </div>
+              );
+            })}
+          </PrezzoGroup>
+        ) : null}
         <PrezzoGroup title="Vendita">
           <PrezzoRow label="Prezzo vendita" value={formatEur(prezzoVendita)} />
           <PrezzoRow label="Markup" value={formatMarkupDisplay(markupPct)} />

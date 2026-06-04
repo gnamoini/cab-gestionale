@@ -22,7 +22,8 @@ import { QK } from "@/src/lib/react-query/query-keys";
 export const lavorazioniDomainQueryKeys = {
   root: QK.lavorazioniQueries,
   base: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "base", lavorazioneId] as const,
-  list: (filtersKey: string) => [...lavorazioniDomainQueryKeys.root, "list", filtersKey] as const,
+  list: (filtersKey: string, clientPortal: boolean) =>
+    [...lavorazioniDomainQueryKeys.root, "list", filtersKey, clientPortal ? "portal" : "ops"] as const,
   schede: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "schede", lavorazioneId] as const,
   movimenti: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "movimenti", lavorazioneId] as const,
   preventivi: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "preventivi", lavorazioneId] as const,
@@ -56,19 +57,30 @@ export function stableLavorazioniFiltersKey(filters: LavorazioneFilters | undefi
   });
 }
 
+type LavListQueryKey = ReturnType<typeof lavorazioniDomainQueryKeys.list>;
+
 type LavListOpts = Omit<
-  UseQueryOptions<LavorazioneListRow[], Error, LavorazioneListRow[], ReturnType<typeof lavorazioniDomainQueryKeys.list>>,
+  UseQueryOptions<LavorazioneListRow[], Error, LavorazioneListRow[], LavListQueryKey>,
   "queryKey" | "queryFn"
->;
+> & {
+  /** Se true, filtra per `profiles.cliente_ref` (solo portale `/lavorazioni-clienti`). */
+  clientPortal?: boolean;
+};
 
 /** Lista lavorazioni con filtri opzionali (chiave cache derivata da `stableLavorazioniFiltersKey`). */
 export function useLavorazioniList(filters?: LavorazioneFilters, options?: LavListOpts) {
   const fk = stableLavorazioniFiltersKey(filters);
-  return useServiceQuery(lavorazioniDomainQueryKeys.list(fk), () => fetchLavorazioniListAuthorized(filters), {
-    staleTime: LA_STALE_MS,
-    enabled: options?.enabled !== false,
-    ...options,
-  });
+  const clientPortal = options?.clientPortal === true;
+  const { clientPortal: _cp, ...queryOpts } = options ?? {};
+  return useServiceQuery(
+    lavorazioniDomainQueryKeys.list(fk, clientPortal),
+    () => fetchLavorazioniListAuthorized(filters, { clientPortal }),
+    {
+      staleTime: LA_STALE_MS,
+      enabled: queryOpts.enabled !== false,
+      ...queryOpts,
+    },
+  );
 }
 
 /** Lavorazioni per mezzo (riusa la stessa chiave di lista con filtri mezzo + join). */

@@ -68,6 +68,8 @@ npm run smoke:playwright
 
 - Bucket `documenti` deve essere **privato** (signed URL).
 - Diagnostica orphan: `npm run ops:diagnostics` (advisory, campione 500 oggetti root).
+- Inventario `url_file` / file mancanti: `npm run documenti:storage-inventory`.
+- Bonifica URL legacy → path: `npm run documenti:remediate-url-file` (dry-run); `DOCUMENTI_REMEDIATE_APPLY=1` per applicare.
 - Soglia warning orphan in CI: `OPS_STORAGE_ORPHAN_WARN_THRESHOLD` (default 10).
 
 ### Service role

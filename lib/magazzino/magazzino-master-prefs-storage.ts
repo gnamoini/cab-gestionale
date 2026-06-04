@@ -1,5 +1,6 @@
 /** Anagrafiche magazzino (liste guidate) persistite in locale — condivise tra Magazzino e Impostazioni sistema. */
 
+import { parseProduttoriByFornitore } from "@/lib/magazzino/fornitore-produttore-master";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 
 /** @deprecated Persistenza spostata su `public.app_settings` (modulo `magazzino`, chiave `master`). */
@@ -12,6 +13,8 @@ export type MagazzinoMasterPrefs = {
   categorie: string[];
   mezziCompatibili: string[];
   fornitori: string[];
+  /** Produttori per fornitore alternativo (chiave = normalizeFornitoreKey). */
+  produttoriByFornitore?: Record<string, string[]>;
 };
 
 export function loadMagazzinoMasterPrefs(): MagazzinoMasterPrefs | null {
@@ -30,6 +33,7 @@ export function loadMagazzinoMasterPrefs(): MagazzinoMasterPrefs | null {
         ? (o.mezziCompatibili as string[]).filter((x) => typeof x === "string")
         : [],
       fornitori: Array.isArray(o.fornitori) ? (o.fornitori as string[]).filter((x) => typeof x === "string") : [],
+      produttoriByFornitore: parseProduttoriByFornitore(o.produttoriByFornitore),
     };
   } catch {
     return null;

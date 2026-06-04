@@ -32,26 +32,6 @@ export function ResponsiveLayoutAuditMount() {
       const flexResult = runFlexSystemAudit(pathname);
       emitFlexSystemAuditWarnings(flexResult);
       emitMobileModalAuditWarnings(runMobileModalAudit());
-      // #region agent log
-      fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bb7cdf" },
-        body: JSON.stringify({
-          sessionId: "bb7cdf",
-          runId: "post-fix",
-          hypothesisId: "H1-H3",
-          location: "responsive-layout-audit-mount.tsx:run",
-          message: "responsive audit summary",
-          data: {
-            pathname,
-            findingCount: result.findings.length,
-            viewportOverflowCount: result.findings.filter((f) => f.kind === "element-exceeds-viewport").length,
-            pageOverflow: result.hasPageOverflow,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-      // #endregion
     }
 
     function schedule() {

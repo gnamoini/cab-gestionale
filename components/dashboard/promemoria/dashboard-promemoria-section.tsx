@@ -2,13 +2,24 @@
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/auth-context";
+import { appendDashboardSistemaLog } from "@/lib/dashboard/dashboard-sistema-log-storage";
 import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
 import type { DashboardPromemoriaRow } from "@/lib/dashboard/dashboard-promemoria-types";
 import { monthKeyFromParts } from "@/lib/dashboard/dashboard-promemoria-types";
 import { LoadingCardSkeleton, LoadingErrorState } from "@/components/design-system";
 import { DashboardPromemoriaCalendar } from "@/components/dashboard/promemoria/dashboard-promemoria-calendar";
 import { DashboardPromemoriaDayPanel } from "@/components/dashboard/promemoria/dashboard-promemoria-day-panel";
-import { DashboardPromemoriaFormModal } from "@/components/dashboard/promemoria/dashboard-promemoria-form-modal";
+import {
+  DashboardPromemoriaFormModal,
+  type DashboardPromemoriaFormSubmitPayload,
+} from "@/components/dashboard/promemoria/dashboard-promemoria-form-modal";
+import { DashboardPromemoriaScopeDialog } from "@/components/dashboard/promemoria/dashboard-promemoria-scope-dialog";
+import {
+  expandRecurrenceOccurrences,
+  validateRecurrenceInput,
+  type PromemoriaRecurrenceScope,
+} from "@/lib/dashboard/dashboard-promemoria-recurrence";
 import {
   initialPromemoriaMonthKey,
   prefetchPromemoriaMonth,
@@ -26,6 +37,8 @@ import {
 } from "@/lib/ui/design-system";
 
 export function DashboardPromemoriaSection() {
+  const { authorName } = useAuth();
+  const logAutore = authorName.trim() || "Operatore";
   const queryClient = useQueryClient();
   const rbac = useRbac();
   const readOnly = !rbac.canWrite("dashboard");
@@ -36,6 +49,7 @@ export function DashboardPromemoriaSection() {
   const [monthKey, setMonthKey] = useState(initialPromemoriaMonthKey);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<DashboardPromemoriaRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DashboardPromemoriaRow | null>(null);
   const hasLoadedOnceRef = useRef(false);
 
   const {
@@ -86,8 +100,46 @@ export function DashboardPromemoriaSection() {
     setModalOpen(true);
   }, []);
 
+  const performDelete = useCallback(
+    async (row: DashboardPromemoriaRow, scope: PromemoriaRecurrenceScope) => {
+      if (!rbac.canWrite("dashboard")) {
+        toastError(new Error(rbac.isLoading ? "Permessi in caricamento, riprova." : "Non hai i permessi per eseguire questa azione."));
+        return;
+      }
+      try {
+        const count = await deleteMutation.mutateAsync({ id: row.id, scope });
+        const scopeLabel =
+          scope === "series"
+            ? "tutta la serie"
+            : scope === "following"
+              ? "questa e le successive"
+              : "l'occorrenza";
+        appendDashboardSistemaLog({
+          tone: "delete",
+          tipoRiga: "PROMEMORIA",
+          oggettoRiga: row.title,
+          modificaRiga:
+            count > 1
+              ? `• ${logAutore} ha eliminato ${count} promemoria (${scopeLabel})`
+              : `• ${logAutore} ha eliminato il promemoria del ${row.event_date}`,
+          autore: logAutore,
+          atIso: new Date().toISOString(),
+        });
+        toastSuccess(count > 1 ? `${count} promemoria eliminati.` : "Promemoria eliminato.");
+        setDeleteTarget(null);
+      } catch (e) {
+        toastError(e, { action: "delete" });
+      }
+    },
+    [deleteMutation, logAutore, rbac, toastError, toastSuccess],
+  );
+
   const handleDelete = useCallback(
     async (row: DashboardPromemoriaRow) => {
+      if (row.series_id) {
+        setDeleteTarget(row);
+        return;
+      }
       const ok = await confirm({
         title: "Elimina promemoria",
         message: `Eliminare «${row.title}»?`,
@@ -95,28 +147,32 @@ export function DashboardPromemoriaSection() {
         destructive: true,
       });
       if (!ok) return;
-      if (!rbac.canWrite("dashboard")) {
-        toastError(new Error(rbac.isLoading ? "Permessi in caricamento, riprova." : "Non hai i permessi per eseguire questa azione."));
-        return;
-      }
-      try {
-        await deleteMutation.mutateAsync(row.id);
-        toastSuccess("Promemoria eliminato.");
-      } catch (e) {
-        toastError(e, { action: "delete" });
-      }
+      await performDelete(row, "single");
     },
-    [confirm, deleteMutation, rbac, toastError, toastSuccess],
+    [confirm, performDelete],
   );
 
   const saving = createMutation.isPending || updateMutation.isPending;
 
   const handleSubmit = useCallback(
-    async (payload: { eventDate: string; eventTime: string | null; title: string; description: string | null }) => {
+    async (payload: DashboardPromemoriaFormSubmitPayload) => {
       const title = payload.title.trim();
       if (!title) {
         toastValidation("Inserisci un titolo.");
         return;
+      }
+      if (!editing && payload.recurrence?.enabled) {
+        const validation = validateRecurrenceInput(
+          payload.eventDate,
+          payload.recurrence.frequency ?? null,
+          payload.recurrence.interval ?? 1,
+          payload.recurrence.untilYmd ?? "",
+          true,
+        );
+        if (!validation.ok) {
+          toastValidation(validation.message);
+          return;
+        }
       }
       try {
         if (editing) {
@@ -126,25 +182,62 @@ export function DashboardPromemoriaSection() {
             eventTime: payload.eventTime,
             title,
             description: payload.description,
+            scope: payload.scope,
+          });
+          const scopeNote =
+            payload.scope === "series"
+              ? " (tutta la serie)"
+              : payload.scope === "following"
+                ? " (questa e le successive)"
+                : "";
+          appendDashboardSistemaLog({
+            tone: "update",
+            tipoRiga: "PROMEMORIA",
+            oggettoRiga: title,
+            modificaRiga: `• ${logAutore} ha aggiornato il promemoria del ${payload.eventDate}${scopeNote}`,
+            autore: logAutore,
+            atIso: new Date().toISOString(),
           });
           toastSuccess("Promemoria aggiornato.");
         } else {
-          await createMutation.mutateAsync({
+          const created = await createMutation.mutateAsync({
             eventDate: payload.eventDate,
             eventTime: payload.eventTime,
             title,
             description: payload.description,
+            recurrence: payload.recurrence,
           });
-          toastSuccess("Promemoria creato.");
+          const recurring = Boolean(payload.recurrence?.enabled && payload.recurrence.frequency);
+          const occurrenceCount = recurring
+            ? expandRecurrenceOccurrences(
+                payload.eventDate,
+                payload.recurrence!.frequency!,
+                payload.recurrence?.interval ?? 1,
+                payload.recurrence!.untilYmd!,
+              ).length
+            : 1;
+          appendDashboardSistemaLog({
+            tone: "create",
+            tipoRiga: "PROMEMORIA",
+            oggettoRiga: title,
+            modificaRiga:
+              occurrenceCount > 1
+                ? `• ${logAutore} ha creato ${occurrenceCount} promemoria ricorrenti a partire dal ${payload.eventDate}`
+                : `• ${logAutore} ha creato un promemoria per il ${payload.eventDate}`,
+            autore: logAutore,
+            atIso: new Date().toISOString(),
+          });
+          toastSuccess(occurrenceCount > 1 ? `${occurrenceCount} promemoria creati.` : "Promemoria creato.");
+          handleSelectYmd(created.event_date);
         }
         setModalOpen(false);
         setEditing(null);
-        handleSelectYmd(payload.eventDate);
+        if (editing) handleSelectYmd(payload.eventDate);
       } catch (e) {
         toastError(e instanceof Error ? e.message : "Salvataggio non riuscito.");
       }
     },
-    [createMutation, editing, handleSelectYmd, toastError, toastSuccess, toastValidation, updateMutation],
+    [createMutation, editing, handleSelectYmd, logAutore, toastError, toastSuccess, toastValidation, updateMutation],
   );
 
   const isCurrentMonthView = monthKey === promemoriaMonthKeyFromYmd(todayDateYmd());
@@ -243,6 +336,17 @@ export function DashboardPromemoriaSection() {
       />
     ) : null}
     {confirmDialog}
+    <DashboardPromemoriaScopeDialog
+      open={deleteTarget != null}
+      mode="delete"
+      title={deleteTarget?.title ?? ""}
+      onClose={() => setDeleteTarget(null)}
+      onSelect={(scope) => {
+        const row = deleteTarget;
+        setDeleteTarget(null);
+        if (row) void performDelete(row, scope);
+      }}
+    />
     </>
   );
 }

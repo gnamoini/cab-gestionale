@@ -12,6 +12,7 @@ import {
   warnIfCompatImpact,
 } from "@/lib/magazzino/compat/compat-rename-guard";
 import { auditCompatConsistency } from "@/lib/magazzino/compat/compat-consistency-auditor";
+import { patchFornitoriAlternativiFornitoreRename } from "@/lib/magazzino/ricambio-fornitori-alternativi";
 import { metaFieldsToRicambioUi, parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 
@@ -180,6 +181,32 @@ async function propagateMagazzinoMetaField(metaKey: string, from: string, to: st
   return updated;
 }
 
+async function propagateMagazzinoFornitoreAlternativo(from: string, to: string): Promise<number> {
+  const c = await sb();
+  const { data, error } = await c.from("magazzino_ricambi").select("id, meta");
+  if (error) throw new Error(error.message);
+  let updated = 0;
+  for (const row of data ?? []) {
+    let meta = row.meta;
+    let changed = false;
+    const altPatch = patchFornitoriAlternativiFornitoreRename(meta, from, to);
+    if (altPatch.changed) {
+      meta = altPatch.next;
+      changed = true;
+    }
+    const legacy = patchMetaString(meta, "fornitoreNonOriginale", from, to);
+    if (legacy.changed) {
+      meta = legacy.next;
+      changed = true;
+    }
+    if (!changed) continue;
+    const { error: upErr } = await c.from("magazzino_ricambi").update({ meta }).eq("id", row.id);
+    if (upErr) throw new Error(upErr.message);
+    updated += 1;
+  }
+  return updated;
+}
+
 async function propagateMagazzinoCompat(entry: SettingsRenameEntry): Promise<number> {
   const c = await sb();
   const liste = await loadMezziListePrefs();
@@ -242,7 +269,7 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
       out.push({ kind, from, to, updated: await propagateMagazzinoMetaField("categoria", from, to) });
       break;
     case "mag_fornitore":
-      out.push({ kind, from, to, updated: await propagateMagazzinoMetaField("fornitoreNonOriginale", from, to) });
+      out.push({ kind, from, to, updated: await propagateMagazzinoFornitoreAlternativo(from, to) });
       break;
     case "tipo_attrezzatura":
       out.push(await propagateSimpleColumn(kind, from, to, "mezzi", "tipo_attrezzatura"));

@@ -10,8 +10,11 @@ import {
 } from "@/lib/lavorazioni/client-portal-access";
 import {
   ACCESS_DENIED_PATH,
+  CLIENTE_HOME_PATH,
   defaultHomePathForRole,
   hasPermission,
+  isClienteRole,
+  isPathAllowedForCliente,
   pathnameToSection,
   resolveClientLavorazioniPortalAccess,
 } from "@/lib/auth/rbac";
@@ -91,6 +94,14 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
       console.info(`[boot-timing] proxy GET / → ${home} ${Date.now() - t0}ms`);
     }
     return redirect;
+  }
+
+  if (isClienteRole(activeUser) && !isPathAllowedForCliente(pathname) && pathname !== ACCESS_DENIED_PATH) {
+    const url = request.nextUrl.clone();
+    url.pathname = ACCESS_DENIED_PATH;
+    url.searchParams.set("from", CLIENTE_HOME_PATH);
+    url.searchParams.set("denied", "cliente_route");
+    return NextResponse.redirect(url);
   }
 
   let clientLavorazioniAllowed = hasPermission(role, "viewClientLavorazioni");

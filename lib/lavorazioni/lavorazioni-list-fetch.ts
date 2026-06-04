@@ -2,8 +2,14 @@ import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-st
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
-import { ensureClientLavorazioniAccess } from "@/src/lib/auth/permission-guards";
-import { ensureSectionRead } from "@/src/lib/auth/permission-guards";
+import { resolveRole } from "@/lib/auth/rbac";
+import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
+import {
+  ensureClientLavorazioniAccess,
+  ensureSectionRead,
+  getCurrentRoleForPermissionCheck,
+  loadCallerClienteRef,
+} from "@/src/lib/auth/permission-guards";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneFilters, LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -85,20 +91,31 @@ function mapRawRows(raw: Array<LavorazioneRow & { mezzi?: unknown }>, includeMez
   });
 }
 
+export type LavorazioniListFetchOptions = {
+  /** Filtra su `mezzi.cliente` (defense in depth oltre RLS). */
+  clienteRefScope?: string | null;
+};
+
 /** Fetch puro da Supabase — nessun controllo permessi UI. */
 export async function fetchLavorazioniListRows(
   sb: SupabaseClient,
   filters?: LavorazioneFilters,
+  options?: LavorazioniListFetchOptions,
 ): Promise<ServiceResult<LavorazioneListRow[]>> {
-  const includeMezzo = filters?.includeMezzo === true;
+  const clienteRefScope = normalizeClienteRef(options?.clienteRefScope);
+  const includeMezzo = filters?.includeMezzo === true || !!clienteRefScope;
+  const mezziSelect = clienteRefScope ? "mezzi!inner(*)" : "mezzi(*)";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- evita TS2589 su PostgrestFilterBuilder
   let q: any = applyLavorazioniNotDeletedFilter(
     sb
       .from("lavorazioni")
-      .select(includeMezzo ? "*, mezzi(*)" : "*")
+      .select(includeMezzo ? `*, ${mezziSelect}` : "*")
       .order("created_at", { ascending: false }),
   );
   q = applyLavorazioniListFilters(q, filters);
+  if (clienteRefScope && includeMezzo) {
+    q = q.eq("mezzi.cliente", clienteRefScope);
+  }
   const { data, error } = await q;
   if (error) return err(error.message);
   if (includeMezzo) {
@@ -109,12 +126,28 @@ export async function fetchLavorazioniListRows(
   return success(mapRawRows(raw.map((row) => ({ ...row })), false));
 }
 
+export type LavorazioniListAuthorizedOptions = {
+  /** Lista portale clienti: applica filtro `profiles.cliente_ref` se valorizzato. */
+  clientPortal?: boolean;
+};
+
+async function resolveClienteRefScopeForAuthorizedList(
+  authOptions?: LavorazioniListAuthorizedOptions,
+): Promise<string | null> {
+  const role = await getCurrentRoleForPermissionCheck();
+  const scopeByRole = resolveRole(role) === "cliente";
+  const scopeByPortal = authOptions?.clientPortal === true;
+  if (!scopeByRole && !scopeByPortal) return null;
+  return normalizeClienteRef(await loadCallerClienteRef());
+}
+
 /**
  * Fetch autorizzato per liste condivise (gestionale + portale clienti).
  * Portale: ensureClientLavorazioniAccess; altrimenti ensureSectionRead("lavorazioni").
  */
 export async function fetchLavorazioniListAuthorized(
   filters?: LavorazioneFilters,
+  authOptions?: LavorazioniListAuthorizedOptions,
 ): Promise<ServiceResult<LavorazioneListRow[]>> {
   try {
     const portal = await ensureClientLavorazioniAccess();
@@ -123,7 +156,8 @@ export async function fetchLavorazioniListAuthorized(
       if (!gestionale.success) return err(gestionale.error ?? portal.error ?? "Permesso richiesto.");
     }
     const sb = getBrowserSupabase();
-    return fetchLavorazioniListRows(sb, filters);
+    const clienteRefScope = await resolveClienteRefScopeForAuthorizedList(authOptions);
+    return fetchLavorazioniListRows(sb, filters, { clienteRefScope });
   } catch (e) {
     return serviceFailFromError(e);
   }

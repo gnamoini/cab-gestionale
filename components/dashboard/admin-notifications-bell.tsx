@@ -16,6 +16,7 @@ import {
 } from "@/lib/lavorazioni/admin-notifications";
 import { formatNotificationRelativeTime } from "@/lib/lavorazioni/format-notification-relative-time";
 import {
+  buildAdminDashboardTestNotification,
   isAdminDashboardTestNotification,
   isDashboardPromemoriaReminderNotification,
   isDipendentiPresenzeReminderNotification,
@@ -23,6 +24,15 @@ import {
   isMagazzinoDashboardNotification,
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
+import { publishAdminDashboardNotification } from "@/lib/notifications/admin-dashboard-desktop";
+import {
+  formatDesktopNotificationPermissionStatusLabel,
+  getDesktopNotificationPermissionState,
+  requestDesktopNotificationPermissionInteractive,
+  type DesktopNotificationPermissionState,
+} from "@/lib/lavorazioni/desktop-notifications";
+import { useAuth } from "@/context/auth-context";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { buildAdminNotificationDashboardHref } from "@/lib/lavorazioni/admin-notifications";
 import { GLOBAL_DROPDOWN_VIEWPORT_PAD } from "@/lib/ui/global-dropdown-portal";
 import { dsPageToolbarIconBtn, dsScrollbar } from "@/lib/ui/design-system";
@@ -30,6 +40,85 @@ import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
 
 const PANEL_TITLE_ID = "admin-notifications-panel-title";
+
+function DesktopNotificationPanelFooter({
+  permissionState,
+  onPermissionChange,
+}: {
+  permissionState: DesktopNotificationPermissionState;
+  onPermissionChange: () => void;
+}) {
+  const { user } = useAuth();
+  const gestToast = useGestionaleToast();
+  const statusLabel = formatDesktopNotificationPermissionStatusLabel(permissionState);
+  const canEnable = permissionState === "default" || permissionState === "denied";
+  const canSendTest = permissionState === "granted" && Boolean(user?.id);
+
+  const handleEnable = async () => {
+    const result = await requestDesktopNotificationPermissionInteractive();
+    onPermissionChange();
+    if (result === "granted") {
+      gestToast.success("Notifiche desktop attivate.");
+      return;
+    }
+    if (result === "denied") {
+      gestToast.validation(
+        "Notifiche bloccate dal browser. Apri le impostazioni del sito (lucchetto) e consenti le notifiche.",
+      );
+    }
+  };
+
+  const handleTest = async () => {
+    const userId = user?.id;
+    if (!userId) return;
+    const { added, desktop } = await publishAdminDashboardNotification(
+      userId,
+      buildAdminDashboardTestNotification(),
+    );
+    if (added) onPermissionChange();
+    if (desktop) {
+      gestToast.success("Notifica di test inviata (campanella e desktop).");
+    } else {
+      gestToast.validation("Test in campanella. Abilita le notifiche desktop per il popup di sistema.");
+    }
+  };
+
+  return (
+    <div className="flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] px-3 py-2">
+      <div className="flex flex-col gap-1">
+        <p className="text-[11px] text-[color:var(--cab-text-muted)]">
+          Notifiche desktop:{" "}
+          <span className="font-medium text-[color:var(--cab-text)]">{statusLabel}</span>
+        </p>
+        {permissionState === "denied" ? (
+          <p className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
+            Consenti le notifiche per questo sito dalle impostazioni del browser.
+          </p>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {canEnable ? (
+          <button
+            type="button"
+            className="min-h-[2.25rem] rounded-lg px-2 text-[11px] font-medium text-[color:var(--cab-primary)] hover:bg-[var(--cab-hover)] hover:underline"
+            onClick={() => void handleEnable()}
+          >
+            Abilita notifiche desktop
+          </button>
+        ) : null}
+        {canSendTest ? (
+          <button
+            type="button"
+            className="min-h-[2.25rem] rounded-lg px-2 text-[11px] font-medium text-[color:var(--cab-text-muted)] hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] hover:underline"
+            onClick={() => void handleTest()}
+          >
+            Invia test
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 /** Fallback se la sezione calendario promemoria non è nel DOM. */
 const NOTIFICATIONS_PANEL_WIDTH_FALLBACK_PX = 352;
@@ -325,6 +414,9 @@ export function AdminNotificationsBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [desktopPermissionState, setDesktopPermissionState] = useState(() =>
+    getDesktopNotificationPermissionState(),
+  );
   const anchorRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const {
@@ -363,6 +455,15 @@ export function AdminNotificationsBell() {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    setDesktopPermissionState(getDesktopNotificationPermissionState());
+  }, [open]);
+
+  const refreshDesktopPermission = useCallback(() => {
+    setDesktopPermissionState(getDesktopNotificationPermissionState());
   }, []);
 
   useLayoutEffect(() => {
@@ -473,6 +574,11 @@ export function AdminNotificationsBell() {
             ))
           )}
         </div>
+
+        <DesktopNotificationPanelFooter
+          permissionState={desktopPermissionState}
+          onPermissionChange={refreshDesktopPermission}
+        />
 
         <footer className="flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <button

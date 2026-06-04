@@ -1,5 +1,6 @@
 import { exitWithGate, printGateResult } from "../lib/ci/gate-output";
 import { validateProductionEnv } from "../lib/ops/validate-production-env";
+import { runDocumentiUrlInventory } from "../lib/ops/documenti-url-inventory";
 import { runStorageConsistencyDiagnostics } from "../lib/ops/storage-consistency-diagnostics";
 
 const GATE_NAME = "Ops diagnostics (advisory)";
@@ -24,6 +25,7 @@ async function main(): Promise<void> {
   }
 
   const storage = await runStorageConsistencyDiagnostics();
+  const docInventory = await runDocumentiUrlInventory();
   if (!storage.connected) {
     const msg = storage.warnings.join("; ") || "DB non connesso";
     if (requireDb()) blockers.push(`storage-diagnostics: ${msg}`);
@@ -35,6 +37,15 @@ async function main(): Promise<void> {
         `Orphan sample (max 5): ${storage.orphanSamplePaths.slice(0, 5).join(", ")}`,
       );
     }
+  }
+
+  if (!docInventory.connected) {
+    for (const w of docInventory.warnings) warnings.push(`documenti-inventory: ${w}`);
+  } else {
+    warnings.push(
+      `documenti-inventory: ${docInventory.totalRows} righe; non risolvibili=${docInventory.unresolvablePathCount}; legacy bonificabili=${docInventory.legacyResolvableCount}; missing storage sample=${docInventory.missingStorageSampleCount}`,
+    );
+    for (const w of docInventory.warnings) warnings.push(w);
   }
 
   const status = blockers.length === 0 ? "PASS" : "FAIL";

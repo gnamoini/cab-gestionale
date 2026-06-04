@@ -1,5 +1,13 @@
 import { normalizeRicambioCodice } from "@/lib/magazzino/ricambio-codice";
-import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import {
+  legacyFornitoreAlternativoFromMeta,
+  parseFornitoriAlternativiMeta,
+  resolveFornitoriAlternativiFromMeta,
+  sanitizeFornitoriAlternativiForPersist,
+  syncLegacyFornitoreFieldsFromAlternativi,
+  syncFlatFornitoreFieldsOnRicambio,
+} from "@/lib/magazzino/ricambio-fornitori-alternativi";
+import type { RicambioFornitoreAlternativo, RicambioMagazzino } from "@/lib/magazzino/types";
 import { writeCompatibilitaRicambio } from "@/lib/magazzino/compat/compat-write-gate";
 import {
   parseCompatRefs,
@@ -12,8 +20,11 @@ export type MagazzinoRicambioMeta = {
   compatibilitaMezzi?: string[];
   compatibilitaRefs?: RicambioCompatRef[];
   codiceOriginaleSecondario?: string;
+  marcaOriginaleSecondaria?: string;
+  usatoInTagliandi?: boolean;
   scortaMinima?: number;
   scontoFornitoreOriginale?: number;
+  fornitoriAlternativi?: RicambioFornitoreAlternativo[];
   fornitoreNonOriginale?: string;
   codiceFornitoreNonOriginale?: string;
   prezzoFornitoreNonOriginale?: number;
@@ -38,6 +49,13 @@ function strArray(v: unknown): string[] {
     .filter((x) => x && x !== "—");
 }
 
+function bool(v: unknown): boolean | undefined {
+  if (typeof v === "boolean") return v;
+  if (v === "true" || v === 1 || v === "1") return true;
+  if (v === "false" || v === 0 || v === "0") return false;
+  return undefined;
+}
+
 export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
   const m = raw as Record<string, unknown>;
@@ -45,14 +63,9 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
   const refs = parseCompatRefs(m.compatibilitaRefs);
   const scortaMinima = num(m.scortaMinima, NaN);
   const codiceSecondario = str(m.codiceOriginaleSecondario);
-  return {
-    note: str(m.note) || undefined,
-    categoria: str(m.categoria) || undefined,
-    compatibilitaMezzi: compat.length ? compat : undefined,
-    compatibilitaRefs: refs.length ? refs : undefined,
-    codiceOriginaleSecondario: codiceSecondario ? normalizeRicambioCodice(codiceSecondario) : undefined,
-    scortaMinima: Number.isFinite(scortaMinima) ? Math.max(0, scortaMinima) : undefined,
-    scontoFornitoreOriginale: num(m.scontoFornitoreOriginale, NaN) || undefined,
+  const fornitoriParsed = parseFornitoriAlternativiMeta(m.fornitoriAlternativi);
+
+  const legacyFlat = {
     fornitoreNonOriginale: str(m.fornitoreNonOriginale) || undefined,
     codiceFornitoreNonOriginale: (() => {
       const c = str(m.codiceFornitoreNonOriginale);
@@ -60,11 +73,35 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
     })(),
     prezzoFornitoreNonOriginale: num(m.prezzoFornitoreNonOriginale, NaN) || undefined,
     scontoFornitoreNonOriginale: num(m.scontoFornitoreNonOriginale, NaN) || undefined,
+  };
+
+  const fornitoriAlternativi = resolveFornitoriAlternativiFromMeta({
+    fornitoriAlternativi: fornitoriParsed,
+    ...legacyFlat,
+  });
+
+  const usatoInTagliandi = bool(m.usatoInTagliandi);
+
+  return {
+    note: str(m.note) || undefined,
+    categoria: str(m.categoria) || undefined,
+    compatibilitaMezzi: compat.length ? compat : undefined,
+    compatibilitaRefs: refs.length ? refs : undefined,
+    codiceOriginaleSecondario: codiceSecondario ? normalizeRicambioCodice(codiceSecondario) : undefined,
+    marcaOriginaleSecondaria: str(m.marcaOriginaleSecondaria) || undefined,
+    usatoInTagliandi: usatoInTagliandi ?? undefined,
+    scortaMinima: Number.isFinite(scortaMinima) ? Math.max(0, scortaMinima) : undefined,
+    scontoFornitoreOriginale: num(m.scontoFornitoreOriginale, NaN) || undefined,
+    fornitoriAlternativi: fornitoriAlternativi.length ? fornitoriAlternativi : undefined,
+    ...legacyFlat,
     autoreUltimaModifica: str(m.autoreUltimaModifica) || undefined,
   };
 }
 
-export function ricambioUiToMagazzinoMeta(r: RicambioMagazzino, mezziListe?: import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs): MagazzinoRicambioMeta {
+export function ricambioUiToMagazzinoMeta(
+  r: RicambioMagazzino,
+  mezziListe?: import("@/lib/mezzi/mezzi-liste-prefs-storage").MezziListePrefs,
+): MagazzinoRicambioMeta {
   const compatMeta = writeCompatibilitaRicambio(
     {
       compatibilitaMezzi: r.compatibilitaMezzi,
@@ -77,21 +114,21 @@ export function ricambioUiToMagazzinoMeta(r: RicambioMagazzino, mezziListe?: imp
 
   const compat = compatMeta.compatibilitaMezzi?.map((x) => x.trim()).filter((x) => x && x !== "—") ?? [];
   const codiceSecondario = r.codiceFornitoreOriginaleSecondario.trim();
+  const fornitoriAlternativi = sanitizeFornitoriAlternativiForPersist(r.fornitoriAlternativi ?? []);
+  const legacySync = syncLegacyFornitoreFieldsFromAlternativi(fornitoriAlternativi);
+
   return {
     note: r.note.trim() || undefined,
     categoria: r.categoria.trim() || undefined,
     compatibilitaMezzi: compat.length ? compat : undefined,
     compatibilitaRefs: compatMeta.compatibilitaRefs,
     codiceOriginaleSecondario: codiceSecondario ? normalizeRicambioCodice(codiceSecondario) : undefined,
+    marcaOriginaleSecondaria: r.marcaOriginaleSecondaria.trim() || undefined,
+    usatoInTagliandi: r.usatoInTagliandi ? true : undefined,
     scortaMinima: Math.max(0, r.scortaMinima),
     scontoFornitoreOriginale: r.scontoFornitoreOriginale > 0 ? r.scontoFornitoreOriginale : undefined,
-    fornitoreNonOriginale: r.fornitoreNonOriginale.trim() || undefined,
-    codiceFornitoreNonOriginale: (() => {
-      const c = r.codiceFornitoreNonOriginale.trim();
-      return c ? normalizeRicambioCodice(c) : undefined;
-    })(),
-    prezzoFornitoreNonOriginale: r.prezzoFornitoreNonOriginale > 0 ? r.prezzoFornitoreNonOriginale : undefined,
-    scontoFornitoreNonOriginale: r.scontoFornitoreNonOriginale > 0 ? r.scontoFornitoreNonOriginale : undefined,
+    fornitoriAlternativi: fornitoriAlternativi.length ? fornitoriAlternativi : undefined,
+    ...legacySync,
     autoreUltimaModifica: r.autoreUltimaModifica.trim() || undefined,
   };
 }
@@ -103,24 +140,69 @@ export function metaFieldsToRicambioUi(meta: MagazzinoRicambioMeta): Pick<
   | "compatibilitaMezzi"
   | "compatibilitaRefs"
   | "codiceFornitoreOriginaleSecondario"
+  | "marcaOriginaleSecondaria"
+  | "usatoInTagliandi"
   | "scortaMinima"
   | "scontoFornitoreOriginale"
+  | "fornitoriAlternativi"
   | "fornitoreNonOriginale"
   | "codiceFornitoreNonOriginale"
   | "prezzoFornitoreNonOriginale"
   | "scontoFornitoreNonOriginale"
 > {
-  return {
+  const fornitoriAlternativi = resolveFornitoriAlternativiFromMeta({
+    fornitoriAlternativi: meta.fornitoriAlternativi,
+    fornitoreNonOriginale: meta.fornitoreNonOriginale,
+    codiceFornitoreNonOriginale: meta.codiceFornitoreNonOriginale,
+    prezzoFornitoreNonOriginale: meta.prezzoFornitoreNonOriginale,
+    scontoFornitoreNonOriginale: meta.scontoFornitoreNonOriginale,
+  });
+
+  const partial: Pick<
+    RicambioMagazzino,
+    | "note"
+    | "categoria"
+    | "compatibilitaMezzi"
+    | "compatibilitaRefs"
+    | "codiceFornitoreOriginaleSecondario"
+    | "marcaOriginaleSecondaria"
+    | "usatoInTagliandi"
+    | "scortaMinima"
+    | "scontoFornitoreOriginale"
+    | "fornitoriAlternativi"
+    | "fornitoreNonOriginale"
+    | "codiceFornitoreNonOriginale"
+    | "prezzoFornitoreNonOriginale"
+    | "scontoFornitoreNonOriginale"
+  > = {
     note: meta.note ?? "",
     categoria: meta.categoria?.trim() || "Generale",
     compatibilitaMezzi: meta.compatibilitaMezzi?.filter((x) => x && x !== "—") ?? [],
     compatibilitaRefs: meta.compatibilitaRefs,
     codiceFornitoreOriginaleSecondario: meta.codiceOriginaleSecondario ?? "",
+    marcaOriginaleSecondaria: meta.marcaOriginaleSecondaria ?? "",
+    usatoInTagliandi: meta.usatoInTagliandi === true,
     scortaMinima: Math.max(0, meta.scortaMinima ?? 0),
     scontoFornitoreOriginale: Math.min(100, Math.max(0, meta.scontoFornitoreOriginale ?? 0)),
+    fornitoriAlternativi,
     fornitoreNonOriginale: meta.fornitoreNonOriginale ?? "",
     codiceFornitoreNonOriginale: meta.codiceFornitoreNonOriginale ?? "",
     prezzoFornitoreNonOriginale: Math.max(0, meta.prezzoFornitoreNonOriginale ?? 0),
     scontoFornitoreNonOriginale: Math.min(100, Math.max(0, meta.scontoFornitoreNonOriginale ?? 0)),
+  };
+
+  syncFlatFornitoreFieldsOnRicambio(partial);
+  return partial;
+}
+
+/** Migrazione esplicita legacy → array (test / repair). */
+export function migrateLegacyFornitoriInMeta(meta: MagazzinoRicambioMeta): MagazzinoRicambioMeta {
+  const rows = resolveFornitoriAlternativiFromMeta(meta);
+  if (!rows.length) return meta;
+  const legacy = legacyFornitoreAlternativoFromMeta(meta);
+  return {
+    ...meta,
+    fornitoriAlternativi: rows,
+    ...(legacy ? syncLegacyFornitoreFieldsFromAlternativi(rows) : {}),
   };
 }

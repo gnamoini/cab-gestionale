@@ -1,5 +1,6 @@
 import { buildRicambioCodiceEntityKey } from "@/lib/validation/entity-keys";
 import { entityAutocompleteKey, normalizeEntityString } from "@/lib/validation/global-entity-validation";
+import { allCodiciFornitoriAlternativi } from "@/lib/magazzino/ricambio-fornitori-alternativi";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 
 /**
@@ -26,6 +27,11 @@ function ricambioCodiciForMatch(item: RicambioMagazzino): string[] {
   const secondary = item.codiceFornitoreOriginaleSecondario.trim();
   if (primary) codes.push(primary);
   if (secondary) codes.push(secondary);
+  const altCodici = allCodiciFornitoriAlternativi(item.fornitoriAlternativi ?? []);
+  if (!altCodici.length && item.codiceFornitoreNonOriginale.trim()) {
+    codes.push(item.codiceFornitoreNonOriginale);
+  }
+  codes.push(...altCodici);
   return codes;
 }
 

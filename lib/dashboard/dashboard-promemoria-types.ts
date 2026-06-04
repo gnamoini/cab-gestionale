@@ -1,3 +1,8 @@
+import type {
+  PromemoriaRecurrenceFrequency,
+  PromemoriaRecurrenceScope,
+} from "@/lib/dashboard/dashboard-promemoria-recurrence";
+
 /** Riga `dashboard_promemoria`. */
 export type DashboardPromemoriaRow = {
   id: string;
@@ -13,6 +18,17 @@ export type DashboardPromemoriaRow = {
   notified_on: string | null;
   entity_type: string | null;
   entity_id: string | null;
+  series_id: string | null;
+  recurrence_frequency: PromemoriaRecurrenceFrequency | null;
+  recurrence_interval: number;
+  recurrence_until: string | null;
+};
+
+export type DashboardPromemoriaRecurrenceInput = {
+  enabled: boolean;
+  frequency?: PromemoriaRecurrenceFrequency | null;
+  interval?: number;
+  untilYmd?: string | null;
 };
 
 export type DashboardPromemoriaInput = {
@@ -20,10 +36,17 @@ export type DashboardPromemoriaInput = {
   eventTime?: string | null;
   title: string;
   description?: string | null;
+  recurrence?: DashboardPromemoriaRecurrenceInput;
 };
 
 export type DashboardPromemoriaUpdateInput = DashboardPromemoriaInput & {
   id: string;
+  scope?: PromemoriaRecurrenceScope;
+};
+
+export type DashboardPromemoriaDeleteInput = {
+  id: string;
+  scope?: PromemoriaRecurrenceScope;
 };
 
 /** Chiave mese `YYYY-MM` per query e cache. */

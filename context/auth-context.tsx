@@ -102,7 +102,11 @@ async function getSessionWithSoftRetry(sb: ReturnType<typeof getBrowserSupabase>
 
 async function loadPublicUserFromSessionUser(sessionUser: User): Promise<PublicAuthUser> {
   const sb = getBrowserSupabase();
-  const { data: row, error } = await sb.from("profiles").select("nome, ruolo").eq("id", sessionUser.id).maybeSingle();
+  const { data: row, error } = await sb
+    .from("profiles")
+    .select("nome, ruolo, cliente_ref")
+    .eq("id", sessionUser.id)
+    .maybeSingle();
   if (error) {
     console.warn("[auth] profilo non leggibile:", error.message);
   }

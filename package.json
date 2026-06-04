@@ -34,6 +34,8 @@
     "ui:final-stability:manifest:generate": "npx tsx scripts/generate-ui-final-stability-manifest.ts --update",
     "global-table-head:audit": "npx tsx scripts/global-table-head-audit.ts",
     "ops:diagnostics": "npx tsx scripts/ops-diagnostics.ts",
+    "documenti:storage-inventory": "npx tsx scripts/documenti-storage-inventory.ts",
+    "documenti:remediate-url-file": "npx tsx scripts/remediate-documenti-url-file.ts",
     "ops:env-check": "npx tsx scripts/ops-env-check.ts",
     "audit:rls": "npx tsx scripts/rls-service-audit.ts"
   },

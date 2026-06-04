@@ -33,6 +33,8 @@ export type GlobalDatePickerProps = {
   disabled?: boolean;
   placeholder?: string;
   "aria-label"?: string;
+  /** Se impostato, sostituisce la normalizzazione predefinita su blur. */
+  onBlur?: () => void;
 };
 
 function fieldClassForVariant(
@@ -55,6 +57,7 @@ export function GlobalDatePicker({
   disabled,
   placeholder = "gg/mm/aaaa",
   "aria-label": ariaLabel,
+  onBlur: onBlurProp,
 }: GlobalDatePickerProps) {
   const autoId = useId();
   const inputId = idProp ?? autoId;
@@ -149,7 +152,7 @@ export function GlobalDatePicker({
         className={fieldClass}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        onBlur={onTextBlur}
+        onBlur={onBlurProp ?? onTextBlur}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
             setOpen(false);
@@ -160,7 +163,7 @@ export function GlobalDatePicker({
             if (open) {
               setOpen(false);
             } else {
-              onTextBlur();
+              (onBlurProp ?? onTextBlur)();
             }
             scheduleFocusNextGestionaleField(e.currentTarget);
           }
@@ -187,6 +190,10 @@ export function GlobalDatePicker({
   );
 }
 
+function displayFromYmd(valueYmd: string): string {
+  return valueYmd ? ymdToItDisplay(valueYmd) : "";
+}
+
 /** Filtri con valore interno `yyyy-mm-dd`. */
 export function GlobalDatePickerYmd({
   valueYmd,
@@ -203,16 +210,40 @@ export function GlobalDatePickerYmd({
   "aria-label"?: string;
   variant?: "default" | "filter";
 }) {
-  const display = valueYmd ? ymdToItDisplay(valueYmd) : "";
+  const [displayDraft, setDisplayDraft] = useState(() => displayFromYmd(valueYmd));
+
+  useEffect(() => {
+    setDisplayDraft(displayFromYmd(valueYmd));
+  }, [valueYmd]);
+
+  const commitBlur = useCallback(() => {
+    const trimmed = displayDraft.trim();
+    if (!trimmed) {
+      setDisplayDraft("");
+      onChangeYmd("");
+      return;
+    }
+    const r = parseItalianDayToIso(trimmed);
+    if (r.ok) {
+      const display = isoToItDisplay(r.iso);
+      const ymd = isoToDateInputValue(r.iso);
+      setDisplayDraft(display);
+      onChangeYmd(ymd);
+      return;
+    }
+    setDisplayDraft("");
+    onChangeYmd("");
+  }, [displayDraft, onChangeYmd]);
 
   return (
     <GlobalDatePicker
       id={id}
       variant={variant}
-      value={display}
+      value={displayDraft}
       placeholder={placeholder}
       aria-label={ariaLabel}
       onChange={(next) => {
+        setDisplayDraft(next);
         if (!next.trim()) {
           onChangeYmd("");
           return;
@@ -220,6 +251,7 @@ export function GlobalDatePickerYmd({
         const r = parseItalianDayToIso(next);
         if (r.ok) onChangeYmd(isoToDateInputValue(r.iso));
       }}
+      onBlur={commitBlur}
     />
   );
 }

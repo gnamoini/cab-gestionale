@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { buildReportLavorazioniBundle } from "@/lib/report/lavorazioni-report-selectors";
 import { ReportDataIntegrityLayer } from "@/lib/report/report-data-integrity-layer";
 import { sumMagazzinoUsciteQtyInRange } from "@/lib/report/magazzino-period-aggregate";
+import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { endOfLocalDay, startOfLocalDay } from "@/lib/report/date-ranges";
@@ -39,28 +40,15 @@ assert.ok(bundle.storico.length >= 1);
 assert.equal(bundle.completate.length, 1);
 assert.equal(bundle.completate[0]?.id, "c2");
 
-const ricambio: RicambioMagazzino = {
+const ricambio: RicambioMagazzino = defaultRicambioMagazzinoFields({
   id: "r1",
   marca: "Bosch",
   codiceFornitoreOriginale: "X1",
-  codiceFornitoreOriginaleSecondario: "",
   descrizione: "Filtro",
-  note: "",
-  categoria: "",
-  compatibilitaMezzi: [],
   scorta: 5,
-  scortaMinima: 0,
-  dataUltimaModifica: "2026-01-01T00:00:00.000Z",
-  autoreUltimaModifica: "",
   prezzoFornitoreOriginale: 10,
-  scontoFornitoreOriginale: 0,
-  markupPercentuale: 0,
   prezzoVendita: 12,
-  fornitoreNonOriginale: "",
-  codiceFornitoreNonOriginale: "",
-  prezzoFornitoreNonOriginale: 0,
-  scontoFornitoreNonOriginale: 0,
-};
+});
 
 const range = {
   start: startOfLocalDay(new Date("2025-03-01T00:00:00.000Z")),

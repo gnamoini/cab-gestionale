@@ -54,12 +54,21 @@ import { SETTINGS_PANEL_SHELL } from "@/components/dashboard/settings-list-ui";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { gestionaleModalBodyFlexClass, resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
-import { CAB_MODAL_ROOT_ATTR } from "@/lib/ui/mobile-modal-behavior";
+import {
+  CAB_FOCUS_SCROLL_GROUP_ATTR,
+  CAB_FOCUS_SCROLL_TITLE_ATTR,
+  CAB_MODAL_ROOT_ATTR,
+} from "@/lib/ui/mobile-modal-behavior";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]">{children}</p>
+    <p
+      {...{ [CAB_FOCUS_SCROLL_TITLE_ATTR]: "" }}
+      className="mb-3 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]"
+    >
+      {children}
+    </p>
   );
 }
 
@@ -298,7 +307,10 @@ export function EditLavorazioneModal({
     <LavorazioniModalShell wide onRequestClose={onRequestClose} title={title} titleId="lav-edit-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
-          <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+          <div
+            {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+            className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
             <SectionTitle>Mezzo</SectionTitle>
             <div className="grid gap-3 sm:grid-cols-12">
               <div className="sm:col-span-12">
@@ -343,7 +355,10 @@ export function EditLavorazioneModal({
             </div>
           </div>
 
-          <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+          <div
+            {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+            className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
             <SectionTitle>Committente e utilizzo</SectionTitle>
             <div className="grid gap-3 sm:grid-cols-12">
               <div className="sm:col-span-6">
@@ -379,7 +394,10 @@ export function EditLavorazioneModal({
             </div>
           </div>
 
-          <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+          <div
+            {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+            className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
             <SectionTitle>Gestione intervento</SectionTitle>
             <div className="grid gap-3 sm:grid-cols-12">
               <div className="sm:col-span-4">
@@ -431,7 +449,10 @@ export function EditLavorazioneModal({
             </div>
           </div>
 
-          <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+          <div
+            {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+            className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
             <SectionTitle>Pianificazione</SectionTitle>
             <div className="grid gap-3 sm:grid-cols-12">
               <div className="sm:col-span-6">
@@ -467,7 +488,10 @@ export function EditLavorazioneModal({
             </p>
           </div>
 
-          <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+          <div
+            {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+            className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
             <SectionTitle>Note interne</SectionTitle>
             <textarea
               className={`${dsInput} min-h-[88px] resize-y`}
@@ -531,7 +555,10 @@ export function NewLavorazioneModal({
     <LavorazioniModalShell wide onRequestClose={onRequestClose} title="Nuova lavorazione" titleId="lav-new-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
-          <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+          <div
+            {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+            className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
             <SectionTitle>Mezzo</SectionTitle>
             <LavorazioneMezzoPicker mezzi={mezzi} draft={d} setDraft={setDraft} />
             <div className="mt-4 grid gap-3">
@@ -571,7 +598,10 @@ export function NewLavorazioneModal({
             </div>
           </div>
 
-          <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+          <div
+            {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+            className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
             <SectionTitle>Committente e utilizzo</SectionTitle>
             <div className="grid gap-3">
               <Field label="Cliente">
@@ -601,7 +631,10 @@ export function NewLavorazioneModal({
             </div>
           </div>
 
-          <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+          <div
+            {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+            className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
             <SectionTitle>Gestione intervento</SectionTitle>
             <div className="grid gap-3 sm:grid-cols-3">
               <Field label="Stato iniziale">
@@ -647,7 +680,10 @@ export function NewLavorazioneModal({
             </div>
           </div>
 
-          <div className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40">
+          <div
+            {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
+            className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
+          >
             <SectionTitle>Tempi e note</SectionTitle>
             <div className="grid gap-3">
               <Field label="Data ingresso">

@@ -3,9 +3,9 @@
 import {
   useEffect,
   useMemo,
+  useRef,
   useState,
   type Dispatch,
-  type KeyboardEvent,
   type SetStateAction,
 } from "react";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
@@ -14,12 +14,11 @@ import {
   SETTINGS_PANEL_SHELL,
   SettingsEditableStringRow,
   SettingsQuickAddRow,
+  SettingsRowActionButtons,
 } from "@/components/dashboard/settings-list-ui";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
-import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { handleSettingsInlineEditKeyDown } from "@/lib/settings/settings-inline-edit-keyboard";
 import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
 import {
   aggiungiMarcaHierarchy,
@@ -47,9 +46,6 @@ const HIERARCHY_MODEL_BOX =
 const HIERARCHY_MODEL_INPUT =
   "min-h-8 min-w-0 flex-1 border-0 bg-transparent px-1 py-0 text-sm font-medium text-[color:var(--cab-text)] outline-none placeholder:font-normal placeholder:text-[color:var(--cab-text-muted)] focus:bg-[color:color-mix(in_srgb,var(--cab-surface)_85%,var(--cab-card))] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]";
 
-const HIERARCHY_DELETE_BTN =
-  "shrink-0 rounded-md bg-transparent px-2 py-1 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-danger)_90%,var(--cab-text))] opacity-80 transition-[opacity,background-color] duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-card))] hover:opacity-100";
-
 function HierarchyModelRow({
   value,
   ariaLabel,
@@ -61,19 +57,47 @@ function HierarchyModelRow({
   onRenameBlur: (previous: string, next: string) => void;
   onRemove: () => void;
 }) {
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const commit = () => {
+    const next = inputRef.current?.value ?? value;
+    onRenameBlur(value, next);
+  };
+
+  const cancel = () => {
+    if (inputRef.current) inputRef.current.value = value;
+  };
+
   return (
     <li className={HIERARCHY_MODEL_BOX}>
       <input
+        ref={inputRef}
         className={HIERARCHY_MODEL_INPUT}
         defaultValue={value}
         key={`${value}-hierarchy`}
         aria-label={ariaLabel ?? `Modifica ${value}`}
-        onBlur={(e) => onRenameBlur(value, e.target.value)}
-        onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => handleSettingsInlineEditKeyDown(e, value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            e.stopPropagation();
+            commit();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            cancel();
+          }
+        }}
       />
-      <button type="button" className={`${HIERARCHY_DELETE_BTN} ${erpFocus}`} onClick={onRemove}>
-        Elimina
-      </button>
+      <SettingsRowActionButtons
+        mode="edit"
+        itemLabel={value}
+        showRemoveInEdit
+        onEdit={() => {}}
+        onConfirm={commit}
+        onCancelEdit={cancel}
+        onRemove={onRemove}
+      />
     </li>
   );
 }
@@ -254,7 +278,7 @@ export function HierarchyTreeSettingsSection({
     <div className="w-full space-y-4">
       {variant === "modello" ? (
         <p className={`${dsTypoSmall} text-[color:var(--cab-text-muted)]`}>
-          Modifica il nome nel campo e conferma uscendo dal campo (Invio o clic fuori). La riga in basso aggiunge un
+          Modifica il nome nel campo, poi Conferma (o Invio). Annulla ripristina il testo. La riga in basso aggiunge un
           modello alla marca.
         </p>
       ) : null}

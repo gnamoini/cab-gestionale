@@ -59,7 +59,7 @@ async function fetchServerAuthSnapshotWithClient(
 
   const { data: prof, error: profErr } = await supabase
     .from("profiles")
-    .select("nome, ruolo")
+    .select("nome, ruolo, cliente_ref")
     .eq("id", authUser.id)
     .maybeSingle();
 

@@ -1,5 +1,12 @@
 import type { CatalogMacchina, CatalogMarca } from "@/lib/documenti/documenti-catalog-types";
-import { resolveDocumentoFileUrlSigned } from "@/lib/documenti/documenti-db-mapper";
+import {
+  documentoFileAccessBlockLabel,
+  documentoFileOpenFailureMessage,
+  getDocumentoFileAccessState,
+  type DocumentoFileAccessState,
+  type DocumentoFileOpenResult,
+} from "@/lib/documenti/documento-file-access";
+import { resolveDocumentoFileUrlSignedResult } from "@/lib/documenti/documenti-db-mapper";
 import type { DocumentoRow } from "@/src/types/supabase-tables";
 import {
   formatDocumentoRigaSintetica,
@@ -259,20 +266,33 @@ export function countDocsInMarcaNode(node: ArchiveDocMarcaNode): number {
   return node.filesMarca.length + node.modelli.reduce((n, m) => n + m.files.length, 0);
 }
 
+export function getDocumentoFileAccess(doc: DocumentoGestionale): DocumentoFileAccessState {
+  return getDocumentoFileAccessState(doc);
+}
+
 export function canOpenDocumento(doc: DocumentoGestionale): boolean {
-  return Boolean(doc.urlBlob?.trim() || doc.urlDocumento?.trim());
+  return getDocumentoFileAccessState(doc).canOpen;
+}
+
+export function documentoFileUnavailableLabel(doc: DocumentoGestionale): string | null {
+  const access = getDocumentoFileAccessState(doc);
+  if (access.canOpen || !access.blockReason) return null;
+  return documentoFileAccessBlockLabel(access.blockReason);
 }
 
 /** Apre il file con signed URL (bucket `documenti` privato) o blob locale pre-save. */
 export async function openDocumentoFile(
   doc: DocumentoGestionale,
   row?: Pick<DocumentoRow, "url_file">,
-): Promise<boolean> {
-  const href = await resolveDocumentoFileUrlSigned(row ?? { url_file: doc.urlDocumento ?? "" }, doc);
-  if (!href) return false;
-  window.open(href, "_blank", "noopener,noreferrer");
-  return true;
+): Promise<DocumentoFileOpenResult> {
+  const result = await resolveDocumentoFileUrlSignedResult(row ?? { url_file: doc.urlDocumento ?? "" }, doc);
+  if (result.ok) {
+    window.open(result.href, "_blank", "noopener,noreferrer");
+  }
+  return result;
 }
+
+export { documentoFileOpenFailureMessage };
 
 export function extractFileExtension(fileName: string): string {
   const i = fileName.lastIndexOf(".");

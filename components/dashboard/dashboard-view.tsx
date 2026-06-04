@@ -43,7 +43,7 @@ export function DashboardView() {
               undoDisabled
               leading={<AdminNotificationsBell />}
               onOpenLog={() => setLogOpen(true)}
-              logTitle="Storico modifiche dashboard"
+              logTitle="Log modifiche dashboard"
             />
           )
         }

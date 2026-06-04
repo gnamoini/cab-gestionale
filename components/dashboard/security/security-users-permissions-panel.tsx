@@ -8,6 +8,10 @@ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityCreateUserModal } from "@/components/dashboard/security-create-user-modal";
+import { SecurityUserDetailDrawer } from "@/components/dashboard/security/security-user-detail-drawer";
+import {
+  buildInitialModuleDraft,
+} from "@/components/dashboard/security/security-user-module-permissions-editor";
 import {
   SecurityUsersTable,
   buildSecurityUserPatches,
@@ -22,59 +26,148 @@ import {
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import {
+  computeModulePermissionDraft,
+  snapshotModuleDraft,
+  type ModulePermissionDraftRow,
+} from "@/lib/security/user-module-permissions";
+import { validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
+import { resolveRole, type AppRole } from "@/lib/auth/rbac";
+import {
   dsBtnGhost,
   dsBtnNeutral,
   dsBtnPrimary,
   dsPageToolbar,
   dsPageToolbarBtn,
+  dsSectionTitle,
 } from "@/lib/ui/design-system";
 
 type Props = {
   readOnly?: boolean;
-  onOpenDetail: (userId: string) => void;
 };
 
-export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }: Props) {
+function buildModuleSnapshots(
+  users: EditableSecurityUser[],
+  permissionRows: import("@/src/types/supabase-tables").UserPermissionRow[],
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const u of users) {
+    const draft = computeModulePermissionDraft(u.ruolo, u.id, permissionRows);
+    out[u.id] = snapshotModuleDraft(draft);
+  }
+  return out;
+}
+
+function buildModuleDrafts(
+  users: EditableSecurityUser[],
+  permissionRows: import("@/src/types/supabase-tables").UserPermissionRow[],
+): Record<string, ModulePermissionDraftRow[]> {
+  const out: Record<string, ModulePermissionDraftRow[]> = {};
+  for (const u of users) {
+    out[u.id] = buildInitialModuleDraft(u.ruolo, u.id, permissionRows);
+  }
+  return out;
+}
+
+export function SecurityUsersPermissionsPanel({ readOnly = false }: Props) {
   const { refresh, user: sessionUser } = useAuth();
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const queryClient = useQueryClient();
   const [createOpen, setCreateOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [draftRows, setDraftRows] = useState<EditableSecurityUser[]>([]);
   const [savedSnapshot, setSavedSnapshot] = useState<string | null>(null);
+  const [moduleDrafts, setModuleDrafts] = useState<Record<string, ModulePermissionDraftRow[]>>({});
+  const [savedModuleSnapshots, setSavedModuleSnapshots] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const hydratedRef = useRef(false);
 
   const usersQ = useSecurityUsersPermissionsQuery(true);
   const serverUsers = usersQ.users;
+  const permissionRows = usersQ.permissionRows;
 
   useEffect(() => {
     if (!usersQ.isSuccess || hydratedRef.current) return;
     setDraftRows(serverUsers);
     setSavedSnapshot(rowsSnapshot(serverUsers));
+    setModuleDrafts(buildModuleDrafts(serverUsers, permissionRows));
+    setSavedModuleSnapshots(buildModuleSnapshots(serverUsers, permissionRows));
     hydratedRef.current = true;
-  }, [usersQ.isSuccess, serverUsers]);
+  }, [usersQ.isSuccess, serverUsers, permissionRows]);
 
-  const syncFromServer = useCallback((users: EditableSecurityUser[]) => {
-    setDraftRows(users);
-    setSavedSnapshot(rowsSnapshot(users));
-  }, []);
+  const syncFromServer = useCallback(
+    (users: EditableSecurityUser[], perms: typeof permissionRows) => {
+      setDraftRows(users);
+      setSavedSnapshot(rowsSnapshot(users));
+      setModuleDrafts(buildModuleDrafts(users, perms));
+      setSavedModuleSnapshots(buildModuleSnapshots(users, perms));
+    },
+    [],
+  );
 
-  const isDirty = useMemo(() => {
+  const isTableDirty = useMemo(() => {
     if (!hydratedRef.current || savedSnapshot == null) return false;
     return rowsSnapshot(draftRows) !== savedSnapshot;
   }, [draftRows, savedSnapshot]);
 
+  const isModuleDirty = useMemo(() => {
+    if (!hydratedRef.current) return false;
+    for (const row of draftRows) {
+      const saved = savedModuleSnapshots[row.id];
+      const draft = moduleDrafts[row.id];
+      if (!saved || !draft) continue;
+      if (snapshotModuleDraft(draft) !== saved) return true;
+    }
+    return false;
+  }, [draftRows, moduleDrafts, savedModuleSnapshots]);
+
+  const isDirty = isTableDirty || isModuleDirty;
+
+  const selectedUser = useMemo(
+    () => draftRows.find((u) => u.id === selectedUserId) ?? null,
+    [draftRows, selectedUserId],
+  );
+
+  const selectedModuleDraft = useMemo(() => {
+    if (!selectedUserId) return [];
+    return moduleDrafts[selectedUserId] ?? [];
+  }, [moduleDrafts, selectedUserId]);
+
   const handleCancel = useCallback(() => {
-    syncFromServer(serverUsers);
-  }, [serverUsers, syncFromServer]);
+    syncFromServer(serverUsers, permissionRows);
+  }, [serverUsers, permissionRows, syncFromServer]);
 
   const handleSave = useCallback(async () => {
     if (!isDirty) return;
-    const patches = buildSecurityUserPatches(serverUsers, draftRows);
+    for (const row of draftRows) {
+      const clienteErr = validateClienteRefForRole(row.ruolo, row.clienteRef);
+      if (clienteErr) {
+        gestToast.error(clienteErr);
+        return;
+      }
+    }
+    const patches = buildSecurityUserPatches(
+      serverUsers,
+      draftRows,
+      savedModuleSnapshots,
+      moduleDrafts,
+      permissionRows,
+    );
     if (!patches.length) {
       setSavedSnapshot(rowsSnapshot(draftRows));
+      setSavedModuleSnapshots(buildModuleSnapshots(draftRows, permissionRows));
       return;
+    }
+
+    const roleChanges = patches.filter((p) => p.ruolo != null);
+    if (roleChanges.length > 0) {
+      const ok = await confirm({
+        title: "Cambio ruolo",
+        message:
+          "Il cambio ruolo ripristina i permessi personalizzati per pagina al default del nuovo ruolo (salvo override espliciti nella stessa operazione). Continuare?",
+        confirmLabel: "Salva",
+      });
+      if (!ok) return;
     }
 
     setSaving(true);
@@ -92,7 +185,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
         queryKey: QK.securityUsersPermissions,
         queryFn: fetchSecurityUsersPermissionsQuery,
       });
-      syncFromServer(fresh.users);
+      syncFromServer(fresh.users, fresh.permissionRows);
       if (patches.some((p) => p.userId === sessionUser?.id)) {
         await refresh();
       }
@@ -100,7 +193,20 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
     } finally {
       setSaving(false);
     }
-  }, [serverUsers, draftRows, isDirty, gestToast, queryClient, refresh, sessionUser?.id, syncFromServer]);
+  }, [
+    serverUsers,
+    draftRows,
+    savedModuleSnapshots,
+    moduleDrafts,
+    permissionRows,
+    isDirty,
+    gestToast,
+    queryClient,
+    refresh,
+    sessionUser?.id,
+    syncFromServer,
+    confirm,
+  ]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -123,12 +229,38 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
         if (!ok) return;
       }
       const res = await usersQ.refetch();
-      if (res.data?.users) syncFromServer(res.data.users);
+      if (res.data?.users) syncFromServer(res.data.users, res.data.permissionRows);
+      hydratedRef.current = true;
     })();
   }, [confirm, isDirty, usersQ, syncFromServer]);
 
+  const handleRoleChange = useCallback((userId: string, ruolo: AppRole) => {
+    const role = resolveRole(ruolo);
+    setModuleDrafts((prev) => ({
+      ...prev,
+      [userId]: computeModulePermissionDraft(role, userId, []),
+    }));
+  }, []);
+
+  const handleRestoreModuleFromRole = useCallback(() => {
+    if (!selectedUser) return;
+    const role = resolveRole(selectedUser.ruolo);
+    setModuleDrafts((prev) => ({
+      ...prev,
+      [selectedUser.id]: computeModulePermissionDraft(role, selectedUser.id, []),
+    }));
+  }, [selectedUser]);
+
+  const handleModuleDraftChange = useCallback(
+    (rows: ModulePermissionDraftRow[]) => {
+      if (!selectedUserId) return;
+      setModuleDrafts((prev) => ({ ...prev, [selectedUserId]: rows }));
+    },
+    [selectedUserId],
+  );
+
   return (
-    <ShellCard title="Gestione Utenti e Permessi">
+    <ShellCard title="Utenti, ruoli e pagine consentite" subtitle="Gestione centralizzata di profili, ruoli, accesso portale clienti e permessi per modulo (menu ERP).">
       <div className={`${dsPageToolbar} -mx-1 mb-4 sm:mx-0`}>
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -170,12 +302,30 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, onOpenDetail }
         </div>
       ) : null}
 
+      <h3 className={`${dsSectionTitle} mb-2`}>Associazione clienti</h3>
+      <p className="mb-3 text-xs text-[color:var(--cab-text-muted)]">
+        Collega ogni utente a un cliente dell&apos;anagrafica mezzi. Il ruolo Cliente richiede un cliente associato per accedere al portale.
+      </p>
+
       <SecurityUsersTable
         rows={usersQ.isError ? [] : draftRows}
         loading={usersQ.isLoading}
         readOnly={readOnly}
+        permissionRows={permissionRows}
         onRowsChange={setDraftRows}
-        onOpenDetail={onOpenDetail}
+        onOpenDetail={setSelectedUserId}
+        onRoleChange={handleRoleChange}
+      />
+
+      <SecurityUserDetailDrawer
+        user={selectedUser}
+        open={!!selectedUser}
+        readOnly={readOnly}
+        permissionRows={permissionRows}
+        moduleDraft={selectedModuleDraft}
+        onModuleDraftChange={handleModuleDraftChange}
+        onRestoreModuleFromRole={handleRestoreModuleFromRole}
+        onClose={() => setSelectedUserId(null)}
       />
 
       <SecurityCreateUserModal

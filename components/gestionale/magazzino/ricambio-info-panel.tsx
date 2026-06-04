@@ -120,6 +120,9 @@ export function RicambioInfoPanel({
               {ricambio.codiceFornitoreOriginaleSecondario.trim() ? (
                 <span className="block font-mono text-[11px] font-medium tracking-wide text-[color:var(--cab-text-muted)]">
                   {ricambio.codiceFornitoreOriginaleSecondario}
+                  {ricambio.marcaOriginaleSecondaria.trim()
+                    ? ` · ${ricambio.marcaOriginaleSecondaria}`
+                    : ""}
                 </span>
               ) : null}
             </div>
@@ -129,6 +132,10 @@ export function RicambioInfoPanel({
         <GestionaleInfoRow label="Descrizione" value={hubPanoramicaDisplayValue(ricambio.descrizione)} strong />
         <GestionaleInfoRow label="Note" value={multilineValue(ricambio.note)} />
         <GestionaleInfoRow label="Categoria" value={hubPanoramicaDisplayValue(ricambio.categoria)} />
+        <GestionaleInfoRow
+          label="Tagliando"
+          value={ricambio.usatoInTagliandi ? "Sì" : "No"}
+        />
         <GestionaleInfoRow label="Compatibilità" value={compatDisplay} />
       </GestionaleInfoCard>
 
@@ -156,27 +163,37 @@ export function RicambioInfoPanel({
         </GestionaleInfoSubgroup>
       </GestionaleInfoCard>
 
-      <GestionaleInfoCard title="Fornitore alternativo">
-        <GestionaleInfoRow label="Nome" value={hubPanoramicaDisplayValue(ricambio.fornitoreNonOriginale)} />
-        <GestionaleInfoRow
-          label="Codice"
-          value={
-            ricambio.codiceFornitoreNonOriginale.trim() ? (
-              <span className="font-mono">{ricambio.codiceFornitoreNonOriginale}</span>
-            ) : (
-              "—"
-            )
-          }
-          mono
-        />
+      <GestionaleInfoCard title="Fornitori alternativi">
+        {(ricambio.fornitoriAlternativi ?? []).length === 0 ? (
+          <GestionaleInfoRow label="—" value="Nessun fornitore alternativo" />
+        ) : (
+          (ricambio.fornitoriAlternativi ?? []).map((alt, i) => (
+            <GestionaleInfoSubgroup key={alt.id || i} title={`Alternativo ${i + 1}`}>
+              <GestionaleInfoRow label="Fornitore" value={hubPanoramicaDisplayValue(alt.fornitore)} />
+              <GestionaleInfoRow label="Produttore" value={hubPanoramicaDisplayValue(alt.produttore)} />
+              <GestionaleInfoRow
+                label="Codice"
+                value={
+                  alt.codice.trim() ? (
+                    <span className="font-mono">{alt.codice}</span>
+                  ) : (
+                    "—"
+                  )
+                }
+                mono
+              />
+              <GestionaleInfoRow label="Prezzo" value={formatEur(alt.prezzo)} mono />
+              <GestionaleInfoRow label="Sconto" value={`${alt.sconto}%`} mono />
+            </GestionaleInfoSubgroup>
+          ))
+        )}
       </GestionaleInfoCard>
 
       <MagazzinoPrezziLineari
         formatEur={formatEur}
         listinoOE={ricambio.prezzoFornitoreOriginale}
         scontoOE={ricambio.scontoFornitoreOriginale}
-        listinoAlt={ricambio.prezzoFornitoreNonOriginale}
-        scontoAlt={ricambio.scontoFornitoreNonOriginale}
+        fornitoriAlternativi={ricambio.fornitoriAlternativi}
         markupPct={ricambio.markupPercentuale}
         prezzoVendita={ricambio.prezzoVendita}
       />

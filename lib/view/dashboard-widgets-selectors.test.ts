@@ -10,6 +10,7 @@ import {
   formatDashboardMagRicambioIdent,
   formatDashboardMagRicambioTitle,
 } from "@/lib/view/dashboard-widgets-selectors";
+import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MovimentoRicambioRow } from "@/src/types/supabase-tables";
@@ -103,28 +104,17 @@ assert.equal(formatDashboardMagRicambioTitle("Bucher", "Ruota Bocca Aspirazione"
 assert.equal(formatDashboardMagRicambioTitle("—", "Filtro olio"), "Filtro olio");
 
 const ricambi: RicambioMagazzino[] = [
-  {
+  defaultRicambioMagazzinoFields({
     id: "r1",
     marca: "OEM",
     codiceFornitoreOriginale: "X1",
-    codiceFornitoreOriginaleSecondario: "",
     descrizione: "Filtro",
-    note: "",
-    categoria: "",
-    compatibilitaMezzi: [],
     scorta: 1,
     scortaMinima: 5,
     dataUltimaModifica: "2026-05-20T00:00:00.000Z",
-    autoreUltimaModifica: "",
     prezzoFornitoreOriginale: 10,
-    scontoFornitoreOriginale: 0,
-    markupPercentuale: 0,
     prezzoVendita: 10,
-    fornitoreNonOriginale: "",
-    codiceFornitoreNonOriginale: "",
-    prezzoFornitoreNonOriginale: 0,
-    scontoFornitoreNonOriginale: 0,
-  },
+  }),
 ];
 
 assert.equal(computeDashboardMagWidgetStats(ricambi).sottoScorta, 1);

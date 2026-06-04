@@ -14,6 +14,7 @@ import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/type
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { parseScontoRicambiByCliente } from "@/lib/mezzi/cliente-commerciale";
 import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { parseProduttoriByFornitore } from "@/lib/magazzino/fornitore-produttore-master";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
@@ -149,6 +150,7 @@ function parseMagazzinoMasterPayload(raw: unknown): MagazzinoMasterPrefs {
       ? o.mezziCompatibili.filter((x): x is string => typeof x === "string")
       : [],
     fornitori: Array.isArray(o.fornitori) ? o.fornitori.filter((x): x is string => typeof x === "string") : [],
+    produttoriByFornitore: parseProduttoriByFornitore(o.produttoriByFornitore),
   };
 }
 

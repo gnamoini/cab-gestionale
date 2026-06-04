@@ -1,34 +1,70 @@
 "use client";
 
-const DESKTOP_ASKED_KEY = "cab-desktop-notifications-asked";
+import {
+  DESKTOP_PROMPT_DISMISSED_KEY,
+  formatDesktopNotificationPermissionStatusLabel,
+  resolveDesktopNotificationPermissionState,
+  shouldShowDesktopNotificationPermissionBanner,
+  type DesktopNotificationPermissionState,
+} from "@/lib/lavorazioni/desktop-notification-permission";
 
-export function wasDesktopNotificationAsked(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.localStorage.getItem(DESKTOP_ASKED_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-export function markDesktopNotificationAsked(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(DESKTOP_ASKED_KEY, "1");
-  } catch {
-    /* ignore */
-  }
-}
+export type { DesktopNotificationPermissionState };
+export {
+  DESKTOP_PROMPT_DISMISSED_KEY,
+  formatDesktopNotificationPermissionStatusLabel,
+  shouldShowDesktopNotificationPermissionBanner,
+};
 
 export function canUseDesktopNotifications(): boolean {
   return typeof window !== "undefined" && "Notification" in window;
 }
 
+export function getDesktopNotificationPermissionState(): DesktopNotificationPermissionState {
+  if (!canUseDesktopNotifications()) return "unsupported";
+  return resolveDesktopNotificationPermissionState(true, Notification.permission);
+}
+
+export function wasDesktopNotificationPromptDismissed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return window.localStorage.getItem(DESKTOP_PROMPT_DISMISSED_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+export function dismissDesktopNotificationPrompt(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(DESKTOP_PROMPT_DISMISSED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+/** @deprecated Usare wasDesktopNotificationPromptDismissed */
+export function wasDesktopNotificationAsked(): boolean {
+  return wasDesktopNotificationPromptDismissed();
+}
+
+/** @deprecated Usare dismissDesktopNotificationPrompt */
+export function markDesktopNotificationAsked(): void {
+  dismissDesktopNotificationPrompt();
+}
+
+/**
+ * Solo lettura permesso (nessuna richiesta al browser).
+ * @deprecated Non invocare requestPermission in background; usare requestDesktopNotificationPermissionInteractive.
+ */
 export async function requestDesktopNotificationPermissionOnce(): Promise<NotificationPermission | null> {
   if (!canUseDesktopNotifications()) return null;
-  if (Notification.permission !== "default") return Notification.permission;
-  if (wasDesktopNotificationAsked()) return Notification.permission;
-  markDesktopNotificationAsked();
+  return Notification.permission;
+}
+
+/** Richiesta permesso con gesto utente (banner / campanella). */
+export async function requestDesktopNotificationPermissionInteractive(): Promise<NotificationPermission | null> {
+  if (!canUseDesktopNotifications()) return null;
+  if (Notification.permission === "granted") return "granted";
   try {
     return await Notification.requestPermission();
   } catch {
@@ -61,15 +97,3 @@ export function showDesktopAdminNotification(options: {
 
 /** @deprecated Usare showDesktopAdminNotification */
 export const showDesktopLavorazioneNotification = showDesktopAdminNotification;
-
-/** Richiesta permesso esplicita (click utente su «Notifiche desktop» / test). */
-export async function requestDesktopNotificationPermissionInteractive(): Promise<NotificationPermission | null> {
-  if (!canUseDesktopNotifications()) return null;
-  if (Notification.permission === "granted") return "granted";
-  markDesktopNotificationAsked();
-  try {
-    return await Notification.requestPermission();
-  } catch {
-    return Notification.permission;
-  }
-}

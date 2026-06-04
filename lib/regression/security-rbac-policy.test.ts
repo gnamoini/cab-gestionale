@@ -3,6 +3,7 @@
  */
 import assert from "node:assert/strict";
 import { hasCapability } from "@/lib/rbac";
+import { clienteRoleRequiresRef, validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
 import { hasPermission } from "@/lib/auth/rbac";
 
 const matrix: Array<{
@@ -27,5 +28,10 @@ for (const row of matrix) {
     `${row.role} client portal`,
   );
 }
+
+assert.equal(clienteRoleRequiresRef("cliente"), true);
+assert.equal(validateClienteRefForRole("cliente", null) != null, true);
+assert.equal(validateClienteRefForRole("cliente", "ACME"), null);
+assert.equal(validateClienteRefForRole("admin", null), null);
 
 console.log("security-rbac-policy.test.ts OK");

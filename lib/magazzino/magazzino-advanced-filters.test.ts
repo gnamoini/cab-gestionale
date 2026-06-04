@@ -7,6 +7,7 @@ import {
   magazzinoRowMatchesAdvancedFilters,
   magazzinoRowMatchesTreeCompatFilters,
 } from "@/lib/magazzino/magazzino-advanced-filters";
+import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 
@@ -35,30 +36,30 @@ const liste: MezziListePrefs = {
 };
 
 function baseRow(overrides: Partial<RicambioMagazzino> = {}): RicambioMagazzino {
-  return {
+  return defaultRicambioMagazzinoFields({
     id: "r1",
     marca: "Bosch",
     codiceFornitoreOriginale: "ABC",
-    codiceFornitoreOriginaleSecondario: "",
     descrizione: "Filtro",
-    note: "",
     categoria: "Filtri",
-    compatibilitaMezzi: [],
-    compatibilitaRefs: [],
     scorta: 1,
-    scortaMinima: 0,
-    dataUltimaModifica: "2026-01-01T00:00:00.000Z",
-    autoreUltimaModifica: "Test",
     prezzoFornitoreOriginale: 10,
-    scontoFornitoreOriginale: 0,
-    markupPercentuale: 0,
     prezzoVendita: 10,
+    fornitoriAlternativi: [
+      {
+        id: "alt-1",
+        fornitore: "Ricambi Express",
+        produttore: "ACME",
+        codice: "RX-1",
+        prezzo: 8,
+        sconto: 0,
+      },
+    ],
     fornitoreNonOriginale: "Ricambi Express",
     codiceFornitoreNonOriginale: "RX-1",
     prezzoFornitoreNonOriginale: 8,
-    scontoFornitoreNonOriginale: 0,
     ...overrides,
-  };
+  });
 }
 
 test("magazzinoAdvancedFiltersActive include telaio e fornitore", () => {
@@ -124,5 +125,26 @@ test("magazzinoRowMatchesAdvancedFilters per fornitore non originale", () => {
       liste,
     ),
     false,
+  );
+});
+
+test("filtro tagliando solo / escludi", () => {
+  const tagliando = baseRow({ usatoInTagliandi: true });
+  const normale = baseRow({ id: "r2", usatoInTagliandi: false });
+  assert.equal(
+    magazzinoRowMatchesAdvancedFilters(tagliando, { ...MAGAZZINO_ADVANCED_FILTERS_EMPTY, tagliando: "solo" }, liste),
+    true,
+  );
+  assert.equal(
+    magazzinoRowMatchesAdvancedFilters(normale, { ...MAGAZZINO_ADVANCED_FILTERS_EMPTY, tagliando: "solo" }, liste),
+    false,
+  );
+  assert.equal(
+    magazzinoRowMatchesAdvancedFilters(tagliando, { ...MAGAZZINO_ADVANCED_FILTERS_EMPTY, tagliando: "escludi" }, liste),
+    false,
+  );
+  assert.equal(
+    magazzinoRowMatchesAdvancedFilters(normale, { ...MAGAZZINO_ADVANCED_FILTERS_EMPTY, tagliando: "escludi" }, liste),
+    true,
   );
 });

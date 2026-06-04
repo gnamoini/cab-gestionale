@@ -141,7 +141,7 @@ export function TimesheetHeader({
       <section aria-label="Filtri timesheet" className="min-w-0">
         <ToolbarGroup>
           <ToolbarGroupBody>
-            <ToolbarGroupPrimaryRow className="items-end gap-2 !sm:flex-nowrap !sm:justify-start">
+            <ToolbarGroupPrimaryRow className="items-end gap-2 sm:flex-nowrap sm:justify-start">
               {periodMode !== "month" ? (
                 <TimesheetPeriodNav
                   periodLabel={periodLabel}

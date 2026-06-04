@@ -153,4 +153,26 @@ function assertValidTableHead(html: string) {
   assert.match(html, /sticky left-0/);
 }
 
+{
+  function Tooltip({ children }: { children?: React.ReactNode }) {
+    return children ?? null;
+  }
+  const html = renderToStaticMarkup(
+    createElement(
+      "table",
+      null,
+      createElement(
+        GlobalTableHead,
+        null,
+        createElement(GlobalTableHeadLabel, { label: "Dipendente" }),
+        createElement(Tooltip, {
+          children: createElement("th", { scope: "col" }, "03"),
+        }),
+      ),
+    ),
+  );
+  assertValidTableHead(html);
+  assert.match(html, />03</);
+}
+
 console.log("global-table-head-dom.test.ts OK");

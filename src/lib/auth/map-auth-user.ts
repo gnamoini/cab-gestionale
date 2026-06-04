@@ -1,10 +1,11 @@
+import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
 import { resolveFormattedUserDisplayName } from "@/src/lib/auth/resolve-user-display-name";
 import { resolveRole } from "@/lib/auth/rbac";
 import type { PublicAuthUser } from "@/src/types/auth-user";
 import type { RuoloUtente } from "@/src/types/supabase-tables";
 import type { User } from "@supabase/supabase-js";
 
-type ProfileRow = { nome: string | null; ruolo: string | null };
+type ProfileRow = { nome: string | null; ruolo: string | null; cliente_ref?: string | null };
 
 export function mapSupabaseUserToPublicAuthUser(
   sessionUser: User,
@@ -21,6 +22,7 @@ export function mapSupabaseUserToPublicAuthUser(
     email: sessionUser.email ?? "",
     nome,
     ruolo: resolveRole(ruoloFromProfile) as RuoloUtente,
+    clienteRef: normalizeClienteRef(profile?.cliente_ref),
   };
 }
 
@@ -34,5 +36,6 @@ export function mapDegradedPublicAuthUser(sessionUser: User): PublicAuthUser {
     email: sessionUser.email ?? "",
     nome,
     ruolo: "guest",
+    clienteRef: null,
   };
 }

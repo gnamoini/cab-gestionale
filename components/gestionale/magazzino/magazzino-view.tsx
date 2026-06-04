@@ -63,6 +63,7 @@ import {
   findDuplicateByCodici,
   type MagazzinoArchiveDuplicateCodeGroup,
 } from "@/lib/magazzino/duplicates";
+import { ricambioHasFornitoreAlternativo } from "@/lib/magazzino/ricambio-fornitori-alternativi";
 import { compareByColumn, compareNaturalOrder, type SortPhaseMagazzino } from "@/lib/magazzino/sort-order";
 import {
   buildConsumoMapMagazzinoRolling36ForProducts,
@@ -189,8 +190,20 @@ function initialFornitoriFromProducts(rows: RicambioMagazzino[]) {
   for (const r of rows) {
     const t = r.fornitoreNonOriginale.trim();
     if (t) s.add(t);
+    for (const alt of r.fornitoriAlternativi ?? []) {
+      const f = alt.fornitore.trim();
+      if (f) s.add(f);
+    }
   }
   return [...s].sort((a, b) => a.localeCompare(b, "it"));
+}
+
+function formatFornitoreAlternativoDisplay(p: RicambioMagazzino): string {
+  const alts = p.fornitoriAlternativi ?? [];
+  const firstName = alts[0]?.fornitore.trim() || p.fornitoreNonOriginale.trim();
+  if (!firstName) return "—";
+  if (alts.length <= 1) return firstName;
+  return `${firstName} (+${alts.length - 1})`;
 }
 
 function mergeMasterWithRows(master: string[], rowValues: string[]) {
@@ -279,15 +292,30 @@ const CAMPO_LABEL: Partial<Record<keyof RicambioMagazzino, string>> = {
   scontoFornitoreOriginale: "Sconto OE %",
   markupPercentuale: "Markup %",
   prezzoVendita: "Prezzo vendita",
+  marcaOriginaleSecondaria: "Marca secondaria",
+  usatoInTagliandi: "Tagliando",
   fornitoreNonOriginale: "Fornitore alternativo",
   codiceFornitoreNonOriginale: "Codice alternativo",
   prezzoFornitoreNonOriginale: "Prezzo alternativo",
   scontoFornitoreNonOriginale: "Sconto alt. %",
 };
 
+function fmtFornitoriAlternativiDiff(rows: RicambioMagazzino["fornitoriAlternativi"]): string {
+  if (!rows?.length) return "—";
+  return rows
+    .map(
+      (r) =>
+        `${r.fornitore}|${r.produttore}|${r.codice}|${r.prezzo}|${r.sconto}`,
+    )
+    .join("; ");
+}
+
 const DIFF_KEYS: (keyof RicambioMagazzino)[] = [
   "marca",
   "codiceFornitoreOriginale",
+  "codiceFornitoreOriginaleSecondario",
+  "marcaOriginaleSecondaria",
+  "usatoInTagliandi",
   "descrizione",
   "note",
   "categoria",
@@ -322,7 +350,9 @@ function parseUndoValue(key: keyof RicambioMagazzino, raw: string, current: Rica
 }
 
 function fmtForDiff(k: keyof RicambioMagazzino, r: RicambioMagazzino): string {
+  if (k === "fornitoriAlternativi") return fmtFornitoriAlternativiDiff(r.fornitoriAlternativi);
   const v = r[k];
+  if (k === "usatoInTagliandi") return r.usatoInTagliandi ? "Sì" : "No";
   if (Array.isArray(v)) return (v as string[]).join(", ") || "—";
   if (typeof v === "number") {
     if (k === "markupPercentuale") {
@@ -352,6 +382,11 @@ function diffRicambi(before: RicambioMagazzino, after: RicambioMagazzino): Campo
     if (b !== a) {
       out.push({ campo: CAMPO_LABEL[key] ?? String(key), prima: b, dopo: a });
     }
+  }
+  const bAlt = fmtFornitoriAlternativiDiff(before.fornitoriAlternativi);
+  const aAlt = fmtFornitoriAlternativiDiff(after.fornitoriAlternativi);
+  if (bAlt !== aAlt) {
+    out.push({ campo: "Fornitori alternativi", prima: bAlt, dopo: aAlt });
   }
   return out;
 }
@@ -957,7 +992,20 @@ export function MagazzinoView() {
   );
 
   const fornitori = useMemo(
-    () => mergeMasterWithRows(masterFornitori, prodotti.map((p) => p.fornitoreNonOriginale)),
+    () =>
+      mergeMasterWithRows(
+        masterFornitori,
+        prodotti.flatMap((p) => {
+          const names: string[] = [];
+          const first = p.fornitoreNonOriginale.trim();
+          if (first) names.push(first);
+          for (const alt of p.fornitoriAlternativi ?? []) {
+            const f = alt.fornitore.trim();
+            if (f) names.push(f);
+          }
+          return names;
+        }),
+      ),
     [masterFornitori, prodotti],
   );
 
@@ -1435,7 +1483,7 @@ export function MagazzinoView() {
     setNuovoFornitore("");
   }
   async function removeMasterFornitore(f: string) {
-    const n = prodotti.filter((p) => p.fornitoreNonOriginale.trim() === f).length;
+    const n = prodotti.filter((p) => ricambioHasFornitoreAlternativo(p, f)).length;
     if (n > 0) {
       const ok = await confirm({
         title: "Rimuovere fornitore?",
