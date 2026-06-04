@@ -58,6 +58,20 @@ assert.doesNotMatch(pageLayout, /useLayoutEffect|window\.innerWidth|matchMedia/)
 const appShell = read("components/gestionale/app-shell.tsx");
 assert.match(appShell, /layoutResponsiveCoreScope/);
 assert.match(appShell, /gestionale-scroll-y/);
+assert.match(appShell, /dsGestionaleContentShellRow/);
+assert.match(appShell, /dsGestionaleContentRail/);
+assert.match(appShell, /dsGestionaleContentGutter/);
+assert.match(appShell, /cab-gestionale-scroll-gutter-mirror/);
+assert.match(
+  appShell,
+  /cab-gestionale-scroll-gutter-mirror[\s\S]*>\s*\n\s*<div[\s\S]*dsGestionaleContentGutter/,
+  "gutter mirror must wrap padded shell row, not share one element with padding",
+);
+assert.doesNotMatch(
+  designSystem,
+  /dsGestionaleContentRail = `[^`]*\bpx-/,
+  "content rail must not include horizontal padding (scrollbar flush to column edge)",
+);
 
 // --- Flex anti-pattern: files with flex-1 must have containment in same line ---
 const flex1Violations: string[] = [];

@@ -9,7 +9,17 @@ const SKIP_DIRS = new Set(["node_modules", ".next", ".git", "dist", "build"]);
 
 const SKIP_SCAN_PREFIXES = ["lib/production/"];
 
-const LEGACY_PUBLIC_URL_ALLOWLIST = new Set(["lib/documenti/storage-path-from-stored.ts"]);
+const LEGACY_PUBLIC_URL_ALLOWLIST = new Set([
+  "lib/documenti/storage-path-from-stored.ts",
+  /** Fixture URL legacy per assert su classify/resolve. */
+  "lib/documenti/documento-file-access.test.ts",
+]);
+
+/** Test RBAC che invocano hasCapability/can_manage_settings (non production path). */
+const RBAC_CAPABILITY_DIRECT_ALLOWLIST = new Set([
+  "lib/rbac.capability.test.ts",
+  "lib/regression/security-rbac-policy.test.ts",
+]);
 
 const PILOT_ENV_IMPORT_ALLOWLIST = new Set([
   "lib/permissions/operator-global-settings.ts",
@@ -159,7 +169,8 @@ export function scanProductionReadinessCode(repoRoot = process.cwd()): Productio
     if (
       /hasCapability\s*\([^)]*can_manage_settings/.test(content) &&
       !content.includes("isOperatorGlobalSettingsEnabled") &&
-      rel !== "lib/auth/rbac.ts"
+      rel !== "lib/auth/rbac.ts" &&
+      !RBAC_CAPABILITY_DIRECT_ALLOWLIST.has(rel)
     ) {
       for (const line of lineHits(content, /can_manage_settings/)) {
         rbacBypassOutsideCentralFunction.push({ file: rel, line });

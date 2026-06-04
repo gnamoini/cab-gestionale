@@ -87,8 +87,9 @@ assert.match(
 );
 assert.match(bridgesSrc, /DesktopNotificationPermissionPrompt/);
 assert.match(bridgesPromptSrc, /requestDesktopNotificationPermissionInteractive/);
-assert.match(bellSrc, /DesktopNotificationPanelFooter/);
-assert.match(bellSrc, /Abilita notifiche desktop/);
+assert.match(bellSrc, /NotificationsPanelFooter/);
+assert.match(bellSrc, />\s*Abilita\s*</);
+assert.match(bellSrc, />\s*Test\s*</);
 assert.match(bellSrc, /buildAdminDashboardTestNotification/);
 
 console.log("notifications-policy.test.ts OK");

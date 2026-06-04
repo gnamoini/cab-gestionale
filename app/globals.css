@@ -454,6 +454,12 @@ html.dark select option {
   scrollbar-gutter: stable;
 }
 
+/** Stessa larghezza utile del main con `scrollbar-gutter: stable` (mirror solo sul wrapper, non sul padding). */
+.cab-gestionale-scroll-gutter-mirror {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+
 /* ResponsiveLayoutCore — media e contenimento globale nel main gestionale */
 .gestionale-responsive-core img,
 .gestionale-responsive-core video,

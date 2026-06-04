@@ -474,6 +474,15 @@ export const dsStackPage = layoutPageContainer;
 /** Larghezza massima contenuto liste gestionale (allineata tra moduli). */
 export const dsGestionaleContentMax = "mx-auto w-full max-w-[min(100%,100rem)]";
 
+/** Padding orizzontale contenuto (dentro colonna già ristretta dal gutter scroll, se applicabile). */
+export const dsGestionaleContentGutter = "px-2 sm:px-3 md:px-4";
+
+/** Contenitore max-width riga shell (logo/account); gutter su figlio o stessa riga con `dsGestionaleContentGutter`. */
+export const dsGestionaleContentShellRow = `${dsGestionaleContentMax} w-full min-w-0`;
+
+/** Colonna max-width + scroll: senza padding esterno così la scrollbar resta sul bordo destro. */
+export const dsGestionaleContentRail = `${dsGestionaleContentMax} flex min-h-0 min-w-0 w-full flex-1 flex-col`;
+
 /** Placeholder unificato campi ricerca liste; dettaglio in `aria-label` per modulo. */
 export const GESTIONALE_SEARCH_PLACEHOLDER = "Cerca…";
 

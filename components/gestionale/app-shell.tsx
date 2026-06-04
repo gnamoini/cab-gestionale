@@ -17,7 +17,13 @@ import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
 import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
-import { dsGestionaleContentMax, dsPageToolbarBtn, dsZModalHigh } from "@/lib/ui/design-system";
+import {
+  dsGestionaleContentGutter,
+  dsGestionaleContentRail,
+  dsGestionaleContentShellRow,
+  dsPageToolbarBtn,
+  dsZModalHigh,
+} from "@/lib/ui/design-system";
 import { layoutPageRoot, layoutResponsiveCoreScope } from "@/lib/ui/responsive-layout-core";
 import { ResponsiveLayoutAuditMount } from "@/components/gestionale/responsive-layout-audit-mount";
 import { VisualLayoutLinterMount } from "@/components/gestionale/visual-layout-linter-mount";
@@ -377,24 +383,6 @@ function MobileNavDrawer({
   }, [onClose]);
 
   useEffect(() => {
-    // #region agent log
-    fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "b1d6c0" },
-      body: JSON.stringify({
-        sessionId: "b1d6c0",
-        runId: "drawer-state",
-        hypothesisId: "H2",
-        location: "app-shell.tsx:MobileNavDrawer",
-        message: "drawer state",
-        data: { open, mounted, closing },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-    // #endregion
-  }, [open, mounted, closing]);
-
-  useEffect(() => {
     if (!mounted || closing || !open) return;
     function onKey(e: KeyboardEvent) {
       if (e.key !== "Escape") return;
@@ -613,10 +601,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className={`flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-250 ease-out ${mainPad}`}
       >
         <header className="cab-ios-sticky-header shrink-0 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_92%,transparent)] backdrop-blur-md supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
-          <div
-            className={`${dsGestionaleContentMax} flex h-14 w-full min-w-0 items-center gap-3 px-2 max-md:grid max-md:grid-cols-[auto_1fr_auto] max-md:items-center max-md:gap-0 sm:px-3 md:justify-between md:px-4`}
-          >
-            <div className="flex min-w-0 items-center justify-start gap-3 max-md:contents">
+          <div className={`${dsGestionaleContentShellRow} cab-gestionale-scroll-gutter-mirror`}>
+            <div
+              className={`${dsGestionaleContentGutter} flex h-14 min-w-0 items-center gap-3 max-md:grid max-md:grid-cols-[auto_1fr_auto] max-md:items-center max-md:gap-0 md:justify-between`}
+            >
+              <div className="flex min-w-0 items-center justify-start gap-3 max-md:contents">
               <button
                 type="button"
                 data-testid="smoke-nav-drawer-open"
@@ -645,9 +634,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   priority
                 />
               </Link>
-            </div>
-            <div className="flex min-w-0 items-center justify-end">
-              <AccountMenu />
+              </div>
+              <div className="flex min-w-0 items-center justify-end">
+                <AccountMenu />
+              </div>
             </div>
           </div>
         </header>
@@ -659,11 +649,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <DesignSystemLockMount />
         <UiOsShadowMount />
 
-        <main
-          className={`gestionale-scroll-y gestionale-scrollbar ${layoutResponsiveCoreScope} ${dsGestionaleContentMax} min-h-0 min-w-0 flex-1 px-2 pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:px-3 md:px-4 md:pb-[max(1rem,env(safe-area-inset-bottom))]`}
-        >
-          <div className={layoutPageRoot}>{children}</div>
-        </main>
+        <div className={dsGestionaleContentRail}>
+          <main
+            className={`gestionale-scroll-y gestionale-scrollbar ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))]`}
+          >
+            <div className={`${layoutPageRoot} ${dsGestionaleContentGutter}`}>{children}</div>
+          </main>
+        </div>
       </div>
     </div>
   );

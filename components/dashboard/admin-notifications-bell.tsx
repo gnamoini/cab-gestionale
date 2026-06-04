@@ -35,24 +35,44 @@ import { useAuth } from "@/context/auth-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { buildAdminNotificationDashboardHref } from "@/lib/lavorazioni/admin-notifications";
 import { GLOBAL_DROPDOWN_VIEWPORT_PAD } from "@/lib/ui/global-dropdown-portal";
-import { dsPageToolbarIconBtn, dsScrollbar } from "@/lib/ui/design-system";
+import {
+  dsBtnGhost,
+  dsModalCloseBtn,
+  dsModalHeaderInner,
+  dsModalHeaderLead,
+  dsModalSubtitle,
+  dsModalTitle,
+  dsModalTitleBlock,
+  dsPageToolbarIconBtn,
+  dsPageToolbarMetaChipAccent,
+  dsScrollbar,
+} from "@/lib/ui/design-system";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
 
 const PANEL_TITLE_ID = "admin-notifications-panel-title";
 
-function DesktopNotificationPanelFooter({
+function NotificationsPanelFooter({
   permissionState,
   onPermissionChange,
+  unreadCount,
+  readCount,
+  onMarkAllRead,
+  onRemoveRead,
 }: {
   permissionState: DesktopNotificationPermissionState;
   onPermissionChange: () => void;
+  unreadCount: number;
+  readCount: number;
+  onMarkAllRead: () => void;
+  onRemoveRead: () => void;
 }) {
   const { user } = useAuth();
   const gestToast = useGestionaleToast();
   const statusLabel = formatDesktopNotificationPermissionStatusLabel(permissionState);
   const canEnable = permissionState === "default" || permissionState === "denied";
   const canSendTest = permissionState === "granted" && Boolean(user?.id);
+  const desktopActive = permissionState === "granted";
 
   const handleEnable = async () => {
     const result = await requestDesktopNotificationPermissionInteractive();
@@ -84,39 +104,58 @@ function DesktopNotificationPanelFooter({
   };
 
   return (
-    <div className="flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] px-3 py-2">
-      <div className="flex flex-col gap-1">
-        <p className="text-[11px] text-[color:var(--cab-text-muted)]">
-          Notifiche desktop:{" "}
-          <span className="font-medium text-[color:var(--cab-text)]">{statusLabel}</span>
+    <footer className="flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-3 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+        <span className="text-xs text-[color:var(--cab-text-muted)]">
+          Desktop{" "}
+          <span
+            className={
+              desktopActive
+                ? "font-medium text-[color:var(--cab-text)]"
+                : "font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_75%,var(--cab-text))]"
+            }
+          >
+            {statusLabel}
+          </span>
+        </span>
+        <div className="flex flex-wrap items-center gap-1">
+          {canEnable ? (
+            <button type="button" className={dsBtnGhost} onClick={() => void handleEnable()}>
+              Abilita
+            </button>
+          ) : null}
+          {canSendTest ? (
+            <button type="button" className={dsBtnGhost} onClick={() => void handleTest()}>
+              Test
+            </button>
+          ) : null}
+        </div>
+      </div>
+      {permissionState === "denied" ? (
+        <p className="text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+          Consenti le notifiche dal lucchetto del browser.
         </p>
-        {permissionState === "denied" ? (
-          <p className="text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
-            Consenti le notifiche per questo sito dalle impostazioni del browser.
-          </p>
-        ) : null}
+      ) : null}
+      <div className="flex items-center gap-2 border-t border-[color:color-mix(in_srgb,var(--cab-border)_65%,transparent)] pt-2">
+        <button
+          type="button"
+          className={`${dsBtnGhost} min-h-[2rem] min-w-0 flex-1 sm:flex-none`}
+          disabled={unreadCount === 0}
+          onClick={onMarkAllRead}
+        >
+          Segna tutte lette
+        </button>
+        <span className="hidden h-4 w-px shrink-0 bg-[color:var(--cab-border)] sm:block" aria-hidden />
+        <button
+          type="button"
+          className={`${dsBtnGhost} min-h-[2rem] min-w-0 flex-1 sm:flex-none`}
+          disabled={readCount === 0}
+          onClick={onRemoveRead}
+        >
+          Elimina lette
+        </button>
       </div>
-      <div className="flex flex-wrap gap-2">
-        {canEnable ? (
-          <button
-            type="button"
-            className="min-h-[2.25rem] rounded-lg px-2 text-[11px] font-medium text-[color:var(--cab-primary)] hover:bg-[var(--cab-hover)] hover:underline"
-            onClick={() => void handleEnable()}
-          >
-            Abilita notifiche desktop
-          </button>
-        ) : null}
-        {canSendTest ? (
-          <button
-            type="button"
-            className="min-h-[2.25rem] rounded-lg px-2 text-[11px] font-medium text-[color:var(--cab-text-muted)] hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] hover:underline"
-            onClick={() => void handleTest()}
-          >
-            Invia test
-          </button>
-        ) : null}
-      </div>
-    </div>
+    </footer>
   );
 }
 
@@ -541,21 +580,36 @@ export function AdminNotificationsBell() {
         style={style}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <header className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] px-3 py-2.5">
-          <div className="min-w-0 flex-1">
-            <h2 id={PANEL_TITLE_ID} className="truncate text-sm font-semibold text-[color:var(--cab-text)]">
-              Notifiche
-            </h2>
-            <p className="truncate text-[11px] text-[color:var(--cab-text-muted)]">
-              {unreadCount > 0 ? `${unreadCount} non lette` : "Nessuna notifica non letta"}
-            </p>
+        <header className="flex shrink-0 border-b border-[color:var(--cab-border)] px-3 py-2.5">
+          <div className={dsModalHeaderInner}>
+            <div className={dsModalHeaderLead}>
+              <div className={dsModalTitleBlock}>
+                <div className="flex min-w-0 items-center gap-2">
+                  <h2 id={PANEL_TITLE_ID} className={`${dsModalTitle} text-sm`}>
+                    Notifiche
+                  </h2>
+                  {unreadCount > 0 ? (
+                    <span className={dsPageToolbarMetaChipAccent} aria-hidden>
+                      {unreadCount}
+                    </span>
+                  ) : null}
+                </div>
+                {unreadCount > 0 ? (
+                  <p className={dsModalSubtitle}>
+                    {unreadCount} non {unreadCount === 1 ? "letta" : "lette"}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+            <CloseButton onClick={close} className={dsModalCloseBtn} />
           </div>
-          <CloseButton onClick={close} className="shrink-0" />
         </header>
 
-        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-2">
+        <div className="min-h-0 min-w-0 flex-1 space-y-2 overflow-y-auto overscroll-contain p-3">
           {notifications.length === 0 ? (
-            <p className="py-6 text-center text-xs text-[color:var(--cab-text-muted)]">Nessuna notifica.</p>
+            <p className="py-10 text-center text-sm text-[color:var(--cab-text-muted)]">
+              Nessuna notifica al momento.
+            </p>
           ) : (
             notifications.map((row) => (
               <NotificationRow
@@ -575,29 +629,14 @@ export function AdminNotificationsBell() {
           )}
         </div>
 
-        <DesktopNotificationPanelFooter
+        <NotificationsPanelFooter
           permissionState={desktopPermissionState}
           onPermissionChange={refreshDesktopPermission}
+          unreadCount={unreadCount}
+          readCount={readCount}
+          onMarkAllRead={markAllRead}
+          onRemoveRead={removeReadNotifications}
         />
-
-        <footer className="flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] px-3 py-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <button
-            type="button"
-            className="min-h-[2.5rem] w-full rounded-lg text-[11px] font-medium text-[color:var(--cab-primary)] hover:bg-[var(--cab-hover)] hover:underline disabled:opacity-50 sm:min-h-0 sm:w-auto sm:rounded-none sm:hover:bg-transparent"
-            disabled={unreadCount === 0}
-            onClick={() => markAllRead()}
-          >
-            Segna tutte lette
-          </button>
-          <button
-            type="button"
-            className="min-h-[2.5rem] w-full rounded-lg text-[11px] font-medium text-[color:var(--cab-text-muted)] hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] hover:underline disabled:opacity-50 sm:min-h-0 sm:w-auto sm:rounded-none sm:hover:bg-transparent"
-            disabled={readCount === 0}
-            onClick={() => removeReadNotifications()}
-          >
-            Elimina lette
-          </button>
-        </footer>
       </div>
     ) : null;
 

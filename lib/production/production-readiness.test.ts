@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { validateProductionReadiness } from "@/lib/production/production-readiness";
+import { scanProductionReadinessCode } from "@/lib/production/production-readiness-scan";
 import type { ProductionReadinessCodeScan } from "@/lib/production/production-readiness-types";
 
 const cleanScan: ProductionReadinessCodeScan = {
@@ -44,5 +45,22 @@ const blocked = validateProductionReadiness({
 
 assert.equal(blocked.ready, false, `blockers: ${blocked.blockers.join("; ")}`);
 assert.ok(blocked.blockers.some((b) => b.includes("ENABLE_OPERATOR_GLOBAL_SETTINGS")));
+
+const scan = scanProductionReadinessCode();
+assert.equal(
+  scan.legacySupabasePublicUrlInCodeHits.some((h) => h.file.includes("documento-file-access.test.ts")),
+  false,
+  "test fixture URL must not block production gate",
+);
+assert.equal(
+  scan.rbacBypassOutsideCentralFunction.some((h) => h.file.includes("rbac.capability.test.ts")),
+  false,
+  "rbac capability unit tests must not block production gate",
+);
+assert.equal(
+  scan.rbacBypassOutsideCentralFunction.some((h) => h.file.includes("security-rbac-policy.test.ts")),
+  false,
+  "security rbac regression must not block production gate",
+);
 
 console.log("production-readiness.test.ts OK");
