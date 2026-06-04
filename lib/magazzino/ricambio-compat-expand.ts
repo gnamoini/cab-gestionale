@@ -80,11 +80,9 @@ function linesForMarcaInTree(
   marca: string,
 ): string[] {
   const want = normMarca(marca);
+  // Solo righe ancora presenti nell'albero mezzi: legacy obsolete non bloccano universale marca.
   return selected.filter((line) => {
-    if (!allTreeLines.has(line)) {
-      const parsed = parseCompatMarcaModello(line);
-      return normMarca(parsed.marca) === want && Boolean(parsed.modello);
-    }
+    if (!allTreeLines.has(line)) return false;
     return normMarca(parseCompatMarcaModello(line).marca) === want;
   });
 }
@@ -107,6 +105,35 @@ function expandTreeMarcheSenzaModelli(
   }
 }
 
+/** Se esistono modelli espliciti per una marca, la riga universale marca è ridondante. */
+function stripUniversalWhenExplicitModelsPresent(
+  result: Set<string>,
+  tree: HierarchyTreeKey,
+  mezziListe: MezziListePrefs,
+): void {
+  const allLines = new Set(flattenCompatFromHierarchyTree(mezziListe, tree));
+  for (const line of [...result]) {
+    if (!isCompatMarcaUniversalLine(line)) continue;
+    if (!lineBelongsToHierarchyTree(line, tree, mezziListe)) continue;
+    const { marca } = parseCompatMarcaModello(line);
+    if (!marca) continue;
+    if (linesForMarcaInTree([...result], allLines, marca).length > 0) {
+      result.delete(line);
+    }
+  }
+}
+
+/** Normalizza elenco compat: modello esplicito prevale su universale marca (stesso albero). */
+export function preferExplicitModelsOverUniversalMarca(
+  lines: readonly string[],
+  mezziListe: MezziListePrefs,
+): string[] {
+  const result = new Set(normalizeCompatList(lines));
+  stripUniversalWhenExplicitModelsPresent(result, "attrezzature", mezziListe);
+  stripUniversalWhenExplicitModelsPresent(result, "telai", mezziListe);
+  return [...result].sort((a, b) => a.localeCompare(b, "it"));
+}
+
 export type ExpandRicambioCompatOpts = {
   marcheAttrezzaturaFiltro: readonly string[];
   marcheTelaioFiltro: readonly string[];
@@ -124,6 +151,8 @@ export function expandRicambioCompatibilitaMezzi(
   const result = new Set(normalizeCompatList(selected));
   expandTreeMarcheSenzaModelli(result, "attrezzature", opts.marcheAttrezzaturaFiltro, opts.mezziListe);
   expandTreeMarcheSenzaModelli(result, "telai", opts.marcheTelaioFiltro, opts.mezziListe);
+  stripUniversalWhenExplicitModelsPresent(result, "attrezzature", opts.mezziListe);
+  stripUniversalWhenExplicitModelsPresent(result, "telai", opts.mezziListe);
   return [...result].sort((a, b) => a.localeCompare(b, "it"));
 }
 

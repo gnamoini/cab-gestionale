@@ -36,7 +36,7 @@ import {
   scheduleRouteTransitionBegin,
 } from "@/src/lib/navigation/route-transition";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { useGestionaleMainScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
 import { useSidebarCollapsed } from "@/lib/ui/use-sidebar-collapsed";
@@ -367,7 +367,7 @@ function MobileNavDrawer({
     return () => window.clearTimeout(id);
   }, [mounted, open]);
 
-  useBodyScrollLock(mounted, "MobileNavDrawer");
+  useGestionaleMainScrollLock(mounted, "MobileNavDrawer");
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");

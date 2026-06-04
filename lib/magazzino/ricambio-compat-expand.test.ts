@@ -65,4 +65,31 @@ const derived = deriveMarcheFiltroFromCompatLabels([ivecoUniversal, ivecoDaily],
 assert.deepEqual(derived.attrezzature, ["Iveco"]);
 assert.equal(derived.telai.length, 0);
 
+const longoSl500 = compatLabelMarcaModello("Longo", "SL500");
+const longoUniversal = marcaUniversalCompatLabel("Longo");
+const mezziLongo: MezziListePrefs = {
+  ...mezziListe,
+  attrezzature: [
+    {
+      id: "m-longo",
+      nome: "Longo",
+      modelli: [{ id: "mod-sl500", nome: "SL500" }],
+    },
+  ],
+};
+
+const modelOnly = expandRicambioCompatibilitaMezzi([longoUniversal, longoSl500], {
+  marcheAttrezzaturaFiltro: ["Longo"],
+  marcheTelaioFiltro: [],
+  mezziListe: mezziLongo,
+});
+assert.deepEqual(modelOnly, [longoSl500], "modello esplicito esclude universale marca");
+
+const universalOnly = expandRicambioCompatibilitaMezzi([], {
+  marcheAttrezzaturaFiltro: ["Longo"],
+  marcheTelaioFiltro: [],
+  mezziListe: mezziLongo,
+});
+assert.deepEqual(universalOnly, [longoUniversal], "solo marca filtro → universale marca");
+
 console.log("ricambio-compat-expand.test.ts OK");

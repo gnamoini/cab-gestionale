@@ -10,10 +10,34 @@ import {
 import { isImageLogAction, type GestionaleLogEventTone, type GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { isLogReverted } from "@/lib/gestionale-log/undo";
 import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
+import { lavorazioneLogOggettoFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow, LogModificaWithProfileRow } from "@/src/types/supabase-tables";
+import type { LavorazioneSchedeStore } from "@/types/schede";
 
 export type LogModificaAutoreSource = LogModificaRow | LogModificaWithProfileRow;
+
+export function isGenericLavorazioneLogOggetto(oggetto: string): boolean {
+  const t = oggetto.trim();
+  return !t || t === "—" || t === "Lavorazione" || /^Scheda\s·\s/i.test(t);
+}
+
+/** Risolve titolo log lavorazioni da payload.context o catalogo locale. */
+export function buildLavorazioneLogOggettoResolver(
+  lavorazioniById: ReadonlyMap<string, LavorazioneListRow>,
+  schedeStore?: LavorazioneSchedeStore,
+): (row: LogModificaAutoreSource) => string | undefined {
+  return (logRow) => {
+    if (logRow.entita !== "lavorazioni") return undefined;
+    const fromPayload = logModificaOggettoFromPayload(logRow as LogModificaRow);
+    if (fromPayload && fromPayload !== "—") return fromPayload;
+    const lav = lavorazioniById.get(logRow.entita_id);
+    if (!lav) return undefined;
+    const label = lavorazioneLogOggettoFromListRow(lav, schedeStore);
+    return label !== "—" ? label : undefined;
+  };
+}
 
 export function logAutoreLabel(r: LogModificaAutoreSource, currentUserId: string | null, displayName: string): string {
   const profileNome = (r as LogModificaWithProfileRow).profiles?.nome?.trim();
@@ -76,7 +100,7 @@ export function buildLogModificheDisplayEntries(
     let vm = buildLogModificheGestionaleViewModel(row, resolveAutore(row), options?.statiLavorazione);
     const oggetto =
       options?.resolveOggetto?.(row)?.trim() ?? logModificaOggettoFromPayload(row)?.trim();
-    if (oggetto && oggetto !== "—" && (vm.oggettoRiga === "Lavorazione" || vm.oggettoRiga === "—")) {
+    if (oggetto && oggetto !== "—" && isGenericLavorazioneLogOggetto(vm.oggettoRiga)) {
       vm = { ...vm, oggettoRiga: oggetto };
     }
     return { id: row.id, row, vm };

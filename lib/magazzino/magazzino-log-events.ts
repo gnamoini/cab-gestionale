@@ -20,15 +20,26 @@ export type BuildMagazzinoLocalLogInput = {
 /** Campi aggiornati automaticamente a ogni salvataggio — non mostrare nel log modifiche. */
 export const MAGAZZINO_AUTOMATIC_LOG_FIELD_KEYS = new Set(["autoreUltimaModifica", "dataUltimaModifica"]);
 
+/** Campo tecnico (SSOT ID) — la UI mostra solo «Compatibilità» (legacy labels). */
+export const MAGAZZINO_INTERNAL_LOG_FIELD_KEYS = new Set(["compatibilitaRefs"]);
+
 const MAGAZZINO_AUTO_MODIFICA_LINE_RE =
   /^(?:AutoreUltimaModifica|Autore ultima modifica|DataUltimaModifica|Data ultima modifica)\b/i;
 
+const MAGAZZINO_COMPAT_REFS_LINE_RE = /^CompatibilitaRefs\b/i;
+
 export function isMagazzinoAutomaticLogField(key: string): boolean {
-  return MAGAZZINO_AUTOMATIC_LOG_FIELD_KEYS.has(key.trim());
+  const k = key.trim();
+  return MAGAZZINO_AUTOMATIC_LOG_FIELD_KEYS.has(k) || MAGAZZINO_INTERNAL_LOG_FIELD_KEYS.has(k);
 }
 
 export function filterMagazzinoAutomaticModifiche(lines: readonly string[]): string[] {
-  return lines.filter((line) => !MAGAZZINO_AUTO_MODIFICA_LINE_RE.test(line.replace(/^•\s*/, "").trim()));
+  return lines.filter((line) => {
+    const bare = line.replace(/^•\s*/, "").trim();
+    if (MAGAZZINO_AUTO_MODIFICA_LINE_RE.test(bare)) return false;
+    if (MAGAZZINO_COMPAT_REFS_LINE_RE.test(bare)) return false;
+    return true;
+  });
 }
 
 export const MAGAZZINO_CAMPO_LABEL: Record<string, string> = {

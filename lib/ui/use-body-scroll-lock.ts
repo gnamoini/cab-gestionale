@@ -4,6 +4,7 @@ import { useLayoutEffect } from "react";
 import { usePathname } from "next/navigation";
 import {
   acquireBodyScrollLock,
+  acquireMainScrollLock,
   forceReleaseAllBodyScrollLocks,
   healBodyScrollLockState,
   refreshBodyScrollLockOnViewportChange,
@@ -12,8 +13,19 @@ import {
 export { BODY_LOCK_ATTR } from "@/lib/ui/body-scroll-lock-manager";
 
 /**
+ * Blocca scroll del main gestionale senza paddingRight sul body.
+ * Usare per drawer nav mobile quando non serve il body lock.
+ */
+export function useGestionaleMainScrollLock(active: boolean, source?: string): void {
+  useLayoutEffect(() => {
+    if (!active) return;
+    return acquireMainScrollLock(source ?? "main");
+  }, [active, source]);
+}
+
+/**
  * Blocca lo scroll documento quando overlay/modal/drawer sono aperti.
- * Delega al body scroll manager globale (reference counting + restore sicuro).
+ * In app shell blocca anche main.gestionale-scroll-y (scroll interno) senza padding body.
  */
 export function useBodyScrollLock(active: boolean, source?: string): void {
   useLayoutEffect(() => {

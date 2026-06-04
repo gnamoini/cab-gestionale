@@ -190,7 +190,7 @@ export function MezziFilters(props: MezziFiltersProps) {
     onFiltroUltimaLav,
   } = props;
   return (
-    <div className={`${dsPageToolbar} -mx-1 sm:mx-0`}>
+    <div className={`${dsPageToolbar} min-w-0 w-full max-w-full`}>
       <div className="flex flex-col gap-3">
         <MezziSearchBar search={search} onSearch={onSearch} />
         <MezziFilterFields

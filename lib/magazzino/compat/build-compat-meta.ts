@@ -1,6 +1,6 @@
 import type { MagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
 import {
-  dedupeCompatRefs,
+  dedupeCompatRefsPreferExplicitModels,
   labelsToCompatRefs,
   refsToCompatLabels,
   type RicambioCompatRef,
@@ -22,7 +22,7 @@ export function buildCompatMetaForSave(
   refs: readonly RicambioCompatRef[],
   liste: MezziListePrefs,
 ): Pick<MagazzinoRicambioMeta, "compatibilitaRefs" | "compatibilitaMezzi"> {
-  const deduped = dedupeCompatRefs(refs);
+  const deduped = dedupeCompatRefsPreferExplicitModels(refs);
   const labels = refsToCompatLabels(deduped, liste);
   return {
     compatibilitaRefs: deduped.length > 0 ? deduped : undefined,

@@ -138,10 +138,11 @@ import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
 import { logService } from "@/src/services/log.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import {
+  buildLavorazioneLogOggettoResolver,
   buildLogModificheDisplayEntries,
   logAutoreLabel,
 } from "@/lib/gestionale-log/log-modifiche-view-model";
-import { lavorazioneLogOggettoFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";
+import { lavorazioneLogContextFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import { auditPayload, pickExistingFields } from "@/lib/gestionale-log/undo";
 import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -939,6 +940,7 @@ export function LavorazioniView() {
           rollbackSnapshot: schedeSnapshot,
         });
       }
+      const logContext = lavorazioneLogContextFromListRow(row, schedeStore);
       void logService.create({
         entita: "lavorazioni",
         entita_id: row.id,
@@ -947,6 +949,7 @@ export function LavorazioniView() {
         payload: {
           before: { addetto: beforeAddetto },
           after: { addetto: clean },
+          ...(logContext ? { context: logContext } : {}),
         },
       });
       flashRow(row.id);
@@ -1281,22 +1284,22 @@ export function LavorazioniView() {
     return map;
   }, [attiveRows, chiuseRows]);
 
+  const resolveLavorazioneLogOggetto = useMemo(
+    () => buildLavorazioneLogOggettoResolver(lavorazioniById, schedeStore),
+    [lavorazioniById, schedeStore],
+  );
+
   const logDisplayEntries = useMemo(
     () =>
       buildLogModificheDisplayEntries(
         lavModificheLogQuery.data ?? [],
         (row) => logAutoreLabel(row, user?.id ?? null, authorName),
         {
-          resolveOggetto: (row) => {
-            if (row.entita !== "lavorazioni") return undefined;
-            const lav = lavorazioniById.get(row.entita_id);
-            if (!lav) return undefined;
-            return lavorazioneLogOggettoFromListRow(lav, schedeStore);
-          },
+          resolveOggetto: resolveLavorazioneLogOggetto,
           statiLavorazione: statiOpts,
         },
       ),
-    [lavModificheLogQuery.data, user?.id, authorName, lavorazioniById, schedeStore, statiOpts],
+    [lavModificheLogQuery.data, user?.id, authorName, resolveLavorazioneLogOggetto, statiOpts],
   );
 
   const ultimaModificaAutoreByLavId = useMemo(

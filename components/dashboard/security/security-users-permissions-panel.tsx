@@ -261,7 +261,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false }: Props) {
 
   return (
     <ShellCard title="Utenti, ruoli e pagine consentite" subtitle="Gestione centralizzata di profili, ruoli, accesso portale clienti e permessi per modulo (menu ERP).">
-      <div className={`${dsPageToolbar} -mx-1 mb-4 sm:mx-0`}>
+      <div className={`${dsPageToolbar} mb-4 min-w-0 w-full max-w-full`}>
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             {!readOnly ? (

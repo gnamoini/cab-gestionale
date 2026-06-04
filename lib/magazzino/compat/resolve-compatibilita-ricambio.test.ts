@@ -50,4 +50,19 @@ const fromLegacy = resolveCompatibilitaRicambio(
 );
 assert.deepEqual(fromLegacy.labels, [fiatUniversal]);
 
+const dualLegacy = resolveCompatibilitaRicambio(
+  { compatibilitaMezzi: [fiatUniversal, fiat500] },
+  mezziListe,
+);
+assert.deepEqual(dualLegacy.labels, [fiat500]);
+assert.equal(dualLegacy.display, "FIAT 500");
+
+const dualRefs = [
+  { tree: "attrezzature" as const, marcaId: "m-fiat", modelloId: "mod-500" },
+  { tree: "attrezzature" as const, marcaId: "m-fiat" },
+];
+const dualRefsResolved = resolveCompatibilitaRicambio({ compatibilitaRefs: dualRefs }, mezziListe);
+assert.deepEqual(dualRefsResolved.labels, [fiat500]);
+assert.equal(dualRefsResolved.display, "FIAT 500");
+
 console.log("resolve-compatibilita-ricambio.test.ts OK");

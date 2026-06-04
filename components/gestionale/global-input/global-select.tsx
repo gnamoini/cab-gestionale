@@ -316,6 +316,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
       }
       closeAndReset();
       setTouched(true);
+    } catch {
+      /* onAddToList gestisce toast/ritorno null */
     } finally {
       addInFlightRef.current = false;
     }

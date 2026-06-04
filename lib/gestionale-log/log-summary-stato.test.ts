@@ -132,4 +132,53 @@ assert.equal(
   "cached summary oggetto must drop placeholder dashes",
 );
 
+const addettoLog = buildLogModificaSummary({
+  entita: "lavorazioni",
+  entita_id: "lav-addetto",
+  azione: "UPDATE",
+  payload: {
+    before: { addetto: "Angelo" },
+    after: { addetto: "Donato" },
+    context: { oggetto: "Acme Spa — Bobcat E35" },
+  },
+});
+
+assert.equal(addettoLog.oggettoRiga, "Acme Spa — Bobcat E35", "addetto log must show lavorazione label from context");
+
+const cachedAddetto = buildLogModificaSummary({
+  entita: "lavorazioni",
+  entita_id: "lav-addetto",
+  azione: "UPDATE",
+  payload: {
+    before: { addetto: "Angelo" },
+    after: { addetto: "Donato" },
+    context: { oggetto: "Acme Spa — Bobcat E35" },
+    summary: {
+      tipoRiga: "AGGIORNAMENTO LAVORAZIONE",
+      oggettoRiga: "Lavorazione",
+      modifiche: ["Addetto modificato da “Angelo” a “Donato”"],
+    },
+  },
+});
+
+assert.equal(cachedAddetto.oggettoRiga, "Acme Spa — Bobcat E35", "cached addetto log must refresh oggetto from context");
+
+const schedaOggetto = buildLogModificaSummary({
+  entita: "scheda_lavorazione",
+  entita_id: "sch-2",
+  azione: "UPDATE",
+  payload: {
+    before: {
+      tipo: "ingresso",
+      contenuto: { doc: { campi: { cliente: "Rossi Srl", marcaAttrezzatura: "FIAT", modelloAttrezzatura: "500" } } },
+    },
+    after: {
+      tipo: "ingresso",
+      contenuto: { doc: { campi: { cliente: "Rossi Srl", marcaAttrezzatura: "FIAT", modelloAttrezzatura: "500X" } } },
+    },
+  },
+});
+
+assert.equal(schedaOggetto.oggettoRiga, "Rossi Srl — FIAT 500X", "scheda log must identify cliente and attrezzatura");
+
 console.log("log-summary-stato.test.ts OK");

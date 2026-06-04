@@ -52,9 +52,13 @@ export function GlobalMultiSelect({
       const inOptions = options.some((o) => o.trim().toLowerCase() === clean.toLowerCase());
       let canonical = clean;
       if (!inOptions && onAddToList) {
-        const added = await onAddToList(clean);
-        if (!added) return;
-        canonical = added;
+        try {
+          const added = await onAddToList(clean);
+          if (!added) return;
+          canonical = added;
+        } catch {
+          return;
+        }
       } else if (!inOptions && !allowAdd) {
         return;
       }

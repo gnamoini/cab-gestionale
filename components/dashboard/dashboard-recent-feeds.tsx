@@ -10,6 +10,7 @@ import {
 } from "@/components/gestionale/gestionale-log-ui";
 import { layoutScrollYSafe } from "@/lib/ui/responsive-layout-core";
 import {
+  buildLavorazioneLogOggettoResolver,
   buildLogModificheDisplayEntries,
   buildLogModificheFocusHref,
   briefLogModificaRiga,
@@ -20,7 +21,10 @@ import { LoadingFormSkeleton } from "@/components/design-system";
 import { dsDashboardWidgetTitle, dsSurfaceCard } from "@/lib/ui/design-system";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
+import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
 const dashboardFeedScrollClass = layoutScrollYSafe;
 
@@ -34,13 +38,27 @@ export function DashboardRecentFeeds() {
   const globalOpts = useGlobalOptions({ debugTag: "DashboardRecentFeeds" });
   const statiLavorazione = globalOpts.lavorazioni.stati;
 
+  const lavListQ = useLavorazioniList({ includeMezzo: true }, { enabled: !staging, ...viewOpts });
+  const { store: schedeStore } = useSchedeBundlesQuery(!staging, { viewLayer: true });
+
+  const lavorazioniById = useMemo(() => {
+    const map = new Map<string, LavorazioneListRow>();
+    for (const row of lavListQ.data ?? []) map.set(row.id, row);
+    return map;
+  }, [lavListQ.data]);
+
+  const resolveLavorazioneOggetto = useMemo(
+    () => buildLavorazioneLogOggettoResolver(lavorazioniById, schedeStore),
+    [lavorazioniById, schedeStore],
+  );
+
   const lavLogsQ = useLogListQuery({ entita: "lavorazioni", limit: 12 }, { enabled: !staging, ...viewOpts });
   const magLogsQ = useLogListQuery({ entita: "magazzino_ricambi", limit: 12 }, { enabled: !staging, ...viewOpts });
 
   const lavSlice = useMemo(() => {
     return buildLogModificheDisplayEntries(lavLogsQ.data ?? [], (row) =>
       logAutoreLabel(row, user?.id ?? null, authorName),
-      { statiLavorazione },
+      { statiLavorazione, resolveOggetto: resolveLavorazioneOggetto },
     )
       .slice(0, 8)
       .map((entry) => ({
@@ -51,7 +69,7 @@ export function DashboardRecentFeeds() {
         },
         href: buildLogModificheFocusHref(entry.row),
       }));
-  }, [authorName, lavLogsQ.data, statiLavorazione, user?.id]);
+  }, [authorName, lavLogsQ.data, resolveLavorazioneOggetto, statiLavorazione, user?.id]);
 
   const magSlice = useMemo(() => {
     return buildLogModificheDisplayEntries(magLogsQ.data ?? [], (row) =>

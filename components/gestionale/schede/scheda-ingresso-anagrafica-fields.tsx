@@ -8,6 +8,7 @@ import { CompatHierarchySelect } from "@/components/gestionale/magazzino/compat-
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
 import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
+import { sliceInputValue, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -105,9 +106,10 @@ export function SchedaIngressoAnagraficaFields({
             <input
               className={inputFieldClass}
               value={value.richiedente}
-              onChange={(e) => onPatch({ richiedente: e.target.value })}
+              onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
               disabled={disabled}
               placeholder="Nome libero"
+              maxLength={TEXT_SHORT}
               aria-label="Richiedente"
             />
           </FormField>
@@ -185,6 +187,9 @@ export function SchedaIngressoAnagraficaFields({
               disabled={disabled}
               onCopy={onCopyLastIngresso}
             />
+          ) : null}
+          {mezzoLinked && !onSaveMezzo ? (
+            <p className="text-xs text-[color:var(--cab-text-muted)]">Mezzo collegato in anagrafica.</p>
           ) : null}
         </FormSection>
       ) : null}

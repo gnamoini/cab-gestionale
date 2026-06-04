@@ -3,6 +3,7 @@
 import { useCallback, useMemo } from "react";
 import { GlobalMultiSelect } from "@/components/gestionale/global-input/global-multi-select";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
+import { compatHierarchyMultiAddValue } from "@/lib/magazzino/compat/compat-hierarchy-add-value";
 import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { GlobalSettingsHierarchyKind } from "@/src/lib/global-list/global-settings-list-keys";
 import { useAppendGlobalListValue } from "@/src/hooks/use-append-global-list-value";
@@ -91,12 +92,23 @@ export function CompatHierarchyMultiSelect({
     marcaNome,
   });
 
+  const appendEnabled =
+    canAppend && (hierarchyKind !== "modello" || Boolean(marcaNome?.trim()));
+
+  const handleCompatAdd = useCallback(
+    (value: string) => {
+      const line = compatHierarchyMultiAddValue(hierarchyKind, value, marcaNome);
+      if (line) onAdd(line);
+    },
+    [hierarchyKind, marcaNome, onAdd],
+  );
+
   const handleAddToList = useCallback(
     async (raw: string): Promise<string | null> => {
-      if (!canAppend) return null;
+      if (!appendEnabled) return null;
       return append(raw);
     },
-    [append, canAppend],
+    [append, appendEnabled],
   );
 
   const mergedOptions = useMemo(() => {
@@ -112,13 +124,13 @@ export function CompatHierarchyMultiSelect({
       disabled={disabled}
       options={mergedOptions}
       selected={selected}
-      onAdd={onAdd}
+      onAdd={handleCompatAdd}
       onRemove={onRemove}
       emptyMessage={emptyMessage}
-      allowAdd={canAppend}
-      canAdd={canAppend}
+      allowAdd={appendEnabled}
+      canAdd={appendEnabled}
       addPending={isPending}
-      onAddToList={canAppend ? handleAddToList : undefined}
+      onAddToList={appendEnabled ? handleAddToList : undefined}
     />
   );
 }

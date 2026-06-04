@@ -213,15 +213,18 @@ export function LavorazioneMobileControlsPanel({ children }: { children: ReactNo
   );
 }
 
-/** Footer card mobile: solo data e ora ultimo aggiornamento (senza autore). */
+/** Footer card mobile: data · ora e autore su due righe (come magazzino). */
 export function LavorazioneMobileUltimaModifica({ info }: { info: LavorazioneUltimaModificaInfo }) {
-  const { dateTime } = formatLavorazioneUltimaModificaMobileLines(info);
+  const { dateTime, autore } = formatLavorazioneUltimaModificaMobileLines(info);
   if (!dateTime || dateTime === "—") return null;
   return (
-    <p className="min-w-0 truncate text-xs font-medium tabular-nums leading-tight text-[color:var(--cab-text-muted)]">
-      <span className="sr-only">Ultimo aggiornamento: </span>
-      {dateTime}
-    </p>
+    <div className="min-w-0 text-xs font-medium leading-tight text-[color:var(--cab-text-muted)]">
+      <p className="min-w-0 truncate tabular-nums">
+        <span className="sr-only">Ultimo aggiornamento: </span>
+        {dateTime}
+      </p>
+      {autore !== "—" ? <p className="min-w-0 truncate">{autore}</p> : null}
+    </div>
   );
 }
 

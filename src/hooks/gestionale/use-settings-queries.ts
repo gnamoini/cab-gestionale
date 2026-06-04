@@ -26,7 +26,7 @@ export type CabAppSettingsQueryPayload = {
   resolved: CabAppSettingsResolved;
 };
 
-async function fetchCabAppSettingsPayload(): Promise<CabAppSettingsQueryPayload> {
+export async function fetchCabAppSettingsPayload(): Promise<CabAppSettingsQueryPayload> {
   const startedAt = Date.now();
   try {
     const r = await settingsService.getAllSettings();

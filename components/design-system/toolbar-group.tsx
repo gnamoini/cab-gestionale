@@ -22,7 +22,7 @@ export type ToolbarGroupProps = {
 
 export function ToolbarGroup({ children, className = "" }: ToolbarGroupProps) {
   return (
-    <div className={`${dsPageToolbar} -mx-1 min-w-0 max-w-full sm:mx-0 ${className}`.trim()}>{children}</div>
+    <div className={`${dsPageToolbar} min-w-0 w-full max-w-full ${className}`.trim()}>{children}</div>
   );
 }
 

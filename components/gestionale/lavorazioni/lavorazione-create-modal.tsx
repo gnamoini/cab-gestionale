@@ -342,6 +342,7 @@ export function LavorazioneCreateModal({
           mezzoPrompt={mezzoPrompt}
           onMezzoDialogAccept={acceptMezzoPrompt}
           onMezzoDialogDismiss={dismissMezzoPrompt}
+          mezzoLinked={Boolean(mezzoId.trim())}
         />
         <footer className={`${dsModalFormFooter} min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end`}>
           <button

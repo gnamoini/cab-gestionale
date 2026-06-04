@@ -1,0 +1,7 @@
+﻿# Riduce lag IDE durante npm run dev (Turbopack scrive spesso in .next)
+.next/
+node_modules/
+out/
+build/
+coverage/
+.vercel/

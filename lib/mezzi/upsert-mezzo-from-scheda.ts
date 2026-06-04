@@ -40,16 +40,18 @@ function resolveTargetMezzo(
   preferredMezzoId: string | undefined,
   fields: SchedaIngressoFields,
 ): MezzoGestito | null {
-  const preferred = preferredMezzoId?.trim();
-  if (preferred) {
-    const hit = catalog.find((m) => m.id === preferred);
-    if (hit) return hit;
-  }
-  return findMezzoByIngressoIdent(catalog, {
+  const byIdent = findMezzoByIngressoIdent(catalog, {
     targa: fields.targa,
     matricola: fields.matricola,
     nScuderia: fields.nScuderia,
   });
+  if (byIdent) return byIdent;
+
+  const preferred = preferredMezzoId?.trim();
+  if (preferred) {
+    return catalog.find((m) => m.id === preferred) ?? null;
+  }
+  return null;
 }
 
 /**

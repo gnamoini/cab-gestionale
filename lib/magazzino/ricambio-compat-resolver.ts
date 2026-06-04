@@ -51,6 +51,19 @@ export function dedupeCompatRefs(refs: readonly RicambioCompatRef[]): RicambioCo
   return out;
 }
 
+/** Ref marca senza modello è ridondante se esiste ref modello per la stessa marca/albero. */
+export function dedupeCompatRefsPreferExplicitModels(refs: readonly RicambioCompatRef[]): RicambioCompatRef[] {
+  const deduped = dedupeCompatRefs(refs);
+  const marcheWithModel = new Set<string>();
+  for (const r of deduped) {
+    if (r.modelloId) marcheWithModel.add(`${r.tree}:${r.marcaId}`);
+  }
+  return deduped.filter((r) => {
+    if (r.modelloId) return true;
+    return !marcheWithModel.has(`${r.tree}:${r.marcaId}`);
+  });
+}
+
 function findMarcaByNome(liste: MezziListePrefs, tree: HierarchyTreeKey, nome: string) {
   return getHierarchyTree(migrateMezziListePrefs(liste), tree).find((m) => norm(m.nome) === norm(nome));
 }

@@ -38,7 +38,7 @@ export function ReportToolbar({
     <>
       <PageHeader title="Report" titleAddon={titleAddon} />
       <ShellCard>
-        <ToolbarGroup className="sm:mx-0">
+        <ToolbarGroup>
           <ToolbarGroupBody>
             <ReportControls
               preset={preset}

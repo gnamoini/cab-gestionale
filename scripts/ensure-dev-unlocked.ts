@@ -7,9 +7,34 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const LOCK_PATH = path.join(ROOT, ".next", "dev", "lock");
+const DEV_DIR = path.join(ROOT, ".next", "dev");
+const LOCK_PATH = path.join(DEV_DIR, "lock");
 
 type DevLock = { pid?: number; port?: number };
+
+function removeDevCacheAfterCrash(reason: string): void {
+  if (!fs.existsSync(DEV_DIR)) return;
+  fs.rmSync(DEV_DIR, { recursive: true, force: true });
+  console.warn(`[dev] Removed .next/dev after crash (${reason}).`);
+  // #region agent log
+  fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "929eab",
+    },
+    body: JSON.stringify({
+      sessionId: "929eab",
+      runId: "post-fix",
+      hypothesisId: "B",
+      location: "ensure-dev-unlocked.ts:clean-dev-cache",
+      message: "stale crash recovery — wiped .next/dev",
+      data: { reason },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
+}
 
 function pidAlive(pid: number): boolean {
   try {
@@ -21,6 +46,24 @@ function pidAlive(pid: number): boolean {
 }
 
 if (!fs.existsSync(LOCK_PATH)) {
+  // #region agent log
+  fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "929eab",
+    },
+    body: JSON.stringify({
+      sessionId: "929eab",
+      runId: "pre-fix",
+      hypothesisId: "C",
+      location: "ensure-dev-unlocked.ts:no-lock",
+      message: "no dev lock — fresh start",
+      data: {},
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   process.exit(0);
 }
 
@@ -28,13 +71,30 @@ let lock: DevLock = {};
 try {
   lock = JSON.parse(fs.readFileSync(LOCK_PATH, "utf8")) as DevLock;
 } catch {
-  fs.unlinkSync(LOCK_PATH);
-  console.warn("[dev] Removed unreadable .next/dev/lock");
+  removeDevCacheAfterCrash("unreadable-lock");
   process.exit(0);
 }
 
 const pid = lock.pid;
 if (pid && pidAlive(pid)) {
+  // #region agent log
+  fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "929eab",
+    },
+    body: JSON.stringify({
+      sessionId: "929eab",
+      runId: "pre-fix",
+      hypothesisId: "C",
+      location: "ensure-dev-unlocked.ts:alive-lock",
+      message: "dev already running — would block second instance",
+      data: { pid, port: lock.port },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   console.error(`[dev] Next.js dev server already running (PID ${pid}, port ${lock.port ?? "?"}).`);
   console.error(`[dev] Stop it first: taskkill /PID ${pid} /F`);
   console.error("[dev] Or use: npm run dev:webpack while editing proxy.ts / proxy-handler.ts");
@@ -42,5 +102,4 @@ if (pid && pidAlive(pid)) {
   process.exit(1);
 }
 
-fs.unlinkSync(LOCK_PATH);
-console.warn(`[dev] Removed stale .next/dev/lock (PID ${pid ?? "?"} not running).`);
+removeDevCacheAfterCrash(`stale-lock-pid-${pid ?? "?"}`);

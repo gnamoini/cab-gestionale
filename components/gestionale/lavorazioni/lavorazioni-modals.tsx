@@ -242,7 +242,7 @@ export function LavorazioniModalShell({
       <div
         ref={dialogFocus.ref}
         {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
-        className={`${dialogSurfaceClass} flex-safe-col cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
+        className={`${dialogSurfaceClass} flex-safe-col touch-auto cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}

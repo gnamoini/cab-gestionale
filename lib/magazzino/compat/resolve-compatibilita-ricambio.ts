@@ -1,6 +1,9 @@
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { ExpandRicambioCompatOpts } from "@/lib/magazzino/ricambio-compat-expand";
-import { expandRicambioCompatibilitaMezzi } from "@/lib/magazzino/ricambio-compat-expand";
+import {
+  expandRicambioCompatibilitaMezzi,
+  preferExplicitModelsOverUniversalMarca,
+} from "@/lib/magazzino/ricambio-compat-expand";
 import {
   buildCompatMetaForSave,
   compatRefsFromExpandedLabels,
@@ -17,6 +20,7 @@ import type { CompatInput, ResolvedCompatibilita } from "@/lib/magazzino/compat/
 import {
   collapseLegacyExpandedMarcaUniversal,
   dedupeCompatRefs,
+  dedupeCompatRefsPreferExplicitModels,
   resolveCompatRefLabel,
 } from "@/lib/magazzino/ricambio-compat-resolver";
 
@@ -57,7 +61,9 @@ export function resolveCompatibilitaRicambio(
   opts?: { expand?: ExpandRicambioCompatOpts },
 ): ResolvedCompatibilita {
   const rawLegacy = normalizeCompatList(input.compatibilitaMezzi ?? []);
-  let refs = input.compatibilitaRefs?.length ? dedupeCompatRefs(input.compatibilitaRefs) : [];
+  let refs = input.compatibilitaRefs?.length
+    ? dedupeCompatRefsPreferExplicitModels(input.compatibilitaRefs)
+    : [];
 
   if (opts?.expand && liste) {
     const expanded = expandRicambioCompatibilitaMezzi(rawLegacy, opts.expand);
@@ -88,8 +94,11 @@ export function resolveCompatibilitaRicambio(
     return buildResolved(refs, sorted, orphanLabels);
   }
 
-  const labels = dedupeCompatLabels(collapseLegacyExpandedMarcaUniversal(rawLegacy, liste));
-  return buildResolved([], labels, []);
+  const labels = preferExplicitModelsOverUniversalMarca(
+    collapseLegacyExpandedMarcaUniversal(rawLegacy, liste),
+    liste,
+  );
+  return buildResolved([], dedupeCompatLabels(labels), []);
 }
 
 /** Alias read-path: labels risolte per adapter UI. */

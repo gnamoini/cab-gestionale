@@ -42,3 +42,40 @@ export function lavorazioneLogOggettoFromListRow(
     tipoAttrezzatura: ing?.tipoAttrezzatura?.trim() || row.mezzo?.tipo_attrezzatura,
   });
 }
+
+function schedaContenutoCampi(contenuto: unknown): Record<string, unknown> {
+  if (!contenuto || typeof contenuto !== "object" || Array.isArray(contenuto)) return {};
+  const root = contenuto as Record<string, unknown>;
+  const doc = root.doc;
+  if (doc && typeof doc === "object" && !Array.isArray(doc)) {
+    const campi = (doc as Record<string, unknown>).campi;
+    if (campi && typeof campi === "object" && !Array.isArray(campi)) {
+      return campi as Record<string, unknown>;
+    }
+  }
+  return root;
+}
+
+/** Cliente — attrezzatura da `scheda_lavorazione.contenuto` (log senza join mezzo). */
+export function lavorazioneLogOggettoFromSchedaContenuto(contenuto: unknown): string {
+  const campi = schedaContenutoCampi(contenuto);
+  const str = (key: string) => {
+    const v = campi[key];
+    return typeof v === "string" ? v.trim() : "";
+  };
+  return formatLavorazioneLogOggettoLabel({
+    cliente: str("cliente"),
+    marca: str("marcaAttrezzatura"),
+    modello: str("modelloAttrezzatura"),
+    tipoAttrezzatura: str("tipoAttrezzatura"),
+  });
+}
+
+export function lavorazioneLogContextFromListRow(
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
+): { oggetto: string } | undefined {
+  const oggetto = lavorazioneLogOggettoFromListRow(row, schedeStore).trim();
+  if (!oggetto || oggetto === "—") return undefined;
+  return { oggetto };
+}

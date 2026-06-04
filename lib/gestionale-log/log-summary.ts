@@ -7,15 +7,25 @@ import {
   safeStr,
   type GestionaleLogEventTone,
 } from "@/lib/gestionale-log/view-model";
-import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-log-oggetto";
+import {
+  formatLavorazioneLogOggettoLabel,
+  lavorazioneLogOggettoFromSchedaContenuto,
+} from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import { compatLineDisplayText } from "@/lib/magazzino/compat/compat-display";
+import { normalizeCompatList } from "@/lib/magazzino/compat/compat-normalize";
 import { parseMagazzinoRicambioMeta } from "@/lib/magazzino/magazzino-meta";
 import {
   filterMagazzinoAutomaticModifiche,
   isMagazzinoAutomaticLogField,
   MAGAZZINO_CAMPO_LABEL,
 } from "@/lib/magazzino/magazzino-log-events";
+import {
+  isCompatMarcaUniversalLine,
+  marcaUniversalCompatLabel,
+} from "@/lib/magazzino/ricambio-compat-resolver";
+import { parseCompatMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
 
 /** Summary persistito in `log_modifiche.payload.summary` (generato al write). */
 export type LogModificaSummary = {
@@ -259,8 +269,11 @@ function buildOggettoFromRecord(entita: string, raw: Record<string, unknown>): s
       const cat = pickStr(raw, ["categoria"]);
       return joinOggetto([nome, formatTitleCasePhrase(cat)]);
     }
-    case "scheda_lavorazione":
+    case "scheda_lavorazione": {
+      const fromContenuto = lavorazioneLogOggettoFromSchedaContenuto(raw.contenuto);
+      if (fromContenuto !== "—") return fromContenuto;
       return `Scheda · ${pickStr(raw, ["tipo"]) || "lavorazione"}`;
+    }
     case "profiles":
       return formatTitleCasePhrase(pickStr(raw, ["nome", "email"]) || "Utente");
     case "bunder_documents": {
@@ -395,11 +408,79 @@ function unwrapSchedaContenutoCampi(raw: unknown): Record<string, unknown> {
   return root;
 }
 
-function formatMetaValueForLog(key: string, value: unknown): string {
-  if (key === "compatibilitaMezzi" && Array.isArray(value)) {
-    const parts = value.map((x) => (typeof x === "string" ? x.trim() : "")).filter(Boolean);
-    return parts.length ? parts.join(", ") : "—";
+/** Etichette compat per log: display humano, senza universale ridondante se c’è un modello. */
+export function formatCompatMezziArrayForLog(value: unknown): string {
+  if (!Array.isArray(value)) return "—";
+  const raw = normalizeCompatList(value.filter((x): x is string => typeof x === "string"));
+  if (raw.length === 0) return "Universale (tutte le macchine)";
+
+  const marcheWithModel = new Set<string>();
+  for (const line of raw) {
+    const { marca, modello } = parseCompatMarcaModello(line);
+    if (marca && modello) marcheWithModel.add(marca.trim().toLowerCase());
   }
+
+  const filtered = raw.filter((line) => {
+    if (!isCompatMarcaUniversalLine(line)) return true;
+    const { marca } = parseCompatMarcaModello(line);
+    return !marcheWithModel.has(marca.trim().toLowerCase());
+  });
+
+  const parts = filtered.map((line) => compatLineDisplayText(line));
+  return parts.length ? parts.join(", ") : "Universale (tutte le macchine)";
+}
+
+/** Riformatta elenco compat già serializzato nel summary cache (legacy raw «Marca —»). */
+function formatCompatMezziQuotedListForLog(quoted: string): string {
+  const items = quoted
+    .split(/,\s*/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (!items.length) return "—";
+  const labels = items.map((item) => {
+    if (item.includes(" — ")) return item;
+    const uni = item.match(/^(.+?)\s+\(universale\)$/i);
+    if (uni) return marcaUniversalCompatLabel(uni[1]!.trim());
+    return item;
+  });
+  return formatCompatMezziArrayForLog(labels);
+}
+
+function remapCompatibilitaModificaLines(lines: readonly string[]): string[] {
+  return lines.map((line) => {
+    const bare = line.replace(/^•\s*/, "").trim();
+    const mod = bare.match(/^Compatibilità modificato da [“"](.+)[”"] a [“"](.+)[”"]$/);
+    if (mod) {
+      return `Compatibilità modificato da “${formatCompatMezziQuotedListForLog(mod[1]!)}” a “${formatCompatMezziQuotedListForLog(mod[2]!)}”`;
+    }
+    const set = bare.match(/^Compatibilità impostato a [“"](.+)[”"]$/);
+    if (set) return `Compatibilità impostato a “${formatCompatMezziQuotedListForLog(set[1]!)}”`;
+    return line;
+  });
+}
+
+/** Summary cache magazzino: rigenera compat da payload e nasconde compatibilitaRefs. */
+function refreshMagazzinoLogModifiche(
+  cachedLines: readonly string[],
+  payload: Record<string, unknown> | null,
+): string[] {
+  const stripped = filterMagazzinoAutomaticModifiche(cachedLines);
+  if (!payload) return remapCompatibilitaModificaLines(stripped);
+
+  const metaChange = extractPayloadFieldChanges(payload).find((c) => c.key === "meta");
+  if (metaChange) {
+    const metaLines = diffMagazzinoMetaModifiche(metaChange.before, metaChange.after);
+    const other = stripped.filter(
+      (l) => !/^Compatibilit[àa]\s/i.test(l.replace(/^•\s*/, "").trim()),
+    );
+    return metaLines.length > 0 ? [...other, ...metaLines] : remapCompatibilitaModificaLines(stripped);
+  }
+
+  return remapCompatibilitaModificaLines(stripped);
+}
+
+function formatMetaValueForLog(key: string, value: unknown): string {
+  if (key === "compatibilitaMezzi") return formatCompatMezziArrayForLog(value);
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   return formatValueForField(key, value);
 }
@@ -464,17 +545,29 @@ function resolveOggettoRiga(
 ): string {
   let resolved = oggettoRiga;
   const ctxOggetto = oggettoFromPayloadContext(payload);
-  if (ctxOggetto && (resolved === "Lavorazione" || resolved === "—" || !resolved.trim())) {
+  if (ctxOggetto && isGenericLavorazioneLogOggettoLabel(resolved)) {
     resolved = ctxOggetto;
   }
-  if (entita === "lavorazioni" && resolved === "Lavorazione") {
+  if (entita === "lavorazioni" && isGenericLavorazioneLogOggettoLabel(resolved)) {
     const record = payload ? recordFromPayload(payload) : null;
     if (record) {
       const rebuilt = buildOggettoFromRecord(entita, record);
-      if (rebuilt !== "Lavorazione") resolved = rebuilt;
+      if (!isGenericLavorazioneLogOggettoLabel(rebuilt)) resolved = rebuilt;
+    }
+  }
+  if (entita === "scheda_lavorazione" && isGenericLavorazioneLogOggettoLabel(resolved)) {
+    const record = payload ? recordFromPayload(payload) : null;
+    if (record) {
+      const rebuilt = buildOggettoFromRecord(entita, record);
+      if (!isGenericLavorazioneLogOggettoLabel(rebuilt)) resolved = rebuilt;
     }
   }
   return sanitizeLogOggettoRiga(resolved);
+}
+
+function isGenericLavorazioneLogOggettoLabel(raw: string): boolean {
+  const t = safeStr(raw).trim();
+  return !t || t === "—" || t === "Lavorazione" || /^Scheda\s·\s/i.test(t);
 }
 
 function filterModificheForDisplay(entita: string, lines: string[]): string[] {
@@ -489,6 +582,7 @@ function diffToModifiche(
 ): string[] {
   const lines: string[] = [];
   for (const change of extractPayloadFieldChanges(payload)) {
+    if (entita === "magazzino_ricambi" && isMagazzinoAutomaticLogField(change.key)) continue;
     if (change.key === "contenuto") {
       lines.push(...diffContenutoSchedaModifiche(change.before, change.after));
       continue;
@@ -624,7 +718,9 @@ export function buildLogModificaSummary(input: {
       let resolvedModifiche =
         input.entita === "lavorazioni"
           ? remapLavorazioneStatoInModifiche(modifiche as string[], payload, stati)
-          : filterModificheForDisplay(input.entita, modifiche as string[]);
+          : input.entita === "magazzino_ricambi"
+            ? refreshMagazzinoLogModifiche(modifiche as string[], payload)
+            : filterModificheForDisplay(input.entita, modifiche as string[]);
       resolvedModifiche = refreshGenericModifiche(resolvedModifiche, payload, stati);
       if (resolvedModifiche.length === 0 && input.entita === "magazzino_ricambi") {
         resolvedModifiche = defaultModificheForCreate(input.entita, input.azione, recordFromPayload(payload), stati);

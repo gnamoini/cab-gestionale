@@ -4,6 +4,9 @@
   "private": true,
   "scripts": {
     "dev": "npx tsx scripts/ensure-dev-unlocked.ts && next dev",
+    "dev:lag-probe": "npx tsx scripts/dev-cursor-lag-probe.ts",
+    "dev:cpu-probe": "npx tsx scripts/dev-cpu-crash-probe.ts",
+    "dev:cpu-probe:webpack": "npx tsx scripts/dev-cpu-crash-probe.ts --webpack",
     "dev:fresh": "npx tsx scripts/ensure-dev-unlocked.ts && npx tsx scripts/clean-next-dev-cache.ts && next dev",
     "dev:webpack": "next dev --webpack",
     "clean:next": "npx tsx scripts/clean-next-dev-cache.ts",

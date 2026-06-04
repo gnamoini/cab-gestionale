@@ -3,7 +3,6 @@
 import "./magazzino-scroll.css";
 
 import type { ReactElement, ReactNode } from "react";
-import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -23,10 +22,9 @@ import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzi
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { RicambioFormFields } from "@/components/gestionale/magazzino/ricambio-form-fields";
-import { RicambioConsumoInfoRows, RicambioInfoPanel } from "@/components/gestionale/magazzino/ricambio-info-panel";
-import {
-  GestionaleInfoCard,
-} from "@/components/design-system/gestionale-info-card";
+import { RicambioEditModal } from "@/components/gestionale/magazzino/ricambio-edit-modal";
+import { probeRicambioInputLag } from "@/lib/debug/ricambio-input-lag-probe";
+import { RicambioInfoPanel } from "@/components/gestionale/magazzino/ricambio-info-panel";
 import {
   ricambioUiToMagazzinoInsert,
   ricambioUiToMagazzinoUpdate,
@@ -50,7 +48,6 @@ import {
   emptyRicambioForm,
   formatMarkupDisplay,
   ricambioFromFormLenient,
-  toFormDraft,
   validateRicambioListFields,
   type RicambioFormState,
 } from "@/lib/magazzino/form";
@@ -155,6 +152,7 @@ import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-el
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useMagazzinoLogFeed } from "@/lib/magazzino/use-magazzino-log-feed";
+import { formatCompatMezziArrayForLog } from "@/lib/gestionale-log/log-summary";
 import { useAuth } from "@/context/auth-context";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -353,6 +351,7 @@ function fmtForDiff(k: keyof RicambioMagazzino, r: RicambioMagazzino): string {
   if (k === "fornitoriAlternativi") return fmtFornitoriAlternativiDiff(r.fornitoriAlternativi);
   const v = r[k];
   if (k === "usatoInTagliandi") return r.usatoInTagliandi ? "Sì" : "No";
+  if (k === "compatibilitaMezzi") return formatCompatMezziArrayForLog(v);
   if (Array.isArray(v)) return (v as string[]).join(", ") || "—";
   if (typeof v === "number") {
     if (k === "markupPercentuale") {
@@ -613,9 +612,8 @@ export function MagazzinoView() {
 
   const [detail, setDetail] = useState<{ id: string; mode: "info" | "edit" } | null>(null);
   useUIAutonomyFixEngine("/magazzino", [newOpen, detail, dupCheckModalOpen]);
-  const [editDraft, setEditDraft] = useState<RicambioFormState | null>(null);
   const [newListFieldInvalid, setNewListFieldInvalid] = useState(false);
-  const [editListFieldInvalid, setEditListFieldInvalid] = useState(false);
+  const magViewRenderRef = useRef(0);
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -688,13 +686,6 @@ export function MagazzinoView() {
     orderMapRef.current = order;
     nextOrderRef.current = mapped.length;
   }, [magazzinoListQ.data]);
-
-  const setEditForm = useCallback<Dispatch<SetStateAction<RicambioFormState>>>((action) => {
-    setEditDraft((prev) => {
-      if (prev === null) return null;
-      return typeof action === "function" ? action(prev) : action;
-    });
-  }, []);
 
   function mergeIntoPending(map: Map<string, { prima: string; dopo: string }>, ch: CampoChange) {
     const ex = map.get(ch.campo);
@@ -813,8 +804,6 @@ export function MagazzinoView() {
       setNewListFieldInvalid(false);
       setNewOpen(false);
       setDetail(null);
-      setEditDraft(null);
-      setEditListFieldInvalid(false);
       setAdvancedFilters(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
       saveMagazzinoAdvancedFiltersPersisted(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
       setSoloSottoScorta(Boolean(opts?.applySottoScorta));
@@ -1284,8 +1273,6 @@ export function MagazzinoView() {
       closeOverlays: () => {
         setNewOpen(false);
         setDetail(null);
-        setEditDraft(null);
-        setEditListFieldInvalid(false);
       },
     });
     toastSuccess(inView ? toastMessage : `${toastMessage} (fuori dai filtri attivi)`);
@@ -1337,58 +1324,17 @@ export function MagazzinoView() {
 
   function openInfo(p: RicambioMagazzino) {
     setDetail({ id: p.id, mode: "info" });
-    setEditDraft(null);
   }
 
   function startEditFromInfo() {
     if (!magCanCreateRicambio) return;
     if (!detailRicambio) return;
-    setEditListFieldInvalid(false);
-    setEditDraft(toFormDraft(detailRicambio, mezziListePrefs));
     setDetail({ id: detailRicambio.id, mode: "edit" });
   }
 
   function cancelEditBackToInfo() {
     if (!detail) return;
-    setEditDraft(null);
-    setEditListFieldInvalid(false);
     setDetail({ id: detail.id, mode: "info" });
-  }
-
-  async function saveEdit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!magCanCreateRicambio || saveBusy) return;
-    if (!detail || detail.mode !== "edit" || !editDraft) return;
-    const listErr = validateRicambioListFields(editDraft, {
-      marche,
-      categorie,
-      mezziListe: mezziListePrefs,
-    });
-    if (listErr) {
-      setEditListFieldInvalid(true);
-      toastError(listErr);
-      return;
-    }
-    setEditListFieldInvalid(false);
-    const before = prodotti.find((p) => p.id === detail.id);
-    if (!before) return;
-    const next = ricambioFromFormLenient(editDraft, detail.id, authorName, {
-      mezziListe: mezziListePrefs,
-    });
-    const ricambioId = detail.id;
-    setSaveBusy(true);
-    try {
-      const updated = await magazzinoService.update(ricambioId, ricambioUiToMagazzinoUpdate(next, mezziListePrefs));
-      if (!updated.success || !updated.data) {
-        toastError(updated.error ?? "Salvataggio non riuscito.");
-        return;
-      }
-      const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
-      patchProdotti((prev) => prev.map((p) => (p.id === ricambioId ? touch(ui) : p)));
-      completeMagazzinoSave(ricambioId, "Modifiche salvate.");
-    } finally {
-      setSaveBusy(false);
-    }
   }
 
   function requestEliminaRicambio() {
@@ -1406,7 +1352,6 @@ export function MagazzinoView() {
     }
     patchProdotti((prev) => prev.filter((p) => p.id !== id));
     setDetail((d) => (d?.id === id ? null : d));
-    if (detail?.id === id) setEditDraft(null);
     setEliminaRicambioTarget(null);
     successDeleted();
     void invalidateAfterMagazzinoOrMovimenti(queryClient, [
@@ -1416,8 +1361,15 @@ export function MagazzinoView() {
 
   function closeDetail() {
     setDetail(null);
-    setEditDraft(null);
-    setEditListFieldInvalid(false);
+  }
+
+  magViewRenderRef.current += 1;
+  if (detail?.mode === "edit") {
+    // #region agent log
+    probeRicambioInputLag("magazzino-view.tsx:render-edit-mode", "E", {
+      magViewRenderCount: magViewRenderRef.current,
+    });
+    // #endregion
   }
 
   const infoTimeline = useMemo(() => {
@@ -2074,105 +2026,66 @@ export function MagazzinoView() {
         </GestionaleModalShell>
       ) : null}
 
-      {detail && detailRicambio ? (
+      {detail && detailRicambio && detail.mode === "info" ? (
         <GestionaleModalShell
           onRequestClose={closeDetail}
-          title={detail.mode === "info" ? "Scheda ricambio" : "Modifica ricambio"}
+          title="Scheda ricambio"
           titleId="detail-ricambio-title"
           maxWidthClass="max-w-lg"
         >
-            {detail.mode === "info" ? (
-              <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-                <GestionaleModalScrollBody className="p-4">
-                  <RicambioInfoPanel
-                    ricambio={detailRicambio}
-                    compatDisplay={compatDisplayFor(detailRicambio)}
-                    consumo={consumoMap.get(detailRicambio.id)}
-                    formatEur={eur}
-                    canEditPhotos={magCanCreateRicambio}
-                    onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
-                    logTimeline={infoTimeline}
-                    logLoading={magLogFeedLoading}
-                    onDismissLogEntry={removeMagazzinoLogEntry}
-                  />
-                </GestionaleModalScrollBody>
-                <footer className={`${dsModalFormFooter} flex-col items-stretch`}>
-                  <MagazzinoDisabledButtonTooltip
-                    content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
-                    disabled={!magCanCreateRicambio}
-                  >
-                    <button
-                      type="button"
-                      onClick={startEditFromInfo}
-                      className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
-                      disabled={!magCanCreateRicambio}
-                    >
-                      Modifica
-                    </button>
-                  </MagazzinoDisabledButtonTooltip>
-                </footer>
-              </div>
-            ) : (
-              <form {...gestionaleFormFocusScopeProps()} onSubmit={saveEdit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-                {editDraft ? (
-                  <>
-                    <GestionaleModalScrollBody className="space-y-4 p-4">
-                      <RicambioFormFields
-                        form={editDraft}
-                        setForm={setEditForm}
-                        formResetKey={detail.id}
-                        listFieldForceInvalid={editListFieldInvalid}
-                        relaxHtmlValidation
-                      />
-                      {detailRicambio ? (
-                        <GestionaleInfoCard title="Consumo e autonomia (stima)">
-                          <RicambioConsumoInfoRows
-                            consumo={consumoMap.get(detailRicambio.id)}
-                            scorta={Math.max(0, Math.round(Number.parseInt(editDraft.scorta, 10) || 0))}
-                            autonomiaTooltip="Scorta nel modulo ÷ consumo medio mensile"
-                          />
-                        </GestionaleInfoCard>
-                      ) : null}
-                    </GestionaleModalScrollBody>
-                    <footer
-                      className={`${dsModalFormFooter} flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between`}
-                    >
-                      <MagazzinoDisabledButtonTooltip
-                        content={magCanDeleteRicambio ? "Elimina ricambio" : READONLY_PERMISSION_HINT}
-                        disabled={!magCanDeleteRicambio}
-                      >
-                        <button
-                          type="button"
-                          onClick={requestEliminaRicambio}
-                          disabled={!magCanDeleteRicambio}
-                          className={`${dsBtnDanger} min-h-11 w-full justify-center sm:w-auto`}
-                        >
-                          Elimina ricambio
-                        </button>
-                      </MagazzinoDisabledButtonTooltip>
-                      <div className="flex w-full min-w-0 gap-2 sm:w-auto sm:justify-end">
-                        <button
-                          type="button"
-                          onClick={cancelEditBackToInfo}
-                          className={`${erpBtnNeutral} min-h-11 min-w-0 flex-1 justify-center sm:min-w-[6.5rem] sm:flex-none`}
-                        >
-                          Annulla
-                        </button>
-                        <LoadingButton
-                          type="submit"
-                          loading={saveBusy}
-                          preset="salva"
-                          className={`${erpBtnAccent} min-h-11 min-w-0 flex-1 justify-center sm:min-w-[6.5rem] sm:flex-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
-                        >
-                          Salva
-                        </LoadingButton>
-                      </div>
-                    </footer>
-                  </>
-                ) : null}
-              </form>
-            )}
+          <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+            <GestionaleModalScrollBody className="p-4">
+              <RicambioInfoPanel
+                ricambio={detailRicambio}
+                compatDisplay={compatDisplayFor(detailRicambio)}
+                consumo={consumoMap.get(detailRicambio.id)}
+                formatEur={eur}
+                canEditPhotos={magCanCreateRicambio}
+                onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
+                logTimeline={infoTimeline}
+                logLoading={magLogFeedLoading}
+                onDismissLogEntry={removeMagazzinoLogEntry}
+              />
+            </GestionaleModalScrollBody>
+            <footer className={`${dsModalFormFooter} flex-col items-stretch`}>
+              <MagazzinoDisabledButtonTooltip
+                content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
+                disabled={!magCanCreateRicambio}
+              >
+                <button
+                  type="button"
+                  onClick={startEditFromInfo}
+                  className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+                  disabled={!magCanCreateRicambio}
+                >
+                  Modifica
+                </button>
+              </MagazzinoDisabledButtonTooltip>
+            </footer>
+          </div>
         </GestionaleModalShell>
+      ) : null}
+
+      {detail && detailRicambio && detail.mode === "edit" ? (
+        <RicambioEditModal
+          ricambioId={detail.id}
+          ricambio={detailRicambio}
+          mezziListePrefs={mezziListePrefs}
+          marche={marche}
+          categorie={categorie}
+          authorName={authorName}
+          consumo={consumoMap.get(detailRicambio.id)}
+          magCanCreateRicambio={magCanCreateRicambio}
+          magCanDeleteRicambio={magCanDeleteRicambio}
+          onClose={closeDetail}
+          onCancel={cancelEditBackToInfo}
+          onRequestDelete={requestEliminaRicambio}
+          onSaveError={(message) => toastError(message)}
+          onSaved={(ui, message) => {
+            patchProdotti((prev) => prev.map((p) => (p.id === ui.id ? touch(ui) : p)));
+            completeMagazzinoSave(ui.id, message);
+          }}
+        />
       ) : null}
 
       <Drawer

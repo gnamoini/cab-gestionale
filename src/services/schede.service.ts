@@ -2,7 +2,8 @@
 
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
-import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { lavorazioneLogOggettoFromSchedaContenuto } from "@/lib/lavorazioni/lavorazione-log-oggetto";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { SchedaLavorazioneRow, TipoSchedaLavorazione } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -24,6 +25,12 @@ export const SCHEDA_CONCURRENCY_CONFLICT =
 
 async function sb() {
   return getBrowserSupabase();
+}
+
+function oggettoContextForScheda(row: SchedaLavorazioneRow) {
+  const oggetto = lavorazioneLogOggettoFromSchedaContenuto(row.contenuto);
+  if (oggetto === "—") return undefined;
+  return auditContext(oggetto);
 }
 
 export const schedeService = {
@@ -61,7 +68,8 @@ export const schedeService = {
       const { data: row, error } = await c.from("scheda_lavorazione").insert(data).select("*").single();
       if (error) return err(error.message);
       const r = row as SchedaLavorazioneRow;
-      await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r) });
+      const ctx = oggettoContextForScheda(r);
+      await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, ctx) });
       return success(r);
     } catch (e) {
       return serviceFailFromError(e);
@@ -83,11 +91,12 @@ export const schedeService = {
         return err(error.message);
       }
       const r = row as SchedaLavorazioneRow;
+      const ctx = oggettoContextForScheda(r);
       await writeModificaLog(c, {
         entita: ENTITA,
         entita_id: id,
         azione: "UPDATE",
-        payload: auditDiff(before, r),
+        payload: auditDiff(before, r, ctx),
       });
       return success(r);
     } catch (e) {
