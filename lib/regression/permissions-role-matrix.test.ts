@@ -86,8 +86,8 @@ const cases: RoleCase[] = [
   {
     role: "guest",
     pageExpect: {
-      "/dashboard": true,
-      "/magazzino": true,
+      "/dashboard": false,
+      "/magazzino": false,
       "/impostazioni": false,
       "/dashboard/security": false,
     },

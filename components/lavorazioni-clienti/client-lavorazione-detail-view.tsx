@@ -110,7 +110,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
     return (
       <>
         <PageHeader title={PORTALE_CLIENTI_LABEL} leading={backToListButton} />
-        <div className={dsStackPage}>
+        <div className={`${dsStackPage} min-w-0 max-w-full`}>
           <ShellCard>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">Non hai permesso per visualizzare questa lavorazione.</p>
             <Link href="/dashboard" className={`mt-4 inline-flex ${dsBtnNeutral}`}>
@@ -135,7 +135,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
     return (
       <>
         <PageHeader title={PORTALE_CLIENTI_LABEL} leading={backToListButton} />
-        <div className={dsStackPage}>
+        <div className={`${dsStackPage} min-w-0 max-w-full`}>
           <ShellCard>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {detailQ.error?.message ?? "La lavorazione richiesta non esiste o non è accessibile."}
@@ -171,7 +171,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
         }
       />
 
-      <div className={dsStackPage}>
+      <div className={`${dsStackPage} min-w-0 max-w-full`}>
         <ShellCard>
           <HubModalPanoramicaPanel gapClass={dsGapXl}>
             <ClientLavorazioneTimelinePanel

@@ -83,7 +83,7 @@ export const ROLE_CAPABILITIES: Record<CanonicalRole, Record<Capability, boolean
     can_access_client_area: true,
   },
   guest: {
-    can_read_operational: true,
+    can_read_operational: false,
     can_write_operational: false,
     can_manage_settings: false,
     can_manage_security: false,

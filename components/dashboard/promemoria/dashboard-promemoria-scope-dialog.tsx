@@ -35,7 +35,7 @@ export function DashboardPromemoriaScopeDialog({
         <p className={`${dsTypoSmall} text-[color:var(--cab-text)]`}>
           «{title}» fa parte di una serie ricorrente. {verb}:
         </p>
-        <div className="flex flex-col gap-2">
+        <div className="flex min-w-0 flex-col gap-2">
           <Button type="button" variant="secondary" className="w-full justify-start" onClick={() => onSelect("single")}>
             Solo questa occorrenza
           </Button>

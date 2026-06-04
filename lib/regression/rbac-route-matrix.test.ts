@@ -50,7 +50,7 @@ assertRouteProtection(
 assertRouteProtection(
   "guest",
   [
-    { pathname: "/dashboard", allowed: true },
+    { pathname: "/dashboard", allowed: false },
     { pathname: "/impostazioni", allowed: false },
     { pathname: "/login", allowed: true },
   ],

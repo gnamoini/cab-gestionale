@@ -104,7 +104,7 @@ begin
 
   case p_capability
     when 'can_read_operational' then
-      return v_role in ('manager', 'operatore', 'guest');
+      return v_role in ('manager', 'operatore');
     when 'can_write_operational' then
       return v_role in ('manager', 'operatore');
     when 'can_manage_settings' then

@@ -1,8 +1,8 @@
 {
-  "version": 5,
+  "version": 6,
   "frozenAt": "2026-06-04",
-  "entryCount": 17,
-  "checksum": "bc70e9db58084d36314209b9a3fcf4647a318a521622131ca03034a33cbb186f",
+  "entryCount": 16,
+  "checksum": "b3e2bb6c60bbcac0f3fa6b975ac06cb3e7698f7cb6f39e118241749d208ccc0c",
   "entries": [
     {
       "file": "app/login/login-form.tsx",
@@ -53,11 +53,6 @@
       "file": "components/bunder/bunder-view.tsx",
       "line": 742,
       "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/dashboard/admin-notifications-bell.tsx",
-      "line": 556,
-      "reason": "flex-grow-without-containment"
     },
     {
       "file": "components/dashboard/security-dashboard-view.tsx",
