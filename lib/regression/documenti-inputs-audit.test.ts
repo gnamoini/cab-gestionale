@@ -42,6 +42,9 @@ assert.match(modals, /id="doc-upload-categoria"/);
 assert.match(modals, /htmlFor="doc-edit-note"/);
 assert.match(modals, /id="doc-edit-nome"/);
 assert.match(modals, /GestionaleModalScrollBody/);
+assert.doesNotMatch(modals, /max-w-lg/);
+assert.match(modals, /resolveModalMaxWidthClass/);
+assert.match(modals, /max-w-2xl/);
 
 assert.match(dropzone, /id="doc-upload-file"/);
 assert.match(dropzone, /htmlFor="doc-upload-file"/);

@@ -166,7 +166,9 @@ export function formatDocumentoRigaSintetica(doc: DocumentoGestionale): string {
         ? "CATALOGO"
         : doc.categoria === "manuali"
           ? "MANUALE"
-          : "ALTRO";
+          : doc.categoria === "certificazioni"
+            ? "CERTIFICAZIONE"
+            : "ALTRO";
   const r = resolveDocumentoApplicazione(doc);
   const m = r.marcaKey?.trim() || r.marca.trim();
   if (!marcaAssegnataText(m)) return `${cat} — Senza marca`;

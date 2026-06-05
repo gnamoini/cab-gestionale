@@ -399,21 +399,31 @@ export function GlobalSelect(props: GlobalSelectProps) {
   }, [value, filterNeutralValues]);
 
   const beginEditing = useCallback(() => {
-    if (selectOnly) {
-      setOpen(true);
-      setActiveIndex(-1);
+    editSessionRef.current.modified = false;
+    setFocused(true);
+    setOpen(true);
+    if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) {
+      setSearchText("");
     } else {
-      editSessionRef.current.modified = false;
-      setFocused(true);
-      setOpen(true);
-      if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) {
-        setSearchText("");
-      } else {
-        seedSearchFromCommitted();
-      }
+      seedSearchFromCommitted();
     }
     scheduleGestionaleFieldScroll(inputRef.current, { extraTop: 8, extraBottom: 20 });
-  }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, selectOnly, value]);
+  }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, value]);
+
+  const handleSelectOnlyTriggerMouseDown = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+  }, []);
+
+  const handleSelectOnlyTriggerClick = useCallback(() => {
+    if (open) {
+      dismissDropdown();
+    } else {
+      setOpen(true);
+      setActiveIndex(-1);
+      scheduleGestionaleFieldScroll(inputRef.current, { extraTop: 8, extraBottom: 20 });
+    }
+  }, [open, dismissDropdown]);
 
   const commitBlur = () => {
     if (selectOnly) {
@@ -605,12 +615,17 @@ export function GlobalSelect(props: GlobalSelectProps) {
             else if (canClearCommittedFilter()) onChange("");
           }
         }}
-        onFocus={beginEditing}
+        onFocus={() => {
+          if (selectOnly) {
+            scheduleGestionaleFieldScroll(inputRef.current, { extraTop: 8, extraBottom: 20 });
+            return;
+          }
+          beginEditing();
+        }}
+        onMouseDown={selectOnly ? handleSelectOnlyTriggerMouseDown : undefined}
         onClick={() => {
           if (selectOnly) {
-            setOpen(true);
-            setActiveIndex(-1);
-            scheduleGestionaleFieldScroll(inputRef.current, { extraTop: 8, extraBottom: 20 });
+            handleSelectOnlyTriggerClick();
             return;
           }
           if (!open) beginEditing();

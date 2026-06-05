@@ -54,6 +54,9 @@ export type GlobalSettingsListSelectProps = {
   /** Solo scelta da elenco: niente digitazione né filtro testuale. */
   selectOnly?: boolean;
 
+  /** Voce in testa con value "" (es. «Nessuna marca»). */
+  emptyOptionLabel?: string;
+
   "aria-label"?: string;
 
 };
@@ -100,6 +103,8 @@ export function GlobalSettingsListSelect({
 
   selectOnly,
 
+  emptyOptionLabel,
+
   "aria-label": ariaLabel,
 
 }: GlobalSettingsListSelectProps) {
@@ -137,6 +142,16 @@ export function GlobalSettingsListSelect({
     [list.options, value],
 
   );
+
+  const itemsForUi = useMemo(() => {
+    const base = structured
+      ? list.items
+      : optionsForUi.map((o) => ({ value: o, label: o }));
+    if (!emptyOptionLabel) return base;
+    const empty = { value: "", label: emptyOptionLabel };
+    const rest = base.filter((item) => item.value.trim() !== "");
+    return [empty, ...rest];
+  }, [structured, list.items, optionsForUi, emptyOptionLabel]);
 
 
 
@@ -213,7 +228,7 @@ export function GlobalSettingsListSelect({
 
 
 
-  if (structured) {
+  if (structured || emptyOptionLabel) {
 
     return (
 
@@ -221,9 +236,9 @@ export function GlobalSettingsListSelect({
 
         {...sharedProps}
 
-        items={list.items}
+        items={itemsForUi}
 
-        coloredOptions
+        coloredOptions={structured}
 
       />
 
@@ -253,6 +268,7 @@ export function GlobalHierarchyMarcaSelect({
   placeholder = "Digita o seleziona…",
   allowAdd,
   selectOnly,
+  emptyOptionLabel,
   "aria-label": ariaLabel,
 }: {
   tree: "attrezzature" | "telai";
@@ -267,6 +283,8 @@ export function GlobalHierarchyMarcaSelect({
   /** Consente «Aggiungi …» se il valore non è in elenco (richiede permesso configurazione). Default: true. */
   allowAdd?: boolean;
   selectOnly?: boolean;
+  /** Voce in testa con value "" (es. «Nessuna marca»). */
+  emptyOptionLabel?: string;
   "aria-label"?: string;
 }) {
   return (
@@ -283,6 +301,7 @@ export function GlobalHierarchyMarcaSelect({
       placeholder={placeholder}
       allowAdd={allowAdd ?? true}
       selectOnly={selectOnly}
+      emptyOptionLabel={emptyOptionLabel}
       aria-label={ariaLabel}
     />
   );

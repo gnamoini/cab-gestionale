@@ -30,6 +30,7 @@ const TESTS = [
   "lib/magazzino/compat/compat-readiness-report.test.ts",
   "lib/global-autocomplete/engine.test.ts",
   "lib/global-autocomplete/global-select-add.test.ts",
+  "lib/regression/global-select-dropdown-audit.test.ts",
   "lib/lavorazioni/kanban-operational.test.ts",
   "lib/lavorazioni/admin-notifications.test.ts",
   "lib/dipendenti/dipendenti-presenze-reminder.test.ts",

@@ -182,7 +182,9 @@ function DocGlyph({ doc }: { doc: DocumentoGestionale }) {
         ? "border-sky-200/90 bg-sky-50 text-sky-900 dark:border-sky-800/60 dark:bg-sky-950/80 dark:text-sky-100"
         : doc.categoria === "manuali"
           ? "border-emerald-200/90 bg-emerald-50 text-emerald-900 dark:border-emerald-800/60 dark:bg-emerald-950/80 dark:text-emerald-100"
-          : "border-zinc-200/90 bg-zinc-50 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200";
+          : doc.categoria === "certificazioni"
+            ? "border-violet-200/90 bg-violet-50 text-violet-900 dark:border-violet-800/60 dark:bg-violet-950/80 dark:text-violet-100"
+            : "border-zinc-200/90 bg-zinc-50 text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200";
   const icon =
     doc.categoria === "listini" ? (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.75}>
@@ -199,6 +201,8 @@ function DocGlyph({ doc }: { doc: DocumentoGestionale }) {
         <path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" />
         <path d="M8 7h8M8 11h6" />
       </svg>
+    ) : doc.categoria === "certificazioni" ? (
+      <span aria-hidden>CERT</span>
     ) : doc.tipoFile === "pdf" ? (
       <span aria-hidden>PDF</span>
     ) : (

@@ -104,6 +104,7 @@ export function DocumentiAdvancedFilterPanel({
                 ["listini", "Listini"],
                 ["cataloghi", "Cataloghi"],
                 ["manuali", "Manuali"],
+                ["certificazioni", "Certificazioni"],
                 ["altro", "Altro"],
               ] as const
             ).map(([value, label]) => {

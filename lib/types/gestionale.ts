@@ -101,7 +101,7 @@ export type DocumentoApplicabilitaLegacy = DocumentoApplicabilita | "macchina";
 export interface DocumentoGestionale {
   id: string;
   nome: string;
-  categoria: "manuali" | "listini" | "cataloghi" | "altro";
+  categoria: "manuali" | "listini" | "cataloghi" | "certificazioni" | "altro";
   /** Denormalizzato: prima destinazione o etichetta principale (ordinamento, compatibilità). */
   marca: string;
   /** Legacy: nel catalogo precedente conteneva il nome modello, non il mezzo. */

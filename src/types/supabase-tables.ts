@@ -35,7 +35,7 @@ export type TipoSchedaLavorazione = "ingresso" | "interventi" | "ricambi";
 
 export type TipoMovimentoRicambio = "entrata" | "uscita";
 
-export type CategoriaDocumento = "listino" | "manuale" | "catalogo" | "altro";
+export type CategoriaDocumento = "listino" | "manuale" | "catalogo" | "certificazione" | "altro";
 
 export type MezzoRow = {
   id: string;

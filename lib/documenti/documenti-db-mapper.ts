@@ -24,6 +24,7 @@ const UI_TO_DB_CATEGORIA: Record<DocumentoGestionale["categoria"], CategoriaDocu
   listini: "listino",
   manuali: "manuale",
   cataloghi: "catalogo",
+  certificazioni: "certificazione",
   altro: "altro",
 };
 

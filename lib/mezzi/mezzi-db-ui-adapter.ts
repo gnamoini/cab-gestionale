@@ -50,6 +50,7 @@ const CAT_MAP: Record<DocumentoRow["categoria"], DocumentoGestionale["categoria"
   listino: "listini",
   manuale: "manuali",
   catalogo: "cataloghi",
+  certificazione: "certificazioni",
   altro: "altro",
 };
 

@@ -25,6 +25,8 @@ export function labelCategoria(c: DocumentoGestionale["categoria"]): string {
       return "Cataloghi";
     case "manuali":
       return "Manuali";
+    case "certificazioni":
+      return "Certificazioni";
     default:
       return "Altro";
   }
@@ -298,6 +300,13 @@ export function extractFileExtension(fileName: string): string {
   const i = fileName.lastIndexOf(".");
   if (i <= 0 || i === fileName.length - 1) return "";
   return fileName.slice(i).toLowerCase();
+}
+
+/** Nome file senza estensione (per precompilazione campo «Nome file»). */
+export function stripFileExtension(fileName: string): string {
+  const i = fileName.lastIndexOf(".");
+  if (i <= 0) return fileName.trim();
+  return fileName.slice(0, i).trim();
 }
 
 export { formatDocumentoRigaSintetica, labelApplicabilitaBreve, resolveDocumentoApplicazione };

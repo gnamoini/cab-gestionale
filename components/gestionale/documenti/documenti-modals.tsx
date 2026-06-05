@@ -22,7 +22,7 @@ import {
   GlobalAttrezzatureModelloSelect,
 } from "@/components/gestionale/global-input";
 import { DocumentoFileDropzone } from "@/components/gestionale/documenti/documento-file-dropzone";
-import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+import { gestionaleModalBodyFlexClass, resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
 import { useAuth } from "@/context/auth-context";
 import { dsBtnDanger } from "@/lib/ui/design-system";
 import {
@@ -30,6 +30,7 @@ import {
   documentoFileUnavailableLabel,
   documentoSenzaMarca,
   extractFileExtension,
+  stripFileExtension,
   formatDocumentoRigaSintetica,
   openDocumentoFile,
   inferTipoFileFromNome,
@@ -47,7 +48,15 @@ const inputClass =
 
 const listSelectWrapClass = "mt-1 w-full";
 
-const CATEGORIE: DocumentoGestionale["categoria"][] = ["listini", "cataloghi", "manuali", "altro"];
+const CATEGORIE: DocumentoGestionale["categoria"][] = [
+  "listini",
+  "cataloghi",
+  "manuali",
+  "certificazioni",
+  "altro",
+];
+
+const DOCUMENTI_MARCA_EMPTY_LABEL = "Nessuna marca";
 
 const fieldErrorClass = "mt-1 text-xs text-red-600 dark:text-red-400";
 
@@ -65,18 +74,18 @@ function DocumentiModalShell({
   title,
   children,
   onRequestClose,
-  wide,
+  maxWidthClass = "md:min-w-[min(100%,42rem)] max-w-2xl",
 }: {
   title: string;
   children: React.ReactNode;
   onRequestClose: () => void;
-  wide?: boolean;
+  maxWidthClass?: string;
 }) {
   return (
     <LavorazioniModalShell
       layerClassName="z-[100]"
-      wide={wide}
-      maxWidthClass={wide ? "max-w-lg" : "max-w-md"}
+      wide
+      maxWidthClass={resolveModalMaxWidthClass(maxWidthClass, true)}
       onRequestClose={onRequestClose}
       title={title}
       titleId="documenti-modal-title"
@@ -186,7 +195,7 @@ export function UploadDocumentoModal({
     }
     setPickedName(f.name);
     setPickedSizeKb(Math.max(1, Math.round(f.size / 1024)));
-    if (!nome.trim()) setNome(f.name);
+    if (!nome.trim()) setNome(stripFileExtension(f.name));
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -209,7 +218,7 @@ export function UploadDocumentoModal({
       return;
     }
 
-    const tipo = inferTipoFileFromNome(n);
+    const tipo = inferTipoFileFromNome(file.name);
     const today = new Date().toISOString().slice(0, 10);
     const urlBlob = URL.createObjectURL(file);
     const ext = extractFileExtension(file.name);
@@ -250,7 +259,7 @@ export function UploadDocumentoModal({
     (effectiveApp === "marca" || !marca.trim() || modello.trim().length > 0);
 
   return (
-    <DocumentiModalShell title="Carica documento" onRequestClose={onRequestClose} wide>
+    <DocumentiModalShell title="Carica documento" onRequestClose={onRequestClose}>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <GestionaleModalScrollBody className="space-y-3">
           <DocumentoFileDropzone
@@ -292,42 +301,70 @@ export function UploadDocumentoModal({
             allowModello={!listiniOnly}
           />
 
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-            Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
-            <GlobalAttrezzatureMarcaSelect
-              className={listSelectWrapClass}
-              value={marca}
-              onChange={(v) => {
-                setMarca(v);
-                setModello("");
-                setMarcaInvalid(false);
-                setModelloInvalid(false);
-              }}
-              selectOnly
-              aria-label="Marca documento"
-              aria-invalid={marcaInvalid || undefined}
-            />
-          </label>
-          <FieldError message={marcaInvalid ? "Marca non valida." : null} />
           {effectiveApp === "modello" ? (
-            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-              Modello
-              <GlobalAttrezzatureModelloSelect
-                className={listSelectWrapClass}
-                marcaNome={marca}
-                value={modello}
-                onChange={(v) => {
-                  setModello(v);
-                  setModelloInvalid(false);
-                }}
-                required
-                selectOnly
-                aria-label="Modello documento"
-                aria-invalid={modelloInvalid || undefined}
-              />
-              <FieldError message={modelloInvalid ? "Seleziona un modello." : null} />
-            </label>
-          ) : null}
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
+                  <GlobalAttrezzatureMarcaSelect
+                    className={listSelectWrapClass}
+                    value={marca}
+                    onChange={(v) => {
+                      setMarca(v);
+                      setModello("");
+                      setMarcaInvalid(false);
+                      setModelloInvalid(false);
+                    }}
+                    emptyOptionLabel={DOCUMENTI_MARCA_EMPTY_LABEL}
+                    selectOnly
+                    aria-label="Marca documento"
+                    aria-invalid={marcaInvalid || undefined}
+                  />
+                </label>
+                <FieldError message={marcaInvalid ? "Marca non valida." : null} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  Modello
+                  <GlobalAttrezzatureModelloSelect
+                    className={listSelectWrapClass}
+                    marcaNome={marca}
+                    value={modello}
+                    onChange={(v) => {
+                      setModello(v);
+                      setModelloInvalid(false);
+                    }}
+                    required
+                    selectOnly
+                    aria-label="Modello documento"
+                    aria-invalid={modelloInvalid || undefined}
+                  />
+                </label>
+                <FieldError message={modelloInvalid ? "Seleziona un modello." : null} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
+                <GlobalAttrezzatureMarcaSelect
+                  className={listSelectWrapClass}
+                  value={marca}
+                  onChange={(v) => {
+                    setMarca(v);
+                    setModello("");
+                    setMarcaInvalid(false);
+                    setModelloInvalid(false);
+                  }}
+                  emptyOptionLabel={DOCUMENTI_MARCA_EMPTY_LABEL}
+                  selectOnly
+                  aria-label="Marca documento"
+                  aria-invalid={marcaInvalid || undefined}
+                />
+              </label>
+              <FieldError message={marcaInvalid ? "Marca non valida." : null} />
+            </>
+          )}
 
           <p className="rounded-lg border border-zinc-700/50 bg-zinc-950/30 px-3 py-2 text-[11px] text-zinc-400">
             Anteprima:{" "}
@@ -389,58 +426,60 @@ export function DocumentoInfoModal({
       : `${r.marcaKey ?? r.marca} · ${r.modelloKey ?? r.macchina}`;
 
   return (
-    <DocumentiModalShell title="Dettaglio documento" onRequestClose={onRequestClose} wide>
+    <DocumentiModalShell title="Dettaglio documento" onRequestClose={onRequestClose}>
       <div className={`lavorazioni-scroll-scope ${gestionaleModalBodyFlexClass}`}>
         <GestionaleModalScrollBody className="space-y-3 text-sm">
           <InfoRow label="Riepilogo" value={<span className="font-semibold">{formatDocumentoRigaSintetica(doc)}</span>} />
-          <InfoRow label="Nome file" value={doc.nome} />
-          <InfoRow
-            label="Apri file"
-            value={
-              canOpenFile ? (
-                <button
-                  type="button"
-                  className="font-medium text-[color:var(--cab-primary)] underline decoration-[color:color-mix(in_srgb,var(--cab-primary)_50%,transparent)] underline-offset-2 hover:text-[color:var(--cab-primary-hover)]"
-                  onClick={() => {
-                    void openDocumentoFile(doc).then((result) => {
-                      if (!result.ok) gestToast.warning(result.message);
-                    });
-                  }}
-                >
-                  Apri in nuova scheda
-                </button>
-              ) : (
-                <span className="text-[color:var(--cab-text-muted)]">{fileUnavailableLabel ?? "—"}</span>
-              )
-            }
-          />
-          <InfoRow label="Tipo file" value={labelTipoFile(doc.tipoFile)} />
-          <InfoRow label="Tipo documento" value={labelCategoria(doc.categoria)} />
-          <InfoRow
-            label="Applicabilità"
-            value={
-              documentoSenzaMarcaUi(doc)
-                ? "—"
-                : r.applicabilita === "marca"
-                  ? "Tutta la marca"
-                  : "Modello specifico"
-            }
-          />
-          <InfoRow
-            label="Marca / modello"
-            value={
-              documentoSenzaMarcaUi(doc) ? (
-                <span className="inline-flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-300">
-                  <span aria-hidden>⚠️</span> Senza marca
-                </span>
-              ) : (
-                entita
-              )
-            }
-          />
-          <InfoRow label="Autore" value={doc.autoreCaricamento} />
+          <div className="grid gap-3 md:grid-cols-2">
+            <InfoRow label="Nome file" value={doc.nome} />
+            <InfoRow
+              label="Apri file"
+              value={
+                canOpenFile ? (
+                  <button
+                    type="button"
+                    className="font-medium text-[color:var(--cab-primary)] underline decoration-[color:color-mix(in_srgb,var(--cab-primary)_50%,transparent)] underline-offset-2 hover:text-[color:var(--cab-primary-hover)]"
+                    onClick={() => {
+                      void openDocumentoFile(doc).then((result) => {
+                        if (!result.ok) gestToast.warning(result.message);
+                      });
+                    }}
+                  >
+                    Apri in nuova scheda
+                  </button>
+                ) : (
+                  <span className="text-[color:var(--cab-text-muted)]">{fileUnavailableLabel ?? "—"}</span>
+                )
+              }
+            />
+            <InfoRow label="Tipo file" value={labelTipoFile(doc.tipoFile)} />
+            <InfoRow label="Tipo documento" value={labelCategoria(doc.categoria)} />
+            <InfoRow
+              label="Applicabilità"
+              value={
+                documentoSenzaMarcaUi(doc)
+                  ? "—"
+                  : r.applicabilita === "marca"
+                    ? "Tutta la marca"
+                    : "Modello specifico"
+              }
+            />
+            <InfoRow
+              label="Marca / modello"
+              value={
+                documentoSenzaMarcaUi(doc) ? (
+                  <span className="inline-flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-300">
+                    <span aria-hidden>⚠️</span> Senza marca
+                  </span>
+                ) : (
+                  entita
+                )
+              }
+            />
+            <InfoRow label="Autore" value={doc.autoreCaricamento} />
+            <InfoRow label="Dimensione" value={`${doc.dimensioneKb} KB`} />
+          </div>
           <InfoRow label="Note" value={doc.note?.trim() ? doc.note : "—"} />
-          <InfoRow label="Dimensione" value={`${doc.dimensioneKb} KB`} />
         </GestionaleModalScrollBody>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="flex items-center justify-end gap-2">
@@ -543,7 +582,7 @@ export function DocumentoEditModal({
   }
 
   return (
-    <DocumentiModalShell title="Modifica documento" onRequestClose={onRequestClose} wide>
+    <DocumentiModalShell title="Modifica documento" onRequestClose={onRequestClose}>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <GestionaleModalScrollBody className="space-y-3">
           <label htmlFor="doc-edit-nome" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
@@ -577,42 +616,70 @@ export function DocumentoEditModal({
             allowModello={!listiniOnly}
           />
 
-          <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-            Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
-            <GlobalAttrezzatureMarcaSelect
-              className={listSelectWrapClass}
-              value={marca}
-              onChange={(v) => {
-                setMarca(v);
-                setModello("");
-                setMarcaInvalid(false);
-                setModelloInvalid(false);
-              }}
-              selectOnly
-              aria-label="Marca documento"
-              aria-invalid={marcaInvalid || undefined}
-            />
-          </label>
-          <FieldError message={marcaInvalid ? "Marca non valida." : null} />
           {effectiveApp === "modello" && marca.trim() ? (
-            <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
-              Modello
-              <GlobalAttrezzatureModelloSelect
-                className={listSelectWrapClass}
-                marcaNome={marca}
-                value={modello}
-                onChange={(v) => {
-                  setModello(v);
-                  setModelloInvalid(false);
-                }}
-                required
-                selectOnly
-                aria-label="Modello documento"
-                aria-invalid={modelloInvalid || undefined}
-              />
-              <FieldError message={modelloInvalid ? "Seleziona un modello." : null} />
-            </label>
-          ) : null}
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
+                  <GlobalAttrezzatureMarcaSelect
+                    className={listSelectWrapClass}
+                    value={marca}
+                    onChange={(v) => {
+                      setMarca(v);
+                      setModello("");
+                      setMarcaInvalid(false);
+                      setModelloInvalid(false);
+                    }}
+                    emptyOptionLabel={DOCUMENTI_MARCA_EMPTY_LABEL}
+                    selectOnly
+                    aria-label="Marca documento"
+                    aria-invalid={marcaInvalid || undefined}
+                  />
+                </label>
+                <FieldError message={marcaInvalid ? "Marca non valida." : null} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                  Modello
+                  <GlobalAttrezzatureModelloSelect
+                    className={listSelectWrapClass}
+                    marcaNome={marca}
+                    value={modello}
+                    onChange={(v) => {
+                      setModello(v);
+                      setModelloInvalid(false);
+                    }}
+                    required
+                    selectOnly
+                    aria-label="Modello documento"
+                    aria-invalid={modelloInvalid || undefined}
+                  />
+                </label>
+                <FieldError message={modelloInvalid ? "Seleziona un modello." : null} />
+              </div>
+            </div>
+          ) : (
+            <>
+              <label className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
+                Marca <span className="font-normal text-zinc-500">(facoltativa)</span>
+                <GlobalAttrezzatureMarcaSelect
+                  className={listSelectWrapClass}
+                  value={marca}
+                  onChange={(v) => {
+                    setMarca(v);
+                    setModello("");
+                    setMarcaInvalid(false);
+                    setModelloInvalid(false);
+                  }}
+                  emptyOptionLabel={DOCUMENTI_MARCA_EMPTY_LABEL}
+                  selectOnly
+                  aria-label="Marca documento"
+                  aria-invalid={marcaInvalid || undefined}
+                />
+              </label>
+              <FieldError message={marcaInvalid ? "Marca non valida." : null} />
+            </>
+          )}
 
           <label htmlFor="doc-edit-note" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note
