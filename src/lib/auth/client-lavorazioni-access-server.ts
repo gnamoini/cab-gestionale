@@ -17,17 +17,7 @@ export async function verifyClientLavorazioniAccessServer(): Promise<boolean> {
 
   const { data: prof } = await sb.from("profiles").select("ruolo").eq("id", user.id).maybeSingle();
   const role = prof?.ruolo ?? null;
-  if (hasPermission(role, "viewClientLavorazioni")) return true;
-
-  const { data: row } = await sb
-    .from("app_settings")
-    .select("value")
-    .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
-    .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
-    .maybeSingle();
-
-  const settings = parseClientPortalAccess(row?.value);
-  return userHasClientLavorazioniAccess(role, user.id, settings);
+  return hasPermission(role, "viewClientLavorazioni");
 }
 
 export async function loadClientPortalAccessSettingsServer() {

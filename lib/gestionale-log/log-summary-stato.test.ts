@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { logModificaDetailLine } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { buildLogModificaSummary, sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import { statoLavorazioneLabel } from "@/lib/lavorazioni/stati-dynamic";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import type { LogModificaRow } from "@/src/types/supabase-tables";
 
 const stati: StatoLavorazioneConfig[] = [
   { id: "accettazione", label: "Accettazione", color: "#52525b" },
@@ -180,5 +182,24 @@ const schedaOggetto = buildLogModificaSummary({
 });
 
 assert.equal(schedaOggetto.oggettoRiga, "Rossi Srl — FIAT 500X", "scheda log must identify cliente and attrezzatura");
+
+const securityRow = {
+  id: "log-1",
+  entita: "lavorazioni",
+  entita_id: "lav-1",
+  azione: "UPDATE",
+  created_at: "2026-06-05T10:00:00.000Z",
+  payload: {
+    before: { stato: "Custom_2" },
+    after: { stato: "completata" },
+    compact: '• Stato modificato da "Custom_2" a "Completata"',
+  },
+} as LogModificaRow;
+
+const securityDetail = logModificaDetailLine(securityRow, stati);
+assert.ok(
+  securityDetail.includes("Attesa ricambi officina") && securityDetail.includes("Completata"),
+  `security detail must remap stato ids, got: ${securityDetail}`,
+);
 
 console.log("log-summary-stato.test.ts OK");

@@ -29,6 +29,8 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .cursor/debug*.log
+dev-probe.log
+debug-929eab.log
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)

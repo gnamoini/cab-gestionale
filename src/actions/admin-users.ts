@@ -7,9 +7,13 @@ import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-c
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { assertSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
 import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
-import { normalizeClienteRef, validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
+import { normalizeClienteRef, validateClienteAssociationForRole } from "@/src/lib/auth/cliente-portal-scope";
+import { loadKnownClientiSetFromMezzi } from "@/src/lib/auth/load-known-clienti";
 import { validateCreateUserInput } from "@/lib/validation/admin-user-validation";
-import { validateUpdateUserRoleInput } from "@/lib/validation/security-actions-validation";
+import {
+  validateDeleteUserByAdminInput,
+  validateUpdateUserRoleInput,
+} from "@/lib/validation/security-actions-validation";
 import type { ProfileRow } from "@/src/types/supabase-tables";
 import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
 import { invalidateServerRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth.server";
@@ -51,6 +55,8 @@ export type UpdateUserRoleByAdminResult =
   | { ok: false; message: string };
 
 export type ResetGlobalChangeLogsResult = { ok: true; deletedCount: number | null } | { ok: false; message: string };
+
+export type DeleteUserByAdminResult = { ok: true } | { ok: false; message: string };
 
 const RUOLI = APP_ROLES;
 
@@ -137,6 +143,26 @@ async function writeSecurityLog(
   if (error) console.warn("[security] log utente:", error.message);
 }
 
+async function writeSecurityDeleteLog(
+  admin: SupabaseClient,
+  input: { targetUserId: string; actorUserId: string; nome: string; role: AppRole; actorName?: string },
+) {
+  const { error } = await admin.from("log_modifiche").insert({
+    entita: "security",
+    entita_id: input.targetUserId,
+    azione: "ELIMINAZIONE UTENTE",
+    autore_id: input.actorUserId,
+    payload: {
+      event: "ELIMINAZIONE UTENTE",
+      user: input.nome,
+      role: input.role,
+      actor: input.actorName,
+      compact: `(ELIMINAZIONE UTENTE, ${input.nome}, ${input.role}, ${input.actorName ?? "Admin"}, ${new Date().toLocaleString("it-IT", { dateStyle: "short", timeStyle: "short" })})`,
+    },
+  });
+  if (error) console.warn("[security] log eliminazione utente:", error.message);
+}
+
 function userRowFrom(profile: ProfileRow | undefined, authUser?: { id: string; email?: string | null; created_at?: string; last_sign_in_at?: string | null }): SecurityUserAdminRow {
   const nome = profile?.nome?.trim() || authUser?.email?.split("@")[0]?.trim() || "Utente";
   return {
@@ -166,9 +192,6 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
   const validationErr = validateCreateUserInput({ nome, username, email, password, ruolo });
   if (validationErr) return { ok: false, message: validationErr };
 
-  const clienteRefErr = validateClienteRefForRole(ruolo, clienteRef);
-  if (clienteRefErr) return { ok: false, message: clienteRefErr };
-
   if (!nome) return { ok: false, message: "Il nome è obbligatorio." };
   const usernameErr = usernameFieldError(username);
   if (usernameErr) {
@@ -180,6 +203,18 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
   const caller = await assertAdminCaller();
   if (!caller.ok) return { ok: false, message: caller.message };
   const admin = serviceAdmin(caller.url, caller.serviceKey);
+
+  let knownClienti: Set<string>;
+  try {
+    knownClienti = await loadKnownClientiSetFromMezzi(admin);
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Errore caricamento anagrafica clienti.",
+    };
+  }
+  const clienteRefErr = validateClienteAssociationForRole(ruolo, clienteRef, knownClienti);
+  if (clienteRefErr) return { ok: false, message: clienteRefErr };
 
   const { data: usernameTaken } = await admin.from("profiles").select("id").eq("username", username).maybeSingle();
   if (usernameTaken) return { ok: false, message: "Username già utilizzato." };
@@ -357,6 +392,54 @@ export async function updateUserRoleByAdminAction(input: { userId: string; role:
 
   const authLookup = await admin.auth.admin.getUserById(userId).catch(() => authBefore);
   return { ok: true, user: userRowFrom(profile, authLookup?.data.user ?? undefined) };
+}
+
+export async function deleteUserByAdminAction(userId: string): Promise<DeleteUserByAdminResult> {
+  const caller = await assertAdminCaller();
+  if (!caller.ok) return { ok: false, message: caller.message };
+
+  const parsed = validateDeleteUserByAdminInput(userId, caller.callerId);
+  if (!parsed.ok) return { ok: false, message: parsed.message };
+
+  const admin = serviceAdmin(caller.url, caller.serviceKey);
+
+  const { data: profile, error: profileErr } = await admin
+    .from("profiles")
+    .select("id, nome, ruolo")
+    .eq("id", parsed.userId)
+    .maybeSingle();
+  if (profileErr) return { ok: false, message: profileErr.message };
+  if (!profile) return { ok: false, message: "Profilo non trovato." };
+
+  const targetRole = resolveRole((profile as ProfileRow).ruolo);
+  if (targetRole === "admin") {
+    const { count, error: countErr } = await admin
+      .from("profiles")
+      .select("id", { count: "exact", head: true })
+      .eq("ruolo", "admin");
+    if (countErr) return { ok: false, message: countErr.message };
+    if ((count ?? 0) <= 1) {
+      return { ok: false, message: "Impossibile eliminare l'ultimo amministratore del sistema." };
+    }
+  }
+
+  const nome = (profile as ProfileRow).nome?.trim() || "Utente";
+  await writeSecurityDeleteLog(admin, {
+    targetUserId: parsed.userId,
+    actorUserId: caller.callerId,
+    nome,
+    role: targetRole,
+    actorName: caller.callerName,
+  });
+
+  const { error: deleteErr } = await admin.auth.admin.deleteUser(parsed.userId);
+  if (deleteErr) {
+    return { ok: false, message: deleteErr.message || "Eliminazione utente non riuscita." };
+  }
+
+  clearServerAuthSnapshotCacheForUser(parsed.userId);
+  invalidateServerRuntimeTruth();
+  return { ok: true };
 }
 
 export async function resetGlobalChangeLogsByAdminAction(): Promise<ResetGlobalChangeLogsResult> {

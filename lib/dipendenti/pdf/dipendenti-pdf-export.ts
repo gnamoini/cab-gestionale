@@ -6,15 +6,16 @@ import {
   employeeDisplayName,
   type DipendentiPdfContext,
 } from "@/lib/dipendenti/pdf/dipendenti-pdf-context";
-import { buildComplessivoPdf, buildDipendentePdf } from "@/lib/dipendenti/pdf/dipendenti-pdf-sections";
 import type { DipendenteTimesheetEmployeeRow } from "@/lib/dipendenti/types";
+import { importDipendentiPdfSections } from "@/lib/pdf/lazy-pdf-modules";
 import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 
 export { buildDipendentiPdfContext };
 export type { DipendentiPdfContext };
 
-export function openDipendentiPdfComplessivoInNewTab(ctx: DipendentiPdfContext): void {
+export async function openDipendentiPdfComplessivoInNewTab(ctx: DipendentiPdfContext): Promise<void> {
   if (ctx.employees.length === 0) return;
+  const { buildComplessivoPdf } = await importDipendentiPdfSections();
   const doc = buildComplessivoPdf(ctx);
   void openPdfBlobInNewTab(
     doc.output("blob"),
@@ -22,10 +23,11 @@ export function openDipendentiPdfComplessivoInNewTab(ctx: DipendentiPdfContext):
   );
 }
 
-export function openDipendentiPdfDipendenteInNewTab(
+export async function openDipendentiPdfDipendenteInNewTab(
   ctx: DipendentiPdfContext,
   employee: DipendenteTimesheetEmployeeRow,
-): void {
+): Promise<void> {
+  const { buildDipendentePdf } = await importDipendentiPdfSections();
   const doc = buildDipendentePdf(ctx, employee);
   const displayName = employeeDisplayName(employee, ctx.entries);
   void openPdfBlobInNewTab(

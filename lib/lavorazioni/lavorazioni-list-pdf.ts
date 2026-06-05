@@ -22,11 +22,7 @@ export type LavorazioniInCorsoPdfRow = {
   addetto: string;
 };
 
-/** Righe targa / matricola / N. scuderia per cella PDF multilinea. */
-export function formatIdentificazionePdfCell(targa: string, matricola: string, scuderia: string): string {
-  const lines = [targa.trim(), matricola.trim(), scuderia.trim() ? `N. ${scuderia.trim()}` : ""].filter(Boolean);
-  return lines.length > 0 ? lines.join("\n") : "—";
-}
+export { formatIdentificazionePdfCell } from "@/lib/lavorazioni/lavorazioni-pdf-format";
 
 function safeText(v: string | null | undefined): string {
   const t = (v ?? "").trim();

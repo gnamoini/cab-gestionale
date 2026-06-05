@@ -6,7 +6,13 @@ import {
   CLIENT_LAVORAZIONI_SETTINGS_MODULE,
   parseClientPortalAccess,
 } from "@/lib/lavorazioni/client-portal-access";
-import { normalizeClienteRef, validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
+import {
+  normalizeClienteRef,
+  roleHasClientPortalAccess,
+  validateClienteAssociationForRole,
+} from "@/src/lib/auth/cliente-portal-scope";
+import { loadKnownClientiSetFromMezzi } from "@/src/lib/auth/load-known-clienti";
+import { normalizeUsername } from "@/src/lib/auth/username";
 import { hasPermission, resolveRole, type AppRole } from "@/lib/auth/rbac";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import {
@@ -36,6 +42,7 @@ export type SecurityUserPermissionRow = SecurityUserAdminRow & {
 export type SecurityUserBatchPatch = {
   userId: string;
   nome?: string;
+  username?: string;
   ruolo?: AppRole;
   clienteRef?: string | null;
   clientLavorazioniAccess?: boolean;
@@ -60,16 +67,12 @@ function roleGrantsClientPortal(role: AppRole): boolean {
   return hasPermission(role, "viewClientLavorazioni");
 }
 
-function toPermissionRow(
-  user: SecurityUserAdminRow,
-  enabledUserIds: Set<string>,
-  permissionRows: UserPermissionRow[],
-): SecurityUserPermissionRow {
+function toPermissionRow(user: SecurityUserAdminRow, permissionRows: UserPermissionRow[]): SecurityUserPermissionRow {
   const fromRole = roleGrantsClientPortal(user.ruolo);
   return {
     ...user,
     clientLavorazioniAccessFromRole: fromRole,
-    clientLavorazioniAccess: fromRole || enabledUserIds.has(user.id),
+    clientLavorazioniAccess: fromRole,
     hasModulePermissionOverrides: hasModulePermissionOverrides(user.ruolo, user.id, permissionRows),
   };
 }
@@ -125,9 +128,6 @@ export async function listSecurityUsersPermissionsAction(): Promise<ListSecurity
     .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
     .maybeSingle();
 
-  const settings = parseClientPortalAccess(row?.value);
-  const enabled = new Set(settings.enabledUserIds);
-
   const { createClient } = await import("@supabase/supabase-js");
   const serviceAdmin = createClient(admin.url, admin.serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -144,7 +144,7 @@ export async function listSecurityUsersPermissionsAction(): Promise<ListSecurity
     };
   }
 
-  const users = usersRes.users.map((u) => toPermissionRow(u, enabled, permissionRows));
+  const users = usersRes.users.map((u) => toPermissionRow(u, permissionRows));
   return { ok: true, users, portalSettingsUpdatedAt: row?.updated_at ?? null, permissionRows };
 }
 
@@ -188,6 +188,7 @@ export async function batchUpdateSecurityUsersAction(
     .map((p) => ({
       userId: p.userId,
       nome: p.nome,
+      username: p.username,
       ruolo: p.ruolo != null ? resolveRole(p.ruolo) : undefined,
       clienteRef: p.clienteRef,
       clientLavorazioniAccess: p.clientLavorazioniAccess,
@@ -197,6 +198,16 @@ export async function batchUpdateSecurityUsersAction(
     .filter((p) => p.userId);
 
   if (!normalized.length) return { ok: true, updatedCount: 0 };
+
+  let knownClienti: Set<string>;
+  try {
+    knownClienti = await loadKnownClientiSetFromMezzi(admin);
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Errore caricamento anagrafica clienti.",
+    };
+  }
 
   let updatedCount = 0;
 
@@ -217,10 +228,38 @@ export async function batchUpdateSecurityUsersAction(
       updatedCount += 1;
     }
 
+    if (patch.username != null) {
+      const currentUsername = normalizeUsername(profile.username ?? "");
+      if (patch.username !== currentUsername) {
+        const { data: available, error: rpcErr } = await sbUser.rpc("check_username_available", {
+          p_username: patch.username,
+          p_exclude_user_id: patch.userId,
+        });
+        if (rpcErr) return { ok: false, message: "Impossibile verificare il nome utente. Riprova." };
+        if (available !== true) return { ok: false, message: "Username già utilizzato." };
+
+        const { error } = await admin.from("profiles").update({ username: patch.username }).eq("id", patch.userId);
+        if (error) {
+          const msg =
+            error.message.includes("unique") || error.message.includes("duplicate")
+              ? "Username già utilizzato."
+              : error.message;
+          return { ok: false, message: msg };
+        }
+        await admin.auth.admin
+          .updateUserById(patch.userId, {
+            app_metadata: { cab_username: patch.username },
+          })
+          .catch(() => {});
+        clearServerAuthSnapshotCacheForUser(patch.userId);
+        updatedCount += 1;
+      }
+    }
+
     const effectiveRole = patch.ruolo != null ? patch.ruolo : resolveRole(profile.ruolo);
     const effectiveClienteRef =
       patch.clienteRef !== undefined ? patch.clienteRef : normalizeClienteRef(profile.cliente_ref);
-    const clienteRefErr = validateClienteRefForRole(effectiveRole, effectiveClienteRef);
+    const clienteRefErr = validateClienteAssociationForRole(effectiveRole, effectiveClienteRef, knownClienti);
     if (clienteRefErr) return { ok: false, message: clienteRefErr };
 
     if (patch.clienteRef !== undefined) {
@@ -269,55 +308,6 @@ export async function batchUpdateSecurityUsersAction(
     }
   }
 
-  const portalPatches = normalized.filter((p) => p.clientLavorazioniAccess !== undefined);
-  if (portalPatches.length > 0) {
-    const { data: settingsRow } = await sbUser
-      .from("app_settings")
-      .select("value, updated_at")
-      .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
-      .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
-      .maybeSingle();
-
-    const settings = parseClientPortalAccess(settingsRow?.value);
-    const enabled = new Set(settings.enabledUserIds);
-
-    for (const patch of portalPatches) {
-      const { data: prof } = await admin.from("profiles").select("ruolo").eq("id", patch.userId).maybeSingle();
-      const role = resolveRole(prof?.ruolo);
-      if (roleGrantsClientPortal(role)) continue;
-
-      if (patch.clientLavorazioniAccess) enabled.add(patch.userId);
-      else enabled.delete(patch.userId);
-      updatedCount += 1;
-    }
-
-    const value = { enabledUserIds: [...enabled] };
-    const updated_by = caller.callerId;
-
-    if (!settingsRow) {
-      const { error } = await sbUser.from("app_settings").insert({
-        module: CLIENT_LAVORAZIONI_SETTINGS_MODULE,
-        key: CLIENT_LAVORAZIONI_SETTINGS_KEY,
-        value,
-        updated_by,
-      });
-      if (error) return { ok: false, message: error.message };
-    } else {
-      const { error } = await sbUser
-        .from("app_settings")
-        .update({ value, updated_by })
-        .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
-        .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
-        .eq("updated_at", settingsRow.updated_at);
-      if (error) {
-        return {
-          ok: false,
-          message: "Conflitto di salvataggio accessi clienti. Ricarica la pagina e riprova.",
-        };
-      }
-    }
-  }
-
   await writeSecurityBatchLog(admin, {
     actorUserId: caller.callerId,
     actorName: caller.callerName,
@@ -325,4 +315,180 @@ export async function batchUpdateSecurityUsersAction(
   });
 
   return { ok: true, updatedCount };
+}
+
+export type ClienteAssociationAuditIssue = {
+  userId: string;
+  nome: string;
+  email: string;
+  ruolo: AppRole;
+  clienteRef: string | null;
+  category:
+    | "cliente_senza_associazione"
+    | "associazione_invalida"
+    | "ref_orfano_staff"
+    | "allowlist_non_autorizzato";
+  detail: string;
+};
+
+export type ClienteAssociationAuditResult = {
+  ok: true;
+  issues: ClienteAssociationAuditIssue[];
+  allowlistCleaned: Array<{ userId: string; nome: string; ruolo: string }>;
+  knownClientiCount: number;
+  scannedAt: string;
+};
+
+export type ClienteAssociationAuditActionResult =
+  | ClienteAssociationAuditResult
+  | { ok: false; message: string };
+
+async function cleanupClientPortalAllowlist(
+  sbUser: SupabaseClient,
+  users: SecurityUserAdminRow[],
+  callerId: string,
+): Promise<{ cleaned: Array<{ userId: string; nome: string; ruolo: string }>; issues: ClienteAssociationAuditIssue[] }> {
+  const { data: settingsRow } = await sbUser
+    .from("app_settings")
+    .select("value, updated_at")
+    .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
+    .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
+    .maybeSingle();
+
+  const settings = parseClientPortalAccess(settingsRow?.value);
+  const usersById = new Map(users.map((u) => [u.id, u]));
+  const issues: ClienteAssociationAuditIssue[] = [];
+  const cleaned: Array<{ userId: string; nome: string; ruolo: string }> = [];
+  const nextIds: string[] = [];
+
+  for (const userId of settings.enabledUserIds) {
+    const user = usersById.get(userId);
+    if (!user) {
+      issues.push({
+        userId,
+        nome: "—",
+        email: "",
+        ruolo: "guest",
+        clienteRef: null,
+        category: "allowlist_non_autorizzato",
+        detail: "Utente in allowlist non trovato in elenco profili.",
+      });
+      continue;
+    }
+    if (!roleHasClientPortalAccess(user.ruolo)) {
+      issues.push({
+        userId: user.id,
+        nome: user.nome,
+        email: user.email,
+        ruolo: user.ruolo,
+        clienteRef: user.clienteRef,
+        category: "allowlist_non_autorizzato",
+        detail: "Rimosso dall'allowlist: ruolo senza accesso portale.",
+      });
+      cleaned.push({ userId: user.id, nome: user.nome, ruolo: user.ruolo });
+      continue;
+    }
+    nextIds.push(userId);
+  }
+
+  if (nextIds.length !== settings.enabledUserIds.length) {
+    const value = { enabledUserIds: nextIds };
+    if (!settingsRow) {
+      const { error } = await sbUser.from("app_settings").insert({
+        module: CLIENT_LAVORAZIONI_SETTINGS_MODULE,
+        key: CLIENT_LAVORAZIONI_SETTINGS_KEY,
+        value,
+        updated_by: callerId,
+      });
+      if (error) throw new Error(error.message);
+    } else {
+      const { error } = await sbUser
+        .from("app_settings")
+        .update({ value, updated_by: callerId })
+        .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
+        .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
+        .eq("updated_at", settingsRow.updated_at);
+      if (error) throw new Error("Conflitto aggiornamento allowlist portale. Riprova.");
+    }
+  }
+
+  return { cleaned, issues };
+}
+
+/** Report associazioni cliente + pulizia allowlist portale (no auto-fix su profili). */
+export async function auditClienteAssociationsAction(): Promise<ClienteAssociationAuditActionResult> {
+  const caller = await assertAdminCaller();
+  if (!caller.ok) return { ok: false, message: caller.message };
+
+  const usersRes = await listUsersByAdminAction();
+  if (!usersRes.ok) return { ok: false, message: usersRes.message };
+
+  const { createClient } = await import("@supabase/supabase-js");
+  const admin = createClient(caller.url, caller.serviceKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  const sbUser = await createSupabaseServerUserClient();
+
+  let knownClienti: Set<string>;
+  try {
+    knownClienti = await loadKnownClientiSetFromMezzi(admin);
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Errore caricamento anagrafica clienti.",
+    };
+  }
+
+  const issues: ClienteAssociationAuditIssue[] = [];
+
+  for (const user of usersRes.users) {
+    const ref = normalizeClienteRef(user.clienteRef);
+    if (user.ruolo === "cliente") {
+      if (!ref) {
+        issues.push({
+          userId: user.id,
+          nome: user.nome,
+          email: user.email,
+          ruolo: user.ruolo,
+          clienteRef: null,
+          category: "cliente_senza_associazione",
+          detail: "Ruolo Cliente senza cliente associato.",
+        });
+      } else if (knownClienti.size > 0 && !knownClienti.has(ref)) {
+        issues.push({
+          userId: user.id,
+          nome: user.nome,
+          email: user.email,
+          ruolo: user.ruolo,
+          clienteRef: ref,
+          category: "associazione_invalida",
+          detail: "Cliente associato non presente in anagrafica mezzi.",
+        });
+      }
+    } else if (ref) {
+      issues.push({
+        userId: user.id,
+        nome: user.nome,
+        email: user.email,
+        ruolo: user.ruolo,
+        clienteRef: ref,
+        category: "ref_orfano_staff",
+        detail: "Cliente associato valorizzato per utente non Cliente (informativo).",
+      });
+    }
+  }
+
+  try {
+    const allowlist = await cleanupClientPortalAllowlist(sbUser, usersRes.users, caller.callerId);
+    issues.push(...allowlist.issues);
+    return {
+      ok: true,
+      issues,
+      allowlistCleaned: allowlist.cleaned,
+      knownClientiCount: knownClienti.size,
+      scannedAt: new Date().toISOString(),
+    };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "Errore pulizia allowlist." };
+  }
 }

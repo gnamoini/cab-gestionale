@@ -90,12 +90,13 @@ export function validateProductionReadiness(input: ProductionReadinessInput = {}
     }
   }
 
-  if (db.connected && db.operatorGlobalSettingsDbEnabled) {
-    pushFinding(blockers, {
+  if (db.connected && db.operatorGlobalSettingsDbEnabled && !envPilot) {
+    pushFinding(warnings, {
       id: "feature-flag-db-operator-settings",
       category: "feature-flag",
-      message: "app_settings.system.enable_operator_global_settings è attivo nel database.",
-      detail: "Disattivare prima del deploy production.",
+      message: "Flag DB pilot attivo senza env — override non effettivo.",
+      detail:
+        "Disattivare app_settings.system.enable_operator_global_settings prima del deploy production se non intenzionale.",
     });
   } else if (!db.connected && migSql.rbacPilot) {
     pushFinding(warnings, {

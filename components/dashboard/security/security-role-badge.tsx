@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { roleLabel, type AppRole } from "@/lib/auth/rbac";
+import {
+  formatSecurityWhen,
+  SECURITY_USER_PRESENCE_LABEL,
+  securityUserPresence,
+  type SecurityUserPresence,
+} from "@/lib/security/format-last-sign-in";
 
 const ROLE_TONE: Record<AppRole, string> = {
   admin: "bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/35 dark:text-red-200 dark:ring-red-900/60",
@@ -9,6 +15,12 @@ const ROLE_TONE: Record<AppRole, string> = {
   operatore: "bg-orange-50 text-orange-700 ring-orange-200 dark:bg-orange-950/35 dark:text-orange-200 dark:ring-orange-900/60",
   cliente: "bg-sky-50 text-sky-700 ring-sky-200 dark:bg-sky-950/35 dark:text-sky-200 dark:ring-sky-900/60",
   guest: "bg-zinc-100 text-zinc-700 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-200 dark:ring-zinc-700",
+};
+
+const PRESENCE_TONE: Record<SecurityUserPresence, { text: string; dot: string }> = {
+  online: { text: "text-emerald-700 dark:text-emerald-300", dot: "bg-emerald-500" },
+  offline: { text: "text-[color:var(--cab-text-muted)]", dot: "bg-zinc-400" },
+  never: { text: "text-[color:var(--cab-text-muted)]", dot: "bg-zinc-400" },
 };
 
 export function SecurityRoleBadge({ role }: { role: AppRole }) {
@@ -19,49 +31,40 @@ export function SecurityRoleBadge({ role }: { role: AppRole }) {
   );
 }
 
-export function SecurityStatusBadge({ lastSignInAt }: { lastSignInAt: string | null }) {
+export function SecurityStatusBadge({
+  lastSignInAt,
+  align = "start",
+}: {
+  lastSignInAt: string | null;
+  align?: "start" | "end";
+}) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  if (!lastSignInAt) {
-    return (
-      <span className="inline-flex min-w-0 max-w-full items-center gap-1.5 text-xs text-[color:var(--cab-text-muted)]">
-        <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" aria-hidden />
-        Mai connesso
-      </span>
-    );
-  }
+  const alignClass = align === "end" ? "items-end text-right" : "items-start text-left";
 
   if (!mounted) {
     return (
-      <span className="inline-flex min-w-0 max-w-full items-center gap-1.5 text-xs text-[color:var(--cab-text-muted)]">
-        <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" aria-hidden />
-        —
+      <span className={`inline-flex min-w-0 max-w-full flex-col gap-0.5 ${alignClass}`}>
+        <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-[color:var(--cab-text-muted)]">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400" aria-hidden />
+          —
+        </span>
       </span>
     );
   }
 
-  const days = (Date.now() - new Date(lastSignInAt).getTime()) / 86_400_000;
-  if (days <= 7) {
-    return (
-      <span className="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
-        Attivo
-      </span>
-    );
-  }
-  if (days <= 90) {
-    return (
-      <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden />
-        Inattivo
-      </span>
-    );
-  }
+  const presence = securityUserPresence(lastSignInAt);
+  const tone = PRESENCE_TONE[presence];
+  const lastAccessLabel = lastSignInAt ? formatSecurityWhen(lastSignInAt) : "Mai connesso";
+
   return (
-    <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-[color:var(--cab-text-muted)]">
-      <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" aria-hidden />
-      Dormiente
+    <span className={`inline-flex min-w-0 max-w-full flex-col gap-0.5 ${alignClass}`}>
+      <span className={`inline-flex min-w-0 items-center gap-1.5 text-xs font-medium ${tone.text}`}>
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${tone.dot}`} aria-hidden />
+        {SECURITY_USER_PRESENCE_LABEL[presence]}
+      </span>
+      <span className="text-[10px] leading-tight tabular-nums text-[color:var(--cab-text-muted)]">{lastAccessLabel}</span>
     </span>
   );
 }

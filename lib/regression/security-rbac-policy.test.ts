@@ -13,8 +13,8 @@ const matrix: Array<{
   viewClientLavorazioni: boolean;
 }> = [
   { role: "admin", manageSettings: true, manageSecurity: true, viewClientLavorazioni: true },
-  { role: "manager", manageSettings: true, manageSecurity: false, viewClientLavorazioni: true },
-  { role: "operatore", manageSettings: true, manageSecurity: false, viewClientLavorazioni: true },
+  { role: "manager", manageSettings: true, manageSecurity: false, viewClientLavorazioni: false },
+  { role: "operatore", manageSettings: true, manageSecurity: false, viewClientLavorazioni: false },
   { role: "cliente", manageSettings: false, manageSecurity: false, viewClientLavorazioni: true },
   { role: "guest", manageSettings: false, manageSecurity: false, viewClientLavorazioni: false },
 ];

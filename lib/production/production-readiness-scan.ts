@@ -128,7 +128,10 @@ export function scanProductionReadinessCode(repoRoot = process.cwd()): Productio
     }
 
     if (rel.includes("gestionale-realtime-bridge")) {
-      if (content.includes("startPollingFallback") && content.includes("subscribePostgresChanges")) {
+      const hasPollingFallback = content.includes("startPollingFallback");
+      const hasRealtimeSubscribe = content.includes("subscribePostgresChanges");
+      const hasExclusiveTransport = content.includes("SyncTransportController");
+      if (hasPollingFallback && hasRealtimeSubscribe && !hasExclusiveTransport) {
         realtimePollingFallbackPresent = true;
       }
     }

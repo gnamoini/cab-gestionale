@@ -15,20 +15,27 @@ import {
   LoadingMagazzinoListSkeleton,
   Tooltip,
 } from "@/components/design-system";
-import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
-import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
-import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { MagazzinoGiacenzaBell } from "@/components/gestionale/magazzino/magazzino-giacenza-bell";
 import { MagazzinoScortaBadge } from "@/components/gestionale/magazzino/magazzino-scorta-badge";
-import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
-import { RicambioFormFields } from "@/components/gestionale/magazzino/ricambio-form-fields";
-import { RicambioEditModal } from "@/components/gestionale/magazzino/ricambio-edit-modal";
-import { probeRicambioInputLag } from "@/lib/debug/ricambio-input-lag-probe";
-import { RicambioInfoPanel } from "@/components/gestionale/magazzino/ricambio-info-panel";
-import {
-  ricambioUiToMagazzinoInsert,
-  ricambioUiToMagazzinoUpdate,
-} from "@/lib/magazzino/magazzino-db-ui-adapter";
+import dynamic from "next/dynamic";
+
+const RicambioNewModal = dynamic(
+  () => import("@/components/gestionale/magazzino/ricambio-new-modal").then((m) => m.RicambioNewModal),
+  { ssr: false },
+);
+const RicambioEditModal = dynamic(
+  () => import("@/components/gestionale/magazzino/ricambio-edit-modal").then((m) => m.RicambioEditModal),
+  { ssr: false },
+);
+const MagazzinoRicambioInfoModal = dynamic(
+  () => import("@/components/gestionale/magazzino/magazzino-modals").then((m) => m.MagazzinoRicambioInfoModal),
+  { ssr: false },
+);
+const MagazzinoDupCodesModal = dynamic(
+  () => import("@/components/gestionale/magazzino/magazzino-modals").then((m) => m.MagazzinoDupCodesModal),
+  { ssr: false },
+);
+import { ricambioUiToMagazzinoUpdate } from "@/lib/magazzino/magazzino-db-ui-adapter";
 import { magazzinoService } from "@/src/services/magazzino.service";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
@@ -40,26 +47,18 @@ import { flattenCompatDaAttrezzature, migrateMezziListePrefs } from "@/lib/mezzi
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import {
   loadMagazzinoChangeLog,
-  purgeMagazzinoLogEntriesForRicambioId,
   saveMagazzinoChangeLog,
   type MagazzinoChangeLogEntry,
 } from "@/lib/magazzino/magazzino-change-log-storage";
 import {
-  emptyRicambioForm,
   formatMarkupDisplay,
-  ricambioFromFormLenient,
-  validateRicambioListFields,
   type RicambioFormState,
 } from "@/lib/magazzino/form";
 import { scheduleCompatBackgroundAudit } from "@/lib/magazzino/compat/compat-runtime-sanitize";
 import { readCompatDisplayForUi, readCompatLabelsForUi } from "@/lib/magazzino/compat/compat-read-guard";
 import { latestUndoableScortaEntryForRicambio, parseScortaChange, entryMatchesMagazzinoUndoScope, type MagazzinoUndoScope } from "@/lib/magazzino/magazzino-scorta-undo";
 import { useUndoSessionId } from "@/lib/gestionale-log/use-undo-session-id";
-import {
-  analyzeArchiveDuplicateCodes,
-  findDuplicateByCodici,
-  type MagazzinoArchiveDuplicateCodeGroup,
-} from "@/lib/magazzino/duplicates";
+import { analyzeArchiveDuplicateCodes } from "@/lib/magazzino/duplicates";
 import { ricambioHasFornitoreAlternativo } from "@/lib/magazzino/ricambio-fornitori-alternativi";
 import { compareByColumn, compareNaturalOrder, type SortPhaseMagazzino } from "@/lib/magazzino/sort-order";
 import {
@@ -79,7 +78,6 @@ import {
   dsBtnPrimary,
   dsBtnSoftOrange,
   dsFocus,
-  dsModalFormFooter,
   dsTableActionBtnPrimary,
   dsTableActionBtnSecondary,
   dsTableActionBtnUndo,
@@ -113,7 +111,7 @@ import {
 } from "@/components/design-system";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { MagazzinoAdvancedFilterPanel } from "@/components/gestionale/magazzino/magazzino-advanced-filter-panel";
-import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
+import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   buildMagazzinoFilterCatalog,
@@ -219,19 +217,6 @@ function rowUsesCompatLabel(
   return resolved.some((l) => l.trim().toLowerCase() === want);
 }
 
-function rowStockBg(r: RicambioMagazzino) {
-  if (r.scorta < r.scortaMinima) {
-    return "bg-red-50/50 dark:bg-red-950/20";
-  }
-  return "";
-}
-
-function rowStockBorderFirstTd(r: RicambioMagazzino) {
-  // Evita artefatti sul bordo sinistro della tabella (border-collapsing).
-  // Lo stato sotto scorta resta già evidenziato da badge/riga.
-  return "";
-}
-
 function formatTimestampHover(iso: string) {
   return new Date(iso).toLocaleString("it-IT", {
     day: "2-digit",
@@ -251,19 +236,30 @@ function formatDataUltimaMain(iso: string) {
   });
 }
 
-/** Card mobile magazzino: data (gg/mm/aa) e autore su due righe. */
+/** Card mobile magazzino: data + ora e autore su due righe. */
 function formatMagazzinoUltimaModificaMobileDate(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("it-IT", {
+  return d.toLocaleString("it-IT", {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
 function formatMagazzinoUltimaModificaMobileAutore(autore: string): string {
   return autore.trim() || "—";
+}
+
+function isMagazzinoMobilePlaceholderValue(value: string): boolean {
+  const t = value.trim();
+  return !t || t === "—" || t === "-";
+}
+
+function magazzinoMobileOptionalLabel(value: string, fallback: string): string {
+  return isMagazzinoMobilePlaceholderValue(value) ? fallback : value.trim();
 }
 
 function isModificaOlderThanMonths(iso: string, months: number) {
@@ -488,27 +484,6 @@ function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
   );
 }
 
-function ArchiveDupRicambioRow({
-  p,
-  onOpen,
-}: {
-  p: RicambioMagazzino;
-  onOpen: (id: string) => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={() => onOpen(p.id)}
-      className="w-full rounded-lg border border-zinc-200/90 bg-white px-2.5 py-2 text-left text-xs transition-colors hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] dark:border-zinc-700 dark:bg-zinc-900/50"
-    >
-      <div className="font-semibold text-zinc-800 dark:text-zinc-100">{p.marca}</div>
-      <div className="mt-0.5 font-mono text-[11px] font-medium text-zinc-700 dark:text-zinc-200">{p.codiceFornitoreOriginale}</div>
-      <div className="mt-0.5 min-w-0 text-[11px] leading-snug text-zinc-600 dark:text-zinc-300">{p.descrizione}</div>
-      <div className="mt-1 font-mono text-[11px] tabular-nums text-zinc-500 dark:text-zinc-400">Scorta {p.scorta}</div>
-    </button>
-  );
-}
-
 export function MagazzinoView() {
   const { authorName, user } = useAuth();
   const undoSessionId = useUndoSessionId();
@@ -601,19 +576,14 @@ export function MagazzinoView() {
   );
 
   const [newOpen, setNewOpen] = useState(false);
-  const [newRicambioDraftId, setNewRicambioDraftId] = useState<string | null>(null);
-  const [saveBusy, setSaveBusy] = useState(false);
   const { success: toastSuccess, error: toastError, validation: toastValidation, successDeleted, errorOnce } =
     useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const [eliminaRicambioTarget, setEliminaRicambioTarget] = useState<RicambioMagazzino | null>(null);
-  const [newForm, setNewForm] = useState<RicambioFormState>(emptyRicambioForm());
   const [dupCheckModalOpen, setDupCheckModalOpen] = useState(false);
 
   const [detail, setDetail] = useState<{ id: string; mode: "info" | "edit" } | null>(null);
   useUIAutonomyFixEngine("/magazzino", [newOpen, detail, dupCheckModalOpen]);
-  const [newListFieldInvalid, setNewListFieldInvalid] = useState(false);
-  const magViewRenderRef = useRef(0);
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const flashClearRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -793,15 +763,6 @@ export function MagazzinoView() {
     (ricambioId: string, opts?: { applySottoScorta?: boolean; flashMs?: number }) => {
       flushPendingLog();
       setDupCheckModalOpen(false);
-      setNewRicambioDraftId((currentDraftId) => {
-        if (currentDraftId) {
-          purgeMagazzinoLogEntriesForRicambioId(currentDraftId);
-          setLogEntries(loadMagazzinoChangeLog());
-        }
-        return null;
-      });
-      setNewForm(emptyRicambioForm());
-      setNewListFieldInvalid(false);
       setNewOpen(false);
       setDetail(null);
       setAdvancedFilters(MAGAZZINO_ADVANCED_FILTERS_EMPTY);
@@ -1019,13 +980,6 @@ export function MagazzinoView() {
   const archivioDupCodeGroups = useMemo(() => analyzeArchiveDuplicateCodes(prodotti), [prodotti]);
   const archivioDupCodeCount = archivioDupCodeGroups.length;
 
-  const nuovoCodiceDupEsistente = useMemo(() => {
-    if (!newOpen) return null;
-    return findDuplicateByCodici(prodotti, newForm.codiceFornitoreOriginale, {
-      alsoCheckSecondary: newForm.codiceFornitoreOriginaleSecondario,
-    });
-  }, [newOpen, prodotti, newForm.codiceFornitoreOriginale, newForm.codiceFornitoreOriginaleSecondario]);
-
   const consumoMap = useMemo(
     () => buildConsumoMapMagazzinoRolling36ForProducts(logEntries, prodotti, new Date()),
     [logEntries, prodotti],
@@ -1241,22 +1195,12 @@ export function MagazzinoView() {
     if (!magCanCreateRicambio) return;
     flushPendingLog();
     setDupCheckModalOpen(false);
-    setNewListFieldInvalid(false);
-    setNewForm(emptyRicambioForm());
-    setNewRicambioDraftId(crypto.randomUUID());
     setNewOpen(true);
   }
 
   function closeNewRicambioModal() {
-    const draftId = newRicambioDraftId;
-    if (draftId) {
-      purgeMagazzinoLogEntriesForRicambioId(draftId);
-      setLogEntries(loadMagazzinoChangeLog());
-    }
-    setNewRicambioDraftId(null);
-    setNewForm(emptyRicambioForm());
-    setNewListFieldInvalid(false);
     setNewOpen(false);
+    setLogEntries(loadMagazzinoChangeLog());
   }
 
   function completeMagazzinoSave(
@@ -1279,45 +1223,6 @@ export function MagazzinoView() {
     void invalidateAfterMagazzinoOrMovimenti(queryClient, [
       cabSyncEventForEntity("magazzino_ricambi", ricambioId, syncType, "magazzino_ricambi"),
     ]);
-  }
-
-  async function finalizeNewRicambio() {
-    if (saveBusy) return;
-    const listErr = validateRicambioListFields(newForm, {
-      marche,
-      categorie,
-      mezziListe: mezziListePrefs,
-    });
-    if (listErr) {
-      setNewListFieldInvalid(true);
-      toastError(listErr);
-      return;
-    }
-    setNewListFieldInvalid(false);
-    setSaveBusy(true);
-    try {
-      const r = ricambioFromFormLenient(newForm, newRicambioDraftId ?? undefined, authorName, {
-        mezziListe: mezziListePrefs,
-      });
-      const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r, mezziListePrefs));
-      if (!created.success || !created.data) {
-        toastError(created.error ?? "Creazione ricambio non riuscita.");
-        return;
-      }
-      const ui = ricambioUiFromMagazzinoRow(created.data, authorName, mezziListePrefs);
-      registerOrderIndex(ui.id);
-      patchProdotti((prev) => [ui, ...prev]);
-      setNewForm(emptyRicambioForm());
-      setNewRicambioDraftId(null);
-      completeMagazzinoSave(ui.id, "Ricambio creato in magazzino.", "entity_created");
-    } finally {
-      setSaveBusy(false);
-    }
-  }
-
-  function submitNew(e: React.FormEvent) {
-    e.preventDefault();
-    void finalizeNewRicambio();
   }
 
   const detailRicambio = detail ? prodotti.find((p) => p.id === detail.id) : undefined;
@@ -1361,15 +1266,6 @@ export function MagazzinoView() {
 
   function closeDetail() {
     setDetail(null);
-  }
-
-  magViewRenderRef.current += 1;
-  if (detail?.mode === "edit") {
-    // #region agent log
-    probeRicambioInputLag("magazzino-view.tsx:render-edit-mode", "E", {
-      magViewRenderCount: magViewRenderRef.current,
-    });
-    // #endregion
   }
 
   const infoTimeline = useMemo(() => {
@@ -1467,6 +1363,125 @@ export function MagazzinoView() {
   const hasMagazzinoFilters =
     searchApplied.trim().length > 0 || hasAdvancedPanelFilters || soloSottoScorta || nascondiScortaZero;
 
+  const renderMagazzinoDesktopRow = useCallback(
+    (index: number) => {
+      const p = pagedMagazzino[index];
+      if (!p) return null;
+      const consumoRow = consumoMap.get(p.id);
+      const avgM = consumoRow?.avgMonthly ?? null;
+      const low = p.scorta < p.scortaMinima;
+      const flash = flashRowId === p.id;
+      const stale = isModificaOlderThanMonths(p.dataUltimaModifica, MAGAZZINO_STALE_MODIFICA_MONTHS);
+      return (
+        <tr
+          id={`magazzino-row-${p.id}`}
+          key={p.id}
+          data-gestionale-row-tone={gestionaleListTableRowTone({ flash, lowStock: low })}
+          className={gestionaleListTableRowClass}
+        >
+          <td className={`min-w-0 w-[7.75rem] max-w-[7.75rem] overflow-hidden ${gestionaleListTableTd}`}>
+            <RicambioCodiceCell p={p} />
+          </td>
+          <td className={`${gestionaleListTableTd} font-medium`}>{p.marca}</td>
+          <td className={`min-w-0 ${gestionaleListTableTd}`}>
+            <div className="break-words font-medium leading-snug">{p.descrizione}</div>
+            <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">
+              {compatDisplayFor(p)}
+            </div>
+          </td>
+          <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-300`}>
+            <MagazzinoOptionalTooltip content={p.categoria}>
+              <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
+            </MagazzinoOptionalTooltip>
+          </td>
+          <td className={gestionaleListTableTdCenter}>
+            <MagazzinoScortaBadge value={p.scorta} low={low} variant="table" />
+          </td>
+          <td className={`${gestionaleListTableTdCenter} !text-inherit`}>
+            <div className="flex justify-center">
+              <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="table" />
+            </div>
+          </td>
+          <td className={gestionaleListTableTdCenter}>
+            <Tooltip
+              content={
+                stale
+                  ? `${formatTimestampHover(p.dataUltimaModifica)} · ${MAGAZZINO_STALE_MODIFICA_HINT}`
+                  : formatTimestampHover(p.dataUltimaModifica)
+              }
+              side="top"
+            >
+              <div
+                className={`mx-auto inline-block max-w-full rounded-md px-1.5 py-1 text-center ${
+                  stale
+                    ? "bg-amber-50/95 ring-1 ring-amber-200/80 dark:bg-amber-950/35 dark:ring-amber-800/55"
+                    : ""
+                }`}
+              >
+                <div className="text-[13px] font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
+                  {formatDataUltimaMain(p.dataUltimaModifica)}
+                </div>
+                <div className="text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">
+                  {p.autoreUltimaModifica}
+                </div>
+              </div>
+            </Tooltip>
+          </td>
+          <td className={`${gestionaleListTableTdCenter} font-medium`}>{eur(p.prezzoVendita)}</td>
+          <td className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300`}>
+            <MagazzinoOptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
+              <span className="inline-block max-w-full truncate">
+                {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "dati insufficienti"}
+              </span>
+            </MagazzinoOptionalTooltip>
+          </td>
+          <td className={gestionaleListTableTdAzioni}>
+            <div className={gestionaleListTableActionsGroupEnd}>
+              <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
+                <IconInfoMagazzino />
+              </IconActionButton>
+              <IconActionButton
+                label="Annulla"
+                tooltipContent={magCanCreateRicambio ? "Annulla" : "Sola lettura"}
+                className={dsTableActionBtnUndo}
+                disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
+                onClick={() => void undoLastScorta(p.id)}
+              >
+                <IconUndoMagazzino />
+              </IconActionButton>
+              <IconActionButton
+                label="Diminuisci"
+                tooltipContent={magCanCreateRicambio ? "Diminuisci" : "Sola lettura"}
+                className={dsTableActionBtnSecondary}
+                disabled={!magCanCreateRicambio}
+                onClick={() => adjustScorta(p.id, -1)}
+              >
+                −
+              </IconActionButton>
+              <IconActionButton
+                label="Aumenta"
+                tooltipContent={magCanCreateRicambio ? "Aumenta" : "Sola lettura"}
+                className={dsTableActionBtnPrimary}
+                disabled={!magCanCreateRicambio}
+                onClick={() => adjustScorta(p.id, 1)}
+              >
+                +
+              </IconActionButton>
+            </div>
+          </td>
+        </tr>
+      );
+    },
+    [
+      pagedMagazzino,
+      consumoMap,
+      flashRowId,
+      compatDisplayFor,
+      magCanCreateRicambio,
+      canUndoScortaById,
+    ],
+  );
+
   return (
     <GestionaleSectionGate module="magazzino">
     <div className={`magazzino-scroll-scope ${layoutPageRoot}`}>
@@ -1474,7 +1489,7 @@ export function MagazzinoView() {
         title="Magazzino ricambi"
         actions={
           <GestionalePageToolbarActions
-            className="max-sm:flex-nowrap max-sm:gap-1"
+            className="max-sm:flex-nowrap"
             leading={
               <MagazzinoGiacenzaBell
                 count={sottoScortaTotale}
@@ -1716,119 +1731,13 @@ export function MagazzinoView() {
           empty={filteredSorted.length === 0}
           emptyMessage="Nessun ricambio corrisponde ai filtri selezionati."
           colSpan={10}
+          virtualRows={{
+            rowCount: pagedMagazzino.length,
+            renderRow: renderMagazzinoDesktopRow,
+            estimateRowHeight: 72,
+          }}
         >
-              {pagedMagazzino.map((p) => {
-                const consumoRow = consumoMap.get(p.id);
-                const avgM = consumoRow?.avgMonthly ?? null;
-                const low = p.scorta < p.scortaMinima;
-                const flash = flashRowId === p.id;
-                return (
-                  <tr
-                    id={`magazzino-row-${p.id}`}
-                    key={p.id}
-                    data-gestionale-row-tone={gestionaleListTableRowTone({ flash, lowStock: low })}
-                    className={[gestionaleListTableRowClass, rowStockBg(p)].filter(Boolean).join(" ")}
-                  >
-                    <td
-                      className={`min-w-0 w-[7.75rem] max-w-[7.75rem] overflow-hidden ${gestionaleListTableTd} ${rowStockBorderFirstTd(p)}`}
-                    >
-                      <RicambioCodiceCell p={p} />
-                    </td>
-                    <td className={`${gestionaleListTableTd} font-medium`}>{p.marca}</td>
-                    <td className={`min-w-0 ${gestionaleListTableTd}`}>
-                      <div className="break-words font-medium leading-snug">{p.descrizione}</div>
-                      <div className="mt-0.5 break-words text-xs leading-snug text-zinc-500 dark:text-zinc-400">
-                        {compatDisplayFor(p)}
-                      </div>
-                    </td>
-                    <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-300`}>
-                      <MagazzinoOptionalTooltip content={p.categoria}>
-                        <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
-                      </MagazzinoOptionalTooltip>
-                    </td>
-                    <td className={gestionaleListTableTdCenter}>
-                      <MagazzinoScortaBadge value={p.scorta} low={low} variant="table" />
-                    </td>
-                    <td className={`${gestionaleListTableTdCenter} !text-inherit`}>
-                      <div className="flex justify-center">
-                        <MagazzinoScortaBadge value={p.scortaMinima} kind="minima" variant="table" />
-                      </div>
-                    </td>
-                    <td className={gestionaleListTableTdCenter}>
-                      {(() => {
-                        const stale = isModificaOlderThanMonths(p.dataUltimaModifica, MAGAZZINO_STALE_MODIFICA_MONTHS);
-                        return (
-                          <Tooltip
-                            content={
-                              stale
-                                ? `${formatTimestampHover(p.dataUltimaModifica)} · ${MAGAZZINO_STALE_MODIFICA_HINT}`
-                                : formatTimestampHover(p.dataUltimaModifica)
-                            }
-                            side="top"
-                          >
-                            <div
-                              className={`mx-auto inline-block max-w-full rounded-md px-1.5 py-1 text-center ${
-                                stale
-                                  ? "bg-amber-50/95 ring-1 ring-amber-200/80 dark:bg-amber-950/35 dark:ring-amber-800/55"
-                                  : ""
-                              }`}
-                            >
-                              <div className="text-[13px] font-medium tabular-nums text-zinc-900 dark:text-zinc-100">
-                                {formatDataUltimaMain(p.dataUltimaModifica)}
-                              </div>
-                              <div className="text-[11px] leading-tight text-zinc-500 dark:text-zinc-400">
-                                {p.autoreUltimaModifica}
-                              </div>
-                            </div>
-                          </Tooltip>
-                        );
-                      })()}
-                    </td>
-                    <td className={`${gestionaleListTableTdCenter} font-medium`}>{eur(p.prezzoVendita)}</td>
-                    <td className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300`}>
-                      <MagazzinoOptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
-                        <span className="inline-block max-w-full truncate">
-                          {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "dati insufficienti"}
-                        </span>
-                      </MagazzinoOptionalTooltip>
-                    </td>
-                    <td className={gestionaleListTableTdAzioni}>
-                      <div className={gestionaleListTableActionsGroupEnd}>
-                        <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
-                          <IconInfoMagazzino />
-                        </IconActionButton>
-                        <IconActionButton
-                          label="Annulla"
-                          tooltipContent={magCanCreateRicambio ? "Annulla" : "Sola lettura"}
-                          className={dsTableActionBtnUndo}
-                          disabled={!magCanCreateRicambio || !canUndoScortaById.get(p.id)}
-                          onClick={() => void undoLastScorta(p.id)}
-                        >
-                          <IconUndoMagazzino />
-                        </IconActionButton>
-                        <IconActionButton
-                          label="Diminuisci"
-                          tooltipContent={magCanCreateRicambio ? "Diminuisci" : "Sola lettura"}
-                          className={dsTableActionBtnSecondary}
-                          disabled={!magCanCreateRicambio}
-                          onClick={() => adjustScorta(p.id, -1)}
-                        >
-                          −
-                        </IconActionButton>
-                        <IconActionButton
-                          label="Aumenta"
-                          tooltipContent={magCanCreateRicambio ? "Aumenta" : "Sola lettura"}
-                          className={dsTableActionBtnPrimary}
-                          disabled={!magCanCreateRicambio}
-                          onClick={() => adjustScorta(p.id, 1)}
-                        >
-                          +
-                        </IconActionButton>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
+          {null}
         </GestionaleListTable>
 
         <div className="mt-4 space-y-3 xl:hidden">
@@ -1842,30 +1751,39 @@ export function MagazzinoView() {
               <CardMobile
                 id={`magazzino-row-${p.id}`}
                 key={p.id}
-                className={[
-                  rowStockBg(p),
+                className={
                   flash
                     ? "shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_45%,transparent)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]"
-                    : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                    : undefined
+                }
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-0.5">
                     <p className="line-clamp-2 text-lg font-semibold leading-snug tracking-tight text-[color:var(--cab-text)]">
                       {p.descrizione.trim() || "—"}
                     </p>
-                    <p className="break-all font-mono text-sm font-medium tabular-nums tracking-wide text-[color:var(--cab-text)]">
-                      {p.codiceFornitoreOriginale.trim() || "—"}
+                    <p
+                      className={`break-all font-mono text-sm tabular-nums tracking-wide ${
+                        isMagazzinoMobilePlaceholderValue(p.codiceFornitoreOriginale)
+                          ? "font-normal text-[color:var(--cab-text-muted)]"
+                          : "font-medium text-[color:var(--cab-text)]"
+                      }`}
+                    >
+                      {magazzinoMobileOptionalLabel(p.codiceFornitoreOriginale, "Nessuno codice")}
                     </p>
                     {p.codiceFornitoreOriginaleSecondario.trim() ? (
                       <p className="break-all font-mono text-xs font-medium tabular-nums tracking-wide text-zinc-500 dark:text-zinc-400">
                         {p.codiceFornitoreOriginaleSecondario}
                       </p>
                     ) : null}
-                    <p className="truncate text-[0.9375rem] font-medium leading-snug text-[color:var(--cab-text)]">
-                      {p.marca.trim() || "—"}
+                    <p
+                      className={`truncate text-[0.9375rem] leading-snug ${
+                        isMagazzinoMobilePlaceholderValue(p.marca)
+                          ? "font-normal text-[color:var(--cab-text-muted)]"
+                          : "font-medium text-[color:var(--cab-text)]"
+                      }`}
+                    >
+                      {magazzinoMobileOptionalLabel(p.marca, "Nessuna marca")}
                     </p>
                   </div>
                   <Tooltip content={low ? "Sotto scorta minima" : "Giacenza"} side="top">
@@ -1979,91 +1897,38 @@ export function MagazzinoView() {
       </div>
 
       {newOpen ? (
-        <GestionaleModalShell
-          onRequestClose={closeNewRicambioModal}
-          title="Nuovo ricambio"
-          titleId="new-ricambio-title"
-        >
-            <form {...gestionaleFormFocusScopeProps()} onSubmit={submitNew} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-              <GestionaleModalScrollBody className="space-y-4">
-                <RicambioFormFields
-                  form={newForm}
-                  setForm={setNewForm}
-                  formResetKey={newRicambioDraftId ?? "new"}
-                  relaxHtmlValidation
-                  codiceOriginaleAvvisoDuplicato={
-                    nuovoCodiceDupEsistente
-                      ? {
-                          existing: nuovoCodiceDupEsistente,
-                          onVaiAlRicambio: () => focusRicambioInTable(nuovoCodiceDupEsistente.id),
-                        }
-                      : null
-                  }
-                  listFieldForceInvalid={newListFieldInvalid}
-                />
-                {newRicambioDraftId ? (
-                  <RecordImageManager
-                    scope="magazzino"
-                    recordId={newRicambioDraftId}
-                    canEdit={magCanCreateRicambio}
-                    auditLog={false}
-                    hubCardLayout
-                  />
-                ) : null}
-              </GestionaleModalScrollBody>
-              <footer className={`${dsModalFormFooter} flex-col items-stretch`}>
-                <LoadingButton
-                  type="submit"
-                  loading={saveBusy}
-                  preset="salva"
-                  loadingLabel="Salvataggio…"
-                  className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
-                >
-                  Salva in magazzino
-                </LoadingButton>
-              </footer>
-            </form>
-        </GestionaleModalShell>
+        <RicambioNewModal
+          marche={marche}
+          categorie={categorie}
+          mezziListePrefs={mezziListePrefs}
+          authorName={authorName}
+          prodotti={prodotti}
+          magCanCreateRicambio={magCanCreateRicambio}
+          onClose={closeNewRicambioModal}
+          onSaveError={(message) => toastError(message)}
+          onVaiAlRicambioDuplicato={(id) => focusRicambioInTable(id)}
+          onSaved={(ui) => {
+            registerOrderIndex(ui.id);
+            patchProdotti((prev) => [ui, ...prev]);
+            completeMagazzinoSave(ui.id, "Ricambio creato in magazzino.", "entity_created");
+          }}
+        />
       ) : null}
 
       {detail && detailRicambio && detail.mode === "info" ? (
-        <GestionaleModalShell
-          onRequestClose={closeDetail}
-          title="Scheda ricambio"
-          titleId="detail-ricambio-title"
-          maxWidthClass="max-w-lg"
-        >
-          <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-            <GestionaleModalScrollBody>
-              <RicambioInfoPanel
-                ricambio={detailRicambio}
-                compatDisplay={compatDisplayFor(detailRicambio)}
-                consumo={consumoMap.get(detailRicambio.id)}
-                formatEur={eur}
-                canEditPhotos={magCanCreateRicambio}
-                onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
-                logTimeline={infoTimeline}
-                logLoading={magLogFeedLoading}
-                onDismissLogEntry={removeMagazzinoLogEntry}
-              />
-            </GestionaleModalScrollBody>
-            <footer className={`${dsModalFormFooter} flex-col items-stretch`}>
-              <MagazzinoDisabledButtonTooltip
-                content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
-                disabled={!magCanCreateRicambio}
-              >
-                <button
-                  type="button"
-                  onClick={startEditFromInfo}
-                  className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
-                  disabled={!magCanCreateRicambio}
-                >
-                  Modifica
-                </button>
-              </MagazzinoDisabledButtonTooltip>
-            </footer>
-          </div>
-        </GestionaleModalShell>
+        <MagazzinoRicambioInfoModal
+          ricambio={detailRicambio}
+          compatDisplay={compatDisplayFor(detailRicambio)}
+          consumo={consumoMap.get(detailRicambio.id)}
+          formatEur={eur}
+          magCanCreateRicambio={magCanCreateRicambio}
+          logTimeline={infoTimeline}
+          logLoading={magLogFeedLoading}
+          onClose={closeDetail}
+          onEdit={startEditFromInfo}
+          onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
+          onDismissLogEntry={removeMagazzinoLogEntry}
+        />
       ) : null}
 
       {detail && detailRicambio && detail.mode === "edit" ? (
@@ -2133,41 +1998,11 @@ export function MagazzinoView() {
       </Drawer>
 
       {dupCheckModalOpen ? (
-        <GestionaleModalShell
-          onRequestClose={() => setDupCheckModalOpen(false)}
-          title="Codici duplicati in archivio"
-          titleId="dup-magazzino-title"
-          maxWidthClass="max-w-lg"
-        >
-            <GestionaleModalScrollBody className="space-y-3">
-              {archivioDupCodeGroups.length === 0 ? (
-                <p className="text-sm text-zinc-600 dark:text-zinc-400">Nessun codice duplicato rilevato.</p>
-              ) : (
-                <ul className="space-y-4">
-                  {archivioDupCodeGroups.map((g: MagazzinoArchiveDuplicateCodeGroup) => (
-                    <li
-                      key={g.normalizedKey}
-                      className="rounded-xl border border-zinc-200 bg-zinc-50/60 p-3 dark:border-zinc-700 dark:bg-zinc-800/30"
-                    >
-                      <p className="text-xs font-bold uppercase tracking-wide text-zinc-700 dark:text-zinc-200">
-                        Codice <span className="font-mono normal-case">{g.labelCode}</span>
-                      </p>
-                      <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">
-                        {g.items.length} ricambi con lo stesso codice normalizzato
-                      </p>
-                      <ul className="mt-2 space-y-2">
-                        {g.items.map((p) => (
-                          <li key={p.id}>
-                            <ArchiveDupRicambioRow p={p} onOpen={(id) => focusRicambioInTable(id)} />
-                          </li>
-                        ))}
-                      </ul>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </GestionaleModalScrollBody>
-        </GestionaleModalShell>
+        <MagazzinoDupCodesModal
+          groups={archivioDupCodeGroups}
+          onClose={() => setDupCheckModalOpen(false)}
+          onOpenRicambio={(id) => focusRicambioInTable(id)}
+        />
       ) : null}
       <SettingsEliminaConfirmDialog
         open={eliminaRicambioTarget != null}

@@ -1,0 +1,31 @@
+/* Tabella utenti Security — scroll orizzontale progressivo, azioni sticky a destra */
+
+.security-users-dense-table {
+  min-width: 52rem;
+}
+
+@media (max-width: 1280px) {
+  .security-users-dense-table {
+    min-width: 44rem;
+  }
+
+  /* Permessi */
+  .security-users-dense-table col:nth-child(5),
+  .security-users-dense-table thead th:nth-child(5),
+  .security-users-dense-table tbody td:nth-child(5) {
+    display: none;
+  }
+}
+
+@media (max-width: 1150px) {
+  .security-users-dense-table {
+    min-width: 38rem;
+  }
+
+  /* Cliente associato */
+  .security-users-dense-table col:nth-child(3),
+  .security-users-dense-table thead th:nth-child(3),
+  .security-users-dense-table tbody td:nth-child(3) {
+    display: none;
+  }
+}

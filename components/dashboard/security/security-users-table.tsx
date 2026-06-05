@@ -1,37 +1,101 @@
 "use client";
 
+import "./security-users-table.css";
+
 import { useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
+import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";
+import {
+  SecurityEditNameModal,
+  type SecurityEditProfileValues,
+} from "@/components/dashboard/security/security-edit-name-modal";
+import { deleteUserByAdminAction } from "@/src/actions/admin-users";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
+import { QK } from "@/src/lib/react-query/invalidate-related";
+import { SecurityRoleBadge, SecurityStatusBadge } from "@/components/dashboard/security/security-role-badge";
+import {
+  CLIENTE_REF_UNKNOWN_MSG,
+  fieldClienteAssociationMessage,
+  validateClienteAssociationForRole,
+} from "@/src/lib/auth/cliente-portal-scope";
+import {
+  GestionaleListTable,
+  GestionaleListTableActionsHead,
+  GestionaleListTableRow,
+  GlobalTableHeadLabel,
+  GlobalTableSortTh,
+} from "@/components/gestionale/global-table";
+import { PageToolbar, PageToolbarResultCount } from "@/components/design-system/page-toolbar";
+import { cycleReportSort, type ReportSortPhase } from "@/components/report/report-sort-th";
+import { TablePagination } from "@/components/gestionale/table-pagination";
+import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { SecurityInlineNotice } from "@/components/dashboard/security/security-inline-notice";
 import { APP_ROLES, hasPermission, resolveRole, roleLabel, type AppRole } from "@/lib/auth/rbac";
-import { buildInitialModuleDraft } from "@/components/dashboard/security/security-user-module-permissions-editor";
-import { snapshotModuleDraft } from "@/lib/security/user-module-permissions";
-import { modulePermissionsPayloadFromDraft } from "@/lib/security/user-module-permissions";
-import type { ModulePermissionDraftRow } from "@/lib/security/user-module-permissions";
+import {
+  buildSecurityUserPatches,
+  rowsSnapshot,
+  type EditableSecurityUser,
+} from "@/lib/security/build-security-user-patches";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
 import { PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
-import type { SecurityUserPermissionRow } from "@/src/actions/security-users-permissions";
-import { SecurityEditNameModal } from "@/components/dashboard/security/security-edit-name-modal";
-import { SecurityRoleBadge, SecurityStatusBadge } from "@/components/dashboard/security/security-role-badge";
-import { SecurityToggle } from "@/components/dashboard/security/security-toggle";
-import { GlobalTableHead, GestionaleListTableActionsHead } from "@/components/gestionale/global-table";
-import { cycleReportSort, ReportSortTh, type ReportSortPhase } from "@/components/report/report-sort-th";
-import { TablePagination } from "@/components/gestionale/table-pagination";
-import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import {
   dsBtnGhost,
-  dsInput,
   dsScrollbar,
   dsSkeletonPulse,
-  dsTable,
-  dsTableEmptyCell,
-  dsTableRow,
-  dsTableTd,
-  dsTableWrap,
+  dsTableActionBtnInfo,
+  dsTableActionBtnSecondary,
+  dsTableActionGlyph,
 } from "@/lib/ui/design-system";
+import {
+  gestionaleListColAzioniClass,
+  gestionaleListTableClass,
+  gestionaleListTableMobileEmptyClass,
+  gestionaleListTableTd,
+  gestionaleListTableTdAzioni,
+  gestionaleListTableActionsGroupEnd,
+} from "@/lib/ui/gestionale-list-table";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 
 export type SecurityUserSortKey = "nome" | "username" | "email" | "ruolo" | "clienteRef" | "clientAccess" | "stato";
 
-export type EditableSecurityUser = SecurityUserPermissionRow;
+export type { EditableSecurityUser };
+export { buildSecurityUserPatches, rowsSnapshot };
+
+const SECURITY_USERS_COL_COUNT = 7;
+const securityUsersTableClass = `security-users-dense-table ${gestionaleListTableClass}`;
+const securityUsersTableTd = `${gestionaleListTableTd} py-2`;
+
+/** Select compatto tabella/mobile: mantiene radius DS (inputClassName sostituisce dsInput intero). */
+const securityDenseSelectBase =
+  "min-h-8 w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] px-2.5 py-1 text-xs shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)]";
+
+function securityDenseSelectClass(associationErr: string | null): string {
+  if (!associationErr) return securityDenseSelectBase;
+  if (associationErr === CLIENTE_REF_UNKNOWN_MSG) {
+    return `${securityDenseSelectBase} border-[color:color-mix(in_srgb,var(--cab-danger)_55%,var(--cab-border))] focus:border-[color:color-mix(in_srgb,var(--cab-danger)_65%,var(--cab-border))] focus:ring-[color:color-mix(in_srgb,var(--cab-danger)_22%,transparent)]`;
+  }
+  return `${securityDenseSelectBase} border-[color:color-mix(in_srgb,var(--cab-warning)_55%,var(--cab-border))] focus:border-[color:color-mix(in_srgb,var(--cab-warning)_65%,var(--cab-border))] focus:ring-[color:color-mix(in_srgb,var(--cab-warning)_18%,transparent)]`;
+}
+
+/** Combobox searchable cliente: stesso stile dense + cursore testo. */
+function securityDenseSearchClass(associationErr: string | null): string {
+  return `${securityDenseSelectClass(associationErr)} cursor-text`;
+}
+
+const identityPrimaryClass = "truncate text-sm font-medium leading-snug text-[color:var(--cab-text)]";
+const identitySecondaryClass = "truncate text-xs leading-snug text-[color:var(--cab-text-muted)]";
+const identityUsernameClass = "truncate font-mono text-[10px] leading-snug text-[color:var(--cab-text-muted)]";
+
+function IconInfo({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+    </svg>
+  );
+}
 
 function compareUsers(a: EditableSecurityUser, b: EditableSecurityUser, key: SecurityUserSortKey, phase: "asc" | "desc"): number {
   const dir = phase === "asc" ? 1 : -1;
@@ -39,7 +103,7 @@ function compareUsers(a: EditableSecurityUser, b: EditableSecurityUser, key: Sec
     case "nome":
       return dir * a.nome.localeCompare(b.nome, "it");
     case "username":
-      return dir * (a.username || "").localeCompare(b.username || "", "it");
+      return dir * (a.username ?? "").localeCompare(b.username ?? "", "it");
     case "email":
       return dir * (a.email || "").localeCompare(b.email || "", "it");
     case "ruolo":
@@ -64,24 +128,312 @@ function applyRoleToRow(row: EditableSecurityUser, ruolo: AppRole): EditableSecu
     ...row,
     ruolo,
     clientLavorazioniAccessFromRole: fromRole,
-    clientLavorazioniAccess: fromRole ? true : row.clientLavorazioniAccess,
+    clientLavorazioniAccess: fromRole,
   };
+}
+
+export function rowClienteAssociationError(
+  row: EditableSecurityUser,
+  knownClienti?: Set<string>,
+): string | null {
+  return validateClienteAssociationForRole(row.ruolo, row.clienteRef, knownClienti);
+}
+
+function UserIdentityCell({ row }: { row: EditableSecurityUser }) {
+  const title = [row.nome, row.email, row.username].filter(Boolean).join(" · ");
+  return (
+    <div className="flex min-w-0 flex-col gap-0.5" title={title}>
+      <span className={identityPrimaryClass}>{row.nome}</span>
+      <span className={identitySecondaryClass}>{row.email || "—"}</span>
+      {row.username ? <span className={identityUsernameClass}>@{row.username}</span> : null}
+    </div>
+  );
+}
+
+function PortalAccessBadge({ row }: { row: EditableSecurityUser }) {
+  if (row.clientLavorazioniAccessFromRole) {
+    return (
+      <span className="inline-flex rounded bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--cab-primary)]">
+        Da ruolo
+      </span>
+    );
+  }
+  return (
+    <span className="inline-flex rounded bg-[color:color-mix(in_srgb,var(--cab-text-muted)_12%,var(--cab-surface))] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--cab-text-muted)]">
+      Non disponibile
+    </span>
+  );
+}
+
+function PermissionsBadge({ row }: { row: EditableSecurityUser }) {
+  if (row.hasModulePermissionOverrides) {
+    return (
+      <span className="inline-flex max-w-full rounded bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--cab-primary)]">
+        Personalizzati
+      </span>
+    );
+  }
+  return <span className="text-[10px] text-[color:var(--cab-text-muted)]">Da ruolo</span>;
+}
+
+type RowEditorProps = {
+  row: EditableSecurityUser;
+  readOnly: boolean;
+  knownClienti?: Set<string>;
+  onRoleChange: (userId: string, ruolo: AppRole) => void;
+  onPatch: (userId: string, patch: Partial<EditableSecurityUser>) => void;
+  density?: "table" | "mobile";
+  roleInputClassName?: string;
+};
+
+function SecurityUserRoleField({ row, readOnly, onRoleChange, roleInputClassName }: RowEditorProps) {
+  if (readOnly) return <SecurityRoleBadge role={row.ruolo} />;
+  return (
+    <GlobalSelect
+      selectOnly
+      variant="default"
+      value={row.ruolo}
+      onChange={(v) => onRoleChange(row.id, v as AppRole)}
+      aria-label={`Ruolo ${row.nome}`}
+      inputClassName={roleInputClassName ?? securityDenseSelectBase}
+      items={APP_ROLES.map((role) => ({
+        value: role,
+        label: roleLabel(role),
+      }))}
+    />
+  );
+}
+
+function SecurityUserClienteField({ row, readOnly, knownClienti, onPatch, density = "table" }: RowEditorProps) {
+  const isCliente = row.ruolo === "cliente";
+  const associationErr = rowClienteAssociationError(row, knownClienti);
+  const displayErr = fieldClienteAssociationMessage(associationErr);
+  const errorId = `security-cliente-err-${row.id}`;
+  const noticeVariant = associationErr === CLIENTE_REF_UNKNOWN_MSG ? "danger" : "warning";
+  const hintMessage = density === "mobile" ? displayErr : associationErr;
+
+  if (readOnly) {
+    return (
+      <span className="block max-w-full truncate text-xs" title={row.clienteRef ?? undefined}>
+        {row.clienteRef || "—"}
+      </span>
+    );
+  }
+  return (
+    <div className="min-w-0 space-y-1.5">
+      <GlobalSettingsListSelect
+        variant="default"
+        listKey="mezzi:clienti"
+        allowAdd={false}
+        value={row.clienteRef ?? ""}
+        onChange={(v) => {
+          const next = v.trim() || null;
+          if (isCliente && !next) return;
+          onPatch(row.id, { clienteRef: next });
+        }}
+        aria-label={`Cliente associato ${row.nome}`}
+        aria-invalid={!!associationErr || undefined}
+        aria-describedby={associationErr ? errorId : undefined}
+        inputClassName={securityDenseSearchClass(associationErr)}
+        placeholder={isCliente ? "Cerca o seleziona…" : "—"}
+        required={isCliente}
+      />
+      {hintMessage ? (
+        <SecurityInlineNotice variant={noticeVariant} appearance="inline" id={errorId}>
+          {hintMessage}
+        </SecurityInlineNotice>
+      ) : null}
+    </div>
+  );
+}
+
+function SecurityUserPortalField({ row }: { row: EditableSecurityUser }) {
+  return <PortalAccessBadge row={row} />;
+}
+
+function SecurityUserRowActions({
+  row,
+  readOnly,
+  onOpenDetail,
+  onEditName,
+}: {
+  row: EditableSecurityUser;
+  readOnly: boolean;
+  onOpenDetail: (userId: string) => void;
+  onEditName: (userId: string) => void;
+}) {
+  return (
+    <div className={gestionaleListTableActionsGroupEnd}>
+      {!readOnly ? (
+        <IconActionButton
+          type="button"
+          label="Modifica profilo"
+          className={dsTableActionBtnSecondary}
+          onClick={() => onEditName(row.id)}
+        >
+          <HubIconPencil className={dsTableActionGlyph} />
+        </IconActionButton>
+      ) : null}
+      <IconActionButton
+        type="button"
+        label="Dettaglio utente"
+        className={dsTableActionBtnInfo}
+        onClick={() => onOpenDetail(row.id)}
+      >
+        <IconInfo />
+      </IconActionButton>
+    </div>
+  );
+}
+
+function SecurityUserTableRow({
+  row,
+  readOnly,
+  knownClienti,
+  onOpenDetail,
+  onEditName,
+  onRoleChange,
+  onPatch,
+}: {
+  row: EditableSecurityUser;
+  readOnly: boolean;
+  knownClienti?: Set<string>;
+  onOpenDetail: (userId: string) => void;
+  onEditName: (userId: string) => void;
+  onRoleChange: (userId: string, ruolo: AppRole) => void;
+  onPatch: (userId: string, patch: Partial<EditableSecurityUser>) => void;
+}) {
+  const editorProps: RowEditorProps = { row, readOnly, knownClienti, onRoleChange, onPatch };
+  return (
+    <GestionaleListTableRow>
+      <td className={`min-w-0 ${securityUsersTableTd}`}>
+        <UserIdentityCell row={row} />
+      </td>
+      <td className={`min-w-0 ${securityUsersTableTd}`}>
+        <SecurityUserRoleField {...editorProps} />
+      </td>
+      <td className={`min-w-0 ${securityUsersTableTd}`}>
+        <SecurityUserClienteField {...editorProps} />
+      </td>
+      <td className={`min-w-0 ${securityUsersTableTd}`}>
+        <SecurityUserPortalField row={row} />
+      </td>
+      <td className={`min-w-0 ${securityUsersTableTd}`}>
+        <PermissionsBadge row={row} />
+      </td>
+      <td className={`min-w-0 ${securityUsersTableTd}`}>
+        <SecurityStatusBadge lastSignInAt={row.lastSignInAt} />
+      </td>
+      <td className={gestionaleListTableTdAzioni}>
+        <SecurityUserRowActions row={row} readOnly={readOnly} onOpenDetail={onOpenDetail} onEditName={onEditName} />
+      </td>
+    </GestionaleListTableRow>
+  );
+}
+
+function SecurityUserMobileCard({
+  row,
+  readOnly,
+  knownClienti,
+  onOpenDetail,
+  onEditName,
+  onRoleChange,
+  onPatch,
+}: {
+  row: EditableSecurityUser;
+  readOnly: boolean;
+  knownClienti?: Set<string>;
+  onOpenDetail: (userId: string) => void;
+  onEditName: (userId: string) => void;
+  onRoleChange: (userId: string, ruolo: AppRole) => void;
+  onPatch: (userId: string, patch: Partial<EditableSecurityUser>) => void;
+}) {
+  const associationErr = rowClienteAssociationError(row, knownClienti);
+  const isClienteRole = row.ruolo === "cliente";
+  const editorProps: RowEditorProps = {
+    row,
+    readOnly,
+    knownClienti,
+    onRoleChange,
+    onPatch,
+    density: "mobile",
+    roleInputClassName: securityDenseSelectBase,
+  };
+  const fieldLabel = "text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]";
+  const clienteBlockClass = associationErr
+    ? "space-y-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-warning)_30%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_6%,var(--cab-surface))] p-2.5"
+    : "space-y-2 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-2.5";
+  const cardAccentClass = associationErr
+    ? "ring-1 ring-[color:color-mix(in_srgb,var(--cab-warning)_25%,var(--cab-border))]"
+    : "";
+
+  return (
+    <CardMobile className={`gap-3 !p-3 sm:!p-3.5 ${cardAccentClass}`.trim()}>
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <p className={identityPrimaryClass}>{row.nome}</p>
+          <p className={`mt-0.5 ${identitySecondaryClass}`}>{row.email || "—"}</p>
+          {row.username ? <p className={`mt-0.5 ${identityUsernameClass}`}>@{row.username}</p> : null}
+        </div>
+        <SecurityStatusBadge lastSignInAt={row.lastSignInAt} align="end" />
+      </div>
+
+      <div className="space-y-3 border-t border-[color:var(--cab-border)] pt-3">
+        <label className="flex min-w-0 items-center gap-2">
+          <span className={`w-14 shrink-0 ${fieldLabel}`}>Ruolo</span>
+          <div className="min-w-0 flex-1">
+            <SecurityUserRoleField {...editorProps} />
+          </div>
+        </label>
+
+        {isClienteRole ? (
+          <div className={clienteBlockClass}>
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-[color:var(--cab-text)]">Cliente per portale</p>
+              <p className="mt-0.5 text-[10px] leading-snug text-[color:var(--cab-text-muted)]">
+                Collega l&apos;utente all&apos;anagrafica mezzi
+              </p>
+            </div>
+            <SecurityUserClienteField {...editorProps} />
+          </div>
+        ) : null}
+
+        <div className="flex min-w-0 items-center justify-between gap-3 border-t border-[color:var(--cab-border)] pt-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={fieldLabel}>{PORTALE_CLIENTI_LABEL}</span>
+            <SecurityUserPortalField row={row} />
+          </div>
+          <div className="flex min-w-0 items-center gap-2">
+            <span className={fieldLabel}>Permessi</span>
+            <PermissionsBadge row={row} />
+          </div>
+        </div>
+      </div>
+
+      <CardMobileActions>
+        {!readOnly ? (
+          <button type="button" className={dsBtnGhost} onClick={() => onEditName(row.id)}>
+            Modifica profilo
+          </button>
+        ) : null}
+        <button type="button" className={dsBtnGhost} onClick={() => onOpenDetail(row.id)}>
+          Dettaglio
+        </button>
+      </CardMobileActions>
+    </CardMobile>
+  );
 }
 
 function SecurityUsersTableSkeleton() {
   return (
-    <div className={`${dsTableWrap} ${dsScrollbar}`}>
-      <table className={dsTable}>
-        <tbody>
-          {Array.from({ length: 6 }).map((_, i) => (
-            <tr key={i} className={dsTableRow}>
-              <td colSpan={9} className="px-3 py-3">
-                <div className={`h-4 w-full ${dsSkeletonPulse}`} />
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className={`hidden lg:block ${dsScrollbar}`}>
+      <div className="rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-1">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="border-b border-[color:var(--cab-border)] px-3 py-3 last:border-b-0">
+            <div className={`h-4 w-full ${dsSkeletonPulse}`} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -91,6 +443,8 @@ type Props = {
   loading: boolean;
   readOnly: boolean;
   permissionRows: UserPermissionRow[];
+  knownClienti?: Set<string>;
+  currentUserId?: string | null;
   onRowsChange: (rows: EditableSecurityUser[]) => void;
   onOpenDetail: (userId: string) => void;
   onRoleChange?: (userId: string, ruolo: AppRole) => void;
@@ -101,15 +455,21 @@ export function SecurityUsersTable({
   loading,
   readOnly,
   permissionRows,
+  knownClienti,
+  currentUserId,
   onRowsChange,
   onOpenDetail,
   onRoleChange,
 }: Props) {
+  const queryClient = useQueryClient();
+  const gestToast = useGestionaleToast();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [sortColumn, setSortColumn] = useState<SecurityUserSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<ReportSortPhase>("natural");
   const [editNameUserId, setEditNameUserId] = useState<string | null>(null);
+  const [deletePending, setDeletePending] = useState(false);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -145,7 +505,25 @@ export function SecurityUsersTable({
 
   const paged = useMemo(() => sliceItems(filtered), [filtered, sliceItems]);
 
-  const editNameUser = editNameUserId ? rows.find((r) => r.id === editNameUserId) ?? null : null;
+  const editNameUser = editNameUserId ? (rows.find((r) => r.id === editNameUserId) ?? null) : null;
+
+  async function handleDeleteUser(userId: string) {
+    setDeletePending(true);
+    try {
+      const res = await deleteUserByAdminAction(userId);
+      if (!res.ok) {
+        gestToast.error(res.message);
+        return;
+      }
+      onRowsChange(rows.filter((r) => r.id !== userId));
+      setEditNameUserId(null);
+      await invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient });
+      await queryClient.invalidateQueries({ queryKey: QK.securityUsersPermissions });
+      gestToast.successOnce("security-user-delete", "Utente eliminato.");
+    } finally {
+      setDeletePending(false);
+    }
+  }
 
   function handleSort(key: SecurityUserSortKey) {
     const next = cycleReportSort(sortColumn, sortPhase, key);
@@ -163,257 +541,186 @@ export function SecurityUsersTable({
     onRoleChange?.(userId, ruolo);
   }
 
+  const filtersActive = roleFilter !== "all";
+  const searchActive = search.trim().length > 0;
+
+  function resetFilters() {
+    setRoleFilter("all");
+    resetPage();
+  }
+
+  function resetSearch() {
+    setSearch("");
+    resetPage();
+  }
+
   if (loading) return <SecurityUsersTableSkeleton />;
+
+  const rowProps = {
+    readOnly,
+    knownClienti,
+    onOpenDetail,
+    onEditName: setEditNameUserId,
+    onRoleChange: handleRoleChange,
+    onPatch: patchRow,
+  };
 
   return (
     <>
-      <div className="mb-3 flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
-        <label className="block min-w-0 flex-1 sm:max-w-xs">
-          <span className="sr-only">Cerca utente</span>
-          <input
-            className={`${dsInput} w-full`}
-            placeholder="Cerca per nome, username o email…"
+      <PageToolbar
+        className="mb-3"
+        search={
+          <GestionaleSearchField
+            id="security-users-search"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               resetPage();
             }}
+            placeholder="Cerca per nome, username o email…"
+            aria-label="Cerca utente"
+            wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
           />
-        </label>
-        <label className="block min-w-[10rem] sm:min-w-[12rem]">
-          <span className="sr-only">Filtra ruolo</span>
-          <GlobalSelect
-            selectOnly
-            variant="filter"
-            value={roleFilter}
-            onChange={(v) => {
-              setRoleFilter(v as "all" | AppRole);
-              resetPage();
-            }}
-            aria-label="Filtra ruolo"
-            items={[
-              { value: "all", label: "Tutti i ruoli" },
-              ...APP_ROLES.map((role) => ({ value: role, label: roleLabel(role) })),
-            ]}
+        }
+        filtersExpanded={filtersExpanded}
+        onFiltersToggle={() => setFiltersExpanded((o) => !o)}
+        filtersActive={filtersActive}
+        filterDrawerTitle="Filtra utenti"
+        onFilterReset={resetFilters}
+        filtersPanel={
+          <label className="flex min-w-0 flex-col gap-1 sm:max-w-xs">
+            <span className="text-[11px] font-medium text-[color:var(--cab-text-muted)]">Ruolo</span>
+            <GlobalSelect
+              selectOnly
+              variant="filter"
+              value={roleFilter}
+              onChange={(v) => {
+                setRoleFilter(v as "all" | AppRole);
+                resetPage();
+              }}
+              aria-label="Filtra ruolo"
+              items={[
+                { value: "all", label: "Tutti i ruoli" },
+                ...APP_ROLES.map((role) => ({ value: role, label: roleLabel(role) })),
+              ]}
+            />
+          </label>
+        }
+        meta={
+          <PageToolbarResultCount
+            count={filtered.length}
+            filtersActive={filtersActive}
+            searchActive={searchActive}
+            onFilterReset={resetFilters}
+            onSearchReset={resetSearch}
+            singularLabel="utente"
+            pluralLabel="utenti"
           />
-        </label>
-        <span className="text-xs text-[color:var(--cab-text-muted)]">
-          <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">{filtered.length}</span> utent
-          {filtered.length === 1 ? "e" : "i"}
-        </span>
-      </div>
+        }
+      />
 
       {filtered.length === 0 ? (
-        <div className={dsTableWrap}>
-          <table className={dsTable}>
-            <tbody>
-              <tr>
-                <td className={dsTableEmptyCell}>Nessun utente corrisponde ai filtri.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
+        <>
+          <GestionaleListTable
+            visibilityClass="hidden lg:block"
+            className={securityUsersTableClass}
+            colSpan={SECURITY_USERS_COL_COUNT}
+            empty
+            emptyMessage="Nessun utente corrisponde ai filtri."
+            headRow={
+              <>
+                <GlobalTableHeadLabel label="Identità" />
+                <GlobalTableHeadLabel label="Ruolo" />
+                <GlobalTableHeadLabel label="Cliente associato" />
+                <GlobalTableHeadLabel label={`Accesso ${PORTALE_CLIENTI_LABEL}`} />
+                <GlobalTableHeadLabel label="Permessi" />
+                <GlobalTableHeadLabel label="Ultimo accesso" />
+                <GestionaleListTableActionsHead />
+              </>
+            }
+          >
+            {null}
+          </GestionaleListTable>
+          <p className={`lg:hidden ${gestionaleListTableMobileEmptyClass}`}>Nessun utente corrisponde ai filtri.</p>
+        </>
       ) : (
         <>
-          <div className={`${dsTableWrap} ${dsScrollbar}`}>
-            <table className={`${dsTable} text-xs`}>
-              <GlobalTableHead>
-                <ReportSortTh label="Nome" columnKey="nome" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
-                <ReportSortTh label="Username" columnKey="username" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
-                <ReportSortTh label="Email" columnKey="email" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
-                <ReportSortTh label="Ruolo" columnKey="ruolo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
-                <ReportSortTh
+          <GestionaleListTable
+            visibilityClass="hidden lg:block"
+            className={securityUsersTableClass}
+            colSpan={SECURITY_USERS_COL_COUNT}
+            colgroup={
+              <>
+                <col className="w-[18%]" />
+                <col className="w-[12%]" />
+                <col className="w-[14%]" />
+                <col className="w-[14%]" />
+                <col className="w-[10%]" />
+                <col className="w-[10%]" />
+                <col className={gestionaleListColAzioniClass} />
+              </>
+            }
+            headRow={
+              <>
+                <GlobalTableSortTh label="Identità" columnKey="nome" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                <GlobalTableSortTh label="Ruolo" columnKey="ruolo" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                <GlobalTableSortTh
                   label="Cliente associato"
                   columnKey="clienteRef"
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={handleSort}
                 />
-                <ReportSortTh
+                <GlobalTableSortTh
                   label={`Accesso ${PORTALE_CLIENTI_LABEL}`}
                   columnKey="clientAccess"
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={handleSort}
                 />
-                <th className="px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
-                  Permessi
-                </th>
-                <ReportSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                <GlobalTableHeadLabel label="Permessi" />
+                <GlobalTableSortTh label="Ultimo accesso" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                 <GestionaleListTableActionsHead />
-              </GlobalTableHead>
-              <tbody>
-                {paged.map((row) => {
-                  const portalLocked = row.clientLavorazioniAccessFromRole;
-                  return (
-                    <tr key={row.id} className={dsTableRow}>
-                      <td className={`${dsTableTd} font-medium text-[color:var(--cab-text)]`}>
-                        <div className="flex min-w-0 items-center gap-1.5">
-                          <span className="min-w-0 truncate">{row.nome}</span>
-                          {!readOnly ? (
-                            <button
-                              type="button"
-                              className="shrink-0 text-[10px] font-semibold text-[color:var(--cab-primary)] hover:underline"
-                              onClick={() => setEditNameUserId(row.id)}
-                            >
-                              Modifica
-                            </button>
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className={`${dsTableTd} max-w-[10rem] truncate font-mono text-[11px]`} title={row.username ?? undefined}>
-                        {row.username || "—"}
-                      </td>
-                      <td className={`${dsTableTd} max-w-[14rem] truncate`} title={row.email}>
-                        {row.email || "—"}
-                      </td>
-                      <td className={dsTableTd}>
-                        {readOnly ? (
-                          <SecurityRoleBadge role={row.ruolo} />
-                        ) : (
-                          <GlobalSelect
-                            selectOnly
-                            variant="default"
-                            value={row.ruolo}
-                            onChange={(v) => handleRoleChange(row.id, v as AppRole)}
-                            aria-label={`Ruolo ${row.nome}`}
-                            inputClassName="min-h-8 py-1 text-xs"
-                            items={APP_ROLES.map((role) => ({
-                              value: role,
-                              label: roleLabel(role),
-                            }))}
-                          />
-                        )}
-                      </td>
-                      <td className={dsTableTd}>
-                        {readOnly ? (
-                          <span className="max-w-[12rem] truncate" title={row.clienteRef ?? undefined}>
-                            {row.clienteRef || "—"}
-                          </span>
-                        ) : (
-                          <GlobalSettingsListSelect
-                            selectOnly
-                            variant="default"
-                            listKey="mezzi:clienti"
-                            value={row.clienteRef ?? ""}
-                            onChange={(v) => patchRow(row.id, { clienteRef: v.trim() || null })}
-                            aria-label={`Cliente associato ${row.nome}`}
-                            inputClassName="min-h-8 py-1 text-xs"
-                            placeholder="—"
-                          />
-                        )}
-                      </td>
-                      <td className={dsTableTd}>
-                        <div className="flex min-w-0 items-center gap-2">
-                          <SecurityToggle
-                            checked={row.clientLavorazioniAccess}
-                            disabled={readOnly || portalLocked}
-                            label={`Accesso lavorazioni clienti per ${row.nome}`}
-                            onChange={(next) => patchRow(row.id, { clientLavorazioniAccess: next })}
-                          />
-                          <span className="text-[10px] text-[color:var(--cab-text-muted)]">
-                            {portalLocked ? "Da ruolo" : row.clientLavorazioniAccess ? "ON" : "OFF"}
-                          </span>
-                        </div>
-                      </td>
-                      <td className={dsTableTd}>
-                        {row.hasModulePermissionOverrides ? (
-                          <span className="rounded bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-1.5 py-0.5 text-[10px] font-semibold text-[color:var(--cab-primary)]">
-                            Personalizzati
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-[color:var(--cab-text-muted)]">Da ruolo</span>
-                        )}
-                      </td>
-                      <td className={dsTableTd}>
-                        <SecurityStatusBadge lastSignInAt={row.lastSignInAt} />
-                      </td>
-                      <td className={dsTableTd}>
-                        <button type="button" className={dsBtnGhost} onClick={() => onOpenDetail(row.id)}>
-                          Dettaglio
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+              </>
+            }
+          >
+            {paged.map((row) => (
+              <SecurityUserTableRow key={row.id} row={row} {...rowProps} />
+            ))}
+          </GestionaleListTable>
+
+          <div className="space-y-3 lg:hidden">
+            {paged.map((row) => (
+              <SecurityUserMobileCard key={row.id} row={row} {...rowProps} />
+            ))}
           </div>
+
           {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={pagerLabel} /> : null}
         </>
       )}
 
-      <SecurityEditNameModal
-        open={!!editNameUser}
-        initialNome={editNameUser?.nome ?? ""}
-        onClose={() => setEditNameUserId(null)}
-        onSave={(nome) => {
-          if (editNameUserId) patchRow(editNameUserId, { nome });
-          setEditNameUserId(null);
-        }}
-      />
+      {editNameUser ? (
+        <SecurityEditNameModal
+          open
+          userId={editNameUser.id}
+          initialNome={editNameUser.nome}
+          initialUsername={editNameUser.username ?? ""}
+          userEmail={editNameUser.email}
+          readOnly={readOnly}
+          canDelete={!readOnly && editNameUser.id !== currentUserId}
+          deletePending={deletePending}
+          onClose={() => setEditNameUserId(null)}
+          onSave={(values: SecurityEditProfileValues) => {
+            patchRow(editNameUser.id, {
+              nome: values.nome,
+              username: values.username,
+            });
+            setEditNameUserId(null);
+          }}
+          onDelete={() => handleDeleteUser(editNameUser.id)}
+        />
+      ) : null}
     </>
   );
 }
 
-export function rowsSnapshot(rows: EditableSecurityUser[]): string {
-  return JSON.stringify(
-    rows.map((r) => ({
-      id: r.id,
-      nome: r.nome.trim(),
-      ruolo: r.ruolo,
-      clienteRef: r.clienteRef,
-      clientLavorazioniAccess: r.clientLavorazioniAccess,
-      clientLavorazioniAccessFromRole: r.clientLavorazioniAccessFromRole,
-    })),
-  );
-}
-
-export function buildSecurityUserPatches(
-  saved: EditableSecurityUser[],
-  draft: EditableSecurityUser[],
-  savedModuleSnapshots: Record<string, string>,
-  draftModuleDrafts: Record<string, ModulePermissionDraftRow[]>,
-  permissionRows: UserPermissionRow[],
-): import("@/src/actions/security-users-permissions").SecurityUserBatchPatch[] {
-  const savedById = new Map(saved.map((r) => [r.id, r]));
-  const patches: import("@/src/actions/security-users-permissions").SecurityUserBatchPatch[] = [];
-
-  for (const row of draft) {
-    const orig = savedById.get(row.id);
-    if (!orig) continue;
-    const patch: import("@/src/actions/security-users-permissions").SecurityUserBatchPatch = { userId: row.id };
-    let dirty = false;
-
-    if (row.nome.trim() !== orig.nome.trim()) {
-      patch.nome = row.nome.trim();
-      dirty = true;
-    }
-    const roleChanged = row.ruolo !== orig.ruolo;
-    if (roleChanged) {
-      patch.ruolo = row.ruolo;
-      patch.clearModulePermissions = true;
-      dirty = true;
-    }
-    const clienteRefChanged = (row.clienteRef ?? null) !== (orig.clienteRef ?? null);
-    if (clienteRefChanged) {
-      patch.clienteRef = row.clienteRef ?? null;
-      dirty = true;
-    }
-    if (!row.clientLavorazioniAccessFromRole && row.clientLavorazioniAccess !== orig.clientLavorazioniAccess) {
-      patch.clientLavorazioniAccess = row.clientLavorazioniAccess;
-      dirty = true;
-    }
-
-    const savedModSnap = savedModuleSnapshots[row.id] ?? snapshotModuleDraft(buildInitialModuleDraft(orig.ruolo, orig.id, permissionRows));
-    const draftMod = draftModuleDrafts[row.id];
-    const draftModSnap = draftMod ? snapshotModuleDraft(draftMod) : savedModSnap;
-    if (!roleChanged && draftModSnap !== savedModSnap && draftMod) {
-      patch.modulePermissions = modulePermissionsPayloadFromDraft(resolveRole(row.ruolo), draftMod);
-      dirty = true;
-    }
-
-    if (dirty) patches.push(patch);
-  }
-  return patches;
-}

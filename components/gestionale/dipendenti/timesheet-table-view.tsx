@@ -55,11 +55,12 @@ export function TimesheetTableView({
         accentDateYmd={accentDateYmd}
       />
       <DipendentiMobileDayList
-        monthKey={monthKey}
+        periodDays={periodDays}
         employees={employees}
         filterEmployeeId={filterEmployeeId}
         getCellValue={getCellValue}
         onDayClick={onCellClick}
+        onEmployeeClick={onEmployeeClick}
         entries={entries}
         tipiAssenza={tipiAssenza}
         readOnly={readOnly}

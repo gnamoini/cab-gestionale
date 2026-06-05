@@ -2,9 +2,15 @@
 
 import { useRef, type ReactNode } from "react";
 import { dsModalCloseBtn, dsModalHeader, dsModalHeaderInner, dsModalHeaderLead, dsModalTitle, dsModalTitleBlock, dsZDrawer } from "@/lib/ui/design-system";
-import { cabIosOverlaySurface } from "@/lib/ui/ios-mobile-tokens";
-import { CAB_MODAL_ROOT_ATTR } from "@/lib/ui/mobile-modal-behavior";
+import { cabIosOverlaySurface, cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
+import {
+  CAB_MODAL_ROOT_ATTR,
+  CAB_MODAL_SCROLL_ATTR,
+  gestionaleModalScrollBodyMobileClass,
+} from "@/lib/ui/mobile-modal-behavior";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
+import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 import { CloseButton } from "@/components/design-system/close-button";
 import { gestionaleLogPanelAsideClass } from "@/components/gestionale/gestionale-log-ui";
@@ -31,10 +37,25 @@ export function Drawer({
   lockScroll = true,
 }: DrawerProps) {
   const asideRef = useRef<HTMLElement>(null);
+  const maxMdDown = useMaxMdDown();
   useBodyScrollLock(lockScroll && open, "design-system-Drawer");
+  useOverlayBackHandler(open, onClose, "design-system-Drawer");
   useMobileModalKeyboard(asideRef);
 
   if (!open) return null;
+
+  const headerNode = (
+    <header className={dsModalHeader}>
+      <div className={dsModalHeaderInner}>
+        <div className={dsModalHeaderLead}>
+          <div className={dsModalTitleBlock}>
+            <h2 className={dsModalTitle}>{title}</h2>
+          </div>
+        </div>
+        <CloseButton onClick={onClose} className={dsModalCloseBtn} />
+      </div>
+    </header>
+  );
 
   return (
     <div
@@ -54,17 +75,19 @@ export function Drawer({
         aria-label={ariaLabel ?? title}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <header className={dsModalHeader}>
-          <div className={dsModalHeaderInner}>
-            <div className={dsModalHeaderLead}>
-              <div className={dsModalTitleBlock}>
-                <h2 className={dsModalTitle}>{title}</h2>
-              </div>
-            </div>
-            <CloseButton onClick={onClose} className={dsModalCloseBtn} />
+        <div
+          {...(maxMdDown ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
+          className={`flex min-h-0 min-w-0 flex-1 flex-col ${
+            maxMdDown
+              ? `${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} overflow-y-auto`
+              : "overflow-hidden"
+          }`.trim()}
+        >
+          {headerNode}
+          <div className="flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden">
+            {children}
           </div>
-        </header>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+        </div>
       </aside>
     </div>
   );

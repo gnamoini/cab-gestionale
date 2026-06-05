@@ -6,15 +6,24 @@ import { useAuth } from "@/context/auth-context";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
+import {
+  ToolbarGroup,
+  ToolbarGroupBody,
+  ToolbarGroupMetaRow,
+  ToolbarGroupPrimaryRow,
+} from "@/components/design-system";
+import { GestionaleRefreshToolbarButton } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityCreateUserModal } from "@/components/dashboard/security-create-user-modal";
 import { SecurityUserDetailDrawer } from "@/components/dashboard/security/security-user-detail-drawer";
 import {
   buildInitialModuleDraft,
 } from "@/components/dashboard/security/security-user-module-permissions-editor";
+import { SecurityClienteAuditPanel } from "@/components/dashboard/security/security-cliente-audit-panel";
 import {
   SecurityUsersTable,
   buildSecurityUserPatches,
+  rowClienteAssociationError,
   rowsSnapshot,
   type EditableSecurityUser,
 } from "@/components/dashboard/security/security-users-table";
@@ -30,14 +39,19 @@ import {
   snapshotModuleDraft,
   type ModulePermissionDraftRow,
 } from "@/lib/security/user-module-permissions";
-import { validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
+import { buildKnownClientiSet, validateClienteAssociationForRole } from "@/src/lib/auth/cliente-portal-scope";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { resolveRole, type AppRole } from "@/lib/auth/rbac";
 import {
+  SecurityInlineNotice,
+  securitySubsectionShellClass,
+} from "@/components/dashboard/security/security-inline-notice";
+import {
   dsBtnGhost,
-  dsBtnNeutral,
   dsBtnPrimary,
-  dsPageToolbar,
   dsPageToolbarBtn,
+  dsPageToolbarCtaCompact,
+  dsPageToolbarMetaChipAccent,
   dsSectionTitle,
 } from "@/lib/ui/design-system";
 
@@ -85,6 +99,11 @@ export function SecurityUsersPermissionsPanel({ readOnly = false }: Props) {
   const usersQ = useSecurityUsersPermissionsQuery(true);
   const serverUsers = usersQ.users;
   const permissionRows = usersQ.permissionRows;
+  const globalOpts = useGlobalOptions({ debugTag: "SecurityUsersPermissions" });
+  const knownClienti = useMemo(
+    () => buildKnownClientiSet(globalOpts.mezziListe.clienti ?? []),
+    [globalOpts.mezziListe.clienti],
+  );
 
   useEffect(() => {
     if (!usersQ.isSuccess || hydratedRef.current) return;
@@ -123,6 +142,11 @@ export function SecurityUsersPermissionsPanel({ readOnly = false }: Props) {
 
   const isDirty = isTableDirty || isModuleDirty;
 
+  const hasClienteAssociationViolations = useMemo(() => {
+    if (readOnly) return false;
+    return draftRows.some((row) => rowClienteAssociationError(row, knownClienti) != null);
+  }, [draftRows, knownClienti, readOnly]);
+
   const selectedUser = useMemo(
     () => draftRows.find((u) => u.id === selectedUserId) ?? null,
     [draftRows, selectedUserId],
@@ -140,7 +164,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false }: Props) {
   const handleSave = useCallback(async () => {
     if (!isDirty) return;
     for (const row of draftRows) {
-      const clienteErr = validateClienteRefForRole(row.ruolo, row.clienteRef);
+      const clienteErr = validateClienteAssociationForRole(row.ruolo, row.clienteRef, knownClienti);
       if (clienteErr) {
         gestToast.error(clienteErr);
         return;
@@ -206,6 +230,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false }: Props) {
     sessionUser?.id,
     syncFromServer,
     confirm,
+    knownClienti,
   ]);
 
   useEffect(() => {
@@ -261,61 +286,85 @@ export function SecurityUsersPermissionsPanel({ readOnly = false }: Props) {
 
   return (
     <ShellCard title="Utenti, ruoli e pagine consentite" subtitle="Gestione centralizzata di profili, ruoli, accesso portale clienti e permessi per modulo (menu ERP).">
-      <div className={`${dsPageToolbar} mb-4 min-w-0 w-full max-w-full`}>
-        <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
+      <ToolbarGroup className="mb-4">
+        <ToolbarGroupBody>
+          <ToolbarGroupPrimaryRow>
             {!readOnly ? (
-              <button type="button" className={dsBtnPrimary} onClick={() => setCreateOpen(true)}>
+              <button type="button" className={dsPageToolbarCtaCompact} onClick={() => setCreateOpen(true)}>
                 Nuovo utente
               </button>
             ) : null}
-            <button type="button" className={dsPageToolbarBtn} onClick={handleRefetch} disabled={usersQ.isFetching}>
-              {usersQ.isFetching ? "Aggiornamento…" : "Aggiorna"}
-            </button>
-          </div>
-          {!readOnly ? (
-            <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2">
-              {isDirty ? (
-                <span className="rounded-md bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_30%,var(--cab-border))]">
-                  Modifiche non salvate
-                </span>
-              ) : null}
-              <button type="button" className={dsBtnGhost} onClick={handleCancel} disabled={!isDirty || saving}>
-                Annulla modifiche
-              </button>
-              <button type="button" className={dsBtnNeutral} onClick={() => void handleSave()} disabled={!isDirty || saving}>
-                {saving ? "Salvataggio…" : "Salva"}
-              </button>
-            </div>
+            <GestionaleRefreshToolbarButton busy={usersQ.isFetching} onClick={handleRefetch} />
+          </ToolbarGroupPrimaryRow>
+          {!readOnly && isDirty ? (
+            <ToolbarGroupMetaRow>
+              <span className={dsPageToolbarMetaChipAccent} role="status">
+                Modifiche non salvate
+              </span>
+              <div className="flex min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2">
+                <button
+                  type="button"
+                  className={dsBtnGhost}
+                  onClick={handleCancel}
+                  disabled={saving}
+                >
+                  Annulla modifiche
+                </button>
+                <button
+                  type="button"
+                  className={dsBtnPrimary}
+                  onClick={() => void handleSave()}
+                  disabled={saving || hasClienteAssociationViolations}
+                  title={hasClienteAssociationViolations ? "Correggi le associazioni cliente prima di salvare." : undefined}
+                >
+                  {saving ? "Salvataggio…" : "Salva"}
+                </button>
+              </div>
+            </ToolbarGroupMetaRow>
           ) : null}
-        </div>
-      </div>
+        </ToolbarGroupBody>
+      </ToolbarGroup>
 
       {usersQ.isError ? (
-        <div className="mb-4 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_8%,var(--cab-surface))] px-3 py-2.5">
-          <p className="text-sm text-[color:var(--cab-danger)]">
+        <div className="mb-4 space-y-2">
+          <SecurityInlineNotice variant="danger" title="Errore caricamento">
             {usersQ.error instanceof Error ? usersQ.error.message : "Errore caricamento utenti."}
-          </p>
-          <button type="button" className={`${dsPageToolbarBtn} mt-2`} onClick={() => void usersQ.refetch()}>
+          </SecurityInlineNotice>
+          <button type="button" className={dsPageToolbarBtn} onClick={() => void usersQ.refetch()}>
             Riprova
           </button>
         </div>
       ) : null}
 
-      <h3 className={`${dsSectionTitle} mb-2`}>Associazione clienti</h3>
-      <p className="mb-3 text-xs text-[color:var(--cab-text-muted)]">
-        Collega ogni utente a un cliente dell&apos;anagrafica mezzi. Il ruolo Cliente richiede un cliente associato per accedere al portale.
-      </p>
+      <section className={`${securitySubsectionShellClass} space-y-3 p-3 sm:space-y-4 sm:p-4`} aria-label="Associazione clienti">
+        <header className="min-w-0">
+          <h3 className={dsSectionTitle}>Associazione clienti</h3>
+          <p className="mt-1 text-xs leading-relaxed text-[color:var(--cab-text-muted)] sm:text-[13px]">
+            Collega ogni utente a un cliente dell&apos;anagrafica mezzi. Il ruolo Cliente richiede un cliente associato
+            per accedere al portale.
+          </p>
+        </header>
 
-      <SecurityUsersTable
-        rows={usersQ.isError ? [] : draftRows}
-        loading={usersQ.isLoading}
-        readOnly={readOnly}
-        permissionRows={permissionRows}
-        onRowsChange={setDraftRows}
-        onOpenDetail={setSelectedUserId}
-        onRoleChange={handleRoleChange}
-      />
+        {hasClienteAssociationViolations ? (
+          <SecurityInlineNotice variant="warning" title="Associazioni incomplete">
+            Uno o più utenti con ruolo Cliente non hanno un cliente associato valido. Correggi prima di salvare.
+          </SecurityInlineNotice>
+        ) : null}
+
+        <SecurityUsersTable
+          rows={usersQ.isError ? [] : draftRows}
+          loading={usersQ.isLoading}
+          readOnly={readOnly}
+          permissionRows={permissionRows}
+          knownClienti={knownClienti}
+          currentUserId={sessionUser?.id}
+          onRowsChange={setDraftRows}
+          onOpenDetail={setSelectedUserId}
+          onRoleChange={handleRoleChange}
+        />
+      </section>
+
+      <SecurityClienteAuditPanel readOnly={readOnly} />
 
       <SecurityUserDetailDrawer
         user={selectedUser}

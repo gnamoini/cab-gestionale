@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import {
   handleFocusInForMobileModal,
   syncKeyboardCssVars,
@@ -16,11 +17,22 @@ export function IosInteractionStability() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    healBodyScrollLockState("ios-stability-mount");
     syncKeyboardCssVars();
     syncAppViewportFill();
 
     const vv = window.visualViewport;
+    const rootEl = document.documentElement;
+    const resizeObserver =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            syncAppViewportFill();
+          })
+        : null;
+    resizeObserver?.observe(rootEl);
+
     const onViewportChange = () => {
+      healBodyScrollLockState("viewport-change");
       syncKeyboardCssVars();
       syncAppViewportFill();
     };
@@ -31,6 +43,7 @@ export function IosInteractionStability() {
     document.addEventListener("focusin", handleFocusInForMobileModal, true);
 
     return () => {
+      resizeObserver?.disconnect();
       vv?.removeEventListener("resize", onViewportChange);
       vv?.removeEventListener("scroll", onViewportChange);
       window.removeEventListener("resize", onViewportChange);
@@ -39,8 +52,6 @@ export function IosInteractionStability() {
       document.documentElement.style.removeProperty("--cab-vv-height");
       document.documentElement.style.removeProperty("--cab-vv-offset-top");
       document.documentElement.style.removeProperty("--cab-keyboard-inset");
-      document.documentElement.style.removeProperty("--cab-app-width");
-      document.documentElement.style.removeProperty("--cab-app-height");
     };
   }, []);
 

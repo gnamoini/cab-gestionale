@@ -11,6 +11,7 @@ import {
   dsZModalHigh,
 } from "@/lib/ui/design-system";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 
 /** Layout azioni conferma — mobile: Annulla sotto, desktop: Annulla | Conferma a destra. */
 export const gestionaleConfirmActionsClass =
@@ -51,6 +52,7 @@ export function GestionaleConfirmDialog({
   onConfirm?: () => void;
 }) {
   useBodyScrollLock(open, "GestionaleConfirmDialog");
+  useOverlayBackHandler(open && !pending, onCancel, "GestionaleConfirmDialog");
 
   useEffect(() => {
     if (!open || pending) return;

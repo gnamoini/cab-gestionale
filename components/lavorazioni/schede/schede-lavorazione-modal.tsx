@@ -371,15 +371,15 @@ export function SchedeLavorazioneModal({
   useLayoutEffect(() => {
     draftRef.current = draft;
   }, [draft]);
-  const [ingressoF, setIngressoF] = useState<SchedaIngressoFields | null>(null);
+  const ingressoDraftRef = useRef<SchedaIngressoFields | null>(null);
   const [ingressoFormOpen, setIngressoFormOpen] = useState(false);
+  const [ingressoEditorInitial, setIngressoEditorInitial] = useState<SchedaIngressoFields | null>(null);
   const [lavDoc, setLavDoc] = useState<SchedaLavorazioniDoc | null>(null);
   const [ricDoc, setRicDoc] = useState<SchedaRicambiDoc | null>(null);
   const [eliminaConfirmTipo, setEliminaConfirmTipo] = useState<SchedaTipo | null>(null);
   const baselineIngressoJson = useRef<string | null>(null);
   const baselineLavorazioniJson = useRef<string | null>(null);
   const baselineRicambiJson = useRef<string | null>(null);
-
   const emitLog = useCallback(
     (ev: SchedaLogEv) => {
       onSchedaLog?.(ev);
@@ -416,7 +416,8 @@ export function SchedeLavorazioneModal({
       setStage({ kind: "hub" });
       setHubTab(initialTab);
       setIngressoFormOpen(false);
-      setIngressoF(null);
+      setIngressoEditorInitial(null);
+      ingressoDraftRef.current = null;
       const cloned = JSON.parse(JSON.stringify(bundle)) as LavorazioneSchedeBundle;
       if (!cloned.codice?.trim() && lav.codice?.trim()) {
         cloned.codice = lav.codice.trim();
@@ -461,13 +462,15 @@ export function SchedeLavorazioneModal({
   function openIngressoEditor(campi: SchedaIngressoFields) {
     const normalized = normalizeSchedaIngressoFields(campi, addetti[0] ?? "");
     baselineIngressoJson.current = JSON.stringify(normalized);
-    setIngressoF(normalized);
+    ingressoDraftRef.current = normalized;
+    setIngressoEditorInitial(normalized);
     setIngressoFormOpen(true);
   }
 
   function closeIngressoEditor() {
     setIngressoFormOpen(false);
-    setIngressoF(null);
+    setIngressoEditorInitial(null);
+    ingressoDraftRef.current = null;
   }
 
   function requestDeleteSchedaTipo(tipo: SchedaTipo) {
@@ -503,7 +506,6 @@ export function SchedeLavorazioneModal({
       baselineIngressoJson.current = JSON.stringify(campi);
       const doc: SchedaIngressoDoc = { ...newSchedaMeta("ingresso", u), tipo: "ingresso", campi };
       flushSync(() => {
-        setIngressoF(campi);
         persist({ ...draftRef.current, ingresso: doc });
       });
       openIngressoEditor(campi);
@@ -608,7 +610,6 @@ export function SchedeLavorazioneModal({
       fileEsterno: null,
       campi,
     };
-    setIngressoF(campi);
     persist({ ...draftRef.current, ingresso: doc });
     openIngressoEditor(campi);
     emitLog({
@@ -778,7 +779,7 @@ export function SchedeLavorazioneModal({
   );
 
   function commitIngressoSave(): boolean {
-    const ig = ingressoF;
+    const ig = ingressoDraftRef.current;
     const base = draftRef.current.ingresso;
     if (!ig || !base) return false;
     if (!assertItalianDay("Data ingresso", ig.dataIngresso, gestToast.validation)) return false;
@@ -811,13 +812,9 @@ export function SchedeLavorazioneModal({
     return true;
   }
 
-  function tryIngressoBack() {
-    const ig = ingressoF;
-    if (!ig) {
-      closeIngressoEditor();
-      return;
-    }
-    if (baselineIngressoJson.current === JSON.stringify(ig)) {
+  function tryIngressoBack(draft: SchedaIngressoFields) {
+    ingressoDraftRef.current = draft;
+    if (baselineIngressoJson.current === JSON.stringify(draft)) {
       closeIngressoEditor();
       return;
     }
@@ -1329,14 +1326,13 @@ export function SchedeLavorazioneModal({
         </div>
       </LavorazioniModalShell>
 
-      {ingressoFormOpen && ingressoF && hub.ingresso ? (
+      {ingressoFormOpen && ingressoEditorInitial && hub.ingresso ? (
         <SchedaIngressoEditModal
           open={ingressoFormOpen}
-          onClose={tryIngressoBack}
-          fields={ingressoF}
-          setFields={setIngressoF}
-          onPatch={(patch) => setIngressoF((f) => (f ? { ...f, ...patch } : f))}
-          onSave={() => {
+          initialFields={ingressoEditorInitial}
+          onRequestClose={tryIngressoBack}
+          onSave={(draft) => {
+            ingressoDraftRef.current = draft;
             if (!commitIngressoSave()) return;
             closeIngressoEditor();
           }}

@@ -17,7 +17,7 @@ import {
   buildPreventiviArchivioFilterHref,
   buildPreventiviOpenHrefForRecord,
 } from "@/lib/preventivi/preventivi-lavorazione-href";
-import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
+import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { documentoRowToGestionale, preventivoRowToRecordStub } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { openUrlInNewTab } from "@/lib/pdf/open-url-new-tab";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
@@ -349,7 +349,15 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                         >
                           Dettaglio
                         </button>
-                        <button type="button" className={erpBtnSoftOrange} onClick={() => openPreventivoPdfInNewTab(p, "Gestionale")}>
+                        <button
+                          type="button"
+                          className={erpBtnSoftOrange}
+                          onClick={() =>
+                            void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
+                              openPreventivoPdfInNewTab(p, "Gestionale"),
+                            )
+                          }
+                        >
                           PDF
                         </button>
                       </div>

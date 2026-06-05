@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   autocompleteCommitFromSearchText,
@@ -170,6 +170,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const [activeIndex, setActiveIndex] = useState(-1);
   const [touched, setTouched] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const deferredSearchText = useDeferredValue(searchText);
   const [focused, setFocused] = useState(false);
 
   const engineInput = useMemo(
@@ -187,6 +188,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
 
   const displayValue = useMemo(() => autocompleteDisplayValue(engineInput), [engineInput]);
 
+  const suggestionEngineInput = useMemo(
+    () => ({ ...engineInput, searchText: deferredSearchText }),
+    [engineInput, deferredSearchText],
+  );
+
   const suggestions = useMemo(() => {
     if (selectOnly) {
       if (itemsMode) return [...items].slice(0, AUTOCOMPLETE_BROWSE_CAP);
@@ -202,9 +208,9 @@ export function GlobalSelect(props: GlobalSelectProps) {
       }
       return ordered.slice(0, AUTOCOMPLETE_BROWSE_CAP);
     }
-    if (itemsMode) return autocompleteItemSuggestions(engineInput);
-    return autocompleteStringSuggestions(engineInput);
-  }, [selectOnly, engineInput, itemsMode, items, options]);
+    if (itemsMode) return autocompleteItemSuggestions(suggestionEngineInput);
+    return autocompleteStringSuggestions(suggestionEngineInput);
+  }, [selectOnly, suggestionEngineInput, itemsMode, items, options]);
 
   const addCandidate = focused ? searchText.trim() : "";
 
@@ -231,7 +237,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   }, [isFilterVariant, value, filterNeutralValues, required, strictFromList, mode, options, items]);
 
   const showInvalid = (touched || forceInvalid) && !isValid;
-  const activeTextForSimilar = focused || searchText.length > 0 ? searchText : value;
+  const activeTextForSimilar = focused || searchText.length > 0 ? deferredSearchText : value;
   const similarPool = useMemo(() => {
     if (itemsMode) return items.map((item) => item.label);
     return [...options];

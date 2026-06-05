@@ -11,6 +11,8 @@
   --gestionale-table-row-hover: var(--cab-hover);
   --gestionale-table-row-flash: color-mix(in srgb, var(--cab-primary) 9%, var(--cab-card));
   --gestionale-table-row-flash-ring: color-mix(in srgb, var(--cab-primary) 32%, transparent);
+  --gestionale-table-row-low-stock-bg: rgb(254 242 242 / 0.5);
+  --gestionale-table-row-low-stock-ring: color-mix(in srgb, var(--cab-danger) 35%, transparent);
 }
 
 @media (min-width: 640px) {
@@ -25,6 +27,8 @@
   --gestionale-table-row-hover: var(--cab-hover);
   --gestionale-table-row-flash: color-mix(in srgb, var(--cab-primary) 14%, var(--cab-card));
   --gestionale-table-row-flash-ring: color-mix(in srgb, var(--cab-primary) 38%, transparent);
+  --gestionale-table-row-low-stock-bg: rgb(69 10 10 / 0.2);
+  --gestionale-table-row-low-stock-ring: color-mix(in srgb, var(--cab-danger) 42%, transparent);
 }
 
 .gestionale-list-table-scope tbody tr > td,
@@ -50,22 +54,63 @@
   background-color: var(--gestionale-table-row-hover) !important;
 }
 
-.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td,
-.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
-  background-color: rgb(254 242 242 / 0.5);
+/* Evidenziazione riga: ring solo sul perimetro esterno (no divisori verticali tra celle). */
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td:first-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td:first-child,
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td:first-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td:first-child,
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td:first-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td:first-child {
+  box-shadow:
+    inset 1px 0 0 0 var(--gestionale-table-row-highlight-ring),
+    inset 0 1px 0 0 var(--gestionale-table-row-highlight-ring),
+    inset 0 -1px 0 0 var(--gestionale-table-row-highlight-ring);
 }
 
-.dark .gestionale-list-table-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td,
-.dark .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
-  background-color: rgb(69 10 10 / 0.2);
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td:not(:first-child):not(:last-child),
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td:not(:first-child):not(:last-child),
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td:not(:first-child):not(:last-child),
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td:not(:first-child):not(:last-child),
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td:not(:first-child):not(:last-child),
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td:not(:first-child):not(:last-child) {
+  box-shadow:
+    inset 0 1px 0 0 var(--gestionale-table-row-highlight-ring),
+    inset 0 -1px 0 0 var(--gestionale-table-row-highlight-ring);
+}
+
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td:last-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td:last-child,
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td:last-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td:last-child,
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td:last-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td:last-child {
+  box-shadow:
+    inset -1px 0 0 0 var(--gestionale-table-row-highlight-ring),
+    inset 0 1px 0 0 var(--gestionale-table-row-highlight-ring),
+    inset 0 -1px 0 0 var(--gestionale-table-row-highlight-ring);
+}
+
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td:first-child:last-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td:first-child:last-child,
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td:first-child:last-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td:first-child:last-child,
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td:first-child:last-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td:first-child:last-child {
+  box-shadow: inset 0 0 0 1px var(--gestionale-table-row-highlight-ring);
+}
+
+.gestionale-list-table-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="low-stock"]:not(:hover) > td {
+  --gestionale-table-row-highlight-ring: var(--gestionale-table-row-low-stock-ring);
+  background-color: var(--gestionale-table-row-low-stock-bg);
 }
 
 .gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td,
 .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash"]:not(:hover) > td,
 .gestionale-list-table-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td,
 .lavorazioni-scroll-scope tbody tr[data-gestionale-row-tone="flash-mag"]:not(:hover) > td {
+  --gestionale-table-row-highlight-ring: var(--gestionale-table-row-flash-ring);
   background-color: var(--gestionale-table-row-flash);
-  box-shadow: inset 0 0 0 1px var(--gestionale-table-row-flash-ring);
 }
 
 .gestionale-list-table-scope tbody tr[data-selected="true"]:not(:hover) > td,

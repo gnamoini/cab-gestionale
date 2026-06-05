@@ -93,4 +93,4 @@ Non vengono loggati password, token o payload file. Meta troncati a 500 caratter
 - Next.js: [`app/error.tsx`](../app/error.tsx), [`app/(gestionale)/error.tsx`](../app/(gestionale)/error.tsx)
 - Client: `GestionaleClientErrorBoundary` in [`components/app-providers.tsx`](../components/app-providers.tsx)
 
-UI invariata — stesso markup di `GestionaleErrorFallback`.
+UI condivisa tramite `GestionaleErrorFallback` (eyebrow, icona warning, azioni Riprova/Indietro/home, dettagli tecnici collassabili con digest, collegamenti rapidi RBAC in variante gestionale). Humanize messaggi in `lib/observability/error-message-humanize.ts`.

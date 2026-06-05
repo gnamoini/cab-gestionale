@@ -27,6 +27,7 @@ const documentiView = read("components/gestionale/documenti/documenti-view.tsx")
 const bunderView = read("components/bunder/bunder-view.tsx");
 const preventiviView = read("components/preventivi/preventivi-view.tsx");
 const lavorazioniView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
+const magazzinoView = read("components/gestionale/magazzino/magazzino-view.tsx");
 
 for (const [name, src] of [
   ["report-view", reportView],
@@ -34,9 +35,50 @@ for (const [name, src] of [
   ["bunder-view", bunderView],
   ["preventivi-view", preventiviView],
   ["lavorazioni-view", lavorazioniView],
+  ["magazzino-view", magazzinoView],
 ] as const) {
   assert.match(src, /dynamic\s*\(/, `${name} missing next/dynamic code split`);
 }
+
+assert.match(magazzinoView, /RicambioNewModal/, "magazzino-view should lazy-load RicambioNewModal");
+assert.match(magazzinoView, /RicambioEditModal/, "magazzino-view should lazy-load RicambioEditModal");
+assert.match(magazzinoView, /MagazzinoRicambioInfoModal|magazzino-modals/, "magazzino info modal lazy split");
+assert.match(magazzinoView, /virtualRows/, "magazzino-view should use virtualized table rows");
+
+const lazyPdf = read("lib/pdf/lazy-pdf-modules.ts");
+assert.match(lazyPdf, /importLavorazioniListPdf/);
+assert.match(lazyPdf, /importPreventiviPdf/);
+assert.match(lazyPdf, /importBunderPdf/);
+assert.match(lazyPdf, /importDipendentiPdfSections/);
+
+const lavorazioniViewPdf = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
+assert.doesNotMatch(
+  lavorazioniViewPdf,
+  /from "@\/lib\/lavorazioni\/lavorazioni-list-pdf"/,
+  "lavorazioni-view should not statically import PDF module",
+);
+assert.match(lavorazioniViewPdf, /importLavorazioniListPdf/, "lavorazioni PDF via dynamic import");
+
+const preventiviViewPdf = read("components/preventivi/preventivi-view.tsx");
+assert.doesNotMatch(
+  preventiviViewPdf,
+  /from "@\/lib\/preventivi\/preventivi-pdf"/,
+  "preventivi-view should not statically import preventivi-pdf",
+);
+
+const bunderViewPdf = read("components/bunder/bunder-view.tsx");
+assert.doesNotMatch(
+  bunderViewPdf,
+  /from "@\/lib\/bunder\/bunder-pdf"/,
+  "bunder-view should not statically import bunder-pdf",
+);
+
+const dipendentiExport = read("lib/dipendenti/pdf/dipendenti-pdf-export.ts");
+assert.doesNotMatch(
+  dipendentiExport,
+  /from "@\/lib\/dipendenti\/pdf\/dipendenti-pdf-sections"/,
+  "dipendenti-pdf-export should lazy-load jspdf sections",
+);
 
 const queryPolicies = read("lib/react-query/query-layer-policies.ts");
 assert.match(queryPolicies, /refetchOnWindowFocus: false/);

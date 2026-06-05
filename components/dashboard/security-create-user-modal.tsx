@@ -11,7 +11,13 @@ import { sanitizeUsernameInput, usernameFieldError } from "@/src/lib/auth/userna
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { APP_ROLES, roleLabel, type AppRole } from "@/src/lib/auth/permissions";
 import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
-import { validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
+import { SecurityInlineNotice } from "@/components/dashboard/security/security-inline-notice";
+import {
+  buildKnownClientiSet,
+  fieldClienteAssociationMessage,
+  validateClienteAssociationForRole,
+} from "@/src/lib/auth/cliente-portal-scope";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import {
   dsBtnGhost,
   dsBtnPrimary,
@@ -38,6 +44,10 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const usernameAvailability = useUsernameAvailability(username, { enabled: open });
+  const globalOpts = useGlobalOptions({ enabled: open, debugTag: "SecurityCreateUser" });
+  const knownClienti = buildKnownClientiSet(globalOpts.mezziListe.clienti ?? []);
+  const clienteAssociationErr =
+    ruolo === "cliente" ? validateClienteAssociationForRole(ruolo, clienteRef.trim() || null, knownClienti) : null;
 
   useEffect(() => {
     if (!open) return;
@@ -67,7 +77,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
       setError("Attendi la verifica del nome utente.");
       return;
     }
-    const clienteErr = validateClienteRefForRole(ruolo, clienteRef.trim() || null);
+    const clienteErr = validateClienteAssociationForRole(ruolo, clienteRef.trim() || null, knownClienti);
     if (clienteErr) {
       setError(clienteErr);
       return;
@@ -109,7 +119,12 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
             type="submit"
             form="security-create-user-form"
             className={dsBtnPrimary}
-            disabled={pending || usernameAvailability === "taken" || usernameAvailability === "checking"}
+            disabled={
+              pending ||
+              usernameAvailability === "taken" ||
+              usernameAvailability === "checking" ||
+              !!clienteAssociationErr
+            }
           >
             {pending ? "Creazione…" : "Crea utente"}
           </button>
@@ -212,23 +227,37 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
           </div>
         </label>
         <label className="block min-w-0">
-          <span className={dsSectionTitle}>Cliente associato</span>
+          <span className={dsSectionTitle}>
+            Cliente associato{ruolo === "cliente" ? " (obbligatorio)" : ""}
+          </span>
           <div className="mt-1">
             <GlobalSettingsListSelect
               selectOnly
               variant="default"
               listKey="mezzi:clienti"
               value={clienteRef}
-              onChange={setClienteRef}
+              onChange={(v) => {
+                if (ruolo === "cliente" && !v.trim()) return;
+                setClienteRef(v);
+              }}
               disabled={pending}
               aria-label="Cliente associato"
-              placeholder={ruolo === "cliente" ? "Obbligatorio per ruolo Cliente" : "—"}
+              aria-invalid={ruolo === "cliente" && !!clienteAssociationErr}
+              placeholder={ruolo === "cliente" ? "Seleziona cliente…" : "—"}
               required={ruolo === "cliente"}
             />
           </div>
-          <span className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]">
-            Obbligatorio se il ruolo è Cliente. Limita il portale lavorazioni al cliente scelto.
-          </span>
+          {clienteAssociationErr ? (
+            <div className="mt-1.5">
+              <SecurityInlineNotice variant="warning" appearance="inline">
+                {fieldClienteAssociationMessage(clienteAssociationErr) ?? clienteAssociationErr}
+              </SecurityInlineNotice>
+            </div>
+          ) : (
+            <span className="mt-0.5 block text-[10px] text-[color:var(--cab-text-muted)]">
+              Obbligatorio se il ruolo è Cliente. Limita il portale lavorazioni al cliente scelto.
+            </span>
+          )}
         </label>
 
         {error ? (

@@ -98,7 +98,7 @@ export function PageToolbar({
                   {filterActions}
                 </ToolbarGroupPrimaryRow>
               </div>
-              <div className="hidden min-w-0 w-full sm:flex">
+              <div className="hidden min-w-0 w-full gap-2 sm:flex">
                 <ToolbarGroupPrimaryRow className="min-w-0 w-full sm:flex-nowrap sm:justify-start">
                   <div className="shrink-0">{primaryAction}</div>
                   <div className="min-w-0 flex-1">{search}</div>
@@ -114,9 +114,9 @@ export function PageToolbar({
           )}
           {meta || overflowActions ? (
             <ToolbarGroupMetaRow>
-              {meta ? <div className="flex min-w-0 flex-1 items-center">{meta}</div> : null}
+              {meta ? <div className="flex min-w-0 flex-1 items-center gap-2">{meta}</div> : null}
               {overflowActions ? (
-                <div className="hidden min-w-0 shrink-0 flex-nowrap items-center justify-end gap-1.5 sm:flex sm:flex-wrap">
+                <div className="hidden min-w-0 shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex sm:flex-wrap">
                   {overflowActions}
                 </div>
               ) : null}

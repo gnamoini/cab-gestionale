@@ -83,36 +83,6 @@ export function useMobileModalKeyboard(rootRef: RefObject<HTMLElement | null>): 
         }
       }
 
-      // #region agent log
-      if (isMobileViewport()) {
-        fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "X-Debug-Session-Id": "929eab",
-          },
-          body: JSON.stringify({
-            sessionId: "929eab",
-            runId: "keyboard-dismiss",
-            hypothesisId: keyboardClosing ? "H1" : "H2",
-            location: "use-mobile-modal-keyboard.ts:onViewportChange",
-            message: keyboardClosing ? "keyboard closing — skip modal scroll" : "keyboard open/resize — pad sync",
-            data: {
-              prevKeyboardInset,
-              keyboardInset,
-              keyboardClosing,
-              scrollTop: scrollEl?.scrollTop ?? null,
-              hasFocusedField:
-                focused instanceof HTMLElement &&
-                isGestionaleFocusableField(focused) &&
-                focused.closest(`[${CAB_MODAL_ROOT_ATTR}]`) != null,
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-      }
-      // #endregion
-
       if (
         !keyboardClosing &&
         focused instanceof HTMLElement &&

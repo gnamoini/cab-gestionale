@@ -93,7 +93,7 @@ export function RicambioInfoPanel({
   formatEur: (n: number) => string;
   canEditPhotos: boolean;
   onImageEvent: (event: RecordImageLogEvent) => void;
-  logTimeline: MagazzinoLogFeedItem[];
+  logTimeline: ReadonlyArray<MagazzinoLogFeedItem>;
   logLoading: boolean;
   onDismissLogEntry: (id: string) => void;
 }) {

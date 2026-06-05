@@ -68,8 +68,28 @@ const lavorazioniSrc = readFileSync(
 );
 assert.match(lavorazioniSrc, /CAB_FOCUS_SCROLL_GROUP_ATTR/);
 assert.match(lavorazioniSrc, /CAB_FOCUS_SCROLL_TITLE_ATTR/);
+assert.match(lavorazioniSrc, /useMaxMdDown/);
+assert.match(lavorazioniSrc, /CAB_MODAL_SCROLL_ATTR/);
+assert.match(lavorazioniSrc, /gestionaleModalScrollBodyMobileClass/);
+assert.match(lavorazioniSrc, /max-md:flex-none max-md:overflow-visible/);
 
-const mezziSrc = readFileSync(join(root, "components/gestionale/mezzi/mezzi-view.tsx"), "utf8");
+const scrollBodySrc = readFileSync(
+  join(root, "components/gestionale/mobile-modal-scroll-body.tsx"),
+  "utf8",
+);
+assert.match(scrollBodySrc, /useMaxMdDown/);
+assert.match(scrollBodySrc, /!maxMdDown \? \{ \[CAB_MODAL_SCROLL_ATTR\]/);
+
+const modalBodyClassSrc = readFileSync(join(root, "lib/ui/modal-max-width-class.ts"), "utf8");
+assert.match(modalBodyClassSrc, /max-md:flex-none max-md:overflow-visible/);
+
+const dsModalSrc = readFileSync(join(root, "components/design-system/modal.tsx"), "utf8");
+assert.match(dsModalSrc, /useMaxMdDown/);
+
+const dsDrawerSrc = readFileSync(join(root, "components/design-system/drawer.tsx"), "utf8");
+assert.match(dsDrawerSrc, /useMaxMdDown/);
+
+const mezziSrc = readFileSync(join(root, "components/gestionale/mezzi/mezzi-form-fields.tsx"), "utf8");
 assert.match(mezziSrc, /CAB_FOCUS_SCROLL_GROUP_ATTR/);
 
 const ricambioSrc = readFileSync(

@@ -3,7 +3,7 @@ import { compatLabelMarcaModello } from "@/lib/mezzi/attrezzature-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { buildCompatMetaForSave } from "@/lib/magazzino/compat/build-compat-meta";
 import { resolveCompatibilitaRicambio } from "@/lib/magazzino/compat/resolve-compatibilita-ricambio";
-import { marcaUniversalCompatLabel } from "@/lib/magazzino/ricambio-compat-resolver";
+import { marcaUniversalCompatLabel, type RicambioCompatRef } from "@/lib/magazzino/ricambio-compat-resolver";
 
 const mezziListe: MezziListePrefs = {
   clienti: [],
@@ -48,7 +48,7 @@ const fromLegacy = resolveCompatibilitaRicambio(
   { compatibilitaMezzi: [fiat500, compatLabelMarcaModello("FIAT", "Panda")] },
   mezziListe,
 );
-assert.deepEqual(fromLegacy.labels, [fiatUniversal]);
+assert.deepEqual(fromLegacy.labels, [fiatUniversal.trim()]);
 
 const dualLegacy = resolveCompatibilitaRicambio(
   { compatibilitaMezzi: [fiatUniversal, fiat500] },
@@ -57,11 +57,14 @@ const dualLegacy = resolveCompatibilitaRicambio(
 assert.deepEqual(dualLegacy.labels, [fiat500]);
 assert.equal(dualLegacy.display, "FIAT 500");
 
-const dualRefs = [
-  { tree: "attrezzature" as const, marcaId: "m-fiat", modelloId: "mod-500" },
-  { tree: "attrezzature" as const, marcaId: "m-fiat" },
+const dualRefs: RicambioCompatRef[] = [
+  { tree: "attrezzature", marcaId: "m-fiat", modelloId: "mod-500" },
+  { tree: "attrezzature", marcaId: "m-fiat" },
 ];
-const dualRefsResolved = resolveCompatibilitaRicambio({ compatibilitaRefs: dualRefs }, mezziListe);
+const dualRefsResolved = resolveCompatibilitaRicambio(
+  { compatibilitaRefs: dualRefs, compatibilitaMezzi: [] },
+  mezziListe,
+);
 assert.deepEqual(dualRefsResolved.labels, [fiat500]);
 assert.equal(dualRefsResolved.display, "FIAT 500");
 

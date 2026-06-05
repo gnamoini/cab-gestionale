@@ -9,6 +9,7 @@ import {
   healBodyScrollLockState,
   refreshBodyScrollLockOnViewportChange,
 } from "@/lib/ui/body-scroll-lock-manager";
+import { healOverlayBackStack, resetOverlayBackStack } from "@/lib/ui/overlay-back-stack";
 
 export { BODY_LOCK_ATTR } from "@/lib/ui/body-scroll-lock-manager";
 
@@ -38,8 +39,10 @@ export function useBodyScrollLock(active: boolean, source?: string): void {
 export function useBodyScrollLockRouteGuard(): void {
   const pathname = usePathname();
   useLayoutEffect(() => {
+    resetOverlayBackStack("route-change");
     forceReleaseAllBodyScrollLocks("route-change");
     healBodyScrollLockState("route-change");
+    healOverlayBackStack("route-change");
   }, [pathname]);
 }
 

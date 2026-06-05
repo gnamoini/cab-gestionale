@@ -35,6 +35,7 @@ export class GestionaleClientErrorBoundary extends Component<Props, State> {
         <GestionaleErrorFallback
           variant="gestionale"
           message={this.state.error.message}
+          digest={(this.state.error as Error & { digest?: string }).digest}
           onRetry={() => this.setState({ error: null })}
         />
       );

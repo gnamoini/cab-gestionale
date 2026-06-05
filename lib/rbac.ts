@@ -66,14 +66,14 @@ export const ROLE_CAPABILITIES: Record<CanonicalRole, Record<Capability, boolean
     can_write_operational: true,
     can_manage_settings: true,
     can_manage_security: false,
-    can_access_client_area: true,
+    can_access_client_area: false,
   },
   operatore: {
     can_read_operational: true,
     can_write_operational: true,
     can_manage_settings: true,
     can_manage_security: false,
-    can_access_client_area: true,
+    can_access_client_area: false,
   },
   cliente: {
     can_read_operational: false,

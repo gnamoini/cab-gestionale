@@ -1,6 +1,7 @@
 "use server";
 
 import { spawnSync } from "node:child_process";
+import { tailOutput } from "@/lib/ci/gate-output";
 import {
   OPERATOR_GLOBAL_SETTINGS_KEY,
   OPERATOR_GLOBAL_SETTINGS_MODULE,
@@ -17,12 +18,9 @@ import { invalidateServerRuntimeTruth } from "@/src/lib/runtime/truth-layer/inva
 import {
   resolvePilotSettingsState,
   type PilotControlStatus,
-  type PilotOverrideState,
 } from "@/src/lib/runtime/truth-layer/resolve-pilot-settings-state";
 
-export type { PilotControlStatus, PilotOverrideState };
-
-export type ChecklistStatus = "ok" | "fail";
+export type ChecklistStatus = "ok" | "fail" | "skip";
 
 export type ChecklistItem = {
   id: string;
@@ -51,15 +49,29 @@ async function readPilotDbFlag(): Promise<boolean> {
   return parseOperatorGlobalSettingsDbEnabled(data?.value);
 }
 
-function runLocalCheck(cmd: string, args: string[], timeoutMs: number): { ok: boolean; output: string } {
+function runLocalCheck(
+  cmd: string,
+  args: string[],
+  timeoutMs: number,
+  env?: NodeJS.ProcessEnv,
+): { ok: boolean; output: string } {
   const r = spawnSync(cmd, args, {
     shell: true,
     encoding: "utf8",
     timeout: timeoutMs,
     stdio: ["ignore", "pipe", "pipe"],
+    cwd: process.cwd(),
+    env: { ...process.env, ...env },
   });
   const out = `${r.stdout ?? ""}${r.stderr ?? ""}`.trim();
   return { ok: r.status === 0, output: out };
+}
+
+const DEV_BUILD_SKIP_EXPLANATION =
+  "Build Next.js non eseguibile con il dev server attivo (conflitto .next). Fermare npm run dev ed eseguire npm run ci:build in terminale, oppure affidarsi al workflow release-gate in CI.";
+
+function shouldSkipBuildInDev(): boolean {
+  return process.env.NODE_ENV === "development" && process.env.SECURITY_RELEASE_RUN_BUILD !== "1";
 }
 
 function findingSource(detail?: string): string | undefined {
@@ -80,6 +92,23 @@ function failItem(
 
 function okItem(id: string, label: string, category: ChecklistItem["category"], source?: string): ChecklistItem {
   return { id, label, category, status: "ok", source };
+}
+
+function skipItem(
+  id: string,
+  label: string,
+  category: ChecklistItem["category"],
+  source?: string,
+  explanation = "Non eseguito in questa run. Usa «Esegui checklist completa».",
+): ChecklistItem {
+  return {
+    id,
+    label,
+    category,
+    status: "skip",
+    explanation,
+    source,
+  };
 }
 
 function ensureSecurityRole(allowed: boolean): { ok: false; message: string } | null {
@@ -272,30 +301,42 @@ export async function runSecurityReleaseControlAction(
   }
 
   if (includeBuildChecks) {
-    const tsc = runLocalCheck("npx", ["tsc", "--noEmit"], 120_000);
+    const tsc = runLocalCheck("npm", ["run", "ci:tsc"], 120_000);
     checklist.push(
       tsc.ok
-        ? okItem("tsc-ok", "build TypeScript OK", "build", "tsconfig")
-        : failItem("tsc-ok", "build TypeScript OK", "build", "Typecheck fallito.", tsc.output.split("\n")[0]),
+        ? okItem("tsc-ok", "build TypeScript OK", "build", "npm run ci:tsc")
+        : failItem("tsc-ok", "build TypeScript OK", "build", "Typecheck fallito.", tailOutput(tsc.output)),
     );
 
-    const nextBuild = runLocalCheck("npm", ["run", "build"], 300_000);
-    checklist.push(
-      nextBuild.ok
-        ? okItem("next-build-ok", "build Next.js OK", "build", "npm run build")
-        : failItem("next-build-ok", "build Next.js OK", "build", "Build Next.js fallita.", nextBuild.output.split("\n")[0]),
-    );
+    if (shouldSkipBuildInDev()) {
+      checklist.push(
+        skipItem("next-build-ok", "build Next.js OK", "build", "npm run ci:build", DEV_BUILD_SKIP_EXPLANATION),
+      );
+    } else {
+      const nextBuild = runLocalCheck("npm", ["run", "ci:build"], 300_000, { NODE_ENV: "production" });
+      checklist.push(
+        nextBuild.ok
+          ? okItem("next-build-ok", "build Next.js OK", "build", "npm run ci:build")
+          : failItem("next-build-ok", "build Next.js OK", "build", "Build Next.js fallita.", tailOutput(nextBuild.output)),
+      );
+    }
 
     const permTest = runLocalCheck("npm", ["run", "test:permissions"], 120_000);
     checklist.push(
       permTest.ok
         ? okItem("permissions-test-ok", "test permissions OK", "test", "npm run test:permissions")
-        : failItem("permissions-test-ok", "test permissions OK", "test", "Test permissions fallito.", permTest.output.split("\n")[0]),
+        : failItem(
+            "permissions-test-ok",
+            "test permissions OK",
+            "test",
+            "Test permissions fallito.",
+            tailOutput(permTest.output),
+          ),
     );
   } else {
-    checklist.push(failItem("tsc-ok", "build TypeScript OK", "build", "Non eseguito in questa run.", "npx tsc --noEmit"));
-    checklist.push(failItem("next-build-ok", "build Next.js OK", "build", "Non eseguito in questa run.", "npm run build"));
-    checklist.push(failItem("permissions-test-ok", "test permissions OK", "test", "Non eseguito in questa run.", "npm run test:permissions"));
+    checklist.push(skipItem("tsc-ok", "build TypeScript OK", "build", "npm run ci:tsc"));
+    checklist.push(skipItem("next-build-ok", "build Next.js OK", "build", "npm run ci:build"));
+    checklist.push(skipItem("permissions-test-ok", "test permissions OK", "test", "npm run test:permissions"));
   }
 
   return { ok: true, payload: { pilot, readiness, checklist } };

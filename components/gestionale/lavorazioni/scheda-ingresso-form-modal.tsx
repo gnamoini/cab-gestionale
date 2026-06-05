@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useId, useMemo, type FormEvent, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
@@ -203,18 +213,27 @@ export function SchedaIngressoFormBody({
     [mezziUi, mezzi],
   );
 
+  const [identScan, setIdentScan] = useState({ targa: fields.targa, matricola: fields.matricola });
+  useEffect(() => {
+    const t = window.setTimeout(
+      () => setIdentScan({ targa: fields.targa, matricola: fields.matricola }),
+      300,
+    );
+    return () => window.clearTimeout(t);
+  }, [fields.targa, fields.matricola]);
+
   const lastIngressoMatch = useMemo(() => {
-    if (!hasSchedaIngressoIdentLookup(fields.targa, fields.matricola)) return null;
+    if (!hasSchedaIngressoIdentLookup(identScan.targa, identScan.matricola)) return null;
     return findLastSchedaIngressoForIdent(
-      fields.targa,
-      fields.matricola,
+      identScan.targa,
+      identScan.matricola,
       mezziCatalog,
       schedeStore,
       attive,
       storico,
       excludeLavorazioneId ? { excludeLavorazioneId } : undefined,
     );
-  }, [fields.targa, fields.matricola, mezziCatalog, schedeStore, attive, storico, excludeLavorazioneId]);
+  }, [identScan.targa, identScan.matricola, mezziCatalog, schedeStore, attive, storico, excludeLavorazioneId]);
 
   const onMezzoPromptMatch = useCallback(
     (m: MezzoGestito) => {
@@ -398,10 +417,8 @@ export function SchedaIngressoFormBody({
 
 export function SchedaIngressoEditModal({
   open,
-  onClose,
-  fields,
-  setFields,
-  onPatch,
+  initialFields,
+  onRequestClose,
   onSave,
   onDelete,
   readOnly = false,
@@ -415,11 +432,10 @@ export function SchedaIngressoEditModal({
   excludeLavorazioneId,
 }: {
   open: boolean;
-  onClose: () => void;
-  fields: SchedaIngressoFields;
-  setFields: (fields: SchedaIngressoFields) => void;
-  onPatch: (patch: Partial<SchedaIngressoFields>) => void;
-  onSave: () => void;
+  initialFields: SchedaIngressoFields;
+  /** Chiusura (Annulla / ESC): riceve il draft corrente per dirty-check nel parent. */
+  onRequestClose: (draft: SchedaIngressoFields) => void;
+  onSave: (draft: SchedaIngressoFields) => void;
   onDelete?: () => void;
   readOnly?: boolean;
   canEdit?: boolean;
@@ -432,6 +448,22 @@ export function SchedaIngressoEditModal({
   excludeLavorazioneId?: string;
 }) {
   const ro = readOnly || !canEdit;
+  const [draft, setDraft] = useState(initialFields);
+  const draftRef = useRef(draft);
+  useLayoutEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+
+  useEffect(() => {
+    if (open) setDraft(initialFields);
+  }, [open, initialFields]);
+
+  const setFields = useCallback((fields: SchedaIngressoFields) => setDraft(fields), []);
+  const onPatch = useCallback(
+    (patch: Partial<SchedaIngressoFields>) => setDraft((prev) => ({ ...prev, ...patch })),
+    [],
+  );
+
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
   const mezziUi = useMemo(() => (mezziQ.data ?? []).map(toMezzoUI), [mezziQ.data]);
   const mezziCatalog = useMemo(
@@ -439,7 +471,7 @@ export function SchedaIngressoEditModal({
     [mezziUi, mezzi],
   );
   const mezzoPrompt = useSchedaIngressoMezzoPrompt({
-    fields,
+    fields: draft,
     setFields,
     mezzi: mezziCatalog,
     schedeStore,
@@ -451,7 +483,7 @@ export function SchedaIngressoEditModal({
   function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (ro || !open) return;
-    onSave();
+    onSave(draftRef.current);
   }
 
   if (!open) return null;
@@ -459,7 +491,7 @@ export function SchedaIngressoEditModal({
   return (
     <SchedaIngressoFormModalShell
       open={open}
-      onRequestClose={onClose}
+      onRequestClose={() => onRequestClose(draftRef.current)}
       variant="edit-scheda"
       subtitle="Modifica i dati di accettazione mezzo."
       footer={null}
@@ -467,7 +499,7 @@ export function SchedaIngressoEditModal({
       <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <SchedaIngressoFormBody
           variant="edit-scheda"
-          fields={fields}
+          fields={draft}
           setFields={setFields}
           onPatch={onPatch}
           pending={pending}
@@ -488,7 +520,7 @@ export function SchedaIngressoEditModal({
                 Elimina scheda
               </button>
             ) : null}
-            <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={pending}>
+            <button type="button" className={erpBtnNeutral} onClick={() => onRequestClose(draftRef.current)} disabled={pending}>
               Annulla
             </button>
             {!ro ? (

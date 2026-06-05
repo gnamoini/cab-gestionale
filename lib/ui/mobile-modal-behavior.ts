@@ -105,14 +105,16 @@ function isFieldCaptionElement(el: HTMLElement): boolean {
 /** Contenitore minimo etichetta + controllo (RicambioField, combobox, multi-select, …). */
 export function findGestionaleFieldContainer(field: HTMLElement): HTMLElement | null {
   const modalRoot = field.closest(`[${CAB_MODAL_ROOT_ATTR}]`);
-  let node: HTMLElement | null = field;
-  while (node?.parentElement) {
-    const parent = node.parentElement;
+  let node: HTMLElement = field;
+  for (;;) {
+    const parent: HTMLElement | null = node.parentElement;
+    if (!parent) break;
+    const current = node;
     const hasCaption = Array.from(parent.children).some(
       (ch) =>
         ch instanceof HTMLElement &&
-        ch !== node &&
-        !node.contains(ch) &&
+        ch !== current &&
+        !current.contains(ch) &&
         isFieldCaptionElement(ch) &&
         isBeforeInDocument(ch, field),
     );
@@ -315,38 +317,6 @@ export function scrollFieldIntoModalView(
   } else if (scrollRect.top < visibleTop) {
     delta = scrollRect.top - visibleTop;
   }
-
-  // #region agent log
-  if (isMobileFocusScrollViewport()) {
-    fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Debug-Session-Id": "929eab",
-      },
-      body: JSON.stringify({
-        sessionId: "929eab",
-        runId: "focus-scroll",
-        hypothesisId: "G",
-        location: "mobile-modal-behavior.ts:scrollFieldIntoModalView",
-        message: "modal focus scroll band",
-        data: {
-          delta,
-          visibleTop,
-          visibleBottom,
-          scrollTop: scrollRect.top,
-          scrollBottom: scrollRect.bottom,
-          headerBottom,
-          keyboardInset: computeKeyboardInset(),
-          tag: field.tagName,
-          role: field.getAttribute("role"),
-          hasLabelBlock: Boolean(findFieldLabelBlock(field)),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
 
   if (Math.abs(delta) < 2) return true;
 

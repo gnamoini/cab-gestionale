@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { RicambioFormCompatSection } from "@/components/gestionale/magazzino/ricambio-form-compat-section";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
@@ -17,13 +17,12 @@ import {
 } from "@/lib/magazzino/form";
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
-import { probeRicambioInputLag } from "@/lib/debug/ricambio-input-lag-probe";
 import { GestionaleFormFocusScope } from "@/components/gestionale/gestionale-form-focus-scope";
 import { CloseButton } from "@/components/design-system";
 import { dsBtnNeutral, dsBtnPrimary, dsInput, dsLabel, dsStepperBtn, dsTypoSmall } from "@/lib/ui/design-system";
 import { globalInputInvalidRing } from "@/lib/ui/global-input";
 import { getScontoFornitoreMarca } from "@/lib/magazzino/marca-fornitore-sconto";
-import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
 import {
   CAB_FIELD_LABEL_ATTR,
   CAB_FOCUS_SCROLL_GROUP_ATTR,
@@ -172,16 +171,7 @@ export function RicambioFormFields({
   relaxHtmlValidation?: boolean;
   listFieldForceInvalid?: boolean;
 }) {
-  const formRenderRef = useRef(0);
-  formRenderRef.current += 1;
-  // #region agent log
-  probeRicambioInputLag("ricambio-form-fields.tsx:render", "D", {
-    renderCount: formRenderRef.current,
-    descrizioneLen: form.descrizione.length,
-  });
-  // #endregion
-
-  const globalOpts = useGlobalOptions({ debugTag: "RicambioFormFields" });
+  const globalOpts = useRicambioFormOptions();
   const [showCodiceSecondario, setShowCodiceSecondario] = useState(
     () => Boolean(form.codiceFornitoreOriginaleSecondario.trim()),
   );
@@ -217,6 +207,12 @@ export function RicambioFormFields({
   ]);
 
   const fieldsOptional = relaxHtmlValidation;
+
+  const onFornitoriAlternativiChange = useCallback(
+    (fornitoriAlternativi: RicambioFormState["fornitoriAlternativi"]) =>
+      setForm((f) => ({ ...f, fornitoriAlternativi })),
+    [setForm],
+  );
 
   return (
     <GestionaleFormFocusScope className="flex flex-col gap-4">
@@ -273,22 +269,14 @@ export function RicambioFormFields({
             ) : null}
           </div>
           {showCodiceSecondario ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <input
-                  id="magazzino-ricambio-codice-secondario"
-                  value={form.codiceFornitoreOriginaleSecondario}
-                  onChange={(e) =>
-                    applyRicambioCodiceInputChange(e, (codiceFornitoreOriginaleSecondario) =>
-                      setForm((f) => ({ ...f, codiceFornitoreOriginaleSecondario })),
-                    )
-                  }
-                  placeholder="Codice secondario (opzionale)"
-                  className={`${ricambioFormInputClass} min-w-0 flex-1 font-mono text-[13px] tracking-wide`}
-                />
+            <div className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-2.5">
+              <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                  Codice secondario
+                </p>
                 <CloseButton
                   label="Rimuovi codice secondario"
-                  className="h-11 w-11 shrink-0"
+                  className="h-9 w-9 shrink-0"
                   onClick={() => {
                     setShowCodiceSecondario(false);
                     setForm((f) => ({
@@ -299,17 +287,48 @@ export function RicambioFormFields({
                   }}
                 />
               </div>
-              <RicambioField label="Marca secondaria" htmlFor="magazzino-ricambio-marca-secondaria">
-                <GlobalSettingsListSelect
-                  listKey="magazzino:marche"
-                  id="magazzino-ricambio-marca-secondaria"
-                  value={form.marcaOriginaleSecondaria}
-                  onChange={(marcaOriginaleSecondaria) => setForm((f) => ({ ...f, marcaOriginaleSecondaria }))}
-                  placeholder="Marca del codice secondario…"
-                  inputClassName={ricambioFormInputClass}
-                  aria-label="Marca secondaria codice OE"
-                />
-              </RicambioField>
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="min-w-0">
+                  <label
+                    htmlFor="magazzino-ricambio-codice-secondario"
+                    {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
+                    className={`${dsLabel} cursor-default`}
+                  >
+                    Codice
+                  </label>
+                  <input
+                    id="magazzino-ricambio-codice-secondario"
+                    value={form.codiceFornitoreOriginaleSecondario}
+                    onChange={(e) =>
+                      applyRicambioCodiceInputChange(e, (codiceFornitoreOriginaleSecondario) =>
+                        setForm((f) => ({ ...f, codiceFornitoreOriginaleSecondario })),
+                      )
+                    }
+                    placeholder="Opzionale"
+                    className={`${ricambioFormInputClass} mt-1 min-w-0 w-full font-mono text-[13px] tracking-wide`}
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label
+                    htmlFor="magazzino-ricambio-marca-secondaria"
+                    {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
+                    className={`${dsLabel} cursor-default`}
+                  >
+                    Marca
+                  </label>
+                  <div className="mt-1">
+                    <GlobalSettingsListSelect
+                      listKey="magazzino:marche"
+                      id="magazzino-ricambio-marca-secondaria"
+                      value={form.marcaOriginaleSecondaria}
+                      onChange={(marcaOriginaleSecondaria) => setForm((f) => ({ ...f, marcaOriginaleSecondaria }))}
+                      placeholder="Cerca o seleziona…"
+                      inputClassName={ricambioFormInputClass}
+                      aria-label="Marca secondaria codice OE"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           ) : null}
         </div>
@@ -361,13 +380,7 @@ export function RicambioFormFields({
           id="magazzino-ricambio-descrizione"
           required={!relaxHtmlValidation}
           value={form.descrizione}
-          onChange={(e) => {
-            const t0 = performance.now();
-            setForm((f) => ({ ...f, descrizione: e.target.value }));
-            probeRicambioInputLag("ricambio-form-fields.tsx:descrizione-change", "D", {
-              handlerMs: Math.round((performance.now() - t0) * 100) / 100,
-            });
-          }}
+          onChange={(e) => setForm((f) => ({ ...f, descrizione: e.target.value }))}
           className={ricambioFormInputClass}
         />
       </RicambioField>
@@ -519,7 +532,7 @@ export function RicambioFormFields({
         <RicambioSectionTitle>Fornitori alternativi</RicambioSectionTitle>
         <RicambioFornitoriAlternativiEditor
           rows={form.fornitoriAlternativi}
-          onChange={(fornitoriAlternativi) => setForm((f) => ({ ...f, fornitoriAlternativi }))}
+          onChange={onFornitoriAlternativiChange}
         />
       </div>
 

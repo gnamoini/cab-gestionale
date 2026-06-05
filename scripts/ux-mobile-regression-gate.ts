@@ -141,6 +141,21 @@ function scanFile(file: string): Finding[] {
         message: "Modal/Drawer senza hook scroll-lock condiviso.",
       });
     }
+    const overlayBackExcluded =
+      /global-calendar-panel|settings-color-picker-popover|timesheet-cell-editor-popover/i.test(fileRel);
+    const hasOverlayBack =
+      content.includes("useOverlayBackHandler(") ||
+      content.includes("GestionaleConfirmDialog") ||
+      content.includes("OverlayBackStackGuard");
+    if (hasBodyScrollLock && !overlayBackExcluded && !hasOverlayBack) {
+      findings.push({
+        severity: "blocker",
+        file: fileRel,
+        line: findLine(content, /useBodyScrollLock/),
+        rule: "modal-overlay-back",
+        message: "Overlay con scroll-lock deve usare useOverlayBackHandler (pulsante Indietro mobile).",
+      });
+    }
     const mobileOnlyDrawer =
       /mobile-filter-drawer|cab-nav-drawer-panel|MobileNavDrawer/i.test(fileRel) ||
       (fileRel.endsWith("app-shell.tsx") && content.includes("md:hidden"));

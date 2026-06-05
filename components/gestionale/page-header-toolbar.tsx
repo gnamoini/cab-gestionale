@@ -9,9 +9,13 @@ import { IconGestionaleLog, IconGestionaleUndo, IconGestionaleRefresh } from "@/
 import { dsPageToolbarIconBtn } from "@/lib/ui/design-system";
 import { useSmUp } from "@/lib/ui/use-sm-up";
 
-/** Toolbar azioni header: wrap interno se molti pulsanti; il blocco va sotto il titolo quando manca spazio (PageHeader). */
+/** Shell toolbar header (PageHeader): unico `flex-safe-row` per evitare doppia signature linter. */
 export const gestionalePageToolbarActionsClass =
-  "flex-safe-row min-w-0 max-w-full flex-nowrap items-center justify-end gap-2 sm:flex-wrap";
+  "flex-safe-row min-w-0 max-w-full shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex-wrap";
+
+/** Contenuto azioni dentro la shell — senza `flex-safe-row` (il wrapper è in PageHeader). */
+export const gestionalePageToolbarActionsInnerClass =
+  "flex min-w-0 max-w-full shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex-wrap";
 
 export function GestionaleRefreshToolbarButton({
   busy = false,
@@ -111,13 +115,13 @@ export function GestionalePageToolbarActions({
 
   return (
     <>
-      <div className={`${gestionalePageToolbarActionsClass}${className ? ` ${className}` : ""}`}>
+      <div className={`${gestionalePageToolbarActionsInnerClass}${className ? ` ${className}` : ""}`}>
         {leading}
         <Tooltip content={canUndo && !undoDisabled && !undoPending ? "Annulla" : "Non disponibile"}>
           <button
             type="button"
             onClick={onUndo}
-            className={dsPageToolbarIconBtn}
+            className={`${dsPageToolbarIconBtn} shrink-0`}
             disabled={undoInactive}
             aria-disabled={undoInactive}
             aria-label="Annulla ultima azione"
@@ -130,7 +134,7 @@ export function GestionalePageToolbarActions({
           <button
             type="button"
             onClick={onOpenLog}
-            className={dsPageToolbarIconBtn}
+            className={`${dsPageToolbarIconBtn} shrink-0`}
             aria-label="Log modifiche"
           >
             <IconGestionaleLog />

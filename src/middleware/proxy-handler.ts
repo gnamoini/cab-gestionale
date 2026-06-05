@@ -4,11 +4,6 @@ import { isStagingPublicSlice, isStagingBlockedPathname } from "@/lib/env/stagin
 import { resolveServerAuthWithSupabase } from "@/src/lib/auth/resolve-server-auth";
 import { createSupabaseMiddlewareClient } from "@/src/lib/supabase/middleware-client";
 import {
-  CLIENT_LAVORAZIONI_SETTINGS_KEY,
-  CLIENT_LAVORAZIONI_SETTINGS_MODULE,
-  parseClientPortalAccess,
-} from "@/lib/lavorazioni/client-portal-access";
-import {
   ACCESS_DENIED_PATH,
   CLIENTE_HOME_PATH,
   defaultHomePathForRole,
@@ -16,7 +11,6 @@ import {
   isClienteRole,
   isPathAllowedForCliente,
   pathnameToSection,
-  resolveClientLavorazioniPortalAccess,
 } from "@/lib/auth/rbac";
 import { evaluateGestionaleRouteAccess } from "@/src/lib/auth/evaluate-gestionale-route-access";
 import {
@@ -104,17 +98,7 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     return NextResponse.redirect(url);
   }
 
-  let clientLavorazioniAllowed = hasPermission(role, "viewClientLavorazioni");
-  if (!clientLavorazioniAllowed && pathnameToSection(pathname) === "lavorazioni_clienti") {
-    const { data: row } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
-      .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
-      .maybeSingle();
-    const settings = parseClientPortalAccess(row?.value);
-    clientLavorazioniAllowed = resolveClientLavorazioniPortalAccess(role, activeUser.id, settings.enabledUserIds);
-  }
+  const clientLavorazioniAllowed = hasPermission(role, "viewClientLavorazioni");
 
   const section = pathnameToSection(pathname);
   let pilotDbEnabled = false;

@@ -8,6 +8,7 @@ import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-c
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { RicambioConsumoInfoRows } from "@/components/gestionale/magazzino/ricambio-info-panel";
 import { RicambioFormFields } from "@/components/gestionale/magazzino/ricambio-form-fields";
+import { RicambioFormOptionsProvider } from "@/components/gestionale/magazzino/ricambio-form-options-context";
 import {
   ricambioFromFormLenient,
   toFormDraft,
@@ -16,7 +17,6 @@ import {
 } from "@/lib/magazzino/form";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { probeRicambioInputLag } from "@/lib/debug/ricambio-input-lag-probe";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary, dsModalFormFooter } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
@@ -77,15 +77,6 @@ export function RicambioEditModal({
   );
   const [listFieldInvalid, setListFieldInvalid] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
-  const renderCountRef = useRef(0);
-  renderCountRef.current += 1;
-
-  // #region agent log
-  probeRicambioInputLag("ricambio-edit-modal.tsx:render", "E", {
-    renderCount: renderCountRef.current,
-    descrizioneLen: editDraft.descrizione.length,
-  });
-  // #endregion
 
   useEffect(() => {
     setEditDraft(toFormDraft(ricambio, mezziListePrefs));
@@ -140,6 +131,7 @@ export function RicambioEditModal({
       titleId="detail-ricambio-title"
       maxWidthClass="max-w-lg"
     >
+      <RicambioFormOptionsProvider>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={saveEdit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <GestionaleModalScrollBody className="space-y-4">
           <RicambioFormFields
@@ -192,6 +184,7 @@ export function RicambioEditModal({
           </div>
         </footer>
       </form>
+      </RicambioFormOptionsProvider>
     </GestionaleModalShell>
   );
 }

@@ -12,5 +12,12 @@ export default function GestionaleError({ error, reset }: { error: Error & { dig
     });
   }, [error]);
 
-  return <GestionaleErrorFallback variant="gestionale" message={error.message} onRetry={() => reset()} />;
+  return (
+    <GestionaleErrorFallback
+      variant="gestionale"
+      message={error.message}
+      digest={error.digest}
+      onRetry={() => reset()}
+    />
+  );
 }

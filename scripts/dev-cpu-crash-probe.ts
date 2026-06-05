@@ -8,44 +8,25 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const LOG_PATH = path.join(ROOT, "debug-929eab.log");
-const INGEST =
-  "http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769";
-const SESSION = "929eab";
+const LOG_PATH = path.join(ROOT, "dev-probe.log");
 const MONITOR_MS = Number(process.env.DEV_CPU_PROBE_MS ?? 45_000);
 const SAMPLE_MS = 2_000;
 
-type Payload = {
-  sessionId: string;
+type ProbeEvent = {
   runId: string;
-  hypothesisId: string;
   location: string;
   message: string;
   data: Record<string, unknown>;
   timestamp: number;
 };
 
-function emit(p: Omit<Payload, "sessionId" | "timestamp">): void {
-  const line: Payload = {
-    sessionId: SESSION,
-    timestamp: Date.now(),
-    ...p,
-  };
-  // #region agent log
+function emit(p: Omit<ProbeEvent, "timestamp">): void {
+  const line: ProbeEvent = { ...p, timestamp: Date.now() };
   try {
     fs.appendFileSync(LOG_PATH, `${JSON.stringify(line)}\n`);
   } catch {
     /* ignore */
   }
-  fetch(INGEST, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": SESSION,
-    },
-    body: JSON.stringify(line),
-  }).catch(() => {});
-  // #endregion
 }
 
 function readLockPid(): number | null {
@@ -85,7 +66,6 @@ function sampleNodeCpuWindows(): Promise<number | null> {
 async function main(): Promise<void> {
   emit({
     runId: "cpu-crash",
-    hypothesisId: "B",
     location: "dev-cpu-crash-probe.ts:start",
     message: "probe start",
     data: {
@@ -138,7 +118,6 @@ async function main(): Promise<void> {
   child.on("exit", (code, signal) => {
     emit({
       runId: "cpu-crash",
-      hypothesisId: "B",
       location: "dev-cpu-crash-probe.ts:exit",
       message: "next dev process exited",
       data: { code, signal, readyCount, compileCount, errorLines },
@@ -183,7 +162,6 @@ async function main(): Promise<void> {
 
   emit({
     runId: "cpu-crash",
-    hypothesisId: "A",
     location: "dev-cpu-crash-probe.ts:compile",
     message: "stdout compile/ready pattern",
     data: {
@@ -198,7 +176,6 @@ async function main(): Promise<void> {
 
   emit({
     runId: "cpu-crash",
-    hypothesisId: "C",
     location: "dev-cpu-crash-probe.ts:cpu",
     message: "node cpu samples",
     data: {
@@ -221,7 +198,7 @@ async function main(): Promise<void> {
     },
   });
 
-  console.log("[dev:cpu-probe] Done → debug-929eab.log");
+  console.log("[dev:cpu-probe] Done → dev-probe.log");
 }
 
 void main();

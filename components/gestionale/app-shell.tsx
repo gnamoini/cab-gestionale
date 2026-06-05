@@ -37,6 +37,7 @@ import {
 } from "@/src/lib/navigation/route-transition";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { useGestionaleMainScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
 import { useSidebarCollapsed } from "@/lib/ui/use-sidebar-collapsed";
@@ -368,6 +369,7 @@ function MobileNavDrawer({
   }, [mounted, open]);
 
   useGestionaleMainScrollLock(mounted, "MobileNavDrawer");
+  useOverlayBackHandler(mounted && open && !closing, onClose, "MobileNavDrawer");
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 768px)");

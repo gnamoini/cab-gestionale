@@ -5,6 +5,7 @@ import { CloseButton } from "@/components/design-system";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnNeutral, dsBtnPrimary, dsZModalHigh } from "@/lib/ui/design-system";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import {
   CAB_MODAL_ROOT_ATTR,
   CAB_MODAL_SCROLL_ATTR,
@@ -36,6 +37,7 @@ export function MobileFilterDrawer({
   closeOnBodyButtonClick = false,
 }: MobileFilterDrawerProps) {
   useBodyScrollLock(open, "MobileFilterDrawer");
+  useOverlayBackHandler(open, onClose, "MobileFilterDrawer");
 
   useEffect(() => {
     if (!open) return;

@@ -3,7 +3,13 @@
 import "./gestionale-list-table.css";
 
 import type { ReactNode } from "react";
-import { GlobalTable, type GlobalTableProps } from "@/components/gestionale/global-table/global-table";
+import {
+  GlobalTable,
+  type GlobalTableProps,
+  type GlobalTableVirtualRows,
+} from "@/components/gestionale/global-table/global-table";
+
+export type { GlobalTableVirtualRows };
 import { GlobalTableHeadLabel } from "@/components/gestionale/global-table/global-table-header";
 import {
   gestionaleListTableMasterWrapClass,

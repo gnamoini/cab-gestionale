@@ -6,7 +6,9 @@ html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
   min-height: var(--cab-app-height, 100dvh);
-  min-width: var(--cab-app-width, 100vw);
+  /* Larghezza fluida: non usare --cab-app-width (px) come min-width — resta stale dopo resize/HMR webview IDE. */
+  min-width: 0;
+  width: 100%;
   background-color: var(--cab-bg-app);
 }
 

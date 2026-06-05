@@ -1,4 +1,5 @@
 import {
+  validateDeleteUserByAdminInput,
   validateSecurityUserBatchPatches,
   validateSetClientLavorazioniAccessInput,
   validateUpdateUserRoleInput,
@@ -10,6 +11,7 @@ function assert(cond: boolean, msg: string): void {
 }
 
 const USER_ID = "11111111-1111-4111-8111-111111111111";
+const OTHER_USER_ID = "22222222-2222-4222-8222-222222222222";
 
 assert(validateUserId(USER_ID) === null, "valid uuid");
 assert(validateUserId("not-uuid") !== null, "invalid uuid");
@@ -68,5 +70,14 @@ if (clienteRefPatch.ok) {
 
 const clearClienteRef = validateSecurityUserBatchPatches([{ userId: USER_ID, clienteRef: null }]);
 assert(clearClienteRef.ok === true, "clienteRef null clears association");
+
+const deleteSelf = validateDeleteUserByAdminInput(USER_ID, USER_ID);
+assert(deleteSelf.ok === false, "self-delete rejected");
+
+const deleteOther = validateDeleteUserByAdminInput(OTHER_USER_ID, USER_ID);
+assert(deleteOther.ok === true, "delete other user valid");
+if (deleteOther.ok) assert(deleteOther.userId === OTHER_USER_ID, "userId trimmed");
+
+assert(validateDeleteUserByAdminInput("", USER_ID).ok === false, "empty userId rejected");
 
 console.log("security-actions-validation.test.ts OK");

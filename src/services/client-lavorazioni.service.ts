@@ -2,8 +2,9 @@
 
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
-import { lavorazioneMatchesClienteScope, normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
+import { lavorazioneMatchesClienteScope } from "@/src/lib/auth/cliente-portal-scope";
 import { ensureClientLavorazioniAccess, loadCallerClienteRef } from "@/src/lib/auth/permission-guards";
+import { fetchClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/fetch-client-effective-permissions";
 import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
@@ -53,8 +54,15 @@ export const clientLavorazioniService = {
         settingsStati,
       );
 
+      const snap = await fetchClientEffectivePermissionsSnapshot();
+      const role = snap?.role ?? null;
       const clienteRef = await loadCallerClienteRef();
-      if (normalizeClienteRef(clienteRef) && !lavorazioneMatchesClienteScope(row, clienteRef)) {
+      if (
+        !lavorazioneMatchesClienteScope(row, clienteRef, {
+          failClosedForClienteRole: true,
+          role,
+        })
+      ) {
         return err("Lavorazione non trovata.");
       }
 

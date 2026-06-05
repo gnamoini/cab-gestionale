@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { memo, useCallback, useRef } from "react";
 import { findExactMezzoForIngressoIdent } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
@@ -16,7 +16,7 @@ export type SchedaIngressoAnagraficaSection = "cliente" | "attrezzatura" | "tela
 
 const ALL_SECTIONS: SchedaIngressoAnagraficaSection[] = ["cliente", "attrezzatura", "telaio", "dettagli"];
 
-export function SchedaIngressoAnagraficaFields({
+function SchedaIngressoAnagraficaFieldsInner({
   value,
   onPatch,
   mezzi,
@@ -307,3 +307,5 @@ export function SchedaIngressoAnagraficaFields({
     </>
   );
 }
+
+export const SchedaIngressoAnagraficaFields = memo(SchedaIngressoAnagraficaFieldsInner);

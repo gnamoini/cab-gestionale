@@ -141,12 +141,10 @@ export function canDelete(user: RbacUser, section: RbacSection, ctx?: RbacEvalua
 
 export function resolveClientLavorazioniPortalAccess(
   role: string | null | undefined,
-  userId: string | null | undefined,
-  settingsEnabledUserIds: string[],
+  _userId?: string | null | undefined,
+  _settingsEnabledUserIds?: string[],
 ): boolean {
-  if (hasPermission(role, "viewClientLavorazioni")) return true;
-  if (!userId?.trim()) return false;
-  return settingsEnabledUserIds.includes(userId);
+  return hasPermission(role, "viewClientLavorazioni");
 }
 
 export function isClienteRole(user: RbacUser): boolean {

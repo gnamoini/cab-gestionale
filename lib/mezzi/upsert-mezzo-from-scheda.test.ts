@@ -19,8 +19,12 @@ function mezzo(partial: Partial<MezzoGestito> & Pick<MezzoGestito, "id">): Mezzo
     tipoTelaio: partial.tipoTelaio ?? "—",
     marcaTelaio: partial.marcaTelaio ?? "—",
     modelloTelaio: partial.modelloTelaio ?? "—",
-    oreLavoro: partial.oreLavoro ?? "—",
-    km: partial.km ?? "—",
+    oreKm: partial.oreKm ?? 0,
+    km: partial.km,
+    statoAttuale: partial.statoAttuale ?? "Operativo",
+    dataUltimaUscita: partial.dataUltimaUscita ?? "2024-01-01",
+    note: partial.note ?? "",
+    priorita: partial.priorita ?? "normale",
   };
 }
 

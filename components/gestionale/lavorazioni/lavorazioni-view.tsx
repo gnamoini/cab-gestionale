@@ -30,7 +30,12 @@ const SchedeLavorazioneModal = dynamic(
   { ssr: false },
 );
 import type { SchedeLavorazioneDialogSize } from "@/components/lavorazioni/schede/schede-lavorazione-modal";
-import { LavorazioniKanbanView } from "@/components/gestionale/lavorazioni/lavorazioni-kanban-view";
+import { LoadingKanbanSkeleton } from "@/components/design-system";
+const LavorazioniKanbanView = dynamic(
+  () =>
+    import("@/components/gestionale/lavorazioni/lavorazioni-kanban-view").then((m) => m.LavorazioniKanbanView),
+  { ssr: false, loading: () => <LoadingKanbanSkeleton /> },
+);
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
 import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
 import {
@@ -69,10 +74,8 @@ import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
-import {
-  formatIdentificazionePdfCell,
-  openLavorazioniInCorsoPdfInNewTab,
-} from "@/lib/lavorazioni/lavorazioni-list-pdf";
+import { formatIdentificazionePdfCell } from "@/lib/lavorazioni/lavorazioni-pdf-format";
+import { importLavorazioniListPdf } from "@/lib/pdf/lazy-pdf-modules";
 import {
   buildLatestLogAutoreByEntitaId,
   buildLogAutoreByUserId,
@@ -1417,21 +1420,23 @@ export function LavorazioniView() {
       gestToast.warning("Nessuna lavorazione in corso da stampare con i filtri attivi.");
       return;
     }
-    openLavorazioniInCorsoPdfInNewTab(
-      sortedAttive.map((row) => {
-        const ident = mezzoIdentParts(row, schedeStore);
-        return {
-          cliente: clienteLabel(row, schedeStore),
-          attrezzatura: macchinaLabel(row, schedeStore),
-          identificazione: formatIdentificazionePdfCell(ident.targa, ident.matricola, ident.scuderia),
-          stato: statoLavorazioneLabel(row.stato, statiOpts),
-          priorita: prioritaLabel(row.priorita),
-          prioritaSortKey: row.priorita,
-          addetto: addettoLabel(row, schedeStore, defaultAddetto),
-        };
-      }),
-      authorName,
-    );
+    void importLavorazioniListPdf().then(({ openLavorazioniInCorsoPdfInNewTab }) => {
+      openLavorazioniInCorsoPdfInNewTab(
+        sortedAttive.map((row) => {
+          const ident = mezzoIdentParts(row, schedeStore);
+          return {
+            cliente: clienteLabel(row, schedeStore),
+            attrezzatura: macchinaLabel(row, schedeStore),
+            identificazione: formatIdentificazionePdfCell(ident.targa, ident.matricola, ident.scuderia),
+            stato: statoLavorazioneLabel(row.stato, statiOpts),
+            priorita: prioritaLabel(row.priorita),
+            prioritaSortKey: row.priorita,
+            addetto: addettoLabel(row, schedeStore, defaultAddetto),
+          };
+        }),
+        authorName,
+      );
+    });
   }, [sortedAttive, gestToast, schedeStore, statiOpts, authorName, defaultAddetto]);
 
   return (

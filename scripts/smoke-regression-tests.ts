@@ -16,6 +16,7 @@ const TESTS = [
   "lib/lavorazioni/desktop-notification-permission.test.ts",
   "lib/regression/forms-save-policy.test.ts",
   "lib/regression/performance-policy.test.ts",
+  "lib/regression/debug-instrumentation-policy.test.ts",
   "lib/regression/compatibility-policy.test.ts",
   "lib/regression/audit-signoff-policy.test.ts",
   "lib/regression/pdf-preview-policy.test.ts",
@@ -90,6 +91,7 @@ const TESTS = [
   "lib/validation/services/lavorazioni-payload.test.ts",
   "lib/validation/security-actions-validation.test.ts",
   "lib/auth/cliente-portal-scope.test.ts",
+  "lib/auth/cliente-association-audit.test.ts",
   "lib/dipendenti/timesheet-report-kpi-filter.test.ts",
 ];
 

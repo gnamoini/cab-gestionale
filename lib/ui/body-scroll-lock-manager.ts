@@ -215,14 +215,17 @@ export function healBodyScrollLockState(_reason?: string): void {
   if (lockStack.length > 0) return;
 
   const attr = document.body.getAttribute(BODY_LOCK_ATTR);
+  const hadAttr = Boolean(attr);
+  const wasDomLocked = isDomScrollLocked();
   if (attr) {
     document.body.removeAttribute(BODY_LOCK_ATTR);
   }
-  if (isDomScrollLocked()) {
+  if (wasDomLocked) {
     clearBodyScrollLockStyles();
   }
   const main = document.querySelector(MAIN_SCROLL_SELECTOR) as HTMLElement | null;
-  if (mainLockCount === 0 && main?.style.overflow === "hidden") {
+  const hadMainLock = mainLockCount === 0 && main?.style.overflow === "hidden";
+  if (hadMainLock && main) {
     main.style.overflow = "";
     main.removeAttribute("data-cab-main-scroll-lock");
   }

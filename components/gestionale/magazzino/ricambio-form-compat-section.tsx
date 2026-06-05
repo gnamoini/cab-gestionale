@@ -23,11 +23,9 @@ import {
   marcheFromHierarchyTree,
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import { compatLineDisplayText } from "@/lib/magazzino/form";
-import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
 import { CAB_FIELD_LABEL_ATTR, CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
 import { dsLabel, dsTypoSmall } from "@/lib/ui/design-system";
-import { probeRicambioInputLag } from "@/lib/debug/ricambio-input-lag-probe";
-
 type SetForm = React.Dispatch<React.SetStateAction<RicambioFormState>>;
 
 function RicambioSectionTitle({ children }: { children: React.ReactNode }) {
@@ -86,7 +84,7 @@ function RicambioFormCompatSectionInner({
   setForm: SetForm;
   formResetKey?: string;
 }) {
-  const globalOpts = useGlobalOptions({ debugTag: "RicambioFormCompatSection" });
+  const globalOpts = useRicambioFormOptions();
   const prefsTree = useMemo(() => migrateMezziListePrefs(globalOpts.mezziListe), [globalOpts.mezziListe]);
   const mezziSel = useMemo(() => new Set(parseCompatInput(form.compatibilitaMezzi)), [form.compatibilitaMezzi]);
   const [marcheFiltroAtt, setMarcheFiltroAtt] = useState<Set<string>>(
@@ -377,11 +375,6 @@ function compatSectionPropsEqual(
     prev.form.compatMarcheTelaioFiltro === next.form.compatMarcheTelaioFiltro &&
     prev.formResetKey === next.formResetKey &&
     prev.setForm === next.setForm;
-  if (!equal) {
-    probeRicambioInputLag("ricambio-form-compat-section.tsx:memo-miss", "F", {
-      compatMezziChanged: prev.form.compatibilitaMezzi !== next.form.compatibilitaMezzi,
-    });
-  }
   return equal;
 }
 

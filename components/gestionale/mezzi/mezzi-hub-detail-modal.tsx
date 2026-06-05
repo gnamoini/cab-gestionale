@@ -15,7 +15,7 @@ import { canOpenDocumento, formatDocumentoRigaSintetica, openDocumentoFile } fro
 import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { buildPreventiviArchivioFilterHref, buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
-import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
+import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import { ultimaLavorazioneLabel } from "@/lib/mezzi/mezzi-helpers";
 import { hubPanoramicaDisplayValue } from "@/components/design-system/hub-modal-panoramica";
@@ -490,7 +490,11 @@ export function MezziHubDetailModal({
                         <button
                           type="button"
                           className={dsTableActionTextBtnPrimary}
-                          onClick={() => openPreventivoPdfInNewTab(p, "Gestionale")}
+                          onClick={() =>
+                            void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
+                              openPreventivoPdfInNewTab(p, "Gestionale"),
+                            )
+                          }
                         >
                           PDF
                         </button>

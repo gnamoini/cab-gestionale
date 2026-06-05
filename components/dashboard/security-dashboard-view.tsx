@@ -42,8 +42,14 @@ import {
   runSecurityReleaseControlAction,
   setPilotDbOverrideAction,
   type ChecklistItem,
-  type PilotControlStatus,
 } from "@/src/actions/security-release-control";
+import { logModificaDetailLine } from "@/lib/gestionale-log/log-modifiche-view-model";
+import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import {
+  pilotIncoherenceExplanation,
+  type PilotControlStatus,
+} from "@/src/lib/runtime/truth-layer/resolve-pilot-settings-state";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
 
 type SecurityDashboardTab = "users" | "monitoring" | "release";
 
@@ -80,16 +86,6 @@ function truncateUa(ua: string | null, max = 72): string {
   const t = ua.trim();
   if (t.length <= max) return t;
   return `${t.slice(0, max - 1)}…`;
-}
-
-function payloadDetail(payload: unknown): string {
-  if (!payload || typeof payload !== "object") return "—";
-  const o = payload as Record<string, unknown>;
-  if (typeof o.compact === "string") return o.compact;
-  if (typeof o.event === "string") return o.event;
-  if ("before" in o || "after" in o) return "Modifica dati";
-  if ("snapshot" in o) return "Snapshot record";
-  return "Evento registrato";
 }
 
 function findingTone(category: string): "danger" | "warning" | "neutral" {
@@ -192,7 +188,9 @@ function useRecentSystemActivity(enabled: boolean) {
     queryKey: [...QK.log, "security-recent"],
     enabled,
     ...securityOpts,
-    queryFn: async (): Promise<RecentActivityRow[]> => {
+    queryFn: async (): Promise<
+      Array<LogModificaRow & { profiles?: { nome?: string | null } | null }>
+    > => {
       const sb = getBrowserSupabase();
       const { data, error } = await sb
         .from("log_modifiche")
@@ -200,15 +198,7 @@ function useRecentSystemActivity(enabled: boolean) {
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw new Error(error.message);
-      return ((data ?? []) as Array<LogModificaRow & { profiles?: { nome?: string | null } | null }>).map((r) => ({
-        id: `audit-${r.id}`,
-        source: "audit",
-        action: r.azione,
-        entita: r.entita,
-        when: r.created_at,
-        actor: r.profiles?.nome?.trim() || "—",
-        detail: payloadDetail(r.payload),
-      }));
+      return (data ?? []) as Array<LogModificaRow & { profiles?: { nome?: string | null } | null }>;
     },
   });
 }
@@ -246,7 +236,21 @@ export function SecurityDashboardView() {
 
   const dash = useSecurityDashboardData(filters);
   const usersQ = useSecurityUsersPermissionsQuery(!!isAdmin);
+  const globalOpts = useGlobalOptions({ debugTag: "SecurityDashboardView" });
+  const statiLavorazione = globalOpts.lavorazioni.stati;
   const recentActivityQ = useRecentSystemActivity(!!isAdmin && activeTab === "monitoring");
+
+  const recentActivityRows = useMemo((): RecentActivityRow[] => {
+    return (recentActivityQ.data ?? []).map((r) => ({
+      id: `audit-${r.id}`,
+      source: "audit",
+      action: r.azione,
+      entita: r.entita,
+      when: r.created_at,
+      actor: r.profiles?.nome?.trim() || "—",
+      detail: logModificaDetailLine(r, statiLavorazione),
+    }));
+  }, [recentActivityQ.data, statiLavorazione]);
 
   const runControlCenterCheck = useCallback(async (includeBuildChecks = false) => {
     setReadinessLoading(true);
@@ -488,13 +492,18 @@ export function SecurityDashboardView() {
                   : pilotStatus?.state === "ui_only"
                     ? "SOLO UI ATTIVO"
                     : pilotStatus?.state === "db_only"
-                      ? "SOLO DB ATTIVO"
+                      ? "COMPAT DB (env OFF, override non effettivo)"
                       : "DISATTIVO (produzione-safe)"}
               </strong>
             </div>
-            {pilotStatus?.incoherent ? (
+            {pilotStatus && pilotIncoherenceExplanation(pilotStatus) ? (
               <p className="rounded-md border border-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-surface))] px-3 py-2 text-xs text-[color:var(--cab-text)]">
-                INCOERENTE (risk mode): UI ON e DB OFF (o viceversa).
+                {pilotIncoherenceExplanation(pilotStatus)}
+              </p>
+            ) : null}
+            {pilotStatus?.state === "db_only" && !pilotStatus.incoherent ? (
+              <p className="text-xs text-[color:var(--cab-text-muted)]">
+                DB flag attivo per audit/compat; override effettivo disattivato (env OFF).
               </p>
             ) : null}
             <div className="flex flex-wrap gap-2">
@@ -574,10 +583,12 @@ export function SecurityDashboardView() {
                           className={`inline-flex rounded px-2 py-0.5 text-[10px] font-bold ${
                             item.status === "ok"
                               ? "bg-[color:color-mix(in_srgb,var(--cab-success)_15%,var(--cab-surface))] text-[color:var(--cab-success)]"
-                              : "bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] text-[color:var(--cab-danger)]"
+                              : item.status === "skip"
+                                ? "bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-surface))] text-[color:var(--cab-text-muted)]"
+                                : "bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] text-[color:var(--cab-danger)]"
                           }`}
                         >
-                          {item.status === "ok" ? "OK" : "FAIL"}
+                          {item.status === "ok" ? "OK" : item.status === "skip" ? "SKIP" : "FAIL"}
                         </span>
                       </div>
                       <p className="mt-1 text-[color:var(--cab-text-muted)]">
@@ -588,6 +599,17 @@ export function SecurityDashboardView() {
                     </li>
                   ))}
                 </ul>
+                {checklist.some(
+                  (item) =>
+                    item.status === "skip" && (item.category === "build" || item.category === "test"),
+                ) ? (
+                  <p className="mt-3 text-xs text-[color:var(--cab-text-muted)]">
+                    Check build e test non eseguiti in questa run. Clicca{" "}
+                    <strong className="text-[color:var(--cab-text)]">Esegui checklist completa</strong> per{" "}
+                    <span className="font-mono">tsc</span>, <span className="font-mono">next build</span> e{" "}
+                    <span className="font-mono">test:permissions</span>.
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </section>
@@ -637,7 +659,7 @@ export function SecurityDashboardView() {
           <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento audit…</p>
         ) : recentActivityQ.isError ? (
           <p className="text-sm text-[color:var(--cab-danger)]">{recentActivityQ.error.message}</p>
-        ) : (recentActivityQ.data ?? []).length === 0 ? (
+        ) : recentActivityRows.length === 0 ? (
           <div className={`${dsTableWrap} ${dsScrollbar}`}>
             <table className={dsTable}>
               <tbody>
@@ -658,7 +680,7 @@ export function SecurityDashboardView() {
                   <GlobalTableHeadLabel label="Dettaglio" />
               </GlobalTableHead>
               <tbody>
-                {(recentActivityQ.data ?? []).map((row) => (
+                {recentActivityRows.map((row) => (
                   <tr key={row.id} className={dsTableRow}>
                     <td className={`${dsTableTd} whitespace-nowrap tabular-nums`}>{fmtWhen(row.when)}</td>
                     <td className={dsTableTd}>{row.entita}</td>

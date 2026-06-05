@@ -25,7 +25,7 @@ const BunderEditorModal = dynamic(
 import { useAuth } from "@/context/auth-context";
 import { appendBunderChangeLog, loadBunderChangeLog, removeBunderChangeLogEntryById, type BunderLogStored } from "@/lib/bunder/bunder-change-log-storage";
 import { cloneBunderDocument, createNuovoBunderDocument, documentoMatchesSearch, totaleDocumento } from "@/lib/bunder/bunder-generate-default";
-import { openBunderPdfInNewTab } from "@/lib/bunder/bunder-pdf";
+import { importBunderPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { openBunderWordInNewTab } from "@/lib/bunder/bunder-html-document";
 import { bunderKindLabel, BUNDER_DOC_KIND_OPTIONS } from "@/lib/bunder/doc-kind-meta";
 import type { BunderCommercialDocument, BunderDocKind } from "@/lib/bunder/types";
@@ -573,7 +573,7 @@ export function BunderView() {
   }
 
   function rowPdf(d: BunderCommercialDocument) {
-    openBunderPdfInNewTab(d, authorTrim);
+    void importBunderPdf().then(({ openBunderPdfInNewTab }) => openBunderPdfInNewTab(d, authorTrim));
     appendBunderChangeLog({
       tone: "neutral",
       tipoRiga: "ESPORTAZIONE PDF",

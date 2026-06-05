@@ -1,11 +1,6 @@
 "use client";
 
-import {
-  CLIENT_LAVORAZIONI_SETTINGS_KEY,
-  CLIENT_LAVORAZIONI_SETTINGS_MODULE,
-  parseClientPortalAccess,
-  userHasClientLavorazioniAccess,
-} from "@/lib/lavorazioni/client-portal-access";
+import { userHasClientLavorazioniAccess } from "@/lib/lavorazioni/client-portal-access";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { moduleAllows, type ModulePermissionOp } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
@@ -105,20 +100,13 @@ export async function ensureSectionWriteOrError(section: RbacSection): Promise<v
   if (!allowed.success) throw new Error(allowed.error ?? DENIED_MESSAGE);
 }
 
-async function loadClientPortalAccessForCurrentUser(): Promise<{ role: string | null; userId: string | null; settings: ReturnType<typeof parseClientPortalAccess> }> {
+async function loadClientPortalAccessForCurrentUser(): Promise<{ role: string | null; userId: string | null }> {
   const sb = getBrowserSupabase();
   const { data: auth } = await sb.auth.getUser();
   const userId = auth.user?.id ?? null;
-  if (!userId) return { role: null, userId: null, settings: { enabledUserIds: [] } };
+  if (!userId) return { role: null, userId: null };
   const snap = await fetchClientEffectivePermissionsSnapshot();
-  const role = snap?.role ?? null;
-  const { data: row } = await sb
-    .from("app_settings")
-    .select("value")
-    .eq("module", CLIENT_LAVORAZIONI_SETTINGS_MODULE)
-    .eq("key", CLIENT_LAVORAZIONI_SETTINGS_KEY)
-    .maybeSingle();
-  return { role, userId, settings: parseClientPortalAccess(row?.value) };
+  return { role: snap?.role ?? null, userId };
 }
 
 /** `profiles.cliente_ref` dell'utente corrente (portale / filtri lista). */
@@ -130,10 +118,10 @@ export async function loadCallerClienteRef(): Promise<string | null> {
   return normalizeClienteRef(prof?.cliente_ref);
 }
 
-/** Portale lavorazioni clienti: admin o utente abilitato in Sicurezza. */
+/** Portale lavorazioni clienti: solo ruoli admin e cliente. */
 export async function ensureClientLavorazioniAccess(): Promise<ServiceResult<true>> {
-  const { role, userId, settings } = await loadClientPortalAccessForCurrentUser();
+  const { role, userId } = await loadClientPortalAccessForCurrentUser();
   if (!userId) return err("Sessione non valida.");
-  if (!userHasClientLavorazioniAccess(role, userId, settings)) return err(CLIENT_DENIED);
+  if (!userHasClientLavorazioniAccess(role, userId)) return err(CLIENT_DENIED);
   return success(true);
 }

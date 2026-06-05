@@ -1,5 +1,5 @@
 import { attachConsoleGuards } from "../helpers/console";
-import { adminCredentials, clientCredentials, loginViaUi } from "../fixtures/auth";
+import { adminCredentials, clientCredentials, loginViaUi, operatorCredentials } from "../fixtures/auth";
 import { test, expect } from "@playwright/test";
 
 /** UUID inesistente — verifica che il portale non esponga dati sensibili. */
@@ -20,6 +20,15 @@ test("client portal denies unknown lavorazione id", async ({ page }) => {
     page.getByText(/non esiste o non è accessibile|non trovata|Lavorazione non trovata/i),
   ).toBeVisible({ timeout: 30_000 });
   await expect(page.getByText(/00000000-0000-0000-0000-000000000001/)).not.toBeVisible();
+});
+
+test("operator direct URL to client portal is denied", async ({ page }) => {
+  const op = operatorCredentials();
+  test.skip(!op, "SMOKE_OPERATOR_EMAIL/PASSWORD not set");
+  attachConsoleGuards(page);
+  await loginViaUi(page, op!);
+  await page.goto("/lavorazioni-clienti");
+  await expect(page).toHaveURL(/acesso-negato|\/dashboard/, { timeout: 30_000 });
 });
 
 test("client user cannot open alien lavorazione id", async ({ page }) => {

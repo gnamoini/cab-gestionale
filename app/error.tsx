@@ -12,5 +12,12 @@ export default function RootError({ error, reset }: { error: Error & { digest?: 
     });
   }, [error]);
 
-  return <GestionaleErrorFallback variant="root" message={error.message} onRetry={() => reset()} />;
+  return (
+    <GestionaleErrorFallback
+      variant="root"
+      message={error.message}
+      digest={error.digest}
+      onRetry={() => reset()}
+    />
+  );
 }

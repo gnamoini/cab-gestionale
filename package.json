@@ -40,13 +40,15 @@
     "documenti:storage-inventory": "npx tsx scripts/documenti-storage-inventory.ts",
     "documenti:remediate-url-file": "npx tsx scripts/remediate-documenti-url-file.ts",
     "ops:env-check": "npx tsx scripts/ops-env-check.ts",
-    "audit:rls": "npx tsx scripts/rls-service-audit.ts"
+    "audit:rls": "npx tsx scripts/rls-service-audit.ts",
+    "analyze": "npx tsx scripts/analyze-bundle.ts"
   },
   "dependencies": {
     "@floating-ui/react-dom": "^2.1.8",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "@tanstack/react-query": "^5.66.0",
+    "@tanstack/react-virtual": "^3.14.2",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "next": "16.2.6",
@@ -55,6 +57,7 @@
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@next/bundle-analyzer": "^16.2.7",
     "@playwright/test": "^1.52.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",

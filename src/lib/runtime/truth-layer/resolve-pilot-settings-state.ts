@@ -30,8 +30,16 @@ export function resolvePilotSettingsState(dbEnabled: boolean): PilotSettingsStat
     dbEnabled,
     effectiveEnabled,
     state,
-    incoherent: state === "ui_only" || state === "db_only",
+    incoherent: state === "ui_only",
   };
+}
+
+export function pilotIncoherenceExplanation(status: PilotSettingsState): string | null {
+  if (!status.incoherent) return null;
+  if (status.state === "ui_only") {
+    return "INCOERENTE (risk mode): UI (env) ON, DB (app_settings) OFF. Il pilot non è allineato su RLS.";
+  }
+  return null;
 }
 
 /** Alias per dashboard sicurezza (stesso shape di PilotControlStatus). */

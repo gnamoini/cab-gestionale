@@ -50,7 +50,7 @@ const cases: RoleCase[] = [
       "/report": true,
       "/impostazioni": true,
       "/dashboard/security": false,
-      "/lavorazioni-clienti": true,
+      "/lavorazioni-clienti": false,
     },
   },
   {
@@ -60,6 +60,7 @@ const cases: RoleCase[] = [
       "/report": true,
       "/impostazioni": true,
       "/dashboard/security": false,
+      "/lavorazioni-clienti": false,
     },
     routeExpect: {
       "/report": false,

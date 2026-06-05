@@ -366,41 +366,9 @@ export function validateRicambioListFields(
   opts: RicambioListFieldOptions,
 ): string | null {
   if (f.marca.trim() && !isValueInListOptions(f.marca, opts.marche)) {
-    // #region agent log
-    if (typeof fetch !== "undefined") {
-      fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bb7cdf" },
-        body: JSON.stringify({
-          sessionId: "bb7cdf",
-          hypothesisId: "F",
-          location: "form.ts:validateRicambioListFields",
-          message: "reject marca list",
-          data: { marca: f.marca.trim() },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-    }
-    // #endregion
     return "Seleziona una marca esistente.";
   }
   if (f.categoria.trim() && !isValueInListOptions(f.categoria, opts.categorie)) {
-    // #region agent log
-    if (typeof fetch !== "undefined") {
-      fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bb7cdf" },
-        body: JSON.stringify({
-          sessionId: "bb7cdf",
-          hypothesisId: "F",
-          location: "form.ts:validateRicambioListFields",
-          message: "reject categoria list",
-          data: { categoria: f.categoria.trim() },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {});
-    }
-    // #endregion
     return "Seleziona una categoria esistente.";
   }
   const fForCompat = applyCompatExpansionToFormState(f, opts.mezziListe);
@@ -408,50 +376,8 @@ export function validateRicambioListFields(
   if (compat.length > 0) {
     const invalid = compat.filter((x) => !isAllowedCompatLine(x, opts.mezziListe));
     if (invalid.length > 0) {
-      // #region agent log
-      if (typeof fetch !== "undefined") {
-        fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bb7cdf" },
-          body: JSON.stringify({
-            sessionId: "bb7cdf",
-            hypothesisId: "A",
-            location: "form.ts:validateRicambioListFields",
-            message: "reject compat invalid",
-            data: {
-              invalidCount: invalid.length,
-              invalidSample: invalid.slice(0, 3),
-              compatCount: compat.length,
-              marcheAttFiltro: parseCompatInput(f.compatMarcheAttrezzaturaFiltro),
-              marcheTelFiltro: parseCompatInput(f.compatMarcheTelaioFiltro),
-              expandedCompat: compat.slice(0, 5),
-            },
-            timestamp: Date.now(),
-          }),
-        }).catch(() => {});
-      }
-      // #endregion
       return `Compatibilità non valida: seleziona solo valori dall'elenco (${invalid[0]}).`;
     }
   }
-  // #region agent log
-  if (typeof fetch !== "undefined") {
-    fetch("http://127.0.0.1:7662/ingest/191e4801-c810-4957-b192-301c6ab4b769", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "X-Debug-Session-Id": "bb7cdf" },
-      body: JSON.stringify({
-        sessionId: "bb7cdf",
-        hypothesisId: "A",
-        location: "form.ts:validateRicambioListFields",
-        message: "validate ok",
-        data: {
-          compatCount: compat.length,
-          marcheAttFiltro: parseCompatInput(f.compatMarcheAttrezzaturaFiltro),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {});
-  }
-  // #endregion
   return null;
 }

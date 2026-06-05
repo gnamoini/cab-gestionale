@@ -1,6 +1,6 @@
 /** Corpo modale: flex-1 + min-h-0 dentro dialog a colonna (max-h); il figlio scroll usa overflow-y-auto. */
 export const gestionaleModalBodyFlexClass =
-  "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden";
+  "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden max-md:flex-none max-md:overflow-visible";
 
 /** Corpo scrollabile modale/drawer — unico owner verticale interno. */
 export { dsScrollPanel as gestionaleModalScrollBodyClass } from "@/lib/ui/scroll-system";

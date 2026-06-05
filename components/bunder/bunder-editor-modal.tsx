@@ -8,7 +8,7 @@ import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { applicaHintCliente, hintsByCliente } from "@/lib/bunder/bunder-cliente-hints";
 import { appendBunderChangeLog } from "@/lib/bunder/bunder-change-log-storage";
 import { bunderKindLabel } from "@/lib/bunder/doc-kind-meta";
-import { openBunderPdfInNewTab } from "@/lib/bunder/bunder-pdf";
+import { importBunderPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { openBunderWordInNewTab, openBunderPrintPreview } from "@/lib/bunder/bunder-html-document";
 import { righeFromPreventivo, totaleDocumento } from "@/lib/bunder/bunder-generate-default";
 import { BUNDER_DOC_KIND_OPTIONS } from "@/lib/bunder/doc-kind-meta";
@@ -167,7 +167,7 @@ export function BunderEditorModal({
 
   const esportaPdf = useCallback(() => {
     if (!local) return;
-    openBunderPdfInNewTab(local, autore);
+    void importBunderPdf().then(({ openBunderPdfInNewTab }) => openBunderPdfInNewTab(local, autore));
     appendBunderChangeLog({
       tone: "neutral",
       tipoRiga: "ESPORTAZIONE PDF",

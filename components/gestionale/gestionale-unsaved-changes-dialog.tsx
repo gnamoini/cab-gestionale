@@ -2,6 +2,7 @@
 
 import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
 import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 
 export type GestionaleUnsavedPlacement = "nested" | "stacked";
 
@@ -35,6 +36,12 @@ export function GestionaleUnsavedChangesDialog({
   onDiscard: () => void;
   onSaveAndExit: () => void;
 }) {
+  useOverlayBackHandler(
+    placement === "nested" && open && !pending,
+    onStay,
+    "GestionaleUnsavedChangesDialog-nested",
+  );
+
   const actions = (
     <div className={gestionaleConfirmActionsClass}>
       <button type="button" className={`${dsBtnNeutral} min-h-[2.75rem] sm:min-h-0`} onClick={onStay} disabled={pending}>

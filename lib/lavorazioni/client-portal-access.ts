@@ -24,12 +24,10 @@ export function parseClientPortalAccess(value: unknown): ClientPortalAccessSetti
 
 export function userHasClientLavorazioniAccess(
   role: string | null | undefined,
-  userId: string | null | undefined,
-  settings: ClientPortalAccessSettings,
+  _userId?: string | null | undefined,
+  _settings?: ClientPortalAccessSettings,
 ): boolean {
-  if (hasPermission(role, "viewClientLavorazioni")) return true;
-  if (!userId?.trim()) return false;
-  return settings.enabledUserIds.includes(userId);
+  return hasPermission(role, "viewClientLavorazioni");
 }
 
 export function clientLavorazioniListPath(): string {

@@ -11,6 +11,7 @@ import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { AuthLogWithProfileRow, LogModificaRow } from "@/src/types/supabase-tables";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
+import { formatSecurityNullableWhen } from "@/lib/security/format-last-sign-in";
 
 type UserActivityRow = {
   id: string;
@@ -20,18 +21,6 @@ type UserActivityRow = {
   actor: string;
   detail: string;
 };
-
-function fmtWhen(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("it-IT", { dateStyle: "short", timeStyle: "medium" });
-  } catch {
-    return iso;
-  }
-}
-
-function fmtNullableWhen(iso: string | null): string {
-  return iso ? fmtWhen(iso) : "—";
-}
 
 function payloadDetail(payload: unknown): string {
   if (!payload || typeof payload !== "object") return "—";
@@ -130,11 +119,11 @@ export function SecurityUserDetailDrawer({
             <dl className="mt-3 grid gap-2 text-xs">
               <div className="flex justify-between gap-3">
                 <dt className="text-[color:var(--cab-text-muted)]">Creato</dt>
-                <dd className="text-right tabular-nums text-[color:var(--cab-text)]">{fmtNullableWhen(user.createdAt)}</dd>
+                <dd className="text-right tabular-nums text-[color:var(--cab-text)]">{formatSecurityNullableWhen(user.createdAt)}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-[color:var(--cab-text-muted)]">Ultimo accesso</dt>
-                <dd className="text-right tabular-nums text-[color:var(--cab-text)]">{fmtNullableWhen(user.lastSignInAt)}</dd>
+                <dd className="text-right tabular-nums text-[color:var(--cab-text)]">{formatSecurityNullableWhen(user.lastSignInAt)}</dd>
               </div>
               <div className="flex justify-between gap-3">
                 <dt className="text-[color:var(--cab-text-muted)]">Id profilo</dt>
@@ -177,7 +166,7 @@ export function SecurityUserDetailDrawer({
                     <li key={row.id} className="px-3 py-2 text-xs">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-semibold text-[color:var(--cab-text)]">{row.action}</span>
-                        <span className="tabular-nums text-[color:var(--cab-text-muted)]">{fmtWhen(row.when)}</span>
+                        <span className="tabular-nums text-[color:var(--cab-text-muted)]">{formatSecurityNullableWhen(row.when)}</span>
                       </div>
                       <p className="mt-1 text-[color:var(--cab-text-muted)]">
                         {row.entita} · {row.detail}

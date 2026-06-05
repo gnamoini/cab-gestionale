@@ -2,6 +2,7 @@
 
 import { APP_ROLES, type AppRole } from "@/lib/auth/rbac";
 import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
+import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
 import { GESTIONALE_PERMISSION_MODULES, type GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 
 export type ValidatedModulePermissionEntry = {
@@ -18,6 +19,7 @@ const MAX_BATCH_PATCHES = 100;
 export type ValidatedSecurityUserBatchPatch = {
   userId: string;
   nome?: string;
+  username?: string;
   ruolo?: AppRole;
   clienteRef?: string | null;
   clientLavorazioniAccess?: boolean;
@@ -127,6 +129,14 @@ export function validateSecurityUserBatchPatches(
       patch.nome = p.nome.trim();
     }
 
+    if (p.username !== undefined) {
+      if (typeof p.username !== "string") return { ok: false, message: "Nome utente non valido." };
+      const normalized = normalizeUsername(p.username);
+      const usernameErr = usernameFieldError(normalized);
+      if (usernameErr) return { ok: false, message: usernameErr };
+      patch.username = normalized;
+    }
+
     if (p.ruolo !== undefined) {
       if (typeof p.ruolo !== "string" || !validateAppRoleValue(p.ruolo)) {
         return { ok: false, message: "Ruolo non valido." };
@@ -200,4 +210,17 @@ export function validateUpdateUserRoleInput(input: unknown):
     return { ok: false, message: "Ruolo non valido." };
   }
   return { ok: true, userId: (raw.userId as string).trim(), role: roleRaw };
+}
+
+export function validateDeleteUserByAdminInput(
+  userId: string | null | undefined,
+  callerId: string | null | undefined,
+): { ok: true; userId: string } | { ok: false; message: string } {
+  const userIdErr = validateUserId(userId);
+  if (userIdErr) return { ok: false, message: userIdErr };
+  const trimmed = (userId as string).trim();
+  if (callerId && trimmed === callerId) {
+    return { ok: false, message: "Non puoi eliminare il tuo account da qui." };
+  }
+  return { ok: true, userId: trimmed };
 }

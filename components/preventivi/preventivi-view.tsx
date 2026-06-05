@@ -47,7 +47,7 @@ import {
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { buildNewPreventivoFromLavorazioneContext } from "@/lib/preventivi/generate-preventivo-from-lavorazione";
 import { buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
-import { openPreventivoPdfInNewTab } from "@/lib/preventivi/preventivi-pdf";
+import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { Q_PREVENTIVI_LAV, Q_PREVENTIVI_LAV_ORIG, Q_PREVENTIVI_MEZZO, Q_PREVENTIVI_NUOVO, Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
 import { readAndClearPendingPreventivoPayload, markEphemeralPreventivoDraft, clearEphemeralPreventivoDraft, readEphemeralPreventivoDraftId } from "@/lib/preventivi/preventivi-session-bridge";
 import {
@@ -202,7 +202,11 @@ function PreventivoRowActions({
       <IconActionButton
         label="PDF"
         className={dsTableActionBtnSecondary}
-        onClick={() => openPreventivoPdfInNewTab(p, autore.trim() || "Operatore")}
+        onClick={() =>
+          void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
+            openPreventivoPdfInNewTab(p, autore.trim() || "Operatore"),
+          )
+        }
       >
         <IconPreventivoPdf />
       </IconActionButton>

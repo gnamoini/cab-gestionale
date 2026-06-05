@@ -147,6 +147,22 @@ export function briefLogModificaRiga(modificaRiga: string, maxLines = 3): string
   return `${head.join("\n")}\n• …`;
 }
 
+/** Dettaglio compatto per tabelle admin (security monitoring, audit). */
+export function logModificaDetailLine(
+  row: LogModificaRow,
+  statiLavorazione?: StatoLavorazioneConfig[],
+  maxLines = 3,
+): string {
+  const vm = buildLogModificheGestionaleViewModel(row, "—", statiLavorazione);
+  const lines = parseModificheLines(briefLogModificaRiga(vm.modificaRiga, maxLines));
+  if (lines.length) {
+    return lines.map((line) => `• ${line.replace(/^•\s*/, "")}`).join(" · ");
+  }
+  const fallback = vm.modificaRiga.trim().replace(/\n/g, " · ");
+  if (fallback) return fallback;
+  return vm.oggettoRiga !== "—" ? vm.oggettoRiga : vm.tipoRiga || "Evento registrato";
+}
+
 /** Deep link da voce log globale a pagina operativa. */
 export function buildLogModificheFocusHref(row: LogModificaRow): string | null {
   const lavId = lavorazioneIdFromLogRow(row);

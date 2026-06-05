@@ -52,13 +52,18 @@ import {
 } from "@/lib/ui/design-system";
 import { SETTINGS_PANEL_SHELL } from "@/components/dashboard/settings-list-ui";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { gestionaleModalBodyFlexClass, resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
 import {
   CAB_FOCUS_SCROLL_GROUP_ATTR,
   CAB_FOCUS_SCROLL_TITLE_ATTR,
   CAB_MODAL_ROOT_ATTR,
+  CAB_MODAL_SCROLL_ATTR,
+  gestionaleModalScrollBodyMobileClass,
 } from "@/lib/ui/mobile-modal-behavior";
+import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
+import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
@@ -194,9 +199,11 @@ export function LavorazioniModalShell({
   titleId?: string;
 }) {
   useBodyScrollLock(true, "LavorazioniModalShell");
+  useOverlayBackHandler(true, onRequestClose, "LavorazioniModalShell");
   useDevModalLayoutLint(true, "lavorazioni-modal-shell");
   const dialogFocus = useGestionaleModalDialogFocus();
   useMobileModalKeyboard(dialogFocus.ref);
+  const maxMdDown = useMaxMdDown();
   const modalOpenStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
 
   useLayoutEffect(() => {
@@ -249,8 +256,19 @@ export function LavorazioniModalShell({
         onKeyDown={dialogFocus.onKeyDown}
         onMouseDown={(e) => e.stopPropagation()}
       >
-        {headerNode}
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
+        <div
+          {...(maxMdDown ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
+          className={`flex min-h-0 min-w-0 flex-1 flex-col ${
+            maxMdDown
+              ? `${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} overflow-y-auto`
+              : "overflow-hidden"
+          }`.trim()}
+        >
+          {headerNode}
+          <div className="flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden">
+            {children}
+          </div>
+        </div>
       </div>
     </div>
   );

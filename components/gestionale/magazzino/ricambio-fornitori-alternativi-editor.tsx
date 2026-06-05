@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { CloseButton } from "@/components/design-system";
 import {
@@ -8,7 +9,7 @@ import {
 } from "@/lib/magazzino/form";
 import { produttoriForFornitore } from "@/lib/magazzino/fornitore-produttore-master";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
-import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
 import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
 
 const ricambioFormInputClass = dsInput;
@@ -31,8 +32,8 @@ function patchRow(
   return rows.map((r) => (r.id === id ? { ...r, ...patch } : r));
 }
 
-export function RicambioFornitoriAlternativiEditor({ rows, onChange, readOnly = false }: Props) {
-  const globalOpts = useGlobalOptions({ debugTag: "RicambioFornitoriAlternativiEditor" });
+function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = false }: Props) {
+  const globalOpts = useRicambioFormOptions();
   const master = globalOpts.magazzinoMaster;
 
   const addRow = () => {
@@ -157,3 +158,8 @@ export function RicambioFornitoriAlternativiEditor({ rows, onChange, readOnly = 
     </div>
   );
 }
+
+export const RicambioFornitoriAlternativiEditor = memo(
+  RicambioFornitoriAlternativiEditorInner,
+  (prev, next) => prev.readOnly === next.readOnly && prev.onChange === next.onChange && prev.rows === next.rows,
+);
