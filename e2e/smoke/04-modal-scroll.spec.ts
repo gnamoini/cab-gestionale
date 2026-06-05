@@ -59,6 +59,28 @@ test("main scrollbar track is reachable at viewport right edge", async ({ page }
   expect(hit.gutter).toBe("stable");
 });
 
+test("main scroll column spans full width on wide desktop", async ({ page }) => {
+  attachConsoleGuards(page);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/magazzino");
+
+  const layout = await page.evaluate(() => {
+    const main = document.querySelector("main.gestionale-scroll-y");
+    if (!main) return { ok: false, reason: "missing-main" };
+    const rect = main.getBoundingClientRect();
+    const delta = window.innerWidth - rect.right;
+    return {
+      ok: delta <= 2,
+      delta,
+      rectRight: rect.right,
+      innerWidth: window.innerWidth,
+    };
+  });
+
+  expect(layout.ok, JSON.stringify(layout)).toBe(true);
+});
+
 test("log drawer locks body scroll and restores on close", async ({ page }) => {
   attachConsoleGuards(page);
   await page.setViewportSize({ width: 1280, height: 720 });

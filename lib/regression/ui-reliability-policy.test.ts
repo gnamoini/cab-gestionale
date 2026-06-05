@@ -60,17 +60,39 @@ assert.match(appShell, /layoutResponsiveCoreScope/);
 assert.match(appShell, /gestionale-scroll-y/);
 assert.match(appShell, /dsGestionaleContentShellRow/);
 assert.match(appShell, /dsGestionaleContentRail/);
+assert.match(appShell, /dsGestionaleContentMax/);
 assert.match(appShell, /dsGestionaleContentGutter/);
 assert.match(appShell, /cab-gestionale-scroll-gutter-mirror/);
+assert.match(appShell, /gestionale-scroll-y gestionale-scrollbar w-full/);
 assert.match(
   appShell,
-  /cab-gestionale-scroll-gutter-mirror[\s\S]*>\s*\n\s*<div[\s\S]*dsGestionaleContentGutter/,
-  "gutter mirror must wrap padded shell row, not share one element with padding",
+  /cab-gestionale-scroll-gutter-mirror[\s\S]*>\s*\n\s*<div[\s\S]*dsGestionaleContentShellRow[\s\S]*dsGestionaleContentGutter/,
+  "gutter mirror must wrap shell row then padded header row",
+);
+assert.match(
+  appShell,
+  /dsGestionaleContentMax[\s\S]*layoutPageRoot[\s\S]*dsGestionaleContentGutter/,
+  "main scroll inner wrapper must carry content width + gutter",
+);
+assert.doesNotMatch(
+  designSystem,
+  /dsGestionaleContentRail = `[^`]*\bmx-auto/,
+  "content rail must not center or cap width (full column scroll)",
+);
+assert.doesNotMatch(
+  designSystem,
+  /dsGestionaleContentRail = `[^`]*\bmax-w-/,
+  "content rail must not cap max-width",
 );
 assert.doesNotMatch(
   designSystem,
   /dsGestionaleContentRail = `[^`]*\bpx-/,
   "content rail must not include horizontal padding (scrollbar flush to column edge)",
+);
+assert.doesNotMatch(
+  designSystem,
+  /dsGestionaleContentMax = `[^`]*\bmx-auto/,
+  "content max token must not center with side bands on desktop",
 );
 
 // --- Flex anti-pattern: files with flex-1 must have containment in same line ---

@@ -471,17 +471,17 @@ export const dsCardTitle = dsTypoCardTitle;
 /** Stack verticale sotto `PageHeader` — include contenimento responsive (ResponsiveLayoutCore). */
 export const dsStackPage = layoutPageContainer;
 
-/** Larghezza massima contenuto liste gestionale (allineata tra moduli). */
-export const dsGestionaleContentMax = "mx-auto w-full max-w-[min(100%,100rem)]";
+/** Larghezza contenuto pagine gestionale — full bleed nella colonna main (dopo sidebar). */
+export const dsGestionaleContentMax = "w-full min-w-0 max-w-full";
 
-/** Padding orizzontale contenuto (dentro colonna già ristretta dal gutter scroll, se applicabile). */
-export const dsGestionaleContentGutter = "px-2 sm:px-3 md:px-4";
+/** Padding orizzontale contenuto (wrapper interno; il main scroll resta edge-to-edge). */
+export const dsGestionaleContentGutter = "px-2 sm:px-3 md:px-3";
 
-/** Contenitore max-width riga shell (logo/account); gutter su figlio o stessa riga con `dsGestionaleContentGutter`. */
+/** Riga shell header allineata al wrapper contenuto (stessa larghezza utile + gutter). */
 export const dsGestionaleContentShellRow = `${dsGestionaleContentMax} w-full min-w-0`;
 
-/** Colonna max-width + scroll: senza padding esterno così la scrollbar resta sul bordo destro. */
-export const dsGestionaleContentRail = `${dsGestionaleContentMax} flex min-h-0 min-w-0 w-full flex-1 flex-col`;
+/** Rail scroll strutturale: full width colonna main, senza max-width né padding (scrollbar a destra). */
+export const dsGestionaleContentRail = "flex min-h-0 min-w-0 w-full flex-1 flex-col";
 
 /** Placeholder unificato campi ricerca liste; dettaglio in `aria-label` per modulo. */
 export const GESTIONALE_SEARCH_PLACEHOLDER = "Cerca…";

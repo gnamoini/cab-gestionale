@@ -19,6 +19,7 @@ import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
 import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
 import {
   dsGestionaleContentGutter,
+  dsGestionaleContentMax,
   dsGestionaleContentRail,
   dsGestionaleContentShellRow,
   dsPageToolbarBtn,
@@ -603,10 +604,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className={`flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-250 ease-out ${mainPad}`}
       >
         <header className="cab-ios-sticky-header shrink-0 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_92%,transparent)] backdrop-blur-md supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
-          <div className={`${dsGestionaleContentShellRow} cab-gestionale-scroll-gutter-mirror`}>
-            <div
-              className={`${dsGestionaleContentGutter} flex h-14 min-w-0 items-center gap-3 max-md:grid max-md:grid-cols-[auto_1fr_auto] max-md:items-center max-md:gap-0 md:justify-between`}
-            >
+          <div className="cab-gestionale-scroll-gutter-mirror w-full min-w-0">
+            <div className={dsGestionaleContentShellRow}>
+              <div
+                className={`${dsGestionaleContentGutter} flex h-14 min-w-0 items-center gap-3 max-md:grid max-md:grid-cols-[auto_1fr_auto] max-md:items-center max-md:gap-0 md:justify-between`}
+              >
               <div className="flex min-w-0 items-center justify-start gap-3 max-md:contents">
               <button
                 type="button"
@@ -640,6 +642,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex min-w-0 items-center justify-end">
                 <AccountMenu />
               </div>
+              </div>
             </div>
           </div>
         </header>
@@ -653,9 +656,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className={dsGestionaleContentRail}>
           <main
-            className={`gestionale-scroll-y gestionale-scrollbar ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))]`}
+            className={`gestionale-scroll-y gestionale-scrollbar w-full ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))]`}
           >
-            <div className={`${layoutPageRoot} ${dsGestionaleContentGutter}`}>{children}</div>
+            <div className={`${dsGestionaleContentMax} ${layoutPageRoot} ${dsGestionaleContentGutter}`}>
+              {children}
+            </div>
           </main>
         </div>
       </div>
