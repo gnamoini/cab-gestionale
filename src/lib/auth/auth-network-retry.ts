@@ -16,9 +16,8 @@ export function isTransientNetworkAuthError(err: AuthError | Error): boolean {
   );
 }
 
+/** Invalida sessione solo su errori refresh/JWT irrecuperabili — non su 401/403 generici. */
 export function shouldClearSessionOnAuthError(err: AuthError | Error): boolean {
-  const status = "status" in err && typeof err.status === "number" ? err.status : null;
-  if (status === 401 || status === 403) return true;
   return isInvalidRefreshAuthMessage(err.message);
 }
 

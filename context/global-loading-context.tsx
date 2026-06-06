@@ -118,14 +118,16 @@ export function useGlobalLoadingContextBridge(): (message: string | null) => voi
   const ctx = useContext(GlobalLoadingContext);
   const releaseRef = useRef<(() => void) | null>(null);
 
+  const push = ctx?.push;
+
   return useCallback(
     (message: string | null) => {
       releaseRef.current?.();
       releaseRef.current = null;
-      if (message?.trim() && ctx) {
-        releaseRef.current = ctx.push(message.trim());
+      if (message?.trim() && push) {
+        releaseRef.current = push(message.trim());
       }
     },
-    [ctx],
+    [push],
   );
 }

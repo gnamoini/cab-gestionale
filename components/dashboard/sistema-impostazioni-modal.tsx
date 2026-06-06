@@ -1927,6 +1927,7 @@ function SistemaImpostazioniWorkspace({
 
   return (
     <LavorazioniModalShell
+      modalSize="formLarge"
       alignTop
       onRequestClose={handleRequestClose}
       header={settingsModalHeader ?? undefined}

@@ -35,7 +35,16 @@ export function useReportKpiPerformanceData({
 } {
   const viewOpts = useReportViewQueryOpts();
   const lavQuery = useLavorazioniList({ includeMezzo: true }, viewOpts);
-  const { store: schedeStore, isLoading: schedeLoading } = useSchedeBundlesQuery(!live.isLoading);
+  const schedeLavorazioneIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const row of lavQuery.data ?? []) ids.add(row.id);
+    for (const row of live.attive) ids.add(row.id);
+    for (const row of live.completate) ids.add(row.id);
+    return [...ids];
+  }, [lavQuery.data, live.attive, live.completate]);
+  const { store: schedeStore, isLoading: schedeLoading } = useSchedeBundlesQuery(!live.isLoading, {
+    lavorazioneIds: schedeLavorazioneIds,
+  });
   const settingsQ = useCabAppSettingsPayloadQuery();
 
   const costoOrario = useMemo(() => {

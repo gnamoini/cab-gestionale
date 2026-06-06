@@ -25,10 +25,11 @@ export function DashboardPromemoriaScopeDialog({
 
   return createPortal(
     <GestionaleModalShell
+      modalSize="formSmall"
+      modalHeight="compact"
       onRequestClose={onClose}
       title={mode === "delete" ? "Elimina promemoria ricorrente" : "Modifica promemoria ricorrente"}
       titleId="dashboard-promemoria-scope-title"
-      dialogSize="compact"
     >
       <div className="space-y-4 p-4">
         <p className={`${dsTypoSmall} text-[color:var(--cab-text)]`}>

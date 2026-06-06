@@ -98,7 +98,7 @@ export function PageToolbar({
                   {filterActions}
                 </ToolbarGroupPrimaryRow>
               </div>
-              <div className="hidden min-w-0 w-full gap-2 sm:flex">
+              <div className="hidden min-w-0 w-full sm:flex">
                 <ToolbarGroupPrimaryRow className="min-w-0 w-full sm:flex-nowrap sm:justify-start">
                   <div className="shrink-0">{primaryAction}</div>
                   <div className="min-w-0 flex-1">{search}</div>

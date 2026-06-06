@@ -210,23 +210,45 @@ export function useGlobalDropdownPortal({
   };
 }
 
+function isPointerInsidePanel(e: PointerEvent, panel: HTMLElement): boolean {
+  if (panel.contains(e.target as Node)) return true;
+  const rect = panel.getBoundingClientRect();
+  if (rect.width <= 0 || rect.height <= 0) return false;
+  return (
+    e.clientX >= rect.left &&
+    e.clientX <= rect.right &&
+    e.clientY >= rect.top &&
+    e.clientY <= rect.bottom
+  );
+}
+
+export type UseDropdownOutsideDismissOptions = {
+  /** false: listener disattivato (es. pannello non ancora posizionato). */
+  when?: boolean;
+};
+
 /** Chiude il menu se il tap/click è fuori da anchor e pannello portal. */
 export function useDropdownOutsideDismiss(
   open: boolean,
   anchorRef: RefObject<HTMLElement | null>,
   panelRef: RefObject<HTMLElement | null>,
   onDismiss: () => void,
+  options?: UseDropdownOutsideDismissOptions,
 ): void {
+  const when = options?.when ?? true;
   const onDismissStable = useCallback(() => onDismiss(), [onDismiss]);
 
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open || !when) return;
     function onDocPointerDown(e: PointerEvent) {
       const target = e.target as Node;
-      if (anchorRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      if (anchorRef.current?.contains(target)) return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      if (isPointerInsidePanel(e, panel)) return;
       onDismissStable();
     }
     document.addEventListener("pointerdown", onDocPointerDown, true);
     return () => document.removeEventListener("pointerdown", onDocPointerDown, true);
-  }, [open, anchorRef, panelRef, onDismissStable]);
+  }, [open, when, anchorRef, panelRef, onDismissStable]);
 }

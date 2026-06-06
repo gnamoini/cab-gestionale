@@ -21,6 +21,7 @@ import {
   GESTIONALE_REALTIME_TABLES,
   invalidateAllGestionaleOperationalQueries,
 } from "@/lib/realtime/gestionale-realtime-config";
+import { isGestionaleForcePollEnabled } from "@/lib/realtime/gestionale-force-poll";
 import {
   postgresChangeFingerprint,
   subscribePostgresChangesChannel,
@@ -237,6 +238,11 @@ export function GestionaleRealtimeBridge() {
 
     const connectRealtime = async () => {
       if (cancelled || reconnecting) return;
+      if (isGestionaleForcePollEnabled()) {
+        startPollingFallback("NEXT_PUBLIC_GESTIONALE_FORCE_POLL");
+        reconnecting = false;
+        return;
+      }
       reconnecting = true;
       const gen = ++connectGeneration;
 

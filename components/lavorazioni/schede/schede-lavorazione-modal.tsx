@@ -75,7 +75,7 @@ import {
   statoUiSchedaLavorazioni,
   statoUiSchedaRicambi,
 } from "@/lib/schede/schede-ui";
-import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
+import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioniLogChange, LavorazioniLogTipo } from "@/lib/lavorazioni/lavorazioni-change-log";
 import { LavorazionePreventiviHubList, CreaPreventivoDaSchedeCta } from "@/components/lavorazioni/schede/lavorazione-preventivi-hub-list";
@@ -206,7 +206,7 @@ function assertItalianDay(label: string, value: string, notify: (message: string
     notify(`Data obbligatoria: ${label}`);
     return false;
   }
-  if (!parseItalianDayToIso(t).ok) {
+  if (!parseItalianDayDisplayToIso(t).ok) {
     notify(`${label}: usa il formato GG/MM/AAAA`);
     return false;
   }
@@ -973,7 +973,8 @@ export function SchedeLavorazioneModal({
   return (
     <>
       <LavorazioniModalShell
-        dialogSize={frozenDialogSize}
+        modalSize="formLarge"
+        modalHeight={frozenDialogSize === "compact" ? "compact" : "standard"}
         onRequestClose={onClose}
         titleId="schede-lav-detail-title"
         header={

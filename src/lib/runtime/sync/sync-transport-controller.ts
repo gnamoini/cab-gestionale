@@ -9,13 +9,20 @@ export type SyncTransportControllerOptions = {
   onModeChange?: (mode: SyncTransportMode) => void;
 };
 
+const POLL_BACKOFF_AFTER_MS = 5 * 60_000;
+const POLL_INTERVAL_MAX_MS = 60_000;
+
 /**
  * Transporte sync mutuamente esclusivo: realtime XOR polling (mai entrambi attivi).
+ * Polling: backoff esponenziale dopo 5 minuti in fallback (20s → 40s → 60s cap).
  */
 export class SyncTransportController {
   private mode: SyncTransportMode = "idle";
-  private pollTimer: ReturnType<typeof setInterval> | null = null;
+  private pollTimer: ReturnType<typeof setTimeout> | null = null;
   private acceptRealtimePayloads = true;
+  private pollingStartedAt = 0;
+  private pollIntervalCurrent = 0;
+  private pollBackoffLevel = 0;
 
   constructor(private readonly opts: SyncTransportControllerOptions) {}
 
@@ -33,6 +40,8 @@ export class SyncTransportController {
 
   activateRealtime(): void {
     this.stopPolling();
+    this.pollBackoffLevel = 0;
+    this.pollIntervalCurrent = 0;
     this.acceptRealtimePayloads = true;
     this.setMode("realtime");
   }
@@ -48,20 +57,46 @@ export class SyncTransportController {
     if (reason) {
       trackRuntimeEvent(RuntimeEvents.realtimeFlush, { mode: "polling", reason: reason.slice(0, 200) });
     }
-    this.pollTimer = setInterval(() => {
+    this.pollingStartedAt = Date.now();
+    this.pollBackoffLevel = 0;
+    this.pollIntervalCurrent = this.opts.pollIntervalMs;
+    this.scheduleNextPoll();
+  }
+
+  private maybeIncreasePollBackoff(): void {
+    const elapsed = Date.now() - this.pollingStartedAt;
+    if (elapsed < POLL_BACKOFF_AFTER_MS) return;
+    const doubled = this.opts.pollIntervalMs * 2 ** Math.min(this.pollBackoffLevel + 1, 2);
+    const next = Math.min(POLL_INTERVAL_MAX_MS, doubled);
+    if (next > this.pollIntervalCurrent) {
+      this.pollBackoffLevel += 1;
+      this.pollIntervalCurrent = next;
+    }
+  }
+
+  private scheduleNextPoll(): void {
+    this.stopPolling();
+    this.pollTimer = setTimeout(() => {
+      this.pollTimer = null;
       this.opts.onPoll();
-    }, this.opts.pollIntervalMs);
+      this.maybeIncreasePollBackoff();
+      if (this.mode === "polling") {
+        this.scheduleNextPoll();
+      }
+    }, this.pollIntervalCurrent);
   }
 
   stopPolling(): void {
     if (this.pollTimer) {
-      clearInterval(this.pollTimer);
+      clearTimeout(this.pollTimer);
       this.pollTimer = null;
     }
   }
 
   setIdle(): void {
     this.stopPolling();
+    this.pollBackoffLevel = 0;
+    this.pollIntervalCurrent = 0;
     this.acceptRealtimePayloads = false;
     this.setMode("idle");
   }

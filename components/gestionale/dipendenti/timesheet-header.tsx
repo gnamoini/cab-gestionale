@@ -205,7 +205,7 @@ export function TimesheetHeader({
                 ) : null}
                 {periodMode === "month" ? (
                   <label className="flex min-w-0 flex-col gap-1">
-                    <span className={`${filterLabelClass} hidden sm:block invisible`} aria-hidden="true">
+                    <span className={`${filterLabelClass} hidden min-w-0 sm:block invisible`} aria-hidden="true">
                       &#8203;
                     </span>
                     <div className="flex min-w-0 flex-col gap-2 sm:flex-row">

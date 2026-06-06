@@ -64,6 +64,7 @@ export function TimesheetCellEditorPopover({
 
   return (
     <GestionaleModalShell
+      modalSize="formSmall"
       onRequestClose={onClose}
       title="Modifica cella"
       subtitle={anchorLabel}

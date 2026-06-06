@@ -79,6 +79,7 @@ export function MagazzinoRicambioInfoModal({
 }) {
   return (
     <GestionaleModalShell
+      modalSize="info"
       onRequestClose={onClose}
       title="Scheda ricambio"
       titleId="detail-ricambio-title"
@@ -128,6 +129,7 @@ export function MagazzinoDupCodesModal({
 }) {
   return (
     <GestionaleModalShell
+      modalSize="info"
       onRequestClose={onClose}
       title="Codici duplicati in archivio"
       titleId="dup-magazzino-title"

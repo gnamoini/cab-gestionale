@@ -77,6 +77,7 @@ export function LavorazioneEditModal({
 
   return (
     <LavorazioniModalShell
+      modalSize="formMedium"
       onRequestClose={onClose}
       onBack={onBack}
       title="Dettagli macchina"

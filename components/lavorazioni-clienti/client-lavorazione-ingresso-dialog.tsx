@@ -47,6 +47,7 @@ export function ClientLavorazioneIngressoDialog({
       open={open}
       onRequestClose={onClose}
       variant="edit-scheda"
+      modalSize="info"
       footer={null}
     >
       <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
@@ -64,7 +65,7 @@ export function ClientLavorazioneIngressoDialog({
               </p>
             ) : null}
 
-            <SchedaIngressoPanoramicaView fields={fields} showAddettoAccettazione={false} />
+            <SchedaIngressoPanoramicaView fields={fields} showAddettoAccettazione={false} rowLayout="stacked" />
 
             {updatedByHint ? (
               <p className="border-t border-[color:var(--cab-border)] pt-3 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">

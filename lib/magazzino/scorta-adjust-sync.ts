@@ -193,7 +193,12 @@ async function runScortaSyncWorker(
   } finally {
     q.syncing = false;
     q.primaAtBurstStart = null;
+    queues.delete(ricambioId);
   }
+}
+
+export function getScortaSyncQueueSize(): number {
+  return queues.size;
 }
 
 /** Accoda sync verso server; UI già aggiornata da `applyScortaOptimisticDelta`. */
@@ -209,7 +214,12 @@ export function enqueueScortaSync(
   void runScortaSyncWorker(qc, ricambioId, autore, callbacks, mezziListe);
 }
 
-/** Solo per test — reset stato globale code. */
-export function resetScortaSyncQueuesForTest(): void {
+/** Reset code scorta (logout / test). */
+export function clearScortaSyncQueues(): void {
   queues.clear();
+}
+
+/** @deprecated Usare `clearScortaSyncQueues`. */
+export function resetScortaSyncQueuesForTest(): void {
+  clearScortaSyncQueues();
 }

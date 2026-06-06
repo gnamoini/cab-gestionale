@@ -5,20 +5,38 @@ export const gestionaleModalBodyFlexClass =
 /** Corpo scrollabile modale/drawer — unico owner verticale interno. */
 export { dsScrollPanel as gestionaleModalScrollBodyClass } from "@/lib/ui/scroll-system";
 
-/** Tier standard desktop — 48rem fissi (non shrink-to-content), cap max-w-3xl. */
-export const gestionaleModalWidthStandard =
-  "max-md:max-w-none md:min-w-[48rem] md:max-w-3xl";
+export {
+  type ModalSize,
+  type ModalHeight,
+  type DrawerSize,
+  type GestionaleModalWidth,
+  resolveModalWidthClasses,
+  resolveModalHeightClasses,
+  resolveShellModalLayout,
+  resolveDrawerAsideClasses,
+  defaultModalHeightForSize,
+} from "@/lib/ui/modal-size-system";
 
-/** @deprecated Alias di `gestionaleModalWidthStandard` — un solo tier desktop. */
+import {
+  resolveGestionaleModalWidthFromLegacy,
+  resolveModalWidthClasses,
+  type GestionaleModalWidth,
+} from "@/lib/ui/modal-size-system";
+
+/** Tier standard desktop — alias di `formMedium` (48rem). */
+export const gestionaleModalWidthStandard = resolveModalWidthClasses("formMedium");
+
+/** Tier conferma — compatto (28rem). */
+export const gestionaleModalWidthConfirmation = resolveModalWidthClasses("confirmation");
+
+/** @deprecated Alias di `gestionaleModalWidthStandard`. */
 export const gestionaleModalWidthWide = gestionaleModalWidthStandard;
 
-export type GestionaleModalWidth = "standard" | "wide";
-
-/** Risolve le classi max-width per un tier gestionale (SSOT). `wide` è deprecato → sempre standard. */
+/** Risolve le classi max-width per un tier gestionale legacy (`standard` → formMedium). */
 export function resolveGestionaleModalWidth(
-  _size: GestionaleModalWidth = "standard",
+  size: GestionaleModalWidth = "standard",
 ): string {
-  return gestionaleModalWidthStandard;
+  return resolveGestionaleModalWidthFromLegacy(size);
 }
 
 /** Prefissa classi max-width per desktop; mobile resta full-bleed (max-md:max-w-none). */

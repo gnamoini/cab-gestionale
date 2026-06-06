@@ -332,7 +332,8 @@ export function ReportMagazzinoSection({
 
       {open ? (
         <GestionaleModalShell
-          size="standard"
+          modalSize="analytics"
+          modalHeight="tall"
           title="Storico manuale magazzino"
           titleId="report-magazzino-manual-title"
           onRequestClose={() => setOpen(false)}

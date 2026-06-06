@@ -95,6 +95,7 @@ export function SecurityEditNameModal({
   return (
     <>
       <GestionaleModalShell
+        modalSize="formSmall"
         title="Modifica profilo"
         titleId="security-edit-profile-title"
         onRequestClose={() => {

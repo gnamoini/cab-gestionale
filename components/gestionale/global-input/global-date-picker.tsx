@@ -1,6 +1,16 @@
 "use client";
 
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+} from "react";
 import { createPortal } from "react-dom";
 import { GlobalCalendarPanel, initialViewFromYmd, parseDisplayToYmd } from "@/components/gestionale/global-input/global-calendar-panel";
 import {
@@ -11,15 +21,23 @@ import {
   dateInputValueToIso,
   isoToDateInputValue,
   isoToItDisplay,
-  parseItalianDayToIso,
   ymdToItDisplay,
 } from "@/lib/lavorazioni/date-day-only";
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
+import {
+  applyItalianDateMaskChange,
+  normalizeItalianDatePaste,
+  parseItalianDayDisplayToIso,
+  validateItalianDateInput,
+  type ItalianDateYearRange,
+} from "@/lib/ui/italian-date-input-mask";
 import {
   globalInputCalendarBtn,
   globalInputCalendarPortalPanel,
   globalInputFieldDefault,
   globalInputFieldFilterDate,
+  globalInputInvalidMessage,
+  globalInputInvalidRing,
 } from "@/lib/ui/global-input";
 
 export type GlobalDatePickerProps = {
@@ -35,6 +53,8 @@ export type GlobalDatePickerProps = {
   "aria-label"?: string;
   /** Se impostato, sostituisce la normalizzazione predefinita su blur. */
   onBlur?: () => void;
+  /** Range anno per feedback UX (default 1900–2100). */
+  yearRange?: ItalianDateYearRange;
 };
 
 function fieldClassForVariant(
@@ -58,9 +78,13 @@ export function GlobalDatePicker({
   placeholder = "gg/mm/aaaa",
   "aria-label": ariaLabel,
   onBlur: onBlurProp,
+  yearRange,
 }: GlobalDatePickerProps) {
   const autoId = useId();
   const inputId = idProp ?? autoId;
+  const errorId = `${inputId}-date-error`;
+  const inputRef = useRef<HTMLInputElement>(null);
+  const pendingCursor = useRef<number | null>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const [open, setOpen] = useState(false);
@@ -69,7 +93,14 @@ export function GlobalDatePicker({
   const [viewYear, setViewYear] = useState(initial.year);
   const [viewMonth, setViewMonth] = useState(initial.month);
 
+  const validation = useMemo(
+    () => validateItalianDateInput(value, { yearRange }),
+    [value, yearRange],
+  );
+  const showInvalid = validation.status === "invalid" && value.trim().length > 0;
+
   const fieldClass = fieldClassForVariant(variant, inputClassName);
+  const inputClass = showInvalid ? `${fieldClass}${globalInputInvalidRing}` : fieldClass;
 
   const closeCalendar = useCallback(() => setOpen(false), []);
 
@@ -92,6 +123,42 @@ export function GlobalDatePicker({
     setViewMonth(v.month);
   }, [open, selectedYmd]);
 
+  useLayoutEffect(() => {
+    if (pendingCursor.current === null || !inputRef.current) return;
+    const pos = pendingCursor.current;
+    pendingCursor.current = null;
+    inputRef.current.setSelectionRange(pos, pos);
+  });
+
+  const applyMaskedChange = useCallback(
+    (nextRaw: string, selectionStart: number) => {
+      const { display, cursor } = applyItalianDateMaskChange(value, nextRaw, selectionStart);
+      pendingCursor.current = cursor;
+      onChange(display);
+    },
+    [onChange, value],
+  );
+
+  const onInputChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      applyMaskedChange(e.target.value, e.target.selectionStart ?? 0);
+    },
+    [applyMaskedChange],
+  );
+
+  const onPaste = useCallback(
+    (e: ClipboardEvent<HTMLInputElement>) => {
+      e.preventDefault();
+      const pasted = normalizeItalianDatePaste(e.clipboardData.getData("text"));
+      const el = e.currentTarget;
+      const selStart = el.selectionStart ?? 0;
+      const selEnd = el.selectionEnd ?? selStart;
+      const newRaw = value.slice(0, selStart) + pasted + value.slice(selEnd);
+      applyMaskedChange(newRaw, selStart + pasted.length);
+    },
+    [applyMaskedChange, value],
+  );
+
   const applyYmd = useCallback(
     (ymd: string) => {
       if (!ymd) {
@@ -106,16 +173,15 @@ export function GlobalDatePicker({
     [onChange],
   );
 
-  const onTextBlur = () => {
+  const onTextBlur = useCallback(() => {
     const trimmed = value.trim();
     if (!trimmed) {
       onChange("");
       return;
     }
-    const r = parseItalianDayToIso(trimmed);
+    const r = parseItalianDayDisplayToIso(trimmed);
     if (r.ok) onChange(isoToItDisplay(r.iso));
-    else onChange("");
-  };
+  }, [onChange, value]);
 
   const calendarPortal =
     open && portalStyle ? (
@@ -141,6 +207,7 @@ export function GlobalDatePicker({
   return (
     <div ref={wrapRef} className="relative w-full">
       <input
+        ref={inputRef}
         id={inputId}
         type="text"
         inputMode="numeric"
@@ -149,9 +216,12 @@ export function GlobalDatePicker({
         disabled={disabled}
         placeholder={placeholder}
         aria-label={ariaLabel}
-        className={fieldClass}
+        aria-invalid={showInvalid || undefined}
+        aria-describedby={showInvalid ? errorId : undefined}
+        className={inputClass}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={onInputChange}
+        onPaste={onPaste}
         onBlur={onBlurProp ?? onTextBlur}
         onKeyDown={(e) => {
           if (e.key === "Escape") {
@@ -185,6 +255,11 @@ export function GlobalDatePicker({
           />
         </svg>
       </button>
+      {showInvalid && validation.message ? (
+        <p id={errorId} className={globalInputInvalidMessage}>
+          {validation.message}
+        </p>
+      ) : null}
       {typeof document !== "undefined" && calendarPortal ? createPortal(calendarPortal, document.body) : null}
     </div>
   );
@@ -202,6 +277,7 @@ export function GlobalDatePickerYmd({
   placeholder = "gg/mm/aaaa",
   "aria-label": ariaLabel,
   variant = "filter",
+  yearRange,
 }: {
   valueYmd: string;
   onChangeYmd: (ymd: string) => void;
@@ -209,6 +285,7 @@ export function GlobalDatePickerYmd({
   placeholder?: string;
   "aria-label"?: string;
   variant?: "default" | "filter";
+  yearRange?: ItalianDateYearRange;
 }) {
   const [displayDraft, setDisplayDraft] = useState(() => displayFromYmd(valueYmd));
 
@@ -223,7 +300,7 @@ export function GlobalDatePickerYmd({
       onChangeYmd("");
       return;
     }
-    const r = parseItalianDayToIso(trimmed);
+    const r = parseItalianDayDisplayToIso(trimmed);
     if (r.ok) {
       const display = isoToItDisplay(r.iso);
       const ymd = isoToDateInputValue(r.iso);
@@ -231,8 +308,7 @@ export function GlobalDatePickerYmd({
       onChangeYmd(ymd);
       return;
     }
-    setDisplayDraft("");
-    onChangeYmd("");
+    setDisplayDraft(trimmed);
   }, [displayDraft, onChangeYmd]);
 
   return (
@@ -242,13 +318,14 @@ export function GlobalDatePickerYmd({
       value={displayDraft}
       placeholder={placeholder}
       aria-label={ariaLabel}
+      yearRange={yearRange}
       onChange={(next) => {
         setDisplayDraft(next);
         if (!next.trim()) {
           onChangeYmd("");
           return;
         }
-        const r = parseItalianDayToIso(next);
+        const r = parseItalianDayDisplayToIso(next);
         if (r.ok) onChangeYmd(isoToDateInputValue(r.iso));
       }}
       onBlur={commitBlur}

@@ -1,6 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE, readSupabasePublicEnv } from "@/lib/env/supabase-public";
-import { isInvalidRefreshAuthMessage } from "@/src/lib/auth/clear-invalid-auth-session";
 import {
   shouldClearSessionOnAuthError,
   isTransientNetworkAuthError,
@@ -116,7 +115,7 @@ export async function resolveServerAuthWithSupabase(
   const profileCached = readCachedServerAuthSnapshot(fingerprint);
   const { data: authData, error: authError } = await getUserWithNetworkRetry(supabase);
 
-  if (authError && isInvalidRefreshAuthMessage(authError.message)) {
+  if (authError && shouldClearSessionOnAuthError(authError)) {
     try {
       await supabase.auth.signOut();
     } catch {

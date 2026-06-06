@@ -211,6 +211,7 @@ export function BunderEditorModal({
   return (
     <>
     <GestionaleModalShell
+      modalSize="formLarge"
       onRequestClose={requestClose}
       header={
         <GestionaleModalHeader

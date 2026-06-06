@@ -13,7 +13,9 @@ import {
   clearMagazzinoNotifications,
   emptyAdminNotificationStore,
   getUnreadCount,
+  isNotificationUnread,
   loadAdminNotificationStore,
+  markAdminNotificationRead,
   markAllAdminNotificationsRead,
   upsertAdminNotification,
   ADMIN_NOTIFICATION_STORE_MAX_ITEMS,
@@ -202,5 +204,14 @@ for (let i = 0; i < ADMIN_NOTIFICATION_STORE_MAX_ITEMS + 5; i++) {
   );
 }
 assert.ok(Object.keys(loadAdminNotificationStore(USER).items).length <= ADMIN_NOTIFICATION_STORE_MAX_ITEMS);
+
+const older = wrapLavorazioneNotification(minimalNotificationIntent("lav-old", "2026-01-10T10:00:00.000Z"));
+const newer = wrapLavorazioneNotification(minimalNotificationIntent("lav-new", "2026-01-12T10:00:00.000Z"));
+storage.clear();
+upsertAdminNotification(USER, older);
+upsertAdminNotification(USER, newer);
+const afterSingleRead = markAdminNotificationRead(USER, older);
+assert.equal(isNotificationUnread(afterSingleRead, older), false);
+assert.equal(isNotificationUnread(afterSingleRead, newer), true);
 
 console.log("admin-notifications.test.ts OK");

@@ -289,6 +289,7 @@ export function RecordImageManager({
         </GestionaleUploadDropExpand>
         {preview ? (
           <GestionaleModalShell
+            modalSize="fullscreen"
             onRequestClose={() => setPreview(null)}
             title="Anteprima foto"
             layerClassName={`!bg-black/70 ${cabModalZStacked}`}
@@ -374,6 +375,7 @@ export function RecordImageManager({
       </GestionaleUploadDropExpand>
       {preview ? (
         <GestionaleModalShell
+          modalSize="fullscreen"
           onRequestClose={() => setPreview(null)}
           title="Anteprima foto"
           layerClassName={`!bg-black/70 ${cabModalZStacked}`}

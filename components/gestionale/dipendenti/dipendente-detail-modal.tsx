@@ -41,6 +41,7 @@ export function DipendenteDetailModal({
 
   return (
     <GestionaleModalShell
+      modalSize="info"
       onRequestClose={onClose}
       title={employee.display_name}
       subtitle={formatMonthLabel(monthKey)}

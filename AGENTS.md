@@ -433,6 +433,13 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 
 
+## Modali gestionale (dimensioni SSOT)
+
+- SSOT: `lib/ui/modal-size-system.ts` — `modalSize` semantico (`confirmation`, `info`, `formSmall`, `formMedium`, `formLarge`, `analytics`, `fullscreen`).
+- Shell: `GestionaleModalShell` con prop `modalSize` / `modalHeight`; conferme: `GestionaleConfirmDialog` (larghezza `confirmation`).
+- Drawer: `resolveDrawerAsideClasses("drawerLog" | "drawerFilter" | "drawerNav")`.
+- Documentazione: `docs/modal-system.md`. Audit: `lib/regression/modal-width-audit.test.ts`.
+
 ## Tabelle gestionale (design master)
 
 La tabella della pagina **Lavorazioni** è il riferimento unico per tutte le liste dense.

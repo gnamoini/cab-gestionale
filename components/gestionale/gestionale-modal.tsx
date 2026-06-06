@@ -15,7 +15,7 @@ export {
   GestionaleModalScrollBody,
 };
 
-export type { GestionaleModalWidth } from "@/lib/ui/modal-max-width-class";
+export type { GestionaleModalWidth, ModalHeight, ModalSize } from "@/lib/ui/modal-max-width-class";
 
 /** Stato open/close per modali gestionale. Lo scroll lock è gestito da `GestionaleModalShell`. */
 export function useGestionaleModal(initialOpen = false) {

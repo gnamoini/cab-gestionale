@@ -222,6 +222,7 @@ export function MezziHubDetailModal({
 
   return (
     <LavorazioniModalShell
+      modalSize="formLarge"
       onRequestClose={onClose}
       titleId="mezzi-hub-title"
       header={

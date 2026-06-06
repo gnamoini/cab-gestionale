@@ -62,7 +62,7 @@ export function ClientLavorazioneQrDialog({
   }
 
   return (
-    <LavorazioniModalShell onRequestClose={onClose} title="QR lavorazione">
+    <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="QR lavorazione">
       <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
         <div className="flex flex-col items-center gap-4 p-6">
           {dataUrl ? (

@@ -43,6 +43,7 @@ const LEGACY_COMPAT_READ_PREFIXES = [
 
 const LEGACY_COMPAT_READ_FILES = new Set([
   "components/gestionale/magazzino/magazzino-view.tsx",
+  "components/gestionale/magazzino/ricambio-form-compat-section.tsx",
   "lib/gestionale-log/log-summary.ts",
   "lib/magazzino/magazzino-db-ui-adapter.ts",
   "lib/magazzino/sort-order.ts",

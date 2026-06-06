@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   subscribeCabSync,
   type CabSyncEntity,
@@ -11,6 +11,9 @@ export function useCabSyncListener(
   entity: CabSyncEntity | CabSyncEntity[] | "settings",
   handler: (event: CabSyncEvent) => void,
 ): void {
+  const handlerRef = useRef(handler);
+  handlerRef.current = handler;
+
   const entities =
     entity === "settings"
       ? (["app_settings"] as CabSyncEntity[])
@@ -22,13 +25,12 @@ export function useCabSyncListener(
     const targets = entities;
     return subscribeCabSync((ev) => {
       if (ev.type === "settings_updated" && entity === "settings") {
-        handler(ev);
+        handlerRef.current(ev);
         return;
       }
       if (ev.type === "settings_updated") return;
-      if (targets.includes(ev.entity)) handler(ev);
+      if (targets.includes(ev.entity)) handlerRef.current(ev);
     });
-    // entity + targets derived from entity prop only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [handler, entity]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handler via ref; entity prop only
+  }, [entity]);
 }

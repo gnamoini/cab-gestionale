@@ -22,6 +22,10 @@ import {
 const LOGIN_PATH = "/login";
 const RESET_PASSWORD_PATH = "/login/reset-password";
 
+function requestHadSupabaseAuthCookies(request: NextRequest): boolean {
+  return request.cookies.getAll().some((c) => c.name.includes("-auth-token"));
+}
+
 function isStaticAsset(pathname: string): boolean {
   if (pathname.startsWith("/_next")) return true;
   if (pathname === "/favicon.ico") return true;
@@ -71,6 +75,9 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     url.pathname = LOGIN_PATH;
     const from = pathname === "/" ? "/dashboard" : `${pathname}${request.nextUrl.search}`;
     url.searchParams.set("from", from);
+    if (requestHadSupabaseAuthCookies(request)) {
+      url.searchParams.set("reason", "session_expired");
+    }
     return NextResponse.redirect(url);
   }
 

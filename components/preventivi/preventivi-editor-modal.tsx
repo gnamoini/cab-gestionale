@@ -443,6 +443,7 @@ export function PreventiviEditorModal({
 
   return (
     <LavorazioniModalShell
+      modalSize="formLarge"
       onRequestClose={requestClose}
       title={
         isNew

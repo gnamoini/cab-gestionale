@@ -20,6 +20,31 @@ const LEGACY_STORAGE_PREFIX = "cab:admin-lav-notifications:";
 type StoreListener = (userId: string) => void;
 const listeners = new Set<StoreListener>();
 
+let storageBridgeAttached = false;
+
+function dispatchStorageKey(key: string): void {
+  if (key.startsWith(STORAGE_PREFIX)) {
+    const userId = key.slice(STORAGE_PREFIX.length);
+    for (const fn of listeners) fn(userId);
+    return;
+  }
+  if (key.startsWith(LEGACY_STORAGE_PREFIX)) {
+    const userId = key.slice(LEGACY_STORAGE_PREFIX.length);
+    for (const fn of listeners) fn(userId);
+  }
+}
+
+function onCrossTabStorage(e: StorageEvent): void {
+  if (!e.key) return;
+  dispatchStorageKey(e.key);
+}
+
+function ensureStorageBridgeListener(): void {
+  if (storageBridgeAttached || typeof window === "undefined") return;
+  storageBridgeAttached = true;
+  window.addEventListener("storage", onCrossTabStorage);
+}
+
 function storageKey(userId: string): string {
   return `${STORAGE_PREFIX}${userId}`;
 }
@@ -270,6 +295,25 @@ export function markAllAdminNotificationsRead(userId: string): AdminNotification
   return next;
 }
 
+/** Segna letta una singola notifica (avanza lastSeenAt fino al suo createdAt). */
+export function markAdminNotificationRead(
+  userId: string,
+  notification: AdminDashboardNotification,
+): AdminNotificationStoreState {
+  const state = loadAdminNotificationStore(userId);
+  if (!isNotificationUnread(state, notification)) return state;
+  const createdMs = new Date(notificationCreatedAt(notification)).getTime();
+  if (Number.isNaN(createdMs)) return state;
+  const seenMs = state.lastSeenAt ? new Date(state.lastSeenAt).getTime() : 0;
+  const nextSeenMs = Math.max(Number.isNaN(seenMs) ? 0 : seenMs, createdMs);
+  const next: AdminNotificationStoreState = {
+    ...state,
+    lastSeenAt: new Date(nextSeenMs).toISOString(),
+  };
+  saveAdminNotificationStore(userId, next);
+  return next;
+}
+
 export function removeAdminNotification(
   userId: string,
   notification: AdminDashboardNotification,
@@ -314,22 +358,6 @@ export function clearMagazzinoNotifications(userId: string): AdminNotificationSt
 
 export function subscribeAdminNotificationStore(listener: StoreListener): () => void {
   listeners.add(listener);
-  if (typeof window !== "undefined") {
-    const onStorage = (e: StorageEvent) => {
-      if (!e.key) return;
-      if (e.key.startsWith(STORAGE_PREFIX)) {
-        listener(e.key.slice(STORAGE_PREFIX.length));
-        return;
-      }
-      if (e.key.startsWith(LEGACY_STORAGE_PREFIX)) {
-        listener(e.key.slice(LEGACY_STORAGE_PREFIX.length));
-      }
-    };
-    window.addEventListener("storage", onStorage);
-    return () => {
-      listeners.delete(listener);
-      window.removeEventListener("storage", onStorage);
-    };
-  }
+  ensureStorageBridgeListener();
   return () => listeners.delete(listener);
 }

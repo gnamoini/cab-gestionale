@@ -12,6 +12,7 @@ import {
   type LavorazioneUpdateOptimisticContext,
 } from "@/src/lib/react-query/lavorazioni-optimistic";
 import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
+import { evictLavorazioneDomainCache } from "@/src/lib/react-query/evict-lavorazione-domain-cache";
 import {
   lavorazioniService,
   type LavorazioneInsert,
@@ -60,6 +61,9 @@ export function useLavorazioneUpdateMutation() {
 export function useLavorazioneRemoveMutation() {
   const queryClient = useQueryClient();
   return useServiceMutation((id: string) => lavorazioniService.remove(id), {
+    onSuccess: (_data, id) => {
+      evictLavorazioneDomainCache(queryClient, id);
+    },
     onSettled: async (_data, error, id) => {
       if (error) return;
       await invalidateAfterLavorazioneMutations(queryClient, [

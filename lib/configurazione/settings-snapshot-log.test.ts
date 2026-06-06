@@ -36,6 +36,18 @@ const base = (): ConfigurazioneSettingsSnapshot => ({
   const entries = buildConfigurazioneLogEntriesFromSnapshotDiff(before, after, "Test");
   assert.equal(entries.length, 1);
   assert.match(entries[0]!.oggettoRiga, /Parametri economici/);
+  assert.match(entries[0]!.modificaRiga, /Costo orario default: da 40 a 42/);
+}
+
+{
+  const before = base();
+  const after = {
+    ...before,
+    mag: { ...before.mag, marche: [...before.mag.marche, "Bosch"] },
+  };
+  const entries = buildConfigurazioneLogEntriesFromSnapshotDiff(before, after, "Giorgio");
+  assert.equal(entries.length, 1);
+  assert.match(entries[0]!.modificaRiga, /Aggiunto marca ricambio «Bosch»/);
 }
 
 {

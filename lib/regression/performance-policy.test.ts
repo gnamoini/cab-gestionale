@@ -84,4 +84,7 @@ const queryPolicies = read("lib/react-query/query-layer-policies.ts");
 assert.match(queryPolicies, /refetchOnWindowFocus: false/);
 assert.match(queryPolicies, /GESTIONALE_REPORT_STALE_MS = 120_000/);
 
+const queryProvider = read("src/providers/query-provider.tsx");
+assert.match(queryProvider, /gcTime:\s*300_000/, "QueryClient must set explicit gcTime for long-session cache lifecycle");
+
 console.log("performance-policy.test.ts OK");

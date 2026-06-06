@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
+import { clearGestionaleToasts } from "@/context/toast-context";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import { useGestionaleTopNotice } from "@/components/gestionale/gestionale-top-notice";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
@@ -25,9 +26,13 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     if (configBlocked) return;
     if (status !== "anonymous") return;
+    clearGestionaleToasts();
     const qs = window.location.search;
     const from = qs ? `${pathname}${qs}` : pathname;
-    router.replace(`/login?from=${encodeURIComponent(from || "/dashboard")}`);
+    const params = new URLSearchParams();
+    params.set("from", from || "/dashboard");
+    params.set("reason", "session_expired");
+    router.replace(`/login?${params.toString()}`);
   }, [status, configBlocked, router, pathname]);
 
   useEffect(() => {

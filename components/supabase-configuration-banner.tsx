@@ -1,13 +1,21 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 
+function isLoginRoute(pathname: string | null): boolean {
+  return pathname === "/login" || (pathname?.startsWith("/login/") ?? false);
+}
+
 /** Banner globale se mancano le variabili pubbliche Supabase o `AuthProvider` segnala `configurationError`. */
 export function SupabaseConfigurationBanner() {
+  const pathname = usePathname();
   const { configurationError } = useAuth();
   const envMissing = !isSupabasePublicEnvConfigured();
+
   if (!envMissing && !configurationError) return null;
+  if (!envMissing && configurationError && isLoginRoute(pathname)) return null;
 
   return (
     <div

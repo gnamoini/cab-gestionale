@@ -19,6 +19,10 @@ import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import {
+  dsNotificationWidgetDangerChip,
+  dsNotificationWidgetDangerRow,
+} from "@/lib/ui/notification-ui";
+import {
   formatDashboardMagRicambioTitle,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
@@ -30,8 +34,6 @@ const kpiCardClass = `${dsSurfaceInteractiveKpi} min-w-0 max-w-full overflow-hid
 const panelCardClass = `${dsSurfacePanel} flex min-h-[220px] min-w-0 max-w-full flex-col p-4`;
 
 const widgetTitleClass = dsDashboardWidgetTitle;
-
-const magSottoScortaPillHex = "#b91c1c";
 
 /** Colonna pill priorità/stato: larghezza al contenuto (etichette lunghe es. «Attesa Ricambi»). */
 const dashboardLavMiniPillColClass =
@@ -184,16 +186,11 @@ type MagazzinoRicambioRow = ReturnType<typeof useDashboardMetrics>["magRecentRic
 function MagazzinoSottoScortaListItem({ r }: { r: MagazzinoRicambioRow }) {
   return (
     <li>
-      <div
-        className="flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 shadow-sm shadow-black/10 transition-[filter,box-shadow] duration-200 ease-out dark:shadow-black/25"
-        style={readablePillStyleFromHex(magSottoScortaPillHex)}
-      >
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-snug">
+      <div className={dsNotificationWidgetDangerRow}>
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-snug text-[color:var(--cab-text)]">
           {formatDashboardMagRicambioTitle(r.marca, r.label)}
         </p>
-        <span className="inline-flex shrink-0 rounded-md border border-current/30 bg-black/15 px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap backdrop-blur-[1px]">
-          Sotto scorta
-        </span>
+        <span className={dsNotificationWidgetDangerChip}>Sotto scorta</span>
       </div>
     </li>
   );

@@ -66,7 +66,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
     () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
     [globalOpts.lavorazioni.stati],
   );
-  const schedeStore = useLavorazioneSchedeStoreSync();
+  const schedeStore = useLavorazioneSchedeStoreSync(lavorazioneId);
   const schedeBundle = useMemo(
     () => getOrCreateBundle(schedeStore, lavorazioneId),
     [schedeStore, lavorazioneId],
@@ -190,6 +190,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
 
   return (
     <GestionaleModalShell
+      modalSize="formLarge"
       onRequestClose={onClose}
       title={titolo}
       subtitle={sottotitolo}

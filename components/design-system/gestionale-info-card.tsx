@@ -6,6 +6,7 @@ import {
   dsGestionaleInfoCardCompact,
   dsGestionaleInfoCardMetricRow,
   dsGestionaleInfoCardRow,
+  dsGestionaleInfoCardRowStacked,
   dsGestionaleInfoCardRowLabel,
   dsGestionaleInfoCardRowValue,
   dsGestionaleInfoCardRowValueStrong,
@@ -76,21 +77,27 @@ export function GestionaleInfoSubgroup({
   );
 }
 
+export type GestionaleInfoRowLayout = "grid" | "stacked";
+
 export function GestionaleInfoRow({
   label,
   value,
   mono,
   strong,
+  layout = "grid",
 }: {
   label: string;
   value: ReactNode;
   mono?: boolean;
   /** Valore in grassetto (campi principali). */
   strong?: boolean;
+  /** `stacked`: label sopra valore (portale clienti / modali info). */
+  layout?: GestionaleInfoRowLayout;
 }) {
   const valueClass = strong ? dsGestionaleInfoCardRowValueStrong : dsGestionaleInfoCardRowValue;
+  const rowClass = layout === "stacked" ? dsGestionaleInfoCardRowStacked : dsGestionaleInfoCardRow;
   return (
-    <div className={dsGestionaleInfoCardRow}>
+    <div className={rowClass}>
       <div className={dsGestionaleInfoCardRowLabel}>{label}</div>
       <div className={`${valueClass}${mono ? " font-mono tabular-nums" : ""}`}>{value}</div>
     </div>

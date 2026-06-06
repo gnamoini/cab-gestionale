@@ -407,7 +407,8 @@ function ReportLavorazioniSectionInner({
 
       {open ? (
         <GestionaleModalShell
-          size="standard"
+          modalSize="analytics"
+          modalHeight="tall"
           title="Dati storici manuali"
           titleId="report-lavorazioni-manual-title"
           onRequestClose={() => setOpen(false)}

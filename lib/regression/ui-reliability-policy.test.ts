@@ -74,6 +74,8 @@ assert.match(
   /dsGestionaleContentMax[\s\S]*layoutPageRoot[\s\S]*dsGestionaleContentGutter/,
   "main scroll inner wrapper must carry content width + gutter",
 );
+assert.match(appShell, /dsGestionaleScrollEndPad/);
+assert.match(appShell, /useGestionaleScrollEnd/);
 assert.doesNotMatch(
   designSystem,
   /dsGestionaleContentRail = `[^`]*\bmx-auto/,

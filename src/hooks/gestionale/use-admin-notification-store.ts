@@ -11,6 +11,7 @@ import {
   listNotifications,
   loadAdminNotificationStore,
   markAllAdminNotificationsRead,
+  markAdminNotificationRead,
   removeAdminNotification,
   removeReadAdminNotifications,
   subscribeAdminNotificationStore,
@@ -50,6 +51,14 @@ export function useAdminNotificationStore() {
     setState(markAllAdminNotificationsRead(userId));
   }, [enabled, userId]);
 
+  const markNotificationRead = useCallback(
+    (notification: AdminDashboardNotification) => {
+      if (!enabled) return;
+      setState(markAdminNotificationRead(userId, notification));
+    },
+    [enabled, userId],
+  );
+
   const dismissNotification = useCallback(
     (notification: AdminDashboardNotification) => {
       if (!enabled) return;
@@ -79,6 +88,7 @@ export function useAdminNotificationStore() {
     unreadCount,
     readCount,
     markAllRead,
+    markNotificationRead,
     dismissNotification,
     removeReadNotifications,
     clearMagazzinoNotifications: clearMagazzinoNotifs,

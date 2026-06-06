@@ -9,7 +9,6 @@ export type ClientPortalSortKey =
   | "mezzoIdent"
   | "note"
   | "stato"
-  | "priorita"
   | "completamento"
   | "addetto";
 
@@ -62,8 +61,6 @@ function cmpBundle(
       return t(cmpStr(noteText(a), noteText(b)));
     case "addetto":
       return t(cmpStr(fa.addetto, fb.addetto));
-    case "priorita":
-      return t(cmpStr(ra.priorita, rb.priorita));
     case "stato":
       if (variant === "archive") return 0;
       return t(

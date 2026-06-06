@@ -120,6 +120,7 @@ export function ClientLavorazioneDocumentsDialog({
 
   return (
     <LavorazioniModalShell
+      modalSize="info"
       onRequestClose={onClose}
       title="Documenti lavorazione"
       subtitle={refLabel}

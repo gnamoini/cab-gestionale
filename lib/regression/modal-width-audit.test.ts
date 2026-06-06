@@ -21,11 +21,15 @@ function listTsxUnder(dir: string): string[] {
   return out;
 }
 
-const ssot = read("lib/ui/modal-max-width-class.ts");
-assert.match(ssot, /gestionaleModalWidthStandard/);
-assert.match(ssot, /48rem/);
-assert.match(ssot, /gestionaleModalWidthWide/);
-assert.match(ssot, /resolveGestionaleModalWidth/);
+const ssot = read("lib/ui/modal-size-system.ts");
+assert.match(ssot, /resolveModalWidthClasses/);
+assert.match(ssot, /formMedium/);
+assert.match(ssot, /confirmation/);
+assert.match(ssot, /resolveDrawerAsideClasses/);
+
+const reExport = read("lib/ui/modal-max-width-class.ts");
+assert.match(reExport, /gestionaleModalWidthConfirmation/);
+assert.match(reExport, /modal-size-system/);
 
 const componentsDir = path.join(ROOT, "components");
 for (const file of listTsxUnder(componentsDir)) {
@@ -50,12 +54,22 @@ for (const file of listTsxUnder(componentsDir)) {
     assert.doesNotMatch(
       block,
       /size=["']wide["']/,
-      `${rel}: tier wide deprecato — usare default standard`,
+      `${rel}: tier wide deprecato — usare modalSize`,
+    );
+    assert.doesNotMatch(
+      block,
+      /size=["']standard["']/,
+      `${rel}: usare modalSize invece di size="standard"`,
+    );
+    assert.doesNotMatch(
+      block,
+      /dialogSize=/,
+      `${rel}: usare modalSize/modalHeight invece di dialogSize`,
     );
     assert.doesNotMatch(
       block,
       /max-w-(lg|md|xl|3xl|4xl|5xl|6xl|7xl)/,
-      `${rel}: larghezza modale solo via size`,
+      `${rel}: larghezza modale solo via modalSize (SSOT)`,
     );
   }
 }

@@ -976,7 +976,7 @@ export function BunderView() {
       </div>
 
       {wizardOpen ? (
-        <LavorazioniModalShell onRequestClose={() => setWizardOpen(false)} title="Nuovo documento commerciale">
+        <LavorazioniModalShell modalSize="formMedium" onRequestClose={() => setWizardOpen(false)} title="Nuovo documento commerciale">
           <div className="p-4 sm:p-6">
             <p className="text-sm text-[color:var(--cab-text-muted)]">
               Seleziona il tipo. Il testo e le righe saranno generate con impostazione professionale; potrai modificarle

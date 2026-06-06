@@ -167,6 +167,9 @@ export const globalInputFieldFilterDate = `${globalInputFieldFilterSearch} pr-11
 export const globalInputInvalidRing =
   " border-[color:color-mix(in_srgb,var(--cab-danger)_55%,var(--cab-border))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-danger)_28%,transparent)]";
 
+export const globalInputInvalidMessage =
+  "mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]";
+
 export const globalInputCalendarBtn = [
   "absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center",
   "rounded-md border border-[color:var(--cab-border-strong)]",

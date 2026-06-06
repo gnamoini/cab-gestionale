@@ -17,6 +17,7 @@ import {
   PageToolbar,
   PageToolbarResultCount,
 } from "@/components/design-system";
+import { HubIconOpen } from "@/components/design-system/hub-table-action-icons";
 import {
   formatLavorazioneMobileIdentLine,
   LavMobileInlineField,
@@ -70,19 +71,16 @@ import {
 import {
   LavorazioneAddettoReadOnlyPill,
   LavorazioneCompletamentoDatePill,
-  LavorazionePrioritaReadOnlyPill,
   LavorazioneReadOnlyPill,
 } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import {
-  prioritaLabel,
-  prioritaPillShellClass,
-  prioritaPillShellStyle,
   statoPillShellClassDynamic,
   statoPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   LavorazioneIngressoDateCellFromIso,
-  lavTableActionBtnInfo,
+  dsTableActionBtnWithBadge,
+  lavTableActionBtnPrimary,
   lavTableActionBtnSecondary,
   lavTableActionsRow,
   lavTableColAttrezzaturaClass,
@@ -105,10 +103,6 @@ import {
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import { resolveLavorazioneUltimaModifica } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { gestionaleLavorazioniDenseTableClass } from "@/lib/ui/gestionale-list-table";
-import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
-import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
-import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
-import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import {
   sortClientPortalBundles,
   type ClientPortalSortKey,
@@ -192,10 +186,17 @@ function RowActions({
         as="link"
         href={clientLavorazioniDetailPath(rowId)}
         label="Informazioni e avanzamento"
-        className={`${lavTableActionBtnInfo} no-underline`}
+        tooltipContent="Informazioni e avanzamento"
+        className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge} no-underline`}
         onClick={(e) => e.stopPropagation()}
       >
         <IconInfo />
+        <span
+          className="pointer-events-none absolute -right-1 -top-1 flex h-3.5 w-3.5 items-center justify-center rounded-[4px] border border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[var(--cab-card)] text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)]"
+          aria-hidden
+        >
+          <HubIconOpen className="h-2 w-2" />
+        </span>
       </IconActionButton>
     </div>
   );
@@ -206,7 +207,6 @@ function DesktopTable({
   variant,
   statiOpts,
   colStyles,
-  prioritaColors,
   addettoColors,
   emptyMessage,
   sortColumn,
@@ -219,7 +219,6 @@ function DesktopTable({
   variant: "active" | "archive";
   statiOpts: { id: string; label: string; color?: string }[];
   colStyles: LavorazioniListTableColStyles;
-  prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
   emptyMessage: string;
   sortColumn: ClientPortalSortKey | null;
@@ -238,7 +237,6 @@ function DesktopTable({
         <col className={lavTableColIdentificazioneClass} />
         <col className={lavTableColNoteClass} />
         <col style={colStyles.statoPillColStyle} />
-        <col style={colStyles.prioritaPillColStyle} />
         <col style={colStyles.addettoPillColStyle} />
         <col className={lavTableColAzioniClass} />
       </>
@@ -266,7 +264,6 @@ function DesktopTable({
         <GlobalTableSortTh label="Identificazione" columnKey="mezzoIdent" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Note" columnKey="note" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
-        <GlobalTableSortTh label="Priorità" columnKey="priorita" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
         <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
         <GestionaleListTableActionsHead />
       </>
@@ -292,7 +289,7 @@ function DesktopTable({
       headRow={headRow}
       empty={bundles.length === 0}
       emptyMessage={emptyMessage}
-      colSpan={variant === "active" ? 10 : 9}
+      colSpan={9}
     >
       {bundles.map(({ row, fields }) => (
         <tr key={row.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
@@ -319,11 +316,6 @@ function DesktopTable({
               <td className={lavTableTdPill}>
                 <div className={lavTableTdPillWrap}>
                   <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
-                </div>
-              </td>
-              <td className={lavTableTdPill}>
-                <div className={lavTableTdPillWrap}>
-                  <LavorazionePrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
                 </div>
               </td>
             </>
@@ -356,7 +348,6 @@ function MobileCards({
   bundles,
   variant,
   statiOpts,
-  prioritaColors,
   addettoColors,
   schedeStore,
   emptyMessage,
@@ -366,7 +357,6 @@ function MobileCards({
   bundles: RowBundle[];
   variant: "active" | "archive";
   statiOpts: { id: string; label: string; color?: string }[];
-  prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
   schedeStore: LavorazioneSchedeStore;
   emptyMessage: string;
@@ -419,9 +409,6 @@ function MobileCards({
             </LavorazioneMobileMetaGrid>
             <LavorazioneMobileNote text={lavorazioneNoteInterventoText(fields)} />
             <LavorazioneMobileControlsPanel>
-              <LavMobileInlineField label="Priorità" layout="stack">
-                <LavorazionePrioritaReadOnlyPill priorita={row.priorita} prioritaColors={prioritaColors} />
-              </LavMobileInlineField>
               <LavMobileInlineField label="Addetto" layout="stack">
                 <LavorazioneAddettoReadOnlyPill addetto={fields.addetto} addettoColors={addettoColors} />
               </LavMobileInlineField>
@@ -455,7 +442,6 @@ function LavorazioniSection({
   variant,
   statiOpts,
   colStyles,
-  prioritaColors,
   addettoColors,
   emptyDefault,
   filtersActive,
@@ -472,7 +458,6 @@ function LavorazioniSection({
   variant: "active" | "archive";
   statiOpts: { id: string; label: string; color?: string }[];
   colStyles: LavorazioniListTableColStyles;
-  prioritaColors: Record<string, string | undefined>;
   addettoColors: Record<string, string | undefined>;
   schedeStore: LavorazioneSchedeStore;
   emptyDefault: string;
@@ -492,7 +477,6 @@ function LavorazioniSection({
         variant={variant}
         statiOpts={statiOpts}
         colStyles={colStyles}
-        prioritaColors={prioritaColors}
         addettoColors={addettoColors}
         emptyMessage={emptyMessage}
         sortColumn={sortColumn}
@@ -505,7 +489,6 @@ function LavorazioniSection({
         bundles={bundles}
         variant={variant}
         statiOpts={statiOpts}
-        prioritaColors={prioritaColors}
         addettoColors={addettoColors}
         schedeStore={schedeStore}
         emptyMessage={emptyMessage}
@@ -537,17 +520,19 @@ export function ClientLavorazioniView() {
   );
   const statoOrderIds = useMemo(() => statiOpts.map((s) => s.id), [statiOpts]);
   const addettiGlobali = globalOpts.lavorazioni.addetti;
-  const prioritaOpts = useMemo(
-    () => orderPrioritaList(globalOpts.lavorazioni.prioritaDb),
-    [globalOpts.lavorazioni.prioritaDb],
-  );
-  const colStyles = useLavorazioniListTableColStyles(statiOpts, prioritaOpts, addettiGlobali);
-  const prioritaColors = globalOpts.lavorazioni.prioritaColors;
+  const colStyles = useLavorazioniListTableColStyles(statiOpts, [], addettiGlobali);
   const addettoColors = globalOpts.lavorazioni.addettoColors;
   const viewOpts = useViewQueryOpts();
-  const { store: schedeStore } = useSchedeBundlesQuery(access.allowed, { viewLayer: true });
   const inCorsoQ = useClientLavorazioniInCorsoQuery(access.allowed);
   const archivioQ = useClientLavorazioniArchivioQuery(access.allowed);
+  const schedeLavorazioneIds = useMemo(
+    () => [...(inCorsoQ.data ?? []), ...(archivioQ.data ?? [])].map((row) => row.id),
+    [inCorsoQ.data, archivioQ.data],
+  );
+  const { store: schedeStore } = useSchedeBundlesQuery(access.allowed, {
+    viewLayer: true,
+    lavorazioneIds: schedeLavorazioneIds,
+  });
   const logsQ = useLogListQuery(
     { entita: "lavorazioni", limit: 2000 },
     {
@@ -777,7 +762,6 @@ export function ClientLavorazioniView() {
               variant="active"
               statiOpts={statiOpts}
               colStyles={colStyles}
-              prioritaColors={prioritaColors}
               addettoColors={addettoColors}
               schedeStore={schedeStore}
               emptyDefault="Nessuna lavorazione in corso."
@@ -802,7 +786,6 @@ export function ClientLavorazioniView() {
               variant="archive"
               statiOpts={statiOpts}
               colStyles={colStyles}
-              prioritaColors={prioritaColors}
               addettoColors={addettoColors}
               schedeStore={schedeStore}
               emptyDefault="Nessuna lavorazione in archivio."

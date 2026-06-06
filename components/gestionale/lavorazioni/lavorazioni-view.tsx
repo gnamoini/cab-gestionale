@@ -72,7 +72,7 @@ import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavor
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import { parseItalianDayToIso } from "@/lib/lavorazioni/date-day-only";
+import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { formatIdentificazionePdfCell } from "@/lib/lavorazioni/lavorazioni-pdf-format";
 import { importLavorazioniListPdf } from "@/lib/pdf/lazy-pdf-modules";
@@ -642,9 +642,6 @@ export function LavorazioniView() {
     initialTab?: "schede" | "panoramica";
     dialogSize?: SchedeLavorazioneDialogSize;
   } | null>(null);
-  const { store: schedeStore, invalidate: invalidateSchedeStore, refetch: refetchSchedeStore } =
-    useSchedeBundlesQuery();
-
   const persistSchedeAndSync = useCallback(
     (
       promise: Promise<{ ok: true } | { ok: false; error: string }>,
@@ -667,16 +664,6 @@ export function LavorazioniView() {
     },
     [qc, gestToast],
   );
-
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const d = (e as CustomEvent<CabAddettoRenameDetail>).detail;
-      if (!d?.previousName || !d?.nextName) return;
-      invalidateSchedeStore();
-    };
-    window.addEventListener(CAB_ADDETTO_DISPLAY_RENAME, handler);
-    return () => window.removeEventListener(CAB_ADDETTO_DISPLAY_RENAME, handler);
-  }, [invalidateSchedeStore]);
 
   const SEARCH_DEBOUNCE_MS = 320;
 
@@ -760,6 +747,23 @@ export function LavorazioniView() {
 
   const attiveRows = attiveQuery.data ?? [];
   const chiuseRows = chiuseQuery.data ?? [];
+  const schedeLavorazioneIds = useMemo(
+    () => [...attiveRows, ...chiuseRows].map((row) => row.id),
+    [attiveRows, chiuseRows],
+  );
+  const { store: schedeStore, invalidate: invalidateSchedeStore, refetch: refetchSchedeStore } =
+    useSchedeBundlesQuery(true, { lavorazioneIds: schedeLavorazioneIds });
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const d = (e as CustomEvent<CabAddettoRenameDetail>).detail;
+      if (!d?.previousName || !d?.nextName) return;
+      invalidateSchedeStore();
+    };
+    window.addEventListener(CAB_ADDETTO_DISPLAY_RENAME, handler);
+    return () => window.removeEventListener(CAB_ADDETTO_DISPLAY_RENAME, handler);
+  }, [invalidateSchedeStore]);
+
   const defaultAddetto = globalOpts.lavorazioni.addetti[0] ?? "";
   const [listRefreshBusy, setListRefreshBusy] = useState(false);
 
@@ -1257,7 +1261,7 @@ export function LavorazioniView() {
     });
 
     const note = campi.noteIntervento?.trim() || null;
-    const parsedIngresso = parseItalianDayToIso(campi.dataIngresso.trim());
+    const parsedIngresso = parseItalianDayDisplayToIso(campi.dataIngresso.trim());
     const lavPatch: LavorazioneUpdate = {};
     if (note !== (row.note ?? "").trim()) lavPatch.note = note;
     if (parsedIngresso.ok) lavPatch.data_ingresso = parsedIngresso.iso;

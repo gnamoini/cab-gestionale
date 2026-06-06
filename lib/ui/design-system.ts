@@ -336,11 +336,15 @@ export const dsGestionaleModalBodyStage =
 
 /** Finestra modale lavorazioni (header + corpo): mobile fullscreen, desktop card centrata. */
 export const dsLavorazioniModalDialog =
-  `${cabModalDialogBase} min-w-0 max-w-full overflow-x-hidden w-full md:w-auto flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(calc(92dvh-2rem),840px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
+  `${cabModalDialogBase} max-md:min-w-0 max-w-full overflow-x-hidden w-full md:w-auto flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(calc(92dvh-2rem),840px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
 
 /** Hub compatto (desktop): finestra più bassa (es. pulsante Informazioni). */
 export const dsLavorazioniModalDialogCompact =
-  `${cabModalDialogBase} min-w-0 max-w-full overflow-x-hidden w-full md:w-auto flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(72dvh,560px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
+  `${cabModalDialogBase} max-md:min-w-0 max-w-full overflow-x-hidden w-full md:w-auto flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(72dvh,560px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
+
+/** Analytics / report (desktop): finestra più alta. */
+export const dsLavorazioniModalDialogTall =
+  `${cabModalDialogBase} max-md:min-w-0 max-w-full overflow-x-hidden w-full md:w-auto flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(92dvh,920px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
 
 /** @deprecated Liste dense: `GlobalTableHead sticky` + `globalTableTheadSticky`. */
 export const dsTableThSticky =
@@ -494,7 +498,7 @@ export const dsPageToolbarMetaChipBase =
   "inline-flex min-h-[1.5rem] items-center gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] px-2 py-0.5 text-xs leading-none shadow-[var(--cab-shadow-sm)]";
 export const dsPageToolbarMetaChip = `${dsPageToolbarMetaChipBase} bg-[var(--cab-surface)] text-[color:var(--cab-text-muted)]`;
 export const dsPageToolbarMetaChipAccent = `${dsPageToolbarMetaChipBase} border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] font-semibold text-[color:var(--cab-text)]`;
-export const dsPageToolbarMetaActionBtn = `${dsBtnGhost} min-h-[1.5rem] shrink-0 px-2 py-0.5 text-xs font-semibold text-[color:color-mix(in_srgb,var(--cab-primary)_88%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] hover:text-[color:var(--cab-text)]`;
+export const dsPageToolbarMetaActionBtn = `inline-flex min-h-[1.75rem] shrink-0 items-center justify-center gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2.5 py-1 text-xs font-semibold text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_58%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-surface))] hover:shadow-[var(--cab-shadow-md)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 /** @deprecated Usare `dsPageToolbarMetaActionBtn`. */
 export const dsPageToolbarMetaResetBtn = dsPageToolbarMetaActionBtn;
 
@@ -538,6 +542,9 @@ export const dsGestionaleInfoCardSubgroupTitle =
   "mb-2 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]";
 export const dsGestionaleInfoCardRow =
   "grid grid-cols-[minmax(7rem,128px)_1fr] gap-2 border-b border-[color:var(--cab-border)] py-2 text-sm last:border-b-0";
+/** Portale / modali strette: label sopra valore, larghezza testo stabile. */
+export const dsGestionaleInfoCardRowStacked =
+  "flex flex-col gap-0.5 border-b border-[color:var(--cab-border)] py-2 text-sm last:border-b-0";
 export const dsGestionaleInfoCardRowLabel =
   "font-medium text-[color:var(--cab-text-muted)]";
 export const dsGestionaleInfoCardRowValue = "min-w-0 text-[color:var(--cab-text)]";

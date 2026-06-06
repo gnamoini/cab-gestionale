@@ -1,24 +1,9 @@
 {
-  "version": 6,
-  "frozenAt": "2026-06-04",
-  "entryCount": 16,
-  "checksum": "b3e2bb6c60bbcac0f3fa6b975ac06cb3e7698f7cb6f39e118241749d208ccc0c",
+  "version": 7,
+  "frozenAt": "2026-06-06",
+  "entryCount": 11,
+  "checksum": "60b97bb66b9c444314512d52fe612595421ff6a0593039e81125aa25ce38962b",
   "entries": [
-    {
-      "file": "app/login/login-form.tsx",
-      "line": 293,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "app/login/login-form.tsx",
-      "line": 327,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "app/login/login-form.tsx",
-      "line": 459,
-      "reason": "toolbar-without-containment"
-    },
     {
       "file": "components/bunder/bunder-view.tsx",
       "line": 668,
@@ -55,18 +40,8 @@
       "reason": "toolbar-without-containment"
     },
     {
-      "file": "components/dashboard/security-dashboard-view.tsx",
-      "line": 453,
-      "reason": "toolbar-without-containment"
-    },
-    {
       "file": "components/dashboard/sistema-impostazioni-modal.tsx",
       "line": 382,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/gestionale/dipendenti/timesheet-header.tsx",
-      "line": 200,
       "reason": "toolbar-without-containment"
     },
     {

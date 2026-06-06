@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth, isAuthFullyAuthenticated } from "@/context/auth-context";
+import { clearGestionaleToasts } from "@/context/toast-context";
 import { resolvePostLoginRedirectPath } from "@/lib/auth/resolve-post-login-redirect";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import {
@@ -112,6 +113,9 @@ const iconInset = "pointer-events-none absolute left-3 top-1/2 z-[1] -translate-
 const loginAlertErrorClass =
   "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_8%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-danger)_90%,var(--cab-text))]";
 
+const loginAlertInfoClass =
+  "rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-info)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-info)_8%,var(--cab-surface))] px-3 py-2 text-sm text-[color:color-mix(in_srgb,var(--cab-info)_90%,var(--cab-text))]";
+
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -144,6 +148,12 @@ export function LoginForm() {
         ? GLOBAL_LOADING_MESSAGES.redirectWorkspace
         : null;
   useGlobalLoading(authWaitMessage);
+
+  const sessionExpiredNotice = searchParams.get("reason") === "session_expired";
+
+  useEffect(() => {
+    clearGestionaleToasts();
+  }, []);
 
   useEffect(() => {
     if (!isAuthFullyAuthenticated(status)) return;
@@ -271,6 +281,12 @@ export function LoginForm() {
             </p>
           ) : null}
 
+          {sessionExpiredNotice && !configBlocked ? (
+            <p className={`mb-5 ${loginAlertInfoClass} text-center text-sm`} role="status">
+              Sessione scaduta. Accedi di nuovo.
+            </p>
+          ) : null}
+
           <form onSubmit={onSubmit} noValidate className="space-y-4">
             <div className="space-y-4">
               <div>
@@ -290,7 +306,7 @@ export function LoginForm() {
                     inputMode="text"
                     autoComplete="username"
                     placeholder="Email o username"
-                    className={`${dsSearchFieldInput} pl-10`}
+                    className={`${dsSearchFieldInput} min-w-0 pl-10`}
                     value={email}
                     onChange={(e) => {
                       setEmail(formatLoginIdentifierInput(e.target.value));
@@ -324,7 +340,7 @@ export function LoginForm() {
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     placeholder="••••••••"
-                    className={`${dsSearchFieldInput} pl-10 pr-11`}
+                    className={`${dsSearchFieldInput} min-w-0 pl-10 pr-11`}
                     value={password}
                     onChange={(e) => {
                       setPassword(e.target.value);
@@ -456,7 +472,7 @@ export function LoginForm() {
                       inputMode="email"
                       autoComplete="email"
                       placeholder="nome@azienda.it"
-                      className={`${dsSearchFieldInput} pl-10`}
+                      className={`${dsSearchFieldInput} min-w-0 pl-10`}
                       value={resetEmail}
                       onChange={(e) => setResetEmail(e.target.value)}
                       disabled={resetPending}

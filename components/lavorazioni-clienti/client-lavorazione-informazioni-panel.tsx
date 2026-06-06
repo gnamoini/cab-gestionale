@@ -26,7 +26,7 @@ export function ClientLavorazioneInformazioniPanel({
 
   return (
     <section aria-label="Scheda ingresso" className={`flex min-w-0 flex-col ${dsGapMd}`}>
-      <SchedaIngressoPanoramicaView fields={fields} showAddettoAccettazione={false} />
+      <SchedaIngressoPanoramicaView fields={fields} showAddettoAccettazione={false} rowLayout="stacked" />
     </section>
   );
 }

@@ -217,7 +217,7 @@ export function LavorazioniClienteUtilStack({
       {utilizzatoreStackVisible(utilizzatore) ? (
         <TruncatedTextTooltip
           text={utilizzatore.trim()}
-          className="truncate text-[10px] text-zinc-500 dark:text-zinc-400"
+          className="truncate text-sm text-zinc-500 dark:text-zinc-400"
         />
       ) : null}
     </div>

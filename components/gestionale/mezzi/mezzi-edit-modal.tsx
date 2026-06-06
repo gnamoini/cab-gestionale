@@ -63,7 +63,7 @@ export function MezziEditModal({
   }
 
   return (
-    <GestionaleModalShell title="Modifica mezzo" titleId="mezzo-edit-title" onRequestClose={onClose}>
+    <GestionaleModalShell modalSize="formMedium" title="Modifica mezzo" titleId="mezzo-edit-title" onRequestClose={onClose}>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <GestionaleModalScrollBody className="space-y-3">
           <MezzoFormFields form={form} setForm={setFormStable} excludeMezzoId={mezzo.id} />

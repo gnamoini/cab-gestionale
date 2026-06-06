@@ -10,13 +10,13 @@ import {
   dsModalCloseBtn,
   dsZModalHigh,
 } from "@/lib/ui/design-system";
-import { gestionaleModalWidthStandard } from "@/lib/ui/modal-max-width-class";
+import { gestionaleModalWidthConfirmation } from "@/lib/ui/modal-max-width-class";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 
 /** Layout azioni conferma — mobile: Annulla sotto, desktop: Annulla | Conferma a destra. */
 export const gestionaleConfirmActionsClass =
-  "mt-5 flex min-w-0 shrink-0 flex-col-reverse gap-2 sm:flex-row sm:flex-wrap sm:justify-end";
+  "flex min-w-0 shrink-0 flex-col-reverse gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:justify-end sm:px-5";
 
 export function GestionaleConfirmDialog({
   open,
@@ -104,7 +104,7 @@ export function GestionaleConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="gestionale-confirm-title"
-        className={`flex max-h-[min(92dvh,calc(var(--cab-vv-height,100dvh)-2rem))] w-full ${gestionaleModalWidthStandard} flex-col overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl`}
+        className={`flex max-h-[min(92dvh,calc(var(--cab-vv-height,100dvh)-2rem))] w-full ${gestionaleModalWidthConfirmation} flex-col overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--cab-border)] px-4 py-3">
@@ -114,12 +114,14 @@ export function GestionaleConfirmDialog({
             </h2>
             {subtitle ? <p className="mt-0.5 truncate text-sm text-[color:var(--cab-text-muted)]">{subtitle}</p> : null}
           </div>
-          <CloseButton onClick={onCancel} disabled={pending} className={dsModalCloseBtn} label="Annulla" />
+          <CloseButton onClick={onCancel} disabled={pending} className={dsModalCloseBtn} label="Chiudi" />
         </header>
-        <div className="min-h-0 overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-5">
+        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-5">
           {body}
-          {footer ?? defaultFooter}
         </div>
+        <footer className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)]">
+          {footer ?? defaultFooter}
+        </footer>
       </div>
     </div>,
     document.body,

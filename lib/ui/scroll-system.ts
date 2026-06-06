@@ -16,3 +16,6 @@ export const dsScrollPanel =
 /** Wrap orizzontale tabella o board. */
 export const dsScrollX =
   "min-w-0 overflow-x-auto overscroll-x-contain gestionale-scrollbar";
+
+/** Sentinel in fondo al contenuto main — spazio scrollabile extra (--cab-scroll-end-pad). */
+export const dsGestionaleScrollEndPad = "gestionale-scroll-end-pad";

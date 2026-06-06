@@ -12,7 +12,7 @@ const DEFAULT_MAX = 5;
 
 function PhotoLightbox({ image, onClose }: { image: StoredImage; onClose: () => void }) {
   return (
-    <LavorazioniModalShell onRequestClose={onClose} title="Foto lavorazione">
+    <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="Foto lavorazione">
       <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain p-4 sm:p-6">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

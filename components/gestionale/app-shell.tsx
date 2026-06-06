@@ -38,11 +38,14 @@ import {
 } from "@/src/lib/navigation/route-transition";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { useGestionaleMainScrollLock } from "@/lib/ui/use-body-scroll-lock";
+import { useGestionaleScrollEnd } from "@/lib/ui/use-gestionale-scroll-end";
+import { dsGestionaleScrollEndPad } from "@/lib/ui/scroll-system";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
 import { useSidebarCollapsed } from "@/lib/ui/use-sidebar-collapsed";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
+import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
 
 const shellTopBarClass =
   "flex h-14 shrink-0 items-center border-b border-[color:var(--cab-border)]";
@@ -426,7 +429,7 @@ function MobileNavDrawer({
         onClick={onClose}
       />
       <div
-        className="cab-nav-drawer-panel absolute inset-y-0 left-0 flex w-[min(19.5rem,88vw)] max-w-full flex-col border-r border-zinc-200 bg-white pt-[env(safe-area-inset-top)] shadow-2xl dark:border-zinc-800 dark:bg-zinc-900"
+        className={resolveDrawerAsideClasses("drawerNav")}
         data-state={panelState}
         role="dialog"
         aria-modal="true"
@@ -456,6 +459,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const { collapsed, toggleCollapsed } = useSidebarCollapsed();
   const [routeLoading, setRouteLoading] = useState(false);
   const routeTransitionStartRef = useRef<number | null>(null);
+  const mainScrollRef = useRef<HTMLElement | null>(null);
+  useGestionaleScrollEnd(mainScrollRef);
   const { user } = useAuth();
   const pathname = usePathname();
   const rbac = useRbac();
@@ -671,10 +676,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <div className={dsGestionaleContentRail}>
           <main
+            ref={mainScrollRef}
             className={`gestionale-scroll-y gestionale-scrollbar w-full ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))]`}
           >
             <div className={`${dsGestionaleContentMax} ${layoutPageRoot} ${dsGestionaleContentGutter}`}>
               {children}
+              <div aria-hidden className={dsGestionaleScrollEndPad} />
             </div>
           </main>
         </div>

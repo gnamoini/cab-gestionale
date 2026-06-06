@@ -456,6 +456,39 @@ html.dark select option {
   scrollbar-gutter: stable;
 }
 
+.gestionale-scroll-end-pad {
+  height: var(--cab-scroll-end-pad);
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+main.gestionale-scroll-y {
+  position: relative;
+}
+
+main.gestionale-scroll-y::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--cab-scroll-end-pad);
+  background: linear-gradient(
+    to top,
+    var(--cab-bg-app) 0%,
+    color-mix(in srgb, var(--cab-bg-app) 65%, transparent) 55%,
+    transparent 100%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 280ms ease-out;
+  z-index: 1;
+}
+
+main.gestionale-scroll-y[data-cab-scroll-at-end="true"]::after {
+  opacity: 0.35;
+}
+
 /** Stessa larghezza utile del main con `scrollbar-gutter: stable` (mirror solo sul wrapper, non sul padding). */
 .cab-gestionale-scroll-gutter-mirror {
   overflow: hidden;
@@ -503,6 +536,36 @@ body[data-cab-scroll-lock-count] {
 /* Sidebar collapse — label fade + icone che si centrano con la larghezza */
 .cab-app-shell {
   --cab-sidebar-motion: 250ms;
+  --cab-scroll-end-pad: max(2.5rem, calc(env(safe-area-inset-bottom) + 1.25rem));
+  --cab-modal-width-confirmation: 28rem;
+  --cab-modal-width-info: 32rem;
+  --cab-modal-width-form-small: 36rem;
+  --cab-modal-width-form-medium: 48rem;
+  --cab-modal-width-form-large: 56rem;
+  --cab-modal-width-analytics: 64rem;
+  --cab-modal-width-drawer-log: 28rem;
+  --cab-modal-width-drawer-filter: 22rem;
+  --cab-modal-width-drawer-nav: 19.5rem;
+}
+
+@media (min-width: 768px) {
+  .cab-app-shell {
+    --cab-scroll-end-pad: max(3rem, min(10dvh, 4.5rem));
+  }
+
+  /* Larghezza minima modali desktop — SSOT con --cab-modal-width-* (Tailwind arbitrary min-w non affidabile). */
+  .cab-modal-min-w-form-small {
+    min-width: var(--cab-modal-width-form-small);
+  }
+  .cab-modal-min-w-form-medium {
+    min-width: var(--cab-modal-width-form-medium);
+  }
+  .cab-modal-min-w-form-large {
+    min-width: var(--cab-modal-width-form-large);
+  }
+  .cab-modal-min-w-analytics {
+    min-width: var(--cab-modal-width-analytics);
+  }
 }
 
 .cab-sidebar .cab-sidebar-nav {

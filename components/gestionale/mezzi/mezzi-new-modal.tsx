@@ -60,7 +60,7 @@ export function MezziNewModal({
   }
 
   return (
-    <GestionaleModalShell title="Nuovo mezzo" titleId="mezzo-nuovo-title" onRequestClose={onClose}>
+    <GestionaleModalShell modalSize="formMedium" title="Nuovo mezzo" titleId="mezzo-nuovo-title" onRequestClose={onClose}>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <GestionaleModalScrollBody className="space-y-3">
           <MezzoFormFields form={form} setForm={setFormStable} />

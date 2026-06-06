@@ -126,6 +126,7 @@ export function RicambioNewModal({
 
   return (
     <GestionaleModalShell
+      modalSize="formMedium"
       onRequestClose={handleClose}
       title="Nuovo ricambio"
       titleId="new-ricambio-title"

@@ -29,11 +29,11 @@ export function GlobalErrorView({
   };
 
   return (
-    <AuthStandalonePageShell showThemeToggle={false}>
+    <AuthStandalonePageShell showThemeToggle={false} decorativeBackground={false}>
       <main className="relative z-10 flex min-h-[var(--cab-app-height,100dvh)] w-full flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <ErrorPageCard
-          eyebrow="Errore imprevisto"
-          title="Impossibile caricare l'applicazione"
+          eyebrow="Errore di caricamento"
+          title="Errore di caricamento"
           description={description}
           technicalDetail={technicalDetail}
           onRetry={onRetry}

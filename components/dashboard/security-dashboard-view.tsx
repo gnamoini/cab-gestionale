@@ -18,9 +18,9 @@ import { useSecurityUsersPermissionsQuery } from "@/src/hooks/use-security-users
 import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
 import {
   dsBtnDanger,
-  dsBtnGhost,
   dsBtnNeutral,
   dsPageToolbarBtn,
+  dsPageToolbarMetaActionBtn,
   dsScrollbar,
   dsSectionTitle,
   dsStackPage,
@@ -308,6 +308,9 @@ export function SecurityDashboardView() {
     void runControlCenterCheck(false);
   }, [isAdmin, runControlCenterCheck]);
 
+  const usersRefetchRef = useRef(usersQ.refetch);
+  usersRefetchRef.current = usersQ.refetch;
+
   useEffect(() => {
     if (!isAdmin) return;
     const sb = getBrowserSupabase();
@@ -329,7 +332,7 @@ export function SecurityDashboardView() {
               "@/src/lib/runtime/truth-layer/invalidate-runtime-truth"
             );
             await invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient });
-            await usersQ.refetch();
+            await usersRefetchRef.current();
             await runControlCenterCheck(false);
           })();
         },
@@ -339,7 +342,7 @@ export function SecurityDashboardView() {
     return () => {
       void sb.removeChannel(channel);
     };
-  }, [isAdmin, queryClient, runControlCenterCheck, usersQ]);
+  }, [isAdmin, queryClient, runControlCenterCheck]);
 
   const { logsQuery, recentLogins, recentLoginFailed, activeTodayCount, activeTodayIds, lastAccessPerUser } = dash;
 
@@ -454,7 +457,7 @@ export function SecurityDashboardView() {
           title="Release e pilot"
           subtitle="Pilot mode per operatori e checklist di readiness di produzione."
         >
-          <div className={`${gestionalePageToolbarActionsClass} mb-4`}>
+          <div className={`${gestionalePageToolbarActionsClass} mb-4 min-w-0`}>
             <button type="button" className={dsPageToolbarBtn} onClick={() => void runControlCenterCheck(true)} disabled={readinessLoading}>
               {readinessLoading ? "Controllo…" : "Esegui checklist completa"}
             </button>
@@ -741,7 +744,7 @@ export function SecurityDashboardView() {
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className={dsBtnGhost}
+              className={dsPageToolbarMetaActionBtn}
               onClick={() => {
                 setRange(defaultRange());
                 setFilterUserId(null);

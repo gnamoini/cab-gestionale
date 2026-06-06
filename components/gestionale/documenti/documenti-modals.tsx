@@ -16,6 +16,7 @@ import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestional
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import type { ModalSize } from "@/lib/ui/modal-max-width-class";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
   GlobalAttrezzatureMarcaSelect,
@@ -80,13 +81,16 @@ function DocumentiModalShell({
   title,
   children,
   onRequestClose,
+  modalSize = "formMedium",
 }: {
   title: string;
   children: React.ReactNode;
   onRequestClose: () => void;
+  modalSize?: ModalSize;
 }) {
   return (
     <LavorazioniModalShell
+      modalSize={modalSize}
       layerClassName="z-[100]"
       onRequestClose={onRequestClose}
       title={title}
@@ -428,7 +432,7 @@ export function DocumentoInfoModal({
       : `${r.marcaKey ?? r.marca} · ${r.modelloKey ?? r.macchina}`;
 
   return (
-    <DocumentiModalShell title="Dettaglio documento" onRequestClose={onRequestClose}>
+    <DocumentiModalShell modalSize="info" title="Dettaglio documento" onRequestClose={onRequestClose}>
       <div className={`lavorazioni-scroll-scope ${gestionaleModalBodyFlexClass}`}>
         <GestionaleModalScrollBody className="space-y-3 text-sm">
           <InfoRow label="Riepilogo" value={<span className="font-semibold">{formatDocumentoRigaSintetica(doc)}</span>} />

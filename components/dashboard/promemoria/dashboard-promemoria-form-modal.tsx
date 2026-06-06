@@ -181,10 +181,11 @@ export function DashboardPromemoriaFormModal({
   return createPortal(
     <>
       <GestionaleModalShell
+        modalSize="formSmall"
+        modalHeight="compact"
         onRequestClose={requestClose}
         title={editing ? "Modifica promemoria" : "Nuovo promemoria"}
         titleId="dashboard-promemoria-modal-title"
-        dialogSize="compact"
         layerClassName="cursor-pointer"
       >
         <form

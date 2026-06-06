@@ -7,11 +7,11 @@ import type { LavorazioneAttiva, PrioritaLav, StatoLavorazioneConfig } from "@/l
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
+import { isoToItDisplay } from "@/lib/lavorazioni/date-day-only";
 import {
-  isoToItDisplay,
-  parseItalianDayToIso,
-  parseOptionalItalianDayToIso,
-} from "@/lib/lavorazioni/date-day-only";
+  parseItalianDayDisplayToIso,
+  parseOptionalItalianDayDisplayToIso,
+} from "@/lib/ui/italian-date-input-mask";
 import { LavorazioniDateField } from "@/components/gestionale/lavorazioni/lavorazioni-date-field";
 import { LavorazioneMezzoPicker } from "@/components/gestionale/lavorazioni/lavorazione-mezzo-picker";
 import { LavorazioniModalSelect } from "@/components/gestionale/lavorazioni/lavorazioni-modal-select";
@@ -35,7 +35,6 @@ import { useGestionaleModalDialogFocus } from "@/components/gestionale/gestional
 import { CloseButton } from "@/components/design-system/close-button";
 import {
   dsInput,
-  dsLavorazioniModalDialog,
   dsLavorazioniModalLayer,
   dsLabel,
   dsModalBackBtn,
@@ -47,7 +46,6 @@ import {
   dsModalTitle,
   dsModalTitleBlock,
   dsHubModalTabBar,
-  dsLavorazioniModalDialogCompact,
   dsSegmentedBtnOn,
 } from "@/lib/ui/design-system";
 import { SETTINGS_PANEL_SHELL } from "@/components/dashboard/settings-list-ui";
@@ -56,8 +54,10 @@ import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import {
   gestionaleModalBodyFlexClass,
-  resolveGestionaleModalWidth,
+  resolveShellModalLayout,
   type GestionaleModalWidth,
+  type ModalHeight,
+  type ModalSize,
 } from "@/lib/ui/modal-max-width-class";
 import {
   CAB_FOCUS_SCROLL_GROUP_ATTR,
@@ -67,6 +67,7 @@ import {
   gestionaleModalScrollBodyMobileClass,
 } from "@/lib/ui/mobile-modal-behavior";
 import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
+import { flexShrinkSafe } from "@/lib/ui/global-flex-system";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 
@@ -172,6 +173,8 @@ export type LavorazioniModalDialogSize = "hub" | "compact";
 /** Chiusura: click fuori, ESC, X in header; scroll lock come `Modal` globale. */
 export function LavorazioniModalShell({
   children,
+  modalSize,
+  modalHeight,
   size = "standard",
   dialogSize = "hub",
   alignTop,
@@ -182,11 +185,16 @@ export function LavorazioniModalShell({
   onBack,
   header,
   titleId,
+  footer,
 }: {
   children: React.ReactNode;
-  /** `standard`: modale lavorazione; `wide`: scheda ingresso / form complessi. */
+  /** Categoria semantica — SSOT dimensioni (`lib/ui/modal-size-system.ts`). */
+  modalSize?: ModalSize;
+  /** Override altezza desktop (default derivato da `modalSize`). */
+  modalHeight?: ModalHeight;
+  /** @deprecated Usare `modalSize="formMedium"`. */
   size?: GestionaleModalWidth;
-  /** `compact`: dialog più basso su desktop (hub schede resta `hub`). */
+  /** @deprecated Usare `modalHeight="compact"|"standard"`. */
   dialogSize?: LavorazioniModalDialogSize;
   alignTop?: boolean;
   /** Es. `z-[110]` quando la modale si apre sopra un'altra modale gestionale. */
@@ -200,6 +208,8 @@ export function LavorazioniModalShell({
   header?: React.ReactNode;
   /** Id titolo per `aria-labelledby` (default se `title` è impostato). */
   titleId?: string;
+  /** Footer fisso sotto il corpo scrollabile. */
+  footer?: React.ReactNode;
 }) {
   useBodyScrollLock(true, "LavorazioniModalShell");
   useOverlayBackHandler(true, onRequestClose, "LavorazioniModalShell");
@@ -215,9 +225,11 @@ export function LavorazioniModalShell({
   }, []);
 
   const labelledBy = title ? (titleId ?? LAV_MODAL_TITLE_ID) : titleId;
-  const dialogMaxWidth = resolveGestionaleModalWidth(size);
-  const dialogSurfaceClass =
-    dialogSize === "compact" ? dsLavorazioniModalDialogCompact : dsLavorazioniModalDialog;
+  const { widthClass: dialogMaxWidth, surfaceClass: dialogSurfaceClass } = resolveShellModalLayout({
+    modalSize,
+    modalHeight,
+    legacyDialogSize: modalSize == null && modalHeight == null ? dialogSize : undefined,
+  });
   const headerNode =
     header ??
     (title ? (
@@ -252,7 +264,7 @@ export function LavorazioniModalShell({
       <div
         ref={dialogFocus.ref}
         {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
-        className={`${dialogSurfaceClass} flex-safe-col touch-auto cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
+        className={`${dialogSurfaceClass} ${flexShrinkSafe} flex-safe-col touch-auto cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
@@ -271,6 +283,11 @@ export function LavorazioniModalShell({
           <div className="flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden">
             {children}
           </div>
+          {footer ? (
+            <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
+              {footer}
+            </footer>
+          ) : null}
         </div>
       </div>
     </div>
@@ -306,12 +323,12 @@ export function EditLavorazioneModal({
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const inOk = parseItalianDayToIso(dataIngressoText);
+    const inOk = parseItalianDayDisplayToIso(dataIngressoText);
     if (!inOk.ok) {
       setDateErr("Data ingresso non valida. Usa gg/mm/aaaa (es. 10/05/2026) oppure aaaa-mm-gg.");
       return;
     }
-    const uscOk = parseOptionalItalianDayToIso(dataUscitaText);
+    const uscOk = parseOptionalItalianDayDisplayToIso(dataUscitaText);
     if (!uscOk.ok) {
       setDateErr("Data uscita non valida.");
       return;
@@ -325,7 +342,7 @@ export function EditLavorazioneModal({
   }
 
   return (
-    <LavorazioniModalShell size="standard" onRequestClose={onRequestClose} title={title} titleId="lav-edit-modal-title">
+    <LavorazioniModalShell modalSize="formMedium" onRequestClose={onRequestClose} title={title} titleId="lav-edit-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
           <div
@@ -563,7 +580,7 @@ export function NewLavorazioneModal({
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const inOk = parseItalianDayToIso(ingressoText);
+    const inOk = parseItalianDayDisplayToIso(ingressoText);
     if (!inOk.ok) {
       setDateErr("Data ingresso non valida. Usa gg/mm/aaaa (es. 10/05/2026) oppure aaaa-mm-gg.");
       return;
@@ -573,7 +590,7 @@ export function NewLavorazioneModal({
   }
 
   return (
-    <LavorazioniModalShell size="standard" onRequestClose={onRequestClose} title="Nuova lavorazione" titleId="lav-new-modal-title">
+    <LavorazioniModalShell modalSize="formMedium" onRequestClose={onRequestClose} title="Nuova lavorazione" titleId="lav-new-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
           <div
@@ -1012,6 +1029,7 @@ export function SettingsLavorazioniModal({
 
   return (
     <LavorazioniModalShell
+      modalSize="formLarge"
       onRequestClose={onRequestClose}
       title={settingsTitle}
       titleId="lavorazioni-settings-title"

@@ -53,7 +53,11 @@ import { FormField, FormSection } from "@/components/gestionale/schede/gestional
 import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
 import { dsBtnDanger, dsInput, dsModalFormFooter } from "@/lib/ui/design-system";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
-import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+import {
+  gestionaleModalBodyFlexClass,
+  type ModalHeight,
+  type ModalSize,
+} from "@/lib/ui/modal-max-width-class";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 
 export function todayItDate(): string {
@@ -109,6 +113,8 @@ export function SchedaIngressoFormModalShell({
   subtitle,
   children,
   footer,
+  modalSize = "formLarge",
+  modalHeight,
 }: {
   open: boolean;
   onRequestClose: () => void;
@@ -116,11 +122,15 @@ export function SchedaIngressoFormModalShell({
   subtitle?: string;
   children: ReactNode;
   footer: ReactNode;
+  modalSize?: ModalSize;
+  modalHeight?: ModalHeight;
 }) {
   if (!open) return null;
 
   return (
     <LavorazioniModalShell
+      modalSize={modalSize}
+      modalHeight={modalHeight}
       layerClassName={variant === "edit-scheda" ? "z-[110]" : undefined}
       onRequestClose={onRequestClose}
       title={variant === "create-lavorazione" ? "Nuova lavorazione" : "Scheda di ingresso"}

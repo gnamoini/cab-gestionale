@@ -97,6 +97,11 @@ export function subscribeCabSync(listener: Listener): () => void {
   return () => listeners.delete(listener);
 }
 
+/** Dev/ops: conteggio listener attivi (stabile se hook sync usa ref handler). */
+export function getCabSyncListenerCount(): number {
+  return listeners.size;
+}
+
 /** Sotto-entità logiche schede (tipo in `scheda_lavorazione`, non tabella separata). */
 export type SchedeLogicalKind = "schede_ingresso" | "schede_lavorazione" | "schede_ricambi";
 

@@ -31,13 +31,21 @@ export function isLavorazioneStoricoDb(_stato: string): boolean {
   return false;
 }
 
+/** Collegamento mezzo–lavorazione: FK `mezzo_id` stretto, fuzzy solo senza FK, esclude soft-deleted. */
+export function lavorazioneCollegataMezzoDb(m: MezzoGestito, row: LavorazioneListRow): boolean {
+  if (row.deleted_at) return false;
+  const mezzoId = row.mezzo_id?.trim();
+  if (mezzoId) return mezzoId === m.id;
+  return lavorazioneMatchesMezzo(m, lavRowToMatchShape(row));
+}
+
 export function interventiMezzoDaLavorazioniDb(
   m: MezzoGestito,
   rows: readonly LavorazioneListRow[],
 ): MezzoInterventoLavorazione[] {
   const out: MezzoInterventoLavorazione[] = [];
   for (const row of rows) {
-    if (!lavorazioneMatchesMezzo(m, lavRowToMatchShape(row))) continue;
+    if (!lavorazioneCollegataMezzoDb(m, row)) continue;
     const ing = row.data_ingresso?.trim() ? row.data_ingresso : row.created_at;
     const fin = row.data_uscita;
     const statoLabel = labelLavorazioneStatoDb(row.stato);
@@ -84,11 +92,11 @@ export function interventiMezzoDaLavorazioniDb(
 export function mezzoHaLavorazioneAttivaDb(m: MezzoGestito, rows: readonly LavorazioneListRow[]): boolean {
   return rows.some((row) => {
     if (isLavorazioneArchived(row)) return false;
-    return lavorazioneMatchesMezzo(m, lavRowToMatchShape(row));
+    return lavorazioneCollegataMezzoDb(m, row);
   });
 }
 
 /** Lavorazione non eliminata (in corso o archiviata) collegata per identità mezzo. */
 export function mezzoHaLavorazioneCollegataDb(m: MezzoGestito, rows: LavorazioneListRow[]): boolean {
-  return rows.some((row) => lavorazioneMatchesMezzo(m, lavRowToMatchShape(row)));
+  return rows.some((row) => lavorazioneCollegataMezzoDb(m, row));
 }

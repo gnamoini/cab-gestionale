@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -50,6 +51,15 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<UploadFeedbackItem[]>([]);
   const itemsRef = useRef(items);
   itemsRef.current = items;
+  const removeTimeoutsRef = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    const timeouts = removeTimeoutsRef.current;
+    return () => {
+      for (const t of timeouts) clearTimeout(t);
+      timeouts.clear();
+    };
+  }, []);
 
   const clearItem = useCallback((id: string) => {
     setItems((prev) => prev.filter((x) => x.id !== id));
@@ -57,9 +67,11 @@ export function UploadFeedbackProvider({ children }: { children: ReactNode }) {
 
   const scheduleRemove = useCallback(
     (id: string, delayMs: number) => {
-      window.setTimeout(() => {
+      const t = window.setTimeout(() => {
+        removeTimeoutsRef.current.delete(t);
         setItems((prev) => prev.filter((x) => x.id !== id));
       }, delayMs);
+      removeTimeoutsRef.current.add(t);
     },
     [],
   );

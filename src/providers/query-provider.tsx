@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-query";
 import { useToastContext } from "@/context/toast-context";
 
+import { installLongSessionDevHook } from "@/lib/observability/long-session-dev-hook";
 import { formatSupabaseError, isPermissionDeniedError } from "@/src/utils/supabaseErrorHandler";
 
 function QueryErrorToasts({ client }: { client: QueryClient }) {
@@ -57,11 +58,15 @@ export function QueryProvider({ children }: { children: ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 30_000, retry: 1 },
+          queries: { staleTime: 30_000, gcTime: 300_000, retry: 1 },
           mutations: { retry: 0 },
         },
       }),
   );
+
+  useEffect(() => {
+    installLongSessionDevHook(client);
+  }, [client]);
 
   return (
     <QueryClientProvider client={client}>

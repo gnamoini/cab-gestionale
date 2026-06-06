@@ -13,29 +13,36 @@ const DOT_GRID_STYLE = {
 export function AuthStandalonePageShell({
   children,
   showThemeToggle = true,
+  decorativeBackground = true,
 }: {
   children: ReactNode;
   showThemeToggle?: boolean;
+  /** false: sfondo piatto (pagine errore); true: griglia + watermark (login, 404). */
+  decorativeBackground?: boolean;
 }) {
   return (
     <div className="relative isolate min-h-dvh overflow-hidden bg-[var(--cab-bg-app)]">
       <div className="pointer-events-none absolute inset-0 bg-[var(--cab-bg-app)]" aria-hidden />
-      <div
-        className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.055]"
-        style={DOT_GRID_STYLE}
-        aria-hidden
-      />
-      <div
-        className="pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.04] blur-[1px] dark:opacity-[0.06]"
-        aria-hidden
-      >
-        <CabLogo
-          height={240}
-          priority={false}
-          sizes="(max-width: 768px) 80vw, 240px"
-          className="mx-auto object-center dark:brightness-[1.15] dark:contrast-[0.92] dark:saturate-0"
-        />
-      </div>
+      {decorativeBackground ? (
+        <>
+          <div
+            className="pointer-events-none absolute inset-0 opacity-[0.035] dark:opacity-[0.055]"
+            style={DOT_GRID_STYLE}
+            aria-hidden
+          />
+          <div
+            className="pointer-events-none absolute left-1/2 top-[42%] -translate-x-1/2 -translate-y-1/2 select-none opacity-[0.04] blur-[1px] dark:opacity-[0.06]"
+            aria-hidden
+          >
+            <CabLogo
+              height={240}
+              priority={false}
+              sizes="(max-width: 768px) 80vw, 240px"
+              className="mx-auto object-center dark:brightness-[1.15] dark:contrast-[0.92] dark:saturate-0"
+            />
+          </div>
+        </>
+      ) : null}
       {showThemeToggle ? (
         <div className="absolute right-4 top-4 z-20 sm:right-6 sm:top-6">
           <ThemeToggle />

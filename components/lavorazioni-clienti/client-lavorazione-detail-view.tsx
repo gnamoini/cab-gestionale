@@ -9,7 +9,6 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { IconBack, IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
 import { ClientLavorazioneInformazioniPanel } from "@/components/lavorazioni-clienti/client-lavorazione-informazioni-panel";
 import { ClientLavorazioneMediaPanel } from "@/components/lavorazioni-clienti/client-lavorazione-media-panel";
-import { ClientLavorazioneDocumentsPanel } from "@/components/lavorazioni-clienti/client-lavorazione-documents";
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
 import {
   ClientLavorazioneAvanzamentoPanel,
@@ -62,7 +61,10 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
     () => filterClientPortalStatiOptions(globalOpts.lavorazioni.stati),
     [globalOpts.lavorazioni.stati],
   );
-  const { store: schedeStore } = useSchedeBundlesQuery(access.allowed, { viewLayer: true });
+  const { store: schedeStore } = useSchedeBundlesQuery(access.allowed, {
+    viewLayer: true,
+    lavorazioneIds: [lavorazioneId],
+  });
   const addettiGlobali = globalOpts.lavorazioni.addetti;
   const [qrOpen, setQrOpen] = useState(false);
 
@@ -189,7 +191,6 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
               addettiGlobali={addettiGlobali}
             />
             <ClientLavorazioneMediaPanel lavorazioneId={row.id} />
-            <ClientLavorazioneDocumentsPanel lavorazioneId={row.id} embedded />
             <div className="border-t border-[color:var(--cab-border)] pt-[length:var(--ds-space-xl)]">
               <ClientLavorazioneAvanzamentoPanel logs={logs} statiOpts={statiOpts} row={row} />
             </div>

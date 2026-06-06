@@ -23,12 +23,15 @@ import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 import { beginUndoSession, resetUndoSession } from "@/lib/gestionale-log/undo-session";
 import { flushPendingModificaLogs } from "@/src/services/internal/audit-log";
 import { notifyUndoSessionChanged } from "@/lib/gestionale-log/use-undo-session-id";
+import { registerGestionaleVisibilityHandler } from "@/lib/ui/gestionale-visibility-coordinator";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { clearClientEffectivePermissionsSnapshotCache, publishAuthRoleHint } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { clearInvalidAuthSession } from "@/src/lib/auth/clear-invalid-auth-session";
 import { clearRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
+import { clearRicambioStockSnapshotRegistry } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
+import { clearScortaSyncQueues } from "@/lib/magazzino/scorta-adjust-sync";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { authLogsService } from "@/src/services/auth-logs.service";
 import type { AuthStatus } from "@/src/lib/auth/auth-status";
@@ -51,6 +54,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 const FALLBACK_AUTHOR = "Utente CAB";
 const AUTH_INIT_FAILSAFE_MS = 7_000;
+
+type AuthInvalidSessionSource = "init" | "refresh" | "token_refreshed" | "login";
 
 function isServerSnapshotFresh(snapshot: ServerAuthSnapshot | null | undefined): boolean {
   if (!snapshot?.user) return false;
@@ -132,6 +137,7 @@ export function AuthProvider({
   const authRestoreStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
   const authRestoreLoggedRef = useRef(skipInitGetSessionRef.current);
   const authInitFailsafeFiredRef = useRef(false);
+  const statusRef = useRef<AuthStatus>(initial.status);
 
   if (initialSnapshot?.user?.id) {
     const permissionsKey = [...QK.userPermissions, initialSnapshot.user.id] as const;
@@ -153,6 +159,7 @@ export function AuthProvider({
   }, [user?.id, user?.ruolo]);
 
   useEffect(() => {
+    statusRef.current = status;
     userIdRef.current = user?.id ?? null;
     if (user && (status === "authenticated" || status === "degraded")) lastStableUserRef.current = user;
     if (authRestoreLoggedRef.current) return;
@@ -162,15 +169,29 @@ export function AuthProvider({
     trackRuntimeEvent(RuntimeEvents.authRestoreDuration, { durationMs });
   }, [user, status]);
 
+  const transitionToAnonymous = useCallback(async () => {
+    setUser(null);
+    lastStableUserRef.current = null;
+    setStatus("anonymous");
+    clearRuntimeCabAppSettings();
+    clearRicambioStockSnapshotRegistry();
+    clearScortaSyncQueues();
+    queryClient.clear();
+    clearGestionaleToasts();
+  }, [queryClient]);
+
+  const transitionToDegraded = useCallback(
+    (fallbackUser: PublicAuthUser) => {
+      setUser(fallbackUser);
+      setStatus("degraded");
+    },
+    [],
+  );
+
   const applyAuthUser = useCallback(
     async (authUser: User | null) => {
       if (!authUser) {
-        setUser(null);
-        lastStableUserRef.current = null;
-        setStatus("anonymous");
-        clearRuntimeCabAppSettings();
-        queryClient.clear();
-        clearGestionaleToasts();
+        await transitionToAnonymous();
         return;
       }
       try {
@@ -185,7 +206,7 @@ export function AuthProvider({
         setStatus("degraded");
       }
     },
-    [queryClient],
+    [queryClient, transitionToAnonymous],
   );
 
   const applySession = useCallback(
@@ -196,14 +217,21 @@ export function AuthProvider({
   );
 
   const handleInvalidSession = useCallback(
-    async (sb: ReturnType<typeof getBrowserSupabase>, reason: string) => {
+    async (
+      sb: ReturnType<typeof getBrowserSupabase>,
+      reason: string,
+      source: AuthInvalidSessionSource,
+    ) => {
       if (clearingSessionRef.current) {
         await applySession(null);
         return;
       }
       clearingSessionRef.current = true;
       try {
-        trackRuntimeEvent(RuntimeEvents.authSessionInvalid, { reason: reason.slice(0, 200) });
+        trackRuntimeEvent(RuntimeEvents.authSessionInvalid, {
+          reason: reason.slice(0, 200),
+          source,
+        });
         await clearInvalidAuthSession(sb);
         await applySession(null);
       } finally {
@@ -216,8 +244,7 @@ export function AuthProvider({
   const refresh = useCallback(async () => {
     if (!isSupabasePublicEnvConfigured()) {
       setConfigurationError(MISSING_SUPABASE_ENV_MESSAGE);
-      setUser(null);
-      setStatus("anonymous");
+      await transitionToAnonymous();
       return;
     }
     setConfigurationError(null);
@@ -227,7 +254,7 @@ export function AuthProvider({
       const session = data?.session ?? null;
 
       if (error && shouldClearSessionOnAuthError(error)) {
-        await handleInvalidSession(sb, error.message);
+        await handleInvalidSession(sb, error.message, "refresh");
         return;
       }
       if (error && isTransientNetworkAuthError(error)) {
@@ -254,7 +281,7 @@ export function AuthProvider({
         setStatus("degraded");
       }
     }
-  }, [applySession, handleInvalidSession]);
+  }, [applySession, handleInvalidSession, transitionToAnonymous]);
 
   useEffect(() => {
     if (status !== "loading") {
@@ -277,13 +304,21 @@ export function AuthProvider({
         setStatus("degraded");
         return;
       }
-      setUser(null);
-      setStatus("anonymous");
-      void refresh();
+      void transitionToAnonymous().then(() => refresh());
     }, AUTH_INIT_FAILSAFE_MS);
 
     return () => window.clearTimeout(id);
-  }, [status, initialSnapshot?.user, refresh]);
+  }, [status, initialSnapshot?.user, refresh, transitionToAnonymous]);
+
+  useEffect(() => {
+    if (!isSupabasePublicEnvConfigured()) return;
+
+    return registerGestionaleVisibilityHandler(() => {
+      const currentStatus = statusRef.current;
+      if (currentStatus !== "authenticated" && currentStatus !== "degraded") return;
+      void refresh();
+    });
+  }, [refresh]);
 
   useEffect(() => {
     let cancelled = false;
@@ -291,8 +326,7 @@ export function AuthProvider({
 
     if (!isSupabasePublicEnvConfigured()) {
       setConfigurationError(MISSING_SUPABASE_ENV_MESSAGE);
-      setUser(null);
-      setStatus("anonymous");
+      void transitionToAnonymous();
       return () => {
         cancelled = true;
       };
@@ -307,7 +341,21 @@ export function AuthProvider({
         const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
           if (cancelled) return;
           if (event === "TOKEN_REFRESHED" && !session) {
-            void handleInvalidSession(sb, "TOKEN_REFRESHED senza sessione");
+            void (async () => {
+              const { data, error } = await getSessionWithSoftRetry(sb);
+              const recovered = data?.session ?? null;
+              if (recovered?.user) {
+                await applySession(recovered);
+                return;
+              }
+              if (error && shouldClearSessionOnAuthError(error)) {
+                await handleInvalidSession(sb, `TOKEN_REFRESHED: ${error.message}`, "token_refreshed");
+                return;
+              }
+              if (!recovered && (lastStableUserRef.current || userIdRef.current)) {
+                await handleInvalidSession(sb, "TOKEN_REFRESHED senza sessione", "token_refreshed");
+              }
+            })();
             return;
           }
           if (event === "TOKEN_REFRESHED" && session?.user?.id && session.user.id === userIdRef.current) {
@@ -337,16 +385,22 @@ export function AuthProvider({
           if (cancelled) return;
 
           if (initErr && shouldClearSessionOnAuthError(initErr)) {
-            await handleInvalidSession(sb, initErr.message);
+            await handleInvalidSession(sb, initErr.message, "init");
           } else if (initErr && session?.user && isTransientNetworkAuthError(initErr)) {
             await applySession(session);
             setStatus("degraded");
           } else if (initErr) {
             console.warn("[auth] init getSession:", initErr.message);
-            if (session?.user) await applySession(session);
-            else {
-              setUser(null);
-              setStatus("anonymous");
+            if (session?.user) {
+              await applySession(session);
+            } else if (initialSnapshot?.user) {
+              transitionToDegraded(initialSnapshot.user);
+              void refresh();
+            } else if (lastStableUserRef.current) {
+              transitionToDegraded(lastStableUserRef.current);
+              void refresh();
+            } else {
+              await transitionToAnonymous();
             }
           } else {
             await applySession(session);
@@ -356,8 +410,7 @@ export function AuthProvider({
         if (!cancelled) {
           const msg = e instanceof Error ? e.message : "";
           setConfigurationError(msg === MISSING_SUPABASE_ENV_MESSAGE ? msg : null);
-          setUser(null);
-          setStatus("anonymous");
+          await transitionToAnonymous();
         }
       }
     })();
@@ -366,7 +419,7 @@ export function AuthProvider({
       cancelled = true;
       subscription?.unsubscribe();
     };
-  }, [applySession, handleInvalidSession]);
+  }, [applySession, handleInvalidSession, initialSnapshot?.user, refresh, transitionToAnonymous, transitionToDegraded]);
 
   const login = useCallback(
     async (email: string, password: string, _remember: boolean) => {
@@ -405,7 +458,7 @@ export function AuthProvider({
         const session = sessWrap?.session ?? null;
         if (sessErr && shouldClearSessionOnAuthError(sessErr)) {
           authLogsService.logLoginFailedFireAndForget(signInEmail);
-          await handleInvalidSession(sb, sessErr.message);
+          await handleInvalidSession(sb, sessErr.message, "login");
           return { ok: false as const, message: "Accesso non riuscito. Riprova." };
         }
         if (!session?.user) {
@@ -458,14 +511,10 @@ export function AuthProvider({
     trackRuntimeEvent(RuntimeEvents.authLogout, { userId: uid ?? "anon" });
     clearClientEffectivePermissionsSnapshotCache();
     await invalidateRuntimeTruth({ reason: "logout", queryClient });
-    setUser(null);
-    lastStableUserRef.current = null;
-    setStatus("anonymous");
-    queryClient.clear();
-    clearGestionaleToasts();
+    await transitionToAnonymous();
     resetUndoSession();
     notifyUndoSessionChanged();
-  }, [queryClient, user?.email, user?.id]);
+  }, [queryClient, transitionToAnonymous, user?.email, user?.id]);
 
   const authorName = useMemo(() => {
     const n = user?.nome?.trim();

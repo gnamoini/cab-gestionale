@@ -51,9 +51,15 @@ export function useDashboardMetrics() {
   useCabSyncListener("movimenti_ricambi", invalidateMagLogs);
 
   const globalOpts = useGlobalOptions({ debugTag: "useDashboardMetrics" });
-  const { store: schedeStore } = useSchedeBundlesQuery(!staging);
 
   const lavQuery = useLavorazioniList(LAV_FILTERS, viewOpts);
+  const schedeLavorazioneIds = useMemo(
+    () => (lavQuery.data ?? []).map((row) => row.id),
+    [lavQuery.data],
+  );
+  const { store: schedeStore } = useSchedeBundlesQuery(!staging, {
+    lavorazioneIds: schedeLavorazioneIds,
+  });
   const magQuery = useMagazzinoRicambiUIQuery(undefined, viewOpts);
   const magLogsQ = useLogListQuery(
     { entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },

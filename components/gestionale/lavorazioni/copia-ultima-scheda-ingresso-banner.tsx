@@ -1,7 +1,7 @@
 "use client";
 
 import { formatLastSchedaIngressoHint } from "@/lib/schede/scheda-ingresso-reuse";
-import { dsBtnSoftOrange } from "@/lib/ui/design-system";
+import { dsAccentSoftBanner, dsBtnSoftOrange, dsFocus } from "@/lib/ui/design-system";
 
 function IconCopiaIngressoPrecedente({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
@@ -22,7 +22,7 @@ export function CopiaUltimaSchedaIngressoBanner({
   onCopy,
 }: {
   visible: boolean;
-  /** Evidenzia al primo match (pulse/glow). */
+  /** Evidenzia al primo match (bordo/alone). */
   highlight: boolean;
   updatedAt?: string;
   disabled?: boolean;
@@ -31,34 +31,56 @@ export function CopiaUltimaSchedaIngressoBanner({
 }) {
   if (!visible) return null;
 
+  const shellClass = [
+    dsAccentSoftBanner,
+    "rounded-[var(--ds-radius-xl)] px-4 py-3.5 shadow-[var(--cab-shadow-sm)] transition-[box-shadow,border-color] duration-300",
+    highlight
+      ? "border-[color:color-mix(in_srgb,var(--cab-primary)_52%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] shadow-[var(--cab-shadow-md),0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_32%,transparent)]"
+      : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <div
-      className={[
-        "rounded-xl border px-3 py-3 transition-[box-shadow,border-color] duration-300",
-        highlight
-          ? "animate-pulse border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] shadow-[0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,transparent),0_0_18px_color-mix(in_srgb,var(--cab-primary)_28%,transparent)] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-card))]"
-          : "border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-card))]",
-      ].join(" ")}
-      role="status"
-    >
-      <p className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-primary)]">
-        Mezzo già registrato
-      </p>
-      <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">
-        {updatedAt
-          ? `Ultima scheda ingresso: ${formatLastSchedaIngressoHint(updatedAt)}. Puoi copiare i dati nell’anagrafica corrente.`
-          : "È disponibile una scheda ingresso precedente per questo mezzo."}
-      </p>
-      <button
-        type="button"
-        className={`${dsBtnSoftOrange} mt-3 w-full sm:w-auto ${highlight ? "shadow-[0_0_14px_color-mix(in_srgb,var(--cab-primary)_40%,transparent)]" : ""}`}
-        disabled={disabled}
-        title={disabled ? disabledTitle : "Copia campi dall’ultima scheda ingresso dello stesso mezzo"}
-        onClick={onCopy}
-      >
-        <IconCopiaIngressoPrecedente />
-        Copia ultima scheda ingresso
-      </button>
+    <div className={shellClass} role="status">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <div
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_38%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-surface))] text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)]"
+            aria-hidden
+          >
+            <IconCopiaIngressoPrecedente className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]">
+              Mezzo già registrato
+            </p>
+            <p className="mt-1 text-sm leading-snug text-[color:var(--cab-text-muted)]">
+              {updatedAt ? (
+                <>
+                  Ultima scheda ingresso:{" "}
+                  <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">
+                    {formatLastSchedaIngressoHint(updatedAt)}
+                  </span>
+                  . Puoi copiare i dati nell’anagrafica corrente.
+                </>
+              ) : (
+                "È disponibile una scheda ingresso precedente per questo mezzo."
+              )}
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          className={`${dsBtnSoftOrange} w-full shrink-0 sm:w-auto ${dsFocus} ${highlight ? "shadow-[var(--cab-shadow-md)]" : ""}`}
+          disabled={disabled}
+          title={disabled ? disabledTitle : "Copia campi dall’ultima scheda ingresso dello stesso mezzo"}
+          onClick={onCopy}
+        >
+          <IconCopiaIngressoPrecedente />
+          Copia ultima scheda ingresso
+        </button>
+      </div>
     </div>
   );
 }

@@ -2,10 +2,10 @@
   "governanceVersion": 1,
   "freezeVersion": 1,
   "freezeMode": true,
-  "baselineChecksum": "b3e2bb6c60bbcac0f3fa6b975ac06cb3e7698f7cb6f39e118241749d208ccc0c",
+  "baselineChecksum": "60b97bb66b9c444314512d52fe612595421ff6a0593039e81125aa25ce38962b",
   "allowlistTokenCount": 11,
   "allowlistFilePatternCount": 1,
   "shrinkMarkerCount": 2,
   "containmentMarkerCount": 8,
-  "baselineEntryCount": 16
+  "baselineEntryCount": 11
 }

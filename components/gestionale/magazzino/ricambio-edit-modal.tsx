@@ -126,6 +126,7 @@ export function RicambioEditModal({
 
   return (
     <GestionaleModalShell
+      modalSize="formMedium"
       onRequestClose={onClose}
       title="Modifica ricambio"
       titleId="detail-ricambio-title"

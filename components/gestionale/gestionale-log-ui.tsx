@@ -7,6 +7,7 @@ import { Tooltip } from "@/components/design-system/tooltip";
 import { LogEntry } from "@/components/design-system/log-entry";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { dsModalHeader } from "@/lib/ui/design-system";
+import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
 
 /** Icona unificata “log / cronologia” (stroke 2, stile coerente con impostazioni e toolbar). */
 export function IconGestionaleLog(props: SVGProps<SVGSVGElement>) {
@@ -79,8 +80,7 @@ export const gestionaleLogScrollClass =
 export const gestionaleLogScrollEmbeddedClass =
   "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]";
 
-export const gestionaleLogPanelAsideClass =
-  "flex h-full max-h-dvh min-h-0 w-full max-w-md flex-col overflow-hidden border-l border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl";
+export const gestionaleLogPanelAsideClass = resolveDrawerAsideClasses("drawerLog");
 
 /** @deprecated — usare token `dsModalHeader` (allineato a `Drawer` / modali gestionale). */
 export const gestionaleLogPanelHeaderClass = dsModalHeader;

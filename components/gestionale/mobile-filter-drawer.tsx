@@ -12,6 +12,7 @@ import {
   gestionaleModalScrollBodyMobileClass,
 } from "@/lib/ui/mobile-modal-behavior";
 import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
+import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
 
 type MobileFilterDrawerProps = {
   open: boolean;
@@ -65,7 +66,7 @@ export function MobileFilterDrawer({
         onClick={onClose}
       />
       <div
-        className="cab-drawer-panel absolute inset-y-0 right-0 flex w-[min(100%,22rem)] max-w-full flex-col border-l border-[color:var(--cab-border)] bg-[var(--cab-card)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-[var(--cab-shadow-lg)]"
+        className={resolveDrawerAsideClasses("drawerFilter")}
         role="dialog"
         aria-modal="true"
         aria-labelledby="cab-filter-drawer-title"

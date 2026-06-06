@@ -29,21 +29,19 @@ function QuickNavLinks() {
   if (!ready || links.length === 0) return null;
 
   return (
-    <>
-      <p className="text-xs font-medium text-[color:var(--cab-text-muted)]">Collegamenti rapidi</p>
-      <ul className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
-        {links.map((link) => (
-          <li key={link.href}>
-            <Link
-              href={link.href}
-              className={`text-sm font-medium text-[color:var(--cab-primary)] underline-offset-2 hover:underline ${dsFocus}`}
-            >
-              {link.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </>
+    <p className="text-xs text-[color:var(--cab-text-muted)]">
+      {links.map((link, index) => (
+        <span key={link.href}>
+          {index > 0 ? <span aria-hidden> · </span> : null}
+          <Link
+            href={link.href}
+            className={`font-medium text-[color:var(--cab-text-muted)] underline-offset-2 hover:text-[color:var(--cab-text)] hover:underline ${dsFocus}`}
+          >
+            {link.label}
+          </Link>
+        </span>
+      ))}
+    </p>
   );
 }
 
@@ -69,10 +67,10 @@ function GestionaleEmbeddedError({
   };
 
   return (
-    <div className="flex min-h-[min(28rem,60vh)] min-w-0 flex-col items-center justify-center px-2 py-8 sm:py-12">
+    <div className="flex min-w-0 flex-col items-center justify-center px-2 py-10">
       <ErrorPageCard
         eyebrow="Errore di caricamento"
-        title="Impossibile caricare la pagina"
+        title="Errore di caricamento"
         description={description}
         technicalDetail={technicalDetail}
         showLogo={false}
@@ -113,7 +111,7 @@ function GlobalStandaloneErrorPage({
   };
 
   return (
-    <AuthStandalonePageShell showThemeToggle={false}>
+    <AuthStandalonePageShell showThemeToggle={false} decorativeBackground={false}>
       <main className="relative z-10 flex min-h-[var(--cab-app-height,100dvh)] w-full flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <ErrorPageCard
           eyebrow={eyebrow}
@@ -159,7 +157,7 @@ function StandaloneErrorPage({
   };
 
   return (
-    <AuthStandalonePageShell showThemeToggle={false}>
+    <AuthStandalonePageShell showThemeToggle={false} decorativeBackground={false}>
       <main className="relative z-10 flex min-h-[var(--cab-app-height,100dvh)] w-full flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <ErrorPageCard
           eyebrow={eyebrow}
@@ -200,8 +198,8 @@ export function GestionaleErrorFallback({
   if (variant === "global") {
     return (
       <GlobalStandaloneErrorPage
-        eyebrow="Errore imprevisto"
-        title="Impossibile caricare l'applicazione"
+        eyebrow="Errore di caricamento"
+        title="Errore di caricamento"
         description={description}
         technicalDetail={technicalDetail}
         onRetry={onRetry}
@@ -213,8 +211,8 @@ export function GestionaleErrorFallback({
 
   return (
     <StandaloneErrorPage
-      eyebrow="Errore imprevisto"
-      title="Qualcosa è andato storto"
+      eyebrow="Errore di caricamento"
+      title="Errore di caricamento"
       description={description}
       technicalDetail={technicalDetail}
       onRetry={onRetry}

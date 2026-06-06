@@ -1,6 +1,7 @@
 import type { QueryClient } from "@tanstack/react-query";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 import { isClientPortalSyncTable } from "@/lib/lavorazioni/client-portal-sync-tables";
+import { refreshSchedeBundleSliceForSchedaId } from "@/lib/schede/schede-bundle-cache-patch";
 import { markEntityInvalidated } from "@/lib/sync/recent-entity-invalidation";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
@@ -156,6 +157,27 @@ function invalidatePrefixKeys(
   }
 }
 
+function trySurgicalSchedeInvalidation(
+  qc: QueryClient,
+  uniqueTables: string[],
+  options: InvalidateGestionaleTablesOptions | undefined,
+  refetchType: "active" | "all" | "none",
+): boolean {
+  if (uniqueTables.length !== 1 || uniqueTables[0] !== "scheda_lavorazione") return false;
+  if (hasDestructiveCabEvents(options?.cabSyncEvents)) return false;
+  const schedaId = options?.entityIdByTable?.get("scheda_lavorazione");
+  if (!schedaId) return false;
+
+  void refreshSchedeBundleSliceForSchedaId(qc, schedaId).then((ok) => {
+    if (!ok) {
+      void qc.invalidateQueries({ queryKey: QK.schede, refetchType });
+    }
+  });
+  invalidatePrefixKeys(qc, [QK.lavorazioniQueries], refetchType);
+  markEntityInvalidated("scheda_lavorazione", schedaId);
+  return true;
+}
+
 /** Esecuzione sincrona invalidation (usata dal batch flush e path immediate). */
 export function executeInvalidateGestionaleTables(
   qc: QueryClient,
@@ -172,6 +194,11 @@ export function executeInvalidateGestionaleTables(
     uniqueTables.includes("lavorazioni")
       ? "all"
       : baseRefetchType;
+
+  if (trySurgicalSchedeInvalidation(qc, uniqueTables, options, refetchType)) {
+    return;
+  }
+
   const entityId = canUseEntityAwareLavorazioni(
     uniqueTables,
     options?.entityIdByTable,

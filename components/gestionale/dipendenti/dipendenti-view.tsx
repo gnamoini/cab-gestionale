@@ -244,7 +244,7 @@ export function DipendentiView() {
       setFillToday8hConfirmOpen(false);
       setFillToday8hUpserts([]);
     } catch (e) {
-      errorOnce("dip-fill-today-8h", e, { entity: "timesheet", action: "save" });
+      errorOnce("dip-fill-today-8h", e, { module: "dipendenti", action: "update" });
     } finally {
       setFillToday8hPending(false);
     }
