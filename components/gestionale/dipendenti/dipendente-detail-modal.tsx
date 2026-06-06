@@ -44,7 +44,6 @@ export function DipendenteDetailModal({
       onRequestClose={onClose}
       title={employee.display_name}
       subtitle={formatMonthLabel(monthKey)}
-      maxWidthClass="max-w-3xl"
     >
       <GestionaleModalScrollBody className="py-3">
         <div className="mb-4 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">

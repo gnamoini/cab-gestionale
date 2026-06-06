@@ -336,11 +336,11 @@ export const dsGestionaleModalBodyStage =
 
 /** Finestra modale lavorazioni (header + corpo): mobile fullscreen, desktop card centrata. */
 export const dsLavorazioniModalDialog =
-  `${cabModalDialogBase} min-w-0 max-w-full overflow-x-hidden w-full md:w-auto md:max-w-none flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(calc(92dvh-2rem),840px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
+  `${cabModalDialogBase} min-w-0 max-w-full overflow-x-hidden w-full md:w-auto flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(calc(92dvh-2rem),840px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
 
 /** Hub compatto (desktop): finestra più bassa (es. pulsante Informazioni). */
 export const dsLavorazioniModalDialogCompact =
-  `${cabModalDialogBase} min-w-0 max-w-full overflow-x-hidden w-full md:w-auto md:max-w-none flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(72dvh,560px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
+  `${cabModalDialogBase} min-w-0 max-w-full overflow-x-hidden w-full md:w-auto flex flex-col overflow-hidden max-md:flex-1 max-md:min-h-0 max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:rounded-none max-md:border-0 max-md:shadow-none md:flex-none md:max-h-[min(72dvh,560px)] md:rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabCard} md:shadow-2xl`;
 
 /** @deprecated Liste dense: `GlobalTableHead sticky` + `globalTableTheadSticky`. */
 export const dsTableThSticky =

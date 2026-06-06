@@ -973,8 +973,6 @@ export function SchedeLavorazioneModal({
   return (
     <>
       <LavorazioniModalShell
-        wide={frozenDialogSize === "hub"}
-        maxWidthClass={frozenDialogSize === "hub" ? "max-w-4xl" : "max-w-xl"}
         dialogSize={frozenDialogSize}
         onRequestClose={onClose}
         titleId="schede-lav-detail-title"

@@ -121,12 +121,6 @@ export function SchedaIngressoFormModalShell({
 
   return (
     <LavorazioniModalShell
-      wide
-      maxWidthClass={
-        variant === "create-lavorazione"
-          ? "md:min-w-[min(100%,48rem)] md:max-w-4xl"
-          : "md:min-w-[min(100%,42rem)] md:max-w-3xl"
-      }
       layerClassName={variant === "edit-scheda" ? "z-[110]" : undefined}
       onRequestClose={onRequestClose}
       title={variant === "create-lavorazione" ? "Nuova lavorazione" : "Scheda di ingresso"}

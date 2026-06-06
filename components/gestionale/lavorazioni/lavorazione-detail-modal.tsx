@@ -191,7 +191,6 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
   return (
     <GestionaleModalShell
       onRequestClose={onClose}
-      maxWidthClass="max-w-3xl"
       title={titolo}
       subtitle={sottotitolo}
       titleId="lav-hub-title"

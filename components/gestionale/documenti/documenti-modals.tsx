@@ -22,7 +22,7 @@ import {
   GlobalAttrezzatureModelloSelect,
 } from "@/components/gestionale/global-input";
 import { DocumentoFileDropzone } from "@/components/gestionale/documenti/documento-file-dropzone";
-import { gestionaleModalBodyFlexClass, resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useAuth } from "@/context/auth-context";
 import { dsBtnDanger } from "@/lib/ui/design-system";
 import {
@@ -74,18 +74,14 @@ function DocumentiModalShell({
   title,
   children,
   onRequestClose,
-  maxWidthClass = "md:min-w-[min(100%,42rem)] max-w-2xl",
 }: {
   title: string;
   children: React.ReactNode;
   onRequestClose: () => void;
-  maxWidthClass?: string;
 }) {
   return (
     <LavorazioniModalShell
       layerClassName="z-[100]"
-      wide
-      maxWidthClass={resolveModalMaxWidthClass(maxWidthClass, true)}
       onRequestClose={onRequestClose}
       title={title}
       titleId="documenti-modal-title"

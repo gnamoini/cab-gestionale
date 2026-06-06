@@ -54,7 +54,11 @@ import { SETTINGS_PANEL_SHELL } from "@/components/dashboard/settings-list-ui";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
-import { gestionaleModalBodyFlexClass, resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
+import {
+  gestionaleModalBodyFlexClass,
+  resolveGestionaleModalWidth,
+  type GestionaleModalWidth,
+} from "@/lib/ui/modal-max-width-class";
 import {
   CAB_FOCUS_SCROLL_GROUP_ATTR,
   CAB_FOCUS_SCROLL_TITLE_ATTR,
@@ -168,8 +172,7 @@ export type LavorazioniModalDialogSize = "hub" | "compact";
 /** Chiusura: click fuori, ESC, X in header; scroll lock come `Modal` globale. */
 export function LavorazioniModalShell({
   children,
-  wide,
-  maxWidthClass,
+  size = "standard",
   dialogSize = "hub",
   alignTop,
   layerClassName,
@@ -181,8 +184,8 @@ export function LavorazioniModalShell({
   titleId,
 }: {
   children: React.ReactNode;
-  wide?: boolean;
-  maxWidthClass?: string;
+  /** `standard`: modale lavorazione; `wide`: scheda ingresso / form complessi. */
+  size?: GestionaleModalWidth;
   /** `compact`: dialog più basso su desktop (hub schede resta `hub`). */
   dialogSize?: LavorazioniModalDialogSize;
   alignTop?: boolean;
@@ -212,7 +215,7 @@ export function LavorazioniModalShell({
   }, []);
 
   const labelledBy = title ? (titleId ?? LAV_MODAL_TITLE_ID) : titleId;
-  const dialogMaxWidth = resolveModalMaxWidthClass(maxWidthClass, wide);
+  const dialogMaxWidth = resolveGestionaleModalWidth(size);
   const dialogSurfaceClass =
     dialogSize === "compact" ? dsLavorazioniModalDialogCompact : dsLavorazioniModalDialog;
   const headerNode =
@@ -322,7 +325,7 @@ export function EditLavorazioneModal({
   }
 
   return (
-    <LavorazioniModalShell wide onRequestClose={onRequestClose} title={title} titleId="lav-edit-modal-title">
+    <LavorazioniModalShell size="standard" onRequestClose={onRequestClose} title={title} titleId="lav-edit-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
           <div
@@ -570,7 +573,7 @@ export function NewLavorazioneModal({
   }
 
   return (
-    <LavorazioniModalShell wide onRequestClose={onRequestClose} title="Nuova lavorazione" titleId="lav-new-modal-title">
+    <LavorazioniModalShell size="standard" onRequestClose={onRequestClose} title="Nuova lavorazione" titleId="lav-new-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
           <div
@@ -1009,8 +1012,6 @@ export function SettingsLavorazioniModal({
 
   return (
     <LavorazioniModalShell
-      wide
-      maxWidthClass="max-w-3xl"
       onRequestClose={onRequestClose}
       title={settingsTitle}
       titleId="lavorazioni-settings-title"

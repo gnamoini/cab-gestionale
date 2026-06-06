@@ -443,8 +443,6 @@ export function PreventiviEditorModal({
 
   return (
     <LavorazioniModalShell
-      wide
-      maxWidthClass="max-w-5xl"
       onRequestClose={requestClose}
       title={
         isNew

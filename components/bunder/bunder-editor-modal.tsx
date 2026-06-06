@@ -212,8 +212,6 @@ export function BunderEditorModal({
     <>
     <GestionaleModalShell
       onRequestClose={requestClose}
-      maxWidthClass="max-w-5xl"
-      wide
       header={
         <GestionaleModalHeader
           title={`Documento commerciale — ${local.numeroProgressivo}`}

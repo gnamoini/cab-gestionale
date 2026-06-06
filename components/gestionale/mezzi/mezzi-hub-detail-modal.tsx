@@ -222,8 +222,6 @@ export function MezziHubDetailModal({
 
   return (
     <LavorazioniModalShell
-      wide
-      maxWidthClass="max-w-4xl"
       onRequestClose={onClose}
       titleId="mezzi-hub-title"
       header={

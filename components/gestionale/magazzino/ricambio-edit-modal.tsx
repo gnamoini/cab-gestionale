@@ -129,7 +129,6 @@ export function RicambioEditModal({
       onRequestClose={onClose}
       title="Modifica ricambio"
       titleId="detail-ricambio-title"
-      maxWidthClass="max-w-lg"
     >
       <RicambioFormOptionsProvider>
       <form {...gestionaleFormFocusScopeProps()} onSubmit={saveEdit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>

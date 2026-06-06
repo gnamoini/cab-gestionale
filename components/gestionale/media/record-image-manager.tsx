@@ -290,7 +290,6 @@ export function RecordImageManager({
         {preview ? (
           <GestionaleModalShell
             onRequestClose={() => setPreview(null)}
-            maxWidthClass="max-w-4xl"
             title="Anteprima foto"
             layerClassName={`!bg-black/70 ${cabModalZStacked}`}
           >
@@ -376,7 +375,6 @@ export function RecordImageManager({
       {preview ? (
         <GestionaleModalShell
           onRequestClose={() => setPreview(null)}
-          maxWidthClass="max-w-4xl"
           title="Anteprima foto"
           layerClassName={`!bg-black/70 ${cabModalZStacked}`}
         >

@@ -1927,9 +1927,7 @@ function SistemaImpostazioniWorkspace({
 
   return (
     <LavorazioniModalShell
-      wide
       alignTop
-      maxWidthClass="max-w-6xl"
       onRequestClose={handleRequestClose}
       header={settingsModalHeader ?? undefined}
     >
