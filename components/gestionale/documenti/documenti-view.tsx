@@ -67,6 +67,7 @@ import {
   canOpenDocumento,
   countDocsInMarcaNode,
   documentoSenzaMarca,
+  documentoSenzaMarcaConAvviso,
   documentoFileUnavailableLabel,
   formatDocumentoRigaSintetica,
   openDocumentoFile,
@@ -241,8 +242,8 @@ function ArchiveDocRow({
   const canOpen = canOpenDocumento(doc);
   const unavailableHint = documentoFileUnavailableLabel(doc) ?? "File non disponibile.";
   const stop = (e: MouseEvent) => e.stopPropagation();
-  const senzaMarca = documentoSenzaMarca(doc);
-  const rowToneClass = senzaMarca
+  const senzaMarcaAvviso = documentoSenzaMarcaConAvviso(doc);
+  const rowToneClass = senzaMarcaAvviso
     ? "border-l-4 border-l-[color:var(--cab-warning)] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-surface))] hover:bg-[color:color-mix(in_srgb,var(--cab-warning)_16%,var(--cab-surface))]"
     : "hover:bg-[var(--cab-hover)]";
 
@@ -314,7 +315,7 @@ function ArchiveDocRow({
                 File non collegato
               </span>
             ) : null}
-            {senzaMarca ? (
+            {senzaMarcaAvviso ? (
               <span
                 className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[color:color-mix(in_srgb,var(--cab-warning)_22%,var(--cab-surface))] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-warning)_50%,var(--cab-border))]"
                 title="Assegna una marca per collocare il documento nell'archivio"
@@ -503,6 +504,7 @@ export function DocumentiView() {
 
   const {
     senzaMarca: documentiSenzaMarca,
+    certificazioniSenzaMarca: documentiCertificazioniSenzaMarca,
     conMarca: documentiConMarca,
     tree,
     senzaCollocazione: documentiSenzaCollocazione,
@@ -559,11 +561,12 @@ export function DocumentiView() {
     if (
       selectedDocId &&
       !documentiSenzaMarca.some((d) => d.id === selectedDocId) &&
+      !documentiCertificazioniSenzaMarca.some((d) => d.id === selectedDocId) &&
       !documentiConMarca.some((d) => d.id === selectedDocId)
     ) {
       setSelectedDocId(null);
     }
-  }, [documentiConMarca, documentiSenzaMarca, selectedDocId]);
+  }, [documentiConMarca, documentiCertificazioniSenzaMarca, documentiSenzaMarca, selectedDocId]);
 
   const didAutoExpandTree = useRef(false);
   useEffect(() => {
@@ -994,6 +997,40 @@ export function DocumentiView() {
                     </div>
                   ) : null}
 
+                  {documentiCertificazioniSenzaMarca.length > 0 ? (
+                    <div
+                      className={[
+                        "border-b border-violet-200/90 bg-violet-50/90 p-3 sm:p-4 dark:border-violet-800/50 dark:bg-violet-950/35",
+                        documentiSenzaMarca.length === 0 ? "overflow-hidden rounded-t-[var(--ds-radius-xl)]" : "",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")}
+                    >
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
+                        Certificazioni ({documentiCertificazioniSenzaMarca.length})
+                      </p>
+                      <p className="mt-1 text-xs leading-snug text-[color:var(--cab-text-muted)]">
+                        Certificazioni non legate a una marca specifica.
+                      </p>
+                      <ul
+                        className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] bg-[var(--cab-card)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-border)_90%,var(--cab-border-strong))]"
+                        role="listbox"
+                      >
+                        {documentiCertificazioniSenzaMarca.map((d) => (
+                          <ArchiveDocRow
+                            key={d.id}
+                            doc={d}
+                            selected={selectedDocId === d.id}
+                            onSelect={() => setSelectedDocId(d.id)}
+                            onInfo={() => setInfoDoc(d)}
+                            onFileUnavailable={(msg) => gestToast.warning(msg)}
+                            onApri={() => openDoc(d)}
+                          />
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
+
                   {pagedTree.map((node, marcaIndex) => {
                     const { marca, filesMarca, modelli } = node;
                     const { listini, altriMarca } = partitionMarcaLevelDocs(filesMarca);
@@ -1003,7 +1040,10 @@ export function DocumentiView() {
                       documentiSenzaCollocazione.length === 0 &&
                       !showDocPager;
                     const isFirstMarcaInTree =
-                      marcaIndex === 0 && documentiSenzaMarca.length === 0 && marcaPage === 1;
+                      marcaIndex === 0 &&
+                      documentiSenzaMarca.length === 0 &&
+                      documentiCertificazioniSenzaMarca.length === 0 &&
+                      marcaPage === 1;
                     return (
                       <div
                         key={marca.id}
@@ -1277,7 +1317,7 @@ export function DocumentiView() {
         open={deleteConfirmDoc != null}
         itemLabel={deleteConfirmDoc?.nome}
         detail={
-          deleteConfirmDoc && documentoSenzaMarca(deleteConfirmDoc)
+          deleteConfirmDoc && documentoSenzaMarcaConAvviso(deleteConfirmDoc)
             ? "Il documento non ha marca assegnata."
             : undefined
         }

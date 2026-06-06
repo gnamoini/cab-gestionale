@@ -4,7 +4,6 @@ import {
   buildDocumentiViewTree,
   compareDocs,
   documentoCollocatoInCatalogo,
-  documentoSenzaMarca,
   getDocAssocRefs,
   assocPairLabel,
   labelCategoria,
@@ -16,6 +15,11 @@ import {
   type DocumentiSortKey,
   type DocumentiSortPhase,
 } from "@/components/gestionale/documenti/documenti-helpers";
+import {
+  documentoCertificazioneSenzaMarca,
+  documentoSenzaMarca,
+  documentoSenzaMarcaConAvviso,
+} from "@/lib/documenti/documenti-senza-marca-classify";
 import {
   documentoRowMatchesAdvancedFilters,
   type DocumentiAdvancedFilters,
@@ -34,6 +38,7 @@ export type DocumentiSortState = {
 
 export type DocumentiFilteredView = {
   senzaMarca: DocumentoGestionale[];
+  certificazioniSenzaMarca: DocumentoGestionale[];
   conMarca: DocumentoGestionale[];
   tree: ArchiveDocMarcaNode[];
   countByMarca: Map<string, number>;
@@ -88,15 +93,18 @@ export function buildDocumentiFilteredView(
 ): DocumentiFilteredView {
   const { sortColumn, sortPhase } = sort;
   const senzaMarca: DocumentoGestionale[] = [];
+  const certificazioniSenzaMarca: DocumentoGestionale[] = [];
   const conMarca: DocumentoGestionale[] = [];
 
   for (const d of docs) {
     if (!docRowMatchesPageFilters(d, catalog, filters)) continue;
-    if (documentoSenzaMarca(d)) senzaMarca.push(d);
+    if (documentoCertificazioneSenzaMarca(d)) certificazioniSenzaMarca.push(d);
+    else if (documentoSenzaMarcaConAvviso(d)) senzaMarca.push(d);
     else conMarca.push(d);
   }
 
   senzaMarca.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase, { skipSenzaMarcaPartition: true }));
+  certificazioniSenzaMarca.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase, { skipSenzaMarcaPartition: true }));
   conMarca.sort((a, b) => compareDocs(a, b, sortColumn, sortPhase, { skipSenzaMarcaPartition: true }));
 
   const tree = buildDocumentiViewTree(catalog, mezziSnap, conMarca, sortColumn, sortPhase);
@@ -105,11 +113,12 @@ export function buildDocumentiFilteredView(
 
   return {
     senzaMarca,
+    certificazioniSenzaMarca,
     conMarca,
     tree,
     countByMarca,
     senzaCollocazione,
-    totalDocs: senzaMarca.length + conMarca.length,
+    totalDocs: senzaMarca.length + certificazioniSenzaMarca.length + conMarca.length,
   };
 }
 

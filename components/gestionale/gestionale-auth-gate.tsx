@@ -5,14 +5,16 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
-import { GlobalLoadingView } from "@/components/design-system/global-loading";
+import { useGestionaleTopNotice } from "@/components/gestionale/gestionale-top-notice";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
+
+const AUTH_NOTICE_DELAY_MS = 300;
 
 /**
  * Dopo il proxy (cookie sessione Supabase), sincronizza con `AuthProvider`
  * e reindirizza al login se la sessione client risulta assente.
- * Shell-first: sidebar/header restano visibili; banner compatto nel main.
+ * Shell-first: sidebar/header restano visibili; notifica compatta fissa in cima.
  */
 export function GestionaleAuthGate({ children }: { children: React.ReactNode }) {
   const { status, configurationError, refresh } = useAuth();
@@ -34,6 +36,21 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
     void refresh();
   }, [status, configBlocked, refresh]);
 
+  const showAuthBanner = !configBlocked && (status === "loading" || status === "degraded" || status === "anonymous");
+  const bannerMessage =
+    status === "degraded"
+      ? "Verifica sessione in corso…"
+      : status === "anonymous"
+        ? GLOBAL_LOADING_MESSAGES.redirectLogin
+        : GLOBAL_LOADING_MESSAGES.session;
+
+  useGestionaleTopNotice("auth", {
+    visible: showAuthBanner,
+    message: bannerMessage,
+    busy: true,
+    showDelayMs: AUTH_NOTICE_DELAY_MS,
+  });
+
   if (configBlocked) {
     return (
       <div className="flex min-w-0 min-h-[50vh] flex-col items-center justify-center gap-4 px-4 py-16 text-center">
@@ -52,28 +69,7 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
     );
   }
 
-  const showAuthBanner = status === "loading" || status === "degraded" || status === "anonymous";
-  const bannerMessage =
-    status === "degraded"
-      ? "Verifica sessione in corso…"
-      : status === "anonymous"
-        ? GLOBAL_LOADING_MESSAGES.redirectLogin
-        : GLOBAL_LOADING_MESSAGES.session;
-
   return (
-    <>
-      {showAuthBanner ? (
-        <div
-          className="border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-card))] px-4 py-2"
-          role="status"
-          aria-busy="true"
-        >
-          <div className="mx-auto flex min-w-0 max-w-3xl items-center justify-center gap-2">
-            <GlobalLoadingView message={bannerMessage} spinnerSize="sm" className="flex-row gap-2 py-0" />
-          </div>
-        </div>
-      ) : null}
-      <div className={status === "loading" ? "pointer-events-none opacity-95" : undefined}>{children}</div>
-    </>
+    <div className={status === "loading" ? "pointer-events-none opacity-95" : undefined}>{children}</div>
   );
 }

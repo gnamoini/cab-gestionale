@@ -510,7 +510,6 @@ export function MezziView() {
                 onSort={onSort}
                 flashRowId={flashRowId}
                 onHub={setHubMezzo}
-                onDelete={canEditVehicles ? handleDeleteMezzo : undefined}
               />
             )}
           </div>

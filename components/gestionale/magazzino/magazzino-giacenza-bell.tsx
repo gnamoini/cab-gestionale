@@ -188,7 +188,6 @@ export function MagazzinoGiacenzaBell({
         <GestionaleModalShell
           onRequestClose={close}
           alignTop
-          maxWidthClass="max-w-lg"
           title="Sotto scorta minima"
           subtitle={subtitle}
           titleId="magazzino-giacenza-modal-title"

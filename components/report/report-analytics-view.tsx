@@ -1,19 +1,15 @@
 "use client";
 
-import { useCallback, useMemo, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { ReportComplianceZone } from "@/components/report/layout/report-compliance-zone";
-import { ReportEconomicZone } from "@/components/report/layout/report-economic-zone";
 import { ReportExecutiveOverview } from "@/components/report/layout/report-executive-overview";
-import { ReportFleetZone } from "@/components/report/layout/report-fleet-zone";
 import { ReportMaintenanceZone } from "@/components/report/layout/report-maintenance-zone";
-import { ReportOperationsZone } from "@/components/report/layout/report-operations-zone";
+import { ReportOperationalAnalysisZone } from "@/components/report/layout/report-operational-analysis-zone";
 import { ReportPerformanceGate } from "@/components/report/layout/report-performance-gate";
-import { ReportTeamTimesheetZone } from "@/components/report/layout/report-team-timesheet-zone";
 import { ReportToolbar } from "@/components/report/layout/report-toolbar";
-import { ReportZoneNav } from "@/components/report/layout/report-zone-nav";
+import { ReportTrendsZone } from "@/components/report/layout/report-trends-zone";
 import { ReportIntegrityStatusBadge } from "@/components/report/report-integrity-status-badge";
 import { buildReportModel } from "@/lib/report/build-report-model";
 import { endOfLocalDay, startOfLocalDay, type ReportCompareMode, type ReportPeriodPreset } from "@/lib/report/date-ranges";
@@ -29,6 +25,10 @@ import {
   loadMagazzinoManualMonthMap,
   revisionMagazzinoManualMonthMap,
 } from "@/lib/report/magazzino-manual-storage";
+import {
+  loadReportPeriodPrefs,
+  saveReportPeriodPrefs,
+} from "@/lib/report/report-period-persistence";
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { LoadingErrorState, LoadingReportSkeleton } from "@/components/design-system";
 import { dsStackPage } from "@/lib/ui/design-system";
@@ -54,23 +54,49 @@ function useStableDateRange(range: DateRange | null | undefined): DateRange | nu
   }, [startMs, endMs]);
 }
 
-function useClientMounted(): boolean {
-  return useSyncExternalStore(
-    () => () => {},
-    () => true,
-    () => false,
-  );
+function readInitialPeriodPrefs(): {
+  preset: ReportPeriodPreset;
+  compareMode: ReportCompareMode;
+  customFrom: string;
+  customTo: string;
+} {
+  const defaults = {
+    preset: "last_3_months" as ReportPeriodPreset,
+    compareMode: "none" as ReportCompareMode,
+    customFrom: "",
+    customTo: "",
+  };
+  const saved = loadReportPeriodPrefs();
+  if (!saved) return defaults;
+  let nextPreset = saved.preset;
+  let nextFrom = saved.customFrom;
+  let nextTo = saved.customTo;
+  if (nextPreset === "custom" && (!nextFrom || !nextTo)) {
+    nextPreset = "last_30_days";
+    nextFrom = "";
+    nextTo = "";
+  }
+  return {
+    preset: nextPreset,
+    compareMode: saved.compareMode,
+    customFrom: nextFrom,
+    customTo: nextTo,
+  };
 }
 
 export function ReportAnalyticsView() {
-  const mounted = useClientMounted();
-  const anchor = useMemo(() => (mounted ? new Date() : null), [mounted]);
-  const [preset, setPreset] = useState<ReportPeriodPreset>("last_3_months");
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
-  const [compareMode, setCompareMode] = useState<ReportCompareMode>("none");
+  const anchor = useMemo(() => new Date(), []);
+  const [initialPrefs] = useState(readInitialPeriodPrefs);
+  const [preset, setPreset] = useState<ReportPeriodPreset>(initialPrefs.preset);
+  const [customFrom, setCustomFrom] = useState(initialPrefs.customFrom);
+  const [customTo, setCustomTo] = useState(initialPrefs.customTo);
+  const [compareMode, setCompareMode] = useState<ReportCompareMode>(initialPrefs.compareMode);
   const [histRev, setHistRev] = useState(0);
   useUIAutonomyFixEngine("/report", [preset, compareMode, histRev]);
+
+  useEffect(() => {
+    saveReportPeriodPrefs({ preset, compareMode, customFrom, customTo });
+  }, [preset, compareMode, customFrom, customTo]);
 
   const live = useReportLiveData();
 
@@ -178,7 +204,7 @@ export function ReportAnalyticsView() {
   }, [model, filterRange, semanticIndex, derivedBundle.magLogSorted, live.magazzino]);
 
   const toolbarProps =
-    anchor && filterRange && model
+    filterRange && model
       ? {
           titleAddon: integrityBadge,
           preset,
@@ -194,7 +220,14 @@ export function ReportAnalyticsView() {
         }
       : null;
 
-  if (!mounted || !anchor || live.isLoading || !model || !tops || !filterRange || !toolbarProps) {
+  const renderPhase =
+    live.isLoading || !model || !tops || !filterRange || !toolbarProps
+      ? "skeleton"
+      : live.isError
+        ? "error"
+        : "full";
+
+  if (live.isLoading || !model || !tops || !filterRange || !toolbarProps) {
     return (
       <div className={dsStackPage}>
         {toolbarProps ? (
@@ -227,7 +260,6 @@ export function ReportAnalyticsView() {
   return (
     <div className={dsStackPage}>
       <ReportToolbar {...toolbarProps} />
-      <ReportZoneNav />
 
       <ReportPerformanceGate
         anchor={anchor}
@@ -239,9 +271,8 @@ export function ReportAnalyticsView() {
       >
         <div className="min-w-0 space-y-4">
           <ReportExecutiveOverview compareMode={compareMode} />
-          <ReportOperationsZone filterRange={filterRange} anchor={anchor} semanticIndex={semanticIndex} />
-          <ReportFleetZone />
-          <ReportEconomicZone />
+          <ReportTrendsZone filterRange={filterRange} anchor={anchor} semanticIndex={semanticIndex} />
+          <ReportOperationalAnalysisZone filterRange={filterRange} />
           <ReportMaintenanceZone
             attive={live.attive}
             completate={live.completate}
@@ -259,8 +290,6 @@ export function ReportAnalyticsView() {
             topsRicambi={tops.ricambi}
             showCompare={Boolean(model.compareRange)}
           />
-          <ReportComplianceZone />
-          <ReportTeamTimesheetZone filterRange={filterRange} />
         </div>
       </ReportPerformanceGate>
     </div>

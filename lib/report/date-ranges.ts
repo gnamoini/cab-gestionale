@@ -1,13 +1,20 @@
 export type ReportPeriodPreset =
   | "today"
+  | "yesterday"
+  | "last_7_days"
   | "last_30_days"
   | "current_week"
+  | "last_week"
   | "current_month"
   | "last_month"
   | "last_3_months"
+  | "last_6_months"
+  | "current_quarter"
+  | "last_quarter"
   | "last_12_months"
-  | "last_3_years"
   | "ytd"
+  | "previous_year"
+  | "last_3_years"
   | "custom";
 export type ReportCompareMode = "none" | "prev_year" | "prev_period";
 
@@ -45,6 +52,30 @@ function startOfLocalWeekMonday(d: Date): Date {
   return startOfLocalDay(addLocalDays(d, -daysSinceMonday));
 }
 
+/** Indice trimestre 0–3 per mese locale. */
+function quarterIndex(month: number): number {
+  return Math.floor(month / 3);
+}
+
+/** 1° giorno del trimestre solare che contiene `d`. */
+function startOfLocalQuarter(d: Date): Date {
+  const q = quarterIndex(d.getMonth());
+  return startOfLocalDay(new Date(d.getFullYear(), q * 3, 1));
+}
+
+/** Ultimo istante del trimestre solare che contiene `d`. */
+function endOfLocalQuarter(d: Date): Date {
+  const q = quarterIndex(d.getMonth());
+  return endOfLocalDay(new Date(d.getFullYear(), q * 3 + 3, 0));
+}
+
+/** Trimestre solare completo immediatamente precedente ad `anchor`. */
+function previousLocalQuarterRange(anchor: Date): DateRange {
+  const curQStart = startOfLocalQuarter(anchor);
+  const prevQEnd = endOfLocalDay(addLocalDays(curQStart, -1));
+  return { start: startOfLocalQuarter(prevQEnd), end: prevQEnd };
+}
+
 function parseYmd(ymd: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
   if (!m) return null;
@@ -74,11 +105,24 @@ export function resolvePresetRange(
   if (preset === "today") {
     return { start: startOfLocalDay(end), end };
   }
+  if (preset === "yesterday") {
+    const y = startOfLocalDay(addLocalDays(end, -1));
+    return { start: y, end: endOfLocalDay(y) };
+  }
+  if (preset === "last_7_days") {
+    return { start: startOfLocalDay(addLocalDays(end, -6)), end };
+  }
   if (preset === "last_30_days") {
     return { start: startOfLocalDay(addLocalDays(end, -29)), end };
   }
   if (preset === "current_week") {
     return { start: startOfLocalWeekMonday(end), end };
+  }
+  if (preset === "last_week") {
+    const thisWeekStart = startOfLocalWeekMonday(end);
+    const lastWeekEnd = endOfLocalDay(addLocalDays(thisWeekStart, -1));
+    const lastWeekStart = startOfLocalWeekMonday(lastWeekEnd);
+    return { start: lastWeekStart, end: lastWeekEnd };
   }
   if (preset === "current_month") {
     return { start: startOfLocalDay(new Date(end.getFullYear(), end.getMonth(), 1)), end };
@@ -94,16 +138,33 @@ export function resolvePresetRange(
     const start = startOfLocalDay(new Date(end.getFullYear(), end.getMonth() - 2, 1));
     return { start, end };
   }
+  if (preset === "last_6_months") {
+    const start = startOfLocalDay(new Date(end.getFullYear(), end.getMonth() - 5, 1));
+    return { start, end };
+  }
+  if (preset === "current_quarter") {
+    return { start: startOfLocalQuarter(end), end };
+  }
+  if (preset === "last_quarter") {
+    return previousLocalQuarterRange(end);
+  }
   if (preset === "last_12_months") {
     const start = startOfLocalDay(new Date(end.getFullYear(), end.getMonth() - 11, 1));
     return { start, end };
   }
+  if (preset === "ytd") {
+    return { start: startOfLocalDay(new Date(end.getFullYear(), 0, 1)), end };
+  }
+  if (preset === "previous_year") {
+    const y = end.getFullYear() - 1;
+    return {
+      start: startOfLocalDay(new Date(y, 0, 1)),
+      end: endOfLocalDay(new Date(y, 11, 31)),
+    };
+  }
   if (preset === "last_3_years") {
     const start = startOfLocalDay(new Date(end.getFullYear(), end.getMonth() - 35, 1));
     return { start, end };
-  }
-  if (preset === "ytd") {
-    return { start: startOfLocalDay(new Date(end.getFullYear(), 0, 1)), end };
   }
   return { start: startOfLocalDay(new Date(end.getFullYear(), end.getMonth(), 1)), end };
 }
@@ -153,4 +214,12 @@ export function formatCompareLabel(mode: ReportCompareMode, cur: DateRange, prev
     return `Confronto: ${fmt(cur.start)} — ${fmt(cur.end)} vs ${fmt(prev.start)} — ${fmt(prev.end)}`;
   }
   return `Confronto con periodo precedente (${fmt(prev.start)} — ${fmt(prev.end)})`;
+}
+
+/** Giorni inclusivi nel range (presentazione). */
+export function inclusiveDayCount(range: DateRange): number {
+  const start = startOfLocalDay(range.start).getTime();
+  const end = startOfLocalDay(range.end).getTime();
+  if (end < start) return 0;
+  return Math.round((end - start) / 86_400_000) + 1;
 }

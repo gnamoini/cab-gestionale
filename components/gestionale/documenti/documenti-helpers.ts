@@ -73,18 +73,19 @@ export function assocPairLabel(catalog: CatalogMarca[], ref: DocumentoAssocRef):
 export type DocumentiSortKey = "nome" | "marca" | "macchina" | "caricatoIl" | "categoria";
 export type DocumentiSortPhase = "natural" | "asc" | "desc";
 
-const MARCA_NON_ASSEGNATA_SENTINELS = new Set(["", "—", "-", "n/a", "na"]);
+import {
+  documentoCertificazioneSenzaMarca,
+  documentoHaMarcaAssegnata,
+  documentoSenzaMarca,
+  documentoSenzaMarcaConAvviso,
+} from "@/lib/documenti/documenti-senza-marca-classify";
 
-/** True se il documento non ha una marca valida (vuota o segnaposto). */
-export function documentoHaMarcaAssegnata(doc: DocumentoGestionale): boolean {
-  const r = resolveDocumentoApplicazione(doc);
-  const m = (r.marcaKey ?? r.marca).trim().toLowerCase();
-  return m.length > 0 && !MARCA_NON_ASSEGNATA_SENTINELS.has(m);
-}
-
-export function documentoSenzaMarca(doc: DocumentoGestionale): boolean {
-  return !documentoHaMarcaAssegnata(doc);
-}
+export {
+  documentoCertificazioneSenzaMarca,
+  documentoHaMarcaAssegnata,
+  documentoSenzaMarca,
+  documentoSenzaMarcaConAvviso,
+};
 
 function compareSenzaMarcaPrima(a: DocumentoGestionale, b: DocumentoGestionale): number {
   const sa = documentoSenzaMarca(a) ? 0 : 1;

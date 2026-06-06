@@ -3,7 +3,10 @@
  */
 
 export const reportMetricCardClass =
-  "flex min-w-0 flex-col rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-4 shadow-[var(--cab-shadow-sm)] transition-shadow duration-200 hover:shadow-[var(--cab-shadow-md)]";
+  "flex min-h-[8.5rem] min-w-0 flex-col rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-4 shadow-[var(--cab-shadow-sm)] transition-[box-shadow,border-color] duration-200 hover:border-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-border))] hover:shadow-[var(--cab-shadow-md)]";
+
+export const reportMetricCardHeroClass =
+  "flex min-h-[9.5rem] min-w-0 flex-col rounded-[var(--ds-radius-xl)] border border-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_4%,var(--cab-card))] p-4 shadow-[var(--cab-shadow-sm)]";
 
 export const reportMetricCardCompactClass =
   "flex min-w-0 flex-col rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] p-3 shadow-[var(--cab-shadow-sm)]";
@@ -25,15 +28,24 @@ export const reportSectionGroupDescClass = "mt-0.5 text-[11px] leading-snug text
 
 export const reportKpiDescriptionClass = "mt-0.5 text-[10px] leading-snug text-[color:var(--cab-text-muted)]";
 
-/** ShellCard zona control tower. */
+/** ShellCard zona — offset anchor nav (solo app shell). */
 export const reportZoneShellClass = "scroll-mt-28";
 
 export const reportExecutiveStripClass =
-  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_45%,var(--cab-card))] px-4 py-3 text-sm leading-relaxed text-[color:var(--cab-text)]";
+  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_45%,var(--cab-card))] px-3 py-2.5 text-sm leading-relaxed text-[color:var(--cab-text)] sm:px-4 sm:py-3";
 
-/** Barra navigazione zone — sticky sotto header/filtri. */
-export const reportZoneNavStickyClass =
-  "sticky top-[var(--gestionale-sticky-offset,3.5rem)] z-20 -mx-1 bg-[color:color-mix(in_srgb,var(--cab-bg)_88%,transparent)] px-1 py-2 backdrop-blur-sm";
+/** Command bar report: titolo, periodo, nav e filtri (flusso pagina, non sticky). */
+export const reportCommandBarClass = "min-w-0 space-y-2";
+
+/** Pannello filtri dentro la command bar. */
+export const reportCommandFiltersShellClass =
+  "rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]";
+
+/** Barra navigazione zone (incapsulata nella command bar). */
+export const reportZoneNavClass = "min-w-0 border-b border-[color:var(--cab-border)] px-2 py-1.5";
+
+/** @deprecated Usare reportZoneNavClass. */
+export const reportZoneNavStickyClass = reportZoneNavClass;
 
 export const reportHealthChipClass =
   "inline-flex items-center gap-1.5 rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2 py-1 text-[11px] font-medium tabular-nums text-[color:var(--cab-text)]";

@@ -39,10 +39,15 @@ function pushOverlayHistory(id: number, source: string): void {
   window.history.pushState(state, "", window.location.href);
 }
 
+/**
+ * Chiusura programmatica overlay (X, Salva, Annulla): replaceState in-place.
+ * Evita navigazione indesiderata verso la route precedente (Next.js + voci history orfane).
+ * Il pulsante Indietro del browser resta gestito da popstate + handleOverlayBackPopState.
+ */
 function consumeOverlayHistoryEntry(): void {
   if (typeof window === "undefined") return;
-  suppressNextPop = true;
-  window.history.back();
+  if (!isCabOverlayState(window.history.state)) return;
+  window.history.replaceState(null, "", window.location.href);
 }
 
 /** Rimuove voci history overlay orfane (refresh / bfcache) senza toccare la navigazione reale. */

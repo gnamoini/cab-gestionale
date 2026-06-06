@@ -5,6 +5,7 @@ import { memo, useCallback, useMemo, useState } from "react";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GlobalSelect } from "@/components/gestionale/global-input";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { ReportCompareBanner } from "@/components/report/report-compare-banner";
@@ -24,8 +25,6 @@ import {
 import type { ReportManualEntryRow } from "@/src/types/supabase-tables";
 import {
   dsInput,
-  dsModalBackdrop,
-  dsModalPanel,
   dsScrollbar,
   dsTableRow,
   dsTableTd,
@@ -35,7 +34,6 @@ import {
 } from "@/lib/ui/design-system";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import {
   globalTableFixed,
   globalTableHeadEdgeInset,
@@ -123,7 +121,6 @@ function ReportLavorazioniSectionInner({
   const forecast = useMemo(() => yearlyForecastLineModel(forecastRows, anchor), [forecastRows, anchor]);
 
   const [open, setOpen] = useState(false);
-  useBodyScrollLock(open, "report-lavorazioni-manual");
   const [periodMonth, setPeriodMonth] = useState(monthOptions[0]?.value ?? "");
   const [completedCount, setCompletedCount] = useState("");
   const [note, setNote] = useState("");
@@ -409,19 +406,15 @@ function ReportLavorazioniSectionInner({
       ) : null}
 
       {open ? (
-        <div
-          className={dsModalBackdrop}
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
+        <GestionaleModalShell
+          size="standard"
+          title="Dati storici manuali"
+          titleId="report-lavorazioni-manual-title"
+          onRequestClose={() => setOpen(false)}
         >
-          <div
-            className={`${dsModalPanel} ${gestionaleModalBodyFlexClass} min-w-0 w-full max-w-full overflow-hidden overflow-x-hidden`}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
+          <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
             <GestionaleModalScrollBody className="space-y-0">
-              <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Dati storici manuali</h3>
-              <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
+              <p className="text-xs text-[color:var(--cab-text-muted)]">
                 Inserisci il numero di lavorazioni completate per un mese passato. Non modifica le lavorazioni operative
                 nel gestionale.
               </p>
@@ -467,7 +460,7 @@ function ReportLavorazioniSectionInner({
                 </p>
               ) : null}
             </GestionaleModalScrollBody>
-            <div className="mt-4 flex shrink-0 justify-end gap-2 border-t border-[color:var(--cab-border)] pt-4">
+            <div className="flex shrink-0 justify-end gap-2 border-t border-[color:var(--cab-border)] p-4">
               <button type="button" className={erpBtnNeutral} onClick={() => setOpen(false)}>
                 Annulla
               </button>
@@ -481,7 +474,7 @@ function ReportLavorazioniSectionInner({
               </button>
             </div>
           </div>
-        </div>
+        </GestionaleModalShell>
       ) : null}
     </ShellCard>
   );

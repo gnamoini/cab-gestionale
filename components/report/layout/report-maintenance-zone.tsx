@@ -1,13 +1,18 @@
 "use client";
 
 import { ShellCard } from "@/components/gestionale/shell-card";
+import { KpiPerformanceCompliance } from "@/components/report/kpi-performance/kpi-performance-compliance";
 import { ReportClassificheOperativePanel } from "@/components/report/report-classifiche-operative-panel";
 import { ReportLavorazioniSection } from "@/components/report/report-lavorazioni-section";
 import { ReportLavorazioniTemporalSection } from "@/components/report/report-lavorazioni-temporal-section";
 import { ReportMagazzinoSection } from "@/components/report/report-magazzino-section";
 import { ReportRicambiConsumoSection } from "@/components/report/report-ricambi-consumo-section";
 import { ReportTopRicambi } from "@/components/report/report-tops";
-import { reportZoneShellClass } from "@/components/report/report-ui-tokens";
+import {
+  reportSectionGroupDescClass,
+  reportSubsectionTitleClass,
+  reportZoneShellClass,
+} from "@/components/report/report-ui-tokens";
 import type { ReportCompareDetail } from "@/lib/report/build-report-model";
 import type { DateRange } from "@/lib/report/date-ranges";
 import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
@@ -53,26 +58,36 @@ export function ReportMaintenanceZone({
   return (
     <ShellCard
       id="report-maintenance"
-      title="Dettaglio manutenzione"
-      subtitle="Matrici, magazzino, consumi ricambi e classifiche operative"
+      title="Analisi approfondite e dettaglio"
+      subtitle="Matrici lavorazioni, magazzino, consumi e classifiche granulari"
       collapsible
       defaultCollapsed
       className={reportZoneShellClass}
     >
-      <div className="min-w-0 space-y-4">
-        <ReportLavorazioniSection
-          attive={attive}
-          completate={completate}
-          manualEntries={manualEntries}
-          anchor={anchor}
-          filterRange={filterRange}
-          compareDetail={compareDetail}
-          semanticIndex={semanticIndex}
-        />
+      <p className={reportSectionGroupDescClass}>
+        Sezione per analisi puntuali e tabelle esportabili. Espandi solo le voci necessarie per ridurre il rumore
+        visivo nella panoramica.
+      </p>
+
+      <div className="mt-4 min-w-0 space-y-4">
+        <section className="min-w-0 space-y-3" aria-labelledby="report-deep-lavorazioni">
+          <h2 id="report-deep-lavorazioni" className={reportSubsectionTitleClass}>
+            Matrici lavorazioni
+          </h2>
+          <ReportLavorazioniSection
+            attive={attive}
+            completate={completate}
+            manualEntries={manualEntries}
+            anchor={anchor}
+            filterRange={filterRange}
+            compareDetail={compareDetail}
+            semanticIndex={semanticIndex}
+          />
+        </section>
 
         <ShellCard
           id="report-lavorazioni-temporal"
-          title="Dettaglio mensile lavorazioni"
+          title="Tabella mensile lavorazioni"
           subtitle="Espansione settimanale per mese"
           collapsible
           defaultCollapsed
@@ -87,22 +102,26 @@ export function ReportMaintenanceZone({
           />
         </ShellCard>
 
-        <ReportMagazzinoSection
-          derivedBundle={derivedBundle}
-          prodotti={prodotti}
-          anchor={anchor}
-          range={filterRange}
-          compareDetail={compareDetail}
-          histRev={histRev}
-          onHistRev={onHistRev}
-        />
+        <ShellCard title="Magazzino e movimenti" collapsible defaultCollapsed>
+          <ReportMagazzinoSection
+            derivedBundle={derivedBundle}
+            prodotti={prodotti}
+            anchor={anchor}
+            range={filterRange}
+            compareDetail={compareDetail}
+            histRev={histRev}
+            onHistRev={onHistRev}
+          />
+        </ShellCard>
 
-        <ReportRicambiConsumoSection
-          magLogSorted={derivedBundle.magLogSorted}
-          prodotti={prodotti}
-          filterRange={filterRange}
-          anchor={anchor}
-        />
+        <ShellCard title="Consumo ricambi" collapsible defaultCollapsed>
+          <ReportRicambiConsumoSection
+            magLogSorted={derivedBundle.magLogSorted}
+            prodotti={prodotti}
+            filterRange={filterRange}
+            anchor={anchor}
+          />
+        </ShellCard>
 
         {topsRicambi.length > 0 ? (
           <ShellCard title="Top ricambi per movimenti" collapsible defaultCollapsed>
@@ -113,10 +132,21 @@ export function ReportMaintenanceZone({
         <ShellCard
           id="report-classifiche"
           title="Classifiche operative"
+          subtitle="Top mezzi e clienti nel periodo"
           collapsible
-          defaultCollapsed={false}
+          defaultCollapsed
         >
           <ReportClassificheOperativePanel mezzi={topsMezzi} clienti={topsClienti} showCompare={showCompare} />
+        </ShellCard>
+
+        <ShellCard
+          id="report-compliance"
+          title="Scadenze e compliance"
+          subtitle="Dati non ancora modellati nel gestionale"
+          collapsible
+          defaultCollapsed
+        >
+          <KpiPerformanceCompliance />
         </ShellCard>
       </div>
     </ShellCard>

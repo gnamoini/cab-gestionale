@@ -97,7 +97,6 @@ export function SecurityEditNameModal({
       <GestionaleModalShell
         title="Modifica profilo"
         titleId="security-edit-profile-title"
-        maxWidthClass="max-w-lg"
         onRequestClose={() => {
           if (!busy) onClose();
         }}

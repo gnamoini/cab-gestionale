@@ -10,53 +10,79 @@ import type { DateRange } from "@/lib/report/date-ranges";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { useReportTimesheetKpi } from "@/src/hooks/use-report-timesheet-kpi";
 
-export function ReportTeamTimesheetZone({ filterRange }: { filterRange: DateRange }) {
+export function ReportTeamTimesheetZone({
+  filterRange,
+  embed = false,
+}: {
+  filterRange: DateRange;
+  embed?: boolean;
+}) {
   const kpi = useReportTimesheetKpi(filterRange);
 
-  return (
+  const body = (
+    <>
+      {kpi.isLoading ? (
+        <LoadingCardSkeleton minHeightClass="min-h-[280px]" rows={4} />
+      ) : kpi.isError ? (
+        <LoadingErrorState
+          title="KPI dipendenti non disponibili"
+          description="Impossibile caricare registro o presenze per il periodo."
+          onRetry={kpi.refetch}
+        />
+      ) : (
+        <TimesheetKPIGrid
+          employees={kpi.employees}
+          entries={kpi.entries}
+          previousMonthEntries={kpi.previousMonthEntries}
+          showMonthDelta={kpi.singleMonth}
+        />
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link href="/dipendenti" className={`${dsBtnNeutral} inline-flex text-sm no-underline`}>
+          Apri timesheet dipendenti
+        </Link>
+      </div>
+    </>
+  );
+
+  const content = (
     <GestionaleSectionGate module="dipendenti">
-      <ShellCard
-        id="report-team"
-        title="Indicatori"
-        subtitle={`KPI — ${kpi.periodLabel}`}
-        collapsible
-        defaultCollapsed={false}
-        className={reportZoneShellClass}
-      >
-        <p className={reportSectionGroupDescClass}>
-          Ore e presenze dal modulo{" "}
-          <Link href="/dipendenti" className="font-medium text-[color:var(--cab-text)] underline-offset-2 hover:underline">
-            Dipendenti
-          </Link>
-          , allineate al periodo selezionato in toolbar. Negli indicatori non si contano le assenze registrate nei
-          weekend né quelle di tipo festività.
-        </p>
-
-        <div className="mt-4 min-w-0">
-          {kpi.isLoading ? (
-            <LoadingCardSkeleton minHeightClass="min-h-[320px]" rows={4} />
-          ) : kpi.isError ? (
-            <LoadingErrorState
-              title="KPI dipendenti non disponibili"
-              description="Impossibile caricare registro o presenze per il periodo."
-              onRetry={kpi.refetch}
-            />
-          ) : (
-            <TimesheetKPIGrid
-              employees={kpi.employees}
-              entries={kpi.entries}
-              previousMonthEntries={kpi.previousMonthEntries}
-              showMonthDelta={kpi.singleMonth}
-            />
-          )}
+      {embed ? (
+        <div className="min-w-0">
+          <p className={reportSectionGroupDescClass}>
+            Ore e presenze dal modulo Dipendenti ({kpi.periodLabel}). Weekend e festività esclusi dagli
+            indicatori.
+          </p>
+          <div className="mt-4 min-w-0">{body}</div>
         </div>
-
-        <div className="mt-4">
-          <Link href="/dipendenti" className={`${dsBtnNeutral} inline-flex text-sm no-underline`}>
-            Apri timesheet dipendenti
-          </Link>
-        </div>
-      </ShellCard>
+      ) : (
+        <>
+          <p className={reportSectionGroupDescClass}>
+            Ore e presenze dal modulo{" "}
+            <Link href="/dipendenti" className="font-medium text-[color:var(--cab-text)] underline-offset-2 hover:underline">
+              Dipendenti
+            </Link>
+            , allineate al periodo selezionato. Weekend e festività esclusi dagli indicatori.
+          </p>
+          <div className="mt-4 min-w-0">{body}</div>
+        </>
+      )}
     </GestionaleSectionGate>
+  );
+
+  if (embed) return content;
+
+  return (
+    <ShellCard
+      id="report-team"
+      title="Team e produttività"
+      subtitle={`KPI dipendenti — ${kpi.periodLabel}`}
+      collapsible
+      defaultCollapsed={false}
+      className={reportZoneShellClass}
+    >
+      {content}
+    </ShellCard>
   );
 }

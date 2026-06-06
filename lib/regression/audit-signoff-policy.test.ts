@@ -42,7 +42,23 @@ assert.match(preventiviService, /ensureSectionWrite\("preventivi"\)/);
 assert.match(preventiviService, /ensureSectionDelete\("preventivi"\)/);
 
 const settingsGate = read("components/gestionale/gestionale-settings-ready-gate.tsx");
+const authGate = read("components/gestionale/gestionale-auth-gate.tsx");
+const topNotice = read("components/gestionale/gestionale-top-notice.tsx");
+const gestionaleLayout = read("app/(gestionale)/layout.tsx");
+
 assert.match(settingsGate, /toast\.warning/);
+assert.match(settingsGate, /useGestionaleTopNotice/);
+assert.doesNotMatch(settingsGate, /LoadingProgressBar/);
+assert.doesNotMatch(settingsGate, /SettingsSyncNotice/);
+
+assert.match(authGate, /useGestionaleTopNotice/);
+assert.doesNotMatch(authGate, /GlobalLoadingView/);
+assert.doesNotMatch(authGate, /border-b border-\[color:var\(--cab-border\)\]/);
+
+assert.match(topNotice, /createPortal/);
+assert.match(topNotice, /fixed inset-x-0/);
+
+assert.match(gestionaleLayout, /GestionaleTopNoticeProvider/);
 
 const promemoriaModal = read("components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx");
 assert.match(promemoriaModal, /GestionaleUnsavedChangesDialog/);

@@ -185,7 +185,6 @@ export function DashboardPromemoriaFormModal({
         title={editing ? "Modifica promemoria" : "Nuovo promemoria"}
         titleId="dashboard-promemoria-modal-title"
         dialogSize="compact"
-        maxWidthClass="max-w-md"
         layerClassName="cursor-pointer"
       >
         <form

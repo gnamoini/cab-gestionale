@@ -10,6 +10,7 @@ import {
   dsModalCloseBtn,
   dsZModalHigh,
 } from "@/lib/ui/design-system";
+import { gestionaleModalWidthStandard } from "@/lib/ui/modal-max-width-class";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 
@@ -103,7 +104,7 @@ export function GestionaleConfirmDialog({
         role="dialog"
         aria-modal="true"
         aria-labelledby="gestionale-confirm-title"
-        className="flex max-h-[min(92dvh,calc(var(--cab-vv-height,100dvh)-2rem))] w-full max-w-md flex-col overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl"
+        className={`flex max-h-[min(92dvh,calc(var(--cab-vv-height,100dvh)-2rem))] w-full ${gestionaleModalWidthStandard} flex-col overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <header className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--cab-border)] px-4 py-3">

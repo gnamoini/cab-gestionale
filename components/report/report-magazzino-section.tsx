@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GlobalSelect } from "@/components/gestionale/global-input";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { ReportCompareBanner } from "@/components/report/report-compare-banner";
 import { MagazzinoCapitalLineChart, MagazzinoEntrateUsciteBars } from "@/components/report/report-charts";
@@ -29,8 +30,6 @@ import type { ReportDerivedBundle } from "@/lib/report/report-derived-cache";
 import { getMagazzinoMonthlyRowsForRange } from "@/lib/report/report-derived-cache";
 import {
   dsInput,
-  dsModalBackdrop,
-  dsModalPanel,
   dsTableRow,
   dsTableTd,
   dsTableWrap,
@@ -39,7 +38,6 @@ import {
 } from "@/lib/ui/design-system";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 
 function fmtPct(p: number | null): string {
   if (p == null) return "—";
@@ -118,7 +116,6 @@ export function ReportMagazzinoSection({
   const showEmpty = rows.length === 0 || (!logInRange && !hasRawLog && !hasManualInRange);
 
   const [open, setOpen] = useState(false);
-  useBodyScrollLock(open, "report-magazzino-manual");
   const [key, setKey] = useState(rows[0]?.key ?? "");
   const [ent, setEnt] = useState("");
   const [usc, setUsc] = useState("");
@@ -334,19 +331,15 @@ export function ReportMagazzinoSection({
       </div>
 
       {open ? (
-        <div
-          className={dsModalBackdrop}
-          onMouseDown={(e) => {
-            if (e.target === e.currentTarget) setOpen(false);
-          }}
+        <GestionaleModalShell
+          size="standard"
+          title="Storico manuale magazzino"
+          titleId="report-magazzino-manual-title"
+          onRequestClose={() => setOpen(false)}
         >
-          <div
-            className={`${dsModalPanel} ${gestionaleModalBodyFlexClass} min-w-0 w-full max-w-full overflow-hidden overflow-x-hidden`}
-            onMouseDown={(e) => e.stopPropagation()}
-          >
+          <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
             <GestionaleModalScrollBody className="space-y-0">
-              <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Storico manuale magazzino</h3>
-              <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">
+              <p className="text-xs text-[color:var(--cab-text-muted)]">
                 Opzionale: sovrascrivi i valori calcolati per un mese. Lascia vuoto un campo per usare il valore automatico.
               </p>
               <label htmlFor="report-mag-manual-mese" className="mt-3 block text-xs text-[color:var(--cab-text-muted)]">
@@ -426,7 +419,7 @@ export function ReportMagazzinoSection({
                 </label>
               </div>
             </GestionaleModalScrollBody>
-            <div className="mt-4 flex shrink-0 justify-end gap-2 border-t border-[color:var(--cab-border)] pt-4">
+            <div className="flex shrink-0 justify-end gap-2 border-t border-[color:var(--cab-border)] p-4">
               <button type="button" className={erpBtnNeutral} onClick={() => setOpen(false)}>
                 Annulla
               </button>
@@ -435,7 +428,7 @@ export function ReportMagazzinoSection({
               </button>
             </div>
           </div>
-        </div>
+        </GestionaleModalShell>
       ) : null}
     </ShellCard>
   );

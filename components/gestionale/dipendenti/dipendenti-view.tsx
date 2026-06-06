@@ -16,11 +16,13 @@ import { TimesheetEmptyState } from "@/components/gestionale/dipendenti/timeshee
 import { TimesheetLoadError } from "@/components/gestionale/dipendenti/timesheet-load-error";
 import { TimesheetTableView } from "@/components/gestionale/dipendenti/timesheet-table-view";
 import { LoadingDipendentiSkeleton } from "@/components/design-system";
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import {
   buildDipendentiPdfContext,
   openDipendentiPdfComplessivoInNewTab,
   openDipendentiPdfDipendenteInNewTab,
 } from "@/lib/dipendenti/pdf/dipendenti-pdf-export";
+import { buildEmptyDay8hUpserts } from "@/lib/dipendenti/timesheet-bulk-fill-day";
 import {
   currentMonthKey,
   isDateInMonthKey,
@@ -39,6 +41,11 @@ import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 /** Evidenziazione colonna «Oggi» — durata lettura dopo animazione CSS (~760ms). */
 const TIMESHEET_TODAY_ACCENT_MS = 2800;
 
+function formatWorkDateIt(dateYmd: string): string {
+  const [y, m, d] = dateYmd.split("-");
+  return `${d}/${m}/${y}`;
+}
+
 export function DipendentiView() {
   const [monthKey, setMonthKey] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));
   const [periodMode] = useState<TimesheetPeriodMode>("month");
@@ -50,6 +57,9 @@ export function DipendentiView() {
   const [bootstrapPending, setBootstrapPending] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
   const [accentDateYmd, setAccentDateYmd] = useState<string | null>(null);
+  const [fillToday8hPending, setFillToday8hPending] = useState(false);
+  const [fillToday8hConfirmOpen, setFillToday8hConfirmOpen] = useState(false);
+  const [fillToday8hUpserts, setFillToday8hUpserts] = useState<TimesheetEntryUpsert[]>([]);
   const accentClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -59,7 +69,7 @@ export function DipendentiView() {
   }, []);
 
   const perm = usePermissions("dipendenti");
-  const { validation: toastValidation } = useGestionaleToast();
+  const { validation: toastValidation, successOnce, errorOnce } = useGestionaleToast();
   const ts = useDipendentiTimesheet({ monthKey, periodMode, weekAnchor, dayDate });
 
   useEffect(() => {
@@ -173,6 +183,73 @@ export function DipendentiView() {
     }, TIMESHEET_TODAY_ACCENT_MS);
   }, [handleMonthKey]);
 
+  const todayYmd = todayDateYmd();
+  const todayInViewedMonth = isDateInMonthKey(todayYmd, monthKey);
+
+  const fillToday8hDisabled =
+    readOnly ||
+    ts.entriesDegraded ||
+    ts.loadPhase !== "ready" ||
+    ts.displayEmployees.length === 0 ||
+    !todayInViewedMonth ||
+    fillToday8hPending ||
+    ts.upsertPending;
+
+  const fillToday8hDisabledReason = readOnly
+    ? "Permessi insufficienti per modificare le presenze"
+    : ts.entriesDegraded
+      ? "Presenze in sola lettura: aggiorna i dati prima di compilare"
+      : ts.loadPhase !== "ready" || ts.displayEmployees.length === 0
+        ? "Registro presenze non pronto"
+        : !todayInViewedMonth
+          ? GESTIONALE_TOAST.dipendentiFillToday8hNotInMonth
+          : fillToday8hPending || ts.upsertPending
+            ? "Salvataggio in corso"
+            : undefined;
+
+  const handleFillToday8h = useCallback(() => {
+    if (readOnly || ts.entriesDegraded || fillToday8hPending || ts.upsertPending) return;
+    const workDate = todayDateYmd();
+    if (!isDateInMonthKey(workDate, monthKey)) {
+      toastValidation(GESTIONALE_TOAST.dipendentiFillToday8hNotInMonth);
+      return;
+    }
+    const upserts = buildEmptyDay8hUpserts(ts.displayEmployees, workDate, ts.getCellValue);
+    if (upserts.length === 0) {
+      toastValidation(GESTIONALE_TOAST.dipendentiFillToday8hNoEmpty);
+      return;
+    }
+    setFillToday8hUpserts(upserts);
+    setFillToday8hConfirmOpen(true);
+  }, [
+    readOnly,
+    ts.entriesDegraded,
+    ts.upsertPending,
+    ts.displayEmployees,
+    ts.getCellValue,
+    monthKey,
+    fillToday8hPending,
+    toastValidation,
+  ]);
+
+  const handleConfirmFillToday8h = useCallback(async () => {
+    if (fillToday8hUpserts.length === 0) {
+      setFillToday8hConfirmOpen(false);
+      return;
+    }
+    setFillToday8hPending(true);
+    try {
+      await Promise.all(fillToday8hUpserts.map((input) => ts.saveNow(input)));
+      successOnce("dip-fill-today-8h", GESTIONALE_TOAST.dipendentiFillToday8hSuccess);
+      setFillToday8hConfirmOpen(false);
+      setFillToday8hUpserts([]);
+    } catch (e) {
+      errorOnce("dip-fill-today-8h", e, { entity: "timesheet", action: "save" });
+    } finally {
+      setFillToday8hPending(false);
+    }
+  }, [fillToday8hUpserts, ts, successOnce, errorOnce]);
+
   if (perm.isLoading) {
     return <LoadingDipendentiSkeleton />;
   }
@@ -211,6 +288,10 @@ export function DipendentiView() {
             saveStatus={ts.saveStatus}
             showBackgroundSync={ts.showBackgroundSyncInToolbar}
             onGoToToday={handleGoToToday}
+            onFillToday8h={readOnly ? undefined : handleFillToday8h}
+            fillToday8hPending={fillToday8hPending}
+            fillToday8hDisabled={fillToday8hDisabled}
+            fillToday8hDisabledReason={fillToday8hDisabledReason}
           />
 
           <TimesheetLoadError
@@ -297,6 +378,26 @@ export function DipendentiView() {
           monthKey={monthKey}
           entries={ts.entries}
           tipiAssenza={ts.tipiAssenza}
+        />
+
+        <GestionaleConfirmDialog
+          open={fillToday8hConfirmOpen}
+          title="Imposta 8 ore per oggi"
+          message={
+            fillToday8hUpserts.length > 0
+              ? `Compilare 8 ore ordinarie per ${fillToday8hUpserts.length} addett${
+                  fillToday8hUpserts.length === 1 ? "o" : "i"
+                } con cella vuota il ${formatWorkDateIt(todayYmd)}? Le celle già compilate non verranno modificate.`
+              : undefined
+          }
+          confirmLabel={fillToday8hPending ? "Salvataggio…" : "Conferma"}
+          pending={fillToday8hPending}
+          onCancel={() => {
+            if (fillToday8hPending) return;
+            setFillToday8hConfirmOpen(false);
+            setFillToday8hUpserts([]);
+          }}
+          onConfirm={() => void handleConfirmFillToday8h()}
         />
       </div>
     </GestionaleSectionGate>

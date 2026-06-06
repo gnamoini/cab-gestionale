@@ -23,6 +23,7 @@ const TESTS = [
   "lib/regression/input-security-policy.test.ts",
   "lib/bunder/bunder-document-dirty.test.ts",
   "lib/regression/report-kpi-bundle.test.ts",
+  "lib/report/date-ranges.test.ts",
   "src/lib/react-query/lavorazioni-optimistic.test.ts",
   "lib/production/production-readiness.test.ts",
   "lib/ops/validate-production-env.test.ts",

@@ -29,7 +29,6 @@ export function DashboardPromemoriaScopeDialog({
       title={mode === "delete" ? "Elimina promemoria ricorrente" : "Modifica promemoria ricorrente"}
       titleId="dashboard-promemoria-scope-title"
       dialogSize="compact"
-      maxWidthClass="max-w-md"
     >
       <div className="space-y-4 p-4">
         <p className={`${dsTypoSmall} text-[color:var(--cab-text)]`}>

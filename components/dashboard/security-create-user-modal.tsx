@@ -109,7 +109,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
         if (!pending) onClose();
       }}
       title="Nuovo utente"
-      panelClassName="max-w-lg"
+      size="standard"
       footer={
         <>
           <button type="button" className={dsBtnGhost} onClick={() => onClose()} disabled={pending}>

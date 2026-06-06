@@ -68,6 +68,10 @@ export function TimesheetHeader({
   saveStatus,
   showBackgroundSync,
   onGoToToday,
+  onFillToday8h,
+  fillToday8hPending,
+  fillToday8hDisabled,
+  fillToday8hDisabledReason,
 }: {
   periodMode: TimesheetPeriodMode;
   monthKey: TimesheetMonthKey;
@@ -83,6 +87,10 @@ export function TimesheetHeader({
   /** Solo sync in background a pagina già caricata; il primo caricamento usa skeleton/error. */
   showBackgroundSync?: boolean;
   onGoToToday: () => void;
+  onFillToday8h?: () => void;
+  fillToday8hPending?: boolean;
+  fillToday8hDisabled?: boolean;
+  fillToday8hDisabledReason?: string;
 }) {
   const { year, month } = parseMonthKey(monthKey);
   const yearItems = yearOptions(6).map((o) => ({ value: String(o.value), label: o.label }));
@@ -200,14 +208,35 @@ export function TimesheetHeader({
                     <span className={`${filterLabelClass} hidden sm:block invisible`} aria-hidden="true">
                       &#8203;
                     </span>
-                    <button
-                      type="button"
-                      className={`${dsPageToolbarBtn} w-full min-w-0 px-3`}
-                      onClick={onGoToToday}
-                      title="Vai al mese corrente e evidenzia la colonna di oggi"
-                    >
-                      Oggi
-                    </button>
+                    <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        className={`${dsPageToolbarBtn} w-full min-w-0 flex-1 px-3`}
+                        onClick={onGoToToday}
+                        title="Vai al mese corrente e evidenzia la colonna di oggi"
+                      >
+                        Oggi
+                      </button>
+                      {onFillToday8h ? (
+                        <button
+                          type="button"
+                          className={`${dsPageToolbarBtn} w-full min-w-0 flex-1 px-2.5 sm:px-3`}
+                          onClick={onFillToday8h}
+                          disabled={fillToday8hDisabled || fillToday8hPending}
+                          aria-busy={fillToday8hPending}
+                          title={
+                            fillToday8hDisabled && fillToday8hDisabledReason
+                              ? fillToday8hDisabledReason
+                              : "Imposta 8 ore ordinarie per oggi su tutte le celle vuote degli addetti visibili"
+                          }
+                        >
+                          <span className="sm:hidden">{fillToday8hPending ? "…" : "8h oggi"}</span>
+                          <span className="hidden sm:inline">
+                            {fillToday8hPending ? "Salvataggio…" : "8h per tutti (oggi)"}
+                          </span>
+                        </button>
+                      ) : null}
+                    </div>
                   </label>
                 ) : null}
               </div>

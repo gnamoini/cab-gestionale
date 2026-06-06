@@ -82,7 +82,6 @@ export function MagazzinoRicambioInfoModal({
       onRequestClose={onClose}
       title="Scheda ricambio"
       titleId="detail-ricambio-title"
-      maxWidthClass="max-w-lg"
     >
       <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <GestionaleModalScrollBody>
@@ -132,7 +131,6 @@ export function MagazzinoDupCodesModal({
       onRequestClose={onClose}
       title="Codici duplicati in archivio"
       titleId="dup-magazzino-title"
-      maxWidthClass="max-w-lg"
     >
       <GestionaleModalScrollBody className="space-y-3">
         {groups.length === 0 ? (

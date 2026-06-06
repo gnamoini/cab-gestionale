@@ -28,7 +28,9 @@ import { dsBtnDanger } from "@/lib/ui/design-system";
 import {
   canOpenDocumento,
   documentoFileUnavailableLabel,
+  documentoCertificazioneSenzaMarca,
   documentoSenzaMarca,
+  documentoSenzaMarcaConAvviso,
   extractFileExtension,
   stripFileExtension,
   formatDocumentoRigaSintetica,
@@ -41,6 +43,10 @@ import {
 
 function documentoSenzaMarcaUi(doc: DocumentoGestionale): boolean {
   return documentoSenzaMarca(doc);
+}
+
+function documentoSenzaMarcaConAvvisoUi(doc: DocumentoGestionale): boolean {
+  return documentoSenzaMarcaConAvviso(doc);
 }
 
 const inputClass =
@@ -463,10 +469,12 @@ export function DocumentoInfoModal({
             <InfoRow
               label="Marca / modello"
               value={
-                documentoSenzaMarcaUi(doc) ? (
+                documentoSenzaMarcaConAvvisoUi(doc) ? (
                   <span className="inline-flex items-center gap-1.5 font-semibold text-amber-700 dark:text-amber-300">
                     <span aria-hidden>⚠️</span> Senza marca
                   </span>
+                ) : documentoCertificazioneSenzaMarca(doc) ? (
+                  "—"
                 ) : (
                   entita
                 )

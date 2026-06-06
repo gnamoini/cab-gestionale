@@ -1,16 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { reportZoneNavStickyClass } from "@/components/report/report-ui-tokens";
+import { reportZoneNavClass } from "@/components/report/report-ui-tokens";
 
-const ZONE_ITEMS = [
-  { id: "report-executive", label: "Sintesi" },
-  { id: "report-operations", label: "Operazioni" },
-  { id: "report-fleet", label: "Flotta" },
-  { id: "report-economic", label: "Economia" },
-  { id: "report-maintenance", label: "Dettaglio" },
-  { id: "report-compliance", label: "Compliance" },
-  { id: "report-team", label: "Team" },
+export const REPORT_ZONE_ITEMS = [
+  { id: "report-executive", label: "Panoramica" },
+  { id: "report-trends", label: "Andamento" },
+  { id: "report-operational", label: "Operativo" },
+  { id: "report-maintenance", label: "Approfondimenti" },
 ] as const;
 
 const zoneNavLinkClass =
@@ -22,11 +19,11 @@ const zoneNavLinkIdleClass =
 const zoneNavLinkActiveClass =
   "border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-card))] text-[color:var(--cab-text)]";
 
-export function ReportZoneNav() {
-  const [activeId, setActiveId] = useState<string>(ZONE_ITEMS[0].id);
+export function ReportZoneNav({ className }: { className?: string }) {
+  const [activeId, setActiveId] = useState<string>(REPORT_ZONE_ITEMS[0].id);
 
   useEffect(() => {
-    const elements = ZONE_ITEMS.map((item) => document.getElementById(item.id)).filter(
+    const elements = REPORT_ZONE_ITEMS.map((item) => document.getElementById(item.id)).filter(
       (el): el is HTMLElement => el != null,
     );
     if (elements.length === 0) return;
@@ -39,7 +36,7 @@ export function ReportZoneNav() {
         const top = visible[0]?.target;
         if (top?.id) setActiveId(top.id);
       },
-      { rootMargin: "-18% 0px -52% 0px", threshold: [0, 0.12, 0.3] },
+      { rootMargin: "-20% 0px -55% 0px", threshold: [0, 0.12, 0.3] },
     );
 
     for (const el of elements) observer.observe(el);
@@ -47,9 +44,12 @@ export function ReportZoneNav() {
   }, []);
 
   return (
-    <nav className={`min-w-0 ${reportZoneNavStickyClass}`} aria-label="Zone report control tower">
+    <nav
+      className={`${reportZoneNavClass}${className ? ` ${className}` : ""}`}
+      aria-label="Sezioni report"
+    >
       <ul className="gestionale-scrollbar flex min-w-0 gap-1.5 overflow-x-auto pb-0.5">
-        {ZONE_ITEMS.map((item) => {
+        {REPORT_ZONE_ITEMS.map((item) => {
           const active = activeId === item.id;
           return (
             <li key={item.id} className="shrink-0">

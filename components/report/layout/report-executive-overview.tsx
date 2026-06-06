@@ -3,10 +3,10 @@
 import { useMemo } from "react";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { KpiPerformanceAlerts } from "@/components/report/kpi-performance/kpi-performance-alerts";
+import { ReportExecutiveKpiSection } from "@/components/report/layout/report-executive-kpi-section";
 import { ReportExecutiveStrip } from "@/components/report/layout/report-executive-strip";
 import { useReportPerformanceContext } from "@/components/report/layout/report-performance-gate";
-import { ReportUnifiedKpiGrid } from "@/components/report/report-unified-kpi-grid";
-import { reportSectionGroupDescClass, reportZoneShellClass } from "@/components/report/report-ui-tokens";
+import { reportSubsectionTitleClass, reportZoneShellClass } from "@/components/report/report-ui-tokens";
 import type { ReportCompareMode } from "@/lib/report/date-ranges";
 import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";
 
@@ -17,13 +17,13 @@ export function ReportExecutiveOverview({ compareMode }: { compareMode: ReportCo
     if (!perf) return "Caricamento sintesi…";
     const alertN = perf.alerts.length;
     const alertPart = alertN > 0 ? `${alertN} alert attivi` : "nessun alert critico";
-    return `${perf.operational.closedInPeriod} chiusure nel periodo · ${perf.operational.openCount} interventi aperti · ${alertPart}`;
+    return `${perf.operational.closedInPeriod} chiusure · ${perf.operational.openCount} aperti · ${alertPart}`;
   }, [perf]);
 
   return (
     <ShellCard
       id="report-executive"
-      title="Sintesi esecutiva"
+      title="Panoramica esecutiva"
       subtitle="Stato officina e flotta nel periodo selezionato"
       collapsible={false}
       className={reportZoneShellClass}
@@ -47,21 +47,16 @@ export function ReportExecutiveOverview({ compareMode }: { compareMode: ReportCo
             }}
           />
 
-          <div>
-            <p className={reportSectionGroupDescClass}>
-              Indicatori strategici. Le pillole indicano il livello di affidabilità del dato (esatto, stima, proxy).
-            </p>
-            <div className="mt-3">
-              <ReportUnifiedKpiGrid items={partitioned.executive} />
-            </div>
-          </div>
+          <ReportExecutiveKpiSection items={partitioned.executive} />
 
-          <section className="min-w-0 space-y-3" aria-labelledby="report-executive-alerts-title">
-            <h2 id="report-executive-alerts-title" className="text-sm font-semibold text-[color:var(--cab-text)]">
-              Alert e criticità
-            </h2>
-            <KpiPerformanceAlerts alerts={perf.alerts} />
-          </section>
+          {perf.alerts.length > 0 ? (
+            <section className="min-w-0 space-y-3 border-t border-[color:var(--cab-border)] pt-6" aria-labelledby="report-executive-alerts-title">
+              <h2 id="report-executive-alerts-title" className={reportSubsectionTitleClass}>
+                Alert e criticità
+              </h2>
+              <KpiPerformanceAlerts alerts={perf.alerts} />
+            </section>
+          ) : null}
         </div>
       )}
     </ShellCard>

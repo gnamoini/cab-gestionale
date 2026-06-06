@@ -2,6 +2,7 @@
 
 import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
 import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
+import { gestionaleModalWidthStandard } from "@/lib/ui/modal-max-width-class";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 
 export type GestionaleUnsavedPlacement = "nested" | "stacked";
@@ -82,7 +83,7 @@ export function GestionaleUnsavedChangesDialog({
       }}
     >
       <div
-        className="w-full max-w-md rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-5 shadow-2xl"
+        className={`w-full ${gestionaleModalWidthStandard} rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-5 shadow-2xl`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <h3 id="gestionale-unsaved-title" className="text-sm font-semibold text-[color:var(--cab-text)]">

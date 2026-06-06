@@ -8,6 +8,7 @@ import {
   reportKpiTrustPillClass,
   reportMetricCardClass,
   reportMetricCardCompactClass,
+  reportMetricCardHeroClass,
   type ReportCompareTone,
 } from "@/components/report/report-ui-tokens";
 import { REPORT_KPI_TRUST_LABELS, type ReportKpiTrust } from "@/lib/report/kpi-display-clusters";
@@ -30,6 +31,24 @@ function arrowAndTone(
   }
   if (deltaPct > 0) return { arrow: "↑", tone: "up" };
   return { arrow: "↓", tone: "down" };
+}
+
+function CompareInline({ rows }: { rows: KpiCompareRow[] }) {
+  const row = rows[0];
+  if (!row) return null;
+  const pctStr = fmtPct(row.deltaPct);
+  const { arrow, tone } = arrowAndTone(row.deltaPct, row.invert);
+  const tc = reportCompareToneClass(tone);
+  return (
+    <span
+      className={`inline-flex shrink-0 items-center gap-1 rounded-md border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_60%,var(--cab-card))] px-2 py-0.5 text-[11px] font-semibold tabular-nums ${tc}`}
+      title={row.label}
+    >
+      <span className="text-xs leading-none">{arrow}</span>
+      {row.deltaAbs != null ? <span>{row.deltaAbs}</span> : null}
+      {pctStr != null ? <span className="font-normal opacity-90">{pctStr}</span> : row.deltaAbs == null ? <span>—</span> : null}
+    </span>
+  );
 }
 
 function CompareBlock({ rows }: { rows: KpiCompareRow[] }) {
@@ -108,8 +127,9 @@ export function ReportKpiCard({
   placeholder?: boolean;
 }) {
   const hasCmp = compareRows != null && compareRows.length > 0;
-  const shell = compact ? reportMetricCardCompactClass : reportMetricCardClass;
+  const shell = hero ? reportMetricCardHeroClass : compact ? reportMetricCardCompactClass : reportMetricCardClass;
   const valueSize = hero ? "text-3xl sm:text-4xl" : compact ? "text-xl" : "text-2xl sm:text-3xl";
+  const showInlineCompare = hero && hasCmp;
 
   return (
     <article className={`${shell}${placeholder ? " pointer-events-none opacity-60" : ""}`}>
@@ -117,18 +137,21 @@ export function ReportKpiCard({
         <p className="min-w-0 text-[11px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           {label}
         </p>
-        {trust ? (
-          <span className={reportKpiTrustPillClass} title={`Fonte: ${REPORT_KPI_TRUST_LABELS[trust]}`}>
-            {REPORT_KPI_TRUST_LABELS[trust]}
-          </span>
-        ) : null}
+        <div className="flex shrink-0 items-center gap-1.5">
+          {showInlineCompare ? <CompareInline rows={compareRows!} /> : null}
+          {trust ? (
+            <span className={reportKpiTrustPillClass} title={`Fonte: ${REPORT_KPI_TRUST_LABELS[trust]}`}>
+              {REPORT_KPI_TRUST_LABELS[trust]}
+            </span>
+          ) : null}
+        </div>
       </div>
       {description ? <p className={reportKpiDescriptionClass}>{description}</p> : null}
       <p className={`mt-2 font-semibold tracking-tight tabular-nums text-[color:var(--cab-text)] ${valueSize}`}>
         {value}
       </p>
       {sub ? <KpiSubLines sub={sub} /> : null}
-      {hasCmp ? <CompareBlock rows={compareRows!} /> : null}
+      {hasCmp && !showInlineCompare ? <CompareBlock rows={compareRows!} /> : null}
       {spark != null ? (
         <div className="mt-auto flex min-w-0 items-end justify-between gap-2 pt-4">
           <span className="text-[10px] text-[color:var(--cab-text-muted)]">Trend 7gg (solo DB)</span>

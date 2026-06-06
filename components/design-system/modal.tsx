@@ -23,7 +23,7 @@ import {
   gestionaleModalScrollBodyMobileClass,
 } from "@/lib/ui/mobile-modal-behavior";
 import { layoutModalBodySafe } from "@/lib/ui/responsive-layout-core";
-import { resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
+import { resolveGestionaleModalWidth, type GestionaleModalWidth } from "@/lib/ui/modal-max-width-class";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
@@ -37,11 +37,11 @@ export type ModalProps = {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
-  /** Larghezza pannello desktop (default max-w-lg). */
-  panelClassName?: string;
+  /** Tier larghezza desktop (default standard). */
+  size?: GestionaleModalWidth;
 };
 
-export function Modal({ open, onClose, title, children, footer, panelClassName = "" }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, size = "standard" }: ModalProps) {
   const frameRef = useRef<HTMLDivElement>(null);
   const maxMdDown = useMaxMdDown();
   useBodyScrollLock(open, "design-system-Modal");
@@ -51,7 +51,7 @@ export function Modal({ open, onClose, title, children, footer, panelClassName =
 
   if (!open) return null;
 
-  const panelWidth = resolveModalMaxWidthClass(panelClassName.trim() || "max-w-lg");
+  const panelWidth = resolveGestionaleModalWidth(size);
 
   const headerNode = (
     <header className={dsModalHeader}>

@@ -1,5 +1,5 @@
 import { resolveDocumentoApplicazione } from "@/lib/documenti/documenti-applicabilita";
-import { documentoSenzaMarca } from "@/components/gestionale/documenti/documenti-helpers";
+import { documentoSenzaMarca } from "@/lib/documenti/documenti-senza-marca-classify";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 
 export const FILTER_ALL = "__tutti__" as const;

@@ -6,7 +6,6 @@ import { CardMobile, CardMobileActions, IconActionButton } from "@/components/de
 import {
   dsTableActionBtnInfo,
   dsTableActionBtnSecondary,
-  dsTableActionBtnDanger,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import {
@@ -27,7 +26,7 @@ import {
 import { hrefDocumentiPerMezzo, hrefLavorazioniPerMezzo, hrefPreventiviPerMezzo, ultimaLavorazioneLabel } from "@/lib/mezzi/mezzi-helpers";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 
-/** 5 icone × 36px + gap — larghezza fissa per non assorbire slack in `table-fixed`. */
+/** 4 icone × 36px + gap — larghezza fissa per non assorbire slack in `table-fixed`. */
 const mezziTableActionsColClass = gestionaleListColAzioniClass;
 
 /** Righe multi-riga: min-height + sfondo come Lavorazioni/Magazzino (hover via scroll scope). */
@@ -133,14 +132,6 @@ function MezziCellIdentificazione({ lines }: { lines: string[] }) {
   );
 }
 
-function IconTrash({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-    </svg>
-  );
-}
-
 export type MezziTableProps = {
   rows: MezzoGestito[];
   interventiByMezzoId: Map<string, MezzoInterventoLavorazione[]>;
@@ -150,17 +141,14 @@ export type MezziTableProps = {
   onSort: (k: MezziSortKey) => void;
   flashRowId: string | null;
   onHub: (m: MezzoGestito) => void;
-  onDelete?: (m: MezzoGestito) => void;
 };
 
 function MezzoRowActions({
   m,
   onHub,
-  onDelete,
 }: {
   m: MezzoGestito;
   onHub: (m: MezzoGestito) => void;
-  onDelete?: (m: MezzoGestito) => void;
 }) {
   return (
     <>
@@ -191,11 +179,6 @@ function MezzoRowActions({
       >
         <IconClipboardList />
       </IconActionButton>
-      {onDelete && !m.hubSynthetic ? (
-        <IconActionButton label="Elimina" className={dsTableActionBtnDanger} onClick={() => onDelete(m)}>
-          <IconTrash />
-        </IconActionButton>
-      ) : null}
     </>
   );
 }
@@ -206,14 +189,12 @@ function MezzoRowInner({
   inOff: _inOff,
   flash,
   onHub,
-  onDelete,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
   inOff: boolean;
   flash: boolean;
   onHub: (m: MezzoGestito) => void;
-  onDelete?: (m: MezzoGestito) => void;
 }) {
   const ultima = ultimaLavorazioneLabel(interventi);
   const nLavorazioni = interventi.length;
@@ -264,7 +245,7 @@ function MezzoRowInner({
       </td>
       <td className={gestionaleListTableTdAzioni}>
         <div className={gestionaleListTableActionsGroupEnd}>
-          <MezzoRowActions m={m} onHub={onHub} onDelete={onDelete} />
+          <MezzoRowActions m={m} onHub={onHub} />
         </div>
       </td>
     </tr>
@@ -277,14 +258,12 @@ function MezzoMobileCard({
   inOff: _inOff,
   flash,
   onHub,
-  onDelete,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
   inOff: boolean;
   flash: boolean;
   onHub: (m: MezzoGestito) => void;
-  onDelete?: (m: MezzoGestito) => void;
 }) {
   const ultima = ultimaLavorazioneLabel(interventi);
   const nLavorazioni = interventi.length;
@@ -356,7 +335,7 @@ function MezzoMobileCard({
         </div>
       </dl>
       <CardMobileActions spacing="tight" className="mt-2.5 border-t border-zinc-200/80 pt-2.5 dark:border-zinc-700/80">
-        <MezzoRowActions m={m} onHub={onHub} onDelete={onDelete} />
+        <MezzoRowActions m={m} onHub={onHub} />
       </CardMobileActions>
     </CardMobile>
   );
@@ -364,7 +343,7 @@ function MezzoMobileCard({
 
 const MezzoRow = memo(MezzoRowInner);
 
-export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, sortPhase, onSort, flashRowId, onHub, onDelete }: MezziTableProps) {
+export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, sortPhase, onSort, flashRowId, onHub }: MezziTableProps) {
   return (
     <>
       <GestionaleListTable
@@ -419,7 +398,6 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
             inOff={inOfficina(m)}
             flash={flashRowId === m.id}
             onHub={onHub}
-            onDelete={onDelete}
           />
         ))}
       </GestionaleListTable>
@@ -438,7 +416,6 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
               inOff={inOfficina(m)}
               flash={flashRowId === m.id}
               onHub={onHub}
-              onDelete={onDelete}
             />
           ))
         )}

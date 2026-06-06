@@ -115,13 +115,12 @@ withWindowHistory((mock) => {
   }, "prog-close");
 
   assert.equal(getOverlayBackStackDepth(), 1);
+  assert.equal(mock.index(), 1);
   release();
   assert.equal(getOverlayBackStackDepth(), 0);
   assert.equal(closed, 0);
-
-  __setSuppressNextPopForTests(true);
-  assert.ok(handleOverlayBackPopState());
-  assert.equal(closed, 0);
+  assert.equal(mock.index(), 1, "programmatic close must not pop to another route");
+  assert.equal(mock.history.state, null, "overlay state cleared via replaceState");
 
   mock.history.back();
   assert.equal(closed, 0);
@@ -155,7 +154,7 @@ withWindowHistory(() => {
 
 const stackSrc = readFileSync(join(root, "lib/ui/overlay-back-stack.ts"), "utf8");
 assert.match(stackSrc, /pushState/);
-assert.match(stackSrc, /suppressNextPop/);
+assert.match(stackSrc, /function consumeOverlayHistoryEntry[\s\S]*replaceState/);
 assert.match(stackSrc, /handleOverlayBackPopState/);
 
 const shells = [

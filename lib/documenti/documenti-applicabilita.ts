@@ -171,7 +171,10 @@ export function formatDocumentoRigaSintetica(doc: DocumentoGestionale): string {
             : "ALTRO";
   const r = resolveDocumentoApplicazione(doc);
   const m = r.marcaKey?.trim() || r.marca.trim();
-  if (!marcaAssegnataText(m)) return `${cat} — Senza marca`;
+  if (!marcaAssegnataText(m)) {
+    if (doc.categoria === "certificazioni") return cat;
+    return `${cat} — Senza marca`;
+  }
   if (r.applicabilita === "marca") return `${cat} — ${m}`;
   const mod = r.modelloKey?.trim() || r.macchina.trim();
   return `${cat} — ${m} ${mod}`.replace(/\s+/g, " ").trim();

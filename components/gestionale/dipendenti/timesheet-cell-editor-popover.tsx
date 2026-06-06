@@ -67,7 +67,6 @@ export function TimesheetCellEditorPopover({
       onRequestClose={onClose}
       title="Modifica cella"
       subtitle={anchorLabel}
-      maxWidthClass="max-w-md"
     >
       <div className="space-y-3 px-4 py-3">
         <TimesheetCellEditor

@@ -159,7 +159,7 @@ function AccountMenu() {
     window.location.assign("/login");
   }
 
-  const label = status === "loading" ? "Account" : (user?.nome ?? "Account");
+  const label = user?.nome?.trim() || "Account";
 
   return (
     <div className="relative" ref={wrapRef}>
@@ -172,11 +172,16 @@ function AccountMenu() {
         aria-haspopup="menu"
       >
         <UserProfileAvatar
-          nome={status === "loading" ? "·" : user?.nome}
+          nome={user?.nome ?? (status === "loading" ? "·" : undefined)}
           email={user?.email}
           variant="header"
         />
-        <span className="min-w-0 flex-1 truncate font-medium text-[color:var(--cab-text)]">{label}</span>
+        <span
+          className="min-w-0 flex-1 truncate font-medium text-[color:var(--cab-text)]"
+          suppressHydrationWarning
+        >
+          {label}
+        </span>
         <span className="shrink-0 text-[color:var(--cab-text-muted)]" aria-hidden>
           ▾
         </span>
@@ -240,17 +245,26 @@ function SidebarAccountFooter() {
     window.location.assign("/login");
   }
 
-  const nome = status === "loading" ? "…" : user?.nome ?? "Account";
+  const nome = user?.nome?.trim() || (status === "loading" && !user ? "…" : "Account");
+  const email = user?.email?.trim() ?? "";
 
   return (
     <div className="border-t border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-950/40">
       <div className="flex items-center gap-2">
         <UserProfileAvatar nome={user?.nome} email={user?.email} variant="sidebar" />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-50">{nome}</p>
-          {user?.email ? (
-            <p className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{user.email}</p>
-          ) : null}
+          <p
+            className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-50"
+            suppressHydrationWarning
+          >
+            {nome}
+          </p>
+          <p
+            className="truncate text-[10px] text-zinc-500 dark:text-zinc-400"
+            suppressHydrationWarning
+          >
+            {email || (status === "loading" ? "\u00a0" : "")}
+          </p>
         </div>
       </div>
       <button
@@ -572,6 +586,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onClick={toggleCollapsed}
               aria-label={collapsed ? "Espandi menu laterale" : "Comprimi menu laterale"}
               className={`${erpFocus} hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-sm text-[color:var(--cab-text-muted)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:bg-[var(--cab-hover)] md:inline-flex dark:border-[color:var(--cab-border-strong)]`}
+              suppressHydrationWarning
             >
               {collapsed ? "⟩" : "⟨"}
             </button>

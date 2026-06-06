@@ -475,7 +475,7 @@ export const dsStackPage = layoutPageContainer;
 export const dsGestionaleContentMax = "w-full min-w-0 max-w-full";
 
 /** Padding orizzontale contenuto (wrapper interno; il main scroll resta edge-to-edge). */
-export const dsGestionaleContentGutter = "px-2 sm:px-3 md:px-3";
+export const dsGestionaleContentGutter = "px-5";
 
 /** Riga shell header allineata al wrapper contenuto (stessa larghezza utile + gutter). */
 export const dsGestionaleContentShellRow = `${dsGestionaleContentMax} w-full min-w-0`;

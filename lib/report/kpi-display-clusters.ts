@@ -26,6 +26,19 @@ export const EXECUTIVE_KPI_IDS = [
   "clienti",
 ] as const;
 
+/** KPI hero in panoramica esecutiva (leggibilità 30s). */
+export const EXECUTIVE_PRIMARY_KPI_IDS = [
+  "lav-periodo",
+  "lav-chiusi",
+  "cost-tot",
+  "clienti",
+  "flotta-disp",
+  "lav-media-settimanale",
+] as const;
+
+/** KPI secondari — stessa sezione, griglia compatta. */
+export const EXECUTIVE_SECONDARY_KPI_IDS = ["lav-aperti", "lav-tempo", "scorta"] as const;
+
 export const FLEET_ZONE_KPI_IDS = ["flotta-officina", "mezzi"] as const;
 
 export const ECONOMIC_ZONE_KPI_IDS = ["cap", "ric-usati"] as const;
