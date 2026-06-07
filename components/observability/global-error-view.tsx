@@ -30,7 +30,7 @@ export function GlobalErrorView({
 
   return (
     <AuthStandalonePageShell showThemeToggle={false} decorativeBackground={false}>
-      <main className="relative z-10 flex min-h-[var(--cab-app-height,100dvh)] w-full flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
+      <main className="relative z-10 flex min-h-[var(--cab-app-height,100dvh)] w-full min-w-0 flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <ErrorPageCard
           eyebrow="Errore di caricamento"
           title="Errore di caricamento"

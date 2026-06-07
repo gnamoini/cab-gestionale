@@ -429,7 +429,7 @@ function MobileNavDrawer({
         onClick={onClose}
       />
       <div
-        className={resolveDrawerAsideClasses("drawerNav")}
+        className={`cab-nav-drawer-panel ${resolveDrawerAsideClasses("drawerNav")}`}
         data-state={panelState}
         role="dialog"
         aria-modal="true"

@@ -1,8 +1,8 @@
 {
-  "version": 7,
-  "frozenAt": "2026-06-06",
-  "entryCount": 11,
-  "checksum": "60b97bb66b9c444314512d52fe612595421ff6a0593039e81125aa25ce38962b",
+  "version": 8,
+  "frozenAt": "2026-06-07",
+  "entryCount": 10,
+  "checksum": "509bb84ed9a64c55dd70287f59a07ff4868606d946a4f578d0dc784bf70984ac",
   "entries": [
     {
       "file": "components/bunder/bunder-view.tsx",
@@ -37,11 +37,6 @@
     {
       "file": "components/bunder/bunder-view.tsx",
       "line": 742,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/dashboard/sistema-impostazioni-modal.tsx",
-      "line": 382,
       "reason": "toolbar-without-containment"
     },
     {

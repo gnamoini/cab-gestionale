@@ -11,7 +11,7 @@ function read(rel: string): string {
 const bunderEditor = read("components/bunder/bunder-editor-modal.tsx");
 const bunderView = read("components/bunder/bunder-view.tsx");
 const dipendentiHook = read("src/hooks/use-dipendenti-timesheet.ts");
-const impostazioni = read("components/dashboard/sistema-impostazioni-modal.tsx");
+const impostazioni = read("components/dashboard/settings/settings-workspace-shell.tsx");
 const preventivi = read("components/preventivi/preventivi-editor-modal.tsx");
 const schede = read("components/lavorazioni/schede/schede-lavorazione-modal.tsx");
 const promemoria = read("components/dashboard/promemoria/dashboard-promemoria-form-modal.tsx");

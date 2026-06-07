@@ -85,7 +85,7 @@ export function SettingsDipendentiAssenzeSection({
                   onChange(tipi.map((x) => (x.id === t.id ? { ...x, label: e.target.value } : x)))
                 }
               />
-              <label className="flex cursor-pointer items-center justify-center">
+              <label className="flex min-w-0 cursor-pointer items-center justify-center">
                 <input
                   type="checkbox"
                   className="h-3.5 w-3.5 rounded border-[color:var(--cab-border)]"

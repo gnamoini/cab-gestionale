@@ -9,7 +9,7 @@ type Finding = { file: string; line: number; rule: string; message: string };
 
 const MODAL_SHELL_ANCHORS: { file: string; needles: string[] }[] = [
   {
-    file: "components/gestionale/magazzino/magazzino-view.tsx",
+    file: "components/gestionale/magazzino/magazzino-modals.tsx",
     needles: ["GestionaleModalShell"],
   },
   {

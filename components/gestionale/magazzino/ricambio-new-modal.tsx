@@ -163,7 +163,7 @@ export function RicambioNewModal({
               />
             ) : null}
           </GestionaleModalScrollBody>
-          <footer className={`${dsModalFormFooter} flex-col items-stretch`}>
+          <footer className={`${dsModalFormFooter} min-w-0 flex-col items-stretch`}>
             <LoadingButton
               type="submit"
               loading={saveBusy}

@@ -51,7 +51,7 @@ export function ErrorPageCard({
   return (
     <div className={`${authStandaloneCardClass} text-center`} role="alert" aria-live="assertive">
       {showLogo ? (
-        <div className="flex justify-center">
+        <div className="flex min-w-0 justify-center">
           <CabLogo
             height={40}
             priority
@@ -70,7 +70,7 @@ export function ErrorPageCard({
 
       {technicalDetail ? <TechnicalDetails detail={technicalDetail} /> : null}
 
-      <div className="mt-6 flex flex-col-reverse items-stretch justify-center gap-2 sm:flex-row sm:items-center">
+      <div className="mt-6 flex min-w-0 flex-col-reverse items-stretch justify-center gap-2 sm:flex-row sm:items-center">
         {safeExitReady ? (
           <Link
             href={safeExitHref}

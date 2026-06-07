@@ -27,7 +27,7 @@ export function SistemaImpostazioniPageView() {
 
   if (!permissions.canManageSettings) {
     return (
-      <div className={layoutPageRoot}>
+      <div className={`${layoutPageRoot} min-w-0`}>
         <PageHeader
           title="Impostazioni"
           description="Non hai i permessi per modificare la configurazione globale."

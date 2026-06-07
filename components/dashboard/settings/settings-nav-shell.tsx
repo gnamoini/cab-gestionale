@@ -115,7 +115,7 @@ export function SettingsMobileSectionPicker({
     <div ref={rootRef} className="relative w-full md:hidden">
       <button
         type="button"
-        className={`${gestionaleSelectFilterClass} relative block truncate text-left ${open ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]" : ""} ${dsFocus}`}
+        className={`${gestionaleSelectFilterClass} relative block min-w-0 truncate text-left ${open ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]" : ""} ${dsFocus}`}
         onClick={onToggle}
         aria-expanded={open}
         aria-controls="settings-mobile-nav-panel"

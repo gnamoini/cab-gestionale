@@ -102,7 +102,7 @@ export function SettingsMagazzinoMarcheList({
                 trailing={
                   <label
                     htmlFor={settingsConfigFieldId("config-sconto-marca", nome)}
-                    className="flex shrink-0 items-center gap-1 text-xs text-[color:var(--cab-text-muted)]"
+                    className="flex min-w-0 shrink-0 items-center gap-1 text-xs text-[color:var(--cab-text-muted)]"
                   >
                     Sconto listino %
                     <input
