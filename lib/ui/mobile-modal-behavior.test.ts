@@ -6,6 +6,7 @@ import {
   CAB_FOCUS_SCROLL_TITLE_ATTR,
   CAB_MODAL_ROOT_ATTR,
   CAB_MODAL_SCROLL_ATTR,
+  computeFocusScrollDelta,
   computeKeyboardInset,
   minFocusScrollTop,
   MobileModalBehaviorLayer,
@@ -28,9 +29,30 @@ assert.equal(minFocusScrollTop(120, []), 120);
 assert.equal(minFocusScrollTop(120, [80, 95]), 80);
 assert.equal(minFocusScrollTop(50, [80, 95]), 50);
 
+assert.equal(computeFocusScrollDelta({ top: 100, bottom: 150, left: 0, right: 0 }, 50, 200), 0);
+
+assert.equal(
+  computeFocusScrollDelta({ top: 100, bottom: 180, left: 0, right: 0 }, 50, 160),
+  20,
+  "keyboard shrinks viewport: scroll down but keep label in band",
+);
+
+assert.equal(
+  computeFocusScrollDelta({ top: 100, bottom: 180, left: 0, right: 0 }, 50, 120),
+  50,
+  "infeasible band: anchor label at visibleTop",
+);
+
+assert.equal(
+  computeFocusScrollDelta({ top: 40, bottom: 90, left: 0, right: 0 }, 55, 200),
+  -15,
+  "field too high: scroll up",
+);
+
 const behaviorSrc = readFileSync(join(root, "lib/ui/mobile-modal-behavior.ts"), "utf8");
+assert.match(behaviorSrc, /computeFocusScrollDelta/);
 assert.match(behaviorSrc, /getFocusScrollRect\(field\)/);
-assert.match(behaviorSrc, /scrollRect\.top < visibleTop/);
+assert.match(behaviorSrc, /computeFocusScrollDelta\(scrollRect/);
 assert.match(behaviorSrc, /findFieldLabelBlock/);
 assert.match(behaviorSrc, /findModalHeaderBottom/);
 assert.match(behaviorSrc, /findGestionaleFieldContainer/);
@@ -84,7 +106,8 @@ const modalBodyClassSrc = readFileSync(join(root, "lib/ui/modal-max-width-class.
 assert.match(modalBodyClassSrc, /max-md:flex-none max-md:overflow-visible/);
 
 const dsModalSrc = readFileSync(join(root, "components/design-system/modal.tsx"), "utf8");
-assert.match(dsModalSrc, /useMaxMdDown/);
+assert.match(dsModalSrc, /LavorazioniModalShell/);
+assert.match(dsModalSrc, /GestionaleModalScrollBody/);
 
 const dsDrawerSrc = readFileSync(join(root, "components/design-system/drawer.tsx"), "utf8");
 assert.match(dsDrawerSrc, /useMaxMdDown/);

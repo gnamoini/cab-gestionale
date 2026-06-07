@@ -19,7 +19,7 @@ import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
 import { GestionaleFormFocusScope } from "@/components/gestionale/gestionale-form-focus-scope";
 import { CloseButton } from "@/components/design-system";
-import { dsBtnNeutral, dsBtnPrimary, dsInput, dsLabel, dsStepperBtn, dsTypoSmall } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsBtnPrimary, dsFocus, dsInput, dsLabel, dsSegmentedBtnOff, dsSegmentedBtnOn, dsSegmentedWrap, dsStepperBtn, dsTypoSmall } from "@/lib/ui/design-system";
 import { globalInputInvalidRing } from "@/lib/ui/global-input";
 import { getScontoFornitoreMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
@@ -407,10 +407,16 @@ export function RicambioFormFields({
         />
       </RicambioField>
       <RicambioField label="Usato nei tagliandi">
-        <div className="flex flex-wrap gap-2" role="group" aria-label="Usato nei tagliandi">
+        <div
+          className={`${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`}
+          role="group"
+          aria-label="Usato nei tagliandi"
+        >
           <button
             type="button"
-            className={`${dsBtnNeutral} min-h-11 px-4 text-sm font-semibold ${!form.usatoInTagliandi ? "ring-2 ring-[color:var(--cab-primary)]" : ""}`}
+            className={`flex min-h-11 min-w-0 flex-1 items-center justify-center text-sm font-semibold ${
+              !form.usatoInTagliandi ? dsSegmentedBtnOn : dsSegmentedBtnOff
+            } ${dsFocus}`}
             aria-pressed={!form.usatoInTagliandi}
             onClick={() => setForm((f) => ({ ...f, usatoInTagliandi: false }))}
           >
@@ -418,7 +424,9 @@ export function RicambioFormFields({
           </button>
           <button
             type="button"
-            className={`${dsBtnNeutral} min-h-11 px-4 text-sm font-semibold ${form.usatoInTagliandi ? "ring-2 ring-[color:var(--cab-primary)]" : ""}`}
+            className={`flex min-h-11 min-w-0 flex-1 items-center justify-center text-sm font-semibold ${
+              form.usatoInTagliandi ? dsSegmentedBtnOn : dsSegmentedBtnOff
+            } ${dsFocus}`}
             aria-pressed={form.usatoInTagliandi}
             onClick={() => setForm((f) => ({ ...f, usatoInTagliandi: true }))}
           >

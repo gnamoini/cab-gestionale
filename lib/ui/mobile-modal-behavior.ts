@@ -258,19 +258,43 @@ export function minFocusScrollTop(fieldTop: number, anchorTops: number[]): numbe
   return top;
 }
 
-/** Rettangolo scroll: top = min(etichetta campo, campo); bottom = campo (no titolo sezione). */
+/**
+ * Delta scroll per tenere l'intero blocco etichetta+campo in [visibleTop, visibleBottom].
+ * deltaMin: scroll minimo per non superare il bordo inferiore; deltaMax: massimo senza uscire in alto.
+ */
+export function computeFocusScrollDelta(
+  scrollRect: FocusScrollRect,
+  visibleTop: number,
+  visibleBottom: number,
+): number {
+  const deltaMin = scrollRect.bottom - visibleBottom;
+  const deltaMax = scrollRect.top - visibleTop;
+
+  if (deltaMin <= deltaMax) {
+    if (deltaMin <= 0 && deltaMax >= 0) return 0;
+    if (deltaMin > 0) return deltaMin;
+    return deltaMax;
+  }
+
+  return deltaMax;
+}
+
+/** Rettangolo scroll: top = min(etichetta campo, campo); bottom = blocco label o campo. */
 export function getFocusScrollRect(field: HTMLElement): FocusScrollRect {
   const fieldRect = field.getBoundingClientRect();
   const anchorTops: number[] = [];
+  let bottom = fieldRect.bottom;
 
   const labelBlock = findFieldLabelBlock(field);
   if (labelBlock) {
-    anchorTops.push(labelBlock.getBoundingClientRect().top);
+    const blockRect = labelBlock.getBoundingClientRect();
+    anchorTops.push(blockRect.top);
+    bottom = Math.max(blockRect.bottom, fieldRect.bottom);
   }
 
   return {
     top: minFocusScrollTop(fieldRect.top, anchorTops),
-    bottom: fieldRect.bottom,
+    bottom,
     left: fieldRect.left,
     right: fieldRect.right,
   };
@@ -311,12 +335,7 @@ export function scrollFieldIntoModalView(
     vv?.top ?? 0,
   ) + extraTop;
 
-  let delta = 0;
-  if (scrollRect.bottom > visibleBottom) {
-    delta = scrollRect.bottom - visibleBottom;
-  } else if (scrollRect.top < visibleTop) {
-    delta = scrollRect.top - visibleTop;
-  }
+  const delta = computeFocusScrollDelta(scrollRect, visibleTop, visibleBottom);
 
   if (Math.abs(delta) < 2) return true;
 
@@ -394,6 +413,7 @@ export const MobileModalBehaviorLayer = {
   computeKeyboardInset,
   isVirtualKeyboardClosing,
   syncKeyboardCssVars,
+  computeFocusScrollDelta,
   getFocusScrollRect,
   findFocusScrollGroup,
   findFieldLabelBlock,
