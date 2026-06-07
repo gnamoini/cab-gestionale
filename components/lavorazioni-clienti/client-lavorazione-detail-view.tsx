@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type MouseEvent } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionaleRefreshToolbarButton, gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
+import { GestionaleRefreshToolbarButton, gestionalePageToolbarActionsInnerClass } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { IconBack, IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
 import { ClientLavorazioneInformazioniPanel } from "@/components/lavorazioni-clienti/client-lavorazione-informazioni-panel";
@@ -157,7 +157,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
         title={pageTitle}
         leading={backToListButton}
         actions={
-          <div className={gestionalePageToolbarActionsClass}>
+          <div className={gestionalePageToolbarActionsInnerClass}>
             <GestionaleRefreshToolbarButton
               busy={refreshBusy}
               onClick={() => void refreshClientData()}

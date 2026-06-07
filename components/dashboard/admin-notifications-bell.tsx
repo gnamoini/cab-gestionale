@@ -113,7 +113,7 @@ function NotificationsPanelFooter({
 
   return (
     <footer className="flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-3 py-2.5">
-      <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1.5">
+      <div className="flex-safe-row min-w-0 max-w-full flex-nowrap items-center justify-between gap-x-2 gap-y-1.5 sm:flex-wrap">
         <span className="text-xs text-[color:var(--cab-text-muted)]">
           Desktop{" "}
           <span
@@ -126,7 +126,7 @@ function NotificationsPanelFooter({
             {statusLabel}
           </span>
         </span>
-        <div className="flex flex-wrap items-center gap-1">
+        <div className="flex-safe-row min-w-0 max-w-full flex-nowrap items-center gap-1 sm:flex-wrap">
           {canEnable ? (
             <button type="button" className={dsBtnGhost} onClick={() => void handleEnable()}>
               Abilita

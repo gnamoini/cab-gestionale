@@ -1,6 +1,7 @@
 /**
  * Evita crash Turbopack HMR (NextSegmentConfig) da lock stale o seconda istanza dev.
  * Legge `.next/dev/lock` e fallisce con messaggio chiaro se un next dev è già attivo.
+ * Se il dev in ascolto risponde 404 su /login (manifest corrotto), termina e pulisce .next/dev.
  */
 import { execSync } from "node:child_process";
 import fs from "node:fs";
@@ -30,6 +31,53 @@ function pidAlive(pid: number): boolean {
 
 const DEFAULT_DEV_PORT = 3000;
 
+/** GET /login — 404 indica manifest route corrotto (redirect loop → pagina 404 standalone). */
+function fetchLoginRouteStatus(port: number): number | null {
+  try {
+    const out = execSync(`curl.exe -s -o NUL -w "%{http_code}" http://127.0.0.1:${port}/login`, {
+      encoding: "utf8",
+      timeout: 8000,
+    });
+    const status = Number(String(out).trim());
+    return Number.isFinite(status) ? status : null;
+  } catch {
+    return null;
+  }
+}
+
+function killDevPid(pid: number): void {
+  try {
+    process.kill(pid, "SIGTERM");
+  } catch {
+    try {
+      execSync(`taskkill /PID ${pid} /F`, { stdio: "ignore" });
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function recoverCorruptedDevServer(pid: number, port: number, reason: string, loginStatus: number | null): void {
+  console.warn(
+    `[dev] Dev server unhealthy on port ${port} (GET /login → ${loginStatus ?? "unreachable"}). Recovering…`,
+  );
+  killDevPid(pid);
+  removeDevCacheAfterCrash(reason);
+}
+
+function failDevAlreadyRunning(pid: number, port: number, reason: string): never {
+  const loginStatus = fetchLoginRouteStatus(port);
+  if (loginStatus === 404) {
+    recoverCorruptedDevServer(pid, port, "login-route-404", loginStatus);
+    process.exit(0);
+  }
+  console.error(`[dev] Next.js dev server already running (${reason}, PID ${pid}, port ${port}).`);
+  console.error(`[dev] Stop it first: taskkill /PID ${pid} /F`);
+  console.error("[dev] Then: npm run clean:next -- --force && npm run dev");
+  console.error("[dev] Or use: npm run dev:webpack while editing proxy.ts / proxy-handler.ts");
+  process.exit(1);
+}
+
 /** Rileva PID in ascolto su porta (Windows netstat) — lock assente ma processo zombie. */
 function pidListeningOnPort(port: number): number | null {
   try {
@@ -45,14 +93,6 @@ function pidListeningOnPort(port: number): number | null {
     /* ignore */
   }
   return null;
-}
-
-function failDevAlreadyRunning(pid: number, port: number, reason: string): never {
-  console.error(`[dev] Next.js dev server already running (${reason}, PID ${pid}, port ${port}).`);
-  console.error(`[dev] Stop it first: taskkill /PID ${pid} /F`);
-  console.error("[dev] Then: npm run clean:next -- --force && npm run dev");
-  console.error("[dev] Or use: npm run dev:webpack while editing proxy.ts / proxy-handler.ts");
-  process.exit(1);
 }
 
 const orphanPortPid = pidListeningOnPort(DEFAULT_DEV_PORT);

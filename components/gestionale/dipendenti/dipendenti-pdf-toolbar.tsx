@@ -1,7 +1,7 @@
 "use client";
 
 import { PageToolbarCtaLabel } from "@/components/design-system";
-import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
+import { gestionalePageToolbarActionsInnerClass } from "@/components/gestionale/page-header-toolbar";
 import { dsPageToolbarBtn } from "@/lib/ui/design-system";
 
 function PdfExportIcon({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
@@ -30,7 +30,7 @@ export function DipendentiPdfToolbar({
   const needsAddetto = !filterEmployeeId;
   return (
     <div
-      className={`${gestionalePageToolbarActionsClass} min-w-0`}
+      className={`${gestionalePageToolbarActionsInnerClass} min-w-0`}
       role="group"
       aria-label="Export PDF presenze"
     >

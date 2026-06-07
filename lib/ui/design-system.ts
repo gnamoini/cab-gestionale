@@ -77,7 +77,7 @@ export const dsBtnNeutral = `inline-flex items-center justify-center gap-1.5 rou
  * - solo icona: `dsPageToolbarIconBtn` (40×40)
  * - icona + testo: `dsPageToolbarBtn`
  */
-export const dsPageToolbarBtn = `inline-flex min-h-[2.5rem] shrink-0 items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] ${cabSurface} px-3 py-2 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,box-shadow,ring-color,border-color,color] duration-200 ease-out hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+export const dsPageToolbarBtn = `inline-flex min-h-[2.5rem] min-w-0 shrink-0 items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] ${cabSurface} px-3 py-2 text-xs font-semibold ${cabText} shadow-[var(--cab-shadow-sm)] transition-[background-color,box-shadow,ring-color,border-color,color] duration-200 ease-out hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
 /** Solo icona in toolbar header — footprint quadrato 40×40. */
 export const dsPageToolbarIconBtn = `${dsPageToolbarBtn} h-10 w-10 min-h-0 p-0`;

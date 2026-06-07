@@ -142,7 +142,7 @@ export function SistemaImpostazioniWorkspace({
   const pageMode = surface === "page";
   const bulkSave = useSettingsBulkMutation();
   const { undoable: undoableConfigSave, sessionId: undoSessionId } = useUndoableConfigurazioneSave({
-    enabled: open && pageMode,
+    enabled: open && surface === "page",
   });
   const statiInUsoQ = useLavorazioniStatiInUsoQuery({ enabled: open });
   const addettiInUsoQ = useLavorazioniAddettiInUsoQuery({ enabled: open });
