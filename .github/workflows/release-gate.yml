@@ -67,6 +67,13 @@ jobs:
       - name: UX mobile gate
         run: npm run ux:mobile-gate
 
+      - name: Verify Supabase secrets present
+        run: |
+          test -n "$NEXT_PUBLIC_SUPABASE_URL"
+          test -n "$NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+          echo "Supabase secrets present"
+
       - name: Production readiness (RBAC, storage, pilot, legacy URLs)
         run: npm run production:check
 

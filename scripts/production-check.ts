@@ -131,12 +131,23 @@ async function main() {
   printGateHeader("Production readiness detail");
   printChecksSection(CHECK_GROUPS, blockerIds, warningIds);
 
-  if (report.meta.dbChecked) {
-    console.log("DB snapshot: connected");
-  } else if (requireDb()) {
+  if (!report.meta.dbChecked) {
     console.log("DB snapshot: not connected (required)");
+    if (requireDb()) {
+      const missing = [
+        !process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() && "NEXT_PUBLIC_SUPABASE_URL",
+        !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() && "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        !process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() && "SUPABASE_SERVICE_ROLE_KEY",
+      ].filter(Boolean);
+      if (missing.length > 0) {
+        console.log(`[production:check] missing env: ${missing.join(", ")}`);
+      }
+      for (const b of report.findings.blockers) {
+        console.log(`[production:check] blocker: ${b.id}`);
+      }
+    }
   } else {
-    console.log("DB snapshot: skipped (set PRODUCTION_CHECK_REQUIRE_DB=1 for CI)");
+    console.log("DB snapshot: connected");
   }
 
   exitWithGate(status);
