@@ -118,7 +118,7 @@ async function main(): Promise<void> {
   const { key_id, key } = await getPublicKey(token);
   for (const { name, value } of toSet) {
     await setSecret(token, name, value, key_id, key);
-    console.log(`[sync-secrets] OK ${name}`);
+    console.log(`[sync-secrets] OK ${name} (len=${value.length})`);
   }
 
   if (skipped.length > 0) {

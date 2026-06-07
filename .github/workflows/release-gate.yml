@@ -74,6 +74,9 @@ jobs:
           test -n "$SUPABASE_SERVICE_ROLE_KEY"
           echo "Supabase secrets present"
 
+      - name: Verify Supabase connection
+        run: npx tsx scripts/verify-supabase-ci-env.ts
+
       - name: Production readiness (RBAC, storage, pilot, legacy URLs)
         run: npm run production:check
 
