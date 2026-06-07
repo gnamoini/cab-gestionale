@@ -19,6 +19,14 @@ function isProductionDeployTarget(env: NodeJS.ProcessEnv): boolean {
   return nodeEnv === "production" || vercelEnv === "production";
 }
 
+function missingSupabaseEnvForDbCheck(env: NodeJS.ProcessEnv): string[] {
+  const missing: string[] = [];
+  if (!env.NEXT_PUBLIC_SUPABASE_URL?.trim()) missing.push("NEXT_PUBLIC_SUPABASE_URL");
+  if (!env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim()) missing.push("NEXT_PUBLIC_SUPABASE_ANON_KEY");
+  if (!env.SUPABASE_SERVICE_ROLE_KEY?.trim()) missing.push("SUPABASE_SERVICE_ROLE_KEY");
+  return missing;
+}
+
 function pushFinding(
   list: ProductionReadinessFinding[],
   finding: ProductionReadinessFinding,
@@ -169,10 +177,15 @@ export function validateProductionReadiness(input: ProductionReadinessInput = {}
   }
 
   if (!db.connected && input.requireDb) {
+    const missingEnv = missingSupabaseEnvForDbCheck(env);
     pushFinding(blockers, {
       id: "feature-flag-db-not-checked",
       category: "database",
       message: "Impossibile verificare app_settings.system.enable_operator_global_settings (DB non connesso).",
+      detail:
+        missingEnv.length > 0
+          ? `Configurare in GitHub Actions secrets: ${missingEnv.join(", ")}. Vedi docs/release-gate.md.`
+          : "Verificare connettività Supabase e permessi service role.",
     });
   }
 
