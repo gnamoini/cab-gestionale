@@ -42,6 +42,8 @@
     "documenti:remediate-url-file": "npx tsx scripts/remediate-documenti-url-file.ts",
     "ops:env-check": "npx tsx scripts/ops-env-check.ts",
     "audit:rls": "npx tsx scripts/rls-service-audit.ts",
+    "audit:supabase": "npx tsx scripts/supabase-audit-inventory.ts",
+    "audit:supabase:json": "npx tsx scripts/supabase-audit-inventory.ts --json",
     "analyze": "npx tsx scripts/analyze-bundle.ts"
   },
   "dependencies": {

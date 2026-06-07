@@ -22,6 +22,7 @@ import {
   type GestionaleDataSectionTableLayout,
   PDF_GESTIONALE_MUTED_FILL,
 } from "@/lib/pdf/gestionale-section-table";
+import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import {
   drawGestionalePdfHeader,
   drawPdfPageFooters,
@@ -47,12 +48,16 @@ type PresenzeMonthlyGridOptions = {
   showFooterTotals?: boolean;
 };
 
-export function buildDipendentePdf(ctx: DipendentiPdfContext, employee: DipendenteTimesheetEmployeeRow): JsPDFDoc {
+export async function buildDipendentePdf(
+  ctx: DipendentiPdfContext,
+  employee: DipendenteTimesheetEmployeeRow,
+): Promise<JsPDFDoc> {
+  const logoDataUrl = await loadBrandingLogoDataUrl();
   const displayName = employeeDisplayName(employee, ctx.entries);
   const title = timesheetDipendenteTitle(ctx.monthKey, displayName);
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
-  let y = drawGestionalePdfHeader(doc, pageW, title, { metaDivider: false });
+  let y = drawGestionalePdfHeader(doc, pageW, title, { metaDivider: false, logoDataUrl });
   y = pdfAdvanceSection(y);
 
   drawDipendentePresenzeVerticalTable(doc, ctx, employee, y, pageW, title);
@@ -61,15 +66,16 @@ export function buildDipendentePdf(ctx: DipendentiPdfContext, employee: Dipenden
   return doc;
 }
 
-export function buildComplessivoPdf(ctx: DipendentiPdfContext): JsPDFDoc {
+export async function buildComplessivoPdf(ctx: DipendentiPdfContext): Promise<JsPDFDoc> {
   if (ctx.employees.length === 0) {
     throw new Error("Nessun dipendente da esportare.");
   }
 
+  const logoDataUrl = await loadBrandingLogoDataUrl();
   const title = timesheetComplessivoTitle(ctx.monthKey);
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
-  let y = drawGestionalePdfHeader(doc, pageW, title, { metaDivider: false });
+  let y = drawGestionalePdfHeader(doc, pageW, title, { metaDivider: false, logoDataUrl });
   y = pdfAdvanceSection(y);
 
   drawPresenzeMonthlyGrid(doc, ctx, y, pageW, title, { showFooterTotals: true });

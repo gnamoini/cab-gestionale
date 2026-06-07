@@ -10,6 +10,7 @@ import { noteRealtimeReconnect } from "@/lib/observability/degradation-detector"
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import {
   appSettingsChangeFingerprint,
+  isOperatorGlobalSettingsPilotPayload,
   isOwnAppSettingsWrite,
   REMOTE_SETTINGS_NOTIFY_DEBOUNCE_MS,
   shouldShowRemoteSettingsToast,
@@ -22,6 +23,7 @@ import {
   invalidateAllGestionaleOperationalQueries,
 } from "@/lib/realtime/gestionale-realtime-config";
 import { isGestionaleForcePollEnabled } from "@/lib/realtime/gestionale-force-poll";
+import { setGestionaleRealtimeRuntimeMode } from "@/lib/realtime/gestionale-realtime-runtime";
 import {
   postgresChangeFingerprint,
   subscribePostgresChangesChannel,
@@ -95,6 +97,7 @@ export function GestionaleRealtimeBridge() {
     const setConnectionStatus = (next: "connected" | "polling" | "idle") => {
       setGestionaleStatus(next);
       setSettingsStatus(next);
+      setGestionaleRealtimeRuntimeMode(next);
     };
 
     const isSettingsEditorActive = () =>
@@ -170,8 +173,9 @@ export function GestionaleRealtimeBridge() {
       }, GESTIONALE_REALTIME_DEBOUNCE_MS);
     };
 
-    const onAuthCriticalChange = (table: string) => {
+    const onAuthCriticalChange = (table: string, payload?: PostgresChangePayload) => {
       if (table === "app_settings") {
+        if (payload && !isOperatorGlobalSettingsPilotPayload(payload)) return;
         void invalidateRuntimeTruth({
           reason: "pilotChanged",
           queryClient: qc,
@@ -204,7 +208,7 @@ export function GestionaleRealtimeBridge() {
 
         const cabEvent = cabSyncEventFromPostgresChange(table, payload) ?? { type: "settings_updated" as const };
         scheduleInvalidate(table, cabEvent);
-        onAuthCriticalChange(table);
+        onAuthCriticalChange(table, payload);
         scheduleRemoteSettingsNotify();
         return;
       }

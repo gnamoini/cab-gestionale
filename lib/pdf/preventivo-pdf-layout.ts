@@ -1,5 +1,10 @@
-import type { jsPDF } from "jspdf";
+import { jsPDF, type jsPDF as JsPDFDoc } from "jspdf";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
+import {
+  CAB_LOGO_PDF_ASPECT,
+  CAB_LOGO_PDF_MAX_HEIGHT_MM,
+  pdfImageFormatFromDataUrl,
+} from "@/lib/branding/branding-logo-for-pdf";
 
 export {
   buildPreventivoAttrezzaturaPdfFields,
@@ -30,6 +35,11 @@ export const PDF_SECTION_GAP = 5.5;
 export const PDF_SECTION_CONTENT_GAP = 2;
 
 export const PDF_COMPANY_NAME = "CENTRO ASSISTENZA BARI SRL";
+
+/** Altezza fissa slot brand header (1 riga testo 13pt + gap prima titolo documento). */
+export const PDF_HEADER_BRAND_BLOCK_MM = 6.5;
+/** Altezza massima logo nel blocco brand (≤ slot per paginazione stabile). */
+export const PDF_HEADER_BRAND_MAX_MM = 6.5;
 
 /** Aliquota IVA predefinita per riepilogo documento (imponibile = totale finale calcolato). */
 export const PDF_PREVENTIVO_IVA_PERCENT = 22;
@@ -104,28 +114,83 @@ export type PreventivoPdfHeaderMeta = {
   operatore?: string;
   /** Default true: linea orizzontale sotto metadati (data/operatore). */
   metaDivider?: boolean;
+  /** Logo branding (data URL) — opzionale. */
+  logoDataUrl?: string | null;
 };
 
-/** Intestazione aziendale + tipo documento + metadati documento su una riga. */
-export function drawPreventivoPdfHeader(
-  doc: jsPDF,
+/**
+ * Blocco brand header: logo centrato **oppure** testo aziendale (fallback).
+ * Occupazione verticale fissa (`PDF_HEADER_BRAND_BLOCK_MM`) per allineare il titolo documento.
+ */
+export function drawPdfBrandBlock(
+  doc: JsPDFDoc,
   pageW: number,
-  tipoDocumentoUpper: string,
-  meta?: PreventivoPdfHeaderMeta,
+  startY: number,
+  logoDataUrl?: string | null,
 ): number {
-  let y = PDF_MARGIN_TOP;
   const cw = pdfContentWidth(pageW);
+  const blockEndY = startY + PDF_HEADER_BRAND_BLOCK_MM;
+
+  if (logoDataUrl) {
+    try {
+      const maxH = Math.min(PDF_HEADER_BRAND_MAX_MM, CAB_LOGO_PDF_MAX_HEIGHT_MM);
+      let logoH = maxH;
+      let logoW = logoH * CAB_LOGO_PDF_ASPECT;
+      if (logoW > cw) {
+        logoW = cw;
+        logoH = logoW / CAB_LOGO_PDF_ASPECT;
+      }
+      const logoX = pageW / 2 - logoW / 2;
+      doc.addImage(
+        logoDataUrl,
+        pdfImageFormatFromDataUrl(logoDataUrl),
+        logoX,
+        startY,
+        logoW,
+        logoH,
+        undefined,
+        "FAST",
+      );
+      return blockEndY;
+    } catch {
+      /* fallback testuale sotto */
+    }
+  }
 
   doc.setTextColor(...C_PRIMARY);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
   const companyLines = doc.splitTextToSize(PDF_COMPANY_NAME, cw) as string[];
+  let y = startY;
   for (const line of companyLines) {
     doc.text(line, pageW / 2, y, { align: "center" });
     y += 5.5;
   }
 
-  y += 1;
+  return blockEndY;
+}
+
+/** Y finale header (helper test/regression paginazione). */
+export function measureGestionalePdfHeaderEndY(
+  pageW: number,
+  tipoDocumentoUpper: string,
+  meta?: PreventivoPdfHeaderMeta,
+): number {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+  return drawPreventivoPdfHeader(doc, pageW, tipoDocumentoUpper, meta);
+}
+
+/** Intestazione aziendale + tipo documento + metadati documento su una riga. */
+export function drawPreventivoPdfHeader(
+  doc: JsPDFDoc,
+  pageW: number,
+  tipoDocumentoUpper: string,
+  meta?: PreventivoPdfHeaderMeta,
+): number {
+  let y = PDF_MARGIN_TOP;
+
+  y = drawPdfBrandBlock(doc, pageW, y, meta?.logoDataUrl);
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11.5);
   doc.setTextColor(...C_PRIMARY);
@@ -418,9 +483,8 @@ export function drawPdfTotalsSummary(
   return y + boxH + PDF_SECTION_GAP;
 }
 
-export function drawPdfPageFooters(doc: jsPDF, numero: string): void {
+export function drawPdfPageFooters(doc: JsPDFDoc, numero: string): void {
   const pageCount = doc.getNumberOfPages();
-  const pageH = doc.internal.pageSize.getHeight();
   const numeroClean = cleanField(numero) ?? "";
   for (let i = 1; i <= pageCount; i += 1) {
     doc.setPage(i);
@@ -429,6 +493,5 @@ export function drawPdfPageFooters(doc: jsPDF, numero: string): void {
     doc.setTextColor(...C_MUTED);
     const footer = numeroClean ? `${numeroClean} · Pag. ${i}/${pageCount}` : `Pag. ${i}/${pageCount}`;
     doc.text(footer, PDF_MARGIN_L, PDF_FOOTER_Y);
-    doc.text(PDF_COMPANY_NAME, doc.internal.pageSize.getWidth() - PDF_MARGIN_R, PDF_FOOTER_Y, { align: "right" });
   }
 }

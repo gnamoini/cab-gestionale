@@ -8,6 +8,7 @@ import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-pref
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
+import type { CabBrandingSettings } from "@/lib/branding/branding-settings-model";
 
 export type ConfigurazioneSettingsSnapshot = {
   stati: StatoLavorazioneConfig[];
@@ -19,6 +20,7 @@ export type ConfigurazioneSettingsSnapshot = {
   liste: MezziListePrefs;
   eco: SistemaPreventiviDefaults;
   tipiAssenza: TipoAssenzaConfig[];
+  branding: CabBrandingSettings;
 };
 
 export type ConfigurazioneSectionId =
@@ -38,7 +40,8 @@ export type ConfigurazioneSectionId =
   | "tel-tipo"
   | "tel-marca"
   | "tel-modello"
-  | "sys-economici";
+  | "sys-economici"
+  | "brand-personalizzazione";
 
 export const CONFIGURAZIONE_SECTION_LABELS: Record<ConfigurazioneSectionId, string> = {
   "op-addetti": "Addetti",
@@ -58,6 +61,7 @@ export const CONFIGURAZIONE_SECTION_LABELS: Record<ConfigurazioneSectionId, stri
   "tel-marca": "Marca telaio",
   "tel-modello": "Modello telaio",
   "sys-economici": "Parametri economici",
+  "brand-personalizzazione": "Branding",
 };
 
 function sliceKey(value: unknown): string {

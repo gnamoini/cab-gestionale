@@ -10,9 +10,13 @@ import {
 } from "react";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import {
+  SETTINGS_HIERARCHY_MODEL_BOX,
+  SETTINGS_HIERARCHY_MODEL_INPUT,
   SETTINGS_LIST_UL,
   SETTINGS_PANEL_SHELL,
+  SETTINGS_SECTION_HINT,
   SettingsEditableStringRow,
+  SettingsEmptyState,
   SettingsQuickAddRow,
   SettingsRowActionButtons,
 } from "@/components/dashboard/settings-list-ui";
@@ -35,16 +39,9 @@ import {
   dsPageToolbarCtaCompact,
   dsPageToolbarMetaChip,
   dsPageToolbarMetaChipAccent,
-  dsTypoSmall,
 } from "@/lib/ui/design-system";
 import { PageToolbarCtaLabel } from "@/components/design-system";
 
-/** Box unificato per riga modello e riga “aggiungi modello”. */
-const HIERARCHY_MODEL_BOX =
-  "group flex min-h-8 items-center gap-1.5 rounded-[var(--ds-radius-md)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2 transition-colors duration-150 hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-card))]";
-
-const HIERARCHY_MODEL_INPUT =
-  "min-h-8 min-w-0 flex-1 border-0 bg-transparent px-1 py-0 text-sm font-medium text-[color:var(--cab-text)] outline-none placeholder:font-normal placeholder:text-[color:var(--cab-text-muted)] focus:bg-[color:color-mix(in_srgb,var(--cab-surface)_85%,var(--cab-card))] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]";
 
 function HierarchyModelRow({
   value,
@@ -69,10 +66,10 @@ function HierarchyModelRow({
   };
 
   return (
-    <li className={HIERARCHY_MODEL_BOX}>
+    <li className={SETTINGS_HIERARCHY_MODEL_BOX}>
       <input
         ref={inputRef}
-        className={HIERARCHY_MODEL_INPUT}
+        className={SETTINGS_HIERARCHY_MODEL_INPUT}
         defaultValue={value}
         key={`${value}-hierarchy`}
         aria-label={ariaLabel ?? `Modifica ${value}`}
@@ -160,9 +157,9 @@ function MarcaModelsPanel({
           onRemove={() => onRemoveModello(mod.id, mod.nome)}
         />
       ))}
-      <li className={`${HIERARCHY_MODEL_BOX} gap-2 sm:gap-1.5`}>
+      <li className={`${SETTINGS_HIERARCHY_MODEL_BOX} gap-2 sm:gap-1.5`}>
         <input
-          className={HIERARCHY_MODEL_INPUT}
+          className={SETTINGS_HIERARCHY_MODEL_INPUT}
           value={modelDraft}
           onChange={(e) => onModelDraftChange(e.target.value)}
           placeholder={sortedModelli.length === 0 ? "Primo modello…" : "Nuovo modello…"}
@@ -277,7 +274,7 @@ export function HierarchyTreeSettingsSection({
   return (
     <div className="w-full space-y-4">
       {variant === "modello" ? (
-        <p className={`${dsTypoSmall} text-[color:var(--cab-text-muted)]`}>
+        <p className={SETTINGS_SECTION_HINT}>
           Modifica il nome nel campo, poi Conferma (o Invio). Annulla ripristina il testo. La riga in basso aggiunge un
           modello alla marca.
         </p>
@@ -312,11 +309,11 @@ export function HierarchyTreeSettingsSection({
       ) : null}
 
       {filteredTree.length === 0 ? (
-        <p className={`text-center ${dsTypoSmall} text-[color:var(--cab-text-muted)]`}>
+        <SettingsEmptyState>
           {variant === "marca"
             ? "Nessuna marca. Aggiungi la prima marca sopra."
             : "Nessun risultato. Prova un altro testo o aggiungi marche nella sezione Marca."}
-        </p>
+        </SettingsEmptyState>
       ) : variant === "modello" ? (
         <div className="space-y-2">
           {filteredTree.map((m) => {

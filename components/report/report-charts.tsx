@@ -3,7 +3,7 @@
 import { memo } from "react";
 import type { YearForecastLinePoint } from "@/lib/report/lavorazioni-year-matrix";
 
-const ORANGE = "#ff6633";
+const ORANGE = "var(--cab-primary)";
 const ZINC = "#71717a";
 const SKY = "#0ea5e9";
 const EMERALD = "#22c55e";

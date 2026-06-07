@@ -1,0 +1,2712 @@
+{
+  "generatedAt": "2026-06-07T01:18:04.668Z",
+  "migrationCount": 80,
+  "migrations": [
+    {
+      "file": "20260211120000_officina_gestionale_core.sql",
+      "timestamp": "20260211120000",
+      "slug": "officina_gestionale_core",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "documenti",
+        "lavorazioni",
+        "log_modifiche",
+        "magazzino_ricambi",
+        "mezzi",
+        "movimenti_ricambi",
+        "preventivi",
+        "profiles",
+        "scheda_lavorazione"
+      ],
+      "policies": [],
+      "functions": [
+        "set_updated_at"
+      ],
+      "triggers": [
+        "documenti_set_updated_at",
+        "lavorazioni_set_updated_at",
+        "magazzino_ricambi_set_updated_at",
+        "mezzi_set_updated_at",
+        "preventivi_set_updated_at",
+        "profiles_set_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_documenti_categoria",
+        "idx_documenti_created_at",
+        "idx_documenti_marca_modello",
+        "idx_documenti_mezzo_id",
+        "idx_lavorazioni_created_by",
+        "idx_lavorazioni_data_ingresso",
+        "idx_lavorazioni_mezzo_id",
+        "idx_lavorazioni_stato",
+        "idx_log_modifiche_autore_id",
+        "idx_log_modifiche_created_at",
+        "idx_log_modifiche_entita",
+        "idx_magazzino_ricambi_codice",
+        "idx_magazzino_ricambi_marca",
+        "idx_magazzino_ricambi_nome_trgm",
+        "idx_mezzi_cliente",
+        "idx_mezzi_created_by",
+        "idx_mezzi_marca_modello",
+        "idx_mezzi_matricola",
+        "idx_mezzi_targa",
+        "idx_movimenti_ricambi_created_at",
+        "idx_movimenti_ricambi_lavorazione_id",
+        "idx_movimenti_ricambi_ricambio_id",
+        "idx_movimenti_ricambi_tipo",
+        "idx_preventivi_cliente",
+        "idx_preventivi_created_at",
+        "idx_preventivi_lavorazione_id",
+        "idx_preventivi_mezzo_id",
+        "idx_profiles_ruolo",
+        "idx_scheda_lavorazione_contenuto_gin",
+        "idx_scheda_lavorazione_created_at",
+        "idx_scheda_lavorazione_lavorazione_id",
+        "idx_scheda_lavorazione_tipo"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260211140000_officina_gestionale_schema.sql",
+      "timestamp": "20260211140000",
+      "slug": "officina_gestionale_schema",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "documenti",
+        "lavorazioni",
+        "log_modifiche",
+        "magazzino_ricambi",
+        "mezzi",
+        "movimenti_ricambi",
+        "preventivi",
+        "profiles",
+        "scheda_lavorazione"
+      ],
+      "policies": [],
+      "functions": [
+        "set_updated_at"
+      ],
+      "triggers": [
+        "trg_lavorazioni_updated_at",
+        "trg_magazzino_ricambi_updated_at",
+        "trg_mezzi_updated_at",
+        "trg_preventivi_updated_at",
+        "trg_profiles_updated_at",
+        "trg_scheda_lavorazione_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_lavorazioni_mezzo_id",
+        "idx_log_modifiche_entita_entita_id_created_at",
+        "idx_magazzino_ricambi_nome_trgm",
+        "idx_mezzi_cliente_trgm",
+        "idx_movimenti_ricambi_lavorazione_id",
+        "idx_movimenti_ricambi_ricambio_id",
+        "idx_preventivi_mezzo_id",
+        "idx_scheda_lavorazione_contenuto_gin"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260211160000_officina_rls_auth_profiles.sql",
+      "timestamp": "20260211160000",
+      "slug": "officina_rls_auth_profiles",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "documenti",
+        "lavorazioni",
+        "log_modifiche",
+        "magazzino_ricambi",
+        "mezzi",
+        "movimenti_ricambi",
+        "preventivi",
+        "profiles",
+        "scheda_lavorazione"
+      ],
+      "policies": [
+        "documenti_delete_priv",
+        "documenti_insert_priv",
+        "documenti_select_role",
+        "documenti_update_priv",
+        "lavorazioni_delete_priv",
+        "lavorazioni_insert_priv",
+        "lavorazioni_select_role",
+        "lavorazioni_update_priv",
+        "log_modifiche_insert_priv",
+        "log_modifiche_select_role",
+        "magazzino_ricambi_delete_priv",
+        "magazzino_ricambi_insert_priv",
+        "magazzino_ricambi_select_role",
+        "magazzino_ricambi_update_priv",
+        "mezzi_delete_priv",
+        "mezzi_insert_priv",
+        "mezzi_select_role",
+        "mezzi_update_priv",
+        "movimenti_ricambi_delete_priv",
+        "movimenti_ricambi_insert_priv",
+        "movimenti_ricambi_select_role",
+        "movimenti_ricambi_update_priv",
+        "preventivi_delete_priv",
+        "preventivi_insert_priv",
+        "preventivi_select_role",
+        "preventivi_update_priv",
+        "profiles_delete_admin",
+        "profiles_select_role",
+        "profiles_update_admin",
+        "scheda_lavorazione_delete_priv",
+        "scheda_lavorazione_insert_priv",
+        "scheda_lavorazione_select_role",
+        "scheda_lavorazione_update_priv"
+      ],
+      "functions": [
+        "current_profile_role",
+        "handle_new_user"
+      ],
+      "triggers": [
+        "on_auth_user_created"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260212120000_app_settings.sql",
+      "timestamp": "20260212120000",
+      "slug": "app_settings",
+      "tags": [
+        "realtime",
+        "auth"
+      ],
+      "tables": [
+        "app_settings"
+      ],
+      "policies": [
+        "app_settings_delete_admin",
+        "app_settings_insert_admin",
+        "app_settings_select_auth",
+        "app_settings_update_admin"
+      ],
+      "functions": [],
+      "triggers": [
+        "trg_app_settings_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_app_settings_module"
+      ],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260215120000_stabilize_profiles_app_settings_rls.sql",
+      "timestamp": "20260215120000",
+      "slug": "stabilize_profiles_app_settings_rls",
+      "tags": [
+        "auth"
+      ],
+      "tables": [],
+      "policies": [
+        "app_settings_select_auth"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260216120000_app_settings_select_requires_profile.sql",
+      "timestamp": "20260216120000",
+      "slug": "app_settings_select_requires_profile",
+      "tags": [
+        "auth"
+      ],
+      "tables": [],
+      "policies": [
+        "app_settings_select_auth"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260218120000_app_settings_audit.sql",
+      "timestamp": "20260218120000",
+      "slug": "app_settings_audit",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "app_settings_audit"
+      ],
+      "policies": [
+        "app_settings_audit_select_admin"
+      ],
+      "functions": [
+        "log_app_settings_update_audit"
+      ],
+      "triggers": [
+        "trg_app_settings_audit_update"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_app_settings_audit_module_key_at",
+        "idx_app_settings_audit_updated_at"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260219120000_user_permissions.sql",
+      "timestamp": "20260219120000",
+      "slug": "user_permissions",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "user_permissions"
+      ],
+      "policies": [
+        "app_settings_delete_admin",
+        "app_settings_insert_admin",
+        "app_settings_select_auth",
+        "app_settings_update_admin",
+        "user_permissions_select_own_or_admin",
+        "user_permissions_write_admin"
+      ],
+      "functions": [
+        "user_effective_can"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_user_permissions_user"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260220120000_auth_logs.sql",
+      "timestamp": "20260220120000",
+      "slug": "auth_logs",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "auth_logs"
+      ],
+      "policies": [
+        "auth_logs_insert_failed_anon",
+        "auth_logs_insert_failed_auth",
+        "auth_logs_insert_login",
+        "auth_logs_insert_logout",
+        "auth_logs_select"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_auth_logs_created",
+        "idx_auth_logs_user_created"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260511120000_auth_logs_realtime.sql",
+      "timestamp": "20260511120000",
+      "slug": "auth_logs_realtime",
+      "tags": [
+        "realtime"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260511130000_handle_new_user_profile_app_metadata.sql",
+      "timestamp": "20260511130000",
+      "slug": "handle_new_user_profile_app_metadata",
+      "tags": [
+        "auth"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "handle_new_user"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260517194000_rbac_enum_ospite_cliente.sql",
+      "timestamp": "20260517194000",
+      "slug": "rbac_enum_ospite_cliente",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260517194100_rbac_official_roles.sql",
+      "timestamp": "20260517194100",
+      "slug": "rbac_official_roles",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "profiles"
+      ],
+      "policies": [
+        "app_settings_delete_admin",
+        "app_settings_insert_admin",
+        "app_settings_select_auth",
+        "app_settings_update_admin",
+        "auth_logs_select",
+        "documenti_delete_priv",
+        "documenti_insert_priv",
+        "documenti_select_role",
+        "documenti_update_priv",
+        "lavorazioni_delete_priv",
+        "lavorazioni_insert_priv",
+        "lavorazioni_select_role",
+        "lavorazioni_update_priv",
+        "log_modifiche_insert_priv",
+        "log_modifiche_select_role",
+        "magazzino_ricambi_delete_priv",
+        "magazzino_ricambi_insert_priv",
+        "magazzino_ricambi_select_role",
+        "magazzino_ricambi_update_priv",
+        "mezzi_delete_priv",
+        "mezzi_insert_priv",
+        "mezzi_select_role",
+        "mezzi_update_priv",
+        "movimenti_ricambi_delete_priv",
+        "movimenti_ricambi_insert_priv",
+        "movimenti_ricambi_select_role",
+        "movimenti_ricambi_update_priv",
+        "preventivi_delete_priv",
+        "preventivi_insert_priv",
+        "preventivi_select_role",
+        "preventivi_update_priv",
+        "profiles_delete_admin",
+        "profiles_select_role",
+        "profiles_update_admin",
+        "scheda_lavorazione_delete_priv",
+        "scheda_lavorazione_insert_priv",
+        "scheda_lavorazione_select_role",
+        "scheda_lavorazione_update_priv"
+      ],
+      "functions": [
+        "handle_new_user",
+        "user_effective_can"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260517202600_lavorazioni_priorita_settings.sql",
+      "timestamp": "20260517202600",
+      "slug": "lavorazioni_priorita_settings",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260518120000_extend_stato_lavorazione_enum.sql",
+      "timestamp": "20260518120000",
+      "slug": "extend_stato_lavorazione_enum",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260518120100_log_modifiche_update_operatore.sql",
+      "timestamp": "20260518120100",
+      "slug": "log_modifiche_update_operatore",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "log_modifiche_update_priv"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260518140000_storage_buckets_images_documenti.sql",
+      "timestamp": "20260518140000",
+      "slug": "storage_buckets_images_documenti",
+      "tags": [
+        "storage"
+      ],
+      "tables": [],
+      "policies": [
+        "cab_documenti_delete",
+        "cab_documenti_insert",
+        "cab_documenti_select",
+        "cab_documenti_update",
+        "cab_images_delete",
+        "cab_images_insert",
+        "cab_images_select",
+        "cab_images_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260518150000_magazzino_ricambi_meta.sql",
+      "timestamp": "20260518150000",
+      "slug": "magazzino_ricambi_meta",
+      "tags": [],
+      "tables": [
+        "magazzino_ricambi"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_magazzino_ricambi_meta_gin"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260518160000_rbac_cliente_role.sql",
+      "timestamp": "20260518160000",
+      "slug": "rbac_cliente_role",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "lavorazioni_select_role",
+        "log_modifiche_select_role",
+        "mezzi_select_role"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260518160200_mezzi_meta_optional_matricola.sql",
+      "timestamp": "20260518160200",
+      "slug": "mezzi_meta_optional_matricola",
+      "tags": [],
+      "tables": [
+        "mezzi"
+      ],
+      "policies": [
+        "mezzi_delete_priv"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260518170000_segnalazioni.sql",
+      "timestamp": "20260518170000",
+      "slug": "segnalazioni",
+      "tags": [
+        "soft_delete",
+        "realtime",
+        "auth"
+      ],
+      "tables": [
+        "segnalazioni"
+      ],
+      "policies": [
+        "segnalazioni_insert_role",
+        "segnalazioni_select_role",
+        "segnalazioni_update_role"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_segnalazioni_created_at",
+        "idx_segnalazioni_created_by",
+        "idx_segnalazioni_stato"
+      ],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260518180000_rls_security_hardening.sql",
+      "timestamp": "20260518180000",
+      "slug": "rls_security_hardening",
+      "tags": [
+        "rbac",
+        "storage",
+        "soft_delete",
+        "repair",
+        "auth"
+      ],
+      "tables": [
+        "app_settings",
+        "app_settings_audit",
+        "auth_logs",
+        "documenti",
+        "lavorazioni",
+        "log_modifiche",
+        "magazzino_ricambi",
+        "mezzi",
+        "movimenti_ricambi",
+        "preventivi",
+        "profiles",
+        "scheda_lavorazione",
+        "segnalazioni",
+        "user_permissions"
+      ],
+      "policies": [
+        "app_settings_audit_select_admin",
+        "app_settings_delete_admin",
+        "app_settings_insert_admin",
+        "app_settings_select_auth",
+        "app_settings_update_admin",
+        "auth_logs_select",
+        "cab_documenti_delete",
+        "cab_documenti_insert",
+        "cab_documenti_select",
+        "cab_documenti_update",
+        "cab_images_delete",
+        "cab_images_insert",
+        "cab_images_select",
+        "cab_images_update",
+        "documenti_delete_priv",
+        "documenti_insert_priv",
+        "documenti_select_role",
+        "documenti_update_priv",
+        "lavorazioni_delete_priv",
+        "lavorazioni_insert_priv",
+        "lavorazioni_select_role",
+        "lavorazioni_update_priv",
+        "log_modifiche_delete_admin",
+        "log_modifiche_insert_priv",
+        "log_modifiche_select_role",
+        "log_modifiche_update_priv",
+        "magazzino_ricambi_delete_priv",
+        "magazzino_ricambi_insert_priv",
+        "magazzino_ricambi_select_role",
+        "magazzino_ricambi_update_priv",
+        "mezzi_delete_priv",
+        "mezzi_insert_priv",
+        "mezzi_select_role",
+        "mezzi_update_priv",
+        "movimenti_ricambi_delete_priv",
+        "movimenti_ricambi_insert_priv",
+        "movimenti_ricambi_select_role",
+        "movimenti_ricambi_update_priv",
+        "preventivi_delete_priv",
+        "preventivi_insert_priv",
+        "preventivi_select_role",
+        "preventivi_update_priv",
+        "profiles_delete_admin",
+        "profiles_select_own_or_admin",
+        "profiles_update_admin",
+        "scheda_lavorazione_delete_priv",
+        "scheda_lavorazione_insert_priv",
+        "scheda_lavorazione_select_role",
+        "scheda_lavorazione_update_priv",
+        "segnalazioni_insert_role",
+        "segnalazioni_select_role",
+        "segnalazioni_update_role",
+        "user_permissions_select_admin",
+        "user_permissions_write_admin"
+      ],
+      "functions": [
+        "rbac_can_read_lavorazione_row",
+        "rbac_can_read_log_row",
+        "rbac_can_read_operational",
+        "rbac_can_write_operational",
+        "rbac_cliente_ref",
+        "rbac_is_admin",
+        "rbac_is_cliente",
+        "rbac_is_operatore",
+        "rbac_is_ospite",
+        "rbac_lavorazione_visible_to_cliente",
+        "rbac_mezzo_visible_to_cliente",
+        "rbac_normalized_role",
+        "user_effective_can"
+      ],
+      "triggers": [],
+      "views": [
+        "lavorazioni_clienti"
+      ],
+      "indexes": [
+        "idx_profiles_cliente_ref"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260519120000_rbac_enterprise_refactor.sql",
+      "timestamp": "20260519120000",
+      "slug": "rbac_enterprise_refactor",
+      "tags": [
+        "rbac",
+        "storage",
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [
+        "auth_logs_insert_failed_anon",
+        "auth_logs_insert_failed_auth",
+        "auth_logs_insert_login",
+        "auth_logs_insert_logout",
+        "rbac_app_settings_audit_select",
+        "rbac_app_settings_delete",
+        "rbac_app_settings_insert",
+        "rbac_app_settings_select",
+        "rbac_app_settings_update",
+        "rbac_auth_logs_select",
+        "rbac_documenti_delete",
+        "rbac_documenti_insert",
+        "rbac_documenti_select",
+        "rbac_documenti_update",
+        "rbac_lavorazioni_delete",
+        "rbac_lavorazioni_insert",
+        "rbac_lavorazioni_select",
+        "rbac_lavorazioni_update",
+        "rbac_log_modifiche_delete",
+        "rbac_log_modifiche_insert",
+        "rbac_log_modifiche_select",
+        "rbac_magazzino_ricambi_delete",
+        "rbac_magazzino_ricambi_insert",
+        "rbac_magazzino_ricambi_select",
+        "rbac_magazzino_ricambi_update",
+        "rbac_mezzi_delete",
+        "rbac_mezzi_insert",
+        "rbac_mezzi_select",
+        "rbac_mezzi_update",
+        "rbac_movimenti_ricambi_delete",
+        "rbac_movimenti_ricambi_insert",
+        "rbac_movimenti_ricambi_select",
+        "rbac_movimenti_ricambi_update",
+        "rbac_preventivi_delete",
+        "rbac_preventivi_insert",
+        "rbac_preventivi_select",
+        "rbac_preventivi_update",
+        "rbac_profiles_delete",
+        "rbac_profiles_insert",
+        "rbac_profiles_select",
+        "rbac_profiles_update",
+        "rbac_scheda_lavorazione_delete",
+        "rbac_scheda_lavorazione_insert",
+        "rbac_scheda_lavorazione_select",
+        "rbac_scheda_lavorazione_update",
+        "rbac_segnalazioni_insert",
+        "rbac_segnalazioni_select",
+        "rbac_segnalazioni_update",
+        "rbac_storage_documenti",
+        "rbac_storage_images",
+        "rbac_user_permissions_admin"
+      ],
+      "functions": [
+        "rbac_auth_uid",
+        "rbac_can_delete",
+        "rbac_can_read",
+        "rbac_can_read_app_settings",
+        "rbac_can_read_lavorazione_row",
+        "rbac_can_read_log",
+        "rbac_can_read_log_row",
+        "rbac_can_read_operational",
+        "rbac_can_read_row",
+        "rbac_can_read_storage",
+        "rbac_can_write",
+        "rbac_can_write_operational",
+        "rbac_can_write_storage",
+        "rbac_cliente_ref",
+        "rbac_is_admin",
+        "rbac_is_cliente",
+        "rbac_is_operatore",
+        "rbac_is_operatore_or_admin",
+        "rbac_is_ospite",
+        "rbac_lavorazione_visible_to_cliente",
+        "rbac_mezzo_visible_to_cliente",
+        "rbac_normalized_role",
+        "rbac_resource_allows_delete",
+        "rbac_resource_allows_read",
+        "rbac_resource_allows_write",
+        "rbac_role",
+        "rbac_scope_cliente",
+        "rbac_scope_cliente_lavorazioni_mezzo",
+        "rbac_scope_log_modifiche",
+        "user_effective_can"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260519130000_storage_enterprise_refactor.sql",
+      "timestamp": "20260519130000",
+      "slug": "storage_enterprise_refactor",
+      "tags": [
+        "storage"
+      ],
+      "tables": [],
+      "policies": [
+        "rbac_storage_documenti_delete",
+        "rbac_storage_documenti_insert",
+        "rbac_storage_documenti_select",
+        "rbac_storage_documenti_update",
+        "rbac_storage_images_delete",
+        "rbac_storage_images_insert",
+        "rbac_storage_images_select",
+        "rbac_storage_images_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260519140000_operatore_operational_crud.sql",
+      "timestamp": "20260519140000",
+      "slug": "operatore_operational_crud",
+      "tags": [
+        "repair",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [
+        "rbac_documenti_delete",
+        "rbac_lavorazioni_delete",
+        "rbac_log_modifiche_delete",
+        "rbac_magazzino_ricambi_delete",
+        "rbac_mezzi_delete",
+        "rbac_movimenti_ricambi_delete",
+        "rbac_preventivi_delete",
+        "rbac_scheda_lavorazione_delete"
+      ],
+      "functions": [
+        "rbac_resource_allows_delete",
+        "rbac_role"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260519150000_ruolo_manager_guest_enum.sql",
+      "timestamp": "20260519150000",
+      "slug": "ruolo_manager_guest_enum",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260519150100_rbac_capabilities_refactor.sql",
+      "timestamp": "20260519150100",
+      "slug": "rbac_capabilities_refactor",
+      "tags": [
+        "rbac",
+        "storage",
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [
+        "auth_logs_insert_failed_anon",
+        "auth_logs_insert_failed_auth",
+        "auth_logs_insert_login",
+        "auth_logs_insert_logout",
+        "cap_app_settings_audit_select",
+        "cap_app_settings_delete",
+        "cap_app_settings_insert",
+        "cap_app_settings_select",
+        "cap_app_settings_update",
+        "cap_auth_logs_select",
+        "cap_documenti_delete",
+        "cap_documenti_insert",
+        "cap_documenti_select",
+        "cap_documenti_update",
+        "cap_lavorazioni_delete",
+        "cap_lavorazioni_insert",
+        "cap_lavorazioni_select",
+        "cap_lavorazioni_update",
+        "cap_log_delete",
+        "cap_log_insert",
+        "cap_log_select",
+        "cap_magazzino_delete",
+        "cap_magazzino_insert",
+        "cap_magazzino_select",
+        "cap_magazzino_update",
+        "cap_mezzi_delete",
+        "cap_mezzi_insert",
+        "cap_mezzi_select",
+        "cap_mezzi_update",
+        "cap_movimenti_delete",
+        "cap_movimenti_insert",
+        "cap_movimenti_select",
+        "cap_movimenti_update",
+        "cap_preventivi_delete",
+        "cap_preventivi_insert",
+        "cap_preventivi_select",
+        "cap_preventivi_update",
+        "cap_profiles_delete",
+        "cap_profiles_insert",
+        "cap_profiles_select",
+        "cap_profiles_update",
+        "cap_scheda_delete",
+        "cap_scheda_insert",
+        "cap_scheda_select",
+        "cap_scheda_update",
+        "cap_segnalazioni_insert",
+        "cap_segnalazioni_select",
+        "cap_segnalazioni_update",
+        "cap_storage_documenti_delete",
+        "cap_storage_documenti_insert",
+        "cap_storage_documenti_select",
+        "cap_storage_documenti_update",
+        "cap_storage_images_delete",
+        "cap_storage_images_insert",
+        "cap_storage_images_select",
+        "cap_storage_images_update",
+        "cap_user_permissions"
+      ],
+      "functions": [
+        "rbac_auth_uid",
+        "rbac_can_delete",
+        "rbac_can_read",
+        "rbac_can_read_app_settings",
+        "rbac_can_read_lavorazione_row",
+        "rbac_can_read_log",
+        "rbac_can_read_log_row",
+        "rbac_can_read_operational",
+        "rbac_can_read_row",
+        "rbac_can_read_storage",
+        "rbac_can_write",
+        "rbac_can_write_operational",
+        "rbac_can_write_storage",
+        "rbac_cliente_ref",
+        "rbac_has_capability",
+        "rbac_is_admin",
+        "rbac_is_cliente",
+        "rbac_is_operatore",
+        "rbac_is_operatore_or_admin",
+        "rbac_is_ospite",
+        "rbac_lavorazione_visible_to_cliente",
+        "rbac_mezzo_visible_to_cliente",
+        "rbac_normalize_role",
+        "rbac_normalized_role",
+        "rbac_role",
+        "rbac_role_for_user",
+        "rbac_scope_cliente",
+        "rbac_scope_cliente_lavorazioni_mezzo",
+        "rbac_scope_log_modifiche",
+        "user_effective_can"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260520120000_lavorazioni_stati_text_dynamic.sql",
+      "timestamp": "20260520120000",
+      "slug": "lavorazioni_stati_text_dynamic",
+      "tags": [],
+      "tables": [
+        "lavorazioni"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [
+        "lavorazioni_clienti"
+      ],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260520140000_lavorazioni_client_portal_archive.sql",
+      "timestamp": "20260520140000",
+      "slug": "lavorazioni_client_portal_archive",
+      "tags": [],
+      "tables": [
+        "lavorazioni"
+      ],
+      "policies": [],
+      "functions": [
+        "archive_lavorazione_client_portal"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_lavorazioni_client_portal_archived"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260520180000_lavorazioni_soft_delete.sql",
+      "timestamp": "20260520180000",
+      "slug": "lavorazioni_soft_delete",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [
+        "lavorazioni"
+      ],
+      "policies": [
+        "cap_lavorazioni_select"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_lavorazioni_active_archived_created",
+        "idx_lavorazioni_active_archived_uscita",
+        "idx_lavorazioni_active_deleted_at"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260520190000_lavorazioni_deleted_at_ensure.sql",
+      "timestamp": "20260520190000",
+      "slug": "lavorazioni_deleted_at_ensure",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [
+        "lavorazioni"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260520200000_app_settings_bulk_upsert_audit.sql",
+      "timestamp": "20260520200000",
+      "slug": "app_settings_bulk_upsert_audit",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "bulk_upsert_app_settings",
+        "log_app_settings_update_audit"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260520210000_support_notes.sql",
+      "timestamp": "20260520210000",
+      "slug": "support_notes",
+      "tags": [
+        "soft_delete",
+        "realtime",
+        "auth"
+      ],
+      "tables": [
+        "support_notes"
+      ],
+      "policies": [
+        "cap_support_notes_insert",
+        "cap_support_notes_select",
+        "cap_support_notes_update"
+      ],
+      "functions": [],
+      "triggers": [
+        "trg_support_notes_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_support_notes_active",
+        "idx_support_notes_created_at"
+      ],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260520220000_lavorazione_documents.sql",
+      "timestamp": "20260520220000",
+      "slug": "lavorazione_documents",
+      "tags": [
+        "storage",
+        "realtime"
+      ],
+      "tables": [
+        "lavorazione_documents"
+      ],
+      "policies": [
+        "rbac_lavorazione_documents_delete",
+        "rbac_lavorazione_documents_insert",
+        "rbac_lavorazione_documents_select",
+        "rbac_lavorazione_documents_update",
+        "rbac_storage_documenti_lavorazioni_cliente_select"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_lavorazione_documents_lavorazione"
+      ],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260520230000_lavorazioni_soft_delete_rls.sql",
+      "timestamp": "20260520230000",
+      "slug": "lavorazioni_soft_delete_rls",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_lavorazioni_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260521120000_operatore_settings_and_bulk_upsert.sql",
+      "timestamp": "20260521120000",
+      "slug": "operatore_settings_and_bulk_upsert",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "bulk_upsert_app_settings",
+        "rbac_has_capability"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260521140000_lavorazioni_soft_delete_rpc.sql",
+      "timestamp": "20260521140000",
+      "slug": "lavorazioni_soft_delete_rpc",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_lavorazioni_update"
+      ],
+      "functions": [
+        "soft_delete_lavorazione"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260521180000_gestionale_realtime_publication.sql",
+      "timestamp": "20260521180000",
+      "slug": "gestionale_realtime_publication",
+      "tags": [
+        "realtime"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260522120000_schema_consolidation_safe.sql",
+      "timestamp": "20260522120000",
+      "slug": "schema_consolidation_safe",
+      "tags": [
+        "rbac",
+        "soft_delete",
+        "repair",
+        "deprecated",
+        "realtime"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_lavorazione_documents_delete",
+        "cap_lavorazione_documents_insert",
+        "cap_lavorazione_documents_select",
+        "cap_lavorazione_documents_update",
+        "cap_segnalazioni_select"
+      ],
+      "functions": [
+        "current_profile_role"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260523120000_global_entity_validation_keys.sql",
+      "timestamp": "20260523120000",
+      "slug": "global_entity_validation_keys",
+      "tags": [],
+      "tables": [
+        "magazzino_ricambi",
+        "mezzi"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_magazzino_ricambi_entity_key",
+        "idx_mezzi_entity_key"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260523140000_report_manual_entries.sql",
+      "timestamp": "20260523140000",
+      "slug": "report_manual_entries",
+      "tags": [
+        "soft_delete",
+        "auth"
+      ],
+      "tables": [
+        "report_manual_entries"
+      ],
+      "policies": [
+        "cap_report_manual_entries_insert",
+        "cap_report_manual_entries_select",
+        "cap_report_manual_entries_update"
+      ],
+      "functions": [],
+      "triggers": [
+        "trg_report_manual_entries_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_report_manual_entries_active_month",
+        "idx_report_manual_entries_period"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260523150000_scheda_lavorazione_updated_at_fix.sql",
+      "timestamp": "20260523150000",
+      "slug": "scheda_lavorazione_updated_at_fix",
+      "tags": [],
+      "tables": [
+        "scheda_lavorazione"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [
+        "trg_scheda_lavorazione_updated_at"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260523160000_mezzo_delete_dependencies_rpc.sql",
+      "timestamp": "20260523160000",
+      "slug": "mezzo_delete_dependencies_rpc",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "count_mezzo_dependencies"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260523170000_mezzo_delete_purge_storico.sql",
+      "timestamp": "20260523170000",
+      "slug": "mezzo_delete_purge_storico",
+      "tags": [
+        "soft_delete",
+        "repair"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "delete_mezzo"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260523180000_mezzo_delete_purge_schede_storico.sql",
+      "timestamp": "20260523180000",
+      "slug": "mezzo_delete_purge_schede_storico",
+      "tags": [
+        "soft_delete",
+        "repair"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "count_mezzo_dependencies",
+        "delete_mezzo"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260523190000_mezzo_lavorazioni_in_corso.sql",
+      "timestamp": "20260523190000",
+      "slug": "mezzo_lavorazioni_in_corso",
+      "tags": [
+        "soft_delete",
+        "repair"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "count_mezzo_dependencies",
+        "delete_mezzo"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260523200000_mezzo_delete_requires_lavorazione_delete.sql",
+      "timestamp": "20260523200000",
+      "slug": "mezzo_delete_requires_lavorazione_delete",
+      "tags": [
+        "soft_delete",
+        "repair"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "delete_mezzo"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260524120000_lavorazioni_codice_umano.sql",
+      "timestamp": "20260524120000",
+      "slug": "lavorazioni_codice_umano",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [
+        "lavorazioni",
+        "lavorazioni_codice_counters"
+      ],
+      "policies": [],
+      "functions": [
+        "assign_lavorazione_codice",
+        "trg_lavorazioni_assign_codice"
+      ],
+      "triggers": [
+        "trg_lavorazioni_assign_codice"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_lavorazioni_codice_active",
+        "idx_lavorazioni_codice_lookup"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260524140000_preventivi_numero_lavorazione.sql",
+      "timestamp": "20260524140000",
+      "slug": "preventivi_numero_lavorazione",
+      "tags": [],
+      "tables": [
+        "preventivi_lavorazione_numero_counters",
+        "preventivi_manuali_numero_counters"
+      ],
+      "policies": [],
+      "functions": [
+        "assign_preventivo_numero_lavorazione",
+        "assign_preventivo_numero_manuale",
+        "trg_preventivi_assign_numero"
+      ],
+      "triggers": [
+        "trg_preventivi_assign_numero"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260527120000_profiles_username_login.sql",
+      "timestamp": "20260527120000",
+      "slug": "profiles_username_login",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "profiles"
+      ],
+      "policies": [],
+      "functions": [
+        "handle_new_user",
+        "resolve_auth_email_for_login"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "profiles_username_lower_unique"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260527130000_user_prefs_theme.sql",
+      "timestamp": "20260527130000",
+      "slug": "user_prefs_theme",
+      "tags": [
+        "auth"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_user_prefs_insert_own",
+        "cap_user_prefs_select_own",
+        "cap_user_prefs_update_own"
+      ],
+      "functions": [
+        "bulk_upsert_app_settings",
+        "rbac_can_read_app_settings"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260527140000_profiles_username_hardening.sql",
+      "timestamp": "20260527140000",
+      "slug": "profiles_username_hardening",
+      "tags": [
+        "auth"
+      ],
+      "tables": [
+        "profiles"
+      ],
+      "policies": [],
+      "functions": [
+        "check_username_available",
+        "resolve_auth_email_for_login"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260527150000_support_notes_moderation_rls.sql",
+      "timestamp": "20260527150000",
+      "slug": "support_notes_moderation_rls",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_support_notes_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260528120000_reset_user_theme_prefs_dark.sql",
+      "timestamp": "20260528120000",
+      "slug": "reset_user_theme_prefs_dark",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260529120000_app_settings_portal_security_only.sql",
+      "timestamp": "20260529120000",
+      "slug": "app_settings_portal_security_only",
+      "tags": [],
+      "tables": [],
+      "policies": [
+        "cap_app_settings_delete",
+        "cap_app_settings_insert",
+        "cap_app_settings_update"
+      ],
+      "functions": [
+        "bulk_upsert_app_settings",
+        "rbac_can_write_app_settings_row",
+        "rbac_is_restricted_app_settings_row"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260530120000_documenti_bucket_private.sql",
+      "timestamp": "20260530120000",
+      "slug": "documenti_bucket_private",
+      "tags": [
+        "storage"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": [
+        "documenti"
+      ]
+    },
+    {
+      "file": "20260531120000_rls_user_permissions_enforcement.sql",
+      "timestamp": "20260531120000",
+      "slug": "rls_user_permissions_enforcement",
+      "tags": [
+        "rbac",
+        "storage",
+        "soft_delete",
+        "repair",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_documenti_delete",
+        "cap_documenti_insert",
+        "cap_documenti_update",
+        "cap_lavorazioni_delete",
+        "cap_lavorazioni_insert",
+        "cap_lavorazioni_update",
+        "cap_log_insert",
+        "cap_magazzino_delete",
+        "cap_magazzino_insert",
+        "cap_magazzino_select",
+        "cap_magazzino_update",
+        "cap_mezzi_delete",
+        "cap_mezzi_insert",
+        "cap_mezzi_update",
+        "cap_movimenti_delete",
+        "cap_movimenti_insert",
+        "cap_movimenti_select",
+        "cap_movimenti_update",
+        "cap_preventivi_delete",
+        "cap_preventivi_insert",
+        "cap_preventivi_update",
+        "cap_report_manual_entries_insert",
+        "cap_report_manual_entries_select",
+        "cap_report_manual_entries_update",
+        "cap_scheda_delete",
+        "cap_scheda_insert",
+        "cap_scheda_update",
+        "cap_storage_documenti_delete",
+        "cap_storage_documenti_insert",
+        "cap_storage_documenti_select",
+        "cap_storage_documenti_update",
+        "cap_support_notes_insert",
+        "cap_support_notes_select",
+        "cap_user_permissions_select",
+        "cap_user_permissions_write"
+      ],
+      "functions": [
+        "delete_mezzo",
+        "rbac_can_delete",
+        "rbac_can_read_app_settings",
+        "rbac_can_read_log",
+        "rbac_can_read_row",
+        "rbac_can_write",
+        "rbac_has_capability",
+        "rbac_log_entita_module",
+        "rbac_module_can",
+        "rbac_resource_module_can",
+        "rbac_resource_to_module",
+        "rbac_staff_has_any_module_read",
+        "rbac_storage_documenti_path_allowed",
+        "user_effective_can"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260531140000_storage_images_path_rls.sql",
+      "timestamp": "20260531140000",
+      "slug": "storage_images_path_rls",
+      "tags": [
+        "rbac",
+        "storage"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_storage_images_delete",
+        "cap_storage_images_insert",
+        "cap_storage_images_select",
+        "cap_storage_images_update"
+      ],
+      "functions": [
+        "rbac_storage_images_path_allowed"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260601120000_pilot_operator_global_settings_override.sql",
+      "timestamp": "20260601120000",
+      "slug": "pilot_operator_global_settings_override",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "rbac_has_capability",
+        "rbac_pilot_operator_global_settings_enabled"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260602120000_operator_global_settings_rbac_alias.sql",
+      "timestamp": "20260602120000",
+      "slug": "operator_global_settings_rbac_alias",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "rbac_has_capability",
+        "rbac_operator_global_settings_db_enabled"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260603120000_log_modifiche_retention_100.sql",
+      "timestamp": "20260603120000",
+      "slug": "log_modifiche_retention_100",
+      "tags": [
+        "repair"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "prune_log_modifiche_retention"
+      ],
+      "triggers": [
+        "trg_log_modifiche_retention"
+      ],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260604120000_documenti_bucket_100mb.sql",
+      "timestamp": "20260604120000",
+      "slug": "documenti_bucket_100mb",
+      "tags": [
+        "storage"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": [
+        "documenti"
+      ]
+    },
+    {
+      "file": "20260605120000_operatore_can_manage_settings_default.sql",
+      "timestamp": "20260605120000",
+      "slug": "operatore_can_manage_settings_default",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "rbac_has_capability"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260605180000_ricambio_compat_meta_documentation.sql",
+      "timestamp": "20260605180000",
+      "slug": "ricambio_compat_meta_documentation",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260607120000_app_settings_branding.sql",
+      "timestamp": "20260607120000",
+      "slug": "app_settings_branding",
+      "tags": [
+        "storage"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_app_settings_branding_auth_select",
+        "cap_app_settings_branding_public_select",
+        "cap_storage_branding_delete",
+        "cap_storage_branding_insert",
+        "cap_storage_branding_select",
+        "cap_storage_branding_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260610120000_client_portal_rbac_admin_cliente_only.sql",
+      "timestamp": "20260610120000",
+      "slug": "client_portal_rbac_admin_cliente_only",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [
+        "rbac_has_capability"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260612120000_documenti_categoria_certificazione.sql",
+      "timestamp": "20260612120000",
+      "slug": "documenti_categoria_certificazione",
+      "tags": [],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260629120000_dipendenti_timesheet.sql",
+      "timestamp": "20260629120000",
+      "slug": "dipendenti_timesheet",
+      "tags": [
+        "rbac",
+        "auth"
+      ],
+      "tables": [
+        "dipendenti_timesheet_employees",
+        "dipendenti_timesheet_entries"
+      ],
+      "policies": [
+        "cap_dipendenti_timesheet_employees_insert",
+        "cap_dipendenti_timesheet_employees_select",
+        "cap_dipendenti_timesheet_employees_update",
+        "cap_dipendenti_timesheet_entries_insert",
+        "cap_dipendenti_timesheet_entries_select",
+        "cap_dipendenti_timesheet_entries_update"
+      ],
+      "functions": [
+        "rbac_log_entita_module",
+        "rbac_resource_to_module",
+        "rbac_staff_has_any_module_read"
+      ],
+      "triggers": [
+        "trg_dipendenti_timesheet_employees_updated_at",
+        "trg_dipendenti_timesheet_entries_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_dipendenti_timesheet_employees_in_settings",
+        "idx_dipendenti_timesheet_employees_name_norm",
+        "idx_dipendenti_timesheet_entries_dipendente_date",
+        "idx_dipendenti_timesheet_entries_work_date"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260630120000_dipendenti_addetto_id_link.sql",
+      "timestamp": "20260630120000",
+      "slug": "dipendenti_addetto_id_link",
+      "tags": [],
+      "tables": [
+        "dipendenti_timesheet_employees"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_dipendenti_timesheet_employees_source_addetto_id"
+      ],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260701120000_dipendenti_timesheet_ore_assenza.sql",
+      "timestamp": "20260701120000",
+      "slug": "dipendenti_timesheet_ore_assenza",
+      "tags": [],
+      "tables": [
+        "dipendenti_timesheet_entries"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260702120000_dipendenti_entry_employee_snapshot.sql",
+      "timestamp": "20260702120000",
+      "slug": "dipendenti_entry_employee_snapshot",
+      "tags": [],
+      "tables": [
+        "dipendenti_timesheet_entries"
+      ],
+      "policies": [
+        "cap_dipendenti_timesheet_entries_delete"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260703120000_dashboard_promemoria.sql",
+      "timestamp": "20260703120000",
+      "slug": "dashboard_promemoria",
+      "tags": [
+        "soft_delete",
+        "realtime",
+        "auth"
+      ],
+      "tables": [
+        "dashboard_promemoria"
+      ],
+      "policies": [
+        "cap_dashboard_promemoria_insert",
+        "cap_dashboard_promemoria_select",
+        "cap_dashboard_promemoria_update"
+      ],
+      "functions": [],
+      "triggers": [
+        "trg_dashboard_promemoria_updated_at"
+      ],
+      "views": [],
+      "indexes": [
+        "idx_dashboard_promemoria_created_at",
+        "idx_dashboard_promemoria_event_date"
+      ],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260703130000_dashboard_promemoria_event_time.sql",
+      "timestamp": "20260703130000",
+      "slug": "dashboard_promemoria_event_time",
+      "tags": [],
+      "tables": [
+        "dashboard_promemoria"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260704120000_bunder_documents.sql",
+      "timestamp": "20260704120000",
+      "slug": "bunder_documents",
+      "tags": [
+        "realtime"
+      ],
+      "tables": [
+        "bunder_documents"
+      ],
+      "policies": [
+        "bunder_documents_delete",
+        "bunder_documents_insert",
+        "bunder_documents_select",
+        "bunder_documents_update"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "bunder_documents_data_documento_idx",
+        "bunder_documents_kind_idx",
+        "bunder_documents_updated_at_idx"
+      ],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260704130000_deprecate_supporto_tables.sql",
+      "timestamp": "20260704130000",
+      "slug": "deprecate_supporto_tables",
+      "tags": [
+        "deprecated"
+      ],
+      "tables": [],
+      "policies": [
+        "segnalazioni_select_admin",
+        "support_notes_select_admin"
+      ],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260705120000_gestionale_sync_realtime_gaps.sql",
+      "timestamp": "20260705120000",
+      "slug": "gestionale_sync_realtime_gaps",
+      "tags": [
+        "rbac",
+        "realtime",
+        "auth"
+      ],
+      "tables": [],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [
+        "supabase_realtime"
+      ],
+      "buckets": []
+    },
+    {
+      "file": "20260706120000_input_text_limits.sql",
+      "timestamp": "20260706120000",
+      "slug": "input_text_limits",
+      "tags": [],
+      "tables": [
+        "dashboard_promemoria"
+      ],
+      "policies": [],
+      "functions": [],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260707130000_dashboard_promemoria_soft_delete_rls.sql",
+      "timestamp": "20260707130000",
+      "slug": "dashboard_promemoria_soft_delete_rls",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_dashboard_promemoria_update"
+      ],
+      "functions": [
+        "soft_delete_dashboard_promemoria"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260707140000_login_resolve_and_support_notes_rls.sql",
+      "timestamp": "20260707140000",
+      "slug": "login_resolve_and_support_notes_rls",
+      "tags": [
+        "rbac",
+        "soft_delete"
+      ],
+      "tables": [],
+      "policies": [
+        "cap_support_notes_update"
+      ],
+      "functions": [
+        "rbac_staff_has_any_module_write"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [],
+      "publications": [],
+      "buckets": []
+    },
+    {
+      "file": "20260708120000_dashboard_promemoria_recurrence.sql",
+      "timestamp": "20260708120000",
+      "slug": "dashboard_promemoria_recurrence",
+      "tags": [
+        "soft_delete"
+      ],
+      "tables": [
+        "dashboard_promemoria"
+      ],
+      "policies": [],
+      "functions": [
+        "soft_delete_dashboard_promemoria"
+      ],
+      "triggers": [],
+      "views": [],
+      "indexes": [
+        "idx_dashboard_promemoria_series_id"
+      ],
+      "publications": [],
+      "buckets": []
+    }
+  ],
+  "aggregates": {
+    "tables": [
+      "app_settings",
+      "app_settings_audit",
+      "auth_logs",
+      "bunder_documents",
+      "dashboard_promemoria",
+      "dipendenti_timesheet_employees",
+      "dipendenti_timesheet_entries",
+      "documenti",
+      "lavorazione_documents",
+      "lavorazioni",
+      "lavorazioni_codice_counters",
+      "log_modifiche",
+      "magazzino_ricambi",
+      "mezzi",
+      "movimenti_ricambi",
+      "preventivi",
+      "preventivi_lavorazione_numero_counters",
+      "preventivi_manuali_numero_counters",
+      "profiles",
+      "report_manual_entries",
+      "scheda_lavorazione",
+      "segnalazioni",
+      "support_notes",
+      "user_permissions"
+    ],
+    "policies": [
+      "app_settings_audit_select_admin",
+      "app_settings_delete_admin",
+      "app_settings_insert_admin",
+      "app_settings_select_auth",
+      "app_settings_update_admin",
+      "auth_logs_insert_failed_anon",
+      "auth_logs_insert_failed_auth",
+      "auth_logs_insert_login",
+      "auth_logs_insert_logout",
+      "auth_logs_select",
+      "bunder_documents_delete",
+      "bunder_documents_insert",
+      "bunder_documents_select",
+      "bunder_documents_update",
+      "cab_documenti_delete",
+      "cab_documenti_insert",
+      "cab_documenti_select",
+      "cab_documenti_update",
+      "cab_images_delete",
+      "cab_images_insert",
+      "cab_images_select",
+      "cab_images_update",
+      "cap_app_settings_audit_select",
+      "cap_app_settings_branding_auth_select",
+      "cap_app_settings_branding_public_select",
+      "cap_app_settings_delete",
+      "cap_app_settings_insert",
+      "cap_app_settings_select",
+      "cap_app_settings_update",
+      "cap_auth_logs_select",
+      "cap_dashboard_promemoria_insert",
+      "cap_dashboard_promemoria_select",
+      "cap_dashboard_promemoria_update",
+      "cap_dipendenti_timesheet_employees_insert",
+      "cap_dipendenti_timesheet_employees_select",
+      "cap_dipendenti_timesheet_employees_update",
+      "cap_dipendenti_timesheet_entries_delete",
+      "cap_dipendenti_timesheet_entries_insert",
+      "cap_dipendenti_timesheet_entries_select",
+      "cap_dipendenti_timesheet_entries_update",
+      "cap_documenti_delete",
+      "cap_documenti_insert",
+      "cap_documenti_select",
+      "cap_documenti_update",
+      "cap_lavorazione_documents_delete",
+      "cap_lavorazione_documents_insert",
+      "cap_lavorazione_documents_select",
+      "cap_lavorazione_documents_update",
+      "cap_lavorazioni_delete",
+      "cap_lavorazioni_insert",
+      "cap_lavorazioni_select",
+      "cap_lavorazioni_update",
+      "cap_log_delete",
+      "cap_log_insert",
+      "cap_log_select",
+      "cap_magazzino_delete",
+      "cap_magazzino_insert",
+      "cap_magazzino_select",
+      "cap_magazzino_update",
+      "cap_mezzi_delete",
+      "cap_mezzi_insert",
+      "cap_mezzi_select",
+      "cap_mezzi_update",
+      "cap_movimenti_delete",
+      "cap_movimenti_insert",
+      "cap_movimenti_select",
+      "cap_movimenti_update",
+      "cap_preventivi_delete",
+      "cap_preventivi_insert",
+      "cap_preventivi_select",
+      "cap_preventivi_update",
+      "cap_profiles_delete",
+      "cap_profiles_insert",
+      "cap_profiles_select",
+      "cap_profiles_update",
+      "cap_report_manual_entries_insert",
+      "cap_report_manual_entries_select",
+      "cap_report_manual_entries_update",
+      "cap_scheda_delete",
+      "cap_scheda_insert",
+      "cap_scheda_select",
+      "cap_scheda_update",
+      "cap_segnalazioni_insert",
+      "cap_segnalazioni_select",
+      "cap_segnalazioni_update",
+      "cap_storage_branding_delete",
+      "cap_storage_branding_insert",
+      "cap_storage_branding_select",
+      "cap_storage_branding_update",
+      "cap_storage_documenti_delete",
+      "cap_storage_documenti_insert",
+      "cap_storage_documenti_select",
+      "cap_storage_documenti_update",
+      "cap_storage_images_delete",
+      "cap_storage_images_insert",
+      "cap_storage_images_select",
+      "cap_storage_images_update",
+      "cap_support_notes_insert",
+      "cap_support_notes_select",
+      "cap_support_notes_update",
+      "cap_user_permissions",
+      "cap_user_permissions_select",
+      "cap_user_permissions_write",
+      "cap_user_prefs_insert_own",
+      "cap_user_prefs_select_own",
+      "cap_user_prefs_update_own",
+      "documenti_delete_priv",
+      "documenti_insert_priv",
+      "documenti_select_role",
+      "documenti_update_priv",
+      "lavorazioni_delete_priv",
+      "lavorazioni_insert_priv",
+      "lavorazioni_select_role",
+      "lavorazioni_update_priv",
+      "log_modifiche_delete_admin",
+      "log_modifiche_insert_priv",
+      "log_modifiche_select_role",
+      "log_modifiche_update_priv",
+      "magazzino_ricambi_delete_priv",
+      "magazzino_ricambi_insert_priv",
+      "magazzino_ricambi_select_role",
+      "magazzino_ricambi_update_priv",
+      "mezzi_delete_priv",
+      "mezzi_insert_priv",
+      "mezzi_select_role",
+      "mezzi_update_priv",
+      "movimenti_ricambi_delete_priv",
+      "movimenti_ricambi_insert_priv",
+      "movimenti_ricambi_select_role",
+      "movimenti_ricambi_update_priv",
+      "preventivi_delete_priv",
+      "preventivi_insert_priv",
+      "preventivi_select_role",
+      "preventivi_update_priv",
+      "profiles_delete_admin",
+      "profiles_select_own_or_admin",
+      "profiles_select_role",
+      "profiles_update_admin",
+      "rbac_app_settings_audit_select",
+      "rbac_app_settings_delete",
+      "rbac_app_settings_insert",
+      "rbac_app_settings_select",
+      "rbac_app_settings_update",
+      "rbac_auth_logs_select",
+      "rbac_documenti_delete",
+      "rbac_documenti_insert",
+      "rbac_documenti_select",
+      "rbac_documenti_update",
+      "rbac_lavorazione_documents_delete",
+      "rbac_lavorazione_documents_insert",
+      "rbac_lavorazione_documents_select",
+      "rbac_lavorazione_documents_update",
+      "rbac_lavorazioni_delete",
+      "rbac_lavorazioni_insert",
+      "rbac_lavorazioni_select",
+      "rbac_lavorazioni_update",
+      "rbac_log_modifiche_delete",
+      "rbac_log_modifiche_insert",
+      "rbac_log_modifiche_select",
+      "rbac_magazzino_ricambi_delete",
+      "rbac_magazzino_ricambi_insert",
+      "rbac_magazzino_ricambi_select",
+      "rbac_magazzino_ricambi_update",
+      "rbac_mezzi_delete",
+      "rbac_mezzi_insert",
+      "rbac_mezzi_select",
+      "rbac_mezzi_update",
+      "rbac_movimenti_ricambi_delete",
+      "rbac_movimenti_ricambi_insert",
+      "rbac_movimenti_ricambi_select",
+      "rbac_movimenti_ricambi_update",
+      "rbac_preventivi_delete",
+      "rbac_preventivi_insert",
+      "rbac_preventivi_select",
+      "rbac_preventivi_update",
+      "rbac_profiles_delete",
+      "rbac_profiles_insert",
+      "rbac_profiles_select",
+      "rbac_profiles_update",
+      "rbac_scheda_lavorazione_delete",
+      "rbac_scheda_lavorazione_insert",
+      "rbac_scheda_lavorazione_select",
+      "rbac_scheda_lavorazione_update",
+      "rbac_segnalazioni_insert",
+      "rbac_segnalazioni_select",
+      "rbac_segnalazioni_update",
+      "rbac_storage_documenti",
+      "rbac_storage_documenti_delete",
+      "rbac_storage_documenti_insert",
+      "rbac_storage_documenti_lavorazioni_cliente_select",
+      "rbac_storage_documenti_select",
+      "rbac_storage_documenti_update",
+      "rbac_storage_images",
+      "rbac_storage_images_delete",
+      "rbac_storage_images_insert",
+      "rbac_storage_images_select",
+      "rbac_storage_images_update",
+      "rbac_user_permissions_admin",
+      "scheda_lavorazione_delete_priv",
+      "scheda_lavorazione_insert_priv",
+      "scheda_lavorazione_select_role",
+      "scheda_lavorazione_update_priv",
+      "segnalazioni_insert_role",
+      "segnalazioni_select_admin",
+      "segnalazioni_select_role",
+      "segnalazioni_update_role",
+      "support_notes_select_admin",
+      "user_permissions_select_admin",
+      "user_permissions_select_own_or_admin",
+      "user_permissions_write_admin"
+    ],
+    "functions": [
+      "archive_lavorazione_client_portal",
+      "assign_lavorazione_codice",
+      "assign_preventivo_numero_lavorazione",
+      "assign_preventivo_numero_manuale",
+      "bulk_upsert_app_settings",
+      "check_username_available",
+      "count_mezzo_dependencies",
+      "current_profile_role",
+      "delete_mezzo",
+      "handle_new_user",
+      "log_app_settings_update_audit",
+      "prune_log_modifiche_retention",
+      "rbac_auth_uid",
+      "rbac_can_delete",
+      "rbac_can_read",
+      "rbac_can_read_app_settings",
+      "rbac_can_read_lavorazione_row",
+      "rbac_can_read_log",
+      "rbac_can_read_log_row",
+      "rbac_can_read_operational",
+      "rbac_can_read_row",
+      "rbac_can_read_storage",
+      "rbac_can_write",
+      "rbac_can_write_app_settings_row",
+      "rbac_can_write_operational",
+      "rbac_can_write_storage",
+      "rbac_cliente_ref",
+      "rbac_has_capability",
+      "rbac_is_admin",
+      "rbac_is_cliente",
+      "rbac_is_operatore",
+      "rbac_is_operatore_or_admin",
+      "rbac_is_ospite",
+      "rbac_is_restricted_app_settings_row",
+      "rbac_lavorazione_visible_to_cliente",
+      "rbac_log_entita_module",
+      "rbac_mezzo_visible_to_cliente",
+      "rbac_module_can",
+      "rbac_normalize_role",
+      "rbac_normalized_role",
+      "rbac_operator_global_settings_db_enabled",
+      "rbac_pilot_operator_global_settings_enabled",
+      "rbac_resource_allows_delete",
+      "rbac_resource_allows_read",
+      "rbac_resource_allows_write",
+      "rbac_resource_module_can",
+      "rbac_resource_to_module",
+      "rbac_role",
+      "rbac_role_for_user",
+      "rbac_scope_cliente",
+      "rbac_scope_cliente_lavorazioni_mezzo",
+      "rbac_scope_log_modifiche",
+      "rbac_staff_has_any_module_read",
+      "rbac_staff_has_any_module_write",
+      "rbac_storage_documenti_path_allowed",
+      "rbac_storage_images_path_allowed",
+      "resolve_auth_email_for_login",
+      "set_updated_at",
+      "soft_delete_dashboard_promemoria",
+      "soft_delete_lavorazione",
+      "trg_lavorazioni_assign_codice",
+      "trg_preventivi_assign_numero",
+      "user_effective_can"
+    ],
+    "triggers": [
+      "documenti_set_updated_at",
+      "lavorazioni_set_updated_at",
+      "magazzino_ricambi_set_updated_at",
+      "mezzi_set_updated_at",
+      "on_auth_user_created",
+      "preventivi_set_updated_at",
+      "profiles_set_updated_at",
+      "trg_app_settings_audit_update",
+      "trg_app_settings_updated_at",
+      "trg_dashboard_promemoria_updated_at",
+      "trg_dipendenti_timesheet_employees_updated_at",
+      "trg_dipendenti_timesheet_entries_updated_at",
+      "trg_lavorazioni_assign_codice",
+      "trg_lavorazioni_updated_at",
+      "trg_log_modifiche_retention",
+      "trg_magazzino_ricambi_updated_at",
+      "trg_mezzi_updated_at",
+      "trg_preventivi_assign_numero",
+      "trg_preventivi_updated_at",
+      "trg_profiles_updated_at",
+      "trg_report_manual_entries_updated_at",
+      "trg_scheda_lavorazione_updated_at",
+      "trg_support_notes_updated_at"
+    ],
+    "views": [
+      "lavorazioni_clienti"
+    ],
+    "indexes": [
+      "bunder_documents_data_documento_idx",
+      "bunder_documents_kind_idx",
+      "bunder_documents_updated_at_idx",
+      "idx_app_settings_audit_module_key_at",
+      "idx_app_settings_audit_updated_at",
+      "idx_app_settings_module",
+      "idx_auth_logs_created",
+      "idx_auth_logs_user_created",
+      "idx_dashboard_promemoria_created_at",
+      "idx_dashboard_promemoria_event_date",
+      "idx_dashboard_promemoria_series_id",
+      "idx_dipendenti_timesheet_employees_in_settings",
+      "idx_dipendenti_timesheet_employees_name_norm",
+      "idx_dipendenti_timesheet_employees_source_addetto_id",
+      "idx_dipendenti_timesheet_entries_dipendente_date",
+      "idx_dipendenti_timesheet_entries_work_date",
+      "idx_documenti_categoria",
+      "idx_documenti_created_at",
+      "idx_documenti_marca_modello",
+      "idx_documenti_mezzo_id",
+      "idx_lavorazione_documents_lavorazione",
+      "idx_lavorazioni_active_archived_created",
+      "idx_lavorazioni_active_archived_uscita",
+      "idx_lavorazioni_active_deleted_at",
+      "idx_lavorazioni_client_portal_archived",
+      "idx_lavorazioni_codice_active",
+      "idx_lavorazioni_codice_lookup",
+      "idx_lavorazioni_created_by",
+      "idx_lavorazioni_data_ingresso",
+      "idx_lavorazioni_mezzo_id",
+      "idx_lavorazioni_stato",
+      "idx_log_modifiche_autore_id",
+      "idx_log_modifiche_created_at",
+      "idx_log_modifiche_entita",
+      "idx_log_modifiche_entita_entita_id_created_at",
+      "idx_magazzino_ricambi_codice",
+      "idx_magazzino_ricambi_entity_key",
+      "idx_magazzino_ricambi_marca",
+      "idx_magazzino_ricambi_meta_gin",
+      "idx_magazzino_ricambi_nome_trgm",
+      "idx_mezzi_cliente",
+      "idx_mezzi_cliente_trgm",
+      "idx_mezzi_created_by",
+      "idx_mezzi_entity_key",
+      "idx_mezzi_marca_modello",
+      "idx_mezzi_matricola",
+      "idx_mezzi_targa",
+      "idx_movimenti_ricambi_created_at",
+      "idx_movimenti_ricambi_lavorazione_id",
+      "idx_movimenti_ricambi_ricambio_id",
+      "idx_movimenti_ricambi_tipo",
+      "idx_preventivi_cliente",
+      "idx_preventivi_created_at",
+      "idx_preventivi_lavorazione_id",
+      "idx_preventivi_mezzo_id",
+      "idx_profiles_cliente_ref",
+      "idx_profiles_ruolo",
+      "idx_report_manual_entries_active_month",
+      "idx_report_manual_entries_period",
+      "idx_scheda_lavorazione_contenuto_gin",
+      "idx_scheda_lavorazione_created_at",
+      "idx_scheda_lavorazione_lavorazione_id",
+      "idx_scheda_lavorazione_tipo",
+      "idx_segnalazioni_created_at",
+      "idx_segnalazioni_created_by",
+      "idx_segnalazioni_stato",
+      "idx_support_notes_active",
+      "idx_support_notes_created_at",
+      "idx_user_permissions_user",
+      "profiles_username_lower_unique"
+    ],
+    "publications": [
+      "supabase_realtime"
+    ],
+    "buckets": [
+      "documenti"
+    ],
+    "repairChains": [
+      {
+        "name": "schema_core_duplicate",
+        "files": [
+          "20260211120000_officina_gestionale_core.sql",
+          "20260211140000_officina_gestionale_schema.sql"
+        ]
+      },
+      {
+        "name": "rbac_has_capability",
+        "files": [
+          "20260519150100_rbac_capabilities_refactor.sql"
+        ]
+      },
+      {
+        "name": "soft_delete_lavorazioni",
+        "files": [
+          "20260520180000_lavorazioni_soft_delete.sql",
+          "20260520190000_lavorazioni_deleted_at_ensure.sql",
+          "20260520230000_lavorazioni_soft_delete_rls.sql",
+          "20260521140000_lavorazioni_soft_delete_rpc.sql"
+        ]
+      },
+      {
+        "name": "mezzo_delete_rpc",
+        "files": [
+          "20260523160000_mezzo_delete_dependencies_rpc.sql",
+          "20260523170000_mezzo_delete_purge_storico.sql",
+          "20260523180000_mezzo_delete_purge_schede_storico.sql",
+          "20260523200000_mezzo_delete_requires_lavorazione_delete.sql"
+        ]
+      },
+      {
+        "name": "lavorazioni_clienti_view",
+        "files": [
+          "20260520120000_lavorazioni_stati_text_dynamic.sql",
+          "20260520140000_lavorazioni_client_portal_archive.sql"
+        ]
+      },
+      {
+        "name": "supporto_deprecated",
+        "files": [
+          "20260518170000_segnalazioni.sql",
+          "20260520210000_support_notes.sql",
+          "20260527150000_support_notes_moderation_rls.sql",
+          "20260704130000_deprecate_supporto_tables.sql",
+          "20260707140000_login_resolve_and_support_notes_rls.sql"
+        ]
+      },
+      {
+        "name": "realtime_publication",
+        "files": [
+          "20260521180000_gestionale_realtime_publication.sql",
+          "20260705120000_gestionale_sync_realtime_gaps.sql"
+        ]
+      },
+      {
+        "name": "schema_consolidation",
+        "files": [
+          "20260522120000_schema_consolidation_safe.sql"
+        ]
+      }
+    ]
+  },
+  "config": {
+    "seedPaths": [
+      "./seed.sql"
+    ],
+    "seedFilesExist": [
+      {
+        "path": "./seed.sql",
+        "exists": false
+      }
+    ],
+    "edgeFunctionsDir": false,
+    "postgresMajor": "17"
+  },
+  "frontend": {
+    "serviceTables": [
+      "app_settings",
+      "app_settings_audit",
+      "auth_logs",
+      "bunder_documents",
+      "dipendenti_timesheet_employees",
+      "dipendenti_timesheet_entries",
+      "documenti",
+      "lavorazione_documents",
+      "lavorazioni",
+      "log_modifiche",
+      "magazzino_ricambi",
+      "mezzi",
+      "movimenti_ricambi",
+      "preventivi",
+      "profiles",
+      "report_manual_entries",
+      "scheda_lavorazione",
+      "user_permissions"
+    ],
+    "allTables": [
+      "app_settings",
+      "app_settings_audit",
+      "auth_logs",
+      "bunder_documents",
+      "dipendenti_timesheet_employees",
+      "dipendenti_timesheet_entries",
+      "documenti",
+      "lavorazione_documents",
+      "lavorazioni",
+      "log_modifiche",
+      "magazzino_ricambi",
+      "mezzi",
+      "movimenti_ricambi",
+      "preventivi",
+      "profiles",
+      "report_manual_entries",
+      "scheda_lavorazione",
+      "user_permissions"
+    ],
+    "rpcs": [
+      "bulk_upsert_app_settings",
+      "check_username_available",
+      "count_mezzo_dependencies",
+      "delete_mezzo",
+      "resolve_auth_email_for_login",
+      "soft_delete_dashboard_promemoria",
+      "soft_delete_lavorazione"
+    ],
+    "storageBuckets": [
+      "documenti"
+    ],
+    "realtimeTables": [
+      "app_settings",
+      "bunder_documents",
+      "dashboard_promemoria",
+      "dipendenti_timesheet_employees",
+      "dipendenti_timesheet_entries",
+      "documenti",
+      "lavorazione_documents",
+      "lavorazioni",
+      "log_modifiche",
+      "magazzino_ricambi",
+      "mezzi",
+      "movimenti_ricambi",
+      "preventivi",
+      "profiles",
+      "scheda_lavorazione",
+      "user_permissions"
+    ],
+    "typeTables": [
+      "app_settings",
+      "app_settings_audit",
+      "auth_logs",
+      "scheda_lavorazione",
+      "user_permissions"
+    ]
+  },
+  "gaps": {
+    "serviceTablesWithoutRlsInMigrations": [],
+    "migrationTablesWithoutFrontendRef": [
+      "dashboard_promemoria",
+      "segnalazioni",
+      "support_notes"
+    ],
+    "frontendTablesWithoutMigration": [],
+    "rpcsInDbNotInFrontend": [
+      "assign_lavorazione_codice",
+      "assign_preventivo_numero_lavorazione",
+      "assign_preventivo_numero_manuale",
+      "prune_log_modifiche_retention",
+      "trg_lavorazioni_assign_codice",
+      "trg_preventivi_assign_numero",
+      "user_effective_can"
+    ],
+    "rpcsInFrontendNotInMigrations": []
+  }
+}

@@ -58,6 +58,29 @@ assert.match(devHook, /__cabLongSessionMetrics/);
 const forcePoll = read("lib/realtime/gestionale-force-poll.ts");
 assert.match(forcePoll, /NEXT_PUBLIC_GESTIONALE_FORCE_POLL/);
 
+// Post-fix Caso 4 — F1: nessun channel postgres_changes locale su Security dashboard
+const securityDashPostFix = read("components/dashboard/security-dashboard-view.tsx");
+assert.doesNotMatch(securityDashPostFix, /supabase\.channel/);
+assert.doesNotMatch(securityDashPostFix, /postgres_changes/);
+assert.match(securityDashPostFix, /useCabSyncListener\("settings"/);
+assert.match(securityDashPostFix, /useCabSyncListener\("user_permissions"/);
+
+// Post-fix Caso 4 — F2: refreshOperational gated al flag pilot
+const realtimeBridge = read("src/components/gestionale-realtime-bridge.tsx");
+assert.match(realtimeBridge, /isOperatorGlobalSettingsPilotPayload/);
+assert.match(realtimeBridge, /refreshOperational:\s*true/);
+
+// Post-fix Caso 4 — F3: magazzino log feed senza listener cab-sync ridondanti
+const magLogFeed = read("lib/magazzino/use-magazzino-log-feed.ts");
+assert.doesNotMatch(magLogFeed, /useCabSyncListener/);
+
+// Post-fix Caso 4 — F5: migration prune + verify SQL
+const pruneMigration = read("supabase/migrations/20260709120000_realtime_prune_deprecated_supporto.sql");
+assert.match(pruneMigration, /drop table public\.segnalazioni/i);
+assert.match(pruneMigration, /drop table public\.support_notes/i);
+const verifySchema = read("scripts/verify-schema-consolidation.sql");
+assert.match(verifySchema, /20260709120000_realtime_prune_deprecated_supporto/);
+
 const schedeHook = read("src/hooks/use-schede-store-query.ts");
 assert.match(schedeHook, /lavorazioneIds/);
 assert.match(schedeHook, /ensureSchedeBundlesInCache/);

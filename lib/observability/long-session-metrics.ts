@@ -1,4 +1,6 @@
 import { getCabSyncListenerCount } from "@/lib/sync/cab-sync-bus";
+import { getGestionaleDispatchAppliedTotal } from "@/lib/sync/gestionale-sync-dispatch";
+import { getGestionaleRealtimeRuntimeMode } from "@/lib/realtime/gestionale-realtime-runtime";
 import { getRicambioStockSnapshotRegistrySize } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
 import { getScortaSyncQueueSize } from "@/lib/magazzino/scorta-adjust-sync";
 import { getRuntimeHealthSnapshot } from "@/lib/observability/runtime-health";
@@ -9,6 +11,8 @@ export type LongSessionMetricsSnapshot = {
   ricambioSnapshotRegistrySize: number;
   scortaSyncQueueSize: number;
   runtimeHealth: ReturnType<typeof getRuntimeHealthSnapshot>;
+  gestionaleRealtimeMode: ReturnType<typeof getGestionaleRealtimeRuntimeMode>;
+  gestionaleDispatchAppliedTotal: number;
   reactQueryCacheCount?: number;
   heapUsedMb?: number;
   heapTotalMb?: number;
@@ -30,6 +34,8 @@ export function collectLongSessionMetrics(queryCacheCount?: number): LongSession
     ricambioSnapshotRegistrySize: getRicambioStockSnapshotRegistrySize(),
     scortaSyncQueueSize: getScortaSyncQueueSize(),
     runtimeHealth: getRuntimeHealthSnapshot(),
+    gestionaleRealtimeMode: getGestionaleRealtimeRuntimeMode(),
+    gestionaleDispatchAppliedTotal: getGestionaleDispatchAppliedTotal(),
     reactQueryCacheCount: queryCacheCount,
     heapUsedMb: perfMem ? Math.round(perfMem.usedJSHeapSize / 1048576) : undefined,
     heapTotalMb: perfMem ? Math.round(perfMem.totalJSHeapSize / 1048576) : undefined,

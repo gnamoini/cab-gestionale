@@ -19,6 +19,7 @@ la causa è quasi sempre un’**estensione** o il **browser integrato dell’IDE
 
 - [`app/layout.tsx`](../app/layout.tsx): `suppressHydrationWarning` su `<html>`, `<head>`, `<body>`; script `cab-theme-boot` in `<head>` via `next/script` `beforeInteractive`.
 - Script blocking in [`lib/theme/theme-boot-inline-script.ts`](../lib/theme/theme-boot-inline-script.ts) applica tema prima dell’hydration.
+- **Solo development:** script `cab-cursor-automation-dom-shield` ([`lib/theme/cursor-automation-dom-shield-inline-script.ts`](../lib/theme/cursor-automation-dom-shield-inline-script.ts)) rimuove `data-cursor-ref` iniettati da Cursor Browser prima/durante l’hydration (MutationObserver 15s). Non caricato in production.
 
 `suppressHydrationWarning` su `<body>` copre solo attributi del body (es. `bis_register`), non i discendenti. I warning su `bis_skin_checked` nei `<div>` interni spariscono solo disabilitando l'estensione.
 

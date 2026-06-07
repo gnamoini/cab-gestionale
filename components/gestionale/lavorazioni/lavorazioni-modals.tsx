@@ -824,6 +824,15 @@ export function SettingsLavorazioniModal({
 
   const lockedTab = layout === "embedded" && embeddedFocus ? embeddedFocus : null;
   const settingsTabPanelClass = lockedTab ? "w-full space-y-4" : "mx-auto w-full max-w-xl space-y-4";
+  const settingsListDivideClass = lockedTab
+    ? "divide-y divide-[color:var(--cab-border)]"
+    : "divide-y divide-zinc-100 dark:divide-zinc-800";
+  const settingsMutedTextClass = lockedTab
+    ? "text-[color:var(--cab-text-muted)]"
+    : "text-zinc-500 dark:text-zinc-400";
+  const settingsBodyTextClass = lockedTab
+    ? "text-[color:var(--cab-text)]"
+    : "text-zinc-800 dark:text-zinc-100";
   const settingsTitle =
     lockedTab === "stati"
       ? "Stati lavorazioni"
@@ -914,7 +923,7 @@ export function SettingsLavorazioniModal({
                   Aggiungi stato
                 </button>
               </div>
-              <p className="mb-3 text-xs text-zinc-500 dark:text-zinc-400">
+              <p className={`mb-3 text-xs ${settingsMutedTextClass}`}>
                 Scrivi liberamente il nome dello stato. Trascina ⋮⋮ per riordinare il workflow. Gli stati «Archiviato» compaiono nello storico.
               </p>
               <StatoSettingsList
@@ -933,20 +942,20 @@ export function SettingsLavorazioniModal({
 
           {tab === "priorita" ? (
             <div className={settingsTabPanelClass}>
-              <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <ul className={settingsListDivideClass}>
                 {(onChangePrioritaDb ? PRIORITA : prioritaDb?.length ? prioritaDb : PRIORITA).map((p) => {
                   const pl = p as PrioritaLav;
                   const hex = prioritaDisplayColor(pl, prioritaColors);
                   const active = (prioritaDb?.length ? prioritaDb : PRIORITA).includes(p);
                   return (
                     <li key={p} className="flex min-h-[2.75rem] flex-wrap items-center gap-2 py-2.5 first:pt-0 last:pb-0">
-                      <span className="min-w-0 flex-1 text-sm font-medium text-zinc-800 dark:text-zinc-100">
+                      <span className={`min-w-0 flex-1 text-sm font-medium ${settingsBodyTextClass}`}>
                         {prioritaLabel(p)}
                       </span>
                       {onChangePrioritaDb ? (
                         <label
                           htmlFor={`priorita-attiva-${pl}`}
-                          className="inline-flex items-center gap-1.5 text-[11px] font-medium text-zinc-500 dark:text-zinc-400"
+                          className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${settingsMutedTextClass}`}
                         >
                           <input
                             id={`priorita-attiva-${pl}`}

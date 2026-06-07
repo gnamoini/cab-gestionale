@@ -17,6 +17,7 @@ export type MagazzinoMasterPrefs = {
   produttoriByFornitore?: Record<string, string[]>;
 };
 
+/** @deprecated Preferire `public.app_settings` (modulo `magazzino`, chiave `master`). */
 export function loadMagazzinoMasterPrefs(): MagazzinoMasterPrefs | null {
   if (typeof window === "undefined") return null;
   try {
@@ -40,6 +41,7 @@ export function loadMagazzinoMasterPrefs(): MagazzinoMasterPrefs | null {
   }
 }
 
+/** @deprecated Preferire `public.app_settings` (modulo `magazzino`, chiave `master`). */
 export function saveMagazzinoMasterPrefs(prefs: MagazzinoMasterPrefs): void {
   if (typeof window === "undefined") return;
   try {

@@ -1,13 +1,49 @@
 "use client";
 
-import { useRef, useState, type KeyboardEvent } from "react";
+/**
+ * SSOT UI Impostazioni — regole:
+ * 1. Settings Page = layoutPageRoot + PageHeader + SETTINGS_PAGE_SHELL (master-detail).
+ * 2. Settings Section = SETTINGS_SECTION_CARD + SettingsSectionHeader + content.
+ * 3. Settings List Row = SETTINGS_LIST_ROW + SETTINGS_ROW_BTN_* (view/edit o inline).
+ * 4. Settings Add = SettingsAddRow + dsPageToolbarCtaCompact.
+ * 5. Settings Warning = SETTINGS_WARNING_BANNER (token semantici, no colori raw).
+ * 6. Settings Action (admin one-shot) = SETTINGS_ACTION_CARD separata da config operativa.
+ */
+
+import { useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { PageToolbarCtaLabel } from "@/components/design-system";
-import { erpBtnNeutral, erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnPrimary, dsInput, dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
+import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import {
+  dsBtnPrimary,
+  dsFocus,
+  dsInput,
+  dsPageToolbarCtaCompact,
+  dsSectionTitle,
+  dsTypoSmall,
+} from "@/lib/ui/design-system";
 
 /** Shell pannelli elenco impostazioni (clienti, gerarchie, …). */
 export const SETTINGS_PANEL_SHELL =
   "w-full overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]";
+
+/** Wrapper pagina master-detail (sidebar + main). */
+export const SETTINGS_PAGE_SHELL =
+  "relative flex min-h-0 w-full min-w-0 flex-col overflow-visible rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] shadow-[var(--cab-shadow-sm)]";
+
+export const SETTINGS_PAGE_GRID = "grid gap-4 p-3 md:grid-cols-[15rem_minmax(0,1fr)] md:p-4";
+
+/** Aside navigazione sezioni (desktop sticky). */
+export const SETTINGS_SIDEBAR_SHELL =
+  "hidden w-[13.75rem] shrink-0 flex-col border-[color:var(--cab-border)] bg-[color:var(--cab-card)] md:sticky md:top-4 md:flex md:h-fit md:max-h-[calc(100dvh-8rem)] md:w-[15rem] md:overflow-hidden md:rounded-[var(--ds-radius-xl)] md:border md:shadow-[var(--cab-shadow-sm)]";
+
+export const SETTINGS_MAIN_PANEL = "min-w-0 max-w-full overflow-x-hidden bg-transparent";
+
+export const SETTINGS_MAIN_HEADER = "mb-4 min-w-0 border-b border-[color:var(--cab-border)] pb-3";
+
+export const SETTINGS_NAV_GROUP_LABEL = `${dsTypoSmall} px-2 pt-2 pb-0.5 font-bold uppercase tracking-wider text-[color:var(--cab-text-muted)] first:pt-0`;
+
+export const SETTINGS_NAV_BTN =
+  "flex min-h-11 w-full items-center rounded-lg px-3 text-left text-sm font-medium transition-colors duration-150 ease-out";
 
 export const SETTINGS_LIST_UL = "divide-y divide-[color:var(--cab-border)]";
 
@@ -17,10 +53,25 @@ export const SETTINGS_LIST_DIVIDER_UL = "mt-3 divide-y divide-[color:var(--cab-b
 /** Card sezione interna (magazzino, clienti, parametri economici). */
 export const SETTINGS_SECTION_CARD = `${SETTINGS_PANEL_SHELL} p-3 sm:p-4`;
 
+/** Card azioni amministrative secondarie (migrazioni one-shot). */
+export const SETTINGS_ACTION_CARD = `${SETTINGS_PANEL_SHELL} mt-4 border-dashed bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-3 sm:p-4`;
+
 export const SETTINGS_SECTION_TITLE =
-  "text-xs font-bold uppercase tracking-wide text-[color:var(--cab-text)]";
+  "text-xs font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]";
 
 export const SETTINGS_SECTION_HINT = "mt-1 text-xs text-[color:var(--cab-text-muted)]";
+
+export const SETTINGS_SECTION_DESC = SETTINGS_SECTION_HINT;
+
+export const SETTINGS_ADD_ROW = "mt-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center";
+
+export const SETTINGS_ADD_INPUT = `${dsInput} min-h-11 min-w-0 flex-1 text-sm ${dsFocus}`;
+
+export const SETTINGS_EMPTY_STATE =
+  "rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] px-4 py-8 text-center text-xs text-[color:var(--cab-text-muted)]";
+
+export const SETTINGS_WARNING_BANNER =
+  "mt-3 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-warning)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-surface))] px-3 py-2 text-xs text-[color:color-mix(in_srgb,var(--cab-warning)_75%,var(--cab-text))]";
 
 /** Input numerico compatto (sconti % in elenchi). */
 export const SETTINGS_DISCOUNT_INPUT =
@@ -40,8 +91,105 @@ export const SETTINGS_ROW_BTN_NEUTRAL = `${SETTINGS_ROW_BTN_BASE} ${erpBtnNeutra
 
 export const SETTINGS_ROW_BTN_PRIMARY = `${SETTINGS_ROW_BTN_BASE} ${dsBtnPrimary}`;
 
-export const SETTINGS_ROW_BTN_DANGER =
-  `${SETTINGS_ROW_BTN_BASE} border-transparent text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] ${erpFocus}`;
+export const SETTINGS_ROW_BTN_DANGER = `${SETTINGS_ROW_BTN_BASE} border-transparent text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] ${dsFocus}`;
+
+export function settingsNavBtnClass(active: boolean): string {
+  return active
+    ? `${SETTINGS_NAV_BTN} bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] font-semibold text-[color:var(--cab-text)]`
+    : `${SETTINGS_NAV_BTN} text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]`;
+}
+
+export function SettingsSectionHeader({
+  groupLabel,
+  title,
+  titleId,
+  description,
+  badge,
+  level = "page",
+}: {
+  groupLabel?: string;
+  title: string;
+  titleId?: string;
+  description?: string;
+  badge?: ReactNode;
+  /** page = h2 nel main panel; card = h3 in card interna */
+  level?: "page" | "card";
+}) {
+  if (level === "card") {
+    return (
+      <header>
+        <h3 className={SETTINGS_SECTION_TITLE}>{title}</h3>
+        {description ? <p className={SETTINGS_SECTION_HINT}>{description}</p> : null}
+      </header>
+    );
+  }
+
+  return (
+    <header className={SETTINGS_MAIN_HEADER}>
+      {groupLabel ? <p className={SETTINGS_NAV_GROUP_LABEL}>{groupLabel}</p> : null}
+      <h2 id={titleId} className={`${dsSectionTitle} mt-0.5`}>
+        {title}
+      </h2>
+      {description ? <p className={`${SETTINGS_SECTION_HINT} mt-1 max-w-2xl`}>{description}</p> : null}
+      {badge ? <div className="mt-2">{badge}</div> : null}
+    </header>
+  );
+}
+
+export function SettingsEmptyState({ children }: { children: ReactNode }) {
+  return <p className={SETTINGS_EMPTY_STATE}>{children}</p>;
+}
+
+export function SettingsAddRow({
+  value,
+  onChange,
+  onAdd,
+  placeholder,
+  inputAriaLabel,
+  addLabel = "Aggiungi",
+  addLabelShort = "Aggiungi",
+  disabled,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onAdd: () => void;
+  placeholder: string;
+  inputAriaLabel: string;
+  addLabel?: string;
+  addLabelShort?: string;
+  disabled?: boolean;
+}) {
+  const trimmed = value.trim();
+  const canAdd = !disabled && Boolean(trimmed);
+
+  return (
+    <div className={SETTINGS_ADD_ROW}>
+      <input
+        className={SETTINGS_ADD_INPUT}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        autoComplete="off"
+        aria-label={inputAriaLabel}
+        disabled={disabled}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (canAdd) onAdd();
+          }
+        }}
+      />
+      <button
+        type="button"
+        className={`${dsPageToolbarCtaCompact} min-h-11 w-full shrink-0 sm:w-auto`}
+        disabled={!canAdd}
+        onClick={onAdd}
+      >
+        <PageToolbarCtaLabel short={addLabelShort} full={addLabel} />
+      </button>
+    </div>
+  );
+}
 
 export function SettingsRowActionButtons({
   mode,
@@ -58,35 +206,19 @@ export function SettingsRowActionButtons({
   onConfirm: () => void;
   onCancelEdit: () => void;
   onRemove: () => void;
-  /** Righe sempre in edit (es. gerarchie): mostra Elimina accanto a Conferma/Annulla. */
   showRemoveInEdit?: boolean;
 }) {
   if (mode === "edit") {
     return (
       <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-        <button
-          type="button"
-          className={SETTINGS_ROW_BTN_PRIMARY}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onConfirm}
-        >
+        <button type="button" className={SETTINGS_ROW_BTN_PRIMARY} onMouseDown={(e) => e.preventDefault()} onClick={onConfirm}>
           Conferma
         </button>
-        <button
-          type="button"
-          className={SETTINGS_ROW_BTN_NEUTRAL}
-          onMouseDown={(e) => e.preventDefault()}
-          onClick={onCancelEdit}
-        >
+        <button type="button" className={SETTINGS_ROW_BTN_NEUTRAL} onMouseDown={(e) => e.preventDefault()} onClick={onCancelEdit}>
           Annulla
         </button>
         {showRemoveInEdit ? (
-          <button
-            type="button"
-            className={SETTINGS_ROW_BTN_DANGER}
-            onClick={onRemove}
-            aria-label={`Elimina ${itemLabel}`}
-          >
+          <button type="button" className={SETTINGS_ROW_BTN_DANGER} onClick={onRemove} aria-label={`Elimina ${itemLabel}`}>
             Elimina
           </button>
         ) : null}
@@ -96,12 +228,7 @@ export function SettingsRowActionButtons({
 
   return (
     <div className="flex shrink-0 flex-wrap items-center justify-end gap-1">
-      <button
-        type="button"
-        className={SETTINGS_ROW_BTN_NEUTRAL}
-        onClick={onEdit}
-        aria-label={`Modifica ${itemLabel}`}
-      >
+      <button type="button" className={SETTINGS_ROW_BTN_NEUTRAL} onClick={onEdit} aria-label={`Modifica ${itemLabel}`}>
         Modifica
       </button>
       <button type="button" className={SETTINGS_ROW_BTN_DANGER} onClick={onRemove} aria-label={`Elimina ${itemLabel}`}>
@@ -187,32 +314,16 @@ export function SettingsQuickAddRow({
   addLabelShort: string;
   inputAriaLabel: string;
 }) {
-  const trimmed = value.trim();
   return (
-    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-      <input
-        className={`${dsInput} min-h-10 min-w-0 flex-1`}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        autoComplete="off"
-        aria-label={inputAriaLabel}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            if (trimmed) onAdd();
-          }
-        }}
-      />
-      <button
-        type="button"
-        className={`${dsPageToolbarCtaCompact} min-h-10 w-full shrink-0 sm:w-auto`}
-        disabled={!trimmed}
-        onClick={onAdd}
-      >
-        <PageToolbarCtaLabel short={addLabelShort} full={addLabel} />
-      </button>
-    </div>
+    <SettingsAddRow
+      value={value}
+      onChange={onChange}
+      onAdd={onAdd}
+      placeholder={placeholder}
+      inputAriaLabel={inputAriaLabel}
+      addLabel={addLabel}
+      addLabelShort={addLabelShort}
+    />
   );
 }
 
@@ -225,7 +336,7 @@ export function SettingsEditableStringRow({
   value: string;
   onRenameBlur: (previous: string, next: string) => void;
   onRemove: () => void;
-  trailing?: React.ReactNode;
+  trailing?: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -278,3 +389,9 @@ export function SettingsEditableStringRow({
     </li>
   );
 }
+
+/** Box riga modello gerarchia — allineato a SETTINGS_LIST_ROW. */
+export const SETTINGS_HIERARCHY_MODEL_BOX = `${SETTINGS_LIST_ROW} min-h-10 rounded-[var(--ds-radius-md)] border border-[color:var(--cab-border)] bg-[color:var(--cab-card)] px-2 hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-card))]`;
+
+export const SETTINGS_HIERARCHY_MODEL_INPUT =
+  "min-h-9 min-w-0 flex-1 border-0 bg-transparent px-1 py-0 text-sm font-medium text-[color:var(--cab-text)] outline-none placeholder:font-normal placeholder:text-[color:var(--cab-text-muted)] focus:bg-[color:color-mix(in_srgb,var(--cab-surface)_85%,var(--cab-card))] focus:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))]";

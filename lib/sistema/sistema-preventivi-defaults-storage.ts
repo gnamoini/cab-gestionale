@@ -7,6 +7,7 @@ export type SistemaPreventiviDefaults = {
 
 const FALLBACK: SistemaPreventiviDefaults = { costoOrarioDefault: 48 };
 
+/** @deprecated Preferire `public.app_settings` (modulo `preventivi`, chiave `defaults`). */
 export function loadSistemaPreventiviDefaults(): SistemaPreventiviDefaults {
   if (typeof window === "undefined") return FALLBACK;
   try {
@@ -22,6 +23,7 @@ export function loadSistemaPreventiviDefaults(): SistemaPreventiviDefaults {
   }
 }
 
+/** @deprecated Preferire `public.app_settings` (modulo `preventivi`, chiave `defaults`). */
 export function saveSistemaPreventiviDefaults(next: SistemaPreventiviDefaults): void {
   if (typeof window === "undefined") return;
   try {

@@ -45,6 +45,7 @@ export function createMezziListePrefsDefault(): MezziListePrefs {
   return migrateMezziListePrefs(defaultListe());
 }
 
+/** @deprecated Preferire `public.app_settings` (modulo `mezzi`, chiave `liste`). */
 export function loadMezziListePrefs(): MezziListePrefs | null {
   if (typeof window === "undefined") return null;
   try {
@@ -72,6 +73,7 @@ export function loadMezziListePrefs(): MezziListePrefs | null {
   }
 }
 
+/** @deprecated Preferire `public.app_settings` (modulo `mezzi`, chiave `liste`). */
 export function saveMezziListePrefs(liste: MezziListePrefs): void {
   if (typeof window === "undefined") return;
   try {

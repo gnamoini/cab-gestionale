@@ -50,6 +50,7 @@ import {
   type PilotControlStatus,
 } from "@/src/lib/runtime/truth-layer/resolve-pilot-settings-state";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 
 type SecurityDashboardTab = "users" | "monitoring" | "release";
 
@@ -311,38 +312,28 @@ export function SecurityDashboardView() {
   const usersRefetchRef = useRef(usersQ.refetch);
   usersRefetchRef.current = usersQ.refetch;
 
-  useEffect(() => {
-    if (!isAdmin) return;
-    const sb = getBrowserSupabase();
-    const channel = sb
-      .channel("security-release-control-center")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "app_settings" },
-        () => {
-          void runControlCenterCheck(false);
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "user_permissions" },
-        () => {
-          void (async () => {
-            const { invalidateRuntimeTruth } = await import(
-              "@/src/lib/runtime/truth-layer/invalidate-runtime-truth"
-            );
-            await invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient });
-            await usersRefetchRef.current();
-            await runControlCenterCheck(false);
-          })();
-        },
-      )
-      .subscribe();
+  const runControlCenterCheckRef = useRef(runControlCenterCheck);
+  runControlCenterCheckRef.current = runControlCenterCheck;
 
-    return () => {
-      void sb.removeChannel(channel);
-    };
-  }, [isAdmin, queryClient, runControlCenterCheck]);
+  const isAdminRef = useRef(isAdmin);
+  isAdminRef.current = isAdmin;
+
+  useCabSyncListener("settings", () => {
+    if (!isAdminRef.current) return;
+    void runControlCenterCheckRef.current(false);
+  });
+
+  useCabSyncListener("user_permissions", () => {
+    if (!isAdminRef.current) return;
+    void (async () => {
+      const { invalidateRuntimeTruth } = await import(
+        "@/src/lib/runtime/truth-layer/invalidate-runtime-truth"
+      );
+      await invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient });
+      await usersRefetchRef.current();
+      await runControlCenterCheckRef.current(false);
+    })();
+  });
 
   const { logsQuery, recentLogins, recentLoginFailed, activeTodayCount, activeTodayIds, lastAccessPerUser } = dash;
 

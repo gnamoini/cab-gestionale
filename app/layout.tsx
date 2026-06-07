@@ -4,6 +4,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AppProviders } from "@/components/app-providers";
 import { getServerSession } from "@/src/lib/auth/get-server-session";
 import { CAB_THEME_BOOT_INLINE_SCRIPT } from "@/lib/theme/theme-boot-inline-script";
+import { CAB_BRANDING_BOOT_INLINE_SCRIPT } from "@/lib/theme/branding-boot-inline-script";
+import { CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT } from "@/lib/theme/cursor-automation-dom-shield-inline-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -52,6 +54,18 @@ export default async function RootLayout({
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: CAB_THEME_BOOT_INLINE_SCRIPT }}
         />
+        <Script
+          id="cab-branding-boot"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: CAB_BRANDING_BOOT_INLINE_SCRIPT }}
+        />
+        {process.env.NODE_ENV === "development" ? (
+          <Script
+            id="cab-cursor-automation-dom-shield"
+            strategy="beforeInteractive"
+            dangerouslySetInnerHTML={{ __html: CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT }}
+          />
+        ) : null}
       </head>
       <body
         suppressHydrationWarning

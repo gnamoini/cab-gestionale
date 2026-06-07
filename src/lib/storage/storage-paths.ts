@@ -59,3 +59,12 @@ export function buildLavorazioneDocumentStoragePath(
   assertValidRecordId(lavorazioneId, "lavorazione");
   return normalizeStorageObjectPath(`lavorazioni/${lavorazioneId.trim()}/${LAVORAZIONE_DOCUMENT_FILE_NAMES[tipo]}`);
 }
+
+/** Path SSOT logo branding globale (`images` bucket). */
+export function buildBrandingLogoStoragePath(extension: "png" | "webp" | "jpeg" | "jpg" | "svg"): string {
+  const ext = extension === "jpg" ? "jpeg" : extension;
+  const fileName = ext === "jpeg" ? "app-logo.jpg" : `app-logo.${ext}`;
+  return normalizeStorageObjectPath(`branding/${fileName}`);
+}
+
+export const BRANDING_LOGO_STORAGE_PREFIX = "branding/" as const;

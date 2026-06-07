@@ -1,5 +1,9 @@
 # Report refactor schema Supabase — gestionale-cab
 
+> **SSOT aggiornato:** questo documento è storico (maggio 2026, ~38 migration).  
+> Per l'audit production-grade completo (80 migration, snapshot DB live, score readiness):  
+> **[audit-supabase-ecosystem.md](./audit-supabase-ecosystem.md)**
+
 **Data analisi:** 2026-05-22  
 **Migrations analizzate:** 38 file in `supabase/migrations/` + `supabase/rbac_core.sql`  
 **Obiettivo:** schema minimale, RLS coerente, zero downtime, compatibilità frontend totale.

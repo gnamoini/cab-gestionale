@@ -18,6 +18,7 @@ export type LavorazioniPersistedPrefs = {
   prioritaColors?: Partial<Record<PrioritaLav, string>>;
 };
 
+/** @deprecated Preferire `public.app_settings` (modulo `lavorazioni`, chiave `prefs`). */
 export function loadLavorazioniPrefs(): LavorazioniPersistedPrefs | null {
   if (typeof window === "undefined") return null;
   try {
@@ -31,6 +32,7 @@ export function loadLavorazioniPrefs(): LavorazioniPersistedPrefs | null {
   }
 }
 
+/** @deprecated Preferire `public.app_settings` (modulo `lavorazioni`, chiave `prefs`). */
 export function saveLavorazioniPrefs(prefs: LavorazioniPersistedPrefs): void {
   if (typeof window === "undefined") return;
   try {

@@ -16,7 +16,7 @@ export type { DipendentiPdfContext };
 export async function openDipendentiPdfComplessivoInNewTab(ctx: DipendentiPdfContext): Promise<void> {
   if (ctx.employees.length === 0) return;
   const { buildComplessivoPdf } = await importDipendentiPdfSections();
-  const doc = buildComplessivoPdf(ctx);
+  const doc = await buildComplessivoPdf(ctx);
   void openPdfBlobInNewTab(
     doc.output("blob"),
     buildDipendentiPdfDownloadFileName({ monthKey: ctx.monthKey, kind: "aziendale" }),
@@ -28,7 +28,7 @@ export async function openDipendentiPdfDipendenteInNewTab(
   employee: DipendenteTimesheetEmployeeRow,
 ): Promise<void> {
   const { buildDipendentePdf } = await importDipendentiPdfSections();
-  const doc = buildDipendentePdf(ctx, employee);
+  const doc = await buildDipendentePdf(ctx, employee);
   const displayName = employeeDisplayName(employee, ctx.entries);
   void openPdfBlobInNewTab(
     doc.output("blob"),

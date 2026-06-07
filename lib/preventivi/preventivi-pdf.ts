@@ -13,9 +13,11 @@ import { jsPDF } from "jspdf";
 import { buildPreventivoOutputRighe } from "@/lib/preventivi/preventivi-struttura";
 import { buildPreventivoPdfDownloadFileName } from "@/lib/preventivi/preventivo-pdf-filename";
 import { preventivoTipoDocumentoLabel } from "@/lib/preventivi/preventivi-tipo-documento";
+import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
-export function openPreventivoPdfInNewTab(p: PreventivoRecord, autore: string): void {
+export async function openPreventivoPdfInNewTab(p: PreventivoRecord, autore: string): Promise<void> {
+  const logoDataUrl = await loadBrandingLogoDataUrl();
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const righe = buildPreventivoOutputRighe(p);
@@ -30,6 +32,7 @@ export function openPreventivoPdfInNewTab(p: PreventivoRecord, autore: string): 
     numero: p.numero.trim() || undefined,
     data: p.dataCreazione ? fmtDateIt(p.dataCreazione) : undefined,
     operatore,
+    logoDataUrl,
   });
   y = pdfAdvanceSection(y);
 

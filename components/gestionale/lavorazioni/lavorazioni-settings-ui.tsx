@@ -159,7 +159,7 @@ export function StatoSettingsList({
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   return (
-    <ul className="divide-y divide-zinc-100 dark:divide-zinc-800">
+    <ul className="divide-y divide-[color:var(--cab-border)]">
       {stati.map((s, index) => {
         const inUse = attiviStatoIds.has(s.id) || storicoStatoIds.has(s.id);
         const canDelete = s.id !== STATO_LAVORAZIONE_COMPLETATA_ID && !inUse;
@@ -182,7 +182,7 @@ export function StatoSettingsList({
           >
             {onReorder ? (
               <span
-                className="cursor-grab select-none px-1 text-zinc-400 active:cursor-grabbing"
+                className="cursor-grab select-none px-1 text-[color:var(--cab-text-muted)] active:cursor-grabbing"
                 title="Trascina per riordinare"
                 aria-hidden
               >
@@ -220,7 +220,7 @@ export function StatoSettingsList({
             {onChangeStatoClosed ? (
               <label
                 htmlFor={`stato-closed-${s.id}`}
-                className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-zinc-500 dark:text-zinc-400"
+                className="inline-flex shrink-0 items-center gap-1 text-[10px] font-medium text-[color:var(--cab-text-muted)]"
                 title="Solo workflow visuale (dropdown/filtri). L'archivio lavorazioni usa il campo archived in database."
               >
                 <input
@@ -255,12 +255,14 @@ function AddettoSettingsRow({
   onChangeAddettoColor,
   onUpdate,
   onRemove,
+  inUse,
 }: {
   record: AddettoRecord;
   addettoColors: Record<string, string>;
   onChangeAddettoColor: (nome: string, hex: string) => void;
   onUpdate: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
   onRemove: (id: string) => void;
+  inUse: boolean;
 }) {
   const [nome, setNome] = useState(record.nome);
   const [cognome, setCognome] = useState(record.cognome ?? "");
@@ -331,6 +333,11 @@ function AddettoSettingsRow({
         type="button"
         className={`${SETTINGS_ROW_BTN_DANGER} ${erpFocus} w-full sm:w-auto`}
         onClick={() => onRemove(record.id)}
+        title={
+          inUse
+            ? "Compare in lavorazioni già registrate; verrà rimosso solo dalle liste future"
+            : undefined
+        }
       >
         Elimina
       </button>
@@ -344,8 +351,8 @@ export function AddettiSettingsList({
   onChangeAddettoColor,
   onUpdateAddetto,
   onRemove,
-  attiviAddetti: _attiviAddetti,
-  storicoAddetti: _storicoAddetti,
+  attiviAddetti,
+  storicoAddetti,
 }: {
   addettiRecords: AddettoRecord[];
   addettoColors: Record<string, string>;
@@ -375,6 +382,7 @@ export function AddettiSettingsList({
           onChangeAddettoColor={onChangeAddettoColor}
           onUpdate={onUpdateAddetto}
           onRemove={onRemove}
+          inUse={attiviAddetti.has(rec.nome) || storicoAddetti.has(rec.nome)}
         />
       ))}
     </ul>

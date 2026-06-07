@@ -5,6 +5,7 @@ export const CAB_SETTINGS_MODULE = {
   magazzino: "magazzino",
   preventivi: "preventivi",
   dipendenti: "dipendenti",
+  system: "system",
 } as const;
 
 /** Chiavi `app_settings.key` per modulo */
@@ -13,6 +14,7 @@ export const CAB_SETTINGS_KEY = {
   liste: "liste",
   master: "master",
   defaults: "defaults",
+  branding: "branding",
 } as const;
 
 export type CabSettingsModule = (typeof CAB_SETTINGS_MODULE)[keyof typeof CAB_SETTINGS_MODULE];

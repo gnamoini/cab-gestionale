@@ -15,7 +15,7 @@
 }
 
 .lavorazioni-select-dk option:checked {
-  background-color: #ff6633;
+  background-color: var(--cab-primary);
   color: #ffffff;
   font-weight: 600;
 }
@@ -28,7 +28,7 @@
 /* Date picker nativo (showPicker): coerenza dark + accento arancio */
 .lavorazioni-date-native {
   color-scheme: dark;
-  accent-color: #ff6633;
+  accent-color: var(--cab-primary);
 }
 
 /* Host campo data: popup calendario nativo in tema scuro dove supportato */

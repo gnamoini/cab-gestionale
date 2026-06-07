@@ -1,4 +1,8 @@
 import { shouldNotifyRemoteChange } from "@/lib/sistema/remote-change-notify";
+import {
+  OPERATOR_GLOBAL_SETTINGS_KEY,
+  OPERATOR_GLOBAL_SETTINGS_MODULE,
+} from "@/lib/permissions/operator-global-settings";
 import type { PostgresChangePayload } from "@/lib/realtime/postgres-changes-channel";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
 
@@ -26,4 +30,13 @@ export function isOwnAppSettingsWrite(userId: string | undefined, payload: Postg
 
 export function shouldShowRemoteSettingsToast(): boolean {
   return shouldNotifyRemoteChange("settings-remote-toast", REMOTE_SETTINGS_NOTIFY_COOLDOWN_MS);
+}
+
+/** True se il payload postgres_changes tocca il flag pilot operatore (refresh operational mirato). */
+export function isOperatorGlobalSettingsPilotPayload(payload: PostgresChangePayload): boolean {
+  const row =
+    payload.eventType === "DELETE"
+      ? (payload.old as Partial<AppSettingRow> | undefined)
+      : (payload.new as Partial<AppSettingRow> | undefined);
+  return row?.module === OPERATOR_GLOBAL_SETTINGS_MODULE && row?.key === OPERATOR_GLOBAL_SETTINGS_KEY;
 }

@@ -1,4 +1,4 @@
-/** Evento finestra: ricarica preferenze lavorazioni (anagrafiche) da localStorage senza navigazione. */
+/** @deprecated Evento legacy localStorage; preferire invalidazione React Query su `app_settings`. */
 export const CAB_LAVORAZIONI_PREFS_REFRESH = "cab-lavorazioni-prefs-refresh";
 
 /** Evento: ricarica anagrafiche magazzino (marche, categorie, …) da localStorage. */
@@ -31,6 +31,14 @@ export const CAB_CONFIGURAZIONE_LOG_REFRESH = "cab-configurazione-log-refresh";
 export function dispatchConfigurazioneLogRefresh(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(CAB_CONFIGURAZIONE_LOG_REFRESH));
+}
+
+/** Stack undo salvataggi configurazione (/impostazioni). */
+export const CAB_CONFIGURAZIONE_UNDO_REFRESH = "cab-configurazione-undo-refresh";
+
+export function dispatchConfigurazioneUndoRefresh(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event(CAB_CONFIGURAZIONE_UNDO_REFRESH));
 }
 
 export const CAB_PREVENTIVI_LOG_REFRESH = "cab-preventivi-log-refresh";

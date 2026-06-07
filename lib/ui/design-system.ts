@@ -142,9 +142,9 @@ export const dsInputAuth = `w-full rounded-[var(--ds-radius-lg)] border border-[
 const selectChevronWhite =
   "bg-[length:1.15rem] bg-[right_0.55rem_center] bg-no-repeat bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23f4f4f5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E\")]";
 
-/** Chevron accent filtri — stesso stroke (#ff6633) in light e dark. */
+/** Chevron accent filtri — colore da `--cab-select-chevron-accent` (aggiornato dal branding). */
 const gestionaleSelectChevronAccent =
-  "bg-[length:1.1rem] bg-[right_0.55rem_center] bg-no-repeat bg-[url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff6633'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E\")]";
+  "bg-[length:1.1rem] bg-[right_0.55rem_center] bg-no-repeat bg-[image:var(--cab-select-chevron-accent)]";
 
 export const selectLavorazioniInline =
   `lavorazioni-select-dk min-w-0 max-w-[11rem] h-10 cursor-pointer appearance-none rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border-strong)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_92%,#000)] py-2 pl-7 pr-8 text-base md:text-xs font-medium text-[color:var(--cab-text)] shadow-md shadow-black/25 outline-none transition-all duration-200 ease-out hover:border-[color:var(--cab-border)] hover:brightness-[1.05] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_30%,transparent)] ${selectChevronWhite} touch-manipulation`;

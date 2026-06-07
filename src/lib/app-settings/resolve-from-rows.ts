@@ -23,6 +23,11 @@ import {
   parseTipiAssenzaFromPayload,
   type TipoAssenzaConfig,
 } from "@/lib/dipendenti/tipi-assenza-model";
+import {
+  DEFAULT_CAB_BRANDING_SETTINGS,
+  parseBrandingSettingsPayload,
+  type CabBrandingSettings,
+} from "@/lib/branding/branding-settings-model";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import type { AppSettingRow } from "@/src/types/supabase-tables";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
@@ -44,6 +49,7 @@ export type CabAppSettingsResolved = {
   dipendenti: {
     tipiAssenza: TipoAssenzaConfig[];
   };
+  branding: CabBrandingSettings;
 };
 
 const FALLBACK_PREVENTIVI: SistemaPreventiviDefaults = { costoOrarioDefault: 48 };
@@ -209,7 +215,15 @@ export function resolveCabAppSettingsFromRows(
         : defaultTipiAssenza(),
   };
 
-  return { lavorazioni, mezziListe, magazzinoMaster, preventiviDefaults, dipendenti };
+  const brandRow = pick(CAB_SETTINGS_MODULE.system, CAB_SETTINGS_KEY.branding);
+  const branding =
+    brandRow != null
+      ? parseBrandingSettingsPayload(brandRow.value)
+      : legacy?.branding != null
+        ? parseBrandingSettingsPayload(legacy.branding)
+        : { ...DEFAULT_CAB_BRANDING_SETTINGS };
+
+  return { lavorazioni, mezziListe, magazzinoMaster, preventiviDefaults, dipendenti, branding };
 }
 
 export function buildBulkRowsFromResolved(r: CabAppSettingsResolved): { module: string; key: string; value: Record<string, unknown> }[] {
@@ -245,6 +259,15 @@ export function buildBulkRowsFromResolved(r: CabAppSettingsResolved): { module: 
       module: CAB_SETTINGS_MODULE.dipendenti,
       key: CAB_SETTINGS_KEY.prefs,
       value: { tipiAssenza: r.dipendenti.tipiAssenza },
+    },
+    {
+      module: CAB_SETTINGS_MODULE.system,
+      key: CAB_SETTINGS_KEY.branding,
+      value: {
+        primaryColor: r.branding.primaryColor,
+        logoStoragePath: r.branding.logoStoragePath,
+        updatedAt: r.branding.updatedAt ?? new Date().toISOString(),
+      },
     },
   ];
 }

@@ -35,9 +35,9 @@ html {
   --cab-primary: #ff6633;
   --cab-primary-bg: var(--cab-primary);
   --cab-primary-bg-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
-  --cab-primary-hover: #e05a2d;
+  --cab-primary-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
+  --cab-select-chevron-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff6633'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
   --cab-success: #059669;
-  --cab-warning: #d97706;
   --cab-danger: #dc2626;
   --cab-info: #0284c7;
   --cab-hover: rgb(24 24 27 / 0.06);
@@ -81,7 +81,8 @@ html {
   --cab-primary: #ff6633;
   --cab-primary-bg: var(--cab-primary);
   --cab-primary-bg-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
-  --cab-primary-hover: #e05a2d;
+  --cab-primary-hover: color-mix(in srgb, var(--cab-primary) 88%, black);
+  --cab-select-chevron-accent: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ff6633'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2.25' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
   --cab-success: #34d399;
   --cab-warning: #fbbf24;
   --cab-danger: #f87171;

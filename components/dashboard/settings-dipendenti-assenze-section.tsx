@@ -6,10 +6,10 @@ import {
   SETTINGS_LIST_INPUT,
   SETTINGS_ROW_BTN_DANGER,
   SETTINGS_SECTION_CARD,
-  SETTINGS_SECTION_HINT,
+  SettingsAddRow,
+  SettingsSectionHeader,
 } from "@/components/dashboard/settings-list-ui";
 import { createTipoAssenzaId, type TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
-import { dsInput, dsPageToolbarCtaCompact } from "@/lib/ui/design-system";
 
 const ROW_GRID =
   "grid grid-cols-[2.75rem_minmax(0,1fr)_2.25rem_auto] items-center gap-x-2 px-2 py-1";
@@ -42,10 +42,11 @@ export function SettingsDipendentiAssenzeSection({
 
   return (
     <div className={SETTINGS_SECTION_CARD}>
-      <p className={SETTINGS_SECTION_HINT}>
-        Sigle mostrate nelle celle presenze (es. F = Ferie). I record già salvati mantengono l&apos;etichetta
-        originale.
-      </p>
+      <SettingsSectionHeader
+        level="card"
+        title="Tipi assenza dipendenti"
+        description="Sigle mostrate nelle celle presenze (es. F = Ferie). I record già salvati mantengono l&apos;etichetta originale."
+      />
 
       <div className="mt-3 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]">
         <div
@@ -113,29 +114,13 @@ export function SettingsDipendentiAssenzeSection({
         </ul>
       </div>
 
-      <div className="mt-3 flex min-w-0 items-center gap-2">
-        <input
-          className={`${dsInput} min-h-10 min-w-0 flex-1 text-xs`}
-          value={nuovo}
-          placeholder="Nuovo tipo, es. Formazione"
-          aria-label="Nome nuovo tipo assenza"
-          onChange={(e) => setNuovo(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAdd();
-            }
-          }}
-        />
-        <button
-          type="button"
-          className={`${dsPageToolbarCtaCompact} h-8 shrink-0 px-3 text-xs`}
-          disabled={!nuovo.trim()}
-          onClick={handleAdd}
-        >
-          Aggiungi
-        </button>
-      </div>
+      <SettingsAddRow
+        value={nuovo}
+        onChange={setNuovo}
+        placeholder="Nuovo tipo, es. Formazione"
+        inputAriaLabel="Nome nuovo tipo assenza"
+        onAdd={handleAdd}
+      />
     </div>
   );
 }

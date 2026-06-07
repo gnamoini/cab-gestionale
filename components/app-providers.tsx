@@ -3,6 +3,7 @@
 import { AuthProvider } from "@/context/auth-context";
 import { GlobalLoadingProvider } from "@/context/global-loading-context";
 import { ThemeProvider } from "@/context/theme-context";
+import { BrandingProvider } from "@/context/branding-context";
 import { ToastProvider } from "@/context/toast-context";
 import { UploadFeedbackProvider } from "@/context/upload-feedback-context";
 import { UploadFeedbackTray } from "@/components/gestionale/upload";
@@ -44,6 +45,7 @@ export function AppProviders({
                   <OverlayBackStackGuard />
                   <GestionaleClientErrorBoundary>
                     <ThemeProvider>
+                      <BrandingProvider>
                       <SettingsModalOpenProvider>
                         <DevUxEnforcementGuard />
                         <IosInteractionStability />
@@ -51,6 +53,7 @@ export function AppProviders({
                         <DeferredGestionaleBridges />
                         {children}
                       </SettingsModalOpenProvider>
+                      </BrandingProvider>
                     </ThemeProvider>
                   </GestionaleClientErrorBoundary>
                 </ObservabilityProvider>

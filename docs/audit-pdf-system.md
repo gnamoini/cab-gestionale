@@ -301,6 +301,48 @@ app/api/preventivi/pdf-anteprima/route.ts  # proxy deprecato (rimuovere dopo 1 r
 
 ---
 
+## 12. Branding header/footer PDF (2026-06-07)
+
+### Inventario generatori gestionale (Track A)
+
+| Modulo | Generator | Header SSOT | Logo branding |
+|--------|-----------|-------------|---------------|
+| Preventivi | `lib/preventivi/preventivi-pdf.ts` | `drawGestionalePdfHeader` | `loadBrandingLogoDataUrl()` |
+| Schede (×3) | `lib/schede/schede-pdf.ts` | idem | idem |
+| Timesheet dipendenti | `lib/dipendenti/pdf/dipendenti-pdf-sections.ts` | idem | idem |
+| Lista lavorazioni | `lib/lavorazioni/lavorazioni-list-pdf.ts` | idem | idem |
+
+**Fuori scope:** BUNDER (`lib/bunder/bunder-pdf.ts` — brand proprio), PDF archiviati/allegati (file già salvati).
+
+### Strategia implementata
+
+**SSOT layout:** [`lib/pdf/preventivo-pdf-layout.ts`](../lib/pdf/preventivo-pdf-layout.ts)
+
+| Elemento | Comportamento |
+|----------|---------------|
+| `drawPdfBrandBlock` | Logo centrato **oppure** testo `PDF_COMPANY_NAME` (fallback) — mutuamente esclusivi |
+| Slot verticale fisso | `PDF_HEADER_BRAND_BLOCK_MM` (6.5 mm) — titolo documento parte dallo stesso Y con logo o testo |
+| Logo max | `PDF_HEADER_BRAND_MAX_MM` / `CAB_LOGO_PDF_MAX_HEIGHT_MM` = 8 mm (scalato entro slot 6.5 mm) |
+| Sorgente logo | `GET /api/branding/logo` via [`loadBrandingLogoDataUrl()`](../lib/branding/branding-logo-for-pdf.ts) (custom o default `/cab-logo.png`) |
+| Footer | Solo paginazione a sinistra (`N. xxx · Pag. i/n`) — **rimosso** testo aziendale a destra |
+| Fallback | Logo assente/corrotto/`addImage` fallito → header testuale originale |
+
+### Paginazione
+
+- Prima (bug): logo 12 mm **+** testo aziendale → header più alto → rischio pagine extra.
+- Dopo: logo **sostituisce** testo nello slot fisso → page count invariato (verificato in [`lib/pdf/pdf-header-branding.test.ts`](../lib/pdf/pdf-header-branding.test.ts)).
+
+### Verifica
+
+```bash
+node --import tsx lib/pdf/pdf-header-branding.test.ts
+npx tsc --noEmit
+```
+
+Smoke manuale consigliato: anteprima PDF da Preventivi, Schede, Dipendenti, Lavorazioni (documento piccolo/medio/grande) — download, stampa A4, nitidezza logo.
+
+---
+
 ## Mappa file coinvolti
 
 | Layer | File chiave |

@@ -28,6 +28,7 @@ const base = (): ConfigurazioneSettingsSnapshot => ({
   },
   eco: { costoOrarioDefault: 40 },
   tipiAssenza: [],
+  branding: { primaryColor: null, logoStoragePath: null, updatedAt: null },
 });
 
 {

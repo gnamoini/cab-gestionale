@@ -10,6 +10,7 @@ import {
   drawGestionaleDataSectionTable,
   pdfContentWidth,
 } from "@/lib/pdf/core/pdf-base-template";
+import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 
 export type LavorazioniInCorsoPdfRow = {
@@ -63,10 +64,11 @@ function lavorazioniPdfColumnStyles(contentW: number) {
 /**
  * Export PDF lista lavorazioni in corso in layout A4 landscape.
  */
-export function openLavorazioniInCorsoPdfInNewTab(
+export async function openLavorazioniInCorsoPdfInNewTab(
   rows: readonly LavorazioniInCorsoPdfRow[],
   _autore: string,
-): void {
+): Promise<void> {
+  const logoDataUrl = await loadBrandingLogoDataUrl();
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const contentW = pdfContentWidth(pageW);
@@ -75,6 +77,7 @@ export function openLavorazioniInCorsoPdfInNewTab(
   let y = drawGestionalePdfHeader(doc, pageW, "LAVORAZIONI IN CORSO", {
     data: fmtDateIt(nowIso),
     metaDivider: false,
+    logoDataUrl,
   });
   y = pdfAdvanceSection(y);
 

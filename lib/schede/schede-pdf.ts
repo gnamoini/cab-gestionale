@@ -12,6 +12,7 @@ import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { buildSchedaPdfDownloadFileName } from "@/lib/schede/scheda-pdf-filename";
 import { jsPDF } from "jspdf";
+import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import type { LavorazioneSchedeBundle, SchedaIngressoDoc, SchedaLavorazioniDoc, SchedaRicambiDoc } from "@/types/schede";
 
 function schedaDocumentTitle(titoloScheda: string): string {
@@ -26,13 +27,14 @@ function schedaPdfDisplayNumero(bundle: LavorazioneSchedeBundle): string | undef
 }
 
 /** Apre un PDF reale (blob) in nuova scheda con layout unificato preventivi/schede. */
-export function openSchedaPdfInNewTab(opts: {
+export async function openSchedaPdfInNewTab(opts: {
   titoloScheda: string;
   identificazioneLine: string;
   bundle: LavorazioneSchedeBundle;
   doc: SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc;
   autore: string;
-}): void {
+}): Promise<void> {
+  const logoDataUrl = await loadBrandingLogoDataUrl();
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   const ident = opts.identificazioneLine.trim();
@@ -45,6 +47,7 @@ export function openSchedaPdfInNewTab(opts: {
     numero: displayNumero,
     data: docDate,
     operatore,
+    logoDataUrl,
   });
   y = pdfAdvanceSection(y);
 

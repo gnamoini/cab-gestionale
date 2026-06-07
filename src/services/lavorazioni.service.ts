@@ -9,6 +9,7 @@ import { err, success, type ServiceResult } from "@/src/services/service-result"
 import type { LavorazioneRow, MezzoRow, PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import { fetchLavorazioniListAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
+import { partitionAddettiInUso } from "@/lib/lavorazioni/addetti-in-uso";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 const ENTITA = "lavorazioni";
@@ -260,6 +261,39 @@ export const lavorazioniService = {
         else attiviSet.add(s);
       }
       return success({ attivi: [...attiviSet], storico: [...storicoSet] });
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  /** Addetti effettivamente usati su schede lavorazione (per guard delete in impostazioni). */
+  async getAddettiInUso(): Promise<ServiceResult<{ attivi: string[]; storico: string[] }>> {
+    try {
+      const sb = await c();
+      const { data: lavRows, error: lavErr } = await applyLavorazioniNotDeletedFilter(
+        sb.from("lavorazioni").select("id, archived"),
+      );
+      if (lavErr) return err(lavErr.message);
+      const lavorazioni = lavRows ?? [];
+      if (lavorazioni.length === 0) {
+        return success({ attivi: [], storico: [] });
+      }
+      const ids = lavorazioni.map((r) => r.id);
+      const { data: schedaRows, error: schedaErr } = await sb
+        .from("scheda_lavorazione")
+        .select("lavorazione_id, tipo, contenuto")
+        .in("lavorazione_id", ids);
+      if (schedaErr) return err(schedaErr.message);
+      return success(
+        partitionAddettiInUso(
+          lavorazioni.map((r) => ({ id: r.id, archived: r.archived })),
+          (schedaRows ?? []).map((r) => ({
+            lavorazione_id: r.lavorazione_id,
+            tipo: r.tipo,
+            contenuto: r.contenuto,
+          })),
+        ),
+      );
     } catch (e) {
       return serviceFailFromError(e);
     }

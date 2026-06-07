@@ -24,6 +24,7 @@ import {
 import { shouldSkipEntityRefetch } from "@/lib/sync/recent-entity-invalidation";
 import { reconcileGestionaleCabEvents, type ReconcileSource } from "@/lib/sync/gestionale-reconcile";
 import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/lib/schede/schede-store-events";
+import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 
 /** Origine del cambiamento — un solo entry point (`dispatchGestionaleAction`). */
 export type GestionaleActionSource = "local_mutation" | "realtime" | "broadcast" | "reconnect";
@@ -46,6 +47,12 @@ export type DispatchGestionaleRemoteChangeOptions = {
 const recentDispatchFingerprints = new Map<string, number>();
 export const GESTIONALE_DISPATCH_DEDUP_MS = 5000;
 let lastGestionaleDispatchAt = 0;
+let gestionaleDispatchAppliedTotal = 0;
+
+/** Totale dispatch applicati (non deduplicati) nella sessione tab. */
+export function getGestionaleDispatchAppliedTotal(): number {
+  return gestionaleDispatchAppliedTotal;
+}
 
 function pruneDispatchFingerprints(now: number): void {
   for (const [k, t] of recentDispatchFingerprints) {
@@ -216,6 +223,9 @@ export function dispatchGestionaleAction(
 
   const fp = gestionaleDispatchFingerprint(uniqueTables, cabEvents);
   if (shouldSkipDispatch(fp)) return;
+
+  gestionaleDispatchAppliedTotal += 1;
+  incrementHealthCounter("gestionale_dispatch_applied", 1);
 
   const entityIdByTable = buildEntityIdByTable(uniqueTables, cabEvents, options.entityIdByTable);
   const tablesForCache = options.skipCacheInvalidation

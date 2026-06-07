@@ -25,7 +25,7 @@ export type GestionaleSettingsSelectProps = {
 };
 
 /**
- * Select impostazioni — delega a `GlobalSettingsListSelect` quando `listKey` è fornito.
+ * @deprecated Nessun import attivo. Usare `GlobalSettingsListSelect` con `listKey`.
  */
 export function GestionaleSettingsSelect({
   value,

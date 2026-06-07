@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo } from "react";
-import { useQueryClient } from "@tanstack/react-query";
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import {
   buildLogModificheDisplayEntries,
@@ -14,10 +13,8 @@ import {
   type MagazzinoLogFeedItem,
 } from "@/lib/magazzino/magazzino-log-feed-merge";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
-import { QK } from "@/src/lib/react-query/invalidate-related";
 import type { LogModificaAutoreSource } from "@/lib/gestionale-log/log-modifiche-view-model";
 import type { LogModificaRow, LogModificaWithProfileRow } from "@/src/types/supabase-tables";
 
@@ -31,7 +28,6 @@ export function useMagazzinoLogFeed(opts: {
   authorName: string;
   userId: string | null;
 }) {
-  const qc = useQueryClient();
   const gestOpts = useGestionaleQueryOpts();
   const prodottiById = useMemo(() => new Map(opts.prodotti.map((p) => [p.id, p])), [opts.prodotti]);
 
@@ -44,13 +40,7 @@ export function useMagazzinoLogFeed(opts: {
     gestOpts,
   );
 
-  const invalidateLogs = () => {
-    void qc.invalidateQueries({ queryKey: QK.log, refetchType: "active" });
-  };
-
-  useCabSyncListener("log_modifiche", invalidateLogs);
-  useCabSyncListener("magazzino_ricambi", invalidateLogs);
-  useCabSyncListener("movimenti_ricambi", invalidateLogs);
+  // Invalidation via GestionaleRealtimeBridge → dispatchGestionaleAction (log_modifiche / magazzino tables).
 
   const serverRows = useMemo(
     () => [...(magLogsQ.data ?? []), ...(movLogsQ.data ?? [])],
