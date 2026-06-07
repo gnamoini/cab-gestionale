@@ -13,9 +13,9 @@ test("login redirect and logout", async ({ page }) => {
   await expect(page).toHaveURL(/\/login/);
 });
 
-test("reset password page renders form", async ({ page }) => {
+test("reset password page without recovery session shows guidance", async ({ page }) => {
   attachConsoleGuards(page);
   await page.goto("/login/reset-password");
-  await expect(page.getByTestId("smoke-reset-password")).toBeVisible();
-  await expect(page.getByTestId("smoke-reset-password-confirm")).toBeVisible();
+  await expect(page.getByTestId("smoke-reset-password-no-session")).toBeVisible();
+  await expect(page.getByRole("link", { name: /torna al login/i })).toBeVisible();
 });

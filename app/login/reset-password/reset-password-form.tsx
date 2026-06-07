@@ -122,7 +122,7 @@ export function ResetPasswordForm() {
           <AuthStandaloneCardHeader srOnlyTitle="Imposta nuova password" />
 
           {phase === "no_session" ? (
-            <div className="space-y-4 text-center">
+            <div data-testid="smoke-reset-password-no-session" className="space-y-4 text-center">
               <p className={`${alertErrorClass} text-sm`} role="alert">
                 {error ?? "Link non valido o scaduto. Richiedi un nuovo link di recupero password."}
               </p>
