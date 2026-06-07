@@ -98,7 +98,9 @@ export function validateProductionEnv(env: NodeJS.ProcessEnv = process.env): {
     });
   }
 
-  if (productionTarget && env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+  const onVercelProduction = productionTarget && env.VERCEL === "1";
+
+  if (onVercelProduction && env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
     push(blockers, {
       id: "ops-env-service-role-in-runtime-env",
       category: "ops-env",

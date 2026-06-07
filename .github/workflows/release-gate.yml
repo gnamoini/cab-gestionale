@@ -31,6 +31,14 @@ jobs:
     env:
       PRODUCTION_CHECK_REQUIRE_DB: "1"
       CI: "true"
+      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
+      SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
+      SMOKE_OPERATOR_EMAIL: ${{ secrets.SMOKE_OPERATOR_EMAIL }}
+      SMOKE_OPERATOR_PASSWORD: ${{ secrets.SMOKE_OPERATOR_PASSWORD }}
+      SMOKE_DOCUMENTI_LAVORAZIONE_ID: ${{ secrets.SMOKE_DOCUMENTI_LAVORAZIONE_ID }}
 
     steps:
       - name: Checkout
@@ -61,10 +69,6 @@ jobs:
 
       - name: Production readiness (RBAC, storage, pilot, legacy URLs)
         run: npm run production:check
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
       - name: Smoke structural + regression tests
         run: npm run smoke:structural && npm run smoke:regression
@@ -83,8 +87,3 @@ jobs:
         env:
           PORT: "3210"
           SMOKE_BASE_URL: http://127.0.0.1:3210
-          SMOKE_ADMIN_EMAIL: ${{ secrets.SMOKE_ADMIN_EMAIL }}
-          SMOKE_ADMIN_PASSWORD: ${{ secrets.SMOKE_ADMIN_PASSWORD }}
-          SMOKE_OPERATOR_EMAIL: ${{ secrets.SMOKE_OPERATOR_EMAIL }}
-          SMOKE_OPERATOR_PASSWORD: ${{ secrets.SMOKE_OPERATOR_PASSWORD }}
-          SMOKE_DOCUMENTI_LAVORAZIONE_ID: ${{ secrets.SMOKE_DOCUMENTI_LAVORAZIONE_ID }}

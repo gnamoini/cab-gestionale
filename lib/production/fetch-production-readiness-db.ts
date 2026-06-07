@@ -40,7 +40,12 @@ export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionRe
       .eq("key", OPERATOR_GLOBAL_SETTINGS_KEY)
       .maybeSingle();
 
-    if (settingsErr) return base;
+    if (settingsErr) {
+      if (process.env.CI === "true" || process.env.CI === "1") {
+        console.error(`[production:check] app_settings query failed: ${settingsErr.message}`);
+      }
+      return base;
+    }
 
     const { data: buckets, error: bucketsErr } = await admin.storage.listBuckets();
     const documentiBucket = bucketsErr ? null : buckets?.find((b) => b.id === "documenti");
