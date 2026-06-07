@@ -3,7 +3,7 @@
  * Uso: GH_TOKEN=<pat> npx tsx scripts/ensure-ci-smoke-secrets.ts
  * Richiede .env.local con SUPABASE_SERVICE_ROLE_KEY e NEXT_PUBLIC_SUPABASE_*.
  */
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
@@ -77,7 +77,7 @@ async function setGitHubSecret(
   }
 }
 
-async function ensureCiSmokeUser(admin: ReturnType<typeof createClient>, password: string): Promise<void> {
+async function ensureCiSmokeUser(admin: SupabaseClient, password: string): Promise<void> {
   const { data: list, error: listErr } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
   if (listErr) throw listErr;
   const existing = list?.users?.find((u) => u.email?.toLowerCase() === CI_SMOKE_EMAIL);
@@ -103,13 +103,15 @@ async function ensureCiSmokeUser(admin: ReturnType<typeof createClient>, passwor
   }
 
   const { error: profileErr } = await admin.from("profiles").upsert(
-    {
-      id: userId,
-      email: CI_SMOKE_EMAIL,
-      username: "ci-smoke-admin",
-      ruolo: "admin",
-      nome: "CI Smoke",
-    },
+    [
+      {
+        id: userId,
+        email: CI_SMOKE_EMAIL,
+        username: "ci-smoke-admin",
+        ruolo: "admin",
+        nome: "CI Smoke",
+      },
+    ],
     { onConflict: "id" },
   );
   if (profileErr) throw profileErr;
