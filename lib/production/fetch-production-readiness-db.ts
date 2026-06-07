@@ -25,7 +25,12 @@ export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionRe
   };
 
   const serviceKey = readSupabaseServiceRoleKey();
-  if (!serviceKey) return base;
+  if (!serviceKey) {
+    if (process.env.CI === "true" || process.env.CI === "1") {
+      console.error("[production:check] SUPABASE_SERVICE_ROLE_KEY assente o vuota");
+    }
+    return base;
+  }
 
   try {
     const { url } = assertSupabasePublicEnv();
@@ -42,7 +47,7 @@ export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionRe
 
     if (settingsErr) {
       if (process.env.CI === "true" || process.env.CI === "1") {
-        console.error(`[production:check] app_settings query failed: ${settingsErr.message}`);
+        console.log(`[production:check] app_settings query failed: ${settingsErr.message}`);
       }
       return base;
     }
@@ -62,7 +67,12 @@ export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionRe
       portalSecurityGuardSqlPresent: mig.portalSecurity,
       userPermissionsRlsPresent: mig.userPermissionsRls,
     };
-  } catch {
+  } catch (err) {
+    if (process.env.CI === "true" || process.env.CI === "1") {
+      console.log(
+        `[production:check] DB snapshot exception: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
     return base;
   }
 }

@@ -5,6 +5,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
@@ -118,7 +119,8 @@ async function main(): Promise<void> {
   const { key_id, key } = await getPublicKey(token);
   for (const { name, value } of toSet) {
     await setSecret(token, name, value, key_id, key);
-    console.log(`[sync-secrets] OK ${name} (len=${value.length})`);
+    const sha8 = createHash("sha256").update(value).digest("hex").slice(0, 8);
+    console.log(`[sync-secrets] OK ${name} (len=${value.length} sha8=${sha8})`);
   }
 
   if (skipped.length > 0) {
