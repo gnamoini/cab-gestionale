@@ -40,6 +40,8 @@ export const PDF_COMPANY_NAME = "CENTRO ASSISTENZA BARI SRL";
 export const PDF_HEADER_BRAND_BLOCK_MM = 6.5;
 /** Altezza massima logo nel blocco brand (≤ slot per paginazione stabile). */
 export const PDF_HEADER_BRAND_MAX_MM = 6.5;
+/** Spazio tra fondo slot brand (logo/testo) e baseline titolo documento (mm). */
+export const PDF_HEADER_BRAND_TITLE_GAP_MM = 4.5;
 
 /** Aliquota IVA predefinita per riepilogo documento (imponibile = totale finale calcolato). */
 export const PDF_PREVENTIVO_IVA_PERCENT = 22;
@@ -190,6 +192,7 @@ export function drawPreventivoPdfHeader(
   let y = PDF_MARGIN_TOP;
 
   y = drawPdfBrandBlock(doc, pageW, y, meta?.logoDataUrl);
+  y += PDF_HEADER_BRAND_TITLE_GAP_MM;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11.5);

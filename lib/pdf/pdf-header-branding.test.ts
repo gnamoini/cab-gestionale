@@ -5,6 +5,8 @@ import {
   padPdfFieldsToEqualRows,
 } from "@/lib/pdf/gestionale-section-table";
 import {
+  PDF_HEADER_BRAND_BLOCK_MM,
+  PDF_HEADER_BRAND_TITLE_GAP_MM,
   PDF_MARGIN_TOP,
   PDF_PREVENTIVO_IVA_PERCENT,
   drawGestionalePdfHeader,
@@ -141,14 +143,19 @@ const yNoLogoExplicit = measureGestionalePdfHeaderEndY(pageWPortrait, "PREVENTIV
 assert.equal(yWithLogo, yTextOnly, "header con logo deve avere stesso Y finale del fallback testuale");
 assert.equal(yNoLogoExplicit, yTextOnly, "header senza logo usa fallback testuale con stesso Y");
 
-const brandBlockEnd = PDF_MARGIN_TOP + 6.5;
-const docTitleY = brandBlockEnd;
+const brandBlockEnd = PDF_MARGIN_TOP + PDF_HEADER_BRAND_BLOCK_MM;
+const docTitleBaselineY = brandBlockEnd + PDF_HEADER_BRAND_TITLE_GAP_MM;
+const logoBottomY = brandBlockEnd;
 const probeDoc = new jsPDF();
 drawGestionalePdfHeader(probeDoc, pageWPortrait, "PREVENTIVO", {
   ...meta,
   logoDataUrl: MOCK_LOGO_DATA_URL,
 });
-assert.ok(yWithLogo > docTitleY, "Y header include titolo documento sotto il blocco brand");
+assert.ok(yWithLogo > docTitleBaselineY, "Y header include titolo documento sotto il blocco brand");
+assert.ok(
+  docTitleBaselineY >= logoBottomY + 3,
+  "baseline titolo documento deve stare almeno 3mm sotto il fondo logo",
+);
 
 // --- Paginazione: logo ON vs OFF identica ---
 const smallRighe: PreventivoRigaOutput[] = [
