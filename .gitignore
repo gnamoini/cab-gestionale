@@ -44,3 +44,5 @@ debug-929eab.log
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+.vercel
