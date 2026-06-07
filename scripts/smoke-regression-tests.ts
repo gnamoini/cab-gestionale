@@ -6,6 +6,7 @@ const TESTS = [
   "lib/regression/rbac-route-matrix.test.ts",
   "lib/regression/permissions-role-matrix.test.ts",
   "lib/regression/security-rbac-policy.test.ts",
+  "lib/security/http-security-headers.test.ts",
   "lib/regression/security-users-permissions-policy.test.ts",
   "lib/security/user-module-permissions.test.ts",
   "lib/regression/truth-invalidation.test.ts",
