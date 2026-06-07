@@ -9,6 +9,8 @@ import { ShellCard } from "@/components/gestionale/shell-card";
 import { IconBack, IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
 import { ClientLavorazioneInformazioniPanel } from "@/components/lavorazioni-clienti/client-lavorazione-informazioni-panel";
 import { ClientLavorazioneMediaPanel } from "@/components/lavorazioni-clienti/client-lavorazione-media-panel";
+import { ClientContattaciButton } from "@/components/lavorazioni-clienti/client-contattaci-button";
+import { ClientContattaciDialog } from "@/components/lavorazioni-clienti/client-contattaci-dialog";
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
 import {
   ClientLavorazioneAvanzamentoPanel,
@@ -67,6 +69,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
   });
   const addettiGlobali = globalOpts.lavorazioni.addetti;
   const [qrOpen, setQrOpen] = useState(false);
+  const [contattaciOpen, setContattaciOpen] = useState(false);
 
   const detail = detailQ.data;
   const row = detail?.row;
@@ -158,6 +161,7 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
         leading={backToListButton}
         actions={
           <div className={gestionalePageToolbarActionsInnerClass}>
+            <ClientContattaciButton variant="toolbar" onClick={() => setContattaciOpen(true)} />
             <GestionaleRefreshToolbarButton
               busy={refreshBusy}
               onClick={() => void refreshClientData()}
@@ -201,6 +205,8 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
       {qrOpen ? (
         <ClientLavorazioneQrDialog open onClose={() => setQrOpen(false)} lavorazioneId={row.id} refLabel={ref} />
       ) : null}
+
+      {contattaciOpen ? <ClientContattaciDialog open onClose={() => setContattaciOpen(false)} /> : null}
     </>
   );
 }

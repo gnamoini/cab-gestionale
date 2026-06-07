@@ -4,7 +4,9 @@ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionaleRefreshToolbarButton } from "@/components/gestionale/page-header-toolbar";
+import { GestionaleRefreshToolbarButton, gestionalePageToolbarActionsInnerClass } from "@/components/gestionale/page-header-toolbar";
+import { ClientContattaciButton } from "@/components/lavorazioni-clienti/client-contattaci-button";
+import { ClientContattaciDialog } from "@/components/lavorazioni-clienti/client-contattaci-dialog";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
@@ -581,6 +583,7 @@ export function ClientLavorazioniView() {
 
   const [qrRow, setQrRow] = useState<LavorazioneListRow | null>(null);
   const [ingressoRow, setIngressoRow] = useState<LavorazioneListRow | null>(null);
+  const [contattaciOpen, setContattaciOpen] = useState(false);
 
   const [sortInCorsoCol, setSortInCorsoCol] = useState<ClientPortalSortKey | null>(null);
   const [sortInCorsoPhase, setSortInCorsoPhase] = useState<GlobalTableSortPhase>("natural");
@@ -807,7 +810,10 @@ export function ClientLavorazioniView() {
       <PageHeader
         title={PORTALE_CLIENTI_LABEL}
         actions={
-          <GestionaleRefreshToolbarButton busy={refreshBusy} onClick={() => void refreshClientData()} />
+          <div className={gestionalePageToolbarActionsInnerClass}>
+            <ClientContattaciButton variant="toolbar" onClick={() => setContattaciOpen(true)} />
+            <GestionaleRefreshToolbarButton busy={refreshBusy} onClick={() => void refreshClientData()} />
+          </div>
         }
       />
 
@@ -815,7 +821,9 @@ export function ClientLavorazioniView() {
         <ShellCard>
           <section aria-label="Azioni e filtri lavorazioni clienti">
             <PageToolbar
-              primaryAction={null}
+              primaryAction={
+                <ClientContattaciButton variant="primary" onClick={() => setContattaciOpen(true)} />
+              }
               search={
                 <GestionaleSearchField
                   id="client-lavorazioni-search"
@@ -880,6 +888,8 @@ export function ClientLavorazioniView() {
           addettiGlobali={addettiGlobali}
         />
       ) : null}
+
+      {contattaciOpen ? <ClientContattaciDialog open onClose={() => setContattaciOpen(false)} /> : null}
     </>
   );
 }

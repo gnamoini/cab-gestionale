@@ -12,6 +12,34 @@ test("admin can open client lavorazioni list", async ({ page }) => {
   await expect(page).toHaveURL(/lavorazioni-clienti/, { timeout: 30_000 });
 });
 
+test("client portal Contattaci modal shows contact links", async ({ page }) => {
+  attachConsoleGuards(page);
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/lavorazioni-clienti");
+  await expect(page).toHaveURL(/lavorazioni-clienti/, { timeout: 30_000 });
+
+  await page.getByRole("button", { name: "Contattaci" }).first().click();
+
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+  await expect(dialog.getByText("service@autocompattatori.it")).toBeVisible();
+  await expect(dialog.getByText("+39 3480712791")).toBeVisible();
+
+  await expect(dialog.getByRole("link", { name: /Chiama/i })).toHaveAttribute("href", "tel:+393480712791");
+  await expect(dialog.getByRole("link", { name: /WhatsApp/i })).toHaveAttribute(
+    "href",
+    "https://wa.me/393480712791",
+  );
+  await expect(dialog.getByRole("link", { name: /Invia email/i })).toHaveAttribute(
+    "href",
+    "mailto:service@autocompattatori.it",
+  );
+
+  await dialog.getByRole("button", { name: "Chiudi" }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(page).toHaveURL(/lavorazioni-clienti/);
+});
+
 test("client portal denies unknown lavorazione id", async ({ page }) => {
   attachConsoleGuards(page);
   await loginViaUi(page, adminCredentials());
