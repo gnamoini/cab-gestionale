@@ -131,7 +131,10 @@ function scanFile(file: string): Finding[] {
 
   const definesFixedOverlayDialog = /className=.*\bfixed\b/.test(content) && content.includes('role="dialog"');
   if (definesFixedOverlayDialog) {
-    const hasBodyScrollLock = content.includes("useBodyScrollLock(") || content.includes("BODY_LOCK_ATTR");
+    const hasBodyScrollLock =
+      content.includes("useBodyScrollLock(") ||
+      content.includes("useGestionaleMainScrollLock(") ||
+      content.includes("BODY_LOCK_ATTR");
     if (!hasBodyScrollLock) {
       findings.push({
         severity: "blocker",
