@@ -26,6 +26,7 @@ assert.match(pwConfig, /14-magazzino-nuovo-ricambio/);
 
 const pkg = read("package.json");
 assert.match(pkg, /smoke:playwright:ricambio:smoke/);
+assert.match(pkg, /smoke:playwright:ricambio:cert.*--project=chromium/);
 assert.match(pkg, /playwright\.ricambio-cert\.config\.ts/);
 
 const workflow = read(".github/workflows/release-gate.yml");
