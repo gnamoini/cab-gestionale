@@ -4,7 +4,8 @@ import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
-import { prepareGestionaleModalSaveFrom } from "@/lib/ui/gestionale-modal-save-prep";
+import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
+import { resolveGestionaleModalRoot } from "@/lib/ui/gestionale-modal-save-prep";
 import {
   dsBtnNeutral,
   dsBtnPrimary,
@@ -300,6 +301,7 @@ export function HubModalPanoramicaNoteEditor({
 }) {
   const [text, setText] = useState(value);
   const [dirty, setDirty] = useState(false);
+  const submitLock = useSubmitLock();
 
   useEffect(() => {
     setText(value);
@@ -354,8 +356,12 @@ export function HubModalPanoramicaNoteEditor({
             className={dsBtnPrimary}
             disabled={saving}
             onClick={(e) => {
-              prepareGestionaleModalSaveFrom(e.currentTarget);
-              void onSave(text);
+              void runButtonSubmit(
+                resolveGestionaleModalRoot(e.currentTarget),
+                submitLock,
+                () => ({ text }),
+                (snap) => onSave(snap.text),
+              );
             }}
           >
             {saving ? "Salvataggio…" : "Salva note"}

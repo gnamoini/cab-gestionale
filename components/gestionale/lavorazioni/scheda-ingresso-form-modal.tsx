@@ -35,9 +35,9 @@ import {
   type UseSchedaIngressoMezzoPromptResult,
 } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import {
-  gestionaleFormFocusScopeProps,
   gestionaleMultilineEnterProps,
 } from "@/components/gestionale/gestionale-form-focus-scope";
+import { useFormEngine } from "@/lib/forms/form-engine";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { LoadingButton } from "@/components/design-system";
 import {
@@ -457,27 +457,20 @@ export function SchedaIngressoEditModal({
   excludeLavorazioneId?: string;
 }) {
   const ro = readOnly || !canEdit;
-  const [draft, setDraft] = useState(initialFields);
-  const draftRef = useRef(draft);
-  useLayoutEffect(() => {
-    draftRef.current = draft;
-  }, [draft]);
+  const formEngine = useFormEngine<SchedaIngressoFields>({ initial: initialFields });
+  const { value: draft, reset, setValue, patch: onPatch, runSubmit, formProps, ref: draftRef } =
+    formEngine;
 
   useEffect(() => {
-    if (open) setDraft(initialFields);
-  }, [open, initialFields]);
+    if (open) reset(initialFields);
+  }, [open, initialFields, reset]);
 
-  const setFields = useCallback((fields: SchedaIngressoFields) => {
-    draftRef.current = fields;
-    setDraft(fields);
-  }, []);
-  const onPatch = useCallback((patch: Partial<SchedaIngressoFields>) => {
-    setDraft((prev) => {
-      const next = { ...prev, ...patch };
-      draftRef.current = next;
-      return next;
-    });
-  }, []);
+  const setFields = useCallback(
+    (fields: SchedaIngressoFields) => {
+      setValue(fields);
+    },
+    [setValue],
+  );
 
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
   const mezziUi = useMemo(() => (mezziQ.data ?? []).map(toMezzoUI), [mezziQ.data]);
@@ -495,10 +488,12 @@ export function SchedaIngressoEditModal({
     excludeLavorazioneId,
   });
 
-  function onSubmit(e: FormEvent) {
+  function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (ro || !open) return;
-    onSave(draftRef.current);
+    void runSubmit(e.currentTarget, (snap) => {
+      onSave(snap);
+    });
   }
 
   if (!open) return null;
@@ -511,7 +506,7 @@ export function SchedaIngressoEditModal({
       subtitle="Modifica i dati di accettazione mezzo."
       footer={null}
     >
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+      <form {...formProps} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <SchedaIngressoFormBody
           variant="edit-scheda"
           fields={draft}

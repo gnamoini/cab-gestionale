@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { LoadingButton } from "@/components/design-system";
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { FormField } from "@/components/gestionale/schede/gestionale-form-section";
@@ -81,6 +82,7 @@ export function SecurityEditNameModal({
     !deletePending;
 
   const busy = Boolean(pending || deletePending);
+  const submitLock = useSubmitLock();
 
   async function handleConfirmDelete() {
     if (!onDelete || busy) return;
@@ -108,10 +110,33 @@ export function SecurityEditNameModal({
           className={`${gestionaleModalBodyFlexClass} overflow-hidden`}
           onSubmit={(e) => {
             e.preventDefault();
-            const trimmedNome = nome.trim();
-            const normalizedUsername = sanitizeUsernameInput(username);
-            if (!canSave || usernameFieldError(normalizedUsername)) return;
-            onSave({ nome: trimmedNome, username: normalizedUsername });
+            void runSubmitFromGetter(
+              e.currentTarget,
+              submitLock,
+              () => ({
+                nome,
+                username,
+                readOnly,
+                pending: Boolean(pending),
+                deletePending: Boolean(deletePending),
+                usernameAvailability,
+              }),
+              (snap) => {
+                const trimmedNome = snap.nome.trim();
+                const normalizedUsername = sanitizeUsernameInput(snap.username);
+                const snapUsernameErr = usernameFieldError(normalizedUsername);
+                const snapCanSave =
+                  !snap.readOnly &&
+                  trimmedNome.length > 0 &&
+                  !snapUsernameErr &&
+                  snap.usernameAvailability !== "taken" &&
+                  snap.usernameAvailability !== "checking" &&
+                  !snap.pending &&
+                  !snap.deletePending;
+                if (!snapCanSave || snapUsernameErr) return;
+                onSave({ nome: trimmedNome, username: normalizedUsername });
+              },
+            );
           }}
         >
           <GestionaleModalScrollBody className="space-y-4">

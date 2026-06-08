@@ -18,6 +18,7 @@ import {
   validateClienteAssociationForRole,
 } from "@/src/lib/auth/cliente-portal-scope";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import {
   dsBtnGhost,
   dsBtnPrimary,
@@ -48,6 +49,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
   const knownClienti = buildKnownClientiSet(globalOpts.mezziListe.clienti ?? []);
   const clienteAssociationErr =
     ruolo === "cliente" ? validateClienteAssociationForRole(ruolo, clienteRef.trim() || null, knownClienti) : null;
+  const submitLock = useSubmitLock();
 
   useEffect(() => {
     if (!open) return;
@@ -61,45 +63,66 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
     setPending(false);
   }, [open]);
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setError(null);
-    const usernameErr = usernameFieldError(username);
-    if (usernameErr) {
-      setError(usernameErr);
-      return;
-    }
-    if (usernameAvailability === "taken") {
-      setError("Username già utilizzato.");
-      return;
-    }
-    if (usernameAvailability === "checking") {
-      setError("Attendi la verifica del nome utente.");
-      return;
-    }
-    const clienteErr = validateClienteAssociationForRole(ruolo, clienteRef.trim() || null, knownClienti);
-    if (clienteErr) {
-      setError(clienteErr);
-      return;
-    }
 
-    setPending(true);
-    const res = await createUserByAdminAction({
-      nome: nome.trim(),
-      username: username.trim(),
-      email: email.trim(),
-      password,
-      ruolo,
-      clienteRef: clienteRef.trim() || null,
-    });
-    setPending(false);
-    if (!res.ok) {
-      setError(res.message);
-      return;
-    }
-    await invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient: qc });
-    gestToast.successOnce("security-create-user", GESTIONALE_TOAST.successCreated);
-    onClose();
+    await runSubmitFromGetter(
+      e.currentTarget,
+      submitLock,
+      () => ({
+        nome,
+        username,
+        email,
+        password,
+        ruolo,
+        clienteRef,
+        usernameAvailability,
+        knownClienti,
+      }),
+      async (snap) => {
+        setError(null);
+        const usernameErr = usernameFieldError(snap.username);
+        if (usernameErr) {
+          setError(usernameErr);
+          return;
+        }
+        if (snap.usernameAvailability === "taken") {
+          setError("Username già utilizzato.");
+          return;
+        }
+        if (snap.usernameAvailability === "checking") {
+          setError("Attendi la verifica del nome utente.");
+          return;
+        }
+        const clienteErr = validateClienteAssociationForRole(
+          snap.ruolo,
+          snap.clienteRef.trim() || null,
+          snap.knownClienti,
+        );
+        if (clienteErr) {
+          setError(clienteErr);
+          return;
+        }
+
+        setPending(true);
+        const res = await createUserByAdminAction({
+          nome: snap.nome.trim(),
+          username: snap.username.trim(),
+          email: snap.email.trim(),
+          password: snap.password,
+          ruolo: snap.ruolo,
+          clienteRef: snap.clienteRef.trim() || null,
+        });
+        setPending(false);
+        if (!res.ok) {
+          setError(res.message);
+          return;
+        }
+        await invalidateRuntimeTruth({ reason: "roleOrPermissionsChanged", queryClient: qc });
+        gestToast.successOnce("security-create-user", GESTIONALE_TOAST.successCreated);
+        onClose();
+      },
+    );
   }
 
   return (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import { useDevModalLayoutLint } from "@/lib/ui-visual-linter/use-visual-layout-linter";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
 import type { LavorazioneAttiva, PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
@@ -329,25 +330,37 @@ export function EditLavorazioneModal({
     initial.dataCompletamento ? isoToItDisplay(initial.dataCompletamento) : "",
   );
   const [dateErr, setDateErr] = useState<string | null>(null);
+  const submitLock = useSubmitLock();
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const inOk = parseItalianDayDisplayToIso(dataIngressoText);
-    if (!inOk.ok) {
-      setDateErr("Data ingresso non valida. Usa gg/mm/aaaa (es. 10/05/2026) oppure aaaa-mm-gg.");
-      return;
-    }
-    const uscOk = parseOptionalItalianDayDisplayToIso(dataUscitaText);
-    if (!uscOk.ok) {
-      setDateErr("Data uscita non valida.");
-      return;
-    }
-    setDateErr(null);
-    onCommit({
-      ...local,
-      dataIngresso: inOk.iso,
-      dataCompletamento: uscOk.iso,
-    });
+    void runSubmitFromGetter(
+      e.currentTarget,
+      submitLock,
+      () => ({
+        local,
+        dataIngressoText,
+        dataUscitaText,
+      }),
+      (snap) => {
+        const inOk = parseItalianDayDisplayToIso(snap.dataIngressoText);
+        if (!inOk.ok) {
+          setDateErr("Data ingresso non valida. Usa gg/mm/aaaa (es. 10/05/2026) oppure aaaa-mm-gg.");
+          return;
+        }
+        const uscOk = parseOptionalItalianDayDisplayToIso(snap.dataUscitaText);
+        if (!uscOk.ok) {
+          setDateErr("Data uscita non valida.");
+          return;
+        }
+        setDateErr(null);
+        onCommit({
+          ...snap.local,
+          dataIngresso: inOk.iso,
+          dataCompletamento: uscOk.iso,
+        });
+      },
+    );
   }
 
   return (

@@ -17,10 +17,7 @@ import {
 } from "@/lib/magazzino/form";
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
-import {
-  GestionaleFormFocusScope,
-  gestionaleMultilineEnterProps,
-} from "@/components/gestionale/gestionale-form-focus-scope";
+import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { CloseButton } from "@/components/design-system";
 import { dsBtnNeutral, dsBtnPrimary, dsFocus, dsInput, dsLabel, dsSegmentedBtnOff, dsSegmentedBtnOn, dsSegmentedWrap, dsStepperBtn, dsTypoSmall } from "@/lib/ui/design-system";
 import { globalInputInvalidRing } from "@/lib/ui/global-input";
@@ -218,7 +215,7 @@ export function RicambioFormFields({
   );
 
   return (
-    <GestionaleFormFocusScope className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4">
       <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
         <RicambioSectionTitle>Identificazione</RicambioSectionTitle>
         <div className="grid gap-3">
@@ -555,6 +552,6 @@ export function RicambioFormFields({
         markupPct={previewLineari.markupPct}
         prezzoVendita={previewLineari.prezzoVendita}
       />
-    </GestionaleFormFocusScope>
+    </div>
   );
 }

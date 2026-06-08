@@ -1,11 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactElement } from "react";
+import { useCallback, useEffect, useState, type FormEvent, type ReactElement } from "react";
 import { LoadingButton, Tooltip } from "@/components/design-system";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
-import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { useFormEngine } from "@/lib/forms/form-engine";
 import { RicambioConsumoInfoRows } from "@/components/gestionale/magazzino/ricambio-info-panel";
 import { RicambioFormFields } from "@/components/gestionale/magazzino/ricambio-form-fields";
 import { RicambioFormOptionsProvider } from "@/components/gestionale/magazzino/ricambio-form-options-context";
@@ -72,56 +72,60 @@ export function RicambioEditModal({
   onSaved: (ui: RicambioMagazzino, message: string) => void;
   onSaveError: (message: string) => void;
 }) {
-  const [editDraft, setEditDraft] = useState<RicambioFormState>(() =>
-    toFormDraft(ricambio, mezziListePrefs),
-  );
+  const formEngine = useFormEngine<RicambioFormState>({
+    initial: toFormDraft(ricambio, mezziListePrefs),
+  });
+  const { value: editDraft, setValue, reset, runSubmit, formProps } = formEngine;
   const [listFieldInvalid, setListFieldInvalid] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
 
   useEffect(() => {
-    setEditDraft(toFormDraft(ricambio, mezziListePrefs));
+    reset(toFormDraft(ricambio, mezziListePrefs));
     setListFieldInvalid(false);
-  }, [ricambioId, ricambio, mezziListePrefs]);
+  }, [ricambioId, ricambio, mezziListePrefs, reset]);
 
   const setEditForm = useCallback(
     (action: React.SetStateAction<RicambioFormState>) => {
-      setEditDraft((prev) => (typeof action === "function" ? action(prev) : action));
+      setValue(action);
     },
-    [],
+    [setValue],
   );
 
-  async function saveEdit(e: FormEvent) {
+  async function saveEdit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!magCanCreateRicambio || saveBusy) return;
-    const listErr = validateRicambioListFields(editDraft, {
-      marche,
-      categorie,
-      mezziListe: mezziListePrefs,
-    });
-    if (listErr) {
-      setListFieldInvalid(true);
-      onSaveError(listErr);
-      return;
-    }
-    setListFieldInvalid(false);
-    const next = ricambioFromFormLenient(editDraft, ricambioId, authorName, {
-      mezziListe: mezziListePrefs,
-    });
-    setSaveBusy(true);
-    try {
-      const updated = await magazzinoService.update(
-        ricambioId,
-        ricambioUiToMagazzinoUpdate(next, mezziListePrefs),
-      );
-      if (!updated.success || !updated.data) {
-        onSaveError(updated.error ?? "Salvataggio non riuscito.");
+
+    await runSubmit(e.currentTarget, async (currentDraft) => {
+      const listErr = validateRicambioListFields(currentDraft, {
+        marche,
+        categorie,
+        mezziListe: mezziListePrefs,
+      });
+      if (listErr) {
+        setListFieldInvalid(true);
+        onSaveError(listErr);
         return;
       }
-      const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
-      onSaved(ui, "Modifiche salvate.");
-    } finally {
-      setSaveBusy(false);
-    }
+      setListFieldInvalid(false);
+      const next = ricambioFromFormLenient(currentDraft, ricambioId, authorName, {
+        mezziListe: mezziListePrefs,
+      });
+      setSaveBusy(true);
+      try {
+        const updated = await magazzinoService.update(
+          ricambioId,
+          ricambioUiToMagazzinoUpdate(next, mezziListePrefs),
+        );
+        if (!updated.success || !updated.data) {
+          onSaveError(updated.error ?? "Salvataggio non riuscito.");
+          return;
+        }
+        const ui = ricambioUiFromMagazzinoRow(updated.data, authorName, mezziListePrefs);
+        onSaved(ui, "Modifiche salvate.");
+      } finally {
+        setSaveBusy(false);
+      }
+    });
   }
 
   return (
@@ -132,7 +136,7 @@ export function RicambioEditModal({
       titleId="detail-ricambio-title"
     >
       <RicambioFormOptionsProvider>
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={saveEdit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+      <form {...formProps} onSubmit={saveEdit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <GestionaleModalScrollBody className="space-y-4">
           <RicambioFormFields
             form={editDraft}

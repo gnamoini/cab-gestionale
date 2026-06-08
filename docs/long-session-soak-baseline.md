@@ -25,10 +25,19 @@ Restituisce: `cabSyncListeners`, `ricambioSnapshotRegistrySize`, `scortaSyncQueu
 ### Script modulo (CI / terminale)
 
 ```bash
+# Snapshot singolo (dev)
+npm run ops:long-session-soak
+
+# Threshold gate cert (~6 min)
+npm run ops:long-session-soak:threshold
+
+# Nightly extended (tier 3, non blocking)
 npm run ops:long-session-soak -- --samples 48 --interval-ms 300000
 ```
 
 48 campioni × 5 min ≈ 4h di campionamento modulo (heap/RQ richiedono browser).
+
+**Gate model:** threshold in `release-gate-cert`; full soak in `release-gate-nightly`. Metriche Node via `collectLongSessionMetricsNode` (no import `server-only`).
 
 ### Baseline post-fix (snapshot modulo, 2026-06-05)
 

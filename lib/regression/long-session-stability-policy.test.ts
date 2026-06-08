@@ -50,7 +50,8 @@ const cabSyncBus = read("lib/sync/cab-sync-bus.ts");
 assert.match(cabSyncBus, /getCabSyncListenerCount/);
 
 const soakScript = read("scripts/long-session-soak-audit.ts");
-assert.match(soakScript, /collectLongSessionMetrics/);
+assert.match(soakScript, /collectLongSessionMetricsNode/);
+assert.match(read("lib/observability/long-session-metrics-node.ts"), /collectLongSessionMetricsNode/);
 
 const devHook = read("lib/observability/long-session-dev-hook.ts");
 assert.match(devHook, /__cabLongSessionMetrics/);

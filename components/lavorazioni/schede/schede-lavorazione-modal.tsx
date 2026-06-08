@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
-import { prepareGestionaleModalSave } from "@/lib/ui/gestionale-modal-save-prep";
+import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
 import { SchedaIngressoPanoramicaAnagraficaContent } from "@/components/gestionale/lavorazioni/scheda-ingresso-panoramica-view";
@@ -374,6 +374,7 @@ export function SchedeLavorazioneModal({
     draftRef.current = draft;
   }, [draft]);
   const modalRootRef = useRef<HTMLDivElement | null>(null);
+  const submitLock = useSubmitLock();
   const ingressoDraftRef = useRef<SchedaIngressoFields | null>(null);
   const [ingressoFormOpen, setIngressoFormOpen] = useState(false);
   const [ingressoEditorInitial, setIngressoEditorInitial] = useState<SchedaIngressoFields | null>(null);
@@ -781,39 +782,50 @@ export function SchedeLavorazioneModal({
     ],
   );
 
-  function commitIngressoSave(): boolean {
-    prepareGestionaleModalSave(modalRootRef.current);
-    const ig = ingressoDraftRef.current;
-    const base = draftRef.current.ingresso;
-    if (!ig || !base) return false;
-    if (!assertItalianDay("Data ingresso", ig.dataIngresso, gestToast.validation)) return false;
-    const prevCampi: SchedaIngressoFields | null = baselineIngressoJson.current
-      ? (JSON.parse(baselineIngressoJson.current) as SchedaIngressoFields)
-      : null;
-    const changes = prevCampi ? diffSchedaIngressoCampi(prevCampi, ig) : [];
-    if (changes.length) {
-      emitLog({
-        tipo: "aggiornamento",
-        schedaOggetto: SCHEDA_INGRESSO_LABEL,
-        riepilogo: "Scheda ingresso aggiornata",
-        changes,
-      });
-    }
-    const now = new Date().toISOString();
-    const u = currentUser.trim() || "Operatore";
-    const nextDoc: SchedaIngressoDoc = {
-      tipo: "ingresso",
-      createdAt: base.createdAt,
-      createdBy: base.createdBy,
-      sorgente: base.sorgente,
-      fileEsterno: base.fileEsterno,
-      campi: ig,
-      updatedAt: now,
-      updatedBy: u,
-    };
-    persist({ ...draftRef.current, ingresso: nextDoc });
-    void onIngressoCommitted?.(ig);
-    return true;
+  async function commitIngressoSave(): Promise<boolean> {
+    const result = { ok: false };
+    await runButtonSubmit(
+      modalRootRef.current,
+      submitLock,
+      () => ({
+        ig: ingressoDraftRef.current,
+        base: draftRef.current.ingresso,
+      }),
+      (snap) => {
+        const ig = snap.ig;
+        const base = snap.base;
+        if (!ig || !base) return;
+        if (!assertItalianDay("Data ingresso", ig.dataIngresso, gestToast.validation)) return;
+        const prevCampi: SchedaIngressoFields | null = baselineIngressoJson.current
+          ? (JSON.parse(baselineIngressoJson.current) as SchedaIngressoFields)
+          : null;
+        const changes = prevCampi ? diffSchedaIngressoCampi(prevCampi, ig) : [];
+        if (changes.length) {
+          emitLog({
+            tipo: "aggiornamento",
+            schedaOggetto: SCHEDA_INGRESSO_LABEL,
+            riepilogo: "Scheda ingresso aggiornata",
+            changes,
+          });
+        }
+        const now = new Date().toISOString();
+        const u = currentUser.trim() || "Operatore";
+        const nextDoc: SchedaIngressoDoc = {
+          tipo: "ingresso",
+          createdAt: base.createdAt,
+          createdBy: base.createdBy,
+          sorgente: base.sorgente,
+          fileEsterno: base.fileEsterno,
+          campi: ig,
+          updatedAt: now,
+          updatedBy: u,
+        };
+        persist({ ...draftRef.current, ingresso: nextDoc });
+        void onIngressoCommitted?.(ig);
+        result.ok = true;
+      },
+    );
+    return result.ok;
   }
 
   function tryIngressoBack(draft: SchedaIngressoFields) {
@@ -825,40 +837,48 @@ export function SchedeLavorazioneModal({
     setUnsavedPanel("ingresso");
   }
 
-  function commitLavorazioniSave(): boolean {
-    prepareGestionaleModalSave(modalRootRef.current);
-    const doc = lavDoc;
-    if (!doc || !draftRef.current.lavorazioni) return false;
-    for (let i = 0; i < doc.campi.righe.length; i += 1) {
-      const row = doc.campi.righe[i]!;
-      if (!assertItalianDay(`Data riga ${i + 1}`, row.dataLavorazione, gestToast.validation)) return false;
-    }
-    const prevDoc: SchedaLavorazioniDoc | null = baselineLavorazioniJson.current
-      ? (JSON.parse(baselineLavorazioniJson.current) as SchedaLavorazioniDoc)
-      : null;
-    const now = new Date().toISOString();
-    const u = currentUser.trim() || "Operatore";
-    const nextDoc: SchedaLavorazioniDoc = {
-      tipo: "lavorazioni",
-      createdAt: doc.createdAt,
-      createdBy: doc.createdBy,
-      sorgente: doc.sorgente,
-      fileEsterno: doc.fileEsterno,
-      campi: { ...doc.campi, righe: doc.campi.righe.map((r) => ({ ...r })) },
-      updatedAt: now,
-      updatedBy: u,
-    };
-    const changes = diffSchedaLavorazioniDoc(prevDoc, nextDoc);
-    if (changes.length) {
-      emitLog({
-        tipo: "aggiornamento",
-        schedaOggetto: SCHEDA_LAVORAZIONI_LABEL,
-        riepilogo: "Scheda lavorazioni aggiornata",
-        changes,
-      });
-    }
-    persist({ ...draftRef.current, lavorazioni: nextDoc });
-    return true;
+  async function commitLavorazioniSave(): Promise<boolean> {
+    const result = { ok: false };
+    await runButtonSubmit(
+      modalRootRef.current,
+      submitLock,
+      () => ({ doc: lavDoc, draft: draftRef.current }),
+      (snap) => {
+        const doc = snap.doc;
+        if (!doc || !snap.draft.lavorazioni) return;
+        for (let i = 0; i < doc.campi.righe.length; i += 1) {
+          const row = doc.campi.righe[i]!;
+          if (!assertItalianDay(`Data riga ${i + 1}`, row.dataLavorazione, gestToast.validation)) return;
+        }
+        const prevDoc: SchedaLavorazioniDoc | null = baselineLavorazioniJson.current
+          ? (JSON.parse(baselineLavorazioniJson.current) as SchedaLavorazioniDoc)
+          : null;
+        const now = new Date().toISOString();
+        const u = currentUser.trim() || "Operatore";
+        const nextDoc: SchedaLavorazioniDoc = {
+          tipo: "lavorazioni",
+          createdAt: doc.createdAt,
+          createdBy: doc.createdBy,
+          sorgente: doc.sorgente,
+          fileEsterno: doc.fileEsterno,
+          campi: { ...doc.campi, righe: doc.campi.righe.map((r) => ({ ...r })) },
+          updatedAt: now,
+          updatedBy: u,
+        };
+        const changes = diffSchedaLavorazioniDoc(prevDoc, nextDoc);
+        if (changes.length) {
+          emitLog({
+            tipo: "aggiornamento",
+            schedaOggetto: SCHEDA_LAVORAZIONI_LABEL,
+            riepilogo: "Scheda lavorazioni aggiornata",
+            changes,
+          });
+        }
+        persist({ ...snap.draft, lavorazioni: nextDoc });
+        result.ok = true;
+      },
+    );
+    return result.ok;
   }
 
   function tryLavorazioniBack() {
@@ -875,40 +895,48 @@ export function SchedeLavorazioneModal({
     setUnsavedPanel("lav");
   }
 
-  function commitRicambiSave(): boolean {
-    prepareGestionaleModalSave(modalRootRef.current);
-    const doc = ricDoc;
-    if (!doc || !draftRef.current.ricambi) return false;
-    for (let i = 0; i < doc.campi.righe.length; i += 1) {
-      const row = doc.campi.righe[i]!;
-      if (!assertItalianDay(`Data utilizzo riga ${i + 1}`, row.dataUtilizzo, gestToast.validation)) return false;
-    }
-    const prevDoc: SchedaRicambiDoc | null = baselineRicambiJson.current
-      ? (JSON.parse(baselineRicambiJson.current) as SchedaRicambiDoc)
-      : null;
-    const now = new Date().toISOString();
-    const u = currentUser.trim() || "Operatore";
-    const nextDoc: SchedaRicambiDoc = {
-      tipo: "ricambi",
-      createdAt: doc.createdAt,
-      createdBy: doc.createdBy,
-      sorgente: doc.sorgente,
-      fileEsterno: doc.fileEsterno,
-      campi: { ...doc.campi, righe: doc.campi.righe.map((r) => ({ ...r })) },
-      updatedAt: now,
-      updatedBy: u,
-    };
-    const changes = diffSchedaRicambiDoc(prevDoc, nextDoc);
-    if (changes.length) {
-      emitLog({
-        tipo: "aggiornamento",
-        schedaOggetto: SCHEDA_RICAMBI_LABEL,
-        riepilogo: "Scheda ricambi aggiornata",
-        changes,
-      });
-    }
-    persist({ ...draftRef.current, ricambi: nextDoc });
-    return true;
+  async function commitRicambiSave(): Promise<boolean> {
+    const result = { ok: false };
+    await runButtonSubmit(
+      modalRootRef.current,
+      submitLock,
+      () => ({ doc: ricDoc, draft: draftRef.current }),
+      (snap) => {
+        const doc = snap.doc;
+        if (!doc || !snap.draft.ricambi) return;
+        for (let i = 0; i < doc.campi.righe.length; i += 1) {
+          const row = doc.campi.righe[i]!;
+          if (!assertItalianDay(`Data utilizzo riga ${i + 1}`, row.dataUtilizzo, gestToast.validation)) return;
+        }
+        const prevDoc: SchedaRicambiDoc | null = baselineRicambiJson.current
+          ? (JSON.parse(baselineRicambiJson.current) as SchedaRicambiDoc)
+          : null;
+        const now = new Date().toISOString();
+        const u = currentUser.trim() || "Operatore";
+        const nextDoc: SchedaRicambiDoc = {
+          tipo: "ricambi",
+          createdAt: doc.createdAt,
+          createdBy: doc.createdBy,
+          sorgente: doc.sorgente,
+          fileEsterno: doc.fileEsterno,
+          campi: { ...doc.campi, righe: doc.campi.righe.map((r) => ({ ...r })) },
+          updatedAt: now,
+          updatedBy: u,
+        };
+        const changes = diffSchedaRicambiDoc(prevDoc, nextDoc);
+        if (changes.length) {
+          emitLog({
+            tipo: "aggiornamento",
+            schedaOggetto: SCHEDA_RICAMBI_LABEL,
+            riepilogo: "Scheda ricambi aggiornata",
+            changes,
+          });
+        }
+        persist({ ...snap.draft, ricambi: nextDoc });
+        result.ok = true;
+      },
+    );
+    return result.ok;
   }
 
   function tryRicambiBack() {
@@ -1273,9 +1301,11 @@ export function SchedeLavorazioneModal({
               onBack={tryLavorazioniBack}
               onDelete={() => requestDeleteSchedaTipo("lavorazioni")}
               onSave={() => {
-                if (!commitLavorazioniSave()) return;
-                setStage({ kind: "hub" });
-                setLavDoc(null);
+                void commitLavorazioniSave().then((ok) => {
+                  if (!ok) return;
+                  setStage({ kind: "hub" });
+                  setLavDoc(null);
+                });
               }}
             />
           ) : null}
@@ -1292,9 +1322,11 @@ export function SchedeLavorazioneModal({
               onDelete={() => requestDeleteSchedaTipo("ricambi")}
               onImmediatePersist={(d) => persist({ ...draftRef.current, ricambi: d })}
               onSave={() => {
-                if (!commitRicambiSave()) return;
-                setStage({ kind: "hub" });
-                setRicDoc(null);
+                void commitRicambiSave().then((ok) => {
+                  if (!ok) return;
+                  setStage({ kind: "hub" });
+                  setRicDoc(null);
+                });
               }}
             />
           ) : null}
@@ -1315,18 +1347,20 @@ export function SchedeLavorazioneModal({
           }}
           onSaveAndExit={() => {
             const p = unsavedPanel;
-            if (p === "ingresso") {
-              if (!commitIngressoSave()) return;
-              closeIngressoEditor();
-            } else if (p === "lav") {
-              if (!commitLavorazioniSave()) return;
-              setLavDoc(null);
-            } else if (p === "ric") {
-              if (!commitRicambiSave()) return;
-              setRicDoc(null);
-            }
-            setUnsavedPanel(null);
-            setStage({ kind: "hub" });
+            void (async () => {
+              if (p === "ingresso") {
+                if (!(await commitIngressoSave())) return;
+                closeIngressoEditor();
+              } else if (p === "lav") {
+                if (!(await commitLavorazioniSave())) return;
+                setLavDoc(null);
+              } else if (p === "ric") {
+                if (!(await commitRicambiSave())) return;
+                setRicDoc(null);
+              }
+              setUnsavedPanel(null);
+              setStage({ kind: "hub" });
+            })();
           }}
         />
         </div>
@@ -1339,8 +1373,10 @@ export function SchedeLavorazioneModal({
           onRequestClose={tryIngressoBack}
           onSave={(draft) => {
             ingressoDraftRef.current = draft;
-            if (!commitIngressoSave()) return;
-            closeIngressoEditor();
+            void commitIngressoSave().then((ok) => {
+              if (!ok) return;
+              closeIngressoEditor();
+            });
           }}
           onDelete={
             hub.ingresso.sorgente !== "file_esterno" ? () => requestDeleteSchedaTipo("ingresso") : undefined

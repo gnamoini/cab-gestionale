@@ -4,6 +4,7 @@ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 
 import { sliceInputValue, TEXT_LONG, TEXT_MEDIUM } from "@/lib/validation/text-field-limits";
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import { LoadingButton } from "@/components/design-system";
 import { defaultApplicabilitaForCategoria } from "@/lib/documenti/documenti-applicabilita";
 import {
@@ -183,6 +184,7 @@ export function UploadDocumentoModal({
   const [pickedSizeKb, setPickedSizeKb] = useState<number>(0);
   const [marcaInvalid, setMarcaInvalid] = useState(false);
   const [modelloInvalid, setModelloInvalid] = useState(false);
+  const submitLock = useSubmitLock();
 
   const listiniOnly = categoria === "listini";
   const effectiveApp = effectiveDocumentoApplicabilita(categoria, applicabilita);
@@ -207,59 +209,75 @@ export function UploadDocumentoModal({
     if (!nome.trim()) setNome(stripFileExtension(f.name));
   }
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (isUploading) return;
-    const n = nome.trim();
-    const file = pickedFileRef.current;
-    const marcaTrim = marca.trim();
-    const modelloTrim = modello.trim();
-    const validation = validateDocumentoMarcaModelloFields(effectiveApp, marcaTrim, modelloTrim);
-    setMarcaInvalid(validation.marcaInvalid);
-    setModelloInvalid(validation.modelloInvalid);
-    if (!n || !file) return;
-    if (!validation.valid) {
-      gestToast.errorOnce(
-        "documenti-form",
-        validation.modelloInvalid ? "Seleziona un modello per l'applicabilità scelta." : "Controlla marca e modello.",
-        { module: "documenti" },
-      );
-      return;
-    }
 
-    const tipo = inferTipoFileFromNome(file.name);
-    const today = new Date().toISOString().slice(0, 10);
-    const urlBlob = URL.createObjectURL(file);
-    const ext = extractFileExtension(file.name);
-    pickedFileRef.current = null;
+    await runSubmitFromGetter(
+      e.currentTarget,
+      submitLock,
+      () => ({
+        nome,
+        categoria,
+        marca,
+        modello,
+        note,
+        effectiveApp,
+        file: pickedFileRef.current,
+      }),
+      async (snap) => {
+        const n = snap.nome.trim();
+        const file = snap.file;
+        const marcaTrim = snap.marca.trim();
+        const modelloTrim = snap.modello.trim();
+        const validation = validateDocumentoMarcaModelloFields(snap.effectiveApp, marcaTrim, modelloTrim);
+        setMarcaInvalid(validation.marcaInvalid);
+        setModelloInvalid(validation.modelloInvalid);
+        if (!n || !file) return;
+        if (!validation.valid) {
+          gestToast.errorOnce(
+            "documenti-form",
+            validation.modelloInvalid ? "Seleziona un modello per l'applicabilità scelta." : "Controlla marca e modello.",
+            { module: "documenti" },
+          );
+          return;
+        }
 
-    const base: Omit<DocumentoGestionale, "id"> = {
-      nome: n,
-      categoria,
-      marca: marcaTrim,
-      macchina: effectiveApp === "marca" || !marcaTrim ? "—" : modelloTrim,
-      tipoFile: tipo,
-      autoreCaricamento: authorName,
-      note: note.trim() || undefined,
-      caricatoIl: today,
-      ultimaModifica: today,
-      dimensioneKb: Math.max(1, Math.round(file.size / 1024)),
-      urlBlob,
-      fileEstensione: ext || undefined,
-      applicabilita: marcaTrim ? effectiveApp : undefined,
-      marcaKey: marcaTrim || undefined,
-      modelloKey: marcaTrim && effectiveApp === "modello" ? modelloTrim : undefined,
-      associazioni: undefined,
-    };
-    const tmp = { ...base, id: "__new__" } as DocumentoGestionale;
-    const resolved = resolveDocumentoApplicazione(tmp);
-    const { id: _drop, ...payload } = resolved;
-    try {
-      await onSubmit(payload as Omit<DocumentoGestionale, "id">);
-      onRequestClose();
-    } catch {
-      /* errore upload: modale resta aperta per correzione / retry */
-    }
+        const tipo = inferTipoFileFromNome(file.name);
+        const today = new Date().toISOString().slice(0, 10);
+        const urlBlob = URL.createObjectURL(file);
+        const ext = extractFileExtension(file.name);
+        pickedFileRef.current = null;
+
+        const base: Omit<DocumentoGestionale, "id"> = {
+          nome: n,
+          categoria: snap.categoria,
+          marca: marcaTrim,
+          macchina: snap.effectiveApp === "marca" || !marcaTrim ? "—" : modelloTrim,
+          tipoFile: tipo,
+          autoreCaricamento: authorName,
+          note: snap.note.trim() || undefined,
+          caricatoIl: today,
+          ultimaModifica: today,
+          dimensioneKb: Math.max(1, Math.round(file.size / 1024)),
+          urlBlob,
+          fileEstensione: ext || undefined,
+          applicabilita: marcaTrim ? snap.effectiveApp : undefined,
+          marcaKey: marcaTrim || undefined,
+          modelloKey: marcaTrim && snap.effectiveApp === "modello" ? modelloTrim : undefined,
+          associazioni: undefined,
+        };
+        const tmp = { ...base, id: "__new__" } as DocumentoGestionale;
+        const resolved = resolveDocumentoApplicazione(tmp);
+        const { id: _drop, ...payload } = resolved;
+        try {
+          await onSubmit(payload as Omit<DocumentoGestionale, "id">);
+          onRequestClose();
+        } catch {
+          /* errore upload: modale resta aperta per correzione / retry */
+        }
+      },
+    );
   }
 
   const canSubmit =
@@ -541,6 +559,7 @@ export function DocumentoEditModal({
   const [marcaInvalid, setMarcaInvalid] = useState(false);
   const [modelloInvalid, setModelloInvalid] = useState(false);
   const [saving, setSaving] = useState(false);
+  const submitLock = useSubmitLock();
 
   const listiniOnly = categoria === "listini";
   const effectiveApp = effectiveDocumentoApplicabilita(categoria, applicabilita);
@@ -549,48 +568,63 @@ export function DocumentoEditModal({
     if (effectiveApp === "marca") setModello("");
   }, [effectiveApp]);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (saving) return;
-    const marcaTrim = marca.trim();
-    const modelloTrim = modello.trim();
-    const validation = validateDocumentoMarcaModelloFields(effectiveApp, marcaTrim, modelloTrim);
-    setMarcaInvalid(validation.marcaInvalid);
-    setModelloInvalid(validation.modelloInvalid);
-    if (!validation.valid) {
-      gestToast.errorOnce(
-        "documenti-form",
-        validation.modelloInvalid ? "Seleziona un modello per l'applicabilità scelta." : "Controlla marca e modello.",
-        { module: "documenti" },
-      );
-      return;
-    }
 
-    const today = new Date().toISOString().slice(0, 10);
-    const inferredTipoFile = inferTipoFileFromNome(nome.trim() || doc.nome);
-    const base: DocumentoGestionale = {
-      ...doc,
-      nome: nome.trim(),
-      categoria,
-      marca: marcaTrim,
-      macchina: effectiveApp === "marca" || !marcaTrim ? "—" : modelloTrim,
-      tipoFile: inferredTipoFile,
-      note: note.trim() || undefined,
-      autoreCaricamento: doc.autoreCaricamento?.trim() || authorName,
-      ultimaModifica: today,
-      applicabilita: marcaTrim ? effectiveApp : undefined,
-      marcaKey: marcaTrim || undefined,
-      modelloKey: marcaTrim && effectiveApp === "modello" ? modelloTrim : undefined,
-      associazioni: undefined,
-    };
+    await runSubmitFromGetter(
+      e.currentTarget,
+      submitLock,
+      () => ({
+        nome,
+        categoria,
+        marca,
+        modello,
+        note,
+        effectiveApp,
+      }),
+      async (snap) => {
+        const marcaTrim = snap.marca.trim();
+        const modelloTrim = snap.modello.trim();
+        const validation = validateDocumentoMarcaModelloFields(snap.effectiveApp, marcaTrim, modelloTrim);
+        setMarcaInvalid(validation.marcaInvalid);
+        setModelloInvalid(validation.modelloInvalid);
+        if (!validation.valid) {
+          gestToast.errorOnce(
+            "documenti-form",
+            validation.modelloInvalid ? "Seleziona un modello per l'applicabilità scelta." : "Controlla marca e modello.",
+            { module: "documenti" },
+          );
+          return;
+        }
 
-    setSaving(true);
-    try {
-      const result = await onSave(resolveDocumentoApplicazione(base));
-      if (result !== false) onRequestClose();
-    } finally {
-      setSaving(false);
-    }
+        const today = new Date().toISOString().slice(0, 10);
+        const inferredTipoFile = inferTipoFileFromNome(snap.nome.trim() || doc.nome);
+        const base: DocumentoGestionale = {
+          ...doc,
+          nome: snap.nome.trim(),
+          categoria: snap.categoria,
+          marca: marcaTrim,
+          macchina: snap.effectiveApp === "marca" || !marcaTrim ? "—" : modelloTrim,
+          tipoFile: inferredTipoFile,
+          note: snap.note.trim() || undefined,
+          autoreCaricamento: doc.autoreCaricamento?.trim() || authorName,
+          ultimaModifica: today,
+          applicabilita: marcaTrim ? snap.effectiveApp : undefined,
+          marcaKey: marcaTrim || undefined,
+          modelloKey: marcaTrim && snap.effectiveApp === "modello" ? modelloTrim : undefined,
+          associazioni: undefined,
+        };
+
+        setSaving(true);
+        try {
+          const result = await onSave(resolveDocumentoApplicazione(base));
+          if (result !== false) onRequestClose();
+        } finally {
+          setSaving(false);
+        }
+      },
+    );
   }
 
   return (

@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, type FormEvent } from "react";
 import { LoadingButton } from "@/components/design-system";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
-import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { useFormEngine } from "@/lib/forms/form-engine";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   formToMezzoUpdate,
@@ -30,41 +30,45 @@ export function MezziEditModal({
   onValidationError: (message: string) => void;
   onSaveError: (err: unknown) => void;
 }) {
-  const [form, setForm] = useState(() => gestitoToMezzoForm(mezzo));
+  const formEngine = useFormEngine({ initial: gestitoToMezzoForm(mezzo) });
+  const { value: form, setValue, reset, runSubmit, formProps } = formEngine;
   const updateMut = useMezzoUpdateMutation();
 
   useEffect(() => {
-    setForm(gestitoToMezzoForm(mezzo));
-  }, [mezzo.id, mezzo]);
+    reset(gestitoToMezzoForm(mezzo));
+  }, [mezzo.id, mezzo, reset]);
 
   const setFormStable = useCallback(
     (action: React.SetStateAction<typeof form>) => {
-      setForm((prev) => (typeof action === "function" ? action(prev) : action));
+      setValue(action);
     },
-    [],
+    [setValue],
   );
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!canEdit || updateMut.isPending) return;
-    const marca = form.marca.trim();
-    if (!marca || !form.cliente.trim()) {
-      onValidationError("Compila almeno cliente e marca attrezzatura.");
-      return;
-    }
-    const id = mezzo.id;
-    updateMut.mutate(
-      { id, data: formToMezzoUpdate(form) },
-      {
-        onSuccess: () => onSaved(id),
-        onError: onSaveError,
-      },
-    );
+
+    await runSubmit(e.currentTarget, async (currentForm) => {
+      const marca = currentForm.marca.trim();
+      if (!marca || !currentForm.cliente.trim()) {
+        onValidationError("Compila almeno cliente e marca attrezzatura.");
+        return;
+      }
+      const id = mezzo.id;
+      updateMut.mutate(
+        { id, data: formToMezzoUpdate(currentForm) },
+        {
+          onSuccess: () => onSaved(id),
+          onError: onSaveError,
+        },
+      );
+    });
   }
 
   return (
     <GestionaleModalShell modalSize="formMedium" title="Modifica mezzo" titleId="mezzo-edit-title" onRequestClose={onClose}>
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+      <form {...formProps} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <GestionaleModalScrollBody className="space-y-3">
           <MezzoFormFields form={form} setForm={setFormStable} excludeMezzoId={mezzo.id} />
         </GestionaleModalScrollBody>

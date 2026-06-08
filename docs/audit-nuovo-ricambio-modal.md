@@ -1,5 +1,8 @@
 # Audit: modal «Nuovo ricambio» (Magazzino)
 
+> **Superseded:** questo documento descrive l’implementazione pre-refactor (modal inline in `magazzino-view.tsx`, 2026-06-02).  
+> **Report aggiornato:** [`audit-nuova-lavorazione-nuovo-ricambio.md`](./audit-nuova-lavorazione-nuovo-ricambio.md) (2026-06-08) — SSOT [`ricambio-new-modal.tsx`](../components/gestionale/magazzino/ricambio-new-modal.tsx).
+
 Data: 2026-06-02  
 Scope: `/magazzino` → modal inline in [`magazzino-view.tsx`](../components/gestionale/magazzino/magazzino-view.tsx)  
 Vincoli: nessuna nuova funzione, nessun cambio API/tipi/UX oltre ai bugfix.

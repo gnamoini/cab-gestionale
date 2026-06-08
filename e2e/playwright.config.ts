@@ -21,8 +21,11 @@ export default defineConfig({
     navigationTimeout: 30_000,
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  /** Certificazione scheda ingresso: `npm run smoke:playwright:cert` (config mobile dedicata). */
-  testIgnore: ["**/13-lavorazioni-scheda-ingresso.spec.ts"],
+  /** Certificazione mobile / smoke dedicati — vedi smoke:playwright:cert / ricambio:smoke. */
+  testIgnore: [
+    "**/13-lavorazioni-scheda-ingresso.spec.ts",
+    "**/14-magazzino-nuovo-ricambio.spec.ts",
+  ],
   webServer: process.env.SMOKE_NO_WEB_SERVER
     ? undefined
     : {

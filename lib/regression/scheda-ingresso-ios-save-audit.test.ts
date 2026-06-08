@@ -175,9 +175,11 @@ assert.match(focusScope, /flushGestionalePendingCommits/);
 assert.match(focusScope, /flushSync/);
 
 const editModal = read("components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx");
-assert.match(editModal, /draftRef\.current = next/);
+assert.match(editModal, /useFormEngine/);
+assert.match(editModal, /runSubmit/);
 
 const createModal = read("components/gestionale/lavorazioni/lavorazione-create-modal.tsx");
-assert.match(createModal, /fieldsRef\.current/);
+assert.match(createModal, /useFormEngineSections/);
+assert.match(createModal, /runSubmit/);
 
 console.log("scheda-ingresso-ios-save-audit.test: OK");

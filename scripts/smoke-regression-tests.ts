@@ -1,113 +1,39 @@
 import { spawnSync } from "node:child_process";
 import path from "node:path";
+import {
+  REGRESSION_ALL,
+  REGRESSION_CORE,
+  REGRESSION_EXTENDED,
+} from "../lib/regression/smoke-regression-lists";
 
 const ROOT = process.cwd();
-const TESTS = [
-  "lib/regression/rbac-route-matrix.test.ts",
-  "lib/regression/permissions-role-matrix.test.ts",
-  "lib/regression/security-rbac-policy.test.ts",
-  "lib/security/http-security-headers.test.ts",
-  "lib/regression/security-users-permissions-policy.test.ts",
-  "lib/security/user-module-permissions.test.ts",
-  "lib/regression/truth-invalidation.test.ts",
-  "lib/regression/sync-invalidation-policy.test.ts",
-  "lib/regression/notifications-policy.test.ts",
-  "lib/documenti/documento-file-access.test.ts",
-  "lib/regression/documenti-file-access-policy.test.ts",
-  "lib/lavorazioni/desktop-notification-permission.test.ts",
-  "lib/regression/forms-save-policy.test.ts",
-  "lib/regression/performance-policy.test.ts",
-  "lib/regression/long-session-stability-policy.test.ts",
-  "lib/schede/lavorazioni-schede-storage.test.ts",
-  "lib/schede/schede-lazy-fetch.test.ts",
-  "lib/regression/debug-instrumentation-policy.test.ts",
-  "lib/regression/compatibility-policy.test.ts",
-  "lib/regression/audit-signoff-policy.test.ts",
-  "lib/regression/pdf-preview-policy.test.ts",
-  "lib/regression/input-security-policy.test.ts",
-  "lib/bunder/bunder-document-dirty.test.ts",
-  "lib/regression/report-kpi-bundle.test.ts",
-  "lib/report/date-ranges.test.ts",
-  "src/lib/react-query/lavorazioni-optimistic.test.ts",
-  "lib/production/production-readiness.test.ts",
-  "lib/ops/validate-production-env.test.ts",
-  "lib/magazzino/compat/compat-ssot-scan.test.ts",
-  "lib/magazzino/compat/compat-readiness-report.test.ts",
-  "lib/global-autocomplete/engine.test.ts",
-  "lib/global-autocomplete/global-select-add.test.ts",
-  "lib/regression/global-select-dropdown-audit.test.ts",
-  "lib/regression/scheda-ingresso-ios-save-audit.test.ts",
-  "lib/regression/modal-cross-audit.test.ts",
-  "lib/regression/lavorazioni-inputs-audit.test.ts",
-  "lib/regression/lavorazioni-e2e-certification-audit.test.ts",
-  "lib/schede/scheda-ingresso-roundtrip.test.ts",
-  "lib/lavorazioni/kanban-operational.test.ts",
-  "lib/lavorazioni/admin-notifications.test.ts",
-  "lib/dipendenti/dipendenti-presenze-reminder.test.ts",
-  "lib/dashboard/dashboard-promemoria-reminder.test.ts",
-  "lib/regression/dashboard-promemoria-rbac.test.ts",
-  "lib/regression/dashboard-promemoria-soft-delete-rpc.test.ts",
-  "lib/magazzino/ricambio-stock-crossing.test.ts",
-  "lib/magazzino/magazzino-meta.test.ts",
-  "lib/magazzino/fornitore-produttore-master.test.ts",
-  "lib/magazzino/magazzino-advanced-filters.test.ts",
-  "lib/magazzino/duplicates.test.ts",
-  "lib/regression/magazzino-ricambi-extended-policy.test.ts",
-  "lib/regression/loading-design-system.test.ts",
-  "lib/regression/loading-single-representation-policy.test.ts",
-  "lib/regression/toolbar-sticky-policy.test.ts",
-  "lib/regression/toolbar-structure.test.ts",
-  "lib/regression/flex-containment-policy.test.ts",
-  "lib/regression/flex-system-policy.test.ts",
-  "lib/regression/flex-eslint-baseline.test.ts",
-  "lib/regression/flex-system-definitive.test.ts",
-  "lib/regression/flex-system-freeze.test.ts",
-  "lib/regression/flex-allowlist-freeze.test.ts",
-  "lib/regression/flex-system-governance.test.ts",
-  "lib/regression/flex-system-hard-lock.test.ts",
-  "lib/regression/flex-system-absolute-final.test.ts",
-  "lib/regression/ui-route-reliability-audit.test.ts",
-  "lib/regression/ui-final-stability-audit.test.ts",
-  "lib/regression/ui-overflow-regression.test.ts",
-  "lib/regression/ui-reliability-policy.test.ts",
-  "lib/regression/layout-signature.test.ts",
-  "lib/regression/layout-score.test.ts",
-  "lib/regression/visual-layout-linter.test.ts",
-  "lib/regression/fix-safety-guard.test.ts",
-  "lib/regression/ui-autonomy-fix-engine.test.ts",
-  "lib/regression/design-system-lock-policy.test.ts",
-  "lib/regression/layout-contract-validator.test.ts",
-  "lib/regression/ui-os-engine.test.ts",
-  "lib/regression/ui-migration-layer.test.ts",
-  "lib/regression/ui-os-shadow.test.ts",
-  "lib/regression/ui-os-render-decision.test.ts",
-  "lib/regression/ui-os-phase2.test.ts",
-  "lib/regression/theme-boot-script.test.ts",
-  "lib/dipendenti/timesheet-cell-display.test.ts",
-  "lib/dipendenti/dipendenti-pdf-filename.test.ts",
-  "lib/dipendenti/pdf/dipendenti-pdf-stats.test.ts",
-  "lib/dipendenti/timesheet-scheda-stats.test.ts",
-  "lib/dipendenti/timesheet-entry-map.test.ts",
-  "lib/dipendenti/timesheet-kpi-annual.test.ts",
-  "lib/dipendenti/dipendenti-employee-display.test.ts",
-  "lib/dipendenti/timesheet-kpi-delta.test.ts",
-  "lib/regression/global-table-head-dom.test.ts",
-  "lib/regression/global-table-head-audit.test.ts",
-  "scripts/ops-env-check.ts",
-  "scripts/compat-ssot-audit.ts",
-  "scripts/rls-service-audit.ts",
-  "lib/validation/admin-user-validation.test.ts",
-  "lib/validation/password-validation.test.ts",
-  "lib/validation/services/preventivi-payload.test.ts",
-  "lib/validation/services/lavorazioni-payload.test.ts",
-  "lib/validation/security-actions-validation.test.ts",
-  "lib/auth/cliente-portal-scope.test.ts",
-  "lib/auth/cliente-association-audit.test.ts",
-  "lib/dipendenti/timesheet-report-kpi-filter.test.ts",
-];
+
+type Tier = "all" | "core" | "extended";
+
+function resolveTier(): Tier {
+  const arg = process.argv.find((a) => a.startsWith("--"));
+  if (arg === "--core") return "core";
+  if (arg === "--extended") return "extended";
+  return "all";
+}
+
+function testsForTier(tier: Tier): readonly string[] {
+  switch (tier) {
+    case "core":
+      return REGRESSION_CORE;
+    case "extended":
+      return REGRESSION_EXTENDED;
+    default:
+      return REGRESSION_ALL;
+  }
+}
 
 function main(): void {
-  for (const rel of TESTS) {
+  const tier = resolveTier();
+  const tests = testsForTier(tier);
+  console.log(`smoke-regression-tests tier=${tier} (${tests.length} files)\n`);
+
+  for (const rel of tests) {
     const file = path.join(ROOT, rel);
     console.log(`\n--- ${rel} ---\n`);
     const r = spawnSync("npx", ["tsx", file], { cwd: ROOT, shell: true, stdio: "inherit" });
@@ -116,7 +42,7 @@ function main(): void {
       process.exit(1);
     }
   }
-  console.log("\nsmoke-regression-tests: all OK\n");
+  console.log(`\nsmoke-regression-tests (${tier}): all OK\n`);
 }
 
 main();

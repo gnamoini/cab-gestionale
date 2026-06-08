@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
+import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
@@ -48,34 +49,52 @@ export function LavorazioneEditModal({
   const [matricola, setMatricola] = useState(() => row.mezzo?.matricola?.trim() ?? "");
   const [numeroScuderia, setNumeroScuderia] = useState(() => row.mezzo?.numero_scuderia?.trim() ?? "");
   const [note, setNote] = useState(() => (row.note ?? "").trim());
+  const submitLock = useSubmitLock();
 
-  async function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (!cliente.trim() || !marca.trim() || !modello.trim() || !matricola.trim()) {
-      gestToast.validation("Cliente, marca, modello e matricola sono obbligatori.");
-      return;
-    }
-    try {
-      if (row.mezzo_id) {
-        await updateMezzo.mutateAsync({
-          id: row.mezzo_id,
-          data: {
-            cliente: cliente.trim(),
-            utilizzatore: utilizzatore.trim() || null,
-            marca: marca.trim(),
-            modello: modello.trim(),
-            targa: targa.trim() || null,
-            matricola: matricola.trim(),
-            numero_scuderia: numeroScuderia.trim() || null,
-          },
-        });
-      }
-      await update.mutateAsync({ id: row.id, data: { note: note.trim() || null } });
-      gestToast.successSaved();
-      onClose();
-    } catch (e) {
-      gestToast.errorOnce("lav-edit", e, { module: "lavorazioni" });
-    }
+
+    await runSubmitFromGetter(
+      e.currentTarget,
+      submitLock,
+      () => ({
+        cliente,
+        utilizzatore,
+        marca,
+        modello,
+        targa,
+        matricola,
+        numeroScuderia,
+        note,
+      }),
+      async (snap) => {
+        if (!snap.cliente.trim() || !snap.marca.trim() || !snap.modello.trim() || !snap.matricola.trim()) {
+          gestToast.validation("Cliente, marca, modello e matricola sono obbligatori.");
+          return;
+        }
+        try {
+          if (row.mezzo_id) {
+            await updateMezzo.mutateAsync({
+              id: row.mezzo_id,
+              data: {
+                cliente: snap.cliente.trim(),
+                utilizzatore: snap.utilizzatore.trim() || null,
+                marca: snap.marca.trim(),
+                modello: snap.modello.trim(),
+                targa: snap.targa.trim() || null,
+                matricola: snap.matricola.trim(),
+                numero_scuderia: snap.numeroScuderia.trim() || null,
+              },
+            });
+          }
+          await update.mutateAsync({ id: row.id, data: { note: snap.note.trim() || null } });
+          gestToast.successSaved();
+          onClose();
+        } catch (err) {
+          gestToast.errorOnce("lav-edit", err, { module: "lavorazioni" });
+        }
+      },
+    );
   }
 
   return (

@@ -7,7 +7,7 @@ import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/g
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
-import { prepareGestionaleModalSave } from "@/lib/ui/gestionale-modal-save-prep";
+import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { ensurePreventivoStruttura, partitionRigheRicambi, pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
@@ -166,6 +166,7 @@ export function PreventiviEditorModal({
   const queryClient = useQueryClient();
   const baselineRef = useRef<PreventivoRecord | null>(null);
   const modalRootRef = useRef<HTMLDivElement | null>(null);
+  const submitLock = useSubmitLock();
   const draftRef = useRef<PreventivoRecord | null>(null);
   const [draft, setDraft] = useState<PreventivoRecord | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
@@ -377,8 +378,8 @@ export function PreventiviEditorModal({
   }
 
   async function onSalva() {
-    prepareGestionaleModalSave(modalRootRef.current);
-    const cur = draftRef.current;
+    await runButtonSubmit(modalRootRef.current, submitLock, () => ({ draft: draftRef.current }), async (snap) => {
+    const cur = snap.draft;
     if (!cur) return;
     const now = new Date().toISOString();
     const u = autore.trim() || "Operatore";
@@ -441,6 +442,7 @@ export function PreventiviEditorModal({
     setUnsavedExitOpen(false);
     onSaved();
     onClose();
+    });
   }
 
   if (!open || !draft) return null;

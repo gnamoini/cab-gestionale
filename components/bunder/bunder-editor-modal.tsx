@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { prepareGestionaleModalSave } from "@/lib/ui/gestionale-modal-save-prep";
+import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { GlobalDatePickerYmd, GlobalSelect, gestionaleMultilineEnterProps } from "@/components/gestionale/global-input";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -48,6 +48,7 @@ export function BunderEditorModal({
   onSave: (d: BunderCommercialDocument) => void;
 }) {
   const modalRootRef = useRef<HTMLDivElement | null>(null);
+  const submitLock = useSubmitLock();
   const [local, setLocal] = useState<BunderCommercialDocument | null>(null);
   const [baselineSnapshot, setBaselineSnapshot] = useState<string | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
@@ -139,25 +140,27 @@ export function BunderEditorModal({
   }, [local]);
 
   const salva = useCallback(() => {
-    prepareGestionaleModalSave(modalRootRef.current);
-    if (!local) return;
-    const iso = new Date().toISOString();
-    const next: BunderCommercialDocument = {
-      ...local,
-      updatedAt: iso,
-      lastEditedBy: autore.trim() || "Operatore",
-    };
-    appendBunderChangeLog({
-      tone: "update",
-      tipoRiga: "MODIFICA DOCUMENTO",
-      oggettoRiga: `${local.numeroProgressivo} · ${bunderKindLabel(local.kind)}`,
-      modificaRiga: `Destinatario: ${local.aziendaDestinatario}. Totale indicativo: ${totaleDocumento(next).toLocaleString("it-IT", { minimumFractionDigits: 2 })} €.`,
-      autore: autore.trim() || "Operatore",
-      atIso: iso,
+    void runButtonSubmit(modalRootRef.current, submitLock, () => ({ doc: local }), (snap) => {
+      if (!snap.doc) return;
+      const doc = snap.doc;
+      const iso = new Date().toISOString();
+      const next: BunderCommercialDocument = {
+        ...doc,
+        updatedAt: iso,
+        lastEditedBy: autore.trim() || "Operatore",
+      };
+      appendBunderChangeLog({
+        tone: "update",
+        tipoRiga: "MODIFICA DOCUMENTO",
+        oggettoRiga: `${doc.numeroProgressivo} · ${bunderKindLabel(doc.kind)}`,
+        modificaRiga: `Destinatario: ${doc.aziendaDestinatario}. Totale indicativo: ${totaleDocumento(next).toLocaleString("it-IT", { minimumFractionDigits: 2 })} €.`,
+        autore: autore.trim() || "Operatore",
+        atIso: iso,
+      });
+      onSave(next);
+      onClose();
     });
-    onSave(next);
-    onClose();
-  }, [local, autore, onSave, onClose]);
+  }, [local, autore, onSave, onClose, submitLock]);
 
   const requestClose = useCallback(() => {
     if (!isDirty) {

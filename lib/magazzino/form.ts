@@ -34,6 +34,11 @@ import { isValueInListOptions } from "@/lib/ui/list-select-utils";
 
 const MAGAZZINO_DEFAULT_AUTHOR = "Operatore";
 
+/** Segnaposto lenient al save (SSOT — usare in telemetria e mapping). */
+export const RICAMBIO_LENIENT_PLACEHOLDER_MARCA = "—";
+export const RICAMBIO_LENIENT_PLACEHOLDER_DESCRIZIONE = "Senza descrizione";
+export const RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA = "—";
+
 export {
   RICAMBIO_COMPAT_LEGACY_PLACEHOLDER,
   normalizeCompatList,
@@ -214,6 +219,22 @@ export function ricambioFormImportantWarnings(f: RicambioFormState): string[] {
   return w;
 }
 
+export type RicambioLenientPlaceholderFlags = {
+  marcaPlaceholder: boolean;
+  descrizionePlaceholder: boolean;
+  categoriaPlaceholder: boolean;
+};
+
+/** Flag segnaposto post-mapping lenient (telemetria interna, non blocca il save). */
+export function ricambioLenientPlaceholderFlags(r: RicambioMagazzino): RicambioLenientPlaceholderFlags {
+  return {
+    marcaPlaceholder: r.marca === RICAMBIO_LENIENT_PLACEHOLDER_MARCA,
+    descrizionePlaceholder: r.descrizione === RICAMBIO_LENIENT_PLACEHOLDER_DESCRIZIONE,
+    categoriaPlaceholder:
+      r.categoria === RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA || !r.categoria.trim(),
+  };
+}
+
 /** Crea sempre un record: valori vuoti diventano segnaposto coerenti (salvataggio “incompleto”). */
 export type RicambioCompatExpandOptions = {
   mezziListe: MezziListePrefs;
@@ -273,14 +294,15 @@ export function ricambioFromFormLenient(
   const fornitoriAlternativi = fornitoriAlternativiFromFormRows(f.fornitoriAlternativi);
   const partial: RicambioMagazzino = {
     id: id ?? `r-${Date.now()}`,
-    marca: f.marca.trim() || "—",
-    codiceFornitoreOriginale: normalizeRicambioCodice(f.codiceFornitoreOriginale.trim()) || "—",
+    marca: f.marca.trim() || RICAMBIO_LENIENT_PLACEHOLDER_MARCA,
+    codiceFornitoreOriginale:
+      normalizeRicambioCodice(f.codiceFornitoreOriginale.trim()) || RICAMBIO_LENIENT_PLACEHOLDER_MARCA,
     codiceFornitoreOriginaleSecondario: codiceSecondario,
     marcaOriginaleSecondaria: f.marcaOriginaleSecondaria.trim(),
     usatoInTagliandi: f.usatoInTagliandi,
-    descrizione: f.descrizione.trim() || "Senza descrizione",
+    descrizione: f.descrizione.trim() || RICAMBIO_LENIENT_PLACEHOLDER_DESCRIZIONE,
     note: f.note.trim(),
-    categoria: f.categoria.trim() || "—",
+    categoria: f.categoria.trim() || RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA,
     compatibilitaMezzi: compat,
     compatibilitaRefs: compatRefs,
     scorta: Math.max(0, parseFloat(f.scorta) || 0),

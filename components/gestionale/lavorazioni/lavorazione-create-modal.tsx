@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
@@ -22,7 +22,7 @@ import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni
 import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
-import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { useFormEngineSections } from "@/lib/forms/form-engine";
 import { LoadingButton } from "@/components/design-system";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
@@ -35,8 +35,14 @@ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { dsModalFormFooter } from "@/lib/ui/design-system";
+import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 
 export { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
+
+type LavorazioneCreateFormSections = {
+  fields: SchedaIngressoFields;
+  meta: { stato: string; priorita: PrioritaLavorazione; mezzoId: string };
+};
 
 function itDateToYmd(it: string): string {
   const p = it.trim().split(/[/.-]/);
@@ -106,24 +112,40 @@ export function LavorazioneCreateModal({
     [mezziUi, mezzi],
   );
 
-  const [fields, setFieldsState] = useState<SchedaIngressoFields>(() => emptySchedaIngressoFields(""));
-  const fieldsRef = useRef(fields);
+  const formEngine = useFormEngineSections<LavorazioneCreateFormSections>({
+    sections: {
+      fields: { initial: emptySchedaIngressoFields("") },
+      meta: { initial: { stato: "", priorita: "media", mezzoId: "" } },
+    },
+  });
+  const { values, setSection, patchSection, resetSections, runSubmit, formProps } = formEngine;
+  const fields = values.fields;
+  const { stato, priorita, mezzoId } = values.meta;
+
   const setFields = useCallback(
     (next: SchedaIngressoFields | ((prev: SchedaIngressoFields) => SchedaIngressoFields)) => {
-      setFieldsState((prev) => {
-        const resolved = typeof next === "function" ? next(prev) : next;
-        fieldsRef.current = resolved;
-        return resolved;
-      });
+      setSection("fields", next);
     },
-    [],
+    [setSection],
   );
-  useLayoutEffect(() => {
-    fieldsRef.current = fields;
-  }, [fields]);
-  const [mezzoId, setMezzoId] = useState("");
-  const [stato, setStato] = useState("");
-  const [priorita, setPriorita] = useState<PrioritaLavorazione>("media");
+  const setMezzoId = useCallback(
+    (next: string) => {
+      patchSection("meta", { mezzoId: next });
+    },
+    [patchSection],
+  );
+  const setStato = useCallback(
+    (next: string) => {
+      patchSection("meta", { stato: next });
+    },
+    [patchSection],
+  );
+  const setPriorita = useCallback(
+    (next: PrioritaLavorazione) => {
+      patchSection("meta", { priorita: next });
+    },
+    [patchSection],
+  );
   const [mezzoHint, setMezzoHint] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [schedaSyncError, setSchedaSyncError] = useState<string | null>(null);
@@ -131,6 +153,8 @@ export function LavorazioneCreateModal({
   const defaultMezzoAppliedRef = useRef<string | null>(null);
   /** Lavorazione già creata ma scheda ingresso non sincronizzata — retry solo persist. */
   const createdLavorazioneIdRef = useRef<string | null>(null);
+  /** True se INSERT riuscito ma persist scheda fallito (retry manuale, no auto-loop). */
+  const partialSuccessRef = useRef(false);
 
   const patch = useCallback(
     (p: Partial<SchedaIngressoFields>) => setFields((f) => ({ ...f, ...p })),
@@ -193,28 +217,34 @@ export function LavorazioneCreateModal({
     if (!open) {
       formInitRef.current = false;
       defaultMezzoAppliedRef.current = null;
-      setFields(emptySchedaIngressoFields(""));
-      setMezzoId("");
-      setStato("");
-      setPriorita("media");
+      resetSections({
+        fields: emptySchedaIngressoFields(""),
+        meta: { stato: "", priorita: "media", mezzoId: "" },
+      });
       setMezzoHint(null);
       setSubmitError(null);
       setSchedaSyncError(null);
       createdLavorazioneIdRef.current = null;
+      partialSuccessRef.current = false;
       return;
     }
     if (formInitRef.current) return;
     formInitRef.current = true;
     const addetto0 = addettiOpts[0] ?? "";
-    setFields(emptySchedaIngressoFields(addetto0));
-    setMezzoId((defaultMezzoId ?? "").trim());
-    setStato(defaultAccettazioneStatoId);
-    setPriorita(prioritaOpts.includes("media") ? "media" : (prioritaOpts[0] ?? "media"));
+    resetSections({
+      fields: emptySchedaIngressoFields(addetto0),
+      meta: {
+        mezzoId: (defaultMezzoId ?? "").trim(),
+        stato: defaultAccettazioneStatoId,
+        priorita: prioritaOpts.includes("media") ? "media" : (prioritaOpts[0] ?? "media"),
+      },
+    });
     setMezzoHint(null);
     setSubmitError(null);
     setSchedaSyncError(null);
     createdLavorazioneIdRef.current = null;
-  }, [open, defaultMezzoId, prioritaOpts, addettiOpts, defaultAccettazioneStatoId]);
+    partialSuccessRef.current = false;
+  }, [open, defaultMezzoId, prioritaOpts, addettiOpts, defaultAccettazioneStatoId, resetSections]);
 
   useEffect(() => {
     if (!open || !defaultMezzoId) return;
@@ -232,95 +262,105 @@ export function LavorazioneCreateModal({
 
   if (!open) return null;
 
-  async function onSubmit(e: FormEvent) {
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const currentFields = fieldsRef.current;
-    if (!createdBy) {
-      gestToast.validation("Devi essere autenticato per creare una lavorazione.");
-      return;
-    }
-    const sid = stato.trim() || defaultAccettazioneStatoId;
-    if (!sid || !isStatoInConfig(sid, stati)) {
-      gestToast.validation("Seleziona uno stato tra quelli configurati in Configurazione globale.");
-      return;
-    }
-    if (!currentFields.cliente.trim() || !currentFields.marcaAttrezzatura.trim()) {
-      gestToast.validation("Cliente e marca attrezzatura sono obbligatori.");
-      return;
-    }
-    if (!prioritaOpts.includes(priorita)) {
-      gestToast.validation("Seleziona una priorità dalla configurazione globale.");
-      return;
-    }
+    await runSubmit(e.currentTarget, async (snap) => {
+      const currentFields = snap.fields;
+      const { stato: metaStato, priorita: metaPriorita, mezzoId: metaMezzoId } = snap.meta;
 
-    const ymd = itDateToYmd(currentFields.dataIngresso) || new Date().toISOString().slice(0, 10);
-    const noteBlob = currentFields.noteIntervento.trim() || null;
-    setSubmitError(null);
-    setSchedaSyncError(null);
-
-    try {
-      const existingLavId = createdLavorazioneIdRef.current;
-      let lavorazioneId = existingLavId;
-
-      if (!lavorazioneId) {
-        const catalog = await resolveFreshCatalog();
-        const { mezzoId: finalMezzoId } = await upsertMezzoFromSchedaIngresso({
-          fields: currentFields,
-          mezziCatalog: catalog,
-          preferredMezzoId: mezzoId.trim() || null,
-          create: (data) => createMezzo.mutateAsync(data),
-          update: (id, data) => updateMezzo.mutateAsync({ id, data }),
-        });
-
-        const row = await create.mutateAsync({
-          mezzo_id: finalMezzoId,
-          stato: sid,
-          priorita,
-          data_ingresso: ymdToIsoMidUtc(ymd),
-          data_uscita: null,
-          note: noteBlob || null,
-          created_by: createdBy,
-        });
-        lavorazioneId = row.id;
-        createdLavorazioneIdRef.current = row.id;
-      }
-
-      const store = loadLavorazioneSchedeStore();
-      store[lavorazioneId] = {
-        lavorazioneId,
-        codice: store[lavorazioneId]?.codice ?? null,
-        ingresso: {
-          ...newSchedaMeta("ingresso", createdBy),
-          tipo: "ingresso",
-          campi: { ...currentFields },
-        },
-        lavorazioni: store[lavorazioneId]?.lavorazioni ?? null,
-        ricambi: store[lavorazioneId]?.ricambi ?? null,
-      };
-      const res = await persistSchedeStore(store, lavorazioneId);
-      if (!res.ok) {
-        const schedaMsg =
-          res.error ??
-          "Lavorazione creata ma la scheda ingresso non è stata sincronizzata. Riprova il salvaggio o contatta l’amministratore.";
-        setSchedaSyncError(schedaMsg);
-        gestToast.errorOnce("lav-create-scheda", schedaMsg, {
-          module: "lavorazioni",
-        });
-        dispatchGestionaleLocalMutation(qc, ["lavorazioni"]);
+      if (!createdBy) {
+        gestToast.validation("Devi essere autenticato per creare una lavorazione.");
         return;
       }
-      dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
-      createdLavorazioneIdRef.current = null;
-      onCreated?.(lavorazioneId);
-      onClose();
-    } catch (err) {
-      const mutationMsg =
-        create.error?.message ?? createMezzo.error?.message ?? updateMezzo.error?.message ?? null;
-      if (mutationMsg) return;
-      const msg = err instanceof Error ? err.message : "Salvataggio fallito.";
-      setSubmitError(msg);
-      gestToast.error(msg, { module: "lavorazioni" });
-    }
+      const sid = metaStato.trim() || defaultAccettazioneStatoId;
+      if (!sid || !isStatoInConfig(sid, stati)) {
+        gestToast.validation("Seleziona uno stato tra quelli configurati in Configurazione globale.");
+        return;
+      }
+      if (!currentFields.cliente.trim() || !currentFields.marcaAttrezzatura.trim()) {
+        gestToast.validation("Cliente e marca attrezzatura sono obbligatori.");
+        return;
+      }
+      if (!prioritaOpts.includes(metaPriorita)) {
+        gestToast.validation("Seleziona una priorità dalla configurazione globale.");
+        return;
+      }
+
+      const ymd = itDateToYmd(currentFields.dataIngresso) || new Date().toISOString().slice(0, 10);
+      const noteBlob = currentFields.noteIntervento.trim() || null;
+      setSubmitError(null);
+      setSchedaSyncError(null);
+
+      try {
+        const existingLavId = createdLavorazioneIdRef.current;
+        if (existingLavId) {
+          incrementHealthCounter("lavCreatePartialRetry");
+        }
+        let lavorazioneId = existingLavId;
+
+        if (!lavorazioneId) {
+          const catalog = await resolveFreshCatalog();
+          const { mezzoId: finalMezzoId } = await upsertMezzoFromSchedaIngresso({
+            fields: currentFields,
+            mezziCatalog: catalog,
+            preferredMezzoId: metaMezzoId.trim() || null,
+            create: (data) => createMezzo.mutateAsync(data),
+            update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+          });
+
+          const row = await create.mutateAsync({
+            mezzo_id: finalMezzoId,
+            stato: sid,
+            priorita: metaPriorita,
+            data_ingresso: ymdToIsoMidUtc(ymd),
+            data_uscita: null,
+            note: noteBlob || null,
+            created_by: createdBy,
+          });
+          lavorazioneId = row.id;
+          createdLavorazioneIdRef.current = row.id;
+        }
+
+        const store = loadLavorazioneSchedeStore();
+        store[lavorazioneId] = {
+          lavorazioneId,
+          codice: store[lavorazioneId]?.codice ?? null,
+          ingresso: {
+            ...newSchedaMeta("ingresso", createdBy),
+            tipo: "ingresso",
+            campi: { ...currentFields },
+          },
+          lavorazioni: store[lavorazioneId]?.lavorazioni ?? null,
+          ricambi: store[lavorazioneId]?.ricambi ?? null,
+        };
+        const res = await persistSchedeStore(store, lavorazioneId);
+        if (!res.ok) {
+          partialSuccessRef.current = true;
+          incrementHealthCounter("lavCreateSchedaSyncFail");
+          const schedaMsg =
+            res.error ??
+            "Lavorazione creata ma la scheda ingresso non è stata sincronizzata. Riprova il salvaggio o contatta l’amministratore.";
+          setSchedaSyncError(schedaMsg);
+          gestToast.errorOnce("lav-create-scheda", schedaMsg, {
+            module: "lavorazioni",
+          });
+          dispatchGestionaleLocalMutation(qc, ["lavorazioni"]);
+          return;
+        }
+        dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
+        createdLavorazioneIdRef.current = null;
+        partialSuccessRef.current = false;
+        onCreated?.(lavorazioneId);
+        onClose();
+      } catch (err) {
+        const mutationMsg =
+          create.error?.message ?? createMezzo.error?.message ?? updateMezzo.error?.message ?? null;
+        if (mutationMsg) return;
+        const msg = err instanceof Error ? err.message : "Salvataggio fallito.";
+        setSubmitError(msg);
+        gestToast.error(msg, { module: "lavorazioni" });
+      }
+    });
   }
 
   const pending = create.isPending || createMezzo.isPending || updateMezzo.isPending;
@@ -338,7 +378,7 @@ export function LavorazioneCreateModal({
       subtitle="Scheda di ingresso — compila l'accettazione mezzo e salva la lavorazione."
       footer={null}
     >
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+      <form {...formProps} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
         <SchedaIngressoFormBody
           variant="create-lavorazione"
           fields={fields}

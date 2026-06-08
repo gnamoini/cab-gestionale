@@ -23,6 +23,7 @@ import {
   type PromemoriaRecurrenceScope,
 } from "@/lib/dashboard/dashboard-promemoria-recurrence";
 import { promemoriaEventTimeInputValue } from "@/lib/dashboard/dashboard-promemoria-reminder";
+import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
 import { dsInput, dsModalFormFooter, dsTypoSmall } from "@/lib/ui/design-system";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
@@ -74,6 +75,7 @@ export function DashboardPromemoriaFormModal({
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
   const [scopeDialogOpen, setScopeDialogOpen] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
+  const submitLock = useSubmitLock();
   const dataFieldId = useId();
   const timeFieldId = useId();
   const titleFieldId = useId();
@@ -161,13 +163,42 @@ export function DashboardPromemoriaFormModal({
     [buildPayload, onSubmit],
   );
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (editing?.series_id) {
-      setScopeDialogOpen(true);
-      return;
-    }
-    commitSubmit();
+    void runSubmitFromGetter(
+      e.currentTarget,
+      submitLock,
+      () => ({
+        eventDate,
+        eventTime,
+        title,
+        description,
+        repeatEnabled,
+        frequency,
+        untilYmd,
+        seriesId: editing?.series_id,
+      }),
+      (snap) => {
+        if (snap.seriesId) {
+          setScopeDialogOpen(true);
+          return;
+        }
+        onSubmit({
+          eventDate: snap.eventDate,
+          eventTime: snap.eventTime.trim() || null,
+          title: snap.title,
+          description: snap.description.trim() || null,
+          recurrence: editing
+            ? undefined
+            : {
+                enabled: snap.repeatEnabled,
+                frequency: snap.repeatEnabled ? snap.frequency : null,
+                interval: 1,
+                untilYmd: snap.repeatEnabled ? snap.untilYmd : null,
+              },
+        });
+      },
+    );
   }
 
   const requestClose = useCallback(() => {

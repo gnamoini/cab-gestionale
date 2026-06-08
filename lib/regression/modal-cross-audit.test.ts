@@ -35,7 +35,11 @@ assert.match(focusScope, /flushGestionalePendingCommits/);
 
 const savePrep = read("lib/ui/gestionale-modal-save-prep.ts");
 assert.match(savePrep, /prepareGestionaleModalSave/);
-assert.match(savePrep, /flushGestionalePendingCommits/);
+assert.match(savePrep, /prepareFormSubmit/);
+
+const formSubmitPrep = read("lib/forms/form-engine/prepare-form-submit.ts");
+assert.match(formSubmitPrep, /flushGestionalePendingCommits/);
+assert.match(formSubmitPrep, /flushSync/);
 
 const flushSrc = read("lib/ui/gestionale-form-submit-flush.ts");
 assert.match(flushSrc, /flushGestionalePendingCommits/);
@@ -75,8 +79,8 @@ for (const rel of buttonSaveFiles) {
   const src = read(rel);
   assert.match(
     src,
-    /prepareGestionaleModalSave|prepareGestionaleModalSaveFrom/,
-    `${rel} must call prepareGestionaleModalSave* before save`,
+    /runButtonSubmit|prepareGestionaleModalSave|prepareGestionaleModalSaveFrom/,
+    `${rel} must flush via runButtonSubmit or prepareGestionaleModalSave* before save`,
   );
 }
 

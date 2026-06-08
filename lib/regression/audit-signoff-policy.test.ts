@@ -91,7 +91,7 @@ for (const spec of E2E_SPECS) {
   assert.ok(exists(spec), `${spec} missing`);
 }
 
-const smokeRegression = read("scripts/smoke-regression-tests.ts");
+const regressionLists = read("lib/regression/smoke-regression-lists.ts");
 for (const policy of [
   "sync-invalidation-policy.test.ts",
   "notifications-policy.test.ts",
@@ -100,8 +100,11 @@ for (const policy of [
   "compatibility-policy.test.ts",
   "audit-signoff-policy.test.ts",
 ]) {
-  assert.match(smokeRegression, new RegExp(policy.replace(".", "\\.")));
+  assert.match(regressionLists, new RegExp(policy.replace(".", "\\.")));
 }
+const smokeRegression = read("scripts/smoke-regression-tests.ts");
+assert.match(smokeRegression, /smoke-regression-lists/);
+assert.match(smokeRegression, /--core/);
 
 const migrations = [
   "supabase/migrations/20260704120000_bunder_documents.sql",
