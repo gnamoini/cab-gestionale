@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { flushSync } from "react-dom";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
@@ -23,6 +24,7 @@ import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { useFormEngineSections } from "@/lib/forms/form-engine";
+import { prepareFormSubmit } from "@/lib/forms/form-engine/prepare-form-submit";
 import { LoadingButton } from "@/components/design-system";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
@@ -265,14 +267,16 @@ export function LavorazioneCreateModal({
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
+    prepareFormSubmit(form);
+    const domCliente =
+      form.querySelector<HTMLInputElement>('input[role="combobox"][aria-label="Cliente"]')?.value.trim() ??
+      "";
+    if (domCliente) {
+      patch({ cliente: domCliente });
+      flushSync(() => {});
+    }
     await runSubmit(form, async (snap) => {
-      const domCliente =
-        form.querySelector<HTMLInputElement>('input[role="combobox"][aria-label="Cliente"]')?.value.trim() ??
-        "";
-      const currentFields =
-        domCliente && !snap.fields.cliente.trim()
-          ? { ...snap.fields, cliente: domCliente }
-          : snap.fields;
+      const currentFields = snap.fields;
       const { stato: metaStato, priorita: metaPriorita, mezzoId: metaMezzoId } = snap.meta;
 
       if (!createdBy) {
