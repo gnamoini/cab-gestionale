@@ -24,6 +24,13 @@ export async function fillListCombobox(
   const input = root.getByRole("combobox", { name: ariaLabel, exact: true });
   await input.scrollIntoViewIfNeeded();
   await input.click();
+  if ((await input.getAttribute("aria-readonly")) === "true") {
+    const option = page.getByRole("option", { name: new RegExp(escapeRegExp(value), "i") }).first();
+    await expect(option).toBeVisible({ timeout: 15_000 });
+    await option.click();
+    await expect(input).toHaveValue(value, { timeout: 15_000 });
+    return;
+  }
   await input.fill(value);
   const addBtn = page.getByRole("button", { name: new RegExp(`Aggiungi.*${escapeRegExp(value)}`, "i") });
   if (await addBtn.isVisible().catch(() => false)) {
