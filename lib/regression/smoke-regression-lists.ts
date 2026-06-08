@@ -67,6 +67,7 @@ export const REGRESSION_CORE: readonly string[] = [
   "lib/auth/cliente-portal-scope.test.ts",
   "lib/auth/cliente-association-audit.test.ts",
   "lib/regression/client-portal-contattaci-audit.test.ts",
+  "lib/regression/client-portal-mobile-cards-audit.test.ts",
 ] as const;
 
 /** Extended tier — layout/flex governance, dipendenti units, advisory policy scans. */

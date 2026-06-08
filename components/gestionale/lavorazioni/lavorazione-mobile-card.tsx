@@ -73,21 +73,23 @@ export function LavMobileInlineField({
   label,
   children,
   layout = "row",
+  className = "",
 }: {
   label: string;
   children: ReactNode;
   layout?: "row" | "stack";
+  className?: string;
 }) {
   if (layout === "stack") {
     return (
-      <label className="flex min-w-0 flex-col gap-1">
+      <label className={`flex min-w-0 flex-col gap-1 ${className}`.trim()}>
         <span className={metaDt}>{label}</span>
         <div className="min-w-0">{children}</div>
       </label>
     );
   }
   return (
-    <label className="flex min-w-0 items-center gap-1.5">
+    <label className={`flex min-w-0 items-center gap-1.5 ${className}`.trim()}>
       <span className={`w-[4.25rem] ${lavMobileFieldLabelClass}`}>{label}</span>
       <div className="min-w-0 flex-1">{children}</div>
     </label>
@@ -201,12 +203,18 @@ export function LavorazioneMobileNote({ text }: { text: string }) {
   );
 }
 
-export function LavorazioneMobileControlsPanel({ children }: { children: ReactNode }) {
+export function LavorazioneMobileControlsPanel({
+  children,
+  ariaLabel = "Priorità e addetto",
+}: {
+  children: ReactNode;
+  ariaLabel?: string;
+}) {
   return (
     <div
       className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-zinc-200/60 pt-2.5 dark:border-zinc-700/60"
       role="group"
-      aria-label="Priorità e addetto"
+      aria-label={ariaLabel}
     >
       {children}
     </div>

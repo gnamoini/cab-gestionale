@@ -420,10 +420,10 @@ function MobileNavDrawer({
   if (!mounted) return null;
 
   return (
-    <div className={`fixed inset-0 ${dsZModalHigh} touch-none overscroll-none md:hidden`} role="presentation">
+    <div className={`fixed inset-0 ${dsZModalHigh} overscroll-none md:hidden`} role="presentation">
       <button
         type="button"
-        className="cab-nav-drawer-backdrop absolute inset-0 bg-black/50 backdrop-blur-[1px] touch-manipulation"
+        className="cab-nav-drawer-backdrop absolute inset-0 touch-none bg-black/50 backdrop-blur-[1px] touch-manipulation"
         data-state={panelState}
         aria-label="Chiudi menu"
         onClick={onClose}
@@ -443,12 +443,17 @@ function MobileNavDrawer({
             <CloseButton onClick={onClose} />
           </div>
         </div>
-        <nav className="gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto p-3" aria-label="Sezioni principali">
+        <nav
+          className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y p-3 [-webkit-overflow-scrolling:touch]"
+          aria-label="Sezioni principali"
+        >
           {navItems.map((item) => (
             <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} onNavigate={onNavigate} />
           ))}
         </nav>
-        <SidebarThemeSection />
+        <div className="shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+          <SidebarThemeSection />
+        </div>
       </div>
     </div>
   );

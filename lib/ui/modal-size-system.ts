@@ -49,7 +49,7 @@ const DRAWER_ASIDE_CLASSES: Record<DrawerSize, string> = {
   drawerFilter:
     "cab-drawer-panel absolute inset-y-0 right-0 flex w-[min(100%,var(--cab-modal-width-drawer-filter,22rem))] max-w-full flex-col border-l border-[color:var(--cab-border)] bg-[var(--cab-card)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-[var(--cab-shadow-lg)]",
   drawerNav:
-    "cab-nav-drawer-panel absolute inset-y-0 left-0 flex w-[min(var(--cab-modal-width-drawer-nav,19.5rem),88vw)] max-w-full flex-col border-r border-zinc-200 bg-white pt-[env(safe-area-inset-top)] shadow-2xl dark:border-zinc-800 dark:bg-zinc-900",
+    "cab-nav-drawer-panel absolute inset-y-0 left-0 flex min-h-0 w-[min(var(--cab-modal-width-drawer-nav,19.5rem),88vw)] max-w-full flex-col border-r border-zinc-200 bg-white pt-[env(safe-area-inset-top)] shadow-2xl dark:border-zinc-800 dark:bg-zinc-900",
 };
 
 const DEFAULT_HEIGHT_BY_SIZE: Record<

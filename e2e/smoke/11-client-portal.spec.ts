@@ -14,11 +14,14 @@ test("admin can open client lavorazioni list", async ({ page }) => {
 
 test("client portal Contattaci modal shows contact links", async ({ page }) => {
   attachConsoleGuards(page);
+  await page.setViewportSize({ width: 390, height: 844 });
   await loginViaUi(page, adminCredentials());
   await page.goto("/lavorazioni-clienti");
   await expect(page).toHaveURL(/lavorazioni-clienti/, { timeout: 30_000 });
 
-  const openContattaci = page.getByTestId("smoke-contattaci-open").first();
+  await expect(page.getByTestId("smoke-contattaci-open")).toHaveCount(1);
+
+  const openContattaci = page.getByTestId("smoke-contattaci-open");
   await expect(openContattaci).toBeVisible({ timeout: 30_000 });
   await openContattaci.click();
 

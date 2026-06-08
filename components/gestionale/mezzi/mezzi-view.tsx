@@ -25,6 +25,7 @@ import {
   GestionaleLogEntryFourLines,
   GestionaleLogList,
   buildMezziGestionaleLogViewModel,
+  gestionaleLogDrawerPanelClass,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { Q_FOCUS_MEZZO } from "@/lib/navigation/dashboard-log-links";
@@ -548,7 +549,7 @@ export function MezziView() {
       />
 
       <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche" ariaLabel="Log modifiche mezzi">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+        <div className={gestionaleLogDrawerPanelClass}>
               <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
                 {logQuery.isLoading ? (
                   <LoadingFormSkeleton fields={2} className="px-1 py-2" />

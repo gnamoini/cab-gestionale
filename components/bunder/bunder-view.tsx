@@ -74,6 +74,7 @@ import {
   GestionaleLogEntryFourLines,
   GestionaleLogEntryDismissButton,
   GestionaleLogList,
+  gestionaleLogDrawerPanelClass,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 
@@ -1019,7 +1020,7 @@ export function BunderView() {
       />
 
       <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche BUNDER" ariaLabel="Log modifiche BUNDER">
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+        <div className={gestionaleLogDrawerPanelClass}>
           <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
                 {logEntries.length === 0 ? (
                   <GestionaleLogEmpty message="Nessuna voce registrata." />

@@ -135,6 +135,7 @@ import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
+  gestionaleLogDrawerPanelClass,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
@@ -2313,7 +2314,7 @@ export function LavorazioniView() {
         title="Log modifiche lavorazioni"
         ariaLabel="Log modifiche lavorazioni"
       >
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+        <div className={gestionaleLogDrawerPanelClass}>
               {lavModificheLogQuery.isError ? (
                 <p className="text-xs font-medium text-amber-800 dark:text-amber-200">
                   Impossibile caricare il log dal server. Riprova più tardi.

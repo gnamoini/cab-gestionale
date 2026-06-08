@@ -128,6 +128,17 @@ assert.match(dsModalSrc, /GestionaleModalScrollBody/);
 const dsDrawerSrc = readFileSync(join(root, "components/design-system/drawer.tsx"), "utf8");
 assert.match(dsDrawerSrc, /useMaxMdDown/);
 
+const appShellSrc = readFileSync(join(root, "components/gestionale/app-shell.tsx"), "utf8");
+const navDrawerStart = appShellSrc.indexOf("function MobileNavDrawer");
+const navDrawerEnd = appShellSrc.indexOf("export function AppShell");
+assert.ok(navDrawerStart >= 0 && navDrawerEnd > navDrawerStart, "MobileNavDrawer block expected");
+const mobileNavDrawerBlock = appShellSrc.slice(navDrawerStart, navDrawerEnd);
+assert.match(mobileNavDrawerBlock, /fixed inset-0 \$\{dsZModalHigh\} overscroll-none md:hidden/);
+assert.doesNotMatch(mobileNavDrawerBlock, /fixed inset-0 \$\{dsZModalHigh\} touch-none/);
+assert.match(mobileNavDrawerBlock, /cab-nav-drawer-backdrop[\s\S]*touch-none/);
+assert.match(mobileNavDrawerBlock, /touch-pan-y/);
+assert.match(mobileNavDrawerBlock, /cab-sidebar-nav/);
+
 const mezziSrc = readFileSync(join(root, "components/gestionale/mezzi/mezzi-form-fields.tsx"), "utf8");
 assert.match(mezziSrc, /CAB_FOCUS_SCROLL_GROUP_ATTR/);
 

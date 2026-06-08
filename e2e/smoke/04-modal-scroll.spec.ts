@@ -15,6 +15,48 @@ test("mobile drawer releases body scroll lock", async ({ page }) => {
   await assertNoBodyScrollLock(page);
 });
 
+test("mobile nav drawer scrolls menu items", async ({ page }) => {
+  attachConsoleGuards(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/dashboard");
+  await page.getByTestId("smoke-nav-drawer-open").click();
+  const dialog = page.getByRole("dialog", { name: "Menu principale" });
+  await expect(dialog).toBeVisible();
+
+  const scrollHit = await page.evaluate(() => {
+    const dialogEl = document.querySelector('[role="dialog"][aria-label="Menu principale"]');
+    if (!dialogEl) return { ok: false, reason: "missing-dialog" };
+    const nav = dialogEl.querySelector('nav[aria-label="Sezioni principali"]') as HTMLElement | null;
+    if (!nav) return { ok: false, reason: "missing-nav" };
+
+    if (nav.scrollHeight <= nav.clientHeight) {
+      nav.style.minHeight = "120vh";
+      const list = nav.querySelector("a, [aria-disabled]")?.parentElement;
+      if (list instanceof HTMLElement) {
+        list.style.minHeight = `${nav.clientHeight + 400}px`;
+      }
+    }
+
+    const before = nav.scrollTop;
+    nav.scrollTop = 200;
+    return {
+      ok: nav.scrollTop > before,
+      scrollTop: nav.scrollTop,
+      clientHeight: nav.clientHeight,
+      scrollHeight: nav.scrollHeight,
+      touchAction: getComputedStyle(nav).touchAction,
+    };
+  });
+
+  expect(scrollHit.ok, JSON.stringify(scrollHit)).toBe(true);
+  expect(scrollHit.touchAction).not.toBe("none");
+
+  await page.getByRole("button", { name: "Chiudi menu" }).click();
+  await expect(dialog).not.toBeVisible();
+  await assertNoBodyScrollLock(page);
+});
+
 test("main scrollbar track is reachable at viewport right edge", async ({ page }) => {
   attachConsoleGuards(page);
   await page.setViewportSize({ width: 1280, height: 720 });
@@ -79,6 +121,47 @@ test("main scroll column spans full width on wide desktop", async ({ page }) => 
   });
 
   expect(layout.ok, JSON.stringify(layout)).toBe(true);
+});
+
+test("mobile log drawer scroll host scrolls content", async ({ page }) => {
+  attachConsoleGuards(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/magazzino");
+
+  await page.getByRole("button", { name: "Log modifiche" }).click();
+  const logDrawer = page.locator('aside[aria-label="Log modifiche magazzino"]');
+  await expect(logDrawer).toBeVisible();
+
+  const scrollHit = await page.evaluate(() => {
+    const aside = document.querySelector('aside[aria-label="Log modifiche magazzino"]');
+    if (!aside) return { ok: false, reason: "missing-aside" };
+    const host = aside.querySelector("[data-cab-modal-scroll]") as HTMLElement | null;
+    if (!host) return { ok: false, reason: "missing-scroll-host" };
+
+    const inner = host.querySelector("ul, p, .gestionale-scrollbar") as HTMLElement | null;
+    if (inner && inner.scrollHeight <= host.clientHeight) {
+      inner.style.minHeight = `${host.clientHeight + 400}px`;
+    } else if (host.scrollHeight <= host.clientHeight) {
+      host.style.minHeight = `${host.clientHeight + 400}px`;
+    }
+
+    const before = host.scrollTop;
+    host.scrollTop = 200;
+    return {
+      ok: host.scrollTop > before,
+      scrollTop: host.scrollTop,
+      clientHeight: host.clientHeight,
+      scrollHeight: host.scrollHeight,
+      overflowY: getComputedStyle(host).overflowY,
+    };
+  });
+
+  expect(scrollHit.ok, JSON.stringify(scrollHit)).toBe(true);
+
+  await page.getByRole("button", { name: "Chiudi" }).click();
+  await expect(logDrawer).not.toBeVisible();
+  await assertNoBodyScrollLock(page);
 });
 
 test("log drawer locks body scroll and restores on close", async ({ page }) => {

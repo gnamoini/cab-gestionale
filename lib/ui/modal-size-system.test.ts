@@ -24,5 +24,6 @@ assert.match(legacyHub.surfaceClass, /840px/);
 assert.match(resolveDrawerAsideClasses("drawerLog"), /drawer-log|28rem/);
 assert.match(resolveDrawerAsideClasses("drawerFilter"), /22rem/);
 assert.match(resolveDrawerAsideClasses("drawerNav"), /19\.5rem/);
+assert.match(resolveDrawerAsideClasses("drawerNav"), /min-h-0/);
 
 console.log("modal-size-system.test.ts OK");

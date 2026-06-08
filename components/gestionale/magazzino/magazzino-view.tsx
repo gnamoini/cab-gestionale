@@ -131,6 +131,7 @@ import {
   GestionaleLogEntryFourLines,
   GestionaleLogEntryDismissButton,
   GestionaleLogList,
+  gestionaleLogDrawerPanelClass,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import {
@@ -1959,7 +1960,7 @@ export function MagazzinoView() {
         title="Log modifiche magazzino"
         ariaLabel="Log modifiche magazzino"
       >
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+        <div className={gestionaleLogDrawerPanelClass}>
           <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
               {magLogFeedLoading && magLogFeed.length === 0 ? (
                 <LoadingFormSkeleton fields={2} className="px-1 py-2" />

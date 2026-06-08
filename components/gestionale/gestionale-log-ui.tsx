@@ -78,7 +78,11 @@ export const gestionaleLogScrollClass =
   "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-scroll overscroll-contain [scrollbar-gutter:stable]";
 
 export const gestionaleLogScrollEmbeddedClass =
-  "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable]";
+  "gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain [scrollbar-gutter:stable] max-md:flex-none max-md:overflow-visible";
+
+/** Wrapper standard contenuto drawer log — su mobile delega scroll al host `Drawer`. */
+export const gestionaleLogDrawerPanelClass =
+  "flex min-w-0 flex-col gap-2 p-3 max-md:flex-none max-md:overflow-visible md:min-h-0 md:min-w-0 md:flex-1 md:overflow-hidden";
 
 export const gestionaleLogPanelAsideClass = resolveDrawerAsideClasses("drawerLog");
 

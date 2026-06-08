@@ -31,7 +31,6 @@ import {
   LavorazioneMobileMetaGrid,
   LavorazioneMobileMetaItem,
   LavorazioneMobileNote,
-  LavorazioneMobileStatusSlot,
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
 import { ClientLavorazioneIngressoDialog } from "@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog";
 import {
@@ -390,16 +389,15 @@ function MobileCards({
               macchina={fields.attrezzatura}
               identLine={identLine}
               ingresso={<LavorazioneIngressoDateCellFromIso iso={fields.dataIngressoAt} />}
-              statusSlot={
-                variant === "archive" ? (
-                  <LavorazioneMobileStatusSlot>
-                    <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
-                  </LavorazioneMobileStatusSlot>
-                ) : (
-                  <LavorazioneMobileStatusSlot>
-                    <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
-                  </LavorazioneMobileStatusSlot>
-                )
+              secondaryDate={
+                variant === "archive"
+                  ? {
+                      label: "Completamento",
+                      value: (
+                        <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
+                      ),
+                    }
+                  : undefined
               }
             />
             <LavorazioneMobileMetaGrid>
@@ -410,8 +408,19 @@ function MobileCards({
               ) : null}
             </LavorazioneMobileMetaGrid>
             <LavorazioneMobileNote text={lavorazioneNoteInterventoText(fields)} />
-            <LavorazioneMobileControlsPanel>
-              <LavMobileInlineField label="Addetto" layout="stack">
+            <LavorazioneMobileControlsPanel
+              ariaLabel={variant === "archive" ? "Addetto" : "Stato e addetto"}
+            >
+              {variant === "active" ? (
+                <LavMobileInlineField label="Stato" layout="stack">
+                  <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
+                </LavMobileInlineField>
+              ) : null}
+              <LavMobileInlineField
+                label="Addetto"
+                layout="stack"
+                className={variant === "archive" ? "col-span-2" : undefined}
+              >
                 <LavorazioneAddettoReadOnlyPill addetto={fields.addetto} addettoColors={addettoColors} />
               </LavMobileInlineField>
             </LavorazioneMobileControlsPanel>
@@ -811,7 +820,9 @@ export function ClientLavorazioniView() {
         title={PORTALE_CLIENTI_LABEL}
         actions={
           <div className={gestionalePageToolbarActionsInnerClass}>
-            <ClientContattaciButton variant="toolbar" onClick={() => setContattaciOpen(true)} />
+            <span className="hidden sm:inline-flex">
+              <ClientContattaciButton variant="toolbar" onClick={() => setContattaciOpen(true)} />
+            </span>
             <GestionaleRefreshToolbarButton busy={refreshBusy} onClick={() => void refreshClientData()} />
           </div>
         }

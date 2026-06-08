@@ -117,6 +117,7 @@ import {
   GestionaleLogEntryFourLines,
   GestionaleLogEntryDismissButton,
   GestionaleLogList,
+  gestionaleLogDrawerPanelClass,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 
@@ -1079,7 +1080,7 @@ export function PreventiviView() {
         ariaLabel="Log modifiche preventivi"
         lockScroll={!(editor.open && canEditWorkOrders)}
       >
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
+        <div className={gestionaleLogDrawerPanelClass}>
           <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1`}>
             {logEntries.length === 0 ? (
                 <GestionaleLogEmpty message="Nessuna modifica registrata." />

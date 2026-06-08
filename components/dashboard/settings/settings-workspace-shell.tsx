@@ -13,6 +13,7 @@ import { GestionalePageToolbarActions } from "@/components/gestionale/page-heade
 import { LavorazioniModalHeader, LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { ConfigurazioneLogListEmbedded } from "@/components/configurazione/configurazione-log-section";
+import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
 import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
 import { MagazzinoFornitoriProduttoriSettings, magazzinoMasterOnFornitoreRemove, magazzinoMasterOnFornitoreRename } from "@/components/dashboard/magazzino-fornitori-produttori-settings";
 import { SettingsBrandingSection } from "@/components/dashboard/settings-branding-section";
@@ -1408,7 +1409,7 @@ export function SistemaImpostazioniWorkspace({
           title="Log modifiche"
           ariaLabel="Log modifiche configurazione"
         >
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3">
+          <div className={gestionaleLogDrawerPanelClass}>
             <ConfigurazioneLogListEmbedded paged />
           </div>
         </Drawer>

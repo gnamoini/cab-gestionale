@@ -12,6 +12,7 @@ import { DashboardPromemoriaSection } from "@/components/dashboard/promemoria/da
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { AdminNotificationsBell } from "@/components/dashboard/admin-notifications-bell";
 import { Drawer } from "@/components/design-system";
+import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { dsStackPage } from "@/lib/ui/design-system";
@@ -70,7 +71,7 @@ export function DashboardView() {
 
       {staging ? null : (
         <Drawer open={logOpen} onClose={() => setLogOpen(false)} title="Log modifiche" ariaLabel="Log modifiche dashboard">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-3">
+          <div className={gestionaleLogDrawerPanelClass}>
             <DashboardSistemaLogListEmbedded dismissible paged />
           </div>
         </Drawer>

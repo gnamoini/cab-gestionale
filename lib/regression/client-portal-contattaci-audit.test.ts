@@ -13,6 +13,8 @@ function read(rel: string): string {
 
 const contact = read("lib/lavorazioni/client-portal-contact.ts");
 const dialog = read("components/lavorazioni-clienti/client-contattaci-dialog.tsx");
+const listView = read("components/lavorazioni-clienti/client-lavorazioni-view.tsx");
+const logUi = read("components/gestionale/gestionale-log-ui.tsx");
 
 assert.match(contact, /telHref:\s*"tel:\+393480712791"/);
 assert.match(contact, /mailtoHref:\s*"mailto:service@autocompattatori\.it"/);
@@ -46,5 +48,12 @@ const scrollBodyMatch = dialog.match(/<GestionaleModalScrollBody[\s\S]*?<\/Gesti
 assert.ok(scrollBodyMatch, "GestionaleModalScrollBody block expected");
 const scrollBody = scrollBodyMatch[0]!;
 assert.doesNotMatch(scrollBody, /<a\s+href=/, "scroll body must not contain action links");
+
+assert.match(listView, /primaryAction=\{[\s\S]*ClientContattaciButton/);
+assert.match(listView, /hidden sm:inline-flex[\s\S]*ClientContattaciButton variant="toolbar"/);
+
+assert.match(logUi, /gestionaleLogDrawerPanelClass/);
+assert.match(logUi, /max-md:overflow-visible/);
+assert.match(logUi, /max-md:flex-none max-md:overflow-visible/);
 
 console.log("client-portal-contattaci-audit.test.ts OK");
