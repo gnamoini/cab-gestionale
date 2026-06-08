@@ -5,6 +5,7 @@ import { buildSchedaIngressoAuditFixture } from "../fixtures/scheda-ingresso-tes
 import {
   attachSchedaPayloadCapture,
   fillListCombobox,
+  clickNuovaLavorazioneCta,
   fillMinimalCreateAndSaveWithoutClienteBlur,
   fillSchedaIngressoCreateForm,
   openIngressoEditorFromHub,
@@ -31,7 +32,7 @@ test("iOS regression: cliente combobox salvato senza blur prima del submit", asy
 
   await loginViaUi(page, adminCredentials());
   await page.goto("/lavorazioni");
-  await page.getByRole("button", { name: /Nuova lavorazione/i }).click();
+  await clickNuovaLavorazioneCta(page);
   await fillMinimalCreateAndSaveWithoutClienteBlur(page, fixture);
   await expect(page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" })).not.toBeVisible({
     timeout: 60_000,
@@ -49,7 +50,7 @@ test("create → save → hub panoramica → edit ingresso → scheda lavorazion
 
   await loginViaUi(page, adminCredentials());
   await page.goto("/lavorazioni");
-  await page.getByRole("button", { name: /Nuova lavorazione/i }).click();
+  await clickNuovaLavorazioneCta(page);
 
   await fillSchedaIngressoCreateForm(page, ingresso);
   await submitCreateLavorazione(page);

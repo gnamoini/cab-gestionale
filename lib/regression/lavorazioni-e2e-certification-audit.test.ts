@@ -35,6 +35,7 @@ assert.match(spec, /fillMinimalCreateAndSaveWithoutClienteBlur/);
 assert.match(spec, /attachSchedaPayloadCapture/);
 const helpers = read("e2e/helpers/lavorazioni-scheda.ts");
 assert.match(helpers, /Salva lavorazione/);
+assert.match(helpers, /clickNuovaLavorazioneCta/);
 
 const fixture = read("e2e/fixtures/scheda-ingresso-test-data.ts");
 assert.match(fixture, /SCHEDA_INGRESSO_DB_KEYS/);

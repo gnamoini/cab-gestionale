@@ -6,6 +6,13 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+/** CTA toolbar: su mobile `+ Nuova`, da sm `+ Nuova lavorazione`. */
+export async function clickNuovaLavorazioneCta(page: Page): Promise<void> {
+  const btn = page.getByRole("button", { name: /\+?\s*Nuova(\s+lavorazione)?/i });
+  await btn.scrollIntoViewIfNeeded();
+  await btn.click();
+}
+
 /** Combobox GlobalSelect / GlobalSettingsListSelect: digita e aggiungi all'elenco se necessario. */
 export async function fillListCombobox(
   page: Page,

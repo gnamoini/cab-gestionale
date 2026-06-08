@@ -33,7 +33,10 @@ export async function loginViaUi(page: Page, creds: SmokeCredentials): Promise<v
   await page.getByTestId("smoke-login-identifier").fill(creds.email);
   await page.getByTestId("smoke-login-password").fill(creds.password);
   await page.getByTestId("smoke-login-submit").click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 45_000 });
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
+    timeout: 45_000,
+    waitUntil: "domcontentloaded",
+  });
   await expect(async () => {
     const sidebarVisible = await page.getByTestId("smoke-logout-sidebar").isVisible();
     const accountVisible = await page.getByTestId("smoke-account-menu").isVisible();
