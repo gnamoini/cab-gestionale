@@ -1,4 +1,4 @@
-import { test as base, type Page } from "@playwright/test";
+import { test as base, expect, type Page } from "@playwright/test";
 
 export type SmokeCredentials = {
   email: string;
@@ -33,7 +33,9 @@ export async function loginViaUi(page: Page, creds: SmokeCredentials): Promise<v
   await page.getByTestId("smoke-login-identifier").fill(creds.email);
   await page.getByTestId("smoke-login-password").fill(creds.password);
   await page.getByTestId("smoke-login-submit").click();
-  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 30_000 });
+  await page.waitForURL((url) => !url.pathname.startsWith("/login"), { timeout: 45_000 });
+  const shellReady = page.getByTestId("smoke-logout-sidebar").or(page.getByTestId("smoke-account-menu"));
+  await expect(shellReady.first()).toBeVisible({ timeout: 15_000 });
 }
 
 export async function logoutViaUi(page: Page): Promise<void> {
