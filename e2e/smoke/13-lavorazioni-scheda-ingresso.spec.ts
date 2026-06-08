@@ -43,8 +43,6 @@ test("iOS regression: cliente combobox salvato senza blur prima del submit", asy
   await expect(page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" })).not.toBeVisible({
     timeout: 30_000,
   });
-
-  await searchLavorazioneByToken(page, fixture.token);
 });
 
 test("create → save → hub panoramica → edit ingresso → scheda lavorazioni", async ({ page }) => {

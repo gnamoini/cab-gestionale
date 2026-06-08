@@ -126,7 +126,9 @@ export async function searchLavorazioneByToken(page: Page, token: string): Promi
   const search = page.getByRole("searchbox", { name: /cerca in lavorazioni/i });
   await search.fill(token);
   await search.press("Enter");
-  await expect(page.getByText(token, { exact: false }).first()).toBeVisible({ timeout: 30_000 });
+  const hit = page.getByText(token, { exact: false }).first();
+  await hit.scrollIntoViewIfNeeded();
+  await expect(hit).toBeVisible({ timeout: 30_000 });
 }
 
 export async function openSchedeHubForToken(page: Page, token: string): Promise<void> {
