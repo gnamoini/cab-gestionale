@@ -18,19 +18,21 @@ test("client portal Contattaci modal shows contact links", async ({ page }) => {
   await page.goto("/lavorazioni-clienti");
   await expect(page).toHaveURL(/lavorazioni-clienti/, { timeout: 30_000 });
 
-  await page.getByRole("button", { name: "Contattaci" }).first().click();
+  const openContattaci = page.getByTestId("smoke-contattaci-open").first();
+  await expect(openContattaci).toBeVisible({ timeout: 30_000 });
+  await openContattaci.click();
 
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByTestId("smoke-contattaci-dialog");
   await expect(dialog).toBeVisible({ timeout: 10_000 });
   await expect(dialog.getByText("service@autocompattatori.it")).toBeVisible();
   await expect(dialog.getByText("+39 3480712791")).toBeVisible();
 
-  await expect(dialog.getByRole("link", { name: /Chiama/i })).toHaveAttribute("href", "tel:+393480712791");
-  await expect(dialog.getByRole("link", { name: /WhatsApp/i })).toHaveAttribute(
+  await expect(page.getByTestId("smoke-contattaci-call")).toHaveAttribute("href", "tel:+393480712791");
+  await expect(page.getByTestId("smoke-contattaci-whatsapp")).toHaveAttribute(
     "href",
     "https://wa.me/393480712791",
   );
-  await expect(dialog.getByRole("link", { name: /Invia email/i })).toHaveAttribute(
+  await expect(page.getByTestId("smoke-contattaci-email")).toHaveAttribute(
     "href",
     "mailto:service@autocompattatori.it",
   );

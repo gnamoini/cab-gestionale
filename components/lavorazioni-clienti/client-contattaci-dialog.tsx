@@ -11,7 +11,8 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
   const { email, phoneDisplay, telHref, mailtoHref, whatsappHref } = CLIENT_PORTAL_CONTACT;
 
   return (
-    <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="Contattaci">
+    <div data-testid="smoke-contattaci-dialog">
+      <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="Contattaci">
       <GestionaleModalScrollBody className="min-h-0 min-w-0 flex-1">
         <div className={`${gestionaleModalScrollContentPad} flex flex-col gap-5`}>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -49,6 +50,7 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
               href={telHref}
               className={`${dsBtnPrimary} min-h-11 w-full touch-manipulation`}
               aria-label={`Chiama ${phoneDisplay}`}
+              data-testid="smoke-contattaci-call"
             >
               Chiama
             </a>
@@ -58,6 +60,7 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
               rel="noopener noreferrer"
               className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
               aria-label="Scrivi su WhatsApp"
+              data-testid="smoke-contattaci-whatsapp"
             >
               WhatsApp
             </a>
@@ -65,6 +68,7 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
               href={mailtoHref}
               className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
               aria-label={`Invia email a ${email}`}
+              data-testid="smoke-contattaci-email"
             >
               Email
             </a>
@@ -78,5 +82,6 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
         </button>
       </footer>
     </LavorazioniModalShell>
+    </div>
   );
 }

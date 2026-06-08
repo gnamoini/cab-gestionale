@@ -24,6 +24,7 @@ export function ClientContattaciButton({
       onClick={onClick}
       aria-haspopup="dialog"
       aria-label="Contattaci"
+      data-testid="smoke-contattaci-open"
     >
       <IconInfo className="h-4 w-4 shrink-0 opacity-90" />
       Contattaci
