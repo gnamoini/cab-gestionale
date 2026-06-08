@@ -30,7 +30,7 @@
     "smoke:structural": "npx tsx scripts/smoke-structural-gate.ts",
     "smoke:playwright": "npx playwright test -c e2e/playwright.config.ts",
     "smoke:playwright:ios-smoke": "npx playwright test -c e2e/playwright.mobile-cert.config.ts --project=mobile-ios-chromium --grep \"iOS regression\"",
-    "smoke:playwright:cert": "npx playwright test -c e2e/playwright.mobile-cert.config.ts",
+    "smoke:playwright:cert": "npx playwright test -c e2e/playwright.mobile-cert.config.ts --grep \"iOS regression\"",
     "smoke:playwright:ricambio:smoke": "npx playwright test -c e2e/playwright.ricambio-cert.config.ts --project=chromium",
     "smoke:playwright:ricambio:cert": "npx playwright test -c e2e/playwright.ricambio-cert.config.ts",
     "ci:supabase:publication": "npx tsx scripts/verify-supabase-publication.ts --mode=sanity",
