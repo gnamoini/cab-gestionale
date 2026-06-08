@@ -435,13 +435,15 @@ export function GlobalSelect(props: GlobalSelectProps) {
       setActiveIndex(-1);
       return;
     }
-    const userModified = editSessionRef.current.modified;
+    const rawSearch = inputRef.current?.value ?? searchText;
+    const trimmed = rawSearch.trim();
+    const typedPending = Boolean(trimmed && trimmed !== value.trim());
+    const userModified = editSessionRef.current.modified || typedPending;
     editSessionRef.current.modified = false;
     setOpen(false);
     setActiveIndex(-1);
     setTouched(true);
     setFocused(false);
-    const trimmed = searchText.trim();
     if (!trimmed) {
       if (userModified) {
         if (!isFilterVariant) {
@@ -453,7 +455,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
       setSearchText("");
       return;
     }
-    const committed = autocompleteCommitFromSearchText(searchText, mode, options, items, strictFromList);
+    const committed = autocompleteCommitFromSearchText(rawSearch, mode, options, items, strictFromList);
     if (committed && committed !== value) {
       onChange(committed);
     } else if (
@@ -478,7 +480,6 @@ export function GlobalSelect(props: GlobalSelectProps) {
     items,
     strictFromList,
     allowAdd,
-    canAdd,
     onChange,
   ]);
 
