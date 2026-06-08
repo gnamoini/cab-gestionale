@@ -22,6 +22,7 @@ assert.ok(exists("scripts/verify-lavorazione-audit-db.ts"));
 
 const pwCertConfig = read("e2e/playwright.mobile-cert.config.ts");
 assert.match(pwCertConfig, /mobile-android/);
+assert.match(pwCertConfig, /mobile-ios-chromium/);
 assert.match(pwCertConfig, /mobile-ios/);
 assert.match(pwCertConfig, /tablet-ios/);
 assert.match(pwCertConfig, /13-lavorazioni-scheda-ingresso/);
@@ -47,6 +48,7 @@ assert.match(verifyScript, /SCHEDA_INGRESSO_DB_KEYS/);
 
 const pkg = read("package.json");
 assert.match(pkg, /smoke:playwright:ios-smoke/);
+assert.match(pkg, /mobile-ios-chromium/);
 
 const prWorkflow = read(".github/workflows/release-gate.yml");
 assert.match(prWorkflow, /smoke:playwright:ios-smoke/);

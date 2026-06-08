@@ -25,6 +25,11 @@ export default defineConfig({
   projects: [
     { name: "chromium", use: { ...devices["Desktop Chrome"] } },
     { name: "mobile-android", use: { ...devices["Pixel 7"] } },
+    /** PR ios-smoke: Chromium + viewport iPhone (WebKit headless in CI ha auth/CORS flaky). */
+    {
+      name: "mobile-ios-chromium",
+      use: { ...devices["iPhone 14"], browserName: "chromium" },
+    },
     { name: "mobile-ios", use: { ...devices["iPhone 14"] } },
     { name: "tablet-ios", use: { ...devices["iPad Pro 11"] } },
   ],

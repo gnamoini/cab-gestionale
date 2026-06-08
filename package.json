@@ -29,7 +29,7 @@
     "smoke:regression:extended": "npx tsx scripts/smoke-regression-tests.ts --extended",
     "smoke:structural": "npx tsx scripts/smoke-structural-gate.ts",
     "smoke:playwright": "npx playwright test -c e2e/playwright.config.ts",
-    "smoke:playwright:ios-smoke": "npx playwright test -c e2e/playwright.mobile-cert.config.ts --project=mobile-ios --grep \"iOS regression\"",
+    "smoke:playwright:ios-smoke": "npx playwright test -c e2e/playwright.mobile-cert.config.ts --project=mobile-ios-chromium --grep \"iOS regression\"",
     "smoke:playwright:cert": "npx playwright test -c e2e/playwright.mobile-cert.config.ts",
     "smoke:playwright:ricambio:smoke": "npx playwright test -c e2e/playwright.config.ts e2e/smoke/14-magazzino-nuovo-ricambio.spec.ts",
     "smoke:playwright:ricambio:cert": "npx playwright test -c e2e/playwright.ricambio-cert.config.ts",

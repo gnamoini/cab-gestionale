@@ -17,6 +17,7 @@ const IGNORE_PATTERNS = [
 const PAGEERROR_IGNORE_PATTERNS = [
   /supabase\.co\/auth\/v1\/user due to access control checks/i,
   /due to access control checks\.?$/i,
+  /ResizeObserver loop completed with undelivered notifications/i,
 ];
 
 export function attachConsoleGuards(page: Page): void {
