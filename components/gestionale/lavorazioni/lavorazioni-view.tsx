@@ -77,8 +77,7 @@ import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-
 import { formatIdentificazionePdfCell } from "@/lib/lavorazioni/lavorazioni-pdf-format";
 import { importLavorazioniListPdf } from "@/lib/pdf/lazy-pdf-modules";
 import {
-  buildLatestLogAutoreByEntitaId,
-  buildLogAutoreByUserId,
+  buildLavorazioneRowProfileResolver,
   resolveLavorazioneUltimaModifica,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { lavRowMatchesPageFilters, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
@@ -1310,32 +1309,6 @@ export function LavorazioniView() {
     [lavModificheLogQuery.data, user?.id, authorName, resolveLavorazioneLogOggetto, statiOpts],
   );
 
-  const ultimaModificaAutoreByLavId = useMemo(
-    () =>
-      buildLatestLogAutoreByEntitaId(lavModificheLogQuery.data ?? [], (row) =>
-        logAutoreLabel(row, user?.id ?? null, authorName),
-      ),
-    [lavModificheLogQuery.data, user?.id, authorName],
-  );
-
-  const logAutoreByUserId = useMemo(
-    () =>
-      buildLogAutoreByUserId(lavModificheLogQuery.data ?? [], (row) =>
-        logAutoreLabel(row, user?.id ?? null, authorName),
-      ),
-    [lavModificheLogQuery.data, user?.id, authorName],
-  );
-
-  const resolveUltimaModificaUserId = useCallback(
-    (userId: string) => {
-      const fromLog = logAutoreByUserId.get(userId);
-      if (fromLog) return fromLog;
-      if (user?.id && userId === user.id) return authorName.trim() || undefined;
-      return undefined;
-    },
-    [logAutoreByUserId, user?.id, authorName],
-  );
-
   const hasPageClientFilters =
     searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
 
@@ -1949,8 +1922,7 @@ export function LavorazioniView() {
                     meta={
                       <LavorazioneMobileUltimaModifica
                         info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
-                          autoreLog: ultimaModificaAutoreByLavId.get(row.id),
-                          resolveUserId: resolveUltimaModificaUserId,
+                          resolveUserId: buildLavorazioneRowProfileResolver(row, user?.id ?? null, authorName),
                         })}
                       />
                     }
@@ -2254,8 +2226,7 @@ export function LavorazioniView() {
                     meta={
                       <LavorazioneMobileUltimaModifica
                         info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
-                          autoreLog: ultimaModificaAutoreByLavId.get(row.id),
-                          resolveUserId: resolveUltimaModificaUserId,
+                          resolveUserId: buildLavorazioneRowProfileResolver(row, user?.id ?? null, authorName),
                         })}
                       />
                     }

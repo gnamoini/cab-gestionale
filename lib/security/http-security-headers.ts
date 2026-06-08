@@ -22,9 +22,15 @@ function resolveSupabaseConnectOrigins(): string[] {
 /** CSP pragmatica: compatibile con script boot inline, Supabase, blob PDF. */
 export function buildContentSecurityPolicy(): string {
   const connectSrc = ["'self'", ...resolveSupabaseConnectOrigins()].join(" ");
+  const scriptSrcParts = ["'self'", "'unsafe-inline'"];
+  // React dev tooling (callstack reconstruction) requires eval; omitted in production.
+  if (process.env.NODE_ENV !== "production") {
+    scriptSrcParts.push("'unsafe-eval'");
+  }
+  const scriptSrc = `script-src ${scriptSrcParts.join(" ")}`;
   return [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline'",
+    scriptSrc,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",

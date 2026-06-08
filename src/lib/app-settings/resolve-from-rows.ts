@@ -14,7 +14,10 @@ import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/type
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { parseScontoRicambiByCliente } from "@/lib/mezzi/cliente-commerciale";
 import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { parseProduttoriByFornitore } from "@/lib/magazzino/fornitore-produttore-master";
+import {
+  mergeProduttoriFromMagazzinoMaster,
+  parseProduttoriByFornitore,
+} from "@/lib/magazzino/fornitore-produttore-master";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
@@ -145,10 +148,16 @@ function parseMezziListePayload(raw: unknown): MezziListePrefs {
 }
 
 function parseMagazzinoMasterPayload(raw: unknown): MagazzinoMasterPrefs {
-  const empty: MagazzinoMasterPrefs = { marche: [], categorie: [], mezziCompatibili: [], fornitori: [] };
+  const empty: MagazzinoMasterPrefs = {
+    marche: [],
+    categorie: [],
+    mezziCompatibili: [],
+    fornitori: [],
+    produttori: [],
+  };
   if (!raw || typeof raw !== "object") return empty;
   const o = raw as Record<string, unknown>;
-  return {
+  const partial: MagazzinoMasterPrefs = {
     marche: Array.isArray(o.marche) ? o.marche.filter((x): x is string => typeof x === "string") : [],
     scontoFornitoreByMarca: parseScontoFornitoreByMarca(o.scontoFornitoreByMarca),
     categorie: Array.isArray(o.categorie) ? o.categorie.filter((x): x is string => typeof x === "string") : [],
@@ -156,8 +165,10 @@ function parseMagazzinoMasterPayload(raw: unknown): MagazzinoMasterPrefs {
       ? o.mezziCompatibili.filter((x): x is string => typeof x === "string")
       : [],
     fornitori: Array.isArray(o.fornitori) ? o.fornitori.filter((x): x is string => typeof x === "string") : [],
+    produttori: Array.isArray(o.produttori) ? o.produttori.filter((x): x is string => typeof x === "string") : [],
     produttoriByFornitore: parseProduttoriByFornitore(o.produttoriByFornitore),
   };
+  return { ...partial, produttori: mergeProduttoriFromMagazzinoMaster(partial) };
 }
 
 function parsePreventiviDefaultsPayload(raw: unknown): SistemaPreventiviDefaults {
@@ -196,8 +207,8 @@ export function resolveCabAppSettingsFromRows(
     magRow != null
       ? parseMagazzinoMasterPayload(magRow.value)
       : legacy?.magazzinoMaster != null
-        ? legacy.magazzinoMaster
-        : { marche: [], categorie: [], mezziCompatibili: [], fornitori: [] };
+        ? parseMagazzinoMasterPayload(legacy.magazzinoMaster as unknown)
+        : { marche: [], categorie: [], mezziCompatibili: [], fornitori: [], produttori: [] };
 
   const prevRow = pick(CAB_SETTINGS_MODULE.preventivi, CAB_SETTINGS_KEY.defaults);
   const preventiviDefaults =

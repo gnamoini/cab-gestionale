@@ -1,15 +1,13 @@
 "use client";
 
 import { memo } from "react";
-import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { CloseButton } from "@/components/design-system";
 import {
   emptyFornitoreAlternativoFormRow,
   type RicambioFornitoreAlternativoFormRow,
 } from "@/lib/magazzino/form";
-import { produttoriForFornitore } from "@/lib/magazzino/fornitore-produttore-master";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
-import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
 import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
 
 const ricambioFormInputClass = dsInput;
@@ -33,9 +31,6 @@ function patchRow(
 }
 
 function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = false }: Props) {
-  const globalOpts = useRicambioFormOptions();
-  const master = globalOpts.magazzinoMaster;
-
   const addRow = () => {
     if (readOnly || rows.length >= 20) return;
     onChange([...rows, emptyFornitoreAlternativoFormRow()]);
@@ -52,102 +47,91 @@ function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = fa
         <p className="text-xs text-[color:var(--cab-text-muted)]">Nessun fornitore alternativo. Aggiungine uno se serve.</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {rows.map((row, index) => {
-            const produttori = produttoriForFornitore(master, row.fornitore);
-            const produttoreItems = [
-              { value: "", label: produttori.length ? "Seleziona produttore…" : "Nessun produttore in impostazioni" },
-              ...produttori.map((p) => ({ value: p, label: p })),
-            ];
-            return (
-              <li
-                key={row.id}
-                className="rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3"
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
-                    Fornitore alternativo {index + 1}
-                  </span>
-                  {!readOnly ? (
-                    <CloseButton
-                      label={`Rimuovi fornitore alternativo ${index + 1}`}
-                      className="h-9 w-9 shrink-0"
-                      onClick={() => removeRow(row.id)}
-                    />
-                  ) : null}
-                </div>
-                <div className="grid gap-3">
+          {rows.map((row, index) => (
+            <li
+              key={row.id}
+              className="rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+                  Fornitore alternativo {index + 1}
+                </span>
+                {!readOnly ? (
+                  <CloseButton
+                    label={`Rimuovi fornitore alternativo ${index + 1}`}
+                    className="h-9 w-9 shrink-0"
+                    onClick={() => removeRow(row.id)}
+                  />
+                ) : null}
+              </div>
+              <div className="grid gap-3">
+                <label className="block min-w-0">
+                  <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Fornitore</span>
+                  <GlobalSettingsListSelect
+                    listKey="magazzino:fornitori"
+                    value={row.fornitore}
+                    onChange={(fornitore) => onChange(patchRow(rows, row.id, { fornitore }))}
+                    disabled={readOnly}
+                    placeholder="Cerca o seleziona fornitore…"
+                    inputClassName={ricambioFormInputClass}
+                    aria-label={`Fornitore alternativo ${index + 1}`}
+                  />
+                </label>
+                <label className="block min-w-0">
+                  <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Produttore</span>
+                  <GlobalSettingsListSelect
+                    listKey="magazzino:produttori"
+                    value={row.produttore}
+                    onChange={(produttore) => onChange(patchRow(rows, row.id, { produttore }))}
+                    disabled={readOnly}
+                    placeholder="Cerca o seleziona produttore…"
+                    inputClassName={ricambioFormInputClass}
+                    aria-label={`Produttore fornitore ${index + 1}`}
+                  />
+                </label>
+                <label className="block min-w-0">
+                  <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Codice</span>
+                  <input
+                    value={row.codice}
+                    onChange={(e) =>
+                      applyRicambioCodiceInputChange(e, (codice) => onChange(patchRow(rows, row.id, { codice })))
+                    }
+                    disabled={readOnly}
+                    className={`${ricambioFormInputClass} font-mono`}
+                  />
+                </label>
+                <div className="grid grid-cols-2 gap-3">
                   <label className="block min-w-0">
-                    <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Fornitore</span>
-                    <GlobalSettingsListSelect
-                      listKey="magazzino:fornitori"
-                      value={row.fornitore}
-                      onChange={(fornitore) => {
-                        const nextProduttori = produttoriForFornitore(master, fornitore);
-                        const keepProduttore = nextProduttori.includes(row.produttore) ? row.produttore : "";
-                        onChange(patchRow(rows, row.id, { fornitore, produttore: keepProduttore }));
-                      }}
-                      disabled={readOnly}
-                      placeholder="Cerca o seleziona fornitore…"
-                      inputClassName={ricambioFormInputClass}
-                      aria-label={`Fornitore alternativo ${index + 1}`}
-                    />
-                  </label>
-                  <label className="block min-w-0">
-                    <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Produttore</span>
-                    <GlobalSelect
-                      selectOnly
-                      variant="default"
-                      value={row.produttore}
-                      onChange={(produttore) => onChange(patchRow(rows, row.id, { produttore }))}
-                      disabled={readOnly || !row.fornitore.trim()}
-                      items={produttoreItems}
-                      aria-label={`Produttore fornitore ${index + 1}`}
-                    />
-                  </label>
-                  <label className="block min-w-0">
-                    <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Codice</span>
+                    <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Prezzo €</span>
                     <input
-                      value={row.codice}
-                      onChange={(e) =>
-                        applyRicambioCodiceInputChange(e, (codice) => onChange(patchRow(rows, row.id, { codice })))
-                      }
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      inputMode="decimal"
+                      value={row.prezzo}
+                      onChange={(e) => onChange(patchRow(rows, row.id, { prezzo: e.target.value }))}
                       disabled={readOnly}
-                      className={`${ricambioFormInputClass} font-mono`}
+                      className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
                     />
                   </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="block min-w-0">
-                      <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Prezzo €</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        inputMode="decimal"
-                        value={row.prezzo}
-                        onChange={(e) => onChange(patchRow(rows, row.id, { prezzo: e.target.value }))}
-                        disabled={readOnly}
-                        className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
-                      />
-                    </label>
-                    <label className="block min-w-0">
-                      <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Sconto %</span>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={0.01}
-                        inputMode="decimal"
-                        value={row.sconto}
-                        onChange={(e) => onChange(patchRow(rows, row.id, { sconto: e.target.value }))}
-                        disabled={readOnly}
-                        className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
-                      />
-                    </label>
-                  </div>
+                  <label className="block min-w-0">
+                    <span className="mb-1 block text-xs font-medium text-[color:var(--cab-text-muted)]">Sconto %</span>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      step={0.01}
+                      inputMode="decimal"
+                      value={row.sconto}
+                      onChange={(e) => onChange(patchRow(rows, row.id, { sconto: e.target.value }))}
+                      disabled={readOnly}
+                      className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
+                    />
+                  </label>
                 </div>
-              </li>
-            );
-          })}
+              </div>
+            </li>
+          ))}
         </ul>
       )}
       {!readOnly ? (

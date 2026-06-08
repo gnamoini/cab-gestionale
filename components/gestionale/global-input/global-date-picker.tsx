@@ -26,6 +26,8 @@ import {
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
 import {
   applyItalianDateMaskChange,
+  applyItalianDateBackspace,
+  applyItalianDateForwardDelete,
   normalizeItalianDatePaste,
   parseItalianDayDisplayToIso,
   validateItalianDateInput,
@@ -61,7 +63,10 @@ function fieldClassForVariant(
   variant: "default" | "filter",
   inputClassName?: string,
 ): string {
-  if (inputClassName) return inputClassName;
+  const calendarPad = "pr-11";
+  if (inputClassName) {
+    return /\bpr-\S+/.test(inputClassName) ? inputClassName : `${inputClassName} ${calendarPad}`;
+  }
   return variant === "filter" ? globalInputFieldFilterDate : `${globalInputFieldDefault} pr-11`;
 }
 
@@ -205,56 +210,80 @@ export function GlobalDatePicker({
     ) : null;
 
   return (
-    <div ref={wrapRef} className="relative w-full">
-      <input
-        ref={inputRef}
-        id={inputId}
-        type="text"
-        inputMode="numeric"
-        autoComplete="off"
-        required={required}
-        disabled={disabled}
-        placeholder={placeholder}
-        aria-label={ariaLabel}
-        aria-invalid={showInvalid || undefined}
-        aria-describedby={showInvalid ? errorId : undefined}
-        className={inputClass}
-        value={value}
-        onChange={onInputChange}
-        onPaste={onPaste}
-        onBlur={onBlurProp ?? onTextBlur}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") {
-            setOpen(false);
-            return;
-          }
-          if (e.key === "Enter") {
-            e.preventDefault();
-            if (open) {
+    <div className="w-full">
+      <div ref={wrapRef} className="relative w-full">
+        <input
+          ref={inputRef}
+          id={inputId}
+          type="text"
+          inputMode="numeric"
+          autoComplete="off"
+          required={required}
+          disabled={disabled}
+          placeholder={placeholder}
+          aria-label={ariaLabel}
+          aria-invalid={showInvalid || undefined}
+          aria-describedby={showInvalid ? errorId : undefined}
+          className={inputClass}
+          value={value}
+          onChange={onInputChange}
+          onPaste={onPaste}
+          onBlur={onBlurProp ?? onTextBlur}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
               setOpen(false);
-            } else {
-              (onBlurProp ?? onTextBlur)();
+              return;
             }
-            scheduleFocusNextGestionaleField(e.currentTarget);
-          }
-        }}
-      />
-      <button
-        type="button"
-        className={globalInputCalendarBtn}
-        aria-label="Apri calendario"
-        aria-expanded={open}
-        disabled={disabled}
-        onClick={() => setOpen((o) => !o)}
-      >
-        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-          />
-        </svg>
-      </button>
+            if (e.key === "Enter") {
+              e.preventDefault();
+              if (open) {
+                setOpen(false);
+              } else {
+                (onBlurProp ?? onTextBlur)();
+              }
+              scheduleFocusNextGestionaleField(e.currentTarget);
+              return;
+            }
+            if (disabled) return;
+            const el = e.currentTarget;
+            const selStart = el.selectionStart ?? 0;
+            const selEnd = el.selectionEnd ?? selStart;
+            if (e.key === "Backspace" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+              const r = applyItalianDateBackspace(value, selStart, selEnd);
+              if (r) {
+                e.preventDefault();
+                pendingCursor.current = r.cursor;
+                onChange(r.display);
+              }
+              return;
+            }
+            if (e.key === "Delete" && !e.ctrlKey && !e.metaKey && !e.altKey) {
+              const r = applyItalianDateForwardDelete(value, selStart, selEnd);
+              if (r) {
+                e.preventDefault();
+                pendingCursor.current = r.cursor;
+                onChange(r.display);
+              }
+            }
+          }}
+        />
+        <button
+          type="button"
+          className={globalInputCalendarBtn}
+          aria-label="Apri calendario"
+          aria-expanded={open}
+          disabled={disabled}
+          onClick={() => setOpen((o) => !o)}
+        >
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+        </button>
+      </div>
       {showInvalid && validation.message ? (
         <p id={errorId} className={globalInputInvalidMessage}>
           {validation.message}

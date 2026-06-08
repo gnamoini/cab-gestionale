@@ -1,11 +1,13 @@
 export type {
   LavorazioneBaseSnapshot,
+  LavorazioneUpdateOptimisticAudit,
   LavorazioneUpdateOptimisticContext,
   LavorazioniListSnapshot,
 } from "@/src/lib/react-query/lavorazioni-optimistic-cache";
 export {
   applyOptimisticLavorazioneUpdate,
   buildConcludeOptimisticPatch,
+  buildLavorazioneOptimisticAudit,
   rollbackLavorazioneUpdateQueries,
   snapshotLavorazioneUpdateQueries,
 } from "@/src/lib/react-query/lavorazioni-optimistic-cache";

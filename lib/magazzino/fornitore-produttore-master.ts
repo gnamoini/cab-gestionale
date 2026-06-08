@@ -21,6 +21,24 @@ export function parseProduttoriByFornitore(raw: unknown): Record<string, string[
   return out;
 }
 
+export function mergeProduttoriFromMagazzinoMaster(
+  prefs: Partial<MagazzinoMasterPrefs> | null | undefined,
+): string[] {
+  const direct = (prefs?.produttori ?? [])
+    .map((x) => (typeof x === "string" ? x.trim() : ""))
+    .filter((x) => x && x !== "—");
+  const legacy: string[] = [];
+  if (prefs?.produttoriByFornitore) {
+    for (const list of Object.values(prefs.produttoriByFornitore)) {
+      for (const p of list) {
+        const t = p.trim();
+        if (t && t !== "—") legacy.push(t);
+      }
+    }
+  }
+  return [...new Set([...direct, ...legacy])].sort((a, b) => a.localeCompare(b, "it"));
+}
+
 export function produttoriForFornitore(
   master: MagazzinoMasterPrefs | null | undefined,
   fornitore: string,

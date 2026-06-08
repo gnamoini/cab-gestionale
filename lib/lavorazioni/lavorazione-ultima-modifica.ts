@@ -35,12 +35,39 @@ export function displayLavorazioneAutore(
   return `Utente ${t.slice(0, 8)}…`;
 }
 
+export type LavorazioneRowAutoreFields = {
+  updated_at: string;
+  created_at?: string | null;
+  updated_by?: string | null;
+  created_by?: string | null;
+  updated_by_nome?: string | null;
+  created_by_nome?: string | null;
+};
+
 export type ResolveLavorazioneUltimaModificaOptions = {
-  /** Autore dell'ultima voce `log_modifiche` per la lavorazione (operatore di sistema). */
+  /** @deprecated Fallback legacy: autore da batch globale log_modifiche. Preferire `updated_by` riga. */
   autoreLog?: string | null;
-  /** Risolve `updatedBy` salvati come UUID profilo (es. da log `profiles.nome`). */
+  /** Risolve UUID profilo (riga DB o schede). */
   resolveUserId?: (userId: string) => string | undefined;
 };
+
+/** Resolver nomi profilo da join lista + sessione corrente. */
+export function buildLavorazioneRowProfileResolver(
+  row: LavorazioneRowAutoreFields,
+  currentUserId?: string | null,
+  currentUserDisplayName?: string | null,
+): (userId: string) => string | undefined {
+  return (userId: string) => {
+    const id = userId.trim();
+    if (!id) return undefined;
+    if (row.updated_by === id && row.updated_by_nome?.trim()) return row.updated_by_nome.trim();
+    if (row.created_by === id && row.created_by_nome?.trim()) return row.created_by_nome.trim();
+    if (currentUserId && id === currentUserId && currentUserDisplayName?.trim()) {
+      return currentUserDisplayName.trim();
+    }
+    return undefined;
+  };
+}
 
 type SchedaDoc = SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc;
 
@@ -55,28 +82,85 @@ function schedaDocAutore(doc: SchedaDoc): string {
   return autore;
 }
 
-/** Data/ora/autore più recenti tra riga DB e schede collegate. */
+/** Stesso istante o stesso minuto mostrato in UI (row vs schede possono differire di ms). */
+function sameUltimaModificaMoment(isoA: string, isoB: string): boolean {
+  if (isoA === isoB) return true;
+  const ta = new Date(isoA).getTime();
+  const tb = new Date(isoB).getTime();
+  if (!Number.isFinite(ta) || !Number.isFinite(tb)) return false;
+  if (ta === tb) return true;
+  const da = formatLavorazioneIngressoDisplay(isoA);
+  const db = formatLavorazioneIngressoDisplay(isoB);
+  return da.date === db.date && da.time === db.time;
+}
+
+/**
+ * Autore riga DB quando vince `updated_at`.
+ * Priorità: updated_by → created_by (solo se create-only) → stringa vuota (fallback a log/schede).
+ */
+function rowDbAutoreRaw(row: LavorazioneRowAutoreFields): string {
+  const updatedBy = row.updated_by?.trim() ?? "";
+  if (updatedBy) return updatedBy;
+  const createdAt = row.created_at?.trim() ?? "";
+  if (createdAt && sameUltimaModificaMoment(row.updated_at, createdAt)) {
+    const createdBy = row.created_by?.trim() ?? "";
+    if (createdBy) return createdBy;
+  }
+  return "";
+}
+
+function resolveRawAutoreForUltimaModifica(
+  candidates: readonly { iso: string; autore: string }[],
+  bestIso: string,
+  rowIso: string,
+  rowAutoreRaw: string,
+  autoreLog: string,
+): string {
+  if (sameUltimaModificaMoment(bestIso, rowIso)) {
+    if (rowAutoreRaw.trim()) return rowAutoreRaw.trim();
+    if (autoreLog) return autoreLog;
+  }
+  for (const c of candidates) {
+    if (!sameUltimaModificaMoment(c.iso, bestIso)) continue;
+    const autore = c.autore.trim();
+    if (autore) return autore;
+  }
+  return "";
+}
+
+/**
+ * Data/ora/autore più recenti tra riga DB e schede collegate.
+ *
+ * Autore quando vince la riga: updated_by → created_by (create-only) → autoreLog legacy → schede stesso momento.
+ * Autore quando vince una scheda: updatedBy doc (regola ingresso-create) → displayLavorazioneAutore.
+ */
 export function resolveLavorazioneUltimaModifica(
-  row: { updated_at: string },
+  row: LavorazioneRowAutoreFields,
   bundle?: LavorazioneSchedeBundle | null,
   options?: ResolveLavorazioneUltimaModificaOptions,
 ): LavorazioneUltimaModificaInfo {
   const autoreLog = options?.autoreLog?.trim() ?? "";
-  const candidates: { iso: string; autore: string; fromRow: boolean }[] = [
-    { iso: row.updated_at, autore: autoreLog, fromRow: true },
-  ];
+  const resolveUserId = options?.resolveUserId;
+  const rowAutoreRaw = rowDbAutoreRaw(row);
+  const candidates: { iso: string; autore: string }[] = [{ iso: row.updated_at, autore: "" }];
   for (const doc of [bundle?.ingresso, bundle?.lavorazioni, bundle?.ricambi]) {
     if (!doc?.updatedAt?.trim()) continue;
     candidates.push({
       iso: doc.updatedAt,
       autore: schedaDocAutore(doc),
-      fromRow: false,
     });
   }
   const best = candidates.reduce((a, b) =>
     new Date(a.iso).getTime() >= new Date(b.iso).getTime() ? a : b,
   );
-  const autore = displayLavorazioneAutore(best.autore || autoreLog, autoreLog, options?.resolveUserId);
+  const rawAutore = resolveRawAutoreForUltimaModifica(
+    candidates,
+    best.iso,
+    row.updated_at,
+    rowAutoreRaw,
+    autoreLog,
+  );
+  const autore = displayLavorazioneAutore(rawAutore, autoreLog, resolveUserId);
   return { iso: best.iso, autore };
 }
 

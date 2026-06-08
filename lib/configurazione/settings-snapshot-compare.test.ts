@@ -15,6 +15,7 @@ const base = (): ConfigurazioneSettingsSnapshot => ({
     categorie: [],
     mezziCompatibili: [],
     fornitori: [],
+    produttori: [],
   },
   liste: {
     clienti: ["Cliente A"],

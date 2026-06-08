@@ -76,6 +76,12 @@ assert.match(behaviorSrc, /isGestionaleFocusableField/);
 assert.match(behaviorSrc, /scrollGestionaleFieldIntoModal/);
 assert.match(behaviorSrc, /scheduleGestionaleFieldScroll/);
 assert.match(behaviorSrc, /isGestionaleListTriggerButton/);
+assert.match(behaviorSrc, /isGestionaleStepperGroupButton/);
+assert.match(
+  behaviorSrc,
+  /isGestionaleStepperGroupButton[\s\S]*input:not\(\[type="hidden"\]\)/,
+  "stepper group requires input; segmented toggles excluded",
+);
 assert.match(
   behaviorSrc,
   /getFocusScrollRect[\s\S]*findGroupTitleElement/,

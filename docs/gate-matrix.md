@@ -31,6 +31,7 @@
 | `smoke:playwright:ios-smoke` (spec 13 subset) | blocking | — | — |
 | `smoke:playwright:cert` (spec 13 × 4 progetti) | — | blocking | — |
 | `smoke:playwright:ricambio:cert` | — | blocking | — |
+| `smoke:cleanup` (post-Playwright, apply) | blocking | blocking | — |
 | `ops:long-session-soak:threshold` | — | blocking | — |
 | `ops:long-session-soak` (full) | — | — | advisory |
 | `npm run lint` | — | — | advisory |

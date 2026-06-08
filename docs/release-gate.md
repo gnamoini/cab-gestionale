@@ -47,8 +47,11 @@ sequenceDiagram
 | 14 | `npm run smoke:playwright` | Spec 01–12 E2E chromium |
 | 15 | `npm run smoke:playwright:ios-smoke` | Spec 13 subset iOS WebKit (1 test) |
 | 16 | `npm run smoke:playwright:ricambio:smoke` | Spec 14 Nuovo Ricambio smoke |
+| 17 | `npm run smoke:cleanup` (apply in CI) | Teardown dati smoke (`AUDIT-*`, `E2E-*`, liste `app_settings`) |
 
 `production:check` aggrega: **rbac-rls**, **storage**, **pilot-flags**, **legacy-urls**, **ops-env**.
+
+**Cleanup smoke (manuale):** `npm run smoke:cleanup` (dry-run) → `npm run smoke:cleanup:apply`. In CI: step post-Playwright con `SMOKE_CLEANUP_APPLY=1`, `if: always()`.
 
 ### Regression tiers
 
@@ -69,6 +72,7 @@ sequenceDiagram
 - `audit:supabase` (advisory, `continue-on-error`)
 - `smoke:playwright:cert` — spec 13 × 4 progetti
 - `smoke:playwright:ricambio:cert` — spec 14 desktop + iOS
+- `smoke:cleanup:apply` — teardown dati smoke post-Playwright (`if: always()`)
 
 Richiedere come check su `main` in branch protection (oltre a `release-gate` su PR).
 

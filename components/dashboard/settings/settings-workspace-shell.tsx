@@ -15,7 +15,6 @@ import { GestionaleSearchField } from "@/components/gestionale/gestionale-search
 import { ConfigurazioneLogListEmbedded } from "@/components/configurazione/configurazione-log-section";
 import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
 import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
-import { MagazzinoFornitoriProduttoriSettings, magazzinoMasterOnFornitoreRemove, magazzinoMasterOnFornitoreRename } from "@/components/dashboard/magazzino-fornitori-produttori-settings";
 import { SettingsBrandingSection } from "@/components/dashboard/settings-branding-section";
 import { SettingsClientiCommercialiList } from "@/components/dashboard/settings/settings-clienti-list";
 import { SettingsMagazzinoMarcheList } from "@/components/dashboard/settings/settings-magazzino-marche-list";
@@ -204,11 +203,13 @@ export function SistemaImpostazioniWorkspace({
     categorie: [],
     mezziCompatibili: [],
     fornitori: [],
+    produttori: [],
   }));
   const [magHydrated, setMagHydrated] = useState(false);
   const [nuovaMarca, setNuovaMarca] = useState("");
   const [nuovaCategoria, setNuovaCategoria] = useState("");
   const [nuovoFornitore, setNuovoFornitore] = useState("");
+  const [nuovoProduttore, setNuovoProduttore] = useState("");
   const [nuovoCliente, setNuovoCliente] = useState("");
   const [nuovoUtilizzatore, setNuovoUtilizzatore] = useState("");
   const [nuovoCantiere, setNuovoCantiere] = useState("");
@@ -1019,25 +1020,41 @@ export function SistemaImpostazioniWorkspace({
                     magAdd("fornitori", t, () => setNuovoFornitore(""));
                   }}
                   onRemove={(m) => {
-                    patchMag((prev) =>
-                      magazzinoMasterOnFornitoreRemove(
-                        { ...prev, fornitori: prev.fornitori.filter((x) => x !== m) },
-                        m,
-                      ),
-                    );
+                    patchMag((prev) => ({ ...prev, fornitori: prev.fornitori.filter((x) => x !== m) }));
                   }}
                   onRename={(from, to) => {
-                    patchMag((prev) =>
-                      magazzinoMasterOnFornitoreRename(
-                        { ...prev, fornitori: renameInStringList(prev.fornitori, from, to) },
-                        from,
-                        to,
-                      ),
-                    );
+                    patchMag((prev) => ({ ...prev, fornitori: renameInStringList(prev.fornitori, from, to) }));
                     queueRename({ kind: "mag_fornitore", from, to });
                   }}
                 />
-                <MagazzinoFornitoriProduttoriSettings mag={mag} patchMag={patchMag} />
+              </div>
+            ) : null}
+
+            {section === "mag-produttori" ? (
+              <div className="w-full">
+                <SettingsUnifiedStringList
+                  title="Produttori"
+                  values={mag.produttori ?? []}
+                  nuovo={nuovoProduttore}
+                  setNuovo={setNuovoProduttore}
+                  placeholder="Nuovo produttore"
+                  onAdd={(t) => {
+                    magAdd("produttori", t, () => setNuovoProduttore(""));
+                  }}
+                  onRemove={(m) => {
+                    patchMag((prev) => ({
+                      ...prev,
+                      produttori: (prev.produttori ?? []).filter((x) => x !== m),
+                    }));
+                  }}
+                  onRename={(from, to) => {
+                    patchMag((prev) => ({
+                      ...prev,
+                      produttori: renameInStringList(prev.produttori ?? [], from, to),
+                    }));
+                    queueRename({ kind: "mag_produttore", from, to });
+                  }}
+                />
               </div>
             ) : null}
 

@@ -51,7 +51,44 @@ function settingsStatiForSanitize() {
   return resolved.lavorazioni.stati;
 }
 
-/** Filtri server-side condivisi tra query con/senza join `mezzi`. */
+const LAVORAZIONI_PROFILE_SELECT =
+  "updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), created_by_profile:profiles!lavorazioni_created_by_fkey(nome)";
+
+type ProfileEmbed = { nome?: string | null } | null;
+
+function embedProfileNome(raw: ProfileEmbed | ProfileEmbed[] | undefined): string | null {
+  if (raw == null) return null;
+  const p = Array.isArray(raw) ? raw[0] : raw;
+  const nome = p?.nome?.trim();
+  return nome || null;
+}
+
+function lavorazioniListSelect(includeMezzo: boolean, mezziSelect: string): string {
+  const profilePart = LAVORAZIONI_PROFILE_SELECT;
+  if (includeMezzo) return `*, ${profilePart}, ${mezziSelect}`;
+  return `*, ${profilePart}`;
+}
+
+type LavorazioneListRawRow = LavorazioneRow & {
+  mezzi?: unknown;
+  updated_by_profile?: ProfileEmbed | ProfileEmbed[];
+  created_by_profile?: ProfileEmbed | ProfileEmbed[];
+};
+
+function mapRawRows(raw: LavorazioneListRawRow[], includeMezzo: boolean): LavorazioneListRow[] {
+  const stati = settingsStatiForSanitize();
+  return raw.map((row) => {
+    const { mezzi: em, updated_by_profile, created_by_profile, ...rest } = row;
+    const base: LavorazioneListRow = {
+      ...(rest as LavorazioneRow),
+      archived: rest.archived === true,
+      mezzo: includeMezzo ? embedMezzo(em) : null,
+      updated_by_nome: embedProfileNome(updated_by_profile),
+      created_by_nome: embedProfileNome(created_by_profile),
+    };
+    return sanitizeClientLavorazioneRow(base, stati);
+  });
+}
 export function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuery>(
   q: TQuery,
   filters?: LavorazioneFilters,
@@ -78,19 +115,6 @@ export function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuer
   return query as TQuery;
 }
 
-function mapRawRows(raw: Array<LavorazioneRow & { mezzi?: unknown }>, includeMezzo: boolean): LavorazioneListRow[] {
-  const stati = settingsStatiForSanitize();
-  return raw.map((row) => {
-    const { mezzi: em, ...rest } = row;
-    const base: LavorazioneListRow = {
-      ...(rest as LavorazioneRow),
-      archived: rest.archived === true,
-      mezzo: includeMezzo ? embedMezzo(em) : null,
-    };
-    return sanitizeClientLavorazioneRow(base, stati);
-  });
-}
-
 export type LavorazioniListFetchOptions = {
   /** Filtra su `mezzi.cliente` (defense in depth oltre RLS). */
   clienteRefScope?: string | null;
@@ -109,7 +133,7 @@ export async function fetchLavorazioniListRows(
   let q: any = applyLavorazioniNotDeletedFilter(
     sb
       .from("lavorazioni")
-      .select(includeMezzo ? `*, ${mezziSelect}` : "*")
+      .select(lavorazioniListSelect(includeMezzo, mezziSelect))
       .order("created_at", { ascending: false }),
   );
   q = applyLavorazioniListFilters(q, filters);
@@ -119,10 +143,10 @@ export async function fetchLavorazioniListRows(
   const { data, error } = await q;
   if (error) return err(error.message);
   if (includeMezzo) {
-    const raw = (data ?? []) as Array<LavorazioneRow & { mezzi?: unknown }>;
+    const raw = (data ?? []) as LavorazioneListRawRow[];
     return success(mapRawRows(raw, true));
   }
-  const raw = (data ?? []) as LavorazioneRow[];
+  const raw = (data ?? []) as LavorazioneListRawRow[];
   return success(mapRawRows(raw.map((row) => ({ ...row })), false));
 }
 

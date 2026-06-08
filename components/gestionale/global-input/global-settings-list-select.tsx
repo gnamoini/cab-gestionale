@@ -14,7 +14,7 @@ import {
 } from "@/src/lib/global-list/global-settings-list-keys";
 import { useAppendGlobalListValue } from "@/src/hooks/use-append-global-list-value";
 import { useGlobalListOptions } from "@/src/hooks/use-global-list-options";
-import { mergeCurrentValueInOptions } from "@/lib/ui/list-select-utils";
+import { mergeCurrentValueInOptions, normListSelectValue } from "@/lib/ui/list-select-utils";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 
 
@@ -56,6 +56,9 @@ export type GlobalSettingsListSelectProps = {
 
   /** Voce in testa con value "" (es. «Nessuna marca»). */
   emptyOptionLabel?: string;
+
+  /** Valori esclusi dall'elenco (es. segnaposto interni «—»). */
+  excludeValues?: readonly string[];
 
   "aria-label"?: string;
 
@@ -105,6 +108,8 @@ export function GlobalSettingsListSelect({
 
   emptyOptionLabel,
 
+  excludeValues,
+
   "aria-label": ariaLabel,
 
 }: GlobalSettingsListSelectProps) {
@@ -135,13 +140,14 @@ export function GlobalSettingsListSelect({
 
 
 
-  const optionsForUi = useMemo(
-
-    () => mergeCurrentValueInOptions(value, list.options),
-
-    [list.options, value],
-
-  );
+  const optionsForUi = useMemo(() => {
+    let opts = mergeCurrentValueInOptions(value, list.options);
+    if (excludeValues?.length) {
+      const excluded = new Set(excludeValues.map((v) => normListSelectValue(v)));
+      opts = opts.filter((o) => !excluded.has(normListSelectValue(o)));
+    }
+    return opts;
+  }, [list.options, value, excludeValues]);
 
   const itemsForUi = useMemo(() => {
     const base = structured

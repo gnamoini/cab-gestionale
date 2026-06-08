@@ -49,6 +49,17 @@ export function extractItalianDateDigits(raw: string): string {
 export function formatItalianDateDigits(digits: string): string {
   const d = digits.replace(/\D/g, "").slice(0, 8);
   if (!d) return "";
+  if (d.length === 7) {
+    const monthMiddle = parseInt(d.slice(1, 3), 10);
+    if (monthMiddle >= 1 && monthMiddle <= 12) {
+      return `${d[0]}/${d.slice(1, 3)}/${d.slice(3)}`;
+    }
+    const monthStandard = parseInt(d.slice(2, 4), 10);
+    if (monthStandard >= 1 && monthStandard <= 12) {
+      return `${d.slice(0, 2)}/${d.slice(2, 4)}/${d.slice(4)}`;
+    }
+    return `${d.slice(0, 2)}/${d[2]}/${d.slice(3)}`;
+  }
   if (d.length <= 2) return d.length === 2 ? `${d}/` : d;
   if (d.length <= 4) {
     const month = d.slice(2);
@@ -96,6 +107,78 @@ export function applyItalianDateMaskChange(
   const digitsBefore = countDigitsBeforeIndex(nextRaw, selectionStart);
   const cursor = cursorFromDigitCount(digitsBefore);
   return { display, cursor: Math.min(cursor, display.length) };
+}
+
+function removeDigitsByIndex(digits: string, indicesToRemove: Set<number>): string {
+  return [...digits].filter((_, i) => !indicesToRemove.has(i)).join("");
+}
+
+function removeDigitsInSelection(display: string, selStart: number, selEnd: number): string {
+  const digits = extractItalianDateDigits(display);
+  const toRemove = new Set<number>();
+  let digitIdx = 0;
+  for (let i = 0; i < display.length; i++) {
+    const ch = display[i]!;
+    if (!/\d/.test(ch)) continue;
+    if (i >= selStart && i < selEnd) toRemove.add(digitIdx);
+    digitIdx++;
+  }
+  return removeDigitsByIndex(digits, toRemove);
+}
+
+export type ItalianDateEditResult = { display: string; cursor: number };
+
+/** Backspace: rimuove cifre, ignora slash nel display. */
+export function applyItalianDateBackspace(
+  display: string,
+  selectionStart: number,
+  selectionEnd: number,
+): ItalianDateEditResult | null {
+  const selStart = Math.max(0, selectionStart);
+  const selEnd = Math.max(selStart, selectionEnd);
+
+  let newDigits: string;
+  let cursorDigitCount: number;
+
+  if (selStart !== selEnd) {
+    newDigits = removeDigitsInSelection(display, selStart, selEnd);
+    if (newDigits === extractItalianDateDigits(display)) return null;
+    cursorDigitCount = countDigitsBeforeIndex(display, selStart);
+  } else {
+    const digitsBefore = countDigitsBeforeIndex(display, selStart);
+    if (digitsBefore === 0) return null;
+    const digitIdx = digitsBefore - 1;
+    const digits = extractItalianDateDigits(display);
+    newDigits = digits.slice(0, digitIdx) + digits.slice(digitIdx + 1);
+    cursorDigitCount = digitIdx;
+  }
+
+  const nextDisplay = formatItalianDateDigits(newDigits);
+  const cursor = cursorFromDigitCount(cursorDigitCount);
+  return { display: nextDisplay, cursor: Math.min(cursor, nextDisplay.length) };
+}
+
+/** Delete (in avanti): rimuove cifra dopo cursore, salta slash. */
+export function applyItalianDateForwardDelete(
+  display: string,
+  selectionStart: number,
+  selectionEnd: number,
+): ItalianDateEditResult | null {
+  const selStart = Math.max(0, selectionStart);
+  const selEnd = Math.max(selStart, selectionEnd);
+
+  if (selStart !== selEnd) {
+    return applyItalianDateBackspace(display, selStart, selEnd);
+  }
+
+  const digits = extractItalianDateDigits(display);
+  const digitsBefore = countDigitsBeforeIndex(display, selStart);
+  if (digitsBefore >= digits.length) return null;
+
+  const newDigits = digits.slice(0, digitsBefore) + digits.slice(digitsBefore + 1);
+  const nextDisplay = formatItalianDateDigits(newDigits);
+  const cursor = cursorFromDigitCount(digitsBefore);
+  return { display: nextDisplay, cursor: Math.min(cursor, nextDisplay.length) };
 }
 
 function isDaySegmentInvalid(dayStr: string): boolean {

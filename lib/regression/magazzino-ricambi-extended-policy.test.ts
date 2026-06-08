@@ -18,7 +18,7 @@ const filtersSrc = fs.readFileSync(path.join(ROOT, "lib/magazzino/magazzino-adva
 assert.match(formSrc, /usatoInTagliandi/);
 assert.match(formSrc, /marcaOriginaleSecondaria/);
 assert.match(formSrc, /RicambioFornitoriAlternativiEditor/);
-assert.match(editorSrc, /produttoriForFornitore/);
+assert.match(editorSrc, /magazzino:produttori/);
 assert.match(metaSrc, /fornitoriAlternativi/);
 assert.match(metaSrc, /usatoInTagliandi/);
 assert.match(filtersSrc, /tagliando/);

@@ -31,6 +31,7 @@ export type GlobalSettingsFlatListKey =
   | "magazzino:categorie"
   | "magazzino:marche"
   | "magazzino:fornitori"
+  | "magazzino:produttori"
   | "magazzino:mezziCompatibili";
 
 export type GlobalSettingsHierarchyKind = "marca" | "modello";
@@ -139,6 +140,8 @@ export function resolveGlobalListOptions(
       return resolved.magazzinoMaster.marche;
     case "magazzino:fornitori":
       return resolved.magazzinoMaster.fornitori;
+    case "magazzino:produttori":
+      return resolved.magazzinoMaster.produttori ?? [];
     case "magazzino:mezziCompatibili":
       return resolved.magazzinoMaster.mezziCompatibili;
     default:
@@ -251,8 +254,14 @@ export function buildAppendGlobalListUpsert(
     case "magazzino:categorie":
     case "magazzino:marche":
     case "magazzino:fornitori":
+    case "magazzino:produttori":
     case "magazzino:mezziCompatibili": {
-      const field = listKey.split(":")[1] as "marche" | "categorie" | "mezziCompatibili" | "fornitori";
+      const field = listKey.split(":")[1] as
+        | "marche"
+        | "categorie"
+        | "mezziCompatibili"
+        | "fornitori"
+        | "produttori";
       const current = resolved.magazzinoMaster[field] ?? [];
       const { next, canonical } = appendUniqueSorted(current, value);
       if (!canonical) return { ok: false, reason: "empty" };

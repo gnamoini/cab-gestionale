@@ -6,7 +6,7 @@ import { RicambioFormCompatSection } from "@/components/gestionale/magazzino/ric
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { RicambioFornitoriAlternativiEditor } from "@/components/gestionale/magazzino/ricambio-fornitori-alternativi-editor";
 import { ricambioModalSectionClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
-import type { RicambioFormState } from "@/lib/magazzino/form";
+import { RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA, type RicambioFormState } from "@/lib/magazzino/form";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import {
@@ -290,26 +290,6 @@ export function RicambioFormFields({
               <div className="grid gap-2 sm:grid-cols-2">
                 <div className="min-w-0">
                   <label
-                    htmlFor="magazzino-ricambio-codice-secondario"
-                    {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
-                    className={`${dsLabel} cursor-default`}
-                  >
-                    Codice
-                  </label>
-                  <input
-                    id="magazzino-ricambio-codice-secondario"
-                    value={form.codiceFornitoreOriginaleSecondario}
-                    onChange={(e) =>
-                      applyRicambioCodiceInputChange(e, (codiceFornitoreOriginaleSecondario) =>
-                        setForm((f) => ({ ...f, codiceFornitoreOriginaleSecondario })),
-                      )
-                    }
-                    placeholder="Opzionale"
-                    className={`${ricambioFormInputClass} mt-1 min-w-0 w-full font-mono text-[13px] tracking-wide`}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <label
                     htmlFor="magazzino-ricambio-marca-secondaria"
                     {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
                     className={`${dsLabel} cursor-default`}
@@ -327,6 +307,26 @@ export function RicambioFormFields({
                       aria-label="Marca secondaria codice OE"
                     />
                   </div>
+                </div>
+                <div className="min-w-0">
+                  <label
+                    htmlFor="magazzino-ricambio-codice-secondario"
+                    {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
+                    className={`${dsLabel} cursor-default`}
+                  >
+                    Codice
+                  </label>
+                  <input
+                    id="magazzino-ricambio-codice-secondario"
+                    value={form.codiceFornitoreOriginaleSecondario}
+                    onChange={(e) =>
+                      applyRicambioCodiceInputChange(e, (codiceFornitoreOriginaleSecondario) =>
+                        setForm((f) => ({ ...f, codiceFornitoreOriginaleSecondario })),
+                      )
+                    }
+                    placeholder="Opzionale"
+                    className={`${ricambioFormInputClass} mt-1 min-w-0 w-full font-mono text-[13px] tracking-wide`}
+                  />
                 </div>
               </div>
             </div>
@@ -398,10 +398,11 @@ export function RicambioFormFields({
         <GlobalSettingsListSelect
           listKey="magazzino:categorie"
           id="magazzino-ricambio-categoria"
-          value={form.categoria}
+          value={form.categoria === RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA ? "" : form.categoria}
           onChange={(categoria) => setForm((f) => ({ ...f, categoria }))}
           required={!fieldsOptional}
           selectOnly
+          excludeValues={[RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA]}
           inputClassName={ricambioFormInputClass}
           placeholder="Seleziona categoria…"
           aria-label="Categoria ricambio"

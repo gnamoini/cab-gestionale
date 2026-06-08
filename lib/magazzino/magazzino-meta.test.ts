@@ -5,7 +5,10 @@ import {
   ricambioUiToMagazzinoMeta,
 } from "@/lib/magazzino/magazzino-meta";
 import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
-import { patchFornitoriAlternativiFornitoreRename } from "@/lib/magazzino/ricambio-fornitori-alternativi";
+import {
+  patchFornitoriAlternativiFornitoreRename,
+  patchFornitoriAlternativiProduttoreRename,
+} from "@/lib/magazzino/ricambio-fornitori-alternativi";
 
 const legacyMeta = parseMagazzinoRicambioMeta({
   fornitoreNonOriginale: "Forn A",
@@ -60,6 +63,26 @@ assert.equal(renamed.next.fornitoreNonOriginale, "New");
 assert.equal(
   (renamed.next.fornitoriAlternativi as { fornitore: string }[])[0]?.fornitore,
   "New",
+);
+
+const prodRenamed = patchFornitoriAlternativiProduttoreRename(
+  {
+    fornitoriAlternativi: [
+      { id: "a", fornitore: "F1", produttore: "OldP", codice: "X", prezzo: 1, sconto: 0 },
+      { id: "b", fornitore: "F2", produttore: "Other", codice: "", prezzo: 0, sconto: 0 },
+    ],
+  },
+  "OldP",
+  "NewP",
+);
+assert.equal(prodRenamed.changed, true);
+assert.equal(
+  (prodRenamed.next.fornitoriAlternativi as { produttore: string }[])[0]?.produttore,
+  "NewP",
+);
+assert.equal(
+  (prodRenamed.next.fornitoriAlternativi as { produttore: string }[])[1]?.produttore,
+  "Other",
 );
 
 console.log("magazzino-meta.test.ts OK");

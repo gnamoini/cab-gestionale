@@ -4,6 +4,8 @@
 import assert from "node:assert/strict";
 import {
   applyItalianDateMaskChange,
+  applyItalianDateBackspace,
+  applyItalianDateForwardDelete,
   canonicalizeItalianDateDisplay,
   cursorFromDigitCount,
   extractItalianDateDigits,
@@ -71,6 +73,32 @@ assert.equal(cursor, 10);
 // backspace simulato
 const afterBackspace = applyItalianDateMaskChange("06/07/2026", "06/07/202", 8);
 assert.equal(afterBackspace.display, "06/07/202");
+
+// --- backspace / delete (solo cifre, slash fissi) ---
+const backspace = (
+  display: string,
+  start: number,
+  end = start,
+) => applyItalianDateBackspace(display, start, end)!;
+
+assert.deepEqual(backspace("08/06/2026", 3), { display: "0/06/2026", cursor: 1 });
+assert.deepEqual(backspace("08/06/2026", 10), { display: "08/06/202", cursor: 9 });
+assert.equal(applyItalianDateBackspace("", 0, 0), null);
+assert.equal(applyItalianDateBackspace("08/06/2026", 0, 0), null);
+
+assert.deepEqual(backspace("08/06/2026", 1, 5), { display: "02/02/6", cursor: 1 });
+
+const forwardDelete = (
+  display: string,
+  start: number,
+  end = start,
+) => applyItalianDateForwardDelete(display, start, end)!;
+
+assert.deepEqual(forwardDelete("08/06/2026", 2), { display: "08/6/2026", cursor: 3 });
+assert.deepEqual(forwardDelete("08/06/2026", 3), { display: "08/6/2026", cursor: 3 });
+
+assert.equal(formatItalianDateDigits("0062026"), "0/06/2026");
+assert.equal(formatItalianDateDigits("0607202"), "06/07/202");
 
 // --- validazione ---
 assert.deepEqual(validateItalianDateInput(""), { status: "incomplete" });

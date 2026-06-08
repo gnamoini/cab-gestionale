@@ -69,7 +69,6 @@ import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-pref
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
 import {
   dsPageToolbarBtn,
-  dsPageToolbarIconBtn,
   dsPageToolbarCtaCompact,
   dsStackPage,
   GESTIONALE_SEARCH_PLACEHOLDER,
@@ -1496,7 +1495,6 @@ export function MagazzinoView() {
                 count={sottoScortaTotale}
                 items={sottoScortaList}
                 onSelectRicambio={(id) => focusRicambioInTable(id, { applySottoScorta: true })}
-                triggerClassName={dsPageToolbarIconBtn}
               />
             }
             canUndo={Boolean(undoableMagazzinoLog)}

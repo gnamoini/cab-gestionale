@@ -6,7 +6,7 @@ import {
   setScontoFornitoreMarca,
 } from "./marca-fornitore-sconto";
 
-const empty = { marche: [], categorie: [], mezziCompatibili: [], fornitori: [] };
+const empty = { marche: [], categorie: [], mezziCompatibili: [], fornitori: [], produttori: [] };
 
 let mag = registerMarcaInMagazzinoMaster(empty, "AMS");
 mag = setScontoFornitoreMarca(mag, "AMS", 12.5);

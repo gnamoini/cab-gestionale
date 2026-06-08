@@ -6,6 +6,7 @@ export type SistemaSectionId =
   | "op-priorita"
   | "mag-marche"
   | "mag-fornitori"
+  | "mag-produttori"
   | "mag-categorie"
   | "cli-cliente"
   | "cli-cantiere"
@@ -33,6 +34,7 @@ export const SETTINGS_NAV_STRUCTURE: SettingsNavEntry[] = [
   { kind: "group", label: "Magazzino" },
   { kind: "item", id: "mag-marche", label: "Marche ricambi" },
   { kind: "item", id: "mag-fornitori", label: "Fornitori alternativi" },
+  { kind: "item", id: "mag-produttori", label: "Produttori" },
   { kind: "item", id: "mag-categorie", label: "Categorie" },
   { kind: "group", label: "Clienti commerciali" },
   { kind: "item", id: "cli-cliente", label: "Cliente" },
@@ -59,7 +61,8 @@ export const SETTINGS_SECTION_DESCRIPTIONS: Partial<Record<SistemaSectionId, str
   "op-stati": "Stati del workflow lavorazioni e colori badge.",
   "op-priorita": "Priorità lavorazioni e colori di evidenziazione.",
   "mag-marche": "Marche ricambi e sconti fornitore per marca.",
-  "mag-fornitori": "Fornitori alternativi e produttori collegati.",
+  "mag-fornitori": "Fornitori alternativi per ricambi a magazzino.",
+  "mag-produttori": "Produttori per fornitori alternativi nei ricambi.",
   "mag-categorie": "Categorie per classificare i ricambi a magazzino.",
   "cli-cliente": "Clienti commerciali e sconto ricambi automatico nei preventivi.",
   "cli-cantiere": "Cantieri associati ai clienti.",

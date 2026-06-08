@@ -25,5 +25,10 @@ assert.match(csp, /supabase\.co/);
 assert.match(csp, /object-src 'none'/);
 assert.match(csp, /frame-ancestors 'self'/);
 assert.doesNotMatch(csp, /script-src[^;]*\*/);
+if (process.env.NODE_ENV === "production") {
+  assert.doesNotMatch(csp, /unsafe-eval/);
+} else {
+  assert.match(csp, /script-src[^;]*'unsafe-eval'/);
+}
 
 console.log("http-security-headers.test.ts OK");

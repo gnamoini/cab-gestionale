@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  mergeProduttoriFromMagazzinoMaster,
   normalizeFornitoreKey,
   parseProduttoriByFornitore,
   produttoriForFornitore,
@@ -14,7 +15,14 @@ const map = parseProduttoriByFornitore({
 });
 assert.deepEqual(
   produttoriForFornitore(
-    { marche: [], categorie: [], mezziCompatibili: [], fornitori: [], produttoriByFornitore: map },
+    {
+      marche: [],
+      categorie: [],
+      mezziCompatibili: [],
+      fornitori: [],
+      produttori: [],
+      produttoriByFornitore: map,
+    },
     "Ricambi Express",
   ),
   [
@@ -25,5 +33,28 @@ assert.deepEqual(
 const renamed = renameFornitoreInProduttoriMap(map, "Ricambi Express", "RE Nuovo");
 assert.ok(renamed["re nuovo"]?.includes("ACME"));
 assert.equal(renamed["ricambi express"], undefined);
+
+assert.deepEqual(
+  mergeProduttoriFromMagazzinoMaster({
+    marche: [],
+    categorie: [],
+    mezziCompatibili: [],
+    fornitori: [],
+    produttori: ["Zeta", "Alpha"],
+  }),
+  ["Alpha", "Zeta"],
+);
+
+assert.deepEqual(
+  mergeProduttoriFromMagazzinoMaster({
+    marche: [],
+    categorie: [],
+    mezziCompatibili: [],
+    fornitori: [],
+    produttori: ["Alpha"],
+    produttoriByFornitore: { F1: ["Beta", "Alpha"] },
+  }),
+  ["Alpha", "Beta"],
+);
 
 console.log("fornitore-produttore-master.test.ts OK");

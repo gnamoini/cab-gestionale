@@ -348,7 +348,10 @@ export function toFormDraft(
     usatoInTagliandi: r.usatoInTagliandi,
     descrizione: r.descrizione,
     note: r.note,
-    categoria: r.categoria,
+    categoria:
+      r.categoria === RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA || !r.categoria.trim()
+        ? ""
+        : r.categoria,
     compatibilitaMezzi: compatLabels.join(", "),
     compatMarcheAttrezzaturaFiltro: marcheFiltro.attrezzature.join(", "),
     compatMarcheTelaioFiltro: marcheFiltro.telai.join(", "),

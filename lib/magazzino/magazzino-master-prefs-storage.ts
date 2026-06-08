@@ -1,6 +1,9 @@
 /** Anagrafiche magazzino (liste guidate) persistite in locale — condivise tra Magazzino e Impostazioni sistema. */
 
-import { parseProduttoriByFornitore } from "@/lib/magazzino/fornitore-produttore-master";
+import {
+  mergeProduttoriFromMagazzinoMaster,
+  parseProduttoriByFornitore,
+} from "@/lib/magazzino/fornitore-produttore-master";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 
 /** @deprecated Persistenza spostata su `public.app_settings` (modulo `magazzino`, chiave `master`). */
@@ -13,7 +16,9 @@ export type MagazzinoMasterPrefs = {
   categorie: string[];
   mezziCompatibili: string[];
   fornitori: string[];
-  /** Produttori per fornitore alternativo (chiave = normalizeFornitoreKey). */
+  /** Elenco globale produttori (fornitori alternativi ricambi). */
+  produttori: string[];
+  /** @deprecated Migrato in `produttori` — letto solo per merge legacy. */
   produttoriByFornitore?: Record<string, string[]>;
 };
 
@@ -26,7 +31,7 @@ export function loadMagazzinoMasterPrefs(): MagazzinoMasterPrefs | null {
     const p = JSON.parse(raw) as unknown;
     if (!p || typeof p !== "object") return null;
     const o = p as Record<string, unknown>;
-    return {
+    const partial: MagazzinoMasterPrefs = {
       marche: Array.isArray(o.marche) ? (o.marche as string[]).filter((x) => typeof x === "string") : [],
       scontoFornitoreByMarca: parseScontoFornitoreByMarca(o.scontoFornitoreByMarca),
       categorie: Array.isArray(o.categorie) ? (o.categorie as string[]).filter((x) => typeof x === "string") : [],
@@ -34,8 +39,12 @@ export function loadMagazzinoMasterPrefs(): MagazzinoMasterPrefs | null {
         ? (o.mezziCompatibili as string[]).filter((x) => typeof x === "string")
         : [],
       fornitori: Array.isArray(o.fornitori) ? (o.fornitori as string[]).filter((x) => typeof x === "string") : [],
+      produttori: Array.isArray(o.produttori)
+        ? (o.produttori as string[]).filter((x) => typeof x === "string")
+        : [],
       produttoriByFornitore: parseProduttoriByFornitore(o.produttoriByFornitore),
     };
+    return { ...partial, produttori: mergeProduttoriFromMagazzinoMaster(partial) };
   } catch {
     return null;
   }

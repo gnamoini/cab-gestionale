@@ -28,6 +28,8 @@ export function appendGlobalListSuccessMessage(
       return "Marca aggiunta e selezionata";
     case "magazzino:fornitori":
       return "Fornitore aggiunto e selezionato";
+    case "magazzino:produttori":
+      return "Produttore aggiunto e selezionato";
     case "magazzino:mezziCompatibili":
       return "Mezzo compatibile aggiunto e selezionato";
     case "lavorazioni:addetti":

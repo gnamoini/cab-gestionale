@@ -18,6 +18,10 @@ import {
   type RefObject,
 } from "react";
 import {
+  CAB_FIELD_LABEL_ATTR,
+  findGestionaleFieldContainer,
+} from "@/lib/ui/mobile-modal-behavior";
+import {
   GLOBAL_DROPDOWN_MAX_HEIGHT,
   GLOBAL_DROPDOWN_MENU_GAP,
   GLOBAL_DROPDOWN_PORTAL_Z,
@@ -222,6 +226,46 @@ function isPointerInsidePanel(e: PointerEvent, panel: HTMLElement): boolean {
   );
 }
 
+function isFieldCaptionElement(el: HTMLElement): boolean {
+  if (el.tagName === "LABEL") return true;
+  if (el.hasAttribute(CAB_FIELD_LABEL_ATTR)) return true;
+  if (el.tagName === "P" || el.tagName === "SPAN") {
+    const cls = typeof el.className === "string" ? el.className : "";
+    return cls.includes("font-medium");
+  }
+  return false;
+}
+
+/** True se il pointer è sull'etichetta associata al controllo (evita dismiss+reopen flash). */
+export function isPointerOnAssociatedFieldLabel(target: Node, anchor: HTMLElement): boolean {
+  const wrappingLabel = anchor.closest("label");
+  if (wrappingLabel?.contains(target)) return true;
+
+  if (target instanceof Element) {
+    const forLabel = target.closest("label[for]");
+    if (forLabel) {
+      const forId = forLabel.getAttribute("for");
+      if (forId) {
+        for (const el of anchor.querySelectorAll("[id]")) {
+          if (el instanceof HTMLElement && el.id === forId) return true;
+        }
+      }
+    }
+  }
+
+  const container = findGestionaleFieldContainer(anchor);
+  if (container && target instanceof Element) {
+    for (const ch of container.children) {
+      if (!(ch instanceof HTMLElement)) continue;
+      if (ch === anchor || anchor.contains(ch)) continue;
+      if (!ch.contains(target) && ch !== target) continue;
+      if (isFieldCaptionElement(ch)) return true;
+    }
+  }
+
+  return false;
+}
+
 export type UseDropdownOutsideDismissOptions = {
   /** false: listener disattivato (es. pannello non ancora posizionato). */
   when?: boolean;
@@ -242,7 +286,9 @@ export function useDropdownOutsideDismiss(
     if (!open || !when) return;
     function onDocPointerDown(e: PointerEvent) {
       const target = e.target as Node;
-      if (anchorRef.current?.contains(target)) return;
+      const anchor = anchorRef.current;
+      if (anchor?.contains(target)) return;
+      if (anchor && isPointerOnAssociatedFieldLabel(target, anchor)) return;
       const panel = panelRef.current;
       if (!panel) return;
       if (isPointerInsidePanel(e, panel)) return;

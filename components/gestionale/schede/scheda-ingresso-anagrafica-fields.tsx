@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useRef } from "react";
+import { memo, useCallback, useId, useRef } from "react";
 import { findExactMezzoForIngressoIdent } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
@@ -67,12 +67,16 @@ function SchedaIngressoAnagraficaFieldsInner({
     if (hit) onExactMezzoMatch(hit);
   }, [disabled, mezzi, onExactMezzoMatch, value.matricola, value.nScuderia, value.targa]);
 
+  const uid = useId();
+  const fieldId = (suffix: string) => `${uid}-${suffix}`;
+
   return (
     <>
       {show("cliente") ? (
         <FormSection title="Anagrafica cliente">
-          <FormField label="Cliente" required={clienteRequired}>
+          <FormField label="Cliente" htmlFor={fieldId("cliente")} required={clienteRequired}>
             <GlobalSettingsListSelect
+              id={fieldId("cliente")}
               listKey="mezzi:clienti"
               className={listSelectWrapClass}
               value={value.cliente}
@@ -82,8 +86,9 @@ function SchedaIngressoAnagraficaFieldsInner({
               aria-label="Cliente"
             />
           </FormField>
-          <FormField label="Cantiere">
+          <FormField label="Cantiere" htmlFor={fieldId("cantiere")}>
             <GlobalSettingsListSelect
+              id={fieldId("cantiere")}
               listKey="mezzi:cantieri"
               className={listSelectWrapClass}
               value={value.cantiere}
@@ -92,8 +97,9 @@ function SchedaIngressoAnagraficaFieldsInner({
               aria-label="Cantiere"
             />
           </FormField>
-          <FormField label="Utilizzatore">
+          <FormField label="Utilizzatore" htmlFor={fieldId("utilizzatore")}>
             <GlobalSettingsListSelect
+              id={fieldId("utilizzatore")}
               listKey="mezzi:utilizzatori"
               className={listSelectWrapClass}
               value={value.utilizzatore}
@@ -118,8 +124,9 @@ function SchedaIngressoAnagraficaFieldsInner({
 
       {show("attrezzatura") ? (
         <FormSection title="Anagrafica attrezzatura">
-          <FormField label="Tipo attrezzatura">
+          <FormField label="Tipo attrezzatura" htmlFor={fieldId("tipo-attrezzatura")}>
             <GlobalSettingsListSelect
+              id={fieldId("tipo-attrezzatura")}
               listKey="mezzi:tipiAttrezzatura"
               className={listSelectWrapClass}
               value={value.tipoAttrezzatura}
@@ -129,8 +136,9 @@ function SchedaIngressoAnagraficaFieldsInner({
             />
           </FormField>
           <div className="grid gap-2 sm:grid-cols-2">
-            <FormField label="Marca" required={marcaAttrezzaturaRequired}>
+            <FormField label="Marca" htmlFor={fieldId("marca-attrezzatura")} required={marcaAttrezzaturaRequired}>
               <CompatHierarchySelect
+                id={fieldId("marca-attrezzatura")}
                 tree="attrezzature"
                 hierarchyKind="marca"
                 className={listSelectWrapClass}
@@ -141,8 +149,9 @@ function SchedaIngressoAnagraficaFieldsInner({
                 ariaLabel="Marca attrezzatura"
               />
             </FormField>
-            <FormField label="Modello">
+            <FormField label="Modello" htmlFor={fieldId("modello-attrezzatura")}>
               <CompatHierarchySelect
+                id={fieldId("modello-attrezzatura")}
                 tree="attrezzature"
                 hierarchyKind="modello"
                 marcaNome={value.marcaAttrezzatura}
@@ -196,8 +205,9 @@ function SchedaIngressoAnagraficaFieldsInner({
 
       {show("telaio") ? (
         <FormSection title="Anagrafica mezzo / telaio">
-          <FormField label="Tipo telaio">
+          <FormField label="Tipo telaio" htmlFor={fieldId("tipo-telaio")}>
             <GlobalSettingsListSelect
+              id={fieldId("tipo-telaio")}
               listKey="mezzi:tipiTelaio"
               className={listSelectWrapClass}
               value={value.tipoTelaio}
@@ -207,8 +217,9 @@ function SchedaIngressoAnagraficaFieldsInner({
             />
           </FormField>
           <div className="grid gap-2 sm:grid-cols-2">
-            <FormField label="Marca">
+            <FormField label="Marca" htmlFor={fieldId("marca-telaio")}>
               <CompatHierarchySelect
+                id={fieldId("marca-telaio")}
                 tree="telai"
                 hierarchyKind="marca"
                 className={listSelectWrapClass}
@@ -218,8 +229,9 @@ function SchedaIngressoAnagraficaFieldsInner({
                 ariaLabel="Marca telaio"
               />
             </FormField>
-            <FormField label="Modello">
+            <FormField label="Modello" htmlFor={fieldId("modello-telaio")}>
               <CompatHierarchySelect
+                id={fieldId("modello-telaio")}
                 tree="telai"
                 hierarchyKind="modello"
                 marcaNome={value.marcaTelaio}
@@ -290,8 +302,9 @@ function SchedaIngressoAnagraficaFieldsInner({
               />
             </FormField>
           </div>
-          <FormField label="Carburante">
+          <FormField label="Carburante" htmlFor={fieldId("carburante")}>
             <GlobalSelect
+              id={fieldId("carburante")}
               className={listSelectWrapClass}
               value={value.livelloCarburante}
               onChange={(v) => onPatch({ livelloCarburante: v })}

@@ -66,6 +66,8 @@ export type LavorazioneRow = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  /** Ultimo operatore che ha modificato la riga lavorazione (stato, priorità, …). */
+  updated_by?: string | null;
   /** Portale clienti: archiviata manualmente (indipendente dallo stato). */
   archived?: boolean;
   archived_at?: string | null;

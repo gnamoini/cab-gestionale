@@ -32,6 +32,7 @@ export function CompatHierarchySelect({
   disabled,
   required,
   className,
+  id,
 }: {
   tree: HierarchyTreeKey;
   hierarchyKind: GlobalSettingsHierarchyKind;
@@ -43,6 +44,7 @@ export function CompatHierarchySelect({
   disabled?: boolean;
   required?: boolean;
   className?: string;
+  id?: string;
 }) {
   return (
     <GlobalSettingsListSelect
@@ -53,6 +55,7 @@ export function CompatHierarchySelect({
       disabled={disabled}
       required={required}
       className={className}
+      id={id}
       placeholder={placeholder ?? compatHierarchyPlaceholder(tree, hierarchyKind)}
       allowAdd
       aria-label={ariaLabel}

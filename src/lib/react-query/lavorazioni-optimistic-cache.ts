@@ -44,12 +44,34 @@ function rowBelongsInArchivedList(row: LavorazioneListRow, listArchived: boolean
   return listArchived ? row.archived === true : row.archived !== true;
 }
 
+export type LavorazioneUpdateOptimisticAudit = {
+  updated_by?: string | null;
+  updated_at?: string;
+};
+
+function mergeOptimisticAuditPatch(
+  patch: LavorazioneUpdate,
+  audit?: LavorazioneUpdateOptimisticAudit,
+): LavorazioneUpdate & LavorazioneUpdateOptimisticAudit {
+  if (!audit?.updated_by && !audit?.updated_at) return patch;
+  return {
+    ...patch,
+    ...(audit.updated_by ? { updated_by: audit.updated_by } : {}),
+    ...(audit.updated_at ? { updated_at: audit.updated_at } : {}),
+  };
+}
+
 function mergeListRow(
   row: LavorazioneListRow,
   patch: LavorazioneUpdate,
   serverRow?: LavorazioneRow,
+  audit?: LavorazioneUpdateOptimisticAudit,
 ): LavorazioneListRow {
-  const merged = { ...row, ...patch, ...(serverRow ?? {}) } as LavorazioneListRow;
+  const merged = {
+    ...row,
+    ...mergeOptimisticAuditPatch(patch, audit),
+    ...(serverRow ?? {}),
+  } as LavorazioneListRow;
   if (serverRow) {
     merged.mezzo = row.mezzo;
   }
@@ -73,12 +95,13 @@ function resolveMergedRow(
   lavorazioneId: string,
   patch: LavorazioneUpdate,
   serverRow?: LavorazioneRow,
+  audit?: LavorazioneUpdateOptimisticAudit,
 ): LavorazioneListRow | undefined {
   const existing = findRowInListCaches(qc, lavorazioneId);
-  if (existing) return mergeListRow(existing, patch, serverRow);
+  if (existing) return mergeListRow(existing, patch, serverRow, audit);
   if (!serverRow) return undefined;
   const base = { ...serverRow, mezzo: null } as LavorazioneListRow;
-  return mergeListRow(base, patch, serverRow);
+  return mergeListRow(base, patch, serverRow, audit);
 }
 
 function reconcileRowAcrossLists(qc: QueryClient, lavorazioneId: string, merged: LavorazioneListRow): void {
@@ -130,8 +153,9 @@ export function applyOptimisticLavorazioneUpdate(
   lavorazioneId: string,
   patch: LavorazioneUpdate,
   serverRow?: LavorazioneRow,
+  audit?: LavorazioneUpdateOptimisticAudit,
 ): void {
-  const merged = resolveMergedRow(qc, lavorazioneId, patch, serverRow);
+  const merged = resolveMergedRow(qc, lavorazioneId, patch, serverRow, audit);
   if (merged) {
     reconcileRowAcrossLists(qc, lavorazioneId, merged);
   }
@@ -167,4 +191,10 @@ export function buildConcludeOptimisticPatch(row: LavorazioneListRow | undefined
     archived_at: now,
     data_uscita: row?.data_uscita?.trim() ? row.data_uscita : now,
   };
+}
+
+/** Audit riga per update optimistic (updated_by / updated_at). */
+export function buildLavorazioneOptimisticAudit(userId: string | null | undefined): LavorazioneUpdateOptimisticAudit {
+  if (!userId?.trim()) return {};
+  return { updated_by: userId.trim(), updated_at: new Date().toISOString() };
 }

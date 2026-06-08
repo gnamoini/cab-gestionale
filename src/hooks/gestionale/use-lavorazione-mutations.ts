@@ -1,11 +1,13 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/context/auth-context";
 import { useServiceMutation } from "@/src/hooks/use-service-mutation";
 import { cabSyncEventForEntity, invalidateAfterLavorazioneMutations } from "@/src/lib/react-query/invalidate-related";
 import {
   applyOptimisticLavorazioneUpdate,
   buildConcludeOptimisticPatch,
+  buildLavorazioneOptimisticAudit,
   rollbackLavorazioneUpdateQueries,
   settleLavorazioneQuickUpdate,
   snapshotLavorazioneUpdateQueries,
@@ -36,12 +38,14 @@ export function useLavorazioneCreateMutation() {
 
 export function useLavorazioneUpdateMutation() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const optimisticAudit = buildLavorazioneOptimisticAudit(user?.id);
   return useServiceMutation(
     ({ id, data }: { id: string; data: LavorazioneUpdate }) => lavorazioniService.update(id, data),
     {
       onMutate: async (variables) => {
         const context = await snapshotLavorazioneUpdateQueries(queryClient, variables.id);
-        applyOptimisticLavorazioneUpdate(queryClient, variables.id, variables.data);
+        applyOptimisticLavorazioneUpdate(queryClient, variables.id, variables.data, undefined, optimisticAudit);
         return context;
       },
       onSuccess: (serverRow, variables) => {
@@ -90,13 +94,21 @@ export function useLavorazioneRestoreMutation() {
 
 export function useLavorazioneConcludeMutation() {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const optimisticAudit = buildLavorazioneOptimisticAudit(user?.id);
   return useServiceMutation((id: string) => lavorazioniService.conclude(id), {
     onMutate: async (id) => {
       const context = await snapshotLavorazioneUpdateQueries(queryClient, id);
       const existing = context.lists
         .flatMap((s) => s.data ?? [])
         .find((r) => r.id === id);
-      applyOptimisticLavorazioneUpdate(queryClient, id, buildConcludeOptimisticPatch(existing));
+      applyOptimisticLavorazioneUpdate(
+        queryClient,
+        id,
+        buildConcludeOptimisticPatch(existing),
+        undefined,
+        optimisticAudit,
+      );
       return context;
     },
     onSuccess: (serverRow, id) => {

@@ -20,26 +20,18 @@ export const dsNotificationRowTime =
 export const dsNotificationOpenLink =
   "mt-1.5 text-[11px] font-medium leading-snug text-[color:color-mix(in_srgb,var(--cab-primary)_65%,var(--cab-text-muted))] hover:underline";
 
-export const dsNotificationBellIcon = "h-[1.25rem] w-[1.25rem]";
+export const dsNotificationBellIcon = "h-4 w-4 shrink-0 opacity-90";
 
-export const dsNotificationBellIconIdle =
-  "text-[color:var(--cab-text-muted)]";
-
-export const dsNotificationBellIconActive =
-  "text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]";
+/** Ancoraggio badge sul bottone 40×40 (non sul wrapper icona). */
+export const dsNotificationBellBadgeAnchor =
+  "pointer-events-none absolute right-0.5 top-0.5 z-[1]";
 
 export const dsNotificationBellBadgeBase =
-  "pointer-events-none absolute -right-1 -top-1 flex items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--cab-danger)_92%,#000)] font-bold tabular-nums leading-none text-white ring-2 ring-[var(--cab-card)]";
+  "flex items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--cab-danger)_92%,#000)] font-bold tabular-nums leading-none text-white ring-2 ring-[var(--cab-surface)]";
 
-export const dsNotificationBellBadgeCompact = "size-[1.125rem] text-[10px]";
+export const dsNotificationBellBadgeCompact = "size-4 text-[9px]";
 
-export const dsNotificationBellBadgeWide = "h-[1.125rem] min-w-[1.375rem] px-1 text-[9px]";
-
-export const dsNotificationBellTriggerActiveDanger =
-  "border-[color:color-mix(in_srgb,var(--cab-danger)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))]";
-
-export const dsNotificationBellTriggerActiveInfo =
-  "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]";
+export const dsNotificationBellBadgeWide = "h-4 min-w-[1.125rem] px-0.5 text-[8px]";
 
 export const dsNotificationPanelShell =
   "flex min-w-0 flex-col overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-lg)]";

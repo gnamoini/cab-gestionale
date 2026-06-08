@@ -3,14 +3,11 @@
 import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode, Ref } from "react";
 import { CloseButton } from "@/components/design-system/close-button";
 import {
+  dsNotificationBellBadgeAnchor,
   dsNotificationBellBadgeBase,
   dsNotificationBellBadgeCompact,
   dsNotificationBellBadgeWide,
   dsNotificationBellIcon,
-  dsNotificationBellIconActive,
-  dsNotificationBellIconIdle,
-  dsNotificationBellTriggerActiveDanger,
-  dsNotificationBellTriggerActiveInfo,
   dsNotificationDangerAccentText,
   dsNotificationDangerDetailText,
   dsNotificationListClass,
@@ -42,15 +39,16 @@ import {
   dsScrollbar,
 } from "@/lib/ui/design-system";
 
-export function NotificationBellIcon({ active = false }: { active?: boolean }) {
+export function NotificationBellIcon() {
   return (
     <svg
-      className={`${dsNotificationBellIcon} ${active ? dsNotificationBellIconActive : dsNotificationBellIconIdle}`}
+      className={dsNotificationBellIcon}
       viewBox="0 0 24 24"
-      fill={active ? "currentColor" : "none"}
-      fillOpacity={active ? 0.12 : undefined}
+      fill="none"
       stroke="currentColor"
-      strokeWidth={active ? 2.25 : 2}
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden
     >
       <path
@@ -68,7 +66,7 @@ export function NotificationCountBadge({ count }: { count: number }) {
   const wide = count > 9;
   return (
     <span
-      className={`${dsNotificationBellBadgeBase} ${wide ? dsNotificationBellBadgeWide : dsNotificationBellBadgeCompact}`}
+      className={`${dsNotificationBellBadgeAnchor} ${dsNotificationBellBadgeBase} ${wide ? dsNotificationBellBadgeWide : dsNotificationBellBadgeCompact}`}
       aria-hidden
     >
       {label}
@@ -293,8 +291,6 @@ export type NotificationBellActiveTone = "info" | "danger";
 export function NotificationBellTrigger({
   buttonRef,
   count,
-  active,
-  activeTone = "info",
   ariaLabel,
   ariaExpanded,
   onClick,
@@ -302,20 +298,14 @@ export function NotificationBellTrigger({
 }: {
   buttonRef?: Ref<HTMLButtonElement>;
   count: number;
-  active: boolean;
+  /** Ignorato — il bottone resta neutro; usare `count` per il badge. */
+  active?: boolean;
   activeTone?: NotificationBellActiveTone;
   ariaLabel: string;
   ariaExpanded: boolean;
   onClick: () => void;
   className?: string;
 }) {
-  const activeClass =
-    active && activeTone === "danger"
-      ? dsNotificationBellTriggerActiveDanger
-      : active && activeTone === "info"
-        ? dsNotificationBellTriggerActiveInfo
-        : "";
-
   return (
     <button
       ref={buttonRef}
@@ -324,8 +314,7 @@ export function NotificationBellTrigger({
       className={[
         dsPageToolbarIconBtn,
         dsFocus,
-        "relative min-h-[2.5rem] min-w-[2.5rem] overflow-visible",
-        activeClass,
+        "relative shrink-0 overflow-visible",
         className,
       ]
         .filter(Boolean)
@@ -334,10 +323,8 @@ export function NotificationBellTrigger({
       aria-haspopup="dialog"
       aria-label={ariaLabel}
     >
-      <span className="relative inline-flex" aria-hidden>
-        <NotificationBellIcon active={active} />
-        {count > 0 ? <NotificationCountBadge count={count} /> : null}
-      </span>
+      <NotificationBellIcon />
+      {count > 0 ? <NotificationCountBadge count={count} /> : null}
       <span className="sr-only">{ariaLabel}</span>
     </button>
   );

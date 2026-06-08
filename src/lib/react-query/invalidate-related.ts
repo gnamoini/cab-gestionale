@@ -85,6 +85,7 @@ function gestionaleTablesForRenameKinds(kinds: readonly SettingsRenameKind[]): s
         break;
       case "mag_categoria":
       case "mag_fornitore":
+      case "mag_produttore":
         tables.add("magazzino_ricambi");
         break;
       case "tipo_attrezzatura":

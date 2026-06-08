@@ -146,6 +146,14 @@ function isGestionaleListTriggerButton(el: HTMLElement): boolean {
   return popup === "listbox" || popup === "combobox";
 }
 
+/** Bottoni ± in stepper (role=group + input): meritano scroll al focus. Esclude toggle segmented (solo bottoni). */
+function isGestionaleStepperGroupButton(el: HTMLElement): boolean {
+  if (el.tagName !== "BUTTON") return false;
+  const group = el.closest('[role="group"]');
+  if (!group) return false;
+  return Boolean(group.querySelector('input:not([type="hidden"]), textarea, select'));
+}
+
 /** Tutti i controlli che meritano scroll in modale (mobile e desktop). */
 export function isGestionaleFocusableField(el: EventTarget | null): el is HTMLElement {
   if (!(el instanceof HTMLElement)) return false;
@@ -155,7 +163,7 @@ export function isGestionaleFocusableField(el: EventTarget | null): el is HTMLEl
   const role = el.getAttribute("role");
   if (role === "combobox" || role === "searchbox" || role === "spinbutton") return true;
   if (tag === "BUTTON") {
-    if (el.closest('[role="group"]')) return true;
+    if (isGestionaleStepperGroupButton(el)) return true;
     if (isGestionaleListTriggerButton(el)) return true;
   }
   return false;

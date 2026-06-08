@@ -22,9 +22,16 @@ assert.match(tokensSrc, /NotificationSeverity/);
 assert.match(tokensSrc, /dsNotificationRowSurface/);
 assert.match(tokensSrc, /dsNotificationBellBadgeBase/);
 assert.match(tokensSrc, /dsNotificationPanelWidthPx/);
+assert.match(tokensSrc, /dsNotificationBellBadgeAnchor/);
+assert.match(tokensSrc, /h-4 w-4 shrink-0 opacity-90/);
 assert.match(tokensSrc, /dsNotificationPanelMaxHeightPx/);
 
 assert.match(primitivesSrc, /NotificationBellIcon/);
+assert.match(primitivesSrc, /dsNotificationBellBadgeAnchor/);
+assert.doesNotMatch(primitivesSrc, /dsNotificationBellTriggerActiveDanger/);
+assert.doesNotMatch(primitivesSrc, /relative inline-flex[\s\S]*NotificationCountBadge/);
+assert.match(primitivesSrc, /fill="none"/);
+assert.match(primitivesSrc, /strokeWidth=\{2\}/);
 assert.match(primitivesSrc, /NotificationBellTrigger/);
 assert.match(primitivesSrc, /NotificationPanelHeader/);
 assert.match(primitivesSrc, /NotificationPanelShell/);

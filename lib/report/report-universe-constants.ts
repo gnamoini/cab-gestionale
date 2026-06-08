@@ -17,6 +17,7 @@ export function settingsRenameKindsAffectReport(kinds: readonly string[]): boole
     "mag_marca",
     "mag_categoria",
     "mag_fornitore",
+    "mag_produttore",
     "tipo_attrezzatura",
     "tipo_telaio",
     "hierarchy_marca_attrezzature",

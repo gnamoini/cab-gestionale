@@ -102,7 +102,10 @@ import {
   type LavorazioniListTableColStyles,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
-import { resolveLavorazioneUltimaModifica } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
+import {
+  buildLavorazioneRowProfileResolver,
+  resolveLavorazioneUltimaModifica,
+} from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { gestionaleLavorazioniDenseTableClass } from "@/lib/ui/gestionale-list-table";
 import {
   sortClientPortalBundles,
@@ -430,7 +433,9 @@ function MobileCards({
             <LavorazioneMobileCardFooter
               meta={
                 <LavorazioneMobileUltimaModifica
-                  info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id])}
+                  info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
+                    resolveUserId: buildLavorazioneRowProfileResolver(row),
+                  })}
                 />
               }
             >

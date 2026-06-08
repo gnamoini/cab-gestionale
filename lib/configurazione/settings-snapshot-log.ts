@@ -30,6 +30,7 @@ export type ConfigurazioneSectionId =
   | "op-priorita"
   | "mag-marche"
   | "mag-fornitori"
+  | "mag-produttori"
   | "mag-categorie"
   | "cli-cliente"
   | "cli-cantiere"
@@ -50,6 +51,7 @@ export const CONFIGURAZIONE_SECTION_LABELS: Record<ConfigurazioneSectionId, stri
   "op-priorita": "Priorità",
   "mag-marche": "Marche ricambi",
   "mag-fornitori": "Fornitori alternativi",
+  "mag-produttori": "Produttori",
   "mag-categorie": "Categorie",
   "cli-cliente": "Cliente",
   "cli-cantiere": "Cantiere",
@@ -93,6 +95,7 @@ const SECTION_SLICES: SectionSlice[] = [
     }),
   },
   { id: "mag-fornitori", pick: (s) => s.mag.fornitori },
+  { id: "mag-produttori", pick: (s) => s.mag.produttori ?? [] },
   { id: "mag-categorie", pick: (s) => s.mag.categorie },
   {
     id: "cli-cliente",
@@ -326,6 +329,8 @@ function describeSectionChanges(
       ];
     case "mag-fornitori":
       return diffStringList(before.mag.fornitori, after.mag.fornitori, "fornitore alternativo");
+    case "mag-produttori":
+      return diffStringList(before.mag.produttori ?? [], after.mag.produttori ?? [], "produttore");
     case "mag-categorie":
       return diffStringList(before.mag.categorie, after.mag.categorie, "categoria");
     case "cli-cliente":

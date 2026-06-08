@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  buildLavorazioneRowProfileResolver,
   buildLatestLogAutoreByEntitaId,
   buildLogAutoreByUserId,
   displayLavorazioneAutore,
@@ -56,6 +57,32 @@ function ingressoBundle(overrides: {
       },
     },
   };
+}
+
+{
+  const row = { updated_at: rowUpdatedAt, updated_by: sampleUserUuid, updated_by_nome: "Donato Verdi" };
+  const info = resolveLavorazioneUltimaModifica(
+    row,
+    ingressoBundle({ updatedBy: "Angelo", addetto: "Angelo" }),
+    { resolveUserId: buildLavorazioneRowProfileResolver(row) },
+  );
+  assert.equal(info.autore, "Donato Verdi");
+  assert.equal(info.iso, rowUpdatedAt);
+}
+
+{
+  const row = {
+    updated_at: rowUpdatedAt,
+    created_at: rowUpdatedAt,
+    created_by: sampleUserUuid,
+    created_by_nome: "Angelo Creatore",
+  };
+  const info = resolveLavorazioneUltimaModifica(
+    row,
+    ingressoBundle({ updatedBy: "Angelo", addetto: "Angelo" }),
+    { resolveUserId: buildLavorazioneRowProfileResolver(row) },
+  );
+  assert.equal(info.autore, "Angelo Creatore");
 }
 
 {
@@ -133,6 +160,35 @@ function ingressoBundle(overrides: {
     () => "Donato",
   );
   assert.equal(map.get("u1"), "Donato");
+}
+
+{
+  const sameInstant = "2026-05-28T13:34:00.000Z";
+  const info = resolveLavorazioneUltimaModifica(
+    { updated_at: sameInstant },
+    ingressoBundle({
+      updatedAt: sameInstant,
+      updatedBy: "Donato Verdi",
+      addetto: "Angelo",
+    }),
+  );
+  assert.equal(info.autore, "Donato Verdi");
+  assert.equal(info.iso, sameInstant);
+}
+
+{
+  const rowIso = "2026-05-28T13:34:00.000Z";
+  const schedaIso = "2026-05-28T13:34:00.450Z";
+  const info = resolveLavorazioneUltimaModifica(
+    { updated_at: rowIso },
+    ingressoBundle({
+      updatedAt: schedaIso,
+      updatedBy: "Donato Verdi",
+      addetto: "Angelo",
+    }),
+  );
+  assert.equal(info.autore, "Donato Verdi");
+  assert.equal(info.iso, schedaIso);
 }
 
 {

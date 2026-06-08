@@ -205,3 +205,32 @@ export function patchFornitoriAlternativiFornitoreRename(
 
   return { next: base, changed };
 }
+
+export function patchFornitoriAlternativiProduttoreRename(
+  meta: unknown,
+  from: string,
+  to: string,
+): { next: Record<string, unknown>; changed: boolean } {
+  const base =
+    meta && typeof meta === "object" && !Array.isArray(meta) ? { ...(meta as Record<string, unknown>) } : {};
+  const fromTrim = from.trim();
+  const toTrim = to.trim();
+  if (!fromTrim || !toTrim || fromTrim === toTrim) return { next: base, changed: false };
+
+  let changed = false;
+  const raw = base.fornitoriAlternativi;
+  if (Array.isArray(raw) && raw.length > 0) {
+    const nextRows = raw.map((item) => {
+      if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+      const row = { ...(item as Record<string, unknown>) };
+      if (typeof row.produttore === "string" && row.produttore.trim() === fromTrim) {
+        changed = true;
+        return { ...row, produttore: toTrim };
+      }
+      return item;
+    });
+    if (changed) base.fornitoriAlternativi = nextRows;
+  }
+
+  return { next: base, changed };
+}

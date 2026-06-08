@@ -25,7 +25,13 @@ export const LAVORAZIONI_STATI_IN_CORSO: string[] = [
 /** Fallback stati chiusi / archivio. */
 export const LAVORAZIONI_STATI_CHIUSE: string[] = ["completata", "consegnata", "annullata"];
 
-export type LavorazioneListRow = LavorazioneRow & { mezzo: MezzoRow | null };
+export type LavorazioneListRow = LavorazioneRow & {
+  mezzo: MezzoRow | null;
+  /** Nome profilo joinato in lista (ultima modifica). */
+  updated_by_nome?: string | null;
+  /** Nome profilo joinato in lista (fallback creazione). */
+  created_by_nome?: string | null;
+};
 
 export type LavorazioneFilters = {
   /** Se valorizzato, filtra `stato` con `IN` (insieme esplicito). */
@@ -53,6 +59,19 @@ export type LavorazioneUpdate = Partial<LavorazioneInsert>;
 
 async function c() {
   return getBrowserSupabase();
+}
+
+async function authUserId(sb: Awaited<ReturnType<typeof c>>): Promise<string | null> {
+  const { data } = await sb.auth.getUser();
+  return data.user?.id ?? null;
+}
+
+function withRowUpdatedBy<T extends Record<string, unknown>>(
+  patch: T,
+  userId: string | null,
+): T & { updated_by?: string | null } {
+  if (!userId) return patch;
+  return { ...patch, updated_by: userId };
 }
 
 async function oggettoContextForLavorazione(
@@ -101,8 +120,18 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
+      const userId = await authUserId(sb);
       const picked = pickLavorazioneWritePayload(data as Record<string, unknown>);
-      const { data: row, error } = await sb.from("lavorazioni").insert(picked as LavorazioneInsert).select("*").single();
+      const createdBy =
+        typeof data.created_by === "string" && data.created_by.trim()
+          ? data.created_by.trim()
+          : userId;
+      const insertPayload = {
+        ...picked,
+        created_by: createdBy,
+        updated_by: createdBy ?? userId,
+      } as LavorazioneInsert;
+      const { data: row, error } = await sb.from("lavorazioni").insert(insertPayload).select("*").single();
       if (error) return err(error.message);
       const r = row as LavorazioneRow;
       const ctx = await oggettoContextForLavorazione(sb, r);
@@ -118,11 +147,12 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
+      const userId = await authUserId(sb);
       const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
       const picked = pickLavorazioneWritePayload(data as Record<string, unknown>);
       const { data: row, error } = await applyLavorazioniNotDeletedFilter(
-        sb.from("lavorazioni").update(picked).eq("id", id),
+        sb.from("lavorazioni").update(withRowUpdatedBy(picked, userId)).eq("id", id),
       )
         .select("*")
         .single();
@@ -147,10 +177,14 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
+      const userId = await authUserId(sb);
       const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
       const { data: row, error } = await applyLavorazioniNotDeletedFilter(
-        sb.from("lavorazioni").update({ stato, data_uscita: null, archived: false, archived_at: null }).eq("id", id),
+        sb
+          .from("lavorazioni")
+          .update(withRowUpdatedBy({ stato, data_uscita: null, archived: false, archived_at: null }, userId))
+          .eq("id", id),
       )
         .select("*")
         .single();
@@ -175,6 +209,7 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
+      const userId = await authUserId(sb);
       const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
       if (!before) return err("Lavorazione non trovata");
@@ -182,12 +217,15 @@ export const lavorazioniService = {
       if (b.archived === true) return success(b);
 
       const now = new Date().toISOString();
-      const patch = {
-        stato: "completata" as StatoLavorazione,
-        archived: true,
-        archived_at: now,
-        data_uscita: b.data_uscita?.trim() ? b.data_uscita : now,
-      };
+      const patch = withRowUpdatedBy(
+        {
+          stato: "completata" as StatoLavorazione,
+          archived: true,
+          archived_at: now,
+          data_uscita: b.data_uscita?.trim() ? b.data_uscita : now,
+        },
+        userId,
+      );
       const { data: row, error } = await applyLavorazioniNotDeletedFilter(
         sb.from("lavorazioni").update(patch).eq("id", id).eq("archived", false),
       )
