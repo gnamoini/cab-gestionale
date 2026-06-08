@@ -290,8 +290,7 @@ export function useDropdownOutsideDismiss(
       if (anchor?.contains(target)) return;
       if (anchor && isPointerOnAssociatedFieldLabel(target, anchor)) return;
       const panel = panelRef.current;
-      if (!panel) return;
-      if (isPointerInsidePanel(e, panel)) return;
+      if (panel && isPointerInsidePanel(e, panel)) return;
       onDismissStable();
     }
     document.addEventListener("pointerdown", onDocPointerDown, true);

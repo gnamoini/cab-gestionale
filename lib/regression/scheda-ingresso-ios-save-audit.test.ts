@@ -46,12 +46,7 @@ function simulateGlobalSelectCommitBlur(params: {
   );
   if (committed && committed !== params.value) {
     params.onChange(committed);
-  } else if (
-    !committed &&
-    trimmed &&
-    trimmed !== params.value &&
-    params.allowAdd
-  ) {
+  } else if (trimmed !== params.value) {
     params.onChange(trimmed);
   }
 }

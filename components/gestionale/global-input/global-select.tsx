@@ -304,14 +304,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
     const committed = autocompleteCommitFromSearchText(rawSearch, mode, options, items, strictFromList);
     if (committed && committed !== value) {
       onChange(committed);
-    } else if (
-      !committed &&
-      trimmed &&
-      trimmed !== value &&
-      allowAdd &&
-      !isFilterVariant
-    ) {
-      // Submit flush (iOS): committa testo pendente; append all'elenco globale resta opzionale (canAdd).
+    } else if (trimmed !== value && !isFilterVariant) {
+      // Submit/blur flush: committa testo digitato anche senza permesso append elenco.
       onChange(trimmed);
     }
     setSearchText("");
@@ -325,7 +319,6 @@ export function GlobalSelect(props: GlobalSelectProps) {
     options,
     items,
     strictFromList,
-    allowAdd,
     onChange,
   ]);
 
