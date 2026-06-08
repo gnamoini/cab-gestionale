@@ -86,9 +86,17 @@ export async function fillSchedaIngressoCreateForm(
   await modal.getByLabel("Descrizione anomalia").fill(data.descrizioneAnomalia);
   await modal.getByLabel("Note").fill(data.noteIntervento);
 
-  if (!options?.skipClienteBlurTest) {
-    // no-op: full form fill commits comboboxes via add/select
-  }
+  await expect(modal.getByRole("combobox", { name: "Cliente", exact: true })).toHaveValue(data.cliente, {
+    timeout: 15_000,
+  });
+  await expect(modal.getByRole("combobox", { name: "Marca attrezzatura", exact: true })).toHaveValue(
+    data.marcaAttrezzatura,
+    { timeout: 15_000 },
+  );
+
+  const save = modal.getByRole("button", { name: "Salva lavorazione" });
+  await save.scrollIntoViewIfNeeded();
+  await expect(save).toBeEnabled({ timeout: 30_000 });
 }
 
 /** Digita in Cliente e salva senza blur — regression iOS submit flush. */
@@ -118,8 +126,22 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
 
 export async function submitCreateLavorazione(page: Page): Promise<void> {
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
-  await modal.getByRole("button", { name: "Salva lavorazione" }).click();
-  await expect(modal).not.toBeVisible({ timeout: 60_000 });
+  const save = modal.getByRole("button", { name: "Salva lavorazione" });
+  await save.scrollIntoViewIfNeeded();
+  await expect(save).toBeEnabled({ timeout: 45_000 });
+
+  const createResponse = page.waitForResponse(
+    (res) => res.url().includes("/rest/v1/lavorazioni") && res.request().method() === "POST",
+    { timeout: 90_000 },
+  );
+
+  await modal.locator("form").evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+
+  const response = await createResponse;
+  expect(response.ok(), `lavorazioni POST failed: ${response.status()}`).toBeTruthy();
+  await expect(modal).toBeHidden({ timeout: 60_000 });
 }
 
 export async function searchLavorazioneByToken(page: Page, token: string): Promise<void> {

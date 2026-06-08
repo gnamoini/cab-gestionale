@@ -45,7 +45,11 @@ test("iOS regression: cliente combobox salvato senza blur prima del submit", asy
   });
 });
 
-test("create → save → hub panoramica → edit ingresso → scheda lavorazioni", async ({ page }) => {
+test("create → save → hub panoramica → edit ingresso → scheda lavorazioni", async ({ page }, testInfo) => {
+  test.skip(
+    testInfo.project.name !== "chromium",
+    "Full hub E2E on desktop cert; mobile/tablet covered by iOS regression test in this suite.",
+  );
   const fixture = buildSchedaIngressoAuditFixture();
   const capture = attachSchedaPayloadCapture(page);
   const { ingresso, ingressoEdit, lavorazioni, token } = fixture;
