@@ -90,14 +90,18 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
   await expect(modal).toBeVisible();
 
+  const save = modal.getByRole("button", { name: "Salva lavorazione" });
+  await expect(save).toBeEnabled({ timeout: 45_000 });
+
+  // Marca prima (commit con blur) — poi Cliente digitato e submit senza blur su Cliente.
+  await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
+
   const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
   await clienteInput.click();
   await clienteInput.fill(fixture.ingresso.cliente);
 
-  await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
-
-  await clienteInput.focus();
-  await modal.getByRole("button", { name: "Salva lavorazione" }).click();
+  await save.scrollIntoViewIfNeeded();
+  await save.click();
 }
 
 export async function submitCreateLavorazione(page: Page): Promise<void> {
