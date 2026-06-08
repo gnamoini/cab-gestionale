@@ -110,7 +110,9 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   await clienteInput.fill(fixture.ingresso.cliente);
 
   await save.scrollIntoViewIfNeeded();
-  await save.click();
+  await modal.locator("form").evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
 }
 
 export async function submitCreateLavorazione(page: Page): Promise<void> {

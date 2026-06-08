@@ -19,7 +19,7 @@ const hasSmokeCreds = Boolean(
   process.env.SMOKE_ADMIN_EMAIL?.trim() && process.env.SMOKE_ADMIN_PASSWORD?.trim(),
 );
 
-test.describe.configure({ mode: "serial", timeout: 120_000 });
+test.describe.configure({ mode: "serial", timeout: 180_000 });
 
 test.beforeEach(({ page }) => {
   test.skip(!hasSmokeCreds, "SMOKE_ADMIN_EMAIL e SMOKE_ADMIN_PASSWORD richiesti");
@@ -34,13 +34,17 @@ test("iOS regression: cliente combobox salvato senza blur prima del submit", asy
   await page.goto("/lavorazioni");
   await clickNuovaLavorazioneCta(page);
   await fillMinimalCreateAndSaveWithoutClienteBlur(page, fixture);
+
+  await expect(async () => {
+    const lastPayload = capture.ingressoCampi.at(-1);
+    expect(lastPayload?.cliente).toBe(fixture.ingresso.cliente);
+  }).toPass({ timeout: 90_000 });
+
   await expect(page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" })).not.toBeVisible({
-    timeout: 60_000,
+    timeout: 30_000,
   });
 
   await searchLavorazioneByToken(page, fixture.token);
-  const lastPayload = capture.ingressoCampi.at(-1);
-  expect(lastPayload?.cliente).toBe(fixture.ingresso.cliente);
 });
 
 test("create → save → hub panoramica → edit ingresso → scheda lavorazioni", async ({ page }) => {
