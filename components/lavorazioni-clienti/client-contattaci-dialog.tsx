@@ -76,7 +76,12 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
       </GestionaleModalScrollBody>
 
       <footer className={dsModalFormFooter}>
-        <button type="button" className={`${dsBtnNeutral} min-h-11`} onClick={onClose}>
+        <button
+          type="button"
+          className={`${dsBtnNeutral} min-h-11`}
+          onClick={onClose}
+          data-testid="smoke-contattaci-close"
+        >
           Chiudi
         </button>
       </footer>

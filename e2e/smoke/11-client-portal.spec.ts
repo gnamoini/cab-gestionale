@@ -37,7 +37,7 @@ test("client portal Contattaci modal shows contact links", async ({ page }) => {
     "mailto:service@autocompattatori.it",
   );
 
-  await dialog.getByRole("button", { name: "Chiudi" }).click();
+  await dialog.getByTestId("smoke-contattaci-close").click();
   await expect(dialog).not.toBeVisible();
   await expect(page).toHaveURL(/lavorazioni-clienti/);
 });
