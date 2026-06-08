@@ -115,8 +115,8 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
 
   const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
   await clienteInput.click();
-  await clienteInput.fill("");
-  await clienteInput.pressSequentially(fixture.ingresso.cliente, { delay: 5 });
+  await clienteInput.fill(fixture.ingresso.cliente);
+  await expect(clienteInput).toHaveValue(fixture.ingresso.cliente, { timeout: 15_000 });
 
   await save.scrollIntoViewIfNeeded();
   await save.click();

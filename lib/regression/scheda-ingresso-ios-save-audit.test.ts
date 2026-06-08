@@ -223,5 +223,6 @@ assert.match(editModal, /runSubmit/);
 const createModal = read("components/gestionale/lavorazioni/lavorazione-create-modal.tsx");
 assert.match(createModal, /useFormEngineSections/);
 assert.match(createModal, /runSubmit/);
+assert.match(createModal, /domCliente/);
 
 console.log("scheda-ingresso-ios-save-audit.test: OK");

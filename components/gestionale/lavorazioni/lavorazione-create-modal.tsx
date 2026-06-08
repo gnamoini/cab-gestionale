@@ -264,8 +264,15 @@ export function LavorazioneCreateModal({
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    await runSubmit(e.currentTarget, async (snap) => {
-      const currentFields = snap.fields;
+    const form = e.currentTarget;
+    await runSubmit(form, async (snap) => {
+      const domCliente =
+        form.querySelector<HTMLInputElement>('input[role="combobox"][aria-label="Cliente"]')?.value.trim() ??
+        "";
+      const currentFields =
+        domCliente && !snap.fields.cliente.trim()
+          ? { ...snap.fields, cliente: domCliente }
+          : snap.fields;
       const { stato: metaStato, priorita: metaPriorita, mezzoId: metaMezzoId } = snap.meta;
 
       if (!createdBy) {
