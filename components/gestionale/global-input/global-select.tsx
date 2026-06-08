@@ -270,13 +270,86 @@ export function GlobalSelect(props: GlobalSelectProps) {
     onValidityChange?.(isValid);
   }, [isValid, onValidityChange]);
 
+  const canClearCommittedFilter = useCallback(() => {
+    if (!value.trim()) return false;
+    return !isFilterNeutralValue(value, filterNeutralValues);
+  }, [value, filterNeutralValues]);
+
+  const commitBlur = useCallback(() => {
+    if (selectOnly) {
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
+    }
+    const rawSearch = inputRef.current?.value ?? searchText;
+    const trimmed = rawSearch.trim();
+    const typedPending = Boolean(trimmed && trimmed !== value.trim());
+    const userModified = editSessionRef.current.modified || typedPending;
+    editSessionRef.current.modified = false;
+    setOpen(false);
+    setActiveIndex(-1);
+    setTouched(true);
+    setFocused(false);
+    if (!trimmed) {
+      if (userModified) {
+        if (!isFilterVariant) {
+          if (value) onChange("");
+        } else if (canClearCommittedFilter()) {
+          onChange("");
+        }
+      }
+      setSearchText("");
+      return;
+    }
+    const committed = autocompleteCommitFromSearchText(rawSearch, mode, options, items, strictFromList);
+    if (committed && committed !== value) {
+      onChange(committed);
+    } else if (
+      !committed &&
+      trimmed &&
+      trimmed !== value &&
+      allowAdd &&
+      !isFilterVariant
+    ) {
+      // Submit flush (iOS): committa testo pendente; append all'elenco globale resta opzionale (canAdd).
+      onChange(trimmed);
+    }
+    setSearchText("");
+  }, [
+    selectOnly,
+    searchText,
+    value,
+    isFilterVariant,
+    canClearCommittedFilter,
+    mode,
+    options,
+    items,
+    strictFromList,
+    allowAdd,
+    onChange,
+  ]);
+
+  /** Tap fuori (es. Salva) chiude il menu: committa testo pendente invece di scartarlo. */
   const dismissDropdown = useCallback(() => {
+    if (selectOnly) {
+      setOpen(false);
+      setActiveIndex(-1);
+      return;
+    }
+    const domPending = inputRef.current?.value.trim() ?? "";
+    const hasPending =
+      editSessionRef.current.modified || Boolean(searchText.trim()) || Boolean(domPending);
+    if (hasPending) {
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+      commitBlur();
+      return;
+    }
     setOpen(false);
     setActiveIndex(-1);
     setFocused(false);
     editSessionRef.current.modified = false;
     setSearchText("");
-  }, []);
+  }, [selectOnly, searchText, commitBlur]);
 
   useDropdownOutsideDismiss(portalOpen, wrapRef, dropdownRef, dismissDropdown);
 
@@ -397,11 +470,6 @@ export function GlobalSelect(props: GlobalSelectProps) {
     setSearchText(autocompleteCommittedDisplayValue(engineInput));
   }, [engineInput]);
 
-  const canClearCommittedFilter = useCallback(() => {
-    if (!value.trim()) return false;
-    return !isFilterNeutralValue(value, filterNeutralValues);
-  }, [value, filterNeutralValues]);
-
   const beginEditing = useCallback(() => {
     editSessionRef.current.modified = false;
     setFocused(true);
@@ -428,60 +496,6 @@ export function GlobalSelect(props: GlobalSelectProps) {
       scheduleGestionaleFieldScroll(inputRef.current, { extraBottom: 20 });
     }
   }, [open, dismissDropdown]);
-
-  const commitBlur = useCallback(() => {
-    if (selectOnly) {
-      setOpen(false);
-      setActiveIndex(-1);
-      return;
-    }
-    const rawSearch = inputRef.current?.value ?? searchText;
-    const trimmed = rawSearch.trim();
-    const typedPending = Boolean(trimmed && trimmed !== value.trim());
-    const userModified = editSessionRef.current.modified || typedPending;
-    editSessionRef.current.modified = false;
-    setOpen(false);
-    setActiveIndex(-1);
-    setTouched(true);
-    setFocused(false);
-    if (!trimmed) {
-      if (userModified) {
-        if (!isFilterVariant) {
-          if (value) onChange("");
-        } else if (canClearCommittedFilter()) {
-          onChange("");
-        }
-      }
-      setSearchText("");
-      return;
-    }
-    const committed = autocompleteCommitFromSearchText(rawSearch, mode, options, items, strictFromList);
-    if (committed && committed !== value) {
-      onChange(committed);
-    } else if (
-      !committed &&
-      trimmed &&
-      trimmed !== value &&
-      allowAdd &&
-      !isFilterVariant
-    ) {
-      // Submit flush (iOS): committa testo pendente; append all'elenco globale resta opzionale (canAdd).
-      onChange(trimmed);
-    }
-    setSearchText("");
-  }, [
-    selectOnly,
-    searchText,
-    value,
-    isFilterVariant,
-    canClearCommittedFilter,
-    mode,
-    options,
-    items,
-    strictFromList,
-    allowAdd,
-    onChange,
-  ]);
 
   useEffect(() => {
     const input = inputRef.current;

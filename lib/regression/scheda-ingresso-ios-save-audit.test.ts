@@ -213,6 +213,8 @@ assert.match(globalSelect, /registerGestionaleComboboxFlush/);
 assert.match(globalSelect, /trimmed !== value/);
 assert.match(globalSelect, /allowAdd/);
 assert.match(globalSelect, /unregisterGestionaleComboboxFlush/);
+assert.match(globalSelect, /hasPending/);
+assert.match(globalSelect, /commitBlur\(\)/);
 
 const focusScope = read("components/gestionale/gestionale-form-focus-scope.tsx");
 assert.match(focusScope, /onSubmitCapture/);
