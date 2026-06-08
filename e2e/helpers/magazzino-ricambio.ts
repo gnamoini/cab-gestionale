@@ -24,12 +24,13 @@ export async function createRicambioLenientSmoke(
 
   const modal = page.getByRole("dialog").filter({ hasText: "Nuovo ricambio" });
   await expect(modal).toBeVisible();
+  // Draft UUID + reset form avvengono in useEffect post-mount — attendere hub foto prima di digitare.
+  await expect(modal.getByRole("button", { name: /^Aggiungi$/i })).toBeVisible({ timeout: 20_000 });
 
-  const codiceInput = modal.getByLabel(/codice fornitore originale/i).first();
+  const codiceInput = modal.locator("#magazzino-ricambio-codice-oe");
+  await expect(codiceInput).toBeEditable({ timeout: 10_000 });
   await codiceInput.click();
-  await codiceInput.fill("");
-  await codiceInput.pressSequentially(codice, { delay: 5 });
-  await codiceInput.blur();
+  await codiceInput.fill(codice);
   const codiceNormalized = codice.toLocaleUpperCase("it-IT");
   await expect(codiceInput).toHaveValue(codiceNormalized, { timeout: 10_000 });
 
