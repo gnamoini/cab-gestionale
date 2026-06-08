@@ -10,7 +10,7 @@ import { useUsernameAvailability } from "@/src/hooks/use-username-availability";
 import { sanitizeUsernameInput, usernameFieldError } from "@/src/lib/auth/username";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { APP_ROLES, roleLabel, type AppRole } from "@/src/lib/auth/permissions";
-import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { GlobalSelect, GlobalSettingsListSelect, gestionaleFormFocusScopeProps } from "@/components/gestionale/global-input";
 import { SecurityInlineNotice } from "@/components/dashboard/security/security-inline-notice";
 import {
   buildKnownClientiSet,
@@ -135,7 +135,12 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
         Creazione tramite Supabase Auth e tabella <code className="rounded bg-[var(--cab-surface-2)] px-1">profiles</code>.
         Ruoli ufficiali: admin, manager, operatore, cliente e guest.
       </p>
-      <form id="security-create-user-form" className="flex min-w-0 flex-col gap-3" onSubmit={(ev) => void handleSubmit(ev)}>
+      <form
+        id="security-create-user-form"
+        className="flex min-w-0 flex-col gap-3"
+        {...gestionaleFormFocusScopeProps()}
+        onSubmit={(ev) => void handleSubmit(ev)}
+      >
         <label className="block min-w-0">
           <span className={dsSectionTitle}>Nome</span>
           <input

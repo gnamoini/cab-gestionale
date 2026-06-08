@@ -41,4 +41,14 @@ assert.match(ingressoForm, /id=\{dataIngressoFieldId\}/);
 assert.match(anagrafica, /inputMode="decimal"/);
 assert.match(anagrafica, /inputMode="numeric"/);
 
+assert.match(
+  ingressoForm,
+  /gestionaleMultilineEnterProps/,
+  "scheda ingresso: textarea multiriga devono usare gestionaleMultilineEnterProps",
+);
+
+const modals = read("components/gestionale/lavorazioni/lavorazioni-modals.tsx");
+assert.match(ingressoForm, /GestionaleModalScrollBody/);
+assert.match(modals, /useMobileModalKeyboard/);
+
 console.log("lavorazioni-inputs-audit.test.ts OK");

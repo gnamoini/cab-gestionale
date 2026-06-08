@@ -4,7 +4,10 @@ import { useState, type FormEvent } from "react";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
-import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import {
+  gestionaleFormFocusScopeProps,
+  gestionaleMultilineEnterProps,
+} from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import {
   GlobalHierarchyMarcaSelect,
@@ -153,7 +156,7 @@ export function LavorazioneEditModal({
 
           <label className="block">
             <span className={dsLabel}>Note</span>
-            <textarea className={`${dsInput} mt-1 min-h-[100px] w-full resize-y`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} disabled={update.isPending || updateMezzo.isPending} rows={4} maxLength={TEXT_LONG} />
+            <textarea {...gestionaleMultilineEnterProps} className={`${dsInput} mt-1 min-h-[100px] w-full resize-y`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} disabled={update.isPending || updateMezzo.isPending} rows={4} maxLength={TEXT_LONG} />
           </label>
         </GestionaleModalScrollBody>
 

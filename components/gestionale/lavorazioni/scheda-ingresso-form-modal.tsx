@@ -34,7 +34,10 @@ import {
   useSchedaIngressoMezzoPrompt,
   type UseSchedaIngressoMezzoPromptResult,
 } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
-import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import {
+  gestionaleFormFocusScopeProps,
+  gestionaleMultilineEnterProps,
+} from "@/components/gestionale/gestionale-form-focus-scope";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { LoadingButton } from "@/components/design-system";
 import {
@@ -394,6 +397,7 @@ export function SchedaIngressoFormBody({
           <FormField label="Descrizione anomalia" htmlFor={anomaliaFieldId}>
             <textarea
               id={anomaliaFieldId}
+              {...gestionaleMultilineEnterProps}
               className={`${dsInput} min-h-[72px] w-full resize-y`}
               value={fields.descrizioneAnomalia}
               onChange={(e) => onPatch({ descrizioneAnomalia: sliceInputValue(e.target.value, TEXT_EXTRA) })}
@@ -405,6 +409,7 @@ export function SchedaIngressoFormBody({
           <FormField label="Note" htmlFor={noteFieldId}>
             <textarea
               id={noteFieldId}
+              {...gestionaleMultilineEnterProps}
               className={`${dsInput} min-h-[56px] w-full resize-y`}
               value={fields.noteIntervento ?? ""}
               onChange={(e) => onPatch({ noteIntervento: sliceInputValue(e.target.value, TEXT_LONG) })}
@@ -462,11 +467,17 @@ export function SchedaIngressoEditModal({
     if (open) setDraft(initialFields);
   }, [open, initialFields]);
 
-  const setFields = useCallback((fields: SchedaIngressoFields) => setDraft(fields), []);
-  const onPatch = useCallback(
-    (patch: Partial<SchedaIngressoFields>) => setDraft((prev) => ({ ...prev, ...patch })),
-    [],
-  );
+  const setFields = useCallback((fields: SchedaIngressoFields) => {
+    draftRef.current = fields;
+    setDraft(fields);
+  }, []);
+  const onPatch = useCallback((patch: Partial<SchedaIngressoFields>) => {
+    setDraft((prev) => {
+      const next = { ...prev, ...patch };
+      draftRef.current = next;
+      return next;
+    });
+  }, []);
 
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
   const mezziUi = useMemo(() => (mezziQ.data ?? []).map(toMezzoUI), [mezziQ.data]);

@@ -49,7 +49,13 @@ export {
 export {
   GestionaleFormFocusScope,
   gestionaleFormFocusScopeProps,
+  gestionaleMultilineEnterProps,
 } from "@/components/gestionale/gestionale-form-focus-scope";
+export {
+  prepareGestionaleModalSave,
+  prepareGestionaleModalSaveFrom,
+  resolveGestionaleModalRoot,
+} from "@/lib/ui/gestionale-modal-save-prep";
 export { GlobalAnchoredMenu } from "@/components/gestionale/global-input/global-anchored-menu";
 export {
   useGlobalDropdownPortal,

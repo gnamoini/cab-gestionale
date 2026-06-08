@@ -17,7 +17,10 @@ import {
 } from "@/lib/magazzino/form";
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
-import { GestionaleFormFocusScope } from "@/components/gestionale/gestionale-form-focus-scope";
+import {
+  GestionaleFormFocusScope,
+  gestionaleMultilineEnterProps,
+} from "@/components/gestionale/gestionale-form-focus-scope";
 import { CloseButton } from "@/components/design-system";
 import { dsBtnNeutral, dsBtnPrimary, dsFocus, dsInput, dsLabel, dsSegmentedBtnOff, dsSegmentedBtnOn, dsSegmentedWrap, dsStepperBtn, dsTypoSmall } from "@/lib/ui/design-system";
 import { globalInputInvalidRing } from "@/lib/ui/global-input";
@@ -386,6 +389,7 @@ export function RicambioFormFields({
       </RicambioField>
       <RicambioField label="Note" htmlFor="magazzino-ricambio-note">
         <textarea
+          {...gestionaleMultilineEnterProps}
           id="magazzino-ricambio-note"
           value={form.note}
           onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}

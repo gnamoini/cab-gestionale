@@ -143,12 +143,12 @@ export function GlobalFixedListPillSelect({
         disabled={disabled}
         title={title}
         onFocus={() => {
-          scheduleGestionaleFieldScroll(triggerRef.current, { extraTop: 8, extraBottom: 20 });
+          scheduleGestionaleFieldScroll(triggerRef.current, { extraBottom: 20 });
         }}
         onClick={() => {
           if (!disabled) {
             setOpen((o) => !o);
-            scheduleGestionaleFieldScroll(triggerRef.current, { extraTop: 8, extraBottom: 20 });
+            scheduleGestionaleFieldScroll(triggerRef.current, { extraBottom: 20 });
           }
         }}
       >

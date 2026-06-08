@@ -6,6 +6,8 @@ import { IconActionButton } from "@/components/design-system";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { prepareGestionaleModalSave } from "@/lib/ui/gestionale-modal-save-prep";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { ensurePreventivoStruttura, partitionRigheRicambi, pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
@@ -163,6 +165,7 @@ export function PreventiviEditorModal({
 }) {
   const queryClient = useQueryClient();
   const baselineRef = useRef<PreventivoRecord | null>(null);
+  const modalRootRef = useRef<HTMLDivElement | null>(null);
   const draftRef = useRef<PreventivoRecord | null>(null);
   const [draft, setDraft] = useState<PreventivoRecord | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
@@ -374,6 +377,7 @@ export function PreventiviEditorModal({
   }
 
   async function onSalva() {
+    prepareGestionaleModalSave(modalRootRef.current);
     const cur = draftRef.current;
     if (!cur) return;
     const now = new Date().toISOString();
@@ -444,6 +448,7 @@ export function PreventiviEditorModal({
   return (
     <LavorazioniModalShell
       modalSize="formLarge"
+      modalRootRef={modalRootRef}
       onRequestClose={requestClose}
       title={
         isNew
@@ -553,6 +558,7 @@ export function PreventiviEditorModal({
             <FormSection title="Lavorazioni effettuate">
               <FormField label="Lavorazioni specifiche (testo cliente)" htmlFor={lavorazioniFieldId}>
                 <textarea
+                  {...gestionaleMultilineEnterProps}
                   id={lavorazioniFieldId}
                   className={`${dsInput} min-h-[6rem] resize-y`}
                   value={composeLavorazioniClienteEditorText(draft.descrizioneLavorazioniCliente)}
@@ -854,6 +860,7 @@ export function PreventiviEditorModal({
             <FormSection title="Note">
               <FormField label="Note finali" htmlFor={noteFieldId}>
                 <textarea
+                  {...gestionaleMultilineEnterProps}
                   id={noteFieldId}
                   className={`${dsInput} min-h-[4rem] resize-y`}
                   value={draft.noteFinali}

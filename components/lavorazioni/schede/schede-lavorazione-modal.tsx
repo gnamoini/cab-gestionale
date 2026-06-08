@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
+import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { prepareGestionaleModalSave } from "@/lib/ui/gestionale-modal-save-prep";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
 import { SchedaIngressoPanoramicaAnagraficaContent } from "@/components/gestionale/lavorazioni/scheda-ingresso-panoramica-view";
@@ -371,6 +373,7 @@ export function SchedeLavorazioneModal({
   useLayoutEffect(() => {
     draftRef.current = draft;
   }, [draft]);
+  const modalRootRef = useRef<HTMLDivElement | null>(null);
   const ingressoDraftRef = useRef<SchedaIngressoFields | null>(null);
   const [ingressoFormOpen, setIngressoFormOpen] = useState(false);
   const [ingressoEditorInitial, setIngressoEditorInitial] = useState<SchedaIngressoFields | null>(null);
@@ -779,6 +782,7 @@ export function SchedeLavorazioneModal({
   );
 
   function commitIngressoSave(): boolean {
+    prepareGestionaleModalSave(modalRootRef.current);
     const ig = ingressoDraftRef.current;
     const base = draftRef.current.ingresso;
     if (!ig || !base) return false;
@@ -822,6 +826,7 @@ export function SchedeLavorazioneModal({
   }
 
   function commitLavorazioniSave(): boolean {
+    prepareGestionaleModalSave(modalRootRef.current);
     const doc = lavDoc;
     if (!doc || !draftRef.current.lavorazioni) return false;
     for (let i = 0; i < doc.campi.righe.length; i += 1) {
@@ -871,6 +876,7 @@ export function SchedeLavorazioneModal({
   }
 
   function commitRicambiSave(): boolean {
+    prepareGestionaleModalSave(modalRootRef.current);
     const doc = ricDoc;
     if (!doc || !draftRef.current.ricambi) return false;
     for (let i = 0; i < doc.campi.righe.length; i += 1) {
@@ -975,6 +981,7 @@ export function SchedeLavorazioneModal({
       <LavorazioniModalShell
         modalSize="formLarge"
         modalHeight={frozenDialogSize === "compact" ? "compact" : "standard"}
+        modalRootRef={modalRootRef}
         onRequestClose={onClose}
         titleId="schede-lav-detail-title"
         header={
@@ -1516,6 +1523,7 @@ function AutoGrowTextarea({
   }, [value, readOnly]);
   return (
     <textarea
+      {...gestionaleMultilineEnterProps}
       ref={ta}
       rows={2}
       className={className}

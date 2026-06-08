@@ -1,7 +1,12 @@
 "use client";
 
-import type { KeyboardEvent, ReactNode } from "react";
+import type { FormEvent, KeyboardEvent, ReactNode } from "react";
+import { flushSync } from "react-dom";
 import { gestionaleAdvanceFocusOnEnter } from "@/lib/ui/gestionale-focus-navigation";
+import { flushGestionalePendingCommits } from "@/lib/ui/gestionale-form-submit-flush";
+
+/** Props SSOT per textarea multiriga: Enter inserisce newline, non avanza il focus. */
+export const gestionaleMultilineEnterProps = { "data-gestionale-enter": "ignore" } as const;
 
 export type GestionaleFormFocusScopeProps = {
   children: ReactNode;
@@ -17,6 +22,12 @@ export type GestionaleFormFocusScopeProps = {
 function onScopeKeyDown(e: KeyboardEvent) {
   if (e.defaultPrevented) return;
   gestionaleAdvanceFocusOnEnter(e);
+}
+
+/** Capture: commit combobox + flushSync prima dell'handler submit (tap Salva su iOS senza blur). */
+function onScopeSubmitCapture(e: FormEvent<HTMLFormElement>) {
+  flushGestionalePendingCommits(e.currentTarget);
+  flushSync(() => {});
 }
 
 export function GestionaleFormFocusScope({
@@ -35,9 +46,11 @@ export function GestionaleFormFocusScope({
 export function gestionaleFormFocusScopeProps(): {
   "data-gestionale-focus-scope": true;
   onKeyDown: (e: KeyboardEvent<HTMLElement>) => void;
+  onSubmitCapture: (e: FormEvent<HTMLFormElement>) => void;
 } {
   return {
     "data-gestionale-focus-scope": true,
     onKeyDown: onScopeKeyDown,
+    onSubmitCapture: onScopeSubmitCapture,
   };
 }

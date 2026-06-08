@@ -8,7 +8,7 @@ import { gestionaleModalScrollBodyClass } from "@/lib/ui/modal-max-width-class";
 export const CAB_MODAL_ROOT_ATTR = "data-cab-modal-root";
 export const CAB_MODAL_SCROLL_ATTR = "data-cab-modal-scroll";
 export const CAB_IOS_NO_FOCUS_SCROLL_ATTR = "data-cab-ios-no-focus-scroll";
-/** Contenitore sezione/card (marker layout; lo scroll focus usa solo etichetta campo). */
+/** Contenitore sezione/card (titolo h3 incluso nel rettangolo scroll focus). */
 export const CAB_FOCUS_SCROLL_GROUP_ATTR = "data-cab-focus-scroll-group";
 /** Titolo esplicito nel gruppo (se non è h3/h4). */
 export const CAB_FOCUS_SCROLL_TITLE_ATTR = "data-cab-focus-scroll-title";
@@ -37,6 +37,20 @@ export type ScrollFieldIntoModalOptions = {
 };
 
 const MOBILE_FOCUS_SCROLL_MQ = "(max-width: 767px)";
+
+/** Spazio visivo sopra label/campo su mobile (sotto browser chrome / header modale). */
+export const MOBILE_FOCUS_EXTRA_TOP = 16;
+export const DESKTOP_FOCUS_EXTRA_TOP = 8;
+export const MOBILE_FOCUS_EXTRA_BOTTOM = 16;
+export const DESKTOP_FOCUS_EXTRA_BOTTOM = 12;
+
+export function resolveFocusExtraTop(): number {
+  return isMobileFocusScrollViewport() ? MOBILE_FOCUS_EXTRA_TOP : DESKTOP_FOCUS_EXTRA_TOP;
+}
+
+export function resolveFocusExtraBottom(): number {
+  return isMobileFocusScrollViewport() ? MOBILE_FOCUS_EXTRA_BOTTOM : DESKTOP_FOCUS_EXTRA_BOTTOM;
+}
 
 function isMobileFocusScrollViewport(): boolean {
   if (typeof window === "undefined") return false;
@@ -279,11 +293,19 @@ export function computeFocusScrollDelta(
   return deltaMax;
 }
 
-/** Rettangolo scroll: top = min(etichetta campo, campo); bottom = blocco label o campo. */
+/** Rettangolo scroll: top = min(titolo sezione, etichetta campo, campo); bottom = blocco label o campo. */
 export function getFocusScrollRect(field: HTMLElement): FocusScrollRect {
   const fieldRect = field.getBoundingClientRect();
   const anchorTops: number[] = [];
   let bottom = fieldRect.bottom;
+
+  const group = findFocusScrollGroup(field);
+  if (group) {
+    const titleEl = findGroupTitleElement(group, field);
+    if (titleEl) {
+      anchorTops.push(titleEl.getBoundingClientRect().top);
+    }
+  }
 
   const labelBlock = findFieldLabelBlock(field);
   if (labelBlock) {
@@ -318,8 +340,8 @@ export function scrollFieldIntoModalView(
   const container = findModalScrollContainer(field);
   if (!container) return false;
 
-  const extraBottom = options.extraBottom ?? 12;
-  const extraTop = options.extraTop ?? 8;
+  const extraBottom = options.extraBottom ?? resolveFocusExtraBottom();
+  const extraTop = options.extraTop ?? resolveFocusExtraTop();
   const containerRect = container.getBoundingClientRect();
   const scrollRect = getFocusScrollRect(field);
   const headerBottom = findModalHeaderBottom(field);
@@ -378,7 +400,13 @@ export function scheduleGestionaleFieldScroll(
   options: ScrollFieldIntoModalOptions = {},
 ): void {
   if (!field || typeof window === "undefined") return;
-  const run = (behavior: ScrollBehavior) => scrollGestionaleFieldIntoModal(field, { ...options, behavior });
+  const merged: ScrollFieldIntoModalOptions = {
+    extraTop: resolveFocusExtraTop(),
+    extraBottom: resolveFocusExtraBottom(),
+    ...options,
+  };
+  const run = (behavior: ScrollBehavior) =>
+    scrollGestionaleFieldIntoModal(field, { ...merged, behavior });
   window.requestAnimationFrame(() => {
     run("smooth");
     window.requestAnimationFrame(() => run("auto"));
@@ -420,6 +448,10 @@ export const MobileModalBehaviorLayer = {
   findGestionaleFieldContainer,
   findModalHeaderBottom,
   isGestionaleFocusableField,
+  MOBILE_FOCUS_EXTRA_TOP,
+  DESKTOP_FOCUS_EXTRA_TOP,
+  resolveFocusExtraTop,
+  resolveFocusExtraBottom,
   resolveFocusScrollTarget,
   scrollGestionaleFieldIntoModal,
   scheduleGestionaleFieldScroll,

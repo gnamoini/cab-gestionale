@@ -10,7 +10,10 @@ import {
   GestionaleModalShell,
 } from "@/components/gestionale/gestionale-modal";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
-import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import {
+  gestionaleFormFocusScopeProps,
+  gestionaleMultilineEnterProps,
+} from "@/components/gestionale/gestionale-form-focus-scope";
 import type { DashboardPromemoriaRecurrenceInput } from "@/lib/dashboard/dashboard-promemoria-types";
 import type { DashboardPromemoriaRow } from "@/lib/dashboard/dashboard-promemoria-types";
 import {
@@ -252,6 +255,7 @@ export function DashboardPromemoriaFormModal({
                 Descrizione (facoltativa)
               </span>
               <textarea
+                {...gestionaleMultilineEnterProps}
                 id={descriptionFieldId}
                 className={`${dsInput} min-h-[5rem] resize-y`}
                 value={description}

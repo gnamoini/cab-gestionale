@@ -27,6 +27,10 @@ import {
   globalInputInvalidRing,
 } from "@/lib/ui/global-input";
 import { scheduleFocusNextGestionaleField } from "@/lib/ui/gestionale-focus-navigation";
+import {
+  registerGestionaleComboboxFlush,
+  unregisterGestionaleComboboxFlush,
+} from "@/lib/ui/gestionale-form-submit-flush";
 import { scheduleGestionaleFieldScroll } from "@/lib/ui/mobile-modal-behavior";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import type { ListSelectItem } from "@/lib/ui/list-select-items";
@@ -407,7 +411,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     } else {
       seedSearchFromCommitted();
     }
-    scheduleGestionaleFieldScroll(inputRef.current, { extraTop: 8, extraBottom: 20 });
+    scheduleGestionaleFieldScroll(inputRef.current, { extraBottom: 20 });
   }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, value]);
 
   const handleSelectOnlyTriggerMouseDown = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
@@ -421,11 +425,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
     } else {
       setOpen(true);
       setActiveIndex(-1);
-      scheduleGestionaleFieldScroll(inputRef.current, { extraTop: 8, extraBottom: 20 });
+      scheduleGestionaleFieldScroll(inputRef.current, { extraBottom: 20 });
     }
   }, [open, dismissDropdown]);
 
-  const commitBlur = () => {
+  const commitBlur = useCallback(() => {
     if (selectOnly) {
       setOpen(false);
       setActiveIndex(-1);
@@ -452,7 +456,29 @@ export function GlobalSelect(props: GlobalSelectProps) {
     const committed = autocompleteCommitFromSearchText(searchText, mode, options, items, strictFromList);
     if (committed && committed !== value) onChange(committed);
     setSearchText("");
-  };
+  }, [
+    selectOnly,
+    searchText,
+    value,
+    isFilterVariant,
+    canClearCommittedFilter,
+    mode,
+    options,
+    items,
+    strictFromList,
+    onChange,
+  ]);
+
+  useEffect(() => {
+    const input = inputRef.current;
+    if (!input) return;
+    const flush = () => {
+      if (blurTimer.current) clearTimeout(blurTimer.current);
+      commitBlur();
+    };
+    registerGestionaleComboboxFlush(input, flush);
+    return () => unregisterGestionaleComboboxFlush(input);
+  }, [commitBlur]);
 
   const fuzzyLabel =
     itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object"
@@ -617,7 +643,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         }}
         onFocus={() => {
           if (selectOnly) {
-            scheduleGestionaleFieldScroll(inputRef.current, { extraTop: 8, extraBottom: 20 });
+            scheduleGestionaleFieldScroll(inputRef.current, { extraBottom: 20 });
             return;
           }
           beginEditing();

@@ -26,6 +26,7 @@ import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/g
 import { dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
   erpBtnNeutral,
   erpBtnSoftOrange,
@@ -211,7 +212,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
           {tabBtn("attivita", `Attività (${attivitaCount})`)}
         </div>
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain p-4">
+        <GestionaleModalScrollBody className="min-h-0 min-w-0 flex-1">
           {hubQuery.isLoading && !hub ? <p className="text-sm text-zinc-500">Caricamento…</p> : null}
 
           {tab === "panoramica" && hub ? (
@@ -413,7 +414,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
               <LavorazioneAttivitaPanel feedInput={attivitaFeedInput} />
             )
           ) : null}
-        </div>
+        </GestionaleModalScrollBody>
     </GestionaleModalShell>
   );
 }

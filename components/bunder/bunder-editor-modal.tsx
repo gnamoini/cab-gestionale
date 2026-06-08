@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { prepareGestionaleModalSave } from "@/lib/ui/gestionale-modal-save-prep";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
-import { GlobalDatePickerYmd, GlobalSelect } from "@/components/gestionale/global-input";
+import { GlobalDatePickerYmd, GlobalSelect, gestionaleMultilineEnterProps } from "@/components/gestionale/global-input";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
 import { applicaHintCliente, hintsByCliente } from "@/lib/bunder/bunder-cliente-hints";
@@ -46,6 +47,7 @@ export function BunderEditorModal({
   onClose: () => void;
   onSave: (d: BunderCommercialDocument) => void;
 }) {
+  const modalRootRef = useRef<HTMLDivElement | null>(null);
   const [local, setLocal] = useState<BunderCommercialDocument | null>(null);
   const [baselineSnapshot, setBaselineSnapshot] = useState<string | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
@@ -137,6 +139,7 @@ export function BunderEditorModal({
   }, [local]);
 
   const salva = useCallback(() => {
+    prepareGestionaleModalSave(modalRootRef.current);
     if (!local) return;
     const iso = new Date().toISOString();
     const next: BunderCommercialDocument = {
@@ -212,6 +215,7 @@ export function BunderEditorModal({
     <>
     <GestionaleModalShell
       modalSize="formLarge"
+      modalRootRef={modalRootRef}
       onRequestClose={requestClose}
       header={
         <GestionaleModalHeader
@@ -403,6 +407,7 @@ export function BunderEditorModal({
           <label htmlFor="bunder-edit-intro" className="mt-3 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
             Introduzione
             <textarea
+              {...gestionaleMultilineEnterProps}
               id="bunder-edit-intro"
               className={`${dsInput} mt-1 min-h-[72px] w-full resize-y`}
               value={local.intro}
@@ -465,6 +470,7 @@ export function BunderEditorModal({
                       </td>
                       <td className="px-1 py-1">
                         <textarea
+                          {...gestionaleMultilineEnterProps}
                           className={`${dsInput} min-h-[48px] min-w-[12rem] resize-y py-1 text-xs`}
                           value={r.descrizioneTecnica}
                           aria-label={`Descrizione tecnica riga ${idx + 1}`}
@@ -527,6 +533,7 @@ export function BunderEditorModal({
           <label htmlFor="bunder-edit-clausole" className="mt-4 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
             Clausole legali
             <textarea
+              {...gestionaleMultilineEnterProps}
               id="bunder-edit-clausole"
               className={`${dsInput} mt-1 min-h-[120px] w-full resize-y`}
               value={local.clausoleLegali}
@@ -545,6 +552,7 @@ export function BunderEditorModal({
           <label htmlFor="bunder-edit-note-firma" className="mt-3 block text-xs font-semibold text-zinc-600 dark:text-zinc-300">
             Firma / note piè pagina
             <textarea
+              {...gestionaleMultilineEnterProps}
               id="bunder-edit-note-firma"
               className={`${dsInput} mt-1 min-h-[56px] w-full resize-y`}
               value={local.noteFirma}

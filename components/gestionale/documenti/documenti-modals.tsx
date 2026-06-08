@@ -12,7 +12,10 @@ import {
 } from "@/lib/documenti/documenti-form-validation";
 import type { DocumentoGestionale, DocumentoTipoFile, DocumentoApplicabilita } from "@/lib/types/gestionale";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import {
+  gestionaleFormFocusScopeProps,
+  gestionaleMultilineEnterProps,
+} from "@/components/gestionale/gestionale-form-focus-scope";
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
@@ -381,6 +384,7 @@ export function UploadDocumentoModal({
           <label htmlFor="doc-upload-note" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note (facoltative)
             <textarea
+              {...gestionaleMultilineEnterProps}
               id="doc-upload-note"
               className={`${inputClass} mt-1 min-h-[72px] resize-y`}
               value={note}
@@ -692,6 +696,7 @@ export function DocumentoEditModal({
           <label htmlFor="doc-edit-note" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note
             <textarea
+              {...gestionaleMultilineEnterProps}
               id="doc-edit-note"
               className={`${inputClass} mt-1 min-h-[72px] resize-y`}
               value={note}

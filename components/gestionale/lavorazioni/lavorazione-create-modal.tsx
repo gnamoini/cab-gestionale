@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
@@ -106,7 +106,21 @@ export function LavorazioneCreateModal({
     [mezziUi, mezzi],
   );
 
-  const [fields, setFields] = useState<SchedaIngressoFields>(() => emptySchedaIngressoFields(""));
+  const [fields, setFieldsState] = useState<SchedaIngressoFields>(() => emptySchedaIngressoFields(""));
+  const fieldsRef = useRef(fields);
+  const setFields = useCallback(
+    (next: SchedaIngressoFields | ((prev: SchedaIngressoFields) => SchedaIngressoFields)) => {
+      setFieldsState((prev) => {
+        const resolved = typeof next === "function" ? next(prev) : next;
+        fieldsRef.current = resolved;
+        return resolved;
+      });
+    },
+    [],
+  );
+  useLayoutEffect(() => {
+    fieldsRef.current = fields;
+  }, [fields]);
   const [mezzoId, setMezzoId] = useState("");
   const [stato, setStato] = useState("");
   const [priorita, setPriorita] = useState<PrioritaLavorazione>("media");
@@ -118,9 +132,10 @@ export function LavorazioneCreateModal({
   /** Lavorazione già creata ma scheda ingresso non sincronizzata — retry solo persist. */
   const createdLavorazioneIdRef = useRef<string | null>(null);
 
-  const patch = useCallback((p: Partial<SchedaIngressoFields>) => {
-    setFields((f) => ({ ...f, ...p }));
-  }, []);
+  const patch = useCallback(
+    (p: Partial<SchedaIngressoFields>) => setFields((f) => ({ ...f, ...p })),
+    [setFields],
+  );
 
   const mezzoPrompt = useSchedaIngressoMezzoPrompt({
     fields,
@@ -219,6 +234,7 @@ export function LavorazioneCreateModal({
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    const currentFields = fieldsRef.current;
     if (!createdBy) {
       gestToast.validation("Devi essere autenticato per creare una lavorazione.");
       return;
@@ -228,7 +244,7 @@ export function LavorazioneCreateModal({
       gestToast.validation("Seleziona uno stato tra quelli configurati in Configurazione globale.");
       return;
     }
-    if (!fields.cliente.trim() || !fields.marcaAttrezzatura.trim()) {
+    if (!currentFields.cliente.trim() || !currentFields.marcaAttrezzatura.trim()) {
       gestToast.validation("Cliente e marca attrezzatura sono obbligatori.");
       return;
     }
@@ -237,8 +253,8 @@ export function LavorazioneCreateModal({
       return;
     }
 
-    const ymd = itDateToYmd(fields.dataIngresso) || new Date().toISOString().slice(0, 10);
-    const noteBlob = fields.noteIntervento.trim() || null;
+    const ymd = itDateToYmd(currentFields.dataIngresso) || new Date().toISOString().slice(0, 10);
+    const noteBlob = currentFields.noteIntervento.trim() || null;
     setSubmitError(null);
     setSchedaSyncError(null);
 
@@ -249,7 +265,7 @@ export function LavorazioneCreateModal({
       if (!lavorazioneId) {
         const catalog = await resolveFreshCatalog();
         const { mezzoId: finalMezzoId } = await upsertMezzoFromSchedaIngresso({
-          fields,
+          fields: currentFields,
           mezziCatalog: catalog,
           preferredMezzoId: mezzoId.trim() || null,
           create: (data) => createMezzo.mutateAsync(data),
@@ -276,7 +292,7 @@ export function LavorazioneCreateModal({
         ingresso: {
           ...newSchedaMeta("ingresso", createdBy),
           tipo: "ingresso",
-          campi: { ...fields },
+          campi: { ...currentFields },
         },
         lavorazioni: store[lavorazioneId]?.lavorazioni ?? null,
         ricambi: store[lavorazioneId]?.ricambi ?? null,

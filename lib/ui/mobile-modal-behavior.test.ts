@@ -8,7 +8,9 @@ import {
   CAB_MODAL_SCROLL_ATTR,
   computeFocusScrollDelta,
   computeKeyboardInset,
+  DESKTOP_FOCUS_EXTRA_TOP,
   minFocusScrollTop,
+  MOBILE_FOCUS_EXTRA_TOP,
   MobileModalBehaviorLayer,
 } from "@/lib/ui/mobile-modal-behavior";
 
@@ -28,6 +30,10 @@ assert.equal(MobileModalBehaviorLayer.focusScrollGroupAttr, CAB_FOCUS_SCROLL_GRO
 assert.equal(minFocusScrollTop(120, []), 120);
 assert.equal(minFocusScrollTop(120, [80, 95]), 80);
 assert.equal(minFocusScrollTop(50, [80, 95]), 50);
+assert.equal(minFocusScrollTop(200, [60, 95, 110]), 60, "section title + label anchors pull scroll top up");
+
+assert.ok(MOBILE_FOCUS_EXTRA_TOP >= 16);
+assert.ok(DESKTOP_FOCUS_EXTRA_TOP < MOBILE_FOCUS_EXTRA_TOP);
 
 assert.equal(computeFocusScrollDelta({ top: 100, bottom: 150, left: 0, right: 0 }, 50, 200), 0);
 
@@ -49,21 +55,31 @@ assert.equal(
   "field too high: scroll up",
 );
 
+assert.equal(
+  computeFocusScrollDelta({ top: 55, bottom: 140, left: 0, right: 0 }, 50, 100),
+  5,
+  "tall scroll rect in narrow band: prefer deltaMax to keep section top near visibleTop",
+);
+
 const behaviorSrc = readFileSync(join(root, "lib/ui/mobile-modal-behavior.ts"), "utf8");
 assert.match(behaviorSrc, /computeFocusScrollDelta/);
 assert.match(behaviorSrc, /getFocusScrollRect\(field\)/);
 assert.match(behaviorSrc, /computeFocusScrollDelta\(scrollRect/);
 assert.match(behaviorSrc, /findFieldLabelBlock/);
+assert.match(behaviorSrc, /findFocusScrollGroup/);
+assert.match(behaviorSrc, /findGroupTitleElement/);
+assert.match(behaviorSrc, /resolveFocusExtraTop/);
+assert.match(behaviorSrc, /MOBILE_FOCUS_EXTRA_TOP/);
 assert.match(behaviorSrc, /findModalHeaderBottom/);
 assert.match(behaviorSrc, /findGestionaleFieldContainer/);
 assert.match(behaviorSrc, /isGestionaleFocusableField/);
 assert.match(behaviorSrc, /scrollGestionaleFieldIntoModal/);
 assert.match(behaviorSrc, /scheduleGestionaleFieldScroll/);
 assert.match(behaviorSrc, /isGestionaleListTriggerButton/);
-assert.doesNotMatch(
+assert.match(
   behaviorSrc,
   /getFocusScrollRect[\s\S]*findGroupTitleElement/,
-  "focus scroll must not pull section title into view",
+  "focus scroll includes section title in scroll rect",
 );
 
 const selectSrc = readFileSync(
@@ -129,5 +145,8 @@ assert.match(keyboardHookSrc, /isVirtualKeyboardClosing/);
 assert.match(keyboardHookSrc, /keyboardClosing/);
 assert.match(keyboardHookSrc, /preserveModalScrollTop/);
 assert.match(keyboardHookSrc, /if \(closing\)/);
+assert.match(keyboardHookSrc, /KEYBOARD_SETTLE_MS/);
+assert.match(keyboardHookSrc, /keyboardOpening/);
+assert.match(keyboardHookSrc, /resolveFocusExtraTop/);
 
 console.log("mobile-modal-behavior.test.ts OK");

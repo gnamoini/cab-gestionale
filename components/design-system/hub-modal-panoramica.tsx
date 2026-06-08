@@ -3,6 +3,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
+import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { prepareGestionaleModalSaveFrom } from "@/lib/ui/gestionale-modal-save-prep";
 import {
   dsBtnNeutral,
   dsBtnPrimary,
@@ -322,6 +324,7 @@ export function HubModalPanoramicaNoteEditor({
   return (
     <div className="space-y-2">
       <textarea
+        {...gestionaleMultilineEnterProps}
         className={`${dsInput} min-h-[4.5rem] w-full resize-none overflow-y-auto text-xs leading-snug`}
         value={text}
         onChange={(e) => {
@@ -350,7 +353,10 @@ export function HubModalPanoramicaNoteEditor({
             type="button"
             className={dsBtnPrimary}
             disabled={saving}
-            onClick={() => void onSave(text)}
+            onClick={(e) => {
+              prepareGestionaleModalSaveFrom(e.currentTarget);
+              void onSave(text);
+            }}
           >
             {saving ? "Salvataggio…" : "Salva note"}
           </button>

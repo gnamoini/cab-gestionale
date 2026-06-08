@@ -30,7 +30,10 @@ import {
   prioritaBadgeStyle,
   prioritaLabel,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import {
+  gestionaleFormFocusScopeProps,
+  gestionaleMultilineEnterProps,
+} from "@/components/gestionale/gestionale-form-focus-scope";
 import { useGestionaleModalDialogFocus } from "@/components/gestionale/gestionale-modal-focus";
 import { CloseButton } from "@/components/design-system/close-button";
 import {
@@ -186,6 +189,7 @@ export function LavorazioniModalShell({
   header,
   titleId,
   footer,
+  modalRootRef,
 }: {
   children: React.ReactNode;
   /** Categoria semantica — SSOT dimensioni (`lib/ui/modal-size-system.ts`). */
@@ -210,6 +214,8 @@ export function LavorazioniModalShell({
   titleId?: string;
   /** Footer fisso sotto il corpo scrollabile. */
   footer?: React.ReactNode;
+  /** Ref opzionale al dialog root (`data-cab-modal-root`) per flush pre-save via button. */
+  modalRootRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   useBodyScrollLock(true, "LavorazioniModalShell");
   useOverlayBackHandler(true, onRequestClose, "LavorazioniModalShell");
@@ -262,7 +268,10 @@ export function LavorazioniModalShell({
       }}
     >
       <div
-        ref={dialogFocus.ref}
+        ref={(el) => {
+          dialogFocus.ref.current = el;
+          if (modalRootRef) modalRootRef.current = el;
+        }}
         {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
         className={`${dialogSurfaceClass} ${flexShrinkSafe} flex-safe-col touch-auto cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
         role="dialog"
@@ -532,6 +541,7 @@ export function EditLavorazioneModal({
           >
             <SectionTitle>Note interne</SectionTitle>
             <textarea
+              {...gestionaleMultilineEnterProps}
               className={`${dsInput} min-h-[88px] resize-y`}
               value={local.noteInterne}
               onChange={(e) => setLocal({ ...local, noteInterne: e.target.value })}
@@ -741,6 +751,7 @@ export function NewLavorazioneModal({
               </p>
               <Field label="Note">
                 <textarea
+                  {...gestionaleMultilineEnterProps}
                   className={`${dsInput} min-h-[72px] resize-y`}
                   value={d.noteInterne}
                   onChange={(e) => setDraft({ ...d, noteInterne: e.target.value })}
