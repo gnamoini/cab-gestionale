@@ -34,5 +34,7 @@ assert.match(workflow, /ci:supabase:publication/);
 
 const fetchSrc = read("lib/production/fetch-realtime-publication-tables.ts");
 assert.match(fetchSrc, /pg_publication_tables/);
+assert.match(fetchSrc, /SUPABASE_ACCESS_TOKEN/);
+assert.match(fetchSrc, /api\.supabase\.com/);
 
 console.log(`supabase-publication-gate.test.ts OK (${expected.length} expected tables)`);

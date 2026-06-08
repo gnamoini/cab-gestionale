@@ -87,6 +87,7 @@ jobs:
         run: npm run ci:supabase:publication
         env:
           PUBLICATION_CHECK_STRICT: "0"
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
 
       - name: Smoke structural + regression tests (core tier)
