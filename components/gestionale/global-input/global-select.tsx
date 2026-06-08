@@ -456,7 +456,14 @@ export function GlobalSelect(props: GlobalSelectProps) {
     const committed = autocompleteCommitFromSearchText(searchText, mode, options, items, strictFromList);
     if (committed && committed !== value) {
       onChange(committed);
-    } else if (!committed && trimmed && userModified && allowAdd && canAdd && !isFilterVariant) {
+    } else if (
+      !committed &&
+      trimmed &&
+      trimmed !== value &&
+      allowAdd &&
+      canAdd &&
+      !isFilterVariant
+    ) {
       // Submit flush (iOS): testo nuovo non in elenco ma appendibile — committa per il parent.
       onChange(trimmed);
     }

@@ -104,11 +104,11 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
 
   await modal.getByLabel("Data ingresso").fill(fixture.ingresso.dataIngresso);
   await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
-  await modal.getByRole("combobox", { name: /matricola/i }).fill(fixture.ingresso.matricola);
 
   const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
   await clienteInput.click();
-  await clienteInput.fill(fixture.ingresso.cliente);
+  await clienteInput.fill("");
+  await clienteInput.pressSequentially(fixture.ingresso.cliente, { delay: 5 });
 
   await save.scrollIntoViewIfNeeded();
   await modal.locator("form").evaluate((form: HTMLFormElement) => {

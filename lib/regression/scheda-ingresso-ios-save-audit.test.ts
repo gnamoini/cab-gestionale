@@ -49,7 +49,7 @@ function simulateGlobalSelectCommitBlur(params: {
   } else if (
     !committed &&
     trimmed &&
-    params.userModified &&
+    trimmed !== params.value &&
     params.allowAdd &&
     (params.canAdd ?? true)
   ) {
