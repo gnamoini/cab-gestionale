@@ -196,7 +196,8 @@ unregisterGestionaleComboboxFlush(inputB as unknown as HTMLInputElement);
 
 const globalSelect = read("components/gestionale/global-input/global-select.tsx");
 assert.match(globalSelect, /registerGestionaleComboboxFlush/);
-assert.match(globalSelect, /allowAdd && canAdd/);
+assert.match(globalSelect, /trimmed !== value/);
+assert.match(globalSelect, /allowAdd/);
 assert.match(globalSelect, /unregisterGestionaleComboboxFlush/);
 
 const focusScope = read("components/gestionale/gestionale-form-focus-scope.tsx");
