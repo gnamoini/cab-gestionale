@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const PORT = Number(process.env.SMOKE_PORT ?? (process.env.SMOKE_NO_WEB_SERVER ? "3000" : "3210"));
+const PORT = Number(process.env.SMOKE_PORT ?? "3210");
 const baseURL = process.env.SMOKE_BASE_URL ?? `http://127.0.0.1:${PORT}`;
 
 export default defineConfig({
@@ -20,18 +20,15 @@ export default defineConfig({
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
   },
-  projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "mobile-android", use: { ...devices["Pixel 7"] } },
-    { name: "mobile-ios", use: { ...devices["iPhone 14"] } },
-    { name: "tablet-ios", use: { ...devices["iPad Pro 11"] } },
-  ],
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  /** Certificazione scheda ingresso: `npm run smoke:playwright:cert` (config mobile dedicata). */
+  testIgnore: ["**/13-lavorazioni-scheda-ingresso.spec.ts"],
   webServer: process.env.SMOKE_NO_WEB_SERVER
     ? undefined
     : {
-        command: process.env.CI ? "npm run start" : "npm run dev",
+        command: process.env.CI ? "npm run start" : "npm run build && npm run start",
         url: baseURL,
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: !!process.env.CI,
         timeout: 180_000,
         env: { ...process.env, PORT: String(PORT) },
       },

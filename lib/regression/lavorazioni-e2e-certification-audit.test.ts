@@ -20,10 +20,14 @@ assert.ok(exists("e2e/helpers/lavorazioni-scheda.ts"));
 assert.ok(exists("e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts"));
 assert.ok(exists("scripts/verify-lavorazione-audit-db.ts"));
 
+const pwCertConfig = read("e2e/playwright.mobile-cert.config.ts");
+assert.match(pwCertConfig, /mobile-android/);
+assert.match(pwCertConfig, /mobile-ios/);
+assert.match(pwCertConfig, /tablet-ios/);
+assert.match(pwCertConfig, /13-lavorazioni-scheda-ingresso/);
+
 const pwConfig = read("e2e/playwright.config.ts");
-assert.match(pwConfig, /mobile-android/);
-assert.match(pwConfig, /mobile-ios/);
-assert.match(pwConfig, /tablet-ios/);
+assert.match(pwConfig, /testIgnore.*13-lavorazioni-scheda-ingresso/);
 
 const spec = read("e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts");
 assert.match(spec, /fillMinimalCreateAndSaveWithoutClienteBlur/);

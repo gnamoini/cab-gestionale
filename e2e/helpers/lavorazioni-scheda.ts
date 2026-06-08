@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaIngressoAuditFixture } from "../fixtures/scheda-ingresso-test-data";
 
@@ -7,8 +7,14 @@ function escapeRegExp(s: string): string {
 }
 
 /** Combobox GlobalSelect / GlobalSettingsListSelect: digita e aggiungi all'elenco se necessario. */
-export async function fillListCombobox(page: Page, ariaLabel: string, value: string): Promise<void> {
-  const input = page.getByRole("combobox", { name: ariaLabel });
+export async function fillListCombobox(
+  page: Page,
+  ariaLabel: string,
+  value: string,
+  scope?: Locator,
+): Promise<void> {
+  const root = scope ?? page;
+  const input = root.getByRole("combobox", { name: ariaLabel, exact: true });
   await input.scrollIntoViewIfNeeded();
   await input.click();
   await input.fill(value);
@@ -36,30 +42,30 @@ export async function fillSchedaIngressoCreateForm(
 
   await modal.getByLabel("Data ingresso").fill(data.dataIngresso);
 
-  await fillListCombobox(page, "Cliente", data.cliente);
-  await fillListCombobox(page, "Cantiere", data.cantiere);
-  await fillListCombobox(page, "Utilizzatore", data.utilizzatore);
-  await page.getByLabel("Richiedente").fill(data.richiedente);
+  await fillListCombobox(page, "Cliente", data.cliente, modal);
+  await fillListCombobox(page, "Cantiere", data.cantiere, modal);
+  await fillListCombobox(page, "Utilizzatore", data.utilizzatore, modal);
+  await modal.getByLabel("Richiedente").fill(data.richiedente);
 
-  await fillListCombobox(page, "Tipo attrezzatura", data.tipoAttrezzatura);
-  await fillListCombobox(page, "Marca attrezzatura", data.marcaAttrezzatura);
+  await fillListCombobox(page, "Tipo attrezzatura", data.tipoAttrezzatura, modal);
+  await fillListCombobox(page, "Marca attrezzatura", data.marcaAttrezzatura, modal);
   if (data.modelloAttrezzatura) {
-    await fillListCombobox(page, "Modello attrezzatura", data.modelloAttrezzatura);
+    await fillListCombobox(page, "Modello attrezzatura", data.modelloAttrezzatura, modal);
   }
 
-  await page.getByRole("combobox", { name: /matricola/i }).fill(data.matricola);
-  await page.getByLabel("N. scuderia").fill(data.nScuderia);
+  await modal.getByRole("combobox", { name: /matricola/i }).fill(data.matricola);
+  await modal.getByLabel("N. scuderia").fill(data.nScuderia);
 
-  await fillListCombobox(page, "Tipo telaio", data.tipoTelaio);
-  await fillListCombobox(page, "Marca telaio", data.marcaTelaio);
+  await fillListCombobox(page, "Tipo telaio", data.tipoTelaio, modal);
+  await fillListCombobox(page, "Marca telaio", data.marcaTelaio, modal);
   if (data.modelloTelaio) {
-    await fillListCombobox(page, "Modello telaio", data.modelloTelaio);
+    await fillListCombobox(page, "Modello telaio", data.modelloTelaio, modal);
   }
 
-  await page.getByRole("combobox", { name: /targa/i }).fill(data.targa);
-  await page.getByLabel("Ore lavoro").fill(data.oreLavoro);
-  await page.getByLabel("KM").fill(data.km);
-  await fillListCombobox(page, "Livello carburante", data.livelloCarburante);
+  await modal.getByRole("combobox", { name: /targa/i }).fill(data.targa);
+  await modal.getByLabel("Ore lavoro").fill(data.oreLavoro);
+  await modal.getByLabel("KM").fill(data.km);
+  await fillListCombobox(page, "Livello carburante", data.livelloCarburante, modal);
 
   await modal.getByLabel("Descrizione anomalia").fill(data.descrizioneAnomalia);
   await modal.getByLabel("Note").fill(data.noteIntervento);
@@ -77,11 +83,11 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
   await expect(modal).toBeVisible();
 
-  const clienteInput = page.getByRole("combobox", { name: "Cliente" });
+  const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
   await clienteInput.click();
   await clienteInput.fill(fixture.ingresso.cliente);
 
-  await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura);
+  await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
 
   await clienteInput.focus();
   await modal.getByRole("button", { name: "Salva lavorazione" }).click();

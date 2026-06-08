@@ -27,6 +27,7 @@
     "smoke:regression": "npx tsx scripts/smoke-regression-tests.ts",
     "smoke:structural": "npx tsx scripts/smoke-structural-gate.ts",
     "smoke:playwright": "npx playwright test -c e2e/playwright.config.ts",
+    "smoke:playwright:cert": "npx playwright test -c e2e/playwright.mobile-cert.config.ts",
     "smoke:gate": "npx tsx scripts/smoke-gate.ts",
     "flex:baseline:generate": "npx tsx scripts/generate-flex-baseline.ts --update",
     "flex:baseline:diff": "npx tsx scripts/diff-flex-baseline.ts",
