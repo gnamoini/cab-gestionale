@@ -27,20 +27,34 @@ function simulateGlobalSelectCommitBlur(params: {
   userModified: boolean;
   options: readonly string[];
   onChange: (v: string) => void;
+  strictFromList?: boolean;
+  allowAdd?: boolean;
+  canAdd?: boolean;
 }): void {
   const trimmed = params.searchText.trim();
   if (!trimmed) {
     if (params.userModified && params.value) params.onChange("");
     return;
   }
+  const strictFromList = params.strictFromList ?? false;
   const committed = autocompleteCommitFromSearchText(
     params.searchText,
     "strings",
     params.options,
     [],
-    false,
+    strictFromList,
   );
-  if (committed && committed !== params.value) params.onChange(committed);
+  if (committed && committed !== params.value) {
+    params.onChange(committed);
+  } else if (
+    !committed &&
+    trimmed &&
+    params.userModified &&
+    params.allowAdd &&
+    (params.canAdd ?? true)
+  ) {
+    params.onChange(trimmed);
+  }
 }
 
 // --- Combobox: valore visibile ma parent stale se submit senza blur ---
@@ -99,6 +113,21 @@ simulateGlobalSelectCommitBlur({
 });
 assert.equal(onChangeCalls, 1);
 assert.equal(parentValue, "Cliente Beta");
+
+// strictFromList + allowAdd: submit flush committa testo nuovo (GlobalSelect commitBlur)
+parentValue = "";
+simulateGlobalSelectCommitBlur({
+  searchText: "Cliente AUDIT-NEW",
+  value: parentValue,
+  userModified: true,
+  options: ["Cliente Alpha"],
+  strictFromList: true,
+  allowAdd: true,
+  onChange: (v) => {
+    parentValue = v;
+  },
+});
+assert.equal(parentValue, "Cliente AUDIT-NEW");
 
 // --- draftRef stale: sync sincrono in onPatch ---
 
@@ -167,6 +196,7 @@ unregisterGestionaleComboboxFlush(inputB as unknown as HTMLInputElement);
 
 const globalSelect = read("components/gestionale/global-input/global-select.tsx");
 assert.match(globalSelect, /registerGestionaleComboboxFlush/);
+assert.match(globalSelect, /allowAdd && canAdd/);
 assert.match(globalSelect, /unregisterGestionaleComboboxFlush/);
 
 const focusScope = read("components/gestionale/gestionale-form-focus-scope.tsx");

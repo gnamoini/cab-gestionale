@@ -454,7 +454,12 @@ export function GlobalSelect(props: GlobalSelectProps) {
       return;
     }
     const committed = autocompleteCommitFromSearchText(searchText, mode, options, items, strictFromList);
-    if (committed && committed !== value) onChange(committed);
+    if (committed && committed !== value) {
+      onChange(committed);
+    } else if (!committed && trimmed && userModified && allowAdd && canAdd && !isFilterVariant) {
+      // Submit flush (iOS): testo nuovo non in elenco ma appendibile — committa per il parent.
+      onChange(trimmed);
+    }
     setSearchText("");
   }, [
     selectOnly,
@@ -466,6 +471,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
     options,
     items,
     strictFromList,
+    allowAdd,
+    canAdd,
     onChange,
   ]);
 
