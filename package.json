@@ -31,7 +31,7 @@
     "smoke:playwright": "npx playwright test -c e2e/playwright.config.ts",
     "smoke:playwright:ios-smoke": "npx playwright test -c e2e/playwright.mobile-cert.config.ts --project=mobile-ios-chromium --grep \"iOS regression\"",
     "smoke:playwright:cert": "npx playwright test -c e2e/playwright.mobile-cert.config.ts",
-    "smoke:playwright:ricambio:smoke": "npx playwright test -c e2e/playwright.config.ts e2e/smoke/14-magazzino-nuovo-ricambio.spec.ts",
+    "smoke:playwright:ricambio:smoke": "npx playwright test -c e2e/playwright.ricambio-cert.config.ts --project=chromium",
     "smoke:playwright:ricambio:cert": "npx playwright test -c e2e/playwright.ricambio-cert.config.ts",
     "ci:supabase:publication": "npx tsx scripts/verify-supabase-publication.ts --mode=sanity",
     "ci:supabase:publication:full": "npx tsx scripts/verify-supabase-publication.ts --mode=full",

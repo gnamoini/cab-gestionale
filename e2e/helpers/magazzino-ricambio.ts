@@ -12,7 +12,7 @@ export async function createRicambioLenientSmoke(
   await page.goto("/magazzino");
   await expect(page).toHaveURL(/\/magazzino/);
 
-  const newBtn = page.getByRole("button", { name: /nuovo ricambio/i });
+  const newBtn = page.getByRole("button", { name: /\+?\s*Nuovo(\s+ricambio)?/i });
   await expect(newBtn).toBeVisible({ timeout: 20_000 });
   await newBtn.click();
 
