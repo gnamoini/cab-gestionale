@@ -85,6 +85,10 @@ jobs:
           PORT: "3210"
           SMOKE_BASE_URL: http://127.0.0.1:3210
 
+      - name: Smoke residue audit (advisory)
+        run: npm run audit:smoke:residues
+        continue-on-error: true
+
       - name: Cleanup smoke test data
         if: always()
         run: SMOKE_CLEANUP_APPLY=1 npm run smoke:cleanup

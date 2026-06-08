@@ -123,7 +123,7 @@ function main() {
 
   const playwrightSteps = [
     { label: "smoke:playwright", args: ["run", "smoke:playwright"] as const },
-    { label: "smoke:playwright:ios-smoke", args: ["run", "smoke:playwright:ios-smoke"] as const },
+    { label: "smoke:playwright:scheda-smoke", args: ["run", "smoke:playwright:scheda-smoke"] as const },
     { label: "smoke:playwright:ricambio:smoke", args: ["run", "smoke:playwright:ricambio:smoke"] as const },
   ];
 
@@ -141,6 +141,25 @@ function main() {
       printFinalSummary(results);
       process.exit(1);
     }
+  }
+
+  console.log(`\n--- Step: smoke:cleanup ---\n`);
+  if (hasSupabaseSecrets()) {
+    const cleanup = runStep({
+      label: "smoke:cleanup",
+      cmd: "npm",
+      args: ["run", "smoke:cleanup"],
+      env: { ...process.env, SMOKE_CLEANUP_APPLY: process.env.SMOKE_CLEANUP_APPLY ?? "0" },
+    });
+    results.push({ label: "smoke:cleanup", status: cleanup.status });
+    if (cleanup.status === "FAIL") {
+      console.error("\n✖ Release gate stopped at: smoke:cleanup");
+      printFinalSummary(results);
+      process.exit(1);
+    }
+  } else {
+    console.log("smoke:cleanup SKIP — Supabase secrets assenti\n");
+    results.push({ label: "smoke:cleanup", status: "SKIP" });
   }
 
   printFinalSummary(results);

@@ -41,24 +41,30 @@ sequenceDiagram
 | 8 | `npm run production:check` | RBAC/RLS, storage, pilot flags env+DB, legacy URL |
 | 9 | `npm run ci:supabase:publication` | Publication realtime sanity (deprecated zero; live se `SUPABASE_DB_URL`) |
 | 10 | `npm run smoke:structural` | Shell modali, layout app-shell, KPI report exports |
-| 11 | `npm run smoke:regression:core` | ~62 test critici (security, form/modal, sync, magazzino, gate matrix) |
+| 11 | `npm run smoke:regression:core` | ~63 test critici (security, form/modal, sync, magazzino, gate matrix) |
 | 12 | `npm run flex:eslint:gate` | Flex baseline — no nuove violazioni |
 | 13 | `npm run flex:freeze:gate` | Integrità freeze flex |
 | 14 | `npm run smoke:playwright` | Spec 01–12 E2E chromium |
-| 15 | `npm run smoke:playwright:ios-smoke` | Spec 13 subset iOS WebKit (1 test) |
+| 15 | `npm run smoke:playwright:scheda-smoke` | Spec 13 desktop full flow (iOS combobox in cert-only) |
 | 16 | `npm run smoke:playwright:ricambio:smoke` | Spec 14 Nuovo Ricambio smoke |
 | 17 | `npm run smoke:cleanup` (apply in CI) | Teardown dati smoke (`AUDIT-*`, `E2E-*`, liste `app_settings`) |
 
 `production:check` aggrega: **rbac-rls**, **storage**, **pilot-flags**, **legacy-urls**, **ops-env**.
 
-**Cleanup smoke (manuale):** `npm run smoke:cleanup` (dry-run) → `npm run smoke:cleanup:apply`. In CI: step post-Playwright con `SMOKE_CLEANUP_APPLY=1`, `if: always()`.
+**Cleanup smoke (manuale):** `npm run smoke:cleanup` (dry-run) → `npm run smoke:cleanup:apply`. In CI: step post-Playwright con `SMOKE_CLEANUP_APPLY=1`, `if: always()`. Residui advisory in cert: `npm run audit:smoke:residues`.
+
+**Marker dati smoke (SSOT):** [`smoke-data-markers.ts`](../lib/smoke/smoke-data-markers.ts) — lavorazioni/schede/liste `AUDIT-YYYYMMDD-HHMMSS`, ricambi `E2E-{timestamp}`, documenti filename `smoke-doc`. Utente CI permanente `github-actions-smoke@cab-gestionale.ci` (intenzionale); dati creati dagli smoke sono ephemeral e rimossi dal cleanup.
+
+**Spec 13 iOS combobox:** test E2E `"iOS regression: cliente combobox..."` è **cert-only** (`smoke:playwright:cert`); il PR gate esegue il full-flow desktop (`smoke:playwright:scheda-smoke`) più audit static (`scheda-ingresso-ios-save-audit`, `dropdown-outside-dismiss`). Ripristino iOS in PR dopo fix product combobox.
+
+Audit completo giugno 2026: [`audit-release-gate-2026-06.md`](./audit-release-gate-2026-06.md).
 
 ### Regression tiers
 
 | Script | Uso |
 |--------|-----|
-| `smoke:regression:core` | PR gate (57 file) — SSOT [`smoke-regression-lists.ts`](../lib/regression/smoke-regression-lists.ts) |
-| `smoke:regression:extended` | Cert workflow (46 file) — flex/ui-os/layout advisory |
+| `smoke:regression:core` | PR gate (63 file) — SSOT [`smoke-regression-lists.ts`](../lib/regression/smoke-regression-lists.ts) |
+| `smoke:regression:extended` | Cert workflow (44 file) — flex/ui-os/layout advisory |
 | `smoke:regression` | Core + extended (locale pre-release) |
 
 **Non eseguiti su Vercel:** tutti i gate sopra — build Vercel = `next build` only.
@@ -70,7 +76,8 @@ sequenceDiagram
 - `ci:supabase:publication:full` (blocking)
 - `ops:long-session-soak:threshold` (~6 min)
 - `audit:supabase` (advisory, `continue-on-error`)
-- `smoke:playwright:cert` — spec 13 × 4 progetti
+- `audit:smoke:residues` (advisory, `continue-on-error`; soglia operativa default 5 via `SMOKE_RESIDUE_OPERATIVE_THRESHOLD`; strict opzionale con `SMOKE_RESIDUE_STRICT=1`)
+- `smoke:playwright:cert` — spec 13 iOS combobox × 4 progetti
 - `smoke:playwright:ricambio:cert` — spec 14 desktop + iOS
 - `smoke:cleanup:apply` — teardown dati smoke post-Playwright (`if: always()`)
 

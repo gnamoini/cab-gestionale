@@ -14,6 +14,7 @@ import {
   searchLavorazioneByToken,
   submitCreateLavorazione,
 } from "../helpers/lavorazioni-scheda";
+import { applySmokeTeardown } from "../helpers/smoke-teardown";
 
 const hasSmokeCreds = Boolean(
   process.env.SMOKE_ADMIN_EMAIL?.trim() && process.env.SMOKE_ADMIN_PASSWORD?.trim(),
@@ -24,6 +25,10 @@ test.describe.configure({ mode: "serial", timeout: 180_000 });
 test.beforeEach(({ page }) => {
   test.skip(!hasSmokeCreds, "SMOKE_ADMIN_EMAIL e SMOKE_ADMIN_PASSWORD richiesti");
   attachConsoleGuards(page);
+});
+
+test.afterAll(async () => {
+  await applySmokeTeardown();
 });
 
 test("iOS regression: cliente combobox salvato senza blur prima del submit", async ({ page }) => {

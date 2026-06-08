@@ -4,6 +4,7 @@ import { pruneSmokeAppSettingsValue } from "@/lib/smoke/prune-smoke-app-settings
 import {
   containsSmokeAuditToken,
   isSmokeDocumentFilename,
+  isSmokeLogModificheRow,
   isSmokeRicambioCodice,
 } from "@/lib/smoke/smoke-data-markers";
 import { STORAGE_BUCKETS } from "@/src/lib/storage/storage-config";
@@ -18,6 +19,7 @@ export type SmokeCleanupReport = {
   mezzi: string[];
   ricambi: string[];
   documenti: string[];
+  logModifiche: string[];
   appSettingsRows: { module: string; key: string; removedCount: number }[];
   errors: string[];
 };
@@ -29,6 +31,7 @@ type DocumentoRow = { id: string; nome_file: string | null; url_file: string };
 type RicambioRow = { id: string; codice: string };
 type AppSettingRow = { id: string; module: string; key: string; value: Record<string, unknown> };
 type LavDocRow = { storage_path: string };
+type LogModificaRow = { id: string; entita_id: string; payload: unknown };
 
 function schedaContainsSmokeToken(contenuto: unknown): boolean {
   try {
@@ -150,12 +153,26 @@ async function deleteSmokeDocumenti(admin: SupabaseClient, rows: DocumentoRow[],
   if (error) throw new Error(`delete documenti: ${error.message}`);
 }
 
+async function findSmokeLogModifiche(
+  admin: SupabaseClient,
+  entityIds: Set<string>,
+): Promise<string[]> {
+  const { data, error } = await admin.from("log_modifiche").select("id, entita_id, payload").limit(10_000);
+  if (error) throw new Error(`log_modifiche: ${error.message}`);
+
+  const ids = new Set<string>();
+  for (const row of (data ?? []) as LogModificaRow[]) {
+    if (entityIds.has(row.entita_id) || isSmokeLogModificheRow(row)) ids.add(row.id);
+  }
+  return [...ids];
+}
+
 async function pruneSmokeAppSettings(admin: SupabaseClient, apply: boolean): Promise<SmokeCleanupReport["appSettingsRows"]> {
   const { data, error } = await admin
     .from("app_settings")
     .select("id, module, key, value")
     .in("module", ["mezzi", "lavorazioni", "magazzino"])
-    .eq("key", "liste");
+    .in("key", ["liste", "master"]);
   if (error) throw new Error(`app_settings: ${error.message}`);
 
   const touched: SmokeCleanupReport["appSettingsRows"] = [];
@@ -180,6 +197,7 @@ export async function cleanupSmokeData(
     mezzi: [],
     ricambi: [],
     documenti: [],
+    logModifiche: [],
     appSettingsRows: [],
     errors: [],
   };
@@ -192,11 +210,20 @@ export async function cleanupSmokeData(
     const lavIdSet = new Set(report.lavorazioni);
     report.mezzi = await findOrphanSmokeMezzi(admin, lavIdSet);
 
+    const entityIds = new Set<string>([
+      ...report.lavorazioni,
+      ...report.mezzi,
+      ...report.ricambi,
+      ...report.documenti,
+    ]);
+    report.logModifiche = await findSmokeLogModifiche(admin, entityIds);
+
     if (options.verbose) {
       console.log("lavorazioni:", report.lavorazioni);
       console.log("documenti:", report.documenti);
       console.log("ricambi:", report.ricambi);
       console.log("mezzi:", report.mezzi);
+      console.log("log_modifiche:", report.logModifiche);
     }
 
     if (!options.apply) {
@@ -209,6 +236,12 @@ export async function cleanupSmokeData(
     await purgeLavorazioneDocuments(admin, report.lavorazioni, true);
 
     if (report.lavorazioni.length > 0) {
+      const { error: schedaErr } = await admin
+        .from("scheda_lavorazione")
+        .delete()
+        .in("lavorazione_id", report.lavorazioni);
+      if (schedaErr) throw new Error(`delete scheda_lavorazione: ${schedaErr.message}`);
+
       const { error } = await admin.from("lavorazioni").delete().in("id", report.lavorazioni);
       if (error) throw new Error(`delete lavorazioni: ${error.message}`);
     }
@@ -221,6 +254,11 @@ export async function cleanupSmokeData(
     if (report.ricambi.length > 0) {
       const { error } = await admin.from("magazzino_ricambi").delete().in("id", report.ricambi);
       if (error) throw new Error(`delete magazzino_ricambi: ${error.message}`);
+    }
+
+    if (report.logModifiche.length > 0) {
+      const { error } = await admin.from("log_modifiche").delete().in("id", report.logModifiche);
+      if (error) throw new Error(`delete log_modifiche: ${error.message}`);
     }
 
     report.appSettingsRows = await pruneSmokeAppSettings(admin, true);
@@ -238,6 +276,7 @@ export function printSmokeCleanupReport(report: SmokeCleanupReport, apply: boole
   console.log(`  mezzi orfani: ${report.mezzi.length}`);
   console.log(`  ricambi E2E: ${report.ricambi.length}`);
   console.log(`  documenti smoke: ${report.documenti.length}`);
+  console.log(`  log_modifiche smoke: ${report.logModifiche.length}`);
   console.log(`  app_settings liste aggiornate: ${report.appSettingsRows.length}`);
   for (const row of report.appSettingsRows) {
     console.log(`    - ${row.module}/${row.key}: ${row.removedCount} valori rimossi`);

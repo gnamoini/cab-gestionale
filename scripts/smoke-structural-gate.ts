@@ -13,8 +13,12 @@ const MODAL_SHELL_ANCHORS: { file: string; needles: string[] }[] = [
     needles: ["GestionaleModalShell"],
   },
   {
+    file: "components/gestionale/lavorazioni/lavorazione-create-modal.tsx",
+    needles: ["SchedaIngressoFormModalShell"],
+  },
+  {
     file: "components/gestionale/lavorazioni/lavorazioni-modals.tsx",
-    needles: ["LavorazioniModalShell", "GestionaleModalShell"],
+    needles: ["LavorazioniModalShell"],
   },
   {
     file: "components/gestionale/documenti/documenti-modals.tsx",

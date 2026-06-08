@@ -9,7 +9,7 @@
 
 | Tier | Workflow | Trigger | Blocking | Target duration |
 |------|----------|---------|----------|-----------------|
-| **1 — PR** | `release-gate` | PR + push `main` | Sì | 12–18 min (cap 30) |
+| **1 — PR** | `release-gate` | PR + push `main` | Sì | 10–14 min (cap 30) |
 | **2 — Cert** | `release-gate-cert` | push `main`, weekly Mon 03:00 UTC, dispatch | Sì su `main` (branch protection) | 25–40 min (cap 45) |
 | **3 — Nightly** | `release-gate-nightly` | daily 02:00 UTC, dispatch | No | 60+ min |
 
@@ -27,24 +27,39 @@
 | `smoke:regression:extended` | — | blocking | advisory |
 | `flex:eslint:gate` + `flex:freeze:gate` | blocking | — | — |
 | `smoke:playwright` (spec 01–12) | blocking | — | — |
+| `smoke:playwright:scheda-smoke` (spec 13 desktop full flow) | blocking | — | — |
 | `smoke:playwright:ricambio:smoke` (spec 14) | blocking | — | — |
-| `smoke:playwright:ios-smoke` (spec 13 subset) | blocking | — | — |
-| `smoke:playwright:cert` (spec 13 × 4 progetti) | — | blocking | — |
+| `smoke:playwright:ios-smoke` / cert (spec 13 iOS combobox) | — | blocking | — |
 | `smoke:playwright:ricambio:cert` | — | blocking | — |
 | `smoke:cleanup` (post-Playwright, apply) | blocking | blocking | — |
+| `audit:smoke:residues` (advisory; strict opzionale) | — | advisory* | — |
 | `ops:long-session-soak:threshold` | — | blocking | — |
 | `ops:long-session-soak` (full) | — | — | advisory |
 | `npm run lint` | — | — | advisory |
 
 \* `ci:supabase:publication` richiede `SUPABASE_DB_URL` per check live; con `PUBLICATION_CHECK_STRICT=0` passa con warning se URL assente (static SSOT).
 
+\* `audit:smoke:residues`: advisory di default (`continue-on-error`). Soglia operativa default **5** entità (`SMOKE_RESIDUE_OPERATIVE_THRESHOLD`). Con `SMOKE_RESIDUE_STRICT=1` il job cert fallisce se il totale operativo supera la soglia. `log_modifiche` è informativo e non entra nel totale.
+
 ---
+
+## Certificazione livello A (Production Certified)
+
+Requisiti oggettivi:
+
+1. `release-gate` green su `main` per almeno **2 run consecutive** post-consolidamento.
+2. `release-gate-cert` green incluso `smoke:playwright:cert` (iOS combobox).
+3. `audit:smoke:residues` con totale operativo **≤ 5** dopo cleanup (default soglia).
+4. Nessun blind spot **P0** aperto (iOS combobox cert stabile o ripristinato in PR con fix product).
+
+Stato attuale validazione: **B — Conditionally Stable** (vedi [`audit-release-gate-validation-2026-06.md`](./audit-release-gate-validation-2026-06.md)).
 
 ## Gap residui — chiusura
 
 | Gap | PR | Cert | Nightly |
 |-----|----|------|---------|
-| Spec 13 iOS E2E | `smoke:playwright:ios-smoke` | `smoke:playwright:cert` | — |
+| Spec 13 iOS combobox E2E | — (cert-only) | `smoke:playwright:cert` | — |
+| Spec 13 desktop full flow | `smoke:playwright:scheda-smoke` | — | — |
 | Nuovo Ricambio E2E | spec 14 in `smoke:playwright` | `smoke:playwright:ricambio:cert` | — |
 | Publication drift | `ci:supabase:publication` | `ci:supabase:publication:full` | — |
 | Long-session soak | — | `ops:long-session-soak:threshold` | `ops:long-session-soak` |

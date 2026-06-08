@@ -1,8 +1,10 @@
 # Audit Release Gate
 
-**Data:** 2026-06-08  
+**Data:** 2026-06-08 (aggiornamento hardening)  
 **Scope:** workflow GitHub Actions, script gate locali, smoke/regression/E2E, allineamento architettura 2026-06  
-**Vincolo:** nessuna modifica al codice applicativo; solo gate/test/docs.
+**Vincolo:** nessuna modifica al codice applicativo; solo gate/test/docs/cleanup.
+
+**Report dettagliato:** [`audit-release-gate-2026-06.md`](./audit-release-gate-2026-06.md)
 
 ---
 
@@ -10,21 +12,24 @@
 
 | Metrica | Valore |
 |---------|--------|
-| **Score complessivo** | **7.5/10** (post-allineamento: da 7.0) |
-| Step CI `release-gate` | 16 (dopo audit) |
-| Regression tier core | 57 file |
-| Regression tier extended | 46 file |
-| Playwright in gate | 12 spec chromium (spec 13 esclusa) |
-| Playwright cert (tier 2) | spec 13 + WebKit/iOS — workflow `release-gate-cert` |
+| **Score complessivo** | **8.0/10** (post-hardening giugno 2026; da 6.0 pre-audit) |
+| Step CI `release-gate` | 16 (Playwright chromium unico; iOS combobox in cert) |
+| Regression tier core | 63 file |
+| Regression tier extended | 42 file |
+| Playwright in gate PR | 12 spec chromium + spec 13 desktop + spec 14 |
+| Playwright cert (tier 2) | spec 13 iOS combobox + spec 14 cert |
 
-**Correzioni applicate in questo audit**
+**Correzioni applicate (audit giugno 2026 — gate-only)**
 
-1. `ios:check` aggiunto al workflow CI.
-2. `smoke:regression` splittato in **core** (PR gate) e **extended** (cert/nightly).
-3. Nuovo workflow [`.github/workflows/release-gate-cert.yml`](../.github/workflows/release-gate-cert.yml) (extended + `smoke:playwright:cert` + `audit:supabase` advisory).
-4. [`scripts/release-gate.ts`](../scripts/release-gate.ts) allineato a CI: `ios:check`, `smoke:regression:core`, verify Supabase opzionale, Playwright SKIP esplicito (non più PASS silenzioso).
-5. [`forms-save-policy.test.ts`](../lib/regression/forms-save-policy.test.ts) esteso con assert SSOT create modal (`fieldsRef`, `draftRef`, focus scope).
-6. [`docs/release-gate.md`](./release-gate.md) aggiornato.
+1. Spec 13 iOS combobox spostato da PR a cert-only; PR esegue full-flow desktop.
+2. Regression lists: promossi `notification-ui-policy`, `dropdown-outside-dismiss`; spostati `compat-readiness-report`, `lavorazioni-e2e-certification-audit` in extended; rimossi 9 flex ridondanti da extended.
+3. Structural gate: anchor create modal → `lavorazione-create-modal.tsx`.
+4. Cleanup: delete esplicito `scheda_lavorazione`, prune produttori magazzino, teardown Playwright spec 05/13/14.
+5. Script advisory `audit:smoke-residues` in cert workflow.
+6. `release-gate.ts` locale: step `smoke:cleanup` + `scheda-smoke` al posto di `ios-smoke`.
+7. Documentazione allineata (63/42, score 8.0).
+
+**Correzioni precedenti (audit iniziale):** `ios:check` in CI, split core/extended, workflow cert, `forms-save-policy` esteso, orchestratore locale.
 
 ---
 
@@ -43,7 +48,7 @@
 | 7 | Supabase connect | `verify-supabase-ci-env.ts` | Connectivity | Supabase * | Sì |
 | 8 | Production readiness | `production:check` | RBAC/RLS/storage live DB | Supabase * | Sì |
 | 9 | Structural smoke | `smoke:structural` | Shell modali, tabelle | — | Sì |
-| 10 | Regression core | `smoke:regression:core` | 57 test/policy | — | Sì |
+| 10 | Regression core | `smoke:regression:core` | 63 test/policy | — | Sì |
 | 11 | Flex ESLint | `flex:eslint:gate` | Baseline flex | — | Sì |
 | 12 | Flex freeze | `flex:freeze:gate` | Freeze integrity | — | Sì |
 | 13 | Playwright install | chromium | Browser | — | — |
@@ -55,7 +60,7 @@
 
 | Step | Comando | Blocking |
 |------|---------|----------|
-| Extended regression | `smoke:regression:extended` (46 file) | Sì nel job cert |
+| Extended regression | `smoke:regression:extended` (42 file) | Sì nel job cert |
 | Supabase inventory | `audit:supabase` | No (`continue-on-error`) |
 | Playwright cert | `smoke:playwright:cert` (spec 13, WebKit) | Sì nel job cert |
 

@@ -108,11 +108,8 @@ jobs:
           PORT: "3210"
           SMOKE_BASE_URL: http://127.0.0.1:3210
 
-      - name: Install Playwright WebKit (iOS smoke)
-        run: npx playwright install --with-deps webkit
-
-      - name: Scheda Ingresso iOS smoke (spec 13 subset)
-        run: npm run smoke:playwright:ios-smoke
+      - name: Scheda Ingresso desktop smoke (spec 13 full flow)
+        run: npm run smoke:playwright:scheda-smoke
         env:
           PORT: "3210"
           SMOKE_BASE_URL: http://127.0.0.1:3210

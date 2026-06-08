@@ -1,6 +1,7 @@
 import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi } from "../fixtures/auth";
 import { createRicambioLenientSmoke, uniqueRicambioCodice } from "../helpers/magazzino-ricambio";
+import { applySmokeTeardown } from "../helpers/smoke-teardown";
 import { test } from "@playwright/test";
 
 const hasSmokeCreds = Boolean(
@@ -12,6 +13,10 @@ test.describe.configure({ mode: "serial" });
 test.beforeEach(({ page }) => {
   test.skip(!hasSmokeCreds, "SMOKE_ADMIN_EMAIL e SMOKE_ADMIN_PASSWORD richiesti");
   attachConsoleGuards(page);
+});
+
+test.afterAll(async () => {
+  await applySmokeTeardown();
 });
 
 test("magazzino: nuovo ricambio lenient smoke", async ({ page }) => {

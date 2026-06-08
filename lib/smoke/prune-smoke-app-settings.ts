@@ -8,6 +8,10 @@ const FLAT_LIST_KEYS = [
   "modelli",
   "tipiAttrezzatura",
   "tipiTelaio",
+  "produttori",
+  "categorie",
+  "mezziCompatibili",
+  "fornitori",
 ] as const;
 
 type HierarchyNode = { id?: string; nome?: string; modelli?: { id?: string; nome?: string }[] };
