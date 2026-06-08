@@ -461,10 +461,9 @@ export function GlobalSelect(props: GlobalSelectProps) {
       trimmed &&
       trimmed !== value &&
       allowAdd &&
-      canAdd &&
       !isFilterVariant
     ) {
-      // Submit flush (iOS): testo nuovo non in elenco ma appendibile — committa per il parent.
+      // Submit flush (iOS): committa testo pendente; append all'elenco globale resta opzionale (canAdd).
       onChange(trimmed);
     }
     setSearchText("");

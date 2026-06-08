@@ -50,8 +50,7 @@ function simulateGlobalSelectCommitBlur(params: {
     !committed &&
     trimmed &&
     trimmed !== params.value &&
-    params.allowAdd &&
-    (params.canAdd ?? true)
+    params.allowAdd
   ) {
     params.onChange(trimmed);
   }
@@ -128,6 +127,21 @@ simulateGlobalSelectCommitBlur({
   },
 });
 assert.equal(parentValue, "Cliente AUDIT-NEW");
+
+parentValue = "";
+simulateGlobalSelectCommitBlur({
+  searchText: "Cliente AUDIT-NEW",
+  value: parentValue,
+  userModified: true,
+  options: ["Cliente Alpha"],
+  strictFromList: true,
+  allowAdd: true,
+  canAdd: false,
+  onChange: (v) => {
+    parentValue = v;
+  },
+});
+assert.equal(parentValue, "Cliente AUDIT-NEW", "submit flush committa anche senza canAdd append elenco");
 
 // --- draftRef stale: sync sincrono in onPatch ---
 
