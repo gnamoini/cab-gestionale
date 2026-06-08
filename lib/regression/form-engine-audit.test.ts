@@ -53,7 +53,7 @@ const hookSource = read("lib/forms/form-engine/use-form-engine.ts");
 assert.match(hookSource, /useFormEngine/);
 assert.match(hookSource, /useFormEngineSections/);
 assert.match(hookSource, /gestionaleFormFocusScopeProps/);
-assert.match(hookSource, /iosSubmitGuard/);
+assert.match(hookSource, /prepareFormSubmitAsync/);
 
 const runSubmitSrc = read("lib/forms/form-engine/run-submit.ts");
 assert.match(runSubmitSrc, /runSubmitFromGetter/);

@@ -15,7 +15,7 @@ import {
   captureFormSnapshotSections,
 } from "@/lib/forms/form-engine/capture-form-snapshot";
 import { isFormEngineEnabled } from "@/lib/forms/form-engine/config";
-import { iosSubmitGuard } from "@/lib/forms/form-engine/ios-submit-guard";
+import { prepareFormSubmit, prepareFormSubmitAsync } from "@/lib/forms/form-engine/prepare-form-submit";
 import { createSubmitLock, type FormSubmitLock } from "@/lib/forms/form-engine/submit-lock";
 import type { FormEngineSections, FormEngineSnapshot, FormStateSnapshot } from "@/lib/forms/form-engine/types";
 
@@ -82,8 +82,10 @@ export function useFormEngine<T extends object>(options: {
     ) => {
       if (!submitLock.acquire()) return;
       try {
-        if (enabled && root) {
-          await iosSubmitGuard(root);
+        if (enabled) {
+          await prepareFormSubmitAsync(root);
+        } else {
+          prepareFormSubmit(root);
         }
         await handler(getSnapshot());
       } finally {
@@ -213,8 +215,10 @@ export function useFormEngineSections<S extends FormEngineSections>(options: {
     ) => {
       if (!submitLock.acquire()) return;
       try {
-        if (enabled && root) {
-          await iosSubmitGuard(root);
+        if (enabled) {
+          await prepareFormSubmitAsync(root);
+        } else {
+          prepareFormSubmit(root);
         }
         await handler(getSnapshot());
       } finally {
