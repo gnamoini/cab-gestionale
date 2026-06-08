@@ -31,11 +31,11 @@ test("mobile nav drawer scrolls menu items", async ({ page }) => {
     if (!nav) return { ok: false, reason: "missing-nav" };
 
     if (nav.scrollHeight <= nav.clientHeight) {
-      nav.style.minHeight = "120vh";
-      const list = nav.querySelector("a, [aria-disabled]")?.parentElement;
-      if (list instanceof HTMLElement) {
-        list.style.minHeight = `${nav.clientHeight + 400}px`;
-      }
+      const spacer = document.createElement("div");
+      spacer.setAttribute("data-smoke-nav-scroll-spacer", "1");
+      spacer.style.height = `${nav.clientHeight + 400}px`;
+      spacer.style.flexShrink = "0";
+      nav.appendChild(spacer);
     }
 
     const before = nav.scrollTop;

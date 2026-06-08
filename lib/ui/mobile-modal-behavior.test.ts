@@ -138,6 +138,7 @@ assert.doesNotMatch(mobileNavDrawerBlock, /fixed inset-0 \$\{dsZModalHigh\} touc
 assert.match(mobileNavDrawerBlock, /cab-nav-drawer-backdrop[\s\S]*touch-none/);
 assert.match(mobileNavDrawerBlock, /touch-pan-y/);
 assert.match(mobileNavDrawerBlock, /cab-sidebar-nav/);
+assert.match(mobileNavDrawerBlock, /shrink-0 grid grid-cols-\[1fr_auto_1fr\]/);
 
 const mezziSrc = readFileSync(join(root, "components/gestionale/mezzi/mezzi-form-fields.tsx"), "utf8");
 assert.match(mezziSrc, /CAB_FOCUS_SCROLL_GROUP_ATTR/);

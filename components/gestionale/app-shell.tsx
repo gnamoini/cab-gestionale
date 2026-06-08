@@ -436,7 +436,7 @@ function MobileNavDrawer({
         aria-label="Menu principale"
         onMouseDown={(e) => e.stopPropagation()}
       >
-        <div className={`${shellTopBarClass} grid grid-cols-[1fr_auto_1fr] items-center px-4`}>
+        <div className={`${shellTopBarClass} shrink-0 grid grid-cols-[1fr_auto_1fr] items-center px-4`}>
           <span className="min-w-0" aria-hidden />
           <CabLogo height={32} className="shrink-0" sizes="112px" priority />
           <div className="flex min-w-0 items-center justify-end">
