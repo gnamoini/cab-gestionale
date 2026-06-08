@@ -102,8 +102,9 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   const save = modal.getByRole("button", { name: "Salva lavorazione" });
   await expect(save).toBeEnabled({ timeout: 45_000 });
 
-  // Pre-compila tutti i campi obbligatori tranne Cliente (commit normali).
-  await fillSchedaIngressoCreateForm(page, fixture.ingresso, { skipCliente: true });
+  await modal.getByLabel("Data ingresso").fill(fixture.ingresso.dataIngresso);
+  await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
+  await modal.getByRole("combobox", { name: /matricola/i }).fill(fixture.ingresso.matricola);
 
   const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
   await clienteInput.click();

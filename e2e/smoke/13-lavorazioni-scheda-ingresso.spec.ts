@@ -38,7 +38,7 @@ test("iOS regression: cliente combobox salvato senza blur prima del submit", asy
   await expect(async () => {
     const lastPayload = capture.ingressoCampi.at(-1);
     expect(lastPayload?.cliente).toBe(fixture.ingresso.cliente);
-  }).toPass({ timeout: 90_000 });
+  }).toPass({ timeout: 60_000 });
 
   await expect(page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" })).not.toBeVisible({
     timeout: 30_000,

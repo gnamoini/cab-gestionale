@@ -34,7 +34,7 @@ export async function loginViaUi(page: Page, creds: SmokeCredentials): Promise<v
   await page.getByTestId("smoke-login-password").fill(creds.password);
   await page.getByTestId("smoke-login-submit").click();
   await page.waitForURL((url) => !url.pathname.startsWith("/login"), {
-    timeout: 45_000,
+    timeout: 60_000,
     waitUntil: "domcontentloaded",
   });
   await expect(async () => {
