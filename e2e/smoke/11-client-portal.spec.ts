@@ -22,7 +22,7 @@ test("client portal Contattaci modal shows contact links", async ({ page }) => {
   await expect(openContattaci).toBeVisible({ timeout: 30_000 });
   await openContattaci.click();
 
-  const dialog = page.getByTestId("smoke-contattaci-dialog");
+  const dialog = page.getByRole("dialog", { name: "Contattaci" });
   await expect(dialog).toBeVisible({ timeout: 10_000 });
   await expect(dialog.getByText("service@autocompattatori.it")).toBeVisible();
   await expect(dialog.getByText("+39 3480712791")).toBeVisible();

@@ -11,8 +11,7 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
   const { email, phoneDisplay, telHref, mailtoHref, whatsappHref } = CLIENT_PORTAL_CONTACT;
 
   return (
-    <div data-testid="smoke-contattaci-dialog">
-      <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="Contattaci">
+    <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="Contattaci">
       <GestionaleModalScrollBody className="min-h-0 min-w-0 flex-1">
         <div className={`${gestionaleModalScrollContentPad} flex flex-col gap-5`}>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
@@ -82,6 +81,5 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
         </button>
       </footer>
     </LavorazioniModalShell>
-    </div>
   );
 }
