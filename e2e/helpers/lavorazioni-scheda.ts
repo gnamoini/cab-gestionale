@@ -42,14 +42,16 @@ export async function fillListCombobox(
 export async function fillSchedaIngressoCreateForm(
   page: Page,
   data: SchedaIngressoFields,
-  options?: { skipClienteBlurTest?: boolean },
+  options?: { skipClienteBlurTest?: boolean; skipCliente?: boolean },
 ): Promise<void> {
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
   await expect(modal).toBeVisible();
 
   await modal.getByLabel("Data ingresso").fill(data.dataIngresso);
 
-  await fillListCombobox(page, "Cliente", data.cliente, modal);
+  if (!options?.skipCliente) {
+    await fillListCombobox(page, "Cliente", data.cliente, modal);
+  }
   await fillListCombobox(page, "Cantiere", data.cantiere, modal);
   await fillListCombobox(page, "Utilizzatore", data.utilizzatore, modal);
   await modal.getByLabel("Richiedente").fill(data.richiedente);
@@ -93,8 +95,8 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   const save = modal.getByRole("button", { name: "Salva lavorazione" });
   await expect(save).toBeEnabled({ timeout: 45_000 });
 
-  // Marca prima (commit con blur) — poi Cliente digitato e submit senza blur su Cliente.
-  await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
+  // Pre-compila tutti i campi obbligatori tranne Cliente (commit normali).
+  await fillSchedaIngressoCreateForm(page, fixture.ingresso, { skipCliente: true });
 
   const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
   await clienteInput.click();
