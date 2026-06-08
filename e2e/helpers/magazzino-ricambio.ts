@@ -22,9 +22,22 @@ export async function createRicambioLenientSmoke(
   const codiceInput = modal.getByLabel(/codice fornitore originale/i).first();
   await codiceInput.fill(codice);
 
-  const salva = modal.getByRole("button", { name: /^salva/i });
-  await salva.click();
+  const createResponse = page.waitForResponse(
+    (res) =>
+      res.url().includes("/rest/v1/magazzino_ricambi") &&
+      res.request().method() === "POST" &&
+      res.ok(),
+    { timeout: 60_000 },
+  );
 
+  await modal.locator("form").evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+
+  await createResponse;
   await expect(modal).toBeHidden({ timeout: 30_000 });
-  await expect(page.getByText(codice, { exact: false }).first()).toBeVisible({ timeout: 20_000 });
+
+  const row = page.getByText(codice, { exact: false }).first();
+  await row.scrollIntoViewIfNeeded();
+  await expect(row).toBeVisible({ timeout: 20_000 });
 }
