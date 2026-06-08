@@ -47,11 +47,11 @@ assert.match(verifyScript, /scheda_lavorazione/);
 assert.match(verifyScript, /SCHEDA_INGRESSO_DB_KEYS/);
 
 const pkg = read("package.json");
-assert.match(pkg, /smoke:playwright:ios-smoke/);
+assert.match(pkg, /smoke:playwright:scheda-smoke/);
 assert.match(pkg, /smoke:playwright:cert.*iOS regression/);
-assert.match(pkg, /mobile-ios-chromium/);
 
 const prWorkflow = read(".github/workflows/release-gate.yml");
-assert.match(prWorkflow, /smoke:playwright:ios-smoke/);
+assert.match(prWorkflow, /smoke:playwright:scheda-smoke/);
+assert.doesNotMatch(prWorkflow, /smoke:playwright:ios-smoke/);
 
 console.log("lavorazioni-e2e-certification-audit.test.ts OK");

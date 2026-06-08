@@ -31,6 +31,7 @@ assert.doesNotMatch(magazzinoSources, /<datalist\b/);
 const formFields = read("components/gestionale/magazzino/ricambio-form-fields.tsx");
 const filters = read("components/gestionale/magazzino/magazzino-advanced-filter-panel.tsx");
 const view = read("components/gestionale/magazzino/magazzino-view.tsx");
+const ricambioModal = read("components/gestionale/magazzino/ricambio-new-modal.tsx");
 const multiSelect = read("components/gestionale/global-input/global-multi-select.tsx");
 
 assert.match(formFields, /htmlFor/);
@@ -43,7 +44,7 @@ assert.match(filters, /GlobalSettingsListSelect/);
 assert.match(filters, /htmlFor="mag-filter-marca-ricambio"/);
 assert.match(filters, /id="mag-filter-categoria"/);
 
-assert.match(view, /GestionaleModalScrollBody/);
+assert.match(ricambioModal, /GestionaleModalScrollBody/);
 assert.match(view, /GestionaleListSearchField/);
 assert.match(view, /id="magazzino-search"/);
 

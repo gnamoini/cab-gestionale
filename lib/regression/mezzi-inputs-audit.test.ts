@@ -28,7 +28,8 @@ assert.doesNotMatch(mezziSources, /<select\b/);
 assert.doesNotMatch(mezziSources, /<datalist\b/);
 
 const filters = read("components/gestionale/mezzi/mezzi-filters.tsx");
-const view = read("components/gestionale/mezzi/mezzi-view.tsx");
+const formFields = read("components/gestionale/mezzi/mezzi-form-fields.tsx");
+const newModal = read("components/gestionale/mezzi/mezzi-new-modal.tsx");
 
 assert.match(filters, /htmlFor="mezzi-filter-cliente"/);
 assert.match(filters, /id="mezzi-filter-ultima-lav"/);
@@ -38,10 +39,10 @@ assert.match(filters, /id="mezzi-search"/);
 assert.match(filters, /aria-label="Cerca mezzi"/);
 assert.match(filters, /min-h-11/);
 
-assert.match(view, /htmlFor="mezzo-form-matricola"/);
-assert.match(view, /id="mezzo-form-cliente"/);
-assert.match(view, /inputMode="numeric"/);
-assert.match(view, /GestionaleModalScrollBody/);
-assert.match(view, /MezzoFormFields/);
+assert.match(formFields, /htmlFor="mezzo-form-matricola"/);
+assert.match(formFields, /id="mezzo-form-cliente"/);
+assert.match(formFields, /inputMode="numeric"/);
+assert.match(newModal, /GestionaleModalScrollBody/);
+assert.match(newModal, /MezzoFormFields/);
 
 console.log("mezzi-inputs-audit.test.ts OK");
