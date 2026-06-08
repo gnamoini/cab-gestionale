@@ -65,6 +65,11 @@ jobs:
       - name: Long-session soak threshold
         run: npm run ops:long-session-soak:threshold
 
+      - name: Next.js build (Playwright runtime)
+        run: npm run ci:build
+        env:
+          NODE_ENV: production
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium webkit
 
