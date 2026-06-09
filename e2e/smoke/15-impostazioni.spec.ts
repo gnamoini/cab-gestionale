@@ -66,8 +66,9 @@ test("unsaved changes dialog blocks navigation away from impostazioni", async ({
   await expect(page).toHaveURL(/\/impostazioni/);
   await expect(input).toHaveValue(draft);
 
-  await page.getByRole("button", { name: "Annulla modifiche" }).click();
-  await expect(page.getByRole("button", { name: /Annullare modifiche/i })).toBeVisible({ timeout: 5_000 });
-  await page.getByRole("button", { name: /Annullare modifiche/i }).click();
+  await page.getByRole("button", { name: "Annulla modifiche" }).first().click();
+  const cancelDialog = page.getByRole("dialog").filter({ has: page.getByRole("heading", { name: "Annullare modifiche?" }) });
+  await expect(cancelDialog).toBeVisible({ timeout: 5_000 });
+  await cancelDialog.getByRole("button", { name: "Annulla modifiche" }).click();
   await expect(input).toHaveValue(before, { timeout: 10_000 });
 });
