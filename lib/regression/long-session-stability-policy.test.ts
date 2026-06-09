@@ -93,6 +93,20 @@ assert.match(storage, /LAVORAZIONI_SCHEDE_STORAGE_TTL_MS/);
 const visibility = read("lib/ui/gestionale-visibility-coordinator.ts");
 assert.match(visibility, /registerGestionaleVisibilityHandler/);
 
+const postgresChannel = read("lib/realtime/postgres-changes-channel.ts");
+assert.match(postgresChannel, /channelLostHandled/);
+
+const globalSelect = read("components/gestionale/global-input/global-select.tsx");
+assert.match(globalSelect, /suggestionSearchText/);
+assert.match(globalSelect, /isDeferPending && !editSessionRef\.current\.modified/);
+
+// RF-05 reconnect exhaustion + RF-04 scoped polling fallback
+assert.match(realtimeBridge, /reconnectExhausted/);
+assert.match(realtimeBridge, /notePollingFallbackActivation\("max reconnect attempts/);
+assert.doesNotMatch(realtimeBridge, /console\.warn\("\[gestionale rt\] max reconnect attempts/);
+assert.match(realtimeBridge, /refetchActiveOperationalSnapshot\(qc, \{ onlyActive: true \}\)/);
+assert.doesNotMatch(realtimeBridge, /invalidateAllGestionaleOperationalQueries/);
+
 const authCtx = read("context/auth-context.tsx");
 assert.match(authCtx, /registerGestionaleVisibilityHandler/);
 

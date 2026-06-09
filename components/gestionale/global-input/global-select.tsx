@@ -192,9 +192,13 @@ export function GlobalSelect(props: GlobalSelectProps) {
 
   const displayValue = useMemo(() => autocompleteDisplayValue(engineInput), [engineInput]);
 
+  const isDeferPending = searchText !== deferredSearchText;
+  const suggestionSearchText =
+    isDeferPending && !editSessionRef.current.modified ? searchText : deferredSearchText;
+
   const suggestionEngineInput = useMemo(
-    () => ({ ...engineInput, searchText: deferredSearchText }),
-    [engineInput, deferredSearchText],
+    () => ({ ...engineInput, searchText: suggestionSearchText }),
+    [engineInput, suggestionSearchText],
   );
 
   const suggestions = useMemo(() => {
@@ -452,6 +456,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
+      e.stopPropagation();
+      if (open) e.preventDefault();
       closeAndReset();
       return;
     }

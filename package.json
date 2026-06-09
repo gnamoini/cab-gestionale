@@ -37,6 +37,8 @@
     "ci:supabase:publication": "npx tsx scripts/verify-supabase-publication.ts --mode=sanity",
     "ci:supabase:publication:full": "npx tsx scripts/verify-supabase-publication.ts --mode=full",
     "smoke:gate": "npx tsx scripts/smoke-gate.ts",
+    "ci:smoke:preflight": "npx tsx scripts/ci-smoke-preflight.ts --tier=pr",
+    "ci:smoke:preflight:cert": "npx tsx scripts/ci-smoke-preflight.ts --tier=cert",
     "smoke:cleanup": "npx tsx scripts/cleanup-smoke-data.ts",
     "smoke:cleanup:apply": "npx tsx scripts/cleanup-smoke-data.ts --apply",
     "audit:smoke:residues": "npx tsx scripts/audit-smoke-residues.ts",

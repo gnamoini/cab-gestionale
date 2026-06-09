@@ -25,7 +25,13 @@ function main(): void {
   }
 
   if (!smokeCredsPresent()) {
-    console.log("\nSmoke Playwright skipped: set SMOKE_ADMIN_EMAIL/PASSWORD + Supabase public env (or SMOKE_SKIP=1)\n");
+    const msg =
+      "\nSmoke Playwright skipped: set SMOKE_ADMIN_EMAIL/PASSWORD + Supabase public env (or SMOKE_SKIP=1)\n";
+    if (process.env.CI === "true") {
+      console.error(`${msg}CI=true — FAIL (no silent skip in CI)\n`);
+      process.exit(1);
+    }
+    console.log(msg);
     process.exit(0);
   }
 

@@ -26,6 +26,7 @@
 | `smoke:structural` + `smoke:regression:core` | blocking | — | — |
 | `smoke:regression:extended` | — | blocking | advisory |
 | `flex:eslint:gate` + `flex:freeze:gate` | blocking | — | — |
+| `ci:smoke:preflight` (creds + DB fail-fast) | blocking | blocking | — |
 | `smoke:playwright` (spec 01–12) | blocking | — | — |
 | `smoke:playwright:scheda-smoke` (spec 13 desktop full flow) | blocking | — | — |
 | `smoke:playwright:ricambio:smoke` (spec 14) | blocking | — | — |
@@ -53,6 +54,8 @@ Requisiti oggettivi:
 4. Nessun blind spot **P0** aperto (iOS combobox cert stabile o ripristinato in PR con fix product).
 
 Stato attuale validazione: **B — Conditionally Stable** (vedi [`audit-release-gate-validation-2026-06.md`](./audit-release-gate-validation-2026-06.md)).
+
+Piano uplift 82→90+: [`uplift-production-readiness-82-to-90.md`](./uplift-production-readiness-82-to-90.md).
 
 ## Gap residui — chiusura
 

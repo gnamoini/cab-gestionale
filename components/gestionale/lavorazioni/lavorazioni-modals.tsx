@@ -250,8 +250,17 @@ export function LavorazioniModalShell({
     ) : null);
 
   useEffect(() => {
+    function hasVisibleOpenDropdown(): boolean {
+      if (document.querySelector('input[role="combobox"][aria-expanded="true"]')) return true;
+      for (const el of document.querySelectorAll('[role="listbox"]')) {
+        if (el instanceof HTMLElement && el.offsetParent !== null) return true;
+      }
+      return false;
+    }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onRequestClose();
+      if (e.key !== "Escape") return;
+      if (hasVisibleOpenDropdown()) return;
+      onRequestClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

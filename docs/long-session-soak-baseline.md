@@ -58,13 +58,23 @@ Esecuzione rapida `npm run ops:long-session-soak` (1 campione):
 | Connessioni Realtime | Supabase Realtime | WS per tab |
 | Query lente | Advisors / `pg_stat_statements` | Seq scan bundle schede (pre-lazy) |
 
-### Isolare solo polling (staging)
+### Isolare solo polling (staging / local dev)
 
 ```env
 NEXT_PUBLIC_GESTIONALE_FORCE_POLL=1
 ```
 
 Forza fallback polling senza WebSocket Realtime. Confrontare req/min con flag off (Realtime connected).
+
+Per sessioni dev lunghe con lag da log per-query:
+
+```env
+NEXT_PUBLIC_OBS_LOG_LEVEL=info
+```
+
+Riduce `gestionaleLogger.debug` su ogni query (default dev è `debug` in `lib/observability/config.ts`) senza disabilitare errori.
+
+Report completo lag local: [debug-local-lag-remediation.md](./debug-local-lag-remediation.md).
 
 **Atteso post-fix:**
 

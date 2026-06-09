@@ -32,6 +32,18 @@ const filtered = autocompleteStringSuggestions(base({ focused: true, searchText:
 assert.ok(filtered.includes("Beta"));
 assert.equal(filtered.includes("Gamma"), false);
 
+// Seed open: query committata filtra subito (no browse flash con defer pending)
+const seedOptions = ["A.C.T.A.", "Alpha", "Beta", "Gamma"];
+const seedFiltered = autocompleteStringSuggestions(
+  base({ focused: true, searchText: "A.C.T.A.", options: seedOptions }),
+);
+assert.ok(seedFiltered.includes("A.C.T.A."));
+assert.equal(seedFiltered.includes("Alpha"), false);
+const seedBrowse = autocompleteStringSuggestions(
+  base({ focused: true, searchText: "", options: seedOptions }),
+);
+assert.equal(seedBrowse.length, 4);
+
 // Display: chiuso mostra value
 assert.equal(autocompleteDisplayValue(base({ value: "Alpha", focused: false })), "Alpha");
 

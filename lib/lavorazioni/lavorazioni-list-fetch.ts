@@ -14,6 +14,7 @@ import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { LavorazioneFilters, LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
+import { logLavorazioniListPipelineDebug } from "@/lib/lavorazioni/lavorazioni-list-pipeline-debug";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -51,8 +52,18 @@ function settingsStatiForSanitize() {
   return resolved.lavorazioni.stati;
 }
 
-const LAVORAZIONI_PROFILE_SELECT =
-  "updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), created_by_profile:profiles!lavorazioni_created_by_fkey(nome)";
+const LAVORAZIONI_CREATED_BY_PROFILE_SELECT =
+  "created_by_profile:profiles!lavorazioni_created_by_fkey(nome)";
+
+const LAVORAZIONI_PROFILE_SELECT = `updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), ${LAVORAZIONI_CREATED_BY_PROFILE_SELECT}`;
+
+function isUpdatedByProfileJoinError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes("lavorazioni_updated_by_fkey") ||
+    (m.includes("could not find a relationship") && m.includes("profiles"))
+  );
+}
 
 type ProfileEmbed = { nome?: string | null } | null;
 
@@ -63,8 +74,14 @@ function embedProfileNome(raw: ProfileEmbed | ProfileEmbed[] | undefined): strin
   return nome || null;
 }
 
-function lavorazioniListSelect(includeMezzo: boolean, mezziSelect: string): string {
-  const profilePart = LAVORAZIONI_PROFILE_SELECT;
+function lavorazioniListSelect(
+  includeMezzo: boolean,
+  mezziSelect: string,
+  includeUpdatedByProfile = true,
+): string {
+  const profilePart = includeUpdatedByProfile
+    ? LAVORAZIONI_PROFILE_SELECT
+    : LAVORAZIONI_CREATED_BY_PROFILE_SELECT;
   if (includeMezzo) return `*, ${profilePart}, ${mezziSelect}`;
   return `*, ${profilePart}`;
 }
@@ -120,6 +137,32 @@ export type LavorazioniListFetchOptions = {
   clienteRefScope?: string | null;
 };
 
+async function fetchLavorazioniListRowsQuery(
+  sb: SupabaseClient,
+  filters: LavorazioneFilters | undefined,
+  options: {
+    clienteRefScope: string | null;
+    includeMezzo: boolean;
+    mezziSelect: string;
+    includeUpdatedByProfile: boolean;
+  },
+): Promise<{ data: LavorazioneListRawRow[] | null; error: { message: string } | null }> {
+  const { clienteRefScope, includeMezzo, mezziSelect, includeUpdatedByProfile } = options;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- evita TS2589 su PostgrestFilterBuilder
+  let q: any = applyLavorazioniNotDeletedFilter(
+    sb
+      .from("lavorazioni")
+      .select(lavorazioniListSelect(includeMezzo, mezziSelect, includeUpdatedByProfile))
+      .order("created_at", { ascending: false }),
+  );
+  q = applyLavorazioniListFilters(q, filters);
+  if (clienteRefScope && includeMezzo) {
+    q = q.eq("mezzi.cliente", clienteRefScope);
+  }
+  const { data, error } = await q;
+  return { data: (data ?? null) as LavorazioneListRawRow[] | null, error };
+}
+
 /** Fetch puro da Supabase — nessun controllo permessi UI. */
 export async function fetchLavorazioniListRows(
   sb: SupabaseClient,
@@ -129,18 +172,32 @@ export async function fetchLavorazioniListRows(
   const clienteRefScope = normalizeClienteRef(options?.clienteRefScope);
   const includeMezzo = filters?.includeMezzo === true || !!clienteRefScope;
   const mezziSelect = clienteRefScope ? "mezzi!inner(*)" : "mezzi(*)";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- evita TS2589 su PostgrestFilterBuilder
-  let q: any = applyLavorazioniNotDeletedFilter(
-    sb
-      .from("lavorazioni")
-      .select(lavorazioniListSelect(includeMezzo, mezziSelect))
-      .order("created_at", { ascending: false }),
-  );
-  q = applyLavorazioniListFilters(q, filters);
-  if (clienteRefScope && includeMezzo) {
-    q = q.eq("mezzi.cliente", clienteRefScope);
+  const baseOpts = { clienteRefScope, includeMezzo, mezziSelect };
+
+  let profileJoinFallback = false;
+  let { data, error } = await fetchLavorazioniListRowsQuery(sb, filters, {
+    ...baseOpts,
+    includeUpdatedByProfile: true,
+  });
+
+  if (error && isUpdatedByProfileJoinError(error.message)) {
+    profileJoinFallback = true;
+    ({ data, error } = await fetchLavorazioniListRowsQuery(sb, filters, {
+      ...baseOpts,
+      includeUpdatedByProfile: false,
+    }));
   }
-  const { data, error } = await q;
+
+  logLavorazioniListPipelineDebug({
+    surface: "fetch",
+    archivedFilter: filters?.archived ?? null,
+    clienteRefScope,
+    queryError: error?.message ?? null,
+    rawInCorso: filters?.archived === false ? (data?.length ?? 0) : undefined,
+    rawArchivio: filters?.archived === true ? (data?.length ?? 0) : undefined,
+    profileJoinFallback,
+  });
+
   if (error) return err(error.message);
   if (includeMezzo) {
     const raw = (data ?? []) as LavorazioneListRawRow[];
@@ -181,6 +238,12 @@ export async function fetchLavorazioniListAuthorized(
     }
     const sb = getBrowserSupabase();
     const clienteRefScope = await resolveClienteRefScopeForAuthorizedList(authOptions);
+    logLavorazioniListPipelineDebug({
+      surface: "fetch",
+      guardOk: true,
+      archivedFilter: filters?.archived ?? null,
+      clienteRefScope,
+    });
     return fetchLavorazioniListRows(sb, filters, { clienteRefScope });
   } catch (e) {
     return serviceFailFromError(e);

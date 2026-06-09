@@ -52,6 +52,12 @@ assert.match(savePrep, /prepareFormSubmit/);
 const iosGuard = read("lib/forms/form-engine/ios-submit-guard.ts");
 assert.match(iosGuard, /compositionend/);
 assert.match(iosGuard, /formEngineCompositionTimeout/);
+assert.match(iosGuard, /aria-expanded="true"/);
+assert.match(iosGuard, /IOS_SUBMIT_GUARD_TARGET_ATTR/);
+
+const focusScope = read("components/gestionale/gestionale-form-focus-scope.tsx");
+assert.match(focusScope, /onFocusCapture/);
+assert.match(focusScope, /IOS_SUBMIT_GUARD_TARGET_ATTR/);
 
 const hookSource = read("lib/forms/form-engine/use-form-engine.ts");
 assert.match(hookSource, /useFormEngine/);
@@ -63,7 +69,7 @@ const runSubmitSrc = read("lib/forms/form-engine/run-submit.ts");
 assert.match(runSubmitSrc, /runSubmitFromGetter/);
 assert.match(runSubmitSrc, /runButtonSubmit/);
 assert.match(runSubmitSrc, /prepareFormSubmitAsync/);
-assert.match(runSubmitSrc, /runSubmitFromGetter[\s\S]*prepareFormSubmitAsync/);
+assert.match(runSubmitSrc, /runSubmitCore[\s\S]*prepareFormSubmitAsync/);
 
 const submitLockHook = read("lib/forms/form-engine/use-submit-lock.ts");
 assert.match(submitLockHook, /useSubmitLock/);

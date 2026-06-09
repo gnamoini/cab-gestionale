@@ -99,14 +99,45 @@ export async function clickNuovaLavorazioneCta(page: Page): Promise<void> {
   const btn = page.getByRole("button", { name: /\+?\s*Nuova(\s+lavorazione)?/i });
   await btn.scrollIntoViewIfNeeded();
   await btn.click();
+  const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
+  await expect(modal).toBeVisible({ timeout: 45_000 });
 }
 
-async function dismissComboboxDropdown(page: Page): Promise<void> {
-  const listbox = page.getByRole("listbox");
-  if (await listbox.isVisible().catch(() => false)) {
-    await page.keyboard.press("Escape");
-    await expect(listbox).toBeHidden({ timeout: 5_000 }).catch(() => undefined);
+/** Listbox portal del combobox (`aria-controls`), fallback al primo listbox page. */
+async function listboxForCombobox(page: Page, comboboxInput: Locator): Promise<Locator> {
+  const controlsId = await comboboxInput.getAttribute("aria-controls");
+  if (controlsId?.trim()) {
+    return page.locator(`[id="${controlsId.replace(/"/g, '\\"')}"]`);
   }
+  return page.getByRole("listbox").first();
+}
+
+/** Chiude il listbox portal senza Escape (il modal shell chiude su Escape). */
+async function dismissComboboxDropdown(
+  page: Page,
+  comboboxInput: Locator,
+  modalScope?: Locator,
+): Promise<void> {
+  const listbox = await listboxForCombobox(page, comboboxInput);
+  if (!(await listbox.isVisible().catch(() => false))) {
+    return;
+  }
+  await comboboxInput.blur();
+  if (await listbox.isVisible().catch(() => false)) {
+    const heading = (modalScope ?? page.locator("[data-cab-modal-root]").first()).getByRole("heading", {
+      level: 2,
+    });
+    await heading.click({ force: true });
+  }
+  await expect(listbox).toBeHidden({ timeout: 5_000 });
+}
+
+async function optionInComboboxListbox(page: Page, comboboxInput: Locator, value: string): Promise<Locator> {
+  const listbox = await listboxForCombobox(page, comboboxInput);
+  return listbox
+    .getByRole("option", { name: new RegExp(escapeRegExp(value), "i") })
+    .or(page.getByRole("option", { name: new RegExp(escapeRegExp(value), "i") }))
+    .first();
 }
 
 /** Combobox GlobalSelect / GlobalSettingsListSelect: digita e aggiungi all'elenco se necessario. */
@@ -121,15 +152,12 @@ export async function fillListCombobox(
   await input.scrollIntoViewIfNeeded();
   await input.click();
   if ((await input.getAttribute("aria-readonly")) === "true") {
-    const listbox = page.getByRole("listbox");
-    const option = listbox
-      .getByRole("option", { name: new RegExp(escapeRegExp(value), "i") })
-      .or(page.getByRole("option", { name: new RegExp(escapeRegExp(value), "i") }))
-      .first();
+    const option = await optionInComboboxListbox(page, input, value);
     await expect(option).toBeVisible({ timeout: 15_000 });
     await option.click();
     await expect(input).toHaveValue(value, { timeout: 15_000 });
-    await dismissComboboxDropdown(page);
+    await dismissComboboxDropdown(page, input, scope);
+    if (scope) await expect(scope).toBeVisible();
     return;
   }
   await input.fill(value);
@@ -137,24 +165,23 @@ export async function fillListCombobox(
   if (await addBtn.isVisible().catch(() => false)) {
     await addBtn.click();
     await expect(input).toHaveValue(value, { timeout: 15_000 });
-    await dismissComboboxDropdown(page);
+    await dismissComboboxDropdown(page, input, scope);
+    if (scope) await expect(scope).toBeVisible();
     return;
   }
-  const listbox = page.getByRole("listbox");
-  const option = listbox
-    .getByRole("option", { name: new RegExp(escapeRegExp(value), "i") })
-    .or(page.getByRole("option", { name: new RegExp(escapeRegExp(value), "i") }))
-    .first();
+  const option = await optionInComboboxListbox(page, input, value);
   if (await option.isVisible().catch(() => false)) {
     await option.click();
     await expect(input).toHaveValue(value, { timeout: 15_000 });
-    await dismissComboboxDropdown(page);
+    await dismissComboboxDropdown(page, input, scope);
+    if (scope) await expect(scope).toBeVisible();
     return;
   }
   await input.press("Enter");
-  await dismissComboboxDropdown(page);
+  await dismissComboboxDropdown(page, input, scope);
   await input.blur();
   await expect(input).toHaveValue(value, { timeout: 15_000 });
+  if (scope) await expect(scope).toBeVisible();
   return;
 }
 
@@ -165,6 +192,7 @@ export async function fillSchedaIngressoCreateForm(
 ): Promise<void> {
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
   await expect(modal).toBeVisible();
+  await waitForGlobalOptionsReady(modal);
 
   await modal.getByLabel("Data ingresso").fill(data.dataIngresso);
 
@@ -181,7 +209,9 @@ export async function fillSchedaIngressoCreateForm(
     await fillListCombobox(page, "Modello attrezzatura", data.modelloAttrezzatura, modal);
   }
 
-  await modal.getByRole("combobox", { name: /matricola/i }).fill(data.matricola);
+  const matricolaInput = modal.getByRole("combobox", { name: /matricola/i });
+  await matricolaInput.scrollIntoViewIfNeeded();
+  await matricolaInput.fill(data.matricola);
   await modal.getByLabel("N. scuderia").fill(data.nScuderia);
 
   await fillListCombobox(page, "Tipo telaio", data.tipoTelaio, modal);
@@ -190,7 +220,9 @@ export async function fillSchedaIngressoCreateForm(
     await fillListCombobox(page, "Modello telaio", data.modelloTelaio, modal);
   }
 
-  await modal.getByRole("combobox", { name: /targa/i }).fill(data.targa);
+  const targaInput = modal.getByRole("combobox", { name: /targa/i });
+  await targaInput.scrollIntoViewIfNeeded();
+  await targaInput.fill(data.targa);
   await modal.getByLabel("Ore lavoro").fill(data.oreLavoro);
   await modal.getByLabel("KM").fill(data.km);
   await fillListCombobox(page, "Livello carburante", data.livelloCarburante, modal);
@@ -219,12 +251,14 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   await waitForGlobalOptionsReady(modal);
 
   await modal.getByLabel("Data ingresso").fill(fixture.ingresso.dataIngresso);
-  await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
 
   const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
+  await clienteInput.scrollIntoViewIfNeeded();
   await clienteInput.click();
   await clienteInput.fill(fixture.ingresso.cliente);
   await expect(clienteInput).toHaveValue(fixture.ingresso.cliente, { timeout: 15_000 });
+
+  await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
 
   const schedaPersist = waitForSchedaPersist(page, { expectCliente: fixture.ingresso.cliente });
   await modal.locator("form").evaluate((form: HTMLFormElement) => {
@@ -308,15 +342,13 @@ export async function fillAddettoRiga(hub: Locator, addettoName?: string): Promi
     return;
   }
   await combo.click();
-  const option = page
-    .getByRole("listbox")
-    .getByRole("option")
-    .or(page.getByRole("option"))
-    .first();
+  const listbox = await listboxForCombobox(page, combo);
+  const option = listbox.getByRole("option").or(page.getByRole("option")).first();
   await expect(option).toBeVisible({ timeout: 15_000 });
   await option.click();
   await expect(combo).not.toHaveValue("", { timeout: 15_000 });
-  await dismissComboboxDropdown(page);
+  await dismissComboboxDropdown(page, combo, hub);
+  await expect(hub).toBeVisible();
 }
 
 export async function fillLavorazioniRigaPrima(

@@ -70,6 +70,9 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: CI smoke preflight (fail-fast)
+        run: npx tsx scripts/ci-smoke-preflight.ts --tier=cert
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium webkit
 
@@ -88,6 +91,17 @@ jobs:
       - name: Smoke residue audit (advisory)
         run: npm run audit:smoke:residues
         continue-on-error: true
+
+      - name: Upload Playwright cert artifacts on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-cert-failure-${{ github.run_id }}
+          path: |
+            e2e/test-results/**
+            e2e/playwright-report/**
+          retention-days: 21
+          if-no-files-found: ignore
 
       - name: Cleanup smoke test data
         if: always()

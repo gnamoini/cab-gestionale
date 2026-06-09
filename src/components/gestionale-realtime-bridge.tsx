@@ -6,7 +6,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { useToastContext } from "@/context/toast-context";
 import { isSupabasePublicEnvConfigured } from "@/lib/env/supabase-public";
-import { noteRealtimeReconnect } from "@/lib/observability/degradation-detector";
+import {
+  notePollingFallbackActivation,
+  noteRealtimeReconnect,
+} from "@/lib/observability/degradation-detector";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import {
   appSettingsChangeFingerprint,
@@ -20,7 +23,6 @@ import {
   GESTIONALE_REALTIME_POLL_MS,
   GESTIONALE_REALTIME_RETRY_ATTEMPTS,
   GESTIONALE_REALTIME_TABLES,
-  invalidateAllGestionaleOperationalQueries,
 } from "@/lib/realtime/gestionale-realtime-config";
 import { isGestionaleForcePollEnabled } from "@/lib/realtime/gestionale-force-poll";
 import { setGestionaleRealtimeRuntimeMode } from "@/lib/realtime/gestionale-realtime-runtime";
@@ -74,6 +76,7 @@ export function GestionaleRealtimeBridge() {
     let activeChannel: Awaited<ReturnType<typeof subscribePostgresChangesChannel>>["channel"] | null = null;
     let reconnecting = false;
     let reconnectAttempts = 0;
+    let reconnectExhausted = false;
     let wasPolling = false;
     let connectGeneration = 0;
 
@@ -81,7 +84,8 @@ export function GestionaleRealtimeBridge() {
       pollIntervalMs: GESTIONALE_REALTIME_POLL_MS,
       onPoll: () => {
         if (cancelled) return;
-        invalidateAllGestionaleOperationalQueries(qc);
+        if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
+        refetchActiveOperationalSnapshot(qc, { onlyActive: true });
       },
       onModeChange: (mode) => {
         const next = mode === "realtime" ? "connected" : mode === "polling" ? "polling" : "idle";
@@ -241,7 +245,7 @@ export function GestionaleRealtimeBridge() {
     };
 
     const connectRealtime = async () => {
-      if (cancelled || reconnecting) return;
+      if (cancelled || reconnecting || reconnectExhausted) return;
       if (isGestionaleForcePollEnabled()) {
         startPollingFallback("NEXT_PUBLIC_GESTIONALE_FORCE_POLL");
         reconnecting = false;
@@ -271,6 +275,7 @@ export function GestionaleRealtimeBridge() {
             if (cancelled) return;
             if (s === "connected") {
               rtConnectedRef.current = true;
+              reconnectExhausted = false;
               transport.activateRealtime();
               if (wasPolling) {
                 wasPolling = false;
@@ -287,14 +292,15 @@ export function GestionaleRealtimeBridge() {
             }
           },
           onChannelLost: () => {
-            if (cancelled) return;
+            if (cancelled || reconnectExhausted) return;
             rtConnectedRef.current = false;
             startPollingFallback("channel lost");
             void removeActiveChannel("channel-lost").then(() => {
-              if (cancelled) return;
+              if (cancelled || reconnectExhausted) return;
               if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
-                console.warn("[gestionale rt] max reconnect attempts — polling fallback");
-                startPollingFallback();
+                reconnectExhausted = true;
+                notePollingFallbackActivation("max reconnect attempts — polling fallback");
+                startPollingFallback("max reconnect attempts");
                 return;
               }
               reconnectAttempts += 1;
@@ -318,6 +324,7 @@ export function GestionaleRealtimeBridge() {
         if (subscribed && channel) {
           activeChannel = channel;
           reconnectAttempts = 0;
+          reconnectExhausted = false;
           rtConnectedRef.current = true;
           transport.activateRealtime();
           if (wasPolling) {

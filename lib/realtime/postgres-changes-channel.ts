@@ -90,6 +90,7 @@ export function subscribeRealtimeChannelOnly(
   const { subscribeTimeoutMs = 8000, logPrefix = "[postgres_changes]" } = options;
   let subscribedOnce = false;
   let settled = false;
+  let channelLostHandled = false;
 
   const settle = (result: boolean): boolean => {
     if (settled) return result;
@@ -109,6 +110,8 @@ export function subscribeRealtimeChannelOnly(
         }
         if (st === "CHANNEL_ERROR" || st === "TIMED_OUT" || st === "CLOSED") {
           if (subscribedOnce) {
+            if (channelLostHandled) return;
+            channelLostHandled = true;
             console.warn(`${logPrefix} channel lost:`, st, err?.message ?? "");
             options.onChannelLost?.();
             return;

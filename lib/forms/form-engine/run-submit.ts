@@ -12,10 +12,7 @@ export type RunSubmitOptions = {
   shadowLive?: () => unknown;
 };
 
-/**
- * Submit da form: onSubmitCapture fa solo drain React; FSE esegue guard → flush → snapshot.
- */
-export async function runSubmitFromGetter<T extends object>(
+async function runSubmitCore<T extends object>(
   root: HTMLElement | null,
   lock: FormSubmitLock,
   getValues: () => T,
@@ -41,6 +38,19 @@ export async function runSubmitFromGetter<T extends object>(
 }
 
 /**
+ * Submit da form: onSubmitCapture fa solo drain React; FSE esegue guard → flush → snapshot.
+ */
+export async function runSubmitFromGetter<T extends object>(
+  root: HTMLElement | null,
+  lock: FormSubmitLock,
+  getValues: () => T,
+  handler: (snap: FormStateSnapshot<T>) => void | Promise<void>,
+  options?: RunSubmitOptions,
+): Promise<void> {
+  return runSubmitCore(root, lock, getValues, handler, options);
+}
+
+/**
  * Submit da button onClick (no form submit): flush completo + ios guard + snapshot.
  */
 export async function runButtonSubmit<T extends object>(
@@ -50,20 +60,5 @@ export async function runButtonSubmit<T extends object>(
   handler: (snap: FormStateSnapshot<T>) => void | Promise<void>,
   options?: RunSubmitOptions,
 ): Promise<void> {
-  const enabled = options?.enabled ?? isFormEngineEnabled();
-  if (!lock.acquire()) return;
-  try {
-    if (enabled) {
-      await prepareFormSubmitAsync(root);
-    } else {
-      prepareFormSubmit(root);
-    }
-    const snap = captureFormSnapshot(getValues);
-    if (options?.shadowLive) {
-      compareFormEngineShadow(snap, options.shadowLive(), options.shadowLabel);
-    }
-    await handler(snap);
-  } finally {
-    lock.release();
-  }
+  return runSubmitCore(root, lock, getValues, handler, options);
 }

@@ -37,6 +37,8 @@ assert.match(spec, /attachSchedaPayloadCapture/);
 const helpers = read("e2e/helpers/lavorazioni-scheda.ts");
 assert.match(helpers, /Salva lavorazione/);
 assert.match(helpers, /clickNuovaLavorazioneCta/);
+assert.doesNotMatch(helpers, /keyboard\.press\(["']Escape["']\)/);
+assert.match(helpers, /listboxForCombobox|aria-controls/);
 
 const fixture = read("e2e/fixtures/scheda-ingresso-test-data.ts");
 assert.match(fixture, /SCHEDA_INGRESSO_DB_KEYS/);

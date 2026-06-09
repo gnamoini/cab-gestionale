@@ -11,12 +11,15 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   timeout: 45_000,
   expect: { timeout: 12_000 },
-  reporter: process.env.CI ? [["github"], ["list"]] : [["list"]],
+  reporter: process.env.CI
+    ? [["github"], ["list"], ["html", { open: "never", outputFolder: "e2e/playwright-report" }]]
+    : [["list"]],
+  outputDir: "e2e/test-results",
   use: {
     baseURL,
-    trace: process.env.CI ? "on-first-retry" : "off",
+    trace: process.env.CI ? "retain-on-failure" : "off",
     screenshot: "only-on-failure",
-    video: "off",
+    video: process.env.CI ? "retain-on-failure" : "off",
     actionTimeout: 15_000,
     navigationTimeout: 30_000,
   },
