@@ -58,8 +58,9 @@ test("unsaved changes dialog blocks navigation away from impostazioni", async ({
   await input.fill(draft);
 
   await page.getByRole("link", { name: "Dashboard" }).first().click();
-  await expect(page.getByRole("dialog")).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByText("Modifiche non salvate")).toBeVisible();
+  const unsavedDialog = page.getByRole("dialog");
+  await expect(unsavedDialog).toBeVisible({ timeout: 10_000 });
+  await expect(unsavedDialog.getByRole("heading", { name: "Modifiche non salvate" })).toBeVisible();
 
   await page.getByRole("button", { name: "Torna indietro" }).click();
   await expect(page).toHaveURL(/\/impostazioni/);
