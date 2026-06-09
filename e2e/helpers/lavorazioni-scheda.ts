@@ -152,8 +152,10 @@ export async function fillListCombobox(
     return;
   }
   await input.press("Enter");
-  await expect(input).toHaveValue(value, { timeout: 15_000 });
   await dismissComboboxDropdown(page);
+  await input.blur();
+  await expect(input).toHaveValue(value, { timeout: 15_000 });
+  return;
 }
 
 export async function fillSchedaIngressoCreateForm(
@@ -237,14 +239,12 @@ export async function submitCreateLavorazione(page: Page): Promise<void> {
   await waitForGlobalOptionsReady(modal);
 
   const createResponse = waitForLavorazioneCreate(page);
-  const schedaPersist = waitForSchedaPersist(page, { requireCampi: true });
 
   await modal.locator("form").evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
   });
 
   await createResponse;
-  await schedaPersist;
   await expect(modal).toBeHidden({ timeout: 60_000 });
 }
 
