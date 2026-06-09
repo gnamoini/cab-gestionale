@@ -260,10 +260,11 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
 
   await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
 
+  const save = modal.getByRole("button", { name: "Salva lavorazione" });
+  await save.scrollIntoViewIfNeeded();
+  await expect(save).toBeEnabled({ timeout: 15_000 });
   const schedaPersist = waitForSchedaPersist(page, { expectCliente: fixture.ingresso.cliente });
-  await modal.locator("form").evaluate((form: HTMLFormElement) => {
-    form.requestSubmit();
-  });
+  await save.click();
   await schedaPersist;
   await expect(modal).toBeHidden({ timeout: 60_000 });
 }
@@ -272,11 +273,12 @@ export async function submitCreateLavorazione(page: Page): Promise<void> {
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
   await waitForGlobalOptionsReady(modal);
 
-  const createResponse = waitForLavorazioneCreate(page);
+  const save = modal.getByRole("button", { name: "Salva lavorazione" });
+  await save.scrollIntoViewIfNeeded();
+  await expect(save).toBeEnabled({ timeout: 15_000 });
 
-  await modal.locator("form").evaluate((form: HTMLFormElement) => {
-    form.requestSubmit();
-  });
+  const createResponse = waitForLavorazioneCreate(page);
+  await save.click();
 
   await createResponse;
   await expect(modal).toBeHidden({ timeout: 60_000 });
