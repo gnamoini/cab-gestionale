@@ -145,3 +145,12 @@ iosSubmitGuard → commitPendingForSubmit → flushSync → freezeSnapshot(refsM
 **Payload = UI visibile** per tutti i campi Scheda Ingresso, indipendentemente da browser, focus, blur o timing E2E — senza workaround DOM o merge override.
 
 Validazione statica: `ci:tsc`, `smoke:regression:core`. Verdetto CI operativo da confermare post-push su gate + cert.
+
+## CI post-push (`bfe8e27`)
+
+| Workflow | Run | Esito |
+|---|---|---|
+| `release-gate` | [#78](https://github.com/gnamoini/cab-gestionale/actions/runs/27178944782) | **FAILURE** |
+| `release-gate-cert` | [#43](https://github.com/gnamoini/cab-gestionale/actions/runs/27178944789) | **FAILURE** |
+
+Fix architetturale applicato; spec 13 ancora rosso — richiede estrazione assertion message da log step per diagnosi ulteriore (possibile gap E2E hub oltre submit layer).
