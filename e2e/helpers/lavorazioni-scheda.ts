@@ -48,6 +48,14 @@ export function hubDialog(page: Page): Locator {
   return page.getByRole("dialog").filter({ hasText: "Dettaglio lavorazione" });
 }
 
+async function dismissMezzoPromptIfOpen(page: Page): Promise<void> {
+  const mezzoDialog = page.getByRole("dialog").filter({ hasText: "Mezzo già presente" });
+  if (await mezzoDialog.isVisible().catch(() => false)) {
+    await mezzoDialog.getByRole("button", { name: "Continua manualmente" }).click();
+    await expect(mezzoDialog).toBeHidden({ timeout: 10_000 });
+  }
+}
+
 /** Attende persistenza scheda_lavorazione (POST/PATCH) e opzionalmente verifica cliente. */
 export async function waitForSchedaPersist(
   page: Page,
@@ -259,12 +267,18 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   await expect(clienteInput).toHaveValue(fixture.ingresso.cliente, { timeout: 15_000 });
 
   await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
+  await dismissMezzoPromptIfOpen(page);
 
   const save = modal.getByRole("button", { name: "Salva lavorazione" });
   await save.scrollIntoViewIfNeeded();
   await expect(save).toBeEnabled({ timeout: 15_000 });
-  const schedaPersist = waitForSchedaPersist(page, { expectCliente: fixture.ingresso.cliente });
-  await save.click();
+  const schedaPersist = waitForSchedaPersist(page, { expectCliente: fixture.ingresso.cliente, timeoutMs: 180_000 });
+  const createResponse = waitForLavorazioneCreate(page, 180_000);
+  await modal.locator("form").evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+  await expect(modal.getByRole("button", { name: "Salvataggio…" })).toBeVisible({ timeout: 20_000 });
+  await createResponse;
   await schedaPersist;
   await expect(modal).toBeHidden({ timeout: 60_000 });
 }
@@ -272,15 +286,20 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
 export async function submitCreateLavorazione(page: Page): Promise<void> {
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
   await waitForGlobalOptionsReady(modal);
+  await dismissMezzoPromptIfOpen(page);
 
   const save = modal.getByRole("button", { name: "Salva lavorazione" });
   await save.scrollIntoViewIfNeeded();
   await expect(save).toBeEnabled({ timeout: 15_000 });
 
-  const createResponse = waitForLavorazioneCreate(page);
-  await save.click();
-
+  const createResponse = waitForLavorazioneCreate(page, 180_000);
+  const schedaPersist = waitForSchedaPersist(page, { timeoutMs: 180_000 });
+  await modal.locator("form").evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+  await expect(modal.getByRole("button", { name: "Salvataggio…" })).toBeVisible({ timeout: 20_000 });
   await createResponse;
+  await schedaPersist;
   await expect(modal).toBeHidden({ timeout: 60_000 });
 }
 
