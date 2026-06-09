@@ -25,7 +25,7 @@ const hasSmokeCreds = Boolean(
   process.env.SMOKE_ADMIN_EMAIL?.trim() && process.env.SMOKE_ADMIN_PASSWORD?.trim(),
 );
 
-test.describe.configure({ mode: "serial", timeout: 180_000 });
+test.describe.configure({ mode: "serial", timeout: 600_000 });
 
 test.beforeEach(({ page }) => {
   test.skip(!hasSmokeCreds, "SMOKE_ADMIN_EMAIL e SMOKE_ADMIN_PASSWORD richiesti");

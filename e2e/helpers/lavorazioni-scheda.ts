@@ -272,14 +272,13 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   const save = modal.getByRole("button", { name: "Salva lavorazione" });
   await save.scrollIntoViewIfNeeded();
   await expect(save).toBeEnabled({ timeout: 15_000 });
-  const schedaPersist = waitForSchedaPersist(page, { expectCliente: fixture.ingresso.cliente, timeoutMs: 180_000 });
-  const createResponse = waitForLavorazioneCreate(page, 180_000);
+  const schedaPersist = waitForSchedaPersist(page, { expectCliente: fixture.ingresso.cliente, timeoutMs: 120_000 });
+  const createResponse = waitForLavorazioneCreate(page, 120_000);
   await modal.locator("form").evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
   });
   await expect(modal.getByRole("button", { name: "Salvataggio…" })).toBeVisible({ timeout: 20_000 });
-  await createResponse;
-  await schedaPersist;
+  await Promise.all([createResponse, schedaPersist]);
   await expect(modal).toBeHidden({ timeout: 60_000 });
 }
 
@@ -292,14 +291,13 @@ export async function submitCreateLavorazione(page: Page): Promise<void> {
   await save.scrollIntoViewIfNeeded();
   await expect(save).toBeEnabled({ timeout: 15_000 });
 
-  const createResponse = waitForLavorazioneCreate(page, 180_000);
-  const schedaPersist = waitForSchedaPersist(page, { timeoutMs: 180_000 });
+  const createResponse = waitForLavorazioneCreate(page, 120_000);
+  const schedaPersist = waitForSchedaPersist(page, { timeoutMs: 120_000 });
   await modal.locator("form").evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
   });
   await expect(modal.getByRole("button", { name: "Salvataggio…" })).toBeVisible({ timeout: 20_000 });
-  await createResponse;
-  await schedaPersist;
+  await Promise.all([createResponse, schedaPersist]);
   await expect(modal).toBeHidden({ timeout: 60_000 });
 }
 
