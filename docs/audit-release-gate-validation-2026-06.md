@@ -8,14 +8,21 @@
 
 ## Verdetto certificazione
 
-### **B — Conditionally Stable**
+### **B — Conditionally Stable** (sotto-stato: **PR gate blocked / Cert tier-2 blocked**)
 
-Il consolidamento ha **migliorato qualità, determinismo e hygiene** del gate. Non è ancora **A — Production Certified** perché:
+Il consolidamento gate è **su `main` remoto** e **validato parzialmente su CI reale**. Non è **A — Production Certified** perché:
 
-1. Le modifiche consolidate sono **locali/non pushate** su `main` remoto al momento della validazione.
-2. L’ultimo CI remoto su `2a6628a` (`release-gate`) risulta **failure** (workflow pre-consolidamento con `ios-smoke`).
-3. `release-gate-cert` su `2a6628a` era **in progress** — esito iOS combobox non confermato green.
-4. Blind spot **P0** iOS combobox E2E resta in cert finché non c’è fix product o cert stabilizzato.
+1. `release-gate` su `97a2835` (post-fix audit extended) è **failure** — step `scheda-smoke` (spec 13 desktop full-flow).
+2. `release-gate-cert` su `97a2835` è **failure** — step `smoke:playwright:cert` (spec 13 mobile/iOS).
+3. **Nessuna** run consecutiva green ×2 su `release-gate` (run #2 non dispatchata: run #1 fallita).
+4. `audit:smoke:residues` **skipped** in cert (job fallito prima dello step advisory).
+
+**Successi oggettivi del consolidamento (evidenza CI):**
+
+- `ios-smoke` **assente** dal PR gate (confermato workflow + step 19 = `scheda-smoke`).
+- WebKit **non** installato in PR gate.
+- Extended regression tier **green** su cert #37 (`97a2835`) dopo fix coerenza audit.
+- Cleanup smoke (`if: always()`) **success** su gate #71, #72 e cert #36, #37.
 
 ---
 
@@ -70,7 +77,7 @@ Legenda: **E** E2E, **S** static, **L** live DB
 | ID | Descrizione | P | Mitigazione attuale |
 |---|---|---|---|
 | BS-1 | iOS combobox cert storicamente rosso | **P0** | Static PR; cert blocking |
-| BS-2 | CI green post-consolidamento non verificato su remoto | **P0** | Push + monitor |
+| BS-2 | CI green post-consolidamento non verificato su remoto | **P0** → **chiuso** | Push `467013a`/`97a2835`; evidenza run #71–#72 |
 | BS-3 | No E2E modifica ricambio | **P1** | Static extended policy |
 | BS-4 | Cleanup non garantito su job timeout globale | **P1** | afterAll teardown |
 | BS-5 | Session restore non testato | **P2** | spec 07 hydration parziale |
@@ -139,43 +146,120 @@ Legenda: **E** E2E, **S** static, **L** live DB
 
 ## CI remoto (monitoraggio)
 
-| Workflow | SHA remoto | Esito (2026-06-08) | URL |
-|---|---|---|---|
-| `release-gate` | `2a6628a` | **failure** (pre-consolidamento) | [run 27172572871](https://github.com/gnamoini/cab-gestionale/actions/runs/27172572871) |
-| `release-gate-cert` | `2a6628a` | in progress / non definitivo | [run 27172572851](https://github.com/gnamoini/cab-gestionale/actions/runs/27172572851) |
+### Pre-consolidamento (`2a6628a`)
 
-**Nota:** il consolidamento gate (scheda-smoke, regression 63/44, cleanup log) è in **working tree locale** — richiede commit + push per validazione CI oggettiva.
+| Workflow | Run | Esito | Blocker |
+|---|---|---|---|
+| `release-gate` | [#70](https://github.com/gnamoini/cab-gestionale/actions/runs/27172572871) | **failure** | `ios-smoke` (iOS combobox) |
+| `release-gate-cert` | — | storico rosso iOS | — |
+
+### Post-consolidamento — push `467013a`
+
+| Workflow | Run | Esito | Step blocker | Cleanup |
+|---|---|---|---|---|
+| `release-gate` | [#71](https://github.com/gnamoini/cab-gestionale/actions/runs/27173703777) | **failure** | step 19 `scheda-smoke` (~5 min) | step 21 **success** |
+| `release-gate-cert` | [#36](https://github.com/gnamoini/cab-gestionale/actions/runs/27173703776) | **failure** | step 5 extended regression (~8s) | step 14 **success** |
+
+**Nota `467013a`:** extended regression falliva per drift audit (`lavorazioni-e2e-certification`, `configurazione-inputs` scope obsoleto).
+
+### Post-fix coerenza — push `97a2835`
+
+| Workflow | Run | Esito | Step blocker | Cleanup | Residues |
+|---|---|---|---|---|---|
+| `release-gate` | [#72](https://github.com/gnamoini/cab-gestionale/actions/runs/27174417320) | **failure** | step 19 `scheda-smoke` (~5 min) | step 21 **success** | N/A (PR) |
+| `release-gate-cert` | [#37](https://github.com/gnamoini/cab-gestionale/actions/runs/27174417298) | **failure** | step 11 `smoke:playwright:cert` (~18 min) | step 14 **success** | step 13 **skipped** |
+
+**Nota `97a2835`:** extended regression **green** (44/44); cert raggiunge Playwright ma fallisce su spec 13 mobile/iOS.
+
+### Run #2 `release-gate` (workflow_dispatch)
+
+**Non eseguita** — criterio piano: dispatch solo dopo run #1 green. Entrambe le run post-push (#71, #72) sono **failure** sullo stesso step.
+
+---
+
+## Chiusura operativa (2026-06-09)
+
+### Commit su `main`
+
+| SHA | Messaggio | Contenuto |
+|---|---|---|
+| `467013a` | `chore(gate): consolidamento release gate…` | workflows, tier 63/44, cleanup, teardown, docs |
+| `97a2835` | `fix(gate): allinea audit extended a refactor settings/modali` | coerenza inputs-audit + lavorazioni-e2e-certification |
+
+### Divergenze pre/post push (risolte)
+
+| Aspetto | Pre (`2a6628a`) | Post (`97a2835`) |
+|---|---|---|
+| PR Playwright spec 13 | `ios-smoke` + WebKit | `scheda-smoke` desktop, solo Chromium |
+| Extended cert | drift audit | **green** su run #37 |
+| Cleanup post-failure | parziale | **success** `if: always()` verificato |
+
+### Criteri certificazione A — checklist
+
+| Criterio | Stato |
+|---|---|
+| `release-gate` GREEN run 1 post-consolidamento | **NO** — failure `scheda-smoke` (#71, #72) |
+| `release-gate` GREEN run 2 consecutiva | **NO** — non dispatchata |
+| `release-gate-cert` GREEN (iOS combobox) | **NO** — failure spec 13 cert (#37) |
+| Cleanup deterministico (exit 0) | **SÌ** — verificato su tutte e 4 le run |
+| Residues operativi ≤ 5 | **N/D** — step skipped (cert fallisce prima) |
+| PR gate senza `ios-smoke` | **SÌ** — verificato in workflow e CI |
+
+### Decisione finale
+
+**B confermato** con sotto-stato **PR Production Ready / Cert Pending** parziale:
+
+- **Architettura gate:** obiettivo raggiunto (ios-smoke fuori PR, tiering, cleanup).
+- **Deploy Vercel:** ancora **bloccato** — `release-gate` rosso su spec 13 desktop E2E.
+- **Cert tier-2:** extended green; blocker spostato su **Playwright spec 13** (desktop PR + mobile/iOS cert).
+
+### Risk assessment finale
+
+| Rischio | Prob. | Impatto | Evidenza CI |
+|---|---|---|---|
+| PR gate `scheda-smoke` fail | **Alta** | Deploy bloccato | #71, #72 stesso step |
+| Cert iOS/mobile spec 13 fail | **Alta** | A negata | #37 step 11 |
+| Extended regression drift | **Bassa** (post-fix) | Cert fail precoce | #37 step 5 green |
+| Residues > soglia | **N/D** | Advisory non misurato | step skipped |
+| False sense PR green | **Bassa** | Mitigato | ios-smoke rimosso ma sostituito da nuovo blocker |
+
+### Percorso verso A
+
+1. **Fix spec 13 E2E** (helper/gate o product combobox — fuori scope gate-only attuale se richiede app logic).
+2. Verificare `release-gate` green ×2 consecutive su stesso SHA.
+3. Verificare `release-gate-cert` green incluso iOS combobox.
+4. Estrarre numeri `audit:smoke:residues` da log cert green (soglia ≤5).
 
 ---
 
 ## Modifiche applicate in questa validazione
 
-1. [`docs/audit-release-gate-validation-2026-06.md`](./audit-release-gate-validation-2026-06.md) — questo report
+1. [`docs/audit-release-gate-validation-2026-06.md`](./audit-release-gate-validation-2026-06.md) — questo report (+ sezione chiusura operativa)
 2. [`lib/smoke/cleanup-smoke-data.ts`](../lib/smoke/cleanup-smoke-data.ts) — prune `log_modifiche` smoke
 3. [`lib/smoke/smoke-data-markers.ts`](../lib/smoke/smoke-data-markers.ts) — helper `isSmokeLogModificheRow`
 4. [`scripts/audit-smoke-residues.ts`](../scripts/audit-smoke-residues.ts) — fix tabella + soglia `SMOKE_RESIDUE_OPERATIVE_THRESHOLD`
 5. [`lib/regression/smoke-regression-lists.ts`](../lib/regression/smoke-regression-lists.ts) — +documenti/report inputs extended
 6. [`docs/gate-matrix.md`](./gate-matrix.md) — criterio livello A + soglia residues
+7. **Chiusura operativa:** push `467013a` + `97a2835`; fix audit extended (configurazione/magazzino/mezzi/lavorazioni-e2e)
 
 ---
 
 ## Raccomandazioni residue (solo rifinitura)
 
-1. **Commit + push** consolidamento su `main` e verificare 2 run green `release-gate`.
-2. Monitorare `release-gate-cert` (iOS combobox) — prerequisito livello A.
-3. Opzionale: `SMOKE_RESIDUE_STRICT=1` in cert quando residues stabilmente ≤5.
+1. **Stabilizzare spec 13 E2E** (`scheda-smoke` PR + `smoke:playwright:cert`) — blocker P0 attuale su CI.
+2. Dopo gate green: dispatch run #2 e confermare consecutività.
+3. Estrarre conteggi residues da cert green; opzionale `SMOKE_RESIDUE_STRICT=1`.
 4. Ripristino iOS in PR solo dopo fix product combobox (task separato).
-5. Promuovere inputs-audit orfani rimanenti (dashboard/preventivi/bunder) se cert ha margine — test già esistenti.
 
 ---
 
 ## Percorso verso A — Production Certified
 
-| Requisito | Stato |
+| Requisito | Stato (2026-06-09, SHA `97a2835`) |
 |---|---|
-| `release-gate` green ×2 su main post-consolidamento | Da verificare post-push |
-| `release-gate-cert` green (iOS combobox) | Storicamente a rischio |
-| Residues operativi ≤5 post-cleanup | Meccanismo pronto |
-| Chiusura P0 BS-1/BS-2 | Aperto |
+| `release-gate` green ×2 su main post-consolidamento | **NO** — #71, #72 failure |
+| `release-gate-cert` green (iOS combobox) | **NO** — #37 failure |
+| Residues operativi ≤5 post-cleanup | **N/D** — step skipped |
+| Chiusura P0 BS-1/BS-2 | **Parziale** — BS-2 chiuso (CI validato); BS-1 aperto (spec 13) |
 
 Quando tutti green → **A — Production Certified**.
