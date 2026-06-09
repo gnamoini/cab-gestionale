@@ -22,7 +22,7 @@ jobs:
   cert:
     name: release-gate-cert
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
 
     env:
       CI: "true"
@@ -82,8 +82,20 @@ jobs:
           PORT: "3210"
           SMOKE_BASE_URL: http://127.0.0.1:3210
 
+      - name: Scheda Ingresso desktop smoke (spec 13 full flow)
+        run: npm run smoke:playwright:scheda-smoke
+        env:
+          PORT: "3210"
+          SMOKE_BASE_URL: http://127.0.0.1:3210
+
       - name: Nuovo Ricambio mobile cert (spec 14)
         run: npm run smoke:playwright:ricambio:cert
+        env:
+          PORT: "3210"
+          SMOKE_BASE_URL: http://127.0.0.1:3210
+
+      - name: Nuovo Ricambio E2E smoke (spec 14)
+        run: npm run smoke:playwright:ricambio:smoke
         env:
           PORT: "3210"
           SMOKE_BASE_URL: http://127.0.0.1:3210

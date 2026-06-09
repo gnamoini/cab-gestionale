@@ -111,18 +111,6 @@ jobs:
           PORT: "3210"
           SMOKE_BASE_URL: http://127.0.0.1:3210
 
-      - name: Scheda Ingresso desktop smoke (spec 13 full flow)
-        run: npm run smoke:playwright:scheda-smoke
-        env:
-          PORT: "3210"
-          SMOKE_BASE_URL: http://127.0.0.1:3210
-
-      - name: Nuovo Ricambio E2E smoke (spec 14)
-        run: npm run smoke:playwright:ricambio:smoke
-        env:
-          PORT: "3210"
-          SMOKE_BASE_URL: http://127.0.0.1:3210
-
       - name: Upload Playwright artifacts on failure
         if: failure()
         uses: actions/upload-artifact@v4
