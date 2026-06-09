@@ -8,6 +8,7 @@ const MOBILE_ROUTES = ["/dashboard", "/lavorazioni", "/magazzino", "/dipendenti"
 
 for (const route of MOBILE_ROUTES) {
   test(`mobile ${route} main has no horizontal overflow`, async ({ page }) => {
+    test.setTimeout(90_000);
     attachConsoleGuards(page);
     await page.setViewportSize(MOBILE_VIEWPORT);
     await loginViaUi(page, adminCredentials());

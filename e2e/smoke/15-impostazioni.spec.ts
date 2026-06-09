@@ -1,14 +1,21 @@
+import type { Page } from "@playwright/test";
 import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi } from "../fixtures/auth";
 import { test, expect } from "@playwright/test";
 
 test.describe.configure({ mode: "serial" });
 
+async function openParametriEconomici(page: Page): Promise<void> {
+  await page.getByRole("button", { name: "Parametri economici", exact: true }).click();
+  await expect(page.locator("#config-costo-orario-default")).toBeVisible({ timeout: 15_000 });
+}
+
 test("admin opens impostazioni and saves parametri economici", async ({ page }) => {
   attachConsoleGuards(page);
   await loginViaUi(page, adminCredentials());
   await page.goto("/impostazioni");
   await expect(page.getByRole("heading", { name: "Impostazioni" })).toBeVisible({ timeout: 30_000 });
+  await openParametriEconomici(page);
 
   const input = page.locator("#config-costo-orario-default");
   await expect(input).toBeVisible({ timeout: 15_000 });
@@ -36,6 +43,7 @@ test("unsaved changes dialog blocks navigation away from impostazioni", async ({
   await loginViaUi(page, adminCredentials());
   await page.goto("/impostazioni");
   await expect(page.getByRole("heading", { name: "Impostazioni" })).toBeVisible({ timeout: 30_000 });
+  await openParametriEconomici(page);
 
   const input = page.locator("#config-costo-orario-default");
   await expect(input).toBeVisible({ timeout: 15_000 });
