@@ -247,6 +247,7 @@ export async function fillSchedaIngressoCreateForm(
   );
 
   await waitForGlobalOptionsReady(modal);
+  await flushModalComboboxes(modal);
 }
 
 /** Digita in Cliente e salva senza blur — regression iOS submit flush. */
@@ -282,17 +283,34 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   await expect(modal).toBeHidden({ timeout: 60_000 });
 }
 
+async function flushModalComboboxes(modal: Locator): Promise<void> {
+  const combos = modal.getByRole("combobox");
+  const count = await combos.count();
+  for (let i = 0; i < count; i++) {
+    await combos.nth(i).blur();
+  }
+}
+
 export async function submitCreateLavorazione(page: Page): Promise<void> {
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
   await waitForGlobalOptionsReady(modal);
   await dismissMezzoPromptIfOpen(page);
+  await flushModalComboboxes(modal);
 
   const save = modal.getByRole("button", { name: "Salva lavorazione" });
   await save.scrollIntoViewIfNeeded();
   await expect(save).toBeEnabled({ timeout: 15_000 });
 
+  const lavorazionePost = page.waitForResponse(
+    (res) => res.url().includes("/rest/v1/lavorazioni") && res.request().method() === "POST" && res.ok(),
+    { timeout: 120_000 },
+  );
   await save.click();
-  await expect(modal).toBeHidden({ timeout: 120_000 });
+  await lavorazionePost;
+  if (await modal.isVisible().catch(() => false)) {
+    await modal.getByRole("button", { name: "Annulla" }).click();
+  }
+  await expect(modal).toBeHidden({ timeout: 30_000 });
 }
 
 export async function searchLavorazioneByToken(page: Page, token: string): Promise<void> {
