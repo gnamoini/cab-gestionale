@@ -16,11 +16,13 @@ const metaSrc = fs.readFileSync(path.join(ROOT, "lib/magazzino/magazzino-meta.ts
 const filtersSrc = fs.readFileSync(path.join(ROOT, "lib/magazzino/magazzino-advanced-filters.ts"), "utf8");
 
 assert.match(formSrc, /usatoInTagliandi/);
+assert.match(formSrc, /unitaMisura/);
 assert.match(formSrc, /marcaOriginaleSecondaria/);
 assert.match(formSrc, /RicambioFornitoriAlternativiEditor/);
 assert.match(editorSrc, /magazzino:produttori/);
 assert.match(metaSrc, /fornitoriAlternativi/);
 assert.match(metaSrc, /usatoInTagliandi/);
+assert.match(metaSrc, /unitaMisura/);
 assert.match(filtersSrc, /tagliando/);
 assert.match(filtersSrc, /rowMatchesTagliandoFilter/);
 

@@ -13,6 +13,7 @@ export { Badge, type BadgeTone } from "./badge";
 export { EntitySimilarWarning, useEntitySimilarWarning } from "./entity-similar-warning";
 export { SearchBar, GESTIONALE_SEARCH_PLACEHOLDER, type SearchBarProps } from "./search-bar";
 export { FormField, formInputClass, formTextareaClass } from "./form-field";
+export { GestionaleTextarea, type GestionaleTextareaProps, type GestionaleTextareaSize } from "@/components/gestionale/gestionale-textarea";
 export { PageLayout, type PageLayoutProps } from "./page-layout";
 export {
   PageToolbar,

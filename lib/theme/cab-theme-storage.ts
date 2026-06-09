@@ -1,13 +1,28 @@
 import {
   DEFAULT_PERSISTED_THEME_MODE,
+  parsePersistedThemeMode,
   type PersistedThemeMode,
 } from "@/lib/theme/user-theme-prefs";
 
-/** Chiave localStorage — cache di boot (allineata a DB `user_prefs` quando autenticato). */
+/** Chiave localStorage / cookie — cache di boot (allineata a DB `user_prefs` quando autenticato). */
 export const CAB_THEME_STORAGE_KEY = "cab-theme";
 
 /** Migrazione one-shot: reset preferenza locale al default globale dark. */
 export const CAB_THEME_CLIENT_MIGRATION_KEY = "cab-theme-default-dark-v1";
+
+/** Max-Age cookie tema (1 anno). */
+export const CAB_THEME_COOKIE_MAX_AGE = 31_536_000;
+
+/** Sfondo app per CSS critico inline (primo paint, prima di globals.css). */
+export const THEME_CRITICAL_BG: Record<PersistedThemeMode, string> = {
+  dark: "#09090b",
+  light: "#f4f4f5",
+};
+
+/** Tema SSR da cookie (fallback default globale dark). */
+export function resolveServerThemeMode(cookieValue: string | undefined | null): PersistedThemeMode {
+  return parsePersistedThemeMode(cookieValue) ?? DEFAULT_PERSISTED_THEME_MODE;
+}
 
 /** Applica tema al documento (condiviso con ThemeProvider). */
 export function applyPersistedThemeToDocument(mode: PersistedThemeMode): void {
@@ -28,10 +43,20 @@ export function readThemeBootCache(): PersistedThemeMode | null {
   return null;
 }
 
+export function writeThemeBootCookie(mode: PersistedThemeMode): void {
+  if (typeof document === "undefined") return;
+  try {
+    document.cookie = `${CAB_THEME_STORAGE_KEY}=${mode};path=/;max-age=${CAB_THEME_COOKIE_MAX_AGE};SameSite=Lax`;
+  } catch {
+    /* ignore */
+  }
+}
+
 export function writeThemeBootCache(mode: PersistedThemeMode): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(CAB_THEME_STORAGE_KEY, mode);
+    writeThemeBootCookie(mode);
   } catch {
     /* ignore */
   }
@@ -44,6 +69,7 @@ export function runThemeClientMigrationToDefault(): void {
     if (localStorage.getItem(CAB_THEME_CLIENT_MIGRATION_KEY) === "1") return;
     localStorage.setItem(CAB_THEME_STORAGE_KEY, DEFAULT_PERSISTED_THEME_MODE);
     localStorage.setItem(CAB_THEME_CLIENT_MIGRATION_KEY, "1");
+    writeThemeBootCookie(DEFAULT_PERSISTED_THEME_MODE);
   } catch {
     /* ignore */
   }

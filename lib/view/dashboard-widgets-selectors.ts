@@ -32,6 +32,8 @@ export type DashboardMagRecentRicambioRow = {
   codice: string;
   updatedAt: string;
   sottoScorta: boolean;
+  scorta: number;
+  scortaMinima: number;
 };
 
 export type DashboardMagMovementRow = {
@@ -148,6 +150,10 @@ function isRicambioSottoScorta(r: RicambioMagazzino): boolean {
   return r.scortaMinima > 0 && r.scorta < r.scortaMinima;
 }
 
+function magScortaDeficit(r: RicambioMagazzino): number {
+  return Math.max(0, r.scortaMinima - r.scorta);
+}
+
 function toDashboardMagRicambioRow(r: RicambioMagazzino): DashboardMagRecentRicambioRow {
   return {
     id: r.id,
@@ -156,6 +162,8 @@ function toDashboardMagRicambioRow(r: RicambioMagazzino): DashboardMagRecentRica
     codice: r.codiceFornitoreOriginale,
     updatedAt: r.dataUltimaModifica,
     sottoScorta: isRicambioSottoScorta(r),
+    scorta: r.scorta,
+    scortaMinima: r.scortaMinima,
   };
 }
 
@@ -166,7 +174,11 @@ export function computeDashboardMagSottoScortaRicambi(
 ): DashboardMagRecentRicambioRow[] {
   return [...items]
     .filter(isRicambioSottoScorta)
-    .sort((a, b) => b.dataUltimaModifica.localeCompare(a.dataUltimaModifica))
+    .sort((a, b) => {
+      const byDeficit = magScortaDeficit(b) - magScortaDeficit(a);
+      if (byDeficit !== 0) return byDeficit;
+      return b.dataUltimaModifica.localeCompare(a.dataUltimaModifica);
+    })
     .slice(0, limit)
     .map(toDashboardMagRicambioRow);
 }
@@ -260,4 +272,23 @@ export function formatDashboardMagRicambioTitle(marca: string, nome: string): st
   if (n) return n;
   if (hasMarca) return m;
   return "—";
+}
+
+/** Scorta attuale / minima per alert widget (es. «2 / 5 pz»). */
+export function formatDashboardMagScortaDeficit(scorta: number, scortaMinima: number): string {
+  return `${Math.max(0, Math.round(scorta))} / ${Math.max(0, Math.round(scortaMinima))} pz`;
+}
+
+/** Orario movimento widget: HH:mm se oggi, altrimenti gg MMM breve. */
+export function formatDashboardMagMovementTime(iso: string, now: Date = new Date()): string {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return "—";
+  const sameDay =
+    at.getFullYear() === now.getFullYear() &&
+    at.getMonth() === now.getMonth() &&
+    at.getDate() === now.getDate();
+  if (sameDay) {
+    return at.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
+  }
+  return at.toLocaleDateString("it-IT", { day: "2-digit", month: "short" });
 }

@@ -1059,7 +1059,9 @@ export function DocumentiView() {
                         <button
                           type="button"
                           onClick={() => toggleMarca(marca.id)}
-                          className="group flex min-w-0 w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_36%,transparent)] focus-visible:ring-inset sm:px-4"
+                          className={`group flex min-w-0 w-full items-center gap-3 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_36%,transparent)] focus-visible:ring-inset sm:px-4 ${
+                            marcaOpen(marca.id) ? "border-b border-[color:var(--cab-border)]" : ""
+                          }`}
                           aria-expanded={marcaOpen(marca.id)}
                         >
                           <MarcaGlyph nome={marca.nome} />
@@ -1090,9 +1092,9 @@ export function DocumentiView() {
                           </span>
                         </button>
                         <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${marcaOpen(marca.id) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                          <div className="min-h-0 overflow-hidden">
+                          <div className="min-h-0 overflow-hidden bg-[color:color-mix(in_srgb,var(--cab-surface-2)_72%,var(--cab-card))]">
                             <div
-                              className={`space-y-3.5 border-t border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_72%,var(--cab-card))] px-3 pb-3 pt-3 sm:px-4 ${
+                              className={`space-y-3.5 px-3 pb-3 pt-3 sm:px-4 ${
                                 isLastMarcaInTree ? "rounded-b-[var(--ds-radius-xl)]" : ""
                               }`}
                             >
@@ -1157,7 +1159,11 @@ export function DocumentiView() {
                                         <button
                                           type="button"
                                           onClick={() => toggleModello(mk)}
-                                          className="flex min-w-0 w-full items-center gap-2 bg-[var(--cab-surface)]/60 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)]"
+                                          className={`flex min-w-0 w-full items-center gap-2 bg-[var(--cab-surface)]/60 px-3 py-2.5 text-left transition-colors hover:bg-[var(--cab-hover)] ${
+                                            modelloOpen(marca.id, modello.id)
+                                              ? "border-b border-[color:var(--cab-border)]"
+                                              : ""
+                                          }`}
                                           aria-expanded={modelloOpen(marca.id, modello.id)}
                                         >
                                           <span className="w-4 shrink-0 text-center text-xs font-medium text-[color:var(--cab-text-muted)]" aria-hidden>
@@ -1180,7 +1186,7 @@ export function DocumentiView() {
                                         <div
                                           className={`grid bg-[var(--cab-card)] transition-[grid-template-rows] duration-200 ${modelloOpen(marca.id, modello.id) ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
                                         >
-                                          <div className="min-h-0 overflow-hidden border-t border-[color:var(--cab-border)]">
+                                          <div className="min-h-0 overflow-hidden bg-[var(--cab-card)]">
                                             <ul className="py-0.5" role="listbox">
                                               {files.map((d) => (
                                                 <ArchiveDocRow

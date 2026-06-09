@@ -24,6 +24,6 @@ export function effectiveDocumentoApplicabilita(
   categoria: string,
   applicabilita: DocumentoApplicabilita,
 ): DocumentoApplicabilita {
-  if (categoria === "listini") return "marca";
+  if (categoria === "listini" || categoria === "certificazioni") return "marca";
   return applicabilita;
 }

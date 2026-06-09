@@ -6,17 +6,18 @@ import { sliceInputValue, TEXT_LONG, TEXT_MEDIUM } from "@/lib/validation/text-f
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import { LoadingButton } from "@/components/design-system";
-import { defaultApplicabilitaForCategoria } from "@/lib/documenti/documenti-applicabilita";
+import {
+  defaultApplicabilitaForCategoria,
+  isDocumentoMarcaOnlyCategoria,
+} from "@/lib/documenti/documenti-applicabilita";
 import {
   effectiveDocumentoApplicabilita,
   validateDocumentoMarcaModelloFields,
 } from "@/lib/documenti/documenti-form-validation";
 import type { DocumentoGestionale, DocumentoTipoFile, DocumentoApplicabilita } from "@/lib/types/gestionale";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import {
-  gestionaleFormFocusScopeProps,
-  gestionaleMultilineEnterProps,
-} from "@/components/gestionale/gestionale-form-focus-scope";
+import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { GlobalSelect } from "@/components/gestionale/global-input";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
@@ -68,6 +69,8 @@ const CATEGORIE: DocumentoGestionale["categoria"][] = [
 ];
 
 const DOCUMENTI_MARCA_EMPTY_LABEL = "Nessuna marca";
+
+const DEFAULT_UPLOAD_CATEGORIA: DocumentoGestionale["categoria"] = "listini";
 
 const fieldErrorClass = "mt-1 text-xs text-red-600 dark:text-red-400";
 
@@ -126,10 +129,12 @@ function ApplicabilitaField({
   applicabilita,
   onChange,
   allowModello = true,
+  marcaOnlyHint,
 }: {
   applicabilita: DocumentoApplicabilita;
   onChange: (a: DocumentoApplicabilita) => void;
   allowModello?: boolean;
+  marcaOnlyHint?: string;
 }) {
   return (
     <fieldset className="space-y-2">
@@ -155,11 +160,17 @@ function ApplicabilitaField({
           />
           <span className="text-sm text-zinc-200">Modello specifico</span>
         </label>
-      ) : (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">I listini si applicano a tutta la marca.</p>
-      )}
+      ) : marcaOnlyHint ? (
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">{marcaOnlyHint}</p>
+      ) : null}
     </fieldset>
   );
+}
+
+function marcaOnlyHintForCategoria(categoria: DocumentoGestionale["categoria"]): string | undefined {
+  if (categoria === "listini") return "I listini si applicano a tutta la marca.";
+  if (categoria === "certificazioni") return "Le certificazioni si applicano a tutta la marca.";
+  return undefined;
 }
 
 export function UploadDocumentoModal({
@@ -175,8 +186,10 @@ export function UploadDocumentoModal({
   const gestToast = useGestionaleToast();
   const pickedFileRef = useRef<File | null>(null);
   const [nome, setNome] = useState("");
-  const [categoria, setCategoria] = useState<DocumentoGestionale["categoria"]>("manuali");
-  const [applicabilita, setApplicabilita] = useState<DocumentoApplicabilita>(() => defaultApplicabilitaForCategoria("manuali"));
+  const [categoria, setCategoria] = useState<DocumentoGestionale["categoria"]>(DEFAULT_UPLOAD_CATEGORIA);
+  const [applicabilita, setApplicabilita] = useState<DocumentoApplicabilita>(() =>
+    defaultApplicabilitaForCategoria(DEFAULT_UPLOAD_CATEGORIA),
+  );
   const [marca, setMarca] = useState("");
   const [modello, setModello] = useState("");
   const [note, setNote] = useState("");
@@ -186,7 +199,7 @@ export function UploadDocumentoModal({
   const [modelloInvalid, setModelloInvalid] = useState(false);
   const submitLock = useSubmitLock();
 
-  const listiniOnly = categoria === "listini";
+  const marcaOnly = isDocumentoMarcaOnlyCategoria(categoria);
   const effectiveApp = effectiveDocumentoApplicabilita(categoria, applicabilita);
 
   useEffect(() => {
@@ -325,7 +338,8 @@ export function UploadDocumentoModal({
           <ApplicabilitaField
             applicabilita={applicabilita}
             onChange={setApplicabilita}
-            allowModello={!listiniOnly}
+            allowModello={!marcaOnly}
+            marcaOnlyHint={marcaOnlyHintForCategoria(categoria)}
           />
 
           {effectiveApp === "modello" ? (
@@ -401,12 +415,12 @@ export function UploadDocumentoModal({
           </p>
           <label htmlFor="doc-upload-note" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note (facoltative)
-            <textarea
-              {...gestionaleMultilineEnterProps}
+            <GestionaleTextarea
               id="doc-upload-note"
-              className={`${inputClass} mt-1 min-h-[72px] resize-y`}
+              className="mt-1 min-h-[4.5rem]"
+              size="md"
               value={note}
-              onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))}
+              onChange={(v) => setNote(sliceInputValue(v, TEXT_LONG))}
               rows={3}
               maxLength={TEXT_LONG}
             />
@@ -552,7 +566,9 @@ export function DocumentoEditModal({
   const r0 = resolveDocumentoApplicazione(doc);
   const [nome, setNome] = useState(doc.nome);
   const [categoria, setCategoria] = useState(doc.categoria);
-  const [applicabilita, setApplicabilita] = useState<DocumentoApplicabilita>(r0.applicabilita ?? "marca");
+  const [applicabilita, setApplicabilita] = useState<DocumentoApplicabilita>(() =>
+    effectiveDocumentoApplicabilita(doc.categoria, r0.applicabilita ?? "marca"),
+  );
   const [marca, setMarca] = useState(r0.marcaKey ?? r0.marca);
   const [modello, setModello] = useState(r0.modelloKey ?? (r0.applicabilita === "modello" ? r0.macchina : ""));
   const [note, setNote] = useState(doc.note ?? "");
@@ -561,12 +577,17 @@ export function DocumentoEditModal({
   const [saving, setSaving] = useState(false);
   const submitLock = useSubmitLock();
 
-  const listiniOnly = categoria === "listini";
+  const marcaOnly = isDocumentoMarcaOnlyCategoria(categoria);
   const effectiveApp = effectiveDocumentoApplicabilita(categoria, applicabilita);
 
   useEffect(() => {
     if (effectiveApp === "marca") setModello("");
   }, [effectiveApp]);
+
+  function onEditCategoriaChange(next: DocumentoGestionale["categoria"]) {
+    setCategoria(next);
+    setApplicabilita(defaultApplicabilitaForCategoria(next));
+  }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -649,7 +670,7 @@ export function DocumentoEditModal({
               className={listSelectWrapClass}
               items={CATEGORIE.map((c) => ({ value: c, label: labelCategoria(c) }))}
               value={categoria}
-              onChange={(v) => setCategoria(v as DocumentoGestionale["categoria"])}
+              onChange={(v) => onEditCategoriaChange(v as DocumentoGestionale["categoria"])}
               strictFromList
               selectOnly
               aria-label="Tipo documento"
@@ -659,7 +680,8 @@ export function DocumentoEditModal({
           <ApplicabilitaField
             applicabilita={applicabilita}
             onChange={setApplicabilita}
-            allowModello={!listiniOnly}
+            allowModello={!marcaOnly}
+            marcaOnlyHint={marcaOnlyHintForCategoria(categoria)}
           />
 
           {effectiveApp === "modello" && marca.trim() ? (
@@ -729,12 +751,12 @@ export function DocumentoEditModal({
 
           <label htmlFor="doc-edit-note" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Note
-            <textarea
-              {...gestionaleMultilineEnterProps}
+            <GestionaleTextarea
               id="doc-edit-note"
-              className={`${inputClass} mt-1 min-h-[72px] resize-y`}
+              className="mt-1 min-h-[4.5rem]"
+              size="md"
               value={note}
-              onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))}
+              onChange={(v) => setNote(sliceInputValue(v, TEXT_LONG))}
               rows={3}
               maxLength={TEXT_LONG}
             />

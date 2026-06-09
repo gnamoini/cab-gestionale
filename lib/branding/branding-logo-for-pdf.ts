@@ -44,6 +44,6 @@ export function pdfImageFormatFromDataUrl(dataUrl: string): "PNG" | "JPEG" | "WE
   return "PNG";
 }
 
-export const CAB_LOGO_PDF_MAX_HEIGHT_MM = 8;
+export const CAB_LOGO_PDF_MAX_HEIGHT_MM = 10.5;
 
 export const CAB_LOGO_PDF_ASPECT = 790 / 226;

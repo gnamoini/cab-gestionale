@@ -26,6 +26,7 @@ import {
   GLOBAL_DROPDOWN_MENU_GAP,
   GLOBAL_DROPDOWN_PORTAL_Z,
   GLOBAL_DROPDOWN_VIEWPORT_PAD,
+  globalDropdownPortalDetectOverflowOptions,
   globalDropdownPlacementOriginClass,
   type GlobalDropdownCoords,
   type GlobalDropdownPlacement,
@@ -71,6 +72,7 @@ export function useGlobalDropdownPortal({
   maxHeight = GLOBAL_DROPDOWN_MAX_HEIGHT,
 }: UseGlobalDropdownPortalOptions): UseGlobalDropdownPortalResult {
   const [scrollInside, setScrollInside] = useState(false);
+  const portalOverflow = globalDropdownPortalDetectOverflowOptions();
 
   const {
     refs,
@@ -87,12 +89,12 @@ export function useGlobalDropdownPortal({
     middleware: [
       offset(GLOBAL_DROPDOWN_MENU_GAP),
       flip({
-        padding: GLOBAL_DROPDOWN_VIEWPORT_PAD,
+        ...portalOverflow,
         fallbackPlacements: ["top-start", "bottom-start", "top-end", "bottom-end"],
       }),
-      shift({ padding: GLOBAL_DROPDOWN_VIEWPORT_PAD, crossAxis: true }),
+      shift({ ...portalOverflow, crossAxis: true }),
       size({
-        padding: GLOBAL_DROPDOWN_VIEWPORT_PAD,
+        ...portalOverflow,
         apply({ availableHeight, availableWidth, rects, elements }) {
           const capped = Math.min(maxHeight, Math.max(80, availableHeight));
           const width =

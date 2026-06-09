@@ -22,6 +22,18 @@ export function compareNaturalOrder(
   return a.id.localeCompare(b.id);
 }
 
+/** Ordinamento predefinito lista magazzino (marca ↑) senza stato sort attivo in header. */
+export function compareMagazzinoDefaultOrder(
+  a: RicambioMagazzino,
+  b: RicambioMagazzino,
+  orderIndex: Map<string, number>,
+  mezziListe?: MezziListePrefs,
+): number {
+  const byMarca = compareByColumn(a, b, "marca", "asc", undefined, mezziListe);
+  if (byMarca !== 0) return byMarca;
+  return compareNaturalOrder(a, b, orderIndex);
+}
+
 export function sortValueForKey(
   r: RicambioMagazzino,
   key: SortKeyMagazzino,

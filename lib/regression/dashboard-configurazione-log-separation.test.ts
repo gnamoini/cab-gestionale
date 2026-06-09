@@ -12,6 +12,7 @@ function read(rel: string): string {
 }
 
 const dashLogStorage = read("lib/dashboard/dashboard-sistema-log-storage.ts");
+const settingsWorkspace = read("components/dashboard/settings/settings-workspace-shell.tsx");
 const impostazioniModal = read("components/dashboard/sistema-impostazioni-modal.tsx");
 const dashboardView = read("components/dashboard/dashboard-view.tsx");
 const dashLogSection = read("components/dashboard/dashboard-sistema-log-section.tsx");
@@ -20,7 +21,8 @@ const impostazioniPage = read("app/(gestionale)/impostazioni/page.tsx");
 assert.doesNotMatch(dashLogStorage, /appendDashboardSettings/);
 assert.doesNotMatch(dashLogStorage, /MODIFICA IMPOSTAZIONI/);
 
-assert.match(impostazioniModal, /appendConfigurazioneLogs/);
+assert.match(settingsWorkspace, /appendConfigurazioneLogs/);
+assert.doesNotMatch(settingsWorkspace, /appendDashboardSistemaLog/);
 assert.doesNotMatch(impostazioniModal, /appendDashboardSistemaLog/);
 
 assert.match(dashboardView, /DashboardSistemaLogListEmbedded/);

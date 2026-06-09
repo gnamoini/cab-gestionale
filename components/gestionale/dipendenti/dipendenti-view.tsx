@@ -292,6 +292,7 @@ export function DipendentiView() {
             fillToday8hPending={fillToday8hPending}
             fillToday8hDisabled={fillToday8hDisabled}
             fillToday8hDisabledReason={fillToday8hDisabledReason}
+            monthKeysWithData={ts.monthKeysWithData}
           />
 
           <TimesheetLoadError

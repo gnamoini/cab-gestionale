@@ -24,6 +24,8 @@ import {
 } from "@/lib/ui/notification-ui";
 import {
   formatDashboardMagRicambioTitle,
+  formatDashboardMagMovementTime,
+  formatDashboardMagScortaDeficit,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
@@ -57,11 +59,13 @@ function WidgetEmpty({ message }: { message: string }) {
   return <p className={dsTypoCaption}>{message}</p>;
 }
 
-function KpiStat({ label, value }: { label: string; value: string }) {
+function KpiStat({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
   return (
     <div className="min-w-0">
       <p className={`${dsTypoCaption} truncate`}>{label}</p>
-      <p className="mt-0.5 text-lg font-semibold tabular-nums text-[color:var(--cab-text)]">{value}</p>
+      <p className={`mt-0.5 text-lg font-semibold tabular-nums text-[color:var(--cab-text)] ${valueClassName ?? ""}`.trim()}>
+        {value}
+      </p>
     </div>
   );
 }
@@ -181,27 +185,19 @@ function DashboardLavorazioniWidget({
   );
 }
 
-type MagazzinoRicambioRow = ReturnType<typeof useDashboardMetrics>["magRecentRicambi"][number];
+type MagazzinoSottoScortaRow = ReturnType<typeof useDashboardMetrics>["magSottoScortaRicambi"][number];
 
-function MagazzinoSottoScortaListItem({ r }: { r: MagazzinoRicambioRow }) {
+function MagazzinoSottoScortaListItem({ r }: { r: MagazzinoSottoScortaRow }) {
   return (
     <li>
       <div className={dsNotificationWidgetDangerRow}>
         <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-snug text-[color:var(--cab-text)]">
           {formatDashboardMagRicambioTitle(r.marca, r.label)}
         </p>
-        <span className={dsNotificationWidgetDangerChip}>Sotto scorta</span>
+        <span className={`${dsNotificationWidgetDangerChip} tabular-nums`}>
+          {formatDashboardMagScortaDeficit(r.scorta, r.scortaMinima)}
+        </span>
       </div>
-    </li>
-  );
-}
-
-function MagazzinoRicambioListItem({ r }: { r: MagazzinoRicambioRow }) {
-  return (
-    <li className="flex min-w-0 items-start gap-2">
-      <p className="min-w-0 flex-1 truncate text-sm font-medium text-[color:var(--cab-text)]">
-        {formatDashboardMagRicambioTitle(r.marca, r.label)}
-      </p>
     </li>
   );
 }
@@ -213,7 +209,6 @@ function DashboardMagazzinoWidget({
   stats,
   daily,
   sottoScortaRicambi,
-  recentRicambi,
   recentMovements,
 }: {
   staging: boolean;
@@ -222,9 +217,10 @@ function DashboardMagazzinoWidget({
   stats: ReturnType<typeof useDashboardMetrics>["magStats"];
   daily: ReturnType<typeof useDashboardMetrics>["magDailyMovements"];
   sottoScortaRicambi: ReturnType<typeof useDashboardMetrics>["magSottoScortaRicambi"];
-  recentRicambi: ReturnType<typeof useDashboardMetrics>["magRecentRicambi"];
   recentMovements: ReturnType<typeof useDashboardMetrics>["magRecentMovements"];
 }) {
+  const sottoScortaPreview = sottoScortaRicambi.slice(0, 3);
+
   return (
     <Link href="/magazzino" className={kpiCardClass} aria-label="Apri magazzino">
       <h2 className={`${widgetTitleClass} min-w-0 truncate`}>Magazzino</h2>
@@ -241,23 +237,26 @@ function DashboardMagazzinoWidget({
       ) : (
         <>
           <div className="mt-4 grid min-w-0 grid-cols-3 gap-2 sm:gap-3">
-            <KpiStat label="Sotto scorta" value={String(stats.sottoScorta)} />
+            <KpiStat
+              label="Sotto scorta"
+              value={String(stats.sottoScorta)}
+              valueClassName={
+                stats.sottoScorta > 0 ? "text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))]" : undefined
+              }
+            />
             <KpiStat label="Entrate oggi" value={String(daily.entrate)} />
             <KpiStat label="Uscite oggi" value={String(daily.uscite)} />
           </div>
           <div className="mt-4 space-y-3">
-            <div>
-              <p className={`${dsTypoCaption} mb-0.5 font-semibold uppercase tracking-wide`}>Sotto scorta</p>
-              {sottoScortaRicambi.length === 0 ? (
-                <WidgetEmpty message="Nessun ricambio sotto scorta." />
-              ) : (
-                <ul className="space-y-2">
-                  {sottoScortaRicambi.map((r) => (
-                    <MagazzinoSottoScortaListItem key={r.id} r={r} />
-                  ))}
-                </ul>
-              )}
-            </div>
+            {stats.sottoScorta > 0 ? (
+              <ul className="space-y-2">
+                {sottoScortaPreview.map((r) => (
+                  <MagazzinoSottoScortaListItem key={r.id} r={r} />
+                ))}
+              </ul>
+            ) : (
+              <p className={dsTypoCaption}>Scorte OK · nessun alert</p>
+            )}
             <div>
               <p className={`${dsTypoCaption} mb-1.5 font-semibold uppercase tracking-wide`}>Ultimi movimenti</p>
               {recentMovements.length === 0 ? (
@@ -269,19 +268,10 @@ function DashboardMagazzinoWidget({
                       <Badge tone={m.tipo === "entrata" ? "ok" : "danger"}>{m.tipo === "entrata" ? "Entrata" : "Uscita"}</Badge>
                       <span className="min-w-0 flex-1 truncate text-[color:var(--cab-text)]">{m.label}</span>
                       <span className={`${dsTypoCaption} shrink-0 tabular-nums`}>×{m.quantita}</span>
+                      <span className={`${dsTypoCaption} shrink-0 tabular-nums text-[color:var(--cab-text-muted)]`}>
+                        {formatDashboardMagMovementTime(m.at)}
+                      </span>
                     </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div>
-              <p className={`${dsTypoCaption} mb-1.5 font-semibold uppercase tracking-wide`}>Ultimi modificati</p>
-              {recentRicambi.length === 0 ? (
-                <WidgetEmpty message="Nessun altro ricambio modificato." />
-              ) : (
-                <ul className="space-y-2">
-                  {recentRicambi.map((r) => (
-                    <MagazzinoRicambioListItem key={r.id} r={r} />
                   ))}
                 </ul>
               )}
@@ -312,7 +302,6 @@ export function DashboardOperationalCards() {
     lavStats,
     magStats,
     magSottoScortaRicambi,
-    magRecentRicambi,
     magDailyMovements,
     magRecentMovements,
     lavLoading,
@@ -338,7 +327,6 @@ export function DashboardOperationalCards() {
         stats={magStats}
         daily={magDailyMovements}
         sottoScortaRicambi={magSottoScortaRicambi}
-        recentRicambi={magRecentRicambi}
         recentMovements={magRecentMovements}
       />
       <DashboardLocalNotesWidget />

@@ -12,7 +12,7 @@ import {
   type TouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { dsTooltipContent } from "@/lib/ui/design-system";
+import { dsTooltipContent, dsTooltipContentMultiline } from "@/lib/ui/design-system";
 import { tooltipFixedStyle, tooltipTransformOrigin, type TooltipSide } from "@/lib/ui/tooltip-portal";
 import { useTooltip } from "@/components/design-system/use-tooltip";
 
@@ -36,6 +36,8 @@ export type TooltipProps = {
   delayMs?: number;
   /** Default `true`. Impostare `false` su controlli che restano focalizzati dopo il click (es. toggle tema). */
   showOnFocus?: boolean;
+  /** Supporta `\n` nel contenuto (es. tooltip celle timesheet). */
+  multiline?: boolean;
 };
 
 function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined>): (node: T | null) => void {
@@ -67,10 +69,15 @@ export function Tooltip({
   disabled = false,
   delayMs,
   showOnFocus = true,
+  multiline = false,
 }: TooltipProps) {
   const anchorRef = useRef<HTMLElement | null>(null);
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const displayContent = content?.trim() ? tooltipDisplayContent(content) : content;
+  const displayContent = multiline
+    ? content?.trim() || content
+    : content?.trim()
+      ? tooltipDisplayContent(content)
+      : content;
   const { open, visible, coords, triggerProps } = useTooltip({
     content: displayContent,
     disabled,
@@ -120,7 +127,7 @@ export function Tooltip({
           <div
             ref={contentRef}
             role="tooltip"
-            className={`${dsTooltipContent} ${visible ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+            className={`${multiline ? dsTooltipContentMultiline : dsTooltipContent} ${visible ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
             style={{
               ...tooltipFixedStyle(coords ?? { top: -9999, left: -9999, side }),
               transformOrigin: tooltipTransformOrigin(coords?.side ?? side),

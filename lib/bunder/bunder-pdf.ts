@@ -4,6 +4,7 @@ import type { BunderCommercialDocument } from "@/lib/bunder/types";
 import { openPdfBlobInNewTab } from "@/lib/pdf/open-pdf-blob-preview";
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
+import { drawAutoTableHeadBottomBorder } from "@/lib/pdf/gestionale-section-table";
 
 function fmtIt(d: string): string {
   try {
@@ -87,6 +88,7 @@ export async function openBunderPdfInNewTab(doc: BunderCommercialDocument, autor
     columnStyles: { 0: { cellWidth: 12 }, 1: { cellWidth: 22 }, 2: { cellWidth: 32 }, 3: { cellWidth: 58 } },
     margin: { left: 14, right: 14 },
     theme: "plain",
+    didDrawCell: (data) => drawAutoTableHeadBottomBorder(j, data),
   });
   y = (j as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 40;
   y += 6;
@@ -113,6 +115,7 @@ export async function openBunderPdfInNewTab(doc: BunderCommercialDocument, autor
     headStyles: { fillColor: [238, 238, 238], fontStyle: "bold" },
     margin: { left: 14, right: 14 },
     theme: "grid",
+    didDrawCell: (data) => drawAutoTableHeadBottomBorder(j, data),
   });
   y = (j as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable?.finalY ?? y + 40;
   y += 6;

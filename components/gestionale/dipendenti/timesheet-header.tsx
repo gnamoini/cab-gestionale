@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import type { DipendenteTimesheetEmployeeRow, TimesheetMonthKey } from "@/lib/dipendenti/types";
+import { buildTimesheetYearSelectOptions } from "@/lib/dipendenti/timesheet-available-periods";
 import {
   dateYmdFromDate,
   monthKeyFromParts,
@@ -29,6 +30,19 @@ import {
   dsPageToolbarMetaChip,
   dsTypoSmall,
 } from "@/lib/ui/design-system";
+
+/**
+ * Azioni affiancate nella toolbar mese: stesso padding e hover via bordo
+ * (il ring di `dsPageToolbarBtn` su una sola cella crea asimmetria visiva).
+ */
+const timesheetMonthActionBtnClass = [
+  dsPageToolbarBtn,
+  "w-full min-w-0 flex-1 whitespace-nowrap px-2.5 sm:px-3",
+  "isolate",
+  "ring-0 hover:ring-0",
+  "hover:border-[color:var(--cab-border-strong)]",
+  "hover:shadow-[var(--cab-shadow-sm)]",
+].join(" ");
 
 function TimesheetPeriodNav({
   periodLabel,
@@ -72,6 +86,7 @@ export function TimesheetHeader({
   fillToday8hPending,
   fillToday8hDisabled,
   fillToday8hDisabledReason,
+  monthKeysWithData = [],
 }: {
   periodMode: TimesheetPeriodMode;
   monthKey: TimesheetMonthKey;
@@ -91,9 +106,17 @@ export function TimesheetHeader({
   fillToday8hPending?: boolean;
   fillToday8hDisabled?: boolean;
   fillToday8hDisabledReason?: string;
+  monthKeysWithData?: readonly TimesheetMonthKey[];
 }) {
   const { year, month } = parseMonthKey(monthKey);
-  const yearItems = yearOptions(6).map((o) => ({ value: String(o.value), label: o.label }));
+  const yearItems = useMemo(
+    () =>
+      buildTimesheetYearSelectOptions(monthKeysWithData, year).map((o) => ({
+        value: String(o.value),
+        label: o.label,
+      })),
+    [monthKeysWithData, year],
+  );
   const monthItems = monthOptionsForYear(year).map((o) => ({
     value: String(o.value),
     label: o.label,
@@ -204,14 +227,18 @@ export function TimesheetHeader({
                   </label>
                 ) : null}
                 {periodMode === "month" ? (
-                  <label className="flex min-w-0 flex-col gap-1">
+                  <div
+                    className="flex min-w-0 flex-col gap-1"
+                    role="group"
+                    aria-label="Azioni giorno corrente"
+                  >
                     <span className={`${filterLabelClass} hidden min-w-0 sm:block invisible`} aria-hidden="true">
                       &#8203;
                     </span>
-                    <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
+                    <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-stretch">
                       <button
                         type="button"
-                        className={`${dsPageToolbarBtn} w-full min-w-0 flex-1 px-3`}
+                        className={timesheetMonthActionBtnClass}
                         onClick={onGoToToday}
                         title="Vai al mese corrente e evidenzia la colonna di oggi"
                       >
@@ -220,7 +247,7 @@ export function TimesheetHeader({
                       {onFillToday8h ? (
                         <button
                           type="button"
-                          className={`${dsPageToolbarBtn} w-full min-w-0 flex-1 px-2.5 sm:px-3`}
+                          className={timesheetMonthActionBtnClass}
                           onClick={onFillToday8h}
                           disabled={fillToday8hDisabled || fillToday8hPending}
                           aria-busy={fillToday8hPending}
@@ -231,13 +258,13 @@ export function TimesheetHeader({
                           }
                         >
                           <span className="sm:hidden">{fillToday8hPending ? "…" : "8h oggi"}</span>
-                          <span className="hidden sm:inline">
+                          <span className="hidden min-w-0 truncate sm:inline">
                             {fillToday8hPending ? "Salvataggio…" : "8h per tutti (oggi)"}
                           </span>
                         </button>
                       ) : null}
                     </div>
-                  </label>
+                  </div>
                 ) : null}
               </div>
             </ToolbarGroupPrimaryRow>
@@ -266,16 +293,6 @@ export function TimesheetHeader({
       </section>
     </ShellCard>
   );
-}
-
-function yearOptions(count: number): { value: number; label: string }[] {
-  const startYear = new Date().getFullYear();
-  const out: { value: number; label: string }[] = [];
-  for (let i = 0; i < count; i++) {
-    const y = startYear - i;
-    out.push({ value: y, label: String(y) });
-  }
-  return out;
 }
 
 export function defaultWeekAnchor(monthKey: TimesheetMonthKey): string {

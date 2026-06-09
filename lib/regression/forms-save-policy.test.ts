@@ -37,6 +37,9 @@ assert.match(impostazioni, /GestionaleUnsavedChangesDialog/);
 assert.match(impostazioni, /Torna indietro/);
 assert.match(impostazioni, /Salva ed esci/);
 assert.match(impostazioni, /Esci senza salvare/);
+assert.match(impostazioni, /handleSaveNow/);
+assert.match(impostazioni, /finalizePropaga/);
+assert.match(impostazioni, /SettingsRinominaPropagaDialog/);
 assert.match(preventivi, /GestionaleUnsavedChangesDialog/);
 assert.match(schede, /GestionaleUnsavedChangesDialog/);
 assert.match(promemoria, /GestionaleUnsavedChangesDialog/);
@@ -58,6 +61,6 @@ assert.doesNotMatch(lavCreate, /domCliente/);
 assert.match(ricambioNew, /useFormEngine/);
 assert.match(ricambioNew, /runSubmit/);
 assert.match(schedaIngressoForm, /useFormEngine/);
-assert.match(schedaIngressoForm, /gestionaleMultilineEnterProps/);
+assert.match(schedaIngressoForm, /GestionaleTextarea/);
 
 console.log("forms-save-policy.test.ts OK");

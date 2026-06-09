@@ -7,8 +7,10 @@ import {
   computeDashboardMagSottoScortaRicambi,
   computeDashboardMagWidgetStats,
   formatDashboardLavWidgetMezzoIdent,
+  formatDashboardMagMovementTime,
   formatDashboardMagRicambioIdent,
   formatDashboardMagRicambioTitle,
+  formatDashboardMagScortaDeficit,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzino-defaults";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -121,6 +123,49 @@ assert.equal(computeDashboardMagWidgetStats(ricambi).sottoScorta, 1);
 assert.equal(computeDashboardMagWidgetStats(ricambi).capitale, 10);
 assert.equal(computeDashboardMagSottoScortaRicambi(ricambi).length, 1);
 assert.equal(computeDashboardMagSottoScortaRicambi(ricambi)[0]?.id, "r1");
+assert.equal(computeDashboardMagSottoScortaRicambi(ricambi)[0]?.scorta, 1);
+assert.equal(computeDashboardMagSottoScortaRicambi(ricambi)[0]?.scortaMinima, 5);
+assert.equal(formatDashboardMagScortaDeficit(1, 5), "1 / 5 pz");
+
+const ricambiDeficitSort: RicambioMagazzino[] = [
+  defaultRicambioMagazzinoFields({
+    id: "mild",
+    marca: "A",
+    codiceFornitoreOriginale: "A1",
+    descrizione: "Mild",
+    scorta: 3,
+    scortaMinima: 5,
+    dataUltimaModifica: "2026-05-25T00:00:00.000Z",
+    prezzoFornitoreOriginale: 10,
+    prezzoVendita: 10,
+  }),
+  defaultRicambioMagazzinoFields({
+    id: "severe",
+    marca: "B",
+    codiceFornitoreOriginale: "B1",
+    descrizione: "Severe",
+    scorta: 0,
+    scortaMinima: 10,
+    dataUltimaModifica: "2026-05-20T00:00:00.000Z",
+    prezzoFornitoreOriginale: 10,
+    prezzoVendita: 10,
+  }),
+];
+assert.deepEqual(
+  computeDashboardMagSottoScortaRicambi(ricambiDeficitSort).map((r) => r.id),
+  ["severe", "mild"],
+);
+
+const movementNow = new Date(2026, 5, 9, 15, 30, 0);
+assert.equal(
+  formatDashboardMagMovementTime("2026-06-09T14:32:00", movementNow),
+  "14:32",
+);
+assert.equal(
+  formatDashboardMagMovementTime("2026-06-08T14:32:00", movementNow),
+  "08 giu",
+);
+
 assert.equal(computeDashboardMagRecentRicambi(ricambi).length, 0);
 
 const ricambiMix: RicambioMagazzino[] = [

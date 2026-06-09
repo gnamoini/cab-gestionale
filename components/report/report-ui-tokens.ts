@@ -41,11 +41,15 @@ export const reportCommandBarClass = "min-w-0 space-y-2";
 export const reportCommandFiltersShellClass =
   "rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)]";
 
-/** Barra navigazione zone (incapsulata nella command bar). */
-export const reportZoneNavClass = "min-w-0 border-b border-[color:var(--cab-border)] px-2 py-1.5";
+/** Corpo controlli filtri report (sotto zone nav). */
+export const reportCommandFiltersBodyClass = "px-3 pb-3 pt-2.5";
 
-/** @deprecated Usare reportZoneNavClass. */
-export const reportZoneNavStickyClass = reportZoneNavClass;
+/** Meta periodo — footer toolbar filtri (testo compatto, non chip). */
+export const reportPeriodMetaClass =
+  "text-xs leading-snug text-[color:var(--cab-text-muted)]";
+
+export const reportPeriodMetaRangeClass =
+  "font-medium tabular-nums text-[color:var(--cab-text)]";
 
 export const reportHealthChipClass =
   "inline-flex items-center gap-1.5 rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-2 py-1 text-[11px] font-medium tabular-nums text-[color:var(--cab-text)]";

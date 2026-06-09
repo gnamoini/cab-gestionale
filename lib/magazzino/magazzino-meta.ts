@@ -13,6 +13,10 @@ import {
   parseCompatRefs,
   type RicambioCompatRef,
 } from "@/lib/magazzino/ricambio-compat-resolver";
+import {
+  parseRicambioUnitaMisura,
+  type RicambioUnitaMisura,
+} from "@/lib/magazzino/ricambio-unita-misura";
 
 export type MagazzinoRicambioMeta = {
   note?: string;
@@ -22,6 +26,7 @@ export type MagazzinoRicambioMeta = {
   codiceOriginaleSecondario?: string;
   marcaOriginaleSecondaria?: string;
   usatoInTagliandi?: boolean;
+  unitaMisura?: RicambioUnitaMisura;
   scortaMinima?: number;
   scontoFornitoreOriginale?: number;
   fornitoriAlternativi?: RicambioFornitoreAlternativo[];
@@ -90,6 +95,7 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
     codiceOriginaleSecondario: codiceSecondario ? normalizeRicambioCodice(codiceSecondario) : undefined,
     marcaOriginaleSecondaria: str(m.marcaOriginaleSecondaria) || undefined,
     usatoInTagliandi: usatoInTagliandi ?? undefined,
+    unitaMisura: parseRicambioUnitaMisura(m.unitaMisura),
     scortaMinima: Number.isFinite(scortaMinima) ? Math.max(0, scortaMinima) : undefined,
     scontoFornitoreOriginale: num(m.scontoFornitoreOriginale, NaN) || undefined,
     fornitoriAlternativi: fornitoriAlternativi.length ? fornitoriAlternativi : undefined,
@@ -125,6 +131,7 @@ export function ricambioUiToMagazzinoMeta(
     codiceOriginaleSecondario: codiceSecondario ? normalizeRicambioCodice(codiceSecondario) : undefined,
     marcaOriginaleSecondaria: r.marcaOriginaleSecondaria.trim() || undefined,
     usatoInTagliandi: r.usatoInTagliandi ? true : undefined,
+    unitaMisura: r.unitaMisura !== "pz" ? r.unitaMisura : undefined,
     scortaMinima: Math.max(0, r.scortaMinima),
     scontoFornitoreOriginale: r.scontoFornitoreOriginale > 0 ? r.scontoFornitoreOriginale : undefined,
     fornitoriAlternativi: fornitoriAlternativi.length ? fornitoriAlternativi : undefined,
@@ -142,6 +149,7 @@ export function metaFieldsToRicambioUi(meta: MagazzinoRicambioMeta): Pick<
   | "codiceFornitoreOriginaleSecondario"
   | "marcaOriginaleSecondaria"
   | "usatoInTagliandi"
+  | "unitaMisura"
   | "scortaMinima"
   | "scontoFornitoreOriginale"
   | "fornitoriAlternativi"
@@ -167,6 +175,7 @@ export function metaFieldsToRicambioUi(meta: MagazzinoRicambioMeta): Pick<
     | "codiceFornitoreOriginaleSecondario"
     | "marcaOriginaleSecondaria"
     | "usatoInTagliandi"
+    | "unitaMisura"
     | "scortaMinima"
     | "scontoFornitoreOriginale"
     | "fornitoriAlternativi"
@@ -182,6 +191,7 @@ export function metaFieldsToRicambioUi(meta: MagazzinoRicambioMeta): Pick<
     codiceFornitoreOriginaleSecondario: meta.codiceOriginaleSecondario ?? "",
     marcaOriginaleSecondaria: meta.marcaOriginaleSecondaria ?? "",
     usatoInTagliandi: meta.usatoInTagliandi === true,
+    unitaMisura: parseRicambioUnitaMisura(meta.unitaMisura),
     scortaMinima: Math.max(0, meta.scortaMinima ?? 0),
     scontoFornitoreOriginale: Math.min(100, Math.max(0, meta.scontoFornitoreOriginale ?? 0)),
     fornitoriAlternativi,

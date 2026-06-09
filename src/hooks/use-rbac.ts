@@ -34,7 +34,7 @@ export function useRbac() {
     role,
     isLoading,
     operatorGlobalSettingsPilotActive: snapshot?.pilot.effectiveEnabled ?? false,
-    clientLavorazioniLoading: clientLav.isLoading,
+    clientLavorazioniLoading: false,
     hasPermission: (permission: PermissionKey) => checkPermission(rbacUser, permission, rbacCtx),
     hasCapability: (capability: Capability) => hasCapability(rbacUser, capability, rbacCtx),
     canRead: (section: RbacSection) => canRead(rbacUser, section, rbacCtx),

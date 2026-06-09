@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
-import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { resolveGestionaleModalRoot } from "@/lib/ui/gestionale-modal-save-prep";
 import {
@@ -325,12 +325,12 @@ export function HubModalPanoramicaNoteEditor({
 
   return (
     <div className="space-y-2">
-      <textarea
-        {...gestionaleMultilineEnterProps}
-        className={`${dsInput} min-h-[4.5rem] w-full resize-none overflow-y-auto text-xs leading-snug`}
+      <GestionaleTextarea
+        className="min-h-[4.5rem] text-xs leading-snug"
+        size="sm"
         value={text}
-        onChange={(e) => {
-          setText(e.target.value);
+        onChange={(v) => {
+          setText(v);
           setDirty(true);
         }}
         rows={3}

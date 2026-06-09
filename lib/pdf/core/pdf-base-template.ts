@@ -65,6 +65,8 @@ export {
   drawGestionaleSideBySideMetricBoxes,
   padPdfFieldsToEqualRows,
   gestionaleSectionTableHooks,
+  drawAutoTableHeadBottomBorder,
+  drawGestionaleTableHeadBorders,
   PDF_GESTIONALE_MUTED_FILL,
 } from "@/lib/pdf/gestionale-section-table";
 

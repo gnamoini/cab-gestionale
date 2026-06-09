@@ -1,0 +1,86 @@
+﻿[
+    {
+        "path":  ".github",
+        "blob_href":  "https://github.com/gnamoini/cab-gestionale/blob/bfe8e276daa31331ff87fe677a4642f4a7529faf/.github",
+        "start_line":  2,
+        "start_column":  null,
+        "end_line":  2,
+        "end_column":  null,
+        "annotation_level":  "warning",
+        "title":  "",
+        "message":  "Node.js 20 actions are deprecated. The following actions are running on Node.js 20 and may not work as expected: actions/checkout@v4, actions/setup-node@v4. Actions will be forced to run with Node.js 24 by default starting June 16th, 2026. Node.js 20 will be removed from the runner on September 16th, 2026. Please check if updated versions of these actions are available that support Node.js 24. To opt into Node.js 24 now, set the FORCE_JAVASCRIPT_ACTIONS_TO_NODE24=true environment variable on the runner or in your workflow file. Once Node.js 24 becomes the default, you can temporarily opt out by setting ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION=true. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/",
+        "raw_details":  ""
+    },
+    {
+        "path":  ".github",
+        "blob_href":  "https://github.com/gnamoini/cab-gestionale/blob/bfe8e276daa31331ff87fe677a4642f4a7529faf/.github",
+        "start_line":  178,
+        "start_column":  null,
+        "end_line":  178,
+        "end_column":  null,
+        "annotation_level":  "failure",
+        "title":  "",
+        "message":  "Process completed with exit code 1.",
+        "raw_details":  ""
+    },
+    {
+        "path":  ".github",
+        "blob_href":  "https://github.com/gnamoini/cab-gestionale/blob/bfe8e276daa31331ff87fe677a4642f4a7529faf/.github",
+        "start_line":  86,
+        "start_column":  null,
+        "end_line":  86,
+        "end_column":  null,
+        "annotation_level":  "notice",
+        "title":  "🎭 Playwright Run Summary",
+        "message":  "  1 failed\n    [chromium] › e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:49:5 › create → save → hub panoramica → edit ingresso → scheda lavorazioni ",
+        "raw_details":  ""
+    },
+    {
+        "path":  "e2e/helpers/lavorazioni-scheda.ts",
+        "blob_href":  "https://github.com/gnamoini/cab-gestionale/blob/bfe8e276daa31331ff87fe677a4642f4a7529faf/e2e/helpers/lavorazioni-scheda.ts",
+        "start_line":  121,
+        "start_column":  15,
+        "end_line":  121,
+        "end_column":  15,
+        "annotation_level":  "failure",
+        "title":  "[chromium] › e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:49:5 › create → save → hub panoramica → edit ingresso → scheda lavorazioni",
+        "message":  "  1) [chromium] › e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:49:5 › create → save → hub panoramica → edit ingresso → scheda lavorazioni \n\n    Retry #2 ───────────────────────────────────────────────────────────────────────────────────────\n    TimeoutError: locator.scrollIntoViewIfNeeded: Timeout 20000ms exceeded.\n    Call log:\n      - waiting for getByRole(\u0027dialog\u0027).filter({ hasText: \u0027Nuova lavorazione\u0027 }).getByRole(\u0027combobox\u0027, { name: \u0027Cantiere\u0027, exact: true })\n\n\n       at ../helpers/lavorazioni-scheda.ts:121\n\n      119 |   const root = scope ?? page;\n      120 |   const input = root.getByRole(\"combobox\", { name: ariaLabel, exact: true });\n    \u003e 121 |   await input.scrollIntoViewIfNeeded();\n          |               ^\n      122 |   await input.click();\n      123 |   if ((await input.getAttribute(\"aria-readonly\")) === \"true\") {\n      124 |     const listbox = page.getByRole(\"listbox\");\n        at fillListCombobox (/home/runner/work/cab-gestionale/cab-gestionale/e2e/helpers/lavorazioni-scheda.ts:121:15)\n        at fillSchedaIngressoCreateForm (/home/runner/work/cab-gestionale/cab-gestionale/e2e/helpers/lavorazioni-scheda.ts:174:9)\n        at /home/runner/work/cab-gestionale/cab-gestionale/e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:58:3",
+        "raw_details":  ""
+    },
+    {
+        "path":  "e2e/helpers/lavorazioni-scheda.ts",
+        "blob_href":  "https://github.com/gnamoini/cab-gestionale/blob/bfe8e276daa31331ff87fe677a4642f4a7529faf/e2e/helpers/lavorazioni-scheda.ts",
+        "start_line":  121,
+        "start_column":  15,
+        "end_line":  121,
+        "end_column":  15,
+        "annotation_level":  "failure",
+        "title":  "[chromium] › e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:49:5 › create → save → hub panoramica → edit ingresso → scheda lavorazioni",
+        "message":  "  1) [chromium] › e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:49:5 › create → save → hub panoramica → edit ingresso → scheda lavorazioni \n\n    Retry #1 ───────────────────────────────────────────────────────────────────────────────────────\n    TimeoutError: locator.scrollIntoViewIfNeeded: Timeout 20000ms exceeded.\n    Call log:\n      - waiting for getByRole(\u0027dialog\u0027).filter({ hasText: \u0027Nuova lavorazione\u0027 }).getByRole(\u0027combobox\u0027, { name: \u0027Cantiere\u0027, exact: true })\n\n\n       at ../helpers/lavorazioni-scheda.ts:121\n\n      119 |   const root = scope ?? page;\n      120 |   const input = root.getByRole(\"combobox\", { name: ariaLabel, exact: true });\n    \u003e 121 |   await input.scrollIntoViewIfNeeded();\n          |               ^\n      122 |   await input.click();\n      123 |   if ((await input.getAttribute(\"aria-readonly\")) === \"true\") {\n      124 |     const listbox = page.getByRole(\"listbox\");\n        at fillListCombobox (/home/runner/work/cab-gestionale/cab-gestionale/e2e/helpers/lavorazioni-scheda.ts:121:15)\n        at fillSchedaIngressoCreateForm (/home/runner/work/cab-gestionale/cab-gestionale/e2e/helpers/lavorazioni-scheda.ts:174:9)\n        at /home/runner/work/cab-gestionale/cab-gestionale/e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:58:3",
+        "raw_details":  ""
+    },
+    {
+        "path":  "e2e/helpers/lavorazioni-scheda.ts",
+        "blob_href":  "https://github.com/gnamoini/cab-gestionale/blob/bfe8e276daa31331ff87fe677a4642f4a7529faf/e2e/helpers/lavorazioni-scheda.ts",
+        "start_line":  121,
+        "start_column":  15,
+        "end_line":  121,
+        "end_column":  15,
+        "annotation_level":  "failure",
+        "title":  "[chromium] › e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:49:5 › create → save → hub panoramica → edit ingresso → scheda lavorazioni",
+        "message":  "  1) [chromium] › e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:49:5 › create → save → hub panoramica → edit ingresso → scheda lavorazioni \n    TimeoutError: locator.scrollIntoViewIfNeeded: Timeout 20000ms exceeded.\n    Call log:\n      - waiting for getByRole(\u0027dialog\u0027).filter({ hasText: \u0027Nuova lavorazione\u0027 }).getByRole(\u0027combobox\u0027, { name: \u0027Cantiere\u0027, exact: true })\n\n\n       at ../helpers/lavorazioni-scheda.ts:121\n\n      119 |   const root = scope ?? page;\n      120 |   const input = root.getByRole(\"combobox\", { name: ariaLabel, exact: true });\n    \u003e 121 |   await input.scrollIntoViewIfNeeded();\n          |               ^\n      122 |   await input.click();\n      123 |   if ((await input.getAttribute(\"aria-readonly\")) === \"true\") {\n      124 |     const listbox = page.getByRole(\"listbox\");\n        at fillListCombobox (/home/runner/work/cab-gestionale/cab-gestionale/e2e/helpers/lavorazioni-scheda.ts:121:15)\n        at fillSchedaIngressoCreateForm (/home/runner/work/cab-gestionale/cab-gestionale/e2e/helpers/lavorazioni-scheda.ts:174:9)\n        at /home/runner/work/cab-gestionale/cab-gestionale/e2e/smoke/13-lavorazioni-scheda-ingresso.spec.ts:58:3",
+        "raw_details":  ""
+    },
+    {
+        "path":  ".github",
+        "blob_href":  "https://github.com/gnamoini/cab-gestionale/blob/bfe8e276daa31331ff87fe677a4642f4a7529faf/.github",
+        "start_line":  53,
+        "start_column":  null,
+        "end_line":  53,
+        "end_column":  null,
+        "annotation_level":  "notice",
+        "title":  "🎭 Playwright Run Summary",
+        "message":  "  4 skipped\n  24 passed (1.4m)",
+        "raw_details":  ""
+    }
+]

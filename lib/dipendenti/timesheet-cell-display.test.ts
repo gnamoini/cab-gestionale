@@ -3,6 +3,7 @@ import type { TimesheetDayInfo } from "@/lib/dipendenti/timesheet-month";
 import {
   buildAbsenceCellDisplayContent,
   buildCellDisplayContent,
+  buildTimesheetCellTooltip,
   buildWorkCellDisplayContent,
   cellDisplayKindForLayer,
   formatCellShortLabel,
@@ -11,9 +12,12 @@ import {
   formatAbsenceCellShortLabel,
   formatOrdinarieCellPdf,
   formatStraordinarieCellPdf,
+  formatTimesheetCellTooltipDate,
+  formatTimesheetDayHeaderGrid,
   formatTimesheetDayLabelPdf,
   cellDisplayKind,
 } from "@/lib/dipendenti/timesheet-cell-display";
+import type { DipendenteTimesheetEmployeeRow } from "@/lib/dipendenti/types";
 import { defaultTipiAssenza } from "@/lib/dipendenti/tipi-assenza-model";
 import type { TimesheetCellValue } from "@/lib/dipendenti/types";
 import { validateCellValue } from "@/lib/dipendenti/timesheet-validation";
@@ -74,6 +78,17 @@ assert.equal(
   "3 mercoledì",
 );
 
+assert.equal(
+  formatTimesheetDayHeaderGrid({
+    day: 7,
+    dateYmd: "2026-06-07",
+    weekdayShort: "dom",
+    weekdayLong: "domenica",
+    isWeekend: true,
+  } satisfies TimesheetDayInfo),
+  "7\ndom",
+);
+
 assert.equal(buildCellDisplayContent(cell({ oreOrdinarie: 8, oreStraordinarie: 6 }), tipi).primary, "14h");
 assert.equal(buildCellDisplayContent(cell({ oreOrdinarie: 8, oreStraordinarie: 6 }), tipi).secondary, "8+6");
 assert.equal(buildCellDisplayContent(cell({ oreStraordinarie: 6 }), tipi).primary, "6h");
@@ -97,6 +112,18 @@ assert.equal(buildWorkCellDisplayContent(cell({ oreStraordinarie: 6 })).secondar
 assert.equal(buildWorkCellDisplayContent(cell({ oreOrdinarie: 8, oreAssenza: 8, tipoAssenzaLabel: "Ferie" })).primary, "8");
 assert.equal(buildAbsenceCellDisplayContent(cell({ oreOrdinarie: 8, oreAssenza: 7, tipoAssenzaLabel: "Ferie" }), tipi).primary, "7");
 assert.equal(buildAbsenceCellDisplayContent(cell({ oreOrdinarie: 8, oreAssenza: 7, tipoAssenzaLabel: "Ferie" }), tipi).secondary, "F");
+
+assert.equal(
+  buildAbsenceCellDisplayContent(cell({ oreAssenza: 8, tipoAssenzaLabel: "Festività" }), tipi).secondary,
+  "FES",
+);
+assert.equal(
+  buildAbsenceCellDisplayContent(
+    cell({ oreAssenza: 8, tipoAssenzaId: ferie.id, tipoAssenzaLabel: "Festività" }),
+    tipi,
+  ).secondary,
+  "FES",
+);
 assert.equal(cellDisplayKindForLayer(cell({ oreOrdinarie: 8 }), "work"), "work");
 assert.equal(cellDisplayKindForLayer(cell({ oreAssenza: 8, tipoAssenzaLabel: "Ferie" }), "absence"), "absence");
 assert.equal(cellDisplayKindForLayer(cell({ oreAssenza: 8 }), "work"), "empty");
@@ -110,5 +137,55 @@ assert.equal(altValidation.ok, false);
 
 const capValidation = validateCellValue(cell({ oreOrdinarie: 20, oreStraordinarie: 5 }), tipi);
 assert.equal(capValidation.ok, false);
+
+const sampleDay = {
+  day: 9,
+  dateYmd: "2026-06-09",
+  weekdayShort: "lun",
+  weekdayLong: "lunedì",
+  isWeekend: false,
+} satisfies import("@/lib/dipendenti/timesheet-month").TimesheetDayInfo;
+
+assert.equal(formatTimesheetCellTooltipDate(sampleDay), "Lun 09/06");
+
+function empRow(
+  partial: Partial<DipendenteTimesheetEmployeeRow> & Pick<DipendenteTimesheetEmployeeRow, "id" | "display_name">,
+): DipendenteTimesheetEmployeeRow {
+  return {
+    source_addetto_name: null,
+    source_addetto_id: null,
+    in_settings: true,
+    created_at: "",
+    updated_at: "",
+    ...partial,
+  };
+}
+
+assert.equal(
+  buildTimesheetCellTooltip({
+    employee: empRow({ id: "1", display_name: "Gaetano Pedone" }),
+    addetto: { id: "a1", nome: "Gaetano", cognome: "Pedone" },
+    day: sampleDay,
+  }),
+  "Pedone\nLun 09/06\nClicca per modificare",
+);
+
+assert.equal(
+  buildTimesheetCellTooltip({
+    employee: empRow({ id: "2", display_name: "Angelo" }),
+    day: sampleDay,
+  }),
+  "Angelo\nLun 09/06\nClicca per modificare",
+);
+
+assert.equal(
+  buildTimesheetCellTooltip({
+    employee: empRow({ id: "3", display_name: "Mario Rossi" }),
+    addetto: { id: "a2", nome: "Mario", cognome: "Rossi" },
+    day: sampleDay,
+    readOnly: true,
+  }),
+  "Rossi\nLun 09/06\nSola lettura",
+);
 
 console.log("timesheet-cell-display.test.ts OK");

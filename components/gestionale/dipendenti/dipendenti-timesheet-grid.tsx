@@ -38,6 +38,7 @@ import {
   gestionaleListTableMasterWrapClass,
 } from "@/lib/ui/gestionale-list-table";
 import { dsScrollbar } from "@/lib/ui/design-system";
+import { scrollTimesheetColumnIntoView } from "@/lib/dipendenti/timesheet-grid-scroll";
 import { globalTableThCell, globalTableThLabel } from "@/lib/ui/global-table";
 
 /** Ombra solo sul corpo tabella quando si scrolla orizzontalmente — mai sull’header. */
@@ -238,7 +239,7 @@ function resolvePointerCrosshair(
 function dayHeaderClass(isWeekend: boolean): string {
   return [
     timesheetHeaderThBase,
-    "min-w-[2.5rem] whitespace-nowrap px-0.5 text-center",
+    "min-w-[2.75rem] whitespace-nowrap px-0.5 text-center",
     isWeekend ? "text-[color:var(--cab-text-muted)]" : "",
   ].join(" ");
 }
@@ -386,14 +387,20 @@ export function DipendentiTimesheetGrid({
     clearTimesheetCrosshair(scrollContainerRef.current);
   }, [monthKey, visibleEmployees.length]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!accentDateYmd) return;
     const root = scrollContainerRef.current;
     if (!root) return;
-    const cell = root.querySelector(`[data-timesheet-day="${accentDateYmd}"]`);
-    if (cell instanceof HTMLElement) {
-      cell.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-    }
+
+    const scrollToAccentColumn = () => {
+      const header = root.querySelector(`thead th[data-timesheet-day="${accentDateYmd}"]`);
+      if (header instanceof HTMLElement) {
+        scrollTimesheetColumnIntoView(root, header);
+      }
+    };
+
+    scrollToAccentColumn();
+    requestAnimationFrame(scrollToAccentColumn);
   }, [accentDateYmd, monthKey, visibleEmployees.length]);
 
   const todayRailLayoutKey = `${monthKey}:${visibleEmployees.length}:${filterEmployeeId}`;
@@ -471,7 +478,7 @@ export function DipendentiTimesheetGrid({
                     <span className="gestionale-timesheet-day-accent-day block text-xs font-semibold tabular-nums">
                       {d.day}
                     </span>
-                    <span className="mt-0.5 block text-[10px] font-normal normal-case opacity-80">
+                    <span className="mt-0.5 block whitespace-nowrap text-[10px] font-normal normal-case opacity-80">
                       {d.weekdayShort}
                     </span>
                   </span>
@@ -551,12 +558,11 @@ export function DipendentiTimesheetGrid({
                           isWeekend={d.isWeekend}
                           disabled={readOnly}
                           tooltipLabel={buildTimesheetCellTooltip({
-                            employeeName: emp.display_name,
+                            employee: emp,
+                            addetto: emp.source_addetto_id
+                              ? addettiById.get(emp.source_addetto_id)
+                              : undefined,
                             day: d,
-                            monthKey,
-                            layer: "work",
-                            value: getCellValue(emp.id, d.dateYmd),
-                            tipiAssenza,
                             readOnly,
                           })}
                           onClick={() => onCellClick(emp.id, d.dateYmd)}
@@ -596,12 +602,11 @@ export function DipendentiTimesheetGrid({
                           isWeekend={d.isWeekend}
                           disabled={readOnly}
                           tooltipLabel={buildTimesheetCellTooltip({
-                            employeeName: emp.display_name,
+                            employee: emp,
+                            addetto: emp.source_addetto_id
+                              ? addettiById.get(emp.source_addetto_id)
+                              : undefined,
                             day: d,
-                            monthKey,
-                            layer: "absence",
-                            value: getCellValue(emp.id, d.dateYmd),
-                            tipiAssenza,
                             readOnly,
                           })}
                           onClick={() => onCellClick(emp.id, d.dateYmd)}

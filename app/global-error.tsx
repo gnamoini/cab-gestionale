@@ -4,7 +4,11 @@ import { useEffect } from "react";
 import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import { GlobalErrorView } from "@/components/observability/global-error-view";
-import { CAB_THEME_BOOT_INLINE_SCRIPT } from "@/lib/theme/theme-boot-inline-script";
+import { DEFAULT_PERSISTED_THEME_MODE } from "@/lib/theme/user-theme-prefs";
+import {
+  CAB_THEME_BOOT_INLINE_SCRIPT,
+  CAB_THEME_CRITICAL_INLINE_STYLE,
+} from "@/lib/theme/theme-boot-inline-script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,6 +20,8 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
+
+const defaultTheme = DEFAULT_PERSISTED_THEME_MODE;
 
 export default function GlobalError({
   error,
@@ -41,10 +47,15 @@ export default function GlobalError({
     <html
       lang="it"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full min-h-[var(--cab-app-height,100dvh)] w-full min-w-full bg-[var(--cab-bg-app)] antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full min-h-[var(--cab-app-height,100dvh)] w-full min-w-full bg-[var(--cab-bg-app)] antialiased${defaultTheme === "dark" ? " dark" : ""}`}
+      style={{ colorScheme: defaultTheme }}
     >
       <head suppressHydrationWarning>
         <title>Errore | CAB Gestionale Officina</title>
+        <style
+          id="cab-theme-critical"
+          dangerouslySetInnerHTML={{ __html: CAB_THEME_CRITICAL_INLINE_STYLE }}
+        />
         <Script
           id="cab-theme-boot"
           strategy="beforeInteractive"

@@ -2,23 +2,27 @@
 
 import { useEffect, type RefObject } from "react";
 
-const SCROLL_END_THRESHOLD_PX = 4;
+const SCROLL_END_ENTER_THRESHOLD_PX = 4;
+const SCROLL_END_EXIT_THRESHOLD_PX = 24;
 
-function isAtScrollEnd(el: HTMLElement): boolean {
-  return el.scrollTop + el.clientHeight >= el.scrollHeight - SCROLL_END_THRESHOLD_PX;
+function distanceFromScrollEnd(el: HTMLElement): number {
+  return el.scrollHeight - el.clientHeight - el.scrollTop;
 }
 
 function syncScrollEndState(el: HTMLElement): void {
-  if (isAtScrollEnd(el)) {
+  const dist = distanceFromScrollEnd(el);
+  const atEnd = el.hasAttribute("data-cab-scroll-at-end");
+
+  if (!atEnd && dist <= SCROLL_END_ENTER_THRESHOLD_PX) {
     el.setAttribute("data-cab-scroll-at-end", "true");
-  } else {
+  } else if (atEnd && dist > SCROLL_END_EXIT_THRESHOLD_PX) {
     el.removeAttribute("data-cab-scroll-at-end");
   }
 }
 
 /**
  * Imposta `data-cab-scroll-at-end` sul main gestionale quando lo scroll raggiunge il fondo.
- * Abilita il gradiente di feedback in globals.css.
+ * Abilita il gradiente di feedback in globals.css (sul sentinel `.gestionale-scroll-end-pad`).
  */
 export function useGestionaleScrollEnd(mainRef: RefObject<HTMLElement | null>): void {
   useEffect(() => {

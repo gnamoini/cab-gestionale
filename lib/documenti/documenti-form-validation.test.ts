@@ -19,4 +19,8 @@ import {
   assert.equal(effectiveDocumentoApplicabilita("listini", "modello"), "marca");
 }
 
+{
+  assert.equal(effectiveDocumentoApplicabilita("certificazioni", "modello"), "marca");
+}
+
 console.log("documenti-form-validation.test.ts OK");

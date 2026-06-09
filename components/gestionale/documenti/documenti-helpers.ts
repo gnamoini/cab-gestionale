@@ -14,7 +14,13 @@ import {
   legacyAssocRefs,
   resolveDocumentoApplicazione,
 } from "@/lib/documenti/documenti-applicabilita";
+import {
+  inferTipoFileFromNome,
+  resolveDocumentoTipoFile,
+} from "@/lib/documenti/documento-tipo-file";
 import type { DocumentoAssocRef, DocumentoGestionale, DocumentoTipoFile } from "@/lib/types/gestionale";
+
+export { inferTipoFileFromNome, resolveDocumentoTipoFile };
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
 export function labelCategoria(c: DocumentoGestionale["categoria"]): string {
@@ -47,16 +53,6 @@ export function labelTipoFile(t: DocumentoTipoFile): string {
     default:
       return "Altro";
   }
-}
-
-export function inferTipoFileFromNome(nome: string): DocumentoTipoFile {
-  const lower = nome.toLowerCase();
-  if (lower.endsWith(".pdf")) return "pdf";
-  if (/\.(png|jpg|jpeg|gif|webp|bmp)$/i.test(lower)) return "immagine";
-  if (/\.(xlsx|xls)$/i.test(lower)) return "excel";
-  if (/\.(doc|docx)$/i.test(lower)) return "word";
-  if (/\.(txt|csv)$/i.test(lower)) return "testo";
-  return "altro";
 }
 
 export function getDocAssocRefs(doc: DocumentoGestionale, catalog: CatalogMarca[]): DocumentoAssocRef[] {

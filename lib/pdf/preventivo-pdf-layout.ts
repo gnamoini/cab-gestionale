@@ -36,10 +36,10 @@ export const PDF_SECTION_CONTENT_GAP = 2;
 
 export const PDF_COMPANY_NAME = "CENTRO ASSISTENZA BARI SRL";
 
-/** Altezza fissa slot brand header (1 riga testo 13pt + gap prima titolo documento). */
-export const PDF_HEADER_BRAND_BLOCK_MM = 6.5;
+/** Altezza fissa slot brand header (logo centrato o fallback testuale). */
+export const PDF_HEADER_BRAND_BLOCK_MM = 11;
 /** Altezza massima logo nel blocco brand (≤ slot per paginazione stabile). */
-export const PDF_HEADER_BRAND_MAX_MM = 6.5;
+export const PDF_HEADER_BRAND_MAX_MM = 10.5;
 /** Spazio tra fondo slot brand (logo/testo) e baseline titolo documento (mm). */
 export const PDF_HEADER_BRAND_TITLE_GAP_MM = 4.5;
 
@@ -121,7 +121,7 @@ export type PreventivoPdfHeaderMeta = {
 };
 
 /**
- * Blocco brand header: logo centrato **oppure** testo aziendale (fallback).
+ * Blocco brand header: logo in alto nello slot **oppure** testo aziendale (fallback).
  * Occupazione verticale fissa (`PDF_HEADER_BRAND_BLOCK_MM`) per allineare il titolo documento.
  */
 export function drawPdfBrandBlock(
@@ -143,11 +143,12 @@ export function drawPdfBrandBlock(
         logoH = logoW / CAB_LOGO_PDF_ASPECT;
       }
       const logoX = pageW / 2 - logoW / 2;
+      const logoY = startY;
       doc.addImage(
         logoDataUrl,
         pdfImageFormatFromDataUrl(logoDataUrl),
         logoX,
-        startY,
+        logoY,
         logoW,
         logoH,
         undefined,
@@ -195,10 +196,10 @@ export function drawPreventivoPdfHeader(
   y += PDF_HEADER_BRAND_TITLE_GAP_MM;
 
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(11.5);
+  doc.setFontSize(12.5);
   doc.setTextColor(...C_PRIMARY);
   doc.text(tipoDocumentoUpper, pageW / 2, y, { align: "center" });
-  y += 5.5;
+  y += 6;
 
   const metaParts = [
     meta?.numero ? `N. ${meta.numero}` : null,
@@ -214,7 +215,6 @@ export function drawPreventivoPdfHeader(
   }
 
   y += 2;
-  if (meta?.metaDivider === false) return y;
   return drawPdfHorizontalRule(doc, y, pageW);
 }
 

@@ -3,13 +3,9 @@
 import type { DateRange } from "@/lib/report/date-ranges";
 import { inclusiveDayCount, type ReportCompareMode, type ReportPeriodPreset } from "@/lib/report/date-ranges";
 import { REPORT_PRESET_LABELS } from "@/lib/report/report-period-presets";
-import {
-  dsPageToolbarMetaChip,
-  dsPageToolbarMetaChipAccent,
-} from "@/lib/ui/design-system";
+import { reportPeriodMetaClass, reportPeriodMetaRangeClass } from "@/components/report/report-ui-tokens";
 
-const COMPARE_LABELS: Record<ReportCompareMode, string> = {
-  none: "Nessun confronto",
+const COMPARE_LABELS: Record<Exclude<ReportCompareMode, "none">, string> = {
   prev_period: "vs periodo precedente",
   prev_year: "vs stesso periodo anno precedente",
 };
@@ -21,7 +17,7 @@ function fmtRangeLine(range: DateRange): string {
   return `${a} – ${b}`;
 }
 
-/** Chip compatti — stessa riga meta delle toolbar liste. */
+/** Riepilogo date derivato — footer toolbar filtri report. */
 export function ReportPeriodMeta({
   preset,
   range,
@@ -34,25 +30,34 @@ export function ReportPeriodMeta({
   compareRange: DateRange | null;
 }) {
   const dayCount = inclusiveDayCount(range);
+  const rangeLine = fmtRangeLine(range);
+  const compareActive = compareMode !== "none" && compareRange != null;
+
+  const ariaLabel = compareActive
+    ? `Periodo: ${REPORT_PRESET_LABELS[preset]}, ${rangeLine}, ${dayCount} giorni, ${COMPARE_LABELS[compareMode]}, ${fmtRangeLine(compareRange)}`
+    : `Periodo: ${REPORT_PRESET_LABELS[preset]}, ${rangeLine}, ${dayCount} giorni`;
 
   return (
     <div
-      className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5"
+      className="flex min-w-0 w-full flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3"
       role="status"
       aria-live="polite"
-      aria-label={`Periodo: ${REPORT_PRESET_LABELS[preset]}, ${fmtRangeLine(range)}`}
+      aria-label={ariaLabel}
     >
-      <span className={dsPageToolbarMetaChipAccent}>{REPORT_PRESET_LABELS[preset]}</span>
-      <span className={`${dsPageToolbarMetaChip} tabular-nums`}>{fmtRangeLine(range)}</span>
-      <span className={dsPageToolbarMetaChip}>({dayCount} giorni)</span>
-      {compareMode !== "none" && compareRange ? (
-        <>
-          <span className={dsPageToolbarMetaChipAccent}>{COMPARE_LABELS[compareMode]}</span>
-          <span className={`${dsPageToolbarMetaChip} tabular-nums`}>{fmtRangeLine(compareRange)}</span>
-        </>
-      ) : (
-        <span className={dsPageToolbarMetaChip}>{COMPARE_LABELS.none}</span>
-      )}
+      <p className={`${reportPeriodMetaClass} min-w-0 flex-1`}>
+        <span className={reportPeriodMetaRangeClass}>{rangeLine}</span>
+        <span aria-hidden="true"> · </span>
+        <span>{dayCount} giorni</span>
+      </p>
+      {compareActive ? (
+        <p
+          className={`${reportPeriodMetaClass} min-w-0 w-full shrink-0 sm:ml-auto sm:w-auto sm:min-w-[11.5rem] sm:text-right`}
+        >
+          <span>{COMPARE_LABELS[compareMode]}</span>
+          <span aria-hidden="true"> · </span>
+          <span className={reportPeriodMetaRangeClass}>{fmtRangeLine(compareRange)}</span>
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -17,8 +17,8 @@ la causa è quasi sempre un’**estensione** o il **browser integrato dell’IDE
 
 **Mitigazione in app**
 
-- [`app/layout.tsx`](../app/layout.tsx): `suppressHydrationWarning` su `<html>`, `<head>`, `<body>`; script `cab-theme-boot` in `<head>` via `next/script` `beforeInteractive`.
-- Script blocking in [`lib/theme/theme-boot-inline-script.ts`](../lib/theme/theme-boot-inline-script.ts) applica tema prima dell’hydration.
+- [`app/layout.tsx`](../app/layout.tsx): `suppressHydrationWarning` su `<html>`, `<head>`, `<body>`; tema SSR da cookie `cab-theme`; `<style id="cab-theme-critical">` + `next/script` `beforeInteractive` `cab-theme-boot` in `<head>` (no `<script>` raw — React 19 / Next 16).
+- [`lib/theme/theme-boot-inline-script.ts`](../lib/theme/theme-boot-inline-script.ts): CSS critico inline + IIFE che riallinea `class`/`colorScheme` da `localStorage` e sincronizza cookie prima dell’hydration.
 - **Solo development:** script `cab-cursor-automation-dom-shield` ([`lib/theme/cursor-automation-dom-shield-inline-script.ts`](../lib/theme/cursor-automation-dom-shield-inline-script.ts)) rimuove `data-cursor-ref` iniettati da Cursor Browser prima/durante l’hydration (MutationObserver 15s). Non caricato in production.
 
 `suppressHydrationWarning` su `<body>` copre solo attributi del body (es. `bis_register`), non i discendenti. I warning su `bis_skin_checked` nei `<div>` interni spariscono solo disabilitando l'estensione.
@@ -35,11 +35,21 @@ Pattern da evitare nel render iniziale:
 
 View già allineate: `ThemeToggle`, `DashboardWelcome`, sidebar collapse (`useSidebarCollapsed` / `useSyncExternalStore`), `useUndoSessionId` (`useSyncExternalStore`).
 
-## Theme SSR vs client
+## Theme SSR vs client (anti-FOUC)
 
-SSR imposta `dark` su `<html>`. Lo script in `<head>` riallinea `class` e `colorScheme` da `localStorage` prima del paint. Eventuale differenza è intenzionale e coperta da `suppressHydrationWarning` su `<html>`.
+Tre livelli allineati al primo paint:
 
-Dopo il mount, `ThemeProvider` imposta `document.documentElement.dataset.ready = "1"` (segnale opzionale per CSS/diagnostica). **Non** spostare lo script tema su `afterInteractive`: reintrodurrebbe flash FOUC.
+| Livello | Ruolo |
+|---------|--------|
+| SSR (`resolveServerThemeMode` + cookie) | `<html>` con `dark` e `colorScheme` già corretti nella risposta |
+| CSS critico (`CAB_THEME_CRITICAL_INLINE_STYLE`) | Sfondo `#09090b` / `#f4f4f5` prima del bundle `globals.css` |
+| Script blocking (`CAB_THEME_BOOT_INLINE_SCRIPT`) | Riallinea da `localStorage`, scrive cookie `cab-theme` |
+
+Default globale: **dark** ([`DEFAULT_PERSISTED_THEME_MODE`](../lib/theme/user-theme-prefs.ts)). `ThemeProvider` persiste tema su `localStorage` + cookie via `writeThemeBootCache`.
+
+Eventuale differenza SSR/client (es. primo accesso senza cookie) è coperta da `suppressHydrationWarning` su `<html>`. Dopo il mount, `ThemeProvider` imposta `document.documentElement.dataset.ready = "1"`.
+
+**Non** spostare lo script tema su `afterInteractive` o strategie deferred: reintrodurrebbe flash FOUC. Il primo paint è coperto da SSR + CSS critico anche se lo script è `beforeInteractive`.
 
 ## Auth bootstrap (single source of truth)
 

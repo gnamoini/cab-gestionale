@@ -143,6 +143,19 @@ const yNoLogoExplicit = measureGestionalePdfHeaderEndY(pageWPortrait, "PREVENTIV
 assert.equal(yWithLogo, yTextOnly, "header con logo deve avere stesso Y finale del fallback testuale");
 assert.equal(yNoLogoExplicit, yTextOnly, "header senza logo usa fallback testuale con stesso Y");
 
+const yMetaDividerFalse = measureGestionalePdfHeaderEndY(pageWPortrait, "TABELLA PRESENZE", {
+  logoDataUrl: MOCK_LOGO_DATA_URL,
+  metaDivider: false,
+});
+const yTitleOnlyWithRule =
+  PDF_MARGIN_TOP +
+  PDF_HEADER_BRAND_BLOCK_MM +
+  PDF_HEADER_BRAND_TITLE_GAP_MM +
+  6 +
+  2 +
+  4.5;
+assert.equal(yMetaDividerFalse, yTitleOnlyWithRule, "metaDivider false include separatore prima del contenuto");
+
 const brandBlockEnd = PDF_MARGIN_TOP + PDF_HEADER_BRAND_BLOCK_MM;
 const docTitleBaselineY = brandBlockEnd + PDF_HEADER_BRAND_TITLE_GAP_MM;
 const logoBottomY = brandBlockEnd;

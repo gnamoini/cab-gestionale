@@ -44,15 +44,13 @@ export function DipendentiTimesheetCompactCell({
   const kindClass = isEmpty
     ? `${isWeekend ? CELL_EMPTY_WEEKEND_CLASS : CELL_EMPTY_BASE_CLASS} ${emptyHover}`
     : CELL_KIND_CLASS[kind];
-  const emptyLabel =
-    layer === "absence" ? "Nessuna assenza — clicca per inserire" : "Nessuna presenza — clicca per inserire";
-  const ariaLabel = isEmpty ? emptyLabel : content.title;
+  const ariaLabel = tooltipLabel.replace(/\n/g, " — ");
   const secondaryClass = content.secondaryTone
     ? CELL_SECONDARY_TONE_CLASS[content.secondaryTone]
     : CELL_SECONDARY_TONE_CLASS.neutral;
 
   return (
-    <Tooltip content={tooltipLabel} side="top" showOnFocus={false} delayMs={220}>
+    <Tooltip content={tooltipLabel} multiline side="top" showOnFocus={false} delayMs={220}>
       <button
         type="button"
         data-timesheet-cell=""
@@ -73,7 +71,9 @@ export function DipendentiTimesheetCompactCell({
         content.secondary ? (
           <span className="flex min-w-0 flex-col items-center leading-none">
             <span className="truncate text-[11px] font-bold">{content.primary}</span>
-            <span className={`mt-0.5 truncate text-[9px] font-semibold uppercase tracking-wide ${secondaryClass}`}>
+            <span
+              className={`mt-0.5 whitespace-nowrap text-[9px] font-semibold uppercase tracking-wide ${secondaryClass}`}
+            >
               {content.secondary}
             </span>
           </span>

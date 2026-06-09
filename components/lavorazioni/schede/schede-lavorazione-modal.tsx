@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
+import { gestionaleTextareaMaxHeightCompact } from "@/lib/ui/design-system";
 import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { HubModalTab, HubModalTabBar } from "@/components/design-system/hub-modal-tab-bar";
@@ -1539,38 +1540,6 @@ function SchedaSectionHub({
   );
 }
 
-function AutoGrowTextarea({
-  value,
-  onChange,
-  readOnly,
-  className,
-}: {
-  value: string;
-  onChange: (v: string) => void;
-  readOnly?: boolean;
-  className?: string;
-}) {
-  const ta = useRef<HTMLTextAreaElement | null>(null);
-  useLayoutEffect(() => {
-    const el = ta.current;
-    if (!el) return;
-    el.style.height = "0px";
-    el.style.height = `${Math.max(72, el.scrollHeight)}px`;
-  }, [value, readOnly]);
-  return (
-    <textarea
-      {...gestionaleMultilineEnterProps}
-      ref={ta}
-      rows={2}
-      className={className}
-      readOnly={readOnly}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      style={{ overflow: "hidden", minHeight: "4.5rem", resize: "none" }}
-    />
-  );
-}
-
 function SchedaDayField({
   label,
   value,
@@ -1699,8 +1668,10 @@ function LavorazioniPanel({
                   )}
                 </td>
                 <td className="px-2 py-2 align-top">
-                  <AutoGrowTextarea
-                    className={`${dsInput} !py-2 !text-sm w-full max-w-none leading-relaxed`}
+                  <GestionaleTextarea
+                    className="!py-2 !text-sm w-full max-w-none leading-relaxed"
+                    size="sm"
+                    maxHeight={gestionaleTextareaMaxHeightCompact}
                     readOnly={ro}
                     value={r.lavorazioniEffettuate}
                     onChange={(v) => patchRiga(r.id, (row) => ({ ...row, lavorazioniEffettuate: v }))}

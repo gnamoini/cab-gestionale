@@ -51,6 +51,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     const boot = resolveBootThemeMode();
     setResolved(boot);
     applyPersistedThemeToDocument(boot);
+    writeThemeBootCache(boot);
     setThemeReady(true);
     document.documentElement.dataset.ready = "1";
   }, []);

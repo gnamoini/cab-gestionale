@@ -34,9 +34,7 @@ import {
   useSchedaIngressoMezzoPrompt,
   type UseSchedaIngressoMezzoPromptResult,
 } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
-import {
-  gestionaleMultilineEnterProps,
-} from "@/components/gestionale/gestionale-form-focus-scope";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { useFormEngine } from "@/lib/forms/form-engine";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { LoadingButton } from "@/components/design-system";
@@ -395,24 +393,24 @@ export function SchedaIngressoFormBody({
 
         <FormSection title="Intervento">
           <FormField label="Descrizione anomalia" htmlFor={anomaliaFieldId}>
-            <textarea
+            <GestionaleTextarea
               id={anomaliaFieldId}
-              {...gestionaleMultilineEnterProps}
-              className={`${dsInput} min-h-[72px] w-full resize-y`}
+              className="min-h-[4.5rem]"
+              size="md"
               value={fields.descrizioneAnomalia}
-              onChange={(e) => onPatch({ descrizioneAnomalia: sliceInputValue(e.target.value, TEXT_EXTRA) })}
+              onChange={(v) => onPatch({ descrizioneAnomalia: sliceInputValue(v, TEXT_EXTRA) })}
               disabled={disabled}
               rows={3}
               maxLength={TEXT_EXTRA}
             />
           </FormField>
           <FormField label="Note" htmlFor={noteFieldId}>
-            <textarea
+            <GestionaleTextarea
               id={noteFieldId}
-              {...gestionaleMultilineEnterProps}
-              className={`${dsInput} min-h-[56px] w-full resize-y`}
+              className="min-h-[3.5rem]"
+              size="sm"
               value={fields.noteIntervento ?? ""}
-              onChange={(e) => onPatch({ noteIntervento: sliceInputValue(e.target.value, TEXT_LONG) })}
+              onChange={(v) => onPatch({ noteIntervento: sliceInputValue(v, TEXT_LONG) })}
               disabled={disabled}
               rows={2}
               maxLength={TEXT_LONG}

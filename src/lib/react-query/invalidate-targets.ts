@@ -27,7 +27,7 @@ export const GESTIONALE_TABLE_QUERY_KEYS: Record<string, readonly QueryKeyTuple[
     QK.dipendentiTimesheetEmployees,
     QK.dipendentiTimesheetEmployeeIdsWithEntries,
   ],
-  dipendenti_timesheet_entries: [QK.dipendentiTimesheetEntries],
+  dipendenti_timesheet_entries: [QK.dipendentiTimesheetEntries, QK.dipendentiTimesheetMonthKeysWithData],
   user_permissions: [QK.userPermissions],
 };
 

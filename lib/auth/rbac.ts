@@ -277,10 +277,9 @@ export function isPathAllowedForCliente(pathname: string): boolean {
 export function shouldHideNavHref(
   user: RbacUser,
   href: string,
-  opts?: { clientLavorazioniAllowed?: boolean; clientLavorazioniLoading?: boolean },
+  opts?: { clientLavorazioniAllowed?: boolean },
   ctx?: RbacEvaluationContext,
 ): boolean {
-  if (opts?.clientLavorazioniLoading && href.startsWith("/lavorazioni-clienti")) return true;
   const section = pathnameToSection(href);
   if (!section) return false;
   if (section === "lavorazioni_clienti") {

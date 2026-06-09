@@ -118,7 +118,6 @@ export function DashboardQuickNav() {
             href,
             {
               clientLavorazioniAllowed: clientLav.allowed,
-              clientLavorazioniLoading: clientLav.isLoading,
             },
             { operatorGlobalSettingsDbEnabled: operatorPilot.dbEnabled },
           ),
@@ -129,7 +128,7 @@ export function DashboardQuickNav() {
           item.href !== "/lavorazioni-clienti" &&
           item.href !== "/bunder",
       ),
-    [user, clientLav.allowed, clientLav.isLoading, operatorPilot.dbEnabled],
+    [user, clientLav.allowed, operatorPilot.dbEnabled],
   );
 
   return (

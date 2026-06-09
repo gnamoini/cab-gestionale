@@ -138,6 +138,21 @@
   box-shadow: -12px 0 16px -12px color-mix(in srgb, rgb(9 9 11) 88%, transparent);
 }
 
+/* Ultima riga: angoli inferiori coerenti con il wrap `rounded-[var(--ds-radius-xl)]`. */
+.gestionale-list-table-scope tbody tr[data-gestionale-last-row="true"] > td:first-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-last-row="true"] > td:first-child,
+.gestionale-list-table-scope tbody tr:last-child:not([aria-hidden]) > td:first-child,
+.lavorazioni-scroll-scope tbody tr:last-child:not([aria-hidden]) > td:first-child {
+  border-bottom-left-radius: var(--ds-radius-xl);
+}
+
+.gestionale-list-table-scope tbody tr[data-gestionale-last-row="true"] > td:last-child,
+.lavorazioni-scroll-scope tbody tr[data-gestionale-last-row="true"] > td:last-child,
+.gestionale-list-table-scope tbody tr:last-child:not([aria-hidden]) > td:last-child,
+.lavorazioni-scroll-scope tbody tr:last-child:not([aria-hidden]) > td:last-child {
+  border-bottom-right-radius: var(--ds-radius-xl);
+}
+
 .gestionale-list-table-scope .gestionale-list-table-actions-head,
 .lavorazioni-scroll-scope .gestionale-list-table-actions-head {
   position: sticky;

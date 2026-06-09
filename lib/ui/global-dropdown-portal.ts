@@ -10,6 +10,22 @@ export const GLOBAL_DROPDOWN_VIEWPORT_PAD = 8;
 /** Altezza massima default menu scrollabile. */
 export const GLOBAL_DROPDOWN_MAX_HEIGHT = 320;
 
+/**
+ * Collision detection per menu portal: usa il viewport, non i clipping ancestor
+ * del form/modale (`overflow:hidden`), così l'elenco può sovrapporsi ai campi sotto.
+ */
+export function globalDropdownPortalDetectOverflowOptions(): {
+  padding: number;
+  rootBoundary: "viewport";
+  boundary?: Element;
+} {
+  return {
+    padding: GLOBAL_DROPDOWN_VIEWPORT_PAD,
+    rootBoundary: "viewport",
+    boundary: typeof document !== "undefined" ? document.documentElement : undefined,
+  };
+}
+
 export type GlobalDropdownPlacement = "top" | "bottom";
 
 export type GlobalDropdownCoords = {

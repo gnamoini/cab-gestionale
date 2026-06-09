@@ -48,10 +48,8 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
   const loadingGateStartedRef = useRef<number | null>(null);
 
   const sessionReady = isAuthSessionEstablished(status);
-  const checkingClientLav =
-    pathname.startsWith("/lavorazioni-clienti") && clientLav.isLoading && sessionReady;
   const checkingPerms = sessionReady && permsLoading && !loadingFailsafe;
-  const showLoadingGate = status === "loading" || checkingClientLav || checkingPerms;
+  const showLoadingGate = status === "loading" || checkingPerms;
 
   useEffect(() => {
     if (!showLoadingGate) {
@@ -79,12 +77,12 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
     });
 
   useEffect(() => {
-    if (!sessionReady || checkingClientLav || checkingPerms) return;
+    if (!sessionReady || checkingPerms) return;
     if (pathname === ACCESS_DENIED_PATH) return;
     if (!allowed) {
       router.replace(`${ACCESS_DENIED_PATH}?from=${encodeURIComponent(pathname)}`);
     }
-  }, [allowed, checkingClientLav, checkingPerms, pathname, router, sessionReady]);
+  }, [allowed, checkingPerms, pathname, router, sessionReady]);
 
   if (showLoadingGate && !loadingFailsafe) {
     return (

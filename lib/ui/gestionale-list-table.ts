@@ -165,6 +165,16 @@ export function gestionaleListTableRowClassNames(extra?: string): string {
   return [gestionaleListTableRowClass, extra].filter(Boolean).join(" ");
 }
 
+/**
+ * Ultima riga visibile (liste virtualizzate: il tbody ha righe spacer dopo i dati).
+ * Angoli inferiori in `gestionale-list-table.css`.
+ */
+export const gestionaleListTableLastRowAttr = "data-gestionale-last-row";
+
+export function gestionaleListTableIsLastRow(index: number, rowCount: number): boolean {
+  return rowCount > 0 && index === rowCount - 1;
+}
+
 /** Valori `data-gestionale-row-tone` — stili in `gestionale-list-table.css`. */
 export const gestionaleListTableRowToneFlash = "flash" as const;
 export const gestionaleListTableRowToneLowStock = "low-stock" as const;

@@ -47,6 +47,18 @@ assert.equal(persisted.fornitoriAlternativi?.[1]?.fornitore, "F2");
 assert.equal(persisted.fornitoreNonOriginale, "F1");
 assert.equal(persisted.usatoInTagliandi, true);
 
+const ltMeta = parseMagazzinoRicambioMeta({ unitaMisura: "lt" });
+assert.equal(ltMeta.unitaMisura, "lt");
+assert.equal(metaFieldsToRicambioUi(ltMeta).unitaMisura, "lt");
+
+const ltRicambio = defaultRicambioMagazzinoFields({
+  id: "uuid-lt",
+  descrizione: "Olio",
+  unitaMisura: "lt",
+});
+assert.equal(ricambioUiToMagazzinoMeta(ltRicambio).unitaMisura, "lt");
+assert.equal(ricambioUiToMagazzinoMeta(defaultRicambioMagazzinoFields({ id: "uuid-pz", descrizione: "Bullone" })).unitaMisura, undefined);
+
 const renamed = patchFornitoriAlternativiFornitoreRename(
   {
     fornitoreNonOriginale: "Old",

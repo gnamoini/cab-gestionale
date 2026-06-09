@@ -43,8 +43,8 @@ assert.match(anagrafica, /inputMode="numeric"/);
 
 assert.match(
   ingressoForm,
-  /gestionaleMultilineEnterProps/,
-  "scheda ingresso: textarea multiriga devono usare gestionaleMultilineEnterProps",
+  /GestionaleTextarea/,
+  "scheda ingresso: campi multiriga devono usare GestionaleTextarea SSOT",
 );
 
 const modals = read("components/gestionale/lavorazioni/lavorazioni-modals.tsx");

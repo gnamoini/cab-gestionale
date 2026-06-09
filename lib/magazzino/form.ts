@@ -13,6 +13,10 @@ import { flattenCompatFromHierarchyTree } from "@/lib/mezzi/hierarchy-list-prefs
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import { normalizeRicambioCodice } from "@/lib/magazzino/ricambio-codice";
 import {
+  RICAMBIO_UNITA_MISURA_DEFAULT,
+  type RicambioUnitaMisura,
+} from "@/lib/magazzino/ricambio-unita-misura";
+import {
   deriveMarcheFiltroFromCompatLabels,
   expandRicambioCompatibilitaMezzi,
 } from "@/lib/magazzino/ricambio-compat-expand";
@@ -132,6 +136,7 @@ export type RicambioFormState = {
   codiceFornitoreOriginaleSecondario: string;
   marcaOriginaleSecondaria: string;
   usatoInTagliandi: boolean;
+  unitaMisura: RicambioUnitaMisura;
   descrizione: string;
   note: string;
   categoria: string;
@@ -170,6 +175,7 @@ export function emptyRicambioForm(): RicambioFormState {
     codiceFornitoreOriginaleSecondario: "",
     marcaOriginaleSecondaria: "",
     usatoInTagliandi: false,
+    unitaMisura: RICAMBIO_UNITA_MISURA_DEFAULT,
     descrizione: "",
     note: "",
     categoria: "",
@@ -300,6 +306,7 @@ export function ricambioFromFormLenient(
     codiceFornitoreOriginaleSecondario: codiceSecondario,
     marcaOriginaleSecondaria: f.marcaOriginaleSecondaria.trim(),
     usatoInTagliandi: f.usatoInTagliandi,
+    unitaMisura: f.unitaMisura,
     descrizione: f.descrizione.trim() || RICAMBIO_LENIENT_PLACEHOLDER_DESCRIZIONE,
     note: f.note.trim(),
     categoria: f.categoria.trim() || RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA,
@@ -346,6 +353,7 @@ export function toFormDraft(
     codiceFornitoreOriginaleSecondario: r.codiceFornitoreOriginaleSecondario,
     marcaOriginaleSecondaria: r.marcaOriginaleSecondaria,
     usatoInTagliandi: r.usatoInTagliandi,
+    unitaMisura: r.unitaMisura,
     descrizione: r.descrizione,
     note: r.note,
     categoria:

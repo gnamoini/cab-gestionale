@@ -60,13 +60,19 @@ import { latestUndoableScortaEntryForRicambio, parseScortaChange, entryMatchesMa
 import { useUndoSessionId } from "@/lib/gestionale-log/use-undo-session-id";
 import { analyzeArchiveDuplicateCodes } from "@/lib/magazzino/duplicates";
 import { ricambioHasFornitoreAlternativo } from "@/lib/magazzino/ricambio-fornitori-alternativi";
-import { compareByColumn, compareNaturalOrder, type SortPhaseMagazzino } from "@/lib/magazzino/sort-order";
+import {
+  compareByColumn,
+  compareMagazzinoDefaultOrder,
+  compareNaturalOrder,
+  type SortPhaseMagazzino,
+} from "@/lib/magazzino/sort-order";
 import {
   buildConsumoMapMagazzinoRolling36ForProducts,
   formatAvgMonthlyMagazzinoIt,
 } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import type { RicambioMagazzino, SortKeyMagazzino } from "@/lib/magazzino/types";
+import { formatRicambioUnitaMisuraLabel } from "@/lib/magazzino/ricambio-unita-misura";
 import {
   dsPageToolbarBtn,
   dsPageToolbarCtaCompact,
@@ -77,8 +83,8 @@ import {
   dsBtnPrimary,
   dsBtnSoftOrange,
   dsFocus,
+  dsTableActionBtnDanger,
   dsTableActionBtnPrimary,
-  dsTableActionBtnSecondary,
   dsTableActionBtnUndo,
   dsTableActionBtnInfo,
   dsTableActionGlyph,
@@ -89,6 +95,8 @@ import {
   GlobalTableSortTh,
 } from "@/components/gestionale/global-table";
 import {
+  gestionaleListTableIsLastRow,
+  gestionaleListTableLastRowAttr,
   gestionaleListTableRowClass,
   gestionaleListTableRowSurfaceClass,
   gestionaleListTableRowTone,
@@ -288,6 +296,7 @@ const CAMPO_LABEL: Partial<Record<keyof RicambioMagazzino, string>> = {
   prezzoVendita: "Prezzo vendita",
   marcaOriginaleSecondaria: "Marca secondaria",
   usatoInTagliandi: "Tagliando",
+  unitaMisura: "Unità di misura",
   fornitoreNonOriginale: "Fornitore alternativo",
   codiceFornitoreNonOriginale: "Codice alternativo",
   prezzoFornitoreNonOriginale: "Prezzo alternativo",
@@ -310,6 +319,7 @@ const DIFF_KEYS: (keyof RicambioMagazzino)[] = [
   "codiceFornitoreOriginaleSecondario",
   "marcaOriginaleSecondaria",
   "usatoInTagliandi",
+  "unitaMisura",
   "descrizione",
   "note",
   "categoria",
@@ -347,6 +357,7 @@ function fmtForDiff(k: keyof RicambioMagazzino, r: RicambioMagazzino): string {
   if (k === "fornitoriAlternativi") return fmtFornitoriAlternativiDiff(r.fornitoriAlternativi);
   const v = r[k];
   if (k === "usatoInTagliandi") return r.usatoInTagliandi ? "Sì" : "No";
+  if (k === "unitaMisura") return formatRicambioUnitaMisuraLabel(r.unitaMisura);
   if (k === "compatibilitaMezzi") return formatCompatMezziArrayForLog(v);
   if (Array.isArray(v)) return (v as string[]).join(", ") || "—";
   if (typeof v === "number") {
@@ -1044,7 +1055,7 @@ export function MagazzinoView() {
 
     rows = [...rows].sort((a, b) => {
       if (sortPhase === "natural" || sortColumn === null) {
-        return compareNaturalOrder(a, b, orderMap);
+        return compareMagazzinoDefaultOrder(a, b, orderMap, mezziListePrefs);
       }
       const primary = compareByColumn(a, b, sortColumn, sortPhase, consumoAvgById, mezziListePrefs);
       if (primary !== 0) return primary;
@@ -1377,6 +1388,9 @@ export function MagazzinoView() {
           id={`magazzino-row-${p.id}`}
           key={p.id}
           data-gestionale-row-tone={gestionaleListTableRowTone({ flash, lowStock: low })}
+          {...(gestionaleListTableIsLastRow(index, pagedMagazzino.length)
+            ? { [gestionaleListTableLastRowAttr]: "true" }
+            : {})}
           className={gestionaleListTableRowClass}
         >
           <td className={`min-w-0 w-[7.75rem] max-w-[7.75rem] overflow-hidden ${gestionaleListTableTd}`}>
@@ -1431,7 +1445,7 @@ export function MagazzinoView() {
           <td className={`${gestionaleListTableTdCenter} text-[13px] text-zinc-700 dark:text-zinc-300`}>
             <MagazzinoOptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
               <span className="inline-block max-w-full truncate">
-                {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "dati insufficienti"}
+                {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
               </span>
             </MagazzinoOptionalTooltip>
           </td>
@@ -1452,7 +1466,7 @@ export function MagazzinoView() {
               <IconActionButton
                 label="Diminuisci"
                 tooltipContent={magCanCreateRicambio ? "Diminuisci" : "Sola lettura"}
-                className={dsTableActionBtnSecondary}
+                className={dsTableActionBtnDanger}
                 disabled={!magCanCreateRicambio}
                 onClick={() => adjustScorta(p.id, -1)}
               >
@@ -1810,7 +1824,7 @@ export function MagazzinoView() {
                     <dd className="font-medium tabular-nums text-zinc-700 dark:text-zinc-300">
                       <MagazzinoOptionalTooltip content={magazzinoConsumoMedioTooltip(consumoRow, avgM)}>
                         <span className="inline-block max-w-full truncate">
-                          {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "dati insufficienti"}
+                          {avgM != null ? formatAvgMonthlyMagazzinoIt(avgM) : "—"}
                         </span>
                       </MagazzinoOptionalTooltip>
                     </dd>
@@ -1866,7 +1880,7 @@ export function MagazzinoView() {
                   <IconActionButton
                     label="Diminuisci"
                     tooltipContent={magCanCreateRicambio ? "Diminuisci" : "Sola lettura"}
-                    className={dsTableActionBtnSecondary}
+                    className={dsTableActionBtnDanger}
                     disabled={!magCanCreateRicambio}
                     onClick={() => adjustScorta(p.id, -1)}
                   >

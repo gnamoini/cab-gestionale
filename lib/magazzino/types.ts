@@ -1,4 +1,5 @@
 import type { RicambioCompatRef } from "@/lib/magazzino/ricambio-compat-resolver";
+import type { RicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 
 export type RicambioFornitoreAlternativo = {
   id: string;
@@ -18,6 +19,8 @@ export interface RicambioMagazzino {
   marcaOriginaleSecondaria: string;
   /** Ricambio impiegato nelle manutenzioni tagliando. */
   usatoInTagliandi: boolean;
+  /** Unità di misura giacenza (pz, lt, metri). */
+  unitaMisura: RicambioUnitaMisura;
   descrizione: string;
   note: string;
   categoria: string;

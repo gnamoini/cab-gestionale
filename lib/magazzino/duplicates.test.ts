@@ -22,6 +22,7 @@ function mockRicambio(partial: Partial<RicambioMagazzino> & Pick<RicambioMagazzi
     prezzoVendita: 0,
     marcaOriginaleSecondaria: "",
     usatoInTagliandi: false,
+    unitaMisura: partial.unitaMisura ?? "pz",
     fornitoriAlternativi: partial.fornitoriAlternativi ?? [],
     fornitoreNonOriginale: "",
     codiceFornitoreNonOriginale: "",

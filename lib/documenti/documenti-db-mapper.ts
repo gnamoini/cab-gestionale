@@ -62,6 +62,7 @@ export function gestionaleToDocumentoInsert(
             : undefined
           : undefined,
       fileEstensione: doc.fileEstensione,
+      tipoFile: doc.tipoFile,
       uploadedAt: doc.caricatoIl || new Date().toISOString(),
     },
   };

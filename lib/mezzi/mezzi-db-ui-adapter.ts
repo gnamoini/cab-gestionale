@@ -1,6 +1,7 @@
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
-import type { DocumentoGestionale, DocumentoTipoFile } from "@/lib/types/gestionale";
+import { resolveDocumentoTipoFile } from "@/lib/documenti/documento-tipo-file";
+import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { imageLogModificaRiga, isImageLogAction, type MezziLogEntryLike } from "@/lib/gestionale-log/view-model";
 import { diffMezzoChanges } from "@/lib/mezzi/mezzi-helpers";
 import { parseMezzoMeta } from "@/lib/mezzi/mezzi-meta";
@@ -54,15 +55,6 @@ const CAT_MAP: Record<DocumentoRow["categoria"], DocumentoGestionale["categoria"
   altro: "altro",
 };
 
-function guessTipoFile(url: string): DocumentoTipoFile {
-  const u = url.toLowerCase();
-  if (u.endsWith(".pdf")) return "pdf";
-  if (u.endsWith(".doc") || u.endsWith(".docx")) return "word";
-  if (u.endsWith(".xls") || u.endsWith(".xlsx")) return "excel";
-  if (u.endsWith(".jpg") || u.endsWith(".jpeg") || u.endsWith(".png")) return "immagine";
-  return "altro";
-}
-
 export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale {
   const meta = row.meta ?? {};
   const nome = typeof meta.nome === "string" && meta.nome.trim() ? meta.nome.trim() : row.url_file.split("/").pop() ?? "Documento";
@@ -87,7 +79,11 @@ export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale
     categoria: CAT_MAP[row.categoria] ?? "altro",
     marca: senzaMarca ? "" : row.marca,
     macchina: row.modello ?? "—",
-    tipoFile: guessTipoFile(row.url_file),
+    tipoFile: resolveDocumentoTipoFile({ urlFile: row.url_file, nome, meta }),
+    fileEstensione:
+      typeof meta.fileEstensione === "string" && meta.fileEstensione.trim()
+        ? meta.fileEstensione.trim()
+        : undefined,
     autoreCaricamento: typeof meta.autoreCaricamento === "string" ? meta.autoreCaricamento : "—",
     note: typeof meta.note === "string" ? meta.note : undefined,
     ultimaModifica: row.created_at,

@@ -15,7 +15,6 @@ import { ClientLavorazioniLoadingSkeleton } from "@/components/lavorazioni-clien
 import {
   IconActionButton,
   LoadingErrorState,
-  LoadingPageSkeleton,
   PageToolbar,
   PageToolbarResultCount,
 } from "@/components/design-system";
@@ -639,7 +638,7 @@ export function ClientLavorazioniView() {
   );
 
   useEffect(() => {
-    if (access.isLoading || !access.allowed) return;
+    if (!access.allowed) return;
     logClientPortalPipelineDebug({
       inCorsoRaw: inCorsoQ.data?.length ?? 0,
       archivioRaw: archivioQ.data?.length ?? 0,
@@ -656,7 +655,6 @@ export function ClientLavorazioniView() {
     });
   }, [
     access.allowed,
-    access.isLoading,
     allArchivioBundles.length,
     allInCorsoBundles.length,
     archivioQ.data,
@@ -708,17 +706,6 @@ export function ClientLavorazioniView() {
     saveClientPortalFiltersPersisted(CLIENT_PORTAL_FILTERS_EMPTY);
     setFiltriEspansi(false);
   }, []);
-
-  if (access.isLoading) {
-    return (
-      <>
-        <PageHeader title={PORTALE_CLIENTI_LABEL} />
-        <div className={dsStackPage}>
-          <LoadingPageSkeleton variant="clienti" />
-        </div>
-      </>
-    );
-  }
 
   if (!access.allowed) {
     return (

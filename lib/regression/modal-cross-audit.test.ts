@@ -45,27 +45,21 @@ const flushSrc = read("lib/ui/gestionale-form-submit-flush.ts");
 assert.match(flushSrc, /flushGestionalePendingCommits/);
 assert.match(flushSrc, /flushGestionaleFormPendingCommits/);
 
-// Textarea in modal: multiline Enter opt-out
-const modalFilesWithTextarea = listModalTsxFiles().filter((rel) => /<textarea\b/.test(read(rel)));
+// Multiline fields in modal: SSOT GestionaleTextarea (Enter via gestionaleMultilineEnterProps interno)
+const modalFilesWithTextarea = listModalTsxFiles().filter((rel) =>
+  /GestionaleTextarea/.test(read(rel)),
+);
 const ricambioFields = read("components/gestionale/magazzino/ricambio-form-fields.tsx");
 const hubPanoramica = read("components/design-system/hub-modal-panoramica.tsx");
 
 for (const rel of modalFilesWithTextarea) {
   const src = read(rel);
-  const blocks = src.match(/<textarea[\s\S]*?>/g) ?? [];
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i]!;
-    assert.ok(
-      /gestionaleMultilineEnterProps|data-gestionale-enter="ignore"/.test(block),
-      `${rel}: textarea #${i + 1} must use gestionaleMultilineEnterProps`,
-    );
-  }
+  assert.doesNotMatch(src, /<textarea\b/, `${rel}: use GestionaleTextarea instead of raw textarea`);
+  assert.match(src, /GestionaleTextarea/, `${rel}: multiline fields must use GestionaleTextarea`);
 }
 
-if (/<textarea\b/.test(ricambioFields)) {
-  assert.match(ricambioFields, /gestionaleMultilineEnterProps/);
-}
-assert.match(hubPanoramica, /gestionaleMultilineEnterProps/);
+assert.match(ricambioFields, /GestionaleTextarea/);
+assert.match(hubPanoramica, /GestionaleTextarea/);
 
 // Button-save modals must flush before persist
 const buttonSaveFiles = [

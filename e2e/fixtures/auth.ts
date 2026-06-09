@@ -40,21 +40,12 @@ export async function loginViaUi(page: Page, creds: SmokeCredentials): Promise<v
     });
   }).toPass({ timeout: 90_000 });
 
-  await expect(async () => {
-    const sidebarVisible = await page.getByTestId("smoke-logout-sidebar").isVisible();
-    const accountVisible = await page.getByTestId("smoke-account-menu").isVisible();
-    expect(sidebarVisible || accountVisible).toBeTruthy();
-  }).toPass({ timeout: 15_000 });
+  await expect(page.getByTestId("smoke-account-menu")).toBeVisible({ timeout: 15_000 });
 }
 
 export async function logoutViaUi(page: Page): Promise<void> {
-  const sidebarLogout = page.getByTestId("smoke-logout-sidebar");
-  if (await sidebarLogout.isVisible().catch(() => false)) {
-    await sidebarLogout.click();
-  } else {
-    await page.getByTestId("smoke-account-menu").click();
-    await page.getByTestId("smoke-logout").click();
-  }
+  await page.getByTestId("smoke-account-menu").click();
+  await page.getByTestId("smoke-logout").click();
   await page.waitForURL(/\/login/, { timeout: 30_000 });
 }
 

@@ -82,7 +82,6 @@ flowchart LR
 | **Tipi attrezzatura/telaio** | string[] | seed | `mezzi.liste` | GlobalSelect | Mezzi form |
 | **Gerarchie marca/modello** | tree | vuoto | `mezzi.liste` | GlobalSelect + rename | Mezzi, documenti |
 | **Costo orario default** | number | 48 €/h | `preventivi.defaults` | `use-lavorazione-costo`, runtime cache | KPI, preventivi infer |
-| **Migrazione preventivi** | one-shot admin | — | DB (non settings row) | localStorage count | Import manuale → Supabase |
 
 ### Satellite keys (fuori bulk modal)
 

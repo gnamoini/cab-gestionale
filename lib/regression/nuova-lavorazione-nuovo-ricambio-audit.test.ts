@@ -47,13 +47,13 @@ assert.match(ricambioNew, /relaxHtmlValidation/);
 
 // No nested focus scope in RicambioFormFields (parent form owns scope)
 assert.doesNotMatch(ricambioFields, /GestionaleFormFocusScope/);
-assert.match(ricambioFields, /gestionaleMultilineEnterProps/);
+assert.match(ricambioFields, /GestionaleTextarea/);
 assert.match(ricambioFields, /CAB_FOCUS_SCROLL_GROUP_ATTR/);
 
 // Scheda ingresso create variant — required flags + multiline Enter
 assert.match(schedaBody, /variant === "create-lavorazione"/);
 assert.match(schedaBody, /clienteRequired=\{variant === "create-lavorazione"\}/);
-assert.match(schedaBody, /gestionaleMultilineEnterProps/);
+assert.match(schedaBody, /GestionaleTextarea/);
 
 // Lenient placeholder flags — SSOT segnaposto
 const emptyMapped = ricambioFromFormLenient(emptyRicambioForm(), "test-id");

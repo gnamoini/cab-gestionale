@@ -22,6 +22,10 @@ const colorPicker = read("components/gestionale/settings-color-picker-popover.ts
 const listUi = read("components/dashboard/settings-list-ui.tsx");
 const assenze = read("components/dashboard/settings-dipendenti-assenze-section.tsx");
 const hierarchy = read("components/dashboard/hierarchy-tree-settings-section.tsx");
+const branding = read("components/dashboard/settings-branding-section.tsx");
+const eliminaDlg = read("components/dashboard/settings-elimina-confirm-dialog.tsx");
+const propagaDlg = read("components/dashboard/settings-rinomina-propaga-dialog.tsx");
+const simileDlg = read("components/dashboard/settings-simile-confirm-dialog.tsx");
 
 /** Solo sorgenti impostazioni/configurazione — esclude moduli dashboard non-settings (es. promemoria). */
 const configSources = [
@@ -65,5 +69,15 @@ assert.match(assenze, /inputMode="text"/);
 assert.match(hierarchy, /min-h-10/);
 
 assert.match(colorPicker, /aria-label=\{ariaLabel\}/);
+
+assert.match(branding, /htmlFor="branding-color-picker"/);
+assert.match(branding, /aria-label="Upload logo"/);
+assert.match(branding, /min-h-11/);
+
+assert.match(eliminaDlg, /GestionaleConfirmDialog/);
+assert.match(eliminaDlg, /pending/);
+assert.match(propagaDlg, /disabled=\{pending\}/);
+assert.match(simileDlg, /onCancel/);
+assert.match(simileDlg, /onConfirm/);
 
 console.log("configurazione-inputs-audit.test.ts OK");

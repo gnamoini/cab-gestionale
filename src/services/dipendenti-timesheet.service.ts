@@ -12,6 +12,7 @@ import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { monthKeysFromEntryWorkDates } from "@/lib/dipendenti/timesheet-available-periods";
 import { monthDateRange } from "@/lib/dipendenti/timesheet-month";
 import { planEmployeeBootstrap } from "@/lib/dipendenti/timesheet-bootstrap";
 import type {
@@ -145,6 +146,23 @@ export const dipendentiTimesheetService = {
   async listEntriesForMonth(monthKey: TimesheetMonthKey): Promise<ServiceResult<DipendenteTimesheetEntryRow[]>> {
     const { from, to } = monthDateRange(monthKey);
     return dipendentiTimesheetService.listEntriesForRange(from, to);
+  },
+
+  /** Mesi (YYYY-MM) con almeno una entry salvata — per filtri anno/mese toolbar. */
+  async listMonthKeysWithEntries(): Promise<ServiceResult<TimesheetMonthKey[]>> {
+    try {
+      const allowed = await ensureModuleCan("dipendenti", "read");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+      const c = await sb();
+      const { data, error } = await c.from("dipendenti_timesheet_entries").select("work_date");
+      if (error) return err(error.message);
+      const dates = (data ?? [])
+        .map((row) => (row as { work_date?: string }).work_date)
+        .filter((d): d is string => typeof d === "string" && d.trim().length > 0);
+      return success(monthKeysFromEntryWorkDates(dates));
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
   },
 
   /** ID dipendenti con almeno una presenza registrata (qualsiasi periodo). */

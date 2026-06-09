@@ -6,7 +6,7 @@ import { IconActionButton } from "@/components/design-system";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { runButtonSubmit, useSubmitLock } from "@/lib/forms/form-engine";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
@@ -559,15 +559,15 @@ export function PreventiviEditorModal({
 
             <FormSection title="Lavorazioni effettuate">
               <FormField label="Lavorazioni specifiche (testo cliente)" htmlFor={lavorazioniFieldId}>
-                <textarea
-                  {...gestionaleMultilineEnterProps}
+                <GestionaleTextarea
                   id={lavorazioniFieldId}
-                  className={`${dsInput} min-h-[6rem] resize-y`}
+                  className="min-h-[6rem]"
+                  size="lg"
                   value={composeLavorazioniClienteEditorText(draft.descrizioneLavorazioniCliente)}
-                  onChange={(e) =>
+                  onChange={(v) =>
                     patch({
                       descrizioneLavorazioniCliente: extractLavorazioniClienteSpecifiche(
-                        sliceInputValue(e.target.value, TEXT_EXTRA),
+                        sliceInputValue(v, TEXT_EXTRA),
                       ),
                     })
                   }
@@ -861,12 +861,12 @@ export function PreventiviEditorModal({
 
             <FormSection title="Note">
               <FormField label="Note finali" htmlFor={noteFieldId}>
-                <textarea
-                  {...gestionaleMultilineEnterProps}
+                <GestionaleTextarea
                   id={noteFieldId}
-                  className={`${dsInput} min-h-[4rem] resize-y`}
+                  className="min-h-[4rem]"
+                  size="md"
                   value={draft.noteFinali}
-                  onChange={(e) => patch({ noteFinali: sliceInputValue(e.target.value, TEXT_LONG) })}
+                  onChange={(v) => patch({ noteFinali: sliceInputValue(v, TEXT_LONG) })}
                   maxLength={TEXT_LONG}
                 />
               </FormField>

@@ -1,0 +1,58 @@
+import { attachConsoleGuards } from "../helpers/console";
+import { adminCredentials, loginViaUi } from "../fixtures/auth";
+import { test, expect } from "@playwright/test";
+
+test.describe.configure({ mode: "serial" });
+
+test("admin opens impostazioni and saves parametri economici", async ({ page }) => {
+  attachConsoleGuards(page);
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/impostazioni");
+  await expect(page.getByRole("heading", { name: "Impostazioni" })).toBeVisible({ timeout: 30_000 });
+
+  const input = page.locator("#config-costo-orario-default");
+  await expect(input).toBeVisible({ timeout: 15_000 });
+  const before = await input.inputValue();
+  const next = before === "50" ? "51" : "50";
+  await input.fill(next);
+  await input.blur();
+
+  const saveBtn = page.getByRole("button", { name: /Salva modifiche/i });
+  await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+  await saveBtn.click();
+  await expect(saveBtn).toBeDisabled({ timeout: 30_000 });
+
+  await page.reload();
+  await expect(page.locator("#config-costo-orario-default")).toHaveValue(next, { timeout: 30_000 });
+
+  // Ripristina valore originale per non sporcare l'ambiente smoke
+  await page.locator("#config-costo-orario-default").fill(before);
+  await page.getByRole("button", { name: /Salva modifiche/i }).click();
+  await expect(page.getByRole("button", { name: /Salva modifiche/i })).toBeDisabled({ timeout: 30_000 });
+});
+
+test("unsaved changes dialog blocks navigation away from impostazioni", async ({ page }) => {
+  attachConsoleGuards(page);
+  await loginViaUi(page, adminCredentials());
+  await page.goto("/impostazioni");
+  await expect(page.getByRole("heading", { name: "Impostazioni" })).toBeVisible({ timeout: 30_000 });
+
+  const input = page.locator("#config-costo-orario-default");
+  await expect(input).toBeVisible({ timeout: 15_000 });
+  const before = await input.inputValue();
+  const draft = before === "49" ? "48.5" : "49";
+  await input.fill(draft);
+
+  await page.getByRole("link", { name: "Dashboard" }).first().click();
+  await expect(page.getByRole("dialog")).toBeVisible({ timeout: 10_000 });
+  await expect(page.getByText("Modifiche non salvate")).toBeVisible();
+
+  await page.getByRole("button", { name: "Torna indietro" }).click();
+  await expect(page).toHaveURL(/\/impostazioni/);
+  await expect(input).toHaveValue(draft);
+
+  await page.getByRole("button", { name: "Annulla modifiche" }).click();
+  await expect(page.getByRole("button", { name: /Annullare modifiche/i })).toBeVisible({ timeout: 5_000 });
+  await page.getByRole("button", { name: /Annullare modifiche/i }).click();
+  await expect(input).toHaveValue(before, { timeout: 10_000 });
+});

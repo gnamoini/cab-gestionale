@@ -17,6 +17,7 @@ import {
 } from "@/components/gestionale/gestionale-log-ui";
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
 import type { MagazzinoLogFeedItem } from "@/lib/magazzino/use-magazzino-log-feed";
+import { formatRicambioUnitaMisuraLabel } from "@/lib/magazzino/ricambio-unita-misura";
 import {
   formatAutonomiaMesi,
   formatAvgMonthlyMagazzinoIt,
@@ -135,6 +136,10 @@ export function RicambioInfoPanel({
         <GestionaleInfoRow
           label="Tagliando"
           value={ricambio.usatoInTagliandi ? "Sì" : "No"}
+        />
+        <GestionaleInfoRow
+          label="Unità di misura"
+          value={formatRicambioUnitaMisuraLabel(ricambio.unitaMisura)}
         />
         <GestionaleInfoRow label="Compatibilità" value={compatDisplay} />
       </GestionaleInfoCard>

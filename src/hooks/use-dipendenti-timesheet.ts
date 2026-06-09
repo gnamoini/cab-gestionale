@@ -145,6 +145,11 @@ export function useDipendentiTimesheet(
     { enabled: registryReady && addettiReady && periodMode === "month" },
   );
 
+  const monthKeysWithDataQuery = useServiceQuery(QK.dipendentiTimesheetMonthKeysWithData, () =>
+    dipendentiTimesheetService.listMonthKeysWithEntries(),
+    { enabled: registryReady },
+  );
+
   const syncMutation = useServiceMutation(
     (records: readonly AddettoRecord[]) =>
       dipendentiTimesheetService.syncFromAddettiRecords(records),
@@ -416,10 +421,12 @@ export function useDipendentiTimesheet(
     entriesDegraded,
     syncError,
     bootstrapEmployees,
+    monthKeysWithData: monthKeysWithDataQuery.data ?? [],
     refetch: () => {
       void employeesQuery.refetch();
       void entriesQuery.refetch();
       void previousMonthQuery.refetch();
+      void monthKeysWithDataQuery.refetch();
     },
     refetchEmployees: () => {
       void employeesQuery.refetch();

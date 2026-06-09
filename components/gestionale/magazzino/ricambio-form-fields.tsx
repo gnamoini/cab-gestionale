@@ -17,7 +17,11 @@ import {
 } from "@/lib/magazzino/form";
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
-import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import {
+  formatRicambioUnitaMisuraLabel,
+  RICAMBIO_UNITA_MISURA_VALUES,
+} from "@/lib/magazzino/ricambio-unita-misura";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { CloseButton } from "@/components/design-system";
 import { dsBtnNeutral, dsBtnPrimary, dsFocus, dsInput, dsLabel, dsSegmentedBtnOff, dsSegmentedBtnOn, dsSegmentedWrap, dsStepperBtn, dsTypoSmall } from "@/lib/ui/design-system";
 import { globalInputInvalidRing } from "@/lib/ui/global-input";
@@ -31,11 +35,17 @@ import {
 
 const ricambioFormInputClass = dsInput;
 
-function RicambioSectionTitle({ children }: { children: React.ReactNode }) {
+function RicambioSectionTitle({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
     <p
       {...{ [CAB_FOCUS_SCROLL_TITLE_ATTR]: "" }}
-      className="mb-3 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]"
+      className={`mb-3 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)] ${className}`}
     >
       {children}
     </p>
@@ -65,6 +75,8 @@ function StockStepper({
   ariaIncrease,
   inputClass,
   inputId,
+  btnClass = stepperBtnClass,
+  wrapClassName = "flex w-full min-w-0 max-w-full items-center gap-2",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -75,12 +87,14 @@ function StockStepper({
   ariaIncrease: string;
   inputClass: string;
   inputId?: string;
+  btnClass?: string;
+  wrapClassName?: string;
 }) {
   return (
-    <div role="group" aria-label={groupLabel} className="flex max-w-full items-center gap-2">
+    <div role="group" aria-label={groupLabel} className={wrapClassName}>
       <button
         type="button"
-        className={stepperBtnClass}
+        className={btnClass}
         aria-label={ariaDecrease}
         onPointerDown={(e) => {
           e.preventDefault();
@@ -101,12 +115,12 @@ function StockStepper({
         inputMode="numeric"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`${inputClass} relative z-0 min-w-0 flex-1 text-center font-mono tabular-nums`}
+        className={`${inputClass} relative z-0 font-mono tabular-nums`}
         aria-label={groupLabel}
       />
       <button
         type="button"
-        className={stepperBtnClass}
+        className={btnClass}
         aria-label={ariaIncrease}
         onPointerDown={(e) => {
           e.preventDefault();
@@ -207,6 +221,12 @@ export function RicambioFormFields({
   ]);
 
   const fieldsOptional = relaxHtmlValidation;
+
+  const giacenzaSottoMinima = useMemo(() => {
+    const scorta = Math.max(0, parseFloat(form.scorta) || 0);
+    const min = Math.max(0, parseFloat(form.scortaMinima) || 0);
+    return min > 0 && scorta < min;
+  }, [form.scorta, form.scortaMinima]);
 
   const onFornitoriAlternativiChange = useCallback(
     (fornitoriAlternativi: RicambioFormState["fornitoriAlternativi"]) =>
@@ -385,13 +405,13 @@ export function RicambioFormFields({
         />
       </RicambioField>
       <RicambioField label="Note" htmlFor="magazzino-ricambio-note">
-        <textarea
-          {...gestionaleMultilineEnterProps}
+        <GestionaleTextarea
           id="magazzino-ricambio-note"
           value={form.note}
-          onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+          onChange={(note) => setForm((f) => ({ ...f, note }))}
           rows={2}
-          className={`${ricambioFormInputClass} min-h-[4.5rem] resize-y`}
+          size="sm"
+          className="min-h-[4.5rem]"
         />
       </RicambioField>
       <RicambioField label={fieldsOptional ? "Categoria" : "Categoria *"} htmlFor="magazzino-ricambio-categoria">
@@ -408,67 +428,103 @@ export function RicambioFormFields({
           aria-label="Categoria ricambio"
         />
       </RicambioField>
-      <RicambioField label="Usato nei tagliandi">
-        <div
-          className={`${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`}
-          role="group"
-          aria-label="Usato nei tagliandi"
-        >
-          <button
-            type="button"
-            className={`flex min-h-11 min-w-0 flex-1 items-center justify-center text-sm font-semibold ${
-              !form.usatoInTagliandi ? dsSegmentedBtnOn : dsSegmentedBtnOff
-            } ${dsFocus}`}
-            aria-pressed={!form.usatoInTagliandi}
-            onClick={() => setForm((f) => ({ ...f, usatoInTagliandi: false }))}
+      <div className="grid grid-cols-2 gap-3">
+        <RicambioField label="Usato nei tagliandi">
+          <div
+            className={`${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`}
+            role="group"
+            aria-label="Usato nei tagliandi"
           >
-            No
-          </button>
-          <button
-            type="button"
-            className={`flex min-h-11 min-w-0 flex-1 items-center justify-center text-sm font-semibold ${
-              form.usatoInTagliandi ? dsSegmentedBtnOn : dsSegmentedBtnOff
-            } ${dsFocus}`}
-            aria-pressed={form.usatoInTagliandi}
-            onClick={() => setForm((f) => ({ ...f, usatoInTagliandi: true }))}
+            <button
+              type="button"
+              className={`flex min-h-11 min-w-0 flex-1 items-center justify-center text-sm font-semibold ${
+                !form.usatoInTagliandi ? dsSegmentedBtnOn : dsSegmentedBtnOff
+              } ${dsFocus}`}
+              aria-pressed={!form.usatoInTagliandi}
+              onClick={() => setForm((f) => ({ ...f, usatoInTagliandi: false }))}
+            >
+              No
+            </button>
+            <button
+              type="button"
+              className={`flex min-h-11 min-w-0 flex-1 items-center justify-center text-sm font-semibold ${
+                form.usatoInTagliandi ? dsSegmentedBtnOn : dsSegmentedBtnOff
+              } ${dsFocus}`}
+              aria-pressed={form.usatoInTagliandi}
+              onClick={() => setForm((f) => ({ ...f, usatoInTagliandi: true }))}
+            >
+              Sì
+            </button>
+          </div>
+        </RicambioField>
+        <RicambioField label="Unità di misura">
+          <div
+            className={`${dsSegmentedWrap} w-full min-w-0 gap-0.5 p-0.5`}
+            role="group"
+            aria-label="Unità di misura"
           >
-            Sì
-          </button>
-        </div>
-      </RicambioField>
+            {RICAMBIO_UNITA_MISURA_VALUES.map((unita) => (
+              <button
+                key={unita}
+                type="button"
+                className={`flex min-h-11 min-w-0 flex-1 items-center justify-center text-sm font-semibold ${
+                  form.unitaMisura === unita ? dsSegmentedBtnOn : dsSegmentedBtnOff
+                } ${dsFocus}`}
+                aria-pressed={form.unitaMisura === unita}
+                onClick={() => setForm((f) => ({ ...f, unitaMisura: unita }))}
+              >
+                {formatRicambioUnitaMisuraLabel(unita)}
+              </button>
+            ))}
+          </div>
+        </RicambioField>
+      </div>
         </div>
       </div>
 
       <RicambioFormCompatSection form={form} setForm={setForm} formResetKey={formResetKey} />
 
       <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
-        <RicambioSectionTitle>Giacenza</RicambioSectionTitle>
-      <div className="grid grid-cols-2 gap-3">
-        <RicambioField label="Scorta" htmlFor="magazzino-ricambio-scorta">
-          <StockStepper
-            inputId="magazzino-ricambio-scorta"
-            groupLabel="Scorta"
-            value={form.scorta}
-            onChange={(v) => setForm((f) => ({ ...f, scorta: v }))}
-            onDelta={(d) => bumpScorta("scorta", d)}
-            ariaDecrease="Diminuisci scorta"
-            ariaIncrease="Aumenta scorta"
-            inputClass={stepperInputClass}
-          />
-        </RicambioField>
-        <RicambioField label="Scorta minima" htmlFor="magazzino-ricambio-scorta-minima">
-          <StockStepper
-            inputId="magazzino-ricambio-scorta-minima"
-            groupLabel="Scorta minima"
-            value={form.scortaMinima}
-            onChange={(v) => setForm((f) => ({ ...f, scortaMinima: v }))}
-            onDelta={(d) => bumpScorta("scortaMinima", d)}
-            ariaDecrease="Diminuisci scorta minima"
-            ariaIncrease="Aumenta scorta minima"
-            inputClass={stepperInputClass}
-          />
-        </RicambioField>
-      </div>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+          <RicambioSectionTitle className="mb-0">Giacenza</RicambioSectionTitle>
+          <span className="text-[10px] font-medium text-[color:var(--cab-text-muted)]">
+            in {formatRicambioUnitaMisuraLabel(form.unitaMisura)}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <RicambioField label="Scorta" htmlFor="magazzino-ricambio-scorta">
+            <StockStepper
+              inputId="magazzino-ricambio-scorta"
+              groupLabel="Scorta"
+              value={form.scorta}
+              onChange={(v) => setForm((f) => ({ ...f, scorta: v }))}
+              onDelta={(d) => bumpScorta("scorta", d)}
+              ariaDecrease="Diminuisci scorta"
+              ariaIncrease="Aumenta scorta"
+              inputClass={`${stepperInputClass} text-center`}
+            />
+          </RicambioField>
+          <RicambioField label="Scorta minima" htmlFor="magazzino-ricambio-scorta-minima">
+            <StockStepper
+              inputId="magazzino-ricambio-scorta-minima"
+              groupLabel="Scorta minima"
+              value={form.scortaMinima}
+              onChange={(v) => setForm((f) => ({ ...f, scortaMinima: v }))}
+              onDelta={(d) => bumpScorta("scortaMinima", d)}
+              ariaDecrease="Diminuisci scorta minima"
+              ariaIncrease="Aumenta scorta minima"
+              inputClass={`${stepperInputClass} text-center`}
+            />
+          </RicambioField>
+        </div>
+        {giacenzaSottoMinima ? (
+          <p
+            className="mt-2.5 text-[11px] font-medium leading-snug text-amber-700 dark:text-amber-400"
+            role="status"
+          >
+            Scorta attuale sotto la soglia minima
+          </p>
+        ) : null}
       </div>
 
       <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>

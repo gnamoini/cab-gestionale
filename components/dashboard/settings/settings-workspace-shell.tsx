@@ -31,7 +31,6 @@ import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-el
 import { SettingsRinominaPropagaDialog } from "@/components/dashboard/settings-rinomina-propaga-dialog";
 import {
   SettingsSectionHeader,
-  SETTINGS_ACTION_CARD,
   SETTINGS_MAIN_PANEL,
   SETTINGS_PAGE_GRID,
   SETTINGS_PAGE_SHELL,
@@ -76,8 +75,6 @@ import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/type
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
 import { registerClienteInListe, removeScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { createMezziListePrefsDefault, type MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { migratePreventiviLocalToDb } from "@/lib/preventivi/migrate-preventivi-local-to-db";
-import { loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { addUniqueToStringList, renameInStringList } from "@/lib/settings/settings-list-mutations";
 import type { SettingsRenameEntry } from "@/lib/settings/settings-rename-types";
 import { dispatchAddettoDisplayRename } from "@/lib/sistema/cab-events";
@@ -88,7 +85,6 @@ import { buildBulkRowsFromResolved, resolveCabAppSettingsFromRows } from "@/src/
 import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
 import { invalidateAfterSettingsRenamePropagation } from "@/src/lib/react-query/invalidate-related";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
-import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniAddettiInUsoQuery } from "@/src/hooks/gestionale/use-lavorazioni-addetti-in-uso";
 import { useLavorazioniStatiInUsoQuery } from "@/src/hooks/gestionale/use-lavorazioni-stati-in-uso";
 import { useCabAppSettingsPayloadQuery, useSettingsBulkMutation } from "@/src/hooks/gestionale/use-settings-queries";
@@ -128,12 +124,6 @@ export function SistemaImpostazioniWorkspace({
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const mezziListQ = useMezziListQuery(undefined, { enabled: open });
-  const [migratePreventiviPending, setMigratePreventiviPending] = useState(false);
-  const localPreventiviCount = useMemo(() => {
-    if (!open || typeof window === "undefined") return 0;
-    return loadPreventivi().length;
-  }, [open, migratePreventiviPending]);
   const { setOpen: setSettingsModalOpen } = useSettingsModalOpen();
   const { syncBranding } = useBranding();
   const settingsPayload = useCabAppSettingsPayloadQuery({ enabled: open });
@@ -401,7 +391,7 @@ export function SistemaImpostazioniWorkspace({
       if (logoPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(logoPreviewUrl);
       setLogoPreviewUrl(null);
       syncBranding(nextBranding);
-      renameQueueRef.current = [];
+      // renameQueueRef: cleared in finalizePropaga after user choice (not here — dialog opens post-save)
       return true;
     },
     [
@@ -475,46 +465,6 @@ export function SistemaImpostazioniWorkspace({
     );
     if (shouldExitAfter) completePendingExit();
   }, [completePendingExit, gestToast, queryClient]);
-
-  const runPreventiviLocalMigration = useCallback(async () => {
-    if (migratePreventiviPending) return;
-    const mezziRows = mezziListQ.data ?? [];
-    if (mezziRows.length === 0) {
-      gestToast.warning("Attendi il caricamento mezzi prima di migrare i preventivi.");
-      return;
-    }
-    if (localPreventiviCount === 0) {
-      gestToast.info("Nessun preventivo in localStorage da importare.");
-      return;
-    }
-    const okMigrate = await confirm({
-      title: "Importare preventivi locali?",
-      message: `Importare ${localPreventiviCount} preventivi da localStorage verso il database? L'operazione è idempotente.`,
-      confirmLabel: "Importa",
-    });
-    if (!okMigrate) return;
-    setMigratePreventiviPending(true);
-    try {
-      const res = await migratePreventiviLocalToDb(mezziRows, {
-        queryClient,
-        clearLocalOnSuccess: true,
-      });
-      if (res.errors.length > 0) {
-        gestToast.warning(
-          `Migrati ${res.migrated}, saltati ${res.skipped}. Primi errori: ${res.errors.slice(0, 2).join("; ")}`,
-        );
-      } else {
-        gestToast.successOnce(
-          "settings-migrate-preventivi",
-          `Import completato: ${res.migrated} preventivi sincronizzati.`,
-        );
-      }
-    } catch {
-      gestToast.errorOnce("settings-migrate-preventivi", "Migrazione preventivi non riuscita.");
-    } finally {
-      setMigratePreventiviPending(false);
-    }
-  }, [confirm, gestToast, localPreventiviCount, mezziListQ.data, migratePreventiviPending, queryClient]);
 
   const applySnapshot = useCallback((s: SettingsWorkspaceSnapshot) => {
     setLavPrefsHydrated(false);
@@ -612,6 +562,7 @@ export function SistemaImpostazioniWorkspace({
       applySnapshot(s);
       commitSavedBaseline(s);
     }
+    renameQueueRef.current = [];
     completePendingExit();
   }, [applySnapshot, commitSavedBaseline, completePendingExit]);
 
@@ -663,6 +614,7 @@ export function SistemaImpostazioniWorkspace({
       }
       applySnapshot(s);
       commitSavedBaseline(s);
+      renameQueueRef.current = [];
       gestToast.info("Modifiche annullate");
     })();
   }, [applySnapshot, commitSavedBaseline, confirm, gestToast, isDirty]);
@@ -1298,25 +1250,6 @@ export function SistemaImpostazioniWorkspace({
                       className={`${dsInput} mt-1.5 w-full max-w-xs tabular-nums`}
                     />
                   </label>
-                </div>
-                {/* Admin-only: migrazione one-shot localStorage → DB (non automatica al boot). */}
-                <div className={SETTINGS_ACTION_CARD}>
-                  <SettingsSectionHeader
-                    level="card"
-                    title="Migrazione preventivi"
-                    description="Importa i preventivi ancora presenti in localStorage verso Supabase. Operazione idempotente, da eseguire una sola volta per ambiente."
-                  />
-                  <p className="mt-2 text-xs text-[color:var(--cab-text)]">
-                    In localStorage: <strong>{localPreventiviCount}</strong> record
-                  </p>
-                  <button
-                    type="button"
-                    className={`${dsPageToolbarBtn} mt-3 text-xs`}
-                    disabled={migratePreventiviPending || localPreventiviCount === 0 || mezziListQ.isLoading}
-                    onClick={() => void runPreventiviLocalMigration()}
-                  >
-                    {migratePreventiviPending ? "Import in corso…" : "Importa preventivi locali → DB"}
-                  </button>
                 </div>
               </div>
             ) : null}

@@ -52,6 +52,15 @@ export {
   gestionaleMultilineEnterProps,
 } from "@/components/gestionale/gestionale-form-focus-scope";
 export {
+  GestionaleTextarea,
+  type GestionaleTextareaProps,
+  type GestionaleTextareaSize,
+} from "@/components/gestionale/gestionale-textarea";
+export {
+  gestionaleTextareaMaxHeightCompact,
+  gestionaleTextareaMaxHeightDefault,
+} from "@/lib/ui/design-system";
+export {
   prepareGestionaleModalSave,
   prepareGestionaleModalSaveFrom,
   resolveGestionaleModalRoot,

@@ -36,6 +36,7 @@ export const QK = {
   dipendentiTimesheetEmployeeIdsWithEntries: ["dipendenti_timesheet_employee_ids_with_entries"] as const,
   /** Entries timesheet per mese. */
   dipendentiTimesheetEntries: ["dipendenti_timesheet_entries"] as const,
+  dipendentiTimesheetMonthKeysWithData: ["dipendenti_timesheet_month_keys_with_data"] as const,
   /** Documenti commerciali BUNDER. */
   bunder: ["bunder_documents"] as const,
 };

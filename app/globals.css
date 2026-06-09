@@ -461,32 +461,17 @@ html.dark select option {
   height: var(--cab-scroll-end-pad);
   flex-shrink: 0;
   pointer-events: none;
+  opacity: 0;
+  transition: opacity 280ms ease-out;
 }
 
-main.gestionale-scroll-y {
-  position: relative;
-}
-
-main.gestionale-scroll-y::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: var(--cab-scroll-end-pad);
+main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-pad {
   background: linear-gradient(
     to top,
     var(--cab-bg-app) 0%,
     color-mix(in srgb, var(--cab-bg-app) 65%, transparent) 55%,
     transparent 100%
   );
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 280ms ease-out;
-  z-index: 1;
-}
-
-main.gestionale-scroll-y[data-cab-scroll-at-end="true"]::after {
   opacity: 0.35;
 }
 
@@ -520,6 +505,21 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"]::after {
 
 [data-cab-modal-scroll] {
   scroll-padding-bottom: var(--cab-keyboard-inset, 0px);
+}
+
+/** SSOT textarea gestionale — niente maniglia resize browser (WebKit/Chromium). */
+.gestionale-textarea {
+  resize: none;
+}
+
+.gestionale-textarea::-webkit-resizer {
+  display: none;
+}
+
+@supports (field-sizing: content) {
+  .gestionale-textarea[data-cab-auto-grow="true"] {
+    field-sizing: content;
+  }
 }
 
 @media (max-width: 1023px) {

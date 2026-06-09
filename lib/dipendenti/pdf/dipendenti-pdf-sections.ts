@@ -5,6 +5,7 @@ import {
   formatAbsenceCellShortLabel,
   formatOrdinarieCellPdf,
   formatStraordinarieCellPdf,
+  formatTimesheetDayHeaderGrid,
   formatTimesheetDayLabelPdf,
   formatWorkCellShortLabel,
 } from "@/lib/dipendenti/timesheet-cell-display";
@@ -13,6 +14,10 @@ import {
   entriesForEmployee,
   type DipendentiPdfContext,
 } from "@/lib/dipendenti/pdf/dipendenti-pdf-context";
+import {
+  computeTimesheetGridColumnWidths,
+  TIMESHEET_PDF_SIDE_MARGIN_MM,
+} from "@/lib/dipendenti/pdf/dipendenti-pdf-grid-layout";
 import { buildMonthDays, formatMonthLabel } from "@/lib/dipendenti/timesheet-month";
 import { computeMonthTotals, entryToCellValue } from "@/lib/dipendenti/timesheet-totals";
 import type { DipendenteTimesheetEmployeeRow, TimesheetMonthKey } from "@/lib/dipendenti/types";
@@ -88,9 +93,74 @@ function roundOreSum(v: number): number {
   return Math.round(v * 100) / 100;
 }
 
-/** Nome e cognome su due righe nella colonna dipendente. */
-function pdfMutedCell(content: string): CellInput {
-  return { content, styles: { fillColor: PDF_GESTIONALE_MUTED_FILL } };
+const TIMESHEET_PDF_BODY_FONT_SIZE = 6;
+const TIMESHEET_PDF_DAY_NUM_FONT_SIZE = 7;
+
+/** Altezza minima celle body griglia mensile (mm). */
+export const TIMESHEET_PDF_MIN_CELL_HEIGHT_MM = 5.5;
+
+/** Padding compatto colonne giorno (griglia mensile PDF). */
+export const TIMESHEET_PDF_DAY_CELL_PAD = {
+  top: 0.4,
+  right: 0.25,
+  bottom: 0.4,
+  left: 0.25,
+} as const;
+
+const TIMESHEET_PDF_ABSENCE_LABEL_CELL_PAD = {
+  top: 0.3,
+  right: 0.2,
+  bottom: 0.3,
+  left: 0.2,
+} as const;
+
+/** Cella dati griglia mensile (presenze, totali numerici). */
+export function pdfGridBodyCell(content: string): CellInput {
+  return {
+    content,
+    styles: {
+      fontSize: TIMESHEET_PDF_BODY_FONT_SIZE,
+      halign: "center",
+      valign: "middle",
+      cellPadding: TIMESHEET_PDF_DAY_CELL_PAD,
+    },
+  };
+}
+
+/** Riga assenza dipendente: etichetta compatta (`8 FES`). */
+export function pdfMutedAbsenceLabelCell(content: string): CellInput {
+  return {
+    content,
+    styles: {
+      fillColor: PDF_GESTIONALE_MUTED_FILL,
+      fontSize: TIMESHEET_PDF_BODY_FONT_SIZE,
+      halign: "center",
+      valign: "middle",
+      cellPadding: TIMESHEET_PDF_ABSENCE_LABEL_CELL_PAD,
+      overflow: "visible",
+    },
+  };
+}
+
+/** Riga assenza: totali numerici. */
+export function pdfMutedTotalCell(content: string): CellInput {
+  return {
+    content,
+    styles: {
+      fillColor: PDF_GESTIONALE_MUTED_FILL,
+      fontSize: TIMESHEET_PDF_BODY_FONT_SIZE,
+      halign: "center",
+      valign: "middle",
+      cellPadding: TIMESHEET_PDF_DAY_CELL_PAD,
+    },
+  };
+}
+
+function pdfMutedCell(content: string, fontSize = 6): CellInput {
+  return {
+    content,
+    styles: { fillColor: PDF_GESTIONALE_MUTED_FILL, fontSize, halign: "center" },
+  };
 }
 
 function formatEmployeeNamePdfLines(displayName: string): string {
@@ -183,32 +253,35 @@ function drawPresenzeMonthlyGrid(
 ): number {
   const employees = options.employees ?? ctx.employees;
   const showFooterTotals = options.showFooterTotals ?? true;
-  /** Margini laterali ridotti: tabella leggermente più larga del box A4 standard. */
-  const TIMESHEET_SIDE_MARGIN_MM = 4;
   const days = buildMonthDays(ctx.monthKey);
   const weekendColumnIndexes = days
     .map((d, index) => (d.isWeekend ? index + 1 : -1))
     .filter((index) => index > 0);
+  const { tableW, nameColW, totColW, dayColWidths } = computeTimesheetGridColumnWidths(pageW, days);
   const tableLayout: GestionaleDataSectionTableLayout = {
-    marginLeft: TIMESHEET_SIDE_MARGIN_MM,
-    marginRight: TIMESHEET_SIDE_MARGIN_MM,
-    tableWidth: pageW - TIMESHEET_SIDE_MARGIN_MM * 2,
+    marginLeft: TIMESHEET_PDF_SIDE_MARGIN_MM,
+    marginRight: TIMESHEET_PDF_SIDE_MARGIN_MM,
+    tableWidth: tableW,
     weekendColumnIndexes,
   };
-  const tableW = tableLayout.tableWidth!;
   const headRow: CellInput[] = [
     { content: "Nome", styles: { halign: "left", fontSize: 7.5, fontStyle: "bold", valign: "middle" } },
     ...days.map((d) => ({
-      content: `${d.day}\n${d.weekdayShort}`,
-      styles: { halign: "center" as const, fontSize: 6, valign: "middle" as const, fontStyle: "bold" as const },
+      content: formatTimesheetDayHeaderGrid(d),
+      styles: {
+        halign: "center" as const,
+        fontSize: TIMESHEET_PDF_DAY_NUM_FONT_SIZE,
+        valign: "middle" as const,
+        fontStyle: "bold" as const,
+      },
     })),
-    { content: "Tot.", styles: { halign: "center" as const, fontSize: 6.5, fontStyle: "bold" as const } },
+    {
+      content: "Tot.",
+      styles: { halign: "center" as const, fontSize: 6.5, fontStyle: "bold" as const, valign: "middle" as const },
+    },
   ];
   const colCount = headRow.length;
   const totColIndex = colCount - 1;
-  const nameColW = Math.min(tableW * 0.07, 14);
-  const totColW = 8.5;
-  const dayColW = (tableW - nameColW - totColW) / days.length;
 
   const styles: Record<
     number,
@@ -218,29 +291,38 @@ function drawPresenzeMonthlyGrid(
       overflow: "hidden" | "linebreak";
       fontSize: number;
       valign?: "top" | "middle" | "bottom";
+      cellPadding?: typeof TIMESHEET_PDF_DAY_CELL_PAD;
+      minCellHeight?: number;
     }
   > = {
     0: {
       cellWidth: nameColW,
       halign: "left",
       overflow: "linebreak",
-      fontSize: 6.5,
+      fontSize: TIMESHEET_PDF_BODY_FONT_SIZE,
       valign: "middle",
+      minCellHeight: TIMESHEET_PDF_MIN_CELL_HEIGHT_MM,
     },
   };
   for (let i = 1; i < totColIndex; i++) {
     styles[i] = {
-      cellWidth: dayColW,
+      cellWidth: dayColWidths[i - 1]!,
       halign: "center",
       overflow: "hidden",
-      fontSize: 7,
+      fontSize: TIMESHEET_PDF_BODY_FONT_SIZE,
+      valign: "middle",
+      cellPadding: TIMESHEET_PDF_DAY_CELL_PAD,
+      minCellHeight: TIMESHEET_PDF_MIN_CELL_HEIGHT_MM,
     };
   }
   styles[totColIndex] = {
     cellWidth: totColW,
     halign: "center",
     overflow: "hidden",
-    fontSize: 7,
+    fontSize: TIMESHEET_PDF_BODY_FONT_SIZE,
+    valign: "middle",
+    cellPadding: TIMESHEET_PDF_DAY_CELL_PAD,
+    minCellHeight: TIMESHEET_PDF_MIN_CELL_HEIGHT_MM,
   };
 
   const body: RowInput[] = [];
@@ -263,14 +345,19 @@ function drawPresenzeMonthlyGrid(
       {
         content: formatEmployeeNamePdfLines(name),
         rowSpan: 2,
-        styles: { halign: "left", valign: "middle", fontSize: 6.5, overflow: "linebreak" },
+        styles: {
+          halign: "left",
+          valign: "middle",
+          fontSize: TIMESHEET_PDF_BODY_FONT_SIZE,
+          overflow: "linebreak",
+        },
       },
-      ...workCells,
-      fmtOre(totals.totaleLavorato),
+      ...workCells.map((c) => pdfGridBodyCell(c)),
+      pdfGridBodyCell(fmtOre(totals.totaleLavorato)),
     ]);
     body.push([
-      ...absenceCells.map((c) => pdfMutedCell(c)),
-      pdfMutedCell(fmtOre(totals.oreAssenza)),
+      ...absenceCells.map((c) => pdfMutedAbsenceLabelCell(c)),
+      pdfMutedTotalCell(fmtOre(totals.oreAssenza)),
     ]);
   }
 
@@ -300,13 +387,22 @@ function drawPresenzeMonthlyGrid(
     );
 
     body.push([
-      { content: "Totali", rowSpan: 2, styles: { halign: "left", valign: "middle", fontSize: 6.5 } },
-      ...dailyWorkTotals.map((t) => fmtOre(t)),
-      fmtOre(globalTotals.totaleLavorato),
+      {
+        content: "Totali",
+        rowSpan: 2,
+        styles: {
+          halign: "left",
+          valign: "middle",
+          fontSize: TIMESHEET_PDF_BODY_FONT_SIZE,
+          fontStyle: "bold",
+        },
+      },
+      ...dailyWorkTotals.map((t) => pdfGridBodyCell(fmtOre(t))),
+      pdfGridBodyCell(fmtOre(globalTotals.totaleLavorato)),
     ]);
     body.push([
-      ...dailyAbsenceTotals.map((t) => pdfMutedCell(fmtOre(t))),
-      pdfMutedCell(fmtOre(globalTotals.oreAssenza)),
+      ...dailyAbsenceTotals.map((t) => pdfMutedTotalCell(fmtOre(t))),
+      pdfMutedTotalCell(fmtOre(globalTotals.oreAssenza)),
     ]);
   }
 

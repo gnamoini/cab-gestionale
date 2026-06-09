@@ -39,7 +39,7 @@ export function useSafeGestionaleHomeLink(): SafeGestionaleHomeLink {
   const { isLoading: permsLoading } = useEffectivePermissions();
 
   const sessionReady = isAuthSessionEstablished(status);
-  const permissionsReady = !user?.id || (!clientLav.isLoading && !permsLoading);
+  const permissionsReady = !user?.id || !permsLoading;
   const ready = sessionReady && permissionsReady;
 
   return useMemo(() => {
@@ -51,9 +51,8 @@ export function useSafeGestionaleHomeLink(): SafeGestionaleHomeLink {
       return { href: "/login", label: labelForGestionaleNavHref("/login"), ready: true };
     }
 
-    const navOpts: CanAccessPageOptions & { clientLavorazioniLoading?: boolean } = {
+    const navOpts: CanAccessPageOptions = {
       clientLavorazioniAllowed: clientLav.allowed,
-      clientLavorazioniLoading: false,
     };
 
     const firstNavItem = resolveGestionaleNav({
@@ -93,7 +92,7 @@ export function useAccessibleQuickNavLinks(opts?: {
   );
 
   const sessionReady = isAuthSessionEstablished(status);
-  const permissionsReady = !user?.id || (!clientLav.isLoading && !permsLoading);
+  const permissionsReady = !user?.id || !permsLoading;
   const ready = sessionReady && permissionsReady;
 
   const pageOpts = useMemo(
@@ -108,15 +107,7 @@ export function useAccessibleQuickNavLinks(opts?: {
 
     const items = resolveGestionaleNav({
       hideHref: (href) =>
-        shouldHideNavHref(
-          user,
-          href,
-          {
-            clientLavorazioniAllowed: clientLav.allowed,
-            clientLavorazioniLoading: clientLav.isLoading,
-          },
-          rbacCtx,
-        ),
+        shouldHideNavHref(user, href, { clientLavorazioniAllowed: clientLav.allowed }, rbacCtx),
     }).filter(
       (item) =>
         !item.disabled &&
@@ -128,5 +119,5 @@ export function useAccessibleQuickNavLinks(opts?: {
       ready: true,
       links: items.slice(0, max).map((item) => ({ href: item.href, label: item.label })),
     };
-  }, [ready, user, clientLav.allowed, clientLav.isLoading, excludeHref, max, pageOpts, rbacCtx]);
+  }, [ready, user, clientLav.allowed, excludeHref, max, pageOpts, rbacCtx]);
 }

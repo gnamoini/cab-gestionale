@@ -104,6 +104,8 @@ function toDashboardMagRicambioRow(r: RicambioMagazzino, atIso: string): Dashboa
     codice: r.codiceFornitoreOriginale,
     updatedAt: atIso,
     sottoScorta: isRicambioSottoScorta(r),
+    scorta: r.scorta,
+    scortaMinima: r.scortaMinima,
   };
 }
 

@@ -5,10 +5,8 @@ import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
-import {
-  gestionaleFormFocusScopeProps,
-  gestionaleMultilineEnterProps,
-} from "@/components/gestionale/gestionale-form-focus-scope";
+import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import {
   GlobalHierarchyMarcaSelect,
@@ -175,7 +173,15 @@ export function LavorazioneEditModal({
 
           <label className="block">
             <span className={dsLabel}>Note</span>
-            <textarea {...gestionaleMultilineEnterProps} className={`${dsInput} mt-1 min-h-[100px] w-full resize-y`} value={note} onChange={(e) => setNote(sliceInputValue(e.target.value, TEXT_LONG))} disabled={update.isPending || updateMezzo.isPending} rows={4} maxLength={TEXT_LONG} />
+            <GestionaleTextarea
+              className="mt-1 min-h-[6.25rem]"
+              size="lg"
+              value={note}
+              onChange={(v) => setNote(sliceInputValue(v, TEXT_LONG))}
+              disabled={update.isPending || updateMezzo.isPending}
+              rows={4}
+              maxLength={TEXT_LONG}
+            />
           </label>
         </GestionaleModalScrollBody>
 

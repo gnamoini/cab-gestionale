@@ -49,6 +49,7 @@ export function magazzinoRowToRicambioUI(
     codiceFornitoreOriginaleSecondario: fromMeta.codiceFornitoreOriginaleSecondario,
     marcaOriginaleSecondaria: fromMeta.marcaOriginaleSecondaria,
     usatoInTagliandi: fromMeta.usatoInTagliandi,
+    unitaMisura: fromMeta.unitaMisura,
     descrizione: row.nome,
     note: fromMeta.note,
     categoria: fromMeta.categoria,

@@ -16,7 +16,6 @@ import { useOperatorGlobalSettings } from "@/src/context/operator-global-setting
 import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
 import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
-import { CAB_THEME_STORAGE_KEY } from "@/lib/theme/cab-theme-storage";
 import {
   dsGestionaleContentGutter,
   dsGestionaleContentMax,
@@ -36,7 +35,6 @@ import {
   ROUTE_TRANSITION_CANCEL_EVENT,
   scheduleRouteTransitionBegin,
 } from "@/src/lib/navigation/route-transition";
-import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { useGestionaleMainScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useGestionaleScrollEnd } from "@/lib/ui/use-gestionale-scroll-end";
 import { dsGestionaleScrollEndPad } from "@/lib/ui/scroll-system";
@@ -149,8 +147,15 @@ function AccountMenu() {
     function onDoc(e: MouseEvent) {
       if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
     }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
   }, [open]);
 
   const showGlobalLoading = useShowGlobalLoading();
@@ -192,92 +197,40 @@ function AccountMenu() {
       {open ? (
         <div
           role="menu"
-          className="absolute right-0 z-30 mt-1 max-h-[min(70vh,24rem)] w-44 overflow-y-auto rounded-lg border border-zinc-200 bg-white py-1 text-sm shadow-lg gestionale-scrollbar dark:border-zinc-700 dark:bg-zinc-900"
+          className="absolute right-0 z-30 mt-1 min-w-[13rem] max-h-[min(70vh,24rem)] w-52 overflow-y-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] py-1 text-sm shadow-[var(--cab-shadow-lg)] gestionale-scrollbar"
         >
-          <div className="border-b border-zinc-100 px-3 py-2 dark:border-zinc-800">
-            <p className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-50">{user?.nome ?? "Utente"}</p>
-            <p className="truncate text-[10px] text-zinc-500 dark:text-zinc-400">{user?.email ? user.email : ""}</p>
+          <div className="border-b border-[color:var(--cab-border)] px-3 py-2.5">
+            <p className="truncate text-xs font-semibold text-[color:var(--cab-text)]">
+              {user?.nome ?? "Utente"}
+            </p>
+            <p className="truncate text-[10px] text-[color:var(--cab-text-muted)]">
+              {user?.email ? user.email : ""}
+            </p>
+          </div>
+          <div
+            role="none"
+            className="flex min-h-11 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] px-3 py-2"
+          >
+            <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-[color:var(--cab-text-muted)]">
+              <ThemeModeIcon className="h-4 w-4 shrink-0" />
+              Aspetto
+            </span>
+            <ThemeToggle variant="switch" />
           </div>
           <button
             type="button"
             role="menuitem"
             data-testid="smoke-logout"
             onClick={() => void onLogout()}
-            className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
+            className={`flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] ${erpFocus}`}
           >
-            <span className="text-zinc-400" aria-hidden>
+            <span className="text-[color:var(--cab-text-muted)]" aria-hidden>
               ⎋
             </span>
-            Logout
+            Esci
           </button>
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function SidebarThemeSection({ collapsed = false }: { collapsed?: boolean }) {
-  if (collapsed) {
-    return (
-      <div className="hidden shrink-0 justify-center border-t border-zinc-200 p-2 dark:border-zinc-800 md:flex">
-        <ThemeToggle />
-      </div>
-    );
-  }
-
-  return (
-    <div className="shrink-0 border-t border-zinc-200 px-3 py-2 dark:border-zinc-800">
-      <div className="flex min-h-9 items-center justify-between gap-2 rounded-lg px-2.5">
-        <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-zinc-600 dark:text-zinc-300">
-          <ThemeModeIcon className="h-4 w-4 shrink-0 text-zinc-500 dark:text-zinc-400" />
-          Aspetto
-        </span>
-        <ThemeToggle variant="switch" />
-      </div>
-    </div>
-  );
-}
-
-function SidebarAccountFooter() {
-  const { user, logout, status } = useAuth();
-  const showGlobalLoading = useShowGlobalLoading();
-
-  async function onLogout() {
-    showGlobalLoading(GLOBAL_LOADING_MESSAGES.logout);
-    await logout();
-    window.location.assign("/login");
-  }
-
-  const nome = user?.nome?.trim() || (status === "loading" && !user ? "…" : "Account");
-  const email = user?.email?.trim() ?? "";
-
-  return (
-    <div className="border-t border-zinc-200 bg-zinc-50/50 p-3 dark:border-zinc-800 dark:bg-zinc-950/40">
-      <div className="flex items-center gap-2">
-        <UserProfileAvatar nome={user?.nome} email={user?.email} variant="sidebar" />
-        <div className="min-w-0 flex-1">
-          <p
-            className="truncate text-xs font-semibold text-zinc-900 dark:text-zinc-50"
-            suppressHydrationWarning
-          >
-            {nome}
-          </p>
-          <p
-            className="truncate text-[10px] text-zinc-500 dark:text-zinc-400"
-            suppressHydrationWarning
-          >
-            {email || (status === "loading" ? "\u00a0" : "")}
-          </p>
-        </div>
-      </div>
-      <button
-        type="button"
-        data-testid="smoke-logout-sidebar"
-        onClick={() => void onLogout()}
-        className={`mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white py-2 text-xs font-semibold text-zinc-700 shadow-sm hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800 ${erpFocus}`}
-      >
-        Esci
-      </button>
     </div>
   );
 }
@@ -444,16 +397,13 @@ function MobileNavDrawer({
           </div>
         </div>
         <nav
-          className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y p-3 [-webkit-overflow-scrolling:touch]"
+          className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]"
           aria-label="Sezioni principali"
         >
           {navItems.map((item) => (
             <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} onNavigate={onNavigate} />
           ))}
         </nav>
-        <div className="shrink-0 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
-          <SidebarThemeSection />
-        </div>
       </div>
     </div>
   );
@@ -488,12 +438,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href,
             {
               clientLavorazioniAllowed: clientLavAccess.allowed,
-              clientLavorazioniLoading: clientLavAccess.isLoading,
             },
             { operatorGlobalSettingsDbEnabled: operatorPilot.dbEnabled },
           ),
       }),
-    [user, clientLavAccess.allowed, clientLavAccess.isLoading, operatorPilot.dbEnabled],
+    [user, clientLavAccess.allowed, operatorPilot.dbEnabled],
   );
 
   useEffect(() => {
@@ -619,10 +568,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
           ))}
         </nav>
-        <SidebarThemeSection collapsed={collapsed} />
-        <div className={collapsed ? "hidden" : "block"}>
-          <SidebarAccountFooter />
-        </div>
       </aside>
 
       <div

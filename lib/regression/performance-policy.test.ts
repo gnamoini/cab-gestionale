@@ -44,6 +44,8 @@ assert.match(magazzinoView, /RicambioNewModal/, "magazzino-view should lazy-load
 assert.match(magazzinoView, /RicambioEditModal/, "magazzino-view should lazy-load RicambioEditModal");
 assert.match(magazzinoView, /MagazzinoRicambioInfoModal|magazzino-modals/, "magazzino info modal lazy split");
 assert.match(magazzinoView, /virtualRows/, "magazzino-view should use virtualized table rows");
+assert.match(magazzinoView, /gestionaleListTableLastRowAttr/, "magazzino last row should mark bottom corner radius");
+assert.match(read("components/gestionale/global-table/gestionale-list-table.css"), /data-gestionale-last-row/);
 
 const lazyPdf = read("lib/pdf/lazy-pdf-modules.ts");
 assert.match(lazyPdf, /importLavorazioniListPdf/);

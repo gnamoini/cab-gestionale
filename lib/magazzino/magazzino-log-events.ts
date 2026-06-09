@@ -57,6 +57,7 @@ export const MAGAZZINO_CAMPO_LABEL: Record<string, string> = {
   prezzoVendita: "Prezzo vendita",
   marcaOriginaleSecondaria: "Marca secondaria",
   usatoInTagliandi: "Tagliando",
+  unitaMisura: "Unità di misura",
   fornitoriAlternativi: "Fornitori alternativi",
   fornitoreNonOriginale: "Fornitore alternativo",
   codiceFornitoreNonOriginale: "Codice alternativo",

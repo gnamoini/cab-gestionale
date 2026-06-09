@@ -102,15 +102,6 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
     </IconActionButton>
   );
 
-  if (access.isLoading) {
-    return (
-      <>
-        <PageHeader title={PORTALE_CLIENTI_LABEL} leading={backToListButton} />
-        <LoadingClientDetailSkeleton />
-      </>
-    );
-  }
-
   if (!access.allowed) {
     return (
       <>

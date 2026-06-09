@@ -30,7 +30,7 @@ function doc(partial: Partial<DocumentoGestionale> & Pick<DocumentoGestionale, "
   assert.ok(documentoSenzaMarcaConAvviso(manual));
 
   assert.equal(formatDocumentoRigaSintetica(cert), "CERTIFICAZIONE");
-  assert.equal(formatDocumentoRigaSintetica(manual), "MANUALE — Senza marca");
+  assert.equal(formatDocumentoRigaSintetica(manual), "MANUALE · Senza marca");
 }
 
 console.log("documenti-list-ui-filters.test.ts OK");

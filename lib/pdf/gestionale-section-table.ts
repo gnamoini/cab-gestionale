@@ -42,9 +42,15 @@ export type GestionaleDataSectionTableLayout = {
   marginRight?: number;
   /** Indici colonna (0-based) sab/dom — sfondo grigio chiaro su header righe giorni e body. */
   weekendColumnIndexes?: readonly number[];
+  /** Righe header aggiuntive dopo la prima riga colonne (es. weekday sotto il numero giorno). */
+  extraHeadRows?: RowInput[];
 };
 
 export type GestionaleFieldSectionOpts = { multiline?: boolean };
+
+type PdfCellPadding =
+  | number
+  | { top: number; right: number; bottom: number; left: number };
 
 type DataColumnStyles = Record<
   number,
@@ -54,11 +60,48 @@ type DataColumnStyles = Record<
     overflow: "linebreak" | "ellipsize" | "visible" | "hidden";
     fontSize: number;
     valign: "top" | "middle" | "bottom";
+    cellPadding: PdfCellPadding;
+    minCellHeight: number;
   }>
 >;
 
 function isSectionTitleHeadRow(data: CellHookData): boolean {
   return data.section === "head" && data.row.index === 0;
+}
+
+function drawHeadBottomRule(doc: jsPDF, x: number, y: number, width: number, height: number): void {
+  doc.setDrawColor(...C_RULE);
+  doc.setLineWidth(0.1);
+  doc.line(x, y + height, x + width, y + height);
+}
+
+/** Rinforza il bordo inferiore dell'ultima riga header (tabelle senza titolo sezione gestionale). */
+export function drawAutoTableHeadBottomBorder(doc: jsPDF, data: CellHookData): void {
+  if (data.section !== "head") return;
+  if (data.row.index !== data.table.head.length - 1) return;
+  const { x, y, width, height } = data.cell;
+  drawHeadBottomRule(doc, x, y, width, height);
+}
+
+/** Bordi header post-render: accent su titolo sezione + bottom non coperto dal body. */
+export function drawGestionaleTableHeadBorders(doc: jsPDF, data: CellHookData): void {
+  if (data.section !== "head") return;
+  const { x, y, width, height } = data.cell;
+  const lastHeadRowIndex = data.table.head.length - 1;
+
+  if (isSectionTitleHeadRow(data)) {
+    doc.setDrawColor(...C_ACCENT);
+    doc.setLineWidth(0.5);
+    doc.line(x, y, x + width, y);
+    doc.setLineWidth(0.35);
+    doc.line(x, y, x, y + height);
+    drawHeadBottomRule(doc, x, y, width, height);
+    return;
+  }
+
+  if (data.row.index === lastHeadRowIndex) {
+    drawHeadBottomRule(doc, x, y, width, height);
+  }
 }
 
 function headRowCells(headColumns: RowInput): CellInput[] {
@@ -74,6 +117,29 @@ function columnHeadFontSizeFromRaw(data: CellHookData): number | undefined {
   if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return undefined;
   const fs = (raw as { styles?: { fontSize?: number } }).styles?.fontSize;
   return typeof fs === "number" ? fs : undefined;
+}
+
+function applyBodyCellStyleOverridesFromRaw(data: CellHookData): void {
+  if (data.section !== "body") return;
+  const raw = data.cell.raw;
+  if (raw == null || typeof raw !== "object" || Array.isArray(raw)) return;
+  const rawStyles = (raw as { styles?: Partial<DataColumnStyles[number]> }).styles;
+  if (!rawStyles) return;
+  if (typeof rawStyles.fontSize === "number") {
+    data.cell.styles.fontSize = rawStyles.fontSize;
+  }
+  if (rawStyles.cellPadding != null) {
+    data.cell.styles.cellPadding = rawStyles.cellPadding;
+  }
+  if (rawStyles.overflow != null) {
+    data.cell.styles.overflow = rawStyles.overflow;
+  }
+  if (rawStyles.valign != null) {
+    data.cell.styles.valign = rawStyles.valign;
+  }
+  if (rawStyles.halign != null) {
+    data.cell.styles.halign = rawStyles.halign;
+  }
 }
 
 export function cleanPdfFieldValue(v: string | undefined | null): string | undefined {
@@ -147,7 +213,7 @@ function drawPanelFieldSectionTable(
         data.cell.styles.textColor = C_PRIMARY;
       }
     },
-    willDrawCell: hooks.willDrawCell,
+    didDrawCell: hooks.didDrawCell,
   });
 
   return getAutoTableFinalY(doc, y);
@@ -190,7 +256,7 @@ function drawPanelMetricBox(
       },
     },
     didParseCell: hooks.didParseCell,
-    willDrawCell: hooks.willDrawCell,
+    didDrawCell: hooks.didDrawCell,
   });
 
   return getAutoTableFinalY(doc, y);
@@ -270,14 +336,8 @@ export function gestionaleSectionTableHooks(doc: jsPDF) {
         data.cell.styles.cellPadding = PDF_DS_ROW_PAD;
       }
     },
-    willDrawCell: (data: CellHookData) => {
-      if (!isSectionTitleHeadRow(data)) return;
-      const { x, y, width, height } = data.cell;
-      doc.setDrawColor(...C_ACCENT);
-      doc.setLineWidth(0.5);
-      doc.line(x, y, x + width, y);
-      doc.setLineWidth(0.35);
-      doc.line(x, y, x, y + height);
+    didDrawCell: (data: CellHookData) => {
+      drawGestionaleTableHeadBorders(doc, data);
     },
   };
 }
@@ -313,7 +373,7 @@ export function drawGestionaleFieldSectionTable(
     },
     columnStyles: fieldColumnStyles(contentW, multiline),
     didParseCell: hooks.didParseCell,
-    willDrawCell: hooks.willDrawCell,
+    didDrawCell: hooks.didDrawCell,
   });
 
   return getAutoTableFinalY(doc, y) + PDF_DS_SECTION_GAP;
@@ -409,7 +469,11 @@ export function drawGestionaleDataSectionTable(
     startY: y,
     tableWidth,
     margin: { left: marginLeft, right: marginRight },
-    head: [[{ content: title.toUpperCase(), colSpan: colCount }], headCells],
+    head: [
+      [{ content: title.toUpperCase(), colSpan: colCount }],
+      headCells,
+      ...(layout?.extraHeadRows ?? []),
+    ],
     body,
     foot: sectionTotal
       ? [
@@ -438,13 +502,14 @@ export function drawGestionaleDataSectionTable(
     columnStyles: mergedColumnStyles,
     didParseCell: (data: CellHookData) => {
       baseHooks.didParseCell(data);
+      applyBodyCellStyleOverridesFromRaw(data);
       const customHeadFontSize = columnHeadFontSizeFromRaw(data);
-      if (data.section === "head" && data.row.index === 1 && customHeadFontSize != null) {
+      if (data.section === "head" && data.row.index >= 1 && customHeadFontSize != null) {
         data.cell.styles.fontSize = customHeadFontSize;
       }
       const weekendCols = layout?.weekendColumnIndexes;
       const isWeekendCol = weekendCols?.includes(data.column.index) ?? false;
-      const isDayHeaderRow = data.section === "head" && data.row.index === 1;
+      const isDayHeaderRow = data.section === "head" && data.row.index >= 1;
       if (isWeekendCol && (data.section === "body" || isDayHeaderRow)) {
         data.cell.styles.fillColor = C_WEEKEND_FILL;
       }
@@ -459,7 +524,7 @@ export function drawGestionaleDataSectionTable(
         }
       }
     },
-    willDrawCell: baseHooks.willDrawCell,
+    didDrawCell: baseHooks.didDrawCell,
   });
 
   return getAutoTableFinalY(doc, y) + PDF_DS_SECTION_GAP;

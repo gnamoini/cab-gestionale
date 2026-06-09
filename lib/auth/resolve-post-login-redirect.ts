@@ -29,13 +29,12 @@ function stagingBlocksRedirect(path: string): boolean {
 /** Prima voce menu accessibile (ordine `GESTIONALE_NAV`), esclusi staging disabilitati. */
 export function resolveFirstAccessibleNavHref(
   user: RbacUser,
-  opts?: CanAccessPageOptions & { clientLavorazioniLoading?: boolean },
+  opts?: CanAccessPageOptions,
 ): string {
   const items = resolveGestionaleNav({
     hideHref: (href: GestionaleNavHref) =>
       shouldHideNavHref(user, href, {
         clientLavorazioniAllowed: opts?.clientLavorazioniAllowed,
-        clientLavorazioniLoading: opts?.clientLavorazioniLoading,
       }),
   });
   const first = items.find((item) => !item.disabled);
@@ -68,8 +67,5 @@ export function resolvePostLoginRedirectPath(input: ResolvePostLoginRedirectInpu
     return requested;
   }
 
-  return resolveFirstAccessibleNavHref(input.user, {
-    ...accessOpts,
-    clientLavorazioniLoading: false,
-  });
+  return resolveFirstAccessibleNavHref(input.user, accessOpts);
 }

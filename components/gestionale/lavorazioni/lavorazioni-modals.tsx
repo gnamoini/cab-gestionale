@@ -31,10 +31,8 @@ import {
   prioritaBadgeStyle,
   prioritaLabel,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import {
-  gestionaleFormFocusScopeProps,
-  gestionaleMultilineEnterProps,
-} from "@/components/gestionale/gestionale-form-focus-scope";
+import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { useGestionaleModalDialogFocus } from "@/components/gestionale/gestionale-modal-focus";
 import { CloseButton } from "@/components/design-system/close-button";
 import {
@@ -562,11 +560,11 @@ export function EditLavorazioneModal({
             className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
           >
             <SectionTitle>Note interne</SectionTitle>
-            <textarea
-              {...gestionaleMultilineEnterProps}
-              className={`${dsInput} min-h-[88px] resize-y`}
+            <GestionaleTextarea
+              className="min-h-[5.5rem]"
+              size="lg"
               value={local.noteInterne}
-              onChange={(e) => setLocal({ ...local, noteInterne: e.target.value })}
+              onChange={(noteInterne) => setLocal({ ...local, noteInterne })}
               rows={4}
             />
           </div>
@@ -772,11 +770,11 @@ export function NewLavorazioneModal({
                 Solo giorno (senza orario). Digita gg/mm/aaaa o aaaa-mm-gg, oppure apri il calendario.
               </p>
               <Field label="Note">
-                <textarea
-                  {...gestionaleMultilineEnterProps}
-                  className={`${dsInput} min-h-[72px] resize-y`}
+                <GestionaleTextarea
+                  className="min-h-[4.5rem]"
+                  size="md"
                   value={d.noteInterne}
-                  onChange={(e) => setDraft({ ...d, noteInterne: e.target.value })}
+                  onChange={(noteInterne) => setDraft({ ...d, noteInterne })}
                   rows={3}
                 />
               </Field>

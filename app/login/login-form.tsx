@@ -157,7 +157,6 @@ export function LoginForm() {
 
   useEffect(() => {
     if (!isAuthFullyAuthenticated(status)) return;
-    if (clientLavAccess.isLoading) return;
 
     const target = resolvePostLoginRedirectPath({
       user: user ? { ruolo: user.ruolo, id: user.id } : null,
@@ -172,7 +171,7 @@ export function LoginForm() {
 
     router.replace(finalTarget);
     router.refresh();
-  }, [status, user, clientLavAccess.isLoading, clientLavAccess.allowed, router, searchParams]);
+  }, [status, user, clientLavAccess.allowed, router, searchParams]);
 
   useEffect(() => {
     if (status === "loading" || status === "authenticated" || status === "degraded") return;

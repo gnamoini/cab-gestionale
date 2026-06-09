@@ -105,7 +105,6 @@ export function useDashboardMetrics() {
     });
   }, [magLogsQ.data, movLogsQ.data, ricambiById, staging]);
 
-  const magRecentRicambi = magLogFeed.modified;
   const magRecentMovements = magLogFeed.movements;
 
   const magDailyMovements = useMemo(
@@ -140,7 +139,6 @@ export function useDashboardMetrics() {
     lavStats,
     magStats,
     magSottoScortaRicambi,
-    magRecentRicambi,
     magDailyMovements,
     magRecentMovements,
     lavLoading: lavQuery.isLoading,

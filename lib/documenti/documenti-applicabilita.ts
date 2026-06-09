@@ -8,8 +8,13 @@ export function allowedApplicabilitaForCategoria(
   return ["marca", "modello"];
 }
 
+/** Categorie che ammettono solo applicabilità «tutta la marca» (no modello in UI). */
+export function isDocumentoMarcaOnlyCategoria(c: DocumentoGestionale["categoria"]): boolean {
+  return c === "listini" || c === "certificazioni";
+}
+
 export function defaultApplicabilitaForCategoria(c: DocumentoGestionale["categoria"]): DocumentoApplicabilita {
-  if (c === "listini" || c === "cataloghi") return "marca";
+  if (c === "listini" || c === "cataloghi" || c === "certificazioni") return "marca";
   return "modello";
 }
 
@@ -157,7 +162,9 @@ export function labelApplicabilitaBreve(a: DocumentoApplicabilita): string {
   }
 }
 
-/** Riga sintetica tipo "LISTINO — MERCEDES" o "MANUALE — MERCEDES ACTROS". */
+const DOC_RIGA_SYNTH_SEP = " · ";
+
+/** Riga sintetica tipo "LISTINO · MERCEDES" o "MANUALE · MERCEDES ACTROS". */
 export function formatDocumentoRigaSintetica(doc: DocumentoGestionale): string {
   const cat =
     doc.categoria === "listini"
@@ -173,11 +180,11 @@ export function formatDocumentoRigaSintetica(doc: DocumentoGestionale): string {
   const m = r.marcaKey?.trim() || r.marca.trim();
   if (!marcaAssegnataText(m)) {
     if (doc.categoria === "certificazioni") return cat;
-    return `${cat} — Senza marca`;
+    return `${cat}${DOC_RIGA_SYNTH_SEP}Senza marca`;
   }
-  if (r.applicabilita === "marca") return `${cat} — ${m}`;
+  if (r.applicabilita === "marca") return `${cat}${DOC_RIGA_SYNTH_SEP}${m}`;
   const mod = r.modelloKey?.trim() || r.macchina.trim();
-  return `${cat} — ${m} ${mod}`.replace(/\s+/g, " ").trim();
+  return `${cat}${DOC_RIGA_SYNTH_SEP}${m} ${mod}`.replace(/\s+/g, " ").trim();
 }
 
 export function legacyAssocRefs(doc: DocumentoGestionale, catalog: CatalogMarca[]): DocumentoAssocRef[] {

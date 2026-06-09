@@ -123,7 +123,15 @@ export const dsInput = `w-full rounded-[var(--ds-radius-lg)] border border-[colo
 /** F — Campo ricerca toolbar (icona a sinistra, `min-h-11`; focus inset senza doppio ring). */
 export const dsSearchFieldInput = `w-full min-h-11 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} py-0 pl-10 pr-3 ${dsIosInputTextSize} ${cabText} shadow-[var(--cab-shadow-sm)] outline-none transition-[border-color,box-shadow] duration-200 placeholder:text-[color:var(--cab-text-muted)] hover:border-[color:var(--cab-border-strong)] focus:border-[color:color-mix(in_srgb,var(--cab-primary)_48%,var(--cab-border))] focus:outline-none focus-visible:border-[color:color-mix(in_srgb,var(--cab-primary)_48%,var(--cab-border))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_22%,transparent)] touch-manipulation`;
 
-export const dsTextarea = `${dsInput} min-h-[5.5rem] resize-y`;
+export const dsTextarea = `${dsInput} gestionale-textarea min-h-[var(--cab-textarea-min-h,5.5rem)] resize-none overflow-y-auto`;
+
+/** Tetto default auto-grow textarea (scroll interno oltre il limite — sicuro mobile/iOS). */
+export const gestionaleTextareaMaxHeightDefault = "min(35dvh, 16rem)";
+
+/** Tetto compatto per celle tabella (Bunder, schede). */
+export const gestionaleTextareaMaxHeightCompact = "min(28dvh, 8rem)";
+
+export type GestionaleTextareaSize = "sm" | "md" | "lg";
 
 /** F — Checkbox nativo (login, footer modali, form gestionale). */
 export const dsCheckboxInput =
@@ -388,6 +396,10 @@ export const dsToastDismiss =
 /** Contenuto tooltip portal (icon-only actions). */
 export const dsTooltipContent =
   "pointer-events-none max-w-[12rem] whitespace-nowrap rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-2 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)] transition-[opacity,transform] duration-150 ease-out";
+
+/** Tooltip multilinea (es. celle timesheet). */
+export const dsTooltipContentMultiline =
+  "pointer-events-none max-w-[14rem] whitespace-pre-line text-center leading-snug rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-2.5 py-1.5 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-md)] transition-[opacity,transform] duration-150 ease-out";
 
 /** Skeleton */
 export const dsSkeletonPulse =

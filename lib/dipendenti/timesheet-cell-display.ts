@@ -1,5 +1,8 @@
+import { employeeNameLines } from "@/lib/dipendenti/dipendenti-employee-display";
 import { formatMonthLabel, type TimesheetDayInfo } from "@/lib/dipendenti/timesheet-month";
-import type { TimesheetMonthKey } from "@/lib/dipendenti/types";
+import type { DipendenteTimesheetEmployeeRow, TimesheetMonthKey } from "@/lib/dipendenti/types";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
+import { isFestivitaAbsenceLabel } from "@/lib/dipendenti/timesheet-report-kpi-filter";
 import { resolveTipoAbbrev, resolveTipoById } from "@/lib/dipendenti/tipi-assenza-model";
 import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import type { TimesheetCellValue } from "@/lib/dipendenti/types";
@@ -18,9 +21,14 @@ export function absenceReasonCode(
   value: TimesheetCellValue,
   tipiAssenza: readonly TipoAssenzaConfig[],
 ): string {
+  const label = value.tipoAssenzaLabel?.trim() ?? "";
+  if (label && isFestivitaAbsenceLabel(label)) return "FES";
   const byId = value.tipoAssenzaId ? resolveTipoById(tipiAssenza, value.tipoAssenzaId) : undefined;
-  if (byId) return byId.abbrev;
-  if (value.tipoAssenzaLabel?.trim()) return resolveTipoAbbrev(value.tipoAssenzaLabel, tipiAssenza);
+  if (byId) {
+    if (isFestivitaAbsenceLabel(byId.label)) return "FES";
+    return byId.abbrev;
+  }
+  if (label) return resolveTipoAbbrev(label, tipiAssenza);
   const custom = value.motivoCustom?.trim();
   if (custom) return custom.slice(0, 6).toUpperCase();
   return "A";
@@ -224,34 +232,24 @@ export function formatTimesheetFooterMonthTooltip(
   return `${month} · ${label}: ${value}`;
 }
 
-/** Cella presenza/assenza con contesto dipendente e data. */
+/** Es. "Lun 09/06" da TimesheetDayInfo.dateYmd. */
+export function formatTimesheetCellTooltipDate(day: TimesheetDayInfo): string {
+  const [, mm, dd] = day.dateYmd.split("-");
+  const wd = day.weekdayShort.charAt(0).toLocaleUpperCase("it-IT") + day.weekdayShort.slice(1);
+  return `${wd} ${dd}/${mm}`;
+}
+
+/** Tooltip multilinea cella griglia: cognome, data, azione. */
 export function buildTimesheetCellTooltip(opts: {
-  employeeName: string;
+  employee: DipendenteTimesheetEmployeeRow;
+  addetto?: AddettoRecord | null;
   day: TimesheetDayInfo;
-  monthKey: TimesheetMonthKey;
-  layer: TimesheetCellLayer;
-  value: TimesheetCellValue;
-  tipiAssenza: readonly TipoAssenzaConfig[];
   readOnly?: boolean;
 }): string {
-  const section = opts.layer === "work" ? "Presenza" : "Assenza";
-  const cell = buildLayerCellDisplayContent(opts.value, opts.tipiAssenza, opts.layer);
-  const isEmpty = cellDisplayKindForLayer(opts.value, opts.layer) === "empty";
-  const detail = isEmpty
-    ? opts.layer === "work"
-      ? "Nessuna presenza"
-      : "Nessuna assenza"
-    : cell.title;
-  const note = opts.value.note?.trim();
-  const parts = [
-    opts.employeeName,
-    `${opts.day.weekdayLong} ${opts.day.day}`,
-    formatMonthLabel(opts.monthKey),
-    `${section}: ${detail}`,
-  ];
-  if (note) parts.push(`Nota: ${note}`);
-  parts.push(opts.readOnly ? "Sola lettura" : "Clicca per modificare");
-  return parts.join(" · ");
+  const { cognome } = employeeNameLines(opts.employee, opts.addetto);
+  const nameLine = cognome?.trim() || opts.employee.display_name.trim() || "—";
+  const actionLine = opts.readOnly ? "Sola lettura" : "Clicca per modificare";
+  return [nameLine, formatTimesheetCellTooltipDate(opts.day), actionLine].join("\n");
 }
 
 /** Footer giornaliero (totali colonna). */
@@ -293,6 +291,11 @@ export function formatWorkCellShortLabel(value: TimesheetCellValue): string {
 /** Giorno per PDF dipendente verticale: «12 mercoledì» sulla stessa riga. */
 export function formatTimesheetDayLabelPdf(day: TimesheetDayInfo): string {
   return `${day.day} ${day.weekdayLong}`;
+}
+
+/** Intestazione colonna griglia PDF complessivo: numero sopra, giorno sotto. */
+export function formatTimesheetDayHeaderGrid(day: TimesheetDayInfo): string {
+  return `${day.day}\n${day.weekdayShort}`;
 }
 
 function fmtOrePdfCell(v: number): string {
