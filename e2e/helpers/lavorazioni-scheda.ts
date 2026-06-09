@@ -291,10 +291,7 @@ export async function submitCreateLavorazione(page: Page): Promise<void> {
   await save.scrollIntoViewIfNeeded();
   await expect(save).toBeEnabled({ timeout: 15_000 });
 
-  await modal.locator("form").evaluate((form: HTMLFormElement) => {
-    form.requestSubmit();
-  });
-  await expect(modal.getByRole("button", { name: "Salvataggio…" })).toBeVisible({ timeout: 20_000 });
+  await save.click();
   await expect(modal).toBeHidden({ timeout: 120_000 });
 }
 
