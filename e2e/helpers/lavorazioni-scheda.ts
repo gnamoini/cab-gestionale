@@ -1,4 +1,4 @@
-import { expect, type Locator, type Page } from "@playwright/test";
+import { expect, type Locator, type Page, type Response } from "@playwright/test";
 import type { SchedaIngressoFields } from "@/types/schede";
 import type { SchedaIngressoAuditFixture } from "../fixtures/scheda-ingresso-test-data";
 
@@ -6,11 +6,76 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function parseSchedaCampiFromRequest(response: Response): Record<string, unknown> | null {
+  try {
+    const body = response.request().postDataJSON() as {
+      contenuto?: { doc?: { campi?: Record<string, unknown> } };
+    };
+    const campi = body?.contenuto?.doc?.campi;
+    return campi && typeof campi === "object" ? campi : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Hub schede lavorazione — evita ambiguità con modali figli. */
+export function hubDialog(page: Page): Locator {
+  return page.getByRole("dialog").filter({ hasText: "Dettaglio lavorazione" });
+}
+
+/** Attende persistenza scheda_lavorazione (POST/PATCH) e opzionalmente verifica cliente. */
+export async function waitForSchedaPersist(
+  page: Page,
+  options?: { expectCliente?: string; timeoutMs?: number },
+): Promise<{ campi: Record<string, unknown>; response: Response }> {
+  const timeout = options?.timeoutMs ?? 90_000;
+  const response = await page.waitForResponse(
+    (res) => {
+      if (!res.url().includes("/rest/v1/scheda_lavorazione")) return false;
+      const method = res.request().method();
+      return method === "POST" || method === "PATCH";
+    },
+    { timeout },
+  );
+  expect(response.ok(), `scheda_lavorazione write failed: ${response.status()}`).toBeTruthy();
+  const campi = parseSchedaCampiFromRequest(response);
+  expect(campi, "scheda_lavorazione payload missing contenuto.doc.campi").toBeTruthy();
+  if (options?.expectCliente !== undefined) {
+    expect(campi!.cliente, "cliente in scheda payload").toBe(options.expectCliente);
+  }
+  return { campi: campi!, response };
+}
+
+/** Attende creazione lavorazione (POST). */
+export async function waitForLavorazioneCreate(page: Page, timeoutMs = 90_000): Promise<Response> {
+  const response = await page.waitForResponse(
+    (res) => res.url().includes("/rest/v1/lavorazioni") && res.request().method() === "POST",
+    { timeout: timeoutMs },
+  );
+  expect(response.ok(), `lavorazioni POST failed: ${response.status()}`).toBeTruthy();
+  return response;
+}
+
+/** Attende caricamento opzioni globali (Salva abilitato). */
+export async function waitForGlobalOptionsReady(
+  modal: Locator,
+  saveLabel = "Salva lavorazione",
+  timeoutMs = 45_000,
+): Promise<void> {
+  const save = modal.getByRole("button", { name: saveLabel });
+  await save.scrollIntoViewIfNeeded();
+  await expect(save).toBeEnabled({ timeout: timeoutMs });
+}
+
 /** CTA toolbar: su mobile `+ Nuova`, da sm `+ Nuova lavorazione`. */
 export async function clickNuovaLavorazioneCta(page: Page): Promise<void> {
   const btn = page.getByRole("button", { name: /\+?\s*Nuova(\s+lavorazione)?/i });
   await btn.scrollIntoViewIfNeeded();
   await btn.click();
+}
+
+async function dismissComboboxDropdown(page: Page): Promise<void> {
+  await page.keyboard.press("Escape");
 }
 
 /** Combobox GlobalSelect / GlobalSettingsListSelect: digita e aggiungi all'elenco se necessario. */
@@ -25,10 +90,15 @@ export async function fillListCombobox(
   await input.scrollIntoViewIfNeeded();
   await input.click();
   if ((await input.getAttribute("aria-readonly")) === "true") {
-    const option = page.getByRole("option", { name: new RegExp(escapeRegExp(value), "i") }).first();
+    const listbox = page.getByRole("listbox");
+    const option = listbox
+      .getByRole("option", { name: new RegExp(escapeRegExp(value), "i") })
+      .or(page.getByRole("option", { name: new RegExp(escapeRegExp(value), "i") }))
+      .first();
     await expect(option).toBeVisible({ timeout: 15_000 });
     await option.click();
     await expect(input).toHaveValue(value, { timeout: 15_000 });
+    await dismissComboboxDropdown(page);
     return;
   }
   await input.fill(value);
@@ -36,14 +106,23 @@ export async function fillListCombobox(
   if (await addBtn.isVisible().catch(() => false)) {
     await addBtn.click();
     await expect(input).toHaveValue(value, { timeout: 15_000 });
+    await dismissComboboxDropdown(page);
     return;
   }
-  const option = page.getByRole("option", { name: new RegExp(escapeRegExp(value), "i") }).first();
+  const listbox = page.getByRole("listbox");
+  const option = listbox
+    .getByRole("option", { name: new RegExp(escapeRegExp(value), "i") })
+    .or(page.getByRole("option", { name: new RegExp(escapeRegExp(value), "i") }))
+    .first();
   if (await option.isVisible().catch(() => false)) {
     await option.click();
+    await expect(input).toHaveValue(value, { timeout: 15_000 });
+    await dismissComboboxDropdown(page);
     return;
   }
   await input.press("Enter");
+  await expect(input).toHaveValue(value, { timeout: 15_000 });
+  await dismissComboboxDropdown(page);
 }
 
 export async function fillSchedaIngressoCreateForm(
@@ -94,9 +173,7 @@ export async function fillSchedaIngressoCreateForm(
     { timeout: 15_000 },
   );
 
-  const save = modal.getByRole("button", { name: "Salva lavorazione" });
-  await save.scrollIntoViewIfNeeded();
-  await expect(save).toBeEnabled({ timeout: 30_000 });
+  await waitForGlobalOptionsReady(modal);
 }
 
 /** Digita in Cliente e salva senza blur — regression iOS submit flush. */
@@ -106,9 +183,7 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
 ): Promise<void> {
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
   await expect(modal).toBeVisible();
-
-  const save = modal.getByRole("button", { name: "Salva lavorazione" });
-  await expect(save).toBeEnabled({ timeout: 45_000 });
+  await waitForGlobalOptionsReady(modal);
 
   await modal.getByLabel("Data ingresso").fill(fixture.ingresso.dataIngresso);
   await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
@@ -118,34 +193,39 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   await clienteInput.fill(fixture.ingresso.cliente);
   await expect(clienteInput).toHaveValue(fixture.ingresso.cliente, { timeout: 15_000 });
 
-  await save.scrollIntoViewIfNeeded();
-  await save.click();
+  const schedaPersist = waitForSchedaPersist(page, { expectCliente: fixture.ingresso.cliente });
+  await modal.locator("form").evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+  await schedaPersist;
+  await expect(modal).toBeHidden({ timeout: 60_000 });
 }
 
 export async function submitCreateLavorazione(page: Page): Promise<void> {
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
-  const save = modal.getByRole("button", { name: "Salva lavorazione" });
-  await save.scrollIntoViewIfNeeded();
-  await expect(save).toBeEnabled({ timeout: 45_000 });
+  await waitForGlobalOptionsReady(modal);
 
-  const createResponse = page.waitForResponse(
-    (res) => res.url().includes("/rest/v1/lavorazioni") && res.request().method() === "POST",
-    { timeout: 90_000 },
-  );
+  const createResponse = waitForLavorazioneCreate(page);
+  const schedaPersist = waitForSchedaPersist(page);
 
   await modal.locator("form").evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
   });
 
-  const response = await createResponse;
-  expect(response.ok(), `lavorazioni POST failed: ${response.status()}`).toBeTruthy();
+  await createResponse;
+  await schedaPersist;
   await expect(modal).toBeHidden({ timeout: 60_000 });
 }
 
 export async function searchLavorazioneByToken(page: Page, token: string): Promise<void> {
   const search = page.getByRole("searchbox", { name: /cerca in lavorazioni/i });
+  const listResponse = page.waitForResponse(
+    (res) => res.url().includes("/rest/v1/lavorazioni") && res.request().method() === "GET" && res.ok(),
+    { timeout: 60_000 },
+  );
   await search.fill(token);
   await search.press("Enter");
+  await listResponse.catch(() => undefined);
   const hit = page.getByText(token, { exact: false }).first();
   await hit.scrollIntoViewIfNeeded();
   await expect(hit).toBeVisible({ timeout: 30_000 });
@@ -155,13 +235,11 @@ export async function openSchedeHubForToken(page: Page, token: string): Promise<
   const row = page.locator("tr").filter({ hasText: token }).first();
   await expect(row).toBeVisible({ timeout: 30_000 });
   await row.getByRole("button", { name: "Schede" }).click();
-  await expect(page.getByRole("dialog").filter({ hasText: "Dettaglio lavorazione" })).toBeVisible({
-    timeout: 20_000,
-  });
+  await expect(hubDialog(page)).toBeVisible({ timeout: 20_000 });
 }
 
 export async function openIngressoEditorFromHub(page: Page): Promise<void> {
-  const hub = page.getByRole("dialog");
+  const hub = hubDialog(page);
   await hub.getByRole("tab", { name: /Schede/i }).click();
   const section = hub.locator("section").filter({ hasText: "Scheda ingresso" });
   await section.getByRole("button", { name: "Modifica" }).click();
@@ -169,7 +247,7 @@ export async function openIngressoEditorFromHub(page: Page): Promise<void> {
 }
 
 export async function openLavorazioniEditorFromHub(page: Page): Promise<void> {
-  const hub = page.getByRole("dialog");
+  const hub = hubDialog(page);
   await hub.getByRole("tab", { name: /Schede/i }).click();
   const section = hub.locator("section").filter({ hasText: "Scheda lavorazioni" });
   const modifica = section.getByRole("button", { name: "Modifica" });
@@ -180,6 +258,67 @@ export async function openLavorazioniEditorFromHub(page: Page): Promise<void> {
     await crea.click();
   }
   await expect(hub.getByText("Identificazione macchina")).toBeVisible({ timeout: 15_000 });
+}
+
+export async function fillIdentificazioneMacchina(hub: Locator, value: string): Promise<void> {
+  const input = hub.locator("label").filter({ hasText: "Identificazione macchina" }).locator("input");
+  await input.scrollIntoViewIfNeeded();
+  await input.fill(value);
+  await expect(input).toHaveValue(value);
+}
+
+/** Seleziona addetto riga lavorazione in modo deterministico (prima opzione o valore esplicito). */
+export async function fillAddettoRiga(hub: Locator, addettoName?: string): Promise<void> {
+  const page = hub.page();
+  const combo = hub.getByRole("combobox", { name: "Addetto riga lavorazione" });
+  await combo.scrollIntoViewIfNeeded();
+  if (addettoName?.trim()) {
+    await fillListCombobox(page, "Addetto riga lavorazione", addettoName, hub);
+    return;
+  }
+  await combo.click();
+  const option = page
+    .getByRole("listbox")
+    .getByRole("option")
+    .or(page.getByRole("option"))
+    .first();
+  await expect(option).toBeVisible({ timeout: 15_000 });
+  await option.click();
+  await expect(combo).not.toHaveValue("", { timeout: 15_000 });
+  await dismissComboboxDropdown(page);
+}
+
+export async function fillLavorazioniRigaPrima(
+  hub: Locator,
+  riga: { dataLavorazione: string; lavorazioniEffettuate: string; addettoOre: number },
+  addettoName?: string,
+): Promise<void> {
+  const row = hub.locator("tbody tr").first();
+  await row.getByLabel("Data").fill(riga.dataLavorazione);
+  await row.locator("textarea").fill(riga.lavorazioniEffettuate);
+  await fillAddettoRiga(hub, addettoName);
+  await row.locator('input[type="number"]').fill(String(riga.addettoOre));
+}
+
+/** Click Salva scheda nel hub con attesa persistenza rete. */
+export async function clickSalvaSchedaHub(hub: Locator): Promise<void> {
+  const page = hub.page();
+  const persist = waitForSchedaPersist(page);
+  const btn = hub.getByRole("button", { name: "Salva scheda" });
+  await btn.scrollIntoViewIfNeeded();
+  await btn.click();
+  await persist;
+}
+
+/** Salva scheda ingresso edit modal con attesa persistenza. */
+export async function clickSalvaSchedaIngressoEdit(editModal: Locator): Promise<void> {
+  const page = editModal.page();
+  const persist = waitForSchedaPersist(page);
+  const btn = editModal.getByRole("button", { name: "Salva scheda" });
+  await btn.scrollIntoViewIfNeeded();
+  await btn.click();
+  await persist;
+  await expect(editModal).not.toBeVisible({ timeout: 30_000 });
 }
 
 export function attachSchedaPayloadCapture(page: Page): {

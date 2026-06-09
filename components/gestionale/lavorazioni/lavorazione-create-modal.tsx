@@ -272,8 +272,9 @@ export function LavorazioneCreateModal({
       form.querySelector<HTMLInputElement>('input[role="combobox"][aria-label="Cliente"]')?.value.trim() ??
       "";
     if (domCliente) {
-      patch({ cliente: domCliente });
-      flushSync(() => {});
+      flushSync(() => {
+        patch({ cliente: domCliente });
+      });
     }
     await runSubmit(form, async (snap) => {
       const currentFields = snap.fields;
