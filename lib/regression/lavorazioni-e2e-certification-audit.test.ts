@@ -52,8 +52,9 @@ const pkg = read("package.json");
 assert.match(pkg, /smoke:playwright:scheda-smoke/);
 assert.match(pkg, /smoke:playwright:cert.*iOS regression/);
 
-const prWorkflow = read(".github/workflows/release-gate.yml");
-assert.match(prWorkflow, /smoke:playwright:scheda-smoke/);
-assert.doesNotMatch(prWorkflow, /smoke:playwright:ios-smoke/);
+const certWorkflow = read(".github/workflows/release-gate-cert.yml");
+assert.match(certWorkflow, /smoke:playwright:scheda-smoke/);
+assert.doesNotMatch(read(".github/workflows/release-gate.yml"), /smoke:playwright:scheda-smoke/);
+assert.doesNotMatch(read(".github/workflows/release-gate.yml"), /smoke:playwright:ios-smoke/);
 
 console.log("lavorazioni-e2e-certification-audit.test.ts OK");

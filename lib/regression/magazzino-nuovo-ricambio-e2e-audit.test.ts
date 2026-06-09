@@ -29,7 +29,8 @@ assert.match(pkg, /smoke:playwright:ricambio:smoke/);
 assert.match(pkg, /smoke:playwright:ricambio:cert.*--project=chromium/);
 assert.match(pkg, /playwright\.ricambio-cert\.config\.ts/);
 
-const workflow = read(".github/workflows/release-gate.yml");
-assert.match(workflow, /smoke:playwright:ricambio:smoke/);
+const certWorkflow = read(".github/workflows/release-gate-cert.yml");
+assert.match(certWorkflow, /smoke:playwright:ricambio:smoke/);
+assert.doesNotMatch(read(".github/workflows/release-gate.yml"), /smoke:playwright:ricambio:smoke/);
 
 console.log("magazzino-nuovo-ricambio-e2e-audit.test.ts OK");
