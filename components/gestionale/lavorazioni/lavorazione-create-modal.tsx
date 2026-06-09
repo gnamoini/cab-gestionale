@@ -277,7 +277,7 @@ export function LavorazioneCreateModal({
       });
     }
     await runSubmit(form, async (snap) => {
-      const currentFields = snap.fields;
+      const currentFields = domCliente ? { ...snap.fields, cliente: domCliente } : snap.fields;
       const { stato: metaStato, priorita: metaPriorita, mezzoId: metaMezzoId } = snap.meta;
 
       if (!createdBy) {

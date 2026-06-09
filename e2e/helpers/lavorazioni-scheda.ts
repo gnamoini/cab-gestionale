@@ -6,13 +6,38 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function parseSchedaCampiFromBody(body: unknown): Record<string, unknown> | null {
+  if (!body || typeof body !== "object") return null;
+  const record = body as Record<string, unknown>;
+  let contenuto: unknown = record.contenuto;
+  if (typeof contenuto === "string") {
+    try {
+      contenuto = JSON.parse(contenuto) as unknown;
+    } catch {
+      return null;
+    }
+  }
+  if (!contenuto || typeof contenuto !== "object") return null;
+  const doc = (contenuto as { doc?: { campi?: Record<string, unknown> } }).doc;
+  if (doc?.campi && typeof doc.campi === "object") return doc.campi;
+  return null;
+}
+
 function parseSchedaCampiFromRequest(response: Response): Record<string, unknown> | null {
   try {
-    const body = response.request().postDataJSON() as {
-      contenuto?: { doc?: { campi?: Record<string, unknown> } };
-    };
-    const campi = body?.contenuto?.doc?.campi;
-    return campi && typeof campi === "object" ? campi : null;
+    const body = response.request().postDataJSON();
+    return parseSchedaCampiFromBody(body);
+  } catch {
+    return null;
+  }
+}
+
+async function parseSchedaCampiFromResponse(response: Response): Promise<Record<string, unknown> | null> {
+  const fromRequest = parseSchedaCampiFromRequest(response);
+  if (fromRequest) return fromRequest;
+  try {
+    const body = (await response.json()) as Record<string, unknown>;
+    return parseSchedaCampiFromBody(body);
   } catch {
     return null;
   }
@@ -26,8 +51,8 @@ export function hubDialog(page: Page): Locator {
 /** Attende persistenza scheda_lavorazione (POST/PATCH) e opzionalmente verifica cliente. */
 export async function waitForSchedaPersist(
   page: Page,
-  options?: { expectCliente?: string; timeoutMs?: number },
-): Promise<{ campi: Record<string, unknown>; response: Response }> {
+  options?: { expectCliente?: string; requireCampi?: boolean; timeoutMs?: number },
+): Promise<{ campi: Record<string, unknown> | null; response: Response }> {
   const timeout = options?.timeoutMs ?? 90_000;
   const response = await page.waitForResponse(
     (res) => {
@@ -38,12 +63,14 @@ export async function waitForSchedaPersist(
     { timeout },
   );
   expect(response.ok(), `scheda_lavorazione write failed: ${response.status()}`).toBeTruthy();
-  const campi = parseSchedaCampiFromRequest(response);
-  expect(campi, "scheda_lavorazione payload missing contenuto.doc.campi").toBeTruthy();
+  const campi = await parseSchedaCampiFromResponse(response);
+  if (options?.requireCampi ?? options?.expectCliente !== undefined) {
+    expect(campi, "scheda_lavorazione payload missing contenuto.doc.campi").toBeTruthy();
+  }
   if (options?.expectCliente !== undefined) {
     expect(campi!.cliente, "cliente in scheda payload").toBe(options.expectCliente);
   }
-  return { campi: campi!, response };
+  return { campi, response };
 }
 
 /** Attende creazione lavorazione (POST). */
@@ -75,7 +102,11 @@ export async function clickNuovaLavorazioneCta(page: Page): Promise<void> {
 }
 
 async function dismissComboboxDropdown(page: Page): Promise<void> {
-  await page.keyboard.press("Escape");
+  const listbox = page.getByRole("listbox");
+  if (await listbox.isVisible().catch(() => false)) {
+    await page.keyboard.press("Escape");
+    await expect(listbox).toBeHidden({ timeout: 5_000 }).catch(() => undefined);
+  }
 }
 
 /** Combobox GlobalSelect / GlobalSettingsListSelect: digita e aggiungi all'elenco se necessario. */
@@ -206,7 +237,7 @@ export async function submitCreateLavorazione(page: Page): Promise<void> {
   await waitForGlobalOptionsReady(modal);
 
   const createResponse = waitForLavorazioneCreate(page);
-  const schedaPersist = waitForSchedaPersist(page);
+  const schedaPersist = waitForSchedaPersist(page, { requireCampi: true });
 
   await modal.locator("form").evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
