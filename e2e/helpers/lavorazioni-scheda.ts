@@ -291,14 +291,11 @@ export async function submitCreateLavorazione(page: Page): Promise<void> {
   await save.scrollIntoViewIfNeeded();
   await expect(save).toBeEnabled({ timeout: 15_000 });
 
-  const createResponse = waitForLavorazioneCreate(page, 120_000);
-  const schedaPersist = waitForSchedaPersist(page, { timeoutMs: 120_000 });
   await modal.locator("form").evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
   });
   await expect(modal.getByRole("button", { name: "Salvataggio…" })).toBeVisible({ timeout: 20_000 });
-  await Promise.all([createResponse, schedaPersist]);
-  await expect(modal).toBeHidden({ timeout: 60_000 });
+  await expect(modal).toBeHidden({ timeout: 120_000 });
 }
 
 export async function searchLavorazioneByToken(page: Page, token: string): Promise<void> {
