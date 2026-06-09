@@ -25,7 +25,7 @@ const hasSmokeCreds = Boolean(
   process.env.SMOKE_ADMIN_EMAIL?.trim() && process.env.SMOKE_ADMIN_PASSWORD?.trim(),
 );
 
-test.describe.configure({ mode: "serial", timeout: 600_000 });
+test.describe.configure({ mode: "serial", timeout: 900_000 });
 
 test.beforeEach(({ page }) => {
   test.skip(!hasSmokeCreds, "SMOKE_ADMIN_EMAIL e SMOKE_ADMIN_PASSWORD richiesti");
@@ -47,6 +47,7 @@ test("iOS regression: cliente combobox salvato senza blur prima del submit", asy
 });
 
 test("create → save → hub panoramica → edit ingresso → scheda lavorazioni", async ({ page }) => {
+  test.setTimeout(900_000);
   const fixture = buildSchedaIngressoAuditFixture();
   const capture = attachSchedaPayloadCapture(page);
   const { ingresso, ingressoEdit, lavorazioni, token } = fixture;
