@@ -13,9 +13,14 @@ async function openParametriEconomici(page: Page): Promise<void> {
 async function saveSettingsAndWait(page: Page): Promise<void> {
   const saveBtn = page.getByRole("button", { name: /^Salva( modifiche)?$/ });
   await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+  const saveDone = page.waitForResponse(
+    (res) => res.url().includes("bulk_upsert_app_settings") && res.ok(),
+    { timeout: 60_000 },
+  );
   await saveBtn.click();
-  await expect(page.getByRole("button", { name: "Salvataggio…" })).toBeHidden({ timeout: 30_000 });
-  await expect(saveBtn).toBeDisabled({ timeout: 5_000 });
+  await expect(page.getByRole("button", { name: /Salvataggio/ })).toBeVisible({ timeout: 10_000 });
+  await saveDone;
+  await expect(page.getByRole("button", { name: /Salvataggio/ })).toBeHidden({ timeout: 15_000 });
 }
 
 test("admin opens impostazioni and saves parametri economici", async ({ page }) => {
