@@ -253,13 +253,24 @@ Legenda: **E** E2E, **S** static, **L** live DB
 
 ---
 
+### Post stabilizzazione spec 13 (`3948423`)
+
+Tentativo hardening E2E + submit layer — vedi [`audit-spec-13-e2e-stabilization-2026-06.md`](./audit-spec-13-e2e-stabilization-2026-06.md).
+
+| Workflow | Run | Esito |
+|---|---|---|
+| `release-gate` | [#76](https://github.com/gnamoini/cab-gestionale/actions/runs/27177369981) | **FAILURE** scheda-smoke |
+| `release-gate-cert` | [#41](https://github.com/gnamoini/cab-gestionale/actions/runs/27177369977) | **FAILURE** cert spec 13 |
+
+---
+
 ## Percorso verso A — Production Certified
 
-| Requisito | Stato (2026-06-09, SHA `97a2835`) |
+| Requisito | Stato (2026-06-09, SHA `3948423`) |
 |---|---|
-| `release-gate` green ×2 su main post-consolidamento | **NO** — #71, #72 failure |
-| `release-gate-cert` green (iOS combobox) | **NO** — #37 failure |
+| `release-gate` green ×2 su main post-consolidamento | **NO** — #71–#76 failure |
+| `release-gate-cert` green (iOS combobox) | **NO** — #37–#41 failure |
 | Residues operativi ≤5 post-cleanup | **N/D** — step skipped |
-| Chiusura P0 BS-1/BS-2 | **Parziale** — BS-2 chiuso (CI validato); BS-1 aperto (spec 13) |
+| Chiusura P0 BS-1/BS-2 | **Parziale** — BS-1 aperto (spec 13 post-hardening) |
 
 Quando tutti green → **A — Production Certified**.

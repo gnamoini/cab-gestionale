@@ -120,18 +120,32 @@ Validazione definitiva: **CI GitHub Actions su `fb7d427`** (vedi sezione sotto).
 
 ---
 
-## CI post-push (`fb7d427`)
+## CI post-push (`3948423` — HEAD attuale)
 
-| Workflow | Run | Esito | Note |
-|---|---|---|---|
-| `release-gate` | _pending poll_ | — | step 19 scheda-smoke |
-| `release-gate-cert` | _pending poll_ | — | step 11 cert iOS |
+| Workflow | Run | Esito | Step blocker | Durata step 19/11 |
+|---|---|---|---|---|
+| `release-gate` | [#76](https://github.com/gnamoini/cab-gestionale/actions/runs/27177369981) | **FAILURE** | scheda-smoke spec 13 desktop | ~84s |
+| `release-gate-cert` | [#41](https://github.com/gnamoini/cab-gestionale/actions/runs/27177369977) | **FAILURE** | smoke:playwright:cert | ~8.5 min |
+
+Run intermedie post-fix: [#74](https://github.com/gnamoini/cab-gestionale/actions/runs/27175978429)/[#39](https://github.com/gnamoini/cab-gestionale/actions/runs/27175978421) (`fb7d427`), [#75](https://github.com/gnamoini/cab-gestionale/actions/runs/27176615540)/[#40](https://github.com/gnamoini/cab-gestionale/actions/runs/27176615542) (`b30b746`) — tutte **FAILURE** su spec 13.
+
+**Nota:** log step-level (assertion message esatto) richiede accesso GitHub Actions UI/API autenticata — non disponibile in ambiente agent.
 
 ---
 
 ## Verdetto finale
 
-**Pending CI evidence su `fb7d427`.**
+**B confermato** — miglioramento architetturale significativo (helper deterministici, submit layer cliente, parse payload), ma **CI spec 13 ancora rosso** su `3948423`.
 
-- Se gate #N + cert #N green → **upgrade verso A** (con run #2 gate se richiesta)
-- Se failure residuo → **B** con dettaglio step blocker aggiornato in [`audit-release-gate-validation-2026-06.md`](./audit-release-gate-validation-2026-06.md)
+### Progressi oggettivi
+
+- Helper E2E consolidati con network wait, hub locators, requestSubmit parity
+- Submit layer: `flushSync(patch)` + merge `domCliente` nello snapshot
+- Failure desktop più rapido (~84s vs ~5min pre-fix) → fail earlier nel flow (probabile create/hub, non timeout globale)
+- Extended regression cert resta **green**
+
+### Prossimo passo (fuori scope immediato)
+
+1. Estrarre assertion message da log [#76](https://github.com/gnamoini/cab-gestionale/actions/runs/27177369981) step 19
+2. Repro con credenziali smoke in `.env.local`
+3. Se fail su hub lavorazioni: verificare `clickSalvaSchedaHub` vs persist path scheda tipo `lavorazioni`
