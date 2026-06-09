@@ -12,8 +12,12 @@ export function prepareFormSubmit(root: HTMLElement | null | undefined): void {
   flushSync(() => {});
 }
 
-/** Flush sincrono + guard composizione IME (pipeline completa pre-snapshot). */
+/**
+ * Pipeline completa pre-snapshot: IME guard → flush combobox → drain React.
+ * Ordine SSOT: composizione completa prima di committare testo pendente.
+ */
 export async function prepareFormSubmitAsync(root: HTMLElement | null | undefined): Promise<void> {
-  prepareFormSubmit(root);
   if (root) await iosSubmitGuard(root);
+  if (root) flushGestionalePendingCommits(root);
+  flushSync(() => {});
 }

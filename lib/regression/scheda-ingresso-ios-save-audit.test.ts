@@ -20,6 +20,36 @@ import {
   unregisterGestionaleComboboxFlush,
 } from "@/lib/ui/gestionale-form-submit-flush";
 
+/** Mirror di commitPendingForSubmit in GlobalSelect (variante default, non filter). */
+function simulateCommitPendingForSubmit(params: {
+  searchText: string;
+  value: string;
+  options: readonly string[];
+  onChange: (v: string) => void;
+  strictFromList?: boolean;
+}): void {
+  const trimmed = params.searchText.trim();
+  const committedValue = params.value.trim();
+  if (trimmed === committedValue) return;
+  if (!trimmed) {
+    if (params.value) params.onChange("");
+    return;
+  }
+  const strictFromList = params.strictFromList ?? false;
+  const committed = autocompleteCommitFromSearchText(
+    params.searchText,
+    "strings",
+    params.options,
+    [],
+    strictFromList,
+  );
+  if (committed && committed !== params.value) {
+    params.onChange(committed);
+  } else if (trimmed !== params.value) {
+    params.onChange(trimmed);
+  }
+}
+
 /** Mirror di commitBlur in GlobalSelect (variante default, non filter). */
 function simulateGlobalSelectCommitBlur(params: {
   searchText: string;
@@ -67,17 +97,15 @@ const displayWhileTyping = autocompleteDisplayValue({
 assert.equal(displayWhileTyping, "Nuovo Cliente", "UI mostra searchText digitato");
 
 let parentValue = "";
-simulateGlobalSelectCommitBlur({
+simulateCommitPendingForSubmit({
   searchText: "Nuovo Cliente",
   value: parentValue,
-  userModified: true,
   options,
   onChange: (v) => {
     parentValue = v;
   },
 });
-// Senza chiamata commitBlur, parentValue resta ""
-assert.equal(parentValue, "Nuovo Cliente", "dopo flush commitBlur il parent è aggiornato");
+assert.equal(parentValue, "Nuovo Cliente", "dopo flush commitPendingForSubmit il parent è aggiornato");
 
 parentValue = "Cliente Alpha";
 let onChangeCalls = 0;
@@ -137,6 +165,18 @@ simulateGlobalSelectCommitBlur({
   },
 });
 assert.equal(parentValue, "Cliente AUDIT-NEW", "submit flush committa anche senza canAdd append elenco");
+
+// commitPendingForSubmit: clear senza userModified (invariante submit)
+parentValue = "Cliente Alpha";
+simulateCommitPendingForSubmit({
+  searchText: "",
+  value: parentValue,
+  options,
+  onChange: (v) => {
+    parentValue = v;
+  },
+});
+assert.equal(parentValue, "", "submit flush propaga clear anche senza userModified");
 
 // --- draftRef stale: sync sincrono in onPatch ---
 
@@ -205,6 +245,7 @@ unregisterGestionaleComboboxFlush(inputB as unknown as HTMLInputElement);
 
 const globalSelect = read("components/gestionale/global-input/global-select.tsx");
 assert.match(globalSelect, /registerGestionaleComboboxFlush/);
+assert.match(globalSelect, /commitPendingForSubmit/);
 assert.match(globalSelect, /trimmed !== value/);
 assert.match(globalSelect, /allowAdd/);
 assert.match(globalSelect, /unregisterGestionaleComboboxFlush/);
@@ -213,8 +254,14 @@ assert.match(globalSelect, /commitBlur\(\)/);
 
 const focusScope = read("components/gestionale/gestionale-form-focus-scope.tsx");
 assert.match(focusScope, /onSubmitCapture/);
-assert.match(focusScope, /flushGestionalePendingCommits/);
+assert.doesNotMatch(focusScope, /flushGestionalePendingCommits/);
 assert.match(focusScope, /flushSync/);
+
+const prepSubmit = read("lib/forms/form-engine/prepare-form-submit.ts");
+const asyncBlock = prepSubmit.slice(prepSubmit.indexOf("prepareFormSubmitAsync"));
+const guardIdx = asyncBlock.indexOf("iosSubmitGuard");
+const flushIdx = asyncBlock.indexOf("flushGestionalePendingCommits");
+assert.ok(guardIdx >= 0 && flushIdx > guardIdx, "prepareFormSubmitAsync: guard prima di flush");
 
 const editModal = read("components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx");
 assert.match(editModal, /useFormEngine/);
@@ -223,7 +270,7 @@ assert.match(editModal, /runSubmit/);
 const createModal = read("components/gestionale/lavorazioni/lavorazione-create-modal.tsx");
 assert.match(createModal, /useFormEngineSections/);
 assert.match(createModal, /runSubmit/);
-assert.match(createModal, /prepareFormSubmit/);
-assert.match(createModal, /domCliente/);
+assert.doesNotMatch(createModal, /domCliente/);
+assert.doesNotMatch(createModal, /prepareFormSubmit/);
 
 console.log("scheda-ingresso-ios-save-audit.test: OK");

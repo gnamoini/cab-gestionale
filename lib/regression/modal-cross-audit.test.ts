@@ -31,7 +31,7 @@ function listModalTsxFiles(): string[] {
 const focusScope = read("components/gestionale/gestionale-form-focus-scope.tsx");
 assert.match(focusScope, /gestionaleMultilineEnterProps/);
 assert.match(focusScope, /flushSync/);
-assert.match(focusScope, /flushGestionalePendingCommits/);
+assert.doesNotMatch(focusScope, /flushGestionalePendingCommits/);
 
 const savePrep = read("lib/ui/gestionale-modal-save-prep.ts");
 assert.match(savePrep, /prepareGestionaleModalSave/);

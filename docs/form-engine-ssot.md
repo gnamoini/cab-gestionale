@@ -29,9 +29,10 @@ sequenceDiagram
 
   User->>Form: tap Salva
   Form->>FocusScope: onSubmitCapture
-  FocusScope->>FocusScope: flushCombobox + flushSync
+  FocusScope->>FocusScope: flushSync drain only
   Form->>FSE: runSubmit
   FSE->>FSE: iosSubmitGuard
+  FSE->>FSE: flushCombobox + flushSync
   FSE->>FSE: captureFormSnapshot
   FSE->>Modal: handler(snapshot)
   Modal->>Modal: validate + mutate
@@ -57,8 +58,8 @@ sequenceDiagram
 ## Flusso submit standardizzato
 
 ```
-1. onSubmitCapture → prepareFormSubmit (flush combobox + flushSync)
-2. runSubmit → iosSubmitGuard
+1. onSubmitCapture → flushSync (drain batch React; combobox flush differito)
+2. runSubmit → prepareFormSubmitAsync: iosSubmitGuard → flush combobox → flushSync
 3. captureFormSnapshot da ref sync
 4. [modal] validate(snapshot)
 5. [modal] normalize + mutate
@@ -102,8 +103,9 @@ UI component structure, shell modali, focus scope Enter navigation, scroll mobil
 
 | Problema | Mitigazione FSE |
 |----------|-----------------|
-| iOS submit senza blur | `onSubmitCapture` flush + `iosSubmitGuard` |
-| UI ≠ payload | snapshot da ref sync unico |
+| iOS submit senza blur | `prepareFormSubmitAsync` post-guard + `commitPendingForSubmit` |
+| IME attivo al submit | `iosSubmitGuard` **prima** di flush combobox |
+| UI ≠ payload | snapshot da ref sync unico (no DOM override) |
 | Race doppio submit | `submitLock` in `runSubmit` |
 | ref/state duplicati | `useFormEngine` / `useFormEngineSections` |
 | Divergenza modali pilota | stesso `runSubmit` pipeline |
@@ -155,7 +157,7 @@ Con `NEXT_PUBLIC_FORM_ENGINE=0`: ref sync e submit lock restano attivi; iOS guar
 
 ```
 1. onClick → runButtonSubmit
-2. prepareFormSubmitAsync (flush + iosSubmitGuard)
+2. prepareFormSubmitAsync (iosSubmitGuard → flush → flushSync)
 3. captureFormSnapshot(getter)
 4. handler(snapshot) — validate + mutate invariati
 ```

@@ -41,6 +41,10 @@ lock.release();
 const prepSource = read("lib/forms/form-engine/prepare-form-submit.ts");
 assert.match(prepSource, /flushGestionalePendingCommits/);
 assert.match(prepSource, /flushSync/);
+const asyncBlock = prepSource.slice(prepSource.indexOf("prepareFormSubmitAsync"));
+const guardIdx = asyncBlock.indexOf("iosSubmitGuard");
+const flushIdx = asyncBlock.indexOf("flushGestionalePendingCommits");
+assert.ok(guardIdx >= 0 && flushIdx > guardIdx, "prepareFormSubmitAsync: iosSubmitGuard prima di flush");
 
 const savePrep = read("lib/ui/gestionale-modal-save-prep.ts");
 assert.match(savePrep, /prepareFormSubmit/);
@@ -59,6 +63,7 @@ const runSubmitSrc = read("lib/forms/form-engine/run-submit.ts");
 assert.match(runSubmitSrc, /runSubmitFromGetter/);
 assert.match(runSubmitSrc, /runButtonSubmit/);
 assert.match(runSubmitSrc, /prepareFormSubmitAsync/);
+assert.match(runSubmitSrc, /runSubmitFromGetter[\s\S]*prepareFormSubmitAsync/);
 
 const submitLockHook = read("lib/forms/form-engine/use-submit-lock.ts");
 assert.match(submitLockHook, /useSubmitLock/);

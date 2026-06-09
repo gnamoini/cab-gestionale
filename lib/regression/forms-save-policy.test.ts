@@ -47,11 +47,14 @@ assert.match(securityBatch, /clienteRef/);
 assert.match(securityTable, /clienteRef/);
 assert.match(securityTable, /mezzi:clienti/);
 
-// SSOT create modal — Form Engine + focus scope flush al submit
-assert.match(focusScope, /flushGestionalePendingCommits/);
+// SSOT create modal — Form Engine + flush combobox in prepareFormSubmitAsync (post-guard)
+const prepSubmit = read("lib/forms/form-engine/prepare-form-submit.ts");
+assert.match(prepSubmit, /flushGestionalePendingCommits/);
 assert.match(focusScope, /flushSync/);
+assert.match(focusScope, /onSubmitCapture/);
 assert.match(lavCreate, /useFormEngineSections/);
 assert.match(lavCreate, /runSubmit/);
+assert.doesNotMatch(lavCreate, /domCliente/);
 assert.match(ricambioNew, /useFormEngine/);
 assert.match(ricambioNew, /runSubmit/);
 assert.match(schedaIngressoForm, /useFormEngine/);

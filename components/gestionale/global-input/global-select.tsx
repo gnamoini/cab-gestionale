@@ -275,6 +275,56 @@ export function GlobalSelect(props: GlobalSelectProps) {
     return !isFilterNeutralValue(value, filterNeutralValues);
   }, [value, filterNeutralValues]);
 
+  /** Submit flush: invariante visibile === committato, senza gate userModified. */
+  const commitPendingForSubmit = useCallback(() => {
+    if (selectOnly) return;
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    const rawSearch = inputRef.current?.value ?? searchText;
+    const trimmed = rawSearch.trim();
+    const committedValue = value.trim();
+    if (trimmed === committedValue) {
+      setOpen(false);
+      setActiveIndex(-1);
+      setSearchText("");
+      setFocused(false);
+      return;
+    }
+    editSessionRef.current.modified = false;
+    setOpen(false);
+    setActiveIndex(-1);
+    setTouched(true);
+    setFocused(false);
+    if (!trimmed) {
+      if (!isFilterVariant) {
+        if (value) onChange("");
+      } else if (canClearCommittedFilter()) {
+        onChange("");
+      }
+      setSearchText("");
+      return;
+    }
+    const committed = autocompleteCommitFromSearchText(rawSearch, mode, options, items, strictFromList);
+    if (isFilterVariant) {
+      if (committed && committed !== value) onChange(committed);
+    } else if (committed && committed !== value) {
+      onChange(committed);
+    } else if (trimmed !== value) {
+      onChange(trimmed);
+    }
+    setSearchText("");
+  }, [
+    selectOnly,
+    searchText,
+    value,
+    isFilterVariant,
+    canClearCommittedFilter,
+    mode,
+    options,
+    items,
+    strictFromList,
+    onChange,
+  ]);
+
   const commitBlur = useCallback(() => {
     if (selectOnly) {
       setOpen(false);
@@ -494,12 +544,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
     const input = inputRef.current;
     if (!input) return;
     const flush = () => {
-      if (blurTimer.current) clearTimeout(blurTimer.current);
-      commitBlur();
+      commitPendingForSubmit();
     };
     registerGestionaleComboboxFlush(input, flush);
     return () => unregisterGestionaleComboboxFlush(input);
-  }, [commitBlur]);
+  }, [commitPendingForSubmit]);
 
   const fuzzyLabel =
     itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object"
