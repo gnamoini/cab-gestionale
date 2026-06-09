@@ -10,6 +10,14 @@ async function openParametriEconomici(page: Page): Promise<void> {
   await expect(page.locator("#config-costo-orario-default")).toBeVisible({ timeout: 15_000 });
 }
 
+async function saveSettingsAndWait(page: Page): Promise<void> {
+  const saveBtn = page.getByRole("button", { name: /^Salva( modifiche)?$/ });
+  await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
+  await saveBtn.click();
+  await expect(page.getByRole("button", { name: "Salvataggio…" })).toBeHidden({ timeout: 30_000 });
+  await expect(saveBtn).toBeDisabled({ timeout: 5_000 });
+}
+
 test("admin opens impostazioni and saves parametri economici", async ({ page }) => {
   attachConsoleGuards(page);
   await loginViaUi(page, adminCredentials());
@@ -24,18 +32,16 @@ test("admin opens impostazioni and saves parametri economici", async ({ page }) 
   await input.fill(next);
   await input.blur();
 
-  const saveBtn = page.getByRole("button", { name: /Salva modifiche/i });
-  await expect(saveBtn).toBeEnabled({ timeout: 5_000 });
-  await saveBtn.click();
-  await expect(saveBtn).toBeDisabled({ timeout: 30_000 });
+  await saveSettingsAndWait(page);
 
   await page.reload();
+  await expect(page.getByRole("heading", { name: "Impostazioni" })).toBeVisible({ timeout: 30_000 });
+  await openParametriEconomici(page);
   await expect(page.locator("#config-costo-orario-default")).toHaveValue(next, { timeout: 30_000 });
 
   // Ripristina valore originale per non sporcare l'ambiente smoke
   await page.locator("#config-costo-orario-default").fill(before);
-  await page.getByRole("button", { name: /Salva modifiche/i }).click();
-  await expect(page.getByRole("button", { name: /Salva modifiche/i })).toBeDisabled({ timeout: 30_000 });
+  await saveSettingsAndWait(page);
 });
 
 test("unsaved changes dialog blocks navigation away from impostazioni", async ({ page }) => {

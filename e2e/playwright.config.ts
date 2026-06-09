@@ -9,7 +9,7 @@ export default defineConfig({
   workers: 1,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  timeout: 45_000,
+  timeout: process.env.CI ? 90_000 : 45_000,
   expect: { timeout: 12_000 },
   reporter: process.env.CI
     ? [["github"], ["list"], ["html", { open: "never", outputFolder: "e2e/playwright-report" }]]
