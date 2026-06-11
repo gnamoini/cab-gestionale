@@ -2,7 +2,7 @@
 
 import { Tooltip } from "@/components/design-system/tooltip";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
-import { HubIconPhoto } from "@/components/design-system/hub-table-action-icons";
+import { HubIconAddPhoto, HubIconPhoto } from "@/components/design-system/hub-table-action-icons";
 import { useCallback, useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { dispatchGestionaleLocalMutation } from "@/src/lib/react-query/invalidate-related";
@@ -16,11 +16,13 @@ import {
 } from "@/lib/media/image-storage";
 import { prefetchStorageBuckets } from "@/src/services/storage.service";
 import { LoadingSpinner } from "@/components/design-system/loading";
-import { GestionaleFileInput, GestionaleUploadDropExpand } from "@/components/gestionale/upload";
+import { GestionaleImageCropModal } from "@/components/gestionale/upload/gestionale-image-crop-modal";
+import { GestionaleImageUploadButton } from "@/components/gestionale/upload/gestionale-image-upload-button";
+import { GestionaleUploadDropExpand } from "@/components/gestionale/upload";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { cabModalZStacked } from "@/lib/ui/mobile-modal-behavior";
-import { dsBtnNeutral, dsBtnDanger, dsHubModalFieldLabel, dsHubModalNestedCard, dsHubModalSection, dsHubModalSectionTitle, dsScrollbar, dsTableActionTextBtn, dsTableActionTextBtnPrimary } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsBtnDanger, dsBtnNeutralIconForm, dsHubModalFieldLabel, dsHubModalNestedCard, dsHubModalSection, dsHubModalSectionTitle, dsScrollbar } from "@/lib/ui/design-system";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -49,6 +51,13 @@ function recordImageSectionShellClass(embedded: boolean, flatInInfoCard: boolean
   return embedded ? dsHubModalNestedCard : dsHubModalSection;
 }
 
+const IMAGE_THUMB_CLASS =
+  "group relative h-16 w-16 shrink-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)]";
+
+const IMAGE_GALLERY_ROW_CLASS = `flex h-16 items-center gap-2 overflow-x-auto ${dsScrollbar}`;
+
+const HUB_GALLERY_UPLOAD_BTN_CLASS = `${dsBtnNeutral} h-16 w-16 min-h-16 min-w-16 shrink-0 justify-center gap-0.5 p-0`;
+
 export function RecordImageManager({
   scope,
   recordId,
@@ -60,6 +69,8 @@ export function RecordImageManager({
   flatInInfoCard = false,
   hideTitle = false,
   hubCardLayout = false,
+  /** Con `hubCardLayout`: mostra titolo sulla card (info panel); off se titolo esterno (es. RicambioCollapsibleSection). */
+  hubCardShowTitle = false,
   onImageEvent,
 }: {
   scope: ImageScope;
@@ -77,6 +88,8 @@ export function RecordImageManager({
   hideTitle?: boolean;
   /** Card hub compatta con azioni in header (tab Documenti lavorazione). */
   hubCardLayout?: boolean;
+  /** Con `hubCardLayout`: titolo visibile sulla card hub. */
+  hubCardShowTitle?: boolean;
   onImageEvent?: (event: RecordImageLogEvent) => void;
 }) {
   const qc = useQueryClient();
@@ -84,6 +97,7 @@ export function RecordImageManager({
   const gestToast = useGestionaleToast();
   const [images, setImages] = useState<StoredImage[]>([]);
   const [preview, setPreview] = useState<StoredImage | null>(null);
+  const [cropSource, setCropSource] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -182,12 +196,24 @@ export function RecordImageManager({
   const uploadTitle = limitReached ? `Limite massimo ${maxImages} immagini raggiunto` : "Aggiungi foto";
   const uploadError = imageUpload.error ?? error;
 
-  const handleDropFile = useCallback(
-    (file: File) => {
+  const beginImageUpload = useCallback((file: File) => {
+    setCropSource(file);
+  }, []);
+
+  const commitCroppedUpload = useCallback(
+    async (file: File) => {
+      setCropSource(null);
       imageUpload.selectFile(file);
-      void imageUpload.upload(file);
+      await imageUpload.upload(file);
     },
     [imageUpload],
+  );
+
+  const handleDropFile = useCallback(
+    (file: File) => {
+      beginImageUpload(file);
+    },
+    [beginImageUpload],
   );
 
   const dropExpandProps = {
@@ -203,88 +229,101 @@ export function RecordImageManager({
 
   const titleClass = flatInInfoCard || embedded ? dsHubModalFieldLabel : dsHubModalSectionTitle;
   const ShellTag = flatInInfoCard ? "div" : "section";
-  const uploadBtnClass = hubCardLayout || flatInInfoCard ? dsTableActionTextBtnPrimary : dsBtnNeutral;
-  const uploadBtnExtra = hubCardLayout || flatInInfoCard ? "" : " px-2.5 py-1.5 text-xs";
+  const compactUploadBtn = hubCardLayout || flatInInfoCard;
+  const uploadBtnClass = compactUploadBtn
+    ? hubCardLayout
+      ? HUB_GALLERY_UPLOAD_BTN_CLASS
+      : dsBtnNeutralIconForm
+    : `${dsBtnNeutral} shrink-0 px-2.5 py-1.5 text-xs`;
+
+  const uploadButtonLabel = compactUploadBtn ? (
+    <>
+      <HubIconAddPhoto />
+      <span className="sr-only">Aggiungi foto</span>
+    </>
+  ) : (
+    <span className="inline-flex items-center gap-1">
+      <HubIconPhoto />
+      Aggiungi foto
+    </span>
+  );
 
   const uploadButton =
     canEdit ? (
-      <GestionaleFileInput
-        accept="image/*"
+      <GestionaleImageUploadButton
         disabled={!canUpload}
-        buttonClassName={`${uploadBtnClass} shrink-0${uploadBtnExtra}`}
-        buttonLabel={
-          <span className="inline-flex items-center gap-1">
-            <HubIconPhoto />
-            {hubCardLayout ? "Aggiungi" : "Aggiungi foto"}
-          </span>
-        }
+        buttonClassName={uploadBtnClass}
+        buttonLabel={uploadButtonLabel}
         title={uploadTitle}
         phase={imageUpload.phase}
-        fileName={imageUpload.file?.name}
-        error={imageUpload.error}
-        onRetry={imageUpload.retry}
-        onChange={imageUpload.onFileInputChange}
-        showInlineStatus={false}
+        wrapperClassName={hubCardLayout ? "h-16 shrink-0" : undefined}
+        busyIconOnly={hubCardLayout}
+        onImagePicked={beginImageUpload}
       />
     ) : null;
 
-  const subtitleContent =
-    loading || imageUpload.phase === "uploading" ? (
-      <span className="inline-flex items-center gap-1.5">
-        <LoadingSpinner size="sm" label="Caricamento foto…" />
-        Caricamento foto…
-      </span>
-    ) : (
-      `${images.length}/${maxImages} immagini`
-    );
+  const cropModal = (
+    <GestionaleImageCropModal
+      file={cropSource}
+      onClose={() => setCropSource(null)}
+      onConfirm={commitCroppedUpload}
+    />
+  );
 
-  const bodyContent = (
+  const renderImageThumb = (img: StoredImage) => (
+    <div key={img.path} className={IMAGE_THUMB_CLASS}>
+      <Tooltip content="Apri">
+        <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} aria-label="Apri foto">
+          {/* eslint-disable-next-line @next/next/no-img-element -- Signed Storage URLs are short-lived and already lazy-loaded thumbnails. */}
+          <img src={img.signedUrl} alt={img.name} loading="lazy" className="h-full w-full object-cover" />
+        </button>
+      </Tooltip>
+      {canEdit ? (
+        <Tooltip content="Elimina">
+          <button
+            type="button"
+            className="absolute right-1 top-1 hidden rounded bg-black/60 px-1 text-[11px] font-bold text-white group-hover:block"
+            onClick={() => void removeImage(img)}
+            aria-label="Elimina foto"
+          >
+            ×
+          </button>
+        </Tooltip>
+      ) : null}
+    </div>
+  );
+
+  const hubGalleryContent = (
     <>
       {uploadError ? (
         <p className="rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
           {uploadError}
         </p>
       ) : null}
-      {images.length > 0 ? (
-        <div className={`flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}${uploadError ? " mt-2" : ""}`}>
-          {images.map((img) => (
-            <div
-              key={img.path}
-              className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)]"
-            >
-              <Tooltip content="Apri">
-                <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} aria-label="Apri foto">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- Signed Storage URLs are short-lived and already lazy-loaded thumbnails. */}
-                  <img src={img.signedUrl} alt={img.name} loading="lazy" className="h-full w-full object-cover" />
-                </button>
-              </Tooltip>
-              {canEdit ? (
-                <Tooltip content="Elimina">
-                  <button
-                    type="button"
-                    className="absolute right-1 top-1 hidden rounded bg-black/60 px-1 text-[11px] font-bold text-white group-hover:block"
-                    onClick={() => void removeImage(img)}
-                    aria-label="Elimina foto"
-                  >
-                    ×
-                  </button>
-                </Tooltip>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : !uploadError ? (
-        <p className="text-[11px] text-[color:var(--cab-text-muted)]">Nessuna foto caricata.</p>
-      ) : null}
+      <div className={`${IMAGE_GALLERY_ROW_CLASS}${uploadError ? " mt-2" : ""}`}>
+        {uploadButton}
+        {loading && images.length === 0 ? (
+          <div className={`${IMAGE_THUMB_CLASS} flex items-center justify-center`}>
+            <LoadingSpinner size="sm" label="Caricamento foto…" />
+          </div>
+        ) : null}
+        {images.map(renderImageThumb)}
+      </div>
     </>
   );
+
+  const hubGalleryVisible = canEdit || images.length > 0 || loading || Boolean(uploadError);
 
   if (hubCardLayout) {
     return (
       <>
         <GestionaleUploadDropExpand {...dropExpandProps}>
-          <GestionaleInfoCard compact title="Foto" subtitle={subtitleContent} actions={uploadButton}>
-            {bodyContent}
+          <GestionaleInfoCard compact hideTitle={!hubCardShowTitle} title={title}>
+            {hubGalleryVisible ? (
+              hubGalleryContent
+            ) : (
+              <p className="text-[11px] text-[color:var(--cab-text-muted)]">Nessuna foto caricata.</p>
+            )}
           </GestionaleInfoCard>
         </GestionaleUploadDropExpand>
         {preview ? (
@@ -311,6 +350,7 @@ export function RecordImageManager({
           </GestionaleModalShell>
         ) : null}
         {confirmDialog}
+        {cropModal}
       </>
     );
   }
@@ -333,7 +373,7 @@ export function RecordImageManager({
                 )}
               </p>
             </div>
-            {canEdit ? uploadButton : null}
+            {canEdit ? <div className={compactUploadBtn ? "self-center" : undefined}>{uploadButton}</div> : null}
           </div>
           {uploadError ? (
             <p className="mt-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
@@ -341,32 +381,8 @@ export function RecordImageManager({
             </p>
           ) : null}
           {images.length > 0 ? (
-            <div className={`mt-3 flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}`}>
-              {images.map((img) => (
-                <div
-                  key={img.path}
-                  className="group relative h-16 w-16 shrink-0 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)]"
-                >
-                  <Tooltip content="Apri">
-                    <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} aria-label="Apri foto">
-                      {/* eslint-disable-next-line @next/next/no-img-element -- Signed Storage URLs are short-lived and already lazy-loaded thumbnails. */}
-                      <img src={img.signedUrl} alt={img.name} loading="lazy" className="h-full w-full object-cover" />
-                    </button>
-                  </Tooltip>
-                  {canEdit ? (
-                    <Tooltip content="Elimina">
-                      <button
-                        type="button"
-                        className="absolute right-1 top-1 hidden rounded bg-black/60 px-1 text-[11px] font-bold text-white group-hover:block"
-                        onClick={() => void removeImage(img)}
-                        aria-label="Elimina foto"
-                      >
-                        ×
-                      </button>
-                    </Tooltip>
-                  ) : null}
-                </div>
-              ))}
+            <div className={`mt-3 ${IMAGE_GALLERY_ROW_CLASS}`}>
+              {images.map(renderImageThumb)}
             </div>
           ) : (
             <p className="mt-2 text-[11px] text-[color:var(--cab-text-muted)]">Nessuna foto caricata.</p>
@@ -397,6 +413,7 @@ export function RecordImageManager({
         </GestionaleModalShell>
       ) : null}
       {confirmDialog}
+      {cropModal}
     </>
   );
 }

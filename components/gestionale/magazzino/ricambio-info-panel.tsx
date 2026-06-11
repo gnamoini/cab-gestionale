@@ -13,7 +13,6 @@ import { RecordImageManager, type RecordImageLogEvent } from "@/components/gesti
 import {
   GestionaleLogEntryDismissButton,
   GestionaleLogEntryFourLines,
-  gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
 import type { MagazzinoLogFeedItem } from "@/lib/magazzino/use-magazzino-log-feed";
@@ -147,9 +146,10 @@ export function RicambioInfoPanel({
       <RecordImageManager
         scope="magazzino"
         recordId={ricambio.id}
-        title="Foto ricambio"
+        title="Foto"
         canEdit={canEditPhotos}
         hubCardLayout
+        hubCardShowTitle
         onImageEvent={onImageEvent}
       />
 
@@ -170,7 +170,7 @@ export function RicambioInfoPanel({
 
       <GestionaleInfoCard title="Fornitori alternativi">
         {(ricambio.fornitoriAlternativi ?? []).length === 0 ? (
-          <GestionaleInfoRow label="—" value="Nessun fornitore alternativo" />
+          <p className="text-sm text-[color:var(--cab-text-muted)]">Nessun fornitore alternativo</p>
         ) : (
           (ricambio.fornitoriAlternativi ?? []).map((alt, i) => (
             <GestionaleInfoSubgroup key={alt.id || i} title={`Alternativo ${i + 1}`}>
@@ -195,6 +195,7 @@ export function RicambioInfoPanel({
       </GestionaleInfoCard>
 
       <MagazzinoPrezziLineari
+        variant="info"
         formatEur={formatEur}
         listinoOE={ricambio.prezzoFornitoreOriginale}
         scontoOE={ricambio.scontoFornitoreOriginale}
@@ -203,8 +204,8 @@ export function RicambioInfoPanel({
         prezzoVendita={ricambio.prezzoVendita}
       />
 
-      <GestionaleInfoCard title="Storico modifiche">
-        <ul className={`${gestionaleLogScrollEmbeddedClass} min-h-0 max-h-48 max-md:max-h-40 space-y-2 pr-0.5`}>
+      <GestionaleInfoCard title="Storico modifiche" collapsible defaultCollapsed>
+        <ul className="space-y-2">
           {logLoading ? (
             <li className="list-none">
               <LoadingFormSkeleton fields={1} className="py-1" />

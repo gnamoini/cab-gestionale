@@ -71,7 +71,50 @@ Esempio — allargare tutti i form large:
 
 ## Nested modals
 
-Z-index: base `z-[100]`, stacked `z-[110]`, confirm `z-[120]` (`lib/ui/mobile-modal-behavior.ts`).
+Z-index SSOT: `cabModalLayerClass("base"|"stacked"|"confirm")` o costanti `cabModalZBase` (100), `cabModalZStacked` (110), `cabModalZConfirm` (120) in `lib/ui/mobile-modal-behavior.ts`. Evitare literal `z-[120]` nei consumer.
+
+## Sezioni collapsible (form)
+
+- **SSOT:** `GestionaleCollapsibleSection` in `components/design-system/gestionale-collapsible-section.tsx`
+- Variante `form`: shell surface 35% (modali CRUD ricambio/mezzi/…)
+- Alias dominio magazzino: `RicambioCollapsibleSection` in `ricambio-modal-ui.tsx`
+- Espansione istantanea (`grid-rows`), chevron pill, scroll-into-view su expand mobile
+
+## Bottom sheet mobile
+
+- **SSOT:** `GestionaleMobileBottomSheet` in `components/gestionale/gestionale-mobile-bottom-sheet.tsx`
+- Backdrop: `bg-[var(--cab-overlay)]`; z: `cabModalLayerClass("stacked")`
+- Usato da `GestionaleSearchableSheetSelect` e picker foto mobile
+
+## Drawer e filtri (z ladder)
+
+| Layer | Token / costante | Valore | Uso |
+|-------|------------------|--------|-----|
+| Nav / filtri | `dsZDrawer` | 55 | Menu mobile (`app-shell`), `mobile-filter-drawer` |
+| Modale base | `cabModalZBase` | 100 | `GestionaleModalShell`, documenti, CRUD |
+| Modale stacked | `cabModalZStacked` | 110 | Scheda ingresso edit sopra hub, picker sheet |
+| Confirm nested | `cabModalZConfirm` | 120 | `GestionaleConfirmDialog`, unsaved nested |
+
+**Nota:** non unificare `dsZDrawer` con modali senza regression test nav/filter. Backdrop drawer/filtri: `bg-[var(--cab-overlay)]` (allineato ai modali).
+
+## Propagazione UX (checklist)
+
+1. Footer sticky via prop `footer` shell — non `border-zinc-200 bg-white` inline
+2. `min-h-11` su CTA form mobile
+3. Dirty exit: `useBeforeUnloadWhenDirty` + `GestionaleConfirmDialog` + `cabModalZConfirm`
+4. Back mobile: `ensureOverlayBackResync` quando form dirty
+5. Foto: `RecordImageManager hubCardLayout` + titolo collapsible o `hubCardShowTitle`
+6. Card mobile liste: `CardMobile` + `mt-auto` footer + `h-full` in grid
+
+## Portale clienti (`/lavorazioni-clienti`)
+
+Stessa shell gestionale (`LavorazioniModalShell` / `SchedaIngressoFormModalShell`), con eccezioni UX:
+
+- **Contattaci:** header custom senza X (chiusura solo footer) — audit `client-portal-contattaci-audit.test.ts`
+- **Ingresso / documenti / QR / foto:** footer sticky via prop `footer`, corpo `GestionaleModalScrollBody`, token `--cab-border` (no zinc footer)
+- Superficie read-only: niente dirty guard; CTA footer tipicamente «Chiudi» o link nativi (`tel:`, `mailto:`)
+
+Audit: `lib/regression/client-portal-modal-ux-audit.test.ts`
 
 ## Checklist nuovo modale
 

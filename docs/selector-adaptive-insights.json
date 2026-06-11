@@ -1,0 +1,75 @@
+{
+  "generatedAt": "2026-06-10T16:54:05.011Z",
+  "eventCount": 12,
+  "insights": [
+    {
+      "domain": "addetti",
+      "currentBehavior": {
+        "preferredSurface": "dropdown",
+        "usageStats": {
+          "totalOpens": 11,
+          "surfaceCounts": {
+            "dropdown": 10,
+            "sheet": 0,
+            "searchableDropdown": 1
+          },
+          "bucketCounts": {
+            "2-5": 0,
+            "6-20": 1,
+            "20-100": 9,
+            "100+": 1
+          },
+          "searchUsageRate": 1,
+          "sheetUsageRate": 0,
+          "dropdownRate": 0.9090909090909091,
+          "fallbackRate": 0,
+          "avgDecisionLatencyMs": 2.3181818181818183,
+          "mobileRate": 0.9090909090909091,
+          "dropdownAbandonRate": null
+        }
+      },
+      "recommendation": {
+        "suggestedSurface": "sheet",
+        "confidence": 1,
+        "reason": [
+          "searchUsageRate 100.0% with dominant dropdown",
+          "large option buckets with search-heavy dropdown usage"
+        ]
+      }
+    },
+    {
+      "domain": "report",
+      "currentBehavior": {
+        "preferredSurface": "dropdown",
+        "usageStats": {
+          "totalOpens": 1,
+          "surfaceCounts": {
+            "dropdown": 1,
+            "sheet": 0,
+            "searchableDropdown": 0
+          },
+          "bucketCounts": {
+            "2-5": 0,
+            "6-20": 1,
+            "20-100": 0,
+            "100+": 0
+          },
+          "searchUsageRate": 0,
+          "sheetUsageRate": 0,
+          "dropdownRate": 1,
+          "fallbackRate": 0,
+          "avgDecisionLatencyMs": 1.2,
+          "mobileRate": 0,
+          "dropdownAbandonRate": null
+        }
+      },
+      "recommendation": {
+        "suggestedSurface": "dropdown",
+        "confidence": 0,
+        "reason": [
+          "rule.insufficientData: sample size 1 < 10"
+        ]
+      }
+    }
+  ]
+}

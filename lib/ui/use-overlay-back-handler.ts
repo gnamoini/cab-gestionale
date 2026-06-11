@@ -1,7 +1,11 @@
 "use client";
 
 import { useLayoutEffect, useRef } from "react";
-import { registerOverlayBack } from "@/lib/ui/overlay-back-stack";
+import {
+  registerOverlayBack,
+  type OverlayCloseContext,
+  type RegisterOverlayBackOptions,
+} from "@/lib/ui/overlay-back-stack";
 
 /**
  * Collega un overlay aperto allo stack Indietro (History API).
@@ -9,14 +13,15 @@ import { registerOverlayBack } from "@/lib/ui/overlay-back-stack";
  */
 export function useOverlayBackHandler(
   active: boolean,
-  onClose: () => void,
+  onClose: (ctx?: OverlayCloseContext) => void,
   source?: string,
+  opts?: RegisterOverlayBackOptions,
 ): void {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
   useLayoutEffect(() => {
     if (!active) return;
-    return registerOverlayBack(() => onCloseRef.current(), source);
-  }, [active, source]);
+    return registerOverlayBack((ctx) => onCloseRef.current(ctx), source, opts);
+  }, [active, source, opts?.layer]);
 }

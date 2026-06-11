@@ -2,10 +2,11 @@
 
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
 import { CLIENT_PORTAL_DOCUMENT_SLOTS } from "@/lib/lavorazioni/client-portal-documents";
 import { lavorazioneDocumentByTipo } from "@/lib/lavorazioni/lavorazione-documents";
-import { dsGapMd, dsTableActionTextBtn } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsGapMd, dsTableActionTextBtn } from "@/lib/ui/design-system";
 import { useClientLavorazioneDocumentsQuery } from "@/src/hooks/gestionale/use-client-lavorazione-media-queries";
 import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
 
@@ -125,10 +126,15 @@ export function ClientLavorazioneDocumentsDialog({
       title="Documenti lavorazione"
       subtitle={refLabel}
       titleId="client-lav-docs-title"
+      footer={
+        <button type="button" className={`${dsBtnNeutral} min-h-11 w-full sm:ml-auto sm:w-auto`} onClick={onClose}>
+          Chiudi
+        </button>
+      }
     >
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto px-4 py-3 gestionale-scrollbar">
+      <GestionaleModalScrollBody>
         <ClientLavorazioneDocumentsPanel lavorazioneId={lavorazioneId} />
-      </div>
+      </GestionaleModalScrollBody>
     </LavorazioniModalShell>
   );
 }

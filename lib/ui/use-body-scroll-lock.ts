@@ -9,6 +9,7 @@ import {
   healBodyScrollLockState,
   refreshBodyScrollLockOnViewportChange,
 } from "@/lib/ui/body-scroll-lock-manager";
+import { subscribeGestionaleViewport } from "@/lib/ui/gestionale-viewport-orchestrator";
 import { healOverlayBackStack, resetOverlayBackStack } from "@/lib/ui/overlay-back-stack";
 
 export { BODY_LOCK_ATTR } from "@/lib/ui/body-scroll-lock-manager";
@@ -56,11 +57,6 @@ export function BodyScrollLockRouteGuard(): null {
 export function BodyScrollLockHealGuard(): null {
   useLayoutEffect(() => {
     healBodyScrollLockState("mount");
-    let resizeTimer: ReturnType<typeof setTimeout> | null = null;
-    const onViewportChange = () => {
-      if (resizeTimer) clearTimeout(resizeTimer);
-      resizeTimer = setTimeout(() => refreshBodyScrollLockOnViewportChange("resize"), 100);
-    };
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
         healBodyScrollLockState("visibility");
@@ -69,16 +65,13 @@ export function BodyScrollLockHealGuard(): null {
     const onPageShow = () => healBodyScrollLockState("pageshow");
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pageshow", onPageShow);
-    window.addEventListener("resize", onViewportChange, { passive: true });
-    window.addEventListener("orientationchange", onViewportChange);
-    window.visualViewport?.addEventListener("resize", onViewportChange);
+    const unsubscribe = subscribeGestionaleViewport(() => {
+      refreshBodyScrollLockOnViewportChange("resize");
+    });
     return () => {
-      if (resizeTimer) clearTimeout(resizeTimer);
+      unsubscribe();
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pageshow", onPageShow);
-      window.removeEventListener("resize", onViewportChange);
-      window.removeEventListener("orientationchange", onViewportChange);
-      window.visualViewport?.removeEventListener("resize", onViewportChange);
     };
   }, []);
   return null;

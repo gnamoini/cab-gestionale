@@ -10,9 +10,14 @@ import {
   dsModalCloseBtn,
   dsZModalHigh,
 } from "@/lib/ui/design-system";
+import {
+  CAB_MODAL_ROOT_ATTR,
+  CAB_MODAL_SCROLL_ATTR,
+  gestionaleModalScrollBodyMobileClass,
+} from "@/lib/ui/mobile-modal-behavior";
+import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
 import { gestionaleModalWidthConfirmation } from "@/lib/ui/modal-max-width-class";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
-import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
+import { useGestionaleOverlayBehavior } from "@/lib/ui/use-gestionale-overlay-behavior";
 
 /** Layout azioni conferma — mobile: Annulla sotto, desktop: Annulla | Conferma a destra. */
 export const gestionaleConfirmActionsClass =
@@ -52,8 +57,11 @@ export function GestionaleConfirmDialog({
   onCancel: () => void;
   onConfirm?: () => void;
 }) {
-  useBodyScrollLock(open, "GestionaleConfirmDialog");
-  useOverlayBackHandler(open && !pending, onCancel, "GestionaleConfirmDialog");
+  const dialogRef = useGestionaleOverlayBehavior({
+    open,
+    onRequestClose: onCancel,
+    source: "GestionaleConfirmDialog",
+  });
 
   useEffect(() => {
     if (!open || pending) return;
@@ -101,9 +109,11 @@ export function GestionaleConfirmDialog({
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="gestionale-confirm-title"
+        {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
         className={`flex max-h-[min(92dvh,calc(var(--cab-vv-height,100dvh)-2rem))] w-full ${gestionaleModalWidthConfirmation} flex-col overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl`}
         onMouseDown={(e) => e.stopPropagation()}
       >
@@ -116,7 +126,10 @@ export function GestionaleConfirmDialog({
           </div>
           <CloseButton onClick={onCancel} disabled={pending} className={dsModalCloseBtn} label="Chiudi" />
         </header>
-        <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-5">
+        <div
+          {...{ [CAB_MODAL_SCROLL_ATTR]: "" }}
+          className={`min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-y-contain px-4 py-4 sm:px-5 ${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad}`}
+        >
           {body}
         </div>
         <footer className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)]">

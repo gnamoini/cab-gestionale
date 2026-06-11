@@ -1,12 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
+/** @deprecated Usare `GlobalAsyncSelect` o `GlobalSelect` con opzioni mezzi. Non cablato in produzione. */
+
+import { useCallback, useId, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import {
+  useDropdownOutsideDismiss,
+  useGlobalDropdownPortal,
+} from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import { mezzoMatchesSmartQuery } from "@/lib/mezzi/identificazione-mezzo";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { dsBtnNeutral, dsLabel } from "@/lib/ui/design-system";
+import { globalInputDropdownPortalPanel } from "@/lib/ui/global-input";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { debugSelectOptions } from "@/src/shared/selectors";
 
@@ -41,6 +49,11 @@ export function GestionaleMezzoAutocomplete({
 }: GestionaleMezzoAutocompleteProps) {
   const mezziQ = useMezziListQuery(undefined, { enabled, staleTime: 30_000 });
   const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLUListElement>(null);
+  const inputId = useId();
 
   const mezziUi = useMemo(() => {
     const rows = mezziQ.data ?? [];
@@ -59,7 +72,56 @@ export function GestionaleMezzoAutocomplete({
     return mezziUi.filter((m) => mezzoMatchesSmartQuery(m, q)).slice(0, 24);
   }, [mezziUi, q]);
 
-  const showList = q.trim().length > 0 && !disabled && !mezziQ.isLoading;
+  const showDropdown = open && focused && q.trim().length > 0 && !disabled && !mezziQ.isLoading;
+
+  const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
+    open: showDropdown,
+    anchorRef: wrapRef,
+    contentRef: panelRef,
+    repositionDeps: [filtered.length, q],
+  });
+
+  const dismiss = useCallback(() => {
+    setOpen(false);
+    setFocused(false);
+  }, []);
+
+  useDropdownOutsideDismiss(showDropdown, wrapRef, panelRef, dismiss);
+
+  const menu =
+    showDropdown && portalStyle ? (
+      <ul
+        ref={panelRef}
+        role="listbox"
+        aria-label="Suggerimenti mezzi"
+        style={portalStyle}
+        className={`${globalInputDropdownPortalPanel} space-y-1 p-1.5 ${placementOriginClass} ${
+          scrollInside ? "overflow-y-auto" : "overflow-hidden"
+        }`}
+      >
+        {filtered.length === 0 ? (
+          <li className="px-2 py-2 text-xs text-[color:var(--cab-text-muted)]">Nessun mezzo corrispondente.</li>
+        ) : (
+          filtered.map((m) => (
+            <li key={m.id} role="presentation">
+              <button
+                type="button"
+                role="option"
+                className="w-full rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,transparent)]"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  onChange(m.id);
+                  setQ("");
+                  dismiss();
+                }}
+              >
+                <span className="font-medium text-[color:var(--cab-text)]">{mezzoUiLabel(m)}</span>
+              </button>
+            </li>
+          ))
+        )}
+      </ul>
+    ) : null;
 
   return (
     <div className={`block min-w-0 ${className}`.trim()}>
@@ -86,11 +148,21 @@ export function GestionaleMezzoAutocomplete({
           </button>
         </p>
       ) : (
-        <>
+        <div ref={wrapRef} className="relative mt-1">
           <GestionaleSearchField
-            wrapperClassName="mt-1"
+            id={inputId}
             value={q}
-            onChange={(e) => setQ(e.target.value)}
+            onChange={(e) => {
+              setQ(e.target.value);
+              setOpen(true);
+            }}
+            onFocus={() => {
+              setFocused(true);
+              setOpen(true);
+            }}
+            onBlur={() => {
+              setFocused(false);
+            }}
             placeholder="Cerca per targa, matricola, cliente, marca…"
             disabled={disabled || mezziQ.isLoading}
             aria-label="Cerca mezzo in archivio"
@@ -98,29 +170,8 @@ export function GestionaleMezzoAutocomplete({
           {mezziQ.isLoading ? (
             <p className="mt-1 text-xs text-[color:var(--cab-text-muted)]">Caricamento mezzi…</p>
           ) : null}
-          {showList ? (
-            <ul className="gestionale-scrollbar mt-2 max-h-44 space-y-1 overflow-y-auto rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-muted)] p-1.5">
-              {filtered.length === 0 ? (
-                <li className="px-2 py-2 text-xs text-[color:var(--cab-text-muted)]">Nessun mezzo corrispondente.</li>
-              ) : (
-                filtered.map((m) => (
-                  <li key={m.id}>
-                    <button
-                      type="button"
-                      className="w-full rounded-md px-2 py-1.5 text-left text-xs transition hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,transparent)]"
-                      onClick={() => {
-                        onChange(m.id);
-                        setQ("");
-                      }}
-                    >
-                      <span className="font-medium text-[color:var(--cab-text)]">{mezzoUiLabel(m)}</span>
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
-          ) : null}
-        </>
+          {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
+        </div>
       )}
       {showCreateLink ? (
         <p className="mt-2 text-[11px] text-[color:var(--cab-text-muted)]">

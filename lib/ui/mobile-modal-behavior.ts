@@ -3,7 +3,29 @@
  * Layout-only: visualViewport sync, scroll nel container modale, marker DOM per audit.
  */
 
+import { waitForViewportStable } from "@/lib/ui/gestionale-viewport-orchestrator";
 import { gestionaleModalScrollBodyClass } from "@/lib/ui/modal-max-width-class";
+
+/** Finestra in cui keyboard/textarea evitano re-scroll ridondante dopo focus chain. */
+export const GESTIONALE_FOCUS_SCROLL_COALESCE_MS = 200;
+
+let lastGestionaleFocusScrollAt = 0;
+let lastGestionaleFocusScrollTarget: HTMLElement | null = null;
+
+export function markGestionaleFocusScrollCompleted(field: HTMLElement): void {
+  if (typeof performance === "undefined") return;
+  lastGestionaleFocusScrollAt = performance.now();
+  lastGestionaleFocusScrollTarget = resolveFocusScrollTarget(field);
+}
+
+export function shouldSkipRedundantGestionaleFocusScroll(
+  field: HTMLElement,
+  _reason: "keyboard-open" | "textarea-grow",
+): boolean {
+  if (typeof performance === "undefined") return false;
+  if (performance.now() - lastGestionaleFocusScrollAt > GESTIONALE_FOCUS_SCROLL_COALESCE_MS) return false;
+  return resolveFocusScrollTarget(field) === lastGestionaleFocusScrollTarget;
+}
 
 export const CAB_MODAL_ROOT_ATTR = "data-cab-modal-root";
 export const CAB_MODAL_SCROLL_ATTR = "data-cab-modal-scroll";
@@ -14,6 +36,8 @@ export const CAB_FOCUS_SCROLL_GROUP_ATTR = "data-cab-focus-scroll-group";
 export const CAB_FOCUS_SCROLL_TITLE_ATTR = "data-cab-focus-scroll-title";
 /** Etichetta campo (es. `<p>` sopra combobox / multi-select in modale). */
 export const CAB_FIELD_LABEL_ATTR = "data-cab-field-label";
+/** Header/toolbar sticky espliciti per banda scroll focus (no query class*="sticky"). */
+export const CAB_STICKY_HEADER_ATTR = "data-cab-sticky-header";
 
 export type FocusScrollRect = {
   top: number;
@@ -27,6 +51,15 @@ export const cabModalZBase = "z-[100]";
 export const cabModalZStacked = "z-[110]";
 export const cabModalZConfirm = "z-[120]";
 
+export type CabModalLayerTier = "base" | "stacked" | "confirm";
+
+/** Classe z-index modale SSOT — preferire a literal `z-[100|110|120]`. */
+export function cabModalLayerClass(tier: CabModalLayerTier = "base"): string {
+  if (tier === "confirm") return cabModalZConfirm;
+  if (tier === "stacked") return cabModalZStacked;
+  return cabModalZBase;
+}
+
 /** Corpo scroll modale mobile: touch scroll + overscroll contenuto. */
 export const gestionaleModalScrollBodyMobileClass = `${gestionaleModalScrollBodyClass} [-webkit-overflow-scrolling:touch]`;
 
@@ -37,6 +70,9 @@ export type ScrollFieldIntoModalOptions = {
 };
 
 const MOBILE_FOCUS_SCROLL_MQ = "(max-width: 767px)";
+
+/** Scroll container pagina gestionale (fuori modale). */
+export const GESTIONALE_PAGE_SCROLL_SELECTOR = "main.gestionale-scroll-y";
 
 /** Spazio visivo sopra label/campo su mobile (sotto browser chrome / header modale). */
 export const MOBILE_FOCUS_EXTRA_TOP = 16;
@@ -57,22 +93,98 @@ function isMobileFocusScrollViewport(): boolean {
   return window.matchMedia(MOBILE_FOCUS_SCROLL_MQ).matches;
 }
 
-function getVisualViewportBand(): { top: number; bottom: number } {
+export function getVisualViewportBand(): { top: number; bottom: number } {
   if (typeof window === "undefined") return { top: 0, bottom: 0 };
   const vv = window.visualViewport;
   if (!vv) return { top: 0, bottom: window.innerHeight };
   return { top: vv.offsetTop, bottom: vv.offsetTop + vv.height };
 }
 
+function readSafeAreaPx(edge: "top" | "bottom"): number {
+  if (typeof document === "undefined") return 0;
+  const prop = edge === "top" ? "--cab-safe-top" : "--cab-safe-bottom";
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(prop).trim();
+  const px = parseFloat(raw);
+  return Number.isFinite(px) ? px : 0;
+}
+
+/** Bordo inferiore elementi sticky/header che ostruiscono la parte alta del viewport. */
+export function findStickyObstructions(scope: HTMLElement | Document): number {
+  if (typeof document === "undefined") return 0;
+  const root = scope instanceof Document ? document.body : scope;
+  let maxBottom = 0;
+
+  const candidates = root.querySelectorAll(
+    `header, .cab-ios-sticky-header, [${CAB_STICKY_HEADER_ATTR}]`,
+  );
+  for (const el of candidates) {
+    if (!(el instanceof HTMLElement)) continue;
+    const style = getComputedStyle(el);
+    const isSticky =
+      style.position === "sticky" ||
+      el.classList.contains("cab-ios-sticky-header") ||
+      el.hasAttribute(CAB_STICKY_HEADER_ATTR) ||
+      el.tagName === "HEADER";
+    if (!isSticky) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.height <= 0 || rect.bottom <= 0) continue;
+    if (rect.top > getVisualViewportBand().top + 48) continue;
+    maxBottom = Math.max(maxBottom, rect.bottom);
+  }
+  return maxBottom;
+}
+
+export type EffectiveVisibleBandOptions = {
+  containerRect: DOMRect;
+  field: HTMLElement;
+  extraTop?: number;
+  extraBottom?: number;
+};
+
+/** Banda visibile effettiva condivisa da focus scroll e dropdown portal. */
+export function getEffectiveVisibleBand(options: EffectiveVisibleBandOptions): {
+  visibleTop: number;
+  visibleBottom: number;
+} {
+  const { containerRect, field, extraTop = 0, extraBottom = 0 } = options;
+  const vv = isMobileFocusScrollViewport() ? getVisualViewportBand() : null;
+  const safeTop = readSafeAreaPx("top");
+  const safeBottom = readSafeAreaPx("bottom");
+  const keyboardInset = computeKeyboardInset();
+
+  const modalRoot = field.closest(`[${CAB_MODAL_ROOT_ATTR}]`);
+  const stickyBottom = modalRoot instanceof HTMLElement
+    ? findStickyObstructions(modalRoot)
+    : findStickyObstructions(document);
+  const headerBottom = findModalHeaderBottom(field);
+
+  const visibleTop =
+    Math.max(
+      containerRect.top,
+      vv?.top ?? 0,
+      safeTop,
+      stickyBottom,
+      headerBottom ?? 0,
+    ) + extraTop;
+
+  const vvBottom = vv ? Math.min(containerRect.bottom, vv.bottom) : containerRect.bottom;
+  const visibleBottom = vvBottom - keyboardInset - safeBottom - extraBottom;
+
+  return { visibleTop, visibleBottom };
+}
+
 /** Bordo inferiore header modale (evita che il campo finisca sotto la barra titolo). */
 export function findModalHeaderBottom(field: HTMLElement): number | null {
   const root = field.closest(`[${CAB_MODAL_ROOT_ATTR}]`);
   if (!(root instanceof HTMLElement)) return null;
-  const header = root.querySelector(":scope > header");
+  const header = root.querySelector(
+    `:scope > header, :scope [role='banner'], :scope [${CAB_STICKY_HEADER_ATTR}]`,
+  );
   if (header instanceof HTMLElement) {
     return header.getBoundingClientRect().bottom;
   }
-  return null;
+  const stickyInRoot = findStickyObstructions(root);
+  return stickyInRoot > 0 ? stickyInRoot : null;
 }
 
 /** Tastiera in chiusura (back hardware, dismiss): non riscrollare il modale. */
@@ -183,9 +295,13 @@ function isFocusableField(el: EventTarget | null): el is HTMLElement {
   return isGestionaleFocusableField(el);
 }
 
-function findModalScrollContainer(field: HTMLElement): HTMLElement | null {
+/** Risolve scroll container: modale → pagina gestionale → overflow ancestor. */
+export function findGestionaleScrollContainer(field: HTMLElement): HTMLElement | null {
   const marked = field.closest(`[${CAB_MODAL_SCROLL_ATTR}]`);
   if (marked instanceof HTMLElement) return marked;
+
+  const pageMain = field.closest(GESTIONALE_PAGE_SCROLL_SELECTOR);
+  if (pageMain instanceof HTMLElement) return pageMain;
 
   let node: HTMLElement | null = field.parentElement;
   while (node) {
@@ -198,6 +314,10 @@ function findModalScrollContainer(field: HTMLElement): HTMLElement | null {
     node = node.parentElement;
   }
   return null;
+}
+
+function findModalScrollContainer(field: HTMLElement): HTMLElement | null {
+  return findGestionaleScrollContainer(field);
 }
 
 function isBeforeInDocument(anchor: HTMLElement, field: HTMLElement): boolean {
@@ -337,72 +457,78 @@ export function applyKeyboardPadToScrollContainer(container: HTMLElement | null)
   container.style.paddingBottom = inset > 0 ? `${inset}px` : "";
 }
 
-/** Scroll controllato del campo dentro il container modale (no jump documento). */
-export function scrollFieldIntoModalView(
+/** Scroll controllato del campo nel container gestionale (modale o pagina). */
+export function scrollGestionaleFieldIntoView(
   field: HTMLElement,
   options: ScrollFieldIntoModalOptions = {},
 ): boolean {
   if (typeof window === "undefined") return false;
   if (field.closest(`[${CAB_IOS_NO_FOCUS_SCROLL_ATTR}]`)) return false;
 
-  const container = findModalScrollContainer(field);
+  const container = findGestionaleScrollContainer(field);
   if (!container) return false;
 
   const extraBottom = options.extraBottom ?? resolveFocusExtraBottom();
   const extraTop = options.extraTop ?? resolveFocusExtraTop();
   const containerRect = container.getBoundingClientRect();
   const scrollRect = getFocusScrollRect(field);
-  const headerBottom = findModalHeaderBottom(field);
-  const vv = isMobileFocusScrollViewport() ? getVisualViewportBand() : null;
-
-  const visibleBottom = vv
-    ? Math.min(containerRect.bottom, vv.bottom) - extraBottom
-    : containerRect.bottom - computeKeyboardInset() - extraBottom;
-
-  const visibleTop = Math.max(
-    containerRect.top,
-    headerBottom ?? containerRect.top,
-    vv?.top ?? 0,
-  ) + extraTop;
+  const { visibleTop, visibleBottom } = getEffectiveVisibleBand({
+    containerRect,
+    field,
+    extraTop,
+    extraBottom,
+  });
 
   const delta = computeFocusScrollDelta(scrollRect, visibleTop, visibleBottom);
 
-  if (Math.abs(delta) < 2) return true;
+  if (Math.abs(delta) < 2) {
+    if (field.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) {
+      applyKeyboardPadToScrollContainer(container);
+    }
+    markGestionaleFocusScrollCompleted(field);
+    return true;
+  }
 
-  const behavior = options.behavior ?? "smooth";
+  const behavior = options.behavior ?? "auto";
   try {
     container.scrollBy({ top: delta, behavior });
   } catch {
     container.scrollTop += delta;
   }
 
-  applyKeyboardPadToScrollContainer(container);
+  if (field.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) {
+    applyKeyboardPadToScrollContainer(container);
+  }
+  markGestionaleFocusScrollCompleted(field);
   return true;
 }
 
-/** Focus fuori modale: scroll documento nearest (comportamento legacy). */
+/** @deprecated Usare scrollGestionaleFieldIntoView */
+export function scrollFieldIntoModalView(
+  field: HTMLElement,
+  options: ScrollFieldIntoModalOptions = {},
+): boolean {
+  return scrollGestionaleFieldIntoView(field, options);
+}
+
+/** Focus fuori modale: scroll nel container pagina con stessa math SSOT. */
 export function scrollFieldIntoDocumentView(field: HTMLElement): void {
   if (field.closest(`[${CAB_IOS_NO_FOCUS_SCROLL_ATTR}]`)) return;
   if (field.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) return;
-
-  window.requestAnimationFrame(() => {
-    try {
-      field.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "auto" });
-    } catch {
-      /* ignore */
-    }
-  });
+  scrollGestionaleFieldIntoView(field, { behavior: "auto" });
 }
 
-/** Scroll modale per qualsiasi controllo gestionale (focus già risolto). */
+/** Scroll modale/pagina per qualsiasi controllo gestionale (focus già risolto). */
 export function scrollGestionaleFieldIntoModal(
   field: HTMLElement,
   options: ScrollFieldIntoModalOptions = {},
 ): boolean {
-  return scrollFieldIntoModalView(resolveFocusScrollTarget(field), options);
+  return scrollGestionaleFieldIntoView(resolveFocusScrollTarget(field), options);
 }
 
-/** Doppio rAF: scroll dopo layout tastiera / apertura dropdown. */
+let focusScrollGeneration = 0;
+
+/** Scroll dopo layout stabile — last-wins: solo l'ultimo focus esegue retry post viewport stable. */
 export function scheduleGestionaleFieldScroll(
   field: HTMLElement | null | undefined,
   options: ScrollFieldIntoModalOptions = {},
@@ -411,14 +537,23 @@ export function scheduleGestionaleFieldScroll(
   const merged: ScrollFieldIntoModalOptions = {
     extraTop: resolveFocusExtraTop(),
     extraBottom: resolveFocusExtraBottom(),
+    behavior: "auto",
     ...options,
   };
-  const run = (behavior: ScrollBehavior) =>
-    scrollGestionaleFieldIntoModal(field, { ...merged, behavior });
-  window.requestAnimationFrame(() => {
-    run("smooth");
-    window.requestAnimationFrame(() => run("auto"));
-  });
+  const target = resolveFocusScrollTarget(field);
+  const gen = ++focusScrollGeneration;
+
+  void (async () => {
+    await new Promise<void>((r) => window.requestAnimationFrame(() => r()));
+    if (gen !== focusScrollGeneration) return;
+    const insetBefore = computeKeyboardInset();
+    scrollGestionaleFieldIntoView(target, merged);
+    await waitForViewportStable();
+    if (gen !== focusScrollGeneration) return;
+    if (computeKeyboardInset() !== insetBefore) {
+      scrollGestionaleFieldIntoView(target, merged);
+    }
+  })();
 }
 
 /** Handler focusin unificato (mobile + desktop safe). */
@@ -428,13 +563,7 @@ export function handleFocusInForMobileModal(e: FocusEvent): void {
   const target = resolveFocusScrollTarget(raw);
 
   syncKeyboardCssVars();
-
-  if (target.closest(`[${CAB_MODAL_ROOT_ATTR}]`)) {
-    scheduleGestionaleFieldScroll(target);
-    return;
-  }
-
-  scrollFieldIntoDocumentView(target);
+  scheduleGestionaleFieldScroll(target);
 }
 
 export const MobileModalBehaviorLayer = {
@@ -462,8 +591,14 @@ export const MobileModalBehaviorLayer = {
   resolveFocusExtraBottom,
   resolveFocusScrollTarget,
   scrollGestionaleFieldIntoModal,
+  scrollGestionaleFieldIntoView,
   scheduleGestionaleFieldScroll,
   scrollFieldIntoModalView,
   scrollFieldIntoDocumentView,
   handleFocusInForMobileModal,
+  getEffectiveVisibleBand,
+  findStickyObstructions,
+  findGestionaleScrollContainer,
+  getVisualViewportBand,
+  GESTIONALE_PAGE_SCROLL_SELECTOR,
 } as const;

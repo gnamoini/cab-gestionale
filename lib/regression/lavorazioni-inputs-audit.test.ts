@@ -24,6 +24,20 @@ for (const block of inlineBlocks) {
   assert.match(block, /tablePill/, "every InlineSelectField on /lavorazioni must use tablePill");
 }
 
+const inlineSelectSrc = read("components/gestionale/lavorazioni/lavorazioni-inline-select.tsx");
+assert.match(inlineSelectSrc, /@deprecated/, "native select path must be documented deprecated");
+
+const repoInlineUsages = [
+  view,
+  read("components/lavorazioni-clienti/client-lavorazioni-view.tsx"),
+];
+for (const src of repoInlineUsages) {
+  const blocks = src.match(/<InlineSelectField[\s\S]*?>/g) ?? [];
+  for (const block of blocks) {
+    assert.match(block, /tablePill/, "every InlineSelectField in repo must use tablePill");
+  }
+}
+
 assert.match(filters, /GlobalFilterDateField/);
 assert.doesNotMatch(filters, /type="date"/);
 assert.doesNotMatch(filters, /<select\b/);
@@ -38,8 +52,7 @@ assert.match(filterDrawer, /CAB_MODAL_SCROLL_ATTR/);
 assert.match(ingressoForm, /htmlFor=\{dataIngressoFieldId\}/);
 assert.match(ingressoForm, /id=\{dataIngressoFieldId\}/);
 
-assert.match(anagrafica, /inputMode="decimal"/);
-assert.match(anagrafica, /inputMode="numeric"/);
+assert.match(anagrafica, /GestionaleNumberInput/);
 
 assert.match(
   ingressoForm,
@@ -50,5 +63,7 @@ assert.match(
 const modals = read("components/gestionale/lavorazioni/lavorazioni-modals.tsx");
 assert.match(ingressoForm, /GestionaleModalScrollBody/);
 assert.match(modals, /useMobileModalKeyboard/);
+assert.match(modals, /GlobalFixedListPillSelect/);
+assert.doesNotMatch(modals, /<select\b/);
 
 console.log("lavorazioni-inputs-audit.test.ts OK");

@@ -1,0 +1,37 @@
+{
+  "version": "v0",
+  "timestamp": 0,
+  "config": {
+    "rolloutByDomain": {
+      "lavorazioni": "ENABLED",
+      "addetti": "ENABLED",
+      "mezzi": "ENABLED",
+      "magazzino": "ENABLED",
+      "schede": "ENABLED",
+      "report": "DISABLED",
+      "dashboard_filters": "PARTIAL",
+      "security": "GRADUAL",
+      "dipendenti": "ENABLED"
+    },
+    "thresholds": {
+      "sheetMinOptions": 20,
+      "optionCountBands": [
+        5,
+        20,
+        100
+      ]
+    },
+    "defaultBehavior": {
+      "fallbackSurface": "dropdown",
+      "mobileSheetEnabled": true,
+      "defaultMode": "default",
+      "defaultDomain": "unknown"
+    }
+  },
+  "provenance": {
+    "appliedProposals": [],
+    "ignoredProposals": [],
+    "registryVersion": 0
+  },
+  "schemaHash": "58089af3c1b2cbe8c16b30c951e8d00a9bb96fc3891904edc47cd28d6062b3a1"
+}

@@ -88,17 +88,11 @@ assert.match(
   "focus scroll includes section title in scroll rect",
 );
 
-const selectSrc = readFileSync(
-  join(root, "components/gestionale/global-input/global-select.tsx"),
-  "utf8",
-);
-assert.match(selectSrc, /scheduleGestionaleFieldScroll/);
-
-const pillSrc = readFileSync(
-  join(root, "components/gestionale/global-input/global-fixed-list-pill.tsx"),
-  "utf8",
-);
-assert.match(pillSrc, /scheduleGestionaleFieldScroll/);
+assert.match(behaviorSrc, /scrollGestionaleFieldIntoView/);
+assert.match(behaviorSrc, /getEffectiveVisibleBand/);
+assert.match(behaviorSrc, /findStickyObstructions/);
+assert.match(behaviorSrc, /focusScrollGeneration/);
+assert.doesNotMatch(behaviorSrc, /focusScrollChain/);
 
 const formSectionSrc = readFileSync(
   join(root, "components/gestionale/schede/gestionale-form-section.tsx"),
@@ -158,13 +152,13 @@ assert.match(ricambioSrc, /CAB_FOCUS_SCROLL_TITLE_ATTR/);
 assert.match(ricambioSrc, /CAB_FIELD_LABEL_ATTR/);
 
 const keyboardHookSrc = readFileSync(join(root, "lib/ui/use-mobile-modal-keyboard.ts"), "utf8");
-assert.match(keyboardHookSrc, /scrollGestionaleFieldIntoModal\(resolveFocusScrollTarget\(focused\)/);
+assert.match(keyboardHookSrc, /scrollGestionaleFieldIntoView\(resolveFocusScrollTarget\(focused\)/);
 assert.match(keyboardHookSrc, /isVirtualKeyboardClosing/);
 assert.match(keyboardHookSrc, /keyboardClosing/);
 assert.match(keyboardHookSrc, /preserveModalScrollTop/);
-assert.match(keyboardHookSrc, /if \(closing\)/);
-assert.match(keyboardHookSrc, /KEYBOARD_SETTLE_MS/);
-assert.match(keyboardHookSrc, /keyboardOpening/);
+assert.match(keyboardHookSrc, /keyboardClosing/);
+assert.match(keyboardHookSrc, /subscribeGestionaleViewport/);
+assert.doesNotMatch(keyboardHookSrc, /KEYBOARD_SETTLE_MS/);
 assert.match(keyboardHookSrc, /resolveFocusExtraTop/);
 
 console.log("mobile-modal-behavior.test.ts OK");

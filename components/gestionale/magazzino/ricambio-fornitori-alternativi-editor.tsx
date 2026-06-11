@@ -8,10 +8,9 @@ import {
   type RicambioFornitoreAlternativoFormRow,
 } from "@/lib/magazzino/form";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
-import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
+import { dsBtnNeutralForm, dsInput } from "@/lib/ui/design-system";
 
 const ricambioFormInputClass = dsInput;
-const ricambioFormSecondaryBtnClass = `${dsBtnNeutral} h-11 min-h-11 shrink-0 whitespace-nowrap px-3 text-[11px] font-semibold`;
 
 const noSpinner =
   "[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
@@ -43,14 +42,12 @@ function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = fa
 
   return (
     <div className="flex flex-col gap-3">
-      {rows.length === 0 ? (
-        <p className="text-xs text-[color:var(--cab-text-muted)]">Nessun fornitore alternativo. Aggiungine uno se serve.</p>
-      ) : (
+      {rows.length > 0 ? (
         <ul className="flex flex-col gap-3">
           {rows.map((row, index) => (
             <li
               key={row.id}
-              className="rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3"
+              className={`min-w-0 ${index > 0 ? "border-t border-[color:var(--cab-border)] pt-3" : ""}`}
             >
               <div className="mb-2 flex items-center justify-between gap-2">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
@@ -72,6 +69,9 @@ function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = fa
                     value={row.fornitore}
                     onChange={(fornitore) => onChange(patchRow(rows, row.id, { fornitore }))}
                     disabled={readOnly}
+                    selectOnly
+                    minSheetOptions={0}
+                    sheetTitle="Fornitore"
                     placeholder="Cerca o seleziona fornitore…"
                     inputClassName={ricambioFormInputClass}
                     aria-label={`Fornitore alternativo ${index + 1}`}
@@ -84,6 +84,9 @@ function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = fa
                     value={row.produttore}
                     onChange={(produttore) => onChange(patchRow(rows, row.id, { produttore }))}
                     disabled={readOnly}
+                    selectOnly
+                    minSheetOptions={0}
+                    sheetTitle="Produttore"
                     placeholder="Cerca o seleziona produttore…"
                     inputClassName={ricambioFormInputClass}
                     aria-label={`Produttore fornitore ${index + 1}`}
@@ -133,9 +136,9 @@ function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = fa
             </li>
           ))}
         </ul>
-      )}
+      ) : null}
       {!readOnly ? (
-        <button type="button" className={ricambioFormSecondaryBtnClass} onClick={addRow} disabled={rows.length >= 20}>
+        <button type="button" className={dsBtnNeutralForm} onClick={addRow} disabled={rows.length >= 20}>
           + Aggiungi fornitore alternativo
         </button>
       ) : null}

@@ -133,6 +133,7 @@ function scanFile(file: string): Finding[] {
   if (definesFixedOverlayDialog) {
     const hasBodyScrollLock =
       content.includes("useBodyScrollLock(") ||
+      content.includes("useGestionaleOverlayBehavior(") ||
       content.includes("useGestionaleMainScrollLock(") ||
       content.includes("BODY_LOCK_ATTR");
     if (!hasBodyScrollLock) {
@@ -148,6 +149,7 @@ function scanFile(file: string): Finding[] {
       /global-calendar-panel|settings-color-picker-popover|timesheet-cell-editor-popover/i.test(fileRel);
     const hasOverlayBack =
       content.includes("useOverlayBackHandler(") ||
+      content.includes("useGestionaleOverlayBehavior(") ||
       content.includes("GestionaleConfirmDialog") ||
       content.includes("OverlayBackStackGuard");
     if (hasBodyScrollLock && !overlayBackExcluded && !hasOverlayBack) {
@@ -196,6 +198,20 @@ function scanFile(file: string): Finding[] {
       line: findLine(content, /overflow(?:-[xy])?-(?:auto|scroll)/),
       rule: "scroll-containment",
       message: "Container critico scrollabile senza overscroll containment.",
+    });
+  }
+
+  if (
+    /components\/(?:dashboard|lavorazioni|gestionale)/.test(fileRel) &&
+    /absolute left-0(?: right-0)? top-full/.test(content) &&
+    !fileRel.includes("global-input.ts")
+  ) {
+    findings.push({
+      severity: "blocker",
+      file: fileRel,
+      line: findLine(content, /absolute left-0/),
+      rule: "legacy-inline-dropdown",
+      message: "Dropdown absolute top-full in UI modale: usare useGlobalDropdownPortal.",
     });
   }
 

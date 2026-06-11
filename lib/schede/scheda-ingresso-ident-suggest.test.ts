@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import {
   findExactMezzoForIngressoIdent,
+  mezzoIngressoSuggestLabel,
+  mezzoIngressoSuggestSecondaryLabel,
   suggestMezziForIngressoIdent,
 } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
@@ -70,6 +72,21 @@ const mezzoB: MezzoGestito = {
   assert.equal(merged.cliente, "Già compilato");
   assert.equal(merged.marcaAttrezzatura, "CAT");
   assert.equal(merged.targa, "AB123CD");
+}
+
+{
+  assert.equal(
+    mezzoIngressoSuggestLabel(mezzoA),
+    "CAT 320 · Targa AB123CD · Matr. MX-001",
+  );
+  assert.equal(
+    mezzoIngressoSuggestSecondaryLabel(mezzoA, "targa"),
+    "Cliente A · CAT 320 · Matr. MX-001",
+  );
+  assert.equal(
+    mezzoIngressoSuggestSecondaryLabel(mezzoA, "matricola"),
+    "Cliente A · CAT 320 · Targa AB123CD",
+  );
 }
 
 console.log("scheda-ingresso-ident-suggest.test.ts: ok");

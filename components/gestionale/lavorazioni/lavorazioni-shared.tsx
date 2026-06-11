@@ -18,6 +18,7 @@ import {
   lavorazioniModalSelectClass,
   selectLavorazioniInline,
   selectPillInner,
+  selectPillInnerTable,
 } from "@/lib/ui/design-system";
 import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { pillStyleFromHex } from "@/lib/lavorazioni/color-utils";
@@ -31,7 +32,14 @@ export const erpBtnNuovaLavorazione = dsBtnCtaHero;
 export const erpBtnSoftOrange = dsBtnSoftOrange;
 export const erpBtnIcon = dsBtnIcon;
 export const erpBtnSubtleNew = dsBtnSubtle;
-export { gestionaleSelectFilterClass, gestionaleSelectNativePlainClass, lavorazioniModalSelectClass, selectLavorazioniInline, selectPillInner };
+export {
+  gestionaleSelectFilterClass,
+  gestionaleSelectNativePlainClass,
+  lavorazioniModalSelectClass,
+  selectLavorazioniInline,
+  selectPillInner,
+  selectPillInnerTable,
+};
 /** @deprecated Usa `gestionaleSelectFilterClass` */
 export const selectLavorazioniFilter = gestionaleSelectFilterClass;
 

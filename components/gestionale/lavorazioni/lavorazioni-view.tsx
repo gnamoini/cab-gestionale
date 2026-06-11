@@ -5,7 +5,7 @@ import "./lavorazioni-select-theme.css";
 
 import dynamic from "next/dynamic";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
-import { useCallback, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, startTransition, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -18,10 +18,7 @@ import { GestionalePageToolbarActions, GestionaleRefreshToolbarButton } from "@/
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
-const LavorazioneCreateModal = dynamic(
-  () => import("@/components/gestionale/lavorazioni/lavorazione-create-modal").then((m) => m.LavorazioneCreateModal),
-  { ssr: false },
-);
+import { LavorazioneCreateModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
 const SchedeLavorazioneModal = dynamic(
   () =>
     import("@/components/lavorazioni/schede/schede-lavorazione-modal").then((m) => ({
@@ -39,6 +36,7 @@ const LavorazioniKanbanView = dynamic(
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
 import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
 import {
+  AddettoSelectField,
   InlineSelectField,
   LavorazioneAddettoReadOnlyPill,
   LavorazioneCompletamentoDatePill,
@@ -161,6 +159,7 @@ import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.que
 import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { QK } from "@/src/lib/react-query/invalidate-related";
+import { mezziService } from "@/src/services/mezzi.service";
 import {
   runLavorazioniToolbarRefresh,
 } from "@/src/lib/react-query/refetch-lavorazioni-operational-data";
@@ -609,7 +608,8 @@ export function LavorazioniView() {
   const lavTablePillFillClass = "w-full min-w-0";
 
   const mezziCatalog = useMemo(() => {
-    return [...(mezziListQ.data ?? []).map(toMezzoUI)].sort((a, b) =>
+    const rows = Array.isArray(mezziListQ.data) ? mezziListQ.data : [];
+    return [...rows.map(toMezzoUI)].sort((a, b) =>
       `${a.marca} ${a.modello}`.localeCompare(`${b.marca} ${b.modello}`, "it"),
     );
   }, [mezziListQ.data]);
@@ -630,6 +630,54 @@ export function LavorazioniView() {
   const concludeLav = useLavorazioneConcludeMutation();
 
   const [createOpen, setCreateOpen] = useState(false);
+  const [createModalWarm, setCreateModalWarm] = useState(false);
+
+  const preloadCreateModal = useCallback(() => {
+    void qc.prefetchQuery({
+      queryKey: [...QK.mezzi, null] as const,
+      queryFn: async () => {
+        const res = await mezziService.getAll(undefined);
+        if (!res.success) throw new Error(res.error ?? "Errore lettura mezzi");
+        return res.data ?? [];
+      },
+      staleTime: 30_000,
+    });
+  }, [qc]);
+
+  const primeCreateModal = useCallback(() => {
+    preloadCreateModal();
+    if (canEditWorkOrders) setCreateModalWarm(true);
+  }, [preloadCreateModal, canEditWorkOrders]);
+
+  const openCreateModal = useCallback(() => {
+    primeCreateModal();
+    setCreateOpen(true);
+  }, [primeCreateModal]);
+
+  const closeCreateModal = useCallback(() => {
+    startTransition(() => setCreateOpen(false));
+  }, []);
+
+  useEffect(() => {
+    if (mezziListQ.data != null && !Array.isArray(mezziListQ.data)) {
+      void qc.invalidateQueries({ queryKey: [...QK.mezzi, null] });
+    }
+  }, [mezziListQ.data, qc]);
+
+  useEffect(() => {
+    primeCreateModal();
+    if (typeof window === "undefined") return;
+    const preload = () => primeCreateModal();
+    const requestIdle = (
+      window as Window & { requestIdleCallback?: typeof window.requestIdleCallback }
+    ).requestIdleCallback;
+    if (requestIdle) {
+      const id = requestIdle(preload, { timeout: 4_000 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const t = setTimeout(preload, 2_000);
+    return () => clearTimeout(t);
+  }, [primeCreateModal]);
   type LavorazioniListViewMode = "table" | "kanban";
   const [listViewMode, setListViewMode] = useState<LavorazioniListViewMode>("table");
   useUIAutonomyFixEngine(
@@ -1503,7 +1551,8 @@ export function LavorazioniView() {
             primaryAction={
               <button
                 type="button"
-                onClick={() => setCreateOpen(true)}
+                onClick={openCreateModal}
+                onPointerEnter={primeCreateModal}
                 className={dsPageToolbarCtaCompact}
                 disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}
                 title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : !createdBy ? "Accedi per creare una lavorazione." : undefined}
@@ -1769,10 +1818,10 @@ export function LavorazioniView() {
                             const addetto = addettoLabel(row, schedeStore, defaultAddetto);
                             const addetti = globalOpts.lavorazioni.addetti;
                             return (
-                              <InlineSelectField
-                                tablePill
+                              <AddettoSelectField
+                                variant="pill"
                                 tablePillWidth={lavTablePillFillClass}
-                                tablePillOptions={tablePillOptions.addetto(addetto)}
+                                options={tablePillOptions.addetto(addetto)}
                                 shellClass={addettoPillShellClass()}
                                 shellStyle={addettoPillShellStyleForName(addetto, globalOpts.lavorazioni.addettoColors)}
                                 value={addetto}
@@ -1780,9 +1829,7 @@ export function LavorazioniView() {
                                 ariaLabel={`Addetto — ${macchinaLabel(row, schedeStore)}`}
                                 disabled={loading || !canEditWorkOrders || addetti.length === 0}
                                 title={addetto}
-                              >
-                                <option value={addetto}>{addetto}</option>
-                              </InlineSelectField>
+                              />
                             );
                           })()}
                           </div>
@@ -1900,10 +1947,10 @@ export function LavorazioniView() {
                         const addetto = addettoLabel(row, schedeStore, defaultAddetto);
                         const addetti = globalOpts.lavorazioni.addetti;
                         return (
-                          <InlineSelectField
-                            tablePill
+                          <AddettoSelectField
+                            variant="pill"
                             tablePillWidth={lavTablePillFillClass}
-                            tablePillOptions={tablePillOptions.addetto(addetto)}
+                            options={tablePillOptions.addetto(addetto)}
                             shellClass={addettoPillShellClass()}
                             shellStyle={addettoPillShellStyleForName(addetto, globalOpts.lavorazioni.addettoColors)}
                             value={addetto}
@@ -1911,9 +1958,7 @@ export function LavorazioniView() {
                             ariaLabel={`Addetto — ${macchina}`}
                             disabled={loading || !canEditWorkOrders || addetti.length === 0}
                             title={addetto}
-                          >
-                            <option value={addetto}>{addetto}</option>
-                          </InlineSelectField>
+                          />
                         );
                       })()}
                     </LavMobileInlineField>
@@ -2353,12 +2398,14 @@ export function LavorazioniView() {
         />
       ) : null}
 
+      {canEditWorkOrders && createModalWarm ? (
       <LavorazioneCreateModal
-        key={createOpen ? "lav-create-open" : "lav-create-closed"}
         open={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={closeCreateModal}
         createdBy={createdBy}
         mezzi={mezziCatalog}
+        sharedGlobalOpts={globalOpts}
+        sharedMezziCatalog={mezziCatalog}
         schedeStore={schedeStore}
         attive={attiveLegacyRows}
         storico={storicoLegacyRows}
@@ -2367,6 +2414,7 @@ export function LavorazioniView() {
           flashRow(id);
         }}
       />
+      ) : null}
 
       <LavorazioneConcludiConfirmDialog
         open={concludiConfirmRow != null}

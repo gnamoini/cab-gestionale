@@ -18,6 +18,10 @@ type GestionaleFileInputProps = {
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   showInlineStatus?: boolean;
   statusClassName?: string;
+  /** Wrapper esterno (default colonna); usare es. `shrink-0` in gallerie orizzontali. */
+  wrapperClassName?: string;
+  /** In slot quadrato: solo spinner durante upload, senza testo. */
+  busyIconOnly?: boolean;
 };
 
 /**
@@ -36,23 +40,35 @@ export function GestionaleFileInput({
   onChange,
   showInlineStatus = true,
   statusClassName,
+  wrapperClassName = "flex min-w-0 flex-col gap-2",
+  busyIconOnly = false,
 }: GestionaleFileInputProps) {
   const inputId = useId();
   const busy = phase === "uploading";
   const inputDisabled = disabled || busy;
 
   return (
-    <div className="flex min-w-0 flex-col gap-2">
+    <div className={wrapperClassName}>
       <label
         htmlFor={inputId}
         title={title}
         className={`${buttonClassName ?? dsBtnNeutral} ${inputDisabled ? `cursor-wait opacity-60 ${dsDisabled}` : "cursor-pointer"}`}
       >
         {busy ? (
-          <span className="inline-flex items-center gap-1.5">
-            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]" aria-hidden />
-            Caricamento…
-          </span>
+          busyIconOnly ? (
+            <>
+              <span
+                className="h-4 w-4 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]"
+                aria-hidden
+              />
+              <span className="sr-only">Caricamento…</span>
+            </>
+          ) : (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[color:color-mix(in_srgb,var(--cab-border)_90%,transparent)] border-t-[var(--cab-primary)]" aria-hidden />
+              Caricamento…
+            </span>
+          )
         ) : (
           buttonLabel
         )}

@@ -15,7 +15,7 @@ assert.equal(byKey["X-Content-Type-Options"], "nosniff");
 assert.equal(byKey["X-Frame-Options"], "SAMEORIGIN");
 assert.equal(byKey["Referrer-Policy"], "strict-origin-when-cross-origin");
 assert.equal(byKey["X-DNS-Prefetch-Control"], "on");
-assert.match(byKey["Permissions-Policy"], /camera=\(\)/);
+assert.match(byKey["Permissions-Policy"], /camera=\(self\)/);
 assert.ok(byKey["Content-Security-Policy"], "CSP must be set");
 
 const csp = buildContentSecurityPolicy();

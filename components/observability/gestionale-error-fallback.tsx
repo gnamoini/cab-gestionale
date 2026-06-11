@@ -1,20 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   AuthStandalonePageShell,
 } from "@/components/gestionale/auth-standalone-page";
 import { ErrorPageCard } from "@/components/observability/error-page-card";
-import {
-  useAccessibleQuickNavLinks,
-  useSafeGestionaleHomeLink,
-} from "@/components/observability/use-safe-gestionale-home-link";
+import { useSafeGestionaleHomeLink } from "@/components/observability/use-safe-gestionale-home-link";
 import {
   buildTechnicalDetail,
   friendlyDescription,
 } from "@/lib/observability/error-message-humanize";
-import { dsFocus } from "@/lib/ui/design-system";
 
 export type GestionaleErrorFallbackProps = {
   variant: "root" | "gestionale" | "global";
@@ -22,28 +17,6 @@ export type GestionaleErrorFallbackProps = {
   digest?: string;
   onRetry?: () => void;
 };
-
-function QuickNavLinks() {
-  const { links, ready } = useAccessibleQuickNavLinks({ max: 3 });
-
-  if (!ready || links.length === 0) return null;
-
-  return (
-    <p className="text-xs text-[color:var(--cab-text-muted)]">
-      {links.map((link, index) => (
-        <span key={link.href}>
-          {index > 0 ? <span aria-hidden> · </span> : null}
-          <Link
-            href={link.href}
-            className={`font-medium text-[color:var(--cab-text-muted)] underline-offset-2 hover:text-[color:var(--cab-text)] hover:underline ${dsFocus}`}
-          >
-            {link.label}
-          </Link>
-        </span>
-      ))}
-    </p>
-  );
-}
 
 function GestionaleEmbeddedError({
   description,
@@ -79,7 +52,6 @@ function GestionaleEmbeddedError({
         safeExitHref={safeHome.href}
         safeExitLabel={safeHome.label}
         safeExitReady={safeHome.ready}
-        footer={<QuickNavLinks />}
       />
     </div>
   );

@@ -38,7 +38,10 @@ import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { FileEsternoBadge, SchedaStatoBadge } from "@/components/lavorazioni/schede/schede-badges";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { GestionaleUnsavedChangesDialog } from "@/components/gestionale/gestionale-unsaved-changes-dialog";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import {
+  RicambiMagSearchPortal,
+  RicambioRowAutocompletePortal,
+} from "@/lib/selector-core/legacy-selector-adapters";
 import { applyMagazzinoScaricoDaScheda } from "@/lib/magazzino/apply-scarico-da-scheda";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -1218,7 +1221,7 @@ export function SchedeLavorazioneModal({
                   </div>
                 </div>
               </section>
-              <GestionaleInfoCard title="Storico mezzo">
+              <GestionaleInfoCard title="Storico mezzo" collapsible defaultCollapsed>
                 <p className="mb-3 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
                   Preventivi con gli stessi identificativi del mezzo (targa, matricola o scuderia).
                 </p>
@@ -1250,7 +1253,7 @@ export function SchedeLavorazioneModal({
                 onImageEvent={() => void hubQuery.refetch()}
                 onDocumentEvent={() => void hubQuery.refetch()}
               />
-              <GestionaleInfoCard title="Archivio mezzo">
+              <GestionaleInfoCard title="Archivio mezzo" collapsible defaultCollapsed>
                 <p className="mb-3 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
                   Documenti generici associati al mezzo in anagrafica.
                 </p>
@@ -1585,8 +1588,8 @@ function SchedaDayField({
 function SchedaEditorBottomSave({ readOnly, onSave }: { readOnly: boolean; onSave: () => void }) {
   if (readOnly) return null;
   return (
-    <div className="flex justify-end border-t border-[color:var(--cab-border)] pt-3">
-      <button type="button" className={dsBtnPrimary} onClick={onSave}>
+    <div className="flex justify-end pt-3">
+      <button type="button" className={`${dsBtnPrimary} min-h-11`} onClick={onSave}>
         Salva scheda
       </button>
     </div>
@@ -1858,17 +1861,6 @@ function RicambiPanel({
       .slice(0, 16);
   }, [magSearch, prodotti]);
 
-  useEffect(() => {
-    if (!magSearchOpen) return;
-    function onDoc(ev: MouseEvent) {
-      const t = ev.target;
-      if (t instanceof Element && t.closest("[data-ricambi-mag-search='1']")) return;
-      setMagSearchOpen(false);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [magSearchOpen]);
-
   function addRicambioFromMag(p: RicambioMagazzino) {
     if (doc.campi.righe.some((r) => r.ricambioId === p.id)) {
       gestToast.validation("Ricambio già presente in scheda.");
@@ -1889,17 +1881,6 @@ function RicambiPanel({
     setMagSearch("");
     setMagSearchOpen(false);
   }
-
-  useEffect(() => {
-    if (!acRowId) return;
-    function onDoc(ev: MouseEvent) {
-      const t = ev.target;
-      if (t instanceof Element && t.closest("tr[data-ricambi-ac-open='1']")) return;
-      setAcRowId(null);
-    }
-    document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [acRowId]);
 
   function patchRighe(righe: RigaRicambioScheda[]) {
     setDoc({ ...doc, campi: { ...doc.campi, righe } });
@@ -1990,43 +1971,16 @@ function RicambiPanel({
         <span className="font-medium text-[color:var(--cab-text)]">{identLine}</span>
       </p>
       {!ro ? (
-        <div className="relative max-w-xl max-md:overflow-visible" data-ricambi-mag-search="1">
-          <GestionaleSearchField
-            wrapperClassName="w-full"
-            placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-            value={magSearch}
-            onChange={(e) => {
-              setMagSearch(e.target.value);
-              setMagSearchOpen(true);
-            }}
-            onFocus={() => setMagSearchOpen(true)}
-            autoComplete="off"
-            aria-label="Cerca ricambio in magazzino per nome o codice"
-          />
-          {magSearchOpen && magSearch.trim() && magSearchHits.length > 0 ? (
-            <ul data-cab-ios-no-focus-scroll className="absolute left-0 right-0 top-full z-[90] mt-1 max-h-52 overflow-y-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] py-1 text-[11px] shadow-lg">
-              {magSearchHits.map((p) => (
-                <li key={p.id}>
-                  <button
-                    type="button"
-                    className="flex w-full flex-col px-3 py-2 text-left hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] dark:hover:bg-orange-950/30"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => addRicambioFromMag(p)}
-                  >
-                    <span className="font-medium text-[color:var(--cab-text)]">{p.descrizione || "—"}</span>
-                    <span className="text-[color:var(--cab-text-muted)]">
-                      {p.codiceFornitoreOriginale || "—"} · {p.marca || "—"}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : magSearchOpen && magSearch.trim().length >= 1 && magSearchHits.length === 0 ? (
-            <p className="absolute left-0 right-0 top-full z-[90] mt-1 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 py-2 text-[11px] text-[color:var(--cab-text-muted)] shadow-lg">
-              Nessun ricambio trovato.
-            </p>
-          ) : null}
-        </div>
+        <RicambiMagSearchPortal
+          value={magSearch}
+          onChange={setMagSearch}
+          open={magSearchOpen}
+          onOpenChange={setMagSearchOpen}
+          hits={magSearchHits}
+          onSelect={addRicambioFromMag}
+          placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
+          ariaLabel="Cerca ricambio in magazzino per nome o codice"
+        />
       ) : null}
       <div className={`${dsTableWrap} ${dsScrollbar}`}>
         <table className={`${dsTable} text-xs`}>
@@ -2048,52 +2002,36 @@ function RicambiPanel({
                     {ro ? (
                       <span>{r.ricambioNome || "—"}</span>
                     ) : (
-                      <div className="relative max-md:overflow-visible">
-                        <input
-                          className={`${dsInput} !py-1.5 !text-xs`}
-                          value={r.ricambioNome}
-                          onChange={(e) => {
-                            const v = e.target.value;
-                            patchRighe(doc.campi.righe.map((x) => (x.id === r.id ? { ...x, ricambioNome: v } : x)));
-                            setAcRowId(r.id);
-                          }}
-                          onFocus={() => setAcRowId(r.id)}
-                          placeholder="Nome / descrizione"
-                        />
-                        {sug.length > 0 ? (
-                          <ul data-cab-ios-no-focus-scroll className="absolute left-0 top-full z-[80] mt-0.5 max-h-48 min-w-full overflow-y-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] py-1 text-[11px] shadow-lg">
-                            {sug.map((p) => (
-                              <li key={p.id}>
-                                <button
-                                  type="button"
-                                  className="flex w-full flex-col px-2 py-1.5 text-left hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]"
-                                  onMouseDown={(e) => e.preventDefault()}
-                                  onClick={() => {
-                                    patchRighe(
-                                      doc.campi.righe.map((x) =>
-                                        x.id === r.id
-                                          ? {
-                                              ...x,
-                                              ricambioId: p.id,
-                                              ricambioNome: p.descrizione ?? "",
-                                              codice: p.codiceFornitoreOriginale ?? "",
-                                            }
-                                          : x,
-                                      ),
-                                    );
-                                    setAcRowId(null);
-                                  }}
-                                >
-                                  <span className="font-medium text-[color:var(--cab-text)]">{p.descrizione}</span>
-                                  <span className="text-[color:var(--cab-text-muted)]">
-                                    {p.marca} · {p.codiceFornitoreOriginale}
-                                  </span>
-                                </button>
-                              </li>
-                            ))}
-                          </ul>
-                        ) : null}
-                      </div>
+                      <RicambioRowAutocompletePortal
+                        value={r.ricambioNome}
+                        onChange={(v) => {
+                          patchRighe(doc.campi.righe.map((x) => (x.id === r.id ? { ...x, ricambioNome: v } : x)));
+                          setAcRowId(r.id);
+                        }}
+                        open={acRowId === r.id}
+                        onOpenChange={(next) => setAcRowId(next ? r.id : null)}
+                        suggestions={sug.map((p) => ({
+                          id: p.id,
+                          descrizione: p.descrizione ?? "",
+                          marca: p.marca ?? "",
+                          codiceFornitoreOriginale: p.codiceFornitoreOriginale ?? "",
+                        }))}
+                        onSelect={(p) => {
+                          patchRighe(
+                            doc.campi.righe.map((x) =>
+                              x.id === r.id
+                                ? {
+                                    ...x,
+                                    ricambioId: p.id,
+                                    ricambioNome: p.descrizione,
+                                    codice: p.codiceFornitoreOriginale,
+                                  }
+                                : x,
+                            ),
+                          );
+                          setAcRowId(null);
+                        }}
+                      />
                     )}
                   </td>
                   <td className="px-2 py-2 align-top">

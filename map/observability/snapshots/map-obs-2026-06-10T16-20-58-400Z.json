@@ -1,0 +1,62 @@
+{
+  "timestamp": 1781108458400,
+  "classification": {
+    "tierDistribution": {
+      "1": 44,
+      "2": 1,
+      "3": 25,
+      "0B": 95
+    },
+    "confidenceDistribution": {
+      "0.80-0.89": 23,
+      "0.70-0.79": 63,
+      "below_0.65": 69,
+      "0.65-0.69": 9,
+      "0.90-1.00": 1
+    }
+  },
+  "eligibility": {
+    "includeRate": 0.05454545454545454,
+    "excludeRate": 0.9454545454545454,
+    "holdRate": 0
+  },
+  "waves": {
+    "waveEfficiency": 0.056,
+    "inclusionRate": 0.056,
+    "rejectionRate": 0.019,
+    "byWave": {
+      "1": {
+        "candidates": 9,
+        "excluded": 3,
+        "versionSkips": 0
+      },
+      "2": {
+        "candidates": 0,
+        "excluded": 0,
+        "versionSkips": 0
+      },
+      "3": {
+        "candidates": 0,
+        "excluded": 0,
+        "versionSkips": 0
+      },
+      "4": {
+        "candidates": 0,
+        "excluded": 0,
+        "versionSkips": 0
+      }
+    }
+  },
+  "versions": {
+    "mapVersion": 1,
+    "compatibilityBreakdown": {
+      "CURRENT": 165
+    },
+    "versionDriftIndex": 0
+  },
+  "stability": {
+    "tier0bStabilityScoreAvg": 0.776,
+    "driftTrend": "stable"
+  },
+  "insights": []
+}

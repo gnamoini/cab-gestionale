@@ -225,6 +225,7 @@ export function MezziHubDetailModal({
       modalSize="formLarge"
       onRequestClose={onClose}
       titleId="mezzi-hub-title"
+      footer={footerNode ?? undefined}
       header={
         <LavorazioniModalHeader
           title={mezzoTitolo || "Mezzo"}
@@ -342,6 +343,7 @@ export function MezziHubDetailModal({
             recordId={mezzo.id}
             title="Foto mezzo"
             hubCardLayout
+            hubCardShowTitle
             canEdit={canEdit && !mezzo.hubSynthetic}
             onImageEvent={() => void hubQuery.refetch()}
           />
@@ -351,6 +353,8 @@ export function MezziHubDetailModal({
           <GestionaleInfoCard
             title="Lavorazioni collegate"
             subtitle={`${sortedLav.length} ${sortedLav.length === 1 ? "record" : "record"}`}
+            collapsible
+            defaultCollapsed={sortedLav.length === 0}
             actions={
               sortedLav.length > 0 ? (
                 <Link
@@ -417,7 +421,12 @@ export function MezziHubDetailModal({
         ) : null}
 
         {tab === "timeline" ? (
-          <GestionaleInfoCard title="Timeline" subtitle={`${timeline.length} eventi ordinati per data`}>
+          <GestionaleInfoCard
+            title="Timeline"
+            subtitle={`${timeline.length} eventi ordinati per data`}
+            collapsible
+            defaultCollapsed={timeline.length === 0}
+          >
             {pagedTimeline.length === 0 ? (
               <MezziHubTabEmpty message="Nessun evento in timeline per questo mezzo." />
             ) : (
@@ -465,7 +474,12 @@ export function MezziHubDetailModal({
         ) : null}
 
         {tab === "preventivi" ? (
-          <GestionaleInfoCard title="Preventivi" subtitle={`${sortedPv.length} collegati al mezzo`}>
+          <GestionaleInfoCard
+            title="Preventivi"
+            subtitle={`${sortedPv.length} collegati al mezzo`}
+            collapsible
+            defaultCollapsed={sortedPv.length === 0}
+          >
             {sortedPv.length === 0 ? (
               <MezziHubTabEmpty message="Nessun preventivo collegato a questo mezzo." />
             ) : (
@@ -513,7 +527,12 @@ export function MezziHubDetailModal({
         ) : null}
 
         {tab === "documenti" ? (
-          <GestionaleInfoCard title="Documenti" subtitle={`${documenti.length} file collegati`}>
+          <GestionaleInfoCard
+            title="Documenti"
+            subtitle={`${documenti.length} file collegati`}
+            collapsible
+            defaultCollapsed={documenti.length === 0}
+          >
             {documenti.length === 0 ? (
               <MezziHubTabEmpty message="Nessun documento collegato a questo mezzo." />
             ) : (
@@ -551,7 +570,12 @@ export function MezziHubDetailModal({
         ) : null}
 
         {tab === "log" ? (
-          <GestionaleInfoCard title="Log anagrafica" subtitle={`${hubLogEntries.length} eventi`}>
+          <GestionaleInfoCard
+            title="Log anagrafica"
+            subtitle={`${hubLogEntries.length} eventi`}
+            collapsible
+            defaultCollapsed
+          >
             {hubQuery.isLoading && !hubData ? (
               <p className="text-sm text-[color:var(--cab-text-muted)]">Caricamento log…</p>
             ) : hubLogEntries.length === 0 ? (
@@ -590,10 +614,6 @@ export function MezziHubDetailModal({
           </GestionaleInfoCard>
         ) : null}
       </GestionaleModalScrollBody>
-
-      {footerNode ? (
-        <div className="shrink-0 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">{footerNode}</div>
-      ) : null}
     </LavorazioniModalShell>
   );
 }

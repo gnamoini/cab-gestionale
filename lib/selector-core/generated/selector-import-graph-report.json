@@ -1,0 +1,1146 @@
+{
+  "generatedAt": "2026-06-11T04:32:01.615Z",
+  "fileCount": 72,
+  "nodes": {
+    "lib/selector-core/build-selector-context.ts": {
+      "imports": [
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/resolve-selector-surface.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/derive-query-surface.ts": {
+      "imports": [
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/index.ts": {
+      "imports": [
+        "lib/selector-core/types.ts",
+        "lib/selector-core/selector-rank.ts",
+        "lib/selector-core/selector-recents-store.ts",
+        "lib/selector-core/resolve-selector-suggestions.ts",
+        "lib/selector-core/select-option-atomic.ts",
+        "lib/selector-core/selector-engine-config.ts",
+        "lib/selector-core/selector-decision-engine.ts",
+        "lib/selector-core/build-selector-context.ts",
+        "lib/selector-core/selector-safe-fallback.ts",
+        "lib/selector-core/selector-decision-trace.ts",
+        "lib/selector-core/selector-telemetry-bridge.ts",
+        "lib/selector-core/selector-telemetry.ts",
+        "lib/selector-core/selector-config-promotion-registry.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/selector-snapshot-atomic-switch.ts",
+        "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+        "lib/selector-core/selector-snapshot-semantic-validator.ts",
+        "lib/selector-core/selector-distributed-pointer-guard.ts",
+        "lib/selector-core/selector-snapshot-gc-policy.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts",
+        "lib/selector-core/selector-snapshot-pruner.ts",
+        "lib/selector-core/selector-bundle-registry-consistency-check.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-api-usage-enforcer.ts",
+        "lib/selector-core/selector-observation-registry.ts",
+        "lib/selector-core/selector-debug-dsl-engine.ts",
+        "lib/selector-core/selector-debug-observation.ts",
+        "lib/selector-core/selector-debug-dsl-registry.ts",
+        "lib/selector-core/selector-observation-registry-builder.ts",
+        "lib/selector-core/selector-explanation-kernel.ts",
+        "lib/selector-core/selector-architecture-time-machine.ts",
+        "lib/selector-core/selector-observation-ranking-engine.ts",
+        "lib/selector-core/selector-build-dependency-guard.ts",
+        "lib/selector-core/selector-runtime-version-resolver.ts",
+        "lib/selector-core/selector-runtime-snapshot-revalidator.ts",
+        "lib/selector-core/selector-runtime-sanity-guard.ts",
+        "lib/selector-core/selector-explainability.ts",
+        "lib/selector-core/selector-determinism-gate.ts",
+        "lib/selector-core/selector-determinism-gate-audit.ts",
+        "lib/selector-core/selector-unified-snapshot-index.ts",
+        "lib/selector-core/selector-runtime-context-snapshot.ts",
+        "lib/selector-core/selector-distributed-checkpoint-manager.ts",
+        "lib/selector-core/selector-snapshot-registry.ts",
+        "lib/selector-core/selector-config-enforcer.ts",
+        "lib/selector-core/selector-hard-guardrails.ts",
+        "lib/selector-core/selector-domain-policy.ts",
+        "lib/selector-core/selector-usage-scan.ts",
+        "lib/selector-core/legacy-selector-adapters.ts",
+        "lib/selector-core/derive-query-surface.ts"
+      ],
+      "importedBy": [],
+      "brokenImports": []
+    },
+    "lib/selector-core/legacy-selector-adapters.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/resolve-selector-suggestions.ts": {
+      "imports": [
+        "lib/selector-core/selector-rank.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/resolve-selector-surface.ts": {
+      "imports": [
+        "lib/selector-core/build-selector-context.ts",
+        "lib/selector-core/selector-decision-engine.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [],
+      "brokenImports": []
+    },
+    "lib/selector-core/select-option-atomic.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-ab-simulator.ts": {
+      "imports": [
+        "lib/selector-core/selector-engine-config.ts",
+        "lib/selector-core/selector-telemetry.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-adaptive-analyzer.ts": {
+      "imports": [
+        "lib/selector-core/selector-adaptive-rules.ts",
+        "lib/selector-core/selector-telemetry-aggregator.ts",
+        "lib/selector-core/selector-telemetry.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-adaptive-rules.ts": {
+      "imports": [
+        "lib/selector-core/selector-telemetry-aggregator.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-adaptive-analyzer.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-api-enforcer-report.ts": {
+      "imports": [
+        "lib/selector-core/selector-api-surface-registry.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-api-usage-enforcer.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-enforcement-ruleset.ts",
+        "lib/selector-core/selector-system-canonical-artifacts.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-api-surface-registry.ts": {
+      "imports": [
+        "lib/selector-core/selector-enforcement-ruleset.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-api-enforcer-report.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-api-usage-enforcer.ts": {
+      "imports": [
+        "lib/selector-core/selector-api-enforcer-report.ts",
+        "lib/selector-core/selector-enforcement-ruleset.ts",
+        "lib/selector-core/selector-system-canonical-artifacts.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-architecture-time-machine.ts": {
+      "imports": [
+        "lib/selector-core/selector-enforcement-ruleset.ts",
+        "lib/selector-core/selector-snapshot-registry.ts",
+        "lib/selector-core/selector-core-causal-model.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-debug-dsl-engine.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-build-dependency-guard.ts": {
+      "imports": [
+        "lib/selector-core/selector-snapshot-atomic-switch.ts",
+        "lib/selector-core/selector-bundle-registry-consistency-check.ts",
+        "lib/selector-core/selector-snapshot-pruner.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-build-orchestrator.ts": {
+      "imports": [
+        "lib/selector-core/selector-distributed-checkpoint-manager.ts",
+        "lib/selector-core/selector-bundle-registry-consistency-check.ts",
+        "lib/selector-core/selector-build-dependency-guard.ts",
+        "lib/selector-core/selector-distributed-pointer-guard.ts",
+        "lib/selector-core/selector-snapshot-atomic-switch.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts",
+        "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+        "lib/selector-core/selector-snapshot-pruner.ts",
+        "lib/selector-core/selector-snapshot-gc-policy.ts",
+        "lib/selector-core/selector-snapshot-semantic-validator.ts",
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/selector-snapshot-registry.ts",
+        "lib/selector-core/selector-determinism-gate-audit.ts",
+        "lib/selector-core/selector-determinism-gate.ts",
+        "lib/selector-core/selector-api-usage-enforcer.ts",
+        "lib/selector-core/selector-api-enforcer-report.ts",
+        "lib/selector-core/selector-enforcement-ruleset.ts",
+        "lib/selector-core/types.ts",
+        "lib/selector-core/selector-debug-observation.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-bundle-registry-consistency-check.ts": {
+      "imports": [
+        "lib/selector-core/selector-snapshot-atomic-switch.ts",
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-dependency-guard.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-causal-model-interface.ts": {
+      "imports": [
+        "lib/selector-core/selector-core-causal-model.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-causal-semantic-router.ts",
+        "lib/selector-core/selector-explainability.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-causal-semantic-router.ts": {
+      "imports": [
+        "lib/selector-core/selector-causal-model-interface.ts",
+        "lib/selector-core/selector-core-causal-model.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-cognitive-surface-metrics.ts",
+        "lib/selector-core/selector-explainability.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-cognitive-surface-metrics.ts": {
+      "imports": [
+        "lib/selector-core/selector-causal-semantic-router.ts",
+        "lib/selector-core/selector-core-causal-model.ts"
+      ],
+      "importedBy": [],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-confidence-model.ts": {
+      "imports": [
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-insight-promotion-engine.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-config-enforcer.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/selector-config-promotion-registry.ts",
+        "lib/selector-core/selector-snapshot-atomic-switch.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-config-promotion-registry.ts": {
+      "imports": [
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-config-enforcer.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-config-runtime-loader.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/selector-fallback-trace.ts",
+        "lib/selector-core/selector-distributed-pointer-guard.ts",
+        "lib/selector-core/selector-determinism-gate.ts",
+        "lib/selector-core/selector-runtime-context-snapshot.ts",
+        "lib/selector-core/selector-runtime-sanity-guard.ts",
+        "lib/selector-core/selector-runtime-snapshot-revalidator.ts",
+        "lib/selector-core/selector-runtime-version-resolver.ts",
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/selector-unified-snapshot-index.ts",
+        "lib/selector-core/types.ts",
+        "lib/selector-core/generated/selector-snapshot-registry.generated.ts",
+        "lib/selector-core/generated/selector-rollback-registry.generated.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-decision-engine.ts",
+        "lib/selector-core/selector-engine-config.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-config-snapshot.ts": {
+      "imports": [
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-config-enforcer.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-explainability.ts",
+        "lib/selector-core/selector-fallback-trace.ts",
+        "lib/selector-core/selector-runtime-sanity-guard.ts",
+        "lib/selector-core/selector-runtime-snapshot-revalidator.ts",
+        "lib/selector-core/selector-runtime-version-resolver.ts",
+        "lib/selector-core/selector-snapshot-registry.ts",
+        "lib/selector-core/selector-snapshot-semantic-validator.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-core-causal-model.ts": {
+      "imports": [
+        "lib/selector-core/selector-decision-trace.ts",
+        "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+        "lib/selector-core/selector-snapshot-pruner.ts",
+        "lib/selector-core/selector-runtime-context-snapshot.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-architecture-time-machine.ts",
+        "lib/selector-core/selector-causal-model-interface.ts",
+        "lib/selector-core/selector-causal-semantic-router.ts",
+        "lib/selector-core/selector-cognitive-surface-metrics.ts",
+        "lib/selector-core/selector-explainability.ts",
+        "lib/selector-core/selector-snapshot-gc-policy.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-debug-dsl-engine.ts": {
+      "imports": [
+        "lib/selector-core/selector-debug-dsl-registry.ts",
+        "lib/selector-core/selector-architecture-time-machine.ts",
+        "lib/selector-core/selector-explanation-kernel.ts",
+        "lib/selector-core/selector-observation-ranking-engine.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-debug-dsl-registry.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-debug-dsl-engine.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-debug-observation.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-decision-engine.ts": {
+      "imports": [
+        "lib/selector-core/selector-telemetry-bridge.ts",
+        "lib/selector-core/selector-safe-fallback.ts",
+        "lib/selector-core/selector-fallback-trace.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-engine-config.ts",
+        "lib/selector-core/selector-thresholds.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/resolve-selector-surface.ts",
+        "lib/selector-core/selector-domain-policy.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-decision-trace.ts": {
+      "imports": [
+        "lib/selector-core/selector-engine-config.ts",
+        "lib/selector-core/selector-fallback-trace.ts",
+        "lib/selector-core/selector-runtime-context-snapshot.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-core-causal-model.ts",
+        "lib/selector-core/selector-explainability.ts",
+        "lib/selector-core/selector-telemetry-bridge.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-determinism-gate-audit.ts": {
+      "imports": [
+        "lib/selector-core/selector-distributed-checkpoint-manager.ts",
+        "lib/selector-core/selector-determinism-gate.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-determinism-gate.ts": {
+      "imports": [
+        "lib/selector-core/selector-runtime-context-snapshot.ts",
+        "lib/selector-core/selector-unified-snapshot-index.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-determinism-gate-audit.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-distributed-checkpoint-manager.ts": {
+      "imports": [
+        "lib/selector-core/selector-snapshot-atomic-switch.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-determinism-gate-audit.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-distributed-pointer-guard.ts": {
+      "imports": [
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-snapshot-atomic-switch.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-domain-policy.ts": {
+      "imports": [
+        "lib/selector-core/types.ts",
+        "lib/selector-core/selector-decision-engine.ts",
+        "lib/selector-core/selector-engine-config.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-enforcement-boundary-guard.ts": {
+      "imports": [],
+      "importedBy": [],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-enforcement-ruleset.ts": {
+      "imports": [
+        "lib/selector-core/selector-api-enforcer-report.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-api-surface-registry.ts",
+        "lib/selector-core/selector-api-usage-enforcer.ts",
+        "lib/selector-core/selector-architecture-time-machine.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-system-canonical-artifacts.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-engine-config.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-runtime-loader.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-ab-simulator.ts",
+        "lib/selector-core/selector-decision-engine.ts",
+        "lib/selector-core/selector-decision-trace.ts",
+        "lib/selector-core/selector-domain-policy.ts",
+        "lib/selector-core/selector-safe-fallback.ts",
+        "lib/selector-core/selector-telemetry.ts",
+        "lib/selector-core/selector-thresholds.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-explainability.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/selector-causal-semantic-router.ts",
+        "lib/selector-core/selector-core-causal-model.ts",
+        "lib/selector-core/selector-causal-model-interface.ts",
+        "lib/selector-core/selector-decision-trace.ts",
+        "lib/selector-core/selector-fallback-trace.ts",
+        "lib/selector-core/selector-runtime-context-snapshot.ts",
+        "lib/selector-core/selector-snapshot-gc-policy.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-explanation-kernel.ts": {
+      "imports": [
+        "lib/selector-core/selector-observation-registry.ts",
+        "lib/selector-core/selector-observation-ranking-engine.ts",
+        "lib/selector-core/selector-observation-types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-debug-dsl-engine.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-fallback-trace.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/selector-runtime-sanity-guard.ts",
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-decision-engine.ts",
+        "lib/selector-core/selector-decision-trace.ts",
+        "lib/selector-core/selector-explainability.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-hard-guardrails.ts": {
+      "imports": [
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-insight-promotion-engine.ts": {
+      "imports": [
+        "lib/selector-core/selector-confidence-model.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-observation-ranking-engine.ts": {
+      "imports": [
+        "lib/selector-core/selector-observation-registry.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-debug-dsl-engine.ts",
+        "lib/selector-core/selector-explanation-kernel.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-observation-registry-builder.ts": {
+      "imports": [
+        "lib/selector-core/selector-observation-types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-observation-registry.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-observation-registry.ts": {
+      "imports": [
+        "lib/selector-core/generated/selector-observation-registry.generated.ts",
+        "lib/selector-core/selector-observation-registry-builder.ts",
+        "lib/selector-core/selector-observation-types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-explanation-kernel.ts",
+        "lib/selector-core/selector-observation-ranking-engine.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-observation-types.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/selector-explanation-kernel.ts",
+        "lib/selector-core/selector-observation-registry-builder.ts",
+        "lib/selector-core/selector-observation-registry.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-post-apply-validator.ts": {
+      "imports": [
+        "lib/selector-core/selector-telemetry-aggregator.ts",
+        "lib/selector-core/selector-telemetry.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-rank.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/resolve-selector-suggestions.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-recents-store.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-runtime-context-snapshot.ts": {
+      "imports": [
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-core-causal-model.ts",
+        "lib/selector-core/selector-decision-trace.ts",
+        "lib/selector-core/selector-determinism-gate.ts",
+        "lib/selector-core/selector-explainability.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-runtime-sanity-guard.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/selector-runtime-snapshot-revalidator.ts",
+        "lib/selector-core/selector-runtime-version-resolver.ts",
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-fallback-trace.ts",
+        "lib/selector-core/selector-runtime-snapshot-revalidator.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-runtime-snapshot-revalidator.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/selector-runtime-sanity-guard.ts",
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-runtime-sanity-guard.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-runtime-version-resolver.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-snapshot.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-runtime-sanity-guard.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-safe-fallback.ts": {
+      "imports": [
+        "lib/selector-core/selector-engine-config.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-decision-engine.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-snapshot-atomic-switch.ts": {
+      "imports": [
+        "lib/selector-core/types.ts",
+        "lib/selector-core/selector-distributed-pointer-guard.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-dependency-guard.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-bundle-registry-consistency-check.ts",
+        "lib/selector-core/selector-config-enforcer.ts",
+        "lib/selector-core/selector-distributed-checkpoint-manager.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts",
+        "lib/selector-core/selector-snapshot-registry.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-snapshot-bundle-sync.ts": {
+      "imports": [
+        "lib/selector-core/selector-bundle-registry-consistency-check.ts",
+        "lib/selector-core/selector-snapshot-atomic-switch.ts",
+        "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+        "lib/selector-core/selector-snapshot-pruner.ts",
+        "lib/selector-core/selector-snapshot-registry.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-config-enforcer.ts",
+        "lib/selector-core/selector-snapshot-registry.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-snapshot-gc-policy.ts": {
+      "imports": [
+        "lib/selector-core/selector-core-causal-model.ts",
+        "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-explainability.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-snapshot-lifecycle-manager.ts": {
+      "imports": [
+        "lib/selector-core/selector-snapshot-pruner.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-core-causal-model.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts",
+        "lib/selector-core/selector-snapshot-gc-policy.ts",
+        "lib/selector-core/selector-snapshot-pruner.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-snapshot-pruner.ts": {
+      "imports": [
+        "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-dependency-guard.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-core-causal-model.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts",
+        "lib/selector-core/selector-snapshot-lifecycle-manager.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-snapshot-registry.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/selector-snapshot-atomic-switch.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts",
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/selector-snapshot-semantic-validator.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-architecture-time-machine.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-snapshot-schema-validator.ts": {
+      "imports": [
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-bundle-registry-consistency-check.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-fallback-trace.ts",
+        "lib/selector-core/selector-runtime-context-snapshot.ts",
+        "lib/selector-core/selector-runtime-sanity-guard.ts",
+        "lib/selector-core/selector-runtime-snapshot-revalidator.ts",
+        "lib/selector-core/selector-snapshot-registry.ts",
+        "lib/selector-core/selector-unified-snapshot-index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-snapshot-semantic-validator.ts": {
+      "imports": [
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-snapshot-registry.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-system-canonical-artifacts.ts": {
+      "imports": [
+        "lib/selector-core/selector-api-enforcer-report.ts",
+        "lib/selector-core/selector-enforcement-ruleset.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-api-usage-enforcer.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-telemetry-aggregator.ts": {
+      "imports": [
+        "lib/selector-core/selector-telemetry.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-adaptive-analyzer.ts",
+        "lib/selector-core/selector-adaptive-rules.ts",
+        "lib/selector-core/selector-post-apply-validator.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-telemetry-bridge.ts": {
+      "imports": [
+        "lib/selector-core/selector-decision-trace.ts",
+        "lib/selector-core/selector-telemetry.ts",
+        "lib/selector-core/selector-thresholds.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-decision-engine.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-telemetry.ts": {
+      "imports": [
+        "lib/selector-core/selector-engine-config.ts",
+        "lib/selector-core/selector-thresholds.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-ab-simulator.ts",
+        "lib/selector-core/selector-adaptive-analyzer.ts",
+        "lib/selector-core/selector-post-apply-validator.ts",
+        "lib/selector-core/selector-telemetry-aggregator.ts",
+        "lib/selector-core/selector-telemetry-bridge.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-thresholds.ts": {
+      "imports": [
+        "lib/selector-core/selector-engine-config.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/selector-decision-engine.ts",
+        "lib/selector-core/selector-telemetry-bridge.ts",
+        "lib/selector-core/selector-telemetry.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-unified-snapshot-index.ts": {
+      "imports": [
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/types.ts"
+      ],
+      "importedBy": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-determinism-gate.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/selector-usage-scan.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/types.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/build-selector-context.ts",
+        "lib/selector-core/derive-query-surface.ts",
+        "lib/selector-core/index.ts",
+        "lib/selector-core/resolve-selector-surface.ts",
+        "lib/selector-core/selector-ab-simulator.ts",
+        "lib/selector-core/selector-adaptive-analyzer.ts",
+        "lib/selector-core/selector-adaptive-rules.ts",
+        "lib/selector-core/selector-build-dependency-guard.ts",
+        "lib/selector-core/selector-build-orchestrator.ts",
+        "lib/selector-core/selector-bundle-registry-consistency-check.ts",
+        "lib/selector-core/selector-confidence-model.ts",
+        "lib/selector-core/selector-config-enforcer.ts",
+        "lib/selector-core/selector-config-promotion-registry.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-config-snapshot.ts",
+        "lib/selector-core/selector-core-causal-model.ts",
+        "lib/selector-core/selector-decision-engine.ts",
+        "lib/selector-core/selector-decision-trace.ts",
+        "lib/selector-core/selector-determinism-gate.ts",
+        "lib/selector-core/selector-distributed-pointer-guard.ts",
+        "lib/selector-core/selector-domain-policy.ts",
+        "lib/selector-core/selector-explainability.ts",
+        "lib/selector-core/selector-fallback-trace.ts",
+        "lib/selector-core/selector-hard-guardrails.ts",
+        "lib/selector-core/selector-insight-promotion-engine.ts",
+        "lib/selector-core/selector-post-apply-validator.ts",
+        "lib/selector-core/selector-runtime-context-snapshot.ts",
+        "lib/selector-core/selector-runtime-sanity-guard.ts",
+        "lib/selector-core/selector-runtime-snapshot-revalidator.ts",
+        "lib/selector-core/selector-safe-fallback.ts",
+        "lib/selector-core/selector-snapshot-atomic-switch.ts",
+        "lib/selector-core/selector-snapshot-bundle-sync.ts",
+        "lib/selector-core/selector-snapshot-gc-policy.ts",
+        "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+        "lib/selector-core/selector-snapshot-pruner.ts",
+        "lib/selector-core/selector-snapshot-registry.ts",
+        "lib/selector-core/selector-snapshot-schema-validator.ts",
+        "lib/selector-core/selector-snapshot-semantic-validator.ts",
+        "lib/selector-core/selector-telemetry-aggregator.ts",
+        "lib/selector-core/selector-telemetry-bridge.ts",
+        "lib/selector-core/selector-telemetry.ts",
+        "lib/selector-core/selector-thresholds.ts",
+        "lib/selector-core/selector-unified-snapshot-index.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/generated/selector-snapshot-registry.generated.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/selector-config-runtime-loader.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/generated/selector-rollback-registry.generated.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/selector-config-runtime-loader.ts"
+      ],
+      "brokenImports": []
+    },
+    "lib/selector-core/generated/selector-observation-registry.generated.ts": {
+      "imports": [],
+      "importedBy": [
+        "lib/selector-core/selector-observation-registry.ts"
+      ],
+      "brokenImports": []
+    }
+  },
+  "brokenImports": [],
+  "brokenImportCount": 0,
+  "cycles": [
+    [
+      "lib/selector-core/selector-runtime-sanity-guard.ts",
+      "lib/selector-core/selector-runtime-snapshot-revalidator.ts",
+      "lib/selector-core/selector-runtime-sanity-guard.ts"
+    ],
+    [
+      "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+      "lib/selector-core/selector-snapshot-pruner.ts",
+      "lib/selector-core/selector-snapshot-lifecycle-manager.ts"
+    ],
+    [
+      "lib/selector-core/selector-snapshot-bundle-sync.ts",
+      "lib/selector-core/selector-snapshot-registry.ts",
+      "lib/selector-core/selector-snapshot-bundle-sync.ts"
+    ],
+    [
+      "lib/selector-core/selector-api-enforcer-report.ts",
+      "lib/selector-core/selector-api-surface-registry.ts",
+      "lib/selector-core/selector-enforcement-ruleset.ts",
+      "lib/selector-core/selector-api-enforcer-report.ts"
+    ]
+  ],
+  "cycleCount": 4,
+  "hotPathCycles": [],
+  "hotPathCycleCount": 0,
+  "advisoryCycles": [
+    [
+      "lib/selector-core/selector-runtime-sanity-guard.ts",
+      "lib/selector-core/selector-runtime-snapshot-revalidator.ts",
+      "lib/selector-core/selector-runtime-sanity-guard.ts"
+    ],
+    [
+      "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+      "lib/selector-core/selector-snapshot-pruner.ts",
+      "lib/selector-core/selector-snapshot-lifecycle-manager.ts"
+    ],
+    [
+      "lib/selector-core/selector-snapshot-bundle-sync.ts",
+      "lib/selector-core/selector-snapshot-registry.ts",
+      "lib/selector-core/selector-snapshot-bundle-sync.ts"
+    ],
+    [
+      "lib/selector-core/selector-api-enforcer-report.ts",
+      "lib/selector-core/selector-api-surface-registry.ts",
+      "lib/selector-core/selector-enforcement-ruleset.ts",
+      "lib/selector-core/selector-api-enforcer-report.ts"
+    ]
+  ],
+  "unknownCycles": [],
+  "orphanModules": [
+    "lib/selector-core/selector-enforcement-boundary-guard.ts"
+  ],
+  "hotPathReachable": [
+    "components/gestionale/global-input/global-select.tsx",
+    "lib/selector-core/generated/selector-rollback-registry.generated.ts",
+    "lib/selector-core/generated/selector-snapshot-registry.generated.ts",
+    "lib/selector-core/selector-causal-model-interface.ts",
+    "lib/selector-core/selector-causal-semantic-router.ts",
+    "lib/selector-core/selector-config-runtime-loader.ts",
+    "lib/selector-core/selector-config-snapshot.ts",
+    "lib/selector-core/selector-core-causal-model.ts",
+    "lib/selector-core/selector-decision-engine.ts",
+    "lib/selector-core/selector-decision-trace.ts",
+    "lib/selector-core/selector-determinism-gate.ts",
+    "lib/selector-core/selector-distributed-pointer-guard.ts",
+    "lib/selector-core/selector-engine-config.ts",
+    "lib/selector-core/selector-explainability.ts",
+    "lib/selector-core/selector-fallback-trace.ts",
+    "lib/selector-core/selector-runtime-context-snapshot.ts",
+    "lib/selector-core/selector-runtime-sanity-guard.ts",
+    "lib/selector-core/selector-runtime-snapshot-revalidator.ts",
+    "lib/selector-core/selector-runtime-version-resolver.ts",
+    "lib/selector-core/selector-safe-fallback.ts",
+    "lib/selector-core/selector-snapshot-gc-policy.ts",
+    "lib/selector-core/selector-snapshot-lifecycle-manager.ts",
+    "lib/selector-core/selector-snapshot-pruner.ts",
+    "lib/selector-core/selector-snapshot-schema-validator.ts",
+    "lib/selector-core/selector-telemetry-bridge.ts",
+    "lib/selector-core/selector-telemetry.ts",
+    "lib/selector-core/selector-thresholds.ts",
+    "lib/selector-core/selector-unified-snapshot-index.ts",
+    "lib/selector-core/types.ts"
+  ],
+  "deadCode": [
+    {
+      "file": "lib/selector-core/selector-observation-types.ts",
+      "symbol": "ObservationDomainEntry",
+      "kind": "type",
+      "confidence": 95,
+      "reason": "zero_repo_references",
+      "onHotPath": false,
+      "smokeCovered": false
+    },
+    {
+      "file": "lib/selector-core/selector-observation-types.ts",
+      "symbol": "ImportGraphEntry",
+      "kind": "type",
+      "confidence": 95,
+      "reason": "zero_repo_references",
+      "onHotPath": false,
+      "smokeCovered": false
+    },
+    {
+      "file": "lib/selector-core/selector-post-apply-validator.ts",
+      "symbol": "validatePostApplyOutcome",
+      "kind": "function",
+      "confidence": 95,
+      "reason": "zero_repo_references",
+      "onHotPath": false,
+      "smokeCovered": false
+    },
+    {
+      "file": "lib/selector-core/selector-post-apply-validator.ts",
+      "symbol": "countEventsByDomain",
+      "kind": "function",
+      "confidence": 95,
+      "reason": "zero_repo_references",
+      "onHotPath": false,
+      "smokeCovered": false
+    },
+    {
+      "file": "lib/selector-core/legacy-selector-adapters.ts",
+      "symbol": "LEGACY_SELECTOR_ADAPTER_PHASE",
+      "kind": "const",
+      "confidence": 72,
+      "reason": "script_or_test_only",
+      "onHotPath": false,
+      "smokeCovered": false
+    },
+    {
+      "file": "lib/selector-core/resolve-selector-suggestions.ts",
+      "symbol": "ResolveSelectorSuggestionsInput",
+      "kind": "type",
+      "confidence": 72,
+      "reason": "script_or_test_only",
+      "onHotPath": false,
+      "smokeCovered": false
+    },
+    {
+      "file": "lib/selector-core/selector-post-apply-validator.ts",
+      "symbol": "validatePostApplyOutcomes",
+      "kind": "function",
+      "confidence": 72,
+      "reason": "script_or_test_only",
+      "onHotPath": false,
+      "smokeCovered": false
+    },
+    {
+      "file": "lib/selector-core/selector-post-apply-validator.ts",
+      "symbol": "summarizeValidationResults",
+      "kind": "function",
+      "confidence": 72,
+      "reason": "script_or_test_only",
+      "onHotPath": false,
+      "smokeCovered": false
+    }
+  ]
+}

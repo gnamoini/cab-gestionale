@@ -1,393 +1,279 @@
 "use client";
 
-
-
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
 import { LoadingButton } from "@/components/design-system";
-
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
-
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
-
 import { RecordImageManager } from "@/components/gestionale/media/record-image-manager";
-
 import { RicambioFormFields } from "@/components/gestionale/magazzino/ricambio-form-fields";
-
 import { RicambioFormOptionsProvider } from "@/components/gestionale/magazzino/ricambio-form-options-context";
-
+import { RicambioCollapsibleSection } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import { useFormEngine } from "@/lib/forms/form-engine";
-
 import {
-
   emptyRicambioForm,
-
+  ricambioFormHasNoUserInput,
   ricambioFormImportantWarnings,
-
+  ricambioFormIsDirty,
+  RICAMBIO_SAVE_EMPTY_FORM_MESSAGE,
   ricambioFromFormLenient,
-
   ricambioLenientPlaceholderFlags,
-
   validateRicambioListFields,
-
   type RicambioFormState,
-
 } from "@/lib/magazzino/form";
-
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
-
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-
 import { findDuplicateByCodici } from "@/lib/magazzino/duplicates";
-
 import { purgeMagazzinoLogEntriesForRicambioId } from "@/lib/magazzino/magazzino-change-log-storage";
-
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
-
-import { dsModalFormFooter } from "@/lib/ui/design-system";
-
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-
 import { ricambioUiToMagazzinoInsert } from "@/lib/magazzino/magazzino-db-ui-adapter";
-
 import { magazzinoService } from "@/src/services/magazzino.service";
-
 import { ricambioUiFromMagazzinoRow } from "@/lib/magazzino/magazzino-list-cache";
+import {
+  gateBeginSubmit,
+  gateFormSubmit,
+} from "@/lib/form-ux-migration/form-ux-boundary-gate";
+import {
+  clearOverlayBackResync,
+  ensureOverlayBackResync,
+  type OverlayCloseContext,
+} from "@/lib/ui/overlay-back-stack";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 
-
+const RICAMBIO_NEW_FORM_ID = "ricambio-new-form";
 
 export function RicambioNewModal({
-
   marche,
-
   categorie,
-
+  fornitori,
+  produttori,
   mezziListePrefs,
-
   authorName,
-
   prodotti,
-
   magCanCreateRicambio,
-
   onClose,
-
   onSaved,
-
   onSaveError,
-
   onVaiAlRicambioDuplicato,
-
 }: {
-
   marche: string[];
-
   categorie: string[];
-
+  fornitori: string[];
+  produttori: string[];
   mezziListePrefs: MezziListePrefs;
-
   authorName: string;
-
   prodotti: readonly RicambioMagazzino[];
-
   magCanCreateRicambio: boolean;
-
   onClose: () => void;
-
   onSaved: (ui: RicambioMagazzino) => void;
-
   onSaveError: (message: string) => void;
-
   onVaiAlRicambioDuplicato: (id: string) => void;
-
 }) {
-
   const formEngine = useFormEngine<RicambioFormState>({ initial: emptyRicambioForm() });
-
   const { value: newDraft, setValue, reset, runSubmit, formProps } = formEngine;
-
   const [draftId, setDraftId] = useState<string | null>(() => crypto.randomUUID());
-
   const [listFieldInvalid, setListFieldInvalid] = useState(false);
-
   const [saveBusy, setSaveBusy] = useState(false);
-
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+  const backResyncCleanupRef = useRef<(() => void) | null>(null);
   const [codiceScan, setCodiceScan] = useState({ primary: "", secondary: "" });
+  const baselineForm = useMemo(() => emptyRicambioForm(), []);
+  const isDirty = useMemo(() => ricambioFormIsDirty(newDraft, baselineForm), [newDraft, baselineForm]);
 
+  useBeforeUnloadWhenDirty(isDirty, "Hai modifiche non salvate nel nuovo ricambio.");
 
+  useEffect(() => () => clearOverlayBackResync(backResyncCleanupRef), []);
 
   const setNewForm = useCallback(
-
     (action: React.SetStateAction<RicambioFormState>) => {
-
       setValue(action);
-
     },
-
     [setValue],
-
   );
-
-
 
   const codiceDupEsistente = useMemo(() => {
-
     const primary = codiceScan.primary.trim();
-
     if (!primary) return null;
-
     return findDuplicateByCodici([...prodotti], primary, {
-
       alsoCheckSecondary: codiceScan.secondary.trim() || undefined,
-
     });
-
   }, [prodotti, codiceScan.primary, codiceScan.secondary]);
 
-
-
   useEffect(() => {
-
     const t = window.setTimeout(() => {
-
       setCodiceScan({
-
         primary: newDraft.codiceFornitoreOriginale,
-
         secondary: newDraft.codiceFornitoreOriginaleSecondario,
-
       });
-
     }, 400);
-
     return () => window.clearTimeout(t);
-
   }, [newDraft.codiceFornitoreOriginale, newDraft.codiceFornitoreOriginaleSecondario]);
 
-
-
-  function handleClose() {
-
+  const performClose = useCallback(() => {
+    clearOverlayBackResync(backResyncCleanupRef);
     if (draftId) purgeMagazzinoLogEntriesForRicambioId(draftId);
-
     setDraftId(null);
-
     reset(emptyRicambioForm());
-
     setListFieldInvalid(false);
-
+    setDiscardConfirmOpen(false);
     onClose();
+  }, [draftId, onClose, reset]);
 
-  }
-
-
-
-  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
-
-    e.preventDefault();
-
-    if (!magCanCreateRicambio || saveBusy) return;
-
-
-
-    await runSubmit(e.currentTarget, async (currentDraft) => {
-
-      const listErr = validateRicambioListFields(currentDraft, {
-
-        marche,
-
-        categorie,
-
-        mezziListe: mezziListePrefs,
-
-      });
-
-      if (listErr) {
-
-        setListFieldInvalid(true);
-
-        onSaveError(listErr);
-
+  const requestClose = useCallback(
+    (ctx?: OverlayCloseContext) => {
+      if (saveBusy) return;
+      if (discardConfirmOpen) {
+        setDiscardConfirmOpen(false);
         return;
-
       }
-
-      setListFieldInvalid(false);
-
-      setSaveBusy(true);
-
-      try {
-
-        const r = ricambioFromFormLenient(currentDraft, draftId ?? undefined, authorName, {
-
-          mezziListe: mezziListePrefs,
-
-        });
-
-        const incompleteWarnings = ricambioFormImportantWarnings(currentDraft);
-
-        if (incompleteWarnings.length > 0) {
-
-          incrementHealthCounter("ricambioSaveIncompleteFields");
-
+      if (isDirty) {
+        setDiscardConfirmOpen(true);
+        if (ctx?.fromPopstate) {
+          ensureOverlayBackResync(
+            backResyncCleanupRef,
+            (nextCtx) => requestClose(nextCtx),
+            "RicambioNewModal-back-resync",
+          );
         }
-
-        const placeholderFlags = ricambioLenientPlaceholderFlags(r);
-
-        if (placeholderFlags.marcaPlaceholder) incrementHealthCounter("ricambioSavePlaceholderMarca");
-
-        if (placeholderFlags.descrizionePlaceholder) {
-
-          incrementHealthCounter("ricambioSavePlaceholderDescrizione");
-
-        }
-
-        if (placeholderFlags.categoriaPlaceholder) {
-
-          incrementHealthCounter("ricambioSavePlaceholderCategoria");
-
-        }
-
-        const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r, mezziListePrefs));
-
-        if (!created.success || !created.data) {
-
-          onSaveError(created.error ?? "Creazione ricambio non riuscita.");
-
-          return;
-
-        }
-
-        const ui = ricambioUiFromMagazzinoRow(created.data, authorName, mezziListePrefs);
-
-        setDraftId(null);
-
-        reset(emptyRicambioForm());
-
-        onSaved(ui);
-
-      } finally {
-
-        setSaveBusy(false);
-
+        return;
       }
-
-    });
-
-  }
-
-
-
-  return (
-
-    <GestionaleModalShell
-
-      modalSize="formMedium"
-
-      onRequestClose={handleClose}
-
-      title="Nuovo ricambio"
-
-      titleId="new-ricambio-title"
-
-    >
-
-      <RicambioFormOptionsProvider>
-
-        <form
-
-          {...formProps}
-
-          onSubmit={handleSubmit}
-
-          className={`${gestionaleModalBodyFlexClass} overflow-hidden`}
-
-        >
-
-          <GestionaleModalScrollBody className="space-y-4">
-
-            <RicambioFormFields
-
-              form={newDraft}
-
-              setForm={setNewForm}
-
-              formResetKey={draftId ?? "new"}
-
-              relaxHtmlValidation
-
-              codiceOriginaleAvvisoDuplicato={
-
-                codiceDupEsistente
-
-                  ? {
-
-                      existing: codiceDupEsistente,
-
-                      onVaiAlRicambio: () => onVaiAlRicambioDuplicato(codiceDupEsistente.id),
-
-                    }
-
-                  : null
-
-              }
-
-              listFieldForceInvalid={listFieldInvalid}
-
-            />
-
-            {draftId ? (
-
-              <RecordImageManager
-
-                scope="magazzino"
-
-                recordId={draftId}
-
-                canEdit={magCanCreateRicambio}
-
-                auditLog={false}
-
-                hubCardLayout
-
-              />
-
-            ) : null}
-
-          </GestionaleModalScrollBody>
-
-          <footer className={`${dsModalFormFooter} min-w-0 flex-col items-stretch`}>
-
-            <LoadingButton
-
-              type="submit"
-
-              loading={saveBusy}
-
-              preset="salva"
-
-              loadingLabel="Salvataggio…"
-
-              className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
-
-            >
-
-              Salva in magazzino
-
-            </LoadingButton>
-
-          </footer>
-
-        </form>
-
-      </RicambioFormOptionsProvider>
-
-    </GestionaleModalShell>
-
+      performClose();
+    },
+    [discardConfirmOpen, isDirty, performClose, saveBusy],
   );
 
+  async function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!magCanCreateRicambio || saveBusy) return;
+
+    if (ricambioFormHasNoUserInput(newDraft, baselineForm)) {
+      onSaveError(RICAMBIO_SAVE_EMPTY_FORM_MESSAGE);
+      return;
+    }
+
+    await runSubmit(e.currentTarget, async (currentDraft) => {
+      const listErr = validateRicambioListFields(currentDraft, {
+        marche,
+        categorie,
+        fornitori,
+        produttori,
+        mezziListe: mezziListePrefs,
+      });
+      if (listErr) {
+        setListFieldInvalid(true);
+        onSaveError(listErr);
+        return;
+      }
+      setListFieldInvalid(false);
+      setSaveBusy(true);
+      try {
+        const submitToken = gateBeginSubmit("ricambio");
+        const reconciledDraft = gateFormSubmit("ricambio", currentDraft, submitToken);
+
+        const r = ricambioFromFormLenient(reconciledDraft, draftId ?? undefined, authorName, {
+          mezziListe: mezziListePrefs,
+        });
+        const incompleteWarnings = ricambioFormImportantWarnings(reconciledDraft);
+        if (incompleteWarnings.length > 0) {
+          incrementHealthCounter("ricambioSaveIncompleteFields");
+        }
+        const placeholderFlags = ricambioLenientPlaceholderFlags(r);
+        if (placeholderFlags.marcaPlaceholder) incrementHealthCounter("ricambioSavePlaceholderMarca");
+        if (placeholderFlags.descrizionePlaceholder) {
+          incrementHealthCounter("ricambioSavePlaceholderDescrizione");
+        }
+        if (placeholderFlags.categoriaPlaceholder) {
+          incrementHealthCounter("ricambioSavePlaceholderCategoria");
+        }
+        const created = await magazzinoService.create(ricambioUiToMagazzinoInsert(r, mezziListePrefs));
+        if (!created.success || !created.data) {
+          onSaveError(created.error ?? "Creazione ricambio non riuscita.");
+          return;
+        }
+        const ui = ricambioUiFromMagazzinoRow(created.data, authorName, mezziListePrefs);
+        setDraftId(null);
+        reset(emptyRicambioForm());
+        onSaved(ui);
+      } finally {
+        setSaveBusy(false);
+      }
+    });
+  }
+
+  return (
+    <>
+      <GestionaleModalShell
+        modalSize="formMedium"
+        onRequestClose={requestClose}
+      title="Nuovo ricambio"
+      titleId="new-ricambio-title"
+      footer={
+        <LoadingButton
+          type="submit"
+          form={RICAMBIO_NEW_FORM_ID}
+          loading={saveBusy}
+          preset="salva"
+          loadingLabel="Salvataggio…"
+          className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45 disabled:grayscale`}
+        >
+          Salva in magazzino
+        </LoadingButton>
+      }
+    >
+      <RicambioFormOptionsProvider>
+        <form
+          {...formProps}
+          id={RICAMBIO_NEW_FORM_ID}
+          data-form-ux-id="ricambio"
+          onSubmit={handleSubmit}
+          className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
+        >
+          <GestionaleModalScrollBody className="space-y-4">
+            <RicambioFormFields
+              form={newDraft}
+              setForm={setNewForm}
+              formResetKey={draftId ?? "new"}
+              formMode="create"
+              relaxHtmlValidation
+              codiceOriginaleAvvisoDuplicato={
+                codiceDupEsistente
+                  ? {
+                      existing: codiceDupEsistente,
+                      onVaiAlRicambio: () => onVaiAlRicambioDuplicato(codiceDupEsistente.id),
+                    }
+                  : null
+              }
+              listFieldForceInvalid={listFieldInvalid}
+            />
+            {draftId ? (
+              <RicambioCollapsibleSection title="Foto" defaultCollapsed>
+                <RecordImageManager
+                  scope="magazzino"
+                  recordId={draftId}
+                  canEdit={magCanCreateRicambio}
+                  auditLog={false}
+                  hubCardLayout
+                />
+              </RicambioCollapsibleSection>
+            ) : null}
+          </GestionaleModalScrollBody>
+        </form>
+      </RicambioFormOptionsProvider>
+    </GestionaleModalShell>
+      <GestionaleConfirmDialog
+        open={discardConfirmOpen}
+        title="Modifiche non salvate"
+        message="Hai inserito dati non salvati. Vuoi uscire senza salvare?"
+        cancelLabel="Continua a modificare"
+        confirmLabel="Esci senza salvare"
+        destructive
+        layerClassName={cabModalZConfirm}
+        onCancel={() => setDiscardConfirmOpen(false)}
+        onConfirm={performClose}
+      />
+    </>
+  );
 }
-
-

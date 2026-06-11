@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import {
+  useDropdownOutsideDismiss,
+  useGlobalDropdownPortal,
+} from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import {
   SETTINGS_NAV_GROUP_LABEL,
   settingsNavBtnClass,
@@ -13,6 +18,7 @@ import {
   type SistemaSectionId,
 } from "@/components/dashboard/settings/settings-workspace-types";
 import { dsFocus, gestionaleSelectFilterClass } from "@/lib/ui/design-system";
+import { globalInputDropdownPortalPanel } from "@/lib/ui/global-input";
 
 export function SettingsMainPanel({
   pageMode,
@@ -99,20 +105,52 @@ export function SettingsMobileSectionPicker({
   navQ: string;
   setNavQ: (v: string) => void;
 }) {
-  const rootRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onDoc = (ev: MouseEvent) => {
-      if (rootRef.current?.contains(ev.target as Node)) return;
-      onClose();
-    };
-    document.addEventListener("mousedown", onDoc, true);
-    return () => document.removeEventListener("mousedown", onDoc, true);
-  }, [open, onClose]);
+  const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
+    open,
+    anchorRef,
+    contentRef: panelRef,
+    repositionDeps: [filteredNav.length, navQ],
+    maxHeight: 360,
+  });
+
+  useDropdownOutsideDismiss(open, anchorRef, panelRef, onClose);
+
+  const panel =
+    open && portalStyle ? (
+      <div
+        ref={panelRef}
+        id="settings-mobile-nav-panel"
+        role="listbox"
+        style={portalStyle}
+        className={`${globalInputDropdownPortalPanel} overflow-hidden ${placementOriginClass} ${
+          scrollInside ? "overflow-y-auto" : ""
+        }`}
+      >
+        <div className="border-b border-[color:var(--cab-border)] p-2">
+          <GestionaleSearchField
+            value={navQ}
+            onChange={(e) => setNavQ(e.target.value)}
+            placeholder="Cerca sezione…"
+            autoComplete="off"
+            aria-label="Cerca nelle sezioni configurazione"
+          />
+        </div>
+        <SettingsNavMenuList
+          filteredNav={filteredNav}
+          section={section}
+          onPickSection={(id) => {
+            onPickSection(id);
+            onClose();
+          }}
+        />
+      </div>
+    ) : null;
 
   return (
-    <div ref={rootRef} className="relative w-full md:hidden">
+    <div ref={anchorRef} className="relative w-full md:hidden">
       <button
         type="button"
         className={`${gestionaleSelectFilterClass} relative block min-w-0 truncate text-left ${open ? "border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]" : ""} ${dsFocus}`}
@@ -139,31 +177,7 @@ export function SettingsMobileSectionPicker({
         <span className="block truncate">{activeLabel}</span>
       </button>
 
-      {open ? (
-        <div
-          id="settings-mobile-nav-panel"
-          role="listbox"
-          className="absolute left-0 right-0 top-full z-[var(--ds-z-dropdown,50)] mt-1 overflow-hidden rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-lg"
-        >
-          <div className="border-b border-[color:var(--cab-border)] p-2">
-            <GestionaleSearchField
-              value={navQ}
-              onChange={(e) => setNavQ(e.target.value)}
-              placeholder="Cerca sezione…"
-              autoComplete="off"
-              aria-label="Cerca nelle sezioni configurazione"
-            />
-          </div>
-          <SettingsNavMenuList
-            filteredNav={filteredNav}
-            section={section}
-            onPickSection={(id) => {
-              onPickSection(id);
-              onClose();
-            }}
-          />
-        </div>
-      ) : null}
+      {typeof document !== "undefined" && panel ? createPortal(panel, document.body) : null}
     </div>
   );
 }

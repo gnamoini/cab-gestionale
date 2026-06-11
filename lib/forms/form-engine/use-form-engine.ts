@@ -39,6 +39,8 @@ export function useFormEngine<T extends object>(options: {
   enabled?: boolean;
 }): UseFormEngineResult<T> {
   const enabled = options.enabled ?? isFormEngineEnabled();
+  const initialRef = useRef(options.initial);
+  initialRef.current = options.initial;
   const [value, setValueState] = useState<T>(options.initial);
   const ref = useRef(value);
   const submitLock = useMemo(() => createSubmitLock(), []);
@@ -64,11 +66,11 @@ export function useFormEngine<T extends object>(options: {
 
   const reset = useCallback(
     (next?: T) => {
-      const resolved = next ?? options.initial;
+      const resolved = next ?? initialRef.current;
       ref.current = resolved;
       setValueState(resolved);
     },
-    [options.initial],
+    [],
   );
 
   const getSnapshot = useCallback((): FormStateSnapshot<T> => {

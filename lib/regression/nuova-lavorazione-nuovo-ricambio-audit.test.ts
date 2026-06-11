@@ -21,7 +21,7 @@ function read(rel: string): string {
 
 const lavCreate = read("components/gestionale/lavorazioni/lavorazione-create-modal.tsx");
 const ricambioNew = read("components/gestionale/magazzino/ricambio-new-modal.tsx");
-const ricambioFields = read("components/gestionale/magazzino/ricambio-form-fields.tsx");
+const ricambioEdit = read("components/gestionale/magazzino/ricambio-edit-modal.tsx");
 const schedaBody = read("components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx");
 
 // Nuova Lavorazione — Form Engine sections + scheda persist chain
@@ -44,6 +44,15 @@ assert.match(ricambioNew, /ricambioLenientPlaceholderFlags/);
 assert.match(ricambioNew, /incrementHealthCounter\("ricambioSaveIncompleteFields"\)/);
 assert.match(ricambioNew, /GestionaleModalScrollBody/);
 assert.match(ricambioNew, /relaxHtmlValidation/);
+assert.match(ricambioNew, /footer=\{/);
+assert.match(ricambioNew, /ricambio-new-form/);
+assert.match(ricambioNew, /formMode="create"/);
+
+assert.match(ricambioEdit, /footer=\{/);
+assert.match(ricambioEdit, /ricambio-edit-form/);
+assert.match(ricambioEdit, /formMode="edit"/);
+
+const ricambioFields = read("components/gestionale/magazzino/ricambio-form-fields.tsx");
 
 // No nested focus scope in RicambioFormFields (parent form owns scope)
 assert.doesNotMatch(ricambioFields, /GestionaleFormFocusScope/);

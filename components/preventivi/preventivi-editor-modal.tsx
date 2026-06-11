@@ -457,6 +457,27 @@ export function PreventiviEditorModal({
           ? `Nuovo ${preventivoTipoDocumentoLabel(draft.tipoDocumento).toLowerCase()}`
           : `${preventivoTipoDocumentoLabel(draft.tipoDocumento)} ${draft.numero}`
       }
+      footer={
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+          <button
+            type="button"
+            className={`${dsBtnNeutral} min-h-11 w-full sm:w-auto`}
+            onClick={() =>
+              void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
+                openPreventivoPdfInNewTab(applyTotals(draft), autore),
+              )
+            }
+          >
+            Anteprima PDF
+          </button>
+          <button type="button" className={`${dsBtnNeutral} min-h-11 w-full sm:w-auto`} onClick={requestClose}>
+            Annulla
+          </button>
+          <button type="button" className={`${dsBtnPrimary} min-h-11 w-full sm:w-auto`} onClick={onSalva}>
+            Salva
+          </button>
+        </div>
+      }
     >
       <MezzoRegistratoIngressoDialog
         open={mezzoPrompt.promptOpen}
@@ -873,26 +894,6 @@ export function PreventiviEditorModal({
             </FormSection>
           </div>
         </GestionaleModalScrollBody>
-
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
-          <button
-            type="button"
-            className={dsBtnNeutral}
-            onClick={() =>
-              void importPreventiviPdf().then(({ openPreventivoPdfInNewTab }) =>
-                openPreventivoPdfInNewTab(applyTotals(draft), autore),
-              )
-            }
-          >
-            Anteprima PDF
-          </button>
-          <button type="button" className={dsBtnNeutral} onClick={requestClose}>
-            Annulla
-          </button>
-          <button type="button" className={dsBtnPrimary} onClick={onSalva}>
-            Salva
-          </button>
-        </div>
 
         <GestionaleUnsavedChangesDialog
           open={unsavedExitOpen}

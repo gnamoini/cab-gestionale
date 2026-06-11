@@ -721,12 +721,15 @@ export function SecurityDashboardView() {
             <span className={dsSectionTitle}>Utente</span>
             <div className="mt-1">
               <GlobalSelect
-                selectOnly
                 variant="filter"
                 value={filterUserId ?? ""}
                 onChange={(id) => setFilterUserId(id || null)}
                 disabled={usersQ.isLoading}
                 isLoading={usersQ.isLoading}
+                selectorDomain="security"
+                dynamicList
+                operationalFilter
+                recentsKey="selector:security-audit-users"
                 aria-label="Filtra per utente"
                 items={filterUserItems}
               />

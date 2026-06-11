@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { dsScrollbar } from "@/lib/ui/design-system";
 import { useClientLavorazionePhotosQuery } from "@/src/hooks/gestionale/use-client-lavorazione-media-queries";
 import type { StoredImage } from "@/lib/media/image-storage";
@@ -13,14 +14,14 @@ const DEFAULT_MAX = 5;
 function PhotoLightbox({ image, onClose }: { image: StoredImage; onClose: () => void }) {
   return (
     <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="Foto lavorazione">
-      <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-y-auto overscroll-contain p-4 sm:p-6">
+      <GestionaleModalScrollBody className="flex min-h-0 items-center justify-center">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={image.signedUrl}
           alt={image.name}
           className="max-h-[70vh] max-w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] object-contain"
         />
-      </div>
+      </GestionaleModalScrollBody>
     </LavorazioniModalShell>
   );
 }

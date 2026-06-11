@@ -16,11 +16,13 @@ import {
 import { sliceInputValue, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import { LoadingButton } from "@/components/design-system";
 import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { dsBtnDanger, dsInput, dsLabel } from "@/lib/ui/design-system";
+import { dsBtnDanger, dsBtnNeutral, dsInput, dsLabel } from "@/lib/ui/design-system";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+
+const LAVORAZIONE_EDIT_FORM_ID = "lavorazione-edit-form";
 
 export function LavorazioneEditModal({
   row,
@@ -102,8 +104,54 @@ export function LavorazioneEditModal({
       onBack={onBack}
       title="Dettagli macchina"
       subtitle="Modifica controllata di anagrafica mezzo e note lavorazione."
+      footer={
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
+          <button
+            type="button"
+            className={`${erpBtnNeutral} min-h-11`}
+            onClick={onClose}
+            disabled={update.isPending || updateMezzo.isPending}
+          >
+            Annulla
+          </button>
+          <LoadingButton
+            type="submit"
+            form={LAVORAZIONE_EDIT_FORM_ID}
+            className={`${erpBtnAccent} min-h-11`}
+            loading={update.isPending || updateMezzo.isPending}
+            preset="salva"
+          >
+            Salva
+          </LoadingButton>
+          {canDelete && onDelete ? (
+            <button
+              type="button"
+              className={`${dsBtnDanger} min-h-11 basis-full sm:basis-auto`}
+              disabled={update.isPending || updateMezzo.isPending}
+              onClick={() => {
+                void confirm({
+                  title: "Eliminare lavorazione?",
+                  message:
+                    "L'azione non è reversibile se il record viene rimosso definitivamente.",
+                  destructive: true,
+                  confirmLabel: "Elimina",
+                }).then((ok) => {
+                  if (ok) onDelete();
+                });
+              }}
+            >
+              Elimina
+            </button>
+          ) : null}
+        </div>
+      }
     >
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+      <form
+        id={LAVORAZIONE_EDIT_FORM_ID}
+        {...gestionaleFormFocusScopeProps()}
+        onSubmit={onSubmit}
+        className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
+      >
         <GestionaleModalScrollBody className="space-y-4">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block">
@@ -184,40 +232,6 @@ export function LavorazioneEditModal({
             />
           </label>
         </GestionaleModalScrollBody>
-
-        <footer className="flex min-w-0 shrink-0 flex-wrap items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-          <button type="button" className={erpBtnNeutral} onClick={onClose} disabled={update.isPending || updateMezzo.isPending}>
-            Annulla
-          </button>
-          <LoadingButton
-            type="submit"
-            className={erpBtnAccent}
-            loading={update.isPending || updateMezzo.isPending}
-            preset="salva"
-          >
-            Salva
-          </LoadingButton>
-          {canDelete && onDelete ? (
-            <button
-              type="button"
-              className={`${dsBtnDanger} basis-full sm:basis-auto`}
-              disabled={update.isPending || updateMezzo.isPending}
-              onClick={() => {
-                void confirm({
-                  title: "Eliminare lavorazione?",
-                  message:
-                    "L'azione non è reversibile se il record viene rimosso definitivamente.",
-                  destructive: true,
-                  confirmLabel: "Elimina",
-                }).then((ok) => {
-                  if (ok) onDelete();
-                });
-              }}
-            >
-              Elimina
-            </button>
-          ) : null}
-        </footer>
       </form>
       {confirmDialog}
     </LavorazioniModalShell>

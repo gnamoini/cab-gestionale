@@ -1,0 +1,73 @@
+{
+  "generatedAt": "2026-06-11T04:33:30.936Z",
+  "surfaces": {
+    "SelectorDecisionEngine": {
+      "canonicalPath": "lib/selector-core/selector-decision-engine.ts",
+      "definesSymbol": true,
+      "allImportPaths": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/resolve-selector-surface.ts",
+        "lib/selector-core/selector-decision-engine-parity.test.ts",
+        "lib/selector-core/selector-decision-engine.test.ts",
+        "lib/selector-core/selector-decision-engine.ts",
+        "lib/selector-core/selector-domain-policy.ts",
+        "lib/selector-core/selector-telemetry-bridge.test.ts",
+        "lib/selector-core/selector-ux-intent.test.ts"
+      ],
+      "aliasChains": [
+        "resolve-selector-surface.ts → SelectorDecisionEngine.resolve"
+      ],
+      "duplicateFallbackPaths": [],
+      "forbiddenShimImports": [],
+      "stable": true
+    },
+    "loadLatestSelectorSnapshot": {
+      "canonicalPath": "lib/selector-core/selector-config-runtime-loader.ts",
+      "definesSymbol": true,
+      "allImportPaths": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-enforcement-ruleset.ts",
+        "lib/selector-core/selector-observation-registry.ts"
+      ],
+      "aliasChains": [],
+      "duplicateFallbackPaths": [],
+      "forbiddenShimImports": [],
+      "stable": true
+    },
+    "resolveSelectorEngineConfig": {
+      "canonicalPath": "lib/selector-core/selector-config-runtime-loader.ts",
+      "definesSymbol": true,
+      "allImportPaths": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-config-runtime-loader.ts",
+        "lib/selector-core/selector-enforcement-ruleset.ts",
+        "lib/selector-core/selector-engine-config.ts"
+      ],
+      "aliasChains": [],
+      "duplicateFallbackPaths": [],
+      "forbiddenShimImports": [],
+      "stable": true
+    },
+    "getExplanation": {
+      "canonicalPath": "lib/selector-core/selector-explainability.ts",
+      "definesSymbol": true,
+      "allImportPaths": [
+        "lib/selector-core/index.ts",
+        "lib/selector-core/selector-api-surface-registry.ts",
+        "lib/selector-core/selector-determinism-gate-audit.ts",
+        "lib/selector-core/selector-enforcement-ruleset.ts",
+        "lib/selector-core/selector-explainability.ts",
+        "lib/selector-core/selector-explanation-kernel.ts",
+        "lib/selector-core/selector-observation-registry.ts"
+      ],
+      "aliasChains": [
+        "getSelectorExplanation (deprecated alias in explainability.ts)"
+      ],
+      "duplicateFallbackPaths": [],
+      "forbiddenShimImports": [],
+      "stable": true
+    }
+  },
+  "allStable": true
+}

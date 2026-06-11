@@ -69,6 +69,10 @@ export function GestionaleListSearchField({
   }, [focused, strValue, suggestionPool, suggestionLimit]);
 
   const showDropdown = open && focused && suggestions.length > 0;
+  const activeDescendantId =
+    activeIndex >= 0 && activeIndex < suggestions.length
+      ? `${listboxId}-opt-${activeIndex}`
+      : undefined;
 
   const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
     open: showDropdown,
@@ -176,7 +180,9 @@ export function GestionaleListSearchField({
         role="combobox"
         aria-expanded={showDropdown}
         aria-controls={showDropdown ? listboxId : undefined}
+        aria-activedescendant={activeDescendantId}
         aria-autocomplete="list"
+        enterKeyHint="search"
         autoComplete="off"
       />
       {typeof document !== "undefined" && showDropdown && portalStyle ? (
@@ -195,6 +201,7 @@ export function GestionaleListSearchField({
               return (
                 <li key={`${option}-${idx}`} role="presentation">
                   <button
+                    id={`${listboxId}-opt-${idx}`}
                     type="button"
                     role="option"
                     aria-selected={active}

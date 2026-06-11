@@ -15,6 +15,8 @@ import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useMezzoCreateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import type { MezzoRow } from "@/src/types/supabase-tables";
 
+const MEZZO_NEW_FORM_ID = "mezzo-new-form";
+
 export function MezziNewModal({
   canEdit,
   onClose,
@@ -64,22 +66,33 @@ export function MezziNewModal({
   }
 
   return (
-    <GestionaleModalShell modalSize="formMedium" title="Nuovo mezzo" titleId="mezzo-nuovo-title" onRequestClose={onClose}>
-      <form {...formProps} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+    <GestionaleModalShell
+      modalSize="formMedium"
+      title="Nuovo mezzo"
+      titleId="mezzo-nuovo-title"
+      onRequestClose={onClose}
+      footer={
+        <LoadingButton
+          type="submit"
+          form={MEZZO_NEW_FORM_ID}
+          loading={createMut.isPending}
+          preset="salva"
+          loadingLabel="Salvataggio…"
+          className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:opacity-60`}
+        >
+          Salva mezzo
+        </LoadingButton>
+      }
+    >
+      <form
+        {...formProps}
+        id={MEZZO_NEW_FORM_ID}
+        onSubmit={handleSubmit}
+        className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
+      >
         <GestionaleModalScrollBody className="space-y-3">
           <MezzoFormFields form={form} setForm={setFormStable} />
         </GestionaleModalScrollBody>
-        <div className="shrink-0 border-t border-[color:var(--cab-border)] p-4">
-          <LoadingButton
-            type="submit"
-            loading={createMut.isPending}
-            preset="salva"
-            loadingLabel="Salvataggio…"
-            className={`${erpBtnAccent} w-full disabled:opacity-60`}
-          >
-            Salva mezzo
-          </LoadingButton>
-        </div>
       </form>
     </GestionaleModalShell>
   );

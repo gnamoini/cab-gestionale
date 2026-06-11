@@ -1,4 +1,9 @@
 import type { CSSProperties } from "react";
+import {
+  computeKeyboardInset,
+  findStickyObstructions,
+  getVisualViewportBand,
+} from "@/lib/ui/mobile-modal-behavior";
 
 /** Sopra toolbar sticky, thead e header; sotto toast/modali full-screen. */
 export const GLOBAL_DROPDOWN_PORTAL_Z = 130;
@@ -10,17 +15,49 @@ export const GLOBAL_DROPDOWN_VIEWPORT_PAD = 8;
 /** Altezza massima default menu scrollabile. */
 export const GLOBAL_DROPDOWN_MAX_HEIGHT = 320;
 
+function readSafeAreaPx(edge: "top" | "bottom"): number {
+  if (typeof document === "undefined") return 0;
+  const prop = edge === "top" ? "--cab-safe-top" : "--cab-safe-bottom";
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(prop).trim();
+  const px = parseFloat(raw);
+  return Number.isFinite(px) ? px : 0;
+}
+
+/** Padding collision Floating UI — tastiera virtuale, safe-area e header sticky. */
+export function getFloatingUiBoundaryPadding(): {
+  top: number;
+  right: number;
+  bottom: number;
+  left: number;
+} {
+  const base = GLOBAL_DROPDOWN_VIEWPORT_PAD;
+  if (typeof window === "undefined") {
+    return { top: base, right: base, bottom: base, left: base };
+  }
+
+  const vv = getVisualViewportBand();
+  const keyboardInset = computeKeyboardInset();
+  const safeTop = readSafeAreaPx("top");
+  const safeBottom = readSafeAreaPx("bottom");
+  const stickyBottom = findStickyObstructions(document);
+
+  const topPad = Math.max(base, vv.top + safeTop, stickyBottom > 0 ? stickyBottom - vv.top + base : 0);
+  const bottomPad = Math.max(base, keyboardInset + safeBottom);
+
+  return { top: topPad, right: base, bottom: bottomPad, left: base };
+}
+
 /**
  * Collision detection per menu portal: usa il viewport, non i clipping ancestor
  * del form/modale (`overflow:hidden`), così l'elenco può sovrapporsi ai campi sotto.
  */
 export function globalDropdownPortalDetectOverflowOptions(): {
-  padding: number;
+  padding: { top: number; right: number; bottom: number; left: number };
   rootBoundary: "viewport";
   boundary?: Element;
 } {
   return {
-    padding: GLOBAL_DROPDOWN_VIEWPORT_PAD,
+    padding: getFloatingUiBoundaryPadding(),
     rootBoundary: "viewport",
     boundary: typeof document !== "undefined" ? document.documentElement : undefined,
   };
@@ -57,8 +94,13 @@ export function computeGlobalDropdownCoords(
 ): GlobalDropdownCoords {
   const rect = anchor.getBoundingClientRect();
   const pad = GLOBAL_DROPDOWN_VIEWPORT_PAD;
-  const spaceBelow = window.innerHeight - rect.bottom - gap - pad;
-  const spaceAbove = rect.top - gap - pad;
+  const vv = getVisualViewportBand();
+  const { bottom: bottomPad } = getFloatingUiBoundaryPadding();
+  const visibleBottom = vv.bottom - (bottomPad - pad);
+  const visibleTop = vv.top + pad;
+
+  const spaceBelow = visibleBottom - rect.bottom - gap - pad;
+  const spaceAbove = rect.top - gap - visibleTop;
   const openAbove = spaceBelow < 140 && spaceAbove > spaceBelow;
   const available = Math.max(80, openAbove ? spaceAbove : spaceBelow);
   const needed = contentHeight ?? 0;
@@ -73,7 +115,7 @@ export function computeGlobalDropdownCoords(
   if (left < pad) left = pad;
 
   const top = openAbove
-    ? Math.max(pad, rect.top - gap - (scrollInside ? maxHeight : Math.min(maxHeight, needed || maxHeight)))
+    ? Math.max(visibleTop, rect.top - gap - (scrollInside ? maxHeight : Math.min(maxHeight, needed || maxHeight)))
     : rect.bottom + gap;
 
   return {

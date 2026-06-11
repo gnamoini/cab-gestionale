@@ -1,12 +1,13 @@
 "use client";
 
-import { memo, useCallback, useId, useRef } from "react";
-import { findExactMezzoForIngressoIdent } from "@/lib/schede/scheda-ingresso-ident-suggest";
+import { memo, useId } from "react";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
-import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
+import { LivelloCarburanteSegmentedSelect } from "@/components/gestionale/schede/livello-carburante-segmented-select";
 import { CompatHierarchySelect } from "@/components/gestionale/magazzino/compat-hierarchy-multi-select";
+import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
-import { SchedaIngressoIdentAutocompleteField } from "@/components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field";
+import { SchedaIngressoIdentAutocompleteField } from "@/lib/selector-core/legacy-selector-adapters";
 import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
 import { sliceInputValue, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -50,22 +51,11 @@ function SchedaIngressoAnagraficaFieldsInner({
   const inputFieldClass = `block w-full ${dsInput}`;
   const listSelectWrapClass = "w-full";
   const mezzoMatchHandler = onExactMezzoMatch ?? (() => {});
-  const scuderiaBlurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const identSibling = {
     targa: value.targa,
     matricola: value.matricola,
     nScuderia: value.nScuderia,
   };
-
-  const tryScuderiaMatchOnBlur = useCallback(() => {
-    if (disabled || !onExactMezzoMatch) return;
-    const hit = findExactMezzoForIngressoIdent(mezzi, "nScuderia", value.nScuderia, {
-      targa: value.targa,
-      matricola: value.matricola,
-      nScuderia: value.nScuderia,
-    });
-    if (hit) onExactMezzoMatch(hit);
-  }, [disabled, mezzi, onExactMezzoMatch, value.matricola, value.nScuderia, value.targa]);
 
   const uid = useId();
   const fieldId = (suffix: string) => `${uid}-${suffix}`;
@@ -108,8 +98,9 @@ function SchedaIngressoAnagraficaFieldsInner({
               aria-label="Utilizzatore"
             />
           </FormField>
-          <FormField label="Richiedente">
+          <FormField label="Richiedente" htmlFor={fieldId("richiedente")}>
             <input
+              id={fieldId("richiedente")}
               className={inputFieldClass}
               value={value.richiedente}
               onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
@@ -167,6 +158,7 @@ function SchedaIngressoAnagraficaFieldsInner({
             <SchedaIngressoIdentAutocompleteField
               field="matricola"
               label="Matricola"
+              id={fieldId("matricola")}
               value={value.matricola}
               siblingIdent={identSibling}
               mezzi={mezzi}
@@ -174,19 +166,17 @@ function SchedaIngressoAnagraficaFieldsInner({
               onChange={(v) => onPatch({ matricola: v })}
               onExactMezzoMatch={mezzoMatchHandler}
             />
-            <FormField label="N. scuderia">
-              <input
-                className={`${inputFieldClass} font-mono`}
-                value={value.nScuderia}
-                onChange={(e) => onPatch({ nScuderia: e.target.value })}
-                onBlur={() => {
-                  if (scuderiaBlurTimer.current) clearTimeout(scuderiaBlurTimer.current);
-                  scuderiaBlurTimer.current = setTimeout(() => tryScuderiaMatchOnBlur(), 140);
-                }}
-                disabled={disabled}
-                aria-label="N. scuderia"
-              />
-            </FormField>
+            <SchedaIngressoIdentAutocompleteField
+              field="nScuderia"
+              label="N. scuderia"
+              id={fieldId("n-scuderia")}
+              value={value.nScuderia}
+              siblingIdent={identSibling}
+              mezzi={mezzi}
+              disabled={disabled}
+              onChange={(v) => onPatch({ nScuderia: v })}
+              onExactMezzoMatch={mezzoMatchHandler}
+            />
           </div>
           {onCopyLastIngresso ? (
             <CopiaUltimaSchedaIngressoBanner
@@ -277,41 +267,35 @@ function SchedaIngressoAnagraficaFieldsInner({
       {show("dettagli") ? (
         <FormSection title="Modelli e dettagli tecnici">
           <div className="grid gap-2 sm:grid-cols-2">
-            <FormField label="Ore lavoro">
-              <input
-                type="number"
+            <FormField label="Ore lavoro" htmlFor={fieldId("ore-lavoro")}>
+              <GestionaleNumberInput
+                id={fieldId("ore-lavoro")}
                 min={0}
                 inputMode="decimal"
-                className={inputFieldClass}
                 value={value.oreLavoro}
-                onChange={(e) => onPatch({ oreLavoro: e.target.value })}
+                onChange={(v) => onPatch({ oreLavoro: v })}
                 disabled={disabled}
                 aria-label="Ore lavoro"
               />
             </FormField>
-            <FormField label="KM">
-              <input
-                type="number"
+            <FormField label="KM" htmlFor={fieldId("km")}>
+              <GestionaleNumberInput
+                id={fieldId("km")}
                 min={0}
                 inputMode="numeric"
-                className={inputFieldClass}
                 value={value.km}
-                onChange={(e) => onPatch({ km: e.target.value })}
+                onChange={(v) => onPatch({ km: v })}
                 disabled={disabled}
                 aria-label="KM"
               />
             </FormField>
           </div>
           <FormField label="Carburante" htmlFor={fieldId("carburante")}>
-            <GlobalSelect
+            <LivelloCarburanteSegmentedSelect
               id={fieldId("carburante")}
-              className={listSelectWrapClass}
               value={value.livelloCarburante}
               onChange={(v) => onPatch({ livelloCarburante: v })}
-              options={["Vuoto", "1/4", "1/2", "3/4", "Pieno"]}
               disabled={disabled}
-              allowAdd={false}
-              selectOnly
               aria-label="Livello carburante"
             />
           </FormField>

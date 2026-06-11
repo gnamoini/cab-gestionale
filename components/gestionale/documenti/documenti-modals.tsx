@@ -29,6 +29,7 @@ import {
 } from "@/components/gestionale/global-input";
 import { DocumentoFileDropzone } from "@/components/gestionale/documenti/documento-file-dropzone";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
+import { cabModalLayerClass } from "@/lib/ui/mobile-modal-behavior";
 import { useAuth } from "@/context/auth-context";
 import { dsBtnDanger } from "@/lib/ui/design-system";
 import {
@@ -87,21 +88,24 @@ function FieldError({ message }: { message: string | null }) {
 function DocumentiModalShell({
   title,
   children,
+  footer,
   onRequestClose,
   modalSize = "formMedium",
 }: {
   title: string;
   children: React.ReactNode;
+  footer?: React.ReactNode;
   onRequestClose: () => void;
   modalSize?: ModalSize;
 }) {
   return (
     <LavorazioniModalShell
       modalSize={modalSize}
-      layerClassName="z-[100]"
+      layerClassName={cabModalLayerClass("base")}
       onRequestClose={onRequestClose}
       title={title}
       titleId="documenti-modal-title"
+      footer={footer}
     >
       {children}
     </LavorazioniModalShell>
@@ -299,8 +303,28 @@ export function UploadDocumentoModal({
     (effectiveApp === "marca" || !marca.trim() || modello.trim().length > 0);
 
   return (
-    <DocumentiModalShell title="Carica documento" onRequestClose={onRequestClose}>
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+    <DocumentiModalShell
+      title="Carica documento"
+      onRequestClose={onRequestClose}
+      footer={
+        <LoadingButton
+          type="submit"
+          form="doc-upload-form"
+          className={`${erpBtnAccent} min-h-11 w-full justify-center gap-2`}
+          loading={isUploading}
+          loadingLabel="Caricamento…"
+          disabled={!canSubmit}
+        >
+          Conferma caricamento
+        </LoadingButton>
+      }
+    >
+      <form
+        id="doc-upload-form"
+        {...gestionaleFormFocusScopeProps()}
+        onSubmit={handleSubmit}
+        className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
+      >
         <GestionaleModalScrollBody className="space-y-3">
           <DocumentoFileDropzone
             pickedName={pickedName}
@@ -426,17 +450,6 @@ export function UploadDocumentoModal({
             />
           </label>
         </GestionaleModalScrollBody>
-        <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <LoadingButton
-            type="submit"
-            className={`${erpBtnAccent} flex w-full min-h-11 items-center justify-center gap-2`}
-            loading={isUploading}
-            loadingLabel="Caricamento…"
-            disabled={!canSubmit}
-          >
-            Conferma caricamento
-          </LoadingButton>
-        </div>
       </form>
     </DocumentiModalShell>
   );
@@ -468,8 +481,34 @@ export function DocumentoInfoModal({
       : `${r.marcaKey ?? r.marca} · ${r.modelloKey ?? r.macchina}`;
 
   return (
-    <DocumentiModalShell modalSize="info" title="Dettaglio documento" onRequestClose={onRequestClose}>
-      <div className={`lavorazioni-scroll-scope ${gestionaleModalBodyFlexClass}`}>
+    <DocumentiModalShell
+      modalSize="info"
+      title="Dettaglio documento"
+      onRequestClose={onRequestClose}
+      footer={
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+          <button
+            type="button"
+            className={`${dsBtnDanger} min-h-11 w-full justify-center sm:w-auto`}
+            onClick={onDelete}
+            disabled={!canDelete}
+            title={canDelete ? "Elimina" : "Sola lettura"}
+          >
+            Elimina
+          </button>
+          <button
+            type="button"
+            className={`${erpBtnAccent} min-h-11 w-full justify-center sm:w-auto`}
+            onClick={onEdit}
+            disabled={!canEdit}
+            title={canEdit ? "Modifica" : "Sola lettura"}
+          >
+            Modifica
+          </button>
+        </div>
+      }
+    >
+      <div className={`lavorazioni-scroll-scope ${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}>
         <GestionaleModalScrollBody className="space-y-3 text-sm">
           <InfoRow label="Riepilogo" value={<span className="font-semibold">{formatDocumentoRigaSintetica(doc)}</span>} />
           <div className="grid gap-3 md:grid-cols-2">
@@ -525,28 +564,6 @@ export function DocumentoInfoModal({
           </div>
           <InfoRow label="Note" value={doc.note?.trim() ? doc.note : "—"} />
         </GestionaleModalScrollBody>
-        <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <div className="flex items-center justify-end gap-2">
-            <button
-              type="button"
-              className={dsBtnDanger}
-              onClick={onDelete}
-              disabled={!canDelete}
-              title={canDelete ? "Elimina" : "Sola lettura"}
-            >
-              Elimina
-            </button>
-            <button
-              type="button"
-              className={erpBtnAccent}
-              onClick={onEdit}
-              disabled={!canEdit}
-              title={canEdit ? "Modifica" : "Sola lettura"}
-            >
-              Modifica
-            </button>
-          </div>
-        </div>
       </div>
     </DocumentiModalShell>
   );
@@ -649,8 +666,27 @@ export function DocumentoEditModal({
   }
 
   return (
-    <DocumentiModalShell title="Modifica documento" onRequestClose={onRequestClose}>
-      <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+    <DocumentiModalShell
+      title="Modifica documento"
+      onRequestClose={onRequestClose}
+      footer={
+        <LoadingButton
+          type="submit"
+          form="doc-edit-form"
+          className={`${erpBtnAccent} min-h-11 w-full justify-center gap-2`}
+          loading={saving}
+          preset="salva"
+        >
+          Salva modifiche
+        </LoadingButton>
+      }
+    >
+      <form
+        id="doc-edit-form"
+        {...gestionaleFormFocusScopeProps()}
+        onSubmit={handleSubmit}
+        className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
+      >
         <GestionaleModalScrollBody className="space-y-3">
           <label htmlFor="doc-edit-nome" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Nome file
@@ -762,16 +798,6 @@ export function DocumentoEditModal({
             />
           </label>
         </GestionaleModalScrollBody>
-        <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-          <LoadingButton
-            type="submit"
-            className={`${erpBtnAccent} flex w-full min-h-11 items-center justify-center gap-2`}
-            loading={saving}
-            preset="salva"
-          >
-            Salva modifiche
-          </LoadingButton>
-        </div>
       </form>
     </DocumentiModalShell>
   );

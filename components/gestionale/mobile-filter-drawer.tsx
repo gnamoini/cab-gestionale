@@ -4,8 +4,6 @@ import { useEffect, type ReactNode } from "react";
 import { CloseButton } from "@/components/design-system";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { dsBtnNeutral, dsBtnPrimary, dsZModalHigh } from "@/lib/ui/design-system";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
-import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import {
   CAB_MODAL_ROOT_ATTR,
   CAB_MODAL_SCROLL_ATTR,
@@ -13,6 +11,7 @@ import {
 } from "@/lib/ui/mobile-modal-behavior";
 import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
+import { useGestionaleOverlayBehavior } from "@/lib/ui/use-gestionale-overlay-behavior";
 
 type MobileFilterDrawerProps = {
   open: boolean;
@@ -37,8 +36,11 @@ export function MobileFilterDrawer({
   applyLabel = "Applica",
   closeOnBodyButtonClick = false,
 }: MobileFilterDrawerProps) {
-  useBodyScrollLock(open, "MobileFilterDrawer");
-  useOverlayBackHandler(open, onClose, "MobileFilterDrawer");
+  const panelRef = useGestionaleOverlayBehavior({
+    open,
+    onRequestClose: onClose,
+    source: "MobileFilterDrawer",
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -61,11 +63,12 @@ export function MobileFilterDrawer({
     <div className={`fixed inset-0 ${dsZModalHigh} touch-none overscroll-none sm:hidden`} role="presentation">
       <button
         type="button"
-        className="absolute inset-0 bg-black/50 backdrop-blur-[1px] touch-manipulation"
+        className="absolute inset-0 bg-[var(--cab-overlay)] backdrop-blur-[1px] touch-manipulation"
         aria-label="Chiudi filtri"
         onClick={onClose}
       />
       <div
+        ref={panelRef}
         className={resolveDrawerAsideClasses("drawerFilter")}
         role="dialog"
         aria-modal="true"

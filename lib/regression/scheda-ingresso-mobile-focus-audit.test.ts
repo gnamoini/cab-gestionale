@@ -28,16 +28,18 @@ assert.match(formSection, /<h3/);
 
 assert.match(ingressoForm, /GestionaleModalScrollBody/);
 assert.match(ingressoForm, /FormSection/);
-assert.match(ingressoForm, /gestionaleMultilineEnterProps/);
+assert.match(ingressoForm, /GestionaleTextarea/);
 assert.match(anagrafica, /FormSection/);
 assert.match(anagrafica, /FormField/);
 
-assert.match(keyboardHook, /KEYBOARD_SETTLE_MS/);
-assert.match(keyboardHook, /keyboardOpening/);
+assert.match(keyboardHook, /subscribeGestionaleViewport/);
 assert.match(keyboardHook, /resolveFocusExtraTop/);
 
 assert.match(iosStability, /handleFocusInForMobileModal/);
-assert.match(iosStability, /visualViewport/);
+assert.match(iosStability, /mountGestionaleViewportOrchestrator/);
+
+const orchestrator = read("lib/ui/gestionale-viewport-orchestrator.ts");
+assert.match(orchestrator, /waitForViewportStable/);
 
 const mezziForm = read("components/gestionale/mezzi/mezzi-form-fields.tsx");
 const ricambioForm = read("components/gestionale/magazzino/ricambio-form-fields.tsx");

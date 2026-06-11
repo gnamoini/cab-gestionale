@@ -1,0 +1,75 @@
+/**
+ * Audit searchable sheet selector: SSOT GlobalSelect enhancements.
+ */
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+
+const ROOT = process.cwd();
+
+function read(rel: string): string {
+  return fs.readFileSync(path.join(ROOT, rel), "utf8");
+}
+
+const globalSelect = read("components/gestionale/global-input/global-select.tsx");
+const sheet = read("components/gestionale/global-input/gestionale-searchable-sheet-select.tsx");
+const bottomSheet = read("components/gestionale/gestionale-mobile-bottom-sheet.tsx");
+const virtual = read("components/gestionale/global-input/global-virtualized-listbox.tsx");
+const recents = read("lib/ui/gestionale-selector-recents.ts");
+const ordering = read("lib/ui/list-select-ordering.ts");
+const focusRestore = read("lib/ui/use-dropdown-focus-restore.ts");
+
+assert.match(globalSelect, /GestionaleSearchableSheetSelect/);
+assert.match(globalSelect, /useSelectorOverlayBack/);
+assert.match(globalSelect, /useDropdownFocusRestore/);
+assert.match(globalSelect, /pushSelectorRecent/);
+assert.match(globalSelect, /resolveSelectorSuggestions/);
+assert.match(globalSelect, /useSheet: sheetActive/);
+assert.match(globalSelect, /sheetActive/);
+assert.match(globalSelect, /runAtomicSelect/);
+assert.match(globalSelect, /flushCombobox/);
+assert.match(globalSelect, /deriveSurface/);
+assert.match(sheet, /GestionaleMobileBottomSheet/);
+assert.match(sheet, /showSearch/);
+
+const pillSelect = read("components/gestionale/global-input/global-fixed-list-pill.tsx");
+assert.match(pillSelect, /GestionaleSearchableSheetSelect/);
+assert.match(pillSelect, /showSearch=\{false\}/);
+assert.match(pillSelect, /useMaxMdDown/);
+assert.match(bottomSheet, /role="dialog"/);
+assert.match(bottomSheet, /bg-\[var\(--cab-overlay\)\]/);
+assert.match(bottomSheet, /cabModalZStacked/);
+assert.match(bottomSheet, /CAB_MODAL_ROOT_ATTR/);
+assert.match(bottomSheet, /CAB_STICKY_HEADER_ATTR/);
+assert.match(bottomSheet, /--cab-vv-height/);
+assert.match(bottomSheet, /--cab-vv-offset-top/);
+assert.match(sheet, /registerBack: false/);
+assert.match(sheet, /CAB_MODAL_SCROLL_ATTR/);
+assert.match(sheet, /cabModalScrollKeyboardPad/);
+assert.match(globalSelect, /externalScrollHost=\{sheetOpen\}/);
+assert.match(globalSelect, /hoverActivatesIndex=\{!sheetOpen\}/);
+assert.match(globalSelect, /if \(!open \|\| useSheet\) return;/);
+assert.match(virtual, /externalScrollHost/);
+assert.match(virtual, /externalMeasureReady/);
+assert.match(virtual, /virtualizer\.measure\(\)/);
+assert.match(globalSelect, /browseCap: sheetBrowseAll/);
+assert.match(globalSelect, /showAddOptionInUi/);
+assert.match(sheet, /saved\.has\(el\)/);
+assert.match(sheet, /onTouchMove/);
+assert.match(sheet, /role=\{comboboxAria \? "combobox"/);
+assert.match(sheet, /exemptPanelRef: panelRef/);
+assert.match(sheet, /allowPanelTouchMove/);
+assert.match(sheet, /min-h-0 min-w-0 flex-1 overflow-y-auto/);
+assert.doesNotMatch(sheet, /resolvedSearchRef\.current\?\.focus/);
+assert.match(recents, /readSelectorRecents/);
+assert.match(ordering, /orderSelectSuggestions/);
+assert.match(focusRestore, /restoreFocus/);
+
+const settingsSelect = read("components/gestionale/global-input/global-settings-list-select.tsx");
+assert.match(settingsSelect, /recentsKey: isMagazzinoListKey \? undefined : listKey/);
+assert.match(settingsSelect, /alphabeticalBrowse: isMagazzinoListKey/);
+
+const resolveSuggestions = read("lib/selector-core/resolve-selector-suggestions.ts");
+assert.match(resolveSuggestions, /if \(selectOnly \|\| useSheet\)/);
+
+console.log("searchable-sheet-selector-audit.test.ts OK");

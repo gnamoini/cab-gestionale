@@ -42,6 +42,8 @@ export {
   globalAutocompleteAddBtnClass,
   globalFixedListPillMenuPanel,
   globalInputEmptyMessage,
+  globalInputInvalidRing,
+  resolveGestionaleInputClassName,
   chainGestionaleEnterKeyDown,
   gestionaleAdvanceFocusOnEnter,
   scheduleFocusNextGestionaleField,
@@ -56,6 +58,10 @@ export {
   type GestionaleTextareaProps,
   type GestionaleTextareaSize,
 } from "@/components/gestionale/gestionale-textarea";
+export {
+  GestionaleNumberInput,
+  type GestionaleNumberInputProps,
+} from "@/components/gestionale/gestionale-number-input";
 export {
   gestionaleTextareaMaxHeightCompact,
   gestionaleTextareaMaxHeightDefault,
@@ -72,3 +78,13 @@ export {
   type UseGlobalDropdownPortalOptions,
   type UseGlobalDropdownPortalResult,
 } from "@/components/gestionale/global-input/use-global-dropdown-portal";
+export { GestionaleSearchableSheetSelect } from "@/components/gestionale/global-input/gestionale-searchable-sheet-select";
+export {
+  GlobalVirtualizedListbox,
+  GLOBAL_LISTBOX_VIRTUALIZE_THRESHOLD,
+} from "@/components/gestionale/global-input/global-virtualized-listbox";
+export { HighlightSearchMatch } from "@/components/gestionale/global-input/highlight-search-match";
+export {
+  SelectorEmptyState,
+  resolveSelectorEmptyHint,
+} from "@/components/gestionale/global-input/selector-empty-state";

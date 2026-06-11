@@ -14,8 +14,27 @@ export function normAutocompleteKey(value: string): string {
   return entityAutocompleteKey(value);
 }
 
+/** Segnaposto / valori neutri sempre in testa agli elenchi (dopo la voce value="" se presente). */
+export function isNeutralListOptionLabel(label: string): boolean {
+  const trimmed = label.trim();
+  if (!trimmed) return true;
+  const norm = normListSelectValue(trimmed);
+  if (norm === "" || norm === "-" || norm === "—" || norm === "–" || norm === "nessuna marca") {
+    return true;
+  }
+  return entityAutocompleteKey(trimmed) === "";
+}
+
+export function compareListSelectLabel(a: string, b: string): number {
+  const aNeutral = isNeutralListOptionLabel(a);
+  const bNeutral = isNeutralListOptionLabel(b);
+  if (aNeutral && !bNeutral) return -1;
+  if (!aNeutral && bNeutral) return 1;
+  return a.localeCompare(b, "it");
+}
+
 export function uniqueSortedOptions(options: readonly string[]): string[] {
-  return [...new Set(options.map((x) => x.trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b, "it"));
+  return [...new Set(options.map((x) => x.trim()).filter(Boolean))].sort(compareListSelectLabel);
 }
 
 /** Include il valore selezionato nell'elenco UI finché il refetch non lo contiene (post-append). */
@@ -33,6 +52,10 @@ export function scoreListSelectOption(query: string, option: string): number {
 }
 
 const BROWSE_ALL_CAP = 200;
+
+export function countUniqueListOptions(options: readonly string[]): number {
+  return uniqueSortedOptions(options).length;
+}
 
 export function filterListSelectSuggestions(
   query: string,

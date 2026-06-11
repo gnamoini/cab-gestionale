@@ -3,6 +3,7 @@
 import { GestionaleConfirmDialog, gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
 import { dsBtnDanger, dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
 import { gestionaleModalWidthStandard } from "@/lib/ui/modal-max-width-class";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 
 export type GestionaleUnsavedPlacement = "nested" | "stacked";
@@ -63,7 +64,7 @@ export function GestionaleUnsavedChangesDialog({
         open={open}
         title={title}
         message={message}
-        layerClassName="z-[120]"
+        layerClassName={cabModalZConfirm}
         footer={actions}
         onCancel={onStay}
       />
@@ -74,7 +75,7 @@ export function GestionaleUnsavedChangesDialog({
 
   return (
     <div
-      className="absolute inset-0 z-[120] flex min-w-0 items-center justify-center overflow-x-hidden bg-black/35 p-4 backdrop-blur-[1px]"
+      className={`absolute inset-0 ${cabModalZConfirm} flex min-w-0 items-center justify-center overflow-x-hidden bg-[var(--cab-overlay)] p-4 backdrop-blur-[1px]`}
       role="dialog"
       aria-modal="true"
       aria-labelledby="gestionale-unsaved-title"

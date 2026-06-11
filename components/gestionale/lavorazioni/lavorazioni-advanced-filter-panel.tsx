@@ -148,9 +148,12 @@ export function LavorazioniAdvancedFilterPanel({
             onChange={(v) => onChange({ addetto: v })}
             inputClassName={gestionaleFilterFieldInputClass}
             strictFromList
-            selectOnly
             variant="filter"
             filterNeutralValues={[FILTER_ALL]}
+            selectorDomain="lavorazioni"
+            dynamicList
+            operationalFilter
+            recentsKey="selector:lavorazioni-addetto-filter"
             aria-label="Filtra addetto"
           />
         </LavorazioniFilterField>

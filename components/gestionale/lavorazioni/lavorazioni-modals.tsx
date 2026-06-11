@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import { useDevModalLayoutLint } from "@/lib/ui-visual-linter/use-visual-layout-linter";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
@@ -15,7 +15,13 @@ import {
 } from "@/lib/ui/italian-date-input-mask";
 import { LavorazioniDateField } from "@/components/gestionale/lavorazioni/lavorazioni-date-field";
 import { LavorazioneMezzoPicker } from "@/components/gestionale/lavorazioni/lavorazione-mezzo-picker";
-import { LavorazioniModalSelect } from "@/components/gestionale/lavorazioni/lavorazioni-modal-select";
+import { AddettoSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
+import { GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
+import {
+  buildAddettoTablePillOptions,
+  buildPrioritaTablePillOptions,
+  buildStatoTablePillOptions,
+} from "@/lib/global-list/build-lavorazioni-pill-options";
 import {
   ADDETTI_SETTINGS_PANEL_CLASS,
   ADDETTI_SETTINGS_TABLE_CLASS,
@@ -30,9 +36,16 @@ import {
   erpBtnNeutral,
   prioritaBadgeStyle,
   prioritaLabel,
+  addettoPillShellClass,
+  addettoPillShellStyleForName,
+  prioritaPillShellClass,
+  prioritaPillShellStyle,
+  statoPillShellClass,
+  statoPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { useGestionaleModalDialogFocus } from "@/components/gestionale/gestionale-modal-focus";
 import { CloseButton } from "@/components/design-system/close-button";
 import {
@@ -47,6 +60,7 @@ import {
   dsModalSubtitle,
   dsModalTitle,
   dsModalTitleBlock,
+  dsModalFormFooter,
   dsHubModalTabBar,
   dsSegmentedBtnOn,
 } from "@/lib/ui/design-system";
@@ -103,6 +117,99 @@ const PRIORITA: PrioritaLav[] = orderPrioritaList(["bassa", "media", "alta", "ur
 
 const LAV_MODAL_TITLE_ID = "lav-modal-title";
 
+function LavorazioniInterventoPillFields({
+  statoId,
+  onStatoChange,
+  priorita,
+  onPrioritaChange,
+  addetto,
+  onAddettoChange,
+  stati,
+  addetti,
+  addettoColors,
+  prioritaColors,
+}: {
+  statoId: string;
+  onStatoChange: (v: string) => void;
+  priorita: PrioritaLav;
+  onPrioritaChange: (v: PrioritaLav) => void;
+  addetto: string;
+  onAddettoChange: (v: string) => void;
+  stati: StatoLavorazioneConfig[];
+  addetti: string[];
+  addettoColors: Record<string, string>;
+  prioritaColors?: Partial<Record<PrioritaLav, string>> | null;
+}) {
+  const statoOptions = useMemo(
+    () => buildStatoTablePillOptions(stati, stati),
+    [stati],
+  );
+  const prioritaOptions = useMemo(
+    () => buildPrioritaTablePillOptions(PRIORITA, prioritaColors ?? null),
+    [prioritaColors],
+  );
+  const addettoOptions = useMemo(
+    () => buildAddettoTablePillOptions(addetto, addetti, addettoColors),
+    [addetto, addetti, addettoColors],
+  );
+  const statoStyle = useMemo(
+    () => statoPillShellStyle(statoDisplayColor(statoId, stati)),
+    [statoId, stati],
+  );
+  const prioritaStyle = useMemo(
+    () =>
+      prioritaPillShellStyle(
+        priorita === "urgente" ? "#b91c1c" : prioritaDisplayColor(priorita, prioritaColors),
+      ),
+    [priorita, prioritaColors],
+  );
+  const addettoStyle = useMemo(
+    () => addettoPillShellStyleForName(addetto, addettoColors),
+    [addetto, addettoColors],
+  );
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-12">
+      <div className="sm:col-span-4">
+        <Field label="Stato">
+          <GlobalFixedListPillSelect
+            value={statoId}
+            onChange={onStatoChange}
+            options={statoOptions}
+            ariaLabel="Stato lavorazione"
+            shellClass={statoPillShellClass()}
+            fallbackPillStyle={statoStyle}
+          />
+        </Field>
+      </div>
+      <div className="sm:col-span-4">
+        <Field label="Priorità">
+          <GlobalFixedListPillSelect
+            value={priorita}
+            onChange={(v) => onPrioritaChange(v as PrioritaLav)}
+            options={prioritaOptions}
+            ariaLabel="Priorità"
+            shellClass={prioritaPillShellClass()}
+            fallbackPillStyle={prioritaStyle}
+          />
+        </Field>
+      </div>
+      <div className="sm:col-span-4">
+        <Field label="Addetto">
+          <AddettoSelectField
+            value={addetto}
+            onChange={onAddettoChange}
+            options={addettoOptions}
+            shellClass={addettoPillShellClass()}
+            shellStyle={addettoStyle}
+            ariaLabel="Addetto"
+          />
+        </Field>
+      </div>
+    </div>
+  );
+}
+
 export function LavorazioniModalHeader({
   title,
   subtitle,
@@ -141,7 +248,7 @@ export function LavorazioniModalHeader({
           </div>
         </div>
         {actions ? <div className="flex shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex-wrap">{actions}</div> : null}
-        <CloseButton onClick={onRequestClose} className={dsModalCloseBtn} />
+        <CloseButton onClick={onRequestClose} className={dsModalCloseBtn} showOnFocus={false} />
       </div>
     </header>
   );
@@ -217,7 +324,7 @@ export function LavorazioniModalShell({
   modalRootRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   useBodyScrollLock(true, "LavorazioniModalShell");
-  useOverlayBackHandler(true, onRequestClose, "LavorazioniModalShell");
+  useOverlayBackHandler(true, onRequestClose, "LavorazioniModalShell", { layer: "modal" });
   useDevModalLayoutLint(true, "lavorazioni-modal-shell");
   const dialogFocus = useGestionaleModalDialogFocus();
   useMobileModalKeyboard(dialogFocus.ref);
@@ -300,12 +407,14 @@ export function LavorazioniModalShell({
           <div className="flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden">
             {children}
           </div>
-          {footer ? (
-            <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[color:var(--cab-border)] bg-[var(--cab-card)] px-4 py-3">
-              {footer}
-            </footer>
-          ) : null}
         </div>
+        {footer ? (
+          <footer
+            className={`${dsModalFormFooter} max-md:pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]`}
+          >
+            {footer}
+          </footer>
+        ) : null}
       </div>
     </div>
   );
@@ -373,7 +482,7 @@ export function EditLavorazioneModal({
   return (
     <LavorazioniModalShell modalSize="formMedium" onRequestClose={onRequestClose} title={title} titleId="lav-edit-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 gestionale-scrollbar">
+        <GestionaleModalScrollBody className="space-y-4">
           <div
             {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
             className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
@@ -466,54 +575,18 @@ export function EditLavorazioneModal({
             className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
           >
             <SectionTitle>Gestione intervento</SectionTitle>
-            <div className="grid gap-3 sm:grid-cols-12">
-              <div className="sm:col-span-4">
-                <Field label="Stato">
-                  <LavorazioniModalSelect
-                    ariaLabel="Stato lavorazione"
-                    value={local.statoId}
-                    onChange={(v) => setLocal({ ...local, statoId: v })}
-                    accentHex={statoDisplayColor(local.statoId, stati)}
-                  >
-                    {stati.map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.label}
-                      </option>
-                    ))}
-                  </LavorazioniModalSelect>
-                </Field>
-              </div>
-              <div className="sm:col-span-4">
-                <Field label="Priorità">
-                  <LavorazioniModalSelect
-                    ariaLabel="Priorità"
-                    value={local.priorita}
-                    onChange={(v) => setLocal({ ...local, priorita: v as PrioritaLav })}
-                  >
-                    {PRIORITA.map((p) => (
-                      <option key={p} value={p}>
-                        {p.charAt(0).toUpperCase() + p.slice(1)}
-                      </option>
-                    ))}
-                  </LavorazioniModalSelect>
-                </Field>
-              </div>
-              <div className="sm:col-span-4">
-                <Field label="Addetto">
-                  <LavorazioniModalSelect
-                    ariaLabel="Addetto"
-                    value={local.addetto}
-                    onChange={(v) => setLocal({ ...local, addetto: v })}
-                  >
-                    {addetti.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </LavorazioniModalSelect>
-                </Field>
-              </div>
-            </div>
+            <LavorazioniInterventoPillFields
+              statoId={local.statoId}
+              onStatoChange={(v) => setLocal({ ...local, statoId: v })}
+              priorita={local.priorita}
+              onPrioritaChange={(v) => setLocal({ ...local, priorita: v })}
+              addetto={local.addetto}
+              onAddettoChange={(v) => setLocal({ ...local, addetto: v })}
+              stati={stati}
+              addetti={addetti}
+              addettoColors={addettoColors}
+              prioritaColors={prioritaColors}
+            />
           </div>
 
           <div
@@ -568,7 +641,7 @@ export function EditLavorazioneModal({
               rows={4}
             />
           </div>
-        </div>
+        </GestionaleModalScrollBody>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <button type="submit" className={`${erpBtnAccent} w-full`}>
             Salva modifiche
@@ -622,7 +695,7 @@ export function NewLavorazioneModal({
   return (
     <LavorazioniModalShell modalSize="formMedium" onRequestClose={onRequestClose} title="Nuova lavorazione" titleId="lav-new-modal-title">
       <form {...gestionaleFormFocusScopeProps()} onSubmit={handleSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
-        <div className="min-h-0 min-w-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4">
+        <GestionaleModalScrollBody className="space-y-4">
           <div
             {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
             className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
@@ -704,48 +777,18 @@ export function NewLavorazioneModal({
             className="rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 dark:border-zinc-800 dark:bg-zinc-800/40"
           >
             <SectionTitle>Gestione intervento</SectionTitle>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <Field label="Stato iniziale">
-                <LavorazioniModalSelect
-                  ariaLabel="Stato iniziale"
-                  value={d.statoId}
-                  onChange={(v) => setDraft({ statoId: v })}
-                  accentHex={statoDisplayColor(d.statoId, stati)}
-                >
-                  {stati.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.label}
-                    </option>
-                  ))}
-                </LavorazioniModalSelect>
-              </Field>
-              <Field label="Priorità">
-                <LavorazioniModalSelect
-                  ariaLabel="Priorità"
-                  value={d.priorita}
-                  onChange={(v) => setDraft({ priorita: v as PrioritaLav })}
-                >
-                  {PRIORITA.map((p) => (
-                    <option key={p} value={p}>
-                      {p.charAt(0).toUpperCase() + p.slice(1)}
-                    </option>
-                  ))}
-                </LavorazioniModalSelect>
-              </Field>
-              <Field label="Addetto">
-                <LavorazioniModalSelect
-                  ariaLabel="Addetto"
-                  value={d.addetto}
-                  onChange={(v) => setDraft({ addetto: v })}
-                >
-                  {addetti.map((a) => (
-                    <option key={a} value={a}>
-                      {a}
-                    </option>
-                  ))}
-                </LavorazioniModalSelect>
-              </Field>
-            </div>
+            <LavorazioniInterventoPillFields
+              statoId={d.statoId}
+              onStatoChange={(v) => setDraft({ statoId: v })}
+              priorita={d.priorita}
+              onPrioritaChange={(v) => setDraft({ priorita: v })}
+              addetto={d.addetto}
+              onAddettoChange={(v) => setDraft({ addetto: v })}
+              stati={stati}
+              addetti={addetti}
+              addettoColors={addettoColors}
+              prioritaColors={prioritaColors}
+            />
           </div>
 
           <div
@@ -780,7 +823,7 @@ export function NewLavorazioneModal({
               </Field>
             </div>
           </div>
-        </div>
+        </GestionaleModalScrollBody>
         <div className="shrink-0 border-t border-zinc-100 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <button type="submit" className={`${erpBtnAccent} w-full`}>
             Crea lavorazione
@@ -1052,14 +1095,6 @@ export function SettingsLavorazioniModal({
             </div>
           ) : null}
         </div>
-
-        {layout === "modal" ? (
-          <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900">
-            <button type="button" className={erpBtnNeutral} onClick={onRequestClose}>
-              Chiudi
-            </button>
-          </footer>
-        ) : null}
       </div>
   );
 
@@ -1073,6 +1108,13 @@ export function SettingsLavorazioniModal({
       onRequestClose={onRequestClose}
       title={settingsTitle}
       titleId="lavorazioni-settings-title"
+      footer={
+        layout === "modal" ? (
+          <button type="button" className={`${erpBtnNeutral} min-h-11`} onClick={onRequestClose}>
+            Chiudi
+          </button>
+        ) : undefined
+      }
     >
       {inner}
     </LavorazioniModalShell>

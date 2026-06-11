@@ -1,6 +1,7 @@
 "use client";
 
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import { mezzoIngressoSuggestLabel } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
@@ -21,7 +22,7 @@ export function MezzoRegistratoIngressoDialog({
     <GestionaleConfirmDialog
       open={open}
       title="Mezzo già presente"
-      layerClassName="z-[120]"
+      layerClassName={cabModalZConfirm}
       cancelLabel="Continua manualmente"
       confirmLabel="Compila automaticamente"
       onCancel={onDismiss}

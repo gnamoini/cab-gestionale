@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { useGlobalOptions, type GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import { useLavorazioneCreateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
@@ -24,7 +24,7 @@ import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/sched
 import { useSchedaIngressoMezzoPrompt } from "@/src/hooks/use-scheda-ingresso-mezzo-prompt";
 import { useFormEngineSections } from "@/lib/forms/form-engine";
 import { LoadingButton } from "@/components/design-system";
-import { erpBtnAccent, erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   emptySchedaIngressoFields,
   SchedaIngressoFormBody,
@@ -34,7 +34,6 @@ import {
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { dsModalFormFooter } from "@/lib/ui/design-system";
 import { incrementHealthCounter } from "@/lib/observability/runtime-health";
 
 export { SchedaIngressoEditModal } from "@/components/gestionale/lavorazioni/scheda-ingresso-form-modal";
@@ -71,6 +70,8 @@ export function LavorazioneCreateModal({
   schedeStore = {},
   attive = [],
   storico = [],
+  sharedGlobalOpts,
+  sharedMezziCatalog,
 }: {
   open: boolean;
   onClose: () => void;
@@ -81,14 +82,23 @@ export function LavorazioneCreateModal({
   schedeStore?: LavorazioneSchedeStore;
   attive?: readonly LavorazioneAttiva[];
   storico?: readonly LavorazioneArchiviata[];
+  sharedGlobalOpts?: GlobalOptionsSlice;
+  sharedMezziCatalog?: readonly MezzoGestito[];
 }) {
-  const globalOpts = useGlobalOptions({ enabled: open, debugTag: "LavorazioneCreateModal" });
+  const hookGlobalOpts = useGlobalOptions({
+    enabled: open && !sharedGlobalOpts,
+    debugTag: "LavorazioneCreateModal",
+  });
+  const globalOpts = sharedGlobalOpts ?? hookGlobalOpts;
   const qc = useQueryClient();
   const gestToast = useGestionaleToast();
   const create = useLavorazioneCreateMutation();
   const createMezzo = useMezzoCreateMutation();
   const updateMezzo = useMezzoUpdateMutation();
-  const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
+  const mezziQ = useMezziListQuery(undefined, {
+    enabled: open && !sharedMezziCatalog,
+    staleTime: 30_000,
+  });
 
   const stati = useMemo(
     () => globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata"),
@@ -108,8 +118,8 @@ export function LavorazioneCreateModal({
   const addettiOpts = globalOpts.lavorazioni.addetti;
   const mezziUi = useMemo(() => (mezziQ.data ?? []).map(toMezzoUI), [mezziQ.data]);
   const mezziCatalog = useMemo(
-    () => (mezziUi.length > 0 ? mezziUi : [...mezzi]),
-    [mezziUi, mezzi],
+    () => sharedMezziCatalog ?? (mezziUi.length > 0 ? mezziUi : [...mezzi]),
+    [sharedMezziCatalog, mezziUi, mezzi],
   );
 
   const formEngine = useFormEngineSections<LavorazioneCreateFormSections>({
@@ -210,22 +220,13 @@ export function LavorazioneCreateModal({
       qc.getQueryData<MezzoRow[]>([...QK.mezzi, null]) ??
       qc.getQueriesData<MezzoRow[]>({ queryKey: QK.mezzi }).find(([, data]) => data?.length)?.[1];
     if (freshRows?.length) return freshRows.map(toMezzoUI);
-    return mezziCatalog;
+    return [...mezziCatalog];
   }, [qc, mezziCatalog]);
 
   useEffect(() => {
     if (!open) {
       formInitRef.current = false;
       defaultMezzoAppliedRef.current = null;
-      resetSections({
-        fields: emptySchedaIngressoFields(""),
-        meta: { stato: "", priorita: "media", mezzoId: "" },
-      });
-      setMezzoHint(null);
-      setSubmitError(null);
-      setSchedaSyncError(null);
-      createdLavorazioneIdRef.current = null;
-      partialSuccessRef.current = false;
       return;
     }
     if (formInitRef.current) return;
@@ -375,10 +376,25 @@ export function LavorazioneCreateModal({
       open={open}
       onRequestClose={onClose}
       variant="create-lavorazione"
-      subtitle="Scheda di ingresso — compila l'accettazione mezzo e salva la lavorazione."
-      footer={null}
+      footer={
+        <LoadingButton
+          type="submit"
+          form="lavorazione-create-form"
+          className={`${erpBtnAccent} min-h-11 w-full sm:ml-auto sm:w-auto sm:min-w-[10rem]`}
+          loading={pending}
+          loadingLabel="Salvataggio…"
+          disabled={!createdBy || stati.length === 0 || globalOpts.isLoading}
+        >
+          Salva lavorazione
+        </LoadingButton>
+      }
     >
-      <form {...formProps} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+      <form
+        id="lavorazione-create-form"
+        {...formProps}
+        onSubmit={onSubmit}
+        className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
+      >
         <SchedaIngressoFormBody
           variant="create-lavorazione"
           fields={fields}
@@ -399,26 +415,9 @@ export function LavorazioneCreateModal({
           onMezzoDialogAccept={acceptMezzoPrompt}
           onMezzoDialogDismiss={dismissMezzoPrompt}
           mezzoLinked={Boolean(mezzoId.trim())}
+          sharedGlobalOpts={globalOpts}
+          sharedMezziCatalog={mezziCatalog}
         />
-        <footer className={`${dsModalFormFooter} min-w-0 flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-end`}>
-          <button
-            type="button"
-            className={`${erpBtnNeutral} min-h-11 w-full sm:min-w-[7rem] sm:w-auto`}
-            onClick={onClose}
-            disabled={pending}
-          >
-            Annulla
-          </button>
-          <LoadingButton
-            type="submit"
-            className={`${erpBtnAccent} min-h-11 w-full sm:min-w-[10rem] sm:w-auto`}
-            loading={pending}
-            loadingLabel="Salvataggio…"
-            disabled={!createdBy || stati.length === 0 || globalOpts.isLoading}
-          >
-            Salva lavorazione
-          </LoadingButton>
-        </footer>
       </form>
     </SchedaIngressoFormModalShell>
   );

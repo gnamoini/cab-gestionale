@@ -1,8 +1,8 @@
 "use client";
 
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { CompatHierarchyMultiSelect } from "@/components/gestionale/magazzino/compat-hierarchy-multi-select";
-import { ricambioModalSectionClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
+import { ricambioModalSectionClass, ricambioSectionTitleClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
 import type { RicambioFormState } from "@/lib/magazzino/form";
 import { parseCompatInput } from "@/lib/magazzino/form";
 import {
@@ -28,11 +28,35 @@ import { CAB_FIELD_LABEL_ATTR, CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobi
 import { dsLabel, dsTypoSmall } from "@/lib/ui/design-system";
 type SetForm = React.Dispatch<React.SetStateAction<RicambioFormState>>;
 
-function RicambioSectionTitle({ children }: { children: React.ReactNode }) {
+const HINT_ATT_MODELLO_ID = "ricambio-compat-hint-att-modello";
+const HINT_TEL_MODELLO_ID = "ricambio-compat-hint-tel-modello";
+
+const COMPAT_PREREQ_HINT_BOX =
+  "mt-1.5 flex items-start gap-2 rounded-md border border-[color:color-mix(in_srgb,var(--cab-warning)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_12%,var(--cab-surface))] px-2.5 py-1.5";
+
+const COMPAT_PREREQ_HINT_TEXT =
+  "text-[11px] font-medium leading-snug text-[color:color-mix(in_srgb,var(--cab-warning)_92%,var(--cab-text))]";
+
+const COMPAT_BLOCKED_OVERLAY_BTN =
+  "absolute inset-0 z-[1] cursor-not-allowed rounded-[var(--ds-radius-lg)] bg-transparent outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-warning)_38%,transparent)] focus-visible:ring-offset-0";
+
+function compatBlockedFieldWrapClass(blocked: boolean, hintActive: boolean): string {
+  const base = "relative rounded-[var(--ds-radius-lg)]";
+  if (!blocked) return base;
+  if (hintActive) {
+    return `${base} border border-[color:color-mix(in_srgb,var(--cab-warning)_52%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_8%,var(--cab-surface))]`;
+  }
+  return `${base} border border-dashed border-[color:color-mix(in_srgb,var(--cab-warning)_30%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-surface))]`;
+}
+
+function CompatPrerequisiteHint({ id, message }: { id: string; message: string }) {
   return (
-    <p className="mb-3 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)]">
-      {children}
-    </p>
+    <div id={id} role="alert" className={COMPAT_PREREQ_HINT_BOX}>
+      <span aria-hidden className="shrink-0 text-sm leading-none text-[color:var(--cab-warning)]">
+        ⚠
+      </span>
+      <p className={`min-w-0 flex-1 ${COMPAT_PREREQ_HINT_TEXT}`}>{message}</p>
+    </div>
   );
 }
 
@@ -93,67 +117,83 @@ function RicambioFormCompatSectionInner({
   const [marcheFiltroTel, setMarcheFiltroTel] = useState<Set<string>>(
     () => new Set(parseCompatInput(form.compatMarcheTelaioFiltro)),
   );
+  const [showAttModelloMarcaHint, setShowAttModelloMarcaHint] = useState(false);
+  const [showTelModelloMarcaHint, setShowTelModelloMarcaHint] = useState(false);
 
   useEffect(() => {
     setMarcheFiltroAtt(new Set(parseCompatInput(form.compatMarcheAttrezzaturaFiltro)));
     setMarcheFiltroTel(new Set(parseCompatInput(form.compatMarcheTelaioFiltro)));
+    setShowAttModelloMarcaHint(false);
+    setShowTelModelloMarcaHint(false);
   }, [formResetKey, form.compatMarcheAttrezzaturaFiltro, form.compatMarcheTelaioFiltro]);
 
-  function syncMarcheAttrezzaturaFiltro(next: Set<string>) {
-    setMarcheFiltroAtt(next);
-    const joined = joinCompatLines(next);
-    setForm((f) => {
-      const prevAtt = new Set(parseCompatInput(f.compatMarcheAttrezzaturaFiltro));
-      let lines = parseCompatInput(f.compatibilitaMezzi);
-      for (const old of prevAtt) {
-        if (next.has(old)) continue;
-        lines = stripCompatLinesForMarcaInTree(lines, old, "attrezzature", prefsTree);
-      }
-      return {
-        ...f,
-        compatMarcheAttrezzaturaFiltro: joined,
-        compatibilitaMezzi: compatMezziInteractive(lines, prefsTree),
-      };
-    });
-  }
+  const syncMarcheAttrezzaturaFiltro = useCallback(
+    (next: Set<string>) => {
+      setMarcheFiltroAtt(next);
+      const joined = joinCompatLines(next);
+      setForm((f) => {
+        const prevAtt = new Set(parseCompatInput(f.compatMarcheAttrezzaturaFiltro));
+        let lines = parseCompatInput(f.compatibilitaMezzi);
+        for (const old of prevAtt) {
+          if (next.has(old)) continue;
+          lines = stripCompatLinesForMarcaInTree(lines, old, "attrezzature", prefsTree);
+        }
+        return {
+          ...f,
+          compatMarcheAttrezzaturaFiltro: joined,
+          compatibilitaMezzi: compatMezziInteractive(lines, prefsTree),
+        };
+      });
+    },
+    [prefsTree, setForm],
+  );
 
-  function syncMarcheTelaioFiltro(next: Set<string>) {
-    setMarcheFiltroTel(next);
-    const joined = joinCompatLines(next);
-    setForm((f) => {
-      const prevTel = new Set(parseCompatInput(f.compatMarcheTelaioFiltro));
-      let lines = parseCompatInput(f.compatibilitaMezzi);
-      for (const old of prevTel) {
-        if (next.has(old)) continue;
-        lines = stripCompatLinesForMarcaInTree(lines, old, "telai", prefsTree);
-      }
-      return {
-        ...f,
-        compatMarcheTelaioFiltro: joined,
-        compatibilitaMezzi: compatMezziInteractive(lines, prefsTree),
-      };
-    });
-  }
+  const syncMarcheTelaioFiltro = useCallback(
+    (next: Set<string>) => {
+      setMarcheFiltroTel(next);
+      const joined = joinCompatLines(next);
+      setForm((f) => {
+        const prevTel = new Set(parseCompatInput(f.compatMarcheTelaioFiltro));
+        let lines = parseCompatInput(f.compatibilitaMezzi);
+        for (const old of prevTel) {
+          if (next.has(old)) continue;
+          lines = stripCompatLinesForMarcaInTree(lines, old, "telai", prefsTree);
+        }
+        return {
+          ...f,
+          compatMarcheTelaioFiltro: joined,
+          compatibilitaMezzi: compatMezziInteractive(lines, prefsTree),
+        };
+      });
+    },
+    [prefsTree, setForm],
+  );
 
-  function toggleMezzo(m: string) {
-    setForm((f) => {
-      const cur = new Set(parseCompatInput(f.compatibilitaMezzi));
-      if (cur.has(m)) cur.delete(m);
-      else cur.add(m);
-      return {
-        ...f,
-        compatibilitaMezzi: compatMezziInteractive([...cur], prefsTree),
-      };
-    });
-  }
+  const toggleMezzo = useCallback(
+    (m: string) => {
+      setForm((f) => {
+        const cur = new Set(parseCompatInput(f.compatibilitaMezzi));
+        if (cur.has(m)) cur.delete(m);
+        else cur.add(m);
+        return {
+          ...f,
+          compatibilitaMezzi: compatMezziInteractive([...cur], prefsTree),
+        };
+      });
+    },
+    [prefsTree, setForm],
+  );
 
-  function removeCompatLine(line: string) {
-    setForm((f) => {
-      const cur = new Set(parseCompatInput(f.compatibilitaMezzi));
-      cur.delete(line);
-      return { ...f, compatibilitaMezzi: joinCompatLines(cur) };
-    });
-  }
+  const removeCompatLine = useCallback(
+    (line: string) => {
+      setForm((f) => {
+        const cur = new Set(parseCompatInput(f.compatibilitaMezzi));
+        cur.delete(line);
+        return { ...f, compatibilitaMezzi: joinCompatLines(cur) };
+      });
+    },
+    [setForm],
+  );
 
   const marcheAttrezzatura = useMemo(() => marcheFromHierarchyTree(prefsTree, "attrezzature"), [prefsTree]);
   const marcheTelaio = useMemo(() => marcheFromHierarchyTree(prefsTree, "telai"), [prefsTree]);
@@ -165,6 +205,16 @@ function RicambioFormCompatSectionInner({
     () => Array.from(marcheFiltroTel).sort((a, b) => a.localeCompare(b, "it")),
     [marcheFiltroTel],
   );
+  const attModelloBlocked = !globalOpts.isLoading && marcheFiltroAttList.length === 0;
+  const telModelloBlocked = !globalOpts.isLoading && marcheFiltroTelList.length === 0;
+
+  useEffect(() => {
+    if (!attModelloBlocked) setShowAttModelloMarcaHint(false);
+  }, [attModelloBlocked]);
+
+  useEffect(() => {
+    if (!telModelloBlocked) setShowTelModelloMarcaHint(false);
+  }, [telModelloBlocked]);
 
   const selectedAttrezzature = useMemo(
     () =>
@@ -174,7 +224,15 @@ function RicambioFormCompatSectionInner({
             lineBelongsToHierarchyTree(x, "attrezzature", prefsTree) && !isCompatMarcaUniversalLine(x),
         )
         .sort((a, b) => a.localeCompare(b, "it"))
-        .map((value) => ({ value, label: compatLineDisplayText(value) })),
+        .map((value) => {
+          const full = compatLineDisplayText(value);
+          const modello = parseCompatMarcaModello(value).modello;
+          return {
+            value,
+            label: modello || full,
+            title: full,
+          };
+        }),
     [mezziSel, prefsTree],
   );
   const selectedTelai = useMemo(
@@ -182,7 +240,15 @@ function RicambioFormCompatSectionInner({
       Array.from(mezziSel)
         .filter((x) => lineBelongsToHierarchyTree(x, "telai", prefsTree) && !isCompatMarcaUniversalLine(x))
         .sort((a, b) => a.localeCompare(b, "it"))
-        .map((value) => ({ value, label: compatLineDisplayText(value) })),
+        .map((value) => {
+          const full = compatLineDisplayText(value);
+          const modello = parseCompatMarcaModello(value).modello;
+          return {
+            value,
+            label: modello || full,
+            title: full,
+          };
+        }),
     [mezziSel, prefsTree],
   );
 
@@ -193,6 +259,52 @@ function RicambioFormCompatSectionInner({
   const telaiOpts = useMemo(
     () => compatLabelsPerMarcheHierarchy(prefsTree, "telai", marcheFiltroTelList),
     [prefsTree, marcheFiltroTelList],
+  );
+
+  const selectedMarcheAttChips = useMemo(
+    () =>
+      marcheFiltroAttList.map((m) => ({
+        value: m,
+        label: marcaFiltroChipLabel(m, "attrezzature", mezziSel, prefsTree),
+      })),
+    [marcheFiltroAttList, mezziSel, prefsTree],
+  );
+
+  const selectedMarcheTelChips = useMemo(
+    () =>
+      marcheFiltroTelList.map((m) => ({
+        value: m,
+        label: marcaFiltroChipLabel(m, "telai", mezziSel, prefsTree),
+      })),
+    [marcheFiltroTelList, mezziSel, prefsTree],
+  );
+
+  const handleAddMarcaAtt = useCallback(
+    (m: string) => syncMarcheAttrezzaturaFiltro(new Set(marcheFiltroAtt).add(m)),
+    [marcheFiltroAtt, syncMarcheAttrezzaturaFiltro],
+  );
+
+  const handleRemoveMarcaAtt = useCallback(
+    (m: string) => {
+      const next = new Set(marcheFiltroAtt);
+      next.delete(m);
+      syncMarcheAttrezzaturaFiltro(next);
+    },
+    [marcheFiltroAtt, syncMarcheAttrezzaturaFiltro],
+  );
+
+  const handleAddMarcaTel = useCallback(
+    (m: string) => syncMarcheTelaioFiltro(new Set(marcheFiltroTel).add(m)),
+    [marcheFiltroTel, syncMarcheTelaioFiltro],
+  );
+
+  const handleRemoveMarcaTel = useCallback(
+    (m: string) => {
+      const next = new Set(marcheFiltroTel);
+      next.delete(m);
+      syncMarcheTelaioFiltro(next);
+    },
+    [marcheFiltroTel, syncMarcheTelaioFiltro],
   );
 
   const pendingUniversalMarche = useMemo(
@@ -238,7 +350,7 @@ function RicambioFormCompatSectionInner({
 
   return (
     <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
-      <RicambioSectionTitle>Compatibilità mezzi</RicambioSectionTitle>
+      <p className={ricambioSectionTitleClass("primary")}>Compatibilità mezzi</p>
       <div className="grid gap-3">
         {globalOpts.isLoading ? (
           <p className={dsTypoSmall}>Caricamento elenchi attrezzature e telai…</p>
@@ -248,91 +360,123 @@ function RicambioFormCompatSectionInner({
             <p {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`mb-1.5 ${dsLabel}`}>
               Marca attrezzatura
             </p>
-            <CompatHierarchyMultiSelect
-              tree="attrezzature"
-              hierarchyKind="marca"
-              ariaLabel="Marca attrezzatura compatibilità"
-              placeholder="Cerca marca attrezzatura…"
-              disabled={globalOpts.isLoading}
-              options={marcheAttrezzatura}
-              selected={marcheFiltroAttList.map((m) => ({
-                value: m,
-                label: marcaFiltroChipLabel(m, "attrezzature", mezziSel, prefsTree),
-              }))}
-              onAdd={(m) => syncMarcheAttrezzaturaFiltro(new Set(marcheFiltroAtt).add(m))}
-              onRemove={(m) => {
-                const next = new Set(marcheFiltroAtt);
-                next.delete(m);
-                syncMarcheAttrezzaturaFiltro(next);
-              }}
-              emptyMessage="Nessuna marca"
-            />
+            <div>
+              <CompatHierarchyMultiSelect
+                tree="attrezzature"
+                hierarchyKind="marca"
+                ariaLabel="Marca attrezzatura compatibilità"
+                placeholder="Cerca marca attrezzatura…"
+                disabled={globalOpts.isLoading}
+                options={marcheAttrezzatura}
+                selected={selectedMarcheAttChips}
+                onAdd={handleAddMarcaAtt}
+                onRemove={handleRemoveMarcaAtt}
+                emptyMessage="Nessuna marca"
+              />
+            </div>
           </div>
           <div>
             <p {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`mb-1.5 ${dsLabel}`}>
               Modello attrezzatura
             </p>
-            <CompatHierarchyMultiSelect
-              tree="attrezzature"
-              hierarchyKind="modello"
-              marcaNome={marcheFiltroAttList[0]}
-              ariaLabel="Modello attrezzatura compatibilità"
-              placeholder="Cerca modello attrezzatura…"
-              disabled={globalOpts.isLoading || marcheFiltroAttList.length === 0}
-              options={attrezzatureOpts}
-              selected={selectedAttrezzature}
-              onAdd={(line) => toggleMezzo(line)}
-              onRemove={removeCompatLine}
-              emptyMessage={
-                marcheFiltroAttList.length === 0
-                  ? "Seleziona prima una marca attrezzatura"
-                  : "Nessun modello"
-              }
-            />
+            <div className={compatBlockedFieldWrapClass(attModelloBlocked, showAttModelloMarcaHint && attModelloBlocked)}>
+              <CompatHierarchyMultiSelect
+                tree="attrezzature"
+                hierarchyKind="modello"
+                marcaNome={marcheFiltroAttList[0]}
+                ariaLabel="Modello attrezzatura compatibilità"
+                placeholder="Cerca modello attrezzatura…"
+                disabled={globalOpts.isLoading || attModelloBlocked}
+                options={attrezzatureOpts}
+                selected={selectedAttrezzature}
+                onAdd={(line) => toggleMezzo(line)}
+                onRemove={removeCompatLine}
+                emptyMessage={
+                  attModelloBlocked
+                    ? "Seleziona prima una marca attrezzatura"
+                    : "Nessun modello"
+                }
+              />
+              {attModelloBlocked ? (
+                <button
+                  type="button"
+                  tabIndex={0}
+                  aria-describedby={showAttModelloMarcaHint ? HINT_ATT_MODELLO_ID : undefined}
+                  aria-label="Modello attrezzatura non disponibile finché non selezioni una marca attrezzatura"
+                  className={COMPAT_BLOCKED_OVERLAY_BTN}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    setShowAttModelloMarcaHint(true);
+                  }}
+                />
+              ) : null}
+            </div>
+            {showAttModelloMarcaHint && attModelloBlocked ? (
+              <CompatPrerequisiteHint
+                id={HINT_ATT_MODELLO_ID}
+                message="Seleziona prima la marca attrezzatura per abilitare i modelli."
+              />
+            ) : null}
           </div>
           <div>
             <p {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`mb-1.5 ${dsLabel}`}>
               Marca telaio
             </p>
-            <CompatHierarchyMultiSelect
-              tree="telai"
-              hierarchyKind="marca"
-              ariaLabel="Marca telaio compatibilità"
-              placeholder="Cerca marca telaio…"
-              disabled={globalOpts.isLoading}
-              options={marcheTelaio}
-              selected={marcheFiltroTelList.map((m) => ({
-                value: m,
-                label: marcaFiltroChipLabel(m, "telai", mezziSel, prefsTree),
-              }))}
-              onAdd={(m) => syncMarcheTelaioFiltro(new Set(marcheFiltroTel).add(m))}
-              onRemove={(m) => {
-                const next = new Set(marcheFiltroTel);
-                next.delete(m);
-                syncMarcheTelaioFiltro(next);
-              }}
-              emptyMessage="Nessuna marca"
-            />
+            <div>
+              <CompatHierarchyMultiSelect
+                tree="telai"
+                hierarchyKind="marca"
+                ariaLabel="Marca telaio compatibilità"
+                placeholder="Cerca marca telaio…"
+                disabled={globalOpts.isLoading}
+                options={marcheTelaio}
+                selected={selectedMarcheTelChips}
+                onAdd={handleAddMarcaTel}
+                onRemove={handleRemoveMarcaTel}
+                emptyMessage="Nessuna marca"
+              />
+            </div>
           </div>
           <div>
             <p {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`mb-1.5 ${dsLabel}`}>
               Modello telaio
             </p>
-            <CompatHierarchyMultiSelect
-              tree="telai"
-              hierarchyKind="modello"
-              marcaNome={marcheFiltroTelList[0]}
-              ariaLabel="Modello telaio compatibilità"
-              placeholder="Cerca modello telaio…"
-              disabled={globalOpts.isLoading || marcheFiltroTelList.length === 0}
-              options={telaiOpts}
-              selected={selectedTelai}
-              onAdd={(line) => toggleMezzo(line)}
-              onRemove={removeCompatLine}
-              emptyMessage={
-                marcheFiltroTelList.length === 0 ? "Seleziona prima una marca telaio" : "Nessun modello"
-              }
-            />
+            <div className={compatBlockedFieldWrapClass(telModelloBlocked, showTelModelloMarcaHint && telModelloBlocked)}>
+              <CompatHierarchyMultiSelect
+                tree="telai"
+                hierarchyKind="modello"
+                marcaNome={marcheFiltroTelList[0]}
+                ariaLabel="Modello telaio compatibilità"
+                placeholder="Cerca modello telaio…"
+                disabled={globalOpts.isLoading || telModelloBlocked}
+                options={telaiOpts}
+                selected={selectedTelai}
+                onAdd={(line) => toggleMezzo(line)}
+                onRemove={removeCompatLine}
+                emptyMessage={
+                  telModelloBlocked ? "Seleziona prima una marca telaio" : "Nessun modello"
+                }
+              />
+              {telModelloBlocked ? (
+                <button
+                  type="button"
+                  tabIndex={0}
+                  aria-describedby={showTelModelloMarcaHint ? HINT_TEL_MODELLO_ID : undefined}
+                  aria-label="Modello telaio non disponibile finché non selezioni una marca telaio"
+                  className={COMPAT_BLOCKED_OVERLAY_BTN}
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    setShowTelModelloMarcaHint(true);
+                  }}
+                />
+              ) : null}
+            </div>
+            {showTelModelloMarcaHint && telModelloBlocked ? (
+              <CompatPrerequisiteHint
+                id={HINT_TEL_MODELLO_ID}
+                message="Seleziona prima la marca telaio per abilitare i modelli."
+              />
+            ) : null}
           </div>
         </div>
         {compatFormStatus.invalid.length > 0 ? (
@@ -349,7 +493,7 @@ function RicambioFormCompatSectionInner({
                 : `${compatFormStatus.validCount} compatibilità selezionate`
               : pendingUniversalLabel
                 ? "Nessun modello selezionato — al salvataggio: compatibilità universale per marca."
-                : "Nessuna selezione — compatibilità universale (tutte le macchine)."}
+                : "Nessuna selezione — compatibilità universale."}
           </p>
         )}
         {compatFormStatus.invalid.length === 0 && pendingUniversalLabel ? (

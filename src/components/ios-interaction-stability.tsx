@@ -2,15 +2,12 @@
 
 import { useEffect } from "react";
 import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
-import {
-  handleFocusInForMobileModal,
-  syncKeyboardCssVars,
-} from "@/lib/ui/mobile-modal-behavior";
-import { syncAppViewportFill } from "@/lib/ui/viewport-fill-sync";
+import { mountGestionaleViewportOrchestrator } from "@/lib/ui/gestionale-viewport-orchestrator";
+import { handleFocusInForMobileModal } from "@/lib/ui/mobile-modal-behavior";
 
 /**
  * Sync Visual Viewport (iOS keyboard) e focus input.
- * Focus in modale → scroll container modale; fuori modale → scrollIntoView documento.
+ * Viewport events → orchestratore unico; focus → scroll container gestionale.
  * Montato una volta in AppProviders.
  */
 export function IosInteractionStability() {
@@ -18,36 +15,21 @@ export function IosInteractionStability() {
     if (typeof window === "undefined") return;
 
     healBodyScrollLockState("ios-stability-mount");
-    syncKeyboardCssVars();
-    syncAppViewportFill();
+    mountGestionaleViewportOrchestrator();
 
-    const vv = window.visualViewport;
     const rootEl = document.documentElement;
     const resizeObserver =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(() => {
-            syncAppViewportFill();
+            mountGestionaleViewportOrchestrator();
           })
         : null;
     resizeObserver?.observe(rootEl);
 
-    const onViewportChange = () => {
-      healBodyScrollLockState("viewport-change");
-      syncKeyboardCssVars();
-      syncAppViewportFill();
-    };
-    vv?.addEventListener("resize", onViewportChange);
-    vv?.addEventListener("scroll", onViewportChange);
-    window.addEventListener("resize", onViewportChange, { passive: true });
-    window.addEventListener("orientationchange", onViewportChange);
     document.addEventListener("focusin", handleFocusInForMobileModal, true);
 
     return () => {
       resizeObserver?.disconnect();
-      vv?.removeEventListener("resize", onViewportChange);
-      vv?.removeEventListener("scroll", onViewportChange);
-      window.removeEventListener("resize", onViewportChange);
-      window.removeEventListener("orientationchange", onViewportChange);
       document.removeEventListener("focusin", handleFocusInForMobileModal, true);
       document.documentElement.style.removeProperty("--cab-vv-height");
       document.documentElement.style.removeProperty("--cab-vv-offset-top");

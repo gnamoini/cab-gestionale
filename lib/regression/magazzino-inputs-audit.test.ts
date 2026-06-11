@@ -33,6 +33,9 @@ const filters = read("components/gestionale/magazzino/magazzino-advanced-filter-
 const view = read("components/gestionale/magazzino/magazzino-view.tsx");
 const ricambioModal = read("components/gestionale/magazzino/ricambio-new-modal.tsx");
 const multiSelect = read("components/gestionale/global-input/global-multi-select.tsx");
+const settingsSelect = read("components/gestionale/global-input/global-settings-list-select.tsx");
+const compatMulti = read("components/gestionale/magazzino/compat-hierarchy-multi-select.tsx");
+const globalSelect = read("components/gestionale/global-input/global-select.tsx");
 
 assert.match(formFields, /htmlFor/);
 assert.match(formFields, /magazzino-ricambio-codice-oe/);
@@ -44,10 +47,33 @@ assert.match(filters, /GlobalSettingsListSelect/);
 assert.match(filters, /htmlFor="mag-filter-marca-ricambio"/);
 assert.match(filters, /id="mag-filter-categoria"/);
 
-assert.match(ricambioModal, /GestionaleModalScrollBody/);
+const prezziLineari = read("components/gestionale/magazzino/magazzino-prezzi-lineari.tsx");
+const modalUi = read("components/gestionale/magazzino/ricambio-modal-ui.tsx");
+
+assert.match(formFields, /ricambioPrezziLineariVisible/);
+assert.match(formFields, /RicambioCollapsibleSection/);
+assert.match(formFields, /formMode/);
+assert.match(modalUi, /RicambioCollapsibleSection/);
+assert.match(modalUi, /--cab-border/);
+assert.doesNotMatch(prezziLineari, /zinc-/);
+
+assert.match(ricambioModal, /footer=\{/);
+assert.match(ricambioModal, /ricambio-new-form/);
+assert.match(ricambioModal, /form=\{RICAMBIO_NEW_FORM_ID\}/);
+assert.match(ricambioModal, /formMode="create"/);
+assert.match(ricambioModal, /RicambioCollapsibleSection/);
 assert.match(view, /GestionaleListSearchField/);
 assert.match(view, /id="magazzino-search"/);
 
-assert.match(multiSelect, /aria-label=\{`Rimuovi \$\{s\.label/);
+assert.match(multiSelect, /globalMultiSelectShellClass/);
+assert.match(multiSelect, /role="list"/);
+assert.match(multiSelect, /globalMultiSelectEmbeddedInputClass/);
+assert.match(multiSelect, /aria-label=\{selectedSummary\}/);
+assert.match(settingsSelect, /resolvedSelectorDomain/);
+assert.match(settingsSelect, /listKey\.startsWith\("magazzino:"\)/);
+assert.match(compatMulti, /selectorDomain="magazzino"/);
+assert.match(multiSelect, /selectorDomain=\{selectorDomain\}/);
+assert.match(globalSelect, /resolvedMinSheetOptions/);
+assert.match(globalSelect, /isSelectorDomainSheetRolloutEnabled\(selectorDomain\)/);
 
 console.log("magazzino-inputs-audit.test.ts OK");

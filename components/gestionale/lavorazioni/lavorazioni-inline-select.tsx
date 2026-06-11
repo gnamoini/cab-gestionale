@@ -1,10 +1,11 @@
 "use client";
 
-import { Children, isValidElement, type CSSProperties, type ReactNode } from "react";
+import { Children, isValidElement, useMemo, type CSSProperties, type ReactNode } from "react";
 import {
   GlobalFixedListPillSelect,
   type FixedListPillOption,
 } from "@/components/gestionale/global-input/global-fixed-list-pill";
+import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import {
   addettoPillShellClass,
   addettoPillShellStyleForName,
@@ -201,7 +202,92 @@ export function TablePillReadonly({
   );
 }
 
-/** Select compatto tabella con chevron e altezza fissa (stato / priorità / addetto). */
+const ADDETTI_RECENTS_KEY = "selector:addetti";
+
+/**
+ * Selezione addetto — pill: stesso SSOT di stato/priorità (`GlobalFixedListPillSelect`).
+ * Default: combobox searchable per form full-width.
+ */
+export function AddettoSelectField({
+  variant = "pill",
+  shellClass,
+  shellStyle,
+  value,
+  onChange,
+  options,
+  ariaLabel,
+  disabled,
+  title,
+  tablePillWidth,
+  className = "",
+}: {
+  variant?: "pill" | "default";
+  shellClass?: string;
+  shellStyle?: CSSProperties;
+  value: string;
+  onChange: (next: string) => void;
+  options: TablePillOption[];
+  ariaLabel: string;
+  disabled?: boolean;
+  title?: string;
+  tablePillWidth?: string;
+  className?: string;
+}) {
+  const pillOptions = useMemo(
+    () =>
+      options.map((o) => ({
+        value: o.value,
+        label: o.label,
+        pillStyle: o.pillStyle,
+      })),
+    [options],
+  );
+
+  if (variant === "default") {
+    return (
+      <GlobalSelect
+        value={value}
+        onChange={onChange}
+        items={pillOptions}
+        coloredOptions
+        selectorDomain="addetti"
+        mobileSheetMode="selectOnly"
+        dynamicList
+        recentsKey={ADDETTI_RECENTS_KEY}
+        aria-label={ariaLabel}
+        disabled={disabled}
+        strictFromList
+        className={className}
+      />
+    );
+  }
+
+  const widthClass = tablePillWidth ?? "w-full min-w-0";
+  return (
+    <div
+      className={`group overflow-visible ${widthClass} ${disabled ? "opacity-60" : ""}`}
+      title={title}
+    >
+      <GlobalFixedListPillSelect
+        value={value}
+        onChange={onChange}
+        options={pillOptions}
+        ariaLabel={ariaLabel}
+        disabled={disabled}
+        title={title}
+        sheetTitle={ariaLabel}
+        shellClass={shellClass}
+        fallbackPillStyle={shellStyle}
+      />
+    </div>
+  );
+}
+
+/**
+ * Select compatto tabella con chevron e altezza fissa (stato / priorità / addetto).
+ * Preferire `tablePill` (delega a GlobalFixedListPillSelect). Il path native `<select>`
+ * senza `tablePill` è deprecato — usare GlobalFixedListPillSelect per nuovi casi.
+ */
 export function InlineSelectField({
   shellClass,
   shellStyle,
@@ -211,7 +297,7 @@ export function InlineSelectField({
   ariaLabel,
   disabled,
   wide = false,
-  /** Pill tabella: menu custom con voci centrate. */
+  /** Pill tabella: menu custom con voci centrate (SSOT produzione). */
   tablePill = false,
   tablePillWidth,
   /** Voci menu pill tabella (es. addetto da componente wrapper). */
@@ -266,6 +352,7 @@ export function InlineSelectField({
     );
   }
 
+  /** @deprecated Usare `tablePill` + GlobalFixedListPillSelect o GlobalFixedListPillSelect diretto. */
   return (
     <div
       className={`${shellClass} group overflow-hidden ${widthClass} ${disabled ? "opacity-60" : ""}`}

@@ -233,7 +233,12 @@ export async function fillSchedaIngressoCreateForm(
   await targaInput.fill(data.targa);
   await modal.getByLabel("Ore lavoro").fill(data.oreLavoro);
   await modal.getByLabel("KM").fill(data.km);
-  await fillListCombobox(page, "Livello carburante", data.livelloCarburante, modal);
+  if (data.livelloCarburante) {
+    await modal
+      .getByRole("group", { name: "Livello carburante" })
+      .getByRole("button", { name: data.livelloCarburante, exact: true })
+      .click();
+  }
 
   await modal.getByLabel("Descrizione anomalia").fill(data.descrizioneAnomalia);
   await modal.getByLabel("Note").fill(data.noteIntervento);
@@ -308,7 +313,7 @@ export async function submitCreateLavorazione(page: Page): Promise<void> {
   await save.click();
   await lavorazionePost;
   if (await modal.isVisible().catch(() => false)) {
-    await modal.getByRole("button", { name: "Annulla" }).click();
+    await modal.getByRole("button", { name: "Chiudi" }).click();
   }
   await expect(modal).toBeHidden({ timeout: 30_000 });
 }

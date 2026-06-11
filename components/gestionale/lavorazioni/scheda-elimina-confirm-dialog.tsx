@@ -1,6 +1,7 @@
 "use client";
 
 import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { cabModalZConfirm } from "@/lib/ui/mobile-modal-behavior";
 import {
   SCHEDA_INGRESSO_LABEL,
   SCHEDA_LAVORAZIONI_LABEL,
@@ -37,7 +38,7 @@ export function SchedaEliminaConfirmDialog({
     <GestionaleConfirmDialog
       open={open}
       title="Eliminare scheda?"
-      layerClassName="z-[120]"
+      layerClassName={cabModalZConfirm}
       message={
         <>
           Stai per eliminare <span className="font-semibold">{label}</span> da questa lavorazione.

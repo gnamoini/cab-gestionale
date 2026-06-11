@@ -1,0 +1,17 @@
+[
+  {
+    "proposalId": "prop-addetti-1",
+    "current": {
+      "searchEfficiency": 0.09090909090909091,
+      "dropdownEfficiency": 0.8999823099805135,
+      "fallbackRate": 0
+    },
+    "proposed": {
+      "searchEfficiency": 1,
+      "dropdownEfficiency": 0,
+      "fallbackRate": 0
+    },
+    "fallbackReductionPotential": 0,
+    "recommendation": "favor_proposed"
+  }
+]

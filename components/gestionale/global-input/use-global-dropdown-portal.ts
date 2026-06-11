@@ -21,11 +21,11 @@ import {
   CAB_FIELD_LABEL_ATTR,
   findGestionaleFieldContainer,
 } from "@/lib/ui/mobile-modal-behavior";
+import { subscribeGestionaleViewport } from "@/lib/ui/gestionale-viewport-orchestrator";
 import {
   GLOBAL_DROPDOWN_MAX_HEIGHT,
   GLOBAL_DROPDOWN_MENU_GAP,
   GLOBAL_DROPDOWN_PORTAL_Z,
-  GLOBAL_DROPDOWN_VIEWPORT_PAD,
   globalDropdownPortalDetectOverflowOptions,
   globalDropdownPlacementOriginClass,
   type GlobalDropdownCoords,
@@ -151,6 +151,13 @@ export function useGlobalDropdownPortal({
     if (!open) return;
     update();
   }, [open, update, ...repositionDeps]);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+    return subscribeGestionaleViewport(() => {
+      update();
+    });
+  }, [open, update]);
 
   useLayoutEffect(() => {
     if (!open || !contentRef?.current) {

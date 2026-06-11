@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import { HubIconCopy, HubIconDownload } from "@/components/design-system/hub-table-action-icons";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { clientLavorazioniPublicUrl } from "@/lib/lavorazioni/client-portal-access";
-import { dsBtnNeutral, dsBtnPrimary, dsModalFormFooter } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 export function ClientLavorazioneQrDialog({
@@ -62,35 +63,48 @@ export function ClientLavorazioneQrDialog({
   }
 
   return (
-    <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="QR lavorazione">
-      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain">
-        <div className="flex flex-col items-center gap-4 p-6">
-          {dataUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={dataUrl} alt={`QR code lavorazione ${refLabel}`} className="h-64 w-64 rounded-xl border border-zinc-200 bg-white p-2 dark:border-zinc-700" />
-          ) : (
-            <div className="flex h-64 w-64 items-center justify-center rounded-xl border border-dashed border-zinc-300 text-sm text-zinc-500 dark:border-zinc-600">
-              Generazione QR…
-            </div>
-          )}
-          <p className="max-w-sm break-all text-center text-xs text-zinc-500 dark:text-zinc-400">{url}</p>
+    <LavorazioniModalShell
+      modalSize="info"
+      onRequestClose={onClose}
+      title="QR lavorazione"
+      footer={
+        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+          <button
+            type="button"
+            className={`${dsBtnNeutral} min-h-11 w-full gap-2 px-4 sm:w-auto`}
+            onClick={() => void copyLink()}
+            disabled={!url}
+          >
+            <HubIconCopy className="h-4 w-4 shrink-0 opacity-90" />
+            Copia link
+          </button>
+          <button
+            type="button"
+            className={`${dsBtnPrimary} min-h-11 w-full gap-2 sm:w-auto`}
+            onClick={downloadQr}
+            disabled={!dataUrl}
+          >
+            <HubIconDownload className="h-4 w-4 shrink-0 opacity-90" />
+            Scarica PNG
+          </button>
         </div>
-      </div>
-      <footer className={`${dsModalFormFooter} justify-center`}>
-        <button
-          type="button"
-          className={`${dsBtnNeutral} min-h-11 gap-2 px-4 py-2.5 text-sm font-semibold`}
-          onClick={() => void copyLink()}
-          disabled={!url}
-        >
-          <HubIconCopy className="h-4 w-4 shrink-0 opacity-90" />
-          Copia link
-        </button>
-        <button type="button" className={`${dsBtnPrimary} min-h-11`} onClick={downloadQr} disabled={!dataUrl}>
-          <HubIconDownload className="h-4 w-4 shrink-0 opacity-90" />
-          Scarica PNG
-        </button>
-      </footer>
+      }
+    >
+      <GestionaleModalScrollBody className="flex flex-col items-center gap-4">
+        {dataUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={dataUrl}
+            alt={`QR code lavorazione ${refLabel}`}
+            className="h-64 w-64 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-2"
+          />
+        ) : (
+          <div className="flex h-64 w-64 items-center justify-center rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] text-sm text-[color:var(--cab-text-muted)]">
+            Generazione QR…
+          </div>
+        )}
+        <p className="max-w-sm break-all text-center text-xs text-[color:var(--cab-text-muted)]">{url}</p>
+      </GestionaleModalScrollBody>
     </LavorazioniModalShell>
   );
 }

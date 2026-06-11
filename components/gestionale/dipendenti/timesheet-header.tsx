@@ -206,11 +206,14 @@ export function TimesheetHeader({
                 <label className="flex min-w-0 flex-col gap-1">
                   <span className={filterLabelClass}>Dipendente</span>
                   <GlobalSelect
-                    selectOnly
                     value={filterEmployeeId}
                     onChange={onFilterEmployeeId}
                     items={employeeItems}
                     placeholder="Tutti i dipendenti"
+                    selectorDomain="dipendenti"
+                    dynamicList
+                    operationalFilter
+                    recentsKey="selector:dipendenti-filter"
                     aria-label="Seleziona dipendente"
                   />
                 </label>

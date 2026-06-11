@@ -1,4 +1,5 @@
 import {
+  compareListSelectLabel,
   filterListSelectSuggestions,
   findBestFuzzyListOption,
   findExactListOption,
@@ -20,7 +21,7 @@ export function filterItemSelectSuggestions(
   const q = query.trim();
   if (!q) {
     const cap = limit ?? BROWSE_ITEMS_CAP;
-    return [...items].slice(0, cap);
+    return [...items].sort((a, b) => compareListSelectLabel(a.label, b.label)).slice(0, cap);
   }
   const ranked = [...items]
     .map((item) => ({ item, score: scoreListSelectOption(query, item.label) }))

@@ -11,7 +11,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
-import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { useGlobalOptions, type GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
@@ -48,11 +48,13 @@ import {
   statoPillShellClass,
   statoPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { AddettoSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { GlobalDatePicker, GlobalFixedListPillSelect } from "@/components/gestionale/global-input";
 import { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
-import { dsBtnDanger, dsInput, dsModalFormFooter } from "@/lib/ui/design-system";
+import { dsBtnDanger, dsInput } from "@/lib/ui/design-system";
+import { cabModalLayerClass } from "@/lib/ui/mobile-modal-behavior";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
   gestionaleModalBodyFlexClass,
@@ -132,13 +134,13 @@ export function SchedaIngressoFormModalShell({
     <LavorazioniModalShell
       modalSize={modalSize}
       modalHeight={modalHeight}
-      layerClassName={variant === "edit-scheda" ? "z-[110]" : undefined}
+      layerClassName={variant === "edit-scheda" ? cabModalLayerClass("stacked") : undefined}
       onRequestClose={onRequestClose}
       title={variant === "create-lavorazione" ? "Nuova lavorazione" : "Scheda di ingresso"}
       subtitle={subtitle?.trim() ? subtitle : undefined}
+      footer={footer ?? undefined}
     >
       {children}
-      {footer}
     </LavorazioniModalShell>
   );
 }
@@ -169,6 +171,8 @@ export function SchedaIngressoFormBody({
   saveMezzoPending = false,
   mezzoLinked = false,
   prependContent,
+  sharedGlobalOpts,
+  sharedMezziCatalog,
 }: {
   variant: SchedaIngressoFormVariant;
   fields: SchedaIngressoFields;
@@ -196,16 +200,22 @@ export function SchedaIngressoFormBody({
   mezzoLinked?: boolean;
   /** Contenuto opzionale in cima allo scroll (banner, avvisi). */
   prependContent?: ReactNode;
+  sharedGlobalOpts?: GlobalOptionsSlice;
+  sharedMezziCatalog?: readonly MezzoGestito[];
 }) {
   const disabled = pending || readOnly;
   const dataIngressoFieldId = useId();
   const anomaliaFieldId = useId();
   const noteFieldId = useId();
-  const globalOpts = useGlobalOptions({
-    enabled: true,
+  const hookGlobalOpts = useGlobalOptions({
+    enabled: !sharedGlobalOpts,
     debugTag: variant === "create-lavorazione" ? "LavorazioneCreateModal" : "SchedaIngressoEditModal",
   });
-  const mezziQ = useMezziListQuery(undefined, { enabled: true, staleTime: 30_000 });
+  const globalOpts = sharedGlobalOpts ?? hookGlobalOpts;
+  const mezziQ = useMezziListQuery(undefined, {
+    enabled: !sharedMezziCatalog,
+    staleTime: 30_000,
+  });
   const stati = globalOpts.lavorazioni.stati.filter((s) => s.id !== "annullata");
   const prioritaOpts = useMemo(
     () => orderPrioritaList(globalOpts.lavorazioni.prioritaDb),
@@ -214,9 +224,24 @@ export function SchedaIngressoFormBody({
   const addettiOpts = globalOpts.lavorazioni.addetti;
   const mezziUi = useMemo(() => (mezziQ.data ?? []).map(toMezzoUI), [mezziQ.data]);
   const mezziCatalog = useMemo(
-    () => (mezziUi.length > 0 ? mezziUi : [...mezzi]),
-    [mezziUi, mezzi],
+    () => sharedMezziCatalog ?? (mezziUi.length > 0 ? mezziUi : [...mezzi]),
+    [sharedMezziCatalog, mezziUi, mezzi],
   );
+
+  const [heavySectionsReady, setHeavySectionsReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const markReady = () => {
+      if (!cancelled) setHeavySectionsReady(true);
+    };
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(markReady);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, []);
 
   const [identScan, setIdentScan] = useState({ targa: fields.targa, matricola: fields.matricola });
   useEffect(() => {
@@ -350,27 +375,27 @@ export function SchedaIngressoFormBody({
                 />
               </FormField>
               <FormField label={SCHEDA_INGRESSO_ADDETTO_LABEL} className="sm:col-span-2 lg:col-span-1">
-                <GlobalFixedListPillSelect
+                <AddettoSelectField
                   value={fields.addettoAccettazione}
                   onChange={(v) => onPatch({ addettoAccettazione: v })}
                   options={addettoPillOptions}
+                  shellClass={addettoPillShellClass()}
+                  shellStyle={addettoPillStyle}
                   ariaLabel={SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL}
                   disabled={disabled || addettiOpts.length === 0}
-                  shellClass={addettoPillShellClass()}
-                  fallbackPillStyle={addettoPillStyle}
                 />
               </FormField>
             </div>
           ) : (
             <FormField label={SCHEDA_INGRESSO_ADDETTO_LABEL}>
-              <GlobalFixedListPillSelect
+              <AddettoSelectField
                 value={fields.addettoAccettazione}
                 onChange={(v) => onPatch({ addettoAccettazione: v })}
                 options={addettoPillOptions}
+                shellClass={addettoPillShellClass()}
+                shellStyle={addettoPillStyle}
                 ariaLabel={SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL}
                 disabled={disabled || addettiOpts.length === 0}
-                shellClass={addettoPillShellClass()}
-                fallbackPillStyle={addettoPillStyle}
               />
             </FormField>
           )}
@@ -381,6 +406,7 @@ export function SchedaIngressoFormBody({
           onPatch={onPatch}
           mezzi={mezziCatalog}
           disabled={disabled}
+          sections={heavySectionsReady ? undefined : ["cliente"]}
           onExactMezzoMatch={onMezzoPromptMatch}
           lastIngressoMatch={lastIngressoMatch}
           onCopyLastIngresso={readOnly ? undefined : copyLastIngresso}
@@ -391,6 +417,7 @@ export function SchedaIngressoFormBody({
           mezzoLinked={mezzoLinked}
         />
 
+        {heavySectionsReady ? (
         <FormSection title="Intervento">
           <FormField label="Descrizione anomalia" htmlFor={anomaliaFieldId}>
             <GestionaleTextarea
@@ -417,6 +444,7 @@ export function SchedaIngressoFormBody({
             />
           </FormField>
         </FormSection>
+        ) : null}
       </GestionaleModalScrollBody>
     </>
   );
@@ -502,9 +530,41 @@ export function SchedaIngressoEditModal({
       onRequestClose={() => onRequestClose(draftRef.current)}
       variant="edit-scheda"
       subtitle="Modifica i dati di accettazione mezzo."
-      footer={null}
+      footer={
+        <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
+          {onDelete && !readOnly ? (
+            <button type="button" className={`${dsBtnDanger} min-h-11`} onClick={onDelete} disabled={pending}>
+              Elimina scheda
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={`${erpBtnNeutral} min-h-11`}
+            onClick={() => onRequestClose(draftRef.current)}
+            disabled={pending}
+          >
+            Annulla
+          </button>
+          {!ro ? (
+            <LoadingButton
+              type="submit"
+              form="scheda-ingresso-edit-form"
+              className={`${erpBtnAccent} min-h-11`}
+              loading={pending}
+              preset="salva"
+            >
+              Salva scheda
+            </LoadingButton>
+          ) : null}
+        </div>
+      }
     >
-      <form {...formProps} onSubmit={onSubmit} className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+      <form
+        id="scheda-ingresso-edit-form"
+        {...formProps}
+        onSubmit={onSubmit}
+        className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}
+      >
         <SchedaIngressoFormBody
           variant="edit-scheda"
           fields={draft}
@@ -520,24 +580,6 @@ export function SchedaIngressoEditModal({
           updatedByHint={updatedBy?.trim() || null}
           mezzoPrompt={mezzoPrompt}
         />
-        <footer className={dsModalFormFooter}>
-          <span className="min-w-0 flex-1" aria-hidden />
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            {onDelete && !readOnly ? (
-              <button type="button" className={dsBtnDanger} onClick={onDelete} disabled={pending}>
-                Elimina scheda
-              </button>
-            ) : null}
-            <button type="button" className={erpBtnNeutral} onClick={() => onRequestClose(draftRef.current)} disabled={pending}>
-              Annulla
-            </button>
-            {!ro ? (
-              <LoadingButton type="submit" className={erpBtnAccent} loading={pending} preset="salva">
-                Salva scheda
-              </LoadingButton>
-            ) : null}
-          </div>
-        </footer>
       </form>
     </SchedaIngressoFormModalShell>
   );

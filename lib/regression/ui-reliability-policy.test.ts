@@ -29,6 +29,11 @@ const modalBody = read("lib/ui/modal-max-width-class.ts");
 const pageLayout = read("components/design-system/page-layout.tsx");
 
 // --- Global CSS utilities ---
+assert.match(globalsCss, /html:has\(\.cab-app-shell\)/);
+assert.match(globalsCss, /body:has\(\.cab-app-shell\)[\s\S]*overflow:\s*hidden/);
+assert.match(globalsCss, /\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*auto/);
+assert.match(globalsCss, /@media \(min-width: 768px\)[\s\S]*\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*stable/);
+
 assert.match(globalsCss, /\.flex-safe\s*\{/);
 assert.match(globalsCss, /\.flex-fill,\s*\n?\s*\.flex-fill-safe\s*\{/);
 assert.match(globalsCss, /\.text-safe\s*\{/);
@@ -76,6 +81,13 @@ assert.match(
 );
 assert.match(appShell, /dsGestionaleScrollEndPad/);
 assert.match(appShell, /useGestionaleScrollEnd/);
+assert.match(appShell, /useGlobalDropdownPortal/);
+assert.match(appShell, /createPortal\(menu, document\.body\)/);
+assert.doesNotMatch(
+  appShell,
+  /AccountMenu[\s\S]*role="menu"[\s\S]*absolute right-0/,
+  "account menu must portal (header gutter mirror clips overflow:hidden)",
+);
 assert.doesNotMatch(
   designSystem,
   /dsGestionaleContentRail = `[^`]*\bmx-auto/,

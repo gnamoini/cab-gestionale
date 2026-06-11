@@ -952,6 +952,16 @@ export function MagazzinoView() {
     [masterCategorie, prodotti],
   );
 
+  /** Elenchi globali puri (`Impostazioni → Magazzino`) — SSOT per selettori e validazione form. */
+  const fornitoriGlobal = useMemo(
+    () => appSettings?.magazzinoMaster?.fornitori ?? [],
+    [appSettings?.magazzinoMaster?.fornitori],
+  );
+  const produttoriGlobal = useMemo(
+    () => appSettings?.magazzinoMaster?.produttori ?? [],
+    [appSettings?.magazzinoMaster?.produttori],
+  );
+
   const fornitori = useMemo(
     () =>
       mergeMasterWithRows(
@@ -1753,7 +1763,7 @@ export function MagazzinoView() {
           {null}
         </GestionaleListTable>
 
-        <div className="mt-4 space-y-3 xl:hidden">
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:hidden">
           {pagedMagazzino.map((p) => {
             const consumoRow = consumoMap.get(p.id);
             const avgM = consumoRow?.avgMonthly ?? null;
@@ -1766,13 +1776,13 @@ export function MagazzinoView() {
                 key={p.id}
                 className={
                   flash
-                    ? "shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_45%,transparent)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]"
-                    : undefined
+                    ? "min-w-0 h-full !p-3 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_45%,transparent)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]"
+                    : "min-w-0 h-full !p-3"
                 }
               >
-                <div className="flex items-start justify-between gap-3">
+                <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0 flex-1 space-y-0.5">
-                    <p className="line-clamp-2 text-lg font-semibold leading-snug tracking-tight text-[color:var(--cab-text)]">
+                    <p className="line-clamp-2 text-base font-semibold leading-snug tracking-tight text-[color:var(--cab-text)]">
                       {p.descrizione.trim() || "—"}
                     </p>
                     <p
@@ -1803,8 +1813,10 @@ export function MagazzinoView() {
                     <MagazzinoScortaBadge value={p.scorta} low={low} variant="mobile" />
                   </Tooltip>
                 </div>
-                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">{compatDisplayFor(p)}</p>
-                <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-zinc-500 dark:text-zinc-400">
+                  {compatDisplayFor(p)}
+                </p>
+                <dl className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1.5 text-[11px]">
                   <div>
                     <dt className="text-zinc-500 dark:text-zinc-400">Categoria</dt>
                     <dd className="font-medium text-zinc-900 dark:text-zinc-100">{p.categoria}</dd>
@@ -1830,7 +1842,7 @@ export function MagazzinoView() {
                     </dd>
                   </div>
                 </dl>
-                <div className="mt-3 flex items-center justify-between gap-2 border-t border-zinc-200/90 pt-3 dark:border-zinc-700/80">
+                <div className="mt-auto flex w-full min-w-0 shrink-0 items-end justify-between gap-2 border-t border-zinc-200/90 pt-2.5 dark:border-zinc-700/80">
                   <Tooltip
                     content={
                       staleModifica
@@ -1864,7 +1876,11 @@ export function MagazzinoView() {
                       </p>
                     </div>
                   </Tooltip>
-                  <div className={`${gestionaleListTableActionsGroupEnd} shrink-0`} role="group" aria-label="Azioni">
+                  <div
+                    className={`${gestionaleListTableActionsGroupEnd} shrink-0 flex-nowrap`}
+                    role="group"
+                    aria-label="Azioni"
+                  >
                   <IconActionButton label="Info" className={dsTableActionBtnInfo} onClick={() => openInfo(p)}>
                     <IconInfoMagazzino />
                   </IconActionButton>
@@ -1913,6 +1929,8 @@ export function MagazzinoView() {
         <RicambioNewModal
           marche={marche}
           categorie={categorie}
+          fornitori={fornitoriGlobal}
+          produttori={produttoriGlobal}
           mezziListePrefs={mezziListePrefs}
           authorName={authorName}
           prodotti={prodotti}
@@ -1951,8 +1969,9 @@ export function MagazzinoView() {
           mezziListePrefs={mezziListePrefs}
           marche={marche}
           categorie={categorie}
+          fornitori={fornitoriGlobal}
+          produttori={produttoriGlobal}
           authorName={authorName}
-          consumo={consumoMap.get(detailRicambio.id)}
           magCanCreateRicambio={magCanCreateRicambio}
           magCanDeleteRicambio={magCanDeleteRicambio}
           onClose={closeDetail}
@@ -1963,6 +1982,7 @@ export function MagazzinoView() {
             patchProdotti((prev) => prev.map((p) => (p.id === ui.id ? touch(ui) : p)));
             completeMagazzinoSave(ui.id, message);
           }}
+          onImageEvent={(ev) => logImageEvent(ev, detailRicambio)}
         />
       ) : null}
 

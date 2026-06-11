@@ -1,6 +1,7 @@
 import { prezzoVenditaDaListinoEMarkup } from "@/lib/magazzino/calculations";
 import {
   newFornitoreAlternativoId,
+  resolveFornitoriAlternativiFromMeta,
   sanitizeFornitoriAlternativiForPersist,
   syncFlatFornitoreFieldsOnRicambio,
 } from "@/lib/magazzino/ricambio-fornitori-alternativi";
@@ -115,6 +116,45 @@ export function fornitoriAlternativiToFormRows(
   }));
 }
 
+/** Righe editor form: risolve legacy/meta e garantisce almeno una riga vuota come in «Nuovo ricambio». */
+export function fornitoriAlternativiFormRowsFromRicambio(
+  r: Pick<
+    RicambioMagazzino,
+    | "fornitoriAlternativi"
+    | "fornitoreNonOriginale"
+    | "codiceFornitoreNonOriginale"
+    | "prezzoFornitoreNonOriginale"
+    | "scontoFornitoreNonOriginale"
+  >,
+): RicambioFornitoreAlternativoFormRow[] {
+  const resolved = resolveFornitoriAlternativiFromMeta({
+    fornitoriAlternativi: r.fornitoriAlternativi ?? [],
+    fornitoreNonOriginale: r.fornitoreNonOriginale,
+    codiceFornitoreNonOriginale: r.codiceFornitoreNonOriginale,
+    prezzoFornitoreNonOriginale: r.prezzoFornitoreNonOriginale,
+    scontoFornitoreNonOriginale: r.scontoFornitoreNonOriginale,
+  });
+  const rows = fornitoriAlternativiToFormRows(resolved);
+  return rows.length > 0 ? rows : [emptyFornitoreAlternativoFormRow()];
+}
+
+/** True se almeno una riga ha dati utili (non solo placeholder vuoto). */
+export function fornitoriAlternativiFormRowsHaveContent(
+  rows: RicambioFornitoreAlternativoFormRow[],
+): boolean {
+  return rows.some((row) => {
+    const prezzo = Math.max(0, parseFloat(row.prezzo) || 0);
+    const sconto = Math.min(100, Math.max(0, parseFloat(row.sconto) || 0));
+    return (
+      row.fornitore.trim() !== "" ||
+      row.produttore.trim() !== "" ||
+      row.codice.trim() !== "" ||
+      prezzo > 0 ||
+      sconto > 0
+    );
+  });
+}
+
 export function fornitoriAlternativiFromFormRows(
   rows: RicambioFornitoreAlternativoFormRow[],
 ): RicambioFornitoreAlternativo[] {
@@ -188,12 +228,64 @@ export function emptyRicambioForm(): RicambioFormState {
     scontoFornitoreOriginale: "0",
     markupPercentuale: "45",
     prezzoVendita: "0",
-    fornitoriAlternativi: [],
+    fornitoriAlternativi: [emptyFornitoreAlternativoFormRow()],
     fornitoreNonOriginale: "",
     codiceFornitoreNonOriginale: "",
     prezzoFornitoreNonOriginale: "0",
     scontoFornitoreNonOriginale: "0",
   });
+}
+
+function ricambioFormDirtySnapshot(f: RicambioFormState): string {
+  const s = syncPrezzoVenditaInForm(f);
+  return JSON.stringify({
+    marca: s.marca.trim(),
+    codiceFornitoreOriginale: s.codiceFornitoreOriginale.trim(),
+    codiceFornitoreOriginaleSecondario: s.codiceFornitoreOriginaleSecondario.trim(),
+    marcaOriginaleSecondaria: s.marcaOriginaleSecondaria.trim(),
+    usatoInTagliandi: s.usatoInTagliandi,
+    unitaMisura: s.unitaMisura,
+    descrizione: s.descrizione.trim(),
+    note: s.note.trim(),
+    categoria: s.categoria.trim(),
+    compatibilitaMezzi: s.compatibilitaMezzi.trim(),
+    compatMarcheAttrezzaturaFiltro: s.compatMarcheAttrezzaturaFiltro.trim(),
+    compatMarcheTelaioFiltro: s.compatMarcheTelaioFiltro.trim(),
+    scorta: s.scorta.trim(),
+    scortaMinima: s.scortaMinima.trim(),
+    prezzoFornitoreOriginale: s.prezzoFornitoreOriginale.trim(),
+    scontoFornitoreOriginale: s.scontoFornitoreOriginale.trim(),
+    markupPercentuale: normalizeMarkupInputString(s.markupPercentuale),
+    prezzoVendita: f.prezzoVendita.trim(),
+    fornitoriAlternativi: s.fornitoriAlternativi.map((r) => ({
+      fornitore: r.fornitore.trim(),
+      produttore: r.produttore.trim(),
+      codice: r.codice.trim(),
+      prezzo: r.prezzo.trim(),
+      sconto: r.sconto.trim(),
+    })),
+    fornitoreNonOriginale: s.fornitoreNonOriginale.trim(),
+    codiceFornitoreNonOriginale: s.codiceFornitoreNonOriginale.trim(),
+    prezzoFornitoreNonOriginale: s.prezzoFornitoreNonOriginale.trim(),
+    scontoFornitoreNonOriginale: s.scontoFornitoreNonOriginale.trim(),
+  });
+}
+
+/** True se il draft differisce dal baseline (es. form vuoto o record caricato). */
+export function ricambioFormIsDirty(current: RicambioFormState, baseline: RicambioFormState): boolean {
+  return ricambioFormDirtySnapshot(current) !== ricambioFormDirtySnapshot(baseline);
+}
+
+/** Messaggio toast quando si tenta di salvare un nuovo ricambio senza alcun input utente. */
+export const RICAMBIO_SAVE_EMPTY_FORM_MESSAGE =
+  "Compila almeno un campo del ricambio prima di salvarlo in magazzino.";
+
+/** True se il draft è ancora identico al form vuoto iniziale (nessun dato inserito). */
+export function ricambioFormHasNoUserInput(
+  current: RicambioFormState,
+  baseline: RicambioFormState = emptyRicambioForm(),
+): boolean {
+  return !ricambioFormIsDirty(current, baseline);
 }
 
 export function ricambioFromForm(
@@ -348,7 +440,8 @@ export function toFormDraft(
     : { attrezzature: [] as string[], telai: [] as string[] };
 
   return syncPrezzoVenditaInForm({
-    marca: r.marca,
+    marca:
+      r.marca === RICAMBIO_LENIENT_PLACEHOLDER_MARCA || !r.marca.trim() ? "" : r.marca,
     codiceFornitoreOriginale: r.codiceFornitoreOriginale,
     codiceFornitoreOriginaleSecondario: r.codiceFornitoreOriginaleSecondario,
     marcaOriginaleSecondaria: r.marcaOriginaleSecondaria,
@@ -369,7 +462,7 @@ export function toFormDraft(
     scontoFornitoreOriginale: String(r.scontoFornitoreOriginale),
     markupPercentuale: markupToFormString(r.markupPercentuale),
     prezzoVendita: String(r.prezzoVendita),
-    fornitoriAlternativi: fornitoriAlternativiToFormRows(r.fornitoriAlternativi ?? []),
+    fornitoriAlternativi: fornitoriAlternativiFormRowsFromRicambio(r),
     fornitoreNonOriginale: r.fornitoreNonOriginale,
     codiceFornitoreNonOriginale: r.codiceFornitoreNonOriginale,
     prezzoFornitoreNonOriginale: String(r.prezzoFornitoreNonOriginale),
@@ -380,6 +473,9 @@ export function toFormDraft(
 export type RicambioListFieldOptions = {
   marche: readonly string[];
   categorie: readonly string[];
+  /** Elenchi globali magazzino (`app_settings` → `magazzino.master`). */
+  fornitori: readonly string[];
+  produttori: readonly string[];
   /** Albero attrezzature da `app_settings.mezziListe` — unica fonte compatibilità mezzi. */
   mezziListe: MezziListePrefs;
 };
@@ -403,6 +499,14 @@ export function validateRicambioListFields(
   }
   if (f.categoria.trim() && !isValueInListOptions(f.categoria, opts.categorie)) {
     return "Seleziona una categoria esistente.";
+  }
+  for (const row of f.fornitoriAlternativi) {
+    if (row.fornitore.trim() && !isValueInListOptions(row.fornitore, opts.fornitori)) {
+      return "Seleziona un fornitore alternativo dalle impostazioni globali.";
+    }
+    if (row.produttore.trim() && !isValueInListOptions(row.produttore, opts.produttori)) {
+      return "Seleziona un produttore dalle impostazioni globali.";
+    }
   }
   const fForCompat = applyCompatExpansionToFormState(f, opts.mezziListe);
   const compat = parseCompatInput(fForCompat.compatibilitaMezzi);

@@ -1,7 +1,8 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import {
+  dsFocus,
   dsGestionaleInfoCard,
   dsGestionaleInfoCardCompact,
   dsGestionaleInfoCardMetricRow,
@@ -15,6 +16,29 @@ import {
   dsGestionaleInfoCardTitle,
 } from "@/lib/ui/design-system";
 
+function GestionaleInfoCardChevron({ expanded }: { expanded: boolean }) {
+  return (
+    <span
+      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] transition-transform duration-200 ease-out motion-reduce:transition-none ${
+        expanded ? "rotate-180" : ""
+      }`}
+      aria-hidden
+    >
+      <svg
+        className="h-3.5 w-3.5 text-[color:var(--cab-text-muted)]"
+        fill="none"
+        viewBox="0 0 24 24"
+        stroke="currentColor"
+        strokeWidth={2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+    </span>
+  );
+}
+
 /** Card info stile magazzino (scheda ricambio): titolo + righe label/valore con separatori. */
 export function GestionaleInfoCard({
   title,
@@ -23,6 +47,10 @@ export function GestionaleInfoCard({
   compact = false,
   subtitle,
   actions,
+  hideTitle = false,
+  collapsible = false,
+  defaultCollapsed = true,
+  forceExpanded = false,
 }: {
   title: string;
   children?: ReactNode;
@@ -31,9 +59,64 @@ export function GestionaleInfoCard({
   compact?: boolean;
   subtitle?: ReactNode;
   actions?: ReactNode;
+  /** Titolo esterno sulla sezione (es. collapsible): niente h3 duplicato. */
+  hideTitle?: boolean;
+  /** Header cliccabile per mostrare/nascondere il contenuto (solo card senza subtitle/actions). */
+  collapsible?: boolean;
+  /** Solo se `collapsible`: partenza compressa. */
+  defaultCollapsed?: boolean;
+  /** Solo se `collapsible`: mantiene la sezione espansa (es. validazione). */
+  forceExpanded?: boolean;
 }) {
+  const panelId = useId();
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const shell = compact ? dsGestionaleInfoCardCompact : dsGestionaleInfoCard;
   const hasHeaderRow = Boolean(subtitle || actions);
+  const expanded = forceExpanded || !collapsed;
+
+  useEffect(() => {
+    if (forceExpanded) setCollapsed(false);
+  }, [forceExpanded]);
+
+  if (collapsible && !hasHeaderRow && !hideTitle) {
+    return (
+      <section className={`${shell}${className ? ` ${className}` : ""}`}>
+        <button
+          type="button"
+          id={`${panelId}-trigger`}
+          aria-expanded={expanded}
+          aria-controls={`${panelId}-body`}
+          className={`${dsFocus} group flex w-full min-w-0 items-center justify-between gap-2 rounded-[var(--ds-radius-md)] py-0.5 text-left touch-manipulation`}
+          onClick={() => {
+            if (forceExpanded) return;
+            setCollapsed((c) => !c);
+          }}
+        >
+          <h3 className={`${dsGestionaleInfoCardTitle} mb-0 min-w-0 flex-1`}>{title}</h3>
+          <GestionaleInfoCardChevron expanded={expanded} />
+        </button>
+        <div
+          id={`${panelId}-body`}
+          role="region"
+          aria-labelledby={`${panelId}-trigger`}
+          aria-hidden={!expanded}
+          className={`grid ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+        >
+          <div className="min-h-0 overflow-hidden">
+            {children ? <div className="min-w-0 pt-3">{children}</div> : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (hideTitle && !hasHeaderRow) {
+    return (
+      <section className={`${shell}${className ? ` ${className}` : ""}`} aria-label={title}>
+        {children}
+      </section>
+    );
+  }
 
   if (hasHeaderRow) {
     return (

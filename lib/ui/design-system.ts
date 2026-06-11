@@ -39,6 +39,9 @@ import {
 const cabText = "text-[color:var(--cab-text)]";
 const cabTextMuted = "text-[color:var(--cab-text-muted)]";
 const cabBorder = "border-[color:var(--cab-border)]";
+/** Bordo secondario standard (form «+ Aggiungi…», Annulla, azioni neutre). */
+export const cabBorderSecondaryBtn =
+  "border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))]";
 const cabSurface = "bg-[var(--cab-surface)]";
 const cabCard = "bg-[var(--cab-card)]";
 
@@ -68,8 +71,14 @@ export const dsDisabled = "disabled:pointer-events-none disabled:opacity-55 disa
 /** Cursore manina su controlli cliccabili (bottoni design system). */
 const dsBtnCursor = "cursor-pointer";
 
-/** D — Neutro: Chiudi, Annulla, azioni discrete */
-export const dsBtnNeutral = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] ${cabBorder} ${cabSurface} px-2.5 py-2 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border)_75%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+/** D — Neutro: Chiudi, Annulla, «+ Aggiungi…», azioni discrete */
+export const dsBtnNeutral = `inline-flex items-center justify-center gap-1.5 rounded-[var(--ds-radius-lg)] ${cabBorderSecondaryBtn} ${cabSurface} px-2.5 py-2 text-xs font-medium ${cabText} shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)] hover:ring-1 hover:ring-[color:color-mix(in_srgb,var(--cab-border)_75%,transparent)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
+
+/** D — Neutro in form modal (touch 44px, testo compatto). */
+export const dsBtnNeutralForm = `${dsBtnNeutral} h-11 min-h-11 shrink-0 whitespace-nowrap px-3 text-[11px] font-semibold`;
+
+/** D2 — Neutro icon-only in form modal (touch 44×44). */
+export const dsBtnNeutralIconForm = `${dsBtnNeutral} h-11 w-11 min-h-11 min-w-11 shrink-0 justify-center gap-0.5 p-0`;
 
 /**
  * Toolbar header pagina (`PageHeader`):
@@ -415,7 +424,7 @@ export const dsBadgeOk = `rounded-full bg-[color:color-mix(in_srgb,var(--cab-suc
 export const dsBadgeInfo = `rounded-full bg-[color:color-mix(in_srgb,var(--cab-info)_18%,transparent)] px-2 py-0.5 text-[10px] font-semibold uppercase text-[color:color-mix(in_srgb,var(--cab-info)_88%,var(--cab-text))]`;
 
 /** Tabs segmentati */
-export const dsSegmentedWrap = `flex flex-wrap gap-1 rounded-[var(--ds-radius-xl)] ${cabBorder} ${cabSurface} p-1 shadow-[var(--cab-shadow-sm)]`;
+export const dsSegmentedWrap = `flex flex-wrap gap-1 rounded-[var(--ds-radius-xl)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] ${cabSurface} p-1 shadow-[var(--cab-shadow-sm)]`;
 export const dsSegmentedBtnOn = `rounded-[var(--ds-radius-lg)] ${cabPrimaryBg} px-3 py-2 text-sm font-medium text-white shadow-sm transition-colors`;
 export const dsSegmentedBtnOff = `rounded-[var(--ds-radius-lg)] px-3 py-2 text-sm font-medium ${cabTextMuted} transition-colors hover:bg-[var(--cab-hover)]`;
 
@@ -491,7 +500,7 @@ export const dsStackPage = layoutPageContainer;
 export const dsGestionaleContentMax = "w-full min-w-0 max-w-full";
 
 /** Padding orizzontale contenuto (wrapper interno; il main scroll resta edge-to-edge). */
-export const dsGestionaleContentGutter = "px-5";
+export const dsGestionaleContentGutter = "px-3 md:px-5";
 
 /** Riga shell header allineata al wrapper contenuto (stessa larghezza utile + gutter). */
 export const dsGestionaleContentShellRow = `${dsGestionaleContentMax} w-full min-w-0`;

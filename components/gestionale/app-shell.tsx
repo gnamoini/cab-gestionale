@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { CloseButton, Tooltip } from "@/components/design-system";
 import { useAuth } from "@/context/auth-context";
@@ -44,6 +45,10 @@ import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
 import { useSidebarCollapsed } from "@/lib/ui/use-sidebar-collapsed";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
+import {
+  useDropdownOutsideDismiss,
+  useGlobalDropdownPortal,
+} from "@/components/gestionale/global-input/use-global-dropdown-portal";
 
 const shellTopBarClass =
   "flex h-14 shrink-0 items-center border-b border-[color:var(--cab-border)]";
@@ -140,28 +145,37 @@ function NavLink({
 function AccountMenu() {
   const { user, logout, status } = useAuth();
   const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const close = useCallback(() => setOpen(false), []);
+
+  const { style: portalStyle, scrollInside, placementOriginClass, isPositioned } =
+    useGlobalDropdownPortal({
+      open,
+      anchorRef: triggerRef,
+      contentRef: menuRef,
+      placement: "bottom-end",
+      matchAnchorWidth: false,
+      panelWidth: 208,
+      maxHeight: 384,
+    });
+
+  useDropdownOutsideDismiss(open, triggerRef, menuRef, close, { when: isPositioned });
 
   useEffect(() => {
     if (!open) return;
-    function onDoc(e: MouseEvent) {
-      if (!wrapRef.current?.contains(e.target as Node)) setOpen(false);
-    }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") close();
     }
-    document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, close]);
 
   const showGlobalLoading = useShowGlobalLoading();
 
   async function onLogout() {
-    setOpen(false);
+    close();
     showGlobalLoading(GLOBAL_LOADING_MESSAGES.logout);
     await logout();
     window.location.assign("/login");
@@ -169,9 +183,53 @@ function AccountMenu() {
 
   const label = user?.nome?.trim() || "Account";
 
+  const menu =
+    open && portalStyle ? (
+      <div
+        ref={menuRef}
+        role="menu"
+        style={portalStyle}
+        className={`min-w-[13rem] w-52 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] py-1 text-sm shadow-[var(--cab-shadow-lg)] gestionale-scrollbar ${placementOriginClass} ${
+          scrollInside ? "overflow-y-auto" : "overflow-hidden"
+        }`}
+      >
+        <div className="border-b border-[color:var(--cab-border)] px-3 py-2.5">
+          <p className="truncate text-xs font-semibold text-[color:var(--cab-text)]">
+            {user?.nome ?? "Utente"}
+          </p>
+          <p className="truncate text-[10px] text-[color:var(--cab-text-muted)]">
+            {user?.email ? user.email : ""}
+          </p>
+        </div>
+        <div
+          role="none"
+          className="flex min-h-11 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] px-3 py-2"
+        >
+          <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-[color:var(--cab-text-muted)]">
+            <ThemeModeIcon className="h-4 w-4 shrink-0" />
+            Aspetto
+          </span>
+          <ThemeToggle variant="switch" />
+        </div>
+        <button
+          type="button"
+          role="menuitem"
+          data-testid="smoke-logout"
+          onClick={() => void onLogout()}
+          className={`flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] ${erpFocus}`}
+        >
+          <span className="text-[color:var(--cab-text-muted)]" aria-hidden>
+            ⎋
+          </span>
+          Esci
+        </button>
+      </div>
+    ) : null;
+
   return (
-    <div className="relative" ref={wrapRef}>
+    <div className="relative">
       <button
+        ref={triggerRef}
         type="button"
         data-testid="smoke-account-menu"
         onClick={() => setOpen((v) => !v)}
@@ -194,43 +252,7 @@ function AccountMenu() {
           ▾
         </span>
       </button>
-      {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-30 mt-1 min-w-[13rem] max-h-[min(70vh,24rem)] w-52 overflow-y-auto rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] py-1 text-sm shadow-[var(--cab-shadow-lg)] gestionale-scrollbar"
-        >
-          <div className="border-b border-[color:var(--cab-border)] px-3 py-2.5">
-            <p className="truncate text-xs font-semibold text-[color:var(--cab-text)]">
-              {user?.nome ?? "Utente"}
-            </p>
-            <p className="truncate text-[10px] text-[color:var(--cab-text-muted)]">
-              {user?.email ? user.email : ""}
-            </p>
-          </div>
-          <div
-            role="none"
-            className="flex min-h-11 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] px-3 py-2"
-          >
-            <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-[color:var(--cab-text-muted)]">
-              <ThemeModeIcon className="h-4 w-4 shrink-0" />
-              Aspetto
-            </span>
-            <ThemeToggle variant="switch" />
-          </div>
-          <button
-            type="button"
-            role="menuitem"
-            data-testid="smoke-logout"
-            onClick={() => void onLogout()}
-            className={`flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] ${erpFocus}`}
-          >
-            <span className="text-[color:var(--cab-text-muted)]" aria-hidden>
-              ⎋
-            </span>
-            Esci
-          </button>
-        </div>
-      ) : null}
+      {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
     </div>
   );
 }
@@ -515,7 +537,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const mainPad = collapsed ? "md:pl-[4.25rem]" : "md:pl-[12.75rem]";
 
   return (
-    <div className={`cab-app-shell flex min-h-0 ${cabAppViewportFillClass} max-w-full overflow-x-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]`}>
+    <div className={`cab-app-shell flex min-h-0 ${cabAppViewportFillClass} max-w-full overflow-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]`}>
       <aside
         data-sidebar-collapsed={collapsed ? "" : undefined}
         className={`cab-sidebar fixed inset-y-0 left-0 z-40 hidden flex-col overflow-x-hidden border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width] duration-250 ease-out md:flex ${asideW}`}

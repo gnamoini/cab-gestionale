@@ -82,15 +82,72 @@ export function findExactMezzoForIngressoIdent(
   return findMezzoByIngressoIdent(mezzi, ident);
 }
 
+function trimIdent(v: string | undefined): string {
+  return v?.trim() ?? "";
+}
+
+function formatClienteLabel(cliente: string | undefined): string | null {
+  const c = trimIdent(cliente);
+  if (!c || c === "—") return null;
+  return c;
+}
+
+function formatMarcaModello(mezzo: MezzoGestito): string | null {
+  const mm = `${mezzo.marca} ${mezzo.modello}`.trim();
+  return mm || null;
+}
+
+function formatTargaLabel(targa: string | undefined): string | null {
+  const t = trimIdent(targa);
+  if (!t || t === "—") return null;
+  return `Targa ${t}`;
+}
+
+function formatMatricolaLabel(matricola: string | undefined): string | null {
+  const m = trimIdent(matricola);
+  if (!m || m === "—" || m.toLowerCase() === "non assegnata") return null;
+  return `Matr. ${m}`;
+}
+
+function formatScuderiaLabel(numeroScuderia: string | undefined): string | null {
+  const s = trimIdent(numeroScuderia);
+  if (!s || s === "—") return null;
+  return `Scud. ${s}`;
+}
+
 export function mezzoIngressoSuggestLabel(mezzo: MezzoGestito): string {
-  const marcaModello = `${mezzo.marca} ${mezzo.modello}`.trim();
-  const targa = mezzo.targa?.trim();
-  const matricola = mezzo.matricola?.trim();
-  const idents = [targa && targa !== "—" ? `Targa ${targa}` : "", matricola && matricola !== "—" && matricola !== "Non assegnata" ? `Matr. ${matricola}` : ""]
+  const marcaModello = formatMarcaModello(mezzo);
+  const idents = [formatTargaLabel(mezzo.targa), formatMatricolaLabel(mezzo.matricola)]
     .filter(Boolean)
     .join(" · ");
   if (marcaModello && idents) return `${marcaModello} · ${idents}`;
-  return idents || marcaModello || mezzo.cliente?.trim() || "Mezzo";
+  return idents || marcaModello || formatClienteLabel(mezzo.cliente) || "Mezzo";
+}
+
+/** Riga secondaria autocomplete: cliente in evidenza, senza ripetere il campo già nel titolo. */
+export function mezzoIngressoSuggestSecondaryLabel(
+  mezzo: MezzoGestito,
+  field: SchedaIngressoIdentField,
+): string {
+  const parts: string[] = [];
+  const cliente = formatClienteLabel(mezzo.cliente);
+  const marcaModello = formatMarcaModello(mezzo);
+  if (cliente) parts.push(cliente);
+  if (marcaModello) parts.push(marcaModello);
+  if (field !== "targa") {
+    const t = formatTargaLabel(mezzo.targa);
+    if (t) parts.push(t);
+  }
+  if (field !== "matricola") {
+    const m = formatMatricolaLabel(mezzo.matricola);
+    if (m) parts.push(m);
+  }
+  if (field !== "nScuderia") {
+    const s = formatScuderiaLabel(mezzo.numeroScuderia);
+    if (s) parts.push(s);
+  }
+  const label = parts.join(" · ");
+  return label || mezzoIngressoSuggestLabel(mezzo);
 }
 
 /** Evidenzia il match nel testo identificativo (targa/matricola). */

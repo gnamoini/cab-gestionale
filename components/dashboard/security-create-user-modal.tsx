@@ -260,7 +260,6 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
           </span>
           <div className="mt-1">
             <GlobalSettingsListSelect
-              selectOnly
               variant="default"
               listKey="mezzi:clienti"
               value={clienteRef}
@@ -273,6 +272,8 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
               aria-invalid={ruolo === "cliente" && !!clienteAssociationErr}
               placeholder={ruolo === "cliente" ? "Seleziona cliente…" : "—"}
               required={ruolo === "cliente"}
+              selectorDomain="security"
+              dynamicList
             />
           </div>
           {clienteAssociationErr ? (

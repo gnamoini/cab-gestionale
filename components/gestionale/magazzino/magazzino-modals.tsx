@@ -12,7 +12,6 @@ import type { MagazzinoLogFeedItem } from "@/lib/magazzino/use-magazzino-log-fee
 import type { RicambioConsumoDaLog } from "@/lib/magazzino/ricambio-consumo-from-log";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
-import { dsModalFormFooter } from "@/lib/ui/design-system";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
 function MagazzinoDisabledButtonTooltip({
@@ -83,8 +82,23 @@ export function MagazzinoRicambioInfoModal({
       onRequestClose={onClose}
       title="Scheda ricambio"
       titleId="detail-ricambio-title"
+      footer={
+        <MagazzinoDisabledButtonTooltip
+          content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
+          disabled={!magCanCreateRicambio}
+        >
+          <button
+            type="button"
+            onClick={onEdit}
+            className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
+            disabled={!magCanCreateRicambio}
+          >
+            Modifica
+          </button>
+        </MagazzinoDisabledButtonTooltip>
+      }
     >
-      <div className={`${gestionaleModalBodyFlexClass} overflow-hidden`}>
+      <div className={`${gestionaleModalBodyFlexClass} min-h-0 overflow-hidden`}>
         <GestionaleModalScrollBody>
           <RicambioInfoPanel
             ricambio={ricambio}
@@ -98,21 +112,6 @@ export function MagazzinoRicambioInfoModal({
             onDismissLogEntry={onDismissLogEntry}
           />
         </GestionaleModalScrollBody>
-        <footer className={`${dsModalFormFooter} flex-col items-stretch`}>
-          <MagazzinoDisabledButtonTooltip
-            content={magCanCreateRicambio ? "Modifica" : READONLY_PERMISSION_HINT}
-            disabled={!magCanCreateRicambio}
-          >
-            <button
-              type="button"
-              onClick={onEdit}
-              className={`${erpBtnAccent} min-h-11 w-full justify-center disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-45`}
-              disabled={!magCanCreateRicambio}
-            >
-              Modifica
-            </button>
-          </MagazzinoDisabledButtonTooltip>
-        </footer>
       </div>
     </GestionaleModalShell>
   );

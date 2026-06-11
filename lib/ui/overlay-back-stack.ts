@@ -5,11 +5,23 @@
 
 export const CAB_OVERLAY_HISTORY_KEY = "cabOverlay";
 
+export type OverlayLayer = "modal" | "drawer" | "selector";
+
+export type OverlayCloseContext = {
+  /** True quando la chiusura arriva dal pulsante Indietro / popstate (non da X o overlay click). */
+  fromPopstate?: boolean;
+};
+
 export type OverlayBackEntry = {
   id: number;
   source: string;
-  onClose: () => void;
+  onClose: (ctx?: OverlayCloseContext) => void;
   pushed: boolean;
+  layer?: OverlayLayer;
+};
+
+export type RegisterOverlayBackOptions = {
+  layer?: OverlayLayer;
 };
 
 type CabOverlayHistoryState = {
@@ -102,7 +114,7 @@ export function handleOverlayBackPopState(): boolean {
   if (!entry) return false;
 
   try {
-    entry.onClose();
+    entry.onClose({ fromPopstate: true });
   } catch {
     // onClose può smontare React — non propagare
   }
@@ -130,15 +142,48 @@ export function attachOverlayBackPopStateListener(): () => void {
  * Registra un overlay nello stack e aggiunge una voce history fittizia.
  * Ritorna unregister idempotente.
  */
-export function registerOverlayBack(onClose: () => void, source = "overlay"): () => void {
+function insertOverlayEntry(entry: OverlayBackEntry): void {
+  if (!entry.layer) {
+    overlayStack.push(entry);
+    return;
+  }
+  if (entry.layer === "selector") {
+    let insertAt = overlayStack.length;
+    for (let i = overlayStack.length - 1; i >= 0; i--) {
+      const layer = overlayStack[i]?.layer;
+      if (layer === "modal" || layer === "drawer") {
+        insertAt = i + 1;
+        break;
+      }
+      if (!layer) {
+        insertAt = i;
+      }
+    }
+    overlayStack.splice(insertAt, 0, entry);
+    return;
+  }
+  overlayStack.push(entry);
+}
+
+export function registerOverlayBack(
+  onClose: (ctx?: OverlayCloseContext) => void,
+  source = "overlay",
+  opts?: RegisterOverlayBackOptions,
+): () => void {
   if (typeof window === "undefined") return () => {};
 
   const id = ++nextOverlayId;
-  const entry: OverlayBackEntry = { id, source, onClose, pushed: false };
+  const entry: OverlayBackEntry = {
+    id,
+    source,
+    onClose,
+    pushed: false,
+    layer: opts?.layer,
+  };
 
   pushOverlayHistory(id, source);
   entry.pushed = true;
-  overlayStack.push(entry);
+  insertOverlayEntry(entry);
 
   let released = false;
   return () => {
@@ -146,6 +191,23 @@ export function registerOverlayBack(onClose: () => void, source = "overlay"): ()
     released = true;
     unregisterOverlayBack(id, { syncHistory: true });
   };
+}
+
+type OverlayBackResyncRef = { current: (() => void) | null };
+
+/** Ripristina stack/history dopo Indietro che non ha chiuso l'overlay (es. dialog unsaved). */
+export function ensureOverlayBackResync(
+  cleanupRef: OverlayBackResyncRef,
+  onClose: (ctx?: OverlayCloseContext) => void,
+  source: string,
+): void {
+  if (cleanupRef.current) return;
+  cleanupRef.current = registerOverlayBack(onClose, source, { layer: "modal" });
+}
+
+export function clearOverlayBackResync(cleanupRef: OverlayBackResyncRef): void {
+  cleanupRef.current?.();
+  cleanupRef.current = null;
 }
 
 /** Test-only: reset stato modulo. */

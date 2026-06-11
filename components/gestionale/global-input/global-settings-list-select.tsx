@@ -2,7 +2,7 @@
 
 
 
-import { useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 
@@ -14,7 +14,7 @@ import {
 } from "@/src/lib/global-list/global-settings-list-keys";
 import { useAppendGlobalListValue } from "@/src/hooks/use-append-global-list-value";
 import { useGlobalListOptions } from "@/src/hooks/use-global-list-options";
-import { mergeCurrentValueInOptions, normListSelectValue } from "@/lib/ui/list-select-utils";
+import { mergeCurrentValueInOptions, normListSelectValue, compareListSelectLabel, isNeutralListOptionLabel } from "@/lib/ui/list-select-utils";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 
 
@@ -54,6 +54,27 @@ export type GlobalSettingsListSelectProps = {
   /** Solo scelta da elenco: niente digitazione né filtro testuale. */
   selectOnly?: boolean;
 
+  /** Titolo bottom sheet mobile (default: aria-label). */
+  sheetTitle?: string;
+
+  /** Soglia opzioni per sheet mobile (0 = sempre su mobile con dominio rollout). */
+  minSheetOptions?: number;
+
+  /** Abilita bottom sheet mobile (default: true). */
+  mobileSheet?: boolean;
+
+  /** Sheet mobile: searchable (con Cerca) o selectOnly (solo elenco). */
+  mobileSheetMode?: "selectOnly" | "searchable" | "off";
+
+  /** Dominio UX sheet rollout (v2). */
+  selectorDomain?: import("@/lib/selector-core/selector-domain-policy").SelectorDomain;
+
+  /** Lista DB-driven — policy selectOnly dev warn. */
+  dynamicList?: boolean;
+
+  /** Filtro operativo ad alta frequenza. */
+  operationalFilter?: boolean;
+
   /** Voce in testa con value "" (es. «Nessuna marca»). */
   emptyOptionLabel?: string;
 
@@ -66,13 +87,35 @@ export type GlobalSettingsListSelectProps = {
 
 
 
+const MAGAZZINO_MARCA_EMPTY_LABEL = "Nessuna marca";
+
+
+
+function resolveDefaultEmptyOptionLabel(
+
+  listKey: GlobalSettingsListKey,
+
+  variant: "default" | "filter",
+
+): string | undefined {
+
+  if (variant === "filter") return undefined;
+
+  if (listKey === "magazzino:marche") return MAGAZZINO_MARCA_EMPTY_LABEL;
+
+  return undefined;
+
+}
+
+
+
 /**
 
  * Combobox collegato a `app_settings`: elenco live, filtro typeahead, aggiunta dinamica.
 
  */
 
-export function GlobalSettingsListSelect({
+function GlobalSettingsListSelectInner({
 
   listKey,
 
@@ -106,6 +149,20 @@ export function GlobalSettingsListSelect({
 
   selectOnly,
 
+  sheetTitle,
+
+  minSheetOptions,
+
+  mobileSheet,
+
+  mobileSheetMode,
+
+  selectorDomain,
+
+  dynamicList,
+
+  operationalFilter,
+
   emptyOptionLabel,
 
   excludeValues,
@@ -121,6 +178,7 @@ export function GlobalSettingsListSelect({
 
   const listPending = list.isLoading || !list.ready;
   const deferListUi = hydrated && listPending;
+  const resolvedEmptyOptionLabel = emptyOptionLabel ?? resolveDefaultEmptyOptionLabel(listKey, variant);
 
   const onAddToList = useCallback(
 
@@ -146,18 +204,25 @@ export function GlobalSettingsListSelect({
       const excluded = new Set(excludeValues.map((v) => normListSelectValue(v)));
       opts = opts.filter((o) => !excluded.has(normListSelectValue(o)));
     }
+    if (resolvedEmptyOptionLabel) {
+      opts = opts.filter((o) => !isNeutralListOptionLabel(o));
+    }
     return opts;
-  }, [list.options, value, excludeValues]);
+  }, [list.options, value, excludeValues, resolvedEmptyOptionLabel]);
 
   const itemsForUi = useMemo(() => {
     const base = structured
-      ? list.items
-      : optionsForUi.map((o) => ({ value: o, label: o }));
-    if (!emptyOptionLabel) return base;
-    const empty = { value: "", label: emptyOptionLabel };
-    const rest = base.filter((item) => item.value.trim() !== "");
+      ? [...list.items].sort((a, b) => compareListSelectLabel(a.label, b.label))
+      : [...optionsForUi]
+          .map((o) => ({ value: o, label: o }))
+          .sort((a, b) => compareListSelectLabel(a.label, b.label));
+    if (!resolvedEmptyOptionLabel) return base;
+    const empty = { value: "", label: resolvedEmptyOptionLabel };
+    const rest = base.filter(
+      (item) => item.value.trim() !== "" && !isNeutralListOptionLabel(item.label),
+    );
     return [empty, ...rest];
-  }, [structured, list.items, optionsForUi, emptyOptionLabel]);
+  }, [structured, list.items, optionsForUi, resolvedEmptyOptionLabel]);
 
 
 
@@ -179,7 +244,17 @@ export function GlobalSettingsListSelect({
 
   }, [hierarchyBlocked, list.isError, list.isLoading, list.ready]);
 
-
+  const isMagazzinoListKey = listKey.startsWith("magazzino:");
+  const isMezziListKey = listKey.startsWith("mezzi:");
+  const resolvedSelectorDomain =
+    selectorDomain ?? (isMagazzinoListKey ? "magazzino" : isMezziListKey ? "mezzi" : undefined);
+  const resolvedMobileSheetMode =
+    mobileSheetMode ?? (isMezziListKey && !selectOnly ? "searchable" : undefined);
+  const resolvedPlaceholder =
+    placeholder ??
+    (isMezziListKey || isMagazzinoListKey || listKey === "lavorazioni:addetti"
+      ? "Digita o seleziona…"
+      : undefined);
 
   const sharedProps = {
 
@@ -201,7 +276,7 @@ export function GlobalSettingsListSelect({
 
     required,
 
-    placeholder,
+    placeholder: resolvedPlaceholder,
 
     "aria-label": ariaLabel,
 
@@ -225,6 +300,24 @@ export function GlobalSettingsListSelect({
 
     selectOnly,
 
+    sheetTitle,
+
+    minSheetOptions,
+
+    mobileSheet,
+
+    mobileSheetMode: resolvedMobileSheetMode,
+
+    selectorDomain: resolvedSelectorDomain,
+
+    dynamicList: dynamicList ?? (isMagazzinoListKey || isMezziListKey),
+
+    operationalFilter,
+
+    recentsKey: isMagazzinoListKey ? undefined : listKey,
+
+    alphabeticalBrowse: isMagazzinoListKey,
+
     similarStandardizeLegalSuffix:
       listKey === "mezzi:clienti" ||
       listKey === "mezzi:utilizzatori" ||
@@ -234,7 +327,7 @@ export function GlobalSettingsListSelect({
 
 
 
-  if (structured || emptyOptionLabel) {
+  if (structured || resolvedEmptyOptionLabel) {
 
     return (
 
@@ -257,6 +350,8 @@ export function GlobalSettingsListSelect({
   return <GlobalSelect {...sharedProps} options={optionsForUi} />;
 
 }
+
+export const GlobalSettingsListSelect = memo(GlobalSettingsListSelectInner);
 
 
 

@@ -1,14 +1,13 @@
 "use client";
 
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { GestionaleModalScrollBody, gestionaleModalScrollContentPad } from "@/components/gestionale/mobile-modal-scroll-body";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { CLIENT_PORTAL_CONTACT } from "@/lib/lavorazioni/client-portal-contact";
 import {
   dsBtnNeutral,
   dsBtnPrimary,
   dsLabel,
   dsLavorazioniModalWindowHeader,
-  dsModalFormFooter,
   dsModalHeaderInner,
   dsModalHeaderLead,
   dsModalTitle,
@@ -44,9 +43,46 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
       onRequestClose={onClose}
       titleId={CONTATTACI_TITLE_ID}
       header={<ClientContattaciModalHeader />}
+      footer={
+        <div className="flex w-full flex-col gap-2">
+          <a
+            href={telHref}
+            className={`${dsBtnPrimary} min-h-11 w-full touch-manipulation`}
+            aria-label={`Chiama ${phoneDisplay}`}
+            data-testid="smoke-contattaci-call"
+          >
+            Chiama
+          </a>
+          <a
+            href={whatsappHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
+            aria-label="Scrivi su WhatsApp"
+            data-testid="smoke-contattaci-whatsapp"
+          >
+            WhatsApp
+          </a>
+          <a
+            href={mailtoHref}
+            className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
+            aria-label={`Invia email a ${email}`}
+            data-testid="smoke-contattaci-email"
+          >
+            Email
+          </a>
+          <button
+            type="button"
+            className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
+            onClick={onClose}
+            data-testid="smoke-contattaci-close"
+          >
+            Chiudi
+          </button>
+        </div>
+      }
     >
-      <GestionaleModalScrollBody className="min-h-0 min-w-0 flex-1">
-        <div className={`${gestionaleModalScrollContentPad} flex flex-col gap-5`}>
+      <GestionaleModalScrollBody className="flex flex-col gap-5">
           <p className="text-sm text-[color:var(--cab-text-muted)]">
             Per assistenza puoi contattarci telefonicamente, via WhatsApp o email.
           </p>
@@ -61,47 +97,7 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
               <p className="text-sm font-medium text-[color:var(--cab-text)]">{phoneDisplay}</p>
             </div>
           </div>
-        </div>
       </GestionaleModalScrollBody>
-
-      <footer
-        className={`${dsModalFormFooter} flex-col items-stretch gap-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]`}
-      >
-        <a
-          href={telHref}
-          className={`${dsBtnPrimary} min-h-11 w-full touch-manipulation`}
-          aria-label={`Chiama ${phoneDisplay}`}
-          data-testid="smoke-contattaci-call"
-        >
-          Chiama
-        </a>
-        <a
-          href={whatsappHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
-          aria-label="Scrivi su WhatsApp"
-          data-testid="smoke-contattaci-whatsapp"
-        >
-          WhatsApp
-        </a>
-        <a
-          href={mailtoHref}
-          className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
-          aria-label={`Invia email a ${email}`}
-          data-testid="smoke-contattaci-email"
-        >
-          Email
-        </a>
-        <button
-          type="button"
-          className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
-          onClick={onClose}
-          data-testid="smoke-contattaci-close"
-        >
-          Chiudi
-        </button>
-      </footer>
     </LavorazioniModalShell>
   );
 }

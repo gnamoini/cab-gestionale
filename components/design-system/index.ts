@@ -51,6 +51,15 @@ export {
   GestionaleInfoRow,
   GestionaleInfoSubgroup,
 } from "./gestionale-info-card";
+export {
+  GestionaleCollapsibleSection,
+  gestionaleCollapsibleSectionDefaultClass,
+  gestionaleCollapsibleSectionFormClass,
+  gestionaleCollapsibleSectionTitleClass,
+  gestionaleCollapsibleSectionTitleClassName,
+  type GestionaleCollapsibleSectionTitleTone,
+  type GestionaleCollapsibleSectionVariant,
+} from "./gestionale-collapsible-section";
 export { Modal, type ModalProps } from "./modal";
 export { Drawer, type DrawerProps } from "./drawer";
 export { HubModalTab, HubModalTabBar, type HubModalTabBarProps, type HubModalTabProps } from "./hub-modal-tab-bar";

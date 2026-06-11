@@ -1,12 +1,19 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { dsFocus } from "@/lib/ui/design-system";
+import {
+  globalMultiSelectChipClass,
+  globalMultiSelectChipRemoveClass,
+  globalMultiSelectEmbeddedInputClass,
+  globalMultiSelectShellClass,
+} from "@/lib/ui/global-input";
+import type { SelectorDomain } from "@/lib/selector-core/types";
 
-type SelectedChip = { value: string; label?: string };
+type SelectedChip = { value: string; label?: string; title?: string };
 
-export function GlobalMultiSelect({
+export const GlobalMultiSelect = memo(function GlobalMultiSelect({
   ariaLabel,
   placeholder = "Cerca…",
   disabled,
@@ -20,6 +27,7 @@ export function GlobalMultiSelect({
   canAdd = true,
   addPending = false,
   onAddToList,
+  selectorDomain,
 }: {
   ariaLabel: string;
   placeholder?: string;
@@ -34,6 +42,7 @@ export function GlobalMultiSelect({
   canAdd?: boolean;
   addPending?: boolean;
   onAddToList?: (value: string) => Promise<string | null> | string | null;
+  selectorDomain?: SelectorDomain;
 }) {
   const [draft, setDraft] = useState("");
 
@@ -73,53 +82,80 @@ export function GlobalMultiSelect({
     [allowAdd, onAdd, onAddToList, options, selectedSet],
   );
 
-  return (
-    <div className={className}>
-      <GlobalSelect
-        value={draft}
-        onChange={(next) => {
-          void addValue(next);
-        }}
-        options={filteredOptions}
-        placeholder={placeholder}
-        disabled={disabled}
-        allowAdd={allowAdd}
-        canAdd={canAdd}
-        addPending={addPending}
-        onAddToList={onAddToList ? (v) => void addValue(v) : undefined}
-        strictFromList={!allowAdd}
-        emptyMessage={emptyMessage}
-        invalidMessage="Seleziona un valore esistente"
-        aria-label={ariaLabel}
-      />
+  const handleSelectChange = useCallback(
+    (next: string) => {
+      void addValue(next);
+    },
+    [addValue],
+  );
 
-      {selected.length > 0 ? (
-        <div className="mt-2 flex min-w-0 flex-wrap gap-2">
-          {selected.map((s) => (
-            <button
-              key={s.value}
-              type="button"
-              title="Rimuovi"
-              aria-label={`Rimuovi ${s.label ?? s.value}`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(s.value);
-              }}
-              className={`${dsFocus} inline-flex max-w-full items-center gap-1.5 rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3 py-2 text-xs font-medium text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] active:bg-[var(--cab-hover)]`}
-              disabled={disabled}
-            >
-              <span className="truncate">{s.label ?? s.value}</span>
-              <span className="shrink-0 text-base leading-none text-[color:var(--cab-text-muted)]" aria-hidden>
-                ×
-              </span>
-            </button>
-          ))}
-        </div>
-      ) : null}
+  const handleAddToListCommit = useCallback(
+    (v: string) => {
+      void addValue(v);
+    },
+    [addValue],
+  );
+
+  const selectedSummary =
+    selected.length === 1 ? "1 selezionato" : `${selected.length} selezionati`;
+
+  return (
+    <div className={className} role="group" aria-label={ariaLabel}>
+      <div className={globalMultiSelectShellClass}>
+        {selected.length > 0 ? (
+          <div
+            className="flex min-w-0 flex-wrap gap-1.5 border-b border-[color:var(--cab-border)] px-2.5 pb-1.5 pt-2"
+            role="list"
+            aria-label={selectedSummary}
+          >
+            {selected.map((s) => {
+              const chipLabel = s.label ?? s.value;
+              const chipTitle = s.title ?? chipLabel;
+              return (
+                <span key={s.value} role="listitem" className={globalMultiSelectChipClass}>
+                  <span className="truncate" title={chipTitle}>
+                    {chipLabel}
+                  </span>
+                  <button
+                    type="button"
+                    title={`Rimuovi ${chipTitle}`}
+                    aria-label={`Rimuovi ${chipTitle}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRemove(s.value);
+                    }}
+                    className={`${dsFocus} ${globalMultiSelectChipRemoveClass}`}
+                    disabled={disabled}
+                  >
+                    <span aria-hidden>×</span>
+                  </button>
+                </span>
+              );
+            })}
+          </div>
+        ) : null}
+        <GlobalSelect
+          value={draft}
+          onChange={handleSelectChange}
+          options={filteredOptions}
+          placeholder={placeholder}
+          disabled={disabled}
+          allowAdd={allowAdd}
+          canAdd={canAdd}
+          addPending={addPending}
+          onAddToList={onAddToList ? handleAddToListCommit : undefined}
+          strictFromList={!allowAdd}
+          emptyMessage={emptyMessage}
+          invalidMessage="Seleziona un valore esistente"
+          aria-label={ariaLabel}
+          selectorDomain={selectorDomain}
+          inputClassName={globalMultiSelectEmbeddedInputClass}
+        />
+      </div>
     </div>
   );
-}
+});

@@ -23,7 +23,7 @@ import {
 import { promemoriaEventTimeInputValue } from "@/lib/dashboard/dashboard-promemoria-reminder";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
-import { dsInput, dsModalFormFooter, dsTypoSmall } from "@/lib/ui/design-system";
+import { dsInput, dsTypoSmall } from "@/lib/ui/design-system";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 
 export type DashboardPromemoriaFormSubmitPayload = {
@@ -219,6 +219,22 @@ export function DashboardPromemoriaFormModal({
         title={editing ? "Modifica promemoria" : "Nuovo promemoria"}
         titleId="dashboard-promemoria-modal-title"
         layerClassName="cursor-pointer"
+        footer={
+          <div className="flex w-full flex-col gap-2 sm:ml-auto sm:w-auto sm:flex-row sm:flex-wrap sm:justify-end">
+            <Button type="button" variant="secondary" className="min-h-11" onClick={requestClose} disabled={saving}>
+              Annulla
+            </Button>
+            <LoadingButton
+              type="submit"
+              form="dashboard-promemoria-form"
+              className="min-h-11"
+              loading={saving}
+              disabled={saving}
+            >
+              {editing ? "Salva" : "Crea"}
+            </LoadingButton>
+          </div>
+        }
       >
         <form
           ref={formRef}
@@ -349,16 +365,6 @@ export function DashboardPromemoriaFormModal({
               </p>
             ) : null}
           </GestionaleModalScrollBody>
-          <footer className={dsModalFormFooter}>
-            <div className="ml-auto flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:justify-end">
-              <Button type="button" variant="secondary" onClick={requestClose} disabled={saving}>
-                Annulla
-              </Button>
-              <LoadingButton type="submit" loading={saving} disabled={saving}>
-                {editing ? "Salva" : "Crea"}
-              </LoadingButton>
-            </div>
-          </footer>
         </form>
       </GestionaleModalShell>
       <DashboardPromemoriaScopeDialog

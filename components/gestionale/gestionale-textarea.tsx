@@ -12,6 +12,11 @@ import {
   type TextareaHTMLAttributes,
 } from "react";
 import { gestionaleMultilineEnterProps } from "@/components/gestionale/gestionale-form-focus-scope";
+import { registerGestionaleTextareaViewportSync } from "@/lib/ui/gestionale-textarea-viewport";
+import {
+  scrollGestionaleFieldIntoView,
+  shouldSkipRedundantGestionaleFocusScroll,
+} from "@/lib/ui/mobile-modal-behavior";
 import {
   dsTextarea,
   gestionaleTextareaMaxHeightDefault,
@@ -48,28 +53,43 @@ function minHeightPx(size: GestionaleTextareaSize): number {
   return parseFloat(SIZE_MIN_HEIGHT[size]) * 16;
 }
 
-/** Misura e applica altezza auto-grow (pattern iOS-safe: auto → scrollHeight, cap su maxHeight). */
+/** Misura e applica altezza auto-grow (pattern iOS-safe: overflow hidden fino al tetto, poi scroll). */
 function syncTextareaAutoGrowHeight(
   el: HTMLTextAreaElement,
   size: GestionaleTextareaSize,
   maxHeightCss: string | undefined,
-): void {
+): boolean {
+  const prevHeight = el.style.height;
+  const prevScrollable = el.getAttribute("data-cab-textarea-scrollable") === "true";
+
+  el.style.overflowY = "hidden";
   el.style.height = "auto";
   const minPx = minHeightPx(size);
-  let next = Math.max(minPx, el.scrollHeight);
+  const contentHeight = el.scrollHeight;
+  let next = Math.max(minPx, contentHeight);
 
+  let maxPx = Number.POSITIVE_INFINITY;
   if (maxHeightCss) {
     el.style.maxHeight = maxHeightCss;
-    const maxPx = parseFloat(getComputedStyle(el).maxHeight);
-    if (Number.isFinite(maxPx) && maxPx > 0) {
+    const computedMax = parseFloat(getComputedStyle(el).maxHeight);
+    if (Number.isFinite(computedMax) && computedMax > 0) {
+      maxPx = computedMax;
       next = Math.min(next, maxPx);
     }
   }
 
+  const scrollable = Number.isFinite(maxPx) && contentHeight > maxPx;
   const nextPx = `${next}px`;
-  if (el.style.height !== nextPx) {
-    el.style.height = nextPx;
+  el.style.height = nextPx;
+  if (scrollable) {
+    el.setAttribute("data-cab-textarea-scrollable", "true");
+  } else {
+    el.removeAttribute("data-cab-textarea-scrollable");
   }
+  /** Misura con hidden; poi delega overflow a CSS (`data-cab-textarea-scrollable`). */
+  el.style.overflowY = "";
+
+  return prevHeight !== nextPx || prevScrollable !== scrollable;
 }
 
 function GestionaleTextareaInner(
@@ -94,6 +114,7 @@ function GestionaleTextareaInner(
   forwardedRef: ForwardedRef<HTMLTextAreaElement>,
 ) {
   const innerRef = useRef<HTMLTextAreaElement | null>(null);
+  const scrollRafRef = useRef<number | null>(null);
   const resolvedMaxHeight = autoGrow ? (maxHeightProp ?? gestionaleTextareaMaxHeightDefault) : undefined;
 
   const setRef = (el: HTMLTextAreaElement | null) => {
@@ -102,22 +123,41 @@ function GestionaleTextareaInner(
     else if (forwardedRef) forwardedRef.current = el;
   };
 
+  const scheduleFocusRescroll = () => {
+    const el = innerRef.current;
+    if (!el || document.activeElement !== el) return;
+    if (shouldSkipRedundantGestionaleFocusScroll(el, "textarea-grow")) return;
+    if (scrollRafRef.current != null) window.cancelAnimationFrame(scrollRafRef.current);
+    scrollRafRef.current = window.requestAnimationFrame(() => {
+      scrollRafRef.current = null;
+      if (shouldSkipRedundantGestionaleFocusScroll(el, "textarea-grow")) return;
+      scrollGestionaleFieldIntoView(el, { behavior: "auto" });
+    });
+  };
+
   useLayoutEffect(() => {
     if (!autoGrow) return;
     const el = innerRef.current;
     if (!el) return;
-    syncTextareaAutoGrowHeight(el, size, resolvedMaxHeight);
+    const grew = syncTextareaAutoGrowHeight(el, size, resolvedMaxHeight);
+    if (grew) scheduleFocusRescroll();
   }, [autoGrow, value, readOnly, size, resolvedMaxHeight]);
 
   useEffect(() => {
     if (!autoGrow) return;
-    const el = innerRef.current;
-    if (!el) return;
-
-    const onResize = () => syncTextareaAutoGrowHeight(el, size, resolvedMaxHeight);
-    window.addEventListener("resize", onResize, { passive: true });
-    return () => window.removeEventListener("resize", onResize);
+    return registerGestionaleTextareaViewportSync(() => {
+      const el = innerRef.current;
+      if (!el || document.activeElement !== el) return;
+      const grew = syncTextareaAutoGrowHeight(el, size, resolvedMaxHeight);
+      if (grew) scheduleFocusRescroll();
+    });
   }, [autoGrow, size, resolvedMaxHeight]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current != null) window.cancelAnimationFrame(scrollRafRef.current);
+    };
+  }, []);
 
   const minHeight = SIZE_MIN_HEIGHT[size];
 
@@ -125,7 +165,6 @@ function GestionaleTextareaInner(
     ...style,
     ...(autoGrow
       ? {
-          overflowY: "auto",
           minHeight,
           maxHeight: resolvedMaxHeight,
         }

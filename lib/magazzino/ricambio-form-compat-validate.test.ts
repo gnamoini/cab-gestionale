@@ -39,6 +39,8 @@ const form = {
 const err = validateRicambioListFields(form, {
   marche: ["BOSCH"],
   categorie: ["Generale"],
+  fornitori: [],
+  produttori: [],
   mezziListe,
 });
 

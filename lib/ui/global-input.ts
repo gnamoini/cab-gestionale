@@ -128,15 +128,52 @@ export function globalAutocompleteOptionPillClass(
 }
 
 export const globalAutocompleteAddBtnClass = [
-  "flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed",
-  "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))]",
-  "bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))]",
-  "px-3 py-2 text-xs font-semibold text-[color:var(--cab-primary)]",
-  "transition hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))]",
-  "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))]",
+  "flex w-full min-h-11 items-center justify-center gap-1.5 rounded-md border border-dashed sm:min-h-0",
+  "border-[color:color-mix(in_srgb,var(--cab-primary)_58%,var(--cab-border))]",
+  "bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))]",
+  "px-3 py-2.5 text-xs font-semibold sm:py-2",
+  "text-[color:color-mix(in_srgb,var(--cab-primary)_92%,var(--cab-text))]",
+  "transition hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-surface))]",
+  "disabled:cursor-not-allowed disabled:border-[color:var(--cab-border)]",
+  "disabled:bg-[color:color-mix(in_srgb,var(--cab-text-muted)_10%,var(--cab-surface))]",
+  "disabled:text-[color:var(--cab-text-muted)]",
+  "disabled:hover:bg-[color:color-mix(in_srgb,var(--cab-text-muted)_10%,var(--cab-surface))]",
 ].join(" ");
 
 export const globalInputFieldDefault = dsInput;
+
+/** Shell tag-input multi-select: bordo unico, chip + combobox interni. */
+export const globalMultiSelectShellClass = [
+  "w-full rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))]",
+  "bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)] outline-none",
+  "transition-[border-color,box-shadow] duration-200",
+  "focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))]",
+  "focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]",
+].join(" ");
+
+/** Input combobox incapsulato nel multi-select — senza bordo proprio. */
+export const globalMultiSelectEmbeddedInputClass = [
+  "w-full min-w-0 rounded-none border-0 bg-transparent px-3 py-2.5 shadow-none outline-none ring-0",
+  dsIosInputTextSize,
+  "text-[color:var(--cab-text)] placeholder:text-[color:var(--cab-text-muted)]",
+  "hover:border-transparent focus:border-transparent focus:ring-0 focus-visible:ring-0",
+  "touch-manipulation",
+].join(" ");
+
+/** Chip selezione dentro multi-select. */
+export const globalMultiSelectChipClass = [
+  "inline-flex max-w-full items-center gap-0.5 rounded-md",
+  "border border-[color:color-mix(in_srgb,var(--cab-primary)_24%,var(--cab-border))]",
+  "bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]",
+  "pl-2 pr-0.5 py-0.5 text-[11px] font-semibold leading-snug text-[color:var(--cab-text)]",
+].join(" ");
+
+export const globalMultiSelectChipRemoveClass = [
+  "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md",
+  "text-sm leading-none text-[color:var(--cab-text-muted)]",
+  "hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,transparent)] hover:text-[color:var(--cab-text)]",
+  "active:bg-[color:color-mix(in_srgb,var(--cab-primary)_20%,transparent)]",
+].join(" ");
 
 /** Combobox filtri con ricerca/suggerimenti — no chevron select. */
 export const globalInputFieldFilterSearch = [
@@ -167,6 +204,11 @@ export const globalInputFieldFilterDate = `${globalInputFieldFilterSearch} pr-11
 export const globalInputInvalidRing =
   " border-[color:color-mix(in_srgb,var(--cab-danger)_55%,var(--cab-border))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-danger)_28%,transparent)]";
 
+/** Applica ring errore SSOT a classi input plain (GlobalSelect/DatePicker usano lo stesso token). */
+export function resolveGestionaleInputClassName(baseClass: string, invalid?: boolean): string {
+  return invalid ? `${baseClass}${globalInputInvalidRing}` : baseClass;
+}
+
 export const globalInputInvalidMessage =
   "mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]";
 
@@ -183,7 +225,7 @@ export const globalInputCalendarBtn = [
 ].join(" ");
 
 const globalInputCalendarChrome = [
-  "w-[min(100%,18.5rem)]",
+  "w-full min-w-0",
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]",
   "bg-[var(--cab-card)] p-3 shadow-[var(--cab-shadow-lg)]",
   "origin-top transition-[opacity,transform] duration-150 ease-out",

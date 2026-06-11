@@ -1,0 +1,48 @@
+[
+  {
+    "id": "prop-addetti-1",
+    "targetDomain": "addetti",
+    "proposedChange": {
+      "surfacePreference": "sheet",
+      "rolloutAdjustment": "ENABLED"
+    },
+    "evidence": {
+      "metricsSummary": {
+        "totalOpens": 11,
+        "surfaceCounts": {
+          "dropdown": 10,
+          "sheet": 0,
+          "searchableDropdown": 1
+        },
+        "bucketCounts": {
+          "2-5": 0,
+          "6-20": 1,
+          "20-100": 9,
+          "100+": 1
+        },
+        "searchUsageRate": 1,
+        "sheetUsageRate": 0,
+        "dropdownRate": 0.9090909090909091,
+        "fallbackRate": 0,
+        "avgDecisionLatencyMs": 2.3181818181818183,
+        "mobileRate": 0.9090909090909091,
+        "dropdownAbandonRate": null
+      },
+      "supportingInsights": [
+        "searchUsageRate 100.0% with dominant dropdown",
+        "large option buckets with search-heavy dropdown usage"
+      ]
+    },
+    "riskAssessment": {
+      "riskLevel": "medium",
+      "reasons": [
+        "sample size 11 below 20"
+      ]
+    },
+    "status": "proposed",
+    "confidence": 1,
+    "sampleSize": 11,
+    "createdAt": "2026-06-10T16:58:49.533Z",
+    "version": 1
+  }
+]

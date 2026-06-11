@@ -46,3 +46,12 @@ debug-929eab.log
 next-env.d.ts
 
 .vercel
+
+# MAP runtime snapshots (keep directory via .gitkeep)
+/map/burndown/*.json
+/map/telemetry/*.json
+/map/telemetry-export.json
+/map/promotion-sidecar.json
+/map/waves/**/map-wave-*.json
+/map/stability/classifier-snapshots/*.json
+/map/stability/tier-lock-registry.json

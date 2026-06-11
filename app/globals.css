@@ -209,6 +209,23 @@ html {
   }
 }
 
+@keyframes gestionale-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[gestionale-sheet-in_280ms_cubic-bezier\(0\.22\,1\,0\.36\,1\)\] {
+    animation: none;
+  }
+}
+
 .cab-toast-slot {
   max-height: 6rem;
   overflow: hidden;
@@ -320,6 +337,10 @@ body {
   min-height: -webkit-fill-available;
   padding-left: var(--cab-safe-left);
   padding-right: var(--cab-safe-right);
+}
+
+body:has(.cab-app-shell) {
+  min-height: 0;
 }
 
 @supports (height: 100dvh) {
@@ -454,7 +475,15 @@ html.dark select option {
   overflow-y: auto;
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  scrollbar-gutter: stable;
+  /* Mobile: auto evita doppia track (gutter + thumb); desktop: stable allinea header mirror. */
+  scrollbar-gutter: auto;
+}
+
+@media (min-width: 768px) {
+  .cab-ios-scroll-y,
+  .gestionale-scroll-y {
+    scrollbar-gutter: stable;
+  }
 }
 
 .gestionale-scroll-end-pad {
@@ -478,7 +507,13 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
 /** Stessa larghezza utile del main con `scrollbar-gutter: stable` (mirror solo sul wrapper, non sul padding). */
 .cab-gestionale-scroll-gutter-mirror {
   overflow: hidden;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
+}
+
+@media (min-width: 768px) {
+  .cab-gestionale-scroll-gutter-mirror {
+    scrollbar-gutter: stable;
+  }
 }
 
 /* ResponsiveLayoutCore — media e contenimento globale nel main gestionale */
@@ -520,6 +555,22 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
   .gestionale-textarea[data-cab-auto-grow="true"] {
     field-sizing: content;
   }
+
+  .gestionale-textarea[data-cab-auto-grow="true"][data-cab-textarea-scrollable="true"] {
+    field-sizing: fixed;
+  }
+}
+
+/** Auto-grow: niente scrollbar finché non si raggiunge maxHeight; gutter stabile evita flash layout. */
+.gestionale-textarea[data-cab-auto-grow="true"] {
+  overflow-y: hidden;
+}
+
+.gestionale-textarea[data-cab-auto-grow="true"][data-cab-textarea-scrollable="true"] {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
 }
 
 @media (max-width: 1023px) {
@@ -646,7 +697,17 @@ body[data-cab-scroll-lock-count] {
   }
 }
 
-/* App autenticata: scroll verticale solo su main (.gestionale-scroll-y), non su body. */
+/* App autenticata: scroll verticale solo su main (.gestionale-scroll-y), non su html/body. */
+html:has(.cab-app-shell),
 body:has(.cab-app-shell) {
-  overflow-y: hidden;
+  overflow: hidden;
+  height: var(--cab-app-height, 100dvh);
+  max-height: var(--cab-app-height, 100dvh);
+  overscroll-behavior: none;
+}
+
+body:has(.cab-app-shell) .cab-app-shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
 }

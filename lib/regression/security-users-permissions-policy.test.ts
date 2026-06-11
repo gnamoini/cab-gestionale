@@ -85,7 +85,8 @@ assert.match(actionsSrc, /allowAdd=\{false\}/);
 assert.match(actionsSrc, /Cerca o seleziona/);
 
 assert.match(editModalSrc, /GestionaleModalShell/);
-assert.match(editModalSrc, /dsModalFormFooter/);
+assert.match(editModalSrc, /footer=\{/);
+assert.match(editModalSrc, /dsBtnNeutral/);
 assert.match(editModalSrc, /dsBtnDanger/);
 assert.match(editModalSrc, /GestionaleConfirmDialog/);
 assert.match(editModalSrc, /useUsernameAvailability/);

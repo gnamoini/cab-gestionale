@@ -5,13 +5,15 @@ import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { RicambioFormCompatSection } from "@/components/gestionale/magazzino/ricambio-form-compat-section";
 import { MagazzinoPrezziLineari } from "@/components/gestionale/magazzino/magazzino-prezzi-lineari";
 import { RicambioFornitoriAlternativiEditor } from "@/components/gestionale/magazzino/ricambio-fornitori-alternativi-editor";
-import { ricambioModalSectionClass } from "@/components/gestionale/magazzino/ricambio-modal-ui";
-import { RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA, type RicambioFormState } from "@/lib/magazzino/form";
+import { ricambioModalSectionClass, RicambioCollapsibleSection, ricambioSectionTitleClass, ricambioSectionTitleClassName, type RicambioSectionTitleTone } from "@/components/gestionale/magazzino/ricambio-modal-ui";
+import { ricambioPrezziLineariVisible } from "@/lib/magazzino/ricambio-prezzi-lineari-visible";
+import { RICAMBIO_LENIENT_PLACEHOLDER_CATEGORIA, RICAMBIO_LENIENT_PLACEHOLDER_MARCA, type RicambioFormState } from "@/lib/magazzino/form";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import {
   clampMarkupPercentuale,
   fornitoriAlternativiFromFormRows,
+  fornitoriAlternativiFormRowsHaveContent,
   normalizeMarkupInputString,
   syncPrezzoVenditaInForm,
 } from "@/lib/magazzino/form";
@@ -22,9 +24,12 @@ import {
   RICAMBIO_UNITA_MISURA_VALUES,
 } from "@/lib/magazzino/ricambio-unita-misura";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
+import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
+import { MigratedNumberInput } from "@/components/form-ux-migration/migrated-number-input";
+import { GestionaleRequiredMark } from "@/components/gestionale/schede/gestionale-form-section";
 import { CloseButton } from "@/components/design-system";
-import { dsBtnNeutral, dsBtnPrimary, dsFocus, dsInput, dsLabel, dsSegmentedBtnOff, dsSegmentedBtnOn, dsSegmentedWrap, dsStepperBtn, dsTypoSmall } from "@/lib/ui/design-system";
-import { globalInputInvalidRing } from "@/lib/ui/global-input";
+import { dsBtnNeutralForm, dsBtnPrimary, dsFocus, dsInput, dsLabel, dsSegmentedBtnOff, dsSegmentedBtnOn, dsSegmentedWrap, dsTypoSmall } from "@/lib/ui/design-system";
+import { resolveGestionaleInputClassName } from "@/lib/ui/global-input";
 import { getScontoFornitoreMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
 import {
@@ -35,32 +40,44 @@ import {
 
 const ricambioFormInputClass = dsInput;
 
+/** Placeholder combobox ricambio — pattern unificato «Cerca o seleziona …». */
+const RICAMBIO_MARCA_PLACEHOLDER = "Cerca o seleziona marca…";
+const RICAMBIO_MARCA_ALTERNATIVA_PLACEHOLDER = "Cerca o seleziona marca alternativa…";
+const RICAMBIO_MARCA_ARIA = "Marca ricambio";
+const RICAMBIO_MARCA_ALTERNATIVA_ARIA = "Marca alternativa ricambio";
+
 function RicambioSectionTitle({
   children,
+  tone = "primary",
   className = "",
 }: {
   children: React.ReactNode;
+  tone?: RicambioSectionTitleTone;
   className?: string;
 }) {
   return (
     <p
       {...{ [CAB_FOCUS_SCROLL_TITLE_ATTR]: "" }}
-      className={`mb-3 text-[10px] font-bold uppercase tracking-wide text-[color:var(--cab-text)] ${className}`}
+      className={`${ricambioSectionTitleClass(tone)} ${className}`}
     >
       {children}
     </p>
   );
 }
 
+type RicambioFieldTone = "required" | "operational" | "optional";
+
 /** Nasconde frecce native del browser su input numerici (stepper custom solo scorta). */
 const noSpinner =
   "[appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none";
 
-const stepperInputClass = `${ricambioFormInputClass} ${noSpinner} h-9 min-h-9 min-w-[2.75rem] max-w-[5.5rem] flex-1 py-0 hover:border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] hover:shadow-[var(--cab-shadow-sm)]`;
+/** Bordo/superficie condivisi tra input e pulsanti ± dello stepper scorta. */
+const stepperChromeClass =
+  "rounded-[var(--ds-radius-lg)] border-2 border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] bg-[var(--cab-surface)] shadow-[var(--cab-shadow-sm)] hover:border-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-border-strong))] hover:shadow-[var(--cab-shadow-md)]";
 
-const stepperBtnClass = `${dsStepperBtn} relative z-[1] transition-[background-color,border-color,box-shadow,transform] duration-150`;
+const stepperInputClass = `w-full ${stepperChromeClass} ${noSpinner} h-11 min-h-11 min-w-0 flex-1 py-0 text-center text-sm text-[color:var(--cab-text)] outline-none transition-[border-color,box-shadow] duration-150 focus:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))] focus:ring-2 focus:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)] ${dsFocus} touch-manipulation`;
 
-const ricambioFormSecondaryBtnClass = `${dsBtnNeutral} h-11 min-h-11 shrink-0 whitespace-nowrap px-3 text-[11px] font-semibold`;
+const stepperBtnClass = `inline-flex h-11 w-11 min-h-11 min-w-11 shrink-0 select-none items-center justify-center ${stepperChromeClass} p-0 text-lg font-bold leading-none text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] ${dsFocus} touch-manipulation [-webkit-tap-highlight-color:transparent] relative z-[1] transition-[background-color,border-color,box-shadow,transform] duration-150 active:scale-[0.97] active:border-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-border-strong))] active:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]`;
 
 function formatEurIt(n: number): string {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
@@ -76,7 +93,7 @@ function StockStepper({
   inputClass,
   inputId,
   btnClass = stepperBtnClass,
-  wrapClassName = "flex w-full min-w-0 max-w-full items-center gap-2",
+  wrapClassName = "flex w-full min-w-0 max-w-full items-stretch gap-2.5",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -141,17 +158,29 @@ export function RicambioField({
   label,
   children,
   htmlFor,
+  required,
+  tone = "operational",
 }: {
   label: string;
   children: React.ReactNode;
   /** Id del controllo per associazione label (a11y). */
   htmlFor?: string;
+  required?: boolean;
+  tone?: RicambioFieldTone;
 }) {
+  const labelClass =
+    tone === "optional"
+      ? `${dsLabel} text-[color:var(--cab-text-muted)]`
+      : tone === "operational"
+        ? dsLabel
+        : `${dsLabel} cursor-default`;
+
   if (htmlFor) {
     return (
       <div className="block min-w-0">
-        <label htmlFor={htmlFor} {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={`${dsLabel} cursor-default`}>
+        <label htmlFor={htmlFor} {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={labelClass}>
           {label}
+          {required || tone === "required" ? <GestionaleRequiredMark /> : null}
         </label>
         <div className="mt-1">{children}</div>
       </div>
@@ -159,8 +188,9 @@ export function RicambioField({
   }
   return (
     <div className="block min-w-0">
-      <span {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={dsLabel}>
+      <span {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={labelClass}>
         {label}
+        {required || tone === "required" ? <GestionaleRequiredMark /> : null}
       </span>
       <div className="mt-1">{children}</div>
     </div>
@@ -173,6 +203,7 @@ export function RicambioFormFields({
   form,
   setForm,
   formResetKey,
+  formMode = "create",
   codiceOriginaleAvvisoDuplicato,
   relaxHtmlValidation = false,
   listFieldForceInvalid = false,
@@ -181,6 +212,7 @@ export function RicambioFormFields({
   setForm: SetForm;
   /** Cambia quando si apre un altro ricambio — resetta filtri marca locali. */
   formResetKey?: string;
+  formMode?: "create" | "edit";
   codiceOriginaleAvvisoDuplicato?: { existing: RicambioMagazzino; onVaiAlRicambio: () => void } | null;
   relaxHtmlValidation?: boolean;
   listFieldForceInvalid?: boolean;
@@ -221,6 +253,15 @@ export function RicambioFormFields({
   ]);
 
   const fieldsOptional = relaxHtmlValidation;
+  const showPrezziLineari = ricambioPrezziLineariVisible({
+    listinoOE: previewLineari.listinoOE,
+    fornitoriAlternativi: previewLineari.fornitoriAlternativi,
+  });
+  const fornitoreOriginaleExpandedInEdit =
+    formMode === "edit" &&
+    ((parseFloat(form.prezzoFornitoreOriginale) || 0) > 0 ||
+      (parseFloat(form.scontoFornitoreOriginale) || 0) > 0 ||
+      (parseFloat(String(form.prezzoVendita).replace(",", ".")) || 0) > 0);
 
   const giacenzaSottoMinima = useMemo(() => {
     const scorta = Math.max(0, parseFloat(form.scorta) || 0);
@@ -239,11 +280,11 @@ export function RicambioFormFields({
       <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
         <RicambioSectionTitle>Identificazione</RicambioSectionTitle>
         <div className="grid gap-3">
-      <RicambioField label={fieldsOptional ? "Marca" : "Marca *"} htmlFor="magazzino-ricambio-marca">
+      <RicambioField label="Marca" tone="required" required={!fieldsOptional} htmlFor="magazzino-ricambio-marca">
         <GlobalSettingsListSelect
           listKey="magazzino:marche"
           id="magazzino-ricambio-marca"
-          value={form.marca}
+          value={form.marca === RICAMBIO_LENIENT_PLACEHOLDER_MARCA ? "" : form.marca}
           onChange={(marca) => {
             const sconto = getScontoFornitoreMarca(globalOpts.magazzinoMaster, marca);
             setForm((f) => ({
@@ -253,49 +294,54 @@ export function RicambioFormFields({
             }));
           }}
           required={!fieldsOptional}
-          placeholder="Cerca o seleziona marca…"
+          excludeValues={[RICAMBIO_LENIENT_PLACEHOLDER_MARCA]}
+          placeholder={RICAMBIO_MARCA_PLACEHOLDER}
           inputClassName={ricambioFormInputClass}
-          aria-label="Marca ricambio"
+          aria-label={RICAMBIO_MARCA_ARIA}
         />
       </RicambioField>
       <RicambioField
-        label={fieldsOptional ? "Codice fornitore originale" : "Codice fornitore originale *"}
+        label="Codice fornitore originale"
+        tone="operational"
         htmlFor="magazzino-ricambio-codice-oe"
       >
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <input
               id="magazzino-ricambio-codice-oe"
-              required={!relaxHtmlValidation}
               value={form.codiceFornitoreOriginale}
               onChange={(e) =>
                 applyRicambioCodiceInputChange(e, (codiceFornitoreOriginale) =>
                   setForm((f) => ({ ...f, codiceFornitoreOriginale })),
                 )
               }
-              className={`${ricambioFormInputClass} min-w-0 flex-1 font-mono font-semibold tracking-wide ${
-                codiceOriginaleAvvisoDuplicato ? globalInputInvalidRing : ""
-              }`}
+              className={resolveGestionaleInputClassName(
+                `${ricambioFormInputClass} min-w-0 flex-1 font-mono font-semibold tracking-wide`,
+                Boolean(codiceOriginaleAvvisoDuplicato),
+              )}
               aria-invalid={codiceOriginaleAvvisoDuplicato ? true : undefined}
             />
             {!showCodiceSecondario ? (
               <button
                 type="button"
-                className={ricambioFormSecondaryBtnClass}
+                className={dsBtnNeutralForm}
                 onClick={() => setShowCodiceSecondario(true)}
               >
-                + Secondario
+                + Alternativo
               </button>
             ) : null}
           </div>
           {showCodiceSecondario ? (
             <div className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-2.5">
               <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
-                  Codice secondario
+                <p
+                  {...{ [CAB_FOCUS_SCROLL_TITLE_ATTR]: "" }}
+                  className={`${ricambioSectionTitleClassName} mb-0 min-w-0 flex-1`}
+                >
+                  Codice fornitore alternativo
                 </p>
                 <CloseButton
-                  label="Rimuovi codice secondario"
+                  label="Rimuovi codice fornitore alternativo"
                   className="h-9 w-9 shrink-0"
                   onClick={() => {
                     setShowCodiceSecondario(false);
@@ -314,17 +360,22 @@ export function RicambioFormFields({
                     {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
                     className={`${dsLabel} cursor-default`}
                   >
-                    Marca
+                    Marca alternativa
                   </label>
                   <div className="mt-1">
                     <GlobalSettingsListSelect
                       listKey="magazzino:marche"
                       id="magazzino-ricambio-marca-secondaria"
-                      value={form.marcaOriginaleSecondaria}
+                      value={
+                        form.marcaOriginaleSecondaria === RICAMBIO_LENIENT_PLACEHOLDER_MARCA
+                          ? ""
+                          : form.marcaOriginaleSecondaria
+                      }
                       onChange={(marcaOriginaleSecondaria) => setForm((f) => ({ ...f, marcaOriginaleSecondaria }))}
-                      placeholder="Cerca o seleziona…"
+                      excludeValues={[RICAMBIO_LENIENT_PLACEHOLDER_MARCA]}
+                      placeholder={RICAMBIO_MARCA_ALTERNATIVA_PLACEHOLDER}
                       inputClassName={ricambioFormInputClass}
-                      aria-label="Marca secondaria codice OE"
+                      aria-label={RICAMBIO_MARCA_ALTERNATIVA_ARIA}
                     />
                   </div>
                 </div>
@@ -334,7 +385,7 @@ export function RicambioFormFields({
                     {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
                     className={`${dsLabel} cursor-default`}
                   >
-                    Codice
+                    Codice alternativo
                   </label>
                   <input
                     id="magazzino-ricambio-codice-secondario"
@@ -344,7 +395,7 @@ export function RicambioFormFields({
                         setForm((f) => ({ ...f, codiceFornitoreOriginaleSecondario })),
                       )
                     }
-                    placeholder="Opzionale"
+                    aria-label="Codice alternativo"
                     className={`${ricambioFormInputClass} mt-1 min-w-0 w-full font-mono text-[13px] tracking-wide`}
                   />
                 </div>
@@ -393,7 +444,9 @@ export function RicambioFormFields({
         ) : null}
       </RicambioField>
       <RicambioField
-        label={fieldsOptional ? "Descrizione" : "Descrizione *"}
+        label="Descrizione"
+        tone="required"
+        required={!fieldsOptional}
         htmlFor="magazzino-ricambio-descrizione"
       >
         <input
@@ -404,7 +457,7 @@ export function RicambioFormFields({
           className={ricambioFormInputClass}
         />
       </RicambioField>
-      <RicambioField label="Note" htmlFor="magazzino-ricambio-note">
+      <RicambioField label="Note" tone="optional" htmlFor="magazzino-ricambio-note">
         <GestionaleTextarea
           id="magazzino-ricambio-note"
           value={form.note}
@@ -414,7 +467,12 @@ export function RicambioFormFields({
           className="min-h-[4.5rem]"
         />
       </RicambioField>
-      <RicambioField label={fieldsOptional ? "Categoria" : "Categoria *"} htmlFor="magazzino-ricambio-categoria">
+      <RicambioField
+        label="Categoria"
+        tone={fieldsOptional ? "optional" : "required"}
+        required={!fieldsOptional}
+        htmlFor="magazzino-ricambio-categoria"
+      >
         <GlobalSettingsListSelect
           listKey="magazzino:categorie"
           id="magazzino-ricambio-categoria"
@@ -485,14 +543,14 @@ export function RicambioFormFields({
       <RicambioFormCompatSection form={form} setForm={setForm} formResetKey={formResetKey} />
 
       <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
-        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+        <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
           <RicambioSectionTitle className="mb-0">Giacenza</RicambioSectionTitle>
           <span className="text-[10px] font-medium text-[color:var(--cab-text-muted)]">
             in {formatRicambioUnitaMisuraLabel(form.unitaMisura)}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-3">
-          <RicambioField label="Scorta" htmlFor="magazzino-ricambio-scorta">
+          <RicambioField label="Scorta" tone="operational" htmlFor="magazzino-ricambio-scorta">
             <StockStepper
               inputId="magazzino-ricambio-scorta"
               groupLabel="Scorta"
@@ -504,7 +562,7 @@ export function RicambioFormFields({
               inputClass={`${stepperInputClass} text-center`}
             />
           </RicambioField>
-          <RicambioField label="Scorta minima" htmlFor="magazzino-ricambio-scorta-minima">
+          <RicambioField label="Scorta minima" tone="operational" htmlFor="magazzino-ricambio-scorta-minima">
             <StockStepper
               inputId="magazzino-ricambio-scorta-minima"
               groupLabel="Scorta minima"
@@ -527,88 +585,95 @@ export function RicambioFormFields({
         ) : null}
       </div>
 
-      <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
-        <RicambioSectionTitle>Fornitore originale</RicambioSectionTitle>
+      <RicambioCollapsibleSection
+        title="Fornitore originale"
+        defaultCollapsed={formMode === "create"}
+        forceExpanded={fornitoreOriginaleExpandedInEdit}
+      >
         <div className="grid gap-3">
-      <div className="grid grid-cols-2 gap-3">
-        <RicambioField label="Prezzo listino €" htmlFor="magazzino-ricambio-prezzo-listino">
-          <input
-            id="magazzino-ricambio-prezzo-listino"
-            type="number"
-            min={0}
-            step={0.01}
-            inputMode="decimal"
-            value={form.prezzoFornitoreOriginale}
-            onChange={(e) =>
-              setForm((f) => syncPrezzoVenditaInForm({ ...f, prezzoFornitoreOriginale: e.target.value }))
-            }
-            className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
-          />
-        </RicambioField>
-        <RicambioField label="Sconto %" htmlFor="magazzino-ricambio-sconto-oe">
-          <input
-            id="magazzino-ricambio-sconto-oe"
-            type="number"
-            min={0}
-            max={100}
-            step={0.01}
-            inputMode="decimal"
-            value={form.scontoFornitoreOriginale}
-            onChange={(e) => setForm((f) => ({ ...f, scontoFornitoreOriginale: e.target.value }))}
-            className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
-          />
-        </RicambioField>
-      </div>
-      <RicambioField label="Markup % sul listino OE" htmlFor="magazzino-ricambio-markup">
-        <input
-          id="magazzino-ricambio-markup"
-          type="number"
-          min={0}
-          step="any"
-          inputMode="decimal"
-          value={form.markupPercentuale}
-          onChange={(e) =>
-            setForm((f) => syncPrezzoVenditaInForm({ ...f, markupPercentuale: e.target.value }))
-          }
-          onBlur={(e) =>
-            setForm((f) =>
-              syncPrezzoVenditaInForm({
-                ...f,
-                markupPercentuale: normalizeMarkupInputString(e.target.value),
-              }),
-            )
-          }
-          className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
-        />
-        <div
-          className="mt-2 flex items-center justify-between gap-3 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-3 py-2.5 shadow-[var(--cab-shadow-sm)]"
-          role="status"
-          aria-live="polite"
-        >
-          <span className="text-xs font-medium text-[color:var(--cab-text-muted)]">Prezzo di vendita previsto</span>
-          <span className="text-sm font-semibold tabular-nums text-[color:var(--cab-text)]">
-            {formatEurIt(previewLineari.prezzoVenditaPrevisto)}
-          </span>
+          <div className="grid grid-cols-2 gap-3">
+            <RicambioField label="Prezzo listino €" tone="operational" htmlFor="magazzino-ricambio-prezzo-listino">
+              <MigratedNumberInput
+                formId="ricambio"
+                fieldId="prezzo-listino"
+                id="magazzino-ricambio-prezzo-listino"
+                min={0}
+                step={0.01}
+                inputMode="decimal"
+                value={form.prezzoFornitoreOriginale}
+                onChange={(v) =>
+                  setForm((f) => syncPrezzoVenditaInForm({ ...f, prezzoFornitoreOriginale: v }))
+                }
+                className={`${ricambioFormInputClass} ${noSpinner} tabular-nums`}
+              />
+            </RicambioField>
+            <RicambioField label="Sconto %" tone="operational" htmlFor="magazzino-ricambio-sconto-oe">
+              <GestionaleNumberInput
+                id="magazzino-ricambio-sconto-oe"
+                min={0}
+                max={100}
+                step={0.01}
+                inputMode="decimal"
+                value={form.scontoFornitoreOriginale}
+                onChange={(v) => setForm((f) => ({ ...f, scontoFornitoreOriginale: v }))}
+                className={`${ricambioFormInputClass} ${noSpinner}`}
+              />
+            </RicambioField>
+          </div>
+          <RicambioField label="Markup % sul listino OE" tone="operational" htmlFor="magazzino-ricambio-markup">
+            <GestionaleNumberInput
+              id="magazzino-ricambio-markup"
+              min={0}
+              step="any"
+              inputMode="decimal"
+              value={form.markupPercentuale}
+              onChange={(v) => setForm((f) => syncPrezzoVenditaInForm({ ...f, markupPercentuale: v }))}
+              onBlur={(e) =>
+                setForm((f) =>
+                  syncPrezzoVenditaInForm({
+                    ...f,
+                    markupPercentuale: normalizeMarkupInputString(e.currentTarget.value),
+                  }),
+                )
+              }
+              className={`${ricambioFormInputClass} ${noSpinner}`}
+            />
+            <div
+              className="mt-2 flex items-center justify-between gap-3 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] bg-[var(--cab-surface)] px-3 py-2.5 shadow-[var(--cab-shadow-sm)]"
+              role="status"
+              aria-live="polite"
+            >
+              <span className="text-xs font-medium text-[color:var(--cab-text-muted)]">Prezzo di vendita previsto</span>
+              <span className="text-sm font-semibold tabular-nums text-[color:var(--cab-text)]">
+                {formatEurIt(previewLineari.prezzoVenditaPrevisto)}
+              </span>
+            </div>
+          </RicambioField>
         </div>
-      </RicambioField>
-        </div>
-      </div>
+      </RicambioCollapsibleSection>
 
-      <div {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }} className={ricambioModalSectionClass}>
-        <RicambioSectionTitle>Fornitori alternativi</RicambioSectionTitle>
+      {showPrezziLineari ? (
+        <MagazzinoPrezziLineari
+          variant="form"
+          defaultCollapsed
+          listinoOE={previewLineari.listinoOE}
+          scontoOE={previewLineari.scontoOE}
+          fornitoriAlternativi={previewLineari.fornitoriAlternativi}
+          markupPct={previewLineari.markupPct}
+          prezzoVendita={previewLineari.prezzoVendita}
+        />
+      ) : null}
+
+      <RicambioCollapsibleSection
+        key={`fornitori-alt-${formResetKey ?? "ricambio"}`}
+        title="Fornitori alternativi"
+        defaultCollapsed={!fornitoriAlternativiFormRowsHaveContent(form.fornitoriAlternativi)}
+      >
         <RicambioFornitoriAlternativiEditor
           rows={form.fornitoriAlternativi}
           onChange={onFornitoriAlternativiChange}
         />
-      </div>
-
-      <MagazzinoPrezziLineari
-        listinoOE={previewLineari.listinoOE}
-        scontoOE={previewLineari.scontoOE}
-        fornitoriAlternativi={previewLineari.fornitoriAlternativi}
-        markupPct={previewLineari.markupPct}
-        prezzoVendita={previewLineari.prezzoVendita}
-      />
+      </RicambioCollapsibleSection>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useId, useMemo, useRef, useState, startTransition } from "react";
 import { createPortal } from "react-dom";
 import {
   autocompleteCommitFromSearchText,
@@ -8,18 +8,13 @@ import {
   autocompleteDisplayValue,
   autocompleteFuzzySuggestion,
   autocompleteIsValid,
-  autocompleteItemSuggestions,
   autocompleteShowAddOption,
   autocompleteAddOptionEnabled,
-  autocompleteStringSuggestions,
-  AUTOCOMPLETE_BROWSE_CAP,
   type AutocompleteDataMode,
 } from "@/lib/global-autocomplete/engine";
 import {
   globalAutocompleteAddBtnClass,
   globalAutocompleteDropdownPortalPanel,
-  globalAutocompleteOptionClass,
-  globalAutocompleteOptionPillClass,
   globalInputEmptyMessage,
   globalInputFieldDefault,
   globalInputFieldFilterSearch,
@@ -31,12 +26,42 @@ import {
   registerGestionaleComboboxFlush,
   unregisterGestionaleComboboxFlush,
 } from "@/lib/ui/gestionale-form-submit-flush";
-import { scheduleGestionaleFieldScroll } from "@/lib/ui/mobile-modal-behavior";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import type { ListSelectItem } from "@/lib/ui/list-select-items";
-import { normListSelectValue } from "@/lib/ui/list-select-utils";
+import { countUniqueListOptions, normListSelectValue } from "@/lib/ui/list-select-utils";
+import {
+  pushSelectorRecent,
+  readSelectorRecents,
+} from "@/lib/selector-core/selector-recents-store";
+import { resolveSelectorSuggestions } from "@/lib/selector-core/resolve-selector-suggestions";
+import { buildSelectorContext } from "@/lib/selector-core/build-selector-context";
+import {
+  SelectorDecisionEngine,
+  SHEET_MIN_OPTIONS,
+  isSelectorDomainSheetRolloutEnabled,
+} from "@/lib/selector-core/selector-decision-engine";
+import { emitSelectorOpenFromUI } from "@/lib/selector-core/selector-telemetry-bridge";
+import type { SelectorDomain } from "@/lib/selector-core/types";
+import {
+  runSelectOptionAtomic,
+  shouldIgnoreBlurDuringSelection,
+} from "@/lib/selector-core/select-option-atomic";
+import { useSelectorListboxKeyboard } from "@/lib/selector-interaction/use-selector-listbox-keyboard";
+import { useSelectorOverlayBack } from "@/lib/selector-interaction/use-selector-overlay-back";
+import { useSelectorQueryBridge } from "@/lib/selector-interaction/use-selector-query-bridge";
+import { useSelectorFocusChain } from "@/lib/selector-interaction/use-selector-focus-chain";
+import { useSelectorScrollRestoration } from "@/lib/selector-interaction/use-selector-scroll-restoration";
+import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
+import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { findSimilarEntityInPool } from "@/lib/validation/global-entity-validation";
 import { EntitySimilarWarning } from "@/components/design-system/entity-similar-warning";
+import { GestionaleSearchableSheetSelect } from "@/components/gestionale/global-input/gestionale-searchable-sheet-select";
+import { SelectorEmptyState } from "@/components/gestionale/global-input/selector-empty-state";
+import { SelectorListbox } from "@/components/gestionale/selector/selector-listbox";
+import {
+  defaultItemRenderOption,
+  defaultStringRenderOption,
+} from "@/components/gestionale/selector/selector-listbox-helpers";
 import {
   useDropdownOutsideDismiss,
   useGlobalDropdownPortal,
@@ -63,17 +88,34 @@ type GlobalSelectBaseProps = {
   canAdd?: boolean;
   addPending?: boolean;
   onAddToList?: (value: string) => void | Promise<string | null | void> | string | null;
-  /** Opzioni con pill colorate (stile stato lavorazione). */
   coloredOptions?: boolean;
-  /** Valori filtro "neutrali" (es. FILTER_ALL): al focus svuotano il campo per cercare. */
   filterNeutralValues?: readonly string[];
   "aria-label"?: string;
-  /** Mostra warning non bloccante se il testo digitato è simile a un'opzione esistente. */
   showSimilarWarning?: boolean;
-  /** Standardizza sigle societarie (SRL/SPA) nel confronto similarità. */
   similarStandardizeLegalSuffix?: boolean;
-  /** Solo scelta da elenco: niente digitazione né filtro testuale. */
   selectOnly?: boolean;
+  /** Su mobile apre bottom sheet con ricerca dedicata (default: true se selectOnly e >15 opzioni). */
+  mobileSheet?: boolean;
+  /** Rollout sheet searchable mobile — default selectOnly (parità produzione). */
+  mobileSheetMode?: "selectOnly" | "searchable" | "off";
+  /** Chiave dominio per rollout Fase 3b (legacy). Preferire `selectorDomain`. */
+  rolloutKey?: string;
+  /** Dominio UX per sheet rollout condizionale (v2). */
+  selectorDomain?: SelectorDomain;
+  /** Lista DB-driven / volatile — influisce su selectOnly policy dev warn. */
+  dynamicList?: boolean;
+  /** Filtro operativo ad alta frequenza. */
+  operationalFilter?: boolean;
+  /** Titolo sheet mobile (default: aria-label). */
+  sheetTitle?: string;
+  /** Chiave per cronologia recenti in localStorage. */
+  recentsKey?: string;
+  /** Browse/selectOnly: ordine alfabetico puro, voce vuota in testa. */
+  alphabeticalBrowse?: boolean;
+  /** Evidenzia testo cercato nelle opzioni (default: true). */
+  highlightSearch?: boolean;
+  /** Override soglia opzioni per sheet mobile (default: 0 se selectOnly + dominio rollout, altrimenti 20). */
+  minSheetOptions?: number;
 };
 
 export type GlobalSelectStringProps = GlobalSelectBaseProps & {
@@ -91,6 +133,8 @@ export type GlobalSelectItemsProps = GlobalSelectBaseProps & {
 };
 
 export type GlobalSelectProps = GlobalSelectStringProps | GlobalSelectItemsProps;
+
+const EMPTY_SUGGESTIONS: (string | ListSelectItem)[] = [];
 
 function fieldClassForVariant(
   variant: "default" | "filter",
@@ -110,7 +154,7 @@ function isFilterNeutralValue(value: string, neutralValues?: readonly string[]):
   return neutralValues.includes(value);
 }
 
-/** @deprecated Usare `GlobalAutocompleteCombobox` — alias di `GlobalSelect`. */
+/** @deprecated Usare `GlobalSelect` — alias storico. */
 export const GlobalAutocompleteCombobox = GlobalSelect;
 
 export function GlobalSelect(props: GlobalSelectProps) {
@@ -139,11 +183,21 @@ export function GlobalSelect(props: GlobalSelectProps) {
     showSimilarWarning = true,
     similarStandardizeLegalSuffix = false,
     selectOnly = false,
+    mobileSheet,
+    mobileSheetMode,
+    rolloutKey,
+    selectorDomain,
+    dynamicList,
+    operationalFilter,
+    sheetTitle,
+    recentsKey,
+    alphabeticalBrowse = false,
+    highlightSearch = true,
+    minSheetOptions,
     "aria-label": ariaLabel,
   } = props;
 
   const isFilterVariant = variant === "filter";
-
   const itemsMode = "items" in props && props.items != null;
   const mode: AutocompleteDataMode = itemsMode ? "items" : "strings";
   const items = itemsMode ? props.items : [];
@@ -153,74 +207,228 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const inputId = idProp ?? autoId;
   const listboxId = `${inputId}-listbox`;
   const hydrated = useClientHydrated();
+  const isMobile = useMaxMdDown();
   const showLoadingUi = hydrated && isLoading;
-  const fieldClass = useMemo(() => {
-    const base = fieldClassForVariant(variant, inputClassName, selectOnly);
-    if (!selectOnly) return base;
-    const normalized = base
-      .replace(/\bcursor-text\b/g, "")
-      .replace(/\bappearance-auto\b/g, "appearance-none")
-      .trim();
-    return `${normalized} cursor-pointer caret-transparent`;
-  }, [variant, inputClassName, selectOnly]);
+
   const wrapRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const listScrollRef = useRef<HTMLDivElement>(null);
+  const sheetListScrollRef = useRef<HTMLDivElement>(null);
+  const scrollToRowRef = useRef<((index: number) => void) | null>(null);
+  const keyboardScrollPendingRef = useRef(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const editSessionRef = useRef({ modified: false });
   const addInFlightRef = useRef(false);
 
   const [open, setOpen] = useState(false);
+  const [sheetListReady, setSheetListReady] = useState(false);
+  const openSheetIntentRef = useRef(0);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [touched, setTouched] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const deferredSearchText = useDeferredValue(searchText);
+  const queryBridge = useSelectorQueryBridge({ clearQueryOnClose: true });
+  const { query, setQuery, deriveSurface, resetQuery, onFocusIn, sheetSearchRef } = queryBridge;
+  const deferredQuery = useDeferredValue(query);
   const [focused, setFocused] = useState(false);
+  const [recentValues, setRecentValues] = useState<string[]>([]);
+  const { restoreFocus, captureFocus } = useDropdownFocusRestore(open);
+
+  const totalOptionCount = useMemo(() => {
+    if (itemsMode) return items.length;
+    return countUniqueListOptions(options);
+  }, [itemsMode, items, options]);
+
+  const decisionTraceIdRef = useRef("");
+
+  const resolvedMobileSheetMode = useMemo((): "selectOnly" | "searchable" | "off" => {
+    if (mobileSheetMode) return mobileSheetMode;
+    if (selectOnly) return "selectOnly";
+    if (selectorDomain && isSelectorDomainSheetRolloutEnabled(selectorDomain)) return "searchable";
+    return "selectOnly";
+  }, [mobileSheetMode, selectOnly, selectorDomain]);
+
+  const resolvedMinSheetOptions = useMemo(() => {
+    if (minSheetOptions != null) return minSheetOptions;
+    if (selectorDomain && isSelectorDomainSheetRolloutEnabled(selectorDomain)) {
+      return 0;
+    }
+    return SHEET_MIN_OPTIONS;
+  }, [minSheetOptions, selectorDomain]);
+
+  const selectorDecision = useMemo(() => {
+    const decision = SelectorDecisionEngine.resolve(
+      buildSelectorContext({
+        selectorDomain,
+        rolloutKey,
+        selectOnly,
+        mobileSheetMode: resolvedMobileSheetMode,
+        mobileSheet,
+        sheetSearchableEnabled: resolvedMobileSheetMode === "searchable",
+        dynamicList,
+        operationalFilter,
+        isMobile,
+        optionCount: totalOptionCount,
+        minSheetOptions: resolvedMinSheetOptions,
+      }),
+    );
+    decisionTraceIdRef.current = decision.traceId ?? "";
+    return decision;
+  }, [
+    selectorDomain,
+    rolloutKey,
+    selectOnly,
+    resolvedMobileSheetMode,
+    mobileSheet,
+    dynamicList,
+    operationalFilter,
+    isMobile,
+    totalOptionCount,
+    resolvedMinSheetOptions,
+  ]);
+
+  const effectiveSelectOnly = selectorDecision.flags.isSelectOnly;
+  const useSheet = hydrated && selectorDecision.flags.usesSheet;
+  const sheetUsesSearch = useSheet && selectorDecision.flags.usesSearch;
+  const sheetListOnly = useSheet && !selectorDecision.flags.usesSearch;
+  const browseAsSelectOnly = effectiveSelectOnly || sheetListOnly;
+  /** Mobile sheet: tap-to-open, ricerca nella sheet — evita blur/commit sul trigger. */
+  const useSheetTriggerMode = useSheet;
+
+  const fieldClass = useMemo(() => {
+    const base = fieldClassForVariant(variant, inputClassName, effectiveSelectOnly || useSheetTriggerMode);
+    if (!effectiveSelectOnly && !useSheetTriggerMode) return base;
+    const normalized = base
+      .replace(/\bcursor-text\b/g, "")
+      .replace(/\bappearance-auto\b/g, "appearance-none")
+      .trim();
+    return `${normalized} cursor-pointer caret-transparent`;
+  }, [variant, inputClassName, effectiveSelectOnly, useSheetTriggerMode]);
+
+  useEffect(() => {
+    if (!open) return;
+    const traceId = decisionTraceIdRef.current;
+    if (!traceId) return;
+    emitSelectorOpenFromUI(traceId, {
+      isMobile,
+      optionCount: totalOptionCount,
+      domain: selectorDomain ?? rolloutKey ?? "unknown",
+      rolloutKey,
+    });
+  }, [open, isMobile, totalOptionCount, selectorDomain, rolloutKey]);
+
+  const resolvedSheetTitle = sheetTitle ?? ariaLabel ?? placeholder ?? "Seleziona";
+
+  useEffect(() => {
+    if (!recentsKey || !hydrated) return;
+    setRecentValues(readSelectorRecents(recentsKey));
+  }, [recentsKey, hydrated, open]);
 
   const engineInput = useMemo(
     () => ({
       mode,
       value,
-      searchText,
+      searchText: query,
       focused,
       open,
       options,
       items,
     }),
-    [mode, value, searchText, focused, open, options, items],
+    [mode, value, query, focused, open, options, items],
   );
 
   const displayValue = useMemo(() => autocompleteDisplayValue(engineInput), [engineInput]);
 
-  const isDeferPending = searchText !== deferredSearchText;
+  const isDeferPending = query !== deferredQuery;
   const suggestionSearchText =
-    isDeferPending && !editSessionRef.current.modified ? searchText : deferredSearchText;
+    isDeferPending && !editSessionRef.current.modified ? query : deferredQuery;
 
-  const suggestionEngineInput = useMemo(
-    () => ({ ...engineInput, searchText: suggestionSearchText }),
-    [engineInput, suggestionSearchText],
-  );
+  const sheetQuery = useSheet ? query : "";
+
+  const highlightQuery = useSheet
+    ? sheetUsesSearch
+      ? sheetQuery
+      : ""
+    : effectiveSelectOnly
+      ? ""
+      : suggestionSearchText;
+
+  const showDropdown = open && !disabled && !showLoadingUi;
+  const sheetOpen = showDropdown && useSheet;
+  const sheetActive = open && useSheet;
+
+  useEffect(() => {
+    if (!sheetOpen) {
+      setSheetListReady(false);
+      return;
+    }
+    let cancelled = false;
+    const id = requestAnimationFrame(() => {
+      if (!cancelled) setSheetListReady(true);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(id);
+    };
+  }, [sheetOpen]);
+
+  const deferSheetSuggestions = sheetOpen && !sheetListReady;
 
   const suggestions = useMemo(() => {
-    if (selectOnly) {
-      if (itemsMode) return [...items].slice(0, AUTOCOMPLETE_BROWSE_CAP);
-      const seen = new Set<string>();
-      const ordered: string[] = [];
-      for (const option of options) {
-        const trimmed = option.trim();
-        if (!trimmed) continue;
-        const key = trimmed.toLowerCase();
-        if (seen.has(key)) continue;
-        seen.add(key);
-        ordered.push(trimmed);
-      }
-      return ordered.slice(0, AUTOCOMPLETE_BROWSE_CAP);
+    if (!open || deferSheetSuggestions) return EMPTY_SUGGESTIONS;
+    const sheetBrowseAll = sheetActive && !sheetQuery.trim();
+    const resolveInput = {
+      mode,
+      selectOnly: browseAsSelectOnly || sheetBrowseAll,
+      useSheet: sheetActive,
+      sheetQuery: sheetActive ? sheetQuery : "",
+      engineInput,
+      suggestionSearchText,
+      options,
+      items,
+      selectedValue: value,
+      recentValues,
+      recentsKey,
+      alphabeticalBrowse,
+      browseCap: sheetBrowseAll ? totalOptionCount || undefined : undefined,
+    };
+    const resolved = resolveSelectorSuggestions(resolveInput);
+    if (
+      sheetActive &&
+      sheetUsesSearch &&
+      !sheetQuery.trim() &&
+      resolved.length === 0 &&
+      totalOptionCount > 0
+    ) {
+      return resolveSelectorSuggestions({
+        ...resolveInput,
+        selectOnly: true,
+        useSheet: true,
+        sheetQuery: "",
+      });
     }
-    if (itemsMode) return autocompleteItemSuggestions(suggestionEngineInput);
-    return autocompleteStringSuggestions(suggestionEngineInput);
-  }, [selectOnly, suggestionEngineInput, itemsMode, items, options]);
+    return resolved;
+  }, [
+    mode,
+    browseAsSelectOnly,
+    sheetActive,
+    sheetUsesSearch,
+    sheetQuery,
+    engineInput,
+    suggestionSearchText,
+    options,
+    items,
+    value,
+    recentValues,
+    recentsKey,
+    alphabeticalBrowse,
+    totalOptionCount,
+    open,
+    deferSheetSuggestions,
+  ]);
 
-  const addCandidate = focused ? searchText.trim() : "";
+  const isListTruncated = totalOptionCount > suggestions.length;
+
+  const addCandidate = focused ? query.trim() : useSheet ? sheetQuery.trim() : "";
 
   const fuzzySuggestion = useMemo(
     () => autocompleteFuzzySuggestion(addCandidate, mode, options, items),
@@ -235,9 +443,25 @@ export function GlobalSelect(props: GlobalSelectProps) {
     disabled: Boolean(disabled),
     isLoading,
   });
+  /** Sheet searchable: browse prima — «Aggiungi» solo dopo ricerca digitata. */
+  const showAddOptionInUi =
+    showAddOption && !(sheetActive && sheetUsesSearch && !sheetQuery.trim());
   const addOptionEnabled = autocompleteAddOptionEnabled(addCandidate, addPending);
-  const addOptionIndex = showAddOption ? suggestions.length : -1;
-  const totalNavigableOptions = suggestions.length + (showAddOption ? 1 : 0);
+  const addOptionIndex = showAddOptionInUi ? suggestions.length : -1;
+  const totalNavigableOptions = suggestions.length + (showAddOptionInUi ? 1 : 0);
+
+  const optionDomId = useCallback(
+    (idx: number) => `${listboxId}-opt-${idx}`,
+    [listboxId],
+  );
+  const addOptionDomId = `${listboxId}-add`;
+
+  const activeDescendantId =
+    activeIndex >= 0 && activeIndex < suggestions.length
+      ? optionDomId(activeIndex)
+      : activeIndex === addOptionIndex
+        ? addOptionDomId
+        : undefined;
 
   const isValid = useMemo(() => {
     if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) return true;
@@ -245,7 +469,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
   }, [isFilterVariant, value, filterNeutralValues, required, strictFromList, mode, options, items]);
 
   const showInvalid = (touched || forceInvalid) && !isValid;
-  const activeTextForSimilar = focused || searchText.length > 0 ? deferredSearchText : value;
+  const activeTextForSimilar = focused || query.length > 0 ? deferredQuery : value;
   const similarPool = useMemo(() => {
     if (itemsMode) return items.map((item) => item.label);
     return [...options];
@@ -259,9 +483,15 @@ export function GlobalSelect(props: GlobalSelectProps) {
       standardizeLegalSuffix: similarStandardizeLegalSuffix,
     });
   }, [isFilterVariant, showSimilarWarning, similarPool, activeTextForSimilar, value, similarStandardizeLegalSuffix]);
-  const showDropdown = open && !disabled && !showLoadingUi;
-  const listEmpty = !showLoadingUi && suggestions.length === 0 && !showAddOption && addCandidate.length > 0;
-  const portalOpen = showDropdown && (totalNavigableOptions > 0 || listEmpty);
+
+  const listEmpty =
+    !showLoadingUi &&
+    suggestions.length === 0 &&
+    !showAddOptionInUi &&
+    (addCandidate.length > 0 ||
+      (useSheet && sheetQuery.trim().length > 0) ||
+      (sheetActive && !sheetQuery.trim() && totalOptionCount === 0));
+  const portalOpen = showDropdown && !useSheet && (totalNavigableOptions > 0 || listEmpty);
 
   const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
     open: portalOpen,
@@ -269,6 +499,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
     contentRef: dropdownRef,
     repositionDeps: [suggestions.length, showAddOption, listEmpty, addOptionEnabled],
   });
+
+  const closeAndResetRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     onValidityChange?.(isValid);
@@ -279,17 +511,56 @@ export function GlobalSelect(props: GlobalSelectProps) {
     return !isFilterNeutralValue(value, filterNeutralValues);
   }, [value, filterNeutralValues]);
 
-  /** Submit flush: invariante visibile === committato, senza gate userModified. */
+  const handleResetSearch = useCallback(() => {
+    setQuery("");
+    setActiveIndex(-1);
+    requestAnimationFrame(() => {
+      const ref = sheetOpen ? sheetSearchRef.current : inputRef.current;
+      ref?.focus({ preventScroll: true });
+    });
+  }, [setQuery, sheetOpen, sheetSearchRef]);
+
+  const emptyStateNode = useMemo(
+    () => (
+      <SelectorEmptyState
+        message={
+          emptyMessage === globalInputEmptyMessage ? "Nessun risultato trovato" : emptyMessage
+        }
+        domain={selectorDomain}
+        onResetSearch={handleResetSearch}
+        showClearFilters={isFilterVariant && Boolean(query.trim() || value.trim())}
+        onClearFilters={
+          isFilterVariant
+            ? () => {
+                handleResetSearch();
+                if (canClearCommittedFilter()) onChange("");
+              }
+            : undefined
+        }
+      />
+    ),
+    [
+      emptyMessage,
+      selectorDomain,
+      handleResetSearch,
+      isFilterVariant,
+      query,
+      value,
+      canClearCommittedFilter,
+      onChange,
+    ],
+  );
+
   const commitPendingForSubmit = useCallback(() => {
-    if (selectOnly) return;
+    if (effectiveSelectOnly) return;
     if (blurTimer.current) clearTimeout(blurTimer.current);
-    const rawSearch = inputRef.current?.value ?? searchText;
+    const rawSearch = inputRef.current?.value ?? query;
     const trimmed = rawSearch.trim();
     const committedValue = value.trim();
     if (trimmed === committedValue) {
       setOpen(false);
       setActiveIndex(-1);
-      setSearchText("");
+      resetQuery();
       setFocused(false);
       return;
     }
@@ -304,7 +575,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
       } else if (canClearCommittedFilter()) {
         onChange("");
       }
-      setSearchText("");
+      resetQuery();
       return;
     }
     const committed = autocompleteCommitFromSearchText(rawSearch, mode, options, items, strictFromList);
@@ -315,10 +586,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
     } else if (trimmed !== value) {
       onChange(trimmed);
     }
-    setSearchText("");
+    resetQuery();
   }, [
-    selectOnly,
-    searchText,
+    effectiveSelectOnly,
+    query,
+    resetQuery,
     value,
     isFilterVariant,
     canClearCommittedFilter,
@@ -330,12 +602,12 @@ export function GlobalSelect(props: GlobalSelectProps) {
   ]);
 
   const commitBlur = useCallback(() => {
-    if (selectOnly) {
+    if (effectiveSelectOnly) {
       setOpen(false);
       setActiveIndex(-1);
       return;
     }
-    const rawSearch = inputRef.current?.value ?? searchText;
+    const rawSearch = inputRef.current?.value ?? query;
     const trimmed = rawSearch.trim();
     const typedPending = Boolean(trimmed && trimmed !== value.trim());
     const userModified = editSessionRef.current.modified || typedPending;
@@ -352,20 +624,20 @@ export function GlobalSelect(props: GlobalSelectProps) {
           onChange("");
         }
       }
-      setSearchText("");
+      resetQuery();
       return;
     }
     const committed = autocompleteCommitFromSearchText(rawSearch, mode, options, items, strictFromList);
     if (committed && committed !== value) {
       onChange(committed);
     } else if (trimmed !== value && !isFilterVariant) {
-      // Submit/blur flush: committa testo digitato anche senza permesso append elenco.
       onChange(trimmed);
     }
-    setSearchText("");
+    resetQuery();
   }, [
-    selectOnly,
-    searchText,
+    effectiveSelectOnly,
+    query,
+    resetQuery,
     value,
     isFilterVariant,
     canClearCommittedFilter,
@@ -376,16 +648,17 @@ export function GlobalSelect(props: GlobalSelectProps) {
     onChange,
   ]);
 
-  /** Tap fuori (es. Salva) chiude il menu: committa testo pendente invece di scartarlo. */
   const dismissDropdown = useCallback(() => {
-    if (selectOnly) {
+    if (effectiveSelectOnly) {
       setOpen(false);
       setActiveIndex(-1);
+      resetQuery();
+      restoreFocus();
       return;
     }
     const domPending = inputRef.current?.value.trim() ?? "";
     const hasPending =
-      editSessionRef.current.modified || Boolean(searchText.trim()) || Boolean(domPending);
+      editSessionRef.current.modified || Boolean(query.trim()) || Boolean(domPending);
     if (hasPending) {
       if (blurTimer.current) clearTimeout(blurTimer.current);
       commitBlur();
@@ -395,8 +668,9 @@ export function GlobalSelect(props: GlobalSelectProps) {
     setActiveIndex(-1);
     setFocused(false);
     editSessionRef.current.modified = false;
-    setSearchText("");
-  }, [selectOnly, searchText, commitBlur]);
+    resetQuery();
+    restoreFocus();
+  }, [effectiveSelectOnly, query, commitBlur, restoreFocus, resetQuery]);
 
   useDropdownOutsideDismiss(portalOpen, wrapRef, dropdownRef, dismissDropdown);
 
@@ -404,95 +678,102 @@ export function GlobalSelect(props: GlobalSelectProps) {
     setOpen(false);
     setActiveIndex(-1);
     setFocused(false);
-    setSearchText("");
+    resetQuery();
+    restoreFocus();
+  }, [restoreFocus, resetQuery]);
+
+  closeAndResetRef.current = closeAndReset;
+
+  useSelectorOverlayBack({
+    open: portalOpen,
+    onClose: () => closeAndResetRef.current(),
+    source: "GlobalSelect-dropdown",
+    layer: "selector",
+  });
+  useSelectorOverlayBack({
+    open: sheetOpen,
+    onClose: () => closeAndResetRef.current(),
+    source: "GlobalSelect-sheet",
+    layer: "selector",
+  });
+
+  const recordRecent = useCallback(
+    (selected: string) => {
+      if (!recentsKey) return;
+      pushSelectorRecent(recentsKey, selected);
+      setRecentValues(readSelectorRecents(recentsKey));
+    },
+    [recentsKey],
+  );
+
+  const cancelPendingBlur = useCallback(() => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
   }, []);
+
+  const flushCombobox = useCallback(() => {
+    commitPendingForSubmit();
+  }, [commitPendingForSubmit]);
+
+  const runAtomicSelect = useCallback(
+    (nextValue: string, advanceFocus = true) => {
+      runSelectOptionAtomic({
+        cancelPendingBlur,
+        onChange: (next) => {
+          editSessionRef.current.modified = false;
+          onChange(next);
+        },
+        nextValue,
+        recordRecent,
+        flushCombobox,
+        closeOverlaySync: closeAndReset,
+        resetInteractionState: () => setActiveIndex(-1),
+        restoreFocusOrAdvance: advanceFocus
+          ? () => scheduleFocusNextGestionaleField(inputRef.current)
+          : undefined,
+      });
+      setTouched(true);
+    },
+    [onChange, closeAndReset, recordRecent, cancelPendingBlur, flushCombobox],
+  );
 
   const selectString = useCallback(
     (option: string, advanceFocus = true) => {
-      if (blurTimer.current) clearTimeout(blurTimer.current);
-      editSessionRef.current.modified = false;
-      onChange(option);
-      closeAndReset();
-      setTouched(true);
-      if (advanceFocus) scheduleFocusNextGestionaleField(inputRef.current);
+      runAtomicSelect(option, advanceFocus);
     },
-    [onChange, closeAndReset],
+    [runAtomicSelect],
   );
 
   const selectItem = useCallback(
     (item: ListSelectItem, advanceFocus = true) => {
-      if (blurTimer.current) clearTimeout(blurTimer.current);
-      editSessionRef.current.modified = false;
-      onChange(item.value);
-      closeAndReset();
-      setTouched(true);
-      if (advanceFocus) scheduleFocusNextGestionaleField(inputRef.current);
+      runAtomicSelect(item.value, advanceFocus);
     },
-    [onChange, closeAndReset],
+    [runAtomicSelect],
   );
 
   const runAdd = useCallback(async () => {
     if (!onAddToList || !addCandidate || addPending || addInFlightRef.current) return;
     addInFlightRef.current = true;
-    if (blurTimer.current) clearTimeout(blurTimer.current);
+    cancelPendingBlur();
     try {
       const result = await onAddToList(addCandidate);
       const canonical =
-        typeof result === "string" && result.trim()
-          ? result.trim()
-          : addCandidate.trim();
-      editSessionRef.current.modified = false;
+        typeof result === "string" && result.trim() ? result.trim() : addCandidate.trim();
       if (canonical && normListSelectValue(canonical) !== normListSelectValue(value)) {
-        onChange(canonical);
+        runAtomicSelect(canonical, true);
+      } else {
+        closeAndReset();
+        setTouched(true);
       }
-      closeAndReset();
-      setTouched(true);
     } catch {
       /* onAddToList gestisce toast/ritorno null */
     } finally {
       addInFlightRef.current = false;
     }
-  }, [addCandidate, addPending, onAddToList, closeAndReset, onChange, value]);
+  }, [addCandidate, addPending, onAddToList, cancelPendingBlur, runAtomicSelect, closeAndReset, value]);
 
-  const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      if (open) e.preventDefault();
-      closeAndReset();
-      return;
-    }
-    if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-      setOpen(true);
-      setActiveIndex(totalNavigableOptions > 0 ? 0 : -1);
-      e.preventDefault();
-      return;
-    }
-    if (e.key === "ArrowDown" && totalNavigableOptions > 0) {
-      e.preventDefault();
-      setOpen(true);
-      setActiveIndex((i) => (i + 1) % totalNavigableOptions);
-      return;
-    }
-    if (e.key === "ArrowUp" && totalNavigableOptions > 0) {
-      e.preventDefault();
-      setOpen(true);
-      setActiveIndex((i) => (i <= 0 ? totalNavigableOptions - 1 : i - 1));
-      return;
-    }
-    if (e.key === "Tab" && totalNavigableOptions > 0) {
-      e.preventDefault();
-      setOpen(true);
-      if (e.shiftKey) {
-        setActiveIndex((i) => (i <= 0 ? totalNavigableOptions - 1 : i - 1));
-      } else {
-        setActiveIndex((i) => (i < 0 ? 0 : (i + 1) % totalNavigableOptions));
-      }
-      return;
-    }
-    if (e.key !== "Enter") return;
-    e.preventDefault();
+  const handleListboxEnter = useCallback(() => {
     if (
-      showAddOption &&
+      showAddOptionInUi &&
       addOptionEnabled &&
       (activeIndex === addOptionIndex || (suggestions.length === 0 && addCandidate))
     ) {
@@ -505,46 +786,123 @@ export function GlobalSelect(props: GlobalSelectProps) {
       else selectString(suggestions[idx] as string);
       return;
     }
-    const committed = autocompleteCommitFromSearchText(searchText, mode, options, items, strictFromList);
+    const committed = autocompleteCommitFromSearchText(query, mode, options, items, strictFromList);
     if (committed) {
-      editSessionRef.current.modified = false;
-      onChange(committed);
-      closeAndReset();
-      setTouched(true);
-      scheduleFocusNextGestionaleField(inputRef.current);
+      runAtomicSelect(committed, true);
     }
-  };
+  }, [
+    showAddOptionInUi,
+    addOptionEnabled,
+    activeIndex,
+    addOptionIndex,
+    suggestions,
+    addCandidate,
+    runAdd,
+    itemsMode,
+    selectItem,
+    selectString,
+    query,
+    mode,
+    options,
+    items,
+    strictFromList,
+    runAtomicSelect,
+  ]);
+
+  const listboxKeyboard = useSelectorListboxKeyboard({
+    open: open || sheetOpen,
+    totalNavigableOptions,
+    activeIndex,
+    setOpen,
+    setActiveIndex,
+    onEscape: closeAndReset,
+    onEnter: handleListboxEnter,
+  });
+
+  const runListboxKeyboard = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Tab") {
+        keyboardScrollPendingRef.current = true;
+      }
+      listboxKeyboard(e);
+    },
+    [listboxKeyboard],
+  );
+
+  const onSheetSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (deriveSurface() !== "sheet") return;
+      runListboxKeyboard(e);
+    },
+    [deriveSurface, runListboxKeyboard],
+  );
 
   const seedSearchFromCommitted = useCallback(() => {
-    setSearchText(autocompleteCommittedDisplayValue(engineInput));
-  }, [engineInput]);
+    setQuery(autocompleteCommittedDisplayValue(engineInput));
+  }, [engineInput, setQuery]);
 
   const beginEditing = useCallback(() => {
     editSessionRef.current.modified = false;
     setFocused(true);
     setOpen(true);
     if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) {
-      setSearchText("");
+      setQuery("");
     } else {
       seedSearchFromCommitted();
     }
-    scheduleGestionaleFieldScroll(inputRef.current, { extraBottom: 20 });
-  }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, value]);
+  }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, value, setQuery]);
 
-  const handleSelectOnlyTriggerMouseDown = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
+  const captureTriggerFocus = useSelectorFocusChain({
+    sheetOpen,
+    sheetSearchRef,
+    triggerRef: inputRef,
+    onFocusIn,
+  });
+
+  const handleSheetTriggerMouseDown = useCallback((e: React.MouseEvent<HTMLInputElement>) => {
     e.preventDefault();
     if (blurTimer.current) clearTimeout(blurTimer.current);
   }, []);
 
+  const openSheetFromTrigger = useCallback(() => {
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    if (open) return;
+    const now = performance.now();
+    if (now - openSheetIntentRef.current < 80) return;
+    openSheetIntentRef.current = now;
+    captureFocus();
+    captureTriggerFocus();
+    startTransition(() => {
+      setOpen(true);
+      setActiveIndex(-1);
+      resetQuery();
+    });
+  }, [open, captureFocus, captureTriggerFocus, resetQuery]);
+
+  /** Sheet mobile: il trigger apre solo — chiusura via backdrop/X (no toggle su secondo tap). */
+  const handleSheetTriggerClick = openSheetFromTrigger;
+
+  const handleSelectOnlyTriggerMouseDown = handleSheetTriggerMouseDown;
   const handleSelectOnlyTriggerClick = useCallback(() => {
     if (open) {
       dismissDropdown();
-    } else {
-      setOpen(true);
-      setActiveIndex(-1);
-      scheduleGestionaleFieldScroll(inputRef.current, { extraBottom: 20 });
+      return;
     }
-  }, [open, dismissDropdown]);
+    openSheetFromTrigger();
+  }, [open, dismissDropdown, openSheetFromTrigger]);
+
+  const onInputKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (useSheetTriggerMode && !open && (e.key === "Enter" || e.key === " ")) {
+        e.preventDefault();
+        openSheetFromTrigger();
+        return;
+      }
+      if (deriveSurface() !== "trigger") return;
+      runListboxKeyboard(e);
+    },
+    [useSheetTriggerMode, open, openSheetFromTrigger, deriveSurface, runListboxKeyboard],
+  );
 
   useEffect(() => {
     const input = inputRef.current;
@@ -556,19 +914,57 @@ export function GlobalSelect(props: GlobalSelectProps) {
     return () => unregisterGestionaleComboboxFlush(input);
   }, [commitPendingForSubmit]);
 
+  useEffect(() => {
+    if (activeIndex < 0 || (!portalOpen && !sheetOpen)) return;
+    if (sheetOpen && !keyboardScrollPendingRef.current) return;
+    keyboardScrollPendingRef.current = false;
+    if (activeIndex < suggestions.length && scrollToRowRef.current) {
+      scrollToRowRef.current(activeIndex);
+      return;
+    }
+    const id =
+      activeIndex < suggestions.length
+        ? optionDomId(activeIndex)
+        : activeIndex === addOptionIndex
+          ? addOptionDomId
+          : null;
+    if (!id) return;
+    document.getElementById(id)?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex, portalOpen, sheetOpen, suggestions.length, addOptionIndex, optionDomId, addOptionDomId]);
+
+  const scrollToSuggestionIndex = useCallback((index: number) => {
+    scrollToRowRef.current?.(index);
+  }, []);
+
+  useSelectorScrollRestoration({
+    open: portalOpen || sheetOpen,
+    query: useSheet ? sheetQuery : suggestionSearchText,
+    activeIndex,
+    selectedValue: value,
+    suggestions,
+    getSuggestionKey: (item, i) =>
+      itemsMode ? (item as ListSelectItem).value : (item as string),
+    optionDomId,
+    scrollToIndex: scrollToSuggestionIndex,
+    onRestoreActiveIndex: setActiveIndex,
+  });
+
+  useEffect(() => {
+    if (!open || useSheet) return;
+    const onResize = () => {
+      if (!open) return;
+      closeAndResetRef.current();
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [open, useSheet]);
+
   const fuzzyLabel =
     itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object"
       ? (fuzzySuggestion as ListSelectItem).label
       : typeof fuzzySuggestion === "string"
         ? fuzzySuggestion
         : null;
-
-  const optionBtnClass = (active: boolean, selected: boolean, pillStyle?: CSSProperties) => {
-    if (coloredOptions && pillStyle) {
-      return globalAutocompleteOptionPillClass(active, selected, pillStyle);
-    }
-    return globalAutocompleteOptionClass(active, selected);
-  };
 
   const dropdownPanelClass = `${globalAutocompleteDropdownPortalPanel} p-1 ${placementOriginClass} ${
     scrollInside ? "overflow-y-auto" : "overflow-hidden"
@@ -578,116 +974,206 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const addOptionBtnClass = `${globalAutocompleteAddBtnClass}${
     addOptionActive ? " ring-2 ring-inset ring-white/25 shadow-sm" : ""
   }`;
+  const addOptionLabel = addPending
+    ? "Aggiunta in corso…"
+    : addOptionEnabled && addCandidate
+      ? `Aggiungi «${addCandidate}»`
+      : useSheet && sheetUsesSearch
+        ? "Digita nella ricerca per aggiungere"
+        : "Aggiungi all'elenco";
+
+  const onPointerSelect = useCallback(
+    (e: React.PointerEvent, select: () => void) => {
+      e.preventDefault();
+      cancelPendingBlur();
+      select();
+    },
+    [cancelPendingBlur],
+  );
+
+  const stringRenderOption = useMemo(
+    () =>
+      defaultStringRenderOption({
+        highlightQuery,
+        highlightSearch,
+        onPointerSelect,
+      }),
+    [highlightQuery, highlightSearch, onPointerSelect],
+  );
+
+  const itemRenderOption = useMemo(
+    () =>
+      defaultItemRenderOption({
+        value,
+        coloredOptions,
+        highlightQuery,
+        highlightSearch,
+        onPointerSelect,
+      }),
+    [value, coloredOptions, highlightQuery, highlightSearch, onPointerSelect],
+  );
+
+  const listFooterNote = isListTruncated ? (
+    <p className="px-2 py-1.5 text-[10px] font-medium text-[color:var(--cab-text-muted)]" role="status">
+      Mostrati {suggestions.length} di {totalOptionCount} — affina la ricerca per trovare altri risultati.
+    </p>
+  ) : null;
+
+  const recentSection =
+    recentsKey && recentValues.length > 0 && !highlightQuery.trim() && effectiveSelectOnly ? (
+      <div className="border-b border-[color:var(--cab-border)] px-2 py-1.5">
+        <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+          Recenti
+        </p>
+        <div className="flex flex-wrap gap-1">
+          {recentValues.map((recent) => {
+            const label = itemsMode
+              ? items.find((i) => i.value === recent)?.label ?? recent
+              : options.find((o) => normListSelectValue(o) === normListSelectValue(recent)) ?? recent;
+            return (
+              <button
+                key={recent}
+                type="button"
+                className="rounded-md border border-[color:var(--cab-border)] bg-[var(--cab-surface)] px-2 py-1 text-xs font-medium text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)]"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  if (itemsMode) {
+                    const item = items.find((i) => i.value === recent);
+                    if (item) selectItem(item);
+                    else runAtomicSelect(recent);
+                  } else {
+                    selectString(recent);
+                  }
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    ) : null;
+
+  const optionsListBody = (
+    <>
+      {recentSection}
+      {suggestions.length > 0 ? (
+        itemsMode ? (
+          <SelectorListbox
+            suggestions={suggestions as GlobalSelectOption[]}
+            activeIndex={activeIndex}
+            selectedValue={value}
+            getOptionId={(_, idx) => optionDomId(idx)}
+            getOptionKey={(item) => item.value}
+            renderOption={itemRenderOption}
+            onSelect={(item) => selectItem(item, false)}
+            onActiveIndexChange={setActiveIndex}
+            scrollRef={sheetOpen ? sheetListScrollRef : listScrollRef}
+            scrollToRowRef={scrollToRowRef}
+            externalScrollHost={sheetOpen}
+            hoverActivatesIndex={!sheetOpen}
+          />
+        ) : (
+          <SelectorListbox
+            suggestions={suggestions as string[]}
+            activeIndex={activeIndex}
+            selectedValue={normListSelectValue(value)}
+            getOptionId={(_, idx) => optionDomId(idx)}
+            getOptionKey={(item) => normListSelectValue(item)}
+            renderOption={stringRenderOption}
+            onSelect={(option) => selectString(option, false)}
+            onActiveIndexChange={setActiveIndex}
+            scrollRef={sheetOpen ? sheetListScrollRef : listScrollRef}
+            scrollToRowRef={scrollToRowRef}
+            externalScrollHost={sheetOpen}
+            hoverActivatesIndex={!sheetOpen}
+          />
+        )
+      ) : null}
+      {listFooterNote}
+      {showAddOptionInUi ? (
+        <div
+          role="presentation"
+          className={`px-2 py-1 ${suggestions.length > 0 ? "mt-0.5 border-t border-[color:var(--cab-border)] pt-2" : ""}`}
+        >
+          {suggestions.length === 0 && fuzzyLabel ? (
+            <p className="px-2 pb-1.5 text-xs text-[color:var(--cab-text-muted)]">
+              Forse cercavi:{" "}
+              <button
+                type="button"
+                className="font-semibold text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  if (blurTimer.current) clearTimeout(blurTimer.current);
+                  if (itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object") {
+                    selectItem(fuzzySuggestion as ListSelectItem, false);
+                  } else if (typeof fuzzySuggestion === "string") {
+                    selectString(fuzzySuggestion, false);
+                  }
+                }}
+              >
+                {fuzzyLabel}
+              </button>
+            </p>
+          ) : null}
+          {suggestions.length === 0 && !fuzzyLabel && addCandidate ? (
+            <p className="px-2 pb-1.5 text-xs font-medium text-[color:var(--cab-text-muted)]">
+              {emptyMessage}
+            </p>
+          ) : null}
+          <button
+            id={addOptionDomId}
+            type="button"
+            role="option"
+            aria-selected={addOptionActive}
+            className={addOptionBtnClass}
+            disabled={!addOptionEnabled}
+            aria-disabled={!addOptionEnabled}
+            title={
+              addOptionEnabled
+                ? undefined
+                : useSheet && sheetUsesSearch
+                  ? "Scrivi nel campo Cerca in alto"
+                  : "Digita un valore da aggiungere"
+            }
+            onMouseDown={(e) => {
+              e.preventDefault();
+              if (blurTimer.current) clearTimeout(blurTimer.current);
+              if (addOptionEnabled) void runAdd();
+            }}
+            onMouseEnter={() => {
+              if (!sheetOpen) setActiveIndex(addOptionIndex);
+            }}
+          >
+            <span
+              className={addOptionEnabled ? "" : "opacity-70"}
+              aria-hidden
+            >
+              +
+            </span>
+            {addOptionLabel}
+          </button>
+        </div>
+      ) : null}
+    </>
+  );
 
   const dropdownPortal =
     portalOpen && portalStyle ? (
       <div ref={dropdownRef} style={portalStyle}>
         {showDropdown && totalNavigableOptions > 0 ? (
-          <ul id={listboxId} role="listbox" className={dropdownPanelClass}>
-            {suggestions.map((entry, idx) => {
-              const active = idx === activeIndex;
-              if (itemsMode) {
-                const item = entry as GlobalSelectOption;
-                const selected = item.value === value;
-                return (
-                  <li key={item.value} role="presentation" className="py-0.5">
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={selected}
-                      style={coloredOptions ? item.pillStyle : undefined}
-                      className={optionBtnClass(active, selected, item.pillStyle)}
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        if (blurTimer.current) clearTimeout(blurTimer.current);
-                        selectItem(item, false);
-                      }}
-                      onMouseEnter={() => setActiveIndex(idx)}
-                    >
-                      {item.label}
-                    </button>
-                  </li>
-                );
-              }
-              const option = entry as string;
-              const selected = normListSelectValue(option) === normListSelectValue(value);
-              return (
-                <li key={option} role="presentation" className="py-0.5">
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    className={optionBtnClass(active, selected)}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      if (blurTimer.current) clearTimeout(blurTimer.current);
-                      selectString(option, false);
-                    }}
-                    onMouseEnter={() => setActiveIndex(idx)}
-                  >
-                    {option}
-                  </button>
-                </li>
-              );
-            })}
-            {showAddOption ? (
-              <li
-                role="presentation"
-                className={`py-0.5 ${suggestions.length > 0 ? "mt-0.5 border-t border-[color:var(--cab-border)] pt-1" : ""}`}
-              >
-                {suggestions.length === 0 && fuzzyLabel ? (
-                  <p className="px-2 pb-1.5 text-xs text-[color:var(--cab-text-muted)]">
-                    Forse cercavi:{" "}
-                    <button
-                      type="button"
-                      className="font-semibold text-[color:var(--cab-primary)] underline-offset-2 hover:underline"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        if (blurTimer.current) clearTimeout(blurTimer.current);
-                        if (itemsMode && fuzzySuggestion && typeof fuzzySuggestion === "object") {
-                          selectItem(fuzzySuggestion as ListSelectItem, false);
-                        } else if (typeof fuzzySuggestion === "string") {
-                          selectString(fuzzySuggestion, false);
-                        }
-                      }}
-                    >
-                      {fuzzyLabel}
-                    </button>
-                  </p>
-                ) : null}
-                {suggestions.length === 0 && !fuzzyLabel && addCandidate ? (
-                  <p className="px-2 pb-1.5 text-xs font-medium text-[color:var(--cab-text-muted)]">
-                    {emptyMessage}
-                  </p>
-                ) : null}
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={addOptionActive}
-                  className={addOptionBtnClass}
-                  disabled={!addOptionEnabled}
-                  title={addOptionEnabled ? undefined : "Digita un valore da aggiungere"}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    if (blurTimer.current) clearTimeout(blurTimer.current);
-                    if (addOptionEnabled) void runAdd();
-                  }}
-                  onMouseEnter={() => setActiveIndex(addOptionIndex)}
-                >
-                  <span aria-hidden>+</span>
-                  {addPending ? "Aggiunta in corso…" : addCandidate ? `Aggiungi «${addCandidate}»` : "Aggiungi all'elenco"}
-                </button>
-              </li>
-            ) : null}
-          </ul>
-        ) : null}
-        {showDropdown && listEmpty ? (
           <div
             id={listboxId}
-            role="status"
-            className={`${globalAutocompleteDropdownPortalPanel} px-3 py-2.5 text-xs font-medium text-[color:var(--cab-text-muted)]`}
+            role="listbox"
+            ref={listScrollRef}
+            className={dropdownPanelClass}
           >
-            {emptyMessage}
+            {optionsListBody}
+          </div>
+        ) : null}
+        {showDropdown && listEmpty ? (
+          <div id={listboxId} role="status" className={globalAutocompleteDropdownPortalPanel}>
+            {emptyStateNode}
           </div>
         ) : null}
       </div>
@@ -705,51 +1191,111 @@ export function GlobalSelect(props: GlobalSelectProps) {
         className={`${fieldClass}${showInvalid ? globalInputInvalidRing : ""}`}
         value={displayValue}
         onChange={(e) => {
-          if (selectOnly) return;
+          if (effectiveSelectOnly || useSheetTriggerMode) return;
           const next = e.target.value;
           editSessionRef.current.modified = true;
           setFocused(true);
-          setSearchText(next);
-          setOpen(true);
-          setActiveIndex(-1);
+          setQuery(next);
+          startTransition(() => {
+            setOpen(true);
+            setActiveIndex(-1);
+          });
           if (next === "") {
             if (!isFilterVariant) onChange("");
             else if (canClearCommittedFilter()) onChange("");
           }
         }}
-        onFocus={() => {
-          if (selectOnly) {
-            scheduleGestionaleFieldScroll(inputRef.current, { extraBottom: 20 });
+        onMouseDown={useSheetTriggerMode || effectiveSelectOnly ? handleSheetTriggerMouseDown : undefined}
+        onClick={() => {
+          if (useSheetTriggerMode) {
+            handleSheetTriggerClick();
             return;
           }
-          beginEditing();
-        }}
-        onMouseDown={selectOnly ? handleSelectOnlyTriggerMouseDown : undefined}
-        onClick={() => {
-          if (selectOnly) {
+          if (effectiveSelectOnly) {
             handleSelectOnlyTriggerClick();
             return;
           }
           if (!open) beginEditing();
         }}
-        readOnly={selectOnly || undefined}
+        readOnly={useSheetTriggerMode || effectiveSelectOnly || undefined}
         onBlur={() => {
+          if (shouldIgnoreBlurDuringSelection()) return;
+          if (useSheetTriggerMode) {
+            if (blurTimer.current) clearTimeout(blurTimer.current);
+            return;
+          }
           blurTimer.current = setTimeout(commitBlur, 120);
+        }}
+        onFocus={() => {
+          if (inputRef.current) onFocusIn(inputRef.current);
+          if (useSheetTriggerMode) return;
+          if (!effectiveSelectOnly) beginEditing();
         }}
         onKeyDown={onInputKeyDown}
         disabled={disabled || showLoadingUi}
         required={required && !strictFromList}
         placeholder={resolvedPlaceholder}
         autoComplete="off"
-        role="combobox"
+        enterKeyHint={useSheetTriggerMode ? (sheetUsesSearch ? "search" : "done") : effectiveSelectOnly ? "done" : "search"}
+        role={useSheetTriggerMode ? "button" : "combobox"}
+        aria-haspopup={useSheetTriggerMode ? "listbox" : undefined}
         aria-expanded={showDropdown && (totalNavigableOptions > 0 || listEmpty)}
-        aria-controls={listboxId}
+        aria-controls={showDropdown && !useSheetTriggerMode ? listboxId : undefined}
+        aria-activedescendant={useSheetTriggerMode ? undefined : activeDescendantId}
         aria-invalid={showInvalid || undefined}
-        aria-autocomplete={selectOnly ? "none" : "list"}
-        aria-readonly={selectOnly || undefined}
+        aria-autocomplete={useSheetTriggerMode || effectiveSelectOnly ? "none" : "list"}
+        aria-readonly={useSheetTriggerMode || effectiveSelectOnly || undefined}
         aria-busy={showLoadingUi || addPending || undefined}
       />
       {typeof document !== "undefined" && dropdownPortal ? createPortal(dropdownPortal, document.body) : null}
+      {sheetOpen ? (
+      <GestionaleSearchableSheetSelect
+        open={sheetOpen}
+        onOpenChange={(next) => {
+          if (!next) closeAndReset();
+          else setOpen(true);
+        }}
+        title={resolvedSheetTitle}
+        showSearch={sheetUsesSearch}
+        searchValue={sheetQuery}
+        onSearchChange={(v) => {
+          setQuery(v);
+          setActiveIndex(-1);
+        }}
+        searchPlaceholder={placeholder ?? "Cerca…"}
+        searchAriaLabel={ariaLabel ? `Cerca in ${ariaLabel}` : undefined}
+        listScrollRef={sheetListScrollRef}
+        searchInputRef={sheetSearchRef}
+        onSearchFocus={() => {
+          if (sheetSearchRef.current) onFocusIn(sheetSearchRef.current);
+        }}
+        onSearchKeyDown={onSheetSearchKeyDown}
+        comboboxAria={
+          useSheetTriggerMode && sheetUsesSearch
+            ? {
+                listboxId,
+                activeDescendantId,
+                expanded: showDropdown && (totalNavigableOptions > 0 || listEmpty),
+              }
+            : undefined
+        }
+      >
+        <div id={listboxId} role="listbox">
+          {sheetListReady ? (
+            <>
+              {optionsListBody}
+              {listEmpty ? emptyStateNode : null}
+            </>
+          ) : (
+            <div
+              aria-busy="true"
+              aria-label="Caricamento elenco"
+              className="min-h-[12rem] px-3 py-4"
+            />
+          )}
+        </div>
+      </GestionaleSearchableSheetSelect>
+      ) : null}
       {showInvalid ? (
         <p className="mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]">
           {invalidMessage}

@@ -6,32 +6,29 @@ import {
   useDropdownOutsideDismiss,
   useGlobalDropdownPortal,
 } from "@/components/gestionale/global-input/use-global-dropdown-portal";
+import { GestionaleSearchableSheetSelect } from "@/components/gestionale/global-input/gestionale-searchable-sheet-select";
+import { HighlightSearchMatch } from "@/components/gestionale/global-input/highlight-search-match";
 import {
   findExactMezzoForIngressoIdent,
-  mezzoIngressoSuggestLabel,
-  splitIdentHighlight,
+  mezzoIngressoSuggestSecondaryLabel,
   suggestMezziForIngressoIdent,
   type SchedaIngressoIdentField,
 } from "@/lib/schede/scheda-ingresso-ident-suggest";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
+  globalAutocompleteAddBtnClass,
   globalAutocompleteDropdownPortalPanel,
   globalAutocompleteOptionClass,
   globalInputFieldDefault,
 } from "@/lib/ui/global-input";
+import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
+import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
+import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 
-function IdentHighlight({ text, query }: { text: string; query: string }) {
-  const parts = splitIdentHighlight(text, query);
-  if (!parts) return <>{text}</>;
-  return (
-    <>
-      {parts.before}
-      <mark className="rounded bg-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)] px-0.5 font-semibold text-[color:var(--cab-text)]">
-        {parts.match}
-      </mark>
-      {parts.after}
-    </>
-  );
+function identPlaceholder(field: SchedaIngressoIdentField): string {
+  if (field === "targa") return "Cerca targa…";
+  if (field === "matricola") return "Cerca matricola…";
+  return "Cerca scuderia…";
 }
 
 export function SchedaIngressoIdentAutocompleteField({
@@ -43,6 +40,7 @@ export function SchedaIngressoIdentAutocompleteField({
   readOnly,
   disabled,
   className = "",
+  id: idProp,
   onChange,
   onExactMezzoMatch,
 }: {
@@ -54,31 +52,46 @@ export function SchedaIngressoIdentAutocompleteField({
   readOnly?: boolean;
   disabled?: boolean;
   className?: string;
+  id?: string;
   onChange: (value: string) => void;
-  /** Chiamato quando targa/matricola corrisponde a un mezzo registrato. */
+  /** Chiamato quando targa/matricola/scuderia corrisponde a un mezzo registrato. */
   onExactMezzoMatch: (mezzo: MezzoGestito) => void;
 }) {
   const autoId = useId();
-  const listboxId = `${autoId}-listbox`;
+  const inputId = idProp ?? autoId;
+  const listboxId = `${inputId}-listbox`;
   const wrapRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLUListElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const sheetListScrollRef = useRef<HTMLDivElement>(null);
+  const sheetSearchRef = useRef<HTMLInputElement>(null);
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipBlurMatch = useRef(false);
+  const skipSheetOpenOnFocusRef = useRef(false);
+
+  const hydrated = useClientHydrated();
+  const isMobile = useMaxMdDown();
+  const useMobileSheet = hydrated && isMobile && !readOnly;
+  const placeholder = identPlaceholder(field);
 
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const [focused, setFocused] = useState(false);
+  const [sheetQuery, setSheetQuery] = useState("");
 
+  const { restoreFocus, captureFocus } = useDropdownFocusRestore(open);
+
+  const desktopQuery = focused ? value : value;
   const suggestions = useMemo(
-    () => suggestMezziForIngressoIdent(mezzi, field, focused ? value : value),
-    [mezzi, field, value, focused],
+    () => suggestMezziForIngressoIdent(mezzi, field, useMobileSheet && open ? sheetQuery : desktopQuery),
+    [mezzi, field, useMobileSheet, open, sheetQuery, desktopQuery],
   );
 
-  const showDropdown = open && !readOnly && !disabled && suggestions.length > 0;
+  const showDesktopDropdown = open && !readOnly && !disabled && !useMobileSheet && suggestions.length > 0;
+  const sheetOpen = open && useMobileSheet;
 
   const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
-    open: showDropdown,
+    open: showDesktopDropdown,
     anchorRef: wrapRef,
     contentRef: dropdownRef,
     repositionDeps: [suggestions.length, value],
@@ -88,24 +101,57 @@ export function SchedaIngressoIdentAutocompleteField({
     setOpen(false);
     setActiveIndex(-1);
     setFocused(false);
-  }, []);
+    setSheetQuery("");
+    skipSheetOpenOnFocusRef.current = true;
+    restoreFocus();
+    requestAnimationFrame(() => {
+      skipSheetOpenOnFocusRef.current = false;
+    });
+  }, [restoreFocus]);
 
-  useDropdownOutsideDismiss(showDropdown, wrapRef, dropdownRef, close);
+  useDropdownOutsideDismiss(showDesktopDropdown, wrapRef, dropdownRef, close);
 
-  const pickMezzo = useCallback(
+  const identPreview = useCallback(
     (mezzo: MezzoGestito) => {
-      skipBlurMatch.current = true;
       const ident =
         field === "targa"
           ? mezzo.targa?.trim() ?? ""
           : field === "matricola"
             ? mezzo.matricola?.trim() ?? ""
             : mezzo.numeroScuderia?.trim() ?? "";
-      onChange(ident);
+      return ident || "—";
+    },
+    [field],
+  );
+
+  const tryExactMatch = useCallback(
+    (nextValue: string) => {
+      const hit = findExactMezzoForIngressoIdent(mezzi, field, nextValue, siblingIdent);
+      if (hit) onExactMezzoMatch(hit);
+    },
+    [field, mezzi, onExactMezzoMatch, siblingIdent],
+  );
+
+  const pickMezzo = useCallback(
+    (mezzo: MezzoGestito) => {
+      skipBlurMatch.current = true;
+      const ident = identPreview(mezzo);
+      onChange(ident === "—" ? "" : ident);
       close();
       onExactMezzoMatch(mezzo);
     },
-    [close, field, onChange, onExactMezzoMatch],
+    [close, identPreview, onChange, onExactMezzoMatch],
+  );
+
+  const commitFreeText = useCallback(
+    (raw: string) => {
+      const next = raw.trim();
+      skipBlurMatch.current = true;
+      onChange(next);
+      close();
+      tryExactMatch(next);
+    },
+    [close, onChange, tryExactMatch],
   );
 
   const tryExactMatchOnBlur = useCallback(() => {
@@ -113,11 +159,51 @@ export function SchedaIngressoIdentAutocompleteField({
       skipBlurMatch.current = false;
       return;
     }
-    const hit = findExactMezzoForIngressoIdent(mezzi, field, value, siblingIdent);
-    if (hit) onExactMezzoMatch(hit);
-  }, [field, mezzi, onExactMezzoMatch, siblingIdent, value]);
+    tryExactMatch(value);
+  }, [tryExactMatch, value]);
+
+  const openSheet = useCallback(() => {
+    if (disabled || readOnly) return;
+    if (blurTimer.current) clearTimeout(blurTimer.current);
+    if (open) return;
+    captureFocus();
+    setSheetQuery("");
+    setActiveIndex(-1);
+    setOpen(true);
+  }, [captureFocus, disabled, open, readOnly]);
+
+  const renderSuggestion = (mezzo: MezzoGestito, idx: number, variant: "dropdown" | "sheet") => {
+    const active = idx === activeIndex;
+    const ident = identPreview(mezzo);
+    const query = variant === "sheet" ? sheetQuery : value;
+    const touchClass = variant === "sheet" ? "min-h-11 py-2.5 sm:min-h-0 sm:py-1.5" : "";
+    return (
+      <li key={mezzo.id} role="presentation" className={variant === "sheet" ? "px-2 py-0.5" : "py-0.5"}>
+        <button
+          type="button"
+          role="option"
+          aria-selected={active}
+          className={`${globalAutocompleteOptionClass(active)} ${touchClass}`.trim()}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            if (blurTimer.current) clearTimeout(blurTimer.current);
+            pickMezzo(mezzo);
+          }}
+          onMouseEnter={() => setActiveIndex(idx)}
+        >
+          <span className="block font-medium text-[color:var(--cab-text)]">
+            <HighlightSearchMatch text={ident} query={query} />
+          </span>
+          <span className="mt-0.5 block text-[10px] font-normal text-[color:var(--cab-text-muted)]">
+            {mezzoIngressoSuggestSecondaryLabel(mezzo, field)}
+          </span>
+        </button>
+      </li>
+    );
+  };
 
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (useMobileSheet) return;
     if (e.key === "Escape") {
       close();
       return;
@@ -147,18 +233,35 @@ export function SchedaIngressoIdentAutocompleteField({
     }
   };
 
-  const identPreview = (mezzo: MezzoGestito) => {
-    const ident =
-      field === "targa"
-        ? mezzo.targa?.trim() ?? ""
-        : field === "matricola"
-          ? mezzo.matricola?.trim() ?? ""
-          : mezzo.numeroScuderia?.trim() ?? "";
-    return ident || "—";
+  const onSheetSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      close();
+      return;
+    }
+    if (!suggestions.length) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((i) => (i + 1) % suggestions.length);
+      return;
+    }
+    if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1));
+      return;
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const q = sheetQuery.trim();
+      if (activeIndex >= 0 && activeIndex < suggestions.length) {
+        pickMezzo(suggestions[activeIndex]!);
+        return;
+      }
+      if (q) commitFreeText(q);
+    }
   };
 
   const dropdownPortal =
-    showDropdown && portalStyle ? (
+    showDesktopDropdown && portalStyle ? (
       <ul
         ref={dropdownRef}
         id={listboxId}
@@ -168,73 +271,104 @@ export function SchedaIngressoIdentAutocompleteField({
           scrollInside ? "overflow-y-auto" : "overflow-hidden"
         }`}
       >
-        {suggestions.map((mezzo, idx) => {
-          const active = idx === activeIndex;
-          const ident = identPreview(mezzo);
-          return (
-            <li key={mezzo.id} role="presentation" className="py-0.5">
-              <button
-                type="button"
-                role="option"
-                aria-selected={active}
-                className={globalAutocompleteOptionClass(active)}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  if (blurTimer.current) clearTimeout(blurTimer.current);
-                  pickMezzo(mezzo);
-                }}
-                onMouseEnter={() => setActiveIndex(idx)}
-              >
-                <span className="block font-medium text-[color:var(--cab-text)]">
-                  <IdentHighlight text={ident} query={value} />
-                </span>
-                <span className="mt-0.5 block text-[10px] font-normal text-[color:var(--cab-text-muted)]">
-                  {mezzoIngressoSuggestLabel(mezzo)}
-                </span>
-              </button>
-            </li>
-          );
-        })}
+        {suggestions.map((mezzo, idx) => renderSuggestion(mezzo, idx, "dropdown"))}
       </ul>
     ) : null;
 
+  const sheetFreeText = sheetQuery.trim();
+
   return (
-    <label className={`block text-xs ${className}`.trim()}>
-      <span className="text-zinc-500">{label}</span>
+    <label htmlFor={inputId} className={`block text-xs ${className}`.trim()}>
+      <span className="text-zinc-500 dark:text-zinc-400">{label}</span>
       <div ref={wrapRef} className="relative mt-1">
         <input
           ref={inputRef}
-          className={`${globalInputFieldDefault} font-mono`}
-          readOnly={readOnly}
+          id={inputId}
+          className={`${globalInputFieldDefault} font-mono${useMobileSheet ? " cursor-pointer caret-transparent" : ""}`}
+          readOnly={readOnly || useMobileSheet || undefined}
           disabled={disabled}
           value={value}
           onChange={(e) => {
+            if (useMobileSheet) return;
             onChange(e.target.value);
             setOpen(true);
             setActiveIndex(-1);
           }}
+          onMouseDown={useMobileSheet ? (e) => e.preventDefault() : undefined}
           onFocus={() => {
+            if (useMobileSheet) {
+              if (!skipSheetOpenOnFocusRef.current) openSheet();
+              return;
+            }
             setFocused(true);
             setOpen(true);
           }}
           onBlur={() => {
+            if (useMobileSheet) return;
             if (blurTimer.current) clearTimeout(blurTimer.current);
             blurTimer.current = setTimeout(() => {
               close();
               tryExactMatchOnBlur();
             }, 140);
           }}
+          onClick={() => {
+            if (useMobileSheet) openSheet();
+          }}
           onKeyDown={onInputKeyDown}
-          placeholder={
-            field === "targa" ? "Cerca targa…" : field === "matricola" ? "Cerca matricola…" : "Cerca scuderia…"
-          }
+          placeholder={placeholder}
           autoComplete="off"
-          role="combobox"
-          aria-expanded={showDropdown}
+          role={useMobileSheet ? "button" : "combobox"}
+          aria-haspopup={useMobileSheet ? "listbox" : undefined}
+          aria-expanded={useMobileSheet ? sheetOpen : showDesktopDropdown}
           aria-controls={listboxId}
-          aria-autocomplete="list"
+          aria-autocomplete={useMobileSheet ? "none" : "list"}
+          aria-readonly={useMobileSheet || undefined}
+          enterKeyHint={useMobileSheet ? "search" : undefined}
         />
         {typeof document !== "undefined" && dropdownPortal ? createPortal(dropdownPortal, document.body) : null}
+        <GestionaleSearchableSheetSelect
+          open={sheetOpen}
+          onOpenChange={(next) => {
+            if (!next) close();
+            else setOpen(true);
+          }}
+          title={label}
+          showSearch
+          searchValue={sheetQuery}
+          onSearchChange={(v) => {
+            setSheetQuery(v);
+            setActiveIndex(-1);
+          }}
+          searchPlaceholder={placeholder}
+          searchAriaLabel={`Cerca in ${label}`}
+          listScrollRef={sheetListScrollRef}
+          searchInputRef={sheetSearchRef}
+          onSearchKeyDown={onSheetSearchKeyDown}
+          footer={
+            sheetFreeText ? (
+              <button
+                type="button"
+                className={globalAutocompleteAddBtnClass}
+                onClick={() => commitFreeText(sheetFreeText)}
+              >
+                Usa «{sheetFreeText}»
+              </button>
+            ) : (
+              <p className="px-1 text-center text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
+                Seleziona un mezzo dai suggerimenti o digita un valore nuovo
+              </p>
+            )
+          }
+        >
+          <ul id={listboxId} role="listbox" aria-label={label}>
+            {suggestions.length === 0 && sheetFreeText ? (
+              <li className="px-3 py-2 text-xs text-[color:var(--cab-text-muted)]" role="presentation">
+                Nessun mezzo corrispondente — puoi usare il valore digitato.
+              </li>
+            ) : null}
+            {suggestions.map((mezzo, idx) => renderSuggestion(mezzo, idx, "sheet"))}
+          </ul>
+        </GestionaleSearchableSheetSelect>
       </div>
     </label>
   );

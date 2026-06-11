@@ -12,6 +12,19 @@ export function HubIconPhoto({ className = "h-3.5 w-3.5 shrink-0" }: { className
   );
 }
 
+export function HubIconCamera({ className = "h-3.5 w-3.5 shrink-0" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.125 13.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" />
+    </svg>
+  );
+}
+
 export function HubIconUpload({ className = "h-3.5 w-3.5 shrink-0" }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
@@ -73,6 +86,18 @@ export function HubIconPlus({ className = "h-4 w-4 shrink-0" }: { className?: st
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
     </svg>
+  );
+}
+
+/** Foto centrata con + in badge leggermente spostato — azione «aggiungi immagine». */
+export function HubIconAddPhoto({ className = "h-5 w-5 shrink-0" }: { className?: string }) {
+  return (
+    <span className={`relative inline-flex items-center justify-center ${className}`} aria-hidden>
+      <HubIconPhoto className="h-full w-full" />
+      <span className="absolute -bottom-0.5 -right-1 flex h-2.5 w-2.5 items-center justify-center rounded-[3px] bg-[var(--cab-surface)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))]">
+        <HubIconPlus className="h-2 w-2 stroke-[2.75]" />
+      </span>
+    </span>
   );
 }
 

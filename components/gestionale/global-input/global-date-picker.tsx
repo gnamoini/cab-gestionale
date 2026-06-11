@@ -70,8 +70,6 @@ function fieldClassForVariant(
   return variant === "filter" ? globalInputFieldFilterDate : `${globalInputFieldDefault} pr-11`;
 }
 
-const CALENDAR_PANEL_WIDTH_PX = 296;
-
 export function GlobalDatePicker({
   value,
   onChange,
@@ -113,8 +111,7 @@ export function GlobalDatePicker({
     open,
     anchorRef: wrapRef,
     contentRef: panelRef,
-    matchAnchorWidth: false,
-    panelWidth: CALENDAR_PANEL_WIDTH_PX,
+    matchAnchorWidth: true,
     maxHeight: 420,
     repositionDeps: [viewYear, viewMonth, selectedYmd],
   });

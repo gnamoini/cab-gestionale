@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { memo, useCallback, useMemo } from "react";
 import { GlobalMultiSelect } from "@/components/gestionale/global-input/global-multi-select";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
 import { compatHierarchyMultiAddValue } from "@/lib/magazzino/compat/compat-hierarchy-add-value";
@@ -64,7 +64,7 @@ export function CompatHierarchySelect({
 }
 
 /** Multi-select compatibilità con append inline su gerarchia attrezzature/telai. */
-export function CompatHierarchyMultiSelect({
+export const CompatHierarchyMultiSelect = memo(function CompatHierarchyMultiSelect({
   tree,
   hierarchyKind,
   marcaNome,
@@ -134,6 +134,7 @@ export function CompatHierarchyMultiSelect({
       canAdd={appendEnabled}
       addPending={isPending}
       onAddToList={appendEnabled ? handleAddToList : undefined}
+      selectorDomain="magazzino"
     />
   );
-}
+});

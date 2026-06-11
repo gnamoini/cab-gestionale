@@ -35,6 +35,12 @@ export function autocompleteIsEditing(input: Pick<AutocompleteEngineInput, "focu
 /** Valore mostrato a riposo (commit), prima di entrare in modifica. */
 export function autocompleteCommittedDisplayValue(input: AutocompleteEngineInput): string {
   const { mode, value, items } = input;
+  if (!value.trim()) {
+    if (mode === "items" && items) {
+      return findItemByValue("", items)?.label ?? "";
+    }
+    return "";
+  }
   if (mode === "items" && items) {
     return findItemByValue(value, items)?.label ?? "";
   }
