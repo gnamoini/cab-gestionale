@@ -21,7 +21,7 @@ import { stableHashPayload, type PdfArtifactType } from "@/lib/pdf-artifacts/pdf
 import {
   getCachedPdfArtifactBytes,
   resolvePdfArtifactRef,
-  uploadPdfArtifact,
+  uploadPdfArtifactBestEffort,
 } from "@/lib/pdf-artifacts/pdf-artifact-storage.server";
 import { verifyPdfArtifactReadAccess } from "@/lib/pdf-artifacts/pdf-artifact-rbac.server";
 import { fetchPreventivoRecordServer } from "@/lib/preventivi/preventivi-fetch-server";
@@ -82,6 +82,18 @@ export async function deliverPdfArtifact(
   type: PdfArtifactType,
   query: PdfArtifactQuery,
 ): Promise<ServiceResult<PdfArtifactDelivery>> {
+  try {
+    return await deliverPdfArtifactInner(type, query);
+  } catch (error) {
+    console.error("[pdf-artifact] deliver failed:", error);
+    return err(error instanceof Error ? error.message : "Generazione PDF non riuscita");
+  }
+}
+
+async function deliverPdfArtifactInner(
+  type: PdfArtifactType,
+  query: PdfArtifactQuery,
+): Promise<ServiceResult<PdfArtifactDelivery>> {
   const allowed = await verifyPdfArtifactReadAccess(type);
   if (!allowed) return err("Permesso richiesto.");
 
@@ -111,7 +123,7 @@ export async function deliverPdfArtifact(
       }
       const logo = await loadBrandingLogoDataUrlServer();
       bytes = generateLavorazioniInCorsoPdfBytes(pdfRows, logo);
-      await uploadPdfArtifact(objectPath, bytes);
+      await uploadPdfArtifactBestEffort(objectPath, bytes);
       break;
     }
     case "report-bundle": {
@@ -127,7 +139,7 @@ export async function deliverPdfArtifact(
       }
       const logo = await loadBrandingLogoDataUrlServer();
       bytes = generateReportBundlePdfBytes(snapshot, logo);
-      await uploadPdfArtifact(objectPath, bytes);
+      await uploadPdfArtifactBestEffort(objectPath, bytes);
       break;
     }
     case "preventivo": {
@@ -152,7 +164,7 @@ export async function deliverPdfArtifact(
       }
       const logo = await loadBrandingLogoDataUrlServer();
       bytes = generatePreventivoPdfBytes(p, autore, logo);
-      await uploadPdfArtifact(objectPath, bytes);
+      await uploadPdfArtifactBestEffort(objectPath, bytes);
       break;
     }
     case "scheda-ingresso":
@@ -194,7 +206,7 @@ export async function deliverPdfArtifact(
         lavorazioneRow: payload.lavorazioneRow,
         mezzoRow: payload.mezzoRow,
       });
-      await uploadPdfArtifact(objectPath, bytes);
+      await uploadPdfArtifactBestEffort(objectPath, bytes);
       break;
     }
     case "dipendenti-aziendale": {
@@ -227,7 +239,7 @@ export async function deliverPdfArtifact(
       }
       const logo = await loadBrandingLogoDataUrlServer();
       bytes = await generateDipendentiComplessivoPdfBytes(ctx, logo);
-      await uploadPdfArtifact(objectPath, bytes);
+      await uploadPdfArtifactBestEffort(objectPath, bytes);
       break;
     }
     case "dipendenti-dipendente": {
@@ -263,7 +275,7 @@ export async function deliverPdfArtifact(
       }
       const logo = await loadBrandingLogoDataUrlServer();
       bytes = await generateDipendentiDipendentePdfBytes(ctx, employee, logo);
-      await uploadPdfArtifact(objectPath, bytes);
+      await uploadPdfArtifactBestEffort(objectPath, bytes);
       break;
     }
     case "bunder": {
@@ -287,7 +299,7 @@ export async function deliverPdfArtifact(
         break;
       }
       bytes = generateBunderPdfBytes(doc, autore);
-      await uploadPdfArtifact(objectPath, bytes);
+      await uploadPdfArtifactBestEffort(objectPath, bytes);
       break;
     }
     default: {

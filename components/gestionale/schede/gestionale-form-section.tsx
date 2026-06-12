@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { dsLabel } from "@/lib/ui/design-system";
 import { CAB_FIELD_LABEL_ATTR, CAB_FOCUS_SCROLL_GROUP_ATTR } from "@/lib/ui/mobile-modal-behavior";
+import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 
 export function FormSection({
   title,
@@ -53,7 +54,7 @@ export function FormField({
   if (htmlFor) {
     return (
       <div className={`block min-w-0 text-xs font-medium text-zinc-600 dark:text-zinc-400 ${className}`.trim()}>
-        <label htmlFor={htmlFor} {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className="cursor-default">
+        <label htmlFor={htmlFor} {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={gestionaleFieldLabelClass}>
           {label}
           {required ? <GestionaleRequiredMark /> : null}
         </label>
@@ -62,14 +63,13 @@ export function FormField({
     );
   }
   return (
-    <label
-      {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
-      className={`block min-w-0 text-xs font-medium text-zinc-600 dark:text-zinc-400 ${className}`.trim()}
-    >
-      {label}
-      {required ? <GestionaleRequiredMark /> : null}
+    <div className={`block min-w-0 text-xs font-medium text-zinc-600 dark:text-zinc-400 ${className}`.trim()}>
+      <span {...{ [CAB_FIELD_LABEL_ATTR]: "" }} className={gestionaleFieldLabelClass}>
+        {label}
+        {required ? <GestionaleRequiredMark /> : null}
+      </span>
       <div className="mt-1">{children}</div>
-    </label>
+    </div>
   );
 }
 

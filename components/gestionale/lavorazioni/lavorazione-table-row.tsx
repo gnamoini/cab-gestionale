@@ -52,6 +52,7 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { StatoLavorazione } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
@@ -312,7 +313,7 @@ export type LavorazioneArchivioTableRowProps = {
   canEditWorkOrders: boolean;
   mutPendingBlocking: boolean;
   loading: boolean;
-  defaultAddetto: string;
+  addettoLogs?: readonly LogModificaRow[];
   addettoColors: GlobalOptionsSlice["lavorazioni"]["addettoColors"];
   onRipristina: (row: LavorazioneListRow) => void;
   onOpenInfo: (row: LavorazioneListRow) => void;
@@ -329,7 +330,7 @@ function LavorazioneArchivioTableRowInner({
   canEditWorkOrders,
   mutPendingBlocking,
   loading,
-  defaultAddetto,
+  addettoLogs,
   addettoColors,
   onRipristina,
   onOpenInfo,
@@ -382,7 +383,7 @@ function LavorazioneArchivioTableRowInner({
       <td className={lavTableTdPill}>
         <div className={lavTableTdPillWrap}>
           <LavorazioneAddettoReadOnlyPill
-            addetto={lavorazioneAddettoLabel(row, schedeStore, defaultAddetto)}
+            addetto={lavorazioneAddettoLabel(row, schedeStore, "", addettoLogs)}
             addettoColors={addettoColors}
           />
         </div>

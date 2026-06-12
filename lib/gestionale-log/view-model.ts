@@ -1,4 +1,5 @@
 import type { LavorazioniLogEntry, LavorazioniLogTipo } from "@/lib/lavorazioni/lavorazioni-change-log";
+import { filterAuditMetadataCampoChanges } from "@/lib/gestionale-log/log-summary";
 
 function toBulletModificaRiga(lines: string[]): string {
   if (!lines.length) return "—";
@@ -241,8 +242,9 @@ function sentenceForCampoChange(c: CampoChangeLike): string {
 }
 
 export function buildModificaRigaFromChanges(changes: CampoChangeLike[]): string {
-  if (!changes.length) return "—";
-  return toBulletModificaRiga(changes.map(sentenceForCampoChange));
+  const filtered = filterAuditMetadataCampoChanges(changes);
+  if (!filtered.length) return "—";
+  return toBulletModificaRiga(filtered.map(sentenceForCampoChange));
 }
 
 /** Rimuove prefisso autore dal vecchio riepilogo (solo testo residuo). */
@@ -340,18 +342,18 @@ export function buildMagazzinoGestionaleLogViewModel(entry: MagazzinoLogEntryLik
   if (entry.tipo === "aggiunta") {
     const bullets: string[] = [lead ?? "Nuovo ricambio creato in magazzino"];
     if (entry.changes.length > 0) {
-      const detailLines = entry.changes
-        .filter((c) => c.campo !== "Sincronizzazione")
-        .map(sentenceForCampoChange);
+      const detailLines = filterAuditMetadataCampoChanges(
+        entry.changes.filter((c) => c.campo !== "Sincronizzazione"),
+      ).map(sentenceForCampoChange);
       if (detailLines.length) bullets.push(...detailLines);
     }
     modificaRiga = toBulletModificaRiga(bullets);
   } else if (entry.tipo === "rimozione") {
     modificaRiga = toBulletModificaRiga([lead ?? "Ricambio eliminato dal magazzino"]);
   } else if (entry.changes.length) {
-    const lines = entry.changes
-      .filter((c) => c.campo !== "Sincronizzazione" && !/^(Autore|Data)\s*(ultima\s*)?modifica$/i.test(c.campo.trim()))
-      .map(sentenceForCampoChange);
+    const lines = filterAuditMetadataCampoChanges(
+      entry.changes.filter((c) => c.campo !== "Sincronizzazione"),
+    ).map(sentenceForCampoChange);
     modificaRiga = toBulletModificaRiga(lines.length ? lines : ["Modifica registrata"]);
   } else {
     const fb = stripAutoreFromRiepilogo(entry.riepilogo, entry.autore);

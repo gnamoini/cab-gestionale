@@ -17,7 +17,7 @@ import { compareMezzi, mezzoMatchesUltimaLavFilter, type UltimaLavorazioneFilter
 import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb, mezzoHaLavorazioneCollegataDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
-import { dsPageToolbarBtn, dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
+import { dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
 import { Drawer, LoadingErrorState, LoadingFormSkeleton, LoadingTableSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
 import {
   GestionaleLogChangeList,
@@ -71,7 +71,6 @@ export function MezziView() {
   const [filtroNumeroScuderia, setFiltroNumeroScuderia] = useState("");
   const [filtroUltimaLav, setFiltroUltimaLav] = useState<UltimaLavorazioneFilter>("");
   const [filtriEspansi, setFiltriEspansi] = useState(false);
-  const [toolbarOverflowOpen, setToolbarOverflowOpen] = useState(false);
 
   const serviceFilters = useMemo((): MezzoFilters => {
     return {
@@ -455,22 +454,6 @@ export function MezziView() {
               />
             }
             onFilterReset={resetMezziToolbarFilters}
-            overflowOpen={toolbarOverflowOpen}
-            onOverflowToggle={() => setToolbarOverflowOpen((o) => !o)}
-            overflowActions={
-              <>
-                <button
-                  type="button"
-                  className={`${dsPageToolbarBtn} w-full justify-center sm:w-auto`}
-                  onClick={() => {
-                    setSortColumn("ultimaLavorazione");
-                    setSortPhase("desc");
-                  }}
-                >
-                  Ultima lav. ↓
-                </button>
-              </>
-            }
             meta={
               <PageToolbarResultCount
                 count={sorted.length}

@@ -3,6 +3,7 @@
 import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
 import {
   buildLogModificaSummary,
+  filterAuditMetadataCampoChanges,
   modificheToModificaRiga,
   parseModificheLines,
   type LogModificaSummary,

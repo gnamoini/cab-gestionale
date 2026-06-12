@@ -53,6 +53,60 @@ export function IconInfo({ className = dsTableActionGlyph }: { className?: strin
   );
 }
 
+export function IconPhone({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M6.5 4h3l1.5 4-2 1.5a11 11 0 005 5L17.5 12.5 21.5 14v3a2 2 0 01-2.2 2 16 16 0 01-6.8-1.5 16 16 0 01-4.5-4.5A16 16 0 014 6.2 2 2 0 016 4h.5Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+export function IconWhatsApp({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M12 3a9 9 0 00-7.8 13.5L3 21l4.7-1.2A9 9 0 1012 3Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M9.5 10.5c.3.6 1.2 2.1 2.9 3 1.5.8 2.7.9 3.1 1 .4.1.9-.3 1.1-.7.2-.4.2-.7.1-1-.1-.3-.7-1.1-.9-1.3-.2-.3-.5-.3-.8-.2-.3.1-1 .5-1.2.6-.2.1-.4.1-.7-.1-.3-.2-1.2-.5-2.3-1.5-.9-.8-1.5-1.7-1.7-2-.2-.3 0-.5.1-.7.1-.1.3-.4.4-.5.1-.2.1-.3 0-.5-.1-.2-.8-2-1.1-2.7-.3-.7-.6-.6-.8-.6h-.7c-.2 0-.5.1-.7.3-.2.2-.9.9-.9 2.1 0 1.2.9 2.4 1 2.6.1.2 1.8 2.7 4.3 3.8.6.3 1.1.4 1.5.5.6.2 1.2.2 1.6.1.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.1-1.2-.1-.1-.4-.2-.7-.3-.3-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1Z"
+        fill="currentColor"
+      />
+    </svg>
+  );
+}
+
+export function IconMail({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 6h16a1 1 0 011 1v10a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinejoin="round"
+      />
+      <path d="m4 7 8 6 8-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+export function IconClose({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export function IconArchivia({ className = dsTableActionGlyph }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>

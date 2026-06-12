@@ -1,6 +1,13 @@
 "use client";
 
-import { isValidElement, useRef, type ReactNode, type RefObject } from "react";
+import {
+  isValidElement,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { dsScrollbar } from "@/lib/ui/design-system";
 import {
@@ -55,13 +62,80 @@ function VirtualTableBody({
   virtualRows: GlobalTableVirtualRows;
   colSpan: number;
 }) {
+  const [, setMeasureTick] = useState(0);
+  const [renderFallback, setRenderFallback] = useState(false);
+
   const virtualizer = useVirtualizer({
     count: virtualRows.rowCount,
     getScrollElement: () => scrollRef.current,
     estimateSize: () => virtualRows.estimateRowHeight ?? 52,
     overscan: virtualRows.overscan ?? 8,
   });
+
+  useLayoutEffect(() => {
+    if (virtualRows.rowCount === 0) {
+      setRenderFallback(false);
+      return;
+    }
+
+    setRenderFallback(false);
+    let cancelled = false;
+    let rafId = 0;
+    let ro: ResizeObserver | null = null;
+    let attempts = 0;
+    const maxAttempts = 24;
+
+    const remeasure = () => {
+      if (cancelled) return;
+      const before = virtualizer.getVirtualItems().length;
+      virtualizer.measure();
+      if (virtualizer.getVirtualItems().length !== before) {
+        setMeasureTick((tick) => tick + 1);
+      }
+    };
+
+    const bind = () => {
+      if (cancelled || attempts >= maxAttempts) {
+        if (!cancelled && virtualizer.getVirtualItems().length === 0 && virtualRows.rowCount > 0) {
+          setRenderFallback(true);
+        }
+        return;
+      }
+      attempts += 1;
+      const el = scrollRef.current;
+      if (!el) {
+        rafId = requestAnimationFrame(bind);
+        return;
+      }
+      if (!ro) {
+        ro = new ResizeObserver(remeasure);
+        ro.observe(el);
+      }
+      remeasure();
+      if (virtualizer.getVirtualItems().length === 0 && el.clientHeight > 0) {
+        rafId = requestAnimationFrame(bind);
+      }
+    };
+
+    bind();
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(rafId);
+      ro?.disconnect();
+    };
+  }, [scrollRef, virtualRows.rowCount, virtualizer]);
+
   const items = virtualizer.getVirtualItems();
+
+  if (renderFallback && virtualRows.rowCount > 0) {
+    return (
+      <tbody className={globalTableTbodyInset}>
+        {Array.from({ length: virtualRows.rowCount }, (_, index) => virtualRows.renderRow(index))}
+      </tbody>
+    );
+  }
+
   const paddingTop = items.length > 0 ? items[0]!.start : 0;
   const paddingBottom =
     items.length > 0 ? virtualizer.getTotalSize() - items[items.length - 1]!.end : 0;

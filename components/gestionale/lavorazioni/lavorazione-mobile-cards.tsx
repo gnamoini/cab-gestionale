@@ -56,7 +56,7 @@ import { IconActionButton } from "@/components/design-system";
 import { dsTableActionGlyph } from "@/lib/ui/design-system";
 import type { GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { StatoLavorazione } from "@/src/types/supabase-tables";
+import type { LogModificaRow, StatoLavorazione } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 
 const lavTablePillFillClass = "w-full min-w-0";
@@ -258,7 +258,7 @@ export const LavorazioneAttivaMobileCard = memo(LavorazioneAttivaMobileCardInner
 export type LavorazioneArchivioMobileCardProps = {
   row: LavorazioneListRow;
   bundle?: LavorazioneSchedeBundle;
-  defaultAddetto: string;
+  addettoLogs?: readonly LogModificaRow[];
   canEditWorkOrders: boolean;
   mutPendingBlocking: boolean;
   loading: boolean;
@@ -273,7 +273,7 @@ export type LavorazioneArchivioMobileCardProps = {
 function LavorazioneArchivioMobileCardInner({
   row,
   bundle,
-  defaultAddetto,
+  addettoLogs,
   canEditWorkOrders,
   mutPendingBlocking,
   loading,
@@ -287,7 +287,7 @@ function LavorazioneArchivioMobileCardInner({
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneMacchinaLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
-  const addetto = lavorazioneAddettoLabel(row, schedeStore, defaultAddetto);
+  const addetto = lavorazioneAddettoLabel(row, schedeStore, "", addettoLogs);
   const schedeCount = lavorazioneSchedeCount(bundle, row);
 
   return (

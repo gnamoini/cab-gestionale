@@ -242,10 +242,14 @@ export function HierarchyTreeSettingsSection({
 
   function setMarcaExpanded(marcaId: string, expanded: boolean) {
     setExpandedMarcaIds((prev) => {
-      const n = new Set(prev);
-      if (expanded) n.add(marcaId);
-      else n.delete(marcaId);
-      return n;
+      if (q.trim()) {
+        const n = new Set(prev);
+        if (expanded) n.add(marcaId);
+        else n.delete(marcaId);
+        return n;
+      }
+      if (expanded) return new Set([marcaId]);
+      return new Set();
     });
   }
 

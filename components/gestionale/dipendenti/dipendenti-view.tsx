@@ -103,6 +103,15 @@ export function DipendentiView() {
     [readOnly, ts],
   );
 
+  const handleCopyDayToAll = useCallback(
+    async (upserts: TimesheetEntryUpsert[]) => {
+      if (readOnly || upserts.length === 0) return;
+      await Promise.all(upserts.map((input) => ts.saveNow(input)));
+      successOnce("dip-copy-day-all", GESTIONALE_TOAST.dipendentiCopyDayToAllSuccess);
+    },
+    [readOnly, ts, successOnce],
+  );
+
   const handleScheduleSave = useCallback(
     (input: TimesheetEntryUpsert) => {
       if (readOnly) return;
@@ -375,7 +384,9 @@ export function DipendentiView() {
             initialValue={ts.getCellValue(editorTarget.dipendenteId, editorTarget.workDate)}
             tipiAssenza={ts.tipiAssenza}
             readOnly={readOnly}
+            employees={ts.displayEmployees}
             onSave={handleSaveEntry}
+            onCopyToAll={readOnly || ts.entriesDegraded ? undefined : handleCopyDayToAll}
             onScheduleSave={handleScheduleSave}
             saving={ts.upsertPending}
           />

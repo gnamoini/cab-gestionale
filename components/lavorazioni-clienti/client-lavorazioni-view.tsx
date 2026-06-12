@@ -8,6 +8,7 @@ import { GestionaleRefreshToolbarButton, gestionalePageToolbarActionsInnerClass 
 import { ClientContattaciButton } from "@/components/lavorazioni-clienti/client-contattaci-button";
 import { ClientContattaciDialog } from "@/components/lavorazioni-clienti/client-contattaci-dialog";
 import { ShellCard } from "@/components/gestionale/shell-card";
+import { CollapsibleAccordionProvider } from "@/lib/ui/collapsible-accordion";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { lavorazioniAdvancedFiltersActive } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
@@ -754,10 +755,12 @@ export function ClientLavorazioniView() {
   } else {
     bodyContent = (
       <>
+        <CollapsibleAccordionProvider initialOpenId={showInCorso ? "in-corso" : showArchivio ? "archivio" : null}>
         {showInCorso ? (
           <ShellCard
             title={`Lavorazioni in corso (${sortedInCorsoBundles.length})`}
             collapsible
+            accordionId="in-corso"
             defaultCollapsed={false}
           >
             <LavorazioniSection
@@ -782,6 +785,7 @@ export function ClientLavorazioniView() {
           <ShellCard
             title={`Lavorazioni completate (${sortedArchivioBundles.length})`}
             collapsible
+            accordionId="archivio"
             defaultCollapsed={true}
           >
             <LavorazioniSection
@@ -802,6 +806,7 @@ export function ClientLavorazioniView() {
             />
           </ShellCard>
         ) : null}
+        </CollapsibleAccordionProvider>
       </>
     );
   }

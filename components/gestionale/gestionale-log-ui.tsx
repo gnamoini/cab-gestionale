@@ -6,6 +6,7 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { LogEntry } from "@/components/design-system/log-entry";
 import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import { filterAuditMetadataCampoChanges } from "@/lib/gestionale-log/log-summary";
 import { dsModalHeader } from "@/lib/ui/design-system";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
 
@@ -101,7 +102,8 @@ export function GestionaleLogChangeList({
   compact?: boolean;
 }) {
   if (changes.length === 0) return null;
-  const slice = changes.slice(0, limit);
+  const slice = filterAuditMetadataCampoChanges(changes).slice(0, limit);
+  if (slice.length === 0) return null;
   const textXs = compact ? "text-[10px]" : "text-[11px]";
   const pad = compact
     ? "mt-1.5 space-y-0.5 border-t border-[color:var(--cab-border)] pt-1.5"

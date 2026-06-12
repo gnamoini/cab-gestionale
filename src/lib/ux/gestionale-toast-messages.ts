@@ -16,4 +16,5 @@ export const GESTIONALE_TOAST = {
   dipendentiFillToday8hNoEmpty:
     "Nessuna cella vuota da compilare per oggi.",
   dipendentiFillToday8hSuccess: "Presenze di oggi aggiornate (8 ore sulle celle vuote).",
+  dipendentiCopyDayToAllSuccess: "Ore copiate a tutti gli addetti per il giorno selezionato.",
 } as const;

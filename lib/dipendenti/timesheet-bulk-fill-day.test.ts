@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  buildCopyDayToAllUpserts,
   buildEmptyDay8hUpsert,
   buildEmptyDay8hUpserts,
   countEmptyDay8hUpserts,
@@ -70,6 +71,29 @@ const workDate = "2026-06-05";
 
 {
   assert.equal(buildEmptyDay8hUpserts([], workDate, () => emptyCellValue()).length, 0);
+}
+
+{
+  const sourceValue = {
+    ...emptyCellValue(),
+    oreOrdinarie: 7,
+    oreStraordinarie: 1,
+    note: "Turno",
+  };
+  const upserts = buildCopyDayToAllUpserts(
+    [employee("e1"), employee("e2")],
+    workDate,
+    sourceValue,
+    [],
+  );
+  assert.equal(upserts.length, 2);
+  for (const upsert of upserts) {
+    assert.equal(upsert.workDate, workDate);
+    assert.equal(upsert.oreOrdinarie, 7);
+    assert.equal(upsert.oreStraordinarie, 1);
+    assert.equal(upsert.note, "Turno");
+  }
+  assert.deepEqual(upserts.map((u) => u.dipendenteId).sort(), ["e1", "e2"]);
 }
 
 console.log("timesheet-bulk-fill-day.test.ts OK");

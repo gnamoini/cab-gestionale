@@ -21,8 +21,8 @@ assert.match(contact, /mailtoHref:\s*"mailto:service@autocompattatori\.it"/);
 assert.match(contact, /whatsappHref:\s*"https:\/\/wa\.me\/393480712791"/);
 
 assert.match(dialog, /ClientContattaciModalHeader/);
-assert.doesNotMatch(dialog, /CloseButton/);
-assert.doesNotMatch(dialog, /dsModalCloseBtn/);
+assert.match(dialog, /CloseButton/);
+assert.match(dialog, /dsModalCloseBtn/);
 assert.match(dialog, /titleId=\{CONTATTACI_TITLE_ID\}/);
 assert.match(dialog, /header=\{<ClientContattaciModalHeader/);
 

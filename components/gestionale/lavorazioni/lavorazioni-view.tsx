@@ -14,6 +14,7 @@ import {
   GlobalTableSortTh,
 } from "@/components/gestionale/global-table";
 import { ShellCard } from "@/components/gestionale/shell-card";
+import { CollapsibleAccordionProvider } from "@/lib/ui/collapsible-accordion";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 const LavorazioneCreateModal = dynamic(
   () =>
@@ -204,6 +205,7 @@ import {
   buildLavorazioneSchedeSortIndex,
   type LavorazioneSchedeSortIndex,
 } from "@/lib/lavorazioni/lavorazioni-schede-sort-index";
+import { groupLavorazioniLogsById } from "@/lib/lavorazioni/client-portal-ui";
 import {
   lavorazioneAddettoLabel as addettoLabel,
   lavorazioneCantiereLabel as cantiereLabel,
@@ -760,9 +762,9 @@ export function LavorazioniView() {
   const [sortColA, setSortColA] = useState<SortKeyAtt | null>(null);
   const [sortPhaseA, setSortPhaseA] = useState<SortPhase>("natural");
 
-  // Default: ordine naturale (nessun filtro attivo in header).
-  const [sortColC, setSortColC] = useState<SortKeyCh | null>(null);
-  const [sortPhaseC, setSortPhaseC] = useState<SortPhase>("natural");
+  // Default archivio: completamento decrescente (più recente in alto).
+  const [sortColC, setSortColC] = useState<SortKeyCh | null>("completamento");
+  const [sortPhaseC, setSortPhaseC] = useState<SortPhase>("desc");
 
   const [flashRowId, setFlashRowId] = useState<string | null>(null);
   const [concludiConfirmRow, setConcludiConfirmRow] = useState<LavorazioneListRow | null>(null);
@@ -804,13 +806,13 @@ export function LavorazioniView() {
     [mezzoFilterPart],
   );
 
-  const [archivioCollapsed, setArchivioCollapsed] = useState(true);
+  const [openListSectionId, setOpenListSectionId] = useState<string | null>("attive");
   const needsChiuseFetch = useMemo(
     () =>
-      !archivioCollapsed ||
+      openListSectionId === "archivio" ||
       Boolean(searchApplied.trim()) ||
       lavorazioniAdvancedFiltersActive(advancedFilters),
-    [advancedFilters, archivioCollapsed, searchApplied],
+    [advancedFilters, openListSectionId, searchApplied],
   );
 
   const attiveQuery = useLavorazioniList(filtersAttive, gestionaleQueryOpts);
@@ -831,6 +833,11 @@ export function LavorazioniView() {
     useSchedeBundlesQuery(true, { lavorazioneIds: schedeLavorazioneIds });
 
   useEffect(() => {
+    if (openListSectionId !== "archivio" || chiuseRows.length === 0) return;
+    void refetchSchedeStore();
+  }, [openListSectionId, chiuseRows.length, refetchSchedeStore]);
+
+  useEffect(() => {
     const handler = (e: Event) => {
       const d = (e as CustomEvent<CabAddettoRenameDetail>).detail;
       if (!d?.previousName || !d?.nextName) return;
@@ -842,9 +849,20 @@ export function LavorazioniView() {
 
   const defaultAddetto = globalOpts.lavorazioni.addetti[0] ?? "";
 
+  const logsByLavorazioneId = useMemo(
+    () => groupLavorazioniLogsById(lavModificheLogQuery.data ?? []),
+    [lavModificheLogQuery.data],
+  );
+
   const schedeSortIndex = useMemo(
-    () => buildLavorazioneSchedeSortIndex([...attiveRows, ...chiuseRows], schedeStore, defaultAddetto),
-    [attiveRows, chiuseRows, schedeStore, defaultAddetto],
+    () =>
+      buildLavorazioneSchedeSortIndex(
+        [...attiveRows, ...chiuseRows],
+        schedeStore,
+        defaultAddetto,
+        logsByLavorazioneId,
+      ),
+    [attiveRows, chiuseRows, schedeStore, defaultAddetto, logsByLavorazioneId],
   );
   const [listRefreshBusy, setListRefreshBusy] = useState(false);
 
@@ -1242,11 +1260,10 @@ export function LavorazioniView() {
     const rows = [...chiuseRowsFiltered];
     rows.sort((a, b) => {
       if (sortPhaseC === "natural" || sortColC === null) {
-        // Ordine naturale: più vecchia in alto, nuova in fondo.
-        const ta = new Date(a.data_ingresso ?? a.created_at).getTime();
-        const tb = new Date(b.data_ingresso ?? b.created_at).getTime();
-        if (ta !== tb) return ta - tb;
-        return a.id.localeCompare(b.id);
+        const ta = new Date(dataCompletamentoIso(a)).getTime();
+        const tb = new Date(dataCompletamentoIso(b)).getTime();
+        if (tb !== ta) return tb - ta;
+        return b.id.localeCompare(a.id);
       }
       const p = cmpCh(a, b, sortColC, sortPhaseC, schedeSortIndex);
       if (p !== 0) return p;
@@ -1563,7 +1580,7 @@ export function LavorazioniView() {
           canEditWorkOrders={canEditWorkOrders}
           mutPendingBlocking={mutPendingBlocking}
           loading={loading}
-          defaultAddetto={defaultAddetto}
+          addettoLogs={logsByLavorazioneId.get(row.id)}
           addettoColors={globalOpts.lavorazioni.addettoColors}
           onRipristina={onRipristinaArchivioRow}
           onOpenInfo={onOpenArchivioInfo}
@@ -1578,12 +1595,12 @@ export function LavorazioniView() {
       canEditWorkOrders,
       mutPendingBlocking,
       loading,
-      defaultAddetto,
       globalOpts.lavorazioni.addettoColors,
       onRipristinaArchivioRow,
       onOpenArchivioInfo,
       onOpenArchivioSchede,
       schedeStore,
+      logsByLavorazioneId,
     ],
   );
 
@@ -1661,7 +1678,7 @@ export function LavorazioniView() {
   }
 
   const onPrintLavorazioniInCorso = useCallback(() => {
-    openPdfArtifact("lavorazioni-in-corso");
+    void openPdfArtifact("lavorazioni-in-corso");
   }, []);
 
   return (
@@ -1740,9 +1757,11 @@ export function LavorazioniView() {
           onPrimeCreate={primeCreateModal}
         />
 
+        <CollapsibleAccordionProvider initialOpenId="attive" onOpenIdChange={setOpenListSectionId}>
         <ShellCard
           title={`Lavorazioni in corso (${attiveRowsFiltered.length})`}
           collapsible
+          accordionId="attive"
           defaultCollapsed={false}
         >
           {listViewMode === "kanban" ? (
@@ -1939,8 +1958,8 @@ export function LavorazioniView() {
         <ShellCard
           title={`Archivio lavorazioni (${chiuseRowsFiltered.length})`}
           collapsible
+          accordionId="archivio"
           defaultCollapsed={true}
-          onCollapsedChange={setArchivioCollapsed}
         >
           <LavorazioniDesktopTableShell
             visibilityClass="hidden xl:block"
@@ -2063,7 +2082,7 @@ export function LavorazioniView() {
                 key={row.id}
                 row={row}
                 bundle={schedeStore[row.id]}
-                defaultAddetto={defaultAddetto}
+                addettoLogs={logsByLavorazioneId.get(row.id)}
                 canEditWorkOrders={canEditWorkOrders}
                 mutPendingBlocking={mutPendingBlocking}
                 loading={loading}
@@ -2082,6 +2101,7 @@ export function LavorazioniView() {
           {showPagerC ? <TablePagination page={pageC} pageCount={pageCountC} onPageChange={setPageC} label={labelC} /> : null}
         </ShellCard>
         ) : null}
+        </CollapsibleAccordionProvider>
 
       </div>
 

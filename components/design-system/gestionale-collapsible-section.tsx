@@ -9,7 +9,11 @@ import {
   resolveFocusExtraTop,
   scrollGestionaleFieldIntoView,
 } from "@/lib/ui/mobile-modal-behavior";
-import { dsFocus } from "@/lib/ui/design-system";
+import {
+  gestionaleCollapsibleSectionTitleHitboxClass,
+  gestionaleCollapsibleToggleBtnClass,
+  gestionaleCollapsibleToggleBtnExpandedClass,
+} from "@/lib/ui/gestionale-collapsible-toggle";
 
 /** Pannello sezione form modale — token design system cab (ricambio, mezzi, …). */
 export const gestionaleCollapsibleSectionFormClass =
@@ -101,6 +105,8 @@ export function GestionaleCollapsibleSection({
   const prevExpandedRef = useRef<boolean | null>(null);
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const expanded = forceExpanded || !collapsed;
+  const titleId = `${panelId}-title`;
+  const toggleLabel = `${expanded ? "Nascondi" : "Mostra"} ${title}`;
 
   useEffect(() => {
     if (forceExpanded) setCollapsed(false);
@@ -119,24 +125,32 @@ export function GestionaleCollapsibleSection({
       {...{ [CAB_FOCUS_SCROLL_GROUP_ATTR]: "" }}
       className={`${sectionShellClass(variant)} ${className}`.trim()}
     >
-      <button
-        type="button"
-        id={`${panelId}-trigger`}
-        aria-expanded={expanded}
-        aria-controls={`${panelId}-body`}
-        className={`${dsFocus} group flex w-full min-w-0 items-center justify-between gap-2 rounded-[var(--ds-radius-md)] py-0.5 text-left touch-manipulation`}
-        onClick={() => {
-          if (forceExpanded) return;
-          setCollapsed((c) => !c);
-        }}
-      >
-        <span className={`${gestionaleCollapsibleSectionTitleClass(titleTone)} mb-0 min-w-0 flex-1`}>{title}</span>
-        <GestionaleCollapsibleChevron expanded={expanded} />
-      </button>
+      <div className="flex w-full min-w-0 items-center justify-between gap-2">
+        <span
+          id={titleId}
+          className={`${gestionaleCollapsibleSectionTitleClass(titleTone)} mb-0 min-w-0 flex-1 ${gestionaleCollapsibleSectionTitleHitboxClass}`}
+        >
+          {title}
+        </span>
+        <button
+          type="button"
+          id={`${panelId}-trigger`}
+          aria-expanded={expanded}
+          aria-controls={`${panelId}-body`}
+          aria-label={toggleLabel}
+          className={`${gestionaleCollapsibleToggleBtnClass} ${expanded ? gestionaleCollapsibleToggleBtnExpandedClass : ""}`}
+          onClick={() => {
+            if (forceExpanded) return;
+            setCollapsed((c) => !c);
+          }}
+        >
+          <GestionaleCollapsibleChevron expanded={expanded} />
+        </button>
+      </div>
       <div
         id={`${panelId}-body`}
         role="region"
-        aria-labelledby={`${panelId}-trigger`}
+        aria-labelledby={titleId}
         aria-hidden={!expanded}
         className={`grid ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
       >

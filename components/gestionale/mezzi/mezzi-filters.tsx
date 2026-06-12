@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { dsInput, dsPageToolbar, GESTIONALE_SEARCH_PLACEHOLDER } from "@/lib/ui/design-system";
+import { gestionaleFilterFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 import type { UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
 
 function MezziFieldWrap({
@@ -20,7 +21,7 @@ function MezziFieldWrap({
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <label
           htmlFor={htmlFor}
-          className="cursor-default text-[11px] font-medium text-[color:var(--cab-text-muted)]"
+          className={gestionaleFilterFieldLabelClass}
         >
           {label}
         </label>
@@ -29,14 +30,14 @@ function MezziFieldWrap({
     );
   }
   return (
-    <label className="flex min-w-0 flex-1 flex-col gap-1">
-      <span className="text-[11px] font-medium text-[color:var(--cab-text-muted)]">{label}</span>
+    <div className="flex min-w-0 flex-1 flex-col gap-1">
+      <span className={gestionaleFilterFieldLabelClass}>{label}</span>
       {children}
-    </label>
+    </div>
   );
 }
 
-const filterTextInputClass = `${dsInput} min-h-11 py-2 text-sm font-semibold`;
+const mezziFieldInputClass = `${dsInput} min-h-11 py-2 text-sm font-semibold`;
 
 export type MezziSearchBarProps = {
   search: string;
@@ -100,7 +101,7 @@ export function MezziFilterFields({
             type="text"
             value={filtroCliente}
             onChange={(e) => onFiltroCliente(e.target.value)}
-            className={filterTextInputClass}
+            className={mezziFieldInputClass}
             placeholder="Contiene…"
           />
         </MezziFieldWrap>
@@ -110,7 +111,7 @@ export function MezziFilterFields({
             type="text"
             value={filtroMarca}
             onChange={(e) => onFiltroMarca(e.target.value)}
-            className={filterTextInputClass}
+            className={mezziFieldInputClass}
             placeholder="Contiene…"
           />
         </MezziFieldWrap>
@@ -120,7 +121,7 @@ export function MezziFilterFields({
             type="text"
             value={filtroModello}
             onChange={(e) => onFiltroModello(e.target.value)}
-            className={filterTextInputClass}
+            className={mezziFieldInputClass}
             placeholder="Contiene…"
           />
         </MezziFieldWrap>
@@ -130,7 +131,7 @@ export function MezziFilterFields({
             type="text"
             value={filtroTarga}
             onChange={(e) => onFiltroTarga(e.target.value)}
-            className={`${filterTextInputClass} font-mono`}
+            className={`${mezziFieldInputClass} font-mono`}
             placeholder="Contiene…"
           />
         </MezziFieldWrap>
@@ -140,7 +141,7 @@ export function MezziFilterFields({
             type="text"
             value={filtroNumeroScuderia}
             onChange={(e) => onFiltroNumeroScuderia(e.target.value)}
-            className={`${filterTextInputClass} font-mono`}
+            className={`${mezziFieldInputClass} font-mono`}
             placeholder="Contiene…"
           />
         </MezziFieldWrap>
@@ -148,7 +149,7 @@ export function MezziFilterFields({
           <GlobalSelect
             id="mezzi-filter-ultima-lav"
             variant="filter"
-            inputClassName={filterTextInputClass}
+            inputClassName={mezziFieldInputClass}
             items={[
               { value: "", label: "Tutti" },
               { value: "con", label: "Con lavorazione" },

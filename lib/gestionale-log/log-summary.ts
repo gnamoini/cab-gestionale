@@ -44,6 +44,8 @@ const SKIP_DIFF_KEYS = new Set([
   "updated_at",
   "created_at",
   "created_by",
+  "updated_by",
+  "entity_key",
   "id",
   "deleted_at",
   "undo_session_id",
@@ -52,6 +54,31 @@ const SKIP_DIFF_KEYS = new Set([
   "dataUltimaModifica",
   "data_ultima_modifica",
 ]);
+
+/** Righe summary legacy con metadati audit — non mostrare in feed log. */
+const AUDIT_METADATA_MODIFICA_LINE_RE =
+  /^(?:Updated By|Created By|Updated At|Created At|Entity Key|AutoreUltimaModifica|Autore ultima modifica|DataUltimaModifica|Data ultima modifica)\b/i;
+
+export function isAuditMetadataFieldKey(key: string): boolean {
+  return SKIP_DIFF_KEYS.has(key.trim());
+}
+
+export function isAuditMetadataCampoLabel(label: string): boolean {
+  const bare = safeStr(label).trim();
+  if (!bare) return false;
+  return AUDIT_METADATA_MODIFICA_LINE_RE.test(bare);
+}
+
+export function filterAuditMetadataModifiche(lines: readonly string[]): string[] {
+  return lines.filter((line) => {
+    const bare = line.replace(/^•\s*/, "").trim();
+    return !AUDIT_METADATA_MODIFICA_LINE_RE.test(bare);
+  });
+}
+
+export function filterAuditMetadataCampoChanges<T extends { campo: string }>(changes: readonly T[]): T[] {
+  return changes.filter((ch) => !isAuditMetadataCampoLabel(ch.campo));
+}
 
 const FIELD_LABELS: Record<string, string> = {
   stato: "Stato",
@@ -322,7 +349,7 @@ export function extractPayloadFieldChanges(payload: unknown): PayloadFieldChange
   const keys = new Set([...Object.keys(b), ...Object.keys(a)]);
   const changes: PayloadFieldChange[] = [];
   for (const k of keys) {
-    if (SKIP_DIFF_KEYS.has(k)) continue;
+    if (isAuditMetadataFieldKey(k)) continue;
     if (JSON.stringify(b[k]) === JSON.stringify(a[k])) continue;
     changes.push({ key: k, before: b[k], after: a[k] });
     if (changes.length >= 12) break;
@@ -571,8 +598,18 @@ function isGenericLavorazioneLogOggettoLabel(raw: string): boolean {
 }
 
 function filterModificheForDisplay(entita: string, lines: string[]): string[] {
-  if (entita !== "magazzino_ricambi") return lines;
-  return filterMagazzinoAutomaticModifiche(lines);
+  let out = filterAuditMetadataModifiche(lines);
+  if (entita === "magazzino_ricambi") out = filterMagazzinoAutomaticModifiche(out);
+  return out;
+}
+
+function rediffModificheFromPayload(
+  payload: Record<string, unknown> | null,
+  entita: string,
+  stati?: StatoLavorazioneConfig[],
+): string[] {
+  if (!payload) return [];
+  return filterModificheForDisplay(entita, diffToModifiche(payload, stati, entita));
 }
 
 function diffToModifiche(
@@ -722,8 +759,17 @@ export function buildLogModificaSummary(input: {
             ? refreshMagazzinoLogModifiche(modifiche as string[], payload)
             : filterModificheForDisplay(input.entita, modifiche as string[]);
       resolvedModifiche = refreshGenericModifiche(resolvedModifiche, payload, stati);
-      if (resolvedModifiche.length === 0 && input.entita === "magazzino_ricambi") {
-        resolvedModifiche = defaultModificheForCreate(input.entita, input.azione, recordFromPayload(payload), stati);
+      resolvedModifiche = filterModificheForDisplay(input.entita, resolvedModifiche);
+      if (resolvedModifiche.length === 0) {
+        resolvedModifiche = rediffModificheFromPayload(payload, input.entita, stati);
+      }
+      if (resolvedModifiche.length === 0) {
+        resolvedModifiche = defaultModificheForCreate(
+          input.entita,
+          input.azione,
+          recordFromPayload(payload),
+          stati,
+        );
       }
       return {
         tipoRiga,
@@ -743,10 +789,17 @@ export function buildLogModificaSummary(input: {
     if (input.entita === "lavorazioni" && stati?.length) {
       modifiche = remapLavorazioneStatoInModifiche(modifiche, payload, stati);
     }
+    modifiche = filterModificheForDisplay(input.entita, modifiche);
+    if (modifiche.length === 0 && payload) {
+      modifiche = rediffModificheFromPayload(payload as Record<string, unknown>, input.entita, stati);
+    }
+    if (modifiche.length === 0) {
+      modifiche = ["Modifica registrata"];
+    }
     return {
       tipoRiga: tipoRigaFromAzione(input.entita, input.azione, payload),
       oggettoRiga: buildOggettoFromRecord(input.entita, recordFromPayload(payload) ?? {}),
-      modifiche: modifiche.length ? modifiche : [payload.compact.trim()],
+      modifiche,
       tone: toneFromAzione(input.azione, input.annullato),
     };
   }
@@ -754,14 +807,10 @@ export function buildLogModificaSummary(input: {
   const record = payload ? recordFromPayload(payload) : null;
   const oggettoRiga = resolveOggettoRiga(input.entita, record ? buildOggettoFromRecord(input.entita, record) : "—", payload);
   let modifiche = payload ? diffToModifiche(payload, stati, input.entita) : [];
+  modifiche = filterModificheForDisplay(input.entita, modifiche);
 
   if (modifiche.length === 0) {
     modifiche = defaultModificheForCreate(input.entita, input.azione, record, stati);
-  } else if (input.entita === "magazzino_ricambi") {
-    modifiche = filterMagazzinoAutomaticModifiche(modifiche);
-    if (modifiche.length === 0) {
-      modifiche = defaultModificheForCreate(input.entita, input.azione, record, stati);
-    }
   }
 
   if (input.entita === "magazzino_ricambi" && safeStr(input.azione).toUpperCase() === "DELETE") {
@@ -783,7 +832,16 @@ export function buildLogModificaSummary(input: {
 }
 
 export function modificheToModificaRiga(modifiche: string[]): string {
-  return modifiche.map((m) => `• ${m.replace(/^•\s*/, "")}`).join("\n");
+  const filtered = filterAuditMetadataModifiche(modifiche);
+  const lines = filtered.length > 0 ? filtered : modifiche.length > 0 ? ["Modifica registrata"] : [];
+  if (!lines.length) return "—";
+  return lines.map((m) => `• ${m.replace(/^•\s*/, "")}`).join("\n");
+}
+
+export function sanitizeModificaRigaText(modificaRiga: string): string {
+  const lines = parseModificheLines(modificaRiga);
+  if (!lines.length) return modificaRiga;
+  return modificheToModificaRiga(lines);
 }
 
 export { parseModificheLines };
@@ -802,9 +860,19 @@ export function mergePayloadWithSummary(
       : payload != null
         ? { data: payload }
         : {};
+  const filteredModifiche = filterAuditMetadataModifiche(summary.modifiche);
+  const cleanSummary: LogModificaSummary = {
+    ...summary,
+    modifiche:
+      filteredModifiche.length > 0
+        ? filteredModifiche
+        : summary.modifiche.length > 0
+          ? ["Modifica registrata"]
+          : summary.modifiche,
+  };
   return {
     ...base,
-    summary,
-    compact: modificheToModificaRiga(summary.modifiche).replace(/\n/g, " · "),
+    summary: cleanSummary,
+    compact: modificheToModificaRiga(cleanSummary.modifiche).replace(/\n/g, " · "),
   };
 }

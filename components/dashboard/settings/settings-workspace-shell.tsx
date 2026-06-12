@@ -791,11 +791,8 @@ export function SistemaImpostazioniWorkspace({
               filteredNav={filteredNav}
               section={section}
               onPickSection={setSection}
-              navClassName={
-                pageMode
-                  ? "gestionale-scrollbar min-h-0 flex-1 overflow-y-auto max-h-none"
-                  : "gestionale-scrollbar min-h-0 flex-1 overflow-y-auto"
-              }
+              scrollable={!pageMode}
+              navClassName={pageMode ? undefined : "min-h-0 flex-1"}
             />
           </aside>
 

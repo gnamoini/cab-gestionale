@@ -23,17 +23,68 @@ export function buildPdfArtifactUrl(type: PdfArtifactType, params?: OpenPdfArtif
   return qs ? `/api/pdf/artifacts/${type}?${qs}` : `/api/pdf/artifacts/${type}`;
 }
 
-/** Apre un PDF artifact server-side (GET RBAC + cache storage) in nuova scheda. */
-export function openPdfArtifact(type: PdfArtifactType, params?: OpenPdfArtifactParams): boolean {
-  const url = buildPdfArtifactUrl(type, params);
-  const opened = openUrlInNewTab(url, {
-    blockedMessage: "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
-  });
-  if (!opened) {
-    pushGestionaleToast(
-      "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
-      "warning",
-    );
+function fileNameFromContentDisposition(header: string | null, fallback = "documento.pdf"): string {
+  if (!header) return fallback;
+  const utf8 = /filename\*=UTF-8''([^;\s]+)/i.exec(header);
+  if (utf8?.[1]) {
+    try {
+      return decodeURIComponent(utf8[1]).trim() || fallback;
+    } catch {
+      return utf8[1].trim() || fallback;
+    }
   }
-  return opened;
+  const ascii = /filename="([^"]+)"/i.exec(header);
+  return ascii?.[1]?.trim() || fallback;
+}
+
+/** Scarica l'artifact server-side e apre il PDF in nuova scheda (errori → toast, no pagina 500). */
+export async function openPdfArtifact(
+  type: PdfArtifactType,
+  params?: OpenPdfArtifactParams,
+): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+
+  const url = buildPdfArtifactUrl(type, params);
+  pushGestionaleToast("Generazione PDF in corso…", "info", 5000);
+
+  try {
+    const res = await fetch(url, { credentials: "same-origin" });
+    if (!res.ok) {
+      let message = "Generazione PDF non riuscita";
+      try {
+        const body = (await res.json()) as { error?: string };
+        if (body.error?.trim()) message = body.error.trim();
+      } catch {
+        /* risposta HTML di errore */
+      }
+      pushGestionaleToast(message, "warning", 5200);
+      return false;
+    }
+
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("application/pdf")) {
+      pushGestionaleToast("Risposta PDF non valida.", "warning", 5200);
+      return false;
+    }
+
+    const blob = await res.blob();
+    const fileName = fileNameFromContentDisposition(res.headers.get("content-disposition"));
+    const blobUrl = URL.createObjectURL(new File([blob], fileName, { type: "application/pdf" }));
+    const opened = openUrlInNewTab(blobUrl, {
+      revokeBlobUrlAfterMs: 120_000,
+      blockedMessage: "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
+      downloadFileName: fileName,
+    });
+    if (!opened) {
+      pushGestionaleToast(
+        "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
+        "warning",
+        5200,
+      );
+    }
+    return opened;
+  } catch {
+    pushGestionaleToast("Generazione PDF non riuscita.", "warning", 5200);
+    return false;
+  }
 }

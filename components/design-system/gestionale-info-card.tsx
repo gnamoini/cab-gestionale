@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useId, useState, type ReactNode } from "react";
+import { useCollapsibleAccordionOptional } from "@/lib/ui/collapsible-accordion";
 import {
-  dsFocus,
   dsGestionaleInfoCard,
   dsGestionaleInfoCardCompact,
   dsGestionaleInfoCardMetricRow,
@@ -15,6 +15,11 @@ import {
   dsGestionaleInfoCardSubgroupTitle,
   dsGestionaleInfoCardTitle,
 } from "@/lib/ui/design-system";
+import {
+  gestionaleCollapsibleSectionTitleHitboxClass,
+  gestionaleCollapsibleToggleBtnClass,
+  gestionaleCollapsibleToggleBtnExpandedClass,
+} from "@/lib/ui/gestionale-collapsible-toggle";
 
 function GestionaleInfoCardChevron({ expanded }: { expanded: boolean }) {
   return (
@@ -51,6 +56,7 @@ export function GestionaleInfoCard({
   collapsible = false,
   defaultCollapsed = true,
   forceExpanded = false,
+  accordionId,
 }: {
   title: string;
   children?: ReactNode;
@@ -67,38 +73,60 @@ export function GestionaleInfoCard({
   defaultCollapsed?: boolean;
   /** Solo se `collapsible`: mantiene la sezione espansa (es. validazione). */
   forceExpanded?: boolean;
+  /** Con `CollapsibleAccordionProvider`: aprire questa card chiude le altre del gruppo. */
+  accordionId?: string;
 }) {
   const panelId = useId();
-  const [collapsed, setCollapsed] = useState(defaultCollapsed);
+  const accordion = useCollapsibleAccordionOptional();
+  const inAccordionGroup = Boolean(collapsible && accordionId && accordion && !forceExpanded);
+  const [collapsedState, setCollapsedState] = useState(defaultCollapsed);
+  const collapsed = inAccordionGroup ? !accordion!.isOpen(accordionId!) : collapsedState;
   const shell = compact ? dsGestionaleInfoCardCompact : dsGestionaleInfoCard;
   const hasHeaderRow = Boolean(subtitle || actions);
   const expanded = forceExpanded || !collapsed;
 
   useEffect(() => {
-    if (forceExpanded) setCollapsed(false);
+    if (forceExpanded) setCollapsedState(false);
   }, [forceExpanded]);
 
+  const toggleCollapsed = () => {
+    if (forceExpanded) return;
+    if (inAccordionGroup) {
+      accordion!.toggle(accordionId!);
+      return;
+    }
+    setCollapsedState((c) => !c);
+  };
+
   if (collapsible && !hasHeaderRow && !hideTitle) {
+    const titleId = `${panelId}-title`;
+    const toggleLabel = `${expanded ? "Nascondi" : "Mostra"} ${title}`;
+
     return (
       <section className={`${shell}${className ? ` ${className}` : ""}`}>
-        <button
-          type="button"
-          id={`${panelId}-trigger`}
-          aria-expanded={expanded}
-          aria-controls={`${panelId}-body`}
-          className={`${dsFocus} group flex w-full min-w-0 items-center justify-between gap-2 rounded-[var(--ds-radius-md)] py-0.5 text-left touch-manipulation`}
-          onClick={() => {
-            if (forceExpanded) return;
-            setCollapsed((c) => !c);
-          }}
-        >
-          <h3 className={`${dsGestionaleInfoCardTitle} mb-0 min-w-0 flex-1`}>{title}</h3>
-          <GestionaleInfoCardChevron expanded={expanded} />
-        </button>
+        <div className="flex w-full min-w-0 items-center justify-between gap-2 py-0.5">
+          <h3
+            id={titleId}
+            className={`${dsGestionaleInfoCardTitle} mb-0 min-w-0 flex-1 ${gestionaleCollapsibleSectionTitleHitboxClass}`}
+          >
+            {title}
+          </h3>
+          <button
+            type="button"
+            id={`${panelId}-trigger`}
+            aria-expanded={expanded}
+            aria-controls={`${panelId}-body`}
+            aria-label={toggleLabel}
+            className={`${gestionaleCollapsibleToggleBtnClass} ${expanded ? gestionaleCollapsibleToggleBtnExpandedClass : ""}`}
+            onClick={toggleCollapsed}
+          >
+            <GestionaleInfoCardChevron expanded={expanded} />
+          </button>
+        </div>
         <div
           id={`${panelId}-body`}
           role="region"
-          aria-labelledby={`${panelId}-trigger`}
+          aria-labelledby={titleId}
           aria-hidden={!expanded}
           className={`grid ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
         >

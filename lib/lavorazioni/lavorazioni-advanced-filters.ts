@@ -1,5 +1,5 @@
-import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
 import { clientPortalIngressoIso } from "@/lib/lavorazioni/client-portal-row-fields";
+import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { isoToDateInputValue, normalizeYmdRangeBounds } from "@/lib/lavorazioni/date-day-only";
 import { migrateStatoConfigId } from "@/lib/lavorazioni/stati-dynamic";
 import { lavRowIngressoInRange } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
@@ -80,16 +80,7 @@ function rowEntityFields(
 ): RowEntityFields {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
   const m = row.mezzo;
-  const fromLogs = logs?.length ? latestAddettoFromLogs(logs) : "—";
-  const addettoFallback = fromLogs !== "—" ? fromLogs : defaultAddetto;
-  const addetto =
-    ing?.addettoAccettazione?.trim() ||
-    schedeStore?.[row.id]?.lavorazioni?.campi.righe
-      .flatMap((r) => r.addettiAssegnati)
-      .find((a) => a.addetto.trim())
-      ?.addetto.trim() ||
-    addettoFallback ||
-    "";
+  const addetto = lavorazioneAddettoLabel(row, schedeStore ?? {}, defaultAddetto, logs);
 
   let marca = "";
   let modello = "";

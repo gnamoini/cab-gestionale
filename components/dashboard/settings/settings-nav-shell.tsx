@@ -46,15 +46,21 @@ export function SettingsNavMenuList({
   section,
   onPickSection,
   navClassName,
+  scrollable = true,
 }: {
   filteredNav: SettingsNavEntry[];
   section: SistemaSectionId;
   onPickSection: (id: SistemaSectionId) => void;
   navClassName?: string;
+  /** false = elenco completo senza scrollbar (pagina Impostazioni desktop). */
+  scrollable?: boolean;
 }) {
+  const scrollClass = scrollable
+    ? `gestionale-scrollbar overflow-y-auto ${navClassName ?? "max-h-[min(60vh,22rem)]"}`
+    : `overflow-visible ${navClassName ?? ""}`.trim();
   return (
     <nav
-      className={`gestionale-scrollbar space-y-1 overflow-y-auto p-2 ${navClassName ?? "max-h-[min(60vh,22rem)]"}`}
+      className={`space-y-1 p-2 ${scrollClass}`}
       aria-label="Elenco sezioni configurazione"
     >
       {filteredNav.map((e, i) => {

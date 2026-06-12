@@ -19,7 +19,7 @@ export async function openSchedaPdfInNewTab(opts: {
   doc: SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc;
   autore: string;
 }): Promise<void> {
-  openPdfArtifact(schedaArtifactType(opts.doc), {
+  await openPdfArtifact(schedaArtifactType(opts.doc), {
     lavorazioneId: opts.bundle.lavorazioneId,
     autore: opts.autore,
   });

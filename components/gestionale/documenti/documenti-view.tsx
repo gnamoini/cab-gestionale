@@ -787,20 +787,19 @@ export function DocumentiView() {
 
   function toggleMarca(id: string) {
     setExpandedMarche((prev) => {
-      const n = new Set(prev);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
+      if (prev.has(id) && prev.size === 1) return new Set();
+      return new Set([id]);
     });
+    setExpandedModelli(new Set());
   }
 
   function toggleModello(key: string) {
     setExpandedModelli((prev) => {
-      const n = new Set(prev);
-      if (n.has(key)) n.delete(key);
-      else n.add(key);
-      return n;
+      if (prev.has(key) && prev.size === 1) return new Set();
+      return new Set([key]);
     });
+    const marcaId = key.split("::")[0];
+    if (marcaId) setExpandedMarche(new Set([marcaId]));
   }
 
   const collapseAllTreeGroups = useCallback(() => {

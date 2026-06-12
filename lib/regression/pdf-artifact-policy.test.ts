@@ -16,6 +16,7 @@ assert.ok(exists("docs/pdf-generation-map.md"), "docs/pdf-generation-map.md miss
 
 const artifactRoute = read("app/api/pdf/artifacts/[type]/route.ts");
 assert.match(artifactRoute, /deliverPdfArtifact/);
+assert.match(artifactRoute, /export const runtime = "nodejs"/);
 assert.match(artifactRoute, /isPdfArtifactType/);
 
 const rbac = read("lib/pdf-artifacts/pdf-artifact-rbac.server.ts");
@@ -56,8 +57,14 @@ for (const rel of pdfDataModules) {
   assert.doesNotMatch(src, /select\s*\(\s*["']\*["']\s*\)/);
 }
 
+const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
+assert.match(requestArtifact, /await fetch\(url/);
+assert.match(requestArtifact, /Generazione PDF in corso/);
 const responseHeaders = read("lib/pdf/pdf-artifact-response.ts");
 assert.match(responseHeaders, /X-Cache-Status/);
 assert.match(responseHeaders, /X-PDF-Generate-Ms/);
+
+const generateServer = read("lib/pdf-artifacts/pdf-artifact-generate.server.ts");
+assert.match(generateServer, /uploadPdfArtifactBestEffort/);
 
 console.log("pdf-artifact-policy: OK");

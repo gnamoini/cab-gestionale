@@ -46,6 +46,15 @@ export async function uploadPdfArtifact(objectPath: string, bytes: Uint8Array): 
   if (error) throw new Error(error.message);
 }
 
+/** Cache opzionale: non blocca la consegna del PDF se lo storage non è pronto. */
+export async function uploadPdfArtifactBestEffort(objectPath: string, bytes: Uint8Array): Promise<void> {
+  try {
+    await uploadPdfArtifact(objectPath, bytes);
+  } catch (error) {
+    console.warn("[pdf-artifact] cache upload skipped:", error instanceof Error ? error.message : error);
+  }
+}
+
 export const getCachedPdfArtifactBytes = cache(async (objectPath: string) => {
   return downloadPdfArtifact(objectPath);
 });

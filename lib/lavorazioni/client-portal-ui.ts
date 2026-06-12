@@ -45,6 +45,22 @@ export function macchinaClienteLabel(row: LavorazioneListRow): string {
   return brand || "—";
 }
 
+/** Raggruppa log lavorazioni per `entita_id` (lookup O(1) in lista archivio). */
+export function groupLavorazioniLogsById(
+  logs: readonly LogModificaRow[],
+): ReadonlyMap<string, readonly LogModificaRow[]> {
+  const map = new Map<string, LogModificaRow[]>();
+  for (const row of logs) {
+    if (row.entita !== "lavorazioni") continue;
+    const id = row.entita_id?.trim();
+    if (!id) continue;
+    const list = map.get(id);
+    if (list) list.push(row);
+    else map.set(id, [row]);
+  }
+  return map;
+}
+
 /** Addetto da log UPDATE (payload addetto), più recente per primo. */
 export function latestAddettoFromLogs(logs: readonly LogModificaRow[]): string {
   const sorted = [...logs].sort((a, b) => b.created_at.localeCompare(a.created_at));

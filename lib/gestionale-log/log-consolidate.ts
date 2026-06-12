@@ -1,6 +1,7 @@
 import {
   buildLogModificaSummary,
   extractPayloadFieldChanges,
+  isAuditMetadataFieldKey,
   mergePayloadWithSummary,
   type PayloadFieldChange,
 } from "@/lib/gestionale-log/log-summary";
@@ -22,10 +23,10 @@ function fieldValuesEqual(a: unknown, b: unknown): boolean {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
-/** UPDATE senza effetto netto (es. priorità Media→Alta→Media). */
+/** UPDATE senza effetto netto (es. priorità Media→Alta→Media, solo metadati audit). */
 export function isNetNoOpUpdateRow(row: LogModificaRow): boolean {
   if (safeStr(row.azione).toUpperCase() !== "UPDATE") return false;
-  const changes = extractPayloadFieldChanges(row.payload);
+  const changes = extractPayloadFieldChanges(row.payload).filter((c) => !isAuditMetadataFieldKey(c.key));
   if (!changes.length) return true;
   return changes.every((c) => fieldValuesEqual(c.before, c.after));
 }
@@ -34,7 +35,7 @@ function isConsolidatableUpdateRow(row: LogModificaRow): boolean {
   if (isLogReverted(row)) return false;
   if (safeStr(row.azione).toUpperCase() !== "UPDATE") return false;
   if (isImageLogAction(row.azione)) return false;
-  return extractPayloadFieldChanges(row.payload).length >= 1;
+  return extractPayloadFieldChanges(row.payload).some((c) => !isAuditMetadataFieldKey(c.key));
 }
 
 function canExtendUpdateBurst(older: LogModificaRow, newer: LogModificaRow, windowMs: number): boolean {
@@ -64,6 +65,7 @@ function buildBurstMergedRow(group: LogModificaRow[]): LogModificaRow {
 
   for (const row of group) {
     for (const ch of extractPayloadFieldChanges(row.payload)) {
+      if (isAuditMetadataFieldKey(ch.key)) continue;
       if (!(ch.key in beforeObj)) beforeObj[ch.key] = ch.before;
       afterObj[ch.key] = ch.after;
     }

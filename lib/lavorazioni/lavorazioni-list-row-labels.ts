@@ -8,8 +8,10 @@ import {
 } from "@/lib/domain/intervento-context";
 import { schedaIngressoFieldsFromDisplay } from "@/lib/domain/intervento-context/resolve-intervento-display-for-surface";
 import { countSchedePresenti } from "@/lib/schede/schede-ui";
+import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { InterventoDisplay } from "@/lib/domain/intervento-context/intervento-context.types";
 import type { LavorazioneSchedeBundle, LavorazioneSchedeStore } from "@/types/schede";
 
@@ -44,7 +46,8 @@ export function lavorazioneCantiereLabel(row: LavorazioneListRow, schedeStore?: 
 export function lavorazioneAddettoLabel(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore,
-  fallbackAddetto: string,
+  fallbackAddetto = "",
+  logs?: readonly LogModificaRow[],
 ): string {
   const ctx = composeInterventoContextFromListRow(row, schedeStore);
   const fromIngresso = ctx.schedaIngresso.campi?.addettoAccettazione?.trim();
@@ -53,7 +56,13 @@ export function lavorazioneAddettoLabel(
       .flatMap((r) => r.addettiAssegnati)
       .find((a) => a.addetto.trim())
       ?.addetto.trim() ?? "";
-  return fromIngresso || fromRighe || fallbackAddetto || "—";
+  const fromLogs = logs?.length ? latestAddettoFromLogs(logs) : "—";
+  const label =
+    fromIngresso ||
+    fromRighe ||
+    (fromLogs !== "—" ? fromLogs : "") ||
+    fallbackAddetto.trim();
+  return label || "—";
 }
 
 export function lavorazioneSchedeCount(bundle: LavorazioneSchedeBundle | undefined, row: LavorazioneListRow): number {

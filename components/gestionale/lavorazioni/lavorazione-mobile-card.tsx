@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { CardMobile } from "@/components/design-system/card-mobile-actions";
 import { dsCardMobileActionsGroup } from "@/lib/ui/design-system";
+import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 import {
   formatLavorazioneUltimaModificaMobileLines,
   type LavorazioneUltimaModificaInfo,
@@ -82,17 +83,17 @@ export function LavMobileInlineField({
 }) {
   if (layout === "stack") {
     return (
-      <label className={`flex min-w-0 flex-col gap-1 ${className}`.trim()}>
-        <span className={metaDt}>{label}</span>
+      <div className={`flex min-w-0 flex-col gap-1 ${className}`.trim()}>
+        <span className={`${metaDt} ${gestionaleFieldLabelClass}`}>{label}</span>
         <div className="min-w-0">{children}</div>
-      </label>
+      </div>
     );
   }
   return (
-    <label className={`flex min-w-0 items-center gap-1.5 ${className}`.trim()}>
-      <span className={`w-[4.25rem] ${lavMobileFieldLabelClass}`}>{label}</span>
+    <div className={`flex min-w-0 items-center gap-1.5 ${className}`.trim()}>
+      <span className={`w-[4.25rem] ${lavMobileFieldLabelClass} pointer-events-none select-none`}>{label}</span>
       <div className="min-w-0 flex-1">{children}</div>
-    </label>
+    </div>
   );
 }
 

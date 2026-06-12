@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { globalInputFieldFilterSearch } from "@/lib/ui/global-input";
+import { gestionaleFilterFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 
 /** Input filtri toolbar — combobox ricerca+suggerimenti (non select nativo). */
 export const gestionaleFilterFieldInputClass = globalInputFieldFilterSearch;
@@ -19,7 +20,7 @@ export function LavorazioniFilterField({
   if (htmlFor) {
     return (
       <div className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[color:var(--cab-text-muted)]">
-        <label htmlFor={htmlFor} className="cursor-default">
+        <label htmlFor={htmlFor} className={gestionaleFilterFieldLabelClass}>
           {label}
         </label>
         {children}
@@ -27,10 +28,10 @@ export function LavorazioniFilterField({
     );
   }
   return (
-    <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[color:var(--cab-text-muted)]">
-      {label}
+    <div className="flex min-w-0 flex-col gap-1 text-xs font-medium text-[color:var(--cab-text-muted)]">
+      <span className={gestionaleFilterFieldLabelClass}>{label}</span>
       {children}
-    </label>
+    </div>
   );
 }
 

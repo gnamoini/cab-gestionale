@@ -27,9 +27,9 @@ export const MEZZI_LIST_EMBED_COLUMNS =
 export const MEZZI_EMBED_LIGHT_COLUMNS =
   "cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia" as const;
 
-/** Lista mezzi — senza `meta` (solo modal/dettaglio). */
+/** Lista mezzi — include `meta` (cantiere e telaio in tabella). */
 export const MEZZI_LIST_LIGHT_COLUMNS =
-  "id, cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia, tipo_attrezzatura, anno, entity_key, created_at, updated_at" as const;
+  "id, cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia, tipo_attrezzatura, anno, meta, entity_key, created_at, updated_at" as const;
 
 /** Report classifiche / KPI mezzi. */
 export const MEZZI_REPORT_LIGHT_COLUMNS =

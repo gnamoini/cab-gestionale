@@ -12,12 +12,12 @@ export type { DipendentiPdfContext };
 
 export async function openDipendentiPdfComplessivoInNewTab(ctx: DipendentiPdfContext): Promise<void> {
   if (ctx.employees.length === 0) return;
-  openPdfArtifact("dipendenti-aziendale", { month: ctx.monthKey });
+  await openPdfArtifact("dipendenti-aziendale", { month: ctx.monthKey });
 }
 
 export async function openDipendentiPdfDipendenteInNewTab(
   ctx: DipendentiPdfContext,
   employee: DipendenteTimesheetEmployeeRow,
 ): Promise<void> {
-  openPdfArtifact("dipendenti-dipendente", { month: ctx.monthKey, employeeId: employee.id });
+  await openPdfArtifact("dipendenti-dipendente", { month: ctx.monthKey, employeeId: employee.id });
 }

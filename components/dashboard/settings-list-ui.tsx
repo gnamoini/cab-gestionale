@@ -32,9 +32,9 @@ export const SETTINGS_PAGE_SHELL =
 
 export const SETTINGS_PAGE_GRID = "grid gap-4 p-3 md:grid-cols-[15rem_minmax(0,1fr)] md:p-4";
 
-/** Aside navigazione sezioni (desktop sticky). */
+/** Aside navigazione sezioni (desktop sticky, altezza naturale senza scroll interno). */
 export const SETTINGS_SIDEBAR_SHELL =
-  "hidden w-[13.75rem] shrink-0 flex-col border-[color:var(--cab-border)] bg-[color:var(--cab-card)] md:sticky md:top-4 md:flex md:h-fit md:max-h-[calc(100dvh-8rem)] md:w-[15rem] md:overflow-hidden md:rounded-[var(--ds-radius-xl)] md:border md:shadow-[var(--cab-shadow-sm)]";
+  "hidden w-[13.75rem] shrink-0 flex-col border-[color:var(--cab-border)] bg-[color:var(--cab-card)] md:sticky md:top-4 md:flex md:h-fit md:w-[15rem] md:rounded-[var(--ds-radius-xl)] md:border md:shadow-[var(--cab-shadow-sm)]";
 
 export const SETTINGS_MAIN_PANEL = "min-w-0 max-w-full overflow-x-hidden bg-transparent";
 

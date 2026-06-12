@@ -165,7 +165,7 @@ export function TimesheetHeader({
     else onDayDate(shiftDayDate(dayDate, 1));
   };
 
-  const filterLabelClass = `${dsTypoSmall} font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`;
+  const filterLabelClass = `${dsTypoSmall} font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)] pointer-events-none select-none`;
 
   return (
     <ShellCard>
@@ -183,7 +183,7 @@ export function TimesheetHeader({
               <div
                 className={`grid min-w-0 w-full flex-1 grid-cols-1 gap-2 ${periodMode === "month" ? "sm:grid-cols-4" : "sm:grid-cols-3"}`}
               >
-                <label className="flex min-w-0 flex-col gap-1">
+                <div className="flex min-w-0 flex-col gap-1">
                   <span className={filterLabelClass}>Anno</span>
                   <GlobalSelect
                     selectOnly
@@ -193,8 +193,8 @@ export function TimesheetHeader({
                     items={yearItems}
                     aria-label="Seleziona anno"
                   />
-                </label>
-                <label className="flex min-w-0 flex-col gap-1">
+                </div>
+                <div className="flex min-w-0 flex-col gap-1">
                   <span className={filterLabelClass}>Mese</span>
                   <GlobalSelect
                     selectOnly
@@ -205,8 +205,8 @@ export function TimesheetHeader({
                     items={monthItems}
                     aria-label="Seleziona mese"
                   />
-                </label>
-                <label className="flex min-w-0 flex-col gap-1">
+                </div>
+                <div className="flex min-w-0 flex-col gap-1">
                   <span className={filterLabelClass}>Dipendente</span>
                   <GlobalSelect
                     selectOnly
@@ -218,9 +218,9 @@ export function TimesheetHeader({
                     placeholder="Tutti i dipendenti"
                     aria-label="Seleziona dipendente"
                   />
-                </label>
+                </div>
                 {periodMode === "day" ? (
-                  <label className="flex min-w-0 flex-col gap-1 sm:col-span-3">
+                  <div className="flex min-w-0 flex-col gap-1 sm:col-span-3">
                     <span className={filterLabelClass}>Giorno</span>
                     <input
                       type="date"
@@ -229,7 +229,7 @@ export function TimesheetHeader({
                       onChange={(e) => onDayDate(e.target.value || dayDate)}
                       aria-label="Seleziona giorno"
                     />
-                  </label>
+                  </div>
                 ) : null}
                 {periodMode === "month" ? (
                   <div

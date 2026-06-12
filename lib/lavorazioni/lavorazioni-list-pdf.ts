@@ -22,5 +22,5 @@ export async function openLavorazioniInCorsoPdfInNewTab(
   _rows?: readonly LavorazioniInCorsoPdfRow[],
   _autore?: string,
 ): Promise<void> {
-  openPdfArtifact("lavorazioni-in-corso");
+  await openPdfArtifact("lavorazioni-in-corso");
 }

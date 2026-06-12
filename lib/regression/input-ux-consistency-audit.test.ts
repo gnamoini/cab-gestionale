@@ -21,6 +21,9 @@ const mobileBehavior = read("lib/ui/mobile-modal-behavior.ts");
 const numberInput = read("components/gestionale/gestionale-number-input.tsx");
 const globalInput = read("lib/ui/global-input.ts");
 const formSection = read("components/gestionale/schede/gestionale-form-section.tsx");
+const fieldLabel = read("lib/ui/gestionale-field-label.ts");
+const filterFields = read("components/gestionale/lavorazioni/lavorazioni-filter-fields.tsx");
+const shellCard = read("components/gestionale/shell-card.tsx");
 const searchField = read("components/gestionale/gestionale-search-field.tsx");
 const inlineSelect = read("components/gestionale/lavorazioni/lavorazioni-inline-select.tsx");
 
@@ -40,6 +43,14 @@ assert.doesNotMatch(settingsNavShell, /absolute left-0 right-0 top-full/);
 
 // Magazzino: label attr per focus scroll mobile
 assert.match(ricambioForm, /CAB_FIELD_LABEL_ATTR/);
+
+// Titolo campo / sezione: hitbox solo sul controllo o sul toggle
+assert.match(formSection, /gestionaleFieldLabelClass/);
+assert.match(fieldLabel, /pointer-events-none/);
+assert.doesNotMatch(formSection, /<label[\s\S]*?<div className="mt-1">\{children\}<\/div>[\s\S]*?<\/label>/);
+assert.match(filterFields, /gestionaleFilterFieldLabelClass/);
+assert.match(shellCard, /gestionaleCollapsibleSectionTitleHitboxClass/);
+assert.match(shellCard, /aria-label=\{toggleLabel\}/);
 
 // P1 R-08: required indicator uniforme
 assert.match(formSection, /GestionaleRequiredMark/);

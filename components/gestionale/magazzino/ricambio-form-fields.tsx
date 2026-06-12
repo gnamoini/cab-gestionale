@@ -37,6 +37,7 @@ import {
   CAB_FOCUS_SCROLL_GROUP_ATTR,
   CAB_FOCUS_SCROLL_TITLE_ATTR,
 } from "@/lib/ui/mobile-modal-behavior";
+import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 
 const ricambioFormInputClass = dsInput;
 
@@ -170,10 +171,10 @@ export function RicambioField({
 }) {
   const labelClass =
     tone === "optional"
-      ? `${dsLabel} text-[color:var(--cab-text-muted)]`
+      ? `${gestionaleFieldLabelClass} text-[color:var(--cab-text-muted)]`
       : tone === "operational"
-        ? dsLabel
-        : `${dsLabel} cursor-default`;
+        ? gestionaleFieldLabelClass
+        : `${gestionaleFieldLabelClass}`;
 
   if (htmlFor) {
     return (
@@ -358,7 +359,7 @@ export function RicambioFormFields({
                   <label
                     htmlFor="magazzino-ricambio-marca-secondaria"
                     {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
-                    className={`${dsLabel} cursor-default`}
+                    className={`${gestionaleFieldLabelClass}`}
                   >
                     Marca alternativa
                   </label>
@@ -383,7 +384,7 @@ export function RicambioFormFields({
                   <label
                     htmlFor="magazzino-ricambio-codice-secondario"
                     {...{ [CAB_FIELD_LABEL_ATTR]: "" }}
-                    className={`${dsLabel} cursor-default`}
+                    className={`${gestionaleFieldLabelClass}`}
                   >
                     Codice alternativo
                   </label>

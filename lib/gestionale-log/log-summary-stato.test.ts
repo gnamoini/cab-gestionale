@@ -202,4 +202,44 @@ assert.ok(
   `security detail must remap stato ids, got: ${securityDetail}`,
 );
 
+const updatedByOnly = buildLogModificaSummary({
+  entita: "lavorazioni",
+  entita_id: "lav-upd",
+  azione: "UPDATE",
+  payload: {
+    before: { stato: "accettazione", updated_by: "52424242-0000-0000-0000-000000000001" },
+    after: { stato: "accettazione", updated_by: "24243434-0000-0000-0000-000000000002" },
+    context: { oggetto: "Cliente Demo — Bobcat E35" },
+    summary: {
+      tipoRiga: "AGGIORNAMENTO LAVORAZIONE",
+      oggettoRiga: "Cliente Demo — Bobcat E35",
+      modifiche: ['Updated By modificato da "524242" a "24243"'],
+    },
+  },
+});
+
+assert.ok(
+  !updatedByOnly.modifiche.some((m) => /updated by/i.test(m)),
+  "updated_by audit metadata must not appear in log modifiche",
+);
+assert.equal(updatedByOnly.oggettoRiga, "Cliente Demo — Bobcat E35");
+
+const updatedByWithRealChange = buildLogModificaSummary({
+  entita: "lavorazioni",
+  entita_id: "lav-upd2",
+  azione: "UPDATE",
+  statiLavorazione: stati,
+  payload: {
+    before: { stato: "custom_2", updated_by: "52424242-0000-0000-0000-000000000001" },
+    after: { stato: "custom_1", updated_by: "24243434-0000-0000-0000-000000000002" },
+    context: { oggetto: "Cliente Demo — Bobcat E35" },
+  },
+});
+
+assert.equal(
+  updatedByWithRealChange.modifiche[0],
+  "Stato modificato da “Attesa ricambi officina” a “In attesa preventivo”",
+  "real field changes must remain when updated_by also changes",
+);
+
 console.log("log-summary-stato.test.ts OK");

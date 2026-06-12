@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { memo } from "react";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import { parseModificheLines, sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
+import { filterAuditMetadataModifiche, parseModificheLines, sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import type { GestionaleLogEventTone, GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { formatGestionaleLogMetaLine } from "@/lib/gestionale-log/view-model";
 
@@ -37,7 +37,11 @@ export type LogEntryProps = {
 
 function LogEntryBody({ vm, trailing }: { vm: GestionaleLogViewModel; trailing?: ReactNode }) {
   const voided = vm.annullato === true;
-  const modifiche = parseModificheLines(vm.modificaRiga);
+  const rawModifiche = parseModificheLines(vm.modificaRiga);
+  let modifiche = filterAuditMetadataModifiche(rawModifiche);
+  if (modifiche.length === 0 && rawModifiche.length > 0) {
+    modifiche = ["Modifica registrata"];
+  }
   const badge = TONE_BADGE[vm.tone];
 
   return (

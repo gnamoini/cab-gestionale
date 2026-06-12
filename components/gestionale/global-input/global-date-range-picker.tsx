@@ -1,6 +1,7 @@
 "use client";
 
 import { GlobalDatePickerYmd } from "@/components/gestionale/global-input/global-date-picker";
+import { gestionaleFilterFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 
 export function GlobalDateRangePicker({
   fromYmd,
@@ -23,14 +24,14 @@ export function GlobalDateRangePicker({
 }) {
   return (
     <div className="grid grid-cols-2 gap-2">
-      <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        {fromLabel}
+      <div className="flex min-w-0 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <span className={gestionaleFilterFieldLabelClass}>{fromLabel}</span>
         <GlobalDatePickerYmd valueYmd={fromYmd} onChangeYmd={onChangeFrom} aria-label={fromAriaLabel} />
-      </label>
-      <label className="flex min-w-0 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
-        {toLabel}
+      </div>
+      <div className="flex min-w-0 flex-col gap-1 text-xs font-medium text-zinc-600 dark:text-zinc-400">
+        <span className={gestionaleFilterFieldLabelClass}>{toLabel}</span>
         <GlobalDatePickerYmd valueYmd={toYmd} onChangeYmd={onChangeTo} aria-label={toAriaLabel} />
-      </label>
+      </div>
     </div>
   );
 }

@@ -8,7 +8,8 @@ import { clampOre } from "@/lib/dipendenti/timesheet-totals";
 import type { TimesheetCellValue } from "@/lib/dipendenti/types";
 import { sliceInputValue, TEXT_MEDIUM } from "@/lib/validation/text-field-limits";
 import { GlobalSelect } from "@/components/gestionale/global-input";
-import { dsInput, dsTypoSmall } from "@/lib/ui/design-system";
+import { dsInput } from "@/lib/ui/design-system";
+import { gestionaleFieldLabelClass } from "@/lib/ui/gestionale-field-label";
 
 export function TimesheetCellEditor({
   value,
@@ -38,8 +39,8 @@ export function TimesheetCellEditor({
   return (
     <div className={compact ? "space-y-2" : "space-y-4"}>
       <div className={`grid gap-2 ${compact ? "grid-cols-3" : "grid-cols-3 sm:grid-cols-3"}`}>
-        <label className="flex min-w-0 flex-col gap-0.5">
-          <span className={dsTypoSmall}>Ordinarie</span>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className={gestionaleFieldLabelClass}>Ordinarie</span>
           <input
             className={inputClass}
             type="number"
@@ -53,9 +54,9 @@ export function TimesheetCellEditor({
               onChange({ ...value, oreOrdinarie });
             }}
           />
-        </label>
-        <label className="flex min-w-0 flex-col gap-0.5">
-          <span className={dsTypoSmall}>Straordinarie</span>
+        </div>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className={gestionaleFieldLabelClass}>Straordinarie</span>
           <input
             className={inputClass}
             type="number"
@@ -69,9 +70,9 @@ export function TimesheetCellEditor({
               onChange({ ...value, oreStraordinarie });
             }}
           />
-        </label>
-        <label className="flex min-w-0 flex-col gap-0.5">
-          <span className={dsTypoSmall}>Assenza</span>
+        </div>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <span className={gestionaleFieldLabelClass}>Assenza</span>
           <input
             className={inputClass}
             type="number"
@@ -91,13 +92,13 @@ export function TimesheetCellEditor({
               });
             }}
           />
-        </label>
+        </div>
       </div>
 
       {value.oreAssenza > 0 ? (
         <div className={compact ? "grid gap-2 sm:grid-cols-2" : "space-y-3"}>
-          <label className="flex min-w-0 flex-col gap-0.5">
-            <span className={dsTypoSmall}>Motivo assenza</span>
+          <div className="flex min-w-0 flex-col gap-0.5">
+            <span className={gestionaleFieldLabelClass}>Motivo assenza</span>
             <GlobalSelect
               selectOnly
               value={value.tipoAssenzaId ?? ""}
@@ -113,10 +114,10 @@ export function TimesheetCellEditor({
               disabled={readOnly}
               aria-label="Tipo assenza"
             />
-          </label>
+          </div>
           {selectedTipo?.requiresCustomText ? (
-            <label className="flex min-w-0 flex-col gap-0.5">
-              <span className={dsTypoSmall}>Motivo (Altro)</span>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className={gestionaleFieldLabelClass}>Motivo (Altro)</span>
               <input
                 className={inputClass}
                 value={value.motivoCustom}
@@ -124,7 +125,7 @@ export function TimesheetCellEditor({
                 onChange={(e) => onChange({ ...value, motivoCustom: sliceInputValue(e.target.value, TEXT_MEDIUM) })}
                 maxLength={TEXT_MEDIUM}
               />
-            </label>
+            </div>
           ) : null}
         </div>
       ) : null}

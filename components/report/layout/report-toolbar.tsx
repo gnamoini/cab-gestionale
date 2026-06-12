@@ -58,7 +58,7 @@ export function ReportToolbar({
           <button
             type="button"
             className={dsPageToolbarBtn}
-            onClick={() => openPdfArtifact("report-bundle")}
+            onClick={() => void openPdfArtifact("report-bundle")}
             title="Esporta PDF report gestionale"
             aria-label="Esporta PDF report gestionale"
           >

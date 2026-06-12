@@ -1,3 +1,5 @@
+import { cellValueToUpsert } from "@/lib/dipendenti/timesheet-entry-map";
+import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import { isCellEmpty } from "@/lib/dipendenti/timesheet-totals";
 import type {
   DipendenteTimesheetEmployeeRow,
@@ -43,4 +45,16 @@ export function countEmptyDay8hUpserts(
   getCellValue: (dipendenteId: string, workDate: string) => TimesheetCellValue,
 ): number {
   return buildEmptyDay8hUpserts(employees, workDate, getCellValue).length;
+}
+
+/** Copia lo stesso valore cella a tutti gli addetti per un singolo giorno (sovrascrive). */
+export function buildCopyDayToAllUpserts(
+  employees: readonly DipendenteTimesheetEmployeeRow[],
+  workDate: string,
+  sourceValue: TimesheetCellValue,
+  tipiAssenza: readonly TipoAssenzaConfig[],
+): TimesheetEntryUpsert[] {
+  return employees.map((employee) =>
+    cellValueToUpsert(employee.id, workDate, sourceValue, tipiAssenza),
+  );
 }

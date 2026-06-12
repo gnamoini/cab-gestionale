@@ -8,6 +8,7 @@ import {
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { lavorazioneOreLavoroSortValue } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
 export type LavorazioneSchedeSortRowIndex = {
@@ -27,6 +28,7 @@ export function buildLavorazioneSchedeSortIndex(
   rows: readonly LavorazioneListRow[],
   schedeStore: LavorazioneSchedeStore,
   fallbackAddetto: string,
+  logsByLavorazioneId?: ReadonlyMap<string, readonly LogModificaRow[]>,
 ): LavorazioneSchedeSortIndex {
   const index: Record<string, LavorazioneSchedeSortRowIndex> = {};
   for (const row of rows) {
@@ -37,7 +39,7 @@ export function buildLavorazioneSchedeSortIndex(
       cliente: clienteLabel(row, slice),
       utilizzatore: utilizzatoreLabel(row, slice),
       cantiere: cantiereLabel(row, slice),
-      addetto: addettoLabel(row, slice, fallbackAddetto),
+      addetto: addettoLabel(row, slice, fallbackAddetto, logsByLavorazioneId?.get(row.id)),
       oreTotali: lavorazioneOreLavoroSortValue(row, slice),
     };
   }
