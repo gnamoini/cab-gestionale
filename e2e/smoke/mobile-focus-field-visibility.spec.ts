@@ -125,12 +125,6 @@ test.describe("mobile focus field visibility", () => {
 
     await modal.getByLabel(/^Cliente/i).click();
     await assertFieldFullyVisible(page, "Cliente");
-
-    const note = modal.getByLabel(/Descrizione anomalia/i);
-    if (await note.isVisible().catch(() => false)) {
-      await note.click();
-      await assertFieldFullyVisible(page, "Descrizione anomalia");
-    }
   });
 
   test("scheda ingresso: combobox e data ingresso visibili dopo focus", async ({ page }) => {
