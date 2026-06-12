@@ -711,3 +711,79 @@ body:has(.cab-app-shell) .cab-app-shell {
   min-height: 0;
   max-height: 100%;
 }
+
+/** Slider livello carburante — track unico, thumb touch-friendly su mobile. */
+.livello-carburante-range {
+  height: 0.5rem;
+  touch-action: pan-y;
+}
+
+.livello-carburante-range::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--cab-primary) 0%,
+    var(--cab-primary) var(--livello-pct, 0%),
+    color-mix(in srgb, var(--cab-border) 40%, var(--cab-surface)) var(--livello-pct, 0%),
+    color-mix(in srgb, var(--cab-border) 40%, var(--cab-surface)) 100%
+  );
+}
+
+.livello-carburante-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 1.375rem;
+  height: 1.375rem;
+  margin-top: -0.4375rem;
+  border-radius: 9999px;
+  border: 2px solid var(--cab-card);
+  background: var(--cab-primary);
+  box-shadow: var(--cab-shadow-sm);
+}
+
+.livello-carburante-range::-moz-range-track {
+  height: 0.5rem;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--cab-primary) 0%,
+    var(--cab-primary) var(--livello-pct, 0%),
+    color-mix(in srgb, var(--cab-border) 40%, var(--cab-surface)) var(--livello-pct, 0%),
+    color-mix(in srgb, var(--cab-border) 40%, var(--cab-surface)) 100%
+  );
+}
+
+.livello-carburante-range::-moz-range-thumb {
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 9999px;
+  border: 2px solid var(--cab-card);
+  background: var(--cab-primary);
+  box-shadow: var(--cab-shadow-sm);
+}
+
+@media (max-width: 639px) {
+  .livello-carburante-range {
+    height: 0.625rem;
+  }
+
+  .livello-carburante-range::-webkit-slider-runnable-track {
+    height: 0.625rem;
+  }
+
+  .livello-carburante-range::-webkit-slider-thumb {
+    width: 1.625rem;
+    height: 1.625rem;
+    margin-top: -0.5rem;
+  }
+
+  .livello-carburante-range::-moz-range-track {
+    height: 0.625rem;
+  }
+
+  .livello-carburante-range::-moz-range-thumb {
+    width: 1.625rem;
+    height: 1.625rem;
+  }
+}

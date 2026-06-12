@@ -1,5 +1,6 @@
 "use client";
 
+import { APP_SETTINGS_AUDIT_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -26,7 +27,7 @@ export const appSettingsAuditService = {
       const limit = Math.min(Math.max(params.limit ?? 200, 1), 2000);
       let q = c
         .from("app_settings_audit")
-        .select("*")
+        .select(APP_SETTINGS_AUDIT_COLUMNS)
         .order("updated_at", { ascending: false })
         .limit(limit);
       if (params.module?.trim()) q = q.eq("module", params.module.trim());

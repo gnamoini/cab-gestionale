@@ -46,7 +46,7 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
   try {
     const [{ data: prof }, { data: permRows }, { data: settingsRow }] = await Promise.all([
       sb.from("profiles").select("ruolo").eq("id", userId).maybeSingle(),
-      sb.from("user_permissions").select("*").eq("user_id", userId),
+      sb.from("user_permissions").select("user_id, module, can_read, can_write, can_admin").eq("user_id", userId),
       sb
         .from("app_settings")
         .select("value")

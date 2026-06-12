@@ -81,4 +81,30 @@ assert.deepEqual(
   "desktop autocomplete still uses suggestionSearchText when not on sheet",
 );
 
+const monthItems = [
+  { value: "1", label: "Gennaio" },
+  { value: "2", label: "Febbraio" },
+  { value: "4", label: "Aprile" },
+  { value: "8", label: "Agosto" },
+  { value: "12", label: "Dicembre" },
+];
+
+assert.deepEqual(
+  resolveSelectorSuggestions({
+    mode: "items",
+    selectOnly: true,
+    useSheet: false,
+    sheetQuery: "",
+    engineInput: { ...baseEngineInput, mode: "items", items: monthItems },
+    suggestionSearchText: "",
+    options: [],
+    items: monthItems,
+    selectedValue: "4",
+    recentValues: [],
+    preserveItemOrder: true,
+  }).map((i) => (typeof i === "string" ? i : i.label)),
+  ["Gennaio", "Febbraio", "Aprile", "Agosto", "Dicembre"],
+  "preserveItemOrder keeps chronological month list (not A→Z)",
+);
+
 console.log("resolve-selector-suggestions.test.ts OK");

@@ -1,5 +1,6 @@
 "use client";
 
+import { LAVORAZIONI_COLUMNS } from "@/lib/db/table-select-columns";
 import { pickLavorazioneWritePayload } from "@/lib/validation/services/lavorazioni-payload";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
@@ -33,14 +34,20 @@ export type LavorazioneListRow = LavorazioneRow & {
   created_by_nome?: string | null;
 };
 
+export type LavorazioniListFetchMode = "light" | "detail" | "report";
+
 export type LavorazioneFilters = {
   /** Se valorizzato, filtra `stato` con `IN` (insieme esplicito). */
   stati_in?: StatoLavorazione[];
   mezzo_id?: string;
   stato?: StatoLavorazione;
   priorita?: PrioritaLavorazione;
-  /** Se true, include join `mezzi` (relazione su mezzo_id). */
+  /** Se true, include join `mezzi` (relazione su mezzo_id). Ignorato in `fetchMode: report`. */
   includeMezzo?: boolean;
+  /** Default `light` — liste tabella/kanban. `report` = colonne KPI senza embed. */
+  fetchMode?: LavorazioniListFetchMode;
+  /** Default false in light — profili caricati lazy su mobile. */
+  includeProfiles?: boolean;
   /** Contenuto in `note` (case-insensitive). */
   search?: string;
   /** Range opzionale su `data_ingresso` (ISO `yyyy-mm-dd` o timestamp completo). */
@@ -106,7 +113,7 @@ export const lavorazioniService = {
       const allowed = await ensureSectionRead("lavorazioni");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
-      const { data, error } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
+      const { data, error } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
       if (error) return err(error.message);
       if (!data) return err("Lavorazione non trovata");
       return success(data as LavorazioneRow);
@@ -131,7 +138,7 @@ export const lavorazioniService = {
         created_by: createdBy,
         updated_by: createdBy ?? userId,
       } as LavorazioneInsert;
-      const { data: row, error } = await sb.from("lavorazioni").insert(insertPayload).select("*").single();
+      const { data: row, error } = await sb.from("lavorazioni").insert(insertPayload).select(LAVORAZIONI_COLUMNS).single();
       if (error) return err(error.message);
       const r = row as LavorazioneRow;
       const ctx = await oggettoContextForLavorazione(sb, r);
@@ -148,13 +155,13 @@ export const lavorazioniService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const userId = await authUserId(sb);
-      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
+      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
       const picked = pickLavorazioneWritePayload(data as Record<string, unknown>);
       const { data: row, error } = await applyLavorazioniNotDeletedFilter(
         sb.from("lavorazioni").update(withRowUpdatedBy(picked, userId)).eq("id", id),
       )
-        .select("*")
+        .select(LAVORAZIONI_COLUMNS)
         .single();
       if (error) return err(error.message);
       const r = row as LavorazioneRow;
@@ -178,7 +185,7 @@ export const lavorazioniService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const userId = await authUserId(sb);
-      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
+      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
       const { data: row, error } = await applyLavorazioniNotDeletedFilter(
         sb
@@ -186,7 +193,7 @@ export const lavorazioniService = {
           .update(withRowUpdatedBy({ stato, data_uscita: null, archived: false, archived_at: null }, userId))
           .eq("id", id),
       )
-        .select("*")
+        .select(LAVORAZIONI_COLUMNS)
         .single();
       if (error) return err(error.message);
       const r = row as LavorazioneRow;
@@ -210,7 +217,7 @@ export const lavorazioniService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const userId = await authUserId(sb);
-      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
+      const { data: before, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
       if (!before) return err("Lavorazione non trovata");
       const b = before as LavorazioneRow;
@@ -229,11 +236,11 @@ export const lavorazioniService = {
       const { data: row, error } = await applyLavorazioniNotDeletedFilter(
         sb.from("lavorazioni").update(patch).eq("id", id).eq("archived", false),
       )
-        .select("*")
+        .select(LAVORAZIONI_COLUMNS)
         .maybeSingle();
       if (error) return err(error.message);
       if (!row) {
-        const { data: current, error: e1 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
+        const { data: current, error: e1 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
         if (e1) return err(e1.message);
         if (current && (current as LavorazioneRow).archived === true) return success(current as LavorazioneRow);
         return err("Conclusione non riuscita.");
@@ -262,7 +269,7 @@ export const lavorazioniService = {
       const allowed = await ensurePermission("deleteRecords");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
-      const { data: existing, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*").eq("id", id)).maybeSingle();
+      const { data: existing, error: e0 } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select(LAVORAZIONI_COLUMNS).eq("id", id)).maybeSingle();
       if (e0) return err(e0.message);
       if (!existing) return err("Lavorazione non trovata");
       const { lavorazioneDocumentsService } = await import("@/src/services/lavorazione-documents.service");

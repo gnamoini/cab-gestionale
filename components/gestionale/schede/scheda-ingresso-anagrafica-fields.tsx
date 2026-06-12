@@ -8,7 +8,7 @@ import { CompatHierarchySelect } from "@/components/gestionale/magazzino/compat-
 import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoIdentAutocompleteField } from "@/lib/selector-core/legacy-selector-adapters";
-import { dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
+import { dsInput } from "@/lib/ui/design-system";
 import { sliceInputValue, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { SchedaIngressoFields } from "@/types/schede";
@@ -25,11 +25,10 @@ function SchedaIngressoAnagraficaFieldsInner({
   sections = ALL_SECTIONS,
   onExactMezzoMatch,
   lastIngressoMatch,
+  lastIngressoMatchCount = 1,
   onCopyLastIngresso,
   clienteRequired = false,
   marcaAttrezzaturaRequired = false,
-  onSaveMezzo,
-  saveMezzoPending = false,
   mezzoLinked = false,
 }: {
   value: SchedaIngressoFields;
@@ -39,12 +38,10 @@ function SchedaIngressoAnagraficaFieldsInner({
   sections?: readonly SchedaIngressoAnagraficaSection[];
   onExactMezzoMatch?: (mezzo: MezzoGestito) => void;
   lastIngressoMatch?: { updatedAt?: string } | null;
+  lastIngressoMatchCount?: number;
   onCopyLastIngresso?: () => void;
   clienteRequired?: boolean;
   marcaAttrezzaturaRequired?: boolean;
-  /** Salva solo anagrafica mezzo (senza chiudere la lavorazione). */
-  onSaveMezzo?: () => void;
-  saveMezzoPending?: boolean;
   mezzoLinked?: boolean;
 }) {
   const show = (s: SchedaIngressoAnagraficaSection) => sections.includes(s);
@@ -183,11 +180,12 @@ function SchedaIngressoAnagraficaFieldsInner({
               visible={Boolean(lastIngressoMatch)}
               highlight={false}
               updatedAt={lastIngressoMatch?.updatedAt}
+              matchCount={lastIngressoMatchCount}
               disabled={disabled}
               onCopy={onCopyLastIngresso}
             />
           ) : null}
-          {mezzoLinked && !onSaveMezzo ? (
+          {mezzoLinked ? (
             <p className="text-xs text-[color:var(--cab-text-muted)]">Mezzo collegato in anagrafica.</p>
           ) : null}
         </FormSection>
@@ -244,24 +242,6 @@ function SchedaIngressoAnagraficaFieldsInner({
             onExactMezzoMatch={mezzoMatchHandler}
           />
         </FormSection>
-      ) : null}
-
-      {onSaveMezzo ? (
-        <div className="flex min-w-0 flex-col gap-2 border-t border-[color:var(--cab-border)] pt-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
-          {mezzoLinked ? (
-            <p className="order-2 w-full text-xs text-[color:var(--cab-text-muted)] sm:order-1 sm:mr-auto sm:w-auto">
-              Mezzo collegato in anagrafica.
-            </p>
-          ) : null}
-          <button
-            type="button"
-            className={`${dsBtnNeutral} order-1 min-h-11 w-full sm:order-2 sm:min-w-[9.5rem] sm:w-auto`}
-            disabled={disabled || saveMezzoPending}
-            onClick={onSaveMezzo}
-          >
-            {saveMezzoPending ? "Salvataggio…" : "Salva mezzo"}
-          </button>
-        </div>
       ) : null}
 
       {show("dettagli") ? (

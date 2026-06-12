@@ -130,6 +130,10 @@ export interface DocumentoGestionale {
   urlBlob?: string;
   /** Estensione file, es. `.pdf` (opzionale, da upload o nome). */
   fileEstensione?: string;
+  /** Thumbnail available (stored key or PDF/image type). */
+  hasPreview?: boolean;
+  /** Cache-buster for preview/delivery URLs. */
+  contentVersion?: string;
   /** Legacy — non più usati in UI Documenti */
   entitaTipo?: "macchina" | "azienda" | "lavorazione";
   entitaLabel?: string;

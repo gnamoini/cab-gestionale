@@ -33,7 +33,7 @@ export function CabLogo({ className = "", height = 28, priority = true, sizes }:
       width={CAB_LOGO_INTRINSIC_WIDTH}
       height={CAB_LOGO_INTRINSIC_HEIGHT}
       priority={priority}
-      quality={100}
+      quality={75}
       unoptimized={isCustomLogo}
       sizes={sizes ?? `${displayWidth}px`}
       className={`block h-auto w-auto max-w-full shrink-0 object-contain ${className}`}
@@ -56,6 +56,7 @@ export function CabLogoFill({ className = "", sizes }: CabLogoFillProps) {
       src={logoUrl}
       alt=""
       fill
+      quality={75}
       unoptimized={isCustomLogo}
       sizes={sizes ?? "(max-width: 640px) 220px, 280px"}
       className={`object-contain ${className}`}

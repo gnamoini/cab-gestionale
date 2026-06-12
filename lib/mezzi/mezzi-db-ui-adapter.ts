@@ -1,6 +1,7 @@
 import { normalizePreventivoTipoDocumento } from "@/lib/preventivi/preventivi-tipo-documento";
 import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
 import { resolveDocumentoTipoFile } from "@/lib/documenti/documento-tipo-file";
+import { readDocumentIntelligenceMeta } from "@/lib/documents/document-meta";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { imageLogModificaRiga, isImageLogAction, type MezziLogEntryLike } from "@/lib/gestionale-log/view-model";
 import { diffMezzoChanges } from "@/lib/mezzi/mezzi-helpers";
@@ -73,13 +74,18 @@ export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale
       applicabilita = "marca";
     }
   }
+  const intelligence = readDocumentIntelligenceMeta(meta as Record<string, unknown>);
+  const tipoFile = resolveDocumentoTipoFile({ urlFile: row.url_file, nome, meta });
+  const previewCapable = tipoFile === "pdf" || tipoFile === "immagine";
+  const contentVersion =
+    (typeof meta.uploadedAt === "string" && meta.uploadedAt) || row.created_at || undefined;
   return {
     id: row.id,
     nome,
     categoria: CAT_MAP[row.categoria] ?? "altro",
     marca: senzaMarca ? "" : row.marca,
     macchina: row.modello ?? "—",
-    tipoFile: resolveDocumentoTipoFile({ urlFile: row.url_file, nome, meta }),
+    tipoFile,
     fileEstensione:
       typeof meta.fileEstensione === "string" && meta.fileEstensione.trim()
         ? meta.fileEstensione.trim()
@@ -101,6 +107,8 @@ export function documentoRowToGestionale(row: DocumentoRow): DocumentoGestionale
         ? meta.modelloKey.trim()
         : row.modello?.trim() || undefined,
     urlDocumento: row.url_file,
+    hasPreview: Boolean(intelligence.thumbnailKey) || previewCapable,
+    contentVersion,
   };
 }
 

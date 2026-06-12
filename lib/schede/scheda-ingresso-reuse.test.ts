@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   findLastSchedaIngressoForIdent,
   hasSchedaIngressoIdentLookup,
+  listSchedaIngressoMatchesForIdent,
   mergeSchedaIngressoFields,
 } from "@/lib/schede/scheda-ingresso-reuse";
 import type { SchedaIngressoFields } from "@/types/schede";
@@ -31,6 +32,7 @@ const baseFields = (): SchedaIngressoFields => ({
 
 assert.equal(hasSchedaIngressoIdentLookup("AA111BB", ""), true);
 assert.equal(hasSchedaIngressoIdentLookup("", ""), false);
+assert.equal(hasSchedaIngressoIdentLookup("", "", "42"), true);
 
 const merged = mergeSchedaIngressoFields(
   { ...baseFields(), cliente: "Già inserito" },
@@ -56,36 +58,73 @@ const store = {
     lavorazioni: null,
     ricambi: null,
   },
+  "lav-scuderia": {
+    lavorazioneId: "lav-scuderia",
+    ingresso: {
+      tipo: "ingresso" as const,
+      sorgente: "generata" as const,
+      createdAt: "2025-02-01T10:00:00.000Z",
+      updatedAt: "2025-07-01T12:00:00.000Z",
+      createdBy: "B",
+      updatedBy: "B",
+      fileEsterno: null,
+      campi: { ...baseFields(), targa: "", matricola: "", nScuderia: "99", cliente: "Scuderia Srl" },
+    },
+    lavorazioni: null,
+    ricambi: null,
+  },
 };
 
-const hit = findLastSchedaIngressoForIdent(
-  "AA111BB",
-  "ABC123",
-  [],
-  store,
-  [
-    {
-      id: "lav-old",
-      targa: "AA111BB",
-      matricola: "ABC123",
-      macchina: "X",
-      nScuderia: "",
-      dataIngresso: "2025-01-01",
-      cliente: "—",
-      cantiere: "",
-      utilizzatore: "",
-      addetto: "",
-      noteInterne: "",
-      priorita: "media",
-      statoId: "accettazione",
-      dataCompletamento: null,
-    },
-  ],
-  [],
-  { excludeLavorazioneId: "lav-new" },
-);
+const attive = [
+  {
+    id: "lav-old",
+    targa: "AA111BB",
+    matricola: "ABC123",
+    macchina: "X",
+    nScuderia: "",
+    dataIngresso: "2025-01-01",
+    cliente: "—",
+    cantiere: "",
+    utilizzatore: "",
+    addetto: "",
+    noteInterne: "",
+    priorita: "media",
+    statoId: "accettazione",
+    dataCompletamento: null,
+  },
+  {
+    id: "lav-scuderia",
+    targa: "",
+    matricola: "",
+    macchina: "Y",
+    nScuderia: "99",
+    dataIngresso: "2025-02-01",
+    cliente: "—",
+    cantiere: "",
+    utilizzatore: "",
+    addetto: "",
+    noteInterne: "",
+    priorita: "media",
+    statoId: "accettazione",
+    dataCompletamento: null,
+  },
+] as const;
+
+const hit = findLastSchedaIngressoForIdent("AA111BB", "ABC123", [], store, [...attive], [], {
+  excludeLavorazioneId: "lav-new",
+});
 
 assert.ok(hit);
 assert.equal(hit.campi.cliente, "Storico Srl");
+
+const byScuderia = findLastSchedaIngressoForIdent("", "", [], store, [...attive], [], {
+  nScuderia: "99",
+});
+assert.ok(byScuderia);
+assert.equal(byScuderia.campi.cliente, "Scuderia Srl");
+
+const duplicates = listSchedaIngressoMatchesForIdent("AA111BB", "ABC123", "99", [], store, [...attive], []);
+assert.equal(duplicates.length, 2);
+assert.equal(duplicates[0]!.sourceLavorazioneId, "lav-scuderia");
 
 console.log("scheda-ingresso-reuse.test.ts: ok");

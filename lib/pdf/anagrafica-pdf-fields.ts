@@ -1,7 +1,13 @@
+import { formatLivelloCarburanteDisplay } from "@/lib/schede/livello-carburante-value";
 import type { PdfField } from "@/lib/pdf/core/pdf-base-template";
 import { pdfFieldFromValue } from "@/lib/pdf/gestionale-section-table";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
-import type { SchedaIngressoFields } from "@/types/schede";
+import {
+  resolveInterventoDisplayForSurface,
+  schedaIngressoFieldsFromDisplay,
+} from "@/lib/domain/intervento-context/resolve-intervento-display-for-surface";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 
 export function buildClienteAnagraficaPdfFields(source: {
   cliente?: string;
@@ -52,8 +58,24 @@ export function buildTelaioAnagraficaPdfFields(source: {
     field("Modello", source.modelloTelaio),
     field("Targa", source.targa),
     field("KM", source.km),
-    field("Carburante", source.livelloCarburante),
+    field("Carburante", formatLivelloCarburanteDisplay(source.livelloCarburante) || undefined),
   ].filter((f): f is PdfField => f !== null);
+}
+
+/** Sezioni PDF ingresso via read model quando disponibile row + store. */
+export function buildIngressoAnagraficaPdfSectionsFromContext(
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
+  fallbackIngresso?: SchedaIngressoFields,
+): ReturnType<typeof buildIngressoAnagraficaPdfSections> {
+  const display = resolveInterventoDisplayForSurface("pdf", {
+    lavorazioneRow: row,
+    schedeStore,
+    ingressoCampi: fallbackIngresso ?? schedeStore?.[row.id]?.ingresso?.campi ?? null,
+  });
+  return buildIngressoAnagraficaPdfSections(
+    schedaIngressoFieldsFromDisplay(display, fallbackIngresso),
+  );
 }
 
 export function buildIngressoAnagraficaPdfSections(c: SchedaIngressoFields): {

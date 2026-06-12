@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  DIPENDENTI_TIMESHEET_EMPLOYEES_COLUMNS,
+  DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS,
+} from "@/lib/db/table-select-columns";
 import { clampTextOrNull, TEXT_LONG, TEXT_MEDIUM } from "@/lib/validation/text-field-limits";
 import { normalizeCellValue, isCellEmpty } from "@/lib/dipendenti/timesheet-totals";
 import { validateCellValue } from "@/lib/dipendenti/timesheet-validation";
@@ -12,7 +16,6 @@ import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
-import { monthKeysFromEntryWorkDates } from "@/lib/dipendenti/timesheet-available-periods";
 import { monthDateRange } from "@/lib/dipendenti/timesheet-month";
 import { planEmployeeBootstrap } from "@/lib/dipendenti/timesheet-bootstrap";
 import type {
@@ -79,7 +82,7 @@ export const dipendentiTimesheetService = {
       const c = await sb();
       const { data, error } = await c
         .from("dipendenti_timesheet_employees")
-        .select("*")
+        .select(DIPENDENTI_TIMESHEET_EMPLOYEES_COLUMNS)
         .order("display_name", { ascending: true });
       if (error) return err(error.message);
       return success((data ?? []) as DipendenteTimesheetEmployeeRow[]);
@@ -100,31 +103,45 @@ export const dipendentiTimesheetService = {
       const plan = planEmployeeBootstrap(existing, addettiRecords);
       const c = await sb();
 
-      for (const ins of plan.inserts) {
-        const { error } = await c.from("dipendenti_timesheet_employees").insert({
-          display_name: ins.displayName,
-          source_addetto_name: ins.sourceAddettoName,
-          source_addetto_id: ins.sourceAddettoId,
-          in_settings: true,
-        });
+      if (plan.inserts.length > 0) {
+        const { error } = await c.from("dipendenti_timesheet_employees").insert(
+          plan.inserts.map((ins) => ({
+            display_name: ins.displayName,
+            source_addetto_name: ins.sourceAddettoName,
+            source_addetto_id: ins.sourceAddettoId,
+            in_settings: true,
+          })),
+        );
         if (error) return err(error.message);
       }
 
-      for (const upd of plan.settingsUpdates) {
-        const { error } = await c
-          .from("dipendenti_timesheet_employees")
-          .update({ in_settings: upd.inSettings })
-          .eq("id", upd.id);
-        if (error) return err(error.message);
+      const settingsChunks = plan.settingsUpdates;
+      for (let i = 0; i < settingsChunks.length; i += 20) {
+        const chunk = settingsChunks.slice(i, i + 20);
+        await Promise.all(
+          chunk.map(async (upd) => {
+            const { error } = await c
+              .from("dipendenti_timesheet_employees")
+              .update({ in_settings: upd.inSettings })
+              .eq("id", upd.id);
+            if (error) throw new Error(error.message);
+          }),
+        );
       }
 
-      for (const upd of plan.displayUpdates) {
-        const { error } = await c
-          .from("dipendenti_timesheet_employees")
-          .update({ display_name: upd.displayName })
-          .eq("id", upd.id)
-          .eq("in_settings", true);
-        if (error) return err(error.message);
+      const displayChunks = plan.displayUpdates;
+      for (let i = 0; i < displayChunks.length; i += 20) {
+        const chunk = displayChunks.slice(i, i + 20);
+        await Promise.all(
+          chunk.map(async (upd) => {
+            const { error } = await c
+              .from("dipendenti_timesheet_employees")
+              .update({ display_name: upd.displayName })
+              .eq("id", upd.id)
+              .eq("in_settings", true);
+            if (error) throw new Error(error.message);
+          }),
+        );
       }
 
       return dipendentiTimesheetService.listEmployees();
@@ -154,12 +171,13 @@ export const dipendentiTimesheetService = {
       const allowed = await ensureModuleCan("dipendenti", "read");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data, error } = await c.from("dipendenti_timesheet_entries").select("work_date");
+      const { data, error } = await c.rpc("list_timesheet_month_keys");
       if (error) return err(error.message);
-      const dates = (data ?? [])
-        .map((row) => (row as { work_date?: string }).work_date)
-        .filter((d): d is string => typeof d === "string" && d.trim().length > 0);
-      return success(monthKeysFromEntryWorkDates(dates));
+      const rows = (data ?? []) as { month_key?: string }[];
+      const keys = rows
+        .map((row) => row.month_key)
+        .filter((k): k is string => typeof k === "string" && /^\d{4}-\d{2}$/.test(k));
+      return success(keys as TimesheetMonthKey[]);
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -171,14 +189,13 @@ export const dipendentiTimesheetService = {
       const allowed = await ensureModuleCan("dipendenti", "read");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data, error } = await c.from("dipendenti_timesheet_entries").select("dipendente_id");
+      const { data, error } = await c.rpc("list_timesheet_employee_ids_with_entries");
       if (error) return err(error.message);
-      const ids = new Set<string>();
-      for (const row of data ?? []) {
-        const id = (row as { dipendente_id?: string }).dipendente_id;
-        if (typeof id === "string" && id.trim()) ids.add(id);
-      }
-      return success([...ids]);
+      const rows = (data ?? []) as { dipendente_id?: string }[];
+      const ids = rows
+        .map((row) => row.dipendente_id)
+        .filter((id): id is string => typeof id === "string" && id.trim().length > 0);
+      return success(ids);
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -191,7 +208,7 @@ export const dipendentiTimesheetService = {
       const c = await sb();
       const { data, error } = await c
         .from("dipendenti_timesheet_entries")
-        .select("*")
+        .select(DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS)
         .gte("work_date", from)
         .lte("work_date", to);
       if (error) return err(error.message);
@@ -234,7 +251,7 @@ export const dipendentiTimesheetService = {
 
       const { data: existing, error: findErr } = await c
         .from("dipendenti_timesheet_entries")
-        .select("*")
+        .select(DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS)
         .eq("dipendente_id", input.dipendenteId)
         .eq("work_date", workDate)
         .maybeSingle();
@@ -266,7 +283,7 @@ export const dipendentiTimesheetService = {
           .from("dipendenti_timesheet_entries")
           .update(payload)
           .eq("id", existing.id)
-          .select("*")
+          .select(DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS)
           .single();
         if (error) return err(error.message);
         const saved = data as DipendenteTimesheetEntryRow;
@@ -279,7 +296,7 @@ export const dipendentiTimesheetService = {
         return success(saved);
       }
 
-      const { data, error } = await c.from("dipendenti_timesheet_entries").insert(payload).select("*").single();
+      const { data, error } = await c.from("dipendenti_timesheet_entries").insert(payload).select(DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS).single();
       if (error) return err(error.message);
       const saved = data as DipendenteTimesheetEntryRow;
       await writeModificaLog(c, {
@@ -303,7 +320,7 @@ export const dipendentiTimesheetService = {
       const c = await sb();
       const { data: existing, error: e0 } = await c
         .from("dipendenti_timesheet_entries")
-        .select("*")
+        .select(DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS)
         .eq("dipendente_id", dipendenteId)
         .eq("work_date", parsed)
         .maybeSingle();

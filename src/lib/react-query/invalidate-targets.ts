@@ -2,6 +2,7 @@ import type { QueryClient } from "@tanstack/react-query";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 import { isClientPortalSyncTable } from "@/lib/lavorazioni/client-portal-sync-tables";
 import { refreshSchedeBundleSliceForSchedaId } from "@/lib/schede/schede-bundle-cache-patch";
+import { markSchedeEnsureAfterInvalidate } from "@/lib/schede/schede-ensure-options";
 import { markEntityInvalidated } from "@/lib/sync/recent-entity-invalidation";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
@@ -153,6 +154,9 @@ function invalidatePrefixKeys(
     const fp = keyFingerprint(key);
     if (seen.has(fp)) continue;
     seen.add(fp);
+    if (keyFingerprint(key) === keyFingerprint(QK.schede)) {
+      markSchedeEnsureAfterInvalidate(qc);
+    }
     void qc.invalidateQueries({ queryKey: key, refetchType });
   }
 }
@@ -196,6 +200,7 @@ export function executeInvalidateGestionaleTables(
       : baseRefetchType;
 
   if (trySurgicalSchedeInvalidation(qc, uniqueTables, options, refetchType)) {
+    clearDedupAfterInvalidation(uniqueTables, options?.entityIdByTable);
     return;
   }
 
@@ -215,6 +220,7 @@ export function executeInvalidateGestionaleTables(
       );
       invalidatePrefixKeys(qc, keys, refetchType);
     }
+    clearDedupAfterInvalidation(uniqueTables, options?.entityIdByTable);
     return;
   }
 
@@ -225,6 +231,20 @@ export function executeInvalidateGestionaleTables(
       markEntityInvalidated(table, id);
     }
   }
+  clearDedupAfterInvalidation(uniqueTables, options?.entityIdByTable);
+}
+
+function clearDedupAfterInvalidation(
+  tables: string[],
+  entityIdByTable?: ReadonlyMap<string, string>,
+): void {
+  if (process.env.NODE_ENV === "production") return;
+  void import("@/lib/query/query-dedup-registry").then(({ clearDedupForEntity }) => {
+    for (const table of tables) {
+      const entityId = entityIdByTable?.get(table);
+      clearDedupForEntity(table, entityId);
+    }
+  });
 }
 
 /** Tutte le tabelle operative (polling fallback Realtime). */

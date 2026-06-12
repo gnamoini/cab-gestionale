@@ -1,5 +1,6 @@
 "use client";
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -21,6 +22,30 @@ import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/ke
 
 async function sb() {
   return getBrowserSupabase();
+}
+
+const PROPAGATION_UPDATE_CHUNK = 20;
+
+type PropagationTable = "scheda_lavorazione" | "mezzi" | "magazzino_ricambi";
+
+async function runBatchedRowUpdates(
+  c: SupabaseClient,
+  table: PropagationTable,
+  updates: ReadonlyArray<{ id: string; payload: Record<string, unknown> }>,
+): Promise<number> {
+  if (!updates.length) return 0;
+  let updated = 0;
+  for (let i = 0; i < updates.length; i += PROPAGATION_UPDATE_CHUNK) {
+    const chunk = updates.slice(i, i + PROPAGATION_UPDATE_CHUNK);
+    await Promise.all(
+      chunk.map(async ({ id, payload }) => {
+        const { error } = await c.from(table).update(payload).eq("id", id);
+        if (error) throw new Error(error.message);
+        updated += 1;
+      }),
+    );
+  }
+  return updated;
 }
 
 function patchAddettiInContenuto(contenuto: unknown, from: string, to: string): { next: Record<string, unknown>; changed: boolean } {
@@ -128,29 +153,24 @@ async function propagateSchedaIngressoCampo(
   const c = await sb();
   const { data, error } = await c.from("scheda_lavorazione").select("id, contenuto");
   if (error) throw new Error(error.message);
-  let updated = 0;
+  const pending: { id: string; payload: Record<string, unknown> }[] = [];
   for (const row of data ?? []) {
     const { next, changed } = patchIngressoCampoInContenuto(row.contenuto, field, from, to);
-    if (!changed) continue;
-    const { error: upErr } = await c.from("scheda_lavorazione").update({ contenuto: next }).eq("id", row.id);
-    if (upErr) throw new Error(upErr.message);
-    updated += 1;
+    if (changed) pending.push({ id: row.id as string, payload: { contenuto: next } });
   }
-  return updated;
+  return runBatchedRowUpdates(c, "scheda_lavorazione", pending);
 }
 
 async function propagateAddettoRename(from: string, to: string): Promise<SettingsRenamePropagationResult> {
   const c = await sb();
   const { data, error } = await c.from("scheda_lavorazione").select("id, contenuto");
   if (error) throw new Error(error.message);
-  let updated = 0;
+  const pending: { id: string; payload: Record<string, unknown> }[] = [];
   for (const row of data ?? []) {
     const { next, changed } = patchAddettiInContenuto(row.contenuto, from, to);
-    if (!changed) continue;
-    const { error: upErr } = await c.from("scheda_lavorazione").update({ contenuto: next }).eq("id", row.id);
-    if (upErr) throw new Error(upErr.message);
-    updated += 1;
+    if (changed) pending.push({ id: row.id as string, payload: { contenuto: next } });
   }
+  const updated = await runBatchedRowUpdates(c, "scheda_lavorazione", pending);
   return { kind: "addetto", from, to, updated };
 }
 
@@ -158,55 +178,43 @@ async function propagateMezziMetaField(metaKey: string, from: string, to: string
   const c = await sb();
   const { data, error } = await c.from("mezzi").select("id, meta");
   if (error) throw new Error(error.message);
-  let updated = 0;
+  const pending: { id: string; payload: Record<string, unknown> }[] = [];
   for (const row of data ?? []) {
     const { next, changed } = patchMetaString(row.meta, metaKey, from, to);
-    if (!changed) continue;
-    const { error: upErr } = await c.from("mezzi").update({ meta: next }).eq("id", row.id);
-    if (upErr) throw new Error(upErr.message);
-    updated += 1;
+    if (changed) pending.push({ id: row.id as string, payload: { meta: next } });
   }
-  return updated;
+  return runBatchedRowUpdates(c, "mezzi", pending);
 }
 
 async function propagateMagazzinoMetaField(metaKey: string, from: string, to: string): Promise<number> {
   const c = await sb();
   const { data, error } = await c.from("magazzino_ricambi").select("id, meta");
   if (error) throw new Error(error.message);
-  let updated = 0;
+  const pending: { id: string; payload: Record<string, unknown> }[] = [];
   for (const row of data ?? []) {
     const { next, changed } = patchMetaString(row.meta, metaKey, from, to);
-    if (!changed) continue;
-    const { error: upErr } = await c.from("magazzino_ricambi").update({ meta: next }).eq("id", row.id);
-    if (upErr) throw new Error(upErr.message);
-    updated += 1;
+    if (changed) pending.push({ id: row.id as string, payload: { meta: next } });
   }
-  return updated;
+  return runBatchedRowUpdates(c, "magazzino_ricambi", pending);
 }
 
 async function propagateMagazzinoProduttoreAlternativo(from: string, to: string): Promise<number> {
   const c = await sb();
   const { data, error } = await c.from("magazzino_ricambi").select("id, meta");
   if (error) throw new Error(error.message);
-  let updated = 0;
+  const pending: { id: string; payload: Record<string, unknown> }[] = [];
   for (const row of data ?? []) {
     const altPatch = patchFornitoriAlternativiProduttoreRename(row.meta, from, to);
-    if (!altPatch.changed) continue;
-    const { error: upErr } = await c
-      .from("magazzino_ricambi")
-      .update({ meta: altPatch.next })
-      .eq("id", row.id);
-    if (upErr) throw new Error(upErr.message);
-    updated += 1;
+    if (altPatch.changed) pending.push({ id: row.id as string, payload: { meta: altPatch.next } });
   }
-  return updated;
+  return runBatchedRowUpdates(c, "magazzino_ricambi", pending);
 }
 
 async function propagateMagazzinoFornitoreAlternativo(from: string, to: string): Promise<number> {
   const c = await sb();
   const { data, error } = await c.from("magazzino_ricambi").select("id, meta");
   if (error) throw new Error(error.message);
-  let updated = 0;
+  const pending: { id: string; payload: Record<string, unknown> }[] = [];
   for (const row of data ?? []) {
     let meta = row.meta;
     let changed = false;
@@ -220,12 +228,9 @@ async function propagateMagazzinoFornitoreAlternativo(from: string, to: string):
       meta = legacy.next;
       changed = true;
     }
-    if (!changed) continue;
-    const { error: upErr } = await c.from("magazzino_ricambi").update({ meta }).eq("id", row.id);
-    if (upErr) throw new Error(upErr.message);
-    updated += 1;
+    if (changed) pending.push({ id: row.id as string, payload: { meta } });
   }
-  return updated;
+  return runBatchedRowUpdates(c, "magazzino_ricambi", pending);
 }
 
 async function propagateMagazzinoCompat(entry: SettingsRenameEntry): Promise<number> {
@@ -233,14 +238,14 @@ async function propagateMagazzinoCompat(entry: SettingsRenameEntry): Promise<num
   const liste = await loadMezziListePrefs();
   const { data, error } = await c.from("magazzino_ricambi").select("id, meta");
   if (error) throw new Error(error.message);
-  let updated = 0;
+  const pending: { id: string; payload: Record<string, unknown> }[] = [];
   for (const row of data ?? []) {
     const { next, changed } = regenerateCompatLegacyFromRefs(row.meta, liste, entry);
     if (!changed) continue;
     if (process.env.NODE_ENV !== "production") {
       const parsed = parseMagazzinoRicambioMeta(next);
       const report = auditCompatConsistency(
-        { id: row.id, ...metaFieldsToRicambioUi(parsed) },
+        { id: row.id as string, ...metaFieldsToRicambioUi(parsed) },
         liste,
         "settings-rename-propagation.propagateMagazzinoCompat",
       );
@@ -248,10 +253,9 @@ async function propagateMagazzinoCompat(entry: SettingsRenameEntry): Promise<num
         console.debug("[compat-rename-audit]", row.id, report.issues);
       }
     }
-    const { error: upErr } = await c.from("magazzino_ricambi").update({ meta: next }).eq("id", row.id);
-    if (upErr) throw new Error(upErr.message);
-    updated += 1;
+    pending.push({ id: row.id as string, payload: { meta: next } });
   }
+  const updated = await runBatchedRowUpdates(c, "magazzino_ricambi", pending);
   warnIfCompatImpact(entry, updated);
   return updated;
 }

@@ -1,15 +1,24 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { ReportExecutiveOverview } from "@/components/report/layout/report-executive-overview";
-import { ReportMaintenanceZone } from "@/components/report/layout/report-maintenance-zone";
 import { ReportOperationalAnalysisZone } from "@/components/report/layout/report-operational-analysis-zone";
 import { ReportPerformanceGate } from "@/components/report/layout/report-performance-gate";
 import { ReportToolbar } from "@/components/report/layout/report-toolbar";
-import { ReportTrendsZone } from "@/components/report/layout/report-trends-zone";
+import { LoadingCardSkeleton } from "@/components/design-system";
+
+const ReportTrendsZone = dynamic(
+  () => import("@/components/report/layout/report-trends-zone").then((m) => m.ReportTrendsZone),
+  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[12rem]" /> },
+);
+const ReportMaintenanceZone = dynamic(
+  () => import("@/components/report/layout/report-maintenance-zone").then((m) => m.ReportMaintenanceZone),
+  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[16rem]" /> },
+);
 import { ReportIntegrityStatusBadge } from "@/components/report/report-integrity-status-badge";
 import { buildReportModel } from "@/lib/report/build-report-model";
 import { endOfLocalDay, startOfLocalDay, type ReportCompareMode, type ReportPeriodPreset } from "@/lib/report/date-ranges";

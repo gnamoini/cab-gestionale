@@ -1,29 +1,35 @@
 "use client";
 
-import { useMemo } from "react";
-import { mapPreventiviRowsToRecords } from "@/lib/preventivi/preventivi-records-from-cache";
-import type { PreventivoRecord } from "@/lib/preventivi/types";
-import { usePreventiviListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import {
+  fetchPreventiviRecordsAuthorized,
+  type PreventiviRecordsPayload,
+} from "@/lib/preventivi/preventivi-list-fetch-authorized";
 import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
+import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { QK } from "@/src/lib/react-query/query-keys";
 
-/** Lista preventivi da Supabase (React Query). */
+const PREVENTIVI_RECORDS_KEY = [...QK.preventivi, null] as const;
+
+/** Lista preventivi — 1 query Supabase con embed mezzi (no join client). */
 export function usePreventiviRecordsQuery(enabled = true) {
   const gestOpts = useGestionaleQueryOpts();
-  const pvQ = usePreventiviListQuery(undefined, { enabled, ...gestOpts });
-  const mezziQ = useMezziListQuery(undefined, { enabled });
+  const q = useServiceQuery(PREVENTIVI_RECORDS_KEY, () => fetchPreventiviRecordsAuthorized(), {
+    enabled,
+    ...gestOpts,
+  });
 
-  const records = useMemo((): PreventivoRecord[] => {
-    const mezzi = mezziQ.data ?? [];
-    return mapPreventiviRowsToRecords(pvQ.data, mezzi);
-  }, [pvQ.data, pvQ.dataUpdatedAt, mezziQ.data]);
+  const payload = q.data;
+  const records = payload?.records ?? [];
+  const mezziRows = payload?.mezziRows ?? [];
 
   return {
     records,
-    isLoading: pvQ.isLoading || mezziQ.isLoading,
-    isError: pvQ.isError,
-    error: pvQ.error,
-    refetch: () => {
-      void pvQ.refetch();
-    },
+    mezziRows,
+    isLoading: q.isLoading,
+    isError: q.isError,
+    error: q.error,
+    refetch: () => void q.refetch(),
   };
 }
+
+export type { PreventiviRecordsPayload };

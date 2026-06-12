@@ -1,5 +1,6 @@
 "use client";
 
+import { PROFILES_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -21,7 +22,7 @@ export const authService = {
       const allowed = await ensurePermission("manageUsers");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = getBrowserSupabase();
-      let q = sb.from("profiles").select("*").order("nome", { ascending: true });
+      let q = sb.from("profiles").select(PROFILES_COLUMNS).order("nome", { ascending: true });
       if (filters?.ruolo) q = q.eq("ruolo", filters.ruolo);
       if (filters?.search?.trim()) q = q.ilike("nome", `%${filters.search.trim()}%`);
       const { data, error } = await q;

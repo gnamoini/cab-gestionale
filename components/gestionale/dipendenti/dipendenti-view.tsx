@@ -38,8 +38,9 @@ import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 
-/** Evidenziazione colonna «Oggi» — durata lettura dopo animazione CSS (~760ms). */
-const TIMESHEET_TODAY_ACCENT_MS = 2800;
+/** Evidenziazione colonna «Oggi» — hold + fade-out (allineato a CSS --timesheet-today-*). */
+const TIMESHEET_TODAY_ACCENT_HOLD_MS = 900;
+const TIMESHEET_TODAY_ACCENT_FADE_MS = 360;
 
 function formatWorkDateIt(dateYmd: string): string {
   const [y, m, d] = dateYmd.split("-");
@@ -57,6 +58,7 @@ export function DipendentiView() {
   const [bootstrapPending, setBootstrapPending] = useState(false);
   const [pdfExporting, setPdfExporting] = useState(false);
   const [accentDateYmd, setAccentDateYmd] = useState<string | null>(null);
+  const [accentFadingOut, setAccentFadingOut] = useState(false);
   const [fillToday8hPending, setFillToday8hPending] = useState(false);
   const [fillToday8hConfirmOpen, setFillToday8hConfirmOpen] = useState(false);
   const [fillToday8hUpserts, setFillToday8hUpserts] = useState<TimesheetEntryUpsert[]>([]);
@@ -169,6 +171,7 @@ export function DipendentiView() {
     setWeekAnchor(defaultWeekAnchor(key));
     setDayDate(defaultDayDate(key));
     setAccentDateYmd((prev) => (prev && !isDateInMonthKey(prev, key) ? null : prev));
+    setAccentFadingOut(false);
     setEditorTarget(null);
     setDetailEmployee(null);
   }, []);
@@ -176,11 +179,16 @@ export function DipendentiView() {
   const handleGoToToday = useCallback(() => {
     if (accentClearTimerRef.current) clearTimeout(accentClearTimerRef.current);
     handleMonthKey(currentMonthKey());
+    setAccentFadingOut(false);
     setAccentDateYmd(todayDateYmd());
     accentClearTimerRef.current = setTimeout(() => {
-      setAccentDateYmd(null);
-      accentClearTimerRef.current = null;
-    }, TIMESHEET_TODAY_ACCENT_MS);
+      setAccentFadingOut(true);
+      accentClearTimerRef.current = setTimeout(() => {
+        setAccentDateYmd(null);
+        setAccentFadingOut(false);
+        accentClearTimerRef.current = null;
+      }, TIMESHEET_TODAY_ACCENT_FADE_MS);
+    }, TIMESHEET_TODAY_ACCENT_HOLD_MS);
   }, [handleMonthKey]);
 
   const todayYmd = todayDateYmd();
@@ -350,6 +358,7 @@ export function DipendentiView() {
                 addettiRecords={ts.addettiRecords}
                 readOnly={readOnly || ts.entriesDegraded}
                 accentDateYmd={accentDateYmd}
+                accentFadingOut={accentFadingOut}
               />
             </ShellCard>
           ) : null}

@@ -263,8 +263,9 @@ export function dispatchGestionaleLocalMutation(
   qc: QueryClient,
   tables: string[],
   cabSyncEvents?: CabSyncEvent[],
+  entityIdByTable?: ReadonlyMap<string, string>,
 ): void {
-  dispatchGestionaleAction(qc, tables, { source: "local_mutation", cabSyncEvents });
+  dispatchGestionaleAction(qc, tables, { source: "local_mutation", cabSyncEvents, entityIdByTable });
 }
 
 /**

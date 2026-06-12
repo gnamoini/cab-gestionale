@@ -1,6 +1,7 @@
 "use server";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { PROFILES_COLUMNS, USER_PERMISSIONS_COLUMNS } from "@/lib/db/table-select-columns";
 import {
   CLIENT_LAVORAZIONI_SETTINGS_KEY,
   CLIENT_LAVORAZIONI_SETTINGS_MODULE,
@@ -82,7 +83,7 @@ async function loadAllUserPermissionRows(
   userIds: string[],
 ): Promise<UserPermissionRow[]> {
   if (userIds.length === 0) return [];
-  const { data, error } = await admin.from("user_permissions").select("*").in("user_id", userIds);
+  const { data, error } = await admin.from("user_permissions").select(USER_PERMISSIONS_COLUMNS).in("user_id", userIds);
   if (error) throw new Error(error.message);
   return (data ?? []) as UserPermissionRow[];
 }
@@ -209,12 +210,19 @@ export async function batchUpdateSecurityUsersAction(
     };
   }
 
+  const patchUserIds = normalized.map((p) => p.userId);
+  const { data: profilesBefore, error: profilesLoadErr } = await admin
+    .from("profiles")
+    .select(PROFILES_COLUMNS)
+    .in("id", patchUserIds);
+  if (profilesLoadErr) return { ok: false, message: profilesLoadErr.message };
+  const profileById = new Map(((profilesBefore ?? []) as ProfileRow[]).map((p) => [p.id, p]));
+
   let updatedCount = 0;
 
   for (const patch of normalized) {
-    const { data: before } = await admin.from("profiles").select("*").eq("id", patch.userId).maybeSingle();
-    if (!before) return { ok: false, message: `Profilo non trovato (${patch.userId}).` };
-    const profile = before as ProfileRow;
+    const profile = profileById.get(patch.userId);
+    if (!profile) return { ok: false, message: `Profilo non trovato (${patch.userId}).` };
 
     if (patch.nome != null && patch.nome !== profile.nome?.trim()) {
       if (!patch.nome) return { ok: false, message: "Il nome non può essere vuoto." };

@@ -13,8 +13,12 @@ import {
   gestionaleToDocumentoUpdate,
   uploadDocumentoBlob,
 } from "@/lib/documenti/documenti-db-mapper";
+import { buildDocumentPreviewUrl } from "@/lib/documents/document-preview-url";
+import { DocumentThumbnail } from "@/components/gestionale/documenti/document-thumbnail";
 import { useUploadFeedback } from "@/context/upload-feedback-context";
-import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
+import { invalidateEntity } from "@/lib/cache/minimal-invalidation-contract";
+import { warmupDocumentPreview } from "@/lib/observability/asset-cache-warmup";
+import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
@@ -122,7 +126,7 @@ import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { usePermissions } from "@/src/hooks/use-permissions";
+import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 
 /** Preferenza ultima azione “comprimi / espandi tutto” sull’albero documenti. */
@@ -228,6 +232,7 @@ function MarcaGlyph({ nome }: { nome: string }) {
 function ArchiveDocRow({
   doc,
   selected,
+  eagerPreview,
   onSelect,
   onInfo,
   onFileUnavailable,
@@ -235,6 +240,7 @@ function ArchiveDocRow({
 }: {
   doc: DocumentoGestionale;
   selected: boolean;
+  eagerPreview?: boolean;
   onSelect: () => void;
   onInfo: () => void;
   onFileUnavailable?: (message: string) => void;
@@ -293,7 +299,13 @@ function ArchiveDocRow({
       }}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2.5">
-        <DocGlyph doc={doc} />
+        <DocumentThumbnail
+          documentId={doc.id}
+          hasPreview={doc.hasPreview ?? (doc.tipoFile === "pdf" || doc.tipoFile === "immagine")}
+          contentVersion={doc.contentVersion}
+          eager={eagerPreview}
+          fallback={<DocGlyph doc={doc} />}
+        />
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 flex-nowrap items-center gap-2 sm:flex-wrap">
             <button
@@ -350,13 +362,13 @@ function SubTreeHeading({ title }: { title: string }) {
 export function DocumentiView() {
   const searchParams = useSearchParams();
   const qc = useQueryClient();
-  const docPerm = usePermissions("documenti");
-  const globalPerm = usePermissions();
+  const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
+  const docPerm = permModules.documenti;
   const canUploadDocuments = docPerm.canWrite;
   const canDeleteRecords = docPerm.canWrite && globalPerm.canDeleteRecords;
   const { authorName: author } = useAuth();
   const authorTrim = author.trim() || "Operatore";
-  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery({ tier: "static" });
   const appSettings = settingsPayload?.resolved;
   const mezziQuery = useMezziListQuery();
   const documentiQuery = useDocumentiListQuery();
@@ -598,9 +610,27 @@ export function DocumentiView() {
     applyDocumentiSortSelect(v, setSortColumn, setSortPhase);
   }, []);
 
-  const refreshDocumenti = useCallback(() => {
-    void invalidateOperationalTruth({ queryClient: qc, domain: "documenti" });
-  }, [qc]);
+  const refreshDocumenti = useCallback(
+    (documentoId?: string, dbVersion?: string, operation = "refresh") => {
+      void traceMutationLifecycle(
+        {
+          entityType: "documento",
+          entityId: documentoId ?? "list",
+          operation,
+          scope: documentoId ? "full" : "reactQuery",
+        },
+        () =>
+          invalidateEntity({
+            queryClient: qc,
+            entityType: "documento",
+            entityId: documentoId ?? "list",
+            scope: documentoId ? "full" : "reactQuery",
+            dbVersion,
+          }),
+      );
+    },
+    [qc],
+  );
 
   const handleUpload = useCallback(
     async (payload: Omit<DocumentoGestionale, "id">) => {
@@ -612,12 +642,14 @@ export function DocumentiView() {
         successToast: "Documento caricato.",
         run: async () => {
           let urlFile = payload.urlDocumento?.trim() ?? "";
+          let uploadIntelligence;
           if (payload.urlBlob?.trim()) {
-            const up = await uploadDocumentoBlob(payload.urlBlob, payload.nome || "documento");
+            const up = await uploadDocumentoBlob(payload.urlBlob, payload.nome || "documento", payload.categoria);
             if (!up.success || !up.data) {
               throw new Error(up.error ?? "Caricamento file non riuscito.");
             }
-            urlFile = up.data;
+            urlFile = up.data.path;
+            uploadIntelligence = up.data.intelligence;
             try {
               URL.revokeObjectURL(payload.urlBlob);
             } catch {
@@ -627,7 +659,7 @@ export function DocumentiView() {
           if (!urlFile) {
             throw new Error("File non disponibile per il salvataggio.");
           }
-          const insert = gestionaleToDocumentoInsert(payload, urlFile);
+          const insert = gestionaleToDocumentoInsert(payload, urlFile, uploadIntelligence);
           const res = await documentiService.create(insert);
           if (!res.success || !res.data) {
             if (payload.urlBlob?.trim()) {
@@ -635,6 +667,7 @@ export function DocumentiView() {
             }
             throw new Error(res.error ?? "Impossibile salvare il documento.");
           }
+          void fetch(buildDocumentPreviewUrl(res.data.id), { credentials: "include" }).catch(() => {});
           const row = resolveDocumentoApplicazione(documentoRowToGestionale(res.data));
           appendDocumentiChangeLog({
             tone: "create",
@@ -644,7 +677,12 @@ export function DocumentiView() {
             autore: authorTrim,
             atIso: new Date().toISOString(),
           });
-          refreshDocumenti();
+          const uploadedAt =
+            typeof res.data.meta === "object" && res.data.meta && "uploadedAt" in res.data.meta
+              ? String((res.data.meta as { uploadedAt?: string }).uploadedAt ?? "")
+              : undefined;
+          refreshDocumenti(row.id, uploadedAt || row.caricatoIl);
+          warmupDocumentPreview(row.id, { source: "archive" });
           return row;
         },
       });
@@ -724,7 +762,7 @@ export function DocumentiView() {
         setSelectedDocId((cur) => (cur === victim.id ? null : cur));
         setInfoDoc((d) => (d?.id === victim.id ? null : d));
         setEditDoc((d) => (d?.id === victim.id ? null : d));
-        refreshDocumenti();
+        refreshDocumenti(victim.id, victim.contentVersion);
         gestToast.successDeleted();
       } finally {
         setDocMutating(false);
@@ -983,10 +1021,11 @@ export function DocumentiView() {
                         className="mt-2 overflow-hidden rounded-[var(--ds-radius-lg)] bg-[var(--cab-card)] ring-1 ring-inset ring-[color:color-mix(in_srgb,var(--cab-warning)_40%,var(--cab-border))]"
                         role="listbox"
                       >
-                        {documentiSenzaMarca.map((d) => (
+                        {documentiSenzaMarca.map((d, i) => (
                           <ArchiveDocRow
                             key={d.id}
                             doc={d}
+                            eagerPreview={i < 3}
                             selected={selectedDocId === d.id}
                             onSelect={() => setSelectedDocId(d.id)}
                             onInfo={() => setInfoDoc(d)}

@@ -29,6 +29,8 @@ export type ResolveSelectorSuggestionsInput = {
   browseCap?: number;
   /** Solo A→Z con voce vuota in testa — no recenti / selezionato in cima. */
   alphabeticalBrowse?: boolean;
+  /** Mantiene l'ordine delle `items`/`options` (es. mesi Gen→Dic). */
+  preserveItemOrder?: boolean;
 };
 
 function sortAlphabeticalBrowsePool<T>(
@@ -63,6 +65,7 @@ export function resolveSelectorSuggestions(
     recentValues,
     recentsKey,
     alphabeticalBrowse,
+    preserveItemOrder,
   } = input;
 
   const itemsMode = mode === "items";
@@ -74,6 +77,9 @@ export function resolveSelectorSuggestions(
       let pool: readonly ListSelectItem[] = items;
       if (sheetQ) {
         pool = filterItemSelectSuggestions(sheetQ, items, items.length);
+      }
+      if (preserveItemOrder) {
+        return [...pool].slice(0, cap);
       }
       if (alphabeticalBrowse) {
         return sortAlphabeticalBrowsePool(pool, (i) => i.value, (i) => i.label).slice(0, cap);
@@ -92,6 +98,9 @@ export function resolveSelectorSuggestions(
     let pool = unique;
     if (sheetQ) {
       pool = filterListSelectSuggestions(sheetQ, options, options.length);
+    }
+    if (preserveItemOrder) {
+      return [...pool].slice(0, cap);
     }
     if (alphabeticalBrowse) {
       return sortAlphabeticalBrowsePool(pool, (s) => s, (s) => s).slice(0, cap);

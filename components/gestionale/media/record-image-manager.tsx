@@ -27,6 +27,7 @@ import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
+import { GestionaleMediaImage } from "@/components/gestionale/media/gestionale-media-image";
 import { logService } from "@/src/services/log.service";
 
 type ImageLogAction = "image_uploaded" | "image_deleted";
@@ -178,7 +179,7 @@ export function RecordImageManager({
     try {
       await deleteStoredImage(img.path);
       const logError = await writeImageLog("image_deleted", { name: img.name, path: img.path });
-      if (preview?.path === img.path) setPreview(null);
+      if (preview?.baseName === img.baseName) setPreview(null);
       await refresh();
       if (scope === "lavorazioni") dispatchGestionaleLocalMutation(qc, ["log_modifiche"]);
       if (logError) {
@@ -271,11 +272,10 @@ export function RecordImageManager({
   );
 
   const renderImageThumb = (img: StoredImage) => (
-    <div key={img.path} className={IMAGE_THUMB_CLASS}>
+    <div key={img.baseName} className={IMAGE_THUMB_CLASS}>
       <Tooltip content="Apri">
         <button type="button" className="block h-full w-full" onClick={() => setPreview(img)} aria-label="Apri foto">
-          {/* eslint-disable-next-line @next/next/no-img-element -- Signed Storage URLs are short-lived and already lazy-loaded thumbnails. */}
-          <img src={img.signedUrl} alt={img.name} loading="lazy" className="h-full w-full object-cover" />
+          <GestionaleMediaImage image={img} preset="thumb" alt={img.name} width={64} height={64} />
         </button>
       </Tooltip>
       {canEdit ? (
@@ -334,8 +334,14 @@ export function RecordImageManager({
             layerClassName={`!bg-black/70 ${cabModalZStacked}`}
           >
             <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center p-4">
-              {/* eslint-disable-next-line @next/next/no-img-element -- Preview uses short-lived Supabase signed URLs. */}
-              <img src={preview.signedUrl} alt={preview.name} className="max-h-[min(72dvh,640px)] rounded-xl object-contain shadow-2xl" />
+              <GestionaleMediaImage
+                image={preview}
+                preset="detail"
+                alt={preview.name}
+                loading="eager"
+                className="max-h-[min(72dvh,640px)] max-w-full"
+                imgClassName="max-h-[min(72dvh,640px)] max-w-full rounded-xl object-contain shadow-2xl"
+              />
               <div className="mt-3 flex w-full justify-end gap-2 border-t border-[color:var(--cab-border)] pt-3">
                 {canEdit ? (
                   <button type="button" className={dsBtnDanger} onClick={() => void removeImage(preview)}>
@@ -397,8 +403,14 @@ export function RecordImageManager({
           layerClassName={`!bg-black/70 ${cabModalZStacked}`}
         >
           <div className="flex min-h-0 min-w-0 flex-1 flex-col items-center justify-center p-4">
-            {/* eslint-disable-next-line @next/next/no-img-element -- Preview uses short-lived Supabase signed URLs. */}
-            <img src={preview.signedUrl} alt={preview.name} className="max-h-[min(72dvh,640px)] rounded-xl object-contain shadow-2xl" />
+            <GestionaleMediaImage
+              image={preview}
+              preset="detail"
+              alt={preview.name}
+              loading="eager"
+              className="max-h-[min(72dvh,640px)] max-w-full"
+              imgClassName="max-h-[min(72dvh,640px)] max-w-full rounded-xl object-contain shadow-2xl"
+            />
             <div className="mt-3 flex w-full justify-end gap-2 border-t border-[color:var(--cab-border)] pt-3">
               {canEdit ? (
                 <button type="button" className={dsBtnDanger} onClick={() => void removeImage(preview)}>

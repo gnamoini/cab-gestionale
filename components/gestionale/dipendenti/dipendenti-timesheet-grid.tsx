@@ -34,9 +34,14 @@ import {
 } from "@/lib/dipendenti/timesheet-cell-display";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import {
-  gestionaleListTableClass,
-  gestionaleListTableMasterWrapClass,
-} from "@/lib/ui/gestionale-list-table";
+  computeTimesheetUiTableWidthRem,
+  TIMESHEET_UI_CELL_OVERFLOW_CLASS,
+  TIMESHEET_UI_DAY_COL_MIN_CLASS,
+  TIMESHEET_UI_NAME_COL_CLASS,
+  TIMESHEET_UI_TABLE_CLASS,
+  TIMESHEET_UI_TOTAL_COL_CLASS,
+} from "@/lib/dipendenti/timesheet-grid-layout";
+import { gestionaleListTableMasterWrapClass } from "@/lib/ui/gestionale-list-table";
 import { dsScrollbar } from "@/lib/ui/design-system";
 import { scrollTimesheetColumnIntoView } from "@/lib/dipendenti/timesheet-grid-scroll";
 import { globalTableThCell, globalTableThLabel } from "@/lib/ui/global-table";
@@ -47,8 +52,8 @@ const timesheetStickyColBodyShadow =
 
 const timesheetTotalsColBorder = "border-l border-[color:var(--cab-border)]";
 
-/** Colonna nome: corpo compatto; header con etichetta globale (truncate). */
-const timesheetStickyNameCol = "min-w-[6.25rem] max-w-[9rem] w-[8.5rem]";
+/** Colonna nome: larghezza fissa da SSOT layout. */
+const timesheetStickyNameCol = TIMESHEET_UI_NAME_COL_CLASS;
 
 /** Stesso inset orizzontale della prima `<th>` (`globalTableHeadEdgeInset` + `pr-2.5`). */
 const timesheetStickyNamePad =
@@ -64,13 +69,19 @@ const timesheetHeaderThBase = [
 const timesheetFooterTdBase =
   "border-t-2 border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] py-2 shadow-none";
 
+const timesheetPresenzeShellClass = [
+  "timesheet-presenze-shell",
+  "relative",
+  "hidden md:block",
+  "w-full min-w-0 max-w-full overflow-hidden",
+  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)]",
+].join(" ");
+
 const timesheetTableScrollClass = [
   gestionaleListTableMasterWrapClass,
   "timesheet-presenze-grid",
-  "relative",
   dsScrollbar,
-  "max-h-[min(70vh,40rem)] max-w-full overflow-auto",
-  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)]",
+  "w-full max-h-[min(70vh,40rem)] max-w-full overflow-x-auto overflow-y-auto overscroll-contain [scrollbar-gutter:auto]",
 ].join(" ");
 
 type TimesheetTodayRailBox = { left: number; top: number; width: number; height: number };
@@ -109,8 +120,8 @@ function useTimesheetTodayColumnRail(
       const topRect = header.getBoundingClientRect();
       const bottomRect = bottomEl.getBoundingClientRect();
       setBox({
-        left: topRect.left - rootRect.left + root.scrollLeft,
-        top: topRect.top - rootRect.top + root.scrollTop,
+        left: topRect.left - rootRect.left,
+        top: topRect.top - rootRect.top,
         width: topRect.width,
         height: bottomRect.bottom - topRect.top,
       });
@@ -239,7 +250,9 @@ function resolvePointerCrosshair(
 function dayHeaderClass(isWeekend: boolean): string {
   return [
     timesheetHeaderThBase,
-    "min-w-[2.75rem] whitespace-nowrap px-0.5 text-center",
+    TIMESHEET_UI_DAY_COL_MIN_CLASS,
+    TIMESHEET_UI_CELL_OVERFLOW_CLASS,
+    "whitespace-nowrap px-0.5 text-center",
     isWeekend ? "text-[color:var(--cab-text-muted)]" : "",
   ].join(" ");
 }
@@ -256,6 +269,7 @@ export function DipendentiTimesheetGrid({
   addettiRecords = [],
   readOnly,
   accentDateYmd = null,
+  accentFadingOut = false,
 }: {
   monthKey: TimesheetMonthKey;
   days?: readonly TimesheetDayInfo[];
@@ -268,6 +282,7 @@ export function DipendentiTimesheetGrid({
   addettiRecords?: readonly AddettoRecord[];
   readOnly?: boolean;
   accentDateYmd?: string | null;
+  accentFadingOut?: boolean;
 }) {
   const days = useMemo(
     () => daysProp ?? buildMonthDays(monthKey),
@@ -392,15 +407,10 @@ export function DipendentiTimesheetGrid({
     const root = scrollContainerRef.current;
     if (!root) return;
 
-    const scrollToAccentColumn = () => {
-      const header = root.querySelector(`thead th[data-timesheet-day="${accentDateYmd}"]`);
-      if (header instanceof HTMLElement) {
-        scrollTimesheetColumnIntoView(root, header);
-      }
-    };
-
-    scrollToAccentColumn();
-    requestAnimationFrame(scrollToAccentColumn);
+    const header = root.querySelector(`thead th[data-timesheet-day="${accentDateYmd}"]`);
+    if (header instanceof HTMLElement) {
+      scrollTimesheetColumnIntoView(root, header, "auto");
+    }
   }, [accentDateYmd, monthKey, visibleEmployees.length]);
 
   const todayRailLayoutKey = `${monthKey}:${visibleEmployees.length}:${filterEmployeeId}`;
@@ -416,15 +426,22 @@ export function DipendentiTimesheetGrid({
     "sticky left-0 z-[2] border-b border-[color:var(--cab-border)] bg-[var(--cab-card)] align-middle text-left",
     timesheetStickyNamePad,
     timesheetStickyNameCol,
+    TIMESHEET_UI_CELL_OVERFLOW_CLASS,
   ].join(" ");
   const stickyNameShadow = timesheetStickyColBodyShadow;
   const dayTd = (weekend: boolean) =>
     [
-      "border-b border-[color:var(--cab-border)] p-0 align-middle",
+      "relative border-b border-[color:var(--cab-border)] p-0 align-middle min-h-9",
+      TIMESHEET_UI_DAY_COL_MIN_CLASS,
+      "min-w-0",
       weekend ? "" : "bg-[var(--cab-card)]",
     ].join(" ");
-  const totalTd =
-    "border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_25%,var(--cab-card))] px-1 py-1.5 text-center text-xs font-semibold tabular-nums";
+  const totalTd = [
+    "border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_25%,var(--cab-card))] px-1 py-1.5 text-center text-xs font-semibold tabular-nums",
+    TIMESHEET_UI_TOTAL_COL_CLASS,
+    TIMESHEET_UI_CELL_OVERFLOW_CLASS,
+  ].join(" ");
+  const tableWidthRem = computeTimesheetUiTableWidthRem(days.length);
 
   if (visibleEmployees.length === 0) {
     return (
@@ -436,28 +453,30 @@ export function DipendentiTimesheetGrid({
 
   return (
     <div
-      ref={scrollContainerRef}
-      className={`${timesheetTableScrollClass} hidden md:block`}
-      onPointerMove={handleGridPointerMove}
-      onPointerLeave={handleGridPointerLeave}
+      className={timesheetPresenzeShellClass}
+      data-timesheet-accent-fading={accentFadingOut ? "true" : undefined}
     >
-        {todayColumnRail ? (
-          <div
-            aria-hidden
-            className="timesheet-today-column-rail"
-            style={{
-              left: todayColumnRail.left,
-              top: todayColumnRail.top,
-              width: todayColumnRail.width,
-              height: todayColumnRail.height,
-            }}
-          />
-        ) : null}
-        <table className={`${gestionaleListTableClass} min-w-max border-separate border-spacing-0`}>
+      <div
+        ref={scrollContainerRef}
+        className={timesheetTableScrollClass}
+        onPointerMove={handleGridPointerMove}
+        onPointerLeave={handleGridPointerLeave}
+      >
+        <table
+          className={TIMESHEET_UI_TABLE_CLASS}
+          style={{ width: "100%", minWidth: `${tableWidthRem}rem` }}
+        >
+          <colgroup>
+            <col data-timesheet-fixed="name" />
+            {days.map((d) => (
+              <col key={d.dateYmd} data-timesheet-day="" />
+            ))}
+            <col data-timesheet-fixed="total" />
+          </colgroup>
           <GlobalTableHead sticky>
             <GlobalTableHeadLabel
               label="Dipendente"
-              thClassName={`sticky left-0 z-[4] ${timesheetStickyNameCol} bg-[var(--cab-surface-2)] py-2`}
+              thClassName={`sticky left-0 z-[4] ${timesheetStickyNameCol} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} bg-[var(--cab-surface-2)] py-2`}
             />
             {days.map((d) => (
               <th
@@ -486,7 +505,7 @@ export function DipendentiTimesheetGrid({
               </th>
             ))}
             <th
-              className={`${timesheetHeaderThBase} ${timesheetTotalsColBorder} min-w-[4.5rem] whitespace-nowrap px-1 text-center`}
+              className={`${timesheetHeaderThBase} ${timesheetTotalsColBorder} ${TIMESHEET_UI_TOTAL_COL_CLASS} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} whitespace-nowrap px-1 text-center`}
             >
               <Tooltip
                 content="Totali ore del mese (presenze in riga sopra, assenze in riga sotto)"
@@ -524,14 +543,14 @@ export function DipendentiTimesheetGrid({
                       >
                         <button
                           type="button"
-                          className="w-full break-words rounded-sm text-left transition-colors hover:text-[color:var(--cab-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]"
+                          className="w-full overflow-hidden rounded-sm text-left transition-colors hover:text-[color:var(--cab-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]"
                           onClick={() => onEmployeeClick(emp)}
                         >
-                        <span className="block text-xs font-semibold leading-snug text-[color:var(--cab-text)]">
+                        <span className="block truncate text-xs font-semibold leading-snug text-[color:var(--cab-text)]">
                           {nome}
                         </span>
                         {cognome ? (
-                          <span className="mt-0.5 block text-xs font-semibold leading-snug text-[color:var(--cab-text)]">
+                          <span className="mt-0.5 block truncate text-xs font-semibold leading-snug text-[color:var(--cab-text)]">
                             {cognome}
                           </span>
                         ) : null}
@@ -636,7 +655,7 @@ export function DipendentiTimesheetGrid({
           <tfoot className="bg-[var(--cab-surface-2)]">
             <tr>
               <td
-                className={`${timesheetFooterTdBase} sticky left-0 z-[2] ${timesheetStickyNameCol} ${timesheetStickyNamePad} text-left text-[color:var(--cab-text-muted)]`}
+                className={`${timesheetFooterTdBase} sticky left-0 z-[2] ${timesheetStickyNameCol} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} ${timesheetStickyNamePad} text-left text-[color:var(--cab-text-muted)]`}
                 rowSpan={2}
               >
                 <span className={`${globalTableThLabel} block truncate whitespace-nowrap`}>Totali mese</span>
@@ -651,6 +670,8 @@ export function DipendentiTimesheetGrid({
                     {...dayAccentProps(d.dateYmd)}
                     className={[
                       timesheetFooterTdBase,
+                      TIMESHEET_UI_DAY_COL_MIN_CLASS,
+                      TIMESHEET_UI_CELL_OVERFLOW_CLASS,
                       "px-0.5 text-center text-xs font-semibold tabular-nums",
                     ].join(" ")}
                   >
@@ -673,7 +694,7 @@ export function DipendentiTimesheetGrid({
                 );
               })}
               <td
-                className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} px-1 text-center text-xs font-semibold tabular-nums`}
+                className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} ${TIMESHEET_UI_TOTAL_COL_CLASS} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} px-1 text-center text-xs font-semibold tabular-nums`}
               >
                 <Tooltip
                   content={formatTimesheetFooterMonthTooltip(monthKey, "work", globalTotals.totaleLavorato)}
@@ -698,6 +719,8 @@ export function DipendentiTimesheetGrid({
                     {...dayAccentProps(d.dateYmd)}
                     className={[
                       timesheetFooterTdBase,
+                      TIMESHEET_UI_DAY_COL_MIN_CLASS,
+                      TIMESHEET_UI_CELL_OVERFLOW_CLASS,
                       "px-0.5 text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]",
                     ].join(" ")}
                   >
@@ -720,7 +743,7 @@ export function DipendentiTimesheetGrid({
                 );
               })}
               <td
-                className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} px-1 text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]`}
+                className={`${timesheetFooterTdBase} ${timesheetTotalsColBorder} ${TIMESHEET_UI_TOTAL_COL_CLASS} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} px-1 text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]`}
               >
                 <Tooltip
                   content={formatTimesheetFooterMonthTooltip(monthKey, "absence", globalTotals.oreAssenza)}
@@ -736,6 +759,20 @@ export function DipendentiTimesheetGrid({
             </tr>
           </tfoot>
         </table>
+      </div>
+      <div className="timesheet-presenze-highlight-layer" aria-hidden>
+        {todayColumnRail ? (
+          <div
+            className={`timesheet-today-column-rail${accentFadingOut ? " timesheet-today-column-rail--out" : ""}`}
+            style={{
+              left: todayColumnRail.left,
+              top: todayColumnRail.top,
+              width: todayColumnRail.width,
+              height: todayColumnRail.height,
+            }}
+          />
+        ) : null}
+      </div>
     </div>
   );
 }

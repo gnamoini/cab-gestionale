@@ -57,6 +57,8 @@ assert.match(focusScope, /flushSync/);
 assert.match(focusScope, /onSubmitCapture/);
 assert.match(lavCreate, /useFormEngineSections/);
 assert.match(lavCreate, /runSubmit/);
+assert.match(lavCreate, /GestionaleUnsavedChangesDialog/);
+assert.match(lavCreate, /requestClose/);
 assert.doesNotMatch(lavCreate, /domCliente/);
 assert.match(ricambioNew, /useFormEngine/);
 assert.match(ricambioNew, /runSubmit/);

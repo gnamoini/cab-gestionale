@@ -8,11 +8,11 @@ import {
   type DocumentoFileOpenResult,
 } from "@/lib/documenti/documento-file-access";
 import { documentoStoragePathFromStored } from "@/lib/documenti/storage-path-from-stored";
-import {
-  buildDocumentoStoragePath,
-  normalizeStorageObjectPath,
-  sanitizeStorageFileName,
-} from "@/src/lib/storage/storage-paths";
+import { requestArchiveDocumentUploadPolicy } from "@/lib/documenti/document-upload-policy-client";
+import { sha256HexFromFile } from "@/lib/documents/document-content-hash";
+import type { DocumentIntelligenceMeta } from "@/lib/documents/document-meta";
+import { mergeDocumentIntelligenceMeta } from "@/lib/documents/document-meta";
+import { normalizeStorageObjectPath, sanitizeStorageFileName } from "@/src/lib/storage/storage-paths";
 
 export { documentoStoragePathFromStored } from "@/lib/documenti/storage-path-from-stored";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
@@ -33,6 +33,7 @@ const DOCUMENTO_SIGNED_URL_TTL_SEC = 3600;
 export function gestionaleToDocumentoInsert(
   doc: Omit<DocumentoGestionale, "id">,
   storagePath: string,
+  intelligence?: DocumentIntelligenceMeta,
 ): DocumentoInsert {
   const marcaRaw = (doc.marcaKey ?? doc.marca).trim();
   const marca = marcaRaw && marcaRaw !== "—" ? marcaRaw : "—";
@@ -64,9 +65,15 @@ export function gestionaleToDocumentoInsert(
       fileEstensione: doc.fileEstensione,
       tipoFile: doc.tipoFile,
       uploadedAt: doc.caricatoIl || new Date().toISOString(),
+      ...(intelligence ? mergeDocumentIntelligenceMeta({}, intelligence) : {}),
     },
   };
 }
+
+export type DocumentoUploadResult = {
+  path: string;
+  intelligence?: DocumentIntelligenceMeta;
+};
 
 export function gestionaleToDocumentoUpdate(doc: DocumentoGestionale, storagePath?: string): DocumentoUpdate {
   const path = storagePath ?? doc.urlDocumento ?? "";
@@ -76,7 +83,8 @@ export function gestionaleToDocumentoUpdate(doc: DocumentoGestionale, storagePat
 export async function uploadDocumentoBlob(
   blobUrl: string,
   fileName: string,
-): Promise<ServiceResult<string>> {
+  categoria?: string,
+): Promise<ServiceResult<DocumentoUploadResult>> {
   try {
     const res = await fetch(blobUrl);
     if (!res.ok) return err("Impossibile leggere il file caricato.");
@@ -84,13 +92,13 @@ export async function uploadDocumentoBlob(
     const file = new File([blob], sanitizeStorageFileName(fileName, "documento"), {
       type: blob.type || "application/octet-stream",
     });
-    return uploadDocumentoFile(file);
+    return uploadDocumentoFile(file, categoria);
   } catch (e) {
     return serviceFailFromError(e);
   }
 }
 
-export async function uploadDocumentoFile(file: File): Promise<ServiceResult<string>> {
+export async function uploadDocumentoFile(file: File, categoria?: string): Promise<ServiceResult<DocumentoUploadResult>> {
   try {
     const allowed = await ensurePermission("uploadDocuments");
     if (!allowed.success) {
@@ -98,14 +106,36 @@ export async function uploadDocumentoFile(file: File): Promise<ServiceResult<str
       return err(allowed.error ?? "Permesso richiesto.");
     }
 
-    const path = buildDocumentoStoragePath(file.name);
-    await storageUpload(STORAGE_BUCKETS.documenti, path, file, {
-      cacheControl: "3600",
-      upsert: false,
+    const contentHash = await sha256HexFromFile(file);
+    const policy = await requestArchiveDocumentUploadPolicy({
+      fileName: file.name,
+      fileSize: file.size,
+      mimeType: file.type || "application/octet-stream",
+      contentHash,
+      categoria,
     });
+    if (!policy.ok) {
+      trackRuntimeEvent(RuntimeEvents.documentiUploadFailed, { reason: "policy_denied" });
+      return err(policy.message);
+    }
+    const path = policy.path;
+    if (!policy.deduplicated) {
+      await storageUpload(STORAGE_BUCKETS.documenti, path, file, {
+        cacheControl: "31536000",
+        upsert: false,
+      });
+    }
 
-    trackRuntimeEvent(RuntimeEvents.documentiUploadSuccess, { pathLength: path.length });
-    return success(path);
+    const intelligence: DocumentIntelligenceMeta = {
+      contentHash: policy.contentHash ?? contentHash,
+      semanticClass: policy.semanticClass,
+    };
+
+    trackRuntimeEvent(RuntimeEvents.documentiUploadSuccess, {
+      pathLength: path.length,
+      deduplicated: policy.deduplicated,
+    });
+    return success({ path, intelligence });
   } catch (e) {
     trackRuntimeEvent(RuntimeEvents.documentiUploadFailed, {
       reason: e instanceof Error ? e.message.slice(0, 200) : "upload_error",
@@ -114,7 +144,10 @@ export async function uploadDocumentoFile(file: File): Promise<ServiceResult<str
   }
 }
 
-/** URL firmato (unica modalità di accesso file persistiti su bucket `documenti`). */
+/**
+ * @deprecated Use `archiveDocumentDeliveryUrl` + GET `/api/documents/:id` instead.
+ * Kept for legacy callers during migration.
+ */
 export async function resolveDocumentoFileUrlSignedResult(
   row: Pick<DocumentoRow, "url_file">,
   doc?: DocumentoGestionale,

@@ -17,14 +17,14 @@ const mapperSrc = fs.readFileSync(
 );
 
 assert.match(helpersSrc, /getDocumentoFileAccessState/);
-assert.match(helpersSrc, /resolveDocumentoFileUrlSignedResult/);
+assert.match(helpersSrc, /archiveDocumentDeliveryUrl/);
+assert.doesNotMatch(helpersSrc, /storageCreateSignedUrl/);
 assert.doesNotMatch(
   helpersSrc,
   /canOpenDocumento[\s\S]{0,120}urlDocumento\?\.trim\(\)/,
   "canOpen must use access state not raw string presence",
 );
-assert.match(mapperSrc, /resolveDocumentoFileUrlSignedResult/);
-assert.match(mapperSrc, /classifyDocumentoStorageOpenError/);
+assert.match(mapperSrc, /requestArchiveDocumentUploadPolicy/);
 assert.match(viewSrc, /documentoFileUnavailableLabel/);
 assert.match(viewSrc, /result\.message/);
 

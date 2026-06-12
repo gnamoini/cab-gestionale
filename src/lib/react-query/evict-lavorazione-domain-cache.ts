@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { evictSchedeBundleForLavorazioneId } from "@/lib/schede/schede-bundle-cache-patch";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
 import { QK } from "@/src/lib/react-query/query-keys";
 
@@ -22,6 +23,8 @@ export function evictLavorazioneDomainCache(qc: QueryClient, lavorazioneId: stri
   for (const key of keys) {
     qc.removeQueries({ queryKey: key });
   }
+
+  evictSchedeBundleForLavorazioneId(qc, id);
 
   qc.removeQueries({
     predicate: (q) => {

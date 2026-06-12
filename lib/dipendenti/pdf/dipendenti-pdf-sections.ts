@@ -56,8 +56,9 @@ type PresenzeMonthlyGridOptions = {
 export async function buildDipendentePdf(
   ctx: DipendentiPdfContext,
   employee: DipendenteTimesheetEmployeeRow,
+  logoOverride?: string | null,
 ): Promise<JsPDFDoc> {
-  const logoDataUrl = await loadBrandingLogoDataUrl();
+  const logoDataUrl = logoOverride !== undefined ? logoOverride : await loadBrandingLogoDataUrl();
   const displayName = employeeDisplayName(employee, ctx.entries);
   const title = timesheetDipendenteTitle(ctx.monthKey, displayName);
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -71,12 +72,15 @@ export async function buildDipendentePdf(
   return doc;
 }
 
-export async function buildComplessivoPdf(ctx: DipendentiPdfContext): Promise<JsPDFDoc> {
+export async function buildComplessivoPdf(
+  ctx: DipendentiPdfContext,
+  logoOverride?: string | null,
+): Promise<JsPDFDoc> {
   if (ctx.employees.length === 0) {
     throw new Error("Nessun dipendente da esportare.");
   }
 
-  const logoDataUrl = await loadBrandingLogoDataUrl();
+  const logoDataUrl = logoOverride !== undefined ? logoOverride : await loadBrandingLogoDataUrl();
   const title = timesheetComplessivoTitle(ctx.monthKey);
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();

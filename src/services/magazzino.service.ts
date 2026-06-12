@@ -6,6 +6,8 @@ import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/
 import { sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
+import { MAGAZZINO_RICAMBI_COLUMNS } from "@/lib/db/table-select-columns";
+import { fetchMagazzinoListRows } from "@/lib/magazzino/magazzino-list-fetch";
 import { attachMagazzinoEntityKey } from "@/lib/validation/entity-persistence";
 import { errMessageFromSupabase, serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
@@ -42,13 +44,19 @@ export const magazzinoService = {
       const allowed = await ensureSectionRead("magazzino");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      let q = c.from("magazzino_ricambi").select("*").order("codice", { ascending: true });
-      if (filters?.codice?.trim()) q = q.ilike("codice", `%${filters.codice.trim()}%`);
-      if (filters?.nome?.trim()) q = q.ilike("nome", `%${filters.nome.trim()}%`);
-      if (filters?.marca?.trim()) q = q.ilike("marca", `%${filters.marca.trim()}%`);
-      const { data, error } = await q;
-      if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
-      return success((data ?? []) as MagazzinoRicambioRow[]);
+      return fetchMagazzinoListRows(c, { filters, variant: "list" });
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  /** Report/dashboard widget — subset KPI senza payload lista densa. */
+  async getAllForReport(filters?: MagazzinoFilters): Promise<ServiceResult<MagazzinoRicambioRow[]>> {
+    try {
+      const allowed = await ensureSectionRead("magazzino");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+      const c = await sb();
+      return fetchMagazzinoListRows(c, { filters, variant: "report" });
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -59,7 +67,7 @@ export const magazzinoService = {
       const allowed = await ensureSectionRead("magazzino");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data, error } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
       if (!data) return err("Ricambio non trovato");
       return success(data as MagazzinoRicambioRow);
@@ -74,7 +82,7 @@ export const magazzinoService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const payload = attachMagazzinoEntityKey(data);
-      const { data: row, error } = await c.from("magazzino_ricambi").insert(payload).select("*").single();
+      const { data: row, error } = await c.from("magazzino_ricambi").insert(payload).select(MAGAZZINO_RICAMBI_COLUMNS).single();
       if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
       const r = row as MagazzinoRicambioRow;
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoRicambio(r)) });
@@ -90,9 +98,9 @@ export const magazzinoService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const payload = Object.keys(data).length > 0 ? attachMagazzinoEntityKey(data) : data;
-      const { data: before, error: e0 } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
+      const { data: before, error: e0 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
-      const { data: row, error } = await c.from("magazzino_ricambi").update(payload).eq("id", id).select("*").single();
+      const { data: row, error } = await c.from("magazzino_ricambi").update(payload).eq("id", id).select(MAGAZZINO_RICAMBI_COLUMNS).single();
       if (error) return err(errMessageFromSupabase(error, { module: "magazzino", action: "read" }));
       const r = row as MagazzinoRicambioRow;
       await writeModificaLog(c, {
@@ -112,7 +120,7 @@ export const magazzinoService = {
       const allowed = await ensurePermission("deleteRecords");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: existing, error: e0 } = await c.from("magazzino_ricambi").select("*").eq("id", id).maybeSingle();
+      const { data: existing, error: e0 } = await c.from("magazzino_ricambi").select(MAGAZZINO_RICAMBI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(errMessageFromSupabase(e0, { module: "magazzino" }));
       if (existing) {
         const ex = existing as MagazzinoRicambioRow;

@@ -12,6 +12,7 @@ import { cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import { useGestionaleOverlayBehavior } from "@/lib/ui/use-gestionale-overlay-behavior";
 import { GestionaleMobileBottomSheet } from "@/components/gestionale/gestionale-mobile-bottom-sheet";
+import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
 
 type LockedScrollStyle = {
   overflow: string;
@@ -186,9 +187,18 @@ export function GestionaleSearchableSheetSelect({
   useSheetScrollIsolation(open, panelRef, internalListScrollRef);
 
   const handleClose = () => {
+    armSelectorGhostClickGuard();
     onOpenChange(false);
     restoreFocus();
   };
+
+  const prevOpenRef = useRef(open);
+  useEffect(() => {
+    if (prevOpenRef.current && !open) {
+      armSelectorGhostClickGuard();
+    }
+    prevOpenRef.current = open;
+  }, [open]);
 
   useEffect(() => {
     if (open) return;

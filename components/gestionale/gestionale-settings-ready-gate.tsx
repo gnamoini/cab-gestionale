@@ -20,7 +20,7 @@ export function GestionaleSettingsReadyGate({ children }: { children: React.Reac
   const { configurationError } = useAuth();
   const toast = useGestionaleToast();
   const settingsBlocked = !isSupabasePublicEnvConfigured() || !!configurationError;
-  const q = useCabAppSettingsPayloadQuery({ enabled: !settingsBlocked });
+  const q = useCabAppSettingsPayloadQuery({ enabled: !settingsBlocked, tier: "static" });
   const hasRuntimeCache = Boolean(getRuntimeCabAppSettings());
   const settingsLoading = q.isPending && !q.data && !hasRuntimeCache;
   const [hydrated, setHydrated] = useState(false);

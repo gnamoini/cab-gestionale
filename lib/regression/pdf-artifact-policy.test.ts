@@ -1,0 +1,63 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+
+const ROOT = process.cwd();
+
+function read(rel: string): string {
+  return fs.readFileSync(path.join(ROOT, rel), "utf8");
+}
+
+function exists(rel: string): boolean {
+  return fs.existsSync(path.join(ROOT, rel));
+}
+
+assert.ok(exists("docs/pdf-generation-map.md"), "docs/pdf-generation-map.md missing");
+
+const artifactRoute = read("app/api/pdf/artifacts/[type]/route.ts");
+assert.match(artifactRoute, /deliverPdfArtifact/);
+assert.match(artifactRoute, /isPdfArtifactType/);
+
+const rbac = read("lib/pdf-artifacts/pdf-artifact-rbac.server.ts");
+assert.match(rbac, /verifyServerSectionRead/);
+
+const paths = read("lib/pdf-artifacts/pdf-artifact-paths.ts");
+assert.match(paths, /dataHash/);
+assert.match(paths, /\.pdf/);
+
+const storageConfig = read("src/lib/storage/storage-config.ts");
+assert.match(storageConfig, /pdfArtifacts:\s*"pdf-artifacts"/);
+
+const migratedOpeners = [
+  "lib/lavorazioni/lavorazioni-list-pdf.ts",
+  "lib/preventivi/preventivi-pdf.ts",
+  "lib/schede/schede-pdf.ts",
+  "lib/bunder/bunder-pdf.ts",
+  "lib/dipendenti/pdf/dipendenti-pdf-export.ts",
+];
+
+for (const rel of migratedOpeners) {
+  const src = read(rel);
+  assert.doesNotMatch(src, /from\s+["']jspdf["']/);
+  assert.match(src, /openPdfArtifact/);
+}
+
+const pdfDataModules = [
+  "lib/lavorazioni/lavorazioni-list-fetch-server.ts",
+  "lib/report/report-pdf-data.server.ts",
+  "lib/preventivi/preventivi-fetch-server.ts",
+  "lib/schede/schede-fetch-server.ts",
+  "lib/dipendenti/dipendenti-pdf-data.server.ts",
+  "lib/bunder/bunder-fetch-server.ts",
+];
+
+for (const rel of pdfDataModules) {
+  const src = read(rel);
+  assert.doesNotMatch(src, /select\s*\(\s*["']\*["']\s*\)/);
+}
+
+const responseHeaders = read("lib/pdf/pdf-artifact-response.ts");
+assert.match(responseHeaders, /X-Cache-Status/);
+assert.match(responseHeaders, /X-PDF-Generate-Ms/);
+
+console.log("pdf-artifact-policy: OK");

@@ -34,8 +34,11 @@ assert.match(handler, /PDF_MAGIC/);
 assert.match(handler, /can_read_operational/);
 
 const bunderPdf = read("lib/bunder/bunder-pdf.ts");
-assert.match(bunderPdf, /openPdfBlobInNewTab/);
-assert.doesNotMatch(bunderPdf, /openUrlInNewTab/);
+assert.match(bunderPdf, /openPdfArtifact/);
+assert.doesNotMatch(bunderPdf, /from\s+["']jspdf["']/);
+
+const previewRouteDeprecation = read("app/api/pdf/preview/route.ts");
+assert.match(previewRouteDeprecation, /deprecated:\s*true/);
 
 assert.ok(!exists("lib/preventivi/pdf-preview-cache.ts"), "pdf-preview-cache.ts should be removed");
 

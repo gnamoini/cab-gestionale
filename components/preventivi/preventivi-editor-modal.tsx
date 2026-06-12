@@ -198,7 +198,7 @@ export function PreventiviEditorModal({
     draftRef.current = draft;
   }, [draft]);
 
-  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery({ tier: "static" });
   const appSettings = settingsPayload?.resolved;
 
   const prefsAtt = useMemo(

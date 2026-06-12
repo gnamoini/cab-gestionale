@@ -1,0 +1,48 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+
+const ROOT = process.cwd();
+
+function read(rel: string): string {
+  return fs.readFileSync(path.join(ROOT, rel), "utf8");
+}
+
+assert.ok(fs.existsSync(path.join(ROOT, "docs/minimal-invalidation-contract.md")), "minimal-invalidation-contract doc missing");
+
+const micCore = read("lib/cache/minimal-invalidation-contract.ts");
+assert.match(micCore, /invalidateEntity/);
+assert.match(micCore, /invalidateOperationalTruth/);
+
+const registry = read("lib/cache/mic-registry.ts");
+for (const entity of ["lavorazione", "documento", "mezzo", "report", "settings"]) {
+  assert.match(registry, new RegExp(`${entity}:`));
+}
+
+const micServer = read("lib/cache/mic-server-invalidate.server.ts");
+assert.match(micServer, /invalidatePdfArtifactScope/);
+assert.doesNotMatch(micServer, /select\s*\(\s*["']\*["']\s*\)/);
+
+const apiRoute = read("app/api/cache/invalidate-entity/route.ts");
+assert.match(apiRoute, /runMicServerInvalidations/);
+assert.match(apiRoute, /verifyServerPermission/);
+
+const invalidateRelated = read("src/lib/react-query/invalidate-related.ts");
+assert.match(invalidateRelated, /invalidateEntity/);
+
+const lavMutations = read("src/hooks/gestionale/use-lavorazione-mutations.ts");
+assert.match(lavMutations, /invalidateAfterLavorazioneMutations/);
+
+const mezzoMutations = read("src/hooks/gestionale/use-mezzo-mutations.ts");
+assert.match(mezzoMutations, /invalidateAfterMezzoMutations/);
+
+const documentiView = read("components/gestionale/documenti/documenti-view.tsx");
+assert.match(documentiView, /invalidateEntity/);
+
+const versionRegistry = read("lib/cache/entity-version-registry.ts");
+assert.match(versionRegistry, /resolveEntityCacheVersion/);
+
+const previewUrl = read("lib/documents/document-preview-url.ts");
+assert.match(previewUrl, /resolveEntityCacheVersion/);
+
+console.log("minimal-invalidation-contract-policy: OK");

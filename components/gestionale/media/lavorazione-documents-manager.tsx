@@ -10,7 +10,7 @@ import {
   HubIconUpload,
 } from "@/components/design-system/hub-table-action-icons";
 
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useId, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -24,9 +24,13 @@ import {
 } from "@/lib/lavorazioni/lavorazione-documents";
 import { dsBtnDanger, dsBtnNeutral, dsHubModalFieldLabel, dsHubModalNestedCard, dsHubModalSectionTitle, dsTableActionTextBtn, dsTableActionTextBtnDanger, dsTableActionTextBtnPrimary } from "@/lib/ui/design-system";
 import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
-import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
+import { invalidateEntity } from "@/lib/cache/minimal-invalidation-contract";
+import { warmupDocumentPreview } from "@/lib/observability/asset-cache-warmup";
+import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import { reconcileGestionaleEntity } from "@/lib/sync/gestionale-reconcile";
 import { lavorazioniDomainQueryKeys } from "@/src/services/domain/lavorazioni-domain.queries";
+import { lavorazioneDocumentDeliveryUrl } from "@/lib/documents/document-delivery-url";
+import { DocumentThumbnail } from "@/components/gestionale/documenti/document-thumbnail";
 import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
 import type { LavorazioneDocumentRow, LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
 import { useLavorazionePdfsByLavorazione } from "@/src/services/domain/lavorazioni-domain.queries";
@@ -193,7 +197,21 @@ function DocumentSlotRow({
     <div className={shellClass}>
       <div className="flex min-w-0 items-start justify-between gap-2.5">
         <div className="flex min-w-0 flex-1 items-start gap-2">
-          {!flatInInfoCard ? <IconPdf /> : null}
+          {!flatInInfoCard ? (
+            doc ? (
+              <DocumentThumbnail
+                documentId={doc.lavorazione_id}
+                source="lavorazione"
+                tipo={doc.tipo}
+                hasPreview
+                contentVersion={doc.uploaded_at}
+                fallback={<IconPdf />}
+                className="h-5 w-5 shrink-0 rounded object-cover"
+              />
+            ) : (
+              <IconPdf />
+            )
+          ) : null}
           <div className="min-w-0">
             {hideSlotLabel ? null : <p className={labelClass}>{label}</p>}
             {doc ? (
@@ -309,24 +327,36 @@ export function LavorazioneDocumentsManager({
   const [uploadingTipo, setUploadingTipo] = useState<LavorazioneDocumentTipo | null>(null);
   const [uploadErrorByTipo, setUploadErrorByTipo] = useState<Partial<Record<LavorazioneDocumentTipo, string>>>({});
   const [lastUploadFileByTipo, setLastUploadFileByTipo] = useState<Partial<Record<LavorazioneDocumentTipo, File>>>({});
-  const [urlCache, setUrlCache] = useState<Record<string, string>>({});
-
   const syncDocuments = useCallback(
-    (eventType: "entity_created" | "entity_updated" | "entity_deleted" = "entity_updated") => {
-      void invalidateOperationalTruth({
-        queryClient: qc,
-        domain: "lavorazioni",
-        cabSyncEvents: [
-          cabSyncEventForEntity("lavorazione_documents", lavorazioneId, eventType, "lavorazione_documents"),
-        ],
-      });
+    (
+      eventType: "entity_created" | "entity_updated" | "entity_deleted" = "entity_updated",
+      dbVersion?: string,
+    ) => {
+      void traceMutationLifecycle(
+        {
+          entityType: "lavorazione",
+          entityId: lavorazioneId,
+          operation: `documents_${eventType}`,
+          scope: "full",
+        },
+        () =>
+          invalidateEntity({
+            queryClient: qc,
+            entityType: "lavorazione",
+            entityId: lavorazioneId,
+            scope: "full",
+            cabSyncEvents: [
+              cabSyncEventForEntity("lavorazione_documents", lavorazioneId, eventType, "lavorazione_documents"),
+            ],
+            dbVersion,
+          }),
+      );
       onDocumentEvent?.();
     },
     [qc, lavorazioneId, onDocumentEvent],
   );
 
   useCabSyncListener("lavorazione_documents", (event) => {
-    setUrlCache({});
     const r = reconcileGestionaleEntity(qc, event, "cab_sync", { skipInvalidation: true });
     if (r.needsRefetch) {
       void qc.invalidateQueries({
@@ -336,35 +366,6 @@ export function LavorazioneDocumentsManager({
     }
     onDocumentEvent?.();
   });
-
-  const resolveUrl = useCallback(
-    async (doc: LavorazioneDocumentRow): Promise<string | null> => {
-      const cached = urlCache[doc.storage_path];
-      if (cached) return cached;
-      const res = await lavorazioneDocumentsService.listWithUrls(lavorazioneId);
-      if (!res.success) return null;
-      const hit = (res.data ?? []).find((r) => r.tipo === doc.tipo);
-      if (!hit?.signedUrl) return null;
-      setUrlCache((prev) => ({ ...prev, [doc.storage_path]: hit.signedUrl }));
-      return hit.signedUrl;
-    },
-    [lavorazioneId, urlCache],
-  );
-
-  useEffect(() => {
-    if (!docsQ.isSuccess || rows.length === 0) return;
-    let cancelled = false;
-    void (async () => {
-      const res = await lavorazioneDocumentsService.listWithUrls(lavorazioneId);
-      if (!res.success || cancelled) return;
-      const next: Record<string, string> = {};
-      for (const r of res.data ?? []) next[r.storage_path] = r.signedUrl;
-      if (!cancelled) setUrlCache(next);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [docsQ.isSuccess, lavorazioneId, rows.length]);
 
   async function handleUpload(tipo: LavorazioneDocumentTipo, file: File) {
     if (!(await isValidPdfFile(file))) {
@@ -399,8 +400,14 @@ export function LavorazioneDocumentsManager({
         if (!res.success) throw new Error(res.error ?? "Upload non riuscito.");
         return res.data;
       },
-      onSuccess: () => {
-        syncDocuments("entity_created");
+      onSuccess: (row) => {
+        syncDocuments("entity_created", row?.uploaded_at);
+        warmupDocumentPreview(lavorazioneId, {
+          source: "lavorazione",
+          tipo,
+          entityType: "lavorazione",
+          entityId: lavorazioneId,
+        });
         setUploadErrorByTipo((prev) => {
           const next = { ...prev };
           delete next[tipo];
@@ -442,23 +449,13 @@ export function LavorazioneDocumentsManager({
     syncDocuments("entity_deleted");
   }
 
-  async function openDoc(doc: LavorazioneDocumentRow) {
-    const url = urlCache[doc.storage_path] ?? (await resolveUrl(doc));
-    if (!url) {
-      gestToast.warning("Impossibile aprire il documento.");
-      return;
-    }
-    window.open(url, "_blank", "noopener,noreferrer");
+  function openDoc(doc: LavorazioneDocumentRow) {
+    window.open(lavorazioneDocumentDeliveryUrl(doc, "preview"), "_blank", "noopener,noreferrer");
   }
 
-  async function downloadDoc(doc: LavorazioneDocumentRow) {
-    const url = urlCache[doc.storage_path] ?? (await resolveUrl(doc));
-    if (!url) {
-      gestToast.warning("Impossibile scaricare il documento.");
-      return;
-    }
+  function downloadDoc(doc: LavorazioneDocumentRow) {
     const a = document.createElement("a");
-    a.href = url;
+    a.href = lavorazioneDocumentDeliveryUrl(doc, "download");
     a.download = doc.filename;
     a.rel = "noopener";
     a.click();

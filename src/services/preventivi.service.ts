@@ -1,6 +1,7 @@
 "use client";
 
 import { pickPreventivoWritePayload } from "@/lib/validation/services/preventivi-payload";
+import { PREVENTIVI_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensureSectionDelete, ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
@@ -59,7 +60,7 @@ export const preventiviService = {
       const allowed = await ensureSectionRead("preventivi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      let q = c.from("preventivi").select("*").order("created_at", { ascending: false });
+      let q = c.from("preventivi").select(PREVENTIVI_COLUMNS).order("created_at", { ascending: false });
       if (filters?.mezzo_id) q = q.eq("mezzo_id", filters.mezzo_id);
       if (filters?.lavorazione_id) q = q.eq("lavorazione_id", filters.lavorazione_id);
       if (filters?.cliente?.trim()) q = q.ilike("cliente", `%${filters.cliente.trim()}%`);
@@ -76,7 +77,7 @@ export const preventiviService = {
       const allowed = await ensureSectionRead("preventivi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data, error } = await c.from("preventivi").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await c.from("preventivi").select(PREVENTIVI_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(error.message);
       if (!data) return err("Preventivo non trovato");
       return success(data as PreventivoRow);
@@ -92,7 +93,7 @@ export const preventiviService = {
       const c = await sb();
       const picked = pickPreventivoWritePayload(data as Record<string, unknown>);
       const merged = mergePreventivoPayload(picked as PreventivoInsert) as PreventivoInsert;
-      const { data: row, error } = await c.from("preventivi").insert(merged).select("*").single();
+      const { data: row, error } = await c.from("preventivi").insert(merged).select(PREVENTIVI_COLUMNS).single();
       if (error) return err(error.message);
       const r = row as PreventivoRow;
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r) });
@@ -107,7 +108,7 @@ export const preventiviService = {
       const allowed = await ensureSectionWrite("preventivi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: before, error: e0 } = await c.from("preventivi").select("*").eq("id", id).maybeSingle();
+      const { data: before, error: e0 } = await c.from("preventivi").select(PREVENTIVI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       if (!before) return err("Preventivo non trovato.");
       const patch = pickPreventivoWritePayload(data as Record<string, unknown>);
@@ -122,7 +123,7 @@ export const preventiviService = {
       let q = c.from("preventivi").update(updateBody).eq("id", id);
       const expectedAt = (data as { updated_at?: string }).updated_at;
       if (expectedAt) q = q.eq("updated_at", expectedAt);
-      const { data: row, error } = await q.select("*").single();
+      const { data: row, error } = await q.select(PREVENTIVI_COLUMNS).single();
       if (error) {
         if (error.code === "PGRST116") return err("Un altro utente ha aggiornato questo preventivo. Ricarica e riprova.");
         return err(error.message);
@@ -145,7 +146,7 @@ export const preventiviService = {
       const allowed = await ensureSectionDelete("preventivi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: existing, error: e0 } = await c.from("preventivi").select("*").eq("id", id).maybeSingle();
+      const { data: existing, error: e0 } = await c.from("preventivi").select(PREVENTIVI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       if (existing) await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(existing) });
       const { error } = await c.from("preventivi").delete().eq("id", id);

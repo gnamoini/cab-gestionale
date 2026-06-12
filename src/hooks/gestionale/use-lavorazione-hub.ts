@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo } from "react";
+import { useSchedeBundle } from "@/src/hooks/use-schede-store-query";
 import {
   useDocumentiByLavorazione,
   useLavorazioneBase,
@@ -18,8 +19,11 @@ import { lavorazioniDomainService, type LavorazioneHubData } from "@/src/service
 export function useLavorazioneHub(lavorazioneId: string | undefined) {
   const id = lavorazioneId?.trim() ?? "";
 
+  const { isLoading: schedeBundleLoading } = useSchedeBundle(id || undefined);
   const base = useLavorazioneBase(lavorazioneId);
-  const schede = useSchedeByLavorazione(lavorazioneId);
+  const schede = useSchedeByLavorazione(lavorazioneId, {
+    enabled: id.length > 0 && !schedeBundleLoading,
+  });
   const mov = useMovimentiByLavorazione(lavorazioneId);
   const pv = usePreventiviByLavorazione(lavorazioneId);
   const doc = useDocumentiByLavorazione(lavorazioneId);

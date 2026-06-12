@@ -41,6 +41,7 @@ test("anagraficaFromSchedaIngresso mappa tutti i campi ingresso", () => {
   assert.equal(patch.marcaTelaio, "Iveco");
   assert.equal(patch.km, "45000");
   assert.equal(patch.richiedente, "Mario Rossi");
+  assert.equal(patch.livelloCarburante, "50%");
   assert.equal(patch.macchinaRiassunto, "CAT 320");
 });
 
@@ -102,7 +103,7 @@ test("PDF attrezzatura e telaio completi da record esteso", () => {
   const tel = buildPreventivoTelaioMezzoPdfFields(p);
   assert.ok(tel.some((f) => f.label === "Marca" && f.value === "Iveco"));
   assert.ok(tel.some((f) => f.label === "KM" && f.value === "45000"));
-  assert.ok(tel.some((f) => f.label === "Carburante" && f.value === "1/2"));
+  assert.ok(tel.some((f) => f.label === "Carburante" && f.value === "50%"));
 });
 
 test("mergeAnagraficaPreventivo priorità ingresso su mezzo", () => {

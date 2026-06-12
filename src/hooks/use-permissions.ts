@@ -1,9 +1,13 @@
 "use client";
 
+import { useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { buildEffectivePermissionsByModule, type EffectiveModulePermission } from "@/src/lib/permissions/effective-permissions";
-import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
+import {
+  GESTIONALE_PERMISSION_MODULES,
+  type GestionalePermissionModule,
+} from "@/src/lib/permissions/gestionale-modules";
 import { navHrefToSection, canWriteAnyOperational, resolveRole, type RbacSection } from "@/lib/auth/rbac";
 import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
 import { useRbac } from "@/src/hooks/use-rbac";
@@ -51,40 +55,78 @@ export type GlobalPermissions = {
   isLoading: boolean;
 };
 
-export function usePermissions(): GlobalPermissions;
-export function usePermissions(module: GestionalePermissionModule): EffectiveModulePermission & {
-  isLoading: boolean;
+export type ModulePermission = EffectiveModulePermission & { isLoading: boolean };
+
+export type PermissionsSnapshot = {
+  global: GlobalPermissions;
+  modules: Record<GestionalePermissionModule, ModulePermission>;
 };
-export function usePermissions(module?: GestionalePermissionModule): GlobalPermissions | (EffectiveModulePermission & { isLoading: boolean }) {
+
+function buildGlobalPermissions(
+  user: ReturnType<typeof useAuth>["user"],
+  rbac: ReturnType<typeof useRbac>,
+  authLoading: boolean,
+): GlobalPermissions {
+  return {
+    role: resolveRole(user),
+    isAdmin: rbac.isAdmin,
+    isOperatore: rbac.isOperatore,
+    isOspite: rbac.isOspite,
+    canEditInventory: rbac.hasPermission("editInventory"),
+    canManageUsers: rbac.hasPermission("manageUsers"),
+    canManageSecurity: rbac.hasPermission("manageSecurity"),
+    canManageSettings: rbac.hasPermission("manageSettings"),
+    canEditWorkOrders: rbac.hasPermission("editWorkOrders"),
+    canEditVehicles: rbac.hasPermission("editVehicles"),
+    canUploadDocuments: rbac.hasPermission("uploadDocuments"),
+    canDeleteRecords: rbac.hasPermission("deleteRecords"),
+    canViewReports: rbac.hasPermission("viewReports"),
+    canViewAuditLogs: rbac.hasPermission("viewAuditLogs"),
+    isLoading: authLoading,
+  };
+}
+
+/** Snapshot unico — preferire nelle pagine che leggono global + modulo (evita doppia sottoscrizione). */
+export function usePermissionsSnapshot(): PermissionsSnapshot {
   const rbac = useRbac();
   const { user, status } = useAuth();
-  const ruolo = user?.ruolo;
-  const isLoading = status === "loading";
-
-  if (!module) {
-    return {
-      role: resolveRole(user),
-      isAdmin: rbac.isAdmin,
-      isOperatore: rbac.isOperatore,
-      isOspite: rbac.isOspite,
-      canEditInventory: rbac.hasPermission("editInventory"),
-      canManageUsers: rbac.hasPermission("manageUsers"),
-      canManageSecurity: rbac.hasPermission("manageSecurity"),
-      canManageSettings: rbac.hasPermission("manageSettings"),
-      canEditWorkOrders: rbac.hasPermission("editWorkOrders"),
-      canEditVehicles: rbac.hasPermission("editVehicles"),
-      canUploadDocuments: rbac.hasPermission("uploadDocuments"),
-      canDeleteRecords: rbac.hasPermission("deleteRecords"),
-      canViewReports: rbac.hasPermission("viewReports"),
-      canViewAuditLogs: rbac.hasPermission("viewAuditLogs"),
-      isLoading,
-    };
-  }
-
   const permsQuery = useUserPermissionsQuery();
-  const map = buildEffectivePermissionsByModule(ruolo, permsQuery.data);
-  const row = map[module];
-  return { ...row, isLoading: isLoading || permsQuery.isLoading };
+  const authLoading = status === "loading";
+  const moduleLoading = authLoading || permsQuery.isLoading;
+  const ruolo = user?.ruolo;
+
+  const global = useMemo(
+    () => buildGlobalPermissions(user, rbac, authLoading),
+    [
+      user,
+      rbac.isAdmin,
+      rbac.isOperatore,
+      rbac.isOspite,
+      rbac.hasPermission,
+      authLoading,
+    ],
+  );
+
+  const modules = useMemo(() => {
+    const map = buildEffectivePermissionsByModule(ruolo, permsQuery.data);
+    const out = {} as Record<GestionalePermissionModule, ModulePermission>;
+    for (const mod of GESTIONALE_PERMISSION_MODULES) {
+      out[mod] = { ...map[mod], isLoading: moduleLoading };
+    }
+    return out;
+  }, [ruolo, permsQuery.data, moduleLoading]);
+
+  return useMemo(() => ({ global, modules }), [global, modules]);
+}
+
+export function usePermissions(): GlobalPermissions;
+export function usePermissions(module: GestionalePermissionModule): ModulePermission;
+export function usePermissions(
+  module?: GestionalePermissionModule,
+): GlobalPermissions | ModulePermission {
+  const snapshot = usePermissionsSnapshot();
+  if (!module) return snapshot.global;
+  return snapshot.modules[module];
 }
 
 const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>> = {
@@ -105,24 +147,37 @@ export function useNavHrefPermission(href: string): { canRead: boolean; canWrite
   const moduleFromHref = gestionaleNavHrefToModule(href);
   const section = navHrefToSection(href);
 
-  if (!section) {
-    return { canRead: true, canWrite: canWriteAnyOperational(rbac.user), isLoading: rbac.isLoading };
-  }
+  return useMemo(() => {
+    if (!section) {
+      return { canRead: true, canWrite: canWriteAnyOperational(rbac.user), isLoading: rbac.isLoading };
+    }
 
-  const mod = moduleFromHref ?? SECTION_TO_MODULE[section];
-  if (mod) {
-    const map = buildEffectivePermissionsByModule(user?.ruolo, permsQuery.data);
-    const row = map[mod];
+    const mod = moduleFromHref ?? SECTION_TO_MODULE[section];
+    if (mod) {
+      const map = buildEffectivePermissionsByModule(user?.ruolo, permsQuery.data);
+      const row = map[mod];
+      return {
+        canRead: row.canRead,
+        canWrite: row.canWrite,
+        isLoading: rbac.isLoading || status === "loading" || permsQuery.isLoading,
+      };
+    }
+
     return {
-      canRead: row.canRead,
-      canWrite: row.canWrite,
-      isLoading: rbac.isLoading || status === "loading" || permsQuery.isLoading,
+      canRead: rbac.canRead(section),
+      canWrite: rbac.canWrite(section),
+      isLoading: rbac.isLoading,
     };
-  }
-
-  return {
-    canRead: rbac.canRead(section),
-    canWrite: rbac.canWrite(section),
-    isLoading: rbac.isLoading,
-  };
+  }, [
+    section,
+    moduleFromHref,
+    rbac.user,
+    rbac.isLoading,
+    rbac.canRead,
+    rbac.canWrite,
+    user?.ruolo,
+    permsQuery.data,
+    permsQuery.isLoading,
+    status,
+  ]);
 }

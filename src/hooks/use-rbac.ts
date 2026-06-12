@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback, useMemo } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { denyUnless, assertAllowed } from "@/lib/auth/guard-action";
@@ -24,39 +25,104 @@ export function useRbac() {
   const role = snapshot?.role ?? user?.ruolo ?? "guest";
   const rbacCtx = snapshot?.rbacContext ?? { operatorGlobalSettingsDbEnabled: false };
   const rbacUser = snapshot ? snapshot.role : user;
+  const operatorGlobalSettingsPilotActive = snapshot?.pilot.effectiveEnabled ?? false;
+  const clientLavorazioniAllowed = clientLav.allowed;
 
-  const pageOpts: CanAccessPageOptions = {
-    clientLavorazioniAllowed: clientLav.allowed,
-  };
-
-  return {
-    user,
-    role,
-    isLoading,
-    operatorGlobalSettingsPilotActive: snapshot?.pilot.effectiveEnabled ?? false,
-    clientLavorazioniLoading: false,
-    hasPermission: (permission: PermissionKey) => checkPermission(rbacUser, permission, rbacCtx),
-    hasCapability: (capability: Capability) => hasCapability(rbacUser, capability, rbacCtx),
-    canRead: (section: RbacSection) => canRead(rbacUser, section, rbacCtx),
-    canWrite: (section: RbacSection) => canWrite(rbacUser, section, rbacCtx),
-    canDelete: (section: RbacSection) => canDelete(rbacUser, section, rbacCtx),
-    canAccessPage: (pathname: string, opts?: CanAccessPageOptions) =>
-      canAccessPage(rbacUser, pathname, { ...pageOpts, ...opts }, rbacCtx),
-    guardWrite: (section: RbacSection, onDenied?: (msg: string) => void) =>
+  const hasPermission = useCallback(
+    (permission: PermissionKey) => checkPermission(rbacUser, permission, rbacCtx),
+    [rbacUser, rbacCtx],
+  );
+  const hasCapabilityFn = useCallback(
+    (capability: Capability) => hasCapability(rbacUser, capability, rbacCtx),
+    [rbacUser, rbacCtx],
+  );
+  const canReadFn = useCallback(
+    (section: RbacSection) => canRead(rbacUser, section, rbacCtx),
+    [rbacUser, rbacCtx],
+  );
+  const canWriteFn = useCallback(
+    (section: RbacSection) => canWrite(rbacUser, section, rbacCtx),
+    [rbacUser, rbacCtx],
+  );
+  const canDeleteFn = useCallback(
+    (section: RbacSection) => canDelete(rbacUser, section, rbacCtx),
+    [rbacUser, rbacCtx],
+  );
+  const canAccessPageFn = useCallback(
+    (pathname: string, opts?: CanAccessPageOptions) =>
+      canAccessPage(rbacUser, pathname, { clientLavorazioniAllowed, ...opts }, rbacCtx),
+    [rbacUser, rbacCtx, clientLavorazioniAllowed],
+  );
+  const guardWrite = useCallback(
+    (section: RbacSection, onDenied?: (msg: string) => void) =>
       denyUnless(canWrite(rbacUser, section, rbacCtx), onDenied),
-    guardRead: (section: RbacSection, onDenied?: (msg: string) => void) =>
+    [rbacUser, rbacCtx],
+  );
+  const guardRead = useCallback(
+    (section: RbacSection, onDenied?: (msg: string) => void) =>
       denyUnless(canRead(rbacUser, section, rbacCtx), onDenied),
-    assertWrite: (section: RbacSection) => assertAllowed(canWrite(rbacUser, section, rbacCtx)),
-    isAdmin: role === "admin",
-    isManager: role === "manager",
-    isOperatore: role === "operatore" || role === "manager",
-    isGuest: role === "guest",
-    /** @deprecated Usare isGuest */
-    isOspite: role === "guest",
-    isCliente: role === "cliente",
-    isReadOnly: role === "guest" || role === "cliente",
-    effectivePermissions: snapshot,
-  };
+    [rbacUser, rbacCtx],
+  );
+  const assertWrite = useCallback(
+    (section: RbacSection) => assertAllowed(canWrite(rbacUser, section, rbacCtx)),
+    [rbacUser, rbacCtx],
+  );
+
+  const isAdmin = role === "admin";
+  const isManager = role === "manager";
+  const isOperatore = role === "operatore" || role === "manager";
+  const isGuest = role === "guest";
+  const isCliente = role === "cliente";
+  const isReadOnly = role === "guest" || role === "cliente";
+
+  return useMemo(
+    () => ({
+      user,
+      role,
+      isLoading,
+      operatorGlobalSettingsPilotActive,
+      clientLavorazioniLoading: false,
+      hasPermission,
+      hasCapability: hasCapabilityFn,
+      canRead: canReadFn,
+      canWrite: canWriteFn,
+      canDelete: canDeleteFn,
+      canAccessPage: canAccessPageFn,
+      guardWrite,
+      guardRead,
+      assertWrite,
+      isAdmin,
+      isManager,
+      isOperatore,
+      isGuest,
+      isOspite: isGuest,
+      isCliente,
+      isReadOnly,
+      effectivePermissions: snapshot,
+    }),
+    [
+      user,
+      role,
+      isLoading,
+      operatorGlobalSettingsPilotActive,
+      hasPermission,
+      hasCapabilityFn,
+      canReadFn,
+      canWriteFn,
+      canDeleteFn,
+      canAccessPageFn,
+      guardWrite,
+      guardRead,
+      assertWrite,
+      isAdmin,
+      isManager,
+      isOperatore,
+      isGuest,
+      isCliente,
+      isReadOnly,
+      snapshot,
+    ],
+  );
 }
 
 export type UseRbacReturn = ReturnType<typeof useRbac> & { role: ReturnType<typeof useRbac>["role"] };

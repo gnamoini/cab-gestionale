@@ -24,7 +24,12 @@ import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 
-const LAV_FILTERS = { includeMezzo: true as const, archived: false as const };
+const LAV_FILTERS = {
+  includeMezzo: true as const,
+  archived: false as const,
+  fetchMode: "light" as const,
+  includeProfiles: false as const,
+};
 const DASHBOARD_REPORT_INVALIDATE_DEBOUNCE_MS = 400;
 
 /** Query + selector aggregati per widget Lavorazioni/Magazzino dashboard (VIEW layer, read-only). */
@@ -60,7 +65,7 @@ export function useDashboardMetrics() {
   const { store: schedeStore } = useSchedeBundlesQuery(!staging, {
     lavorazioneIds: schedeLavorazioneIds,
   });
-  const magQuery = useMagazzinoRicambiUIQuery(undefined, viewOpts);
+  const magQuery = useMagazzinoRicambiUIQuery(undefined, { ...viewOpts, variant: "report" });
   const magLogsQ = useLogListQuery(
     { entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
     { enabled: !staging, ...viewOpts },
@@ -133,6 +138,7 @@ export function useDashboardMetrics() {
 
   return {
     staging,
+    globalOpts,
     lavQuery,
     magQuery,
     lavRows,

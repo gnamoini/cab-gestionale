@@ -1,6 +1,8 @@
 "use client";
 
 import type { QueryClient } from "@tanstack/react-query";
+import { invalidateMicSettings } from "@/lib/cache/minimal-invalidation-contract";
+import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
 import type { ServiceResult } from "@/src/services/service-result";
 
@@ -18,6 +20,10 @@ export async function persistSettingsRecord<T>(
       source: "local_mutation",
       cabSyncEvents: [{ type: "settings_updated" }],
     });
+    void traceMutationLifecycle(
+      { entityType: "settings", entityId: "global", operation: "persist" },
+      () => invalidateMicSettings(qc),
+    );
   }
   return result;
 }

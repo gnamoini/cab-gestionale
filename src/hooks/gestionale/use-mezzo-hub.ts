@@ -27,8 +27,6 @@ export function useMezzoHub(mezzoId: string | undefined) {
   const log = useMezzoLog(mezzoId);
   const mov = useMezzoMovimenti(mezzoId);
 
-  const lavIds = lav.data?.map((r) => r.id) ?? [];
-
   const hubReady =
     id.length > 0 &&
     base.isSuccess &&
@@ -36,7 +34,7 @@ export function useMezzoHub(mezzoId: string | undefined) {
     pv.isSuccess &&
     doc.isSuccess &&
     log.isSuccess &&
-    (lavIds.length === 0 || mov.isSuccess);
+    mov.isSuccess;
 
   const snapshot = useMemo(
     () => ({
@@ -56,13 +54,12 @@ export function useMezzoHub(mezzoId: string | undefined) {
   }, [hubReady, snapshot]);
 
   const isError =
-    id.length > 0 &&
-    (base.isError || lav.isError || pv.isError || doc.isError || log.isError || (lavIds.length > 0 && mov.isError));
+    id.length > 0 && (base.isError || lav.isError || pv.isError || doc.isError || log.isError || mov.isError);
 
   const error = useMemo(() => {
-    const e = base.error ?? lav.error ?? pv.error ?? doc.error ?? log.error ?? (lavIds.length > 0 ? mov.error : null);
+    const e = base.error ?? lav.error ?? pv.error ?? doc.error ?? log.error ?? mov.error;
     return e ?? null;
-  }, [base.error, lav.error, pv.error, doc.error, log.error, mov.error, lavIds.length]);
+  }, [base.error, lav.error, pv.error, doc.error, log.error, mov.error]);
 
   const isLoading = id.length > 0 && !isError && !hubReady;
 

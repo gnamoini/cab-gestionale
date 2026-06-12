@@ -1,20 +1,25 @@
 import { Suspense } from "react";
 import { LoadingSuspenseFallback } from "@/components/design-system";
-import { LavorazioniView } from "@/components/gestionale/lavorazioni/lavorazioni-view";
-import { UIPageAdapter } from "@/lib/ui-os";
+import { LavorazioniViewLazy } from "@/components/gestionale/lazy-route-views";
+import { UIPageAdapterGate } from "@/components/gestionale/ui-page-adapter-gate";
 import { getSuggestedSchema } from "@/lib/ui-os/ui-schema";
+import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
+import { prefetchLavorazioniPage } from "@/src/lib/react-query/prefetch-gestionale-page";
 
-export default function LavorazioniPage() {
+export default async function LavorazioniPage() {
+  const dehydratedState = await prefetchLavorazioniPage();
   return (
     <Suspense fallback={<LoadingSuspenseFallback variant="lavorazioni" />}>
-      <UIPageAdapter
-        page="/lavorazioni"
-        mode="os"
-        fallback="legacy"
-        schema={getSuggestedSchema("/lavorazioni")}
-      >
-        <LavorazioniView />
-      </UIPageAdapter>
+      <GestionaleHydrationBoundary state={dehydratedState}>
+        <UIPageAdapterGate
+          page="/lavorazioni"
+          mode="os"
+          fallback="legacy"
+          schema={getSuggestedSchema("/lavorazioni")}
+        >
+          <LavorazioniViewLazy />
+        </UIPageAdapterGate>
+      </GestionaleHydrationBoundary>
     </Suspense>
   );
 }

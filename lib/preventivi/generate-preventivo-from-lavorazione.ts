@@ -14,7 +14,12 @@ import type { LavorazioneSchedeBundle } from "@/types/schede";
 import { getScontoRicambiCliente } from "@/lib/mezzi/cliente-commerciale";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { mergeAnagraficaPreventivo } from "@/lib/preventivi/preventivo-anagrafica-map";
+import {
+  anagraficaFromInterventoContext,
+  type PreventivoAnagraficaPatch,
+} from "@/lib/preventivi/preventivo-anagrafica-map";
+import { assertInterventoExportAlignment } from "@/lib/domain/intervento-context/intervento-export-alignment";
+import { canonicalInputsFromPreventivoContext } from "@/lib/domain/intervento-context/resolve-intervento-canonical";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 
 export function buildNewPreventivoFromLavorazioneContext(opts: {
@@ -32,7 +37,16 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
   const lavScheda = bundle.lavorazioni?.tipo === "lavorazioni" ? bundle.lavorazioni : null;
   const ricScheda = bundle.ricambi?.tipo === "ricambi" ? bundle.ricambi : null;
 
-  const anag = mergeAnagraficaPreventivo(ing, opts.mezzo, lav);
+  const { lavorazioneRow, schedeStore } = canonicalInputsFromPreventivoContext({
+    lav,
+    bundle,
+    mezzo: opts.mezzo,
+  });
+  if (!lavorazioneRow) {
+    throw new Error("Preventivo da lavorazione richiede row per InterventoContext.");
+  }
+  const anag: PreventivoAnagraficaPatch = anagraficaFromInterventoContext(lavorazioneRow, schedeStore);
+  assertInterventoExportAlignment(lavorazioneRow, schedeStore, { preventivoPatch: anag });
   const {
     cliente,
     cantiere,

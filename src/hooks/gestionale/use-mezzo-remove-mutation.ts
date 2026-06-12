@@ -9,8 +9,8 @@ import { mezziService } from "@/src/services/mezzi.service";
 export function useMezzoRemoveMutation() {
   const queryClient = useQueryClient();
   return useServiceMutation((id: string) => mezziService.remove(id), {
-    onSettled: async () => {
-      await invalidateAfterMezzoMutations(queryClient);
+    onSettled: async (_data, _error, id) => {
+      await invalidateAfterMezzoMutations(queryClient, id);
     },
   });
 }

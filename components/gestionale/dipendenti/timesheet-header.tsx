@@ -187,6 +187,7 @@ export function TimesheetHeader({
                   <span className={filterLabelClass}>Anno</span>
                   <GlobalSelect
                     selectOnly
+                    exclusiveGroup="dipendenti-timesheet-filters"
                     value={String(year)}
                     onChange={(v) => onMonthKey(setMonthKeyParts(monthKey, Number(v), month))}
                     items={yearItems}
@@ -197,6 +198,8 @@ export function TimesheetHeader({
                   <span className={filterLabelClass}>Mese</span>
                   <GlobalSelect
                     selectOnly
+                    preserveItemOrder
+                    exclusiveGroup="dipendenti-timesheet-filters"
                     value={String(month)}
                     onChange={(v) => onMonthKey(monthKeyFromParts(year, Number(v)))}
                     items={monthItems}
@@ -206,14 +209,13 @@ export function TimesheetHeader({
                 <label className="flex min-w-0 flex-col gap-1">
                   <span className={filterLabelClass}>Dipendente</span>
                   <GlobalSelect
+                    selectOnly
+                    preserveItemOrder
+                    exclusiveGroup="dipendenti-timesheet-filters"
                     value={filterEmployeeId}
                     onChange={onFilterEmployeeId}
                     items={employeeItems}
                     placeholder="Tutti i dipendenti"
-                    selectorDomain="dipendenti"
-                    dynamicList
-                    operationalFilter
-                    recentsKey="selector:dipendenti-filter"
                     aria-label="Seleziona dipendente"
                   />
                 </label>

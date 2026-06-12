@@ -164,7 +164,7 @@ import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import { useCabAppSettingsPayloadQuery, useSettingsUpsertMutation } from "@/src/hooks/gestionale/use-settings-queries";
-import { usePermissions } from "@/src/hooks/use-permissions";
+import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
@@ -509,11 +509,11 @@ export function MagazzinoView() {
       undoSessionId: undoSessionId || undefined,
     };
   }
-  const settingsPayload = useCabAppSettingsPayloadQuery();
+  const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
   const appSettings = settingsPayload.data?.resolved;
   const settingsRows = settingsPayload.data?.rows ?? [];
-  const magPerm = usePermissions("magazzino");
-  const globalPerm = usePermissions();
+  const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
+  const magPerm = permModules.magazzino;
   const { clearMagazzinoNotifications } = useAdminNotificationStore();
   /** Creazione ricambio: `can_write` o `can_admin` sul modulo (viewer resta escluso). */
   const magCanCreateRicambio = magPerm.canWrite || magPerm.canAdmin;

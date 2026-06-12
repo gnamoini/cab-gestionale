@@ -74,7 +74,10 @@ async function fetchServerAuthSnapshotWithClient(
     publicUser = mapDegradedPublicAuthUser(authUser);
   }
 
-  const { data: permRows, error: permErr } = await supabase.from("user_permissions").select("*").eq("user_id", authUser.id);
+  const { data: permRows, error: permErr } = await supabase
+    .from("user_permissions")
+    .select("user_id, module, can_read, can_write, can_admin")
+    .eq("user_id", authUser.id);
   if (permErr) {
     console.warn("[auth] server snapshot permessi non leggibili:", permErr.message);
   }

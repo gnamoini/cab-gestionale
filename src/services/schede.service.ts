@@ -1,5 +1,6 @@
 "use client";
 
+import { SCHEDA_LAVORAZIONE_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
@@ -37,7 +38,7 @@ export const schedeService = {
   async getAll(filters?: SchedaFilters): Promise<ServiceResult<SchedaLavorazioneRow[]>> {
     try {
       const c = await sb();
-      let q = c.from("scheda_lavorazione").select("*").order("created_at", { ascending: false });
+      let q = c.from("scheda_lavorazione").select(SCHEDA_LAVORAZIONE_COLUMNS).order("created_at", { ascending: false });
       if (filters?.lavorazione_id) q = q.eq("lavorazione_id", filters.lavorazione_id);
       if (filters?.tipo) q = q.eq("tipo", filters.tipo);
       const { data, error } = await q;
@@ -51,7 +52,7 @@ export const schedeService = {
   async getById(id: string): Promise<ServiceResult<SchedaLavorazioneRow>> {
     try {
       const c = await sb();
-      const { data, error } = await c.from("scheda_lavorazione").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await c.from("scheda_lavorazione").select(SCHEDA_LAVORAZIONE_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(error.message);
       if (!data) return err("Scheda non trovata");
       return success(data as SchedaLavorazioneRow);
@@ -65,7 +66,7 @@ export const schedeService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: row, error } = await c.from("scheda_lavorazione").insert(data).select("*").single();
+      const { data: row, error } = await c.from("scheda_lavorazione").insert(data).select(SCHEDA_LAVORAZIONE_COLUMNS).single();
       if (error) return err(error.message);
       const r = row as SchedaLavorazioneRow;
       const ctx = oggettoContextForScheda(r);
@@ -81,11 +82,11 @@ export const schedeService = {
       const allowed = await ensurePermission("editWorkOrders");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: before, error: e0 } = await c.from("scheda_lavorazione").select("*").eq("id", id).maybeSingle();
+      const { data: before, error: e0 } = await c.from("scheda_lavorazione").select(SCHEDA_LAVORAZIONE_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       let q = c.from("scheda_lavorazione").update(data).eq("id", id);
       if (data.updated_at) q = q.eq("updated_at", data.updated_at);
-      const { data: row, error } = await q.select("*").single();
+      const { data: row, error } = await q.select(SCHEDA_LAVORAZIONE_COLUMNS).single();
       if (error) {
         if (error.code === "PGRST116") return err(SCHEDA_CONCURRENCY_CONFLICT);
         return err(error.message);
@@ -109,7 +110,7 @@ export const schedeService = {
       const allowed = await ensurePermission("deleteRecords");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: existing, error: e0 } = await c.from("scheda_lavorazione").select("*").eq("id", id).maybeSingle();
+      const { data: existing, error: e0 } = await c.from("scheda_lavorazione").select(SCHEDA_LAVORAZIONE_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       if (existing) await writeModificaLog(c, { entita: ENTITA, entita_id: id, azione: "DELETE", payload: auditSnapshot(existing) });
       const { error } = await c.from("scheda_lavorazione").delete().eq("id", id);

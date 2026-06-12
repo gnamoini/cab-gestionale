@@ -4,21 +4,24 @@ import "./lavorazioni-scroll.css";
 import "./lavorazioni-select-theme.css";
 
 import dynamic from "next/dynamic";
+import { useLavorazioniPdfWarmup } from "@/lib/observability/asset-cache-warmup";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  GestionaleListTable,
   GestionaleListTableActionsHead,
   GlobalTableSortTh,
 } from "@/components/gestionale/global-table";
-import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionalePageToolbarActions, GestionaleRefreshToolbarButton } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
-import { LavorazioneCreateModal } from "@/components/gestionale/lavorazioni/lavorazione-create-modal";
+const LavorazioneCreateModal = dynamic(
+  () =>
+    import("@/components/gestionale/lavorazioni/lavorazione-create-modal").then((m) => ({
+      default: m.LavorazioneCreateModal,
+    })),
+  { ssr: false },
+);
 const SchedeLavorazioneModal = dynamic(
   () =>
     import("@/components/lavorazioni/schede/schede-lavorazione-modal").then((m) => ({
@@ -35,27 +38,7 @@ const LavorazioniKanbanView = dynamic(
 );
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
 import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
-import {
-  AddettoSelectField,
-  InlineSelectField,
-  LavorazioneAddettoReadOnlyPill,
-  LavorazioneCompletamentoDatePill,
-  LavorazionePrioritaReadOnlyPill,
-  type TablePillOption,
-} from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
-import {
-  formatLavorazioneMobileIdentLine,
-  LavMobileInlineField,
-  LavorazioneMobileCardFooter,
-  LavorazioneMobileCardHeader,
-  LavorazioneMobileUltimaModifica,
-  LavorazioneMobileCardShell,
-  LavorazioneMobileStatusSlot,
-  LavorazioneMobileControlsPanel,
-  LavorazioneMobileMetaGrid,
-  LavorazioneMobileMetaItem,
-  LavorazioneMobileNote,
-} from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
+import { type TablePillOption } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
@@ -65,17 +48,18 @@ import { Q_FOCUS_LAV_ROW, Q_FOCUS_MEZZO, Q_LAVORAZIONI_MEZZO_ID } from "@/lib/na
 import {
   buildLavorazioniPillOptionsFromGlobal,
 } from "@/lib/global-list/build-lavorazioni-pill-options";
-import { gestionaleLavorazioniDenseTableClass, gestionaleListTableRowClass, gestionaleListTableRowTone } from "@/lib/ui/gestionale-list-table";
+import { gestionaleLavorazioniDenseTableClass } from "@/lib/ui/gestionale-list-table";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { comparePrioritaLavorazione, orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { statoWorkflowOrderIndex } from "@/lib/lavorazioni/stato-order";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
-import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
+import { executeInterventoWrite } from "@/lib/domain/intervento-context/write-contract";
+import { logInterventoTelemetry } from "@/lib/domain/intervento-context/intervento-telemetry";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
-import { formatIdentificazionePdfCell } from "@/lib/lavorazioni/lavorazioni-pdf-format";
-import { importLavorazioniListPdf } from "@/lib/pdf/lazy-pdf-modules";
+import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 import {
   buildLavorazioneRowProfileResolver,
+  mergeLazyProfileNamesIntoResolver,
   resolveLavorazioneUltimaModifica,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { lavRowMatchesPageFilters, type LavPageFilters } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
@@ -87,9 +71,20 @@ import {
   saveGestionaleAdvancedFiltersPersisted,
   type LavorazioniAdvancedFilters,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
-import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
-import { persistSchedeBundle, persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
+import { SchedaConcurrencyMergeDialog } from "@/components/lavorazioni/schede/scheda-concurrency-merge-dialog";
+import {
+  resolveSchedaConcurrencyBundle,
+  type SchedaConcurrencyResolution,
+} from "@/lib/schede/scheda-concurrency-merge";
+import {
+  isSchedaConcurrencyConflict,
+  persistSchedeBundle,
+  persistSchedeStore,
+  type PersistSchedeErrorResult,
+  type PersistSchedeResult,
+} from "@/lib/schede/schede-sync-adapter";
+import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
 import { applyOptimisticSchedeStore, rollbackSchedeStore, snapshotSchedeStore } from "@/lib/schede/schede-store-optimistic";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
 import { markRecentLocalTableBurst } from "@/lib/sync/recent-local-mutation";
@@ -98,7 +93,7 @@ import {
   CAB_ADDETTO_DISPLAY_RENAME,
   type CabAddettoRenameDetail,
 } from "@/lib/sistema/cab-events";
-import { countSchedePresenti, newSchedaMeta } from "@/lib/schede/schede-ui";
+import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
@@ -109,13 +104,7 @@ import { isStatoInConfig, resolveDefaultLavorazioneStatoId, statoLavorazioneLabe
 import {
   dsAccentSoftBanner,
   dsInput,
-  dsPageToolbarBtn,
-  dsPageToolbarCtaCompact,
   dsStackPage,
-  GESTIONALE_SEARCH_PLACEHOLDER,
-  dsTableActionBtnDanger,
-  dsTableActionBtnInfo,
-  dsTableActionBtnPrimary,
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import {
@@ -124,9 +113,6 @@ import {
   LoadingErrorState,
   LoadingFormSkeleton,
   LoadingLavorazioniListSkeleton,
-  PageToolbar,
-  PageToolbarCtaLabel,
-  PageToolbarResultCount,
 } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
@@ -149,15 +135,17 @@ import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
-import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
+import type { LavorazioneSchedeBundle, LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import {
   type LavorazioneFilters,
   type LavorazioneListRow,
   type LavorazioneUpdate,
 } from "@/src/services/lavorazioni.service";
+import { useLavorazioneProfileNamesQuery } from "@/src/hooks/use-lavorazione-profile-names-query";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { mezziListQueryKey } from "@/lib/render/query-key-factory";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import { mezziService } from "@/src/services/mezzi.service";
 import {
@@ -169,7 +157,7 @@ import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
-import { usePermissions } from "@/src/hooks/use-permissions";
+import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import {
   erpBtnNeutral,
@@ -187,7 +175,6 @@ import {
   statoPillShellStyle,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
-  LavorazioniClienteUtilStack,
   LavorazioneIngressoDateCell,
   lavTableActionBtnDanger,
   lavTableActionBtnInfo,
@@ -207,126 +194,42 @@ import {
   lavTablePillColStyleFromLabels,
   lavTableTdPill,
   lavTableTdAzioni,
-  lavTableTdCenter,
   lavTableTdPillWrap,
   lavTableThAzioni,
-  LavorazioneOrePermanenzaCell,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
-import { lavorazioneOreLavoroSortValue } from "@/lib/lavorazioni/lavorazioni-list-table-display";
-
-function macchinaLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  const ing = schedeStore?.[row.id]?.ingresso?.campi;
-  if (ing?.marcaAttrezzatura?.trim() || ing?.modelloAttrezzatura?.trim()) {
-    return [ing.marcaAttrezzatura, ing.modelloAttrezzatura].filter(Boolean).join(" ").trim() || "—";
-  }
-  const m = row.mezzo;
-  return m ? `${m.marca} ${m.modello}`.trim() : "—";
-}
-
-function clienteLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  const fromScheda = schedeStore?.[row.id]?.ingresso?.campi.cliente?.trim();
-  return fromScheda || row.mezzo?.cliente?.trim() || "—";
-}
-
-function utilizzatoreLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  return (
-    schedeStore?.[row.id]?.ingresso?.campi.utilizzatore?.trim() || row.mezzo?.utilizzatore?.trim() || ""
-  );
-}
-
-function cantiereLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  return schedeStore?.[row.id]?.ingresso?.campi.cantiere?.trim() || "—";
-}
-
-function addettoLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore, fallbackAddetto: string): string {
-  return (
-    schedeStore[row.id]?.ingresso?.campi.addettoAccettazione?.trim() ||
-    schedeStore[row.id]?.lavorazioni?.campi.righe.flatMap((r) => r.addettiAssegnati).find((a) => a.addetto.trim())?.addetto.trim() ||
-    fallbackAddetto ||
-    "—"
-  );
-}
-
-function schedeCountForRow(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore): number {
-  return countSchedePresenti(getOrCreateBundle(schedeStore, row.id));
-}
-
-type MezzoIdentParts = { targa: string; matricola: string; scuderia: string };
-
-function mezzoIdentParts(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): MezzoIdentParts {
-  const ing = schedeStore?.[row.id]?.ingresso?.campi;
-  const scuderiaIngresso = ing?.nScuderia?.trim() ?? "";
-  if (ing) {
-    return {
-      targa: ing.targa?.trim() ?? "",
-      matricola: ing.matricola?.trim() ?? "",
-      scuderia: scuderiaIngresso,
-    };
-  }
-  const m = row.mezzo;
-  return {
-    targa: m?.targa?.trim() ?? "",
-    matricola: m?.matricola?.trim() ?? "",
-    scuderia: "",
-  };
-}
-
-function mezzoIdent(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  const p = mezzoIdentParts(row, schedeStore);
-  const parts = [p.targa, p.matricola, p.scuderia ? `N. ${p.scuderia}` : ""].filter(Boolean);
-  return parts.join(" · ");
-}
-
-function ClienteUtilizzatoreCell({
-  row,
-  schedeStore,
-}: {
-  row: LavorazioneListRow;
-  schedeStore: LavorazioneSchedeStore;
-}) {
-  const cliente = clienteLabel(row, schedeStore);
-  const utilizzatore = utilizzatoreLabel(row, schedeStore);
-  return (
-    <LavorazioniClienteUtilStack cliente={cliente} utilizzatore={utilizzatore} />
-  );
-}
-
-function MezzoIdentStackCell({
-  row,
-  schedeStore,
-}: {
-  row: LavorazioneListRow;
-  schedeStore?: LavorazioneSchedeStore;
-}) {
-  const p = mezzoIdentParts(row, schedeStore);
-  const lines = [p.targa, p.matricola, p.scuderia ? `N. ${p.scuderia}` : ""].filter(Boolean);
-  if (lines.length === 0) {
-    return <span className="text-sm text-zinc-400">—</span>;
-  }
-  return (
-    <div className="min-w-0 leading-snug">
-      {lines.map((text, index) => (
-        <div
-          key={`${text}-${index}`}
-          className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100"
-        >
-          {text}
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function telaioLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore): string {
-  const ing = schedeStore[row.id]?.ingresso?.campi;
-  if (!ing) return "—";
-  const parts = [ing.tipoTelaio, ing.marcaTelaio, ing.modelloTelaio].map((s) => s?.trim()).filter(Boolean);
-  return parts.length ? parts.join(" ") : "—";
-}
-
-function dataCompletamentoIso(row: LavorazioneListRow): string {
-  return (row.data_uscita ?? row.updated_at) as string;
-}
+import {
+  lavorazioneDataCompletamentoIso,
+} from "@/lib/lavorazioni/lavorazioni-list-table-display";
+import {
+  buildLavorazioneSchedeSortIndex,
+  type LavorazioneSchedeSortIndex,
+} from "@/lib/lavorazioni/lavorazioni-schede-sort-index";
+import {
+  lavorazioneAddettoLabel as addettoLabel,
+  lavorazioneCantiereLabel as cantiereLabel,
+  lavorazioneClienteLabel as clienteLabel,
+  lavorazioneMacchinaLabel as macchinaLabel,
+  lavorazioneMezzoIdent as mezzoIdent,
+  lavorazioneMezzoIdentParts as mezzoIdentParts,
+  lavorazioneSchedeCount as schedeCountForRow,
+  lavorazioneTelaioLabel as telaioLabel,
+  lavorazioneUtilizzatoreLabel as utilizzatoreLabel,
+} from "@/lib/lavorazioni/lavorazioni-list-row-labels";
+import {
+  LavorazioneArchivioTableRow,
+  LavorazioneAttivaTableRow,
+} from "@/components/gestionale/lavorazioni/lavorazione-table-row";
+import {
+  LavorazioneArchivioMobileCard,
+  LavorazioneAttivaMobileCard,
+  LavorazioniMobileListShell,
+} from "@/components/gestionale/lavorazioni/lavorazione-mobile-cards";
+import { LavorazioniDesktopTableShell } from "@/components/gestionale/lavorazioni/lavorazioni-desktop-table-shell";
+import {
+  LavorazioniListToolbar,
+  LavorazioniPageHeaderToolbar,
+} from "@/components/gestionale/lavorazioni/lavorazioni-page-toolbar";
+const dataCompletamentoIso = lavorazioneDataCompletamentoIso;
 
 function canDeleteLavorazioneAttiva(row: LavorazioneListRow, canDelete: boolean): boolean {
   return canDelete && row.archived !== true;
@@ -372,15 +275,6 @@ function IconSchede({ className = dsTableActionGlyph }: { className?: string }) 
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
       <path d="M7 4h7l3 3v13H7V4Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
       <path d="M14 4v4h4M9.5 12h5M9.5 15.5h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6 9V4h12v5M6 14h12M7 17h10v3H7z" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M5 9h14a2 2 0 012 2v4a2 2 0 01-2 2h-2v-3H7v3H5a2 2 0 01-2-2v-4a2 2 0 012-2z" />
     </svg>
   );
 }
@@ -464,17 +358,18 @@ function cmpAtt(
   b: LavorazioneListRow,
   k: SortKeyAtt,
   phase: SortPhase,
-  schedeStore: LavorazioneSchedeStore,
-  fallbackAddetto: string,
+  sortIndex: LavorazioneSchedeSortIndex,
   statoOrderIds: readonly string[],
 ): number {
   const dir = phase === "desc" ? -1 : 1;
   const t = (x: number) => x * dir;
-  if (k === "macchina") return t(cmpStr(macchinaLabel(a, schedeStore), macchinaLabel(b, schedeStore)));
-  if (k === "mezzoIdent") return t(cmpStr(mezzoIdent(a, schedeStore), mezzoIdent(b, schedeStore)));
-  if (k === "cliente") return t(cmpStr(clienteLabel(a, schedeStore), clienteLabel(b, schedeStore)));
-  if (k === "utilizzatore") return t(cmpStr(utilizzatoreLabel(a, schedeStore), utilizzatoreLabel(b, schedeStore)));
-  if (k === "cantiere") return t(cmpStr(cantiereLabel(a, schedeStore), cantiereLabel(b, schedeStore)));
+  const ia = sortIndex[a.id];
+  const ib = sortIndex[b.id];
+  if (k === "macchina") return t(cmpStr(ia?.macchina ?? "—", ib?.macchina ?? "—"));
+  if (k === "mezzoIdent") return t(cmpStr(ia?.mezzoIdent ?? "", ib?.mezzoIdent ?? ""));
+  if (k === "cliente") return t(cmpStr(ia?.cliente ?? "—", ib?.cliente ?? "—"));
+  if (k === "utilizzatore") return t(cmpStr(ia?.utilizzatore ?? "", ib?.utilizzatore ?? ""));
+  if (k === "cantiere") return t(cmpStr(ia?.cantiere ?? "—", ib?.cantiere ?? "—"));
   if (k === "note") return t(cmpStr((a.note ?? "").trim(), (b.note ?? "").trim()));
   if (k === "stato") {
     return t(
@@ -482,7 +377,7 @@ function cmpAtt(
     );
   }
   if (k === "priorita") return t(comparePrioritaLavorazione(a.priorita, b.priorita));
-  if (k === "addetto") return t(cmpStr(addettoLabel(a, schedeStore, fallbackAddetto), addettoLabel(b, schedeStore, fallbackAddetto)));
+  if (k === "addetto") return t(cmpStr(ia?.addetto ?? "—", ib?.addetto ?? "—"));
   const da = new Date(a.data_ingresso ?? a.created_at).getTime();
   const db = new Date(b.data_ingresso ?? b.created_at).getTime();
   return t(da === db ? 0 : da < db ? -1 : 1);
@@ -493,26 +388,27 @@ function cmpCh(
   b: LavorazioneListRow,
   k: SortKeyCh,
   phase: SortPhase,
-  schedeStore: LavorazioneSchedeStore,
-  fallbackAddetto: string,
+  sortIndex: LavorazioneSchedeSortIndex,
 ): number {
   const dir = phase === "desc" ? -1 : 1;
   const t = (x: number) => x * dir;
-  if (k === "macchina") return t(cmpStr(macchinaLabel(a, schedeStore), macchinaLabel(b, schedeStore)));
-  if (k === "mezzoIdent") return t(cmpStr(mezzoIdent(a, schedeStore), mezzoIdent(b, schedeStore)));
-  if (k === "cliente") return t(cmpStr(clienteLabel(a, schedeStore), clienteLabel(b, schedeStore)));
-  if (k === "utilizzatore") return t(cmpStr(utilizzatoreLabel(a, schedeStore), utilizzatoreLabel(b, schedeStore)));
-  if (k === "cantiere") return t(cmpStr(cantiereLabel(a, schedeStore), cantiereLabel(b, schedeStore)));
+  const ia = sortIndex[a.id];
+  const ib = sortIndex[b.id];
+  if (k === "macchina") return t(cmpStr(ia?.macchina ?? "—", ib?.macchina ?? "—"));
+  if (k === "mezzoIdent") return t(cmpStr(ia?.mezzoIdent ?? "", ib?.mezzoIdent ?? ""));
+  if (k === "cliente") return t(cmpStr(ia?.cliente ?? "—", ib?.cliente ?? "—"));
+  if (k === "utilizzatore") return t(cmpStr(ia?.utilizzatore ?? "", ib?.utilizzatore ?? ""));
+  if (k === "cantiere") return t(cmpStr(ia?.cantiere ?? "—", ib?.cantiere ?? "—"));
   if (k === "note") return t(cmpStr((a.note ?? "").trim(), (b.note ?? "").trim()));
-  if (k === "addetto") return t(cmpStr(addettoLabel(a, schedeStore, fallbackAddetto), addettoLabel(b, schedeStore, fallbackAddetto)));
+  if (k === "addetto") return t(cmpStr(ia?.addetto ?? "—", ib?.addetto ?? "—"));
   if (k === "ingresso") {
     const da = new Date(a.data_ingresso ?? a.created_at).getTime();
     const db = new Date(b.data_ingresso ?? b.created_at).getTime();
     return t(da === db ? 0 : da < db ? -1 : 1);
   }
   if (k === "oreTotali") {
-    const ra = lavorazioneOreLavoroSortValue(a, schedeStore);
-    const rb = lavorazioneOreLavoroSortValue(b, schedeStore);
+    const ra = ia?.oreTotali ?? -1;
+    const rb = ib?.oreTotali ?? -1;
     return t(ra === rb ? 0 : ra < rb ? -1 : 1);
   }
   const ua = new Date(dataCompletamentoIso(a)).getTime();
@@ -553,6 +449,7 @@ function navMezzoFilterBadgeLabel(m: MezzoGestito): string {
 }
 
 export function LavorazioniView() {
+  useLavorazioniPdfWarmup();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -561,8 +458,8 @@ export function LavorazioniView() {
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const qc = useQueryClient();
   const gestionaleQueryOpts = useGestionaleQueryOpts();
-  const lavPerm = usePermissions("lavorazioni");
-  const globalPerm = usePermissions();
+  const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
+  const lavPerm = permModules.lavorazioni;
   const { markAllRead: markAdminNotifRead } = useAdminNotificationStore();
   const canEditWorkOrders = lavPerm.canWrite;
   const canDeleteRecords = lavPerm.canWrite && globalPerm.canDeleteRecords;
@@ -592,6 +489,21 @@ export function LavorazioniView() {
     [globalOpts],
   );
 
+  const statiRapidiPillOpts = useMemo(
+    () => tablePillOptions.stati(statiRapidiOpts),
+    [tablePillOptions, statiRapidiOpts],
+  );
+  const prioritaPillOpts = useMemo(
+    () => tablePillOptions.priorita(prioritaOpts),
+    [tablePillOptions, prioritaOpts],
+  );
+  const statoPillStylesById = useMemo(() => {
+    const styles: Record<string, ReturnType<typeof statoPillShellStyle>> = {};
+    for (const s of statiOpts) {
+      styles[s.id] = statoPillShellStyle(statoDisplayColor(s.id, statiOpts));
+    }
+    return styles;
+  }, [statiOpts]);
   const statoPillColStyle = useMemo(
     () => lavTablePillColStyleFromLabels(statiOpts.map((s) => statoLavorazioneLabel(s.id, statiOpts))),
     [statiOpts],
@@ -622,6 +534,14 @@ export function LavorazioniView() {
     [globalOpts.lavorazioni.prioritaColors],
   );
 
+  const prioritaPillStylesById = useMemo(() => {
+    const styles: Record<string, ReturnType<typeof prioritaPillShellStyle>> = {};
+    for (const p of prioritaOpts) {
+      styles[p] = prioritaPillShellStyle(prioColor(p));
+    }
+    return styles;
+  }, [prioritaOpts, prioColor]);
+
   const updateLav = useLavorazioneUpdateMutation();
   const createMezzo = useMezzoCreateMutation();
   const updateMezzo = useMezzoUpdateMutation();
@@ -634,7 +554,7 @@ export function LavorazioniView() {
 
   const preloadCreateModal = useCallback(() => {
     void qc.prefetchQuery({
-      queryKey: [...QK.mezzi, null] as const,
+      queryKey: mezziListQueryKey("list", null),
       queryFn: async () => {
         const res = await mezziService.getAll(undefined);
         if (!res.success) throw new Error(res.error ?? "Errore lettura mezzi");
@@ -660,24 +580,25 @@ export function LavorazioniView() {
 
   useEffect(() => {
     if (mezziListQ.data != null && !Array.isArray(mezziListQ.data)) {
-      void qc.invalidateQueries({ queryKey: [...QK.mezzi, null] });
+      void qc.invalidateQueries({ queryKey: mezziListQueryKey("list", null) });
     }
   }, [mezziListQ.data, qc]);
 
   useEffect(() => {
     primeCreateModal();
     if (typeof window === "undefined") return;
-    const preload = () => primeCreateModal();
     const requestIdle = (
       window as Window & { requestIdleCallback?: typeof window.requestIdleCallback }
     ).requestIdleCallback;
     if (requestIdle) {
-      const id = requestIdle(preload, { timeout: 4_000 });
+      const id = requestIdle(() => primeCreateModal(), { timeout: 4_000 });
       return () => window.cancelIdleCallback(id);
     }
-    const t = setTimeout(preload, 2_000);
+    const t = setTimeout(() => primeCreateModal(), 2_000);
     return () => clearTimeout(t);
-  }, [primeCreateModal]);
+    // Mount-once preload: evita re-run su identity `primeCreateModal`.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount-once
+  }, []);
   type LavorazioniListViewMode = "table" | "kanban";
   const [listViewMode, setListViewMode] = useState<LavorazioniListViewMode>("table");
   useUIAutonomyFixEngine(
@@ -690,28 +611,119 @@ export function LavorazioniView() {
     initialTab?: "schede" | "panoramica";
     dialogSize?: SchedeLavorazioneDialogSize;
   } | null>(null);
+
+  type ConcurrencyConflict = Extract<PersistSchedeErrorResult, { kind: "concurrency" }>;
+
+  type ConcurrencyDialogPending = {
+    conflict: ConcurrencyConflict;
+    resolve: (bundle: LavorazioneSchedeBundle | null) => void;
+  };
+  const [concurrencyDialog, setConcurrencyDialog] = useState<ConcurrencyDialogPending | null>(null);
+  const [concurrencyDialogPending, setConcurrencyDialogPending] = useState(false);
+
+  const waitForConcurrencyResolution = useCallback(
+    (conflict: ConcurrencyConflict) =>
+      new Promise<LavorazioneSchedeBundle | null>((resolve) => {
+        setConcurrencyDialog({ conflict, resolve });
+      }),
+    [],
+  );
+
   const persistSchedeAndSync = useCallback(
     (
-      promise: Promise<{ ok: true } | { ok: false; error: string }>,
-      options?: { syncAfter?: boolean; rollbackSnapshot?: ReturnType<typeof snapshotSchedeStore> },
-    ) => {
-      void promise.then((res) => {
+      promise: Promise<PersistSchedeResult>,
+      options?: {
+        syncAfter?: boolean;
+        rollbackSnapshot?: ReturnType<typeof snapshotSchedeStore>;
+        savedBundle?: LavorazioneSchedeBundle;
+      },
+    ): Promise<PersistSchedeResult> => {
+      return promise.then((res) => {
         if (!res.ok) {
+          if (res.kind === "concurrency") return res;
           if (options?.rollbackSnapshot !== undefined) {
             rollbackSchedeStore(qc, options.rollbackSnapshot);
           }
           gestToast.errorOnce("schede-save", res.error ?? "Salvataggio schede non riuscito.", { module: "lavorazioni" });
-          return;
+          return res;
+        }
+        if (options?.savedBundle) {
+          const prev = snapshotSchedeStore(qc) ?? {};
+          applyOptimisticSchedeStore(qc, {
+            ...prev,
+            [options.savedBundle.lavorazioneId]: options.savedBundle,
+          });
         }
         if (options?.syncAfter !== false) {
-          dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"]);
+          const ingressoRowId = (options?.savedBundle?.ingresso as { id?: string } | null | undefined)?.id?.trim();
+          const entityIdByTable = ingressoRowId
+            ? new Map<string, string>([["scheda_lavorazione", ingressoRowId]])
+            : undefined;
+          dispatchGestionaleLocalMutation(qc, ["scheda_lavorazione"], undefined, entityIdByTable);
         } else {
           markRecentLocalTableBurst(["scheda_lavorazione"]);
         }
+        return res;
       });
     },
     [qc, gestToast],
   );
+
+  const onPersistSchedeBundle = useCallback(
+    async (next: LavorazioneSchedeBundle): Promise<PersistSchedeResult> => {
+      const snapshot = snapshotSchedeStore(qc);
+      let safe = clampSchedeBundle(next);
+      const prev = snapshot ?? {};
+      applyOptimisticSchedeStore(qc, { ...prev, [safe.lavorazioneId]: safe });
+
+      for (let attempt = 0; attempt < 4; attempt += 1) {
+        const res = await persistSchedeAndSync(persistSchedeBundle(safe), {
+          rollbackSnapshot: snapshot,
+          savedBundle: safe,
+        });
+        if (res.ok || !isSchedaConcurrencyConflict(res)) return res;
+
+        logInterventoTelemetry("intervento_edit_conflict", {
+          lavorazioneId: safe.lavorazioneId,
+        });
+
+        const resolved = await waitForConcurrencyResolution(res);
+        setConcurrencyDialog(null);
+        if (!resolved) {
+          if (snapshot !== undefined) rollbackSchedeStore(qc, snapshot);
+          return { ok: false, kind: "error", error: "Salvataggio annullato." };
+        }
+        safe = clampSchedeBundle(resolved);
+        applyOptimisticSchedeStore(qc, { ...prev, [safe.lavorazioneId]: safe });
+      }
+
+      return { ok: false, kind: "error", error: "Troppi tentativi di salvataggio in conflitto." };
+    },
+    [qc, persistSchedeAndSync, waitForConcurrencyResolution],
+  );
+
+  const handleConcurrencyResolve = useCallback(
+    async (resolution: SchedaConcurrencyResolution) => {
+      if (!concurrencyDialog) return;
+      setConcurrencyDialogPending(true);
+      try {
+        const merged = resolveSchedaConcurrencyBundle(
+          resolution,
+          concurrencyDialog.conflict.clientBundle,
+          concurrencyDialog.conflict.serverBundle,
+        );
+        concurrencyDialog.resolve(merged);
+      } finally {
+        setConcurrencyDialogPending(false);
+      }
+    },
+    [concurrencyDialog],
+  );
+
+  const handleConcurrencyCancel = useCallback(() => {
+    concurrencyDialog?.resolve(null);
+    setConcurrencyDialog(null);
+  }, [concurrencyDialog]);
 
   const SEARCH_DEBOUNCE_MS = 320;
 
@@ -773,6 +785,8 @@ export function LavorazioniView() {
   const filtersAttive = useMemo(
     (): LavorazioneFilters => ({
       includeMezzo: true,
+      fetchMode: "light",
+      includeProfiles: false,
       ...mezzoFilterPart,
       archived: false,
     }),
@@ -782,14 +796,28 @@ export function LavorazioniView() {
   const filtersChiuse = useMemo(
     (): LavorazioneFilters => ({
       includeMezzo: true,
+      fetchMode: "light",
+      includeProfiles: false,
       ...mezzoFilterPart,
       archived: true,
     }),
     [mezzoFilterPart],
   );
 
+  const [archivioCollapsed, setArchivioCollapsed] = useState(true);
+  const needsChiuseFetch = useMemo(
+    () =>
+      !archivioCollapsed ||
+      Boolean(searchApplied.trim()) ||
+      lavorazioniAdvancedFiltersActive(advancedFilters),
+    [advancedFilters, archivioCollapsed, searchApplied],
+  );
+
   const attiveQuery = useLavorazioniList(filtersAttive, gestionaleQueryOpts);
-  const chiuseQuery = useLavorazioniList(filtersChiuse, gestionaleQueryOpts);
+  const chiuseQuery = useLavorazioniList(filtersChiuse, {
+    ...gestionaleQueryOpts,
+    enabled: needsChiuseFetch,
+  });
 
   const { undoable: undoableLavLog, logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
 
@@ -813,6 +841,11 @@ export function LavorazioniView() {
   }, [invalidateSchedeStore]);
 
   const defaultAddetto = globalOpts.lavorazioni.addetti[0] ?? "";
+
+  const schedeSortIndex = useMemo(
+    () => buildLavorazioneSchedeSortIndex([...attiveRows, ...chiuseRows], schedeStore, defaultAddetto),
+    [attiveRows, chiuseRows, schedeStore, defaultAddetto],
+  );
   const [listRefreshBusy, setListRefreshBusy] = useState(false);
 
   const refreshLavorazioniLists = useCallback(async () => {
@@ -1039,14 +1072,21 @@ export function LavorazioniView() {
     setConcludiConfirmRow(row);
   }
 
-  function onConcludiAction(row: LavorazioneListRow) {
-    if (mutPendingBlocking || loading || !canEditWorkOrders || row.archived === true) return;
-    if (row.stato !== "completata") {
-      gestToast.warning("Imposta la lavorazione come completata prima di archiviarla.");
-      return;
-    }
-    openConcludiConfirm(row);
-  }
+  const onOpenAttivaInfo = useCallback((row: LavorazioneListRow) => {
+    setSchedeRow({ row, origine: "attiva", initialTab: "panoramica", dialogSize: "compact" });
+  }, []);
+
+  const onOpenAttivaSchede = useCallback((row: LavorazioneListRow) => {
+    setSchedeRow({ row, origine: "attiva", initialTab: "schede", dialogSize: "hub" });
+  }, []);
+
+  const onOpenArchivioInfo = useCallback((row: LavorazioneListRow) => {
+    setSchedeRow({ row, origine: "storico", initialTab: "panoramica", dialogSize: "compact" });
+  }, []);
+
+  const onOpenArchivioSchede = useCallback((row: LavorazioneListRow) => {
+    setSchedeRow({ row, origine: "storico", initialTab: "schede", dialogSize: "hub" });
+  }, []);
 
   function concludiActionBtnProps(row: LavorazioneListRow) {
     const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
@@ -1113,6 +1153,11 @@ export function LavorazioniView() {
     };
   }, []);
 
+  const attiveRowsRef = useRef(attiveRows);
+  const chiuseRowsRef = useRef(chiuseRows);
+  attiveRowsRef.current = attiveRows;
+  chiuseRowsRef.current = chiuseRows;
+
   useEffect(() => {
     const rawFocus = searchParams.get(Q_FOCUS_MEZZO)?.trim();
     if (rawFocus?.startsWith("hub-lav-")) {
@@ -1135,8 +1180,12 @@ export function LavorazioniView() {
       const mezzo = mezziCatalog.find((m) => m.id === rawMezzo);
       const resolved = mezzo ? { ...mezzo } : mezzoFilterStubFromId(rawMezzo);
       setNavMezzoFilter(resolved);
-      const hitA = attiveRows.filter((lav) => lav.mezzo_id === rawMezzo || lavorazioneMatchesMezzo(resolved, lavRowToMatchShape(lav)));
-      const hitC = chiuseRows.filter((lav) => lav.mezzo_id === rawMezzo || lavorazioneMatchesMezzo(resolved, lavRowToMatchShape(lav)));
+      const hitA = attiveRowsRef.current.filter(
+        (lav) => lav.mezzo_id === rawMezzo || lavorazioneMatchesMezzo(resolved, lavRowToMatchShape(lav)),
+      );
+      const hitC = chiuseRowsRef.current.filter(
+        (lav) => lav.mezzo_id === rawMezzo || lavorazioneMatchesMezzo(resolved, lavRowToMatchShape(lav)),
+      );
       const ids = new Set<string>([...hitA.map((r) => r.id), ...hitC.map((r) => r.id)]);
       setNavBulkFlashIds(ids);
       if (navFlashClearRef.current) clearTimeout(navFlashClearRef.current);
@@ -1146,7 +1195,7 @@ export function LavorazioniView() {
       }, 2000);
     }, 80);
     return () => window.clearTimeout(t);
-  }, [searchParams, pathname, router, flashRow, attiveRows, chiuseRows, openDetailById]);
+  }, [searchParams, pathname, router, flashRow, openDetailById, mezziCatalog]);
 
   function cycleSort<T extends string>(
     curCol: T | null,
@@ -1179,7 +1228,7 @@ export function LavorazioniView() {
         if (ta !== tb) return ta - tb;
         return a.id.localeCompare(b.id);
       }
-      const p = cmpAtt(a, b, sortColA, sortPhaseA, schedeStore, defaultAddetto, statoOrderIds);
+      const p = cmpAtt(a, b, sortColA, sortPhaseA, schedeSortIndex, statoOrderIds);
       if (p !== 0) return p;
       const ta = new Date(a.data_ingresso ?? a.created_at).getTime();
       const tb = new Date(b.data_ingresso ?? b.created_at).getTime();
@@ -1187,7 +1236,7 @@ export function LavorazioniView() {
       return a.id.localeCompare(b.id);
     });
     return rows;
-  }, [attiveRowsFiltered, sortColA, sortPhaseA, schedeStore, defaultAddetto, statoOrderIds]);
+  }, [attiveRowsFiltered, sortColA, sortPhaseA, schedeSortIndex, statoOrderIds]);
 
   const sortedChiuse = useMemo(() => {
     const rows = [...chiuseRowsFiltered];
@@ -1199,7 +1248,7 @@ export function LavorazioniView() {
         if (ta !== tb) return ta - tb;
         return a.id.localeCompare(b.id);
       }
-      const p = cmpCh(a, b, sortColC, sortPhaseC, schedeStore, defaultAddetto);
+      const p = cmpCh(a, b, sortColC, sortPhaseC, schedeSortIndex);
       if (p !== 0) return p;
       const ta = new Date(dataCompletamentoIso(a)).getTime();
       const tb = new Date(dataCompletamentoIso(b)).getTime();
@@ -1207,7 +1256,7 @@ export function LavorazioniView() {
       return b.id.localeCompare(a.id);
     });
     return rows;
-  }, [chiuseRowsFiltered, sortColC, sortPhaseC, schedeStore, defaultAddetto]);
+  }, [chiuseRowsFiltered, sortColC, sortPhaseC, schedeSortIndex]);
 
   const listPageSize = useResponsiveListPageSize();
 
@@ -1236,8 +1285,28 @@ export function LavorazioniView() {
   } = useClientPagination(sortedChiuse.length, listPageSize);
   useEffect(() => {
     resetPageC();
-  }, [filtersChiuse, chiuseRowsFiltered.length, searchApplied, listPageSize, resetPageC]);
+  }, [filtersChiuse, chiuseRowsFiltered.length, searchApplied, advancedFilters, listPageSize, resetPageC]);
   const pagedChiuse = useMemo(() => sliceC(sortedChiuse), [sortedChiuse, sliceC, pageC]);
+
+  const mobileProfileUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    const collect = (row: LavorazioneListRow) => {
+      if (row.updated_by?.trim()) ids.add(row.updated_by.trim());
+      if (row.created_by?.trim()) ids.add(row.created_by.trim());
+    };
+    for (const row of pagedAttive) collect(row);
+    for (const row of pagedChiuse) collect(row);
+    return [...ids];
+  }, [pagedAttive, pagedChiuse]);
+  const lazyProfileNames = useLavorazioneProfileNamesQuery(mobileProfileUserIds);
+  const resolveMobileProfile = useCallback(
+    (row: LavorazioneListRow) =>
+      mergeLazyProfileNamesIntoResolver(
+        buildLavorazioneRowProfileResolver(row, user?.id ?? null, authorName),
+        lazyProfileNames,
+      ),
+    [authorName, lazyProfileNames, user?.id],
+  );
 
   const focusLavorazioneInTable = useCallback(
     (id: string) => {
@@ -1288,34 +1357,63 @@ export function LavorazioniView() {
     }
   }, [globalPerm.isAdmin, markAdminNotifRead]);
 
-  /** Post-salvataggio scheda ingresso: UPSERT anagrafica mezzo (merge selettivo) e sync lavorazione. */
-  async function syncIngressoToBackend(row: LavorazioneListRow, campi: SchedaIngressoFields) {
-    if (!campi.cliente.trim() || !campi.marcaAttrezzatura.trim()) return;
-
+  /**
+   * EDIT_INGRESSO_ORDER (v1):
+   * 1. scheda già persistita dal modal
+   * 2. refetch mezzi + row lavorazione (W5)
+   * 3. executeInterventoWrite — unico entry point; sync interno a write-contract
+   */
+  async function syncIngressoToBackend(staleRow: LavorazioneListRow, campi: SchedaIngressoFields) {
     await qc.refetchQueries({ queryKey: QK.mezzi });
     const freshRows =
-      qc.getQueryData<MezzoRow[]>([...QK.mezzi, null]) ??
+      qc.getQueryData<MezzoRow[]>(mezziListQueryKey("list", null)) ??
       qc.getQueriesData<MezzoRow[]>({ queryKey: QK.mezzi }).find(([, data]) => data?.length)?.[1] ??
       mezziListQ.data ??
       [];
     const catalog = freshRows.map(toMezzoUI);
 
-    const { mezzoId } = await upsertMezzoFromSchedaIngresso({
-      fields: campi,
-      mezziCatalog: catalog,
-      preferredMezzoId: row.mezzo_id,
-      create: (data) => createMezzo.mutateAsync(data),
-      update: (id, data) => updateMezzo.mutateAsync({ id, data }),
-    });
+    await qc.refetchQueries({ queryKey: QK.lavorazioniQueries });
+    const freshRow =
+      qc
+        .getQueriesData<LavorazioneListRow[]>({ queryKey: QK.lavorazioniQueries })
+        .flatMap(([, data]) => data ?? [])
+        .find((r) => r.id === staleRow.id) ??
+      attiveRows.find((r) => r.id === staleRow.id) ??
+      chiuseRows.find((r) => r.id === staleRow.id) ??
+      staleRow;
 
-    const note = campi.noteIntervento?.trim() || null;
-    const parsedIngresso = parseItalianDayDisplayToIso(campi.dataIngresso.trim());
-    const lavPatch: LavorazioneUpdate = {};
-    if (note !== (row.note ?? "").trim()) lavPatch.note = note;
-    if (parsedIngresso.ok) lavPatch.data_ingresso = parsedIngresso.iso;
-    if (!row.mezzo_id?.trim() && mezzoId) lavPatch.mezzo_id = mezzoId;
-    if (Object.keys(lavPatch).length) {
-      await updateLav.mutateAsync({ id: row.id, data: lavPatch });
+    const writeDeps = {
+      upsertMezzo: ({ fields, preferredMezzoId }: { fields: SchedaIngressoFields; preferredMezzoId?: string | null }) =>
+        upsertMezzoFromSchedaIngresso({
+          fields,
+          mezziCatalog: catalog,
+          preferredMezzoId,
+          create: (data) => createMezzo.mutateAsync(data),
+          update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+        }),
+      updateLavorazione: async (id: string, patch: Parameters<typeof updateLav.mutateAsync>[0]["data"]) => {
+        await updateLav.mutateAsync({ id, data: patch });
+      },
+    };
+
+    const { result } = await executeInterventoWrite(
+      {
+        mode: "edit",
+        idempotencyKey: `edit-${freshRow.id}`,
+        fields: campi,
+        mezziCatalog: catalog,
+        meta: { row: freshRow },
+      },
+      writeDeps,
+    );
+
+    if (!result.ok) {
+      logInterventoTelemetry("intervento_sync_drift_detected", {
+        lavorazioneId: freshRow.id,
+        stage: result.stage,
+        mismatch: true,
+      });
+      throw new Error(result.error);
     }
   }
 
@@ -1367,6 +1465,127 @@ export function LavorazioniView() {
     loading && attiveQuery.data === undefined && chiuseQuery.data === undefined;
   const loadErrRaw = attiveQuery.isError ? attiveQuery.error : chiuseQuery.isError ? chiuseQuery.error : null;
   const loadErr = loadErrRaw ? formatSupabaseError(loadErrRaw, { module: "lavorazioni", action: "read" }) : null;
+
+  const onConcludiAction = useCallback(
+    (row: LavorazioneListRow) => {
+      if (mutPendingBlocking || loading || !canEditWorkOrders || row.archived === true) return;
+      if (row.stato !== "completata") {
+        gestToast.warning("Imposta la lavorazione come completata prima di archiviarla.");
+        return;
+      }
+      openConcludiConfirm(row);
+    },
+    [mutPendingBlocking, loading, canEditWorkOrders, gestToast],
+  );
+
+  const onRipristinaArchivioRow = useCallback((row: LavorazioneListRow) => {
+    void submitRipristinaInLavorazione(row);
+  }, []);
+
+  const renderAttiveDesktopRow = useCallback(
+    (index: number) => {
+      const row = pagedAttive[index];
+      if (!row) return null;
+      return (
+        <LavorazioneAttivaTableRow
+          key={row.id}
+          row={row}
+          bundle={schedeStore[row.id]}
+          flash={flashRowId === row.id}
+          navBulkFlash={navBulkFlashIds.has(row.id)}
+          rowIndex={index}
+          rowCount={pagedAttive.length}
+          loading={loading}
+          canEditWorkOrders={canEditWorkOrders}
+          mutPendingBlocking={mutPendingBlocking}
+          defaultAddetto={defaultAddetto}
+          statiOpts={statiOpts}
+          statiRapidiPillOpts={statiRapidiPillOpts}
+          prioritaPillOpts={prioritaPillOpts}
+          tablePillOptions={tablePillOptions}
+          statoPillStyle={
+            statoPillStylesById[row.stato] ?? statoPillShellStyle(statoDisplayColor(row.stato, statiOpts))
+          }
+          prioritaPillStyle={
+            prioritaPillStylesById[row.priorita] ?? prioritaPillShellStyle(prioColor(row.priorita))
+          }
+          addettoColors={globalOpts.lavorazioni.addettoColors}
+          addetti={globalOpts.lavorazioni.addetti}
+          onStatoRow={onStatoRow}
+          onPrioritaRow={onPrioritaRow}
+          onAddettoRow={onAddettoRow}
+          onConcludiAction={onConcludiAction}
+          onOpenInfo={onOpenAttivaInfo}
+          onOpenSchede={onOpenAttivaSchede}
+        />
+      );
+    },
+    [
+      pagedAttive,
+      flashRowId,
+      navBulkFlashIds,
+      loading,
+      canEditWorkOrders,
+      mutPendingBlocking,
+      defaultAddetto,
+      statiOpts,
+      statiRapidiPillOpts,
+      prioritaPillOpts,
+      tablePillOptions,
+      statoPillStylesById,
+      prioritaPillStylesById,
+      globalOpts.lavorazioni.addettoColors,
+      globalOpts.lavorazioni.addetti,
+      onStatoRow,
+      onPrioritaRow,
+      onAddettoRow,
+      onConcludiAction,
+      onOpenAttivaInfo,
+      onOpenAttivaSchede,
+      prioColor,
+      schedeStore,
+    ],
+  );
+
+  const renderArchivioDesktopRow = useCallback(
+    (index: number) => {
+      const row = pagedChiuse[index];
+      if (!row) return null;
+      return (
+        <LavorazioneArchivioTableRow
+          key={row.id}
+          row={row}
+          bundle={schedeStore[row.id]}
+          flash={flashRowId === row.id}
+          navBulkFlash={navBulkFlashIds.has(row.id)}
+          rowIndex={index}
+          rowCount={pagedChiuse.length}
+          canEditWorkOrders={canEditWorkOrders}
+          mutPendingBlocking={mutPendingBlocking}
+          loading={loading}
+          defaultAddetto={defaultAddetto}
+          addettoColors={globalOpts.lavorazioni.addettoColors}
+          onRipristina={onRipristinaArchivioRow}
+          onOpenInfo={onOpenArchivioInfo}
+          onOpenSchede={onOpenArchivioSchede}
+        />
+      );
+    },
+    [
+      pagedChiuse,
+      flashRowId,
+      navBulkFlashIds,
+      canEditWorkOrders,
+      mutPendingBlocking,
+      loading,
+      defaultAddetto,
+      globalOpts.lavorazioni.addettoColors,
+      onRipristinaArchivioRow,
+      onOpenArchivioInfo,
+      onOpenArchivioSchede,
+      schedeStore,
+    ],
+  );
 
   async function undoUltimaLavorazione() {
     if (!canEditWorkOrders || !undoableLavLog) return;
@@ -1442,73 +1661,24 @@ export function LavorazioniView() {
   }
 
   const onPrintLavorazioniInCorso = useCallback(() => {
-    if (sortedAttive.length === 0) {
-      gestToast.warning("Nessuna lavorazione in corso da stampare con i filtri attivi.");
-      return;
-    }
-    void importLavorazioniListPdf().then(({ openLavorazioniInCorsoPdfInNewTab }) => {
-      openLavorazioniInCorsoPdfInNewTab(
-        sortedAttive.map((row) => {
-          const ident = mezzoIdentParts(row, schedeStore);
-          return {
-            cliente: clienteLabel(row, schedeStore),
-            attrezzatura: macchinaLabel(row, schedeStore),
-            identificazione: formatIdentificazionePdfCell(ident.targa, ident.matricola, ident.scuderia),
-            stato: statoLavorazioneLabel(row.stato, statiOpts),
-            priorita: prioritaLabel(row.priorita),
-            prioritaSortKey: row.priorita,
-            addetto: addettoLabel(row, schedeStore, defaultAddetto),
-          };
-        }),
-        authorName,
-      );
-    });
-  }, [sortedAttive, gestToast, schedeStore, statiOpts, authorName, defaultAddetto]);
+    openPdfArtifact("lavorazioni-in-corso");
+  }, []);
 
   return (
     <GestionaleSectionGate module="lavorazioni">
     <div className={`lavorazioni-scroll-scope ${layoutPageRoot}`}>
     <>
-      <PageHeader
-        title="Lavorazioni"
-        actions={
-          <GestionalePageToolbarActions
-            leading={
-              <GestionaleRefreshToolbarButton
-                busy={listRefreshBusy}
-                onClick={() => void refreshLavorazioniLists()}
-              />
-            }
-            canUndo={Boolean(undoableLavLog)}
-            undoDisabled={!canEditWorkOrders}
-            undoPending={mutPendingBlocking}
-            onUndo={() => void undoUltimaLavorazione()}
-            onOpenLog={() => setLavLogOpen(true)}
-            logTitle="Storico modifiche lavorazioni"
-            overflowActions={
-              <>
-                <button
-                  type="button"
-                  className={dsPageToolbarBtn}
-                  onClick={onPrintLavorazioniInCorso}
-                  title="Stampa PDF lavorazioni in corso"
-                  aria-label="Stampa lavorazioni in corso"
-                >
-                  <IconPrint />
-                  Stampa
-                </button>
-                <button
-                  type="button"
-                  className={dsPageToolbarBtn}
-                  onClick={() => setListViewMode((m) => (m === "table" ? "kanban" : "table"))}
-                  aria-pressed={listViewMode === "kanban"}
-                >
-                  {listViewMode === "table" ? "Vista Kanban" : "Vista Tabella"}
-                </button>
-              </>
-            }
-          />
-        }
+      <LavorazioniPageHeaderToolbar
+        listRefreshBusy={listRefreshBusy}
+        onRefresh={() => void refreshLavorazioniLists()}
+        canUndo={Boolean(undoableLavLog)}
+        undoDisabled={!canEditWorkOrders}
+        undoPending={mutPendingBlocking}
+        onUndo={() => void undoUltimaLavorazione()}
+        onOpenLog={() => setLavLogOpen(true)}
+        onPrint={onPrintLavorazioniInCorso}
+        listViewMode={listViewMode}
+        onToggleListViewMode={() => setListViewMode((m) => (m === "table" ? "kanban" : "table"))}
       />
 
       <div className={dsStackPage}>
@@ -1545,74 +1715,30 @@ export function LavorazioniView() {
           </div>
         ) : null}
 
-        <ShellCard>
-          <section aria-label="Azioni e filtri lavorazioni (in corso e archivio)">
-          <PageToolbar
-            primaryAction={
-              <button
-                type="button"
-                onClick={openCreateModal}
-                onPointerEnter={primeCreateModal}
-                className={dsPageToolbarCtaCompact}
-                disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}
-                title={!canEditWorkOrders ? READONLY_PERMISSION_HINT : !createdBy ? "Accedi per creare una lavorazione." : undefined}
-              >
-                <PageToolbarCtaLabel short="+ Nuova" full="+ Nuova lavorazione" />
-              </button>
-            }
-            search={
-              <GestionaleSearchField
-                id="lavorazioni-search"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    flushPageSearch();
-                  }
-                }}
-                placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
-                aria-label="Cerca in lavorazioni in corso e archivio"
-                wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
-              />
-            }
-            filtersExpanded={filtriAttiviEspansi}
-            onFiltersToggle={() => setFiltriAttiviEspansi((o) => !o)}
-            filtersActive={hasPageClientFilters || Boolean(navMezzoFilter)}
-            filtersPanel={
-              <LavorazioniAdvancedFilterPanel
-                filters={advancedFilters}
-                onChange={patchAdvancedFilters}
-                catalog={filterCatalog}
-                statiOpts={statiOpts}
-              />
-            }
-            onFilterReset={resetFiltriPagina}
-            meta={
-              <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-x-2 gap-y-1 sm:flex-wrap">
-                {mutPendingBlocking ? (
-                  <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Salvataggio in corso…</span>
-                ) : null}
-                {!createdBy ? (
-                  <span className="text-xs text-amber-800 dark:text-amber-200">Accedi per registrare nuove lavorazioni.</span>
-                ) : null}
-                <PageToolbarResultCount
-                  count={totalFilteredCount}
-                  filtersActive={hasPageClientFilters || Boolean(navMezzoFilter)}
-                  searchActive={searchApplied.trim().length > 0 || searchInput.trim().length > 0}
-                  onSearchReset={resetRicercaPagina}
-                  onFilterReset={resetFiltriPagina}
-                />
-                {hasPageClientFilters || navMezzoFilter ? (
-                  <span className="text-xs text-zinc-500 dark:text-zinc-400">
-                    {attiveRowsFiltered.length} in corso · {chiuseRowsFiltered.length} in archivio
-                  </span>
-                ) : null}
-              </div>
-            }
-          />
-          </section>
-        </ShellCard>
+        <LavorazioniListToolbar
+          canEditWorkOrders={canEditWorkOrders}
+          createdBy={createdBy}
+          mutPendingBlocking={mutPendingBlocking}
+          searchInput={searchInput}
+          onSearchInputChange={(e) => setSearchInput(e.target.value)}
+          onSearchEnter={flushPageSearch}
+          filtriAttiviEspansi={filtriAttiviEspansi}
+          onFiltersToggle={() => setFiltriAttiviEspansi((o) => !o)}
+          hasPageClientFilters={hasPageClientFilters}
+          navMezzoFilterActive={Boolean(navMezzoFilter)}
+          advancedFilters={advancedFilters}
+          onAdvancedFiltersChange={patchAdvancedFilters}
+          filterCatalog={filterCatalog}
+          statiOpts={statiOpts}
+          onFilterReset={resetFiltriPagina}
+          totalFilteredCount={totalFilteredCount}
+          searchApplied={searchApplied}
+          onSearchReset={resetRicercaPagina}
+          attiveFilteredCount={attiveRowsFiltered.length}
+          chiuseFilteredCount={chiuseRowsFiltered.length}
+          onOpenCreate={openCreateModal}
+          onPrimeCreate={primeCreateModal}
+        />
 
         <ShellCard
           title={`Lavorazioni in corso (${attiveRowsFiltered.length})`}
@@ -1652,7 +1778,7 @@ export function LavorazioniView() {
             <LoadingLavorazioniListSkeleton withToolbar={false} />
           ) : (
             <>
-          <GestionaleListTable
+          <LavorazioniDesktopTableShell
             visibilityClass="hidden xl:block"
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
@@ -1748,270 +1874,61 @@ export function LavorazioniView() {
                 : "Nessuna lavorazione in corso."
             }
             colSpan={10}
-          >
-                  {pagedAttive.map((row) => {
-                    const flash = flashRowId === row.id || navBulkFlashIds.has(row.id);
-                    return (
-                      <tr
-                        key={row.id}
-                        id={`lavorazioni-row-${row.id}`}
-                        data-gestionale-row-tone={gestionaleListTableRowTone({ flash })}
-                        className={gestionaleListTableRowClass}
-                      >
-                        <td className={lavTableTd}>
-                          <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
-                        </td>
-                        <td className={lavTableTd}>
-                          <ClienteUtilizzatoreCell row={row} schedeStore={schedeStore} />
-                        </td>
-                        <td className={`${lavTableTd} min-w-0 text-sm text-zinc-700 dark:text-zinc-200`}>
-                          <span className="line-clamp-2 break-words">{cantiereLabel(row, schedeStore)}</span>
-                        </td>
-                        <td className={`${lavTableTd} min-w-0`}>
-                          <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchinaLabel(row, schedeStore)}</div>
-                        </td>
-                        <td className={lavTableTd}>
-                          <MezzoIdentStackCell row={row} schedeStore={schedeStore} />
-                        </td>
-                        <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-                          <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
-                        </td>
-                        <td className={lavTableTdPill}>
-                          <div className={lavTableTdPillWrap}>
-                          <InlineSelectField
-                            tablePill
-                            tablePillWidth={lavTablePillFillClass}
-                            tablePillOptions={tablePillOptions.stati(statiRapidiOpts)}
-                            shellClass={statoPillShellClass()}
-                            shellStyle={statoPillShellStyle(statoDisplayColor(row.stato, statiOpts))}
-                            value={row.stato}
-                            onChange={(v) => onStatoRow(row, v)}
-                            ariaLabel={`Stato — ${macchinaLabel(row, schedeStore)}`}
-                            disabled={loading || !canEditWorkOrders}
-                            title={statoLavorazioneLabel(row.stato, statiOpts)}
-                          >
-                            <option value={row.stato}>{statoLavorazioneLabel(row.stato, statiOpts)}</option>
-                          </InlineSelectField>
-                          </div>
-                        </td>
-                        <td className={lavTableTdPill}>
-                          <div className={lavTableTdPillWrap}>
-                          <InlineSelectField
-                            tablePill
-                            tablePillWidth={lavTablePillFillClass}
-                            tablePillOptions={tablePillOptions.priorita(prioritaOpts)}
-                            shellClass={prioritaPillShellClass()}
-                            shellStyle={prioritaPillShellStyle(prioColor(row.priorita))}
-                            value={row.priorita}
-                            onChange={(v) => onPrioritaRow(row, v)}
-                            ariaLabel={`Priorità — ${macchinaLabel(row, schedeStore)}`}
-                            disabled={loading || !canEditWorkOrders}
-                            title={prioritaLabel(row.priorita)}
-                          >
-                            <option value={row.priorita}>{prioritaLabel(row.priorita)}</option>
-                          </InlineSelectField>
-                          </div>
-                        </td>
-                        <td className={lavTableTdPill}>
-                          <div className={lavTableTdPillWrap}>
-                          {(() => {
-                            const addetto = addettoLabel(row, schedeStore, defaultAddetto);
-                            const addetti = globalOpts.lavorazioni.addetti;
-                            return (
-                              <AddettoSelectField
-                                variant="pill"
-                                tablePillWidth={lavTablePillFillClass}
-                                options={tablePillOptions.addetto(addetto)}
-                                shellClass={addettoPillShellClass()}
-                                shellStyle={addettoPillShellStyleForName(addetto, globalOpts.lavorazioni.addettoColors)}
-                                value={addetto}
-                                onChange={(v) => onAddettoRow(row, v)}
-                                ariaLabel={`Addetto — ${macchinaLabel(row, schedeStore)}`}
-                                disabled={loading || !canEditWorkOrders || addetti.length === 0}
-                                title={addetto}
-                              />
-                            );
-                          })()}
-                          </div>
-                        </td>
-                        <td className={lavTableTdAzioni}>
-                          <div className={lavTableActionsRow}>
-                            <IconActionButton
-                              label="Concludi"
-                              {...concludiActionBtnProps(row)}
-                            >
-                              <IconCloseWork />
-                            </IconActionButton>
-                            <IconActionButton
-                              label="Informazioni"
-                              className={lavTableActionBtnInfo}
-                              disabled={mutPendingBlocking}
-                              onClick={() =>
-                                setSchedeRow({
-                                  row,
-                                  origine: "attiva",
-                                  initialTab: "panoramica",
-                                  dialogSize: "compact",
-                                })
-                              }
-                            >
-                              <IconInfo />
-                            </IconActionButton>
-                            <IconActionButton
-                              label="Schede"
-                              className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                              disabled={mutPendingBlocking}
-                              onClick={() =>
-                                setSchedeRow({ row, origine: "attiva", initialTab: "schede", dialogSize: "hub" })
-                              }
-                            >
-                              <IconSchede />
-                              <span className={dsTableActionBadge} aria-hidden>
-                                {schedeCountForRow(row, schedeStore)}/3
-                              </span>
-                            </IconActionButton>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-          </GestionaleListTable>
+            virtualRows={{
+              rowCount: pagedAttive.length,
+              renderRow: renderAttiveDesktopRow,
+              estimateRowHeight: 72,
+            }}
+          />
 
-          <div className="mt-4 space-y-2 xl:hidden">
-            {pagedAttive.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                {hasPageClientFilters || navMezzoFilter
-                  ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
-                  : "Nessuna lavorazione in corso."}
-              </p>
-            ) : (
-              pagedAttive.map((row) => {
-                const macchina = macchinaLabel(row, schedeStore);
-                const utilizzatore = utilizzatoreLabel(row, schedeStore);
-                return (
-                <LavorazioneMobileCardShell key={row.id}>
-                  <LavorazioneMobileCardHeader
-                    macchina={macchina}
-                    identLine={formatLavorazioneMobileIdentLine(mezzoIdentParts(row, schedeStore))}
-                    ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
-                    statusSlot={
-                      <LavorazioneMobileStatusSlot>
-                        <InlineSelectField
-                          tablePill
-                          tablePillWidth={lavTablePillFillClass}
-                          tablePillOptions={tablePillOptions.stati(statiRapidiOpts)}
-                          shellClass={statoPillShellClass()}
-                          shellStyle={statoPillShellStyle(statoDisplayColor(row.stato, statiOpts))}
-                          value={row.stato}
-                          onChange={(v) => onStatoRow(row, v)}
-                          ariaLabel={`Stato — ${macchina}`}
-                          disabled={loading || !canEditWorkOrders}
-                          title={statoLavorazioneLabel(row.stato, statiOpts)}
-                        >
-                          <option value={row.stato}>{statoLavorazioneLabel(row.stato, statiOpts)}</option>
-                        </InlineSelectField>
-                      </LavorazioneMobileStatusSlot>
-                    }
-                  />
-                  <LavorazioneMobileMetaGrid>
-                    <LavorazioneMobileMetaItem label="Cliente" value={clienteLabel(row, schedeStore)} />
-                    <LavorazioneMobileMetaItem label="Cantiere" value={cantiereLabel(row, schedeStore)} />
-                    {utilizzatore ? (
-                      <LavorazioneMobileMetaItem
-                        label="Utilizzatore"
-                        value={utilizzatore}
-                        className="col-span-2"
-                      />
-                    ) : null}
-                  </LavorazioneMobileMetaGrid>
-                  <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
-                  <LavorazioneMobileControlsPanel>
-                    <LavMobileInlineField label="Priorità" layout="stack">
-                      <InlineSelectField
-                        tablePill
-                        tablePillWidth={lavTablePillFillClass}
-                        tablePillOptions={tablePillOptions.priorita(prioritaOpts)}
-                        shellClass={prioritaPillShellClass()}
-                        shellStyle={prioritaPillShellStyle(prioColor(row.priorita))}
-                        value={row.priorita}
-                        onChange={(v) => onPrioritaRow(row, v)}
-                        ariaLabel={`Priorità — ${macchina}`}
-                        disabled={loading || !canEditWorkOrders}
-                        title={prioritaLabel(row.priorita)}
-                      >
-                        <option value={row.priorita}>{prioritaLabel(row.priorita)}</option>
-                      </InlineSelectField>
-                    </LavMobileInlineField>
-                    <LavMobileInlineField label="Addetto" layout="stack">
-                      {(() => {
-                        const addetto = addettoLabel(row, schedeStore, defaultAddetto);
-                        const addetti = globalOpts.lavorazioni.addetti;
-                        return (
-                          <AddettoSelectField
-                            variant="pill"
-                            tablePillWidth={lavTablePillFillClass}
-                            options={tablePillOptions.addetto(addetto)}
-                            shellClass={addettoPillShellClass()}
-                            shellStyle={addettoPillShellStyleForName(addetto, globalOpts.lavorazioni.addettoColors)}
-                            value={addetto}
-                            onChange={(v) => onAddettoRow(row, v)}
-                            ariaLabel={`Addetto — ${macchina}`}
-                            disabled={loading || !canEditWorkOrders || addetti.length === 0}
-                            title={addetto}
-                          />
-                        );
-                      })()}
-                    </LavMobileInlineField>
-                  </LavorazioneMobileControlsPanel>
-                  <LavorazioneMobileCardFooter
-                    meta={
-                      <LavorazioneMobileUltimaModifica
-                        info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
-                          resolveUserId: buildLavorazioneRowProfileResolver(row, user?.id ?? null, authorName),
-                        })}
-                      />
-                    }
-                  >
-                            <IconActionButton
-                              label="Concludi"
-                              {...concludiActionBtnProps(row)}
-                            >
-                      <IconCloseWork />
-                    </IconActionButton>
-                    <IconActionButton
-                      label="Informazioni"
-                      className={dsTableActionBtnInfo}
-                      disabled={mutPendingBlocking}
-                      onClick={() =>
-                        setSchedeRow({
-                          row,
-                          origine: "attiva",
-                          initialTab: "panoramica",
-                          dialogSize: "compact",
-                        })
-                      }
-                    >
-                      <IconInfo />
-                    </IconActionButton>
-                    <IconActionButton
-                      label="Schede"
-                      className={`${dsTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                      disabled={mutPendingBlocking}
-                      onClick={() =>
-                        setSchedeRow({ row, origine: "attiva", initialTab: "schede", dialogSize: "hub" })
-                      }
-                    >
-                      <IconSchede />
-                      <span className={dsTableActionBadge} aria-hidden>
-                        {schedeCountForRow(row, schedeStore)}/3
-                      </span>
-                    </IconActionButton>
-                  </LavorazioneMobileCardFooter>
-                </LavorazioneMobileCardShell>
+          <LavorazioniMobileListShell
+            empty={pagedAttive.length === 0}
+            emptyMessage={
+              hasPageClientFilters || navMezzoFilter
+                ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
+                : "Nessuna lavorazione in corso."
+            }
+          >
+            {pagedAttive.map((row) => {
+              const concludiProps = concludiActionBtnProps(row);
+              return (
+                <LavorazioneAttivaMobileCard
+                  key={row.id}
+                  row={row}
+                  bundle={schedeStore[row.id]}
+                  defaultAddetto={defaultAddetto}
+                  loading={loading}
+                  canEditWorkOrders={canEditWorkOrders}
+                  mutPendingBlocking={mutPendingBlocking}
+                  statiOpts={statiOpts}
+                  statiRapidiPillOpts={statiRapidiPillOpts}
+                  prioritaPillOpts={prioritaPillOpts}
+                  tablePillOptions={tablePillOptions}
+                  statoPillStyle={
+                    statoPillStylesById[row.stato] ?? statoPillShellStyle(statoDisplayColor(row.stato, statiOpts))
+                  }
+                  prioritaPillStyle={
+                    prioritaPillStylesById[row.priorita] ?? prioritaPillShellStyle(prioColor(row.priorita))
+                  }
+                  addetti={globalOpts.lavorazioni.addetti}
+                  addettoColors={globalOpts.lavorazioni.addettoColors}
+                  ultimaModificaInfo={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
+                    resolveUserId: resolveMobileProfile(row),
+                  })}
+                  concludiDisabled={concludiProps.disabled ?? false}
+                  concludiClassName={concludiProps.className ?? lavTableActionBtnSecondary}
+                  concludiTooltip={concludiProps.tooltipContent ?? "Concludi"}
+                  onStatoRow={onStatoRow}
+                  onPrioritaRow={onPrioritaRow}
+                  onAddettoRow={onAddettoRow}
+                  onConcludi={onConcludiAction}
+                  onOpenInfo={onOpenAttivaInfo}
+                  onOpenSchede={onOpenAttivaSchede}
+                />
               );
-              })
-            )}
-          </div>
+            })}
+          </LavorazioniMobileListShell>
+
 
           {showPagerA ? <TablePagination page={pageA} pageCount={pageCountA} onPageChange={setPageA} label={labelA} /> : null}
             </>
@@ -2023,8 +1940,9 @@ export function LavorazioniView() {
           title={`Archivio lavorazioni (${chiuseRowsFiltered.length})`}
           collapsible
           defaultCollapsed={true}
+          onCollapsedChange={setArchivioCollapsed}
         >
-          <GestionaleListTable
+          <LavorazioniDesktopTableShell
             visibilityClass="hidden xl:block"
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
@@ -2125,198 +2043,41 @@ export function LavorazioniView() {
                 : "Nessun record in archivio."
             }
             colSpan={10}
-          >
-                  {pagedChiuse.map((row) => {
-                    const flash = flashRowId === row.id || navBulkFlashIds.has(row.id);
-                    const telaio = telaioLabel(row, schedeStore);
-                    return (
-                      <tr
-                        key={row.id}
-                        id={`lavorazioni-storico-row-${row.id}`}
-                        data-gestionale-row-tone={gestionaleListTableRowTone({ flash })}
-                        className={gestionaleListTableRowClass}
-                      >
-                        <td className={lavTableTd}>
-                          <LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />
-                        </td>
-                        <td className={lavTableTd}>
-                          <ClienteUtilizzatoreCell row={row} schedeStore={schedeStore} />
-                        </td>
-                        <td className={`${lavTableTd} min-w-0 text-sm text-zinc-700 dark:text-zinc-200`}>
-                          <span className="line-clamp-2 break-words">{cantiereLabel(row, schedeStore)}</span>
-                        </td>
-                        <td className={`${lavTableTd} min-w-0`}>
-                          <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchinaLabel(row, schedeStore)}</div>
-                          {telaio !== "—" ? (
-                            <div className="truncate text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">Telaio: {telaio}</div>
-                          ) : null}
-                        </td>
-                        <td className={lavTableTd}>
-                          <MezzoIdentStackCell row={row} schedeStore={schedeStore} />
-                        </td>
-                        <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-                          <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
-                        </td>
-                        <td className={lavTableTdPill}>
-                          <div className={lavTableTdPillWrap}>
-                            <LavorazioneCompletamentoDatePill iso={dataCompletamentoIso(row)} />
-                          </div>
-                        </td>
-                        <td className={lavTableTdCenter}>
-                          <LavorazioneOrePermanenzaCell row={row} schedeStore={schedeStore} />
-                        </td>
-                        <td className={lavTableTdPill}>
-                          <div className={lavTableTdPillWrap}>
-                            <LavorazioneAddettoReadOnlyPill
-                              addetto={addettoLabel(row, schedeStore, defaultAddetto)}
-                              addettoColors={globalOpts.lavorazioni.addettoColors}
-                            />
-                          </div>
-                        </td>
-                        <td className={lavTableTdAzioni}>
-                          <div className={lavTableActionsRow}>
-                            <IconActionButton
-                              label="Ripristina"
-                              tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
-                              className={lavTableActionBtnDanger}
-                              disabled={!canEditWorkOrders || mutPendingBlocking || loading}
-                              onClick={() => submitRipristinaInLavorazione(row)}
-                            >
-                              <IconRipristinaDaArchivio />
-                            </IconActionButton>
-                            <IconActionButton
-                              label="Informazioni"
-                              className={lavTableActionBtnInfo}
-                              onClick={() =>
-                                setSchedeRow({
-                                  row,
-                                  origine: "storico",
-                                  initialTab: "panoramica",
-                                  dialogSize: "compact",
-                                })
-                              }
-                            >
-                              <IconInfo />
-                            </IconActionButton>
-                            <IconActionButton
-                              label="Schede"
-                              className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                              onClick={() =>
-                                setSchedeRow({ row, origine: "storico", initialTab: "schede", dialogSize: "hub" })
-                              }
-                            >
-                              <IconSchede />
-                              <span className={dsTableActionBadge} aria-hidden>
-                                {schedeCountForRow(row, schedeStore)}/3
-                              </span>
-                            </IconActionButton>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-          </GestionaleListTable>
+            virtualRows={{
+              rowCount: pagedChiuse.length,
+              renderRow: renderArchivioDesktopRow,
+              estimateRowHeight: 72,
+            }}
+          />
 
-          <div className="mt-4 space-y-2 xl:hidden">
-            {pagedChiuse.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-                {hasPageClientFilters || navMezzoFilter
-                  ? "Nessun record in archivio corrisponde alla ricerca o ai filtri selezionati."
-                  : "Nessun record in archivio."}
-              </p>
-            ) : (
-              pagedChiuse.map((row) => {
-              const macchina = macchinaLabel(row, schedeStore);
-              const utilizzatore = utilizzatoreLabel(row, schedeStore);
-              const addetto = addettoLabel(row, schedeStore, defaultAddetto);
-              return (
-                <LavorazioneMobileCardShell key={row.id}>
-                  <LavorazioneMobileCardHeader
-                    macchina={macchina}
-                    identLine={formatLavorazioneMobileIdentLine(mezzoIdentParts(row, schedeStore))}
-                    ingresso={<LavorazioneIngressoDateCell row={row} schedeStore={schedeStore} />}
-                    statusSlot={
-                      <LavorazioneMobileStatusSlot>
-                        <LavorazioneCompletamentoDatePill iso={dataCompletamentoIso(row)} />
-                      </LavorazioneMobileStatusSlot>
-                    }
-                  />
-                  <LavorazioneMobileMetaGrid>
-                    <LavorazioneMobileMetaItem label="Cliente" value={clienteLabel(row, schedeStore)} />
-                    <LavorazioneMobileMetaItem label="Cantiere" value={cantiereLabel(row, schedeStore)} />
-                    {utilizzatore ? (
-                      <LavorazioneMobileMetaItem
-                        label="Utilizzatore"
-                        value={utilizzatore}
-                        className="col-span-2"
-                      />
-                    ) : null}
-                  </LavorazioneMobileMetaGrid>
-                  <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
-                  <LavorazioneMobileControlsPanel>
-                    <LavMobileInlineField label="Priorità" layout="stack">
-                      <LavorazionePrioritaReadOnlyPill
-                        priorita={row.priorita}
-                        prioritaColors={globalOpts.lavorazioni.prioritaColors}
-                      />
-                    </LavMobileInlineField>
-                    <LavMobileInlineField label="Addetto" layout="stack">
-                      <LavorazioneAddettoReadOnlyPill
-                        addetto={addetto}
-                        addettoColors={globalOpts.lavorazioni.addettoColors}
-                      />
-                    </LavMobileInlineField>
-                  </LavorazioneMobileControlsPanel>
-                  <LavorazioneMobileCardFooter
-                    meta={
-                      <LavorazioneMobileUltimaModifica
-                        info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
-                          resolveUserId: buildLavorazioneRowProfileResolver(row, user?.id ?? null, authorName),
-                        })}
-                      />
-                    }
-                  >
-                    <IconActionButton
-                      label="Ripristina"
-                      tooltipContent={canEditWorkOrders ? "Ripristina" : "Sola lettura"}
-                      className={lavTableActionBtnDanger}
-                      disabled={!canEditWorkOrders || mutPendingBlocking || loading}
-                      onClick={() => submitRipristinaInLavorazione(row)}
-                    >
-                      <IconRipristinaDaArchivio />
-                    </IconActionButton>
-                    <IconActionButton
-                      label="Informazioni"
-                      className={lavTableActionBtnInfo}
-                      onClick={() =>
-                        setSchedeRow({
-                          row,
-                          origine: "storico",
-                          initialTab: "panoramica",
-                          dialogSize: "compact",
-                        })
-                      }
-                    >
-                      <IconInfo />
-                    </IconActionButton>
-                    <IconActionButton
-                      label="Schede"
-                      className={`${lavTableActionBtnPrimary} ${dsTableActionBtnWithBadge}`}
-                      onClick={() =>
-                        setSchedeRow({ row, origine: "storico", initialTab: "schede", dialogSize: "hub" })
-                      }
-                    >
-                      <IconSchede />
-                      <span className={dsTableActionBadge} aria-hidden>
-                        {schedeCountForRow(row, schedeStore)}/3
-                      </span>
-                    </IconActionButton>
-                  </LavorazioneMobileCardFooter>
-                </LavorazioneMobileCardShell>
-              );
-            })
-            )}
-          </div>
+          <LavorazioniMobileListShell
+            empty={pagedChiuse.length === 0}
+            emptyMessage={
+              hasPageClientFilters || navMezzoFilter
+                ? "Nessun record in archivio corrisponde alla ricerca o ai filtri selezionati."
+                : "Nessun record in archivio."
+            }
+          >
+            {pagedChiuse.map((row) => (
+              <LavorazioneArchivioMobileCard
+                key={row.id}
+                row={row}
+                bundle={schedeStore[row.id]}
+                defaultAddetto={defaultAddetto}
+                canEditWorkOrders={canEditWorkOrders}
+                mutPendingBlocking={mutPendingBlocking}
+                loading={loading}
+                prioritaColors={globalOpts.lavorazioni.prioritaColors}
+                addettoColors={globalOpts.lavorazioni.addettoColors}
+                ultimaModificaInfo={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
+                  resolveUserId: resolveMobileProfile(row),
+                })}
+                onRipristina={onRipristinaArchivioRow}
+                onOpenInfo={onOpenArchivioInfo}
+                onOpenSchede={onOpenArchivioSchede}
+              />
+            ))}
+          </LavorazioniMobileListShell>
 
           {showPagerC ? <TablePagination page={pageC} pageCount={pageCountC} onPageChange={setPageC} label={labelC} /> : null}
         </ShellCard>
@@ -2358,6 +2119,13 @@ export function LavorazioniView() {
         </div>
       </Drawer>
 
+      <SchedaConcurrencyMergeDialog
+        open={concurrencyDialog != null}
+        pending={concurrencyDialogPending}
+        onCancel={handleConcurrencyCancel}
+        onResolve={handleConcurrencyResolve}
+      />
+
       {schedeRow ? (
         <SchedeLavorazioneModal
           open
@@ -2371,9 +2139,7 @@ export function LavorazioniView() {
           initialTab={schedeRow.initialTab}
           dialogSize={schedeRow.dialogSize}
           bundle={getOrCreateBundle(schedeStore, schedeRow.row.id, schedeRow.row.codice)}
-          onPersist={(next) => {
-            persistSchedeAndSync(persistSchedeBundle(next));
-          }}
+          onPersist={onPersistSchedeBundle}
           onIngressoCommitted={async (campi) => {
             if (!schedeRow) return;
             try {

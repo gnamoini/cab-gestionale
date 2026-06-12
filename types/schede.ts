@@ -101,6 +101,13 @@ export type SchedaRicambiDoc = SchedaMeta & {
   campi: SchedaRicambiFields;
 };
 
+/** Metadati cache in-memory (non persistiti su DB). */
+export type BundleCacheMeta = {
+  /** max(updated_at) delle righe scheda_lavorazione per questo bundle. */
+  _revision?: string;
+  _fetchedAt?: number;
+};
+
 export type LavorazioneSchedeBundle = {
   lavorazioneId: string;
   /** Codice umano display (es. 26-0001). Non sostituisce lavorazioneId uuid. */
@@ -108,6 +115,6 @@ export type LavorazioneSchedeBundle = {
   ingresso: SchedaIngressoDoc | null;
   lavorazioni: SchedaLavorazioniDoc | null;
   ricambi: SchedaRicambiDoc | null;
-};
+} & BundleCacheMeta;
 
 export type LavorazioneSchedeStore = Record<string, LavorazioneSchedeBundle>;

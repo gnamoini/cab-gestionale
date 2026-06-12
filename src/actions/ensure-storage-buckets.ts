@@ -17,11 +17,29 @@ const BUCKET_OPTIONS: Record<
   [STORAGE_BUCKETS.images]: {
     public: false,
     fileSizeLimit: STORAGE_LIMITS.imagesMaxBytes,
-    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/jpg"],
+    allowedMimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/avif",
+      "image/gif",
+      "image/heic",
+      "image/jpg",
+    ],
   },
   [STORAGE_BUCKETS.documenti]: {
     public: false,
     fileSizeLimit: STORAGE_LIMITS.documentiMaxBytes,
+  },
+  [STORAGE_BUCKETS.pdfArtifacts]: {
+    public: false,
+    fileSizeLimit: STORAGE_LIMITS.pdfArtifactsMaxBytes,
+    allowedMimeTypes: ["application/pdf"],
+  },
+  [STORAGE_BUCKETS.documentiThumbnails]: {
+    public: false,
+    fileSizeLimit: STORAGE_LIMITS.documentiThumbnailsMaxBytes,
+    allowedMimeTypes: ["image/webp"],
   },
 };
 

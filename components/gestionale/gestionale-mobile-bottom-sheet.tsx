@@ -1,7 +1,8 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import type { ReactNode, RefObject } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
+import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
 import { CloseButton } from "@/components/design-system";
 import {
   CAB_MODAL_ROOT_ATTR,
@@ -45,6 +46,19 @@ export function GestionaleMobileBottomSheet({
   panelRef?: RefObject<HTMLDivElement | null>;
   className?: string;
 }) {
+  const prevOpenRef = useRef(open);
+  useEffect(() => {
+    if (prevOpenRef.current && !open) {
+      armSelectorGhostClickGuard();
+    }
+    prevOpenRef.current = open;
+  }, [open]);
+
+  const requestClose = () => {
+    armSelectorGhostClickGuard();
+    onRequestClose();
+  };
+
   if (!open || typeof document === "undefined") return null;
 
   const sheet = (
@@ -56,7 +70,15 @@ export function GestionaleMobileBottomSheet({
         type="button"
         className={sheetBackdropClass}
         aria-label={backdropLabel}
-        onClick={onRequestClose}
+        onPointerDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          requestClose();
+        }}
       />
       <div
         ref={panelRef}
@@ -72,7 +94,7 @@ export function GestionaleMobileBottomSheet({
             <h2 id={titleId} className="min-w-0 truncate text-sm font-semibold text-[color:var(--cab-text)]">
               {title}
             </h2>
-            <CloseButton onClick={onRequestClose} aria-label="Chiudi" />
+            <CloseButton onClick={requestClose} aria-label="Chiudi" />
           </div>
           {header ? <div className="border-b border-[color:var(--cab-border)]">{header}</div> : null}
         </div>

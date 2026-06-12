@@ -9,6 +9,8 @@ import {
   type InvalidateGestionaleTablesOptions,
 } from "@/src/lib/react-query/invalidate-targets";
 
+export { clearDedupForEntity, clearDedupForQueryKey } from "@/lib/query/query-dedup-registry";
+
 export const INVALIDATE_BATCH_WINDOW_MS = 100;
 
 type QueryKeyTuple = readonly unknown[];

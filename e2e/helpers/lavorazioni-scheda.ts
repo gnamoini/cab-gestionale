@@ -234,10 +234,17 @@ export async function fillSchedaIngressoCreateForm(
   await modal.getByLabel("Ore lavoro").fill(data.oreLavoro);
   await modal.getByLabel("KM").fill(data.km);
   if (data.livelloCarburante) {
-    await modal
-      .getByRole("group", { name: "Livello carburante" })
-      .getByRole("button", { name: data.livelloCarburante, exact: true })
-      .click();
+    const legacyPercent: Record<string, number> = {
+      Vuoto: 0,
+      "1/4": 25,
+      "1/2": 50,
+      "3/4": 75,
+      Pieno: 100,
+    };
+    const percent = legacyPercent[data.livelloCarburante] ?? Number.parseInt(data.livelloCarburante, 10);
+    const slider = modal.getByRole("slider", { name: "Livello carburante" });
+    await slider.scrollIntoViewIfNeeded();
+    await slider.fill(String(percent));
   }
 
   await modal.getByLabel("Descrizione anomalia").fill(data.descrizioneAnomalia);

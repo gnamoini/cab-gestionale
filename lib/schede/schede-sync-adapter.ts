@@ -17,15 +17,43 @@ import {
   loadLavorazioneSchedeStore,
   saveLavorazioneSchedeStore,
 } from "@/lib/schede/lavorazioni-schede-storage";
-import { schedeService } from "@/src/services/schede.service";
+import { primeLavorazioneSchedeRowsCache } from "@/lib/schede/schede-domain-query-cache";
+import {
+  fetchSchedeBundlesStoreAuthorized,
+  fetchSchedeRowsByLavorazioneIdsAuthorized,
+} from "@/lib/schede/schede-bundles-fetch-authorized";
+import {
+  consumeSchedeEnsureAfterInvalidate,
+  type EnsureSchedeBundlesOptions,
+  shouldRefetchBundleSlice,
+} from "@/lib/schede/schede-ensure-options";
+import { schedeService, SCHEDA_CONCURRENCY_CONFLICT } from "@/src/services/schede.service";
 import { SCHEde_BUNDLES_QUERY_KEY } from "@/src/lib/react-query/query-keys";
 import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
+import type { SchedaLavorazioneRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle, LavorazioneSchedeStore } from "@/types/schede";
 
-const SCHEde_FETCH_CONCURRENCY = 8;
+/** @deprecated Usare SCHEDA_CONCURRENCY_CONFLICT da schede.service */
+export const SCHEDE_CONCURRENCY_CONFLICT = SCHEDA_CONCURRENCY_CONFLICT;
 
-export const SCHEDE_CONCURRENCY_CONFLICT =
-  "Un altro utente ha aggiornato questa scheda. Ricarica e riprova.";
+export type PersistSchedeErrorResult =
+  | { ok: false; kind: "error"; error: string }
+  | {
+      ok: false;
+      kind: "concurrency";
+      error: string;
+      clientBundle: LavorazioneSchedeBundle;
+      serverBundle: LavorazioneSchedeBundle;
+    };
+
+export type PersistSchedeResult = { ok: true } | PersistSchedeErrorResult;
+
+export function isSchedaConcurrencyConflict(result: PersistSchedeResult): result is Extract<
+  PersistSchedeErrorResult,
+  { kind: "concurrency" }
+> {
+  return !result.ok && result.kind === "concurrency";
+}
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -34,15 +62,15 @@ function isUuid(id: string): boolean {
   return UUID_RE.test(id.trim());
 }
 
-async function syncBundleToDb(bundle: LavorazioneSchedeBundle): Promise<{ ok: true } | { ok: false; error: string }> {
+async function syncBundleToDb(bundle: LavorazioneSchedeBundle): Promise<PersistSchedeResult> {
   if (!isUuid(bundle.lavorazioneId)) {
-    return { ok: false, error: "ID lavorazione non valido per sincronizzazione schede." };
+    return { ok: false, kind: "error", error: "ID lavorazione non valido per sincronizzazione schede." };
   }
 
   const existing = await schedeService.getAll({ lavorazione_id: bundle.lavorazioneId });
   const rows = existing.success && existing.data ? existing.data : [];
   if (!existing.success) {
-    return { ok: false, error: existing.error ?? "Lettura schede dal database non riuscita." };
+    return { ok: false, kind: "error", error: existing.error ?? "Lettura schede dal database non riuscita." };
   }
 
   const payloads = bundleToSchedaPayloads(bundle);
@@ -69,12 +97,25 @@ async function syncBundleToDb(bundle: LavorazioneSchedeBundle): Promise<{ ok: tr
         ...schedaUpdateFromContenuto(part.contenuto),
         updated_at: row.updated_at,
       });
-      if (!upd.success) return { ok: false, error: upd.error ?? "Aggiornamento scheda fallito." };
+      if (!upd.success) {
+        if (upd.error === SCHEDA_CONCURRENCY_CONFLICT) {
+          const fresh = await schedeService.getAll({ lavorazione_id: bundle.lavorazioneId });
+          const freshRows = fresh.success && fresh.data ? fresh.data : rows;
+          return {
+            ok: false,
+            kind: "concurrency",
+            error: SCHEDA_CONCURRENCY_CONFLICT,
+            clientBundle: bundle,
+            serverBundle: schedaRowsToBundle(bundle.lavorazioneId, freshRows, bundle.codice),
+          };
+        }
+        return { ok: false, kind: "error", error: upd.error ?? "Aggiornamento scheda fallito." };
+      }
     } else {
       const ins = await schedeService.create(
         schedaInsertFromBundlePart(bundle.lavorazioneId, part.tipo, part.contenuto),
       );
-      if (!ins.success) return { ok: false, error: ins.error ?? "Creazione scheda fallita." };
+      if (!ins.success) return { ok: false, kind: "error", error: ins.error ?? "Creazione scheda fallita." };
     }
   }
 
@@ -82,7 +123,7 @@ async function syncBundleToDb(bundle: LavorazioneSchedeBundle): Promise<{ ok: tr
     const normalized = normalizeSchedaTipoDb(row.tipo);
     if (!normalized || payloadTipi.has(normalized)) continue;
     const del = await schedeService.remove(row.id);
-    if (!del.success) return { ok: false, error: del.error ?? "Eliminazione scheda fallita." };
+    if (!del.success) return { ok: false, kind: "error", error: del.error ?? "Eliminazione scheda fallita." };
   }
 
   return { ok: true };
@@ -95,30 +136,38 @@ function cacheStoreLocally(store: LavorazioneSchedeStore, touchedIds?: string[])
 /** Fetch bundle schede per singola lavorazione (no monolith). */
 export async function fetchSchedeBundleForLavorazione(
   lavorazioneId: string,
+  qc?: QueryClient,
 ): Promise<LavorazioneSchedeBundle | null> {
   const id = lavorazioneId.trim();
   if (!id) return null;
   const remoteRes = await schedeService.getAll({ lavorazione_id: id });
   if (!remoteRes.success) return null;
-  return schedaRowsToBundle(id, remoteRes.data ?? []);
+  const rows = remoteRes.data ?? [];
+  if (qc) primeLavorazioneSchedeRowsCache(qc, id, rows);
+  return schedaRowsToBundle(id, rows);
 }
 
-/** Fetch parallelo per più lavorazioni (chunked). */
+/** Fetch batch per più lavorazioni — 1 query `.in()` per chunk (sostituisce N× getAll). */
 export async function fetchSchedeBundlesForLavorazioni(
   lavorazioneIds: readonly string[],
+  qc?: QueryClient,
 ): Promise<LavorazioneSchedeStore> {
   const unique = [...new Set(lavorazioneIds.map((id) => id.trim()).filter(Boolean))];
-  const store: LavorazioneSchedeStore = {};
-  for (let i = 0; i < unique.length; i += SCHEde_FETCH_CONCURRENCY) {
-    const chunk = unique.slice(i, i + SCHEde_FETCH_CONCURRENCY);
-    const results = await Promise.all(
-      chunk.map(async (id) => {
-        const bundle = await fetchSchedeBundleForLavorazione(id);
-        return bundle ? ([id, bundle] as const) : null;
-      }),
-    );
-    for (const entry of results) {
-      if (entry) store[entry[0]] = entry[1];
+  const [storeRes, rowsRes] = await Promise.all([
+    fetchSchedeBundlesStoreAuthorized(unique),
+    qc ? fetchSchedeRowsByLavorazioneIdsAuthorized(unique) : Promise.resolve(null),
+  ]);
+  if (!storeRes.success) return {};
+  const store = storeRes.data ?? {};
+  if (qc && rowsRes?.success) {
+    const byLav = new Map<string, SchedaLavorazioneRow[]>();
+    for (const row of rowsRes.data ?? []) {
+      const list = byLav.get(row.lavorazione_id) ?? [];
+      list.push(row);
+      byLav.set(row.lavorazione_id, list);
+    }
+    for (const id of unique) {
+      primeLavorazioneSchedeRowsCache(qc, id, byLav.get(id) ?? []);
     }
   }
   return store;
@@ -129,22 +178,27 @@ function schedeEnsureQueryKey(lavorazioneIds: readonly string[]): readonly unkno
   return [...SCHEde_BUNDLES_QUERY_KEY, "ensure", sorted.join(",")] as const;
 }
 
-/** Carica in cache RQ solo i bundle mancanti per gli id richiesti. */
+/** Carica in cache RQ solo i bundle mancanti (o stale) per gli id richiesti. */
 export async function ensureSchedeBundlesInCache(
   qc: QueryClient,
   lavorazioneIds: readonly string[],
+  options?: EnsureSchedeBundlesOptions,
 ): Promise<LavorazioneSchedeStore> {
   const unique = [...new Set(lavorazioneIds.map((id) => id.trim()).filter(Boolean))];
   const prev = qc.getQueryData<LavorazioneSchedeStore>(SCHEde_BUNDLES_QUERY_KEY) ?? {};
-  const missing = unique.filter((id) => !prev[id]);
-  if (missing.length === 0) return prev;
+  const mergedOptions: EnsureSchedeBundlesOptions = {
+    ...options,
+    afterInvalidate: options?.afterInvalidate ?? consumeSchedeEnsureAfterInvalidate(qc),
+  };
+  const toFetch = unique.filter((id) => shouldRefetchBundleSlice(prev[id], mergedOptions));
+  if (toFetch.length === 0) return prev;
 
-  const fetched = await fetchSchedeBundlesForLavorazioni(missing);
+  const fetched = await fetchSchedeBundlesForLavorazioni(toFetch, qc);
   const merged = { ...prev, ...fetched };
   qc.setQueryData(SCHEde_BUNDLES_QUERY_KEY, merged);
 
   if (isSchedeDbPrimary()) {
-    cacheStoreLocally(merged, missing);
+    cacheStoreLocally(merged, toFetch);
   }
   return merged;
 }
@@ -165,9 +219,7 @@ export async function fetchSchedeStoreMerged(): Promise<LavorazioneSchedeStore> 
   return fetchSchedeBundlesFromDb();
 }
 
-export async function persistSchedeBundle(
-  bundle: LavorazioneSchedeBundle,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+export async function persistSchedeBundle(bundle: LavorazioneSchedeBundle): Promise<PersistSchedeResult> {
   const safe = clampSchedeBundle(bundle);
   if (isSchedeDbPrimary()) {
     const db = await syncBundleToDb(safe);
@@ -197,7 +249,7 @@ export function getOrCreateBundleMerged(
 export async function persistSchedeStore(
   store: LavorazioneSchedeStore,
   lavorazioneId?: string,
-): Promise<{ ok: true } | { ok: false; error: string }> {
+): Promise<PersistSchedeResult> {
   const ids = lavorazioneId ? [lavorazioneId] : Object.keys(store);
 
   if (isSchedeDbPrimary()) {

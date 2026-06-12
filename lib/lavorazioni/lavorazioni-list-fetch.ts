@@ -1,3 +1,12 @@
+import {
+  LAVORAZIONI_COLUMNS,
+  LAVORAZIONI_DETAIL_COLUMNS,
+  LAVORAZIONI_LIST_LIGHT_COLUMNS,
+  LAVORAZIONI_REPORT_LIGHT_COLUMNS,
+  MEZZI_EMBED_LIGHT_COLUMNS,
+  MEZZI_LIST_EMBED_COLUMNS,
+} from "@/lib/db/table-select-columns";
+import { mapLavorazioneLightToListRow } from "@/lib/db/dto-mappers";
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
@@ -12,8 +21,13 @@ import {
 } from "@/src/lib/auth/permission-guards";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
-import type { LavorazioneFilters, LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
+import type {
+  LavorazioneFilters,
+  LavorazioneListRow,
+  LavorazioniListFetchMode,
+} from "@/src/services/lavorazioni.service";
+import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
+import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import { logLavorazioniListPipelineDebug } from "@/lib/lavorazioni/lavorazioni-list-pipeline-debug";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -31,12 +45,6 @@ type LavorazioniFilterQuery = {
   order(column: string, opts: { ascending: boolean }): LavorazioniFilterQuery;
 };
 
-function embedMezzo(raw: unknown): MezzoRow | null {
-  if (raw == null) return null;
-  if (Array.isArray(raw)) return (raw[0] as MezzoRow) ?? null;
-  return raw as MezzoRow;
-}
-
 function escapeIlikeToken(raw: string): string {
   return raw.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
 }
@@ -47,7 +55,8 @@ function endOfDayIso(dateDay: string): string {
   return t.length <= 10 ? `${t}T23:59:59.999Z` : t;
 }
 
-function settingsStatiForSanitize() {
+function resolveStatiForSanitize(override?: StatoLavorazioneConfig[]) {
+  if (override?.length) return override;
   const resolved = getRuntimeCabAppSettings() ?? resolveCabAppSettingsFallback();
   return resolved.lavorazioni.stati;
 }
@@ -65,47 +74,68 @@ function isUpdatedByProfileJoinError(message: string): boolean {
   );
 }
 
-type ProfileEmbed = { nome?: string | null } | null;
-
-function embedProfileNome(raw: ProfileEmbed | ProfileEmbed[] | undefined): string | null {
-  if (raw == null) return null;
-  const p = Array.isArray(raw) ? raw[0] : raw;
-  const nome = p?.nome?.trim();
-  return nome || null;
+function resolveFetchMode(filters?: LavorazioneFilters): LavorazioniListFetchMode {
+  return filters?.fetchMode ?? "light";
 }
 
-function lavorazioniListSelect(
-  includeMezzo: boolean,
-  mezziSelect: string,
-  includeUpdatedByProfile = true,
-): string {
-  const profilePart = includeUpdatedByProfile
-    ? LAVORAZIONI_PROFILE_SELECT
-    : LAVORAZIONI_CREATED_BY_PROFILE_SELECT;
-  if (includeMezzo) return `*, ${profilePart}, ${mezziSelect}`;
-  return `*, ${profilePart}`;
+function lavorazioniColumnsForMode(mode: LavorazioniListFetchMode): string {
+  switch (mode) {
+    case "report":
+      return LAVORAZIONI_REPORT_LIGHT_COLUMNS;
+    case "detail":
+      return LAVORAZIONI_DETAIL_COLUMNS;
+    case "light":
+    default:
+      return LAVORAZIONI_LIST_LIGHT_COLUMNS;
+  }
+}
+
+function mezziEmbedColumnsForMode(mode: LavorazioniListFetchMode): string {
+  return mode === "detail" ? MEZZI_LIST_EMBED_COLUMNS : MEZZI_EMBED_LIGHT_COLUMNS;
+}
+
+function lavorazioniListSelect(options: {
+  fetchMode: LavorazioniListFetchMode;
+  includeMezzo: boolean;
+  mezziSelect: string;
+  includeProfiles: boolean;
+  includeUpdatedByProfile: boolean;
+}): string {
+  const { fetchMode, includeMezzo, mezziSelect, includeProfiles, includeUpdatedByProfile } = options;
+  const parts = [lavorazioniColumnsForMode(fetchMode)];
+
+  if (includeProfiles && fetchMode !== "report") {
+    const profilePart = includeUpdatedByProfile
+      ? LAVORAZIONI_PROFILE_SELECT
+      : LAVORAZIONI_CREATED_BY_PROFILE_SELECT;
+    parts.push(profilePart);
+  }
+
+  if (includeMezzo && fetchMode !== "report") {
+    parts.push(mezziSelect);
+  }
+
+  return parts.join(", ");
 }
 
 type LavorazioneListRawRow = LavorazioneRow & {
   mezzi?: unknown;
-  updated_by_profile?: ProfileEmbed | ProfileEmbed[];
-  created_by_profile?: ProfileEmbed | ProfileEmbed[];
+  updated_by_profile?: { nome?: string | null } | { nome?: string | null }[] | null;
+  created_by_profile?: { nome?: string | null } | { nome?: string | null }[] | null;
 };
 
-function mapRawRows(raw: LavorazioneListRawRow[], includeMezzo: boolean): LavorazioneListRow[] {
-  const stati = settingsStatiForSanitize();
+function mapRawRows(
+  raw: LavorazioneListRawRow[],
+  includeMezzo: boolean,
+  sanitizeStati?: StatoLavorazioneConfig[],
+): LavorazioneListRow[] {
+  const stati = resolveStatiForSanitize(sanitizeStati);
   return raw.map((row) => {
-    const { mezzi: em, updated_by_profile, created_by_profile, ...rest } = row;
-    const base: LavorazioneListRow = {
-      ...(rest as LavorazioneRow),
-      archived: rest.archived === true,
-      mezzo: includeMezzo ? embedMezzo(em) : null,
-      updated_by_nome: embedProfileNome(updated_by_profile),
-      created_by_nome: embedProfileNome(created_by_profile),
-    };
-    return sanitizeClientLavorazioneRow(base, stati);
+    const mapped = mapLavorazioneLightToListRow(row, { includeMezzo });
+    return sanitizeClientLavorazioneRow(mapped, stati);
   });
 }
+
 export function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuery>(
   q: TQuery,
   filters?: LavorazioneFilters,
@@ -135,6 +165,8 @@ export function applyLavorazioniListFilters<TQuery extends LavorazioniFilterQuer
 export type LavorazioniListFetchOptions = {
   /** Filtra su `mezzi.cliente` (defense in depth oltre RLS). */
   clienteRefScope?: string | null;
+  /** Server prefetch: stati da DB senza runtime client cache. */
+  sanitizeStati?: StatoLavorazioneConfig[];
 };
 
 async function fetchLavorazioniListRowsQuery(
@@ -142,21 +174,32 @@ async function fetchLavorazioniListRowsQuery(
   filters: LavorazioneFilters | undefined,
   options: {
     clienteRefScope: string | null;
+    fetchMode: LavorazioniListFetchMode;
     includeMezzo: boolean;
     mezziSelect: string;
+    includeProfiles: boolean;
     includeUpdatedByProfile: boolean;
   },
 ): Promise<{ data: LavorazioneListRawRow[] | null; error: { message: string } | null }> {
-  const { clienteRefScope, includeMezzo, mezziSelect, includeUpdatedByProfile } = options;
+  const { clienteRefScope, fetchMode, includeMezzo, mezziSelect, includeProfiles, includeUpdatedByProfile } =
+    options;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- evita TS2589 su PostgrestFilterBuilder
   let q: any = applyLavorazioniNotDeletedFilter(
     sb
       .from("lavorazioni")
-      .select(lavorazioniListSelect(includeMezzo, mezziSelect, includeUpdatedByProfile))
+      .select(
+        lavorazioniListSelect({
+          fetchMode,
+          includeMezzo,
+          mezziSelect,
+          includeProfiles,
+          includeUpdatedByProfile,
+        }),
+      )
       .order("created_at", { ascending: false }),
   );
   q = applyLavorazioniListFilters(q, filters);
-  if (clienteRefScope && includeMezzo) {
+  if (clienteRefScope && includeMezzo && fetchMode !== "report") {
     q = q.eq("mezzi.cliente", clienteRefScope);
   }
   const { data, error } = await q;
@@ -170,9 +213,14 @@ export async function fetchLavorazioniListRows(
   options?: LavorazioniListFetchOptions,
 ): Promise<ServiceResult<LavorazioneListRow[]>> {
   const clienteRefScope = normalizeClienteRef(options?.clienteRefScope);
-  const includeMezzo = filters?.includeMezzo === true || !!clienteRefScope;
-  const mezziSelect = clienteRefScope ? "mezzi!inner(*)" : "mezzi(*)";
-  const baseOpts = { clienteRefScope, includeMezzo, mezziSelect };
+  const fetchMode = resolveFetchMode(filters);
+  const includeMezzo =
+    fetchMode !== "report" && (filters?.includeMezzo === true || !!clienteRefScope);
+  const includeProfiles =
+    filters?.includeProfiles === true || (fetchMode === "detail" && filters?.includeProfiles !== false);
+  const mezziCols = mezziEmbedColumnsForMode(fetchMode);
+  const mezziSelect = clienteRefScope ? `mezzi!inner(${mezziCols})` : `mezzi(${mezziCols})`;
+  const baseOpts = { clienteRefScope, fetchMode, includeMezzo, mezziSelect, includeProfiles };
 
   let profileJoinFallback = false;
   let { data, error } = await fetchLavorazioniListRowsQuery(sb, filters, {
@@ -180,7 +228,7 @@ export async function fetchLavorazioniListRows(
     includeUpdatedByProfile: true,
   });
 
-  if (error && isUpdatedByProfileJoinError(error.message)) {
+  if (error && isUpdatedByProfileJoinError(error.message) && includeProfiles) {
     profileJoinFallback = true;
     ({ data, error } = await fetchLavorazioniListRowsQuery(sb, filters, {
       ...baseOpts,
@@ -199,12 +247,8 @@ export async function fetchLavorazioniListRows(
   });
 
   if (error) return err(error.message);
-  if (includeMezzo) {
-    const raw = (data ?? []) as LavorazioneListRawRow[];
-    return success(mapRawRows(raw, true));
-  }
   const raw = (data ?? []) as LavorazioneListRawRow[];
-  return success(mapRawRows(raw.map((row) => ({ ...row })), false));
+  return success(mapRawRows(raw, includeMezzo, options?.sanitizeStati));
 }
 
 export type LavorazioniListAuthorizedOptions = {
@@ -257,3 +301,6 @@ export function completionSortKey(row: LavorazioneListRow): string {
 export function ingressoSortKey(row: LavorazioneListRow): string {
   return row.data_ingresso?.trim() || row.created_at || "";
 }
+
+/** @deprecated Usare `LAVORAZIONI_DETAIL_COLUMNS` — alias per test legacy. */
+export const LAVORAZIONI_LIST_FULL_COLUMNS = LAVORAZIONI_COLUMNS;

@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { computeLavorazioneCosto, type LavorazioneCostoBreakdown } from "@/lib/lavorazioni/lavorazione-costo";
 import { LAVORAZIONI_SCHEDE_STORE_CHANGED } from "@/src/hooks/use-lavorazione-schede-store-sync";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { magazzinoService } from "@/src/services/magazzino.service";
-import { QK } from "@/src/lib/react-query/invalidate-related";
+import { magazzinoListQueryKey } from "@/lib/render/query-key-factory";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
+
+const MAG_LIST_KEY = magazzinoListQueryKey("list", null);
 
 export function useLavorazioneCosto(
   lavorazioneId: string,
@@ -18,10 +21,17 @@ export function useLavorazioneCosto(
   const id = lavorazioneId.trim();
   const enabled = opts.enabled && id.length > 0 && Boolean(bundle);
 
-  const settingsQ = useCabAppSettingsPayloadQuery();
-  const magQ = useServiceQuery([...QK.magazzino, null] as const, () => magazzinoService.getAll(), {
-    enabled,
+  const queryClient = useQueryClient();
+  const cachedMagazzino = queryClient.getQueryData<MagazzinoRicambioRow[]>(MAG_LIST_KEY);
+
+  const settingsQ = useCabAppSettingsPayloadQuery({ tier: "static" });
+  const magQ = useServiceQuery(MAG_LIST_KEY, () => magazzinoService.getAll(), {
+    enabled: enabled && cachedMagazzino == null,
     staleTime: 30_000,
+    dedupTag: "lavorazione-costo",
+    dedupMeta: { entityType: "magazzino", scope: "list" },
+    initialData: cachedMagazzino,
+    refetchOnMount: cachedMagazzino != null ? false : undefined,
   });
   const [schedeTick, setSchedeTick] = useState(0);
   useEffect(() => {
@@ -33,9 +43,10 @@ export function useLavorazioneCosto(
 
   const magazzinoById = useMemo(() => {
     const map = new Map<string, MagazzinoRicambioRow>();
-    for (const row of magQ.data ?? []) map.set(row.id, row);
+    const rows = magQ.data ?? cachedMagazzino ?? [];
+    for (const row of rows) map.set(row.id, row);
     return map;
-  }, [magQ.data]);
+  }, [magQ.data, cachedMagazzino]);
 
   return useMemo(() => {
     void schedeTick;

@@ -13,6 +13,7 @@ import {
   snapshotLavorazioneUpdateQueries,
   type LavorazioneUpdateOptimisticContext,
 } from "@/src/lib/react-query/lavorazioni-optimistic";
+import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import { markRecentLocalGestionaleMutation } from "@/lib/sync/recent-local-mutation";
 import { evictLavorazioneDomainCache } from "@/src/lib/react-query/evict-lavorazione-domain-cache";
 import {
@@ -31,7 +32,10 @@ export function useLavorazioneCreateMutation() {
         data?.id != null
           ? [cabSyncEventForEntity("lavorazioni", data.id, "entity_created", "lavorazioni")]
           : undefined;
-      await invalidateAfterLavorazioneMutations(queryClient, cabSyncEvents);
+      await traceMutationLifecycle(
+        { entityType: "lavorazione", entityId: data?.id ?? "list", operation: "create" },
+        () => invalidateAfterLavorazioneMutations(queryClient, cabSyncEvents, data?.id, data?.updated_at),
+      );
     },
   });
 }
@@ -55,8 +59,12 @@ export function useLavorazioneUpdateMutation() {
       onError: (_err, _variables, context) => {
         if (context) rollbackLavorazioneUpdateQueries(queryClient, context as LavorazioneUpdateOptimisticContext);
       },
-      onSettled: (_data, error) => {
-        settleLavorazioneQuickUpdate(queryClient, Boolean(error));
+      onSettled: async (data, error, variables) => {
+        if (error) return;
+        await traceMutationLifecycle(
+          { entityType: "lavorazione", entityId: variables.id, operation: "update" },
+          () => settleLavorazioneQuickUpdate(queryClient, false, variables.id, data?.updated_at),
+        );
       },
     },
   );
@@ -70,9 +78,15 @@ export function useLavorazioneRemoveMutation() {
     },
     onSettled: async (_data, error, id) => {
       if (error) return;
-      await invalidateAfterLavorazioneMutations(queryClient, [
-        cabSyncEventForEntity("lavorazioni", id, "entity_deleted", "lavorazioni"),
-      ]);
+      await traceMutationLifecycle(
+        { entityType: "lavorazione", entityId: id, operation: "remove" },
+        () =>
+          invalidateAfterLavorazioneMutations(
+            queryClient,
+            [cabSyncEventForEntity("lavorazioni", id, "entity_deleted", "lavorazioni")],
+            id,
+          ),
+      );
     },
   });
 }
@@ -84,9 +98,16 @@ export function useLavorazioneRestoreMutation() {
     {
       onSettled: async (_data, error, variables) => {
         if (error) return;
-        await invalidateAfterLavorazioneMutations(queryClient, [
-          cabSyncEventForEntity("lavorazioni", variables.id, "entity_updated", "lavorazioni"),
-        ]);
+        await traceMutationLifecycle(
+          { entityType: "lavorazione", entityId: variables.id, operation: "restore" },
+          () =>
+            invalidateAfterLavorazioneMutations(
+              queryClient,
+              [cabSyncEventForEntity("lavorazioni", variables.id, "entity_updated", "lavorazioni")],
+              variables.id,
+              _data?.updated_at,
+            ),
+        );
       },
     },
   );
@@ -120,9 +141,16 @@ export function useLavorazioneConcludeMutation() {
     },
     onSettled: async (_data, error, id) => {
       if (error) return;
-      await invalidateAfterLavorazioneMutations(queryClient, [
-        cabSyncEventForEntity("lavorazioni", id, "entity_updated", "lavorazioni"),
-      ]);
+      await traceMutationLifecycle(
+        { entityType: "lavorazione", entityId: id, operation: "conclude" },
+        () =>
+          invalidateAfterLavorazioneMutations(
+            queryClient,
+            [cabSyncEventForEntity("lavorazioni", id, "entity_updated", "lavorazioni")],
+            id,
+            _data?.updated_at,
+          ),
+      );
     },
   });
 }

@@ -18,6 +18,7 @@ import {
   OPERATOR_GLOBAL_SETTINGS_MODULE,
   parseOperatorGlobalSettingsDbEnabled,
 } from "@/lib/permissions/operator-global-settings";
+import { tryAuthPrecheckEdge, tryEdgeRoute } from "@/src/middleware/edge-router";
 
 const LOGIN_PATH = "/login";
 const RESET_PASSWORD_PATH = "/login/reset-password";
@@ -43,6 +44,11 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
 
   if (isStaticAsset(pathname)) {
     return NextResponse.next();
+  }
+
+  if (pathname.startsWith("/api/")) {
+    const authPrecheck = tryAuthPrecheckEdge(request);
+    if (authPrecheck) return authPrecheck;
   }
 
   const { supabase, response } = createSupabaseMiddlewareClient(request);
@@ -139,6 +145,11 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
 
   if (bootTiming && pathname === "/dashboard") {
     console.info(`[boot-timing] proxy ${pathname} ${Date.now() - t0}ms`);
+  }
+
+  if (pathname.startsWith("/api/")) {
+    const edgeResult = await tryEdgeRoute(request, response);
+    if (edgeResult) return edgeResult;
   }
 
   return response;

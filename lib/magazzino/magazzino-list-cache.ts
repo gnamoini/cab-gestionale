@@ -3,11 +3,12 @@ import { magazzinoRowToRicambioUI, ricambioUiToMagazzinoInsert } from "@/lib/mag
 import { sanitizeCompatRicambioUiBatch } from "@/lib/magazzino/compat/compat-runtime-sanitize";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
-import { QK } from "@/src/lib/react-query/query-keys";
+import { magazzinoListQueryKey as magazzinoListQueryKeyFactory } from "@/lib/render/query-key-factory";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
+/** @deprecated Use `magazzinoListQueryKey("list", null)` from query-key-factory. */
 export function magazzinoListQueryKey() {
-  return [...QK.magazzino, null] as const;
+  return magazzinoListQueryKeyFactory("list", null);
 }
 
 export function mapMagazzinoRowsToUI(

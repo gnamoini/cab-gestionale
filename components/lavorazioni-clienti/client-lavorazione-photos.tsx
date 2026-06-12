@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-card";
 import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
+import { GestionaleMediaImage } from "@/components/gestionale/media/gestionale-media-image";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { dsScrollbar } from "@/lib/ui/design-system";
@@ -15,11 +16,13 @@ function PhotoLightbox({ image, onClose }: { image: StoredImage; onClose: () => 
   return (
     <LavorazioniModalShell modalSize="info" onRequestClose={onClose} title="Foto lavorazione">
       <GestionaleModalScrollBody className="flex min-h-0 items-center justify-center">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={image.signedUrl}
+        <GestionaleMediaImage
+          image={image}
+          preset="detail"
           alt={image.name}
-          className="max-h-[70vh] max-w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] object-contain"
+          loading="eager"
+          className="max-h-[70vh] max-w-full"
+          imgClassName="max-h-[70vh] max-w-full rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] object-contain"
         />
       </GestionaleModalScrollBody>
     </LavorazioniModalShell>
@@ -35,6 +38,10 @@ function PhotoThumb({
   onOpen: () => void;
   sizeClass?: string;
 }) {
+  const match = sizeClass.match(/h-(\d+)/);
+  const px = match ? Number.parseInt(match[1], 10) * 4 : 64;
+  const preset = px <= 48 ? "thumbPortal" : "thumb";
+
   return (
     <button
       type="button"
@@ -43,8 +50,7 @@ function PhotoThumb({
       aria-label={`Apri foto ${image.name}`}
       onClick={onOpen}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={image.signedUrl} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+      <GestionaleMediaImage image={image} preset={preset} alt="" width={px} height={px} />
     </button>
   );
 }
@@ -97,7 +103,7 @@ export function ClientLavorazionePhotoStrip({
     <>
       <div ref={rootRef} className="flex flex-wrap items-center gap-1">
         {images.map((img) => (
-          <PhotoThumb key={img.path} image={img} sizeClass={sizeClass} onOpen={() => setPreview(img)} />
+          <PhotoThumb key={img.baseName} image={img} sizeClass={sizeClass} onOpen={() => setPreview(img)} />
         ))}
       </div>
       {preview ? <PhotoLightbox image={preview} onClose={() => setPreview(null)} /> : null}
@@ -135,7 +141,7 @@ export function ClientLavorazionePhotoGallery({
     images.length > 0 ? (
       <div className={`flex gap-2 overflow-x-auto pb-1 ${dsScrollbar}`}>
         {images.map((img) => (
-          <PhotoThumb key={img.path} image={img} onOpen={() => setPreview(img)} />
+          <PhotoThumb key={img.baseName} image={img} onOpen={() => setPreview(img)} />
         ))}
       </div>
     ) : null;
@@ -158,7 +164,7 @@ export function ClientLavorazionePhotoGallery({
     <>
       <div className="flex flex-wrap gap-2">
         {images.map((img) => (
-          <PhotoThumb key={img.path} image={img} sizeClass="h-16 w-16 sm:h-20 sm:w-20" onOpen={() => setPreview(img)} />
+          <PhotoThumb key={img.baseName} image={img} sizeClass="h-16 w-16 sm:h-20 sm:w-20" onOpen={() => setPreview(img)} />
         ))}
       </div>
       {preview ? <PhotoLightbox image={preview} onClose={() => setPreview(null)} /> : null}

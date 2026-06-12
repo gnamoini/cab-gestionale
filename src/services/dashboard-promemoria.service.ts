@@ -14,6 +14,7 @@ import {
   type PromemoriaRecurrenceScope,
 } from "@/lib/dashboard/dashboard-promemoria-recurrence";
 import { normalizePromemoriaEventTime } from "@/lib/dashboard/dashboard-promemoria-reminder";
+import { DASHBOARD_PROMEMORIA_COLUMNS } from "@/lib/db/table-select-columns";
 import { clampTextOrNull, PROMEMORIA_DESCRIPTION_MAX } from "@/lib/validation/text-field-limits";
 import {
   ensureOperationalWrite,
@@ -82,7 +83,7 @@ export const dashboardPromemoriaService = {
       const c = await sb();
       const { data, error } = await c
         .from(TABLE)
-        .select("*")
+        .select(DASHBOARD_PROMEMORIA_COLUMNS)
         .is("deleted_at", null)
         .gte("event_date", from)
         .lte("event_date", to)
@@ -105,7 +106,7 @@ export const dashboardPromemoriaService = {
       const c = await sb();
       const { data, error } = await c
         .from(TABLE)
-        .select("*")
+        .select(DASHBOARD_PROMEMORIA_COLUMNS)
         .is("deleted_at", null)
         .eq("event_date", ymd)
         .order("event_time", { ascending: true, nullsFirst: true })
@@ -126,7 +127,7 @@ export const dashboardPromemoriaService = {
       const c = await sb();
       const { data, error } = await c
         .from(TABLE)
-        .select("*")
+        .select(DASHBOARD_PROMEMORIA_COLUMNS)
         .is("deleted_at", null)
         .eq("event_date", ymd)
         .order("event_time", { ascending: true, nullsFirst: true })
@@ -176,7 +177,7 @@ export const dashboardPromemoriaService = {
           ...recFields,
         }));
         const c = await sb();
-        const { data, error } = await c.from(TABLE).insert(rows).select("*");
+        const { data, error } = await c.from(TABLE).insert(rows).select(DASHBOARD_PROMEMORIA_COLUMNS);
         if (error) return err(error.message);
         const first = (data ?? [])[0];
         if (!first) return err("Creazione promemoria fallita.");
@@ -193,7 +194,7 @@ export const dashboardPromemoriaService = {
           description: normalizeDescription(input.description),
           ...recurrenceDbFields(false, undefined, null),
         })
-        .select("*")
+        .select(DASHBOARD_PROMEMORIA_COLUMNS)
         .single();
       if (error) return err(error.message);
       return success(mapRow(data as Record<string, unknown>));
@@ -242,7 +243,7 @@ export const dashboardPromemoriaService = {
           .update(patch)
           .eq("id", input.id)
           .is("deleted_at", null)
-          .select("*")
+          .select(DASHBOARD_PROMEMORIA_COLUMNS)
           .single();
         if (error) return err(error.message);
         return success(mapRow(data as Record<string, unknown>));
@@ -259,7 +260,7 @@ export const dashboardPromemoriaService = {
         if (updErr) return err(updErr.message);
         const { data: row, error: rowErr } = await c
           .from(TABLE)
-          .select("*")
+          .select(DASHBOARD_PROMEMORIA_COLUMNS)
           .eq("id", input.id)
           .is("deleted_at", null)
           .single();
@@ -277,7 +278,7 @@ export const dashboardPromemoriaService = {
       if (updErr) return err(updErr.message);
       const { data: row, error: rowErr } = await c
         .from(TABLE)
-        .select("*")
+        .select(DASHBOARD_PROMEMORIA_COLUMNS)
         .eq("id", input.id)
         .is("deleted_at", null)
         .single();

@@ -168,16 +168,158 @@
   background-color: inherit;
 }
 
-/* Timesheet dipendenti — colonna «Oggi»: cornice overlay (verticale + orizzontale sopra data e sotto footer) */
-.timesheet-presenze-grid {
+/* Timesheet dipendenti — token condivisi shell (grid + highlight layer sibling). */
+.timesheet-presenze-shell {
   --timesheet-today-edge: color-mix(in srgb, var(--cab-primary) 62%, transparent);
   --timesheet-today-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --timesheet-today-out-ease: cubic-bezier(0.4, 0, 0.85, 1);
+  --timesheet-today-in-duration: 420ms;
+  --timesheet-today-out-duration: 360ms;
+}
+
+/* scrollbar-gutter: eredita `auto` da gestionale-list-table-scope — niente fascia vuota a destra con w-fit. */
+
+/* Griglia presenze — budget colonne fisso (SSOT lib/dipendenti/timesheet-grid-layout.ts) */
+.timesheet-presenze-grid table {
+  table-layout: fixed;
+}
+
+.timesheet-presenze-grid col[data-timesheet-fixed="name"] {
+  width: 8.5rem;
+}
+
+.timesheet-presenze-grid col[data-timesheet-fixed="total"] {
+  width: 4.5rem;
+}
+
+/* Giorni: nessuna width fissa su col — si espandono in modo uniforme (table-layout: fixed + w-full). */
+.timesheet-presenze-grid th[data-timesheet-day],
+.timesheet-presenze-grid td[data-timesheet-day] {
+  min-width: 2.75rem;
+}
+
+/* Celle giorno — tinta opaca sul td, button overlay senza raggio (SSOT data-timesheet-cell-kind). */
+.timesheet-presenze-grid tbody td[data-timesheet-day] {
+  position: relative;
+  border-right: 1px solid color-mix(in srgb, var(--cab-border) 55%, transparent);
+  padding: 0;
+  vertical-align: top;
+  border-radius: 0 !important;
+  overflow: visible;
+}
+
+.timesheet-presenze-grid tbody td[data-timesheet-day] > button[data-timesheet-cell] {
+  display: flex;
+  border-radius: 0 !important;
+  border: 0;
+  box-shadow: none;
+  background: transparent !important;
+}
+
+/* Tinte opache — weekday (base var(--cab-card)) */
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="work"]) {
+  background-color: color-mix(in srgb, var(--cab-success) 22%, var(--cab-card)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="overtime"]) {
+  background-color: color-mix(in srgb, var(--cab-warning) 26%, var(--cab-card)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="absence"]) {
+  background-color: color-mix(in srgb, var(--cab-danger) 22%, var(--cab-card)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="split"]) {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-success) 22%, var(--cab-card)) 0%,
+    color-mix(in srgb, var(--cab-warning) 28%, var(--cab-card)) 100%
+  ) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="work_absence"]) {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-success) 20%, var(--cab-card)) 0%,
+    color-mix(in srgb, var(--cab-danger) 24%, var(--cab-card)) 100%
+  ) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="overtime_absence"]) {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-warning) 24%, var(--cab-card)) 0%,
+    color-mix(in srgb, var(--cab-danger) 24%, var(--cab-card)) 100%
+  ) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="full"]) {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cab-success) 18%, var(--cab-card)) 0%,
+    color-mix(in srgb, var(--cab-warning) 20%, var(--cab-card)) 45%,
+    color-mix(in srgb, var(--cab-danger) 22%, var(--cab-card)) 100%
+  ) !important;
+}
+
+/* Tinte opache — weekend */
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="work"]) {
+  background-color: color-mix(in srgb, var(--cab-success) 22%, var(--timesheet-weekend-cell)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="overtime"]) {
+  background-color: color-mix(in srgb, var(--cab-warning) 26%, var(--timesheet-weekend-cell)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="absence"]) {
+  background-color: color-mix(in srgb, var(--cab-danger) 22%, var(--timesheet-weekend-cell)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="split"]) {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-success) 22%, var(--timesheet-weekend-cell)) 0%,
+    color-mix(in srgb, var(--cab-warning) 28%, var(--timesheet-weekend-cell)) 100%
+  ) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="work_absence"]) {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-success) 20%, var(--timesheet-weekend-cell)) 0%,
+    color-mix(in srgb, var(--cab-danger) 24%, var(--timesheet-weekend-cell)) 100%
+  ) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="overtime_absence"]) {
+  background-image: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-warning) 24%, var(--timesheet-weekend-cell)) 0%,
+    color-mix(in srgb, var(--cab-danger) 24%, var(--timesheet-weekend-cell)) 100%
+  ) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="full"]) {
+  background-image: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cab-success) 18%, var(--timesheet-weekend-cell)) 0%,
+    color-mix(in srgb, var(--cab-warning) 20%, var(--timesheet-weekend-cell)) 45%,
+    color-mix(in srgb, var(--cab-danger) 22%, var(--timesheet-weekend-cell)) 100%
+  ) !important;
+}
+
+/* Hover celle piene — sul td */
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="work"]:hover:not(:disabled)) {
+  background-color: color-mix(in srgb, var(--cab-success) 30%, var(--cab-card)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="overtime"]:hover:not(:disabled)) {
+  background-color: color-mix(in srgb, var(--cab-warning) 34%, var(--cab-card)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind="absence"]:hover:not(:disabled)) {
+  background-color: color-mix(in srgb, var(--cab-danger) 30%, var(--cab-card)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="work"]:hover:not(:disabled)) {
+  background-color: color-mix(in srgb, var(--cab-success) 30%, var(--timesheet-weekend-cell)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="overtime"]:hover:not(:disabled)) {
+  background-color: color-mix(in srgb, var(--cab-warning) 34%, var(--timesheet-weekend-cell)) !important;
+}
+.timesheet-presenze-grid tbody td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-kind="absence"]:hover:not(:disabled)) {
+  background-color: color-mix(in srgb, var(--cab-danger) 30%, var(--timesheet-weekend-cell)) !important;
 }
 
 @keyframes timesheet-today-rail-in {
   0% {
     opacity: 0;
-    transform: scaleY(0.94);
+    transform: scaleY(0.96);
   }
   100% {
     opacity: 1;
@@ -185,22 +327,58 @@
   }
 }
 
+@keyframes timesheet-today-rail-out {
+  0% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleY(0.985);
+  }
+}
+
+/* Layer highlight «Oggi» — fuori dal flusso scroll (non espande scrollWidth/scrollHeight). */
+.timesheet-presenze-highlight-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .timesheet-today-column-rail {
   position: absolute;
   pointer-events: none;
-  z-index: 6;
   box-sizing: border-box;
-  border: 2px solid var(--timesheet-today-edge);
+  border: none;
   background: transparent;
+  outline: 2px solid var(--timesheet-today-edge);
+  outline-offset: -2px;
   transform-origin: center top;
   opacity: 0;
-  animation: timesheet-today-rail-in 900ms var(--timesheet-today-ease) forwards;
+  animation: timesheet-today-rail-in var(--timesheet-today-in-duration) var(--timesheet-today-ease) forwards;
+}
+
+.timesheet-today-column-rail--out {
+  animation: timesheet-today-rail-out var(--timesheet-today-out-duration) var(--timesheet-today-out-ease) forwards;
 }
 
 .timesheet-presenze-grid thead th[data-timesheet-day-accent="true"] .gestionale-timesheet-day-accent-day {
   color: var(--cab-primary);
   font-weight: 700;
-  transition: color 520ms var(--timesheet-today-ease);
+  transition:
+    color var(--timesheet-today-out-duration) var(--timesheet-today-out-ease),
+    opacity var(--timesheet-today-out-duration) var(--timesheet-today-out-ease);
+}
+
+.timesheet-presenze-shell[data-timesheet-accent-fading="true"]
+  thead
+  th[data-timesheet-day-accent="true"]
+  .gestionale-timesheet-day-accent-day {
+  color: inherit;
+  font-weight: inherit;
+  opacity: 0.55;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -209,12 +387,17 @@
     opacity: 1;
     transform: none;
   }
+
+  .timesheet-today-column-rail--out {
+    animation: none;
+    opacity: 0;
+  }
 }
 
-/* Tabella presenze — niente hover riga nativo (crosshair gestito a parte) */
+/* Tabella presenze — niente hover riga globale (sovrascrive le tinte celle piene). */
 .gestionale-list-table-scope.timesheet-presenze-grid tbody tr:hover > td,
 .lavorazioni-scroll-scope.timesheet-presenze-grid tbody tr:hover > td {
-  background-color: var(--gestionale-table-row-base) !important;
+  background-color: unset !important;
 }
 
 /* Sab/dom — più scuri dei feriali (override `tbody tr > td` row-base) */
@@ -268,22 +451,39 @@
   background-color: var(--timesheet-crosshair-fill-chrome-weekend) !important;
 }
 
+/* Crosshair corpo — solo celle vuote; le piene mantengono la tinta (anello sotto). */
 .timesheet-presenze-grid tbody td[data-timesheet-column-active]:not([data-timesheet-day-accent="true"]):not(
     [data-timesheet-weekend="true"]
-  ),
-.timesheet-presenze-grid tbody tr[data-timesheet-row-active] > td:not([data-timesheet-day-accent="true"]):not(
-    [data-timesheet-weekend="true"]
+  ):not(:has(> button[data-timesheet-cell-kind])),
+.timesheet-presenze-grid
+  tbody
+  tr[data-timesheet-row-active]
+  > td:not([data-timesheet-day-accent="true"]):not([data-timesheet-weekend="true"]):not(
+    :has(> button[data-timesheet-cell-kind])
   ) {
   background-color: var(--timesheet-crosshair-fill) !important;
 }
 
-.timesheet-presenze-grid tbody td[data-timesheet-column-active][data-timesheet-weekend="true"]:not(
-    [data-timesheet-day-accent="true"]
+.timesheet-presenze-grid
+  tbody
+  td[data-timesheet-column-active][data-timesheet-weekend="true"]:not([data-timesheet-day-accent="true"]):not(
+    :has(> button[data-timesheet-cell-kind])
   ),
-.timesheet-presenze-grid tbody tr[data-timesheet-row-active] > td[data-timesheet-weekend="true"]:not(
-    [data-timesheet-day-accent="true"]
+.timesheet-presenze-grid
+  tbody
+  tr[data-timesheet-row-active]
+  > td[data-timesheet-weekend="true"]:not([data-timesheet-day-accent="true"]):not(
+    :has(> button[data-timesheet-cell-kind])
   ) {
   background-color: var(--timesheet-crosshair-fill-weekend) !important;
+}
+
+/* Crosshair su celle piene — solo bordo interno, tinta invariata */
+.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell-kind]):is(
+    [data-timesheet-column-active],
+    [data-timesheet-row-active]
+  ):not([data-timesheet-day-accent="true"]) {
+  box-shadow: inset 0 0 0 1px var(--timesheet-crosshair-edge);
 }
 
 .timesheet-presenze-grid tbody td[data-timesheet-row-active][data-timesheet-sticky-name]:not(
@@ -306,8 +506,23 @@
   background-color: var(--timesheet-crosshair-fill-chrome-weekend) !important;
 }
 
-/* Cella sotto il puntatore — bordo sul td (allineato alla griglia, non sul pulsante interno) */
-.timesheet-presenze-grid tbody td[data-timesheet-day]:has(> button[data-timesheet-cell]:hover:not(:disabled)) {
+/* Cella sotto il puntatore — vuota: leggero riempimento; piena: solo bordo (tinta da kind-hover). */
+.timesheet-presenze-grid
+  tbody
+  td[data-timesheet-day]:has(> button[data-timesheet-cell-empty]:hover:not(:disabled)) {
+  background-color: var(--timesheet-crosshair-fill) !important;
+  box-shadow: inset 0 0 0 1px var(--timesheet-crosshair-edge) !important;
+}
+
+.timesheet-presenze-grid
+  tbody
+  td[data-timesheet-day][data-timesheet-weekend="true"]:has(> button[data-timesheet-cell-empty]:hover:not(:disabled)) {
+  background-color: var(--timesheet-crosshair-fill-weekend) !important;
+}
+
+.timesheet-presenze-grid
+  tbody
+  td[data-timesheet-day]:has(> button[data-timesheet-cell-kind]:hover:not(:disabled)) {
   box-shadow: inset 0 0 0 1.5px var(--timesheet-crosshair-edge) !important;
   position: relative;
   z-index: 1;

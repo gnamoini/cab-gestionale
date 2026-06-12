@@ -23,6 +23,7 @@ import {
 } from "@/lib/ui/global-input";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
+import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 
 function identPlaceholder(field: SchedaIngressoIdentField): string {
@@ -184,10 +185,18 @@ export function SchedaIngressoIdentAutocompleteField({
           role="option"
           aria-selected={active}
           className={`${globalAutocompleteOptionClass(active)} ${touchClass}`.trim()}
-          onMouseDown={(e) => {
+          onPointerDown={(e) => {
             e.preventDefault();
+            e.stopPropagation();
+            if (variant === "sheet") armSelectorGhostClickGuard();
             if (blurTimer.current) clearTimeout(blurTimer.current);
             pickMezzo(mezzo);
+          }}
+          onClick={(e) => {
+            if (variant === "sheet") {
+              e.preventDefault();
+              e.stopPropagation();
+            }
           }}
           onMouseEnter={() => setActiveIndex(idx)}
         >

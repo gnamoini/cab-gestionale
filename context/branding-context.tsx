@@ -42,7 +42,7 @@ function updateFavicon(logoUrl: string): void {
 }
 
 export function BrandingProvider({ children }: { children: ReactNode }) {
-  const settingsQ = useCabAppSettingsPayloadQuery({ enabled: true });
+  const settingsQ = useCabAppSettingsPayloadQuery({ enabled: true, tier: "static" });
   const [localOverride, setLocalOverride] = useState<CabBrandingSettings | null>(null);
 
   const branding = useMemo(() => {

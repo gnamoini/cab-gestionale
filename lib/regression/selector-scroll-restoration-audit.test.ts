@@ -20,6 +20,9 @@ const compatMulti = read("components/gestionale/magazzino/compat-hierarchy-multi
 const focusChain = read("lib/selector-interaction/use-selector-focus-chain.ts");
 const sheet = read("components/gestionale/global-input/gestionale-searchable-sheet-select.tsx");
 
+assert.match(globalSelect, /keyboardScrollPendingRef/);
+assert.match(globalSelect, /useSelectorExclusiveGroup/);
+assert.match(globalSelect, /contentRef: listScrollRef/);
 assert.match(globalSelect, /scrollToRowRef/);
 assert.match(globalSelect, /scrollToSuggestionIndex/);
 assert.match(globalSelect, /onRestoreActiveIndex: setActiveIndex/);

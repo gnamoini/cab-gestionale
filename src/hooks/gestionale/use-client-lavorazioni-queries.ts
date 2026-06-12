@@ -10,7 +10,7 @@ import { clientLavorazioniService } from "@/src/services/client-lavorazioni.serv
 export function useClientLavorazioniInCorsoQuery(enabled: boolean) {
   const opts = useViewQueryOpts();
   return useLavorazioniList(
-    { archived: false, includeMezzo: true },
+    { archived: false, includeMezzo: true, fetchMode: "detail", includeProfiles: true },
     { enabled, clientPortal: true, ...opts },
   );
 }
@@ -19,7 +19,7 @@ export function useClientLavorazioniInCorsoQuery(enabled: boolean) {
 export function useClientLavorazioniArchivioQuery(enabled: boolean) {
   const opts = useViewQueryOpts();
   return useLavorazioniList(
-    { archived: true, includeMezzo: true },
+    { archived: true, includeMezzo: true, fetchMode: "detail", includeProfiles: true },
     { enabled, clientPortal: true, ...opts },
   );
 }

@@ -8,6 +8,8 @@ import {
   cabSyncEventForEntity,
   dispatchGestionaleAction,
 } from "@/lib/sync/gestionale-sync-dispatch";
+import { invalidateEntity } from "@/lib/cache/minimal-invalidation-contract";
+import { refreshSchedeBundlesForMezzoId } from "@/lib/schede/schede-bundle-cache-patch";
 import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-operational-truth";
 import type { QueryClient } from "@tanstack/react-query";
 
@@ -34,12 +36,43 @@ export {
   cabSyncEventForEntity,
 } from "@/lib/sync/gestionale-sync-dispatch";
 
-export async function invalidateAfterMezzoMutations(qc: QueryClient) {
+export async function invalidateAfterMezzoMutations(
+  qc: QueryClient,
+  mezzoId?: string,
+  dbVersion?: string,
+) {
+  if (mezzoId) {
+    await invalidateEntity({
+      queryClient: qc,
+      entityType: "mezzo",
+      entityId: mezzoId,
+      scope: "full",
+      dbVersion,
+    });
+    void refreshSchedeBundlesForMezzoId(qc, mezzoId);
+    return;
+  }
   await invalidateOperationalTruth({ queryClient: qc, domain: "mezzi", skipReportBroadcast: true });
   scheduleReportBroadcastRefresh(qc);
 }
 
-export async function invalidateAfterLavorazioneMutations(qc: QueryClient, cabSyncEvents?: CabSyncEvent[]) {
+export async function invalidateAfterLavorazioneMutations(
+  qc: QueryClient,
+  cabSyncEvents?: CabSyncEvent[],
+  lavorazioneId?: string,
+  dbVersion?: string,
+) {
+  if (lavorazioneId) {
+    await invalidateEntity({
+      queryClient: qc,
+      entityType: "lavorazione",
+      entityId: lavorazioneId,
+      scope: "full",
+      cabSyncEvents,
+      dbVersion,
+    });
+    return;
+  }
   await invalidateOperationalTruth({ queryClient: qc, domain: "lavorazioni", cabSyncEvents, skipReportBroadcast: true });
   scheduleReportBroadcastRefresh(qc);
 }

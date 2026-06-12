@@ -1,5 +1,6 @@
 "use client";
 
+import { DOCUMENTI_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { deleteDocumentoFully } from "@/lib/documenti/delete-documento-fully";
@@ -43,7 +44,7 @@ export const documentiService = {
       const allowed = await ensureSectionRead("documenti");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      let q = c.from("documenti").select("*").order("created_at", { ascending: false });
+      let q = c.from("documenti").select(DOCUMENTI_COLUMNS).order("created_at", { ascending: false });
       if (filters?.mezzo_id) q = q.eq("mezzo_id", filters.mezzo_id);
       if (filters?.marca?.trim()) q = q.ilike("marca", `%${filters.marca.trim()}%`);
       if (filters?.categoria) q = q.eq("categoria", filters.categoria);
@@ -60,7 +61,7 @@ export const documentiService = {
       const allowed = await ensureSectionRead("documenti");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data, error } = await c.from("documenti").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await c.from("documenti").select(DOCUMENTI_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(error.message);
       if (!data) return err("Documento non trovato");
       return success(data as DocumentoRow);
@@ -75,7 +76,7 @@ export const documentiService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const merged = mergeDocumentoMeta(data, { setUploadTimestamp: true }) as DocumentoInsert;
-      const { data: row, error } = await c.from("documenti").insert(merged).select("*").single();
+      const { data: row, error } = await c.from("documenti").insert(merged).select(DOCUMENTI_COLUMNS).single();
       if (error) return err(error.message);
       const r = row as DocumentoRow;
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r) });
@@ -90,7 +91,7 @@ export const documentiService = {
       const allowed = await ensurePermission("uploadDocuments");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: before, error: e0 } = await c.from("documenti").select("*").eq("id", id).maybeSingle();
+      const { data: before, error: e0 } = await c.from("documenti").select(DOCUMENTI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       const prevMeta =
         before?.meta && typeof before.meta === "object" && !Array.isArray(before.meta)
@@ -101,7 +102,7 @@ export const documentiService = {
           ? (data.meta as Record<string, unknown>)
           : {};
       const merged = mergeDocumentoMeta({ ...data, meta: { ...prevMeta, ...nextMeta } }, { setUploadTimestamp: false });
-      const { data: row, error } = await c.from("documenti").update(merged).eq("id", id).select("*").single();
+      const { data: row, error } = await c.from("documenti").update(merged).eq("id", id).select(DOCUMENTI_COLUMNS).single();
       if (error) return err(error.message);
       const r = row as DocumentoRow;
       await writeModificaLog(c, {

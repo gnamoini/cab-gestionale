@@ -125,6 +125,31 @@ __resetSelectOptionAtomicForTests();
   assert.equal(blurCommitCount, 0);
 }
 
+// T-RACE-05a: flushCombobox durante selezione non sovrascrive il commit pointer
+__resetSelectOptionAtomicForTests();
+{
+  let parentValue = "";
+  const commitPendingForSubmit = (searchText: string) => {
+    if (shouldIgnoreBlurDuringSelection()) return;
+    const trimmed = searchText.trim();
+    if (!trimmed) return;
+    // strictFromList: testo ricerca residuo ("g") non deve sovrascrivere il tap su listbox
+    parentValue = trimmed;
+  };
+
+  runSelectOptionAtomic({
+    cancelPendingBlur: () => {},
+    onChange: (next) => {
+      parentValue = next;
+    },
+    nextValue: "gorent-id",
+    flushCombobox: () => commitPendingForSubmit("g"),
+    closeOverlaySync: () => {},
+    resetInteractionState: () => {},
+  });
+  assert.equal(parentValue, "gorent-id");
+}
+
 // T-RACE-05: back during selection in-flight — no double close
 __resetSelectOptionAtomicForTests();
 {

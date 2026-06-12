@@ -29,6 +29,10 @@ export function defaultStringRenderOption(
         aria-selected={selected}
         className={globalAutocompleteOptionClass(active, selected)}
         onPointerDown={(e) => onPointerSelect(e, onSelect)}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
         onMouseEnter={onMouseEnter}
       >
         {highlightSearch && highlightQuery.trim() ? (
@@ -75,6 +79,10 @@ export function defaultItemRenderOption(
           style={coloredOptions ? item.pillStyle : undefined}
           className={btnClass}
           onPointerDown={(e) => onPointerSelect(e, onSelect)}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
           onMouseEnter={onMouseEnter}
         >
           {highlightSearch && highlightQuery.trim() ? (

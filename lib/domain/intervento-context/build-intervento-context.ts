@@ -1,0 +1,311 @@
+import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import type { MezzoGestito } from "@/lib/mezzi/types";
+import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
+import {
+  auditInterventoContext,
+  buildIdentDeltaFromContext,
+} from "@/lib/domain/intervento-context/intervento-audit";
+import {
+  interventoIdentEquals,
+  resolveIdentFromLayers,
+} from "@/lib/domain/intervento-context/intervento-ident";
+import type {
+  InterventoContext,
+  InterventoContextFetchDeps,
+  InterventoContextInputs,
+  InterventoIdent,
+  LavorazioneSnapshot,
+  MezzoSnapshot,
+  SchedaIngressoSnapshot,
+} from "@/lib/domain/intervento-context/intervento-context.types";
+import { fetchSchedeBundleForLavorazione } from "@/lib/schede/schede-sync-adapter";
+import { lavorazioniService } from "@/src/services/lavorazioni.service";
+import { mezziService } from "@/src/services/mezzi.service";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
+import type { LavorazioneSchedeBundle, LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
+
+function emptySchedaIngressoFields(): SchedaIngressoFields {
+  return {
+    dataIngresso: "",
+    cliente: "",
+    cantiere: "",
+    utilizzatore: "",
+    tipoAttrezzatura: "",
+    marcaAttrezzatura: "",
+    modelloAttrezzatura: "",
+    matricola: "",
+    nScuderia: "",
+    oreLavoro: "",
+    tipoTelaio: "",
+    marcaTelaio: "",
+    modelloTelaio: "",
+    targa: "",
+    km: "",
+    descrizioneAnomalia: "",
+    livelloCarburante: "",
+    addettoAccettazione: "",
+    richiedente: "",
+    noteIntervento: "",
+  };
+}
+
+function mezzoSnapshotFromRow(row: MezzoRow | null | undefined, gestito?: MezzoGestito | null): MezzoSnapshot {
+  const g = gestito ?? (row ? toMezzoUI(row) : null);
+  if (!g) {
+    return {
+      id: null,
+      cliente: "",
+      utilizzatore: "",
+      marca: "",
+      modello: "",
+      targa: "",
+      matricola: "",
+      nScuderia: "",
+      tipoAttrezzatura: "",
+      cantiere: "",
+      present: false,
+    };
+  }
+  return {
+    id: g.id,
+    cliente: g.cliente.trim(),
+    utilizzatore: g.utilizzatore.trim(),
+    marca: g.marca.trim(),
+    modello: g.modello.trim(),
+    targa: g.targa.trim(),
+    matricola: g.matricola.trim(),
+    nScuderia: (g.numeroScuderia ?? "").trim(),
+    tipoAttrezzatura: g.tipoAttrezzatura.trim(),
+    cantiere: (g.cantiere ?? "").trim(),
+    present: true,
+  };
+}
+
+function lavorazioneSnapshotFromInputs(
+  lavorazioneId: string,
+  row?: LavorazioneRow | null,
+  legacy?: LavorazioneAttiva | LavorazioneArchiviata | null,
+): LavorazioneSnapshot {
+  return {
+    id: lavorazioneId,
+    mezzoId: row?.mezzo_id?.trim() || legacy?.mezzoId?.trim() || null,
+    dataIngresso: row?.data_ingresso ?? legacy?.dataIngresso ?? null,
+    note: row?.note ?? legacy?.noteInterne ?? null,
+    targa: legacy?.targa?.trim() ?? "",
+    matricola: legacy?.matricola?.trim() ?? "",
+    nScuderia: legacy?.nScuderia?.trim() ?? "",
+    cliente: legacy?.cliente?.trim() ?? "",
+    utilizzatore: legacy?.utilizzatore?.trim() ?? "",
+    cantiere: legacy?.cantiere?.trim() ?? "",
+  };
+}
+
+function schedaIngressoSnapshotFromInputs(
+  campi?: SchedaIngressoFields | null,
+  sorgente?: "generata" | "file_esterno" | null,
+  updatedAt?: string | null,
+): SchedaIngressoSnapshot {
+  const present = Boolean(campi && sorgente !== "file_esterno");
+  return {
+    present,
+    sorgente: sorgente ?? null,
+    updatedAt: updatedAt ?? null,
+    campi: present ? { ...campi! } : campi ? { ...campi } : null,
+  };
+}
+
+function detectIdentMismatch(
+  scheda: SchedaIngressoSnapshot,
+  mezzo: MezzoSnapshot,
+  ident: InterventoIdent,
+): boolean {
+  if (!scheda.present || !mezzo.present || !scheda.campi) return false;
+  const fromScheda: InterventoIdent = {
+    targa: scheda.campi.targa,
+    matricola: scheda.campi.matricola,
+    nScuderia: scheda.campi.nScuderia,
+  };
+  const fromMezzo: InterventoIdent = {
+    targa: mezzo.targa,
+    matricola: mezzo.matricola,
+    nScuderia: mezzo.nScuderia,
+  };
+  const schedaHasIdent = Boolean(
+    fromScheda.targa.trim() || fromScheda.matricola.trim() || fromScheda.nScuderia.trim(),
+  );
+  const mezzoHasIdent = Boolean(
+    fromMezzo.targa.trim() || fromMezzo.matricola.trim() || fromMezzo.nScuderia.trim(),
+  );
+  if (!schedaHasIdent || !mezzoHasIdent) return false;
+  return !interventoIdentEquals(fromScheda, fromMezzo);
+}
+
+export function composeInterventoContext(inputs: InterventoContextInputs): InterventoContext {
+  const lavorazioneId = inputs.lavorazioneId.trim();
+  const mezzo = mezzoSnapshotFromRow(inputs.mezzoRow, inputs.mezzoGestito);
+  const lavorazione = lavorazioneSnapshotFromInputs(
+    lavorazioneId,
+    inputs.lavorazioneRow,
+    inputs.legacyLavorazione,
+  );
+  const schedaIngresso = schedaIngressoSnapshotFromInputs(
+    inputs.ingressoCampi,
+    inputs.ingressoSorgente,
+    inputs.ingressoUpdatedAt,
+  );
+
+  const schedaIdent = schedaIngresso.present
+    ? {
+        targa: schedaIngresso.campi?.targa ?? "",
+        matricola: schedaIngresso.campi?.matricola ?? "",
+        nScuderia: schedaIngresso.campi?.nScuderia ?? "",
+      }
+    : null;
+  const lavIdent = {
+    targa: lavorazione.targa,
+    matricola: lavorazione.matricola,
+    nScuderia: lavorazione.nScuderia,
+  };
+  const mezzoIdent = mezzo.present
+    ? { targa: mezzo.targa, matricola: mezzo.matricola, nScuderia: mezzo.nScuderia }
+    : null;
+
+  const ident = resolveIdentFromLayers(schedaIdent, lavIdent, mezzoIdent);
+
+  const ctx: InterventoContext = {
+    contextId: lavorazioneId,
+    lavorazioneId,
+    mezzo,
+    lavorazione,
+    schedaIngresso,
+    ident,
+    meta: {
+      schedaMissing: !schedaIngresso.present,
+      mezzoUnlinked: !lavorazione.mezzoId,
+      hasIdentMismatch: detectIdentMismatch(schedaIngresso, mezzo, ident),
+    },
+  };
+
+  auditInterventoContext(ctx, "build", {
+    identDelta: buildIdentDeltaFromContext(ctx),
+  });
+
+  return ctx;
+}
+
+export function composeInterventoContextFromBundle(
+  lavorazioneId: string,
+  bundle: LavorazioneSchedeBundle | null | undefined,
+  options?: {
+    lavorazioneRow?: LavorazioneRow | null;
+    mezzoRow?: MezzoRow | null;
+    mezzoGestito?: MezzoGestito | null;
+    legacyLavorazione?: LavorazioneAttiva | LavorazioneArchiviata | null;
+  },
+): InterventoContext {
+  const ing = bundle?.ingresso ?? null;
+  return composeInterventoContext({
+    lavorazioneId,
+    lavorazioneRow: options?.lavorazioneRow,
+    mezzoRow: options?.mezzoRow,
+    mezzoGestito: options?.mezzoGestito,
+    legacyLavorazione: options?.legacyLavorazione,
+    ingressoCampi: ing?.campi ?? null,
+    ingressoSorgente: ing?.sorgente ?? null,
+    ingressoUpdatedAt: ing?.updatedAt ?? null,
+  });
+}
+
+export function composeInterventoContextFromListRow(
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
+): InterventoContext {
+  const bundle = schedeStore?.[row.id];
+  const ing = bundle?.ingresso ?? null;
+  return composeInterventoContext({
+    lavorazioneId: row.id,
+    lavorazioneRow: row,
+    mezzoRow: row.mezzo,
+    ingressoCampi: ing?.campi ?? null,
+    ingressoSorgente: ing?.sorgente ?? null,
+    ingressoUpdatedAt: ing?.updatedAt ?? null,
+  });
+}
+
+export function composeInterventoContextFromDraft({
+  lavorazioneId = "draft",
+  fields,
+  mezzo,
+  lavorazioneRow,
+  legacyLavorazione,
+}: {
+  lavorazioneId?: string;
+  fields: SchedaIngressoFields;
+  mezzo?: MezzoGestito | null;
+  lavorazioneRow?: LavorazioneRow | null;
+  legacyLavorazione?: LavorazioneAttiva | LavorazioneArchiviata | null;
+}): InterventoContext {
+  return composeInterventoContext({
+    lavorazioneId,
+    lavorazioneRow,
+    mezzoGestito: mezzo,
+    legacyLavorazione,
+    ingressoCampi: { ...fields },
+    ingressoSorgente: "generata",
+    ingressoUpdatedAt: null,
+  });
+}
+
+const defaultFetchDeps = (): InterventoContextFetchDeps => ({
+  async getLavorazioneById(id) {
+    const res = await lavorazioniService.getById(id);
+    return res.success ? res.data : null;
+  },
+  async getMezzoById(id) {
+    const res = await mezziService.getById(id);
+    return res.success ? res.data : null;
+  },
+  async fetchSchedeBundle(lavorazioneId) {
+    const bundle = await fetchSchedeBundleForLavorazione(lavorazioneId);
+    if (!bundle?.ingresso) return { ingresso: null };
+    return {
+      ingresso: {
+        campi: bundle.ingresso.campi,
+        sorgente: bundle.ingresso.sorgente,
+        updatedAt: bundle.ingresso.updatedAt,
+      },
+    };
+  },
+});
+
+export async function fetchInterventoContextInputs(
+  lavorazioneId: string,
+  deps: InterventoContextFetchDeps = defaultFetchDeps(),
+): Promise<InterventoContextInputs> {
+  const id = lavorazioneId.trim();
+  const lavRow = await deps.getLavorazioneById(id);
+  let mezzoRow: MezzoRow | null = null;
+  if (lavRow?.mezzo_id?.trim()) {
+    mezzoRow = await deps.getMezzoById(lavRow.mezzo_id.trim());
+  }
+  const bundle = await deps.fetchSchedeBundle(id);
+  return {
+    lavorazioneId: id,
+    lavorazioneRow: lavRow,
+    mezzoRow,
+    ingressoCampi: bundle?.ingresso?.campi ?? null,
+    ingressoSorgente: bundle?.ingresso?.sorgente ?? null,
+    ingressoUpdatedAt: bundle?.ingresso?.updatedAt ?? null,
+  };
+}
+
+export async function buildInterventoContext(
+  lavorazioneId: string,
+  deps?: InterventoContextFetchDeps,
+): Promise<InterventoContext> {
+  const inputs = await fetchInterventoContextInputs(lavorazioneId, deps);
+  return composeInterventoContext(inputs);
+}
+
+export { emptySchedaIngressoFields };

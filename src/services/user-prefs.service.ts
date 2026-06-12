@@ -1,5 +1,6 @@
 "use client";
 
+import { APP_SETTINGS_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { USER_PREFS_SETTINGS_MODULE, type PersistedThemeMode } from "@/lib/theme/user-theme-prefs";
 import { applyAppSettingsUpsert } from "@/src/services/settings.service";
@@ -12,7 +13,7 @@ export async function fetchUserPrefsRow(userId: string): Promise<ServiceResult<A
     const c = getBrowserSupabase();
     const { data, error } = await c
       .from("app_settings")
-      .select("*")
+      .select(APP_SETTINGS_COLUMNS)
       .eq("module", USER_PREFS_SETTINGS_MODULE)
       .eq("key", userId)
       .maybeSingle();

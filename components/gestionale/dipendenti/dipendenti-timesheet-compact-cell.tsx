@@ -16,9 +16,10 @@ import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
 import type { TimesheetCellValue } from "@/lib/dipendenti/types";
 
 const CELL_INTERACTION =
-  "cursor-pointer transition-[filter,transform,opacity] duration-150 ease-out active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100";
+  "cursor-pointer transition-[filter,opacity] duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-60";
 
-const CELL_BUTTON_LAYOUT = "h-full min-h-9 w-full min-w-[2.5rem] rounded-none";
+const CELL_BUTTON_LAYOUT =
+  "box-border block h-full min-h-9 w-full rounded-none border-0 bg-transparent shadow-none";
 
 export function DipendentiTimesheetCompactCell({
   value,
@@ -58,21 +59,22 @@ export function DipendentiTimesheetCompactCell({
         aria-label={ariaLabel}
         onClick={onClick}
         data-timesheet-cell-empty={isEmpty ? "" : undefined}
-        className={`group/cell flex ${CELL_BUTTON_LAYOUT} min-w-0 shrink-0 items-center justify-center px-0 py-0 text-[11px] font-semibold tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)] focus-visible:ring-offset-0 ${CELL_INTERACTION} ${kindClass}`}
+        data-timesheet-cell-kind={isEmpty ? undefined : kind}
+        className={`group/cell flex ${CELL_BUTTON_LAYOUT} min-w-0 items-center justify-center px-0 py-0 text-[11px] font-semibold tabular-nums outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)] ${CELL_INTERACTION} ${kindClass}`}
       >
       {isEmpty ? (
         <span
-          className="pointer-events-none flex size-[1.125rem] items-center justify-center rounded-[var(--ds-radius-sm)] text-[11px] font-medium leading-none text-[color:var(--cab-text-muted)] opacity-[0.2] transition-[opacity,transform] duration-150 group-hover/cell:opacity-65 group-hover/cell:scale-105 group-focus-visible/cell:opacity-65"
+          className="pointer-events-none flex size-[1.125rem] items-center justify-center rounded-none text-[11px] font-medium leading-none text-[color:var(--cab-text-muted)] opacity-[0.2] transition-opacity duration-150 group-hover/cell:opacity-65 group-focus-visible/cell:opacity-65"
           aria-hidden
         >
           +
         </span>
       ) : content.primary ? (
         content.secondary ? (
-          <span className="flex min-w-0 flex-col items-center leading-none">
-            <span className="truncate text-[11px] font-bold">{content.primary}</span>
+          <span className="flex min-w-0 max-w-full flex-col items-center overflow-hidden leading-none">
+            <span className="max-w-full truncate text-[11px] font-bold">{content.primary}</span>
             <span
-              className={`mt-0.5 whitespace-nowrap text-[9px] font-semibold uppercase tracking-wide ${secondaryClass}`}
+              className={`mt-0.5 max-w-full truncate text-[9px] font-semibold uppercase tracking-wide ${secondaryClass}`}
             >
               {content.secondary}
             </span>

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { useSharedEntityQuery } from "@/src/hooks/use-shared-entity-query";
 import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
 import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { documentiService } from "@/src/services/documenti.service";
@@ -35,11 +36,17 @@ function mezzoIdOrEmpty(mezzoId: string | undefined): string {
 }
 
 /** Riga mezzo (anagrafica). */
-export function useMezzoBase(mezzoId: string | undefined) {
+export function useMezzoBase(mezzoId: string | undefined, dedupTag?: string) {
   const id = mezzoIdOrEmpty(mezzoId);
-  return useServiceQuery(mezzoDomainQueryKeys.base(id), () => mezziService.getById(id), {
+  return useSharedEntityQuery({
+    entityType: "mezzi",
+    entityId: id,
+    scope: "detail",
+    queryKey: mezzoDomainQueryKeys.base(id),
+    queryFn: () => mezziService.getById(id),
     enabled: id.length > 0,
     staleTime: MEZZO_ATOMIC_STALE_MS,
+    dedupTag,
   });
 }
 
@@ -101,20 +108,14 @@ export function useMezzoLog(mezzoId: string | undefined) {
   );
 }
 
-/**
- * Movimenti ricambi per tutte le lavorazioni del mezzo.
- * Si aggancia alla lista dominio lavorazioni (`lavorazioniQueries`, stessa cache di `useMezzoLavorazioni`).
- */
+/** Movimenti ricambi per tutte le lavorazioni del mezzo — 1 query via join `lavorazioni.mezzo_id`. */
 export function useMezzoMovimenti(mezzoId: string | undefined) {
   const id = mezzoIdOrEmpty(mezzoId);
-  const lavQ = useMezzoLavorazioni(mezzoId);
-  const lavIds = lavQ.data?.map((r) => r.id) ?? [];
-  const idsKey = useMemo(() => [...lavIds].sort().join(","), [lavIds]);
   return useServiceQuery(
-    mezzoDomainQueryKeys.movimenti(id, idsKey || "__none__"),
-    () => movimentiService.getAll({ lavorazione_ids: [...lavIds] }),
+    mezzoDomainQueryKeys.movimenti(id, "__by_mezzo__"),
+    () => movimentiService.getAll({ mezzo_id: id }),
     {
-      enabled: id.length > 0 && lavQ.isSuccess && lavIds.length > 0,
+      enabled: id.length > 0,
       staleTime: MEZZO_ATOMIC_STALE_MS,
     },
   );

@@ -25,6 +25,7 @@ import { GestionaleSearchableSheetSelect } from "@/components/gestionale/global-
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
+import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
 
 export type FixedListPillOption = {
   value: string;
@@ -147,10 +148,28 @@ export function GlobalFixedListPillSelect({
             active ? "ring-2 ring-inset ring-white/35 shadow-sm" : ""
           }${highlighted && !active ? " ring-2 ring-inset ring-white/20" : ""}`}
           onMouseEnter={() => setActiveIndex(idx)}
-          onClick={() => {
-            onChange(opt.value);
-            close();
-          }}
+          onPointerDown={
+            variant === "sheet"
+              ? (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  armSelectorGhostClickGuard();
+                  onChange(opt.value);
+                  close();
+                }
+              : undefined
+          }
+          onClick={
+            variant === "dropdown"
+              ? () => {
+                  onChange(opt.value);
+                  close();
+                }
+              : (e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }
+          }
         >
           {opt.label}
         </button>

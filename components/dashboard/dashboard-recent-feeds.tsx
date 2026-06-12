@@ -38,8 +38,23 @@ export function DashboardRecentFeeds() {
   const globalOpts = useGlobalOptions({ debugTag: "DashboardRecentFeeds" });
   const statiLavorazione = globalOpts.lavorazioni.stati;
 
-  const lavListQ = useLavorazioniList({ includeMezzo: true }, { enabled: !staging, ...viewOpts });
-  const { store: schedeStore } = useSchedeBundlesQuery(!staging, { viewLayer: true });
+  const lavListQ = useLavorazioniList(
+    {
+      includeMezzo: true,
+      archived: false,
+      fetchMode: "light",
+      includeProfiles: false,
+    },
+    { enabled: !staging, ...viewOpts },
+  );
+  const schedeLavorazioneIds = useMemo(
+    () => (lavListQ.data ?? []).map((row) => row.id),
+    [lavListQ.data],
+  );
+  const { store: schedeStore } = useSchedeBundlesQuery(!staging, {
+    viewLayer: true,
+    lavorazioneIds: schedeLavorazioneIds,
+  });
 
   const lavorazioniById = useMemo(() => {
     const map = new Map<string, LavorazioneListRow>();

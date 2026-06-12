@@ -1,6 +1,3 @@
-"use client";
-
-import { useMemo } from "react";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 
 /** Normalizza chiave cliente per mappa sconti (trim + lowercase). */

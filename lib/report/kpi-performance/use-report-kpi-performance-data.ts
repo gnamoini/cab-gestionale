@@ -6,14 +6,12 @@ import type { KpiPerformanceModel } from "@/lib/report/kpi-performance/kpi-perfo
 import type { DateRange } from "@/lib/report/date-ranges";
 import type { ReportSemanticIndex } from "@/lib/report/report-semantic-index";
 import type { useReportLiveData } from "@/lib/report/use-report-live-data";
-import { useReportViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 
 type LiveSlice = Pick<
   ReturnType<typeof useReportLiveData>,
-  "attive" | "completate" | "mezzi" | "magazzino" | "magLog" | "isLoading"
+  "lavListRows" | "attive" | "completate" | "mezzi" | "magazzino" | "magLog" | "isLoading"
 >;
 
 export function useReportKpiPerformanceData({
@@ -33,19 +31,12 @@ export function useReportKpiPerformanceData({
   isLoading: boolean;
   schedeLoaded: boolean;
 } {
-  const viewOpts = useReportViewQueryOpts();
-  const lavQuery = useLavorazioniList({ includeMezzo: true }, viewOpts);
-  const schedeLavorazioneIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const row of lavQuery.data ?? []) ids.add(row.id);
-    for (const row of live.attive) ids.add(row.id);
-    for (const row of live.completate) ids.add(row.id);
-    return [...ids];
-  }, [lavQuery.data, live.attive, live.completate]);
+  const lavRows = live.lavListRows;
+  const schedeLavorazioneIds = useMemo(() => lavRows.map((row) => row.id), [lavRows]);
   const { store: schedeStore, isLoading: schedeLoading } = useSchedeBundlesQuery(!live.isLoading, {
     lavorazioneIds: schedeLavorazioneIds,
   });
-  const settingsQ = useCabAppSettingsPayloadQuery();
+  const settingsQ = useCabAppSettingsPayloadQuery({ tier: "static" });
 
   const costoOrario = useMemo(() => {
     const v = settingsQ.data?.resolved?.preventiviDefaults?.costoOrarioDefault;
@@ -59,10 +50,8 @@ export function useReportKpiPerformanceData({
     })) as import("@/src/types/supabase-tables").MagazzinoRicambioRow[];
   }, [live.magazzino]);
 
-  const lavRows = lavQuery.data ?? [];
-
   const model = useMemo(() => {
-    if (live.isLoading || lavQuery.isLoading) return null;
+    if (live.isLoading) return null;
     return buildKpiPerformanceModel({
       anchor,
       range,
@@ -86,7 +75,6 @@ export function useReportKpiPerformanceData({
     live.mezzi,
     live.magazzino,
     live.magLog,
-    lavQuery.isLoading,
     lavRows,
     anchor,
     range,
@@ -100,7 +88,7 @@ export function useReportKpiPerformanceData({
 
   return {
     model,
-    isLoading: live.isLoading || lavQuery.isLoading,
+    isLoading: live.isLoading,
     schedeLoaded: !schedeLoading,
   };
 }

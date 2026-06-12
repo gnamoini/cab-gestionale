@@ -46,7 +46,7 @@ assert.match(bottomSheet, /--cab-vv-offset-top/);
 assert.match(sheet, /registerBack: false/);
 assert.match(sheet, /CAB_MODAL_SCROLL_ATTR/);
 assert.match(sheet, /cabModalScrollKeyboardPad/);
-assert.match(globalSelect, /externalScrollHost=\{sheetOpen\}/);
+assert.match(globalSelect, /externalScrollHost/);
 assert.match(globalSelect, /hoverActivatesIndex=\{!sheetOpen\}/);
 assert.match(globalSelect, /if \(!open \|\| useSheet\) return;/);
 assert.match(virtual, /externalScrollHost/);
@@ -71,5 +71,19 @@ assert.match(settingsSelect, /alphabeticalBrowse: isMagazzinoListKey/);
 
 const resolveSuggestions = read("lib/selector-core/resolve-selector-suggestions.ts");
 assert.match(resolveSuggestions, /if \(selectOnly \|\| useSheet\)/);
+
+const ghostGuard = read("lib/selector-interaction/suppress-selector-ghost-click.ts");
+assert.match(ghostGuard, /armSelectorGhostClickGuard/);
+assert.match(ghostGuard, /blockOnce/);
+assert.match(sheet, /armSelectorGhostClickGuard/);
+assert.match(bottomSheet, /armSelectorGhostClickGuard/);
+assert.match(bottomSheet, /onPointerDown/);
+assert.match(globalSelect, /armSelectorGhostClickGuard/);
+assert.match(globalSelect, /e\.stopPropagation\(\)/);
+assert.match(pillSelect, /armSelectorGhostClickGuard/);
+assert.match(pillSelect, /onPointerDown/);
+
+const listboxHelpers = read("components/gestionale/selector/selector-listbox-helpers.tsx");
+assert.match(listboxHelpers, /onClick=\{\(e\) => \{/);
 
 console.log("searchable-sheet-selector-audit.test.ts OK");

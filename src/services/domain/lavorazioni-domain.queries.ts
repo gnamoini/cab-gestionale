@@ -1,14 +1,13 @@
 "use client";
 
 import { useMemo } from "react";
-import type { UseQueryOptions } from "@tanstack/react-query";
+import { useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
+import { lavorazioneSchedeRowsQueryKey } from "@/lib/schede/schede-domain-query-cache";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { useSharedEntityQuery } from "@/src/hooks/use-shared-entity-query";
 import { fetchLavorazioniListAuthorized } from "@/lib/lavorazioni/lavorazioni-list-fetch";
-import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
-import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
-import { documentiService } from "@/src/services/documenti.service";
-import { mezziService } from "@/src/services/mezzi.service";
-import { err, success } from "@/src/services/service-result";
+import { fetchLavorazioneDocumentiSlice } from "@/lib/lavorazioni/lavorazione-documenti-slice-fetch";
+import { success } from "@/src/services/service-result";
 import { lavorazioniService, type LavorazioneFilters, type LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import { logService } from "@/src/services/log.service";
@@ -16,14 +15,20 @@ import { movimentiService } from "@/src/services/movimenti.service";
 import { preventiviService } from "@/src/services/preventivi.service";
 import { lavorazioneDocumentsService } from "@/src/services/lavorazione-documents.service";
 import { schedeService } from "@/src/services/schede.service";
+import type { SchedaLavorazioneRow } from "@/src/types/supabase-tables";
+import {
+  lavorazioniListQueryKey,
+  stableLavorazioniFiltersKey,
+} from "@/lib/lavorazioni/lavorazioni-list-query-keys";
 import { QK } from "@/src/lib/react-query/query-keys";
+
+export { stableLavorazioniFiltersKey };
 
 /** Prefisso stabile per query atomi dominio lavorazioni (invalidazione globale). */
 export const lavorazioniDomainQueryKeys = {
   root: QK.lavorazioniQueries,
   base: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "base", lavorazioneId] as const,
-  list: (filtersKey: string, clientPortal: boolean) =>
-    [...lavorazioniDomainQueryKeys.root, "list", filtersKey, clientPortal ? "portal" : "ops"] as const,
+  list: lavorazioniListQueryKey,
   schede: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "schede", lavorazioneId] as const,
   movimenti: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "movimenti", lavorazioneId] as const,
   preventivi: (lavorazioneId: string) => [...lavorazioniDomainQueryKeys.root, "preventivi", lavorazioneId] as const,
@@ -38,23 +43,6 @@ const LA_STALE_MS = 30_000;
 
 function lavIdOrEmpty(lavorazioneId: string | undefined): string {
   return lavorazioneId?.trim() ?? "";
-}
-
-export function stableLavorazioniFiltersKey(filters: LavorazioneFilters | undefined): string {
-  if (filters == null) return "__all__";
-  return JSON.stringify({
-    m: filters.mezzo_id ?? "",
-    s: filters.stato ?? "",
-    p: filters.priorita ?? "",
-    i: filters.includeMezzo ? 1 : 0,
-    si: [...(filters.stati_in ?? [])].sort().join("|"),
-    q: (filters.search ?? "").trim(),
-    di0: (filters.data_ingresso_da ?? "").trim(),
-    di1: (filters.data_ingresso_a ?? "").trim(),
-    du0: (filters.data_uscita_da ?? "").trim(),
-    du1: (filters.data_uscita_a ?? "").trim(),
-    ar: filters.archived === true ? 1 : filters.archived === false ? 0 : -1,
-  });
 }
 
 type LavListQueryKey = ReturnType<typeof lavorazioniDomainQueryKeys.list>;
@@ -94,21 +82,44 @@ export function useLavorazioniByMezzo(mezzoId: string | undefined) {
 }
 
 /** Singola lavorazione (anagrafica intervento). */
-export function useLavorazioneBase(lavorazioneId: string | undefined) {
+export function useLavorazioneBase(lavorazioneId: string | undefined, dedupTag?: string) {
   const id = lavIdOrEmpty(lavorazioneId);
-  return useServiceQuery(lavorazioniDomainQueryKeys.base(id), () => lavorazioniService.getById(id), {
+  return useSharedEntityQuery({
+    entityType: "lavorazioni",
+    entityId: id,
+    scope: "detail",
+    queryKey: lavorazioniDomainQueryKeys.base(id),
+    queryFn: () => lavorazioniService.getById(id),
     enabled: id.length > 0,
     staleTime: LA_STALE_MS,
+    dedupTag,
   });
 }
 
 /** Schede collegate alla lavorazione. */
-export function useSchedeByLavorazione(lavorazioneId: string | undefined) {
+type SchedeByLavOpts = Omit<
+  UseQueryOptions<SchedaLavorazioneRow[], Error, SchedaLavorazioneRow[], ReturnType<typeof lavorazioniDomainQueryKeys.schede>>,
+  "queryKey" | "queryFn"
+>;
+
+/** Schede per lavorazione — riusa righe già caricate da `ensureSchedeBundlesInCache` quando presenti. */
+export function useSchedeByLavorazione(lavorazioneId: string | undefined, options?: SchedeByLavOpts) {
+  const qc = useQueryClient();
   const id = lavIdOrEmpty(lavorazioneId);
-  return useServiceQuery(lavorazioniDomainQueryKeys.schede(id), () => schedeService.getAll({ lavorazione_id: id }), {
-    enabled: id.length > 0,
-    staleTime: LA_STALE_MS,
-  });
+  const key = lavorazioniDomainQueryKeys.schede(id);
+  return useServiceQuery(
+    key,
+    () => {
+      const cached = qc.getQueryData<SchedaLavorazioneRow[]>(lavorazioneSchedeRowsQueryKey(id));
+      if (cached !== undefined) return Promise.resolve(success(cached));
+      return schedeService.getAll({ lavorazione_id: id });
+    },
+    {
+      enabled: id.length > 0,
+      staleTime: LA_STALE_MS,
+      ...options,
+    },
+  );
 }
 
 /** Movimenti magazzino per lavorazione. */
@@ -138,20 +149,7 @@ export function useDocumentiByLavorazione(lavorazioneId: string | undefined) {
   const mezzoId = base.data?.mezzo_id?.trim() ?? "";
   return useServiceQuery(
     lavorazioniDomainQueryKeys.documenti(id, mezzoId || "__pending__", "__pending__"),
-    async () => {
-      if (!mezzoId) return success([]);
-      const mezzoRes = await mezziService.getById(mezzoId);
-      if (!mezzoRes.success || !mezzoRes.data) return err(mezzoRes.error ?? "Mezzo non trovato");
-      const mezzoG = toMezzoUI(mezzoRes.data);
-      const marca = mezzoG.marca.trim();
-      if (!marca) return success([]);
-      const res = await documentiService.getAll({ marca });
-      if (!res.success) return res;
-      const filtered = (res.data ?? []).filter((row) =>
-        documentoMatchesMarcaModello(documentoRowToGestionale(row), mezzoG.marca, mezzoG.modello),
-      );
-      return success(filtered);
-    },
+    () => fetchLavorazioneDocumentiSlice(mezzoId),
     {
       enabled: id.length > 0 && base.isSuccess,
       staleTime: LA_STALE_MS,

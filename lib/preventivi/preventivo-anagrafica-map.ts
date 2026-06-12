@@ -2,7 +2,13 @@ import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import type { SchedaIngressoFields } from "@/types/schede";
+import { normalizeLivelloCarburanteStored } from "@/lib/schede/livello-carburante-value";
+import {
+  resolveInterventoDisplayForSurface,
+  schedaIngressoFieldsFromDisplay,
+} from "@/lib/domain/intervento-context/resolve-intervento-display-for-surface";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 
 export type PreventivoAnagraficaPatch = Pick<
   PreventivoRecord,
@@ -45,6 +51,18 @@ export function syncMacchinaRiassunto(
   return trimOrEmpty(p.macchinaRiassunto);
 }
 
+/** Anagrafica preventivo via read model canonico (scheda > lav > mezzo). */
+export function anagraficaFromInterventoContext(
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
+): PreventivoAnagraficaPatch {
+  const display = resolveInterventoDisplayForSurface("preventivo", {
+    lavorazioneRow: row,
+    schedeStore,
+  });
+  return anagraficaFromSchedaIngresso(schedaIngressoFieldsFromDisplay(display));
+}
+
 export function anagraficaFromSchedaIngresso(ing: Partial<SchedaIngressoFields>): PreventivoAnagraficaPatch {
   const patch: PreventivoAnagraficaPatch = {
     cliente: trimOrEmpty(ing.cliente),
@@ -62,7 +80,7 @@ export function anagraficaFromSchedaIngresso(ing: Partial<SchedaIngressoFields>)
     marcaTelaio: trimOrEmpty(ing.marcaTelaio),
     modelloTelaio: trimOrEmpty(ing.modelloTelaio),
     km: trimOrEmpty(ing.km),
-    livelloCarburante: trimOrEmpty(ing.livelloCarburante),
+    livelloCarburante: normalizeLivelloCarburanteStored(ing.livelloCarburante),
     richiedente: trimOrEmpty(ing.richiedente),
   };
   patch.macchinaRiassunto = syncMacchinaRiassunto(patch);
@@ -115,7 +133,11 @@ function mergePatch(base: PreventivoAnagraficaPatch, overlay: Partial<Preventivo
   return next;
 }
 
-/** Merge priorità: ingresso > mezzo > lavorazione (ultimo argomento = priorità più bassa). */
+/**
+ * Merge priorità: ingresso > mezzo > lavorazione (ultimo argomento = priorità più bassa).
+ * @deprecated Usare `anagraficaFromInterventoContext(lavorazioneRow, schedeStore)` per export da lavorazione.
+ * Legacy merge manuale — solo test di regressione.
+ */
 export function mergeAnagraficaPreventivo(
   ingresso: Partial<SchedaIngressoFields> | null | undefined,
   mezzo: MezzoGestito | null | undefined,

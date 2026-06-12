@@ -397,12 +397,7 @@ export function cellDisplayKind(value: TimesheetCellValue): CellDisplayKind {
   return "work";
 }
 
-const CELL_FILLED_FRAME =
-  "border border-[color:color-mix(in_srgb,var(--cab-border)_22%,transparent)] shadow-[inset_0_1px_0_0_color-mix(in_srgb,var(--cab-text)_5%,transparent)]";
-
-const CELL_FILLED_HOVER = "active:brightness-[0.98]";
-
-/** Cella vuota — sfondo/bordo sul td (crosshair CSS), pulsante trasparente a tutta area. */
+/** Cella vuota — sfondo sul td (crosshair CSS), pulsante trasparente a tutta area. */
 export const CELL_EMPTY_WEEKEND_CLASS = "border-0 border-transparent bg-transparent shadow-none";
 
 export const CELL_EMPTY_BASE_CLASS = "border-0 border-transparent bg-transparent shadow-none";
@@ -412,15 +407,16 @@ export const CELL_EMPTY_HOVER_WORK = "";
 
 export const CELL_EMPTY_HOVER_ABSENCE = "";
 
+/** Solo tipografia sul button — tinte opache su `td` via `data-timesheet-cell-kind` (CSS). */
 export const CELL_KIND_CLASS: Record<CellDisplayKind, string> = {
   empty: CELL_EMPTY_BASE_CLASS,
-  work: `${CELL_FILLED_FRAME} bg-[color:color-mix(in_srgb,var(--cab-success)_22%,transparent)] text-[color:var(--cab-text)] hover:bg-[color:color-mix(in_srgb,var(--cab-success)_30%,transparent)] ${CELL_FILLED_HOVER}`,
-  overtime: `${CELL_FILLED_FRAME} bg-[color:color-mix(in_srgb,var(--cab-warning)_26%,transparent)] text-[color:var(--cab-text)] hover:bg-[color:color-mix(in_srgb,var(--cab-warning)_34%,transparent)] ${CELL_FILLED_HOVER}`,
-  split: `${CELL_FILLED_FRAME} bg-[linear-gradient(160deg,color-mix(in_srgb,var(--cab-success)_22%,transparent)_0%,color-mix(in_srgb,var(--cab-warning)_28%,transparent)_100%)] text-[color:var(--cab-text)] ${CELL_FILLED_HOVER}`,
-  absence: `${CELL_FILLED_FRAME} bg-[color:color-mix(in_srgb,var(--cab-danger)_22%,transparent)] text-[color:var(--cab-text)] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_30%,transparent)] ${CELL_FILLED_HOVER}`,
-  work_absence: `${CELL_FILLED_FRAME} bg-[linear-gradient(160deg,color-mix(in_srgb,var(--cab-success)_20%,transparent)_0%,color-mix(in_srgb,var(--cab-danger)_24%,transparent)_100%)] text-[color:var(--cab-text)] ${CELL_FILLED_HOVER}`,
-  overtime_absence: `${CELL_FILLED_FRAME} bg-[linear-gradient(160deg,color-mix(in_srgb,var(--cab-warning)_24%,transparent)_0%,color-mix(in_srgb,var(--cab-danger)_24%,transparent)_100%)] text-[color:var(--cab-text)] ${CELL_FILLED_HOVER}`,
-  full: `${CELL_FILLED_FRAME} bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cab-success)_18%,transparent)_0%,color-mix(in_srgb,var(--cab-warning)_20%,transparent)_45%,color-mix(in_srgb,var(--cab-danger)_22%,transparent)_100%)] text-[color:var(--cab-text)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-warning)_28%,transparent)] ${CELL_FILLED_HOVER}`,
+  work: "bg-transparent text-[color:var(--cab-text)]",
+  overtime: "bg-transparent text-[color:var(--cab-text)]",
+  split: "bg-transparent text-[color:var(--cab-text)]",
+  absence: "bg-transparent text-[color:var(--cab-text)]",
+  work_absence: "bg-transparent text-[color:var(--cab-text)]",
+  overtime_absence: "bg-transparent text-[color:var(--cab-text)]",
+  full: "bg-transparent text-[color:var(--cab-text)]",
 };
 
 export const CELL_SECONDARY_TONE_CLASS: Record<CellDisplaySecondaryTone, string> = {

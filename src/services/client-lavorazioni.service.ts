@@ -1,6 +1,7 @@
 "use client";
 
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
+import { LAVORAZIONI_COLUMNS, MEZZI_LIST_EMBED_COLUMNS } from "@/lib/db/table-select-columns";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { lavorazioneMatchesClienteScope } from "@/src/lib/auth/cliente-portal-scope";
 import { ensureClientLavorazioniAccess, loadCallerClienteRef } from "@/src/lib/auth/permission-guards";
@@ -41,7 +42,9 @@ export const clientLavorazioniService = {
       if (!id) return err("Lavorazione non valida.");
 
       const sb = await getBrowserSupabase();
-      const { data, error } = await applyLavorazioniNotDeletedFilter(sb.from("lavorazioni").select("*, mezzi(*)").eq("id", id)).maybeSingle();
+      const { data, error } = await applyLavorazioniNotDeletedFilter(
+        sb.from("lavorazioni").select(`${LAVORAZIONI_COLUMNS}, mezzi(${MEZZI_LIST_EMBED_COLUMNS})`).eq("id", id),
+      ).maybeSingle();
       if (error) return err(error.message);
       if (!data) return err("Lavorazione non trovata.");
 

@@ -1,8 +1,11 @@
+import type { PreventiviRecordsPayload } from "@/lib/preventivi/preventivi-list-fetch";
 import { preventivoRowToRecord } from "@/lib/preventivi/preventivi-db-mapper";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
 import type { QueryClient } from "@tanstack/react-query";
 import { QK } from "@/src/lib/react-query/query-keys";
+
+const PREVENTIVI_RECORDS_KEY = [...QK.preventivi, null] as const;
 
 /** Formato legacy annuale (2026-001 / PV-2026-012) — solo migrazione localStorage. */
 export function nextPreventivoNumeroFromRecords(existing: readonly PreventivoRecord[]): string {
@@ -43,10 +46,11 @@ export function mapPreventiviRowsToRecords(
     .sort((a, b) => new Date(b.dataCreazione).getTime() - new Date(a.dataCreazione).getTime());
 }
 
-export function getPreventiviRecordsFromCache(
-  qc: QueryClient,
-  mezziRows: readonly MezzoRow[],
-): PreventivoRecord[] {
-  const rows = qc.getQueryData<PreventivoRow[]>([...QK.preventivi, null]);
-  return mapPreventiviRowsToRecords(rows, mezziRows);
+export function getPreventiviRecordsFromCache(qc: QueryClient): PreventivoRecord[] {
+  const payload = qc.getQueryData<PreventiviRecordsPayload>(PREVENTIVI_RECORDS_KEY);
+  return payload?.records ?? [];
+}
+
+export function getPreventiviPayloadFromCache(qc: QueryClient): PreventiviRecordsPayload | undefined {
+  return qc.getQueryData<PreventiviRecordsPayload>(PREVENTIVI_RECORDS_KEY);
 }

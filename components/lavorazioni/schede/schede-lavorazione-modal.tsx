@@ -31,6 +31,7 @@ import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavoraz
 import { GlobalDatePicker, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { LavorazioneCostoDiscreto } from "@/components/gestionale/lavorazioni/lavorazione-costo-discreto";
 import { LavorazioneMediaPanel } from "@/components/gestionale/media/lavorazione-media-panel";
+import { useInterventoContext } from "@/src/hooks/gestionale/use-intervento-context";
 import { useLavorazioneCosto } from "@/src/hooks/gestionale/use-lavorazione-costo";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -54,8 +55,12 @@ import {
 } from "@/lib/mezzi/identificazione-mezzo";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
-  findLastSchedaIngressoForIdent,
-} from "@/lib/schede/scheda-ingresso-reuse";
+  applyCopyLastSchedaMatch,
+  copyLastSchedaIngresso,
+  listCopyLastSchedaIngressoCandidates,
+} from "@/lib/domain/scheda-ingresso/copy-last-scheda";
+import type { LastSchedaIngressoMatch } from "@/lib/schede/scheda-ingresso-reuse";
+import { SchedaIngressoCopyPickDialog } from "@/components/gestionale/lavorazioni/scheda-ingresso-copy-pick-dialog";
 import {
   diffSchedaIngressoCampi,
   diffSchedaLavorazioniDoc,
@@ -338,7 +343,12 @@ export function SchedeLavorazioneModal({
   /** Fissato all'apertura: `compact` per Informazioni, `hub` per Schede. */
   dialogSize?: SchedeLavorazioneDialogSize;
   bundle: LavorazioneSchedeBundle;
-  onPersist: (next: LavorazioneSchedeBundle) => void;
+  onPersist: (
+    next: LavorazioneSchedeBundle,
+  ) => Promise<
+    | { ok: true }
+    | { ok: false; error: string; kind?: "error" | "concurrency" }
+  >;
   attive: LavorazioneAttiva[];
   storico: LavorazioneArchiviata[];
   mezzi: MezzoGestito[];
@@ -346,6 +356,7 @@ export function SchedeLavorazioneModal({
   currentUser: string;
   schedeStore: Record<string, LavorazioneSchedeBundle>;
   onSchedaLog?: (ev: SchedaLogEv) => void;
+  /** Post-persist scheda: il parent deve chiamare executeInterventoWrite — mai syncIngressoAfterSave diretto. */
   onIngressoCommitted?: (campi: SchedaIngressoFields) => void | Promise<void>;
   canDeleteLavorazione?: boolean;
   onDeleteLavorazione?: () => void;
@@ -367,10 +378,16 @@ export function SchedeLavorazioneModal({
   const initialTab = normalizeHubTab(initialTabProp);
   const [frozenDialogSize] = useState(() => resolveSchedeDialogSize(dialogSizeProp, initialTab));
   const mezzo = useMemo(() => findMezzoForLavorazione(mezzi, lav), [mezzi, lav]);
+  const interventoCtx = useInterventoContext(lav.id, {
+    enabled: open,
+    legacyLavorazione: lav,
+    mezzoGestito: mezzo,
+  });
   const [stage, setStage] = useState<Stage>({ kind: "hub" });
   const [hubTab, setHubTab] = useState<HubTab>(initialTab);
   const [unsavedPanel, setUnsavedPanel] = useState<null | "ingresso" | "lav" | "ric">(null);
   const [panoramicaNoteSaving, setPanoramicaNoteSaving] = useState(false);
+  const [schedaEditorSaving, setSchedaEditorSaving] = useState(false);
   const [draft, setDraft] = useState<LavorazioneSchedeBundle>(bundle);
   const draftRef = useRef(draft);
   const syncedBundleJsonRef = useRef(JSON.stringify(bundle));
@@ -385,6 +402,7 @@ export function SchedeLavorazioneModal({
   const [lavDoc, setLavDoc] = useState<SchedaLavorazioniDoc | null>(null);
   const [ricDoc, setRicDoc] = useState<SchedaRicambiDoc | null>(null);
   const [eliminaConfirmTipo, setEliminaConfirmTipo] = useState<SchedaTipo | null>(null);
+  const [ingressoCopyPickOpen, setIngressoCopyPickOpen] = useState(false);
   const baselineIngressoJson = useRef<string | null>(null);
   const baselineLavorazioniJson = useRef<string | null>(null);
   const baselineRicambiJson = useRef<string | null>(null);
@@ -458,14 +476,42 @@ export function SchedeLavorazioneModal({
     if (r.needsRefetch) void hubQuery.refetch();
   });
 
-  const persist = useCallback(
-    (b: LavorazioneSchedeBundle) => {
-      onPersist(b);
-      setDraft(b);
-      syncedBundleJsonRef.current = JSON.stringify(b);
+  const applyDraftBundle = useCallback((b: LavorazioneSchedeBundle) => {
+    setDraft(b);
+    syncedBundleJsonRef.current = JSON.stringify(b);
+  }, []);
+
+  const persistBundle = useCallback(
+    async (b: LavorazioneSchedeBundle): Promise<{ ok: true } | { ok: false; error: string }> => {
+      applyDraftBundle(b);
+      return onPersist(b);
     },
-    [onPersist],
+    [applyDraftBundle, onPersist],
   );
+
+  const backgroundPersistDeferRef = useRef<LavorazioneSchedeBundle | null>(null);
+
+  const flushDeferredBackgroundPersist = useCallback(() => {
+    const pending = backgroundPersistDeferRef.current;
+    if (!pending || submitLock.isLocked()) return;
+    backgroundPersistDeferRef.current = null;
+    void persistBundle(pending);
+  }, [persistBundle, submitLock]);
+
+  const persistBundleInBackground = useCallback(
+    (b: LavorazioneSchedeBundle) => {
+      if (submitLock.isLocked()) {
+        backgroundPersistDeferRef.current = b;
+        return;
+      }
+      void persistBundle(b);
+    },
+    [persistBundle, submitLock],
+  );
+
+  useEffect(() => {
+    if (!submitLock.isLocked()) flushDeferredBackgroundPersist();
+  }, [submitLock, flushDeferredBackgroundPersist]);
 
   function openIngressoEditor(campi: SchedaIngressoFields) {
     const normalized = normalizeSchedaIngressoFields(campi, addetti[0] ?? "");
@@ -497,7 +543,7 @@ export function SchedeLavorazioneModal({
           ? SCHEDA_LAVORAZIONI_LABEL
           : SCHEDA_RICAMBI_LABEL;
     const next: LavorazioneSchedeBundle = { ...base, [tipo]: null };
-    persist(next);
+    persistBundleInBackground(next);
     emitLog({ tipo: "eliminazione", schedaOggetto: label, riepilogo: "Scheda eliminata", changes: [] });
     setEliminaConfirmTipo(null);
     setStage({ kind: "hub" });
@@ -514,7 +560,7 @@ export function SchedeLavorazioneModal({
       baselineIngressoJson.current = JSON.stringify(campi);
       const doc: SchedaIngressoDoc = { ...newSchedaMeta("ingresso", u), tipo: "ingresso", campi };
       flushSync(() => {
-        persist({ ...draftRef.current, ingresso: doc });
+        persistBundleInBackground({ ...draftRef.current, ingresso: doc });
       });
       openIngressoEditor(campi);
       emitLog({
@@ -545,7 +591,7 @@ export function SchedeLavorazioneModal({
       baselineLavorazioniJson.current = JSON.stringify(doc);
       flushSync(() => {
         setLavDoc(doc);
-        persist({ ...draftRef.current, lavorazioni: doc });
+        persistBundleInBackground({ ...draftRef.current, lavorazioni: doc });
         setStage({ kind: "lavorazioni" });
       });
       emitLog({
@@ -577,7 +623,7 @@ export function SchedeLavorazioneModal({
       baselineRicambiJson.current = JSON.stringify(doc);
       flushSync(() => {
         setRicDoc(doc);
-        persist({ ...draftRef.current, ricambi: doc });
+        persistBundleInBackground({ ...draftRef.current, ricambi: doc });
         setStage({ kind: "ricambi" });
       });
       emitLog({
@@ -589,23 +635,10 @@ export function SchedeLavorazioneModal({
     }
   }
 
-  function duplicateIngressoPrev() {
-    const match = findLastSchedaIngressoForIdent(
-      lav.targa,
-      lav.matricola,
-      mezzi,
-      schedeStore,
-      attive,
-      storico,
-      { excludeLavorazioneId: lav.id },
-    );
-    if (!match) {
-      gestToast.warning("Nessuna scheda ingresso precedente trovata per questo mezzo (targa o matricola).");
-      return;
-    }
+  function applyDuplicateIngressoFromMatch(match: LastSchedaIngressoMatch) {
     const u = currentUser.trim() || "Operatore";
     const now = new Date().toISOString();
-    const campi = { ...match.campi };
+    const campi = applyCopyLastSchedaMatch("full-snapshot", undefined, match);
     baselineIngressoJson.current = JSON.stringify(campi);
     const doc: SchedaIngressoDoc = {
       ...newSchedaMeta("ingresso", u),
@@ -618,14 +651,41 @@ export function SchedeLavorazioneModal({
       fileEsterno: null,
       campi,
     };
-    persist({ ...draftRef.current, ingresso: doc });
+    persistBundleInBackground({ ...draftRef.current, ingresso: doc });
     openIngressoEditor(campi);
+    setIngressoCopyPickOpen(false);
     emitLog({
       tipo: "creazione",
       schedaOggetto: SCHEDA_INGRESSO_LABEL,
       riepilogo: "Scheda ingresso creata (copia da intervento precedente)",
       changes: [],
     });
+  }
+
+  function duplicateIngressoPrev() {
+    const result = copyLastSchedaIngresso({
+      ident: hubCopyLastIdent,
+      mode: "full-snapshot",
+      mezzi,
+      schedeStore,
+      attive,
+      storico,
+      excludeLavorazioneId: lav.id,
+    });
+    if (result.kind === "none") {
+      gestToast.warning(
+        "Nessuna scheda ingresso precedente trovata per questo mezzo (targa, matricola o n. scuderia).",
+      );
+      return;
+    }
+    if (result.kind === "pick") {
+      gestToast.warning(
+        `Trovate ${result.candidates.length} schede ingresso — scegli quale copiare.`,
+      );
+      setIngressoCopyPickOpen(true);
+      return;
+    }
+    applyDuplicateIngressoFromMatch(result.match);
   }
 
   const lavOrigine = origine ?? (lav.id.startsWith("lav-arch-") ? ("storico" as const) : ("attiva" as const));
@@ -677,18 +737,29 @@ export function SchedeLavorazioneModal({
     return buildSchedaIngressoFieldsFromContext(lav, mezzo, lav.addetto.trim() || addetti[0] || "");
   }, [hub.ingresso, lav, mezzo, addetti]);
 
-  const panoramicaDisplayFields = useMemo(
-    (): SchedaIngressoFields => ({
+  const panoramicaDisplayFields = useMemo((): SchedaIngressoFields => {
+    const d = interventoCtx.display;
+    if (!d) {
+      return {
+        ...panoramicaCampi,
+        cliente: panoramicaCampi.cliente.trim() || lav.cliente.trim(),
+        cantiere: panoramicaCampi.cantiere.trim() || lav.cantiere.trim(),
+        utilizzatore: panoramicaCampi.utilizzatore.trim() || lav.utilizzatore.trim(),
+        targa: panoramicaCampi.targa.trim() || lav.targa.trim(),
+        matricola: panoramicaCampi.matricola.trim() || lav.matricola.trim(),
+        nScuderia: panoramicaCampi.nScuderia.trim() || lav.nScuderia.trim(),
+      };
+    }
+    return {
       ...panoramicaCampi,
-      cliente: panoramicaCampi.cliente.trim() || lav.cliente.trim(),
-      cantiere: panoramicaCampi.cantiere.trim() || lav.cantiere.trim(),
-      utilizzatore: panoramicaCampi.utilizzatore.trim() || lav.utilizzatore.trim(),
-      targa: panoramicaCampi.targa.trim() || lav.targa.trim(),
-      matricola: panoramicaCampi.matricola.trim() || lav.matricola.trim(),
-      nScuderia: panoramicaCampi.nScuderia.trim() || lav.nScuderia.trim(),
-    }),
-    [panoramicaCampi, lav],
-  );
+      cliente: d.cliente.value || panoramicaCampi.cliente.trim(),
+      cantiere: d.cantiere.value || panoramicaCampi.cantiere.trim(),
+      utilizzatore: d.utilizzatore.value || panoramicaCampi.utilizzatore.trim(),
+      targa: d.targa.value || panoramicaCampi.targa.trim(),
+      matricola: d.matricola.value || panoramicaCampi.matricola.trim(),
+      nScuderia: d.nScuderia.value || panoramicaCampi.nScuderia.trim(),
+    };
+  }, [interventoCtx.display, panoramicaCampi, lav]);
 
   const identSubtitle = useMemo(
     () =>
@@ -710,13 +781,31 @@ export function SchedeLavorazioneModal({
   });
   const nOk = countSchedePresenti(hub);
 
-  const hubLastIngressoMatch = useMemo(
+  const hubCopyLastIdent = useMemo(
     () =>
-      findLastSchedaIngressoForIdent(lav.targa, lav.matricola, mezzi, schedeStore, attive, storico, {
+      !interventoCtx.isLoading && interventoCtx.ident
+        ? interventoCtx.ident
+        : {
+            targa: lav.targa,
+            matricola: lav.matricola,
+            nScuderia: lav.nScuderia,
+          },
+    [interventoCtx.ident, interventoCtx.isLoading, lav.targa, lav.matricola, lav.nScuderia],
+  );
+
+  const hubLastIngressoCandidates = useMemo(
+    () =>
+      listCopyLastSchedaIngressoCandidates({
+        ident: hubCopyLastIdent,
+        mezzi,
+        schedeStore,
+        attive,
+        storico,
         excludeLavorazioneId: lav.id,
       }),
-    [lav.targa, lav.matricola, lav.id, mezzi, schedeStore, attive, storico],
+    [hubCopyLastIdent, lav.id, mezzi, schedeStore, attive, storico],
   );
+  const hubLastIngressoMatch = hubLastIngressoCandidates[0] ?? null;
 
   const commitPanoramicaNote = useCallback(
     async (noteIntervento: string) => {
@@ -752,7 +841,8 @@ export function SchedeLavorazioneModal({
             updatedAt: now,
             updatedBy: u,
           };
-          persist({ ...draftRef.current, ingresso: nextDoc });
+          const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
+          if (!persistRes.ok) return;
         } else {
           const nextDoc: SchedaIngressoDoc = {
             ...newSchedaMeta("ingresso", u),
@@ -765,7 +855,8 @@ export function SchedeLavorazioneModal({
             riepilogo: "Scheda ingresso creata (note operative)",
             changes: [],
           });
-          persist({ ...draftRef.current, ingresso: nextDoc });
+          const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
+          if (!persistRes.ok) return;
         }
 
         await onIngressoCommitted?.(campi);
@@ -780,11 +871,51 @@ export function SchedeLavorazioneModal({
       panoramicaNoteValue,
       panoramicaCampi,
       currentUser,
-      persist,
+      persistBundle,
       emitLog,
       onIngressoCommitted,
+      gestToast,
     ],
   );
+
+  /** EDIT_INGRESSO_ORDER step 1: persist scheda; step 2: onIngressoCommitted → parent executeInterventoWrite. */
+  async function applyIngressoCommitAsync(snap: {
+    ig: SchedaIngressoFields | null;
+    base: SchedaIngressoDoc | null | undefined;
+  }): Promise<boolean> {
+    const ig = snap.ig;
+    const base = snap.base;
+    if (!ig || !base) return false;
+    if (!assertItalianDay("Data ingresso", ig.dataIngresso, gestToast.validation)) return false;
+    const prevCampi: SchedaIngressoFields | null = baselineIngressoJson.current
+      ? (JSON.parse(baselineIngressoJson.current) as SchedaIngressoFields)
+      : null;
+    const changes = prevCampi ? diffSchedaIngressoCampi(prevCampi, ig) : [];
+    if (changes.length) {
+      emitLog({
+        tipo: "aggiornamento",
+        schedaOggetto: SCHEDA_INGRESSO_LABEL,
+        riepilogo: "Scheda ingresso aggiornata",
+        changes,
+      });
+    }
+    const now = new Date().toISOString();
+    const u = currentUser.trim() || "Operatore";
+    const nextDoc: SchedaIngressoDoc = {
+      tipo: "ingresso",
+      createdAt: base.createdAt,
+      createdBy: base.createdBy,
+      sorgente: base.sorgente,
+      fileEsterno: base.fileEsterno,
+      campi: ig,
+      updatedAt: now,
+      updatedBy: u,
+    };
+    const persistRes = await persistBundle({ ...draftRef.current, ingresso: nextDoc });
+    if (!persistRes.ok) return false;
+    await onIngressoCommitted?.(ig);
+    return true;
+  }
 
   async function commitIngressoSave(): Promise<boolean> {
     const result = { ok: false };
@@ -795,38 +926,8 @@ export function SchedeLavorazioneModal({
         ig: ingressoDraftRef.current,
         base: draftRef.current.ingresso,
       }),
-      (snap) => {
-        const ig = snap.ig;
-        const base = snap.base;
-        if (!ig || !base) return;
-        if (!assertItalianDay("Data ingresso", ig.dataIngresso, gestToast.validation)) return;
-        const prevCampi: SchedaIngressoFields | null = baselineIngressoJson.current
-          ? (JSON.parse(baselineIngressoJson.current) as SchedaIngressoFields)
-          : null;
-        const changes = prevCampi ? diffSchedaIngressoCampi(prevCampi, ig) : [];
-        if (changes.length) {
-          emitLog({
-            tipo: "aggiornamento",
-            schedaOggetto: SCHEDA_INGRESSO_LABEL,
-            riepilogo: "Scheda ingresso aggiornata",
-            changes,
-          });
-        }
-        const now = new Date().toISOString();
-        const u = currentUser.trim() || "Operatore";
-        const nextDoc: SchedaIngressoDoc = {
-          tipo: "ingresso",
-          createdAt: base.createdAt,
-          createdBy: base.createdBy,
-          sorgente: base.sorgente,
-          fileEsterno: base.fileEsterno,
-          campi: ig,
-          updatedAt: now,
-          updatedBy: u,
-        };
-        persist({ ...draftRef.current, ingresso: nextDoc });
-        void onIngressoCommitted?.(ig);
-        result.ok = true;
+      async (snap) => {
+        result.ok = await applyIngressoCommitAsync(snap);
       },
     );
     return result.ok;
@@ -847,7 +948,7 @@ export function SchedeLavorazioneModal({
       modalRootRef.current,
       submitLock,
       () => ({ doc: lavDoc, draft: draftRef.current }),
-      (snap) => {
+      async (snap) => {
         const doc = snap.doc;
         if (!doc || !snap.draft.lavorazioni) return;
         for (let i = 0; i < doc.campi.righe.length; i += 1) {
@@ -878,8 +979,8 @@ export function SchedeLavorazioneModal({
             changes,
           });
         }
-        persist({ ...snap.draft, lavorazioni: nextDoc });
-        result.ok = true;
+        const persistRes = await persistBundle({ ...snap.draft, lavorazioni: nextDoc });
+        result.ok = persistRes.ok;
       },
     );
     return result.ok;
@@ -905,7 +1006,7 @@ export function SchedeLavorazioneModal({
       modalRootRef.current,
       submitLock,
       () => ({ doc: ricDoc, draft: draftRef.current }),
-      (snap) => {
+      async (snap) => {
         const doc = snap.doc;
         if (!doc || !snap.draft.ricambi) return;
         for (let i = 0; i < doc.campi.righe.length; i += 1) {
@@ -936,8 +1037,8 @@ export function SchedeLavorazioneModal({
             changes,
           });
         }
-        persist({ ...snap.draft, ricambi: nextDoc });
-        result.ok = true;
+        const persistRes = await persistBundle({ ...snap.draft, ricambi: nextDoc });
+        result.ok = persistRes.ok;
       },
     );
     return result.ok;
@@ -1052,6 +1153,7 @@ export function SchedeLavorazioneModal({
                   visible
                   highlight={false}
                   updatedAt={hubLastIngressoMatch.updatedAt}
+                  matchCount={hubLastIngressoCandidates.length}
                   disabled={!canEditWorkOrders}
                   disabledTitle={READONLY_PERMISSION_HINT}
                   onCopy={duplicateIngressoPrev}
@@ -1304,12 +1406,19 @@ export function SchedeLavorazioneModal({
               addettiLista={addetti}
               onBack={tryLavorazioniBack}
               onDelete={() => requestDeleteSchedaTipo("lavorazioni")}
+              saving={schedaEditorSaving}
               onSave={() => {
-                void commitLavorazioniSave().then((ok) => {
-                  if (!ok) return;
-                  setStage({ kind: "hub" });
-                  setLavDoc(null);
-                });
+                void (async () => {
+                  setSchedaEditorSaving(true);
+                  try {
+                    const ok = await commitLavorazioniSave();
+                    if (!ok) return;
+                    setStage({ kind: "hub" });
+                    setLavDoc(null);
+                  } finally {
+                    setSchedaEditorSaving(false);
+                  }
+                })();
               }}
             />
           ) : null}
@@ -1324,13 +1433,20 @@ export function SchedeLavorazioneModal({
               addettiLista={addetti}
               onBack={tryRicambiBack}
               onDelete={() => requestDeleteSchedaTipo("ricambi")}
-              onImmediatePersist={(d) => persist({ ...draftRef.current, ricambi: d })}
+              onImmediatePersist={(d) => persistBundleInBackground({ ...draftRef.current, ricambi: d })}
+              saving={schedaEditorSaving}
               onSave={() => {
-                void commitRicambiSave().then((ok) => {
-                  if (!ok) return;
-                  setStage({ kind: "hub" });
-                  setRicDoc(null);
-                });
+                void (async () => {
+                  setSchedaEditorSaving(true);
+                  try {
+                    const ok = await commitRicambiSave();
+                    if (!ok) return;
+                    setStage({ kind: "hub" });
+                    setRicDoc(null);
+                  } finally {
+                    setSchedaEditorSaving(false);
+                  }
+                })();
               }}
             />
           ) : null}
@@ -1375,12 +1491,14 @@ export function SchedeLavorazioneModal({
           open={ingressoFormOpen}
           initialFields={ingressoEditorInitial}
           onRequestClose={tryIngressoBack}
-          onSave={(draft) => {
+          onSave={async (draft) => {
             ingressoDraftRef.current = draft;
-            void commitIngressoSave().then((ok) => {
-              if (!ok) return;
-              closeIngressoEditor();
+            const ok = await applyIngressoCommitAsync({
+              ig: ingressoDraftRef.current,
+              base: draftRef.current.ingresso,
             });
+            if (!ok) return;
+            closeIngressoEditor();
           }}
           onDelete={
             hub.ingresso.sorgente !== "file_esterno" ? () => requestDeleteSchedaTipo("ingresso") : undefined
@@ -1401,6 +1519,13 @@ export function SchedeLavorazioneModal({
         tipo={eliminaConfirmTipo}
         onCancel={() => setEliminaConfirmTipo(null)}
         onConfirm={confirmDeleteSchedaTipo}
+      />
+      <SchedaIngressoCopyPickDialog
+        open={ingressoCopyPickOpen}
+        candidates={hubLastIngressoCandidates}
+        confirmLabel="Crea da selezionata"
+        onCancel={() => setIngressoCopyPickOpen(false)}
+        onConfirm={applyDuplicateIngressoFromMatch}
       />
       {confirmDialog}
     </>
@@ -1585,12 +1710,20 @@ function SchedaDayField({
   );
 }
 
-function SchedaEditorBottomSave({ readOnly, onSave }: { readOnly: boolean; onSave: () => void }) {
+function SchedaEditorBottomSave({
+  readOnly,
+  saving = false,
+  onSave,
+}: {
+  readOnly: boolean;
+  saving?: boolean;
+  onSave: () => void;
+}) {
   if (readOnly) return null;
   return (
     <div className="flex justify-end pt-3">
-      <button type="button" className={`${dsBtnPrimary} min-h-11`} onClick={onSave}>
-        Salva scheda
+      <button type="button" className={`${dsBtnPrimary} min-h-11`} onClick={onSave} disabled={saving}>
+        {saving ? "Salvataggio…" : "Salva scheda"}
       </button>
     </div>
   );
@@ -1602,6 +1735,7 @@ function LavorazioniPanel({
   addettiLista,
   onBack,
   onDelete,
+  saving = false,
   onSave,
 }: {
   doc: SchedaLavorazioniDoc;
@@ -1609,6 +1743,7 @@ function LavorazioniPanel({
   addettiLista: string[];
   onBack: () => void;
   onDelete: () => void;
+  saving?: boolean;
   onSave: () => void;
 }) {
   const { confirm: askConfirm, confirmDialog: lavorazioniConfirmDialog } = useGestionaleConfirm();
@@ -1632,8 +1767,8 @@ function LavorazioniPanel({
             </button>
           ) : null}
           {!ro ? (
-            <button type="button" className={dsBtnPrimary} onClick={onSave}>
-              Salva scheda
+            <button type="button" className={dsBtnPrimary} onClick={onSave} disabled={saving}>
+              {saving ? "Salvataggio…" : "Salva scheda"}
             </button>
           ) : null}
         </div>
@@ -1807,7 +1942,7 @@ function LavorazioniPanel({
           + Aggiungi riga lavorazione
         </button>
       ) : null}
-      <SchedaEditorBottomSave readOnly={ro} onSave={onSave} />
+      <SchedaEditorBottomSave readOnly={ro} saving={saving} onSave={onSave} />
       {lavorazioniConfirmDialog}
     </div>
   );
@@ -1824,6 +1959,7 @@ function RicambiPanel({
   onSave,
   onImmediatePersist,
   onDelete,
+  saving = false,
 }: {
   doc: SchedaRicambiDoc;
   setDoc: (d: SchedaRicambiDoc) => void;
@@ -1835,6 +1971,7 @@ function RicambiPanel({
   onSave: () => void;
   onImmediatePersist: (d: SchedaRicambiDoc) => void;
   onDelete: () => void;
+  saving?: boolean;
 }) {
   const gestToast = useGestionaleToast();
   const { confirm: askConfirm, confirmDialog: ricambiConfirmDialog } = useGestionaleConfirm();
@@ -1960,8 +2097,8 @@ function RicambiPanel({
             </button>
           ) : null}
           {!ro ? (
-            <button type="button" className={dsBtnPrimary} onClick={onSave}>
-              Salva scheda
+            <button type="button" className={dsBtnPrimary} onClick={onSave} disabled={saving}>
+              {saving ? "Salvataggio…" : "Salva scheda"}
             </button>
           ) : null}
         </div>
@@ -2157,7 +2294,7 @@ function RicambiPanel({
           + Aggiungi riga ricambio
         </button>
       ) : null}
-      <SchedaEditorBottomSave readOnly={ro} onSave={onSave} />
+      <SchedaEditorBottomSave readOnly={ro} saving={saving} onSave={onSave} />
       {ricambiConfirmDialog}
     </div>
   );

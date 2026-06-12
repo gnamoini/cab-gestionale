@@ -1,6 +1,7 @@
 "use client";
 
 import { isPastReportMonth, startOfCurrentMonthLocal } from "@/lib/report/report-manual-entries-map";
+import { REPORT_MANUAL_ENTRIES_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -39,7 +40,7 @@ export const reportManualEntriesService = {
       const c = await sb();
       const { data, error } = await c
         .from("report_manual_entries")
-        .select("*")
+        .select(REPORT_MANUAL_ENTRIES_COLUMNS)
         .is("deleted_at", null)
         .order("period_month", { ascending: false });
       if (error) return err(error.message);
@@ -79,7 +80,7 @@ export const reportManualEntriesService = {
           .from("report_manual_entries")
           .update({ completed_count: count, note })
           .eq("id", existing.id)
-          .select("*")
+          .select(REPORT_MANUAL_ENTRIES_COLUMNS)
           .single();
         if (error) return err(error.message);
         return success(data as ReportManualEntryRow);
@@ -88,7 +89,7 @@ export const reportManualEntriesService = {
       const { data, error } = await c
         .from("report_manual_entries")
         .insert({ period_month: periodMonth, completed_count: count, note })
-        .select("*")
+        .select(REPORT_MANUAL_ENTRIES_COLUMNS)
         .single();
       if (error) return err(error.message);
       return success(data as ReportManualEntryRow);

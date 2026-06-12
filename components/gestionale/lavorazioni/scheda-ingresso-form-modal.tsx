@@ -17,16 +17,20 @@ import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavor
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
-  findLastSchedaIngressoForIdent,
-  hasSchedaIngressoIdentLookup,
-  mergeSchedaIngressoFields,
-} from "@/lib/schede/scheda-ingresso-reuse";
+  applyCopyLastSchedaMatch,
+  copyLastSchedaIngresso,
+  listCopyLastSchedaIngressoCandidates,
+} from "@/lib/domain/scheda-ingresso/copy-last-scheda";
+import { hasSchedaIngressoIdentLookup } from "@/lib/schede/scheda-ingresso-reuse";
+import type { LastSchedaIngressoMatch } from "@/lib/schede/scheda-ingresso-reuse";
+import { SchedaIngressoCopyPickDialog } from "@/components/gestionale/lavorazioni/scheda-ingresso-copy-pick-dialog";
 import {
   SCHEDA_INGRESSO_ADDETTO_ACCETTAZIONE_LABEL,
   SCHEDA_INGRESSO_ADDETTO_LABEL,
 } from "@/lib/schede/scheda-ingresso-ui-labels";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
+import { normalizeLivelloCarburanteStored } from "@/lib/schede/livello-carburante-value";
 import { sliceInputValue, TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
@@ -104,6 +108,7 @@ export function normalizeSchedaIngressoFields(
     const v = raw[key];
     if (v !== undefined && v !== null) out[key] = String(v);
   }
+  out.livelloCarburante = normalizeLivelloCarburanteStored(out.livelloCarburante);
   return out;
 }
 
@@ -167,8 +172,6 @@ export function SchedaIngressoFormBody({
   mezzoPrompt,
   onMezzoDialogAccept,
   onMezzoDialogDismiss,
-  onSaveMezzo,
-  saveMezzoPending = false,
   mezzoLinked = false,
   prependContent,
   sharedGlobalOpts,
@@ -195,8 +198,6 @@ export function SchedaIngressoFormBody({
   mezzoPrompt: UseSchedaIngressoMezzoPromptResult;
   onMezzoDialogAccept?: () => void;
   onMezzoDialogDismiss?: () => void;
-  onSaveMezzo?: () => void;
-  saveMezzoPending?: boolean;
   mezzoLinked?: boolean;
   /** Contenuto opzionale in cima allo scroll (banner, avvisi). */
   prependContent?: ReactNode;
@@ -243,27 +244,53 @@ export function SchedaIngressoFormBody({
     };
   }, []);
 
-  const [identScan, setIdentScan] = useState({ targa: fields.targa, matricola: fields.matricola });
+  const [identScan, setIdentScan] = useState({
+    targa: fields.targa,
+    matricola: fields.matricola,
+    nScuderia: fields.nScuderia,
+  });
   useEffect(() => {
     const t = window.setTimeout(
-      () => setIdentScan({ targa: fields.targa, matricola: fields.matricola }),
+      () =>
+        setIdentScan({
+          targa: fields.targa,
+          matricola: fields.matricola,
+          nScuderia: fields.nScuderia,
+        }),
       300,
     );
     return () => window.clearTimeout(t);
-  }, [fields.targa, fields.matricola]);
+  }, [fields.targa, fields.matricola, fields.nScuderia]);
 
-  const lastIngressoMatch = useMemo(() => {
-    if (!hasSchedaIngressoIdentLookup(identScan.targa, identScan.matricola)) return null;
-    return findLastSchedaIngressoForIdent(
-      identScan.targa,
-      identScan.matricola,
-      mezziCatalog,
+  const lastIngressoCandidates = useMemo(() => {
+    if (!hasSchedaIngressoIdentLookup(identScan.targa, identScan.matricola, identScan.nScuderia)) {
+      return [];
+    }
+    return listCopyLastSchedaIngressoCandidates({
+      ident: {
+        targa: identScan.targa,
+        matricola: identScan.matricola,
+        nScuderia: identScan.nScuderia,
+      },
+      mezzi: mezziCatalog,
       schedeStore,
       attive,
       storico,
-      excludeLavorazioneId ? { excludeLavorazioneId } : undefined,
-    );
-  }, [identScan.targa, identScan.matricola, mezziCatalog, schedeStore, attive, storico, excludeLavorazioneId]);
+      excludeLavorazioneId,
+    });
+  }, [
+    identScan.targa,
+    identScan.matricola,
+    identScan.nScuderia,
+    mezziCatalog,
+    schedeStore,
+    attive,
+    storico,
+    excludeLavorazioneId,
+  ]);
+
+  const lastIngressoMatch = lastIngressoCandidates[0] ?? null;
+  const [copyPickOpen, setCopyPickOpen] = useState(false);
 
   const onMezzoPromptMatch = useCallback(
     (m: MezzoGestito) => {
@@ -272,10 +299,49 @@ export function SchedaIngressoFormBody({
     [mezzoPrompt, readOnly],
   );
 
+  const applyCopyFromMatch = useCallback(
+    (match: LastSchedaIngressoMatch) => {
+      setFields(applyCopyLastSchedaMatch("merge-empty", fields, match));
+      setCopyPickOpen(false);
+    },
+    [fields, setFields],
+  );
+
   const copyLastIngresso = useCallback(() => {
-    if (!lastIngressoMatch || readOnly) return;
-    setFields(mergeSchedaIngressoFields(fields, lastIngressoMatch.campi));
-  }, [fields, lastIngressoMatch, readOnly, setFields]);
+    if (readOnly) return;
+    const result = copyLastSchedaIngresso({
+      ident: {
+        targa: identScan.targa,
+        matricola: identScan.matricola,
+        nScuderia: identScan.nScuderia,
+      },
+      mode: "merge-empty",
+      currentFields: fields,
+      mezzi: mezziCatalog,
+      schedeStore,
+      attive,
+      storico,
+      excludeLavorazioneId,
+    });
+    if (result.kind === "none") return;
+    if (result.kind === "pick") {
+      setCopyPickOpen(true);
+      return;
+    }
+    setFields(result.fields);
+  }, [
+    attive,
+    excludeLavorazioneId,
+    fields,
+    identScan.matricola,
+    identScan.nScuderia,
+    identScan.targa,
+    mezziCatalog,
+    readOnly,
+    schedeStore,
+    setFields,
+    storico,
+  ]);
 
   const tablePillOptions = useMemo(
     () => buildLavorazioniPillOptionsFromGlobal(globalOpts),
@@ -319,6 +385,12 @@ export function SchedaIngressoFormBody({
         mezzo={mezzoPrompt.promptMezzo}
         onAccept={onMezzoDialogAccept ?? mezzoPrompt.acceptAutofill}
         onDismiss={onMezzoDialogDismiss ?? mezzoPrompt.dismissPrompt}
+      />
+      <SchedaIngressoCopyPickDialog
+        open={copyPickOpen}
+        candidates={lastIngressoCandidates}
+        onCancel={() => setCopyPickOpen(false)}
+        onConfirm={applyCopyFromMatch}
       />
       <GestionaleModalScrollBody className="space-y-3">
         {prependContent}
@@ -409,11 +481,10 @@ export function SchedaIngressoFormBody({
           sections={heavySectionsReady ? undefined : ["cliente"]}
           onExactMezzoMatch={onMezzoPromptMatch}
           lastIngressoMatch={lastIngressoMatch}
+          lastIngressoMatchCount={lastIngressoCandidates.length}
           onCopyLastIngresso={readOnly ? undefined : copyLastIngresso}
           clienteRequired={variant === "create-lavorazione"}
           marcaAttrezzaturaRequired={variant === "create-lavorazione"}
-          onSaveMezzo={variant === "create-lavorazione" && !readOnly ? onSaveMezzo : undefined}
-          saveMezzoPending={saveMezzoPending}
           mezzoLinked={mezzoLinked}
         />
 
@@ -470,7 +541,7 @@ export function SchedaIngressoEditModal({
   initialFields: SchedaIngressoFields;
   /** Chiusura (Annulla / ESC): riceve il draft corrente per dirty-check nel parent. */
   onRequestClose: (draft: SchedaIngressoFields) => void;
-  onSave: (draft: SchedaIngressoFields) => void;
+  onSave: (draft: SchedaIngressoFields) => void | Promise<void>;
   onDelete?: () => void;
   readOnly?: boolean;
   canEdit?: boolean;
@@ -483,9 +554,11 @@ export function SchedaIngressoEditModal({
   excludeLavorazioneId?: string;
 }) {
   const ro = readOnly || !canEdit;
+  const [saving, setSaving] = useState(false);
   const formEngine = useFormEngine<SchedaIngressoFields>({ initial: initialFields });
   const { value: draft, reset, setValue, patch: onPatch, runSubmit, formProps, ref: draftRef } =
     formEngine;
+  const savePending = pending || saving;
 
   useEffect(() => {
     if (open) reset(initialFields);
@@ -516,9 +589,14 @@ export function SchedaIngressoEditModal({
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    if (ro || !open) return;
-    void runSubmit(e.currentTarget, (snap) => {
-      onSave(snap);
+    if (ro || !open || savePending) return;
+    void runSubmit(e.currentTarget, async (snap) => {
+      setSaving(true);
+      try {
+        await onSave(snap);
+      } finally {
+        setSaving(false);
+      }
     });
   }
 
@@ -533,7 +611,7 @@ export function SchedaIngressoEditModal({
       footer={
         <div className="flex w-full min-w-0 flex-wrap items-center justify-end gap-2">
           {onDelete && !readOnly ? (
-            <button type="button" className={`${dsBtnDanger} min-h-11`} onClick={onDelete} disabled={pending}>
+            <button type="button" className={`${dsBtnDanger} min-h-11`} onClick={onDelete} disabled={savePending}>
               Elimina scheda
             </button>
           ) : null}
@@ -541,7 +619,7 @@ export function SchedaIngressoEditModal({
             type="button"
             className={`${erpBtnNeutral} min-h-11`}
             onClick={() => onRequestClose(draftRef.current)}
-            disabled={pending}
+            disabled={savePending}
           >
             Annulla
           </button>
@@ -550,7 +628,7 @@ export function SchedaIngressoEditModal({
               type="submit"
               form="scheda-ingresso-edit-form"
               className={`${erpBtnAccent} min-h-11`}
-              loading={pending}
+              loading={savePending}
               preset="salva"
             >
               Salva scheda
@@ -570,7 +648,7 @@ export function SchedaIngressoEditModal({
           fields={draft}
           setFields={setFields}
           onPatch={onPatch}
-          pending={pending}
+          pending={savePending}
           readOnly={ro}
           mezzi={mezzi}
           schedeStore={schedeStore}

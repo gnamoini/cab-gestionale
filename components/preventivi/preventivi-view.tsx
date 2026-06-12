@@ -24,7 +24,7 @@ import { PreventivoEliminaConfirmDialog } from "@/components/preventivi/preventi
 import { PreventiviAdvancedFilterPanel } from "@/components/preventivi/preventivi-advanced-filter-panel";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { useAuth } from "@/context/auth-context";
-import { usePermissions } from "@/src/hooks/use-permissions";
+import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
 import { splitLavorazioniListRowsForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
@@ -62,14 +62,12 @@ import {
   removePreventivoRecord,
 } from "@/lib/preventivi/preventivi-sync-adapter";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
-import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { LoadingCardSkeleton, LoadingTableSkeleton } from "@/components/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
-import { useGestionaleQueryOpts } from "@/src/hooks/gestionale/use-gestionale-query-opts";
-import { usePreventiviListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
 import {
@@ -257,8 +255,8 @@ function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: Preven
 }
 
 export function PreventiviView() {
-  const prevPerm = usePermissions("preventivi");
-  const globalPerm = usePermissions();
+  const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
+  const prevPerm = permModules.preventivi;
   const canEditWorkOrders = prevPerm.canWrite;
   const canDeleteRecords = prevPerm.canWrite && globalPerm.canDeleteRecords;
   const router = useRouter();
@@ -266,12 +264,19 @@ export function PreventiviView() {
   const { authorName: autore } = useAuth();
   const gestToast = useGestionaleToast();
   const queryClient = useQueryClient();
-  const gestOpts = useGestionaleQueryOpts();
-  const pvListQ = usePreventiviListQuery(undefined, { ...gestOpts });
-  const { records: rows, refetch: refetchPreventivi } = usePreventiviRecordsQuery();
-  const preventiviInitialLoading = pvListQ.isLoading && pvListQ.data === undefined;
-  const mezziListQ = useMezziListQuery();
-  const mezziRows = mezziListQ.data ?? [];
+  const { records: rows, mezziRows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
+    usePreventiviRecordsQuery();
+  const preventiviReadyMarked = useRef(false);
+  useEffect(() => {
+    if (preventiviReadyMarked.current || rows.length === 0) return;
+    preventiviReadyMarked.current = true;
+    try {
+      performance.mark("preventivi-view-ready");
+    } catch {
+      /* performance API unavailable */
+    }
+  }, [rows.length]);
+  const preventiviInitialLoading = preventiviQueryLoading && rows.length === 0;
   const mezziSnap = useMemo(() => mezziRows.map(toMezzoUI), [mezziRows]);
   const magazzinoQ = useMagazzinoRicambiUIQuery();
   const magSnap = magazzinoQ.data ?? [];
@@ -392,7 +397,7 @@ export function PreventiviView() {
   const filterOrig: PreventivoLavorazioneOrigine | null =
     filterOrigRaw === "attiva" || filterOrigRaw === "storico" ? filterOrigRaw : null;
 
-  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery({ tier: "static" });
   const listePrefs = useMemo(
     () => migrateMezziListePrefs(settingsPayload?.resolved?.mezziListe ?? createMezziListePrefsDefault()),
     [settingsPayload?.resolved?.mezziListe],

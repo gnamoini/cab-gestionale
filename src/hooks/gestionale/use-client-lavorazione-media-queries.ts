@@ -11,7 +11,6 @@ import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
 
 export type ClientLavorazioneDocumentsPayload = {
   rows: LavorazioneDocumentRow[];
-  urls: Record<string, string>;
 };
 
 export function useClientLavorazioneDocumentsQuery(lavorazioneId: string, enabled = true) {
@@ -23,12 +22,9 @@ export function useClientLavorazioneDocumentsQuery(lavorazioneId: string, enable
   >(
     [...QK.clientLavorazioneDocuments, id] as const,
     async (): Promise<ServiceResult<ClientLavorazioneDocumentsPayload>> => {
-      const res = await lavorazioneDocumentsService.listWithUrls(id);
+      const res = await lavorazioneDocumentsService.listByLavorazione(id);
       if (!res.success) return err(res.error ?? "Errore documenti lavorazione.");
-      const data = res.data ?? [];
-      const urls: Record<string, string> = {};
-      for (const r of data) urls[r.tipo] = r.signedUrl;
-      return success({ rows: data, urls });
+      return success({ rows: res.data ?? [] });
     },
     { enabled: enabled && id.length > 0, ...opts },
   );

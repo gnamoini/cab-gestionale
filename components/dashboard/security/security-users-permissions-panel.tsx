@@ -57,6 +57,8 @@ import {
 
 type Props = {
   readOnly?: boolean;
+  /** Query condivisa dal parent (evita doppio hook sulla tab Utenti). */
+  sharedUsersQ?: ReturnType<typeof useSecurityUsersPermissionsQuery>;
 };
 
 function buildModuleSnapshots(
@@ -82,7 +84,7 @@ function buildModuleDrafts(
   return out;
 }
 
-export function SecurityUsersPermissionsPanel({ readOnly = false }: Props) {
+export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }: Props) {
   const { refresh, user: sessionUser } = useAuth();
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
@@ -96,7 +98,8 @@ export function SecurityUsersPermissionsPanel({ readOnly = false }: Props) {
   const [saving, setSaving] = useState(false);
   const hydratedRef = useRef(false);
 
-  const usersQ = useSecurityUsersPermissionsQuery(true);
+  const internalUsersQ = useSecurityUsersPermissionsQuery(!sharedUsersQ);
+  const usersQ = sharedUsersQ ?? internalUsersQ;
   const serverUsers = usersQ.users;
   const permissionRows = usersQ.permissionRows;
   const globalOpts = useGlobalOptions({ debugTag: "SecurityUsersPermissions" });

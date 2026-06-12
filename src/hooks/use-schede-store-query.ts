@@ -76,6 +76,12 @@ export function useSchedeStoreQuery(enabled = true) {
   return useSchedeBundlesQuery(enabled);
 }
 
+/** Slice bundle per singola riga — evita di passare l'intero `store` ai componenti memo. */
+export function useSchedeBundleForRow(lavorazioneId: string | undefined) {
+  const { bundle } = useSchedeBundle(lavorazioneId);
+  return bundle;
+}
+
 /** Bundle schede per singola lavorazione — lazy fetch on demand. */
 export function useSchedeBundle(lavorazioneId: string | undefined) {
   const ids = useMemo(() => (lavorazioneId ? [lavorazioneId] : []), [lavorazioneId]);

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import { copyLastSchedaIngresso } from "@/lib/domain/scheda-ingresso/copy-last-scheda";
 import { buildSchedaIngressoFieldsFromMezzo } from "@/lib/schede/scheda-ingresso-mezzo-autofill";
-import { findLastSchedaIngressoForIdent, mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
+import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
@@ -42,16 +43,17 @@ export function useSchedaIngressoMezzoPrompt({
     const fromMezzo = buildSchedaIngressoFieldsFromMezzo(promptMezzo);
     let next = mergeSchedaIngressoFields(fields, fromMezzo);
     if (schedeStore) {
-      const last = findLastSchedaIngressoForIdent(
-        next.targa,
-        next.matricola,
+      const copyResult = copyLastSchedaIngresso({
+        ident: { targa: next.targa, matricola: next.matricola, nScuderia: next.nScuderia },
+        mode: "merge-empty",
+        currentFields: next,
         mezzi,
         schedeStore,
         attive,
         storico,
-        excludeLavorazioneId ? { excludeLavorazioneId } : undefined,
-      );
-      if (last) next = mergeSchedaIngressoFields(next, last.campi);
+        excludeLavorazioneId,
+      });
+      if (copyResult.kind === "single") next = copyResult.fields;
     }
     setFields(next);
     setPromptMezzo(null);

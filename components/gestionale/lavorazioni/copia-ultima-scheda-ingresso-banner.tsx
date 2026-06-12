@@ -17,6 +17,7 @@ export function CopiaUltimaSchedaIngressoBanner({
   visible,
   highlight,
   updatedAt,
+  matchCount = 1,
   disabled,
   disabledTitle,
   onCopy,
@@ -25,6 +26,8 @@ export function CopiaUltimaSchedaIngressoBanner({
   /** Evidenzia al primo match (bordo/alone). */
   highlight: boolean;
   updatedAt?: string;
+  /** Più di 1 scheda corrispondente — alla copia si chiede quale usare. */
+  matchCount?: number;
   disabled?: boolean;
   disabledTitle?: string;
   onCopy: () => void;
@@ -56,7 +59,15 @@ export function CopiaUltimaSchedaIngressoBanner({
               Mezzo già registrato
             </p>
             <p className="mt-1 text-sm leading-snug text-[color:var(--cab-text-muted)]">
-              {updatedAt ? (
+              {matchCount > 1 ? (
+                <>
+                  Trovate{" "}
+                  <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">
+                    {matchCount}
+                  </span>{" "}
+                  schede ingresso per questo identificativo. Alla copia potrai scegliere quale usare.
+                </>
+              ) : updatedAt ? (
                 <>
                   Ultima scheda ingresso:{" "}
                   <span className="font-semibold tabular-nums text-[color:var(--cab-text)]">

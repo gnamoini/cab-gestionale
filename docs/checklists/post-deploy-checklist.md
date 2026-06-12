@@ -41,6 +41,13 @@ Eseguire **entro 30 minuti** dal deploy production su Vercel.
 - [ ] `/dashboard/security/production-readiness` — nessun blocker
 - [ ] Security Release Control — READY (informativo, non blocca deploy)
 
+## Database performance (linked Supabase CLI)
+
+- [ ] `npm run ops:slow-query-audit` — confronta `test-results/slow-query-audit.json` con baseline
+- [ ] Nessuna regressione >10% su execution time EXPLAIN vs `slow-query-audit-baseline.json`
+- [ ] `npm run ops:performance-regression-check` — exit 0 (no FAIL >20% vs `performance-snapshot-baseline.json`)
+- [ ] Opzionale dettaglio: `npm run ops:db-explain`, `npm run ops:rest-benchmark`, `npm run ops:performance-snapshot`
+
 ## Storage monitoring
 
 - [ ] Upload documento test (opzionale, ambiente non critico)

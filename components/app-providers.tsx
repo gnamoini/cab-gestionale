@@ -9,6 +9,7 @@ import { UploadFeedbackProvider } from "@/context/upload-feedback-context";
 import { UploadFeedbackTray } from "@/components/gestionale/upload";
 import { GlobalLoadingQueryBridge } from "@/src/components/global-loading-query-bridge";
 import { SupabaseConfigurationBanner } from "@/components/supabase-configuration-banner";
+import { AppSettingsQueryProvider } from "@/src/context/app-settings-query-context";
 import { QueryProvider } from "@/src/providers/query-provider";
 import { DeferredGestionaleBridges } from "@/src/components/deferred-gestionale-bridges";
 import { RealtimeStatusProvider } from "@/src/context/realtime-status-context";
@@ -34,6 +35,7 @@ export function AppProviders({
       <UploadFeedbackProvider>
         <UploadFeedbackTray />
         <QueryProvider>
+          <AppSettingsQueryProvider>
           <GlobalLoadingProvider>
             <GlobalLoadingQueryBridge />
             <RealtimeStatusProvider>
@@ -60,6 +62,7 @@ export function AppProviders({
               </AuthProvider>
             </RealtimeStatusProvider>
           </GlobalLoadingProvider>
+          </AppSettingsQueryProvider>
         </QueryProvider>
       </UploadFeedbackProvider>
     </ToastProvider>

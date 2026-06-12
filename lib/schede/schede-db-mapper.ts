@@ -16,6 +16,16 @@ function rowToDoc(row: SchedaLavorazioneRow): unknown {
   return c;
 }
 
+/** Calcola revision hint da max(updated_at) righe DB. */
+export function computeBundleRevision(rows: readonly SchedaLavorazioneRow[]): string | undefined {
+  let maxTs = "";
+  for (const row of rows) {
+    const ts = row.updated_at?.trim() ?? "";
+    if (ts && ts > maxTs) maxTs = ts;
+  }
+  return maxTs || undefined;
+}
+
 export function schedaRowsToBundle(
   lavorazioneId: string,
   rows: readonly SchedaLavorazioneRow[],
@@ -27,6 +37,8 @@ export function schedaRowsToBundle(
     ingresso: null,
     lavorazioni: null,
     ricambi: null,
+    _revision: computeBundleRevision(rows),
+    _fetchedAt: Date.now(),
   };
   for (const row of rows) {
     const bundleKey = dbTipoToBundleKey(row.tipo);

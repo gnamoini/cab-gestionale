@@ -29,6 +29,7 @@ import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/type
 import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
+import { lavorazioneMezzoIdentParts } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
 /** Vista Kanban: «Attesa preventivo» non ha colonna dedicata — card sotto Accettazione. */
@@ -114,20 +115,11 @@ function identSummaryLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSch
 }
 
 function mezzoIdentParts(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore) {
-  const ing = schedeStore?.[row.id]?.ingresso?.campi;
-  const scuderiaIngresso = ing?.nScuderia?.trim() ?? "";
-  if (ing) {
-    return {
-      targa: ing.targa?.trim() || "—",
-      matricola: ing.matricola?.trim() || "—",
-      scuderia: scuderiaIngresso,
-    };
-  }
-  const m = row.mezzo;
+  const parts = lavorazioneMezzoIdentParts(row, schedeStore);
   return {
-    targa: m?.targa?.trim() || "—",
-    matricola: m?.matricola?.trim() || "—",
-    scuderia: "",
+    targa: parts.targa || "—",
+    matricola: parts.matricola || "—",
+    scuderia: parts.scuderia || "",
   };
 }
 
@@ -154,6 +146,11 @@ type KanbanCardProps = {
   onOpen: () => void;
 };
 
+function kanbanSchedeBundleRevision(store: LavorazioneSchedeStore, lavorazioneId: string): string {
+  const bundle = store[lavorazioneId];
+  return bundle ? JSON.stringify(bundle) : "";
+}
+
 function kanbanCardPropsEqual(prev: Readonly<KanbanCardProps>, next: Readonly<KanbanCardProps>) {
   return (
     prev.row.id === next.row.id &&
@@ -163,7 +160,8 @@ function kanbanCardPropsEqual(prev: Readonly<KanbanCardProps>, next: Readonly<Ka
     prev.row.created_at === next.row.created_at &&
     prev.flash === next.flash &&
     prev.defaultAddetto === next.defaultAddetto &&
-    prev.schedeStore[prev.row.id] === next.schedeStore[next.row.id] &&
+    kanbanSchedeBundleRevision(prev.schedeStore, prev.row.id) ===
+      kanbanSchedeBundleRevision(next.schedeStore, next.row.id) &&
     prev.prioritaColors === next.prioritaColors &&
     prev.addettoColors === next.addettoColors
   );

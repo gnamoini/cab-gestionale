@@ -51,6 +51,8 @@ import { useSelectorOverlayBack } from "@/lib/selector-interaction/use-selector-
 import { useSelectorQueryBridge } from "@/lib/selector-interaction/use-selector-query-bridge";
 import { useSelectorFocusChain } from "@/lib/selector-interaction/use-selector-focus-chain";
 import { useSelectorScrollRestoration } from "@/lib/selector-interaction/use-selector-scroll-restoration";
+import { useSelectorExclusiveGroup } from "@/lib/selector-interaction/use-selector-exclusive-group";
+import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { findSimilarEntityInPool } from "@/lib/validation/global-entity-validation";
@@ -112,10 +114,14 @@ type GlobalSelectBaseProps = {
   recentsKey?: string;
   /** Browse/selectOnly: ordine alfabetico puro, voce vuota in testa. */
   alphabeticalBrowse?: boolean;
+  /** Mantiene l'ordine originale di `items`/`options` (no rank alfabetico). */
+  preserveItemOrder?: boolean;
   /** Evidenzia testo cercato nelle opzioni (default: true). */
   highlightSearch?: boolean;
   /** Override soglia opzioni per sheet mobile (default: 0 se selectOnly + dominio rollout, altrimenti 20). */
   minSheetOptions?: number;
+  /** Chiude gli altri GlobalSelect con lo stesso id quando questo si apre. */
+  exclusiveGroup?: string;
 };
 
 export type GlobalSelectStringProps = GlobalSelectBaseProps & {
@@ -192,8 +198,10 @@ export function GlobalSelect(props: GlobalSelectProps) {
     sheetTitle,
     recentsKey,
     alphabeticalBrowse = false,
+    preserveItemOrder = false,
     highlightSearch = true,
     minSheetOptions,
+    exclusiveGroup,
     "aria-label": ariaLabel,
   } = props;
 
@@ -211,7 +219,6 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const showLoadingUi = hydrated && isLoading;
 
   const wrapRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const listScrollRef = useRef<HTMLDivElement>(null);
   const sheetListScrollRef = useRef<HTMLDivElement>(null);
   const scrollToRowRef = useRef<((index: number) => void) | null>(null);
@@ -389,6 +396,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
       recentValues,
       recentsKey,
       alphabeticalBrowse,
+      preserveItemOrder,
       browseCap: sheetBrowseAll ? totalOptionCount || undefined : undefined,
     };
     const resolved = resolveSelectorSuggestions(resolveInput);
@@ -421,6 +429,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     recentValues,
     recentsKey,
     alphabeticalBrowse,
+    preserveItemOrder,
     totalOptionCount,
     open,
     deferSheetSuggestions,
@@ -493,10 +502,10 @@ export function GlobalSelect(props: GlobalSelectProps) {
       (sheetActive && !sheetQuery.trim() && totalOptionCount === 0));
   const portalOpen = showDropdown && !useSheet && (totalNavigableOptions > 0 || listEmpty);
 
-  const { style: portalStyle, scrollInside, placementOriginClass } = useGlobalDropdownPortal({
+  const { style: portalStyle, placementOriginClass } = useGlobalDropdownPortal({
     open: portalOpen,
     anchorRef: wrapRef,
-    contentRef: dropdownRef,
+    contentRef: listScrollRef,
     repositionDeps: [suggestions.length, showAddOption, listEmpty, addOptionEnabled],
   });
 
@@ -553,6 +562,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
 
   const commitPendingForSubmit = useCallback(() => {
     if (effectiveSelectOnly) return;
+    if (shouldIgnoreBlurDuringSelection()) return;
     if (blurTimer.current) clearTimeout(blurTimer.current);
     const rawSearch = inputRef.current?.value ?? query;
     const trimmed = rawSearch.trim();
@@ -672,7 +682,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     restoreFocus();
   }, [effectiveSelectOnly, query, commitBlur, restoreFocus, resetQuery]);
 
-  useDropdownOutsideDismiss(portalOpen, wrapRef, dropdownRef, dismissDropdown);
+  useDropdownOutsideDismiss(portalOpen, wrapRef, listScrollRef, dismissDropdown);
 
   const closeAndReset = useCallback(() => {
     setOpen(false);
@@ -683,6 +693,27 @@ export function GlobalSelect(props: GlobalSelectProps) {
   }, [restoreFocus, resetQuery]);
 
   closeAndResetRef.current = closeAndReset;
+
+  const { notifyOpening: notifyExclusiveGroupOpening } = useSelectorExclusiveGroup(
+    exclusiveGroup,
+    closeAndReset,
+  );
+
+  const setSelectorOpen = useCallback(
+    (next: boolean | ((prev: boolean) => boolean)) => {
+      if (typeof next === "function") {
+        setOpen((prev) => {
+          const resolved = next(prev);
+          if (resolved && !prev) notifyExclusiveGroupOpening();
+          return resolved;
+        });
+        return;
+      }
+      if (next) notifyExclusiveGroupOpening();
+      setOpen(next);
+    },
+    [notifyExclusiveGroupOpening],
+  );
 
   useSelectorOverlayBack({
     open: portalOpen,
@@ -813,7 +844,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
     open: open || sheetOpen,
     totalNavigableOptions,
     activeIndex,
-    setOpen,
+    setOpen: setSelectorOpen,
     setActiveIndex,
     onEscape: closeAndReset,
     onEnter: handleListboxEnter,
@@ -844,13 +875,13 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const beginEditing = useCallback(() => {
     editSessionRef.current.modified = false;
     setFocused(true);
-    setOpen(true);
+    setSelectorOpen(true);
     if (isFilterVariant && isFilterNeutralValue(value, filterNeutralValues)) {
       setQuery("");
     } else {
       seedSearchFromCommitted();
     }
-  }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, value, setQuery]);
+  }, [isFilterVariant, filterNeutralValues, seedSearchFromCommitted, value, setQuery, setSelectorOpen]);
 
   const captureTriggerFocus = useSelectorFocusChain({
     sheetOpen,
@@ -873,11 +904,11 @@ export function GlobalSelect(props: GlobalSelectProps) {
     captureFocus();
     captureTriggerFocus();
     startTransition(() => {
-      setOpen(true);
+      setSelectorOpen(true);
       setActiveIndex(-1);
       resetQuery();
     });
-  }, [open, captureFocus, captureTriggerFocus, resetQuery]);
+  }, [open, captureFocus, captureTriggerFocus, resetQuery, setSelectorOpen]);
 
   /** Sheet mobile: il trigger apre solo — chiusura via backdrop/X (no toggle su secondo tap). */
   const handleSheetTriggerClick = openSheetFromTrigger;
@@ -916,7 +947,8 @@ export function GlobalSelect(props: GlobalSelectProps) {
 
   useEffect(() => {
     if (activeIndex < 0 || (!portalOpen && !sheetOpen)) return;
-    if (sheetOpen && !keyboardScrollPendingRef.current) return;
+    // Solo navigazione tastiera: l'hover mouse aggiorna activeIndex ma non deve scrollare la lista.
+    if (!keyboardScrollPendingRef.current) return;
     keyboardScrollPendingRef.current = false;
     if (activeIndex < suggestions.length && scrollToRowRef.current) {
       scrollToRowRef.current(activeIndex);
@@ -966,9 +998,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         ? fuzzySuggestion
         : null;
 
-  const dropdownPanelClass = `${globalAutocompleteDropdownPortalPanel} p-1 ${placementOriginClass} ${
-    scrollInside ? "overflow-y-auto" : "overflow-hidden"
-  }`;
+  const dropdownPanelClass = `${globalAutocompleteDropdownPortalPanel} p-1 ${placementOriginClass} min-h-0 overflow-y-auto overscroll-y-contain`;
 
   const addOptionActive = activeIndex === addOptionIndex;
   const addOptionBtnClass = `${globalAutocompleteAddBtnClass}${
@@ -985,10 +1015,14 @@ export function GlobalSelect(props: GlobalSelectProps) {
   const onPointerSelect = useCallback(
     (e: React.PointerEvent, select: () => void) => {
       e.preventDefault();
+      e.stopPropagation();
+      if (sheetOpen) {
+        armSelectorGhostClickGuard();
+      }
       cancelPendingBlur();
       select();
     },
-    [cancelPendingBlur],
+    [cancelPendingBlur, sheetOpen],
   );
 
   const stringRenderOption = useMemo(
@@ -1070,7 +1104,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
             onActiveIndexChange={setActiveIndex}
             scrollRef={sheetOpen ? sheetListScrollRef : listScrollRef}
             scrollToRowRef={scrollToRowRef}
-            externalScrollHost={sheetOpen}
+            externalScrollHost
             hoverActivatesIndex={!sheetOpen}
           />
         ) : (
@@ -1085,7 +1119,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
             onActiveIndexChange={setActiveIndex}
             scrollRef={sheetOpen ? sheetListScrollRef : listScrollRef}
             scrollToRowRef={scrollToRowRef}
-            externalScrollHost={sheetOpen}
+            externalScrollHost
             hoverActivatesIndex={!sheetOpen}
           />
         )
@@ -1160,23 +1194,27 @@ export function GlobalSelect(props: GlobalSelectProps) {
 
   const dropdownPortal =
     portalOpen && portalStyle ? (
-      <div ref={dropdownRef} style={portalStyle}>
-        {showDropdown && totalNavigableOptions > 0 ? (
-          <div
-            id={listboxId}
-            role="listbox"
-            ref={listScrollRef}
-            className={dropdownPanelClass}
-          >
-            {optionsListBody}
-          </div>
-        ) : null}
-        {showDropdown && listEmpty ? (
-          <div id={listboxId} role="status" className={globalAutocompleteDropdownPortalPanel}>
-            {emptyStateNode}
-          </div>
-        ) : null}
-      </div>
+      showDropdown && totalNavigableOptions > 0 ? (
+        <div
+          ref={listScrollRef}
+          id={listboxId}
+          role="listbox"
+          style={portalStyle}
+          className={dropdownPanelClass}
+        >
+          {optionsListBody}
+        </div>
+      ) : showDropdown && listEmpty ? (
+        <div
+          ref={listScrollRef}
+          id={listboxId}
+          role="status"
+          style={portalStyle}
+          className={globalAutocompleteDropdownPortalPanel}
+        >
+          {emptyStateNode}
+        </div>
+      ) : null
     ) : null;
 
   const loadingPlaceholder = "Caricamento elenco…";
@@ -1197,7 +1235,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
           setFocused(true);
           setQuery(next);
           startTransition(() => {
-            setOpen(true);
+            setSelectorOpen(true);
             setActiveIndex(-1);
           });
           if (next === "") {
@@ -1253,7 +1291,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         open={sheetOpen}
         onOpenChange={(next) => {
           if (!next) closeAndReset();
-          else setOpen(true);
+          else setSelectorOpen(true);
         }}
         title={resolvedSheetTitle}
         showSearch={sheetUsesSearch}

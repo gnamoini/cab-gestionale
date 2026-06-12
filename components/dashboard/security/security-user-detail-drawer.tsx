@@ -1,5 +1,6 @@
 "use client";
 
+import { AUTH_LOGS_COLUMNS, LOG_MODIFICHE_WITH_PROFILE_SELECT } from "@/lib/db/table-select-columns";
 import { useQuery } from "@tanstack/react-query";
 import { SecurityRoleBadge } from "@/components/dashboard/security/security-role-badge";
 import { SecurityUserModulePermissionsEditor } from "@/components/dashboard/security/security-user-module-permissions-editor";
@@ -44,13 +45,13 @@ function useUserActivity(userId: string | null, enabled: boolean) {
       const [audit, auth] = await Promise.all([
         sb
           .from("log_modifiche")
-          .select("*, profiles!log_modifiche_autore_id_fkey(id,nome)")
+          .select(LOG_MODIFICHE_WITH_PROFILE_SELECT)
           .eq("autore_id", userId)
           .order("created_at", { ascending: false })
           .limit(30),
         sb
           .from("auth_logs")
-          .select("*")
+          .select(AUTH_LOGS_COLUMNS)
           .eq("user_id", userId)
           .order("created_at", { ascending: false })
           .limit(20),

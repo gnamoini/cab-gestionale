@@ -1,5 +1,7 @@
 "use client";
 
+import { MEZZI_COLUMNS } from "@/lib/db/table-select-columns";
+import { fetchMezziListRows } from "@/lib/mezzi/mezzi-list-fetch";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
@@ -97,21 +99,18 @@ export const mezziService = {
       const allowed = await ensureSectionRead("mezzi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      let q = c.from("mezzi").select("*").order("created_at", { ascending: false });
-      if (filters?.cliente?.trim()) q = q.ilike("cliente", `%${filters.cliente.trim()}%`);
-      if (filters?.marca?.trim()) q = q.ilike("marca", `%${filters.marca.trim()}%`);
-      if (filters?.modello?.trim()) q = q.ilike("modello", `%${filters.modello.trim()}%`);
-      if (filters?.targa?.trim()) q = q.ilike("targa", `%${filters.targa.trim()}%`);
-      if (filters?.numero_scuderia?.trim()) q = q.ilike("numero_scuderia", `%${filters.numero_scuderia.trim()}%`);
-      if (filters?.search?.trim()) {
-        const s = filters.search.trim();
-        q = q.or(
-          `cliente.ilike.%${s}%,marca.ilike.%${s}%,modello.ilike.%${s}%,targa.ilike.%${s}%,matricola.ilike.%${s}%,numero_scuderia.ilike.%${s}%`,
-        );
-      }
-      const { data, error } = await q;
-      if (error) return err(error.message);
-      return success((data ?? []) as MezzoRow[]);
+      return fetchMezziListRows(c, { filters, variant: "list" });
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  async getAllForReport(filters?: MezzoFilters): Promise<ServiceResult<MezzoRow[]>> {
+    try {
+      const allowed = await ensureSectionRead("mezzi");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+      const c = await sb();
+      return fetchMezziListRows(c, { filters, variant: "report" });
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -122,7 +121,7 @@ export const mezziService = {
       const allowed = await ensureSectionRead("mezzi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data, error } = await c.from("mezzi").select("*").eq("id", id).maybeSingle();
+      const { data, error } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
       if (error) return err(error.message);
       if (!data) return err("Mezzo non trovato");
       return success(data as MezzoRow);
@@ -137,7 +136,7 @@ export const mezziService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const payload = attachMezzoEntityKey(sanitizeMezzoWritePayload(data));
-      const { data: row, error } = await c.from("mezzi").insert(payload).select("*").single();
+      const { data: row, error } = await c.from("mezzi").insert(payload).select(MEZZI_COLUMNS).single();
       if (error) return err(error.message);
       const r = row as MezzoRow;
       await writeModificaLog(c, { entita: ENTITA, entita_id: r.id, azione: "CREATE", payload: auditSnapshot(r, oggettoMezzo(r)) });
@@ -154,9 +153,9 @@ export const mezziService = {
       const c = await sb();
       const payload =
         Object.keys(data).length > 0 ? attachMezzoEntityKey(sanitizeMezzoWritePayload(data)) : data;
-      const { data: before, error: e0 } = await c.from("mezzi").select("*").eq("id", id).maybeSingle();
+      const { data: before, error: e0 } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
-      const { data: row, error } = await c.from("mezzi").update(payload).eq("id", id).select("*").single();
+      const { data: row, error } = await c.from("mezzi").update(payload).eq("id", id).select(MEZZI_COLUMNS).single();
       if (error) return err(error.message);
       const r = row as MezzoRow;
       await writeModificaLog(c, {
@@ -176,7 +175,7 @@ export const mezziService = {
       const allowed = await ensurePermission("editVehicles");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: existing, error: e0 } = await c.from("mezzi").select("*").eq("id", id).maybeSingle();
+      const { data: existing, error: e0 } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(humanizeGestionaleError(e0.message, { entity: "mezzo", action: "delete" }));
       if (existing) {
         await writeModificaLog(c, {

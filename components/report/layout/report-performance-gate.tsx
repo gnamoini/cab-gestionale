@@ -12,7 +12,7 @@ import type { useReportLiveData } from "@/lib/report/use-report-live-data";
 
 type LiveSlice = Pick<
   ReturnType<typeof useReportLiveData>,
-  "attive" | "completate" | "mezzi" | "magazzino" | "magLog" | "isLoading"
+  "lavListRows" | "attive" | "completate" | "mezzi" | "magazzino" | "magLog" | "isLoading"
 >;
 
 type ReportPerformanceContextValue = {

@@ -1,5 +1,6 @@
 "use client";
 
+import { LOG_MODIFICHE_WITH_PROFILE_SELECT } from "@/lib/db/table-select-columns";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -195,7 +196,7 @@ function useRecentSystemActivity(enabled: boolean) {
       const sb = getBrowserSupabase();
       const { data, error } = await sb
         .from("log_modifiche")
-        .select("*, profiles!log_modifiche_autore_id_fkey(id,nome)")
+        .select(LOG_MODIFICHE_WITH_PROFILE_SELECT)
         .order("created_at", { ascending: false })
         .limit(50);
       if (error) throw new Error(error.message);
@@ -438,7 +439,7 @@ export function SecurityDashboardView() {
 
       {activeTab === "users" ? (
         <div id="security-panel-users" role="tabpanel" aria-labelledby="security-tab-users">
-          <SecurityUsersPermissionsPanel readOnly={!isAdmin} />
+          <SecurityUsersPermissionsPanel readOnly={!isAdmin} sharedUsersQ={usersQ} />
         </div>
       ) : null}
 

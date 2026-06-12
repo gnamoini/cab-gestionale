@@ -33,6 +33,10 @@ assert.match(src, /GestionaleSearchableSheetSelect/);
 assert.match(src, /SelectorListbox/);
 assert.match(src, /runAtomicSelect/);
 assert.match(src, /flushCombobox/);
+assert.match(
+  src,
+  /const commitPendingForSubmit = useCallback\(\(\) => \{[\s\S]*?shouldIgnoreBlurDuringSelection\(\)/,
+);
 assert.match(src, /Mostrati.*di.*affina la ricerca/);
 
 console.log("global-select-dropdown-audit.test.ts OK");

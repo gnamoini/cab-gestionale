@@ -32,7 +32,7 @@ export function useGlobalListOptions(
   options?: { enabled?: boolean },
 ): GlobalListOptionsResult {
   const enabled = options?.enabled ?? true;
-  const q = useCabAppSettingsPayloadQuery({ enabled, staleTime: 0 });
+  const q = useCabAppSettingsPayloadQuery({ enabled, tier: "static" });
 
   return useMemo((): GlobalListOptionsResult => {
     const structured = isStructuredListKey(listKey);

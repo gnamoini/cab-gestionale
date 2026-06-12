@@ -41,7 +41,7 @@ export function AdminMagazzinoNotificationBridge() {
   const pathname = usePathname() ?? "";
   const { push } = useToastContext();
   const queryClient = useQueryClient();
-  const { data: settingsPayload } = useCabAppSettingsPayloadQuery();
+  const { data: settingsPayload } = useCabAppSettingsPayloadQuery({ tier: "static" });
   const mezziListe = settingsPayload?.resolved?.mezziListe;
   const seenRef = useRef<Map<string, number>>(new Map());
   const seededRef = useRef(false);

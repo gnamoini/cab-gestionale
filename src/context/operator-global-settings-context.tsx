@@ -16,7 +16,7 @@ export type OperatorGlobalSettingsContextValue = PilotSettingsState & {
 const OperatorGlobalSettingsContext = createContext<OperatorGlobalSettingsContextValue | null>(null);
 
 export function OperatorGlobalSettingsProvider({ children }: { children: ReactNode }) {
-  const q = useCabAppSettingsPayloadQuery();
+  const q = useCabAppSettingsPayloadQuery({ tier: "static" });
   const dbEnabled = useMemo(
     () => readOperatorGlobalSettingsDbEnabledFromRows(q.data?.rows),
     [q.data?.rows],

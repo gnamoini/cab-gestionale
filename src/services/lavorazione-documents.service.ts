@@ -1,9 +1,10 @@
 "use client";
 
+import { LAVORAZIONE_DOCUMENTS_COLUMNS } from "@/lib/db/table-select-columns";
+import { requestLavorazioneDocumentUploadPolicy } from "@/lib/documenti/document-upload-policy-client";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
-import { buildLavorazioneDocumentStoragePath } from "@/src/lib/storage/storage-paths";
 import { removeDocumentoStoragePathsBestEffort } from "@/lib/documenti/delete-documento-fully";
-import { STORAGE_BUCKETS, storageCreateSignedUrl, storageUpload } from "@/src/services/storage.service";
+import { STORAGE_BUCKETS, storageUpload } from "@/src/services/storage.service";
 import { ensurePermission } from "@/src/lib/auth/permission-guards";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
@@ -12,13 +13,6 @@ import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import { logService } from "@/src/services/log.service";
 
 const ENTITA = "lavorazioni";
-const SIGNED_URL_TTL = 60 * 60;
-
-async function signedUrlForPath(path: string): Promise<string> {
-  return storageCreateSignedUrl(STORAGE_BUCKETS.documenti, path, SIGNED_URL_TTL);
-}
-
-export type LavorazioneDocumentWithUrl = LavorazioneDocumentRow & { signedUrl: string };
 
 export const lavorazioneDocumentsService = {
   async listByLavorazione(lavorazioneId: string): Promise<ServiceResult<LavorazioneDocumentRow[]>> {
@@ -28,31 +22,11 @@ export const lavorazioneDocumentsService = {
       const sb = await getBrowserSupabase();
       const { data, error } = await sb
         .from("lavorazione_documents")
-        .select("*")
+        .select(LAVORAZIONE_DOCUMENTS_COLUMNS)
         .eq("lavorazione_id", id)
         .order("uploaded_at", { ascending: false });
       if (error) return err(error.message);
       return success((data ?? []) as LavorazioneDocumentRow[]);
-    } catch (e) {
-      return serviceFailFromError(e);
-    }
-  },
-
-  async listWithUrls(lavorazioneId: string): Promise<ServiceResult<LavorazioneDocumentWithUrl[]>> {
-    const res = await this.listByLavorazione(lavorazioneId);
-    if (!res.success) return err(res.error ?? "Errore caricamento documenti.");
-    try {
-      const rows = res.data ?? [];
-      const settled = await Promise.allSettled(
-        rows.map(async (row) => ({
-          ...row,
-          signedUrl: await signedUrlForPath(row.storage_path),
-        })),
-      );
-      const withUrls = settled
-        .filter((r): r is PromiseFulfilledResult<LavorazioneDocumentWithUrl> => r.status === "fulfilled")
-        .map((r) => r.value);
-      return success(withUrls);
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -70,7 +44,16 @@ export const lavorazioneDocumentsService = {
       const id = lavorazioneId.trim();
       if (!id) return err("Lavorazione non valida.");
 
-      const path = buildLavorazioneDocumentStoragePath(id, tipo);
+      const policy = await requestLavorazioneDocumentUploadPolicy({
+        lavorazioneId: id,
+        tipo,
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType: file.type || "application/pdf",
+      });
+      if (!policy.ok) return err(policy.message);
+
+      const path = policy.path;
       const sb = await getBrowserSupabase();
       const { data: userData } = await sb.auth.getUser();
       const userId = userData.user?.id ?? null;
@@ -89,6 +72,7 @@ export const lavorazioneDocumentsService = {
       await storageUpload(STORAGE_BUCKETS.documenti, path, file, {
         contentType: "application/pdf",
         upsert: true,
+        cacheControl: "31536000",
       });
 
       if (oldPath && oldPath !== path) {
@@ -104,7 +88,7 @@ export const lavorazioneDocumentsService = {
         uploaded_by: userId,
       };
 
-      const { data, error } = await sb.from("lavorazione_documents").upsert(row).select("*").single();
+      const { data, error } = await sb.from("lavorazione_documents").upsert(row).select(LAVORAZIONE_DOCUMENTS_COLUMNS).single();
       if (error) return err(error.message);
 
       await logService.create({
@@ -137,7 +121,7 @@ export const lavorazioneDocumentsService = {
       const sb = await getBrowserSupabase();
       const { data: existing, error: fetchErr } = await sb
         .from("lavorazione_documents")
-        .select("*")
+        .select(LAVORAZIONE_DOCUMENTS_COLUMNS)
         .eq("lavorazione_id", id)
         .eq("tipo", tipo)
         .maybeSingle();

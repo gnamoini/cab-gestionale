@@ -13,9 +13,26 @@ export {
 } from "@/src/lib/react-query/lavorazioni-optimistic-cache";
 
 import type { QueryClient } from "@tanstack/react-query";
+import { invalidateEntity } from "@/lib/cache/minimal-invalidation-contract";
 import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-operational-truth";
 
-/** Invalidazione post-update rapido: allinea liste lavorazioni al DB via truth layer. */
-export function settleLavorazioneQuickUpdate(qc: QueryClient, _hadError: boolean): void {
-  void invalidateOperationalTruth({ queryClient: qc, domain: "lavorazioni" });
+/** Invalidazione post-update rapido: allinea liste lavorazioni al DB via MIC. */
+export async function settleLavorazioneQuickUpdate(
+  qc: QueryClient,
+  hadError: boolean,
+  lavorazioneId?: string,
+  dbVersion?: string,
+): Promise<void> {
+  if (hadError) return;
+  if (lavorazioneId) {
+    await invalidateEntity({
+      queryClient: qc,
+      entityType: "lavorazione",
+      entityId: lavorazioneId,
+      scope: "full",
+      dbVersion,
+    });
+    return;
+  }
+  await invalidateOperationalTruth({ queryClient: qc, domain: "lavorazioni" });
 }

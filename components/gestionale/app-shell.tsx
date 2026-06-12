@@ -26,10 +26,17 @@ import {
   dsZModalHigh,
 } from "@/lib/ui/design-system";
 import { layoutPageRoot, layoutResponsiveCoreScope } from "@/lib/ui/responsive-layout-core";
-import { ResponsiveLayoutAuditMount } from "@/components/gestionale/responsive-layout-audit-mount";
-import { VisualLayoutLinterMount } from "@/components/gestionale/visual-layout-linter-mount";
-import { DesignSystemLockMount } from "@/components/gestionale/design-system-lock-mount";
-import { UiOsShadowMount } from "@/components/gestionale/ui-os-shadow-mount";
+import dynamic from "next/dynamic";
+
+const DevAuditMounts = dynamic(
+  () => import("@/components/gestionale/dev-audit-mounts").then((m) => m.DevAuditMounts),
+  { ssr: false },
+);
+const ReactRenderAuditProfiler = dynamic(
+  () =>
+    import("@/components/gestionale/react-render-audit-profiler").then((m) => m.ReactRenderAuditProfiler),
+  { ssr: false },
+);
 import {
   isNavTargetCurrent,
   ROUTE_LOADING_FAILSAFE_MS,
@@ -641,10 +648,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
         <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} onNavigate={beginRouteTransition} />
 
-        <ResponsiveLayoutAuditMount />
-        <VisualLayoutLinterMount />
-        <DesignSystemLockMount />
-        <UiOsShadowMount />
+        {process.env.NODE_ENV === "development" ? <DevAuditMounts /> : null}
 
         <div className={dsGestionaleContentRail}>
           <main
@@ -652,7 +656,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             className={`gestionale-scroll-y gestionale-scrollbar w-full ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))]`}
           >
             <div className={`${dsGestionaleContentMax} ${layoutPageRoot} ${dsGestionaleContentGutter}`}>
-              {children}
+              {process.env.NODE_ENV === "development" ? (
+                <ReactRenderAuditProfiler>{children}</ReactRenderAuditProfiler>
+              ) : (
+                children
+              )}
               <div aria-hidden className={dsGestionaleScrollEndPad} />
             </div>
           </main>

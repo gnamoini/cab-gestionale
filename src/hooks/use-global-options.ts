@@ -90,7 +90,7 @@ function emptySlice(): GlobalOptionsSlice {
  */
 export function useGlobalOptions(options?: { enabled?: boolean; debugTag?: string }): GlobalOptionsSlice {
   const enabled = options?.enabled ?? true;
-  const q = useCabAppSettingsPayloadQuery({ enabled, staleTime: 0 });
+  const q = useCabAppSettingsPayloadQuery({ enabled, tier: "static" });
   const resolved = q.data?.resolved;
   const tag = options?.debugTag ?? "useGlobalOptions";
 

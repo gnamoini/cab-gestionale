@@ -3,10 +3,18 @@ import { drawGestionaleFieldSectionTable, pdfFieldFromValue } from "@/lib/pdf/ge
 import {
   buildAttrezzaturaAnagraficaPdfFields,
   buildClienteAnagraficaPdfFields,
+  buildIngressoAnagraficaPdfSectionsFromContext,
   buildTelaioAnagraficaPdfFields,
 } from "@/lib/pdf/anagrafica-pdf-fields";
+import {
+  resolveInterventoDisplayForSurface,
+  schedaIngressoFieldsFromDisplay,
+} from "@/lib/domain/intervento-context/resolve-intervento-display-for-surface";
 import type { PdfField } from "@/lib/pdf/core/pdf-base-template";
-import type { SchedaIngressoDoc, SchedaIngressoFields } from "@/types/schede";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { LavorazioneSchedeStore, SchedaIngressoDoc, SchedaIngressoFields } from "@/types/schede";
+
+export type { SchedaIngressoFields };
 
 export function buildIngressoPdfSections(c: SchedaIngressoFields): {
   data: PdfField[];
@@ -33,21 +41,39 @@ export function buildIngressoPdfSections(c: SchedaIngressoFields): {
   };
 }
 
-/** Corpo PDF scheda ingresso — layout table-based (header/footer gestiti dal chiamante). */
+/** Corpo PDF scheda ingresso — anagrafica da InterventoContext (row + store). */
 export function drawIngressoPdfBody(
   doc: jsPDF,
   pageW: number,
   startY: number,
   scheda: SchedaIngressoDoc,
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
 ): number {
-  const sections = buildIngressoPdfSections(scheda.campi);
+  const anagSections = buildIngressoAnagraficaPdfSectionsFromContext(row, schedeStore, scheda.campi);
+  const display = resolveInterventoDisplayForSurface("pdf", {
+    lavorazioneRow: row,
+    schedeStore,
+    ingressoCampi: scheda.campi,
+  });
+  const ctxFields = schedaIngressoFieldsFromDisplay(display, scheda.campi);
+  const field = pdfFieldFromValue;
+  const data = [
+    field("Data ingresso", ctxFields.dataIngresso),
+    field("Addetto accettazione", ctxFields.addettoAccettazione),
+  ].filter((f): f is PdfField => f !== null);
+  const altreInformazioni = [
+    field("Descrizione anomalia", ctxFields.descrizioneAnomalia),
+    field("Note intervento", ctxFields.noteIntervento),
+  ].filter((f): f is PdfField => f !== null);
+
   let y = startY;
 
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Data", sections.data);
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Cliente", sections.cliente);
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Attrezzatura", sections.attrezzatura);
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Telaio", sections.telaio);
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Altre informazioni", sections.altreInformazioni, {
+  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Data", data);
+  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Cliente", anagSections.cliente);
+  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Attrezzatura", anagSections.attrezzatura);
+  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Telaio", anagSections.telaio);
+  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Altre informazioni", altreInformazioni, {
     multiline: true,
   });
 

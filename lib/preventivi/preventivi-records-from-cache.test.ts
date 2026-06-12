@@ -24,9 +24,22 @@ const uuid = nextPreventivoId();
 assert.match(uuid, /^[0-9a-f-]{36}$/i);
 
 const qc = new QueryClient();
-assert.deepEqual(getPreventiviRecordsFromCache(qc, []), []);
+assert.deepEqual(getPreventiviRecordsFromCache(qc), []);
 
-qc.setQueryData([...QK.preventivi, null], [
+const mezzoRow = {
+  id: "m-1",
+  cliente: "Cliente A",
+  marca: "CAT",
+  modello: "320",
+  targa: null,
+  matricola: null,
+  numero_scuderia: null,
+  meta: null,
+  created_at: "2026-01-01T00:00:00.000Z",
+  updated_at: "2026-01-01T00:00:00.000Z",
+} as const;
+
+const rawRows = [
   {
     id: "pv-1",
     mezzo_id: "m-1",
@@ -36,13 +49,17 @@ qc.setQueryData([...QK.preventivi, null], [
     dettagli: { numero: `${y}-010` },
     created_at: "2026-01-01T00:00:00.000Z",
     updated_at: "2026-01-02T00:00:00.000Z",
+    mezzi: mezzoRow,
   },
-]);
+];
 
-const mapped = mapPreventiviRowsToRecords(qc.getQueryData([...QK.preventivi, null]), [
-  { id: "m-1", cliente: "Cliente A" } as never,
-]);
-assert.equal(mapped.length, 1);
-assert.equal(mapped[0]?.numero, `${y}-010`);
+qc.setQueryData([...QK.preventivi, null], {
+  records: mapPreventiviRowsToRecords(rawRows, [mezzoRow as never]),
+  mezziRows: [mezzoRow],
+});
+
+const cached = getPreventiviRecordsFromCache(qc);
+assert.equal(cached.length, 1);
+assert.equal(cached[0]?.numero, `${y}-010`);
 
 console.log("preventivi-records-from-cache.test.ts: ok");

@@ -5,6 +5,11 @@ import {
   type LavorazioniAdvancedFilters,
   type LavorazioniListFilterVariant,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
+import {
+  lavorazioneClienteLabel,
+  lavorazioneMacchinaLabel,
+  lavorazioneMezzoIdentParts,
+} from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
@@ -13,20 +18,11 @@ export type LavPageFilters = LavorazioniAdvancedFilters & {
   search: string;
 };
 
-function macchinaFromRow(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  const ing = schedeStore?.[row.id]?.ingresso?.campi;
-  if (ing?.marcaAttrezzatura?.trim() || ing?.modelloAttrezzatura?.trim()) {
-    return [ing.marcaAttrezzatura, ing.modelloAttrezzatura].filter(Boolean).join(" ").trim();
-  }
-  const m = row.mezzo;
-  return m ? `${m.marca} ${m.modello}`.trim() : "";
-}
-
 /** Testo indicizzato per ricerca globale (DB + schede ingresso/lavorazioni). */
 export function lavRowSearchHaystack(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
   const ing = schedeStore?.[row.id]?.ingresso?.campi;
   const lav = schedeStore?.[row.id]?.lavorazioni?.campi;
-  const m = row.mezzo;
+  const ident = lavorazioneMezzoIdentParts(row, schedeStore);
 
   const lavRigheText =
     lav?.righe
@@ -35,13 +31,13 @@ export function lavRowSearchHaystack(row: LavorazioneListRow, schedeStore?: Lavo
 
   return [
     (row.note ?? "").trim(),
-    macchinaFromRow(row, schedeStore),
-    ing?.cliente?.trim() || m?.cliente?.trim() || "",
-    ing?.utilizzatore?.trim() || m?.utilizzatore?.trim() || "",
+    lavorazioneMacchinaLabel(row, schedeStore),
+    lavorazioneClienteLabel(row, schedeStore),
+    ing?.utilizzatore?.trim() || row.mezzo?.utilizzatore?.trim() || "",
     ing?.cantiere?.trim() || "",
-    ing?.targa?.trim() || m?.targa?.trim() || "",
-    ing?.matricola?.trim() || m?.matricola?.trim() || "",
-    ing?.nScuderia?.trim() || m?.numero_scuderia?.trim() || "",
+    ident.targa,
+    ident.matricola,
+    ident.scuderia,
     ing?.marcaAttrezzatura,
     ing?.modelloAttrezzatura,
     ing?.descrizioneAnomalia,

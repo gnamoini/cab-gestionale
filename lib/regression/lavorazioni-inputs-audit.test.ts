@@ -66,4 +66,13 @@ assert.match(modals, /useMobileModalKeyboard/);
 assert.match(modals, /GlobalFixedListPillSelect/);
 assert.doesNotMatch(modals, /<select\b/);
 
+assert.match(view, /onPersistSchedeBundle/);
+assert.match(view, /clampSchedeBundle\(next\)/);
+assert.match(view, /savedBundle:\s*safe/);
+assert.match(view, /onPersist=\{onPersistSchedeBundle\}/);
+assert.match(view, /bundle=\{schedeStore\[row\.id\]\}/);
+
+const kanban = read("components/gestionale/lavorazioni/lavorazioni-kanban-view.tsx");
+assert.match(kanban, /kanbanSchedeBundleRevision/);
+
 console.log("lavorazioni-inputs-audit.test.ts OK");

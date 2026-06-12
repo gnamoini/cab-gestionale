@@ -1,5 +1,6 @@
 "use client";
 
+import { BUNDER_DOCUMENTS_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensureSectionRead, ensureSectionWrite } from "@/src/lib/auth/permission-guards";
 import { bunderDocumentToRow, bunderRowToDocument } from "@/lib/bunder/bunder-db-mapper";
@@ -29,7 +30,7 @@ export const bunderService = {
       const c = await sb();
       const { data, error } = await c
         .from("bunder_documents")
-        .select("*")
+        .select(BUNDER_DOCUMENTS_COLUMNS)
         .order("updated_at", { ascending: false });
       if (error) return err(error.message);
       return success((data ?? []).map((row) => bunderRowToDocument(row as BunderDocumentRow)));
@@ -44,7 +45,7 @@ export const bunderService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const row = bunderDocumentToRow(doc);
-      const { data, error } = await c.from("bunder_documents").insert(row).select("*").single();
+      const { data, error } = await c.from("bunder_documents").insert(row).select(BUNDER_DOCUMENTS_COLUMNS).single();
       if (error) return err(error.message);
       const saved = data as BunderDocumentRow;
       await writeModificaLog(c, {
@@ -65,13 +66,13 @@ export const bunderService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const row = bunderDocumentToRow(doc);
-      const { data: before, error: e0 } = await c.from("bunder_documents").select("*").eq("id", doc.id).maybeSingle();
+      const { data: before, error: e0 } = await c.from("bunder_documents").select(BUNDER_DOCUMENTS_COLUMNS).eq("id", doc.id).maybeSingle();
       if (e0) return err(e0.message);
       const { data, error } = await c
         .from("bunder_documents")
         .update({ ...row, updated_at: new Date().toISOString() })
         .eq("id", doc.id)
-        .select("*")
+        .select(BUNDER_DOCUMENTS_COLUMNS)
         .single();
       if (error) return err(error.message);
       const saved = data as BunderDocumentRow;
@@ -93,12 +94,12 @@ export const bunderService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const row = bunderDocumentToRow(doc);
-      const { data: before, error: e0 } = await c.from("bunder_documents").select("*").eq("id", doc.id).maybeSingle();
+      const { data: before, error: e0 } = await c.from("bunder_documents").select(BUNDER_DOCUMENTS_COLUMNS).eq("id", doc.id).maybeSingle();
       if (e0) return err(e0.message);
       const { data, error } = await c
         .from("bunder_documents")
         .upsert({ ...row, updated_at: new Date().toISOString() }, { onConflict: "id" })
-        .select("*")
+        .select(BUNDER_DOCUMENTS_COLUMNS)
         .single();
       if (error) return err(error.message);
       const saved = data as BunderDocumentRow;
@@ -121,7 +122,7 @@ export const bunderService = {
       const allowed = await ensureSectionWrite(SECTION);
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const { data: existing, error: e0 } = await c.from("bunder_documents").select("*").eq("id", id).maybeSingle();
+      const { data: existing, error: e0 } = await c.from("bunder_documents").select(BUNDER_DOCUMENTS_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       const { error } = await c.from("bunder_documents").delete().eq("id", id);
       if (error) return err(error.message);

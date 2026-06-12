@@ -1,11 +1,16 @@
 import { Suspense } from "react";
 import { LoadingSuspenseFallback } from "@/components/design-system";
-import { DocumentiView } from "@/components/gestionale/documenti/documenti-view";
+import { DocumentiViewLazy } from "@/components/gestionale/lazy-route-views";
+import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
+import { prefetchDocumentiPage } from "@/src/lib/react-query/prefetch-gestionale-page";
 
-export default function DocumentiPage() {
+export default async function DocumentiPage() {
+  const dehydratedState = await prefetchDocumentiPage();
   return (
     <Suspense fallback={<LoadingSuspenseFallback variant="documenti" />}>
-      <DocumentiView />
+      <GestionaleHydrationBoundary state={dehydratedState}>
+        <DocumentiViewLazy />
+      </GestionaleHydrationBoundary>
     </Suspense>
   );
 }

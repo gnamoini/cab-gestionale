@@ -13,15 +13,18 @@ import { fingerprintReportSnapshot } from "@/lib/report/report-derived-cache";
 import { scheduleReportBroadcastRefresh } from "@/lib/report/report-refresh";
 import { subscribeReportDataRefresh } from "@/lib/report/report-broadcast";
 import { useReportViewQueryOpts } from "@/lib/view/view-query-opts";
+import {
+  enrichLavorazioneListRowsWithMezzi,
+  mezziRowsToIdMap,
+} from "@/lib/db/dto-mappers";
 import { useMagazzinoListQuery, useMezziListQuery, useMovimentiListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { useReportManualEntriesQuery } from "@/src/hooks/view/use-report-manual-entries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 
-/** Tutte le lavorazioni non eliminate (in corso + archiviate); split report su `archived`. */
-const LAV_LIST_FILTERS = { includeMezzo: true as const };
-const LAV_ARCHIVIO_FILTERS = { includeMezzo: true as const, archived: true as const };
+/** Tutte le lavorazioni non eliminate; mezzo join client-side da anagrafica slim. */
+const LAV_LIST_FILTERS = { includeMezzo: false as const, fetchMode: "report" as const };
 
 function queryMetaFrom(
   source: ReportIntegrityQueryMeta["source"],
@@ -78,11 +81,10 @@ export function useReportLiveData() {
   }, [queryClient]);
 
   const lavQuery = useLavorazioniList(LAV_LIST_FILTERS, viewOpts);
-  const lavArchivioQuery = useLavorazioniList(LAV_ARCHIVIO_FILTERS, viewOpts);
-  const magQuery = useMagazzinoListQuery(undefined, viewOpts);
-  const mezziQuery = useMezziListQuery(undefined, viewOpts);
+  const magQuery = useMagazzinoListQuery(undefined, { ...viewOpts, variant: "report" });
+  const mezziQuery = useMezziListQuery(undefined, { ...viewOpts, variant: "report" });
   const movimentiQuery = useMovimentiListQuery(undefined, viewOpts);
-  const settingsPayload = useCabAppSettingsPayloadQuery();
+  const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
   const mezziListe = settingsPayload.data?.resolved?.mezziListe;
   const manualQuery = useReportManualEntriesQuery();
 
@@ -95,7 +97,6 @@ export function useReportLiveData() {
 
   const isLoading =
     lavQuery.isLoading ||
-    lavArchivioQuery.isLoading ||
     magQuery.isLoading ||
     mezziQuery.isLoading ||
     movimentiQuery.isLoading ||
@@ -103,7 +104,6 @@ export function useReportLiveData() {
 
   const queryFailed =
     lavQuery.isError ||
-    lavArchivioQuery.isError ||
     magQuery.isError ||
     mezziQuery.isError ||
     movimentiQuery.isError ||
@@ -111,11 +111,18 @@ export function useReportLiveData() {
 
   const isFetching =
     lavQuery.isFetching ||
-    lavArchivioQuery.isFetching ||
     magQuery.isFetching ||
     mezziQuery.isFetching ||
     movimentiQuery.isFetching ||
     manualQuery.isFetching;
+
+  const lavListRows = useMemo(() => {
+    const rows = lavQuery.data ?? [];
+    const needsClientEnrich = rows.some((row) => Boolean(row.mezzo_id?.trim()) && row.mezzo == null);
+    if (!needsClientEnrich) return rows;
+    const mezziById = mezziRowsToIdMap(mezziQuery.data ?? []);
+    return enrichLavorazioneListRowsWithMezzi(rows, mezziById);
+  }, [lavQuery.data, mezziQuery.data]);
 
   const integrityData = useMemo(() => {
     const magazzino = mapMagazzinoRowsToUI(magQuery.data ?? [], "Sistema", mezziListe);
@@ -127,9 +134,11 @@ export function useReportLiveData() {
       queryMetaForDataset("movimenti", movimentiQuery),
       queryMetaForDataset("manualEntries", manualQuery),
     ];
+    const allLavorazioni = lavListRows;
+    const lavorazioniArchivioRaw = lavQuery.isError ? [] : allLavorazioni.filter((row) => row.archived === true);
     return ReportDataIntegrityLayer.buildValidatedDataset({
-      lavorazioniRaw: lavQuery.data ?? [],
-      lavorazioniArchivioRaw: lavArchivioQuery.isError ? [] : (lavArchivioQuery.data ?? []),
+      lavorazioniRaw: allLavorazioni,
+      lavorazioniArchivioRaw,
       magazzino,
       mezzi,
       movimenti: movimentiQuery.data ?? [],
@@ -138,12 +147,9 @@ export function useReportLiveData() {
       onSevereCacheDrift: scheduleRefresh,
     });
   }, [
-    lavQuery.data,
+    lavListRows,
     lavQuery.isError,
     lavQuery.dataUpdatedAt,
-    lavArchivioQuery.data,
-    lavArchivioQuery.isError,
-    lavArchivioQuery.dataUpdatedAt,
     magQuery.data,
     magQuery.isError,
     magQuery.dataUpdatedAt,
@@ -256,6 +262,7 @@ export function useReportLiveData() {
 
   return useMemo(
     () => ({
+      lavListRows,
       attive: integrityData.attive,
       storico: integrityData.storico,
       completate: integrityData.completate,
@@ -273,6 +280,7 @@ export function useReportLiveData() {
     }),
     [
       integrityData,
+      lavListRows,
       snapshotFingerprint,
       isLoading,
       isError,

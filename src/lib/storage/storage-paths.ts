@@ -45,6 +45,21 @@ export function buildDocumentoStoragePath(fileName: string): string {
   return normalizeStorageObjectPath(`${id}/${safeName}`);
 }
 
+const SHA256_HEX_LEN = 64;
+
+/** Content-addressed blob path for deduplicated archive uploads. */
+export function buildDocumentBlobStoragePath(contentHash: string): string {
+  const hash = contentHash.trim().toLowerCase().replace(/[^a-f0-9]/g, "");
+  if (hash.length !== SHA256_HEX_LEN) {
+    throw new Error("Hash contenuto non valido.");
+  }
+  return normalizeStorageObjectPath(`blobs/${hash.slice(0, 2)}/${hash}`);
+}
+
+export function isDocumentBlobStoragePath(path: string): boolean {
+  return normalizeStorageObjectPath(path).startsWith("blobs/");
+}
+
 export const LAVORAZIONE_DOCUMENT_FILE_NAMES = {
   preventivo_upload: "preventivo.pdf",
   ddt: "ddt.pdf",

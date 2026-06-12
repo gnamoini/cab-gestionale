@@ -1,5 +1,6 @@
 "use client";
 
+import { AUTH_LOGS_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import type { AuthLogAction, AuthLogRow, AuthLogWithProfileRow } from "@/src/types/supabase-tables";
 
@@ -82,7 +83,7 @@ export const authLogsService = {
     try {
       const sb = getBrowserSupabase();
       const lim = Math.min(Math.max(limit, 1), 1000);
-      const { data, error } = await sb.from("auth_logs").select("*").order("created_at", { ascending: false }).limit(lim);
+      const { data, error } = await sb.from("auth_logs").select(AUTH_LOGS_COLUMNS).order("created_at", { ascending: false }).limit(lim);
       if (error) return { rows: [], error: error.message };
       return { rows: (data ?? []) as AuthLogRow[], error: null };
     } catch (e) {

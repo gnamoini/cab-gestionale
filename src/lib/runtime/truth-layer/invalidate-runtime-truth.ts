@@ -5,6 +5,7 @@ import { noteInvalidationTruthSpike } from "@/lib/observability/degradation-dete
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
 import { measureAsync } from "@/lib/observability/perf";
 import { QK } from "@/src/lib/react-query/query-keys";
+import { clearRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { invalidateAllGestionaleOperationalQueries } from "@/lib/realtime/gestionale-realtime-config";
 
 export type InvalidateRuntimeTruthReason =
@@ -50,6 +51,10 @@ function noteTruthInvalidateSpike(reason: InvalidateRuntimeTruthReason): void {
 async function runInvalidateRuntimeTruth(opts: InvalidateRuntimeTruthOptions): Promise<void> {
   const { reason, queryClient, refreshOperational = false } = opts;
   noteTruthInvalidateSpike(reason);
+
+  if (reason === "appSettingsChanged") {
+    clearRuntimeCabAppSettings();
+  }
 
   await measureAsync(`invalidate.truth.${reason}`, "cache", async () => {
     const tasks: Promise<unknown>[] = [

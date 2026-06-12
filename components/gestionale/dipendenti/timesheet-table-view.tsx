@@ -25,6 +25,7 @@ export function TimesheetTableView({
   addettiRecords = [],
   readOnly,
   accentDateYmd = null,
+  accentFadingOut = false,
 }: {
   monthKey: TimesheetMonthKey;
   periodDays: readonly TimesheetDayInfo[];
@@ -38,6 +39,7 @@ export function TimesheetTableView({
   addettiRecords?: readonly AddettoRecord[];
   readOnly?: boolean;
   accentDateYmd?: string | null;
+  accentFadingOut?: boolean;
 }) {
   return (
     <div className="flex-safe-col min-w-0 max-w-full gap-3">
@@ -53,6 +55,7 @@ export function TimesheetTableView({
         addettiRecords={addettiRecords}
         readOnly={readOnly}
         accentDateYmd={accentDateYmd}
+        accentFadingOut={accentFadingOut}
       />
       <DipendentiMobileDayList
         periodDays={periodDays}

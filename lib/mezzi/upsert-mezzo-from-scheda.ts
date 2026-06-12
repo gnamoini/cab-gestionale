@@ -1,4 +1,4 @@
-import { findMezzoByIngressoIdent } from "@/lib/mezzi/find-mezzo-by-ident";
+import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import {
   mezzoGestitoToMergeExisting,
   mergeMezzoUpdateFromScheda,
@@ -35,25 +35,6 @@ function assertSchedaMezzoRequired(fields: SchedaIngressoFields): void {
   }
 }
 
-function resolveTargetMezzo(
-  catalog: readonly MezzoGestito[],
-  preferredMezzoId: string | undefined,
-  fields: SchedaIngressoFields,
-): MezzoGestito | null {
-  const byIdent = findMezzoByIngressoIdent(catalog, {
-    targa: fields.targa,
-    matricola: fields.matricola,
-    nScuderia: fields.nScuderia,
-  });
-  if (byIdent) return byIdent;
-
-  const preferred = preferredMezzoId?.trim();
-  if (preferred) {
-    return catalog.find((m) => m.id === preferred) ?? null;
-  }
-  return null;
-}
-
 /**
  * UPSERT anagrafica mezzo da scheda ingresso: match per id preferito o ident (targa/matricola/scuderia),
  * UPDATE con merge selettivo o INSERT.
@@ -65,8 +46,14 @@ export async function upsertMezzoFromSchedaIngresso(
   assertSchedaMezzoRequired(fields);
 
   const preferredId = params.preferredMezzoId?.trim() || undefined;
-  const target = resolveTargetMezzo(mezziCatalog, preferredId, fields);
-  const annoSource = target ?? (preferredId ? mezziCatalog.find((m) => m.id === preferredId) : undefined);
+  const resolved = resolveMezzoFromScheda({
+    scheda: fields,
+    existingMezzi: mezziCatalog,
+    preferredMezzoId: preferredId,
+  });
+  const target = resolved.mezzo;
+  const annoSource =
+    target ?? (preferredId ? mezziCatalog.find((m) => m.id === preferredId) : undefined);
   const incoming = schedaIngressoFieldsToMezzoPayload(fields, { anno: annoSource?.anno });
 
   if (target) {

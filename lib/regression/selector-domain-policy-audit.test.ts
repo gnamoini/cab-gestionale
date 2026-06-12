@@ -58,8 +58,8 @@ assert.doesNotMatch(
 assert.match(lavFilter, /selectorDomain="lavorazioni"/);
 assert.doesNotMatch(lavFilter, /selectOnly[\s\S]{0,200}Filtra addetto/);
 
-assert.match(timesheet, /selectorDomain="dipendenti"/);
-assert.doesNotMatch(timesheet, /selectOnly[\s\S]{0,80}Seleziona dipendente/);
+assert.match(timesheet, /selectOnly[\s\S]{0,120}Seleziona dipendente/);
+assert.doesNotMatch(timesheet, /selectorDomain="dipendenti"/);
 
 assert.match(securityUser, /selectorDomain="security"/);
 assert.doesNotMatch(securityUser, /selectOnly[\s\S]{0,120}mezzi:clienti/);

@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { PROFILES_COLUMNS } from "@/lib/db/table-select-columns";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
 import { APP_ROLES, resolveRole, hasPermission, type AppRole } from "@/lib/auth/rbac";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
@@ -321,7 +322,7 @@ export async function listUsersByAdminAction(): Promise<ListUsersByAdminResult> 
   if (!caller.ok) return { ok: false, message: caller.message };
   const admin = serviceAdmin(caller.url, caller.serviceKey);
 
-  const { data: profiles, error: profilesErr } = await admin.from("profiles").select("*");
+  const { data: profiles, error: profilesErr } = await admin.from("profiles").select(PROFILES_COLUMNS);
   if (profilesErr) return { ok: false, message: profilesErr.message };
   const profileRows = (profiles ?? []) as ProfileRow[];
   const profileById = new Map(profileRows.map((p) => [p.id, p]));
@@ -358,7 +359,7 @@ export async function updateUserRoleByAdminAction(input: { userId: string; role:
   if (!caller.ok) return { ok: false, message: caller.message };
   const admin = serviceAdmin(caller.url, caller.serviceKey);
 
-  const { data: before, error: beforeErr } = await admin.from("profiles").select("*").eq("id", userId).maybeSingle();
+  const { data: before, error: beforeErr } = await admin.from("profiles").select(PROFILES_COLUMNS).eq("id", userId).maybeSingle();
   if (beforeErr) return { ok: false, message: beforeErr.message };
   if (!before) return { ok: false, message: "Profilo non trovato." };
   const authBefore = await admin.auth.admin.getUserById(userId).catch(() => null);
@@ -369,7 +370,7 @@ export async function updateUserRoleByAdminAction(input: { userId: string; role:
     .from("profiles")
     .update({ ruolo: nextRole })
     .eq("id", userId)
-    .select("*")
+    .select(PROFILES_COLUMNS)
     .single();
   if (updateErr) return { ok: false, message: updateErr.message };
 

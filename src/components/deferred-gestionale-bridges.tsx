@@ -23,7 +23,7 @@ export function DeferredGestionaleBridges() {
   const authReady = isAuthSessionEstablished(status) && !!user?.id;
   const [mounted, setMounted] = useState(false);
   const queryClient = useQueryClient();
-  const settingsPayload = useCabAppSettingsPayloadQuery();
+  const settingsPayload = useCabAppSettingsPayloadQuery({ tier: "static" });
   const mezziListe = settingsPayload.data?.resolved?.mezziListe;
 
   useEffect(() => {

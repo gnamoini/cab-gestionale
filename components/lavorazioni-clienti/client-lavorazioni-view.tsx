@@ -427,7 +427,7 @@ function MobileCards({
               </LavMobileInlineField>
             </LavorazioneMobileControlsPanel>
             <div className="mt-2.5">
-              <ClientLavorazionePhotoStrip lavorazioneId={row.id} max={3} lazy={false} sizeClass="h-12 w-12" />
+              <ClientLavorazionePhotoStrip lavorazioneId={row.id} max={3} lazy sizeClass="h-12 w-12" />
             </div>
             <LavorazioneMobileCardFooter
               meta={

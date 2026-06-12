@@ -1,5 +1,3 @@
-"use client";
-
 import { syncAddettoColorMap } from "@/lib/lavorazioni/addetto-colors-assign";
 import {
   defaultAddettiRecords,

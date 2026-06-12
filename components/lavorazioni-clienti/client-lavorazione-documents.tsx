@@ -4,6 +4,7 @@ import { GestionaleInfoCard } from "@/components/design-system/gestionale-info-c
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { LoadingSpinner } from "@/components/design-system/loading/loading-spinner";
+import { lavorazioneDocumentDeliveryUrl } from "@/lib/documents/document-delivery-url";
 import { CLIENT_PORTAL_DOCUMENT_SLOTS } from "@/lib/lavorazioni/client-portal-documents";
 import { lavorazioneDocumentByTipo } from "@/lib/lavorazioni/lavorazione-documents";
 import { dsBtnNeutral, dsGapMd, dsTableActionTextBtn } from "@/lib/ui/design-system";
@@ -13,13 +14,11 @@ import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
 function ClientDocumentSlotCard({
   label,
   doc,
-  url,
   onOpen,
   onDownload,
 }: {
   label: string;
   doc: LavorazioneDocumentRow | undefined;
-  url: string | undefined;
   onOpen: () => void;
   onDownload: () => void;
 }) {
@@ -31,8 +30,7 @@ function ClientDocumentSlotCard({
     "Nessun documento caricato"
   );
 
-  const actions =
-    doc && url ? (
+  const actions = doc ? (
       <>
         <button type="button" className={dsTableActionTextBtn} onClick={onOpen}>
           Apri
@@ -57,7 +55,6 @@ export function ClientLavorazioneDocumentsPanel({
   const docsQ = useClientLavorazioneDocumentsQuery(lavorazioneId);
   const loading = docsQ.isLoading && docsQ.data == null;
   const rows = docsQ.data?.rows ?? [];
-  const urls = docsQ.data?.urls ?? {};
 
   if (loading) {
     const loadingCard = (
@@ -83,17 +80,16 @@ export function ClientLavorazioneDocumentsPanel({
           key={slot.tipo}
           label={slot.label}
           doc={lavorazioneDocumentByTipo(rows, slot.tipo)}
-          url={urls[slot.tipo]}
           onOpen={() => {
-            const u = urls[slot.tipo];
-            if (u) window.open(u, "_blank", "noopener,noreferrer");
+            const doc = lavorazioneDocumentByTipo(rows, slot.tipo);
+            if (!doc) return;
+            window.open(lavorazioneDocumentDeliveryUrl(doc, "preview"), "_blank", "noopener,noreferrer");
           }}
           onDownload={() => {
             const doc = lavorazioneDocumentByTipo(rows, slot.tipo);
-            const u = urls[slot.tipo];
-            if (!doc || !u) return;
+            if (!doc) return;
             const a = document.createElement("a");
-            a.href = u;
+            a.href = lavorazioneDocumentDeliveryUrl(doc, "download");
             a.download = doc.filename;
             a.rel = "noopener";
             a.click();

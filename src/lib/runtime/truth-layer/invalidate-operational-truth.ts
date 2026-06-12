@@ -51,10 +51,14 @@ export async function invalidateOperationalTruth(opts: InvalidateOperationalTrut
       if (!skipReportBroadcast) bumpReportDataRefresh();
       break;
     case "mezzi":
-      dispatchGestionaleAction(queryClient, ["mezzi", "lavorazioni", "preventivi", "documenti", "log_modifiche"], {
-        source: "local_mutation",
-        cabSyncEvents,
-      });
+      dispatchGestionaleAction(
+        queryClient,
+        ["mezzi", "lavorazioni", "scheda_lavorazione", "preventivi", "documenti", "log_modifiche"],
+        {
+          source: "local_mutation",
+          cabSyncEvents,
+        },
+      );
       break;
     case "magazzino":
       dispatchGestionaleAction(queryClient, ["magazzino_ricambi", "movimenti_ricambi", "lavorazioni", "log_modifiche"], {

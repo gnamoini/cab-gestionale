@@ -69,6 +69,19 @@ export function buildLavorazioneRowProfileResolver(
   };
 }
 
+/** Estende resolver riga con nomi profilo da fetch lazy (mobile lista light). */
+export function mergeLazyProfileNamesIntoResolver(
+  base: (userId: string) => string | undefined,
+  lazyNames: ReadonlyMap<string, string>,
+): (userId: string) => string | undefined {
+  return (userId: string) => {
+    const fromBase = base(userId);
+    if (fromBase) return fromBase;
+    const id = userId.trim();
+    return id ? lazyNames.get(id) : undefined;
+  };
+}
+
 type SchedaDoc = SchedaIngressoDoc | SchedaLavorazioniDoc | SchedaRicambiDoc;
 
 /** Storico: in creazione `updatedBy` sulla scheda ingresso era l'addetto, non l'operatore. */

@@ -1,5 +1,6 @@
 "use client";
 
+import { USER_PERMISSIONS_COLUMNS } from "@/lib/db/table-select-columns";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
@@ -14,7 +15,7 @@ export const permissionsService = {
       const uid = gu.user?.id;
       if (!uid) return success([]);
 
-      const { data, error } = await c.from("user_permissions").select("*").eq("user_id", uid);
+      const { data, error } = await c.from("user_permissions").select(USER_PERMISSIONS_COLUMNS).eq("user_id", uid);
       if (error) return err(error.message);
       return success((data ?? []) as UserPermissionRow[]);
     } catch (e) {

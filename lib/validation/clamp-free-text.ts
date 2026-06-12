@@ -1,3 +1,4 @@
+import { normalizeLivelloCarburanteStored } from "@/lib/schede/livello-carburante-value";
 import { clampText, clampTextTrimmed, TEXT_EXTRA, TEXT_LONG, TEXT_MEDIUM, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 import type { BunderCommercialDocument, BunderProductRiga } from "@/lib/bunder/types";
 import type {
@@ -27,12 +28,12 @@ function clampIngressoCampi(campi: SchedaIngressoFields): SchedaIngressoFields {
     "targa",
     "addettoAccettazione",
     "richiedente",
-    "livelloCarburante",
   ];
   const out = { ...campi };
   for (const key of shortKeys) {
     out[key] = clampTextTrimmed(out[key], TEXT_SHORT);
   }
+  out.livelloCarburante = normalizeLivelloCarburanteStored(out.livelloCarburante);
   out.descrizioneAnomalia = clampField(out.descrizioneAnomalia, TEXT_EXTRA);
   out.noteIntervento = clampField(out.noteIntervento, TEXT_LONG);
   out.oreLavoro = clampField(out.oreLavoro, TEXT_SHORT);

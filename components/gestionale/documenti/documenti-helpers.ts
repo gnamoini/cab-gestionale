@@ -6,7 +6,7 @@ import {
   type DocumentoFileAccessState,
   type DocumentoFileOpenResult,
 } from "@/lib/documenti/documento-file-access";
-import { resolveDocumentoFileUrlSignedResult } from "@/lib/documenti/documenti-db-mapper";
+import { archiveDocumentDeliveryUrl } from "@/lib/documents/document-delivery-url";
 import type { DocumentoRow } from "@/src/types/supabase-tables";
 import {
   formatDocumentoRigaSintetica,
@@ -279,16 +279,32 @@ export function documentoFileUnavailableLabel(doc: DocumentoGestionale): string 
   return documentoFileAccessBlockLabel(access.blockReason);
 }
 
-/** Apre il file con signed URL (bucket `documenti` privato) o blob locale pre-save. */
+/** Apre il file via proxy server (RBAC + cache) o blob locale pre-save. */
 export async function openDocumentoFile(
   doc: DocumentoGestionale,
-  row?: Pick<DocumentoRow, "url_file">,
+  _row?: Pick<DocumentoRow, "url_file">,
 ): Promise<DocumentoFileOpenResult> {
-  const result = await resolveDocumentoFileUrlSignedResult(row ?? { url_file: doc.urlDocumento ?? "" }, doc);
-  if (result.ok) {
-    window.open(result.href, "_blank", "noopener,noreferrer");
+  const access = getDocumentoFileAccessState(doc);
+  if (access.hasLocalBlob && doc.urlBlob?.trim()) {
+    window.open(doc.urlBlob.trim(), "_blank", "noopener,noreferrer");
+    return { ok: true, href: doc.urlBlob.trim() };
   }
-  return result;
+  if (!access.canOpen || !doc.id) {
+    const code =
+      access.blockReason === "legacy_url_unparsed"
+        ? "legacy_unparsed"
+        : access.blockReason === "no_file_linked"
+          ? "no_path"
+          : "unknown";
+    return {
+      ok: false,
+      code,
+      message: access.blockReason ? documentoFileAccessBlockLabel(access.blockReason) : documentoFileOpenFailureMessage("no_path"),
+    };
+  }
+  const href = archiveDocumentDeliveryUrl(doc.id, "preview", doc.caricatoIl || doc.ultimaModifica);
+  window.open(href, "_blank", "noopener,noreferrer");
+  return { ok: true, href };
 }
 
 export { documentoFileOpenFailureMessage };

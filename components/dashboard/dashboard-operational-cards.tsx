@@ -28,7 +28,6 @@ import {
   formatDashboardMagScortaDeficit,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
-import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 
@@ -295,9 +294,9 @@ function DashboardLocalNotesWidget() {
 }
 
 export function DashboardOperationalCards() {
-  const globalOpts = useGlobalOptions({ debugTag: "DashboardOperationalCards" });
   const {
     staging,
+    globalOpts,
     lavRows,
     lavStats,
     magStats,
