@@ -101,7 +101,7 @@ export function ClientLavorazionePhotoStrip({
 
   return (
     <>
-      <div ref={rootRef} className="flex flex-wrap items-center gap-1">
+      <div ref={rootRef} className="flex min-w-0 flex-wrap items-center gap-1">
         {images.map((img) => (
           <PhotoThumb key={img.baseName} image={img} sizeClass={sizeClass} onOpen={() => setPreview(img)} />
         ))}

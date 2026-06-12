@@ -90,7 +90,8 @@ for (const f of coreFiles) {
 }
 
 const appShell = read("components/gestionale/app-shell.tsx");
-assert.match(appShell, /VisualLayoutLinterMount/);
+assert.match(appShell, /DevAuditMounts/);
+assert.match(read("components/gestionale/dev-audit-mounts.tsx"), /VisualLayoutLinterMount/);
 
 const mount = read("components/gestionale/visual-layout-linter-mount.tsx");
 assert.match(mount, /NODE_ENV !== "development"/);

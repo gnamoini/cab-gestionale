@@ -68,7 +68,7 @@ export function ClientLavorazioneQrDialog({
       onRequestClose={onClose}
       title="QR lavorazione"
       footer={
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
+        <div className="flex w-full min-w-0 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-center">
           <button
             type="button"
             className={`${dsBtnNeutral} min-h-11 w-full gap-2 px-4 sm:w-auto`}

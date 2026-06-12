@@ -63,7 +63,7 @@ export function RicambiMagSearchPortal({
                 <button
                   type="button"
                   role="option"
-                  className="flex w-full flex-col px-3 py-2 text-left hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] dark:hover:bg-orange-950/30"
+                  className="flex w-full min-w-0 flex-col px-3 py-2 text-left hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] dark:hover:bg-orange-950/30"
                   onPointerDown={(e) => {
                     e.preventDefault();
                     onSelect(p);

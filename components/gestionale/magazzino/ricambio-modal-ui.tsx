@@ -9,7 +9,7 @@ import {
   type GestionaleCollapsibleSectionTitleTone,
 } from "@/components/design-system/gestionale-collapsible-section";
 
-/** Pannello sezione modale ricambio — alias token form collapsible. */
+/** Pannello sezione modale ricambio — alias token form collapsible (`--cab-border` via SSOT). */
 export const ricambioModalSectionClass = gestionaleCollapsibleSectionFormClass;
 
 /** Titolo sezione modale ricambio — stile unico (Identificazione, Giacenza, Foto, …). */

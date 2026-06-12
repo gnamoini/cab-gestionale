@@ -1059,7 +1059,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
         <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           Recenti
         </p>
-        <div className="flex flex-wrap gap-1">
+        <div className="flex min-w-0 flex-wrap gap-1">
           {recentValues.map((recent) => {
             const label = itemsMode
               ? items.find((i) => i.value === recent)?.label ?? recent

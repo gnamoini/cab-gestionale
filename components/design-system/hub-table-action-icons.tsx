@@ -92,7 +92,7 @@ export function HubIconPlus({ className = "h-4 w-4 shrink-0" }: { className?: st
 /** Foto centrata con + in badge leggermente spostato — azione «aggiungi immagine». */
 export function HubIconAddPhoto({ className = "h-5 w-5 shrink-0" }: { className?: string }) {
   return (
-    <span className={`relative inline-flex items-center justify-center ${className}`} aria-hidden>
+    <span className={`relative inline-flex min-w-0 items-center justify-center ${className}`} aria-hidden>
       <HubIconPhoto className="h-full w-full" />
       <span className="absolute -bottom-0.5 -right-1 flex h-2.5 w-2.5 items-center justify-center rounded-[3px] bg-[var(--cab-surface)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))]">
         <HubIconPlus className="h-2 w-2 stroke-[2.75]" />

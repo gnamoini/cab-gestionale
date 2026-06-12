@@ -41,7 +41,7 @@ export function SelectorEmptyState({
 
   return (
     <div
-      className={`flex flex-col items-center gap-2 px-3 py-4 text-center ${className}`.trim()}
+      className={`flex min-w-0 flex-col items-center gap-2 px-3 py-4 text-center ${className}`.trim()}
       role="status"
       aria-live="polite"
     >

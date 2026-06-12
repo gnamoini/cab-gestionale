@@ -54,7 +54,7 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
       titleId={CONTATTACI_TITLE_ID}
       header={<ClientContattaciModalHeader onClose={onClose} />}
       footer={
-        <div className="flex w-full flex-col gap-2">
+        <div className="flex w-full min-w-0 flex-col gap-2">
           <a
             href={telHref}
             className={`${dsBtnPrimary} min-h-11 w-full touch-manipulation`}
@@ -96,7 +96,7 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
         </div>
       }
     >
-      <GestionaleModalScrollBody className="flex flex-col gap-5">
+      <GestionaleModalScrollBody className="flex min-w-0 flex-col gap-5">
         <p className="text-sm text-[color:var(--cab-text-muted)]">
           Per assistenza puoi contattarci telefonicamente, via WhatsApp o email.
         </p>

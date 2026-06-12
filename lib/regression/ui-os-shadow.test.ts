@@ -39,7 +39,11 @@ assert.match(engine, /"\/report": "os"/);
 assert.match(engine, /buildShadowReport/);
 
 const appShell = fs.readFileSync(path.join(ROOT, "components/gestionale/app-shell.tsx"), "utf8");
-assert.match(appShell, /UiOsShadowMount/);
+assert.match(appShell, /DevAuditMounts/);
+assert.match(
+  fs.readFileSync(path.join(ROOT, "components/gestionale/dev-audit-mounts.tsx"), "utf8"),
+  /UiOsShadowMount/,
+);
 
 assert.equal(UI_OS_SHADOW_LOG_PREFIX, "[ui-os-shadow]");
 

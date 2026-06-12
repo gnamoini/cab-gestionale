@@ -70,11 +70,11 @@ export function ClientLavorazioneDocumentsPanel({
       />
     );
     if (embedded) return loadingCard;
-    return <div className={`flex flex-col ${dsGapMd}`}>{loadingCard}</div>;
+    return <div className={`flex min-w-0 flex-col ${dsGapMd}`}>{loadingCard}</div>;
   }
 
   const body = (
-    <div className={`flex flex-col ${dsGapMd}`}>
+    <div className={`flex min-w-0 flex-col ${dsGapMd}`}>
       {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
         <ClientDocumentSlotCard
           key={slot.tipo}
