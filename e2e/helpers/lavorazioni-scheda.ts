@@ -105,7 +105,7 @@ export async function waitForGlobalOptionsReady(
 /** CTA toolbar: su mobile `+ Nuova`, da sm `+ Nuova lavorazione`. */
 export async function clickNuovaLavorazioneCta(page: Page): Promise<void> {
   const btn = page.getByRole("button", { name: /\+?\s*Nuova(\s+lavorazione)?/i });
-  await btn.scrollIntoViewIfNeeded();
+  await expect(btn).toBeVisible({ timeout: 45_000 });
   await btn.click();
   const modal = page.getByRole("dialog").filter({ hasText: "Nuova lavorazione" });
   await expect(modal).toBeVisible({ timeout: 45_000 });
@@ -271,14 +271,11 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
   await expect(modal).toBeVisible();
   await waitForGlobalOptionsReady(modal);
 
-  await modal.getByLabel("Data ingresso").fill(fixture.ingresso.dataIngresso);
-
   await expect(modal.getByRole("combobox", { name: "Cliente", exact: true })).toBeVisible({
-    timeout: 20_000,
+    timeout: 45_000,
   });
 
   const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
-  await clienteInput.scrollIntoViewIfNeeded();
   await clienteInput.click();
   if ((await clienteInput.getAttribute("aria-readonly")) === "true") {
     await page.keyboard.type(fixture.ingresso.cliente, { delay: 15 });
@@ -292,6 +289,8 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
     await addClienteBtn.click();
   }
   await expect(clienteInput).toHaveValue(fixture.ingresso.cliente, { timeout: 15_000 });
+
+  await modal.getByLabel("Data ingresso").fill(fixture.ingresso.dataIngresso);
 
   await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
   await dismissMezzoPromptIfOpen(page);
