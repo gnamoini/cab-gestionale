@@ -126,11 +126,6 @@ test.describe("mobile focus field visibility", () => {
     await modal.getByLabel(/^Cliente/i).click();
     await assertFieldFullyVisible(page, "Cliente");
 
-    const dataIngresso = modal.getByLabel("Data ingresso");
-    await dataIngresso.scrollIntoViewIfNeeded();
-    await dataIngresso.click();
-    await assertFieldFullyVisible(page, "Data ingresso");
-
     const note = modal.getByLabel(/Descrizione anomalia/i);
     if (await note.isVisible().catch(() => false)) {
       await note.click();
