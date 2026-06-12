@@ -40,7 +40,7 @@ test("client portal Contattaci modal shows contact links", async ({ page }) => {
   );
 
   await expect(dialog.getByRole("button", { name: "Chiudi" })).toHaveCount(1);
-  await expect(dialog.locator('[data-testid="smoke-contattaci-close"]')).toBeVisible();
+  await expect(dialog.getByTestId("smoke-contattaci-close")).toBeVisible();
 
   await dialog.getByTestId("smoke-contattaci-close").click();
   await expect(dialog).not.toBeVisible();

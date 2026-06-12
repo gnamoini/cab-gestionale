@@ -4,7 +4,6 @@ import { CloseButton } from "@/components/design-system/close-button";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
-  IconClose,
   IconMail,
   IconPhone,
   IconWhatsApp,
@@ -36,7 +35,12 @@ function ClientContattaciModalHeader({ onClose }: { onClose: () => void }) {
             </h2>
           </div>
         </div>
-        <CloseButton onClick={onClose} label="Chiudi modale" showOnFocus={false} />
+        <CloseButton
+          onClick={onClose}
+          className={dsModalCloseBtn}
+          showOnFocus={false}
+          data-testid="smoke-contattaci-close"
+        />
       </div>
     </header>
   );
@@ -84,15 +88,6 @@ export function ClientContattaciDialog({ open, onClose }: { open: boolean; onClo
             <IconMail className={CONTATTACI_BTN_ICON} />
             Email
           </a>
-          <button
-            type="button"
-            className={`${dsBtnNeutral} min-h-11 w-full touch-manipulation`}
-            onClick={onClose}
-            data-testid="smoke-contattaci-close"
-          >
-            <IconClose className={CONTATTACI_BTN_ICON} />
-            Chiudi
-          </button>
         </div>
       }
     >
