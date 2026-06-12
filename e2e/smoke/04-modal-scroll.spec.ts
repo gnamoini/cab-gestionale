@@ -10,7 +10,7 @@ test("mobile drawer releases body scroll lock", async ({ page }) => {
   await page.goto("/dashboard");
   await page.getByTestId("smoke-nav-drawer-open").click();
   await expect(page.getByRole("dialog", { name: "Menu principale" })).toBeVisible();
-  await page.getByRole("button", { name: "Chiudi menu" }).click();
+  await page.getByRole("dialog", { name: "Menu principale" }).getByRole("button", { name: "Chiudi" }).click();
   await expect(page.getByRole("dialog", { name: "Menu principale" })).not.toBeVisible();
   await assertNoBodyScrollLock(page);
 });
@@ -52,7 +52,7 @@ test("mobile nav drawer scrolls menu items", async ({ page }) => {
   expect(scrollHit.ok, JSON.stringify(scrollHit)).toBe(true);
   expect(scrollHit.touchAction).not.toBe("none");
 
-  await page.getByRole("button", { name: "Chiudi menu" }).click();
+  await page.getByRole("dialog", { name: "Menu principale" }).getByRole("button", { name: "Chiudi" }).click();
   await expect(dialog).not.toBeVisible();
   await assertNoBodyScrollLock(page);
 });

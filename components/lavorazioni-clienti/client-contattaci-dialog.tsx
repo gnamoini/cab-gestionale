@@ -36,7 +36,7 @@ function ClientContattaciModalHeader({ onClose }: { onClose: () => void }) {
             </h2>
           </div>
         </div>
-        <CloseButton onClick={onClose} className={dsModalCloseBtn} showOnFocus={false} />
+        <CloseButton onClick={onClose} label="Chiudi modale" showOnFocus={false} />
       </div>
     </header>
   );

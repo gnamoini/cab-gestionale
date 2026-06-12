@@ -126,10 +126,10 @@ test.describe("mobile focus field visibility", () => {
     await modal.getByLabel(/^Cliente/i).click();
     await assertFieldFullyVisible(page, "Cliente");
 
-    const marcaAttrezzatura = modal.getByRole("combobox", { name: "Marca attrezzatura", exact: true });
-    await marcaAttrezzatura.scrollIntoViewIfNeeded();
-    await marcaAttrezzatura.click();
-    await assertFieldFullyVisible(page, "Marca attrezzatura");
+    const cantiere = modal.getByRole("combobox", { name: "Cantiere", exact: true });
+    await cantiere.scrollIntoViewIfNeeded();
+    await cantiere.click();
+    await assertFieldFullyVisible(page, "Cantiere");
 
     const note = modal.getByLabel(/Descrizione anomalia/i);
     if (await note.isVisible().catch(() => false)) {
@@ -185,7 +185,7 @@ test.describe("mobile focus field visibility", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await loginViaUi(page, adminCredentials());
     await page.goto("/lavorazioni");
-    await expect(page.getByRole("heading", { name: /Lavorazioni/i })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("heading", { name: "Lavorazioni", exact: true })).toBeVisible({ timeout: 30_000 });
 
     await page.getByRole("button", { name: "Filtri" }).click();
     const drawer = page.locator("[data-cab-modal-root]").filter({ has: page.getByRole("heading", { name: "Filtri" }) });

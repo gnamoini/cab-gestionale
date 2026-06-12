@@ -273,15 +273,25 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
 
   await modal.getByLabel("Data ingresso").fill(fixture.ingresso.dataIngresso);
 
-  await expect(
-    modal.getByRole("combobox", { name: "Cliente", exact: true }).or(modal.getByLabel(/^Cliente/i)).first(),
-  ).toBeVisible({ timeout: 20_000 });
+  await expect(modal.getByRole("combobox", { name: "Cliente", exact: true })).toBeVisible({
+    timeout: 20_000,
+  });
 
-  const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true }).or(modal.getByLabel(/^Cliente/i));
-  await clienteInput.first().scrollIntoViewIfNeeded();
-  await clienteInput.first().click();
-  await clienteInput.first().fill(fixture.ingresso.cliente);
-  await expect(clienteInput.first()).toHaveValue(fixture.ingresso.cliente, { timeout: 15_000 });
+  const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
+  await clienteInput.scrollIntoViewIfNeeded();
+  await clienteInput.click();
+  if ((await clienteInput.getAttribute("aria-readonly")) === "true") {
+    await page.keyboard.type(fixture.ingresso.cliente, { delay: 15 });
+  } else {
+    await clienteInput.fill(fixture.ingresso.cliente);
+  }
+  const addClienteBtn = page.getByRole("button", {
+    name: new RegExp(`Aggiungi.*${escapeRegExp(fixture.ingresso.cliente)}`, "i"),
+  });
+  if (await addClienteBtn.isVisible().catch(() => false)) {
+    await addClienteBtn.click();
+  }
+  await expect(clienteInput).toHaveValue(fixture.ingresso.cliente, { timeout: 15_000 });
 
   await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
   await dismissMezzoPromptIfOpen(page);
