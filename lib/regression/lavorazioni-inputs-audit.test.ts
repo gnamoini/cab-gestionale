@@ -12,14 +12,19 @@ function read(rel: string): string {
 }
 
 const view = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
+const tableRow = read("components/gestionale/lavorazioni/lavorazione-table-row.tsx");
+const mobileCards = read("components/gestionale/lavorazioni/lavorazione-mobile-cards.tsx");
 const filters = read("components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx");
 const schedeModal = read("components/lavorazioni/schede/schede-lavorazione-modal.tsx");
 const filterDrawer = read("components/gestionale/mobile-filter-drawer.tsx");
 const ingressoForm = read("components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx");
 const anagrafica = read("components/gestionale/schede/scheda-ingresso-anagrafica-fields.tsx");
 
-const inlineBlocks = view.match(/<InlineSelectField[\s\S]*?>/g) ?? [];
-assert.ok(inlineBlocks.length > 0, "expected InlineSelectField usages in lavorazioni-view");
+const inlineBlocks = [
+  ...(tableRow.match(/<InlineSelectField[\s\S]*?>/g) ?? []),
+  ...(mobileCards.match(/<InlineSelectField[\s\S]*?>/g) ?? []),
+];
+assert.ok(inlineBlocks.length > 0, "expected InlineSelectField usages in lavorazioni table/mobile");
 for (const block of inlineBlocks) {
   assert.match(block, /tablePill/, "every InlineSelectField on /lavorazioni must use tablePill");
 }
@@ -28,7 +33,8 @@ const inlineSelectSrc = read("components/gestionale/lavorazioni/lavorazioni-inli
 assert.match(inlineSelectSrc, /@deprecated/, "native select path must be documented deprecated");
 
 const repoInlineUsages = [
-  view,
+  tableRow,
+  mobileCards,
   read("components/lavorazioni-clienti/client-lavorazioni-view.tsx"),
 ];
 for (const src of repoInlineUsages) {

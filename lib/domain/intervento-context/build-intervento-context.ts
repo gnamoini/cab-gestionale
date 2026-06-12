@@ -89,7 +89,10 @@ function lavorazioneSnapshotFromInputs(
 ): LavorazioneSnapshot {
   return {
     id: lavorazioneId,
-    mezzoId: row?.mezzo_id?.trim() || legacy?.mezzoId?.trim() || null,
+    mezzoId:
+      row?.mezzo_id?.trim() ||
+      (legacy && "mezzoId" in legacy ? legacy.mezzoId?.trim() : null) ||
+      null,
     dataIngresso: row?.data_ingresso ?? legacy?.dataIngresso ?? null,
     note: row?.note ?? legacy?.noteInterne ?? null,
     targa: legacy?.targa?.trim() ?? "",

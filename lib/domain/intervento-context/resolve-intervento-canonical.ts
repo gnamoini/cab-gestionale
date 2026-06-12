@@ -107,7 +107,7 @@ function buildContext(inputs: InterventoCanonicalInputs): InterventoContext {
 
   if (inputs.ingressoCampi) {
     return composeInterventoContext({
-      lavorazioneId: inputs.lavorazioneRow?.id ?? inputs.bundle?.lavorazioneId ?? "",
+      lavorazioneId: inputs.bundle?.lavorazioneId ?? "",
       ingressoCampi: inputs.ingressoCampi,
       ingressoSorgente: "generata",
       mezzoRow: inputs.mezzoRow as MezzoRow | null,

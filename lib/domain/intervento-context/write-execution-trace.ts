@@ -80,8 +80,9 @@ export function recordTraceStep(
   step: WriteExecutionTraceStepName,
   status: WriteExecutionTraceStepStatus,
 ): void {
-  if (!isTraceMutable(trace)) {
-    if (trace?.isFinal) warnBlockedMutation(trace, step);
+  if (!trace) return;
+  if (trace.isFinal) {
+    warnBlockedMutation(trace, step);
     return;
   }
   const last = trace.steps[trace.steps.length - 1];

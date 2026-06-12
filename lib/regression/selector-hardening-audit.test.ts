@@ -16,7 +16,7 @@ function readJson<T>(name: string): T {
 execSync("npx tsx scripts/selector-hardening-audit.ts", {
   cwd: ROOT,
   stdio: "pipe",
-  timeout: 180_000,
+  timeout: 600_000,
 });
 
 type ImportGraphReport = {

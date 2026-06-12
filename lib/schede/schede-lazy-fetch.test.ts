@@ -10,8 +10,9 @@ function read(rel: string): string {
 
 const adapter = read("lib/schede/schede-sync-adapter.ts");
 assert.match(adapter, /fetchSchedeBundleForLavorazione/);
+assert.match(adapter, /fetchSchedeBundlesForLavorazioni/);
 assert.match(adapter, /ensureSchedeBundlesInCache/);
-assert.match(adapter, /SCHEde_FETCH_CONCURRENCY/);
+assert.match(adapter, /fetchSchedeBundlesStoreAuthorized/);
 assert.doesNotMatch(adapter, /schedeService\.getAll\(\)/);
 
 const hook = read("src/hooks/use-schede-store-query.ts");

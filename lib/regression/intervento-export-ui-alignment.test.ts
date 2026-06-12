@@ -41,6 +41,9 @@ const bundle: LavorazioneSchedeBundle = {
     sorgente: "generata",
     createdAt: "2026-06-01T10:00:00.000Z",
     updatedAt: "2026-06-01T10:00:00.000Z",
+    createdBy: "tester",
+    updatedBy: "tester",
+    fileEsterno: null,
     campi: {
       dataIngresso: "01/06/2026",
       cliente: "Cliente Scheda Stale",

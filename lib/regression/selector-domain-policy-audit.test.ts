@@ -17,7 +17,7 @@ const engine = read("lib/selector-core/selector-decision-engine.ts");
 const domainPolicy = read("lib/selector-core/selector-domain-policy.ts");
 const surface = read("lib/selector-core/resolve-selector-surface.ts");
 const globalSelect = read("components/gestionale/global-input/global-select.tsx");
-const lavView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
+const lavTableRow = read("components/gestionale/lavorazioni/lavorazione-table-row.tsx");
 const lavFilter = read("components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx");
 const timesheet = read("components/gestionale/dipendenti/timesheet-header.tsx");
 const securityUser = read("components/dashboard/security-create-user-modal.tsx");
@@ -49,16 +49,17 @@ assert.match(settingsListSelect, /isMezziListKey/);
 assert.match(settingsListSelect, /resolvedMobileSheetMode/);
 assert.match(settingsListSelect, /"searchable"/);
 
-assert.match(lavView, /AddettoSelectField/);
+assert.match(lavTableRow, /AddettoSelectField[\s\S]{0,120}tablePillOptions\.addetto/);
 assert.doesNotMatch(
-  lavView,
-  /InlineSelectField[\s\S]{0,400}tablePillOptions\.addetto/,
+  lavTableRow,
+  /<InlineSelectField[\s\S]{0,80}tablePillOptions\.addetto/,
 );
 
 assert.match(lavFilter, /selectorDomain="lavorazioni"/);
 assert.doesNotMatch(lavFilter, /selectOnly[\s\S]{0,200}Filtra addetto/);
 
-assert.match(timesheet, /selectOnly[\s\S]{0,120}Seleziona dipendente/);
+assert.match(timesheet, /selectOnly[\s\S]{0,200}filterEmployeeId/);
+assert.match(timesheet, /aria-label="Seleziona dipendente"/);
 assert.doesNotMatch(timesheet, /selectorDomain="dipendenti"/);
 
 assert.match(securityUser, /selectorDomain="security"/);

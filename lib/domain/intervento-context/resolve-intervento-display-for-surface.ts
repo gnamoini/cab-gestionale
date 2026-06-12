@@ -53,7 +53,7 @@ export function resolveInterventoIdentForSurface(
 
 /** Campi flat per PDF / preventivi da display canonico. */
 export function schedaIngressoFieldsFromDisplay(
-  display: ReturnType<typeof resolveInterventoDisplay>,
+  display: InterventoDisplay,
   fallback?: Partial<SchedaIngressoFields>,
 ): SchedaIngressoFields {
   const base = fallback ?? {};
