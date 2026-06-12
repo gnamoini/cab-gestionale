@@ -123,11 +123,13 @@ test.describe("mobile focus field visibility", () => {
     const modal = page.locator("[data-cab-modal-root]").first();
     await expect(modal).toBeVisible();
 
-    await modal.getByLabel(/Cliente/i).click();
+    await modal.getByLabel(/^Cliente/i).click();
     await assertFieldFullyVisible(page, "Cliente");
 
-    await modal.getByLabel(/Macchina/i).click();
-    await assertFieldFullyVisible(page, "Macchina");
+    const marcaAttrezzatura = modal.getByRole("combobox", { name: "Marca attrezzatura", exact: true });
+    await marcaAttrezzatura.scrollIntoViewIfNeeded();
+    await marcaAttrezzatura.click();
+    await assertFieldFullyVisible(page, "Marca attrezzatura");
 
     const note = modal.getByLabel(/Descrizione anomalia/i);
     if (await note.isVisible().catch(() => false)) {

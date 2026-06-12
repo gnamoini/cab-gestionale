@@ -273,11 +273,15 @@ export async function fillMinimalCreateAndSaveWithoutClienteBlur(
 
   await modal.getByLabel("Data ingresso").fill(fixture.ingresso.dataIngresso);
 
-  const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true });
-  await clienteInput.scrollIntoViewIfNeeded();
-  await clienteInput.click();
-  await clienteInput.fill(fixture.ingresso.cliente);
-  await expect(clienteInput).toHaveValue(fixture.ingresso.cliente, { timeout: 15_000 });
+  await expect(
+    modal.getByRole("combobox", { name: "Cliente", exact: true }).or(modal.getByLabel(/^Cliente/i)).first(),
+  ).toBeVisible({ timeout: 20_000 });
+
+  const clienteInput = modal.getByRole("combobox", { name: "Cliente", exact: true }).or(modal.getByLabel(/^Cliente/i));
+  await clienteInput.first().scrollIntoViewIfNeeded();
+  await clienteInput.first().click();
+  await clienteInput.first().fill(fixture.ingresso.cliente);
+  await expect(clienteInput.first()).toHaveValue(fixture.ingresso.cliente, { timeout: 15_000 });
 
   await fillListCombobox(page, "Marca attrezzatura", fixture.ingresso.marcaAttrezzatura, modal);
   await dismissMezzoPromptIfOpen(page);
