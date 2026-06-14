@@ -12,7 +12,7 @@ const adapter = read("lib/schede/schede-sync-adapter.ts");
 assert.match(adapter, /fetchSchedeBundleForLavorazione/);
 assert.match(adapter, /fetchSchedeBundlesForLavorazioni/);
 assert.match(adapter, /ensureSchedeBundlesInCache/);
-assert.match(adapter, /fetchSchedeBundlesStoreAuthorized/);
+assert.match(adapter, /fetchSchedeRowsByLavorazioneIdsAuthorized/);
 assert.doesNotMatch(adapter, /schedeService\.getAll\(\)/);
 
 const hook = read("src/hooks/use-schede-store-query.ts");
