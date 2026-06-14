@@ -1,10 +1,10 @@
 import type { DateRange } from "@/lib/report/date-ranges";
+import type { TimesheetMonthKey } from "@/lib/dipendenti/types";
 import {
   dateYmdFromDate,
   formatMonthLabel,
   monthDateRange,
   monthKeyFromDate,
-  type TimesheetMonthKey,
 } from "@/lib/dipendenti/timesheet-month";
 
 function formatReportDayIt(d: Date): string {
