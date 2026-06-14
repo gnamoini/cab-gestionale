@@ -150,7 +150,7 @@ function assembleHubData(core: MezzoHubCore): MezzoHubData {
     interventi: interventiMezzoDaLavorazioniDb(mezzoG, core.lavorazioni),
     preventivi: core.preventiviRows.map((r) => preventivoRowToRecordStub(r, core.mezzoRow)),
     documenti: core.documentiRows.map(documentoRowToGestionale),
-    log: core.logRows.map(logModificaRowToMezziHubLogEntry),
+    log: core.logRows.map((row) => logModificaRowToMezziHubLogEntry(row)),
     movimenti: core.movimentiRows,
     kpi: deriveKpi(core),
     timeline: buildTimeline(core),
