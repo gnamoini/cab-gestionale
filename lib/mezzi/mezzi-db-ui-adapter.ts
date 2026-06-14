@@ -3,10 +3,22 @@ import type { PreventivoRecord, PreventivoStato } from "@/lib/preventivi/types";
 import { resolveDocumentoTipoFile } from "@/lib/documenti/documento-tipo-file";
 import { readDocumentIntelligenceMeta } from "@/lib/documents/document-meta";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
-import { imageLogModificaRiga, isImageLogAction, type MezziLogEntryLike } from "@/lib/gestionale-log/view-model";
+import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
+import {
+  formatTitleCasePhrase,
+  imageLogModificaRiga,
+  isImageLogAction,
+  type MezziLogEntryLike,
+} from "@/lib/gestionale-log/view-model";
 import { diffMezzoChanges } from "@/lib/mezzi/mezzi-helpers";
 import { parseMezzoMeta } from "@/lib/mezzi/mezzi-meta";
-import type { DocumentoRow, LogModificaRow, MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
+import type {
+  DocumentoRow,
+  LogModificaRow,
+  LogModificaWithProfileRow,
+  MezzoRow,
+  PreventivoRow,
+} from "@/src/types/supabase-tables";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 
@@ -216,14 +228,38 @@ export function lavRowToMatchShape(row: LavorazioneListRow) {
 
 export type MezziHubLogEntry = MezziLogEntryLike & { id: string };
 
-function labelMezzoFromRow(r: MezzoRow): string {
-  const m = r.matricola?.trim();
-  if (m) return m;
-  const t = r.targa?.trim();
-  if (t) return t;
+function trimOrEmpty(v: string | null | undefined): string {
+  return v?.trim() ?? "";
+}
+
+/** Etichetta leggibile per log/UI (marca, modello, cliente, targa/matricola). */
+export function mezzoLogOggettoLabelFromRow(r: MezzoRow): string {
+  const marcaModello = `${trimOrEmpty(r.marca)} ${trimOrEmpty(r.modello)}`.trim();
+  const cliente = trimOrEmpty(r.cliente);
+  const targa = trimOrEmpty(r.targa);
+  const matricola = trimOrEmpty(r.matricola);
+  const ident =
+    (targa && targa !== "—" ? targa : "") ||
+    (matricola && matricola.toLowerCase() !== "non assegnata" ? matricola : "");
+
+  const parts: string[] = [];
+  if (marcaModello) parts.push(formatTitleCasePhrase(marcaModello));
+  if (cliente) parts.push(formatTitleCasePhrase(cliente));
+  if (ident) parts.push(ident.toUpperCase());
+
+  if (parts.length) return parts.join(" · ");
   return r.id.length >= 8 ? r.id.slice(0, 8) : r.id;
 }
-export function logModificaRowToMezziHubLogEntry(row: LogModificaRow): MezziHubLogEntry {
+
+export type MezziHubLogEntryOptions = {
+  currentUserId?: string | null;
+  currentDisplayName?: string;
+};
+
+export function logModificaRowToMezziHubLogEntry(
+  row: LogModificaRow | LogModificaWithProfileRow,
+  options?: MezziHubLogEntryOptions,
+): MezziHubLogEntry {
   const p = row.payload as { snapshot?: unknown; before?: unknown; after?: unknown } | null | undefined;
   let mezzo = row.entita_id.length >= 8 ? row.entita_id.slice(0, 8) : row.entita_id;
   let changes: MezziLogEntryLike["changes"] = [];
@@ -236,19 +272,19 @@ export function logModificaRowToMezziHubLogEntry(row: LogModificaRow): MezziHubL
   } else if (row.azione === "CREATE") {
     tipo = "aggiunta";
     if (p?.snapshot && typeof p.snapshot === "object") {
-      mezzo = labelMezzoFromRow(p.snapshot as MezzoRow);
+      mezzo = mezzoLogOggettoLabelFromRow(p.snapshot as MezzoRow);
     }
   } else if (row.azione === "DELETE") {
     tipo = "rimozione";
     if (p?.snapshot && typeof p.snapshot === "object") {
-      mezzo = labelMezzoFromRow(p.snapshot as MezzoRow);
+      mezzo = mezzoLogOggettoLabelFromRow(p.snapshot as MezzoRow);
     }
   } else if (row.azione === "UPDATE") {
     tipo = "update";
     if (p?.before && p?.after && typeof p.before === "object" && typeof p.after === "object") {
       const beforeRow = p.before as MezzoRow;
       const afterRow = p.after as MezzoRow;
-      mezzo = labelMezzoFromRow(afterRow);
+      mezzo = mezzoLogOggettoLabelFromRow(afterRow);
       changes = diffMezzoChanges(toMezzoUI(beforeRow), toMezzoUI(afterRow));
     }
   }
@@ -258,7 +294,7 @@ export function logModificaRowToMezziHubLogEntry(row: LogModificaRow): MezziHubL
     tipo,
     mezzo,
     riepilogo,
-    autore: row.autore_id?.slice(0, 8) ?? "—",
+    autore: logAutoreLabel(row, options?.currentUserId ?? null, options?.currentDisplayName ?? ""),
     at: row.created_at,
     changes,
   };

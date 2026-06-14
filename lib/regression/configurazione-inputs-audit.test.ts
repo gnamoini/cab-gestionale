@@ -59,20 +59,25 @@ assert.match(settingsWorkspace, /SettingsMainPanel/);
 
 assert.match(listUi, /min-h-10/);
 
-assert.match(lavorazioniSettings, /aria-label=\{`Stato finale workflow per/);
 assert.match(lavorazioniSettings, /aria-label=\{`Nome stato \$\{s\.label/);
-assert.match(lavorazioniModals, /aria-label=\{`Priorità \$\{prioritaLabel\(p\)\}: attiva`\}/);
+assert.match(lavorazioniSettings, /ariaLabel=\{`Colore priorità \$\{label\}`\}/);
+assert.match(lavorazioniSettings, /PrioritaSettingsSection/);
 
 assert.match(assenze, /SETTINGS_LIST_INPUT/);
 assert.match(assenze, /inputMode="text"/);
 
-assert.match(hierarchy, /min-h-10/);
+assert.match(hierarchy, /SettingsEditableStringRow/);
+assert.match(hierarchy, /min-h-11/);
 
 assert.match(colorPicker, /aria-label=\{ariaLabel\}/);
 
-assert.match(branding, /htmlFor="branding-color-picker"/);
+assert.match(branding, /aria-label="Selettore colore principale"/);
+assert.match(branding, /SettingsListFrame/);
+assert.match(branding, /SettingsColorPickerPopover/);
+assert.match(branding, /SETTINGS_SECTION_TITLE/);
 assert.match(branding, /aria-label="Upload logo"/);
-assert.match(branding, /min-h-11/);
+assert.match(branding, /Colore dal logo/);
+assert.match(branding, /extractPrimaryColorFromImageUrl/);
 
 assert.match(eliminaDlg, /GestionaleConfirmDialog/);
 assert.match(eliminaDlg, /pending/);

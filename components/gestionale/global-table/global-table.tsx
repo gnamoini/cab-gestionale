@@ -96,7 +96,14 @@ function VirtualTableBody({
 
     const bind = () => {
       if (cancelled || attempts >= maxAttempts) {
-        if (!cancelled && virtualizer.getVirtualItems().length === 0 && virtualRows.rowCount > 0) {
+        const el = scrollRef.current;
+        if (
+          !cancelled &&
+          virtualizer.getVirtualItems().length === 0 &&
+          virtualRows.rowCount > 0 &&
+          el &&
+          el.clientHeight > 0
+        ) {
           setRenderFallback(true);
         }
         return;

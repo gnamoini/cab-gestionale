@@ -1,4 +1,5 @@
 export type SistemaSectionId =
+  | "sys-panoramica"
   | "brand-personalizzazione"
   | "op-addetti"
   | "op-dipendenti-assenze"
@@ -23,7 +24,10 @@ export type SettingsNavEntry =
   | { kind: "group"; label: string }
   | { kind: "item"; id: SistemaSectionId; label: string };
 
+export const SETTINGS_NAV_OVERVIEW_ID = "sys-panoramica" as const satisfies SistemaSectionId;
+
 export const SETTINGS_NAV_STRUCTURE: SettingsNavEntry[] = [
+  { kind: "item", id: SETTINGS_NAV_OVERVIEW_ID, label: "Panoramica" },
   { kind: "group", label: "Personalizzazione" },
   { kind: "item", id: "brand-personalizzazione", label: "Branding" },
   { kind: "group", label: "Operatività" },
@@ -42,45 +46,87 @@ export const SETTINGS_NAV_STRUCTURE: SettingsNavEntry[] = [
   { kind: "item", id: "cli-utilizzatore", label: "Utilizzatore" },
   { kind: "group", label: "Attrezzatura" },
   { kind: "item", id: "att-tipo", label: "Tipo attrezzatura" },
-  { kind: "item", id: "att-marca", label: "Marca" },
-  { kind: "item", id: "att-modello", label: "Modello" },
+  { kind: "item", id: "att-marca", label: "Marca attrezzatura" },
+  { kind: "item", id: "att-modello", label: "Modello attrezzatura" },
   { kind: "group", label: "Telaio" },
   { kind: "item", id: "tel-tipo", label: "Tipo telaio" },
-  { kind: "item", id: "tel-marca", label: "Marca" },
-  { kind: "item", id: "tel-modello", label: "Modello" },
+  { kind: "item", id: "tel-marca", label: "Marca telaio" },
+  { kind: "item", id: "tel-modello", label: "Modello telaio" },
   { kind: "group", label: "Sistema" },
   { kind: "item", id: "sys-economici", label: "Parametri economici" },
 ];
 
 export const SETTINGS_NAV_ITEM_COUNT = SETTINGS_NAV_STRUCTURE.filter((e) => e.kind === "item").length;
 
-export const SETTINGS_SECTION_DESCRIPTIONS: Partial<Record<SistemaSectionId, string>> = {
-  "brand-personalizzazione": "Personalizza colore principale e logo dell'applicazione.",
-  "op-addetti": "Elenco addetti lavorazioni con colori associati.",
-  "op-dipendenti-assenze": "Tipi di assenza e sigle per la tabella presenze dipendenti.",
-  "op-stati": "Stati del workflow lavorazioni e colori badge.",
-  "op-priorita": "Priorità lavorazioni e colori di evidenziazione.",
-  "mag-marche": "Marche ricambi e sconti fornitore per marca.",
-  "mag-fornitori": "Fornitori alternativi per ricambi a magazzino.",
-  "mag-produttori": "Produttori per fornitori alternativi nei ricambi.",
-  "mag-categorie": "Categorie per classificare i ricambi a magazzino.",
-  "cli-cliente": "Clienti commerciali e sconto ricambi automatico nei preventivi.",
-  "cli-cantiere": "Cantieri associati ai clienti.",
-  "cli-utilizzatore": "Utilizzatori per anagrafiche mezzi e lavorazioni.",
-  "att-tipo": "Tipologie di attrezzatura per mezzi e preventivi.",
-  "att-marca": "Marche attrezzatura — base per i modelli collegati.",
-  "att-modello": "Modelli per marca attrezzatura (gerarchia Marca → Modello).",
-  "tel-tipo": "Tipologie telaio per identificazione mezzi.",
-  "tel-marca": "Marche telaio — base per i modelli collegati.",
-  "tel-modello": "Modelli per marca telaio (gerarchia Marca → Modello).",
-  "sys-economici": "Parametri economici di default per preventivi e report.",
-};
-
 export function settingsNavGroupForSection(sectionId: SistemaSectionId): string {
+  if (sectionId === SETTINGS_NAV_OVERVIEW_ID) return "Panoramica";
   let lastGroup = "";
   for (const e of SETTINGS_NAV_STRUCTURE) {
     if (e.kind === "group") lastGroup = e.label;
     else if (e.id === sectionId) return lastGroup;
   }
   return "";
+}
+
+export type SettingsNavGroup = {
+  label: string;
+  items: { id: SistemaSectionId; label: string }[];
+};
+
+/** Gruppi navigazione (esclusa Panoramica) per vista riepilogo. */
+export function settingsNavGroupedItems(): SettingsNavGroup[] {
+  const groups: SettingsNavGroup[] = [];
+  let current: SettingsNavGroup | null = null;
+
+  for (const e of SETTINGS_NAV_STRUCTURE) {
+    if (e.kind === "group") {
+      if (current?.items.length) groups.push(current);
+      current = { label: e.label, items: [] };
+      continue;
+    }
+    if (e.id === SETTINGS_NAV_OVERVIEW_ID) continue;
+    if (!current) current = { label: "Altro", items: [] };
+    current.items.push({ id: e.id, label: e.label });
+  }
+  if (current?.items.length) groups.push(current);
+  return groups;
+}
+
+export function settingsSectionLabel(sectionId: SistemaSectionId): string {
+  const entry = SETTINGS_NAV_STRUCTURE.find(
+    (e): e is Extract<(typeof SETTINGS_NAV_STRUCTURE)[number], { kind: "item" }> =>
+      e.kind === "item" && e.id === sectionId,
+  );
+  return entry?.label ?? "Sezione";
+}
+
+export function settingsDefaultSectionId(pageMode: boolean): SistemaSectionId {
+  return pageMode ? SETTINGS_NAV_OVERVIEW_ID : "brand-personalizzazione";
+}
+
+/** Query param pagina `/impostazioni` — persiste la sezione al reload. */
+export const SETTINGS_SECTION_QUERY_KEY = "sezione";
+
+const VALID_SECTION_IDS = new Set(
+  SETTINGS_NAV_STRUCTURE.filter((e): e is Extract<SettingsNavEntry, { kind: "item" }> => e.kind === "item").map(
+    (e) => e.id,
+  ),
+);
+
+export function isSistemaSectionId(value: string): value is SistemaSectionId {
+  return VALID_SECTION_IDS.has(value as SistemaSectionId);
+}
+
+export function parseSettingsSectionFromSearchParam(
+  raw: string | null | undefined,
+): SistemaSectionId | null {
+  const trimmed = raw?.trim();
+  if (!trimmed || !isSistemaSectionId(trimmed)) return null;
+  return trimmed;
+}
+
+/** Path canonico per deep-link / reload (Panoramica = `/impostazioni` senza query). */
+export function impostazioniPathForSection(sectionId: SistemaSectionId): string {
+  if (sectionId === SETTINGS_NAV_OVERVIEW_ID) return "/impostazioni";
+  return `/impostazioni?${SETTINGS_SECTION_QUERY_KEY}=${encodeURIComponent(sectionId)}`;
 }

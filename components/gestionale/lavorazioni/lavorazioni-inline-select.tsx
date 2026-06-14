@@ -20,9 +20,13 @@ import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { LAVORAZIONE_STATO_COMPLETATA_ID } from "@/lib/lavorazioni/constants";
+import {
+  isLavorazioneEmptyDisplay,
+  LAVORAZIONE_EMPTY_DISPLAY,
+} from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { formatLavorazioneIngressoDisplay } from "@/lib/lavorazioni/lavorazione-ingresso-display";
 import { statoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
-import { dsFocus } from "@/lib/ui/design-system";
+import { dsFocus, dsTableActionsRowHeight } from "@/lib/ui/design-system";
 import {
   lavTablePillMinH,
   lavTablePillTextClass,
@@ -70,29 +74,57 @@ export function LavorazioneReadOnlyPill({
   shellClass,
   shellStyle,
   fullWidth = true,
+  actionRow = false,
+  actionRowFixedWidth = false,
+  actionRowUniformWidthCh,
 }: {
   label: string;
   shellClass: string;
   shellStyle?: CSSProperties;
   /** Larghezza piena nella cella/card; disabilita per badge fit-content (es. stato in header). */
   fullWidth?: boolean;
+  /** Stessa altezza dei pulsanti azione tabella (righe impostazioni). */
+  actionRow?: boolean;
+  /** Larghezza uniforme in riga impostazioni (es. anteprima addetti). */
+  actionRowFixedWidth?: boolean;
+  /** Larghezza condivisa tra righe (ch), es. allineata alla pill più larga dello stato. */
+  actionRowUniformWidthCh?: number;
 }) {
-  const widthClass = fullWidth
-    ? "w-full min-w-0 max-w-full"
-    : "w-fit min-w-0 max-w-full";
+  const widthClass = actionRow
+    ? actionRowUniformWidthCh
+      ? "w-full min-w-0 max-w-full"
+      : actionRowFixedWidth
+        ? "w-[6rem] min-w-[6rem] max-w-[6rem] sm:w-[5.75rem] sm:min-w-[5.75rem] sm:max-w-[5.75rem]"
+        : "w-fit min-w-0 max-w-full"
+    : fullWidth
+      ? "w-full min-w-0 max-w-full"
+      : "w-fit min-w-0 max-w-full";
+  const contentClass = actionRow
+    ? `${dsTableActionsRowHeight} items-center px-2.5 ${lavTablePillTextClass} whitespace-nowrap`
+    : fullWidth
+      ? ""
+      : `px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`;
+  const uniformWidthStyle: CSSProperties | undefined =
+    actionRow && actionRowUniformWidthCh
+      ? {
+          width: `${actionRowUniformWidthCh}ch`,
+          minWidth: `${actionRowUniformWidthCh}ch`,
+          maxWidth: `${actionRowUniformWidthCh}ch`,
+        }
+      : undefined;
   return (
     <span
-      className={`${shellClass} ${widthClass} inline-flex select-none touch-manipulation cursor-default justify-center overflow-hidden ${
-        fullWidth ? "" : `px-2 py-1 ${lavTablePillTextClass} whitespace-nowrap`
-      }`}
-      style={shellStyle}
+      className={`${shellClass} ${widthClass} inline-flex select-none touch-manipulation cursor-default justify-center overflow-hidden ${contentClass}`}
+      style={uniformWidthStyle ? { ...shellStyle, ...uniformWidthStyle } : shellStyle}
     >
-      {fullWidth ? (
+      {fullWidth && !actionRow ? (
         <span
           className={`flex ${lavTablePillMinH} w-full items-center justify-center px-2 py-0.5 ${lavTablePillTextClass} whitespace-nowrap`}
         >
           {label}
         </span>
+      ) : actionRowFixedWidth ? (
+        <span className="min-w-0 max-w-full truncate">{label}</span>
       ) : (
         label
       )}
@@ -109,10 +141,14 @@ export function LavorazionePrioritaReadOnlyPill({
   priorita,
   prioritaColors,
   fullWidth = true,
+  actionRow = false,
+  actionRowFixedWidth = false,
 }: {
   priorita: string;
   prioritaColors: Record<string, string | undefined>;
   fullWidth?: boolean;
+  actionRow?: boolean;
+  actionRowFixedWidth?: boolean;
 }) {
   const p = priorita as PrioritaLavorazione;
   const label = prioritaLabel(p);
@@ -123,6 +159,8 @@ export function LavorazionePrioritaReadOnlyPill({
       shellClass={prioritaPillShellClass()}
       shellStyle={prioritaPillShellStyle(hex)}
       fullWidth={fullWidth}
+      actionRow={actionRow}
+      actionRowFixedWidth={actionRowFixedWidth}
     />
   );
 }
@@ -132,18 +170,31 @@ export function LavorazioneAddettoReadOnlyPill({
   addetto,
   addettoColors,
   fullWidth = true,
+  actionRow = false,
+  actionRowFixedWidth = false,
 }: {
   addetto: string;
   addettoColors: Record<string, string | undefined>;
   fullWidth?: boolean;
+  actionRow?: boolean;
+  actionRowFixedWidth?: boolean;
 }) {
-  const label = addetto.trim() || "—";
+  const label = addetto.trim();
+  if (isLavorazioneEmptyDisplay(label)) {
+    return (
+      <span className="block w-full text-center text-sm text-zinc-400 dark:text-zinc-500">
+        {LAVORAZIONE_EMPTY_DISPLAY}
+      </span>
+    );
+  }
   return (
     <LavorazioneReadOnlyPill
       label={label}
       shellClass={addettoPillShellClass()}
       shellStyle={addettoPillShellStyleForName(label, addettoColors)}
       fullWidth={fullWidth}
+      actionRow={actionRow}
+      actionRowFixedWidth={actionRowFixedWidth}
     />
   );
 }

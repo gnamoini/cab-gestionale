@@ -67,8 +67,13 @@ function recoverCorruptedDevServer(pid: number, port: number, reason: string, lo
 
 function failDevAlreadyRunning(pid: number, port: number, reason: string): never {
   const loginStatus = fetchLoginRouteStatus(port);
-  if (loginStatus === 404) {
-    recoverCorruptedDevServer(pid, port, "login-route-404", loginStatus);
+  if (loginStatus === 404 || loginStatus === null) {
+    recoverCorruptedDevServer(
+      pid,
+      port,
+      loginStatus === 404 ? "login-route-404" : "dev-unreachable",
+      loginStatus,
+    );
     process.exit(0);
   }
   console.error(`[dev] Next.js dev server already running (${reason}, PID ${pid}, port ${port}).`);

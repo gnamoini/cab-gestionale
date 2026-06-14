@@ -61,14 +61,20 @@ export function groupLavorazioniLogsById(
   return map;
 }
 
-/** Addetto da log UPDATE (payload addetto), più recente per primo. */
+/** Addetto da log UPDATE/UNDO (payload addetto o addettoAccettazione), più recente per primo. */
 export function latestAddettoFromLogs(logs: readonly LogModificaRow[]): string {
   const sorted = [...logs].sort((a, b) => b.created_at.localeCompare(a.created_at));
   for (const lg of sorted) {
-    if (lg.azione !== "UPDATE") continue;
-    const payload = lg.payload as { after?: { addetto?: unknown } } | null | undefined;
-    const addetto = payload?.after?.addetto;
-    if (typeof addetto === "string" && addetto.trim()) return addetto.trim();
+    if (lg.azione !== "UPDATE" && lg.azione !== "UNDO") continue;
+    const payload = lg.payload as {
+      after?: { addetto?: unknown; addettoAccettazione?: unknown };
+    } | null | undefined;
+    for (const raw of [payload?.after?.addetto, payload?.after?.addettoAccettazione]) {
+      if (typeof raw === "string") {
+        const addetto = raw.trim();
+        if (addetto && addetto !== "—") return addetto;
+      }
+    }
   }
   return "—";
 }

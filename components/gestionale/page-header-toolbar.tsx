@@ -2,11 +2,16 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { LoadingSpinner } from "@/components/design-system/loading";
+import { PageToolbarCtaLabel } from "@/components/design-system/page-toolbar";
 import { ToolbarGroupOverflowToggle } from "@/components/design-system/toolbar-group";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { MobileFilterDrawer } from "@/components/gestionale/mobile-filter-drawer";
 import { IconGestionaleLog, IconGestionaleUndo, IconGestionaleRefresh } from "@/components/gestionale/gestionale-log-ui";
-import { dsPageToolbarIconBtn } from "@/lib/ui/design-system";
+import {
+  dsPageToolbarBtn,
+  dsPageToolbarIconBtn,
+  dsPageToolbarPrimaryBtn,
+} from "@/lib/ui/design-system";
 import { useSmUp } from "@/lib/ui/use-sm-up";
 
 /** Shell toolbar header (PageHeader): unico `flex-safe-row` per evitare doppia signature linter. */
@@ -66,6 +71,74 @@ export function GestionaleRefreshToolbarButton({
         <span className="sr-only sm:hidden">{busy ? busyLabel : label}</span>
       </button>
     </Tooltip>
+  );
+}
+
+export function GestionaleDirtySaveActions({
+  isDirty,
+  saving = false,
+  onCancel,
+  onSave,
+  statusLabel = "Modifiche non salvate",
+  cancelTitle = "Ripristina le modifiche non salvate",
+  saveTitle = "Salva tutte le modifiche",
+}: {
+  isDirty: boolean;
+  saving?: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+  statusLabel?: string;
+  cancelTitle?: string;
+  saveTitle?: string;
+}) {
+  const disabled = !isDirty || saving;
+
+  return (
+    <div
+      className="flex min-w-0 shrink-0 flex-nowrap items-center gap-2 max-sm:w-full max-sm:flex-col max-sm:items-stretch"
+      role="group"
+      aria-label="Azioni salvataggio"
+    >
+      {isDirty ? (
+        <span
+          role="status"
+          data-testid="gestionale-dirty-status-chip"
+          className="inline-flex h-10 min-h-[2.5rem] shrink-0 items-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-warning)_48%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-warning)_10%,var(--cab-card))] px-3 text-xs font-medium leading-none text-[color:color-mix(in_srgb,var(--cab-warning)_92%,var(--cab-text))] shadow-[var(--cab-shadow-sm)] max-sm:w-full max-sm:justify-center"
+        >
+          <span
+            className="h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--cab-warning)] ring-2 ring-[color:color-mix(in_srgb,var(--cab-warning)_32%,transparent)]"
+            aria-hidden
+          />
+          {statusLabel}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        className={`${dsPageToolbarBtn} max-sm:w-full`}
+        onClick={onCancel}
+        disabled={disabled}
+        title={cancelTitle}
+      >
+        <PageToolbarCtaLabel short="Annulla" full="Annulla modifiche" />
+      </button>
+      <button
+        type="button"
+        className={`${dsPageToolbarPrimaryBtn} max-sm:w-full`}
+        onClick={onSave}
+        disabled={disabled}
+        title={saveTitle}
+        aria-busy={saving}
+      >
+        {saving ? (
+          <span className="inline-flex items-center gap-2">
+            <LoadingSpinner size="sm" label="Salvataggio in corso" />
+            <span>Salvataggio…</span>
+          </span>
+        ) : (
+          <PageToolbarCtaLabel short="Salva" full={isDirty ? "Salva modifiche" : "Salva"} />
+        )}
+      </button>
+    </div>
   );
 }
 

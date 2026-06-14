@@ -13,6 +13,7 @@ import {
   dsBtnSoftOrange,
   dsBtnIcon,
   dsBtnSubtle,
+  dsTableActionGlyph,
   gestionaleSelectFilterClass,
   gestionaleSelectNativePlainClass,
   lavorazioniModalSelectClass,
@@ -158,4 +159,16 @@ export function prioritaBadgeStyle(hex: string | undefined): CSSProperties {
 
 export function addettoBadgeStyle(hex: string | undefined): CSSProperties {
   return { ...pillStyleFromHex(hex), fontWeight: 600 };
+}
+
+/** Ripristina da archivio — vassoio + freccia verso l'alto (unarchive). */
+export function IconRipristinaDaArchivio({ className = dsTableActionGlyph }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M5 10h14" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 10v9h12v-9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v9" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 7l3-3 3 3" />
+    </svg>
+  );
 }

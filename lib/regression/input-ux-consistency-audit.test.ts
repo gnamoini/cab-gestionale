@@ -49,8 +49,9 @@ assert.match(formSection, /gestionaleFieldLabelClass/);
 assert.match(fieldLabel, /pointer-events-none/);
 assert.doesNotMatch(formSection, /<label[\s\S]*?<div className="mt-1">\{children\}<\/div>[\s\S]*?<\/label>/);
 assert.match(filterFields, /gestionaleFilterFieldLabelClass/);
-assert.match(shellCard, /gestionaleCollapsibleSectionTitleHitboxClass/);
+assert.match(shellCard, /aria-expanded=\{expanded\}/);
 assert.match(shellCard, /aria-label=\{toggleLabel\}/);
+assert.doesNotMatch(shellCard, /gestionaleCollapsibleSectionTitleHitboxClass/);
 
 // P1 R-08: required indicator uniforme
 assert.match(formSection, /GestionaleRequiredMark/);

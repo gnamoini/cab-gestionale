@@ -8,9 +8,10 @@ export function useBeforeUnloadWhenDirty(isDirty: boolean, message?: string): vo
     if (!isDirty) return;
     function onBeforeUnload(e: BeforeUnloadEvent) {
       e.preventDefault();
+      // I browser moderni ignorano il testo custom; basta impostare returnValue.
       e.returnValue = message ?? "";
     }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("beforeunload", onBeforeUnload, { capture: true });
+    return () => window.removeEventListener("beforeunload", onBeforeUnload, { capture: true });
   }, [isDirty, message]);
 }

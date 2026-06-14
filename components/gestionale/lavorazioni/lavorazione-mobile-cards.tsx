@@ -39,7 +39,8 @@ import {
   lavorazioneClienteLabel,
   lavorazioneMacchinaLabel,
   lavorazioneMezzoIdentParts,
-  lavorazioneSchedeCount,
+  formatLavorazioneSchedeBadge,
+  lavorazioneSchedeBundleRevision,
   lavorazioneSchedeStoreSlice,
   lavorazioneUtilizzatoreLabel,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
@@ -47,6 +48,7 @@ import type { LavorazioneUltimaModificaInfo } from "@/lib/lavorazioni/lavorazion
 import {
   addettoPillShellClass,
   addettoPillShellStyleForName,
+  IconRipristinaDaArchivio,
   prioritaLabel,
   prioritaPillShellClass,
   statoPillShellClass,
@@ -65,14 +67,6 @@ function IconCloseWork({ className = dsTableActionGlyph }: { className?: string 
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function IconRipristinaDaArchivio({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0119 5" />
     </svg>
   );
 }
@@ -152,7 +146,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
   const macchina = lavorazioneMacchinaLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
   const addetto = lavorazioneAddettoLabel(row, schedeStore, defaultAddetto);
-  const schedeCount = lavorazioneSchedeCount(bundle, row);
+  const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
     <LavorazioneMobileCardShell>
@@ -245,7 +239,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
         >
           <IconSchede />
           <span className={dsTableActionBadge} aria-hidden>
-            {schedeCount}/3
+            {schedeBadge}
           </span>
         </IconActionButton>
       </LavorazioneMobileCardFooter>
@@ -288,7 +282,7 @@ function LavorazioneArchivioMobileCardInner({
   const macchina = lavorazioneMacchinaLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
   const addetto = lavorazioneAddettoLabel(row, schedeStore, "", addettoLogs);
-  const schedeCount = lavorazioneSchedeCount(bundle, row);
+  const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
     <LavorazioneMobileCardShell>
@@ -342,7 +336,7 @@ function LavorazioneArchivioMobileCardInner({
         >
           <IconSchede />
           <span className={dsTableActionBadge} aria-hidden>
-            {schedeCount}/3
+            {schedeBadge}
           </span>
         </IconActionButton>
       </LavorazioneMobileCardFooter>
@@ -350,7 +344,22 @@ function LavorazioneArchivioMobileCardInner({
   );
 }
 
-export const LavorazioneArchivioMobileCard = memo(LavorazioneArchivioMobileCardInner);
+export const LavorazioneArchivioMobileCard = memo(
+  LavorazioneArchivioMobileCardInner,
+  (prev, next) =>
+    prev.row === next.row &&
+    prev.canEditWorkOrders === next.canEditWorkOrders &&
+    prev.mutPendingBlocking === next.mutPendingBlocking &&
+    prev.loading === next.loading &&
+    prev.prioritaColors === next.prioritaColors &&
+    prev.addettoColors === next.addettoColors &&
+    prev.addettoLogs === next.addettoLogs &&
+    prev.ultimaModificaInfo === next.ultimaModificaInfo &&
+    prev.onRipristina === next.onRipristina &&
+    prev.onOpenInfo === next.onOpenInfo &&
+    prev.onOpenSchede === next.onOpenSchede &&
+    lavorazioneSchedeBundleRevision(prev.bundle) === lavorazioneSchedeBundleRevision(next.bundle),
+);
 
 export function LavorazioniMobileEmptyState({ message }: { message: string }) {
   return (

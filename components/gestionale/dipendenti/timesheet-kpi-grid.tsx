@@ -118,7 +118,7 @@ export function TimesheetKPIGrid({
             headRow={
               <>
                 <GlobalTableHeadLabel label="#" align="center" thClassName="w-10" />
-                <GlobalTableHeadLabel label="Dipendente" />
+                <GlobalTableHeadLabel label="Nome" />
                 <GlobalTableHeadLabel label="Lavorato" align="center" />
                 <GlobalTableHeadLabel label="Ord." align="center" />
                 <GlobalTableHeadLabel label="Str." align="center" />

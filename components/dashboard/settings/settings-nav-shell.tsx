@@ -1,24 +1,101 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode, type Ref } from "react";
 import { createPortal } from "react-dom";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
   useDropdownOutsideDismiss,
   useGlobalDropdownPortal,
 } from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import {
+  SETTINGS_NAV_BTN_LABEL,
   SETTINGS_NAV_GROUP_LABEL,
+  SETTINGS_SIDEBAR_NAV,
+  SETTINGS_SIDEBAR_NAV_PAGE_PAD,
+  SETTINGS_SIDEBAR_OVERVIEW,
   settingsNavBtnClass,
+  settingsNavIconWrapClass,
+  settingsNavOverviewBtnClass,
 } from "@/components/dashboard/settings-list-ui";
+import { SettingsSectionIcon } from "@/components/dashboard/settings/settings-section-icons";
 import {
   SETTINGS_NAV_ITEM_COUNT,
-  type SettingsNavEntry,
+  SETTINGS_NAV_OVERVIEW_ID,
+  settingsNavGroupedItems,
   type SistemaSectionId,
 } from "@/components/dashboard/settings/settings-workspace-types";
 import { dsFocus, gestionaleSelectFilterClass } from "@/lib/ui/design-system";
 import { globalInputDropdownPortalPanel } from "@/lib/ui/global-input";
+
+function SettingsNavItemButton({
+  sectionId,
+  label,
+  active,
+  onClick,
+  buttonRef,
+}: {
+  sectionId: SistemaSectionId;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  buttonRef?: Ref<HTMLButtonElement>;
+}) {
+  const btnClass = sectionId === SETTINGS_NAV_OVERVIEW_ID ? settingsNavOverviewBtnClass(active) : settingsNavBtnClass(active);
+
+  return (
+    <button
+      ref={buttonRef}
+      type="button"
+      aria-current={active ? "true" : undefined}
+      onClick={onClick}
+      className={btnClass}
+    >
+      <span className={settingsNavIconWrapClass(active)} aria-hidden>
+        <SettingsSectionIcon sectionId={sectionId} className="h-4 w-4" />
+      </span>
+      <span className={SETTINGS_NAV_BTN_LABEL}>{label}</span>
+    </button>
+  );
+}
+
+export function SettingsNavOverviewLink({
+  active,
+  onClick,
+}: {
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <SettingsNavItemButton
+      sectionId={SETTINGS_NAV_OVERVIEW_ID}
+      label="Panoramica"
+      active={active}
+      onClick={onClick}
+    />
+  );
+}
+
+export function SettingsNavSidebar({
+  section,
+  onPickSection,
+  variant = "default",
+}: {
+  section: SistemaSectionId;
+  onPickSection: (id: SistemaSectionId) => void;
+  variant?: "default" | "page";
+}) {
+  return (
+    <div className={variant === "page" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "contents"}>
+      <div className={SETTINGS_SIDEBAR_OVERVIEW}>
+        <SettingsNavOverviewLink
+          active={section === SETTINGS_NAV_OVERVIEW_ID}
+          onClick={() => onPickSection(SETTINGS_NAV_OVERVIEW_ID)}
+        />
+      </div>
+      <SettingsNavMenuList section={section} onPickSection={onPickSection} variant={variant} />
+    </div>
+  );
+}
 
 export function SettingsMainPanel({
   pageMode,
@@ -42,48 +119,59 @@ export function SettingsMainPanel({
 }
 
 export function SettingsNavMenuList({
-  filteredNav,
   section,
   onPickSection,
   navClassName,
   scrollable = true,
+  variant = "default",
 }: {
-  filteredNav: SettingsNavEntry[];
   section: SistemaSectionId;
   onPickSection: (id: SistemaSectionId) => void;
   navClassName?: string;
-  /** false = elenco completo senza scrollbar (pagina Impostazioni desktop). */
   scrollable?: boolean;
+  /** page = menu sidebar pagina (flex-1, scroll isolato); default = dropdown/modal con max-height. */
+  variant?: "default" | "page";
 }) {
+  const groups = useMemo(() => settingsNavGroupedItems(), []);
+  const activeItemRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    activeItemRef.current?.scrollIntoView({ block: "nearest" });
+  }, [section]);
+
   const scrollClass = scrollable
-    ? `gestionale-scrollbar overflow-y-auto ${navClassName ?? "max-h-[min(60vh,22rem)]"}`
+    ? variant === "page"
+      ? `${SETTINGS_SIDEBAR_NAV} ${navClassName ?? ""}`.trim()
+      : `gestionale-scrollbar overflow-y-auto ${navClassName ?? "max-h-[min(60vh,22rem)]"}`
     : `overflow-visible ${navClassName ?? ""}`.trim();
+
+  const navPadClass = variant === "page" ? SETTINGS_SIDEBAR_NAV_PAGE_PAD : "px-2 pb-4 pt-1.5";
+
   return (
-    <nav
-      className={`space-y-1 p-2 ${scrollClass}`}
-      aria-label="Elenco sezioni configurazione"
-    >
-      {filteredNav.map((e, i) => {
-        if (e.kind === "group") {
-          return (
-            <p key={`nav-g-${e.label}-${i}`} className={SETTINGS_NAV_GROUP_LABEL}>
-              {e.label}
-            </p>
-          );
-        }
-        const active = section === e.id;
-        return (
-          <button
-            key={e.id}
-            type="button"
-            aria-current={active ? "true" : undefined}
-            onClick={() => onPickSection(e.id)}
-            className={settingsNavBtnClass(active)}
-          >
-            {e.label}
-          </button>
-        );
-      })}
+    <nav className={`flex flex-col gap-0.5 ${navPadClass} ${scrollClass}`} aria-label="Elenco sezioni configurazione">
+      {groups.map((group) => (
+        <section key={group.label} aria-labelledby={`settings-nav-${group.label}`} className="min-w-0">
+          <h3 id={`settings-nav-${group.label}`} className={SETTINGS_NAV_GROUP_LABEL}>
+            {group.label}
+          </h3>
+          <ul className="flex flex-col gap-0.5">
+            {group.items.map((item) => {
+              const active = section === item.id;
+              return (
+                <li key={item.id}>
+                  <SettingsNavItemButton
+                    buttonRef={active ? activeItemRef : undefined}
+                    sectionId={item.id}
+                    label={item.label}
+                    active={active}
+                    onClick={() => onPickSection(item.id)}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
     </nav>
   );
 }
@@ -94,22 +182,16 @@ export function SettingsMobileSectionPicker({
   activeGroupLabel,
   onToggle,
   onClose,
-  filteredNav,
   section,
   onPickSection,
-  navQ,
-  setNavQ,
 }: {
   open: boolean;
   activeLabel: string;
   activeGroupLabel: string;
   onToggle: () => void;
   onClose: () => void;
-  filteredNav: SettingsNavEntry[];
   section: SistemaSectionId;
   onPickSection: (id: SistemaSectionId) => void;
-  navQ: string;
-  setNavQ: (v: string) => void;
 }) {
   const anchorRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -118,8 +200,8 @@ export function SettingsMobileSectionPicker({
     open,
     anchorRef,
     contentRef: panelRef,
-    repositionDeps: [filteredNav.length, navQ],
-    maxHeight: 360,
+    repositionDeps: [open, section],
+    maxHeight: 420,
   });
 
   useDropdownOutsideDismiss(open, anchorRef, panelRef, onClose);
@@ -135,17 +217,7 @@ export function SettingsMobileSectionPicker({
           scrollInside ? "overflow-y-auto" : ""
         }`}
       >
-        <div className="border-b border-[color:var(--cab-border)] p-2">
-          <GestionaleSearchField
-            value={navQ}
-            onChange={(e) => setNavQ(e.target.value)}
-            placeholder="Cerca sezione…"
-            autoComplete="off"
-            aria-label="Cerca nelle sezioni configurazione"
-          />
-        </div>
-        <SettingsNavMenuList
-          filteredNav={filteredNav}
+        <SettingsNavSidebar
           section={section}
           onPickSection={(id) => {
             onPickSection(id);
@@ -166,21 +238,17 @@ export function SettingsMobileSectionPicker({
         aria-haspopup="listbox"
         aria-label={`Sezione configurazione: ${activeLabel}. Apri elenco (${SETTINGS_NAV_ITEM_COUNT} sezioni).`}
       >
-        <svg
-          className="pointer-events-none absolute left-2.5 top-1/2 h-[1.1rem] w-[1.1rem] -translate-y-1/2 text-[color:var(--cab-text-muted)]"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+        <span
+          className={`pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 ${settingsNavIconWrapClass(false)}`}
           aria-hidden
         >
-          <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-        </svg>
+          <SettingsSectionIcon sectionId={section} className="h-3.5 w-3.5" />
+        </span>
         <span className="sr-only">Sezione: </span>
-        <span className="block truncate text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
+        <span className="block truncate pl-8 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]">
           {activeGroupLabel}
         </span>
-        <span className="block truncate">{activeLabel}</span>
+        <span className="block truncate pl-8">{activeLabel}</span>
       </button>
 
       {typeof document !== "undefined" && panel ? createPortal(panel, document.body) : null}

@@ -37,7 +37,7 @@ function fileNameFromContentDisposition(header: string | null, fallback = "docum
   return ascii?.[1]?.trim() || fallback;
 }
 
-/** Scarica l'artifact server-side e apre il PDF in nuova scheda (errori → toast, no pagina 500). */
+/** Scarica l'artifact server-side e apre il PDF in nuova scheda (anteprima, non download forzato). */
 export async function openPdfArtifact(
   type: PdfArtifactType,
   params?: OpenPdfArtifactParams,
@@ -73,7 +73,6 @@ export async function openPdfArtifact(
     const opened = openUrlInNewTab(blobUrl, {
       revokeBlobUrlAfterMs: 120_000,
       blockedMessage: "Impossibile aprire il PDF. Consenti i pop-up per questo sito.",
-      downloadFileName: fileName,
     });
     if (!opened) {
       pushGestionaleToast(

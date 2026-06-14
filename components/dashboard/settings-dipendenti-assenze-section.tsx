@@ -1,126 +1,396 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { Tooltip } from "@/components/design-system";
+import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import {
-  SETTINGS_DISCOUNT_INPUT,
-  SETTINGS_LIST_INPUT,
-  SETTINGS_ROW_BTN_DANGER,
-  SETTINGS_SECTION_CARD,
-  SettingsAddRow,
-  SettingsSectionHeader,
+  SettingsEmptyState,
+  SettingsListBody,
+  SettingsListSection,
+  SettingsListToolbar,
+  SettingsRowActionButtons,
+  useSettingsRowCommitOnPointerDownOutside,
+  type SettingsSectionLayout,
 } from "@/components/dashboard/settings-list-ui";
-import { createTipoAssenzaId, type TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
+import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
+import { commitSettingsListDelete } from "@/lib/settings/settings-list-delete";
+import { createTipoAssenzaId, isAltroTipoAssenzaLabel, type TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
+import { SETTINGS_LIST_INPUT_EDIT } from "@/lib/ui/settings-list-tokens";
+import { dsFocus } from "@/lib/ui/design-system";
+import { gestionaleListTableRowBaseClass } from "@/lib/ui/gestionale-list-table";
 
-const ROW_GRID =
-  "grid grid-cols-[2.75rem_minmax(0,1fr)_2.25rem_auto] items-center gap-x-2 px-2 py-1";
+const ASSENZE_SETTINGS_TABLE_CLASS =
+  "grid w-full min-w-0 grid-cols-1 gap-x-2 sm:grid-cols-[minmax(3.5rem,4.5rem)_minmax(0,1fr)_minmax(4.75rem,6rem)_auto]";
 
-export function SettingsDipendentiAssenzeSection({
-  tipi,
-  onChange,
+const ASSENZE_SETTINGS_ROW_CLASS = `${gestionaleListTableRowBaseClass} col-span-full grid min-h-11 min-w-0 grid-cols-1 gap-x-2 gap-y-2 border-[color:var(--cab-border)] px-3 py-2 sm:grid-cols-subgrid sm:items-center sm:gap-y-0 sm:px-4`;
+
+const ASSENZE_EDIT_INPUT_CLASS = `${SETTINGS_LIST_INPUT_EDIT} w-full min-w-0`;
+
+const ASSENZE_VIEW_CELL_CLASS = `flex min-h-11 min-w-0 w-full items-center rounded-md px-1 text-left text-sm font-medium touch-manipulation [-webkit-tap-highlight-color:transparent] ${dsFocus}`;
+
+const ASSENZE_DRAFT_ROW_KEY = "__assenze-draft__";
+
+const ASSENZA_ALTRO_MOTIVO_TOOLTIP = "Obbligatorio scrivere\nmotivo dell'assenza";
+
+const ASSENZE_CUSTOM_TEXT_CELL_PLACEHOLDER = "min-h-11 min-w-[4.75rem] max-sm:hidden";
+
+const ASSENZE_ALTRO_MOTIVO_HINT_CLASS =
+  "flex min-h-11 min-w-0 cursor-help items-center justify-center px-0.5 text-center text-[10px] font-medium leading-tight text-[color:var(--cab-text-muted)] underline decoration-[color:color-mix(in_srgb,var(--cab-text-muted)_40%,transparent)] decoration-dotted underline-offset-2 select-none max-sm:justify-start sm:min-w-[4.75rem]";
+
+function AssenzaAltroMotivoHint() {
+  return (
+    <Tooltip
+      content={ASSENZA_ALTRO_MOTIVO_TOOLTIP}
+      multiline
+      side="top"
+      showOnFocus={false}
+      delayMs={220}
+    >
+      <span
+        role="note"
+        className={ASSENZE_ALTRO_MOTIVO_HINT_CLASS}
+        aria-label="Obbligatorio scrivere motivo dell'assenza"
+      >
+        Richiede motivi
+      </span>
+    </Tooltip>
+  );
+}
+
+function sortTipiAssenza(tipi: readonly TipoAssenzaConfig[]): TipoAssenzaConfig[] {
+  return [...tipi].sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+function filterTipiAssenza(tipi: readonly TipoAssenzaConfig[], query: string): TipoAssenzaConfig[] {
+  const sorted = sortTipiAssenza(tipi);
+  const q = query.trim().toLowerCase();
+  if (!q) return sorted;
+  return sorted.filter(
+    (t) => t.label.toLowerCase().includes(q) || t.abbrev.toLowerCase().includes(q),
+  );
+}
+
+function AssenzaDraftRow({
+  onConfirm,
+  onCancel,
 }: {
-  tipi: TipoAssenzaConfig[];
-  onChange: (next: TipoAssenzaConfig[]) => void;
+  onConfirm: (label: string, abbrev: string, requiresCustomText: boolean) => void;
+  onCancel: () => void;
 }) {
-  const [nuovo, setNuovo] = useState("");
-  const sorted = [...tipi].sort((a, b) => a.sortOrder - b.sortOrder);
+  const rowRef = useRef<HTMLLIElement>(null);
+  const abbrevRef = useRef<HTMLInputElement>(null);
+  const labelRef = useRef<HTMLInputElement>(null);
 
-  const handleAdd = () => {
-    const trimmed = nuovo.trim();
-    if (!trimmed) return;
-    if (tipi.some((t) => t.label.toLowerCase() === trimmed.toLowerCase())) return;
-    onChange([
-      ...tipi,
-      {
-        id: createTipoAssenzaId(),
-        label: trimmed,
-        abbrev: trimmed.slice(0, 3).toUpperCase(),
-        sortOrder: tipi.length,
-      },
-    ]);
-    setNuovo("");
+  useEffect(() => {
+    labelRef.current?.focus();
+  }, []);
+
+  const commit = useCallback(() => {
+    const label = labelRef.current?.value.trim() ?? "";
+    if (!label) {
+      onCancel();
+      return;
+    }
+    const abbrevRaw = abbrevRef.current?.value.trim() ?? "";
+    const abbrev = (abbrevRaw || label.slice(0, 3)).slice(0, 6).toUpperCase();
+    onConfirm(label, abbrev, isAltroTipoAssenzaLabel(label));
+  }, [onCancel, onConfirm]);
+
+  useSettingsRowCommitOnPointerDownOutside(true, rowRef, commit);
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commit();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      onCancel();
+    }
   };
 
   return (
-    <div className={SETTINGS_SECTION_CARD}>
-      <SettingsSectionHeader
-        level="card"
-        title="Tipi assenza dipendenti"
-        description="Sigle mostrate nelle celle presenze (es. F = Ferie). I record già salvati mantengono l&apos;etichetta originale."
+    <li ref={rowRef} className={ASSENZE_SETTINGS_ROW_CLASS}>
+      <input
+        ref={abbrevRef}
+        className={`${ASSENZE_EDIT_INPUT_CLASS} font-mono uppercase`}
+        placeholder="Sigla"
+        maxLength={6}
+        autoComplete="off"
+        spellCheck={false}
+        aria-label="Sigla nuovo tipo assenza"
+        onKeyDown={handleKeyDown}
       />
+      <input
+        ref={labelRef}
+        className={ASSENZE_EDIT_INPUT_CLASS}
+        placeholder="Nome, es. Formazione"
+        autoComplete="off"
+        spellCheck={false}
+        aria-label="Nome nuovo tipo assenza"
+        onKeyDown={handleKeyDown}
+      />
+      <span className={ASSENZE_CUSTOM_TEXT_CELL_PLACEHOLDER} aria-hidden />
+      <SettingsRowActionButtons
+        className="w-full sm:w-auto sm:justify-self-end"
+        mode="edit"
+        itemLabel="nuovo tipo assenza"
+        onEdit={() => labelRef.current?.focus()}
+        onConfirm={commit}
+        onCancelEdit={onCancel}
+        onRemove={onCancel}
+      />
+    </li>
+  );
+}
 
-      <div className="mt-3 overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)]">
-        <div
-          className={`${ROW_GRID} border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] py-1.5 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]`}
-          aria-hidden
-        >
-          <span>Sigla</span>
-          <span>Nome</span>
-          <span className="text-center" title="Richiede motivo personalizzato (tipo Altro)">
-            Altro
-          </span>
-          <span className="sr-only">Azioni</span>
+function AssenzaSettingsRow({
+  tipo,
+  onUpdate,
+  onRemove,
+}: {
+  tipo: TipoAssenzaConfig;
+  onUpdate: (id: string, patch: Partial<Pick<TipoAssenzaConfig, "label" | "abbrev" | "requiresCustomText">>) => void;
+  onRemove: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [editFocus, setEditFocus] = useState<"abbrev" | "label">("label");
+  const [abbrev, setAbbrev] = useState(tipo.abbrev);
+  const [label, setLabel] = useState(tipo.label);
+  const rowRef = useRef<HTMLLIElement>(null);
+  const abbrevInputRef = useRef<HTMLInputElement>(null);
+  const labelInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setAbbrev(tipo.abbrev);
+    setLabel(tipo.label);
+  }, [tipo.abbrev, tipo.id, tipo.label]);
+
+  const startEdit = useCallback((field: "abbrev" | "label") => {
+    setEditFocus(field);
+    setEditing(true);
+  }, []);
+
+  useEffect(() => {
+    if (!editing) return;
+    const target = editFocus === "abbrev" ? abbrevInputRef.current : labelInputRef.current;
+    target?.focus({ preventScroll: true });
+  }, [editFocus, editing]);
+
+  const commitEdit = useCallback(() => {
+    const labelTrim = label.trim();
+    const abbrevTrim = abbrev.trim().slice(0, 6).toUpperCase();
+    if (!labelTrim || !abbrevTrim) {
+      setAbbrev(tipo.abbrev);
+      setLabel(tipo.label);
+      setEditing(false);
+      return;
+    }
+    const patch: Partial<Pick<TipoAssenzaConfig, "label" | "abbrev" | "requiresCustomText">> = {};
+    if (labelTrim !== tipo.label) patch.label = labelTrim;
+    if (abbrevTrim !== tipo.abbrev) patch.abbrev = abbrevTrim;
+    if (Object.keys(patch).length > 0) onUpdate(tipo.id, patch);
+    setEditing(false);
+  }, [abbrev, label, onUpdate, tipo.abbrev, tipo.id, tipo.label]);
+
+  const cancelEdit = useCallback(() => {
+    setAbbrev(tipo.abbrev);
+    setLabel(tipo.label);
+    setEditing(false);
+  }, [tipo.abbrev, tipo.label]);
+
+  useSettingsRowCommitOnPointerDownOutside(editing, rowRef, commitEdit);
+
+  const handleInputKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      commitEdit();
+      return;
+    }
+    if (e.key === "Escape") {
+      e.preventDefault();
+      cancelEdit();
+    }
+  };
+
+  return (
+    <li ref={rowRef} className={ASSENZE_SETTINGS_ROW_CLASS}>
+      {editing ? (
+        <>
+          <input
+            ref={abbrevInputRef}
+            className={`${ASSENZE_EDIT_INPUT_CLASS} font-mono uppercase`}
+            value={abbrev}
+            maxLength={6}
+            autoComplete="off"
+            spellCheck={false}
+            aria-label={`Sigla ${tipo.label}`}
+            onChange={(e) => setAbbrev(e.target.value.slice(0, 6))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === "Escape") e.stopPropagation();
+              handleInputKeyDown(e);
+            }}
+          />
+          <input
+            ref={labelInputRef}
+            className={ASSENZE_EDIT_INPUT_CLASS}
+            value={label}
+            autoComplete="off"
+            spellCheck={false}
+            aria-label={`Nome ${tipo.label}`}
+            onChange={(e) => setLabel(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === "Escape") e.stopPropagation();
+              handleInputKeyDown(e);
+            }}
+          />
+        </>
+      ) : (
+        <>
+          <button
+            type="button"
+            className={`${ASSENZE_VIEW_CELL_CLASS} font-mono text-xs uppercase text-[color:var(--cab-text)]`}
+            onClick={() => startEdit("abbrev")}
+            aria-label={`Modifica sigla ${tipo.abbrev}`}
+          >
+            <span className="min-w-0 truncate">{tipo.abbrev}</span>
+          </button>
+          <button
+            type="button"
+            className={`${ASSENZE_VIEW_CELL_CLASS} text-[color:var(--cab-text)]`}
+            onClick={() => startEdit("label")}
+            aria-label={`Modifica nome ${tipo.label}`}
+          >
+            <span className="min-w-0 truncate">{tipo.label}</span>
+          </button>
+        </>
+      )}
+      {isAltroTipoAssenzaLabel(tipo.label) ? (
+        <AssenzaAltroMotivoHint />
+      ) : (
+        <span className={ASSENZE_CUSTOM_TEXT_CELL_PLACEHOLDER} aria-hidden />
+      )}
+      <SettingsRowActionButtons
+        className="w-full sm:w-auto sm:justify-self-end"
+        mode={editing ? "edit" : "view"}
+        itemLabel={tipo.label}
+        onEdit={() => startEdit("label")}
+        onConfirm={commitEdit}
+        onCancelEdit={cancelEdit}
+        onRemove={onRemove}
+      />
+    </li>
+  );
+}
+
+export function SettingsDipendentiAssenzeSection({
+  layout = "flat",
+  tipi,
+  onChange,
+}: {
+  layout?: SettingsSectionLayout;
+  tipi: TipoAssenzaConfig[];
+  onChange: (next: TipoAssenzaConfig[]) => void;
+}) {
+  const [draftOpen, setDraftOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<TipoAssenzaConfig | null>(null);
+  const { gate, similarDialog } = useSettingsSimilarGate();
+
+  const filtered = useMemo(() => filterTipiAssenza(tipi, searchQuery), [tipi, searchQuery]);
+  const showList = draftOpen || filtered.length > 0;
+  const existingLabels = useMemo(() => tipi.map((t) => t.label), [tipi]);
+
+  const tryAdd = useCallback(
+    (label: string, abbrev: string, requiresCustomText: boolean) => {
+      gate(existingLabels, label, undefined, () => {
+        onChange([
+          ...tipi,
+          {
+            id: createTipoAssenzaId(),
+            label: label.trim(),
+            abbrev: abbrev.trim().slice(0, 6).toUpperCase(),
+            requiresCustomText,
+            sortOrder: tipi.length,
+          },
+        ]);
+        setDraftOpen(false);
+      });
+    },
+    [existingLabels, gate, onChange, tipi],
+  );
+
+  const tryUpdate = useCallback(
+    (id: string, patch: Partial<Pick<TipoAssenzaConfig, "label" | "abbrev" | "requiresCustomText">>) => {
+      const current = tipi.find((t) => t.id === id);
+      if (!current) return;
+      if (patch.label && patch.label !== current.label) {
+        gate(existingLabels, patch.label, current.label, () => {
+          onChange(tipi.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+        });
+        return;
+      }
+      onChange(tipi.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    },
+    [existingLabels, gate, onChange, tipi],
+  );
+
+  return (
+    <SettingsListSection layout={layout} title="Tipi assenza dipendenti">
+      <SettingsListToolbar
+        onStartAdd={() => setDraftOpen(true)}
+        addDisabled={draftOpen}
+        searchValue={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchAriaLabel="Filtra tipi assenza"
+        searchPlaceholder="Filtra per sigla o nome…"
+      />
+      <SettingsListBody
+        layout={layout}
+        showList={showList}
+        empty={
+          <SettingsEmptyState inline={layout === "flat"}>
+            Nessun tipo assenza. Usa Aggiungi per inserire il primo.
+          </SettingsEmptyState>
+        }
+      >
+        <div className={`${ASSENZE_SETTINGS_TABLE_CLASS} divide-y divide-[color:var(--cab-border)]`}>
+          {draftOpen ? (
+            <ul className="contents">
+              <AssenzaDraftRow
+                key={ASSENZE_DRAFT_ROW_KEY}
+                onConfirm={tryAdd}
+                onCancel={() => setDraftOpen(false)}
+              />
+            </ul>
+          ) : null}
+          <ul className="contents">
+            {filtered.map((t) => (
+              <AssenzaSettingsRow
+                key={t.id}
+                tipo={t}
+                onUpdate={tryUpdate}
+                onRemove={() => setPendingDelete(t)}
+              />
+            ))}
+          </ul>
         </div>
-
-        <ul className="divide-y divide-[color:var(--cab-border)]">
-          {sorted.map((t) => (
-            <li key={t.id} className={`${ROW_GRID} transition-colors hover:bg-[var(--cab-hover)]`}>
-              <input
-                className={`${SETTINGS_DISCOUNT_INPUT} w-full font-mono uppercase`}
-                value={t.abbrev}
-                maxLength={6}
-                inputMode="text"
-                autoCapitalize="characters"
-                aria-label={`Sigla ${t.label}`}
-                onChange={(e) =>
-                  onChange(
-                    tipi.map((x) => (x.id === t.id ? { ...x, abbrev: e.target.value.slice(0, 6) } : x)),
-                  )
-                }
-              />
-              <input
-                className={SETTINGS_LIST_INPUT}
-                value={t.label}
-                aria-label={`Nome ${t.label}`}
-                onChange={(e) =>
-                  onChange(tipi.map((x) => (x.id === t.id ? { ...x, label: e.target.value } : x)))
-                }
-              />
-              <label className="flex min-w-0 cursor-pointer items-center justify-center">
-                <input
-                  type="checkbox"
-                  className="h-3.5 w-3.5 rounded border-[color:var(--cab-border)]"
-                  checked={Boolean(t.requiresCustomText)}
-                  title="Richiede motivo personalizzato (tipo Altro)"
-                  aria-label={`${t.label}: richiede testo libero`}
-                  onChange={(e) =>
-                    onChange(
-                      tipi.map((x) =>
-                        x.id === t.id ? { ...x, requiresCustomText: e.target.checked } : x,
-                      ),
-                    )
-                  }
-                />
-              </label>
-              <button
-                type="button"
-                className={SETTINGS_ROW_BTN_DANGER}
-                aria-label={`Elimina ${t.label}`}
-                onClick={() => onChange(tipi.filter((x) => x.id !== t.id))}
-              >
-                Elimina
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <SettingsAddRow
-        value={nuovo}
-        onChange={setNuovo}
-        placeholder="Nuovo tipo, es. Formazione"
-        inputAriaLabel="Nome nuovo tipo assenza"
-        onAdd={handleAdd}
+      </SettingsListBody>
+      {similarDialog}
+      <SettingsEliminaConfirmDialog
+        open={pendingDelete != null}
+        itemLabel={pendingDelete?.label}
+        detail="I fogli presenze già salvati mantengono la sigla registrata al momento dell'inserimento."
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() =>
+          commitSettingsListDelete(
+            pendingDelete?.id,
+            (id) => onChange(tipi.filter((t) => t.id !== id)),
+            () => setPendingDelete(null),
+          )
+        }
       />
-    </div>
+    </SettingsListSection>
   );
 }

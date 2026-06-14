@@ -2,39 +2,48 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
 import { useBranding } from "@/context/branding-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { Drawer } from "@/components/design-system";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
+import { GestionaleDirtySaveActions, GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { LavorazioniModalHeader, LavorazioniModalShell, SettingsLavorazioniModal } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { ConfigurazioneLogListEmbedded } from "@/components/configurazione/configurazione-log-section";
 import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
 import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
 import { SettingsBrandingSection } from "@/components/dashboard/settings-branding-section";
 import { SettingsClientiCommercialiList } from "@/components/dashboard/settings/settings-clienti-list";
+import { SettingsMagazzinoFornitoriList } from "@/components/dashboard/settings/settings-magazzino-fornitori-list";
 import { SettingsMagazzinoMarcheList } from "@/components/dashboard/settings/settings-magazzino-marche-list";
-import { SettingsMainPanel, SettingsMobileSectionPicker, SettingsNavMenuList } from "@/components/dashboard/settings/settings-nav-shell";
+import { SettingsMainPanel, SettingsMobileSectionPicker, SettingsNavSidebar } from "@/components/dashboard/settings/settings-nav-shell";
+import { SettingsOverviewSection } from "@/components/dashboard/settings/settings-overview-section";
 import { SettingsUnifiedStringList } from "@/components/dashboard/settings/settings-unified-string-list";
 import {
+  SETTINGS_NAV_OVERVIEW_ID,
   SETTINGS_NAV_STRUCTURE,
-  SETTINGS_SECTION_DESCRIPTIONS,
+  SETTINGS_SECTION_QUERY_KEY,
+  impostazioniPathForSection,
+  parseSettingsSectionFromSearchParam,
+  settingsDefaultSectionId,
   settingsNavGroupForSection,
   type SistemaSectionId,
 } from "@/components/dashboard/settings/settings-workspace-types";
 import { SettingsDipendentiAssenzeSection } from "@/components/dashboard/settings-dipendenti-assenze-section";
+import { SettingsEconomiciSection } from "@/components/dashboard/settings/settings-economici-section";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import { SettingsRinominaPropagaDialog } from "@/components/dashboard/settings-rinomina-propaga-dialog";
+import { useSettingsSidebarScrollportHeight } from "@/components/dashboard/settings/use-settings-sidebar-scrollport-height";
 import {
   SettingsSectionHeader,
   SETTINGS_MAIN_PANEL,
-  SETTINGS_PAGE_GRID,
-  SETTINGS_PAGE_SHELL,
-  SETTINGS_SECTION_CARD,
+  SETTINGS_PAGE_GRID_MODAL,
+  SETTINGS_PAGE_HEADER_WRAP,
+  SETTINGS_PAGE_MASTER_ROW,
+  SETTINGS_PAGE_SHELL_PAGE,
+  SETTINGS_PAGE_STACK,
   SETTINGS_SIDEBAR_SHELL,
 } from "@/components/dashboard/settings-list-ui";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
@@ -80,7 +89,9 @@ import type { SettingsRenameEntry } from "@/lib/settings/settings-rename-types";
 import { dispatchAddettoDisplayRename } from "@/lib/sistema/cab-events";
 import { suppressSettingsRemoteNotify } from "@/lib/sistema/settings-remote-notify-guard";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
+import { useBeforeUnloadWhenDirty } from "@/lib/forms/use-before-unload-when-dirty";
 import { cancelRouteTransition } from "@/src/lib/navigation/route-transition";
+import { dsGestionaleScrollEndPad } from "@/lib/ui/scroll-system";
 import { buildBulkRowsFromResolved, resolveCabAppSettingsFromRows } from "@/src/lib/app-settings/resolve-from-rows";
 import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
 import { invalidateAfterSettingsRenamePropagation } from "@/src/lib/react-query/invalidate-related";
@@ -99,14 +110,6 @@ import {
 } from "@/src/shared/selectors";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
-import {
-  dsBtnPrimary,
-  dsFocus,
-  dsInput,
-  dsPageToolbarBtn,
-  dsPageToolbarMetaChipAccent,
-  dsStackPage,
-} from "@/lib/ui/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 
 export function SistemaImpostazioniWorkspace({
@@ -123,6 +126,8 @@ export function SistemaImpostazioniWorkspace({
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { setOpen: setSettingsModalOpen } = useSettingsModalOpen();
   const { syncBranding } = useBranding();
@@ -130,6 +135,7 @@ export function SistemaImpostazioniWorkspace({
   const resolvedSettings = settingsPayload.data?.resolved;
   const settingsRows = settingsPayload.data?.rows ?? [];
   const pageMode = surface === "page";
+  const listLayout = pageMode ? "flat" : "card";
   const bulkSave = useSettingsBulkMutation();
   const { undoable: undoableConfigSave, sessionId: undoSessionId } = useUndoableConfigurazioneSave({
     enabled: open && surface === "page",
@@ -147,16 +153,46 @@ export function SistemaImpostazioniWorkspace({
     setSavedRevision((n) => n + 1);
   }, []);
 
-  const [section, setSection] = useState<SistemaSectionId>(() => "brand-personalizzazione");
-  const [navQ, setNavQ] = useState("");
+  const [modalSection, setModalSection] = useState<SistemaSectionId>(() => settingsDefaultSectionId(false));
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [desktopNavOpen, setDesktopNavOpen] = useState(true);
   const [configLogOpen, setConfigLogOpen] = useState(false);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+  const settingsSidebarRef = useRef<HTMLElement>(null);
+  useSettingsSidebarScrollportHeight(settingsSidebarRef, pageMode && open);
 
   type PendingSettingsExit = { kind: "close" } | { kind: "navigate"; href: string };
   const pendingExitRef = useRef<PendingSettingsExit | null>(null);
   const exitAfterSaveRef = useRef(false);
+
+  const urlSection = useMemo(
+    () =>
+      parseSettingsSectionFromSearchParam(searchParams.get(SETTINGS_SECTION_QUERY_KEY)) ??
+      SETTINGS_NAV_OVERVIEW_ID,
+    [searchParams],
+  );
+
+  const section = pageMode ? urlSection : modalSection;
+
+  const currentImpostazioniPath = useMemo(() => {
+    const q = searchParams.toString();
+    return q ? `${pathname}?${q}` : pathname;
+  }, [pathname, searchParams]);
+
+  const pickSection = useCallback(
+    (id: SistemaSectionId) => {
+      setMobileNavOpen(false);
+      if (pageMode) {
+        const target = impostazioniPathForSection(id);
+        if (target !== currentImpostazioniPath) {
+          router.replace(target, { scroll: false });
+        }
+        return;
+      }
+      setModalSection(id);
+    },
+    [currentImpostazioniPath, pageMode, router],
+  );
 
   const attiveStatoIds = useMemo(() => {
     const d = statiInUsoQ.data;
@@ -196,15 +232,6 @@ export function SistemaImpostazioniWorkspace({
     produttori: [],
   }));
   const [magHydrated, setMagHydrated] = useState(false);
-  const [nuovaMarca, setNuovaMarca] = useState("");
-  const [nuovaCategoria, setNuovaCategoria] = useState("");
-  const [nuovoFornitore, setNuovoFornitore] = useState("");
-  const [nuovoProduttore, setNuovoProduttore] = useState("");
-  const [nuovoCliente, setNuovoCliente] = useState("");
-  const [nuovoUtilizzatore, setNuovoUtilizzatore] = useState("");
-  const [nuovoCantiere, setNuovoCantiere] = useState("");
-  const [nuovoTipoAttrezzatura, setNuovoTipoAttrezzatura] = useState("");
-  const [nuovoTipoTelaio, setNuovoTipoTelaio] = useState("");
 
   const [liste, setListe] = useState<MezziListePrefs>(() => createMezziListePrefsDefault());
   const [mezziHydrated, setMezziHydrated] = useState(false);
@@ -264,10 +291,11 @@ export function SistemaImpostazioniWorkspace({
       hydratedSessionRef.current = false;
       return;
     }
-    setSection("brand-personalizzazione");
-    setNavQ("");
-    setMobileNavOpen(false);
-  }, [open]);
+    if (!pageMode) {
+      setModalSection(settingsDefaultSectionId(false));
+      setMobileNavOpen(false);
+    }
+  }, [open, pageMode]);
 
   useEffect(() => {
     if (pageMode) {
@@ -619,18 +647,13 @@ export function SistemaImpostazioniWorkspace({
     })();
   }, [applySnapshot, commitSavedBaseline, confirm, gestToast, isDirty]);
 
-  useEffect(() => {
-    if (!isDirty) return;
-    function onBeforeUnload(e: BeforeUnloadEvent) {
-      e.preventDefault();
-      e.returnValue = "Hai modifiche non salvate. Vuoi davvero uscire?";
-    }
-    window.addEventListener("beforeunload", onBeforeUnload);
-    return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, [isDirty]);
+  useBeforeUnloadWhenDirty(
+    open && isDirty,
+    "Hai modifiche non salvate alla configurazione.",
+  );
 
   useEffect(() => {
-    if (!isDirty) return;
+    if (!open || !isDirty) return;
     function onDocumentClick(e: MouseEvent) {
       const target = e.target;
       if (!(target instanceof Element)) return;
@@ -647,19 +670,13 @@ export function SistemaImpostazioniWorkspace({
     }
     document.addEventListener("click", onDocumentClick, true);
     return () => document.removeEventListener("click", onDocumentClick, true);
-  }, [isDirty, openUnsavedExitDialog]);
+  }, [open, isDirty, openUnsavedExitDialog]);
 
   useEffect(() => () => cancelRouteTransition(), []);
 
   const patchMag = useCallback((fn: (prev: MagazzinoMasterPrefs) => MagazzinoMasterPrefs) => {
     setMag(fn);
   }, []);
-
-  const filteredNav = useMemo(() => {
-    const q = navQ.trim().toLowerCase();
-    if (!q) return SETTINGS_NAV_STRUCTURE;
-    return SETTINGS_NAV_STRUCTURE.filter((e) => (e.kind === "group" ? e.label.toLowerCase().includes(q) : `${e.label}`.toLowerCase().includes(q)));
-  }, [navQ]);
 
   const lavEmbeddedFocus =
     section === "op-addetti" ? "addetti" : section === "op-stati" ? "stati" : section === "op-priorita" ? "priorita" : null;
@@ -670,24 +687,24 @@ export function SistemaImpostazioniWorkspace({
   const activeGroupLabel = settingsNavGroupForSection(section);
   const sectionTitleId = "settings-active-section-title";
 
-  const magAdd = (key: keyof MagazzinoMasterPrefs, raw: string, clear: () => void): boolean => {
+  const magAdd = (key: keyof MagazzinoMasterPrefs, raw: string, clear?: () => void): boolean => {
     const next = addUniqueToStringList(mag[key] as string[], raw);
     if (!next) return false;
     patchMag((prev) => ({ ...prev, [key]: next }));
-    clear();
+    clear?.();
     return true;
   };
 
   const listeAdd = (
     key: "clienti" | "utilizzatori" | "cantieri" | "tipiAttrezzatura" | "tipiTelaio",
     raw: string,
-    clear: () => void,
+    clear?: () => void,
   ): boolean => {
     const cur = (liste[key] as string[] | undefined) ?? [];
     const next = addUniqueToStringList(cur, raw);
     if (!next) return false;
     setListe((prev) => ({ ...prev, [key]: next }));
-    clear();
+    clear?.();
     return true;
   };
 
@@ -730,12 +747,42 @@ export function SistemaImpostazioniWorkspace({
     />
   ) : null;
 
+  const settingsPageHeader = pageMode ? (
+    <div className={SETTINGS_PAGE_HEADER_WRAP}>
+      <PageHeader
+        title="Configurazione"
+        titleAddon={<OperatorGlobalSettingsPilotBadge />}
+        actions={
+          <GestionalePageToolbarActions
+            canUndo={Boolean(undoableConfigSave) || isDirty}
+            undoPending={bulkSave.isPending}
+            onUndo={() => {
+              if (undoableConfigSave) void undoUltimaConfigurazione();
+              else if (isDirty) void handleCancelChanges();
+            }}
+            onOpenLog={() => setConfigLogOpen(true)}
+            logTitle="Storico modifiche configurazione"
+            overflowActions={
+              <GestionaleDirtySaveActions
+                isDirty={isDirty}
+                saving={bulkSave.isPending}
+                onCancel={handleCancelChanges}
+                onSave={handleSaveNow}
+                saveTitle="Salva tutte le modifiche alla configurazione globale"
+              />
+            }
+          />
+        }
+      />
+    </div>
+  ) : null;
+
   const content = (
     <>
       <div
         className={
           pageMode
-            ? SETTINGS_PAGE_SHELL
+            ? SETTINGS_PAGE_SHELL_PAGE
             : "relative flex min-h-0 w-full min-w-0 flex-col max-md:max-h-[min(100dvh,calc(var(--cab-vv-height,100dvh)))] max-md:min-h-0 max-md:flex-1 max-md:overflow-hidden md:h-[min(88dvh,900px)] md:overflow-hidden"
         }
       >
@@ -748,53 +795,43 @@ export function SistemaImpostazioniWorkspace({
                 <h3 className="text-sm font-semibold text-[color:var(--cab-text)]">Sezioni</h3>
                 <CloseButton onClick={() => setMobileNavOpen(false)} />
               </header>
-              <div className="shrink-0 border-b border-[color:var(--cab-border)] p-2">
-                <GestionaleSearchField
-                  value={navQ}
-                  onChange={(e) => setNavQ(e.target.value)}
-                  placeholder="Cerca…"
-                  autoComplete="off"
-                  aria-label="Cerca nelle sezioni configurazione"
+              <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                <SettingsNavSidebar
+                  section={section}
+                  onPickSection={pickSection}
+                  variant="page"
                 />
               </div>
-              <SettingsNavMenuList
-                filteredNav={filteredNav}
-                section={section}
-                navClassName="min-h-0 flex-1 max-h-none"
-                onPickSection={(id) => {
-                  setSection(id);
-                  setMobileNavOpen(false);
-                }}
-              />
             </aside>
           </div>
         ) : null}
 
-        <div className={pageMode ? SETTINGS_PAGE_GRID : "flex min-h-0 min-w-0 flex-1 overflow-hidden"}>
+        {pageMode ? settingsPageHeader : null}
+        <div className={pageMode ? SETTINGS_PAGE_MASTER_ROW : SETTINGS_PAGE_GRID_MODAL}>
+          {pageMode ? (
+            <aside
+              ref={settingsSidebarRef}
+              className={`${SETTINGS_SIDEBAR_SHELL} ${desktopNavOpen ? "md:flex" : "md:hidden"}`}
+            >
+              <SettingsNavSidebar
+                section={section}
+                onPickSection={pickSection}
+                variant="page"
+              />
+            </aside>
+          ) : (
           <aside
             className={
-              pageMode
-                ? `${SETTINGS_SIDEBAR_SHELL} ${desktopNavOpen ? "md:flex" : "md:hidden"}`
-                : `${desktopNavOpen ? "md:flex" : "md:hidden"} hidden w-[13.75rem] shrink-0 flex-col border-[color:var(--cab-border)] bg-[var(--cab-card)] border-r`
+              `${desktopNavOpen ? "md:flex" : "md:hidden"} hidden w-[15rem] shrink-0 flex-col border-[color:var(--cab-border)] bg-[var(--cab-card)] border-r lg:w-[16rem]`
             }
           >
-            <div className="shrink-0 border-b border-[color:var(--cab-border)] p-2">
-              <GestionaleSearchField
-                value={navQ}
-                onChange={(e) => setNavQ(e.target.value)}
-                placeholder="Cerca…"
-                autoComplete="off"
-                aria-label="Cerca nelle sezioni configurazione"
-              />
-            </div>
-            <SettingsNavMenuList
-              filteredNav={filteredNav}
+            <SettingsNavSidebar
               section={section}
-              onPickSection={setSection}
-              scrollable={!pageMode}
-              navClassName={pageMode ? undefined : "min-h-0 flex-1"}
+              onPickSection={pickSection}
+              variant="default"
             />
           </aside>
+          )}
 
           <SettingsMainPanel
             pageMode={pageMode}
@@ -807,10 +844,9 @@ export function SistemaImpostazioniWorkspace({
           >
             {pageMode ? (
               <SettingsSectionHeader
-                groupLabel={activeGroupLabel}
+                groupLabel={section === SETTINGS_NAV_OVERVIEW_ID ? undefined : activeGroupLabel}
                 title={activeSectionLabel}
                 titleId={sectionTitleId}
-                description={SETTINGS_SECTION_DESCRIPTIONS[section]}
               />
             ) : null}
 
@@ -820,11 +856,7 @@ export function SistemaImpostazioniWorkspace({
                 embeddedFocus={lavEmbeddedFocus}
                 stati={stati}
                 onAddStatoFromLabel={handleAddStatoFromLabel}
-                prioritaDb={prioritaDb}
                 prioritaColors={prioritaColors}
-                onChangePrioritaDb={(next) => {
-                  setPrioritaDb(next);
-                }}
                 onChangePrioritaColor={(p, hex) => {
                   const nh = normalizeHex(hex);
                   if (!nh) return;
@@ -834,19 +866,8 @@ export function SistemaImpostazioniWorkspace({
                 onChangeStatoColor={(id, hex) => {
                   const nh = normalizeHex(hex);
                   if (!nh) return;
-                  const nome = stati.find((s) => s.id === id)?.label ?? id;
                   setStati((prev) => prev.map((s) => (s.id === id ? { ...s, color: nh } : s)));
                 }}
-                onChangeStatoClosed={(id, closed) =>
-                  setStati((prev) =>
-                    prev.map((s) => {
-                      if (s.id !== id) return s;
-                      if (closed) return { ...s, closed: true };
-                      const { closed: _omit, ...rest } = s;
-                      return rest;
-                    }),
-                  )
-                }
                 onReorderStato={(from, to) => setStati((prev) => reorderStatiList(prev, from, to))}
                 onRemoveStato={(id) => {
                   if (id === STATO_LAVORAZIONE_COMPLETATA_DB) {
@@ -940,18 +961,17 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {section === "op-dipendenti-assenze" ? (
-              <div className="w-full min-w-0 max-w-2xl">
-                <SettingsDipendentiAssenzeSection tipi={tipiAssenza} onChange={setTipiAssenza} />
+              <div className="w-full">
+                <SettingsDipendentiAssenzeSection layout={listLayout} tipi={tipiAssenza} onChange={setTipiAssenza} />
               </div>
             ) : null}
 
             {section === "mag-marche" ? (
               <div className="w-full">
                 <SettingsMagazzinoMarcheList
+                  layout={listLayout}
                   mag={mag}
                   setMag={setMag}
-                  nuovo={nuovaMarca}
-                  setNuovo={setNuovaMarca}
                   onRename={(from, to) => queueRename({ kind: "mag_marca", from, to })}
                 />
               </div>
@@ -959,22 +979,11 @@ export function SistemaImpostazioniWorkspace({
 
             {section === "mag-fornitori" ? (
               <div className="w-full">
-                <SettingsUnifiedStringList
-                  title="Fornitori alternativi"
-                  values={mag.fornitori}
-                  nuovo={nuovoFornitore}
-                  setNuovo={setNuovoFornitore}
-                  placeholder="Nuovo fornitore"
-                  onAdd={(t) => {
-                    magAdd("fornitori", t, () => setNuovoFornitore(""));
-                  }}
-                  onRemove={(m) => {
-                    patchMag((prev) => ({ ...prev, fornitori: prev.fornitori.filter((x) => x !== m) }));
-                  }}
-                  onRename={(from, to) => {
-                    patchMag((prev) => ({ ...prev, fornitori: renameInStringList(prev.fornitori, from, to) }));
-                    queueRename({ kind: "mag_fornitore", from, to });
-                  }}
+                <SettingsMagazzinoFornitoriList
+                  layout={listLayout}
+                  mag={mag}
+                  setMag={setMag}
+                  onRename={(from, to) => queueRename({ kind: "mag_fornitore", from, to })}
                 />
               </div>
             ) : null}
@@ -982,13 +991,12 @@ export function SistemaImpostazioniWorkspace({
             {section === "mag-produttori" ? (
               <div className="w-full">
                 <SettingsUnifiedStringList
+                  layout={listLayout}
                   title="Produttori"
                   values={mag.produttori ?? []}
-                  nuovo={nuovoProduttore}
-                  setNuovo={setNuovoProduttore}
                   placeholder="Nuovo produttore"
                   onAdd={(t) => {
-                    magAdd("produttori", t, () => setNuovoProduttore(""));
+                    magAdd("produttori", t);
                   }}
                   onRemove={(m) => {
                     patchMag((prev) => ({
@@ -1010,13 +1018,12 @@ export function SistemaImpostazioniWorkspace({
             {section === "mag-categorie" ? (
               <div className="w-full">
                 <SettingsUnifiedStringList
+                  layout={listLayout}
                   title="Categorie magazzino"
                   values={mag.categorie}
-                  nuovo={nuovaCategoria}
-                  setNuovo={setNuovaCategoria}
                   placeholder="Nuova categoria"
                   onAdd={(t) => {
-                    magAdd("categorie", t, () => setNuovaCategoria(""));
+                    magAdd("categorie", t);
                   }}
                   onRemove={(m) => {
                     patchMag((prev) => ({ ...prev, categorie: prev.categorie.filter((x) => x !== m) }));
@@ -1032,13 +1039,12 @@ export function SistemaImpostazioniWorkspace({
             {section === "att-tipo" ? (
               <div className="w-full">
                 <SettingsUnifiedStringList
+                  layout={listLayout}
                   title="Tipo attrezzatura"
                   values={liste.tipiAttrezzatura}
-                  nuovo={nuovoTipoAttrezzatura}
-                  setNuovo={setNuovoTipoAttrezzatura}
                   placeholder="Nuovo tipo attrezzatura"
                   onAdd={(t) => {
-                    listeAdd("tipiAttrezzatura", t, () => setNuovoTipoAttrezzatura(""));
+                    listeAdd("tipiAttrezzatura", t);
                   }}
                   onRemove={(m) => {
                     setListe((prev) => ({ ...prev, tipiAttrezzatura: prev.tipiAttrezzatura.filter((x) => x !== m) }));
@@ -1083,13 +1089,12 @@ export function SistemaImpostazioniWorkspace({
             {section === "tel-tipo" ? (
               <div className="w-full">
                 <SettingsUnifiedStringList
+                  layout={listLayout}
                   title="Tipo telaio"
                   values={liste.tipiTelaio ?? []}
-                  nuovo={nuovoTipoTelaio}
-                  setNuovo={setNuovoTipoTelaio}
                   placeholder="Nuovo tipo telaio"
                   onAdd={(t) => {
-                    listeAdd("tipiTelaio", t, () => setNuovoTipoTelaio(""));
+                    listeAdd("tipiTelaio", t);
                   }}
                   onRemove={(m) => {
                     setListe((prev) => ({
@@ -1137,10 +1142,9 @@ export function SistemaImpostazioniWorkspace({
             {section === "cli-cliente" ? (
               <div className="w-full">
                 <SettingsClientiCommercialiList
+                  layout={listLayout}
                   liste={liste}
                   setListe={setListe}
-                  nuovo={nuovoCliente}
-                  setNuovo={setNuovoCliente}
                   onAdd={(t) => {
                     setListe((prev) => registerClienteInListe(prev, t));
                   }}
@@ -1158,13 +1162,12 @@ export function SistemaImpostazioniWorkspace({
             {section === "cli-utilizzatore" ? (
               <div className="w-full">
                 <SettingsUnifiedStringList
+                  layout={listLayout}
                   title="Utilizzatori"
                   values={liste.utilizzatori}
-                  nuovo={nuovoUtilizzatore}
-                  setNuovo={setNuovoUtilizzatore}
                   placeholder="Nuovo utilizzatore"
                   onAdd={(t) => {
-                    listeAdd("utilizzatori", t, () => setNuovoUtilizzatore(""));
+                    listeAdd("utilizzatori", t);
                   }}
                   onRemove={(m) => {
                     setListe((prev) => ({ ...prev, utilizzatori: prev.utilizzatori.filter((x) => x !== m) }));
@@ -1183,13 +1186,12 @@ export function SistemaImpostazioniWorkspace({
             {section === "cli-cantiere" ? (
               <div className="w-full">
                 <SettingsUnifiedStringList
+                  layout={listLayout}
                   title="Cantieri"
                   values={liste.cantieri}
-                  nuovo={nuovoCantiere}
-                  setNuovo={setNuovoCantiere}
                   placeholder="Nuovo cantiere"
                   onAdd={(t) => {
-                    listeAdd("cantieri", t, () => setNuovoCantiere(""));
+                    listeAdd("cantieri", t);
                   }}
                   onRemove={(m) => {
                     setListe((prev) => ({ ...prev, cantieri: prev.cantieri.filter((x) => x !== m) }));
@@ -1205,8 +1207,13 @@ export function SistemaImpostazioniWorkspace({
               </div>
             ) : null}
 
+            {section === SETTINGS_NAV_OVERVIEW_ID ? (
+              <SettingsOverviewSection onPickSection={pickSection} />
+            ) : null}
+
             {section === "brand-personalizzazione" ? (
               <SettingsBrandingSection
+                layout={listLayout}
                 branding={branding}
                 onBrandingChange={setBranding}
                 logoDraft={logoDraft}
@@ -1223,33 +1230,14 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {section === "sys-economici" ? (
-              <div className="w-full">
-                <div className={SETTINGS_SECTION_CARD}>
-                  <SettingsSectionHeader
-                    level="card"
-                    title="Parametri economici"
-                    description="Costo manodopera di default per nuovi preventivi e report."
-                  />
-                  <label htmlFor="config-costo-orario-default" className="mt-4 block text-xs font-medium text-[color:var(--cab-text-muted)]">
-                    Costo manodopera default (€/h)
-                    <input
-                      id="config-costo-orario-default"
-                      type="number"
-                      inputMode="decimal"
-                      min={1}
-                      step={0.5}
-                      value={eco.costoOrarioDefault}
-                      onChange={(e) => {
-                        const v = Number(e.target.value);
-                        if (!Number.isFinite(v) || v <= 0) return;
-                        setEco({ costoOrarioDefault: Math.round(v * 100) / 100 });
-                      }}
-                      className={`${dsInput} mt-1.5 w-full max-w-xs tabular-nums`}
-                    />
-                  </label>
-                </div>
-              </div>
+              <SettingsEconomiciSection
+                layout={listLayout}
+                costoOrarioDefault={eco.costoOrarioDefault}
+                onChange={(v) => setEco({ costoOrarioDefault: v })}
+              />
             ) : null}
+
+            {pageMode ? <div aria-hidden className={dsGestionaleScrollEndPad} /> : null}
           </SettingsMainPanel>
         </div>
       </div>
@@ -1288,68 +1276,20 @@ export function SistemaImpostazioniWorkspace({
   if (pageMode) {
     return (
       <div className={layoutPageRoot}>
-        <PageHeader
-          title="Impostazioni"
-          description="Configurazione globale del gestionale"
-          belowTitle={
-            <>
-              <OperatorGlobalSettingsPilotBadge />
-              <SettingsMobileSectionPicker
-                open={mobileNavOpen}
-                activeLabel={activeSectionLabel}
-                activeGroupLabel={activeGroupLabel}
-                onToggle={() => setMobileNavOpen((v) => !v)}
-                onClose={() => setMobileNavOpen(false)}
-                filteredNav={filteredNav}
-                section={section}
-                onPickSection={setSection}
-                navQ={navQ}
-                setNavQ={setNavQ}
-              />
-            </>
-          }
-          actions={
-            <GestionalePageToolbarActions
-              canUndo={Boolean(undoableConfigSave) || isDirty}
-              undoPending={bulkSave.isPending}
-              onUndo={() => {
-                if (undoableConfigSave) void undoUltimaConfigurazione();
-                else if (isDirty) void handleCancelChanges();
-              }}
-              onOpenLog={() => setConfigLogOpen(true)}
-              logTitle="Storico modifiche configurazione"
-              overflowActions={
-                <>
-                  {isDirty ? (
-                    <span className={`${dsPageToolbarMetaChipAccent} hidden sm:inline-flex`} role="status">
-                      Modifiche non salvate
-                    </span>
-                  ) : null}
-                  <button
-                    type="button"
-                    className={dsPageToolbarBtn}
-                    onClick={handleCancelChanges}
-                    disabled={!isDirty || bulkSave.isPending}
-                    title="Ripristina le modifiche non salvate"
-                  >
-                    Annulla modifiche
-                  </button>
-                  <button
-                    type="button"
-                    className={dsBtnPrimary}
-                    onClick={handleSaveNow}
-                    disabled={!isDirty || bulkSave.isPending}
-                    title="Salva tutte le modifiche alla configurazione globale"
-                    aria-busy={bulkSave.isPending}
-                  >
-                    {bulkSave.isPending ? "Salvataggio…" : isDirty ? "Salva modifiche" : "Salva"}
-                  </button>
-                </>
-              }
+        <div className={SETTINGS_PAGE_STACK}>
+          <div className="md:hidden">
+            <SettingsMobileSectionPicker
+              open={mobileNavOpen}
+              activeLabel={activeSectionLabel}
+              activeGroupLabel={activeGroupLabel}
+              onToggle={() => setMobileNavOpen((v) => !v)}
+              onClose={() => setMobileNavOpen(false)}
+              section={section}
+              onPickSection={pickSection}
             />
-          }
-        />
-        <div className={dsStackPage}>{content}</div>
+          </div>
+          {content}
+        </div>
         <Drawer
           open={configLogOpen}
           onClose={() => setConfigLogOpen(false)}

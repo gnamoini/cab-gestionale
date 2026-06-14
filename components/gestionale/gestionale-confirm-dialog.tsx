@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { CloseButton } from "@/components/design-system/close-button";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -34,6 +34,7 @@ export function GestionaleConfirmDialog({
   destructive = false,
   pending = false,
   confirmDisabled = false,
+  confirmTestId,
   layerClassName,
   footer,
   onCancel,
@@ -50,6 +51,8 @@ export function GestionaleConfirmDialog({
   destructive?: boolean;
   pending?: boolean;
   confirmDisabled?: boolean;
+  /** Solo smoke/e2e — es. `smoke-logout-confirm`. */
+  confirmTestId?: string;
   /** Es. `z-[120]` per dialoghi sopra modali gestionale. */
   layerClassName?: string;
   /** Footer custom (es. due azioni non standard); se impostato, ignora `onConfirm` default. */
@@ -63,14 +66,34 @@ export function GestionaleConfirmDialog({
     source: "GestionaleConfirmDialog",
   });
 
+  const handleConfirm = useCallback(() => {
+    if (pending || confirmDisabled) return;
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+    onConfirm?.();
+  }, [pending, confirmDisabled, onConfirm]);
+
   useEffect(() => {
     if (!open || pending) return;
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onCancel();
+      if (
+        destructive &&
+        onConfirm &&
+        e.ctrlKey &&
+        e.key === "Delete" &&
+        !e.altKey &&
+        !e.metaKey &&
+        !e.shiftKey
+      ) {
+        e.preventDefault();
+        handleConfirm();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, pending, onCancel]);
+  }, [open, pending, onCancel, onConfirm, destructive, handleConfirm]);
 
   if (!open || typeof document === "undefined") return null;
 
@@ -92,8 +115,9 @@ export function GestionaleConfirmDialog({
       <button
         type="button"
         className={`${confirmClass} min-h-[2.75rem] sm:min-h-0`}
-        onClick={onConfirm}
+        onClick={handleConfirm}
         disabled={pending || confirmDisabled}
+        {...(confirmTestId ? { "data-testid": confirmTestId } : {})}
       >
         {pending ? "Attendere…" : confirmLabel}
       </button>

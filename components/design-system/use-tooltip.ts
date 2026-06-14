@@ -35,6 +35,7 @@ export function useTooltip({
   delayMs = DEFAULT_SHOW_DELAY_MS,
   side = "top",
   showOnFocus = true,
+  dismissOnPointerDown = true,
   anchorRef,
   contentRef,
 }: {
@@ -44,6 +45,8 @@ export function useTooltip({
   side?: TooltipSide;
   /** Tooltip su focus tastiera (`:focus-visible`). Disabilitare per azioni che restano focalizzate al click. */
   showOnFocus?: boolean;
+  /** Default `true`. Impostare `false` su handle drag (mousedown avvia il drag, non un click). */
+  dismissOnPointerDown?: boolean;
   anchorRef: RefObject<HTMLElement | null>;
   contentRef: RefObject<HTMLElement | null>;
 }): {
@@ -179,7 +182,7 @@ export function useTooltip({
   useLayoutEffect(() => {
     if (!open) return;
     updateCoords();
-  }, [open, content, updateCoords]);
+  }, [open, visible, content, updateCoords]);
 
   useEffect(() => {
     if (!open) return;
@@ -242,9 +245,9 @@ export function useTooltip({
       if (e.pointerType === "mouse" || e.pointerType === "touch" || e.pointerType === "pen") {
         pointerActivatedRef.current = true;
       }
-      hideImmediate();
+      if (dismissOnPointerDown) hideImmediate();
     },
-    [hideImmediate],
+    [dismissOnPointerDown, hideImmediate],
   );
 
   const onPointerUp = useCallback(() => {

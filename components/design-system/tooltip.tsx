@@ -12,7 +12,7 @@ import {
   type TouchEvent,
 } from "react";
 import { createPortal } from "react-dom";
-import { dsTooltipContent, dsTooltipContentMultiline } from "@/lib/ui/design-system";
+import { dsTooltipContent, dsTooltipContentMultiline, dsZTooltip } from "@/lib/ui/design-system";
 import { tooltipFixedStyle, tooltipTransformOrigin, type TooltipSide } from "@/lib/ui/tooltip-portal";
 import { useTooltip } from "@/components/design-system/use-tooltip";
 
@@ -36,6 +36,8 @@ export type TooltipProps = {
   delayMs?: number;
   /** Default `true`. Impostare `false` su controlli che restano focalizzati dopo il click (es. toggle tema). */
   showOnFocus?: boolean;
+  /** Default `true`. Impostare `false` su handle drag (mousedown avvia il trascinamento). */
+  dismissOnPointerDown?: boolean;
   /** Supporta `\n` nel contenuto (es. tooltip celle timesheet). */
   multiline?: boolean;
 };
@@ -69,6 +71,7 @@ export function Tooltip({
   disabled = false,
   delayMs,
   showOnFocus = true,
+  dismissOnPointerDown = true,
   multiline = false,
 }: TooltipProps) {
   const anchorRef = useRef<HTMLElement | null>(null);
@@ -84,6 +87,7 @@ export function Tooltip({
     delayMs,
     side,
     showOnFocus,
+    dismissOnPointerDown,
     anchorRef,
     contentRef,
   });
@@ -127,10 +131,11 @@ export function Tooltip({
           <div
             ref={contentRef}
             role="tooltip"
-            className={`${multiline ? dsTooltipContentMultiline : dsTooltipContent} ${visible ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
+            className={`${multiline ? dsTooltipContentMultiline : dsTooltipContent} ${dsZTooltip} ${visible ? "scale-100 opacity-100" : "scale-95 opacity-0"}`}
             style={{
               ...tooltipFixedStyle(coords ?? { top: -9999, left: -9999, side }),
               transformOrigin: tooltipTransformOrigin(coords?.side ?? side),
+              backgroundColor: "var(--cab-card)",
             }}
           >
             {displayContent}

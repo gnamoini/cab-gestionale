@@ -19,7 +19,6 @@ import {
 } from "@/lib/schede/lavorazioni-schede-storage";
 import { primeLavorazioneSchedeRowsCache } from "@/lib/schede/schede-domain-query-cache";
 import {
-  fetchSchedeBundlesStoreAuthorized,
   fetchSchedeRowsByLavorazioneIdsAuthorized,
 } from "@/lib/schede/schede-bundles-fetch-authorized";
 import {
@@ -153,22 +152,23 @@ export async function fetchSchedeBundlesForLavorazioni(
   qc?: QueryClient,
 ): Promise<LavorazioneSchedeStore> {
   const unique = [...new Set(lavorazioneIds.map((id) => id.trim()).filter(Boolean))];
-  const [storeRes, rowsRes] = await Promise.all([
-    fetchSchedeBundlesStoreAuthorized(unique),
-    qc ? fetchSchedeRowsByLavorazioneIdsAuthorized(unique) : Promise.resolve(null),
-  ]);
-  if (!storeRes.success) return {};
-  const store = storeRes.data ?? {};
-  if (qc && rowsRes?.success) {
-    const byLav = new Map<string, SchedaLavorazioneRow[]>();
-    for (const row of rowsRes.data ?? []) {
-      const list = byLav.get(row.lavorazione_id) ?? [];
-      list.push(row);
-      byLav.set(row.lavorazione_id, list);
-    }
-    for (const id of unique) {
-      primeLavorazioneSchedeRowsCache(qc, id, byLav.get(id) ?? []);
-    }
+  if (unique.length === 0) return {};
+
+  const rowsRes = await fetchSchedeRowsByLavorazioneIdsAuthorized(unique);
+  if (!rowsRes.success) return {};
+
+  const byLav = new Map<string, SchedaLavorazioneRow[]>();
+  for (const row of rowsRes.data ?? []) {
+    const list = byLav.get(row.lavorazione_id) ?? [];
+    list.push(row);
+    byLav.set(row.lavorazione_id, list);
+  }
+
+  const store: LavorazioneSchedeStore = {};
+  for (const id of unique) {
+    const list = byLav.get(id) ?? [];
+    store[id] = schedaRowsToBundle(id, list);
+    if (qc) primeLavorazioneSchedeRowsCache(qc, id, list);
   }
   return store;
 }

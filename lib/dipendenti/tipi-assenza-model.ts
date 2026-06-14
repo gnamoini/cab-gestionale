@@ -16,6 +16,11 @@ const DEFAULT_TIPI: Omit<TipoAssenzaConfig, "id">[] = [
   { label: "Altro", abbrev: "A", requiresCustomText: true, sortOrder: 6 },
 ];
 
+/** Tipo «Altro» — unico con motivo scritto a mano configurabile in impostazioni. */
+export function isAltroTipoAssenzaLabel(label: string): boolean {
+  return label.trim().toLowerCase() === "altro";
+}
+
 export function createTipoAssenzaId(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
   return `tipo-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -42,7 +47,7 @@ export function parseTipiAssenzaFromPayload(raw: unknown): TipoAssenzaConfig[] {
       id,
       label,
       abbrev: abbrev.slice(0, 6),
-      requiresCustomText: Boolean(o.requiresCustomText),
+      requiresCustomText: isAltroTipoAssenzaLabel(label) ? true : Boolean(o.requiresCustomText),
       sortOrder: typeof o.sortOrder === "number" ? o.sortOrder : out.length,
     });
   }

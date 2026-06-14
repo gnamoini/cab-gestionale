@@ -74,7 +74,6 @@ export function MagazzinoScortaBadge({
         isGiacenza ? (low ? lowClass : giacenzaToneClass) : minimaToneClass
       } ${bumpClass}`}
       aria-label={ariaLabel}
-      title={isGiacenza ? undefined : `Soglia minima: ${value} pz`}
     >
       <span key={bump?.key ?? value} className={`magazzino-scorta-badge__value ${valueEnterClass}`}>
         {value}

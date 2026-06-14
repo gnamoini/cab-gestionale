@@ -180,14 +180,16 @@ html {
 @keyframes global-dropdown-portal-in {
   from {
     opacity: 0;
+    transform: translate3d(0, -4px, 0);
   }
   to {
     opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
 
 .global-dropdown-portal-enter {
-  animation: global-dropdown-portal-in 150ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: global-dropdown-portal-in 200ms cubic-bezier(0.4, 0, 0.2, 1) both;
 }
 
 .origin-bottom.global-dropdown-portal-enter {
@@ -197,14 +199,48 @@ html {
 @keyframes global-dropdown-portal-in-top {
   from {
     opacity: 0;
+    transform: translate3d(0, 4px, 0);
   }
   to {
     opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+/** Menu account — solo fade + slide leggero, niente scale (evita effetto «bounce»). */
+@keyframes account-menu-portal-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -3px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.account-menu-portal-enter {
+  animation: account-menu-portal-in 220ms cubic-bezier(0.33, 1, 0.68, 1) both;
+}
+
+.origin-bottom.account-menu-portal-enter {
+  animation-name: account-menu-portal-in-top;
+}
+
+@keyframes account-menu-portal-in-top {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 3px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .global-dropdown-portal-enter {
+  .global-dropdown-portal-enter,
+  .account-menu-portal-enter {
     animation: none;
   }
 }
@@ -588,6 +624,13 @@ body[data-cab-scroll-lock-count] {
 /* Sidebar collapse — label fade + icone che si centrano con la larghezza */
 .cab-app-shell {
   --cab-sidebar-motion: 250ms;
+  --cab-gestionale-top-bar: 3.5rem;
+  --cab-settings-sidebar-inset: var(--ds-space-md);
+  --cab-settings-sidebar-height: calc(
+    var(--cab-vv-height, 100dvh) - var(--cab-gestionale-top-bar) - env(safe-area-inset-top, 0px) -
+      max(1rem, env(safe-area-inset-bottom, 0px)) - var(--cab-settings-sidebar-inset) -
+      var(--cab-settings-sidebar-inset)
+  );
   --cab-scroll-end-pad: max(2.5rem, calc(env(safe-area-inset-bottom) + 1.25rem));
   --cab-modal-width-confirmation: 28rem;
   --cab-modal-width-info: 32rem;

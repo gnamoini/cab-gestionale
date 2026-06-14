@@ -17,12 +17,12 @@ import { useOperatorGlobalSettings } from "@/src/context/operator-global-setting
 import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
 import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
+import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
 import {
   dsGestionaleContentGutter,
   dsGestionaleContentMax,
   dsGestionaleContentRail,
   dsGestionaleContentShellRow,
-  dsPageToolbarBtn,
   dsZModalHigh,
 } from "@/lib/ui/design-system";
 import { layoutPageRoot, layoutResponsiveCoreScope } from "@/lib/ui/responsive-layout-core";
@@ -52,6 +52,17 @@ import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
 import { useSidebarCollapsed } from "@/lib/ui/use-sidebar-collapsed";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
+import {
+  accountMenuPortalEnterClass,
+  accountMenuPortalPanel,
+  accountMenuHeaderClass,
+  accountMenuItemClass,
+  accountMenuItemMutedIconClass,
+  accountMenuTriggerBaseClass,
+  accountMenuTriggerOpenClass,
+  accountMenuTriggerLabelClass,
+  accountMenuTriggerChevronWrapClass,
+} from "@/lib/ui/global-input";
 import {
   useDropdownOutsideDismiss,
   useGlobalDropdownPortal,
@@ -149,15 +160,42 @@ function NavLink({
   );
 }
 
+function AccountMenuChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`h-3.5 w-3.5 shrink-0 text-[color:var(--cab-text-muted)] transition-transform duration-200 ease-out ${
+        open ? "rotate-180" : ""
+      }`}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      aria-hidden
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6l4 4 4-4" />
+    </svg>
+  );
+}
+
+function AccountMenuLogoutIcon({ className = accountMenuItemMutedIconClass }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+    </svg>
+  );
+}
+
 function AccountMenu() {
   const { user, logout, status } = useAuth();
   const [open, setOpen] = useState(false);
+  const [menuEntered, setMenuEntered] = useState(false);
+  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
 
-  const { style: portalStyle, scrollInside, placementOriginClass, isPositioned } =
+  const { style: portalStyle, scrollInside, placementOriginClass, isPositioned, floatingRef } =
     useGlobalDropdownPortal({
       open,
       anchorRef: triggerRef,
@@ -167,6 +205,17 @@ function AccountMenu() {
       panelWidth: 208,
       maxHeight: 384,
     });
+
+  useLayoutEffect(() => {
+    if (!open || !isPositioned) {
+      setMenuEntered(false);
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      requestAnimationFrame(() => setMenuEntered(true));
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [open, isPositioned]);
 
   useDropdownOutsideDismiss(open, triggerRef, menuRef, close, { when: isPositioned });
 
@@ -181,11 +230,16 @@ function AccountMenu() {
 
   const showGlobalLoading = useShowGlobalLoading();
 
-  async function onLogout() {
-    close();
+  async function confirmLogout() {
+    setLogoutConfirmOpen(false);
     showGlobalLoading(GLOBAL_LOADING_MESSAGES.logout);
     await logout();
     window.location.assign("/login");
+  }
+
+  function requestLogout() {
+    close();
+    setLogoutConfirmOpen(true);
   }
 
   const label = user?.nome?.trim() || "Account";
@@ -193,27 +247,35 @@ function AccountMenu() {
   const menu =
     open && portalStyle ? (
       <div
-        ref={menuRef}
+        ref={floatingRef}
         role="menu"
+        aria-label="Menu account"
         style={portalStyle}
-        className={`min-w-[13rem] w-52 rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] py-1 text-sm shadow-[var(--cab-shadow-lg)] gestionale-scrollbar ${placementOriginClass} ${
-          scrollInside ? "overflow-y-auto" : "overflow-hidden"
-        }`}
+        className={`${accountMenuPortalPanel} ${placementOriginClass} ${
+          menuEntered ? accountMenuPortalEnterClass : "opacity-0"
+        } ${scrollInside ? "overflow-y-auto" : "overflow-hidden"}`}
       >
-        <div className="border-b border-[color:var(--cab-border)] px-3 py-2.5">
-          <p className="truncate text-xs font-semibold text-[color:var(--cab-text)]">
-            {user?.nome ?? "Utente"}
-          </p>
-          <p className="truncate text-[10px] text-[color:var(--cab-text-muted)]">
-            {user?.email ? user.email : ""}
-          </p>
+        <div role="presentation" className={accountMenuHeaderClass}>
+          <UserProfileAvatar
+            nome={user?.nome ?? (status === "loading" ? "·" : undefined)}
+            email={user?.email}
+            variant="header"
+          />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold leading-tight text-[color:var(--cab-text)]">
+              {user?.nome ?? "Utente"}
+            </p>
+            {user?.email ? (
+              <p className="mt-0.5 truncate text-xs text-[color:var(--cab-text-muted)]">{user.email}</p>
+            ) : null}
+          </div>
         </div>
         <div
-          role="none"
-          className="flex min-h-11 items-center justify-between gap-2 border-b border-[color:var(--cab-border)] px-3 py-2"
+          role="presentation"
+          className={`${accountMenuItemClass} justify-between gap-3 text-[color:var(--cab-text-muted)]`}
         >
-          <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-[color:var(--cab-text-muted)]">
-            <ThemeModeIcon className="h-4 w-4 shrink-0" />
+          <span className="flex min-w-0 items-center gap-2.5">
+            <ThemeModeIcon className={accountMenuItemMutedIconClass} />
             Aspetto
           </span>
           <ThemeToggle variant="switch" />
@@ -222,12 +284,10 @@ function AccountMenu() {
           type="button"
           role="menuitem"
           data-testid="smoke-logout"
-          onClick={() => void onLogout()}
-          className={`flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left text-xs font-semibold text-[color:var(--cab-text)] hover:bg-[var(--cab-hover)] ${erpFocus}`}
+          onClick={() => requestLogout()}
+          className={`${accountMenuItemClass} hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_8%,var(--cab-hover))] ${erpFocus}`}
         >
-          <span className="text-[color:var(--cab-text-muted)]" aria-hidden>
-            ⎋
-          </span>
+          <AccountMenuLogoutIcon />
           Esci
         </button>
       </div>
@@ -240,26 +300,36 @@ function AccountMenu() {
         type="button"
         data-testid="smoke-account-menu"
         onClick={() => setOpen((v) => !v)}
-        className={`${dsPageToolbarBtn} h-11 min-w-0 max-w-[min(14rem,42vw)] justify-start gap-2 px-2.5 py-0 text-left text-xs sm:max-w-[14rem] ${erpFocus}`}
+        className={`${accountMenuTriggerBaseClass} ${open ? accountMenuTriggerOpenClass : ""}`}
         aria-expanded={open}
         aria-haspopup="menu"
+        aria-label={label === "Account" ? "Menu account" : `Menu account: ${label}`}
       >
         <UserProfileAvatar
           nome={user?.nome ?? (status === "loading" ? "·" : undefined)}
           email={user?.email}
           variant="header"
+          className={open ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]" : ""}
         />
-        <span
-          className="min-w-0 flex-1 truncate font-medium text-[color:var(--cab-text)]"
-          suppressHydrationWarning
-        >
+        <span className={accountMenuTriggerLabelClass} suppressHydrationWarning>
           {label}
         </span>
-        <span className="shrink-0 text-[color:var(--cab-text-muted)]" aria-hidden>
-          ▾
+        <span className={accountMenuTriggerChevronWrapClass}>
+          <AccountMenuChevronIcon open={open} />
         </span>
       </button>
       {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
+      <GestionaleConfirmDialog
+        open={logoutConfirmOpen}
+        title="Uscire dall'account?"
+        message="Verrai disconnesso da questa sessione. Dovrai accedere di nuovo per continuare."
+        confirmLabel="Esci"
+        cancelLabel="Annulla"
+        destructive
+        confirmTestId="smoke-logout-confirm"
+        onCancel={() => setLogoutConfirmOpen(false)}
+        onConfirm={() => void confirmLogout()}
+      />
     </div>
   );
 }
@@ -447,6 +517,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useGestionaleScrollEnd(mainScrollRef);
   const { user } = useAuth();
   const pathname = usePathname();
+  const suppressGlobalScrollEndPad = pathname.startsWith("/impostazioni");
   const rbac = useRbac();
   const clientLavAccess = useClientLavorazioniAccess();
   const operatorPilot = useOperatorGlobalSettings();
@@ -661,7 +732,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               ) : (
                 children
               )}
-              <div aria-hidden className={dsGestionaleScrollEndPad} />
+              {!suppressGlobalScrollEndPad ? (
+                <div aria-hidden className={dsGestionaleScrollEndPad} />
+              ) : null}
             </div>
           </main>
         </div>

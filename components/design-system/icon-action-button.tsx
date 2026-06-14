@@ -46,6 +46,7 @@ export function IconActionButton(props: IconActionButtonProps) {
 
   const content = tooltipContent ?? label;
   const resolvedClassName = `${toolbar ? dsPageToolbarIconBtn : ""} ${className}`.trim();
+  const multiline = content.includes("\n");
 
   if (as === "link") {
     const { href, ...linkRest } = rest as IconActionAsLink;
@@ -55,7 +56,7 @@ export function IconActionButton(props: IconActionButtonProps) {
       </Link>
     );
     return (
-      <Tooltip content={content} side={tooltipSide} disabled={tooltipDisabled}>
+      <Tooltip content={content} side={tooltipSide} disabled={tooltipDisabled} multiline={multiline}>
         {link}
       </Tooltip>
     );
@@ -69,7 +70,7 @@ export function IconActionButton(props: IconActionButtonProps) {
   );
 
   return (
-    <Tooltip content={content} side={tooltipSide} disabled={tooltipDisabled}>
+    <Tooltip content={content} side={tooltipSide} disabled={tooltipDisabled} multiline={multiline}>
       {buttonRest.disabled ? <span className="inline-flex min-w-0">{button}</span> : button}
     </Tooltip>
   );

@@ -257,8 +257,14 @@ export const dsCardMobileShell =
 /** G — Icone outline nelle azioni tabella (24×24, stroke 2). */
 export const dsTableActionGlyph = "h-4 w-4 shrink-0 opacity-90";
 
-const dsTableActionSqBase =
+export const dsTableActionSqBase =
   `inline-flex ${dsTableActionsRowHeight} w-10 min-w-10 max-w-10 sm:w-9 sm:min-w-9 sm:max-w-9 shrink-0 items-center justify-center rounded-lg border-2 p-0 shadow-[var(--cab-shadow-sm)] outline-none transition-[background-color,border-color,box-shadow,color,opacity] duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed box-border ${dsBtnCursor} ${dsFocus}`;
+
+/** Campione colore in riga impostazioni — stessa scatola e hover delle azioni secondarie, sfondo colore inline. */
+export const dsTableActionBtnColorSwatch = `${dsTableActionSqBase} relative overflow-hidden border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))] after:pointer-events-none after:absolute after:inset-0 after:rounded-lg after:content-[''] after:bg-transparent after:transition-[background-color] after:duration-150 hover:after:bg-[var(--cab-hover)] active:after:bg-[var(--cab-hover)]`;
+
+/** Popover colore aperto — stesso feedback visivo dell’hover sulle azioni tabella. */
+export const dsTableActionBtnColorSwatchOpen = "after:bg-[var(--cab-hover)]";
 
 /** Pulsante azione con badge contatore (es. schede 1/3) — aggiungere `dsTableActionBadge` come figlio. */
 export const dsTableActionBtnWithBadge = "relative";
@@ -519,6 +525,20 @@ export const dsPageToolbarMetaChipBase =
   "inline-flex min-h-[1.5rem] items-center gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-border-strong)_85%,var(--cab-border))] px-2 py-0.5 text-xs leading-none shadow-[var(--cab-shadow-sm)]";
 export const dsPageToolbarMetaChip = `${dsPageToolbarMetaChipBase} bg-[var(--cab-surface)] text-[color:var(--cab-text-muted)]`;
 export const dsPageToolbarMetaChipAccent = `${dsPageToolbarMetaChipBase} border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] font-semibold text-[color:var(--cab-text)]`;
+
+export {
+  gestionaleDirtyStatusChipClass as dsPageToolbarDirtyStatusChip,
+  gestionaleDirtyStatusDotClass as dsPageToolbarDirtyStatusDot,
+} from "@/lib/ui/page-toolbar-dirty-status";
+
+/** Variante compatta di `dsPageToolbarBtn` — toolbar header (es. annulla modifiche). */
+export const dsPageToolbarBtnCompact = `${dsPageToolbarBtn} h-8 min-h-8 px-3 py-1.5`;
+
+/** Primario toolbar header — stessa altezza di `dsPageToolbarBtn` / `dsPageToolbarIconBtn`. */
+export const dsPageToolbarPrimaryBtn = `${dsBtnPrimary} inline-flex h-10 min-h-[2.5rem] shrink-0 items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-semibold shadow-[var(--cab-shadow-sm)] sm:px-4`;
+
+/** Primario compatto toolbar header — allineato a `dsPageToolbarBtnCompact`. */
+export const dsPageToolbarPrimaryBtnCompact = `${dsBtnPrimary} inline-flex h-8 min-h-8 shrink-0 items-center justify-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold shadow-[var(--cab-shadow-sm)] sm:px-4`;
 export const dsPageToolbarMetaActionBtn = `inline-flex min-h-[1.75rem] shrink-0 items-center justify-center gap-1 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] px-2.5 py-1 text-xs font-semibold text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] transition-[background-color,border-color,box-shadow,color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_58%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-surface))] hover:shadow-[var(--cab-shadow-md)] ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 /** @deprecated Usare `dsPageToolbarMetaActionBtn`. */
 export const dsPageToolbarMetaResetBtn = dsPageToolbarMetaActionBtn;

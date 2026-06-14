@@ -167,6 +167,8 @@ export function GlobalTableSortTh<K extends string>({
   thClassName = "",
   /** Allinea il titolo al testo in chip/pill sotto (es. codice ricambio), non al box. */
   contentChipInset = false,
+  /** Se false, mantiene stile header neutro anche quando la colonna è ordinata attivamente. */
+  highlightWhenActive = true,
 }: {
   label: string;
   labelLines?: readonly [string, string];
@@ -177,8 +179,10 @@ export function GlobalTableSortTh<K extends string>({
   align?: "left" | "center" | "right";
   thClassName?: string;
   contentChipInset?: boolean;
+  highlightWhenActive?: boolean;
 }) {
   const active = sortColumn === columnKey && (sortPhase === "asc" || sortPhase === "desc");
+  const showActiveHighlight = active && highlightWhenActive;
   const stacked = labelLines != null;
   const resolvedAlign = contentChipInset || stacked ? "left" : align;
   const ariaSort = active ? (sortPhase === "asc" ? "ascending" : "descending") : "none";
@@ -206,7 +210,7 @@ export function GlobalTableSortTh<K extends string>({
         onClick={() => onSort(columnKey)}
         aria-label={`${sortLabel}: ${sortHint}. Clic per cambiare ordinamento`}
         className={`${globalTableSortButton} ${stacked ? "items-start gap-1.5 py-0.5" : ""} ${globalTableButtonJustify(resolvedAlign)} ${dsFocus} ${
-          active ? globalTableSortActive : globalTableSortIdle
+          showActiveHighlight ? globalTableSortActive : globalTableSortIdle
         }`}
       >
         {labelNode}

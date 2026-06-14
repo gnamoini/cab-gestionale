@@ -1,0 +1,3 @@
+/** Input rinomina inline impostazioni — SSOT stringa (lib pura, no cicli import). */
+export const SETTINGS_LIST_INPUT_EDIT =
+  "min-h-11 min-w-0 flex-1 border-0 border-b border-[color:color-mix(in_srgb,var(--cab-primary)_40%,var(--cab-border))] bg-transparent px-0 py-2 text-sm font-medium leading-snug text-[color:var(--cab-text)] outline-none ring-0 shadow-none placeholder:font-normal placeholder:text-[color:var(--cab-text-muted)] focus:border-[color:var(--cab-primary)] focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 touch-manipulation [-webkit-tap-highlight-color:transparent]";

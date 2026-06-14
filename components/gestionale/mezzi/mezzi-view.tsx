@@ -20,7 +20,6 @@ import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortP
 import { dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
 import { Drawer, LoadingErrorState, LoadingFormSkeleton, LoadingTableSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
 import {
-  GestionaleLogChangeList,
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
@@ -177,7 +176,16 @@ export function MezziView() {
 
   const [logOpen, setLogOpen] = useState(false);
   const { undoable: undoableMezziLog, logQuery } = useUndoableLog("mezzi");
-  const logEntriesUi = useMemo(() => (logQuery.data ?? []).map(logModificaRowToMezziHubLogEntry), [logQuery.data]);
+  const logEntriesUi = useMemo(
+    () =>
+      (logQuery.data ?? []).map((row) =>
+        logModificaRowToMezziHubLogEntry(row, {
+          currentUserId: user?.id ?? null,
+          currentDisplayName: user?.nome ?? "",
+        }),
+      ),
+    [logQuery.data, user?.id, user?.nome],
+  );
 
   const {
     page: logPage,
@@ -551,9 +559,7 @@ export function MezziView() {
                       });
                       return (
                         <li key={e.id}>
-                          <GestionaleLogEntryFourLines vm={vm}>
-                            <GestionaleLogChangeList changes={e.changes} compact />
-                          </GestionaleLogEntryFourLines>
+                          <GestionaleLogEntryFourLines vm={vm} />
                         </li>
                       );
                     })}

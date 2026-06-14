@@ -2,7 +2,7 @@
  * Token condivisi per select, autocomplete e date picker globali.
  * Unica fonte per radius, ombre, z-index e stati hover/focus dei dropdown.
  */
-import { dsInput, gestionaleSelectFilterClass, dsZDropdown } from "@/lib/ui/design-system";
+import { dsInput, dsPageToolbarBtn, gestionaleSelectFilterClass, dsZDropdown } from "@/lib/ui/design-system";
 import { dsIosInputTextSize } from "@/lib/ui/ios-mobile-tokens";
 
 export const globalInputZDropdown = dsZDropdown;
@@ -19,6 +19,9 @@ const globalAutocompleteDropdownChrome = [
 
 /** Animazione apertura menu portal (dropdown globali). */
 export const globalDropdownPortalEnterClass = "global-dropdown-portal-enter";
+
+/** Animazione apertura menu account — slide morbido senza scale. */
+export const accountMenuPortalEnterClass = "account-menu-portal-enter";
 
 const globalInputDropdownChrome = [
   "max-h-52 overflow-y-auto",
@@ -58,6 +61,36 @@ export const globalFixedListPillMenuPanel = [
   "ring-1 ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)]",
   "gestionale-scrollbar",
 ].join(" ");
+
+/** Pannello portal menu account (header toolbar, posizione fixed). */
+export const accountMenuPortalPanel = [
+  "min-w-[13rem] w-52",
+  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border-strong)]",
+  "bg-[var(--cab-card)] p-1.5",
+  "shadow-[0_12px_32px_rgba(0,0,0,0.5),0_4px_12px_rgba(0,0,0,0.38)]",
+  "ring-1 ring-[color:color-mix(in_srgb,var(--cab-border-strong)_70%,transparent)]",
+  "gestionale-scrollbar",
+].join(" ");
+
+export const accountMenuHeaderClass =
+  "mb-1 flex items-center gap-3 rounded-[var(--ds-radius-md)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_42%,var(--cab-card))] px-2.5 py-2.5 ring-1 ring-[color:color-mix(in_srgb,var(--cab-border)_60%,transparent)]";
+
+export const accountMenuItemClass =
+  "flex w-full min-h-11 items-center gap-2.5 rounded-[var(--ds-radius-md)] px-2.5 py-2 text-left text-xs font-medium text-[color:var(--cab-text)] transition-colors duration-150 hover:bg-[var(--cab-hover)] sm:min-h-10";
+
+export const accountMenuItemMutedIconClass = "h-4 w-4 shrink-0 text-[color:var(--cab-text-muted)]";
+
+/** Trigger menu account — `dsPageToolbarBtn` compatto: solo avatar su mobile, nome+chevron da `sm`. */
+export const accountMenuTriggerBaseClass = `${dsPageToolbarBtn} h-11 min-h-11 w-11 min-w-11 max-w-11 justify-center gap-0 p-1.5 sm:h-11 sm:w-auto sm:min-w-0 sm:max-w-[14rem] sm:justify-start sm:gap-2.5 sm:pl-1.5 sm:pr-2.5 sm:py-0`;
+
+/** Stato aperto trigger — allineato ai filtri/select attivi (`gestionaleSelectFilterClass` / pill attive). */
+export const accountMenuTriggerOpenClass =
+  "border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))] shadow-[var(--cab-shadow-md)] ring-1 ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)] hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] hover:ring-[color:color-mix(in_srgb,var(--cab-primary)_32%,transparent)]";
+
+export const accountMenuTriggerLabelClass =
+  "hidden min-w-0 flex-1 truncate text-left sm:block";
+
+export const accountMenuTriggerChevronWrapClass = "hidden shrink-0 sm:block";
 
 /** Touch target ≥44px su mobile; compatto da `sm` in su. */
 export const globalInputDropdownOptionBase =

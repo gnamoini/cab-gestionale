@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { erpBtnSoftOrange } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
-  GestionaleLogChangeList,
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
   GestionaleLogList,
@@ -594,9 +593,7 @@ export function MezziHubDetailModal({
                     });
                     return (
                       <li key={e.id}>
-                        <GestionaleLogEntryFourLines vm={vm}>
-                          <GestionaleLogChangeList changes={e.changes} compact />
-                        </GestionaleLogEntryFourLines>
+                        <GestionaleLogEntryFourLines vm={vm} />
                       </li>
                     );
                   })}

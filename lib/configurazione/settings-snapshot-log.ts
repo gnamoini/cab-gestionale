@@ -94,7 +94,7 @@ const SECTION_SLICES: SectionSlice[] = [
       mezziCompatibili: s.mag.mezziCompatibili,
     }),
   },
-  { id: "mag-fornitori", pick: (s) => s.mag.fornitori },
+  { id: "mag-fornitori", pick: (s) => ({ fornitori: s.mag.fornitori, scontoFornitoreByFornitore: s.mag.scontoFornitoreByFornitore }) },
   { id: "mag-produttori", pick: (s) => s.mag.produttori ?? [] },
   { id: "mag-categorie", pick: (s) => s.mag.categorie },
   {
@@ -213,11 +213,6 @@ function describeStatiChanges(before: StatoLavorazioneConfig[], after: StatoLavo
     if ((b.color ?? "") !== (a.color ?? "")) {
       lines.push(`Colore stato «${a.label.trim()}»: aggiornato`);
     }
-    if (Boolean(b.closed) !== Boolean(a.closed)) {
-      lines.push(
-        `Stato «${a.label.trim()}»: ${a.closed ? "marcato come finale" : "non più finale"}`,
-      );
-    }
   }
   for (const [id, b] of bMap) {
     if (!aMap.has(id)) lines.push(`Rimosso stato «${b.label.trim() || id}»`);
@@ -328,7 +323,15 @@ function describeSectionChanges(
         ),
       ];
     case "mag-fornitori":
-      return diffStringList(before.mag.fornitori, after.mag.fornitori, "fornitore alternativo");
+      return [
+        ...diffStringList(before.mag.fornitori, after.mag.fornitori, "fornitore alternativo"),
+        ...diffNumberRecord(
+          before.mag.scontoFornitoreByFornitore,
+          after.mag.scontoFornitoreByFornitore,
+          (key) => `Sconto fornitore alternativo «${formatTitleCasePhrase(key)}»`,
+          "%",
+        ),
+      ];
     case "mag-produttori":
       return diffStringList(before.mag.produttori ?? [], after.mag.produttori ?? [], "produttore");
     case "mag-categorie":

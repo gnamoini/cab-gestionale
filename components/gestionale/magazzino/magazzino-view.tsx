@@ -1414,9 +1414,7 @@ export function MagazzinoView() {
             </div>
           </td>
           <td className={`min-w-0 ${gestionaleListTableTd} text-zinc-700 dark:text-zinc-300`}>
-            <MagazzinoOptionalTooltip content={p.categoria}>
-              <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
-            </MagazzinoOptionalTooltip>
+            <span className="block truncate text-[13px] leading-snug">{p.categoria}</span>
           </td>
           <td className={gestionaleListTableTdCenter}>
             <MagazzinoScortaBadge value={p.scorta} low={low} variant="table" />

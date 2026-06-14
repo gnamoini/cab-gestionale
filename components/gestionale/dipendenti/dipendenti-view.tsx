@@ -138,12 +138,14 @@ export function DipendentiView() {
 
   const handleExportPdfComplessivo = useCallback(() => {
     if (pdfExporting || ts.displayEmployees.length === 0) return;
-    setPdfExporting(true);
-    try {
-      openDipendentiPdfComplessivoInNewTab(pdfContext());
-    } finally {
-      setPdfExporting(false);
-    }
+    void (async () => {
+      setPdfExporting(true);
+      try {
+        await openDipendentiPdfComplessivoInNewTab(pdfContext());
+      } finally {
+        setPdfExporting(false);
+      }
+    })();
   }, [pdfExporting, pdfContext, ts.displayEmployees.length]);
 
   const handleExportPdfDipendente = useCallback(() => {
@@ -157,12 +159,14 @@ export function DipendentiView() {
       toastValidation(GESTIONALE_TOAST.dipendentiSelectAddettoForPdf);
       return;
     }
-    setPdfExporting(true);
-    try {
-      openDipendentiPdfDipendenteInNewTab(pdfContext(), employee);
-    } finally {
-      setPdfExporting(false);
-    }
+    void (async () => {
+      setPdfExporting(true);
+      try {
+        await openDipendentiPdfDipendenteInNewTab(pdfContext(), employee);
+      } finally {
+        setPdfExporting(false);
+      }
+    })();
   }, [pdfExporting, pdfContext, ts.displayEmployees, filterEmployeeId, toastValidation]);
 
   const handleBootstrap = useCallback(async () => {

@@ -13,7 +13,12 @@ assert.match(batch, /\.in\("lavorazione_id"/, "batch schede must use .in(lavoraz
 assert.match(batch, /SCHEde_BATCH_IN_CHUNK/, "batch schede must chunk IN clause");
 
 const adapter = read("lib/schede/schede-sync-adapter.ts");
-assert.match(adapter, /fetchSchedeBundlesStoreAuthorized/, "sync adapter must use batch authorized fetch");
+assert.match(adapter, /fetchSchedeRowsByLavorazioneIdsAuthorized/, "sync adapter must use single batch rows fetch");
+assert.doesNotMatch(
+  adapter,
+  /fetchSchedeBundlesStoreAuthorized[\s\S]*fetchSchedeRowsByLavorazioneIdsAuthorized/,
+  "sync adapter must not double-fetch rows and bundles in parallel",
+);
 assert.doesNotMatch(adapter, /SCHEde_FETCH_CONCURRENCY/, "per-id concurrency loop removed");
 
 const server = read("lib/schede/schede-bundles-fetch-server.ts");

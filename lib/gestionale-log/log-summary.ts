@@ -276,9 +276,18 @@ function buildOggettoFromRecord(entita: string, raw: Record<string, unknown>): s
       return joinOggetto([formatTitleCasePhrase(marca), formatTitleCasePhrase(nome)]);
     }
     case "mezzi": {
+      const marcaModello = joinOggetto([
+        formatTitleCasePhrase(pickStr(raw, ["marca"])),
+        formatTitleCasePhrase(pickStr(raw, ["modello"])),
+      ]);
       const cliente = formatTitleCasePhrase(pickStr(raw, ["cliente"]));
       const ident = pickStr(raw, ["targa"]) || pickStr(raw, ["matricola"]) || pickStr(raw, ["codice"]);
-      return joinOggetto([cliente, ident ? ident.toUpperCase() : ""]);
+      const parts = [
+        marcaModello !== "—" ? marcaModello : "",
+        cliente !== "—" ? cliente : "",
+        ident ? ident.toUpperCase() : "",
+      ].filter(Boolean);
+      return parts.length ? parts.join(" · ") : joinOggetto([cliente, ident ? ident.toUpperCase() : ""]);
     }
     case "preventivi": {
       const det = raw.dettagli;

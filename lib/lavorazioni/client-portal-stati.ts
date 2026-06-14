@@ -3,13 +3,14 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { buildStatiLavorazioniOptions } from "@/src/shared/selectors/lavorazioni-stati-db";
 import {
   CLIENT_PORTAL_FALLBACK_STATO,
+  isStatoClosed,
   resolveStatoId,
   statoLavorazioneLabel,
 } from "@/lib/lavorazioni/stati-dynamic";
 
 /** Stati chiusi (config). */
 export function buildClientPortalClosedStatiSet(stati: StatoLavorazioneConfig[]): Set<string> {
-  return new Set(stati.filter((s) => s.closed === true).map((s) => s.id));
+  return new Set(stati.filter((s) => isStatoClosed(s)).map((s) => s.id));
 }
 
 /** Opzioni stato per UI portale. */

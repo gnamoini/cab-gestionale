@@ -62,6 +62,7 @@ export function snapshotFromResolved(r: CabAppSettingsResolved): SettingsWorkspa
       categorie: [...r.magazzinoMaster.categorie],
       mezziCompatibili: [...r.magazzinoMaster.mezziCompatibili],
       fornitori: [...(r.magazzinoMaster.fornitori ?? [])],
+      scontoFornitoreByFornitore: { ...(r.magazzinoMaster.scontoFornitoreByFornitore ?? {}) },
       produttori: [...(r.magazzinoMaster.produttori ?? [])],
     },
     liste: migrateMezziListePrefs(r.mezziListe),

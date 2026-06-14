@@ -185,7 +185,11 @@
 }
 
 .timesheet-presenze-grid col[data-timesheet-fixed="name"] {
-  width: 8.5rem;
+  width: 6.5rem;
+}
+
+.timesheet-presenze-grid col[data-timesheet-weekend-compact="true"] {
+  width: 1.5rem;
 }
 
 .timesheet-presenze-grid col[data-timesheet-fixed="total"] {
@@ -196,6 +200,27 @@
 .timesheet-presenze-grid th[data-timesheet-day],
 .timesheet-presenze-grid td[data-timesheet-day] {
   min-width: 2.75rem;
+}
+
+.timesheet-presenze-grid th[data-timesheet-weekend-compact="true"],
+.timesheet-presenze-grid td[data-timesheet-day][data-timesheet-weekend-compact="true"] {
+  min-width: 1.5rem;
+  width: 1.5rem;
+  max-width: 1.5rem;
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+  text-align: center;
+}
+
+.timesheet-presenze-grid th[data-timesheet-weekend-compact="true"] > * {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+.timesheet-presenze-grid td[data-timesheet-day][data-timesheet-weekend-compact="true"] > button[data-timesheet-cell] {
+  padding-inline: 0;
 }
 
 /* Celle giorno — tinta opaca sul td, button overlay senza raggio (SSOT data-timesheet-cell-kind). */

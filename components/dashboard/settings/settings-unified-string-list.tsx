@@ -1,53 +1,59 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
+import { useMemo, useState, type ReactNode } from "react";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import {
-  SettingsAddRow,
+  SETTINGS_SECTION_HINT,
   SettingsEditableStringRow,
   SettingsEmptyState,
-  SettingsSectionHeader,
+  SettingsListBody,
+  SettingsListSection,
+  SettingsListToolbar,
   SETTINGS_LIST_DIVIDER_UL,
-  SETTINGS_SECTION_CARD,
+  SETTINGS_LIST_DIVIDER_UL_SPACED,
+  type SettingsSectionLayout,
 } from "@/components/dashboard/settings-list-ui";
+import { commitSettingsListDelete } from "@/lib/settings/settings-list-delete";
+import { filterSettingsStringList } from "@/lib/settings/settings-list-search";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
-import { sortStringsItCaseInsensitive } from "@/lib/ui/sort-strings-it";
+
+const SETTINGS_DRAFT_ROW_KEY = "__settings-draft__";
 
 export function SettingsUnifiedStringList({
   title,
+  description,
   values,
-  nuovo,
-  setNuovo,
   placeholder,
   addAriaLabel,
   onAdd,
   onRemove,
   onRename,
+  renderRowTrailing,
+  layout = "flat",
 }: {
   title: string;
+  description?: string;
   values: readonly string[];
-  nuovo: string;
-  setNuovo: (v: string) => void;
   placeholder: string;
   addAriaLabel?: string;
   onAdd: (trimmed: string) => void;
   onRemove: (v: string) => void;
   onRename?: (from: string, to: string) => void;
+  /** Contenuto opzionale a destra del nome (es. chip sconto %). */
+  renderRowTrailing?: (value: string) => ReactNode;
+  layout?: SettingsSectionLayout;
 }) {
   const [q, setQ] = useState("");
+  const [draftOpen, setDraftOpen] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const { gate, similarDialog } = useSettingsSimilarGate();
-  const filtered = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    const base = t ? values.filter((v) => v.toLowerCase().includes(t)) : [...values];
-    return sortStringsItCaseInsensitive(base);
-  }, [values, q]);
+  const filtered = useMemo(() => filterSettingsStringList(values, q), [values, q]);
+  const listUlClass = layout === "flat" ? SETTINGS_LIST_DIVIDER_UL : SETTINGS_LIST_DIVIDER_UL_SPACED;
 
   const tryAdd = (raw: string) => {
     gate(values, raw, undefined, () => {
       onAdd(raw.trim());
-      setNuovo("");
+      setDraftOpen(false);
     });
   };
 
@@ -57,48 +63,60 @@ export function SettingsUnifiedStringList({
     gate(values, t, from, () => onRename?.(from, t));
   };
 
+  const draftPlaceholder = addAriaLabel ?? placeholder;
+  const showList = draftOpen || filtered.length > 0;
+
   return (
-    <div className={SETTINGS_SECTION_CARD}>
-      <SettingsSectionHeader level="card" title={title} />
-      <GestionaleSearchField
-        wrapperClassName="mt-2 w-full"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Filtra elenco…"
-        autoComplete="off"
-        aria-label={`Filtra elenco: ${title}`}
+    <SettingsListSection layout={layout} title={title} description={layout === "card" ? description : undefined}>
+      {layout === "flat" && description ? (
+        <p className={`${SETTINGS_SECTION_HINT} mt-0 max-w-2xl`}>{description}</p>
+      ) : null}
+      <SettingsListToolbar
+        onStartAdd={() => setDraftOpen(true)}
+        addDisabled={draftOpen}
+        searchValue={q}
+        onSearchChange={setQ}
+        searchAriaLabel={`Filtra elenco: ${title}`}
       />
-      <SettingsAddRow
-        value={nuovo}
-        onChange={setNuovo}
-        placeholder={placeholder}
-        inputAriaLabel={addAriaLabel ?? placeholder}
-        onAdd={() => tryAdd(nuovo)}
-      />
-      {filtered.length === 0 ? (
-        <SettingsEmptyState>Nessun elemento. Aggiungi il primo con il campo sopra.</SettingsEmptyState>
-      ) : (
-        <ul className={SETTINGS_LIST_DIVIDER_UL}>
+      <SettingsListBody
+        layout={layout}
+        showList={showList}
+        empty={
+          <SettingsEmptyState inline={layout === "flat"}>
+            Nessun elemento. Usa Aggiungi per inserire il primo.
+          </SettingsEmptyState>
+        }
+      >
+        <ul className={listUlClass}>
+          {draftOpen ? (
+            <SettingsEditableStringRow
+              key={SETTINGS_DRAFT_ROW_KEY}
+              draft
+              value=""
+              placeholder={draftPlaceholder}
+              onRenameBlur={(_, next) => tryAdd(next)}
+              onDraftCancel={() => setDraftOpen(false)}
+              onRemove={() => setDraftOpen(false)}
+            />
+          ) : null}
           {filtered.map((m) => (
             <SettingsEditableStringRow
               key={m}
               value={m}
               onRenameBlur={tryRename}
               onRemove={() => setPendingDelete(m)}
+              trailing={renderRowTrailing?.(m)}
             />
           ))}
         </ul>
-      )}
+      </SettingsListBody>
       {similarDialog}
       <SettingsEliminaConfirmDialog
         open={pendingDelete != null}
         itemLabel={pendingDelete ?? undefined}
         onCancel={() => setPendingDelete(null)}
-        onConfirm={() => {
-          if (pendingDelete) onRemove(pendingDelete);
-          setPendingDelete(null);
-        }}
+        onConfirm={() => commitSettingsListDelete(pendingDelete, onRemove, () => setPendingDelete(null))}
       />
-    </div>
+    </SettingsListSection>
   );
 }

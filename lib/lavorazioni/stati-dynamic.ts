@@ -24,8 +24,8 @@ export const DEFAULT_STATI_LAVORAZIONI_WORKFLOW: StatoLavorazioneConfig[] = [
   { id: "diagnosi", label: "Diagnosi", color: "#ea580c" },
   { id: "in_lavorazione", label: "In lavorazione", color: "#0284c7" },
   { id: "attesa_ricambi", label: "Attesa ricambi", color: "#7c3aed" },
-  { id: "completata", label: "Completata", color: "#15803d", closed: true },
-  { id: "consegnata", label: "Consegnata", color: "#059669", closed: true },
+  { id: "completata", label: "Completata", color: "#15803d" },
+  { id: "consegnata", label: "Consegnata", color: "#059669" },
 ];
 
 export function slugifyStatoId(raw: string): string {
@@ -75,15 +75,14 @@ export function normalizeStatiList(stati: StatoLavorazioneConfig[]): StatoLavora
       id,
       label,
       ...(nh ? { color: nh } : def?.color ? { color: def.color } : {}),
-      /** Solo se esplicitamente true in settings: mai re-inferire da default (evita loop archivio/stati). */
-      ...(raw.closed === true ? { closed: true } : {}),
     });
   }
   return out;
 }
 
+/** Stato finale workflow: fisso su «completata» (non configurabile in impostazioni). */
 export function isStatoClosed(config: StatoLavorazioneConfig): boolean {
-  return config.closed === true;
+  return migrateStatoConfigId(config.id) === STATO_LAVORAZIONE_COMPLETATA_ID;
 }
 
 export function statiInCorsoFromConfig(stati: StatoLavorazioneConfig[]): StatoLavorazioneConfig[] {

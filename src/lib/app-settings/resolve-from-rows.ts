@@ -6,7 +6,6 @@ import {
   syncLavorazioniAddettiFromRecords,
   type AddettoRecord,
 } from "@/lib/lavorazioni/addetto-model";
-import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { DEFAULT_STATI_LAVORAZIONI_WORKFLOW, normalizeStatiList } from "@/lib/lavorazioni/stati-dynamic";
 import type { PrioritaLav, StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
@@ -17,6 +16,7 @@ import {
   parseProduttoriByFornitore,
 } from "@/lib/magazzino/fornitore-produttore-master";
 import type { MagazzinoMasterPrefs } from "@/lib/magazzino/magazzino-master-prefs-storage";
+import { parseScontoFornitoreByFornitore } from "@/lib/magazzino/fornitore-alternativo-sconto";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 import type { SistemaPreventiviDefaults } from "@/lib/sistema/sistema-preventivi-defaults-storage";
 import {
@@ -87,11 +87,8 @@ function resolveAddettiFromPayload(o: Record<string, unknown>): {
   return fallback;
 }
 
-function parsePrioritaDb(raw: unknown): PrioritaLavorazione[] {
-  if (!Array.isArray(raw)) return [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
-  const allowed = new Set(DEFAULT_PRIORITA_LAVORAZIONI_DB);
-  const parsed = raw.filter((x): x is PrioritaLavorazione => typeof x === "string" && allowed.has(x as PrioritaLavorazione));
-  return parsed.length ? orderPrioritaList([...new Set(parsed)]) : [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
+function parsePrioritaDb(_raw: unknown): PrioritaLavorazione[] {
+  return [...DEFAULT_PRIORITA_LAVORAZIONI_DB];
 }
 
 function parseLavorazioniPayload(raw: unknown): CabAppSettingsResolved["lavorazioni"] {
@@ -163,6 +160,7 @@ function parseMagazzinoMasterPayload(raw: unknown): MagazzinoMasterPrefs {
       ? o.mezziCompatibili.filter((x): x is string => typeof x === "string")
       : [],
     fornitori: Array.isArray(o.fornitori) ? o.fornitori.filter((x): x is string => typeof x === "string") : [],
+    scontoFornitoreByFornitore: parseScontoFornitoreByFornitore(o.scontoFornitoreByFornitore),
     produttori: Array.isArray(o.produttori) ? o.produttori.filter((x): x is string => typeof x === "string") : [],
     produttoriByFornitore: parseProduttoriByFornitore(o.produttoriByFornitore),
   };

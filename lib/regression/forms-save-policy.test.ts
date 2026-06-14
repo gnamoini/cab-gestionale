@@ -32,7 +32,8 @@ assert.match(bunderView, /removeBunderDocument\(d\.id, \{ queryClient/);
 assert.match(dipendentiHook, /pagehide/);
 assert.match(dipendentiHook, /beforeunload/);
 
-assert.match(impostazioni, /beforeunload/);
+assert.match(impostazioni, /useBeforeUnloadWhenDirty/);
+assert.match(impostazioni, /dsGestionaleScrollEndPad/);
 assert.match(impostazioni, /GestionaleUnsavedChangesDialog/);
 assert.match(impostazioni, /Torna indietro/);
 assert.match(impostazioni, /Salva ed esci/);

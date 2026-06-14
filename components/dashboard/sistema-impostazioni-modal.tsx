@@ -29,9 +29,9 @@ export function SistemaImpostazioniPageView() {
     return (
       <div className={`${layoutPageRoot} min-w-0`}>
         <PageHeader
-          title="Impostazioni"
+          title="Configurazione"
+          titleAddon={<OperatorGlobalSettingsPilotBadge />}
           description="Non hai i permessi per modificare la configurazione globale."
-          belowTitle={<OperatorGlobalSettingsPilotBadge />}
         />
         <div className={dsStackPage}>
           <ShellCard title="Accesso negato">

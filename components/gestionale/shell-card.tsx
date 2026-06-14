@@ -4,15 +4,18 @@ import { useId, useState, type ReactNode } from "react";
 import { dsCardTitle, dsSurfaceCard, dsTypoSmall } from "@/lib/ui/design-system";
 import { useCollapsibleAccordionOptional } from "@/lib/ui/collapsible-accordion";
 import {
-  gestionaleCollapsibleSectionTitleHitboxClass,
-  gestionaleCollapsibleToggleBtnClass,
-  gestionaleCollapsibleToggleBtnExpandedClass,
+  gestionaleCollapsibleChevronBoxClass,
+  gestionaleCollapsibleChevronBoxExpandedClass,
 } from "@/lib/ui/gestionale-collapsible-toggle";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 
 /** Separatore header/contenuto senza `border-b` sul trigger (evita gap 1px in animazione collapse). */
 const shellCardHeaderDivider =
   "shadow-[inset_0_-1px_0_0_var(--cab-border)]";
+
+/** Focus visibile senza scale: il trigger header è edge-to-edge. */
+const shellCardHeaderTriggerFocus =
+  "outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_42%,transparent)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--cab-bg-app)] dark:focus-visible:ring-offset-[var(--cab-bg-app)]";
 
 function ShellCardChevron({ expanded }: { expanded: boolean }) {
   return (
@@ -63,7 +66,7 @@ export function ShellCard({
   compactContent?: boolean;
   compactHeader?: boolean;
   headerActionsDivider?: boolean;
-  /** Header con toggle solo sul chevron (titolo non cliccabile). */
+  /** Header cliccabile (titolo + chevron) per espandere/collassare. */
   collapsible?: boolean;
   /** Solo se `collapsible`: partenza compressa. */
   defaultCollapsed?: boolean;
@@ -111,10 +114,16 @@ export function ShellCard({
       {hasHeader ? (
         collapsible ? (
           <div
-            className={`flex w-full min-w-0 items-stretch ${expanded ? shellCardHeaderDivider : ""}`}
+            className={`flex w-full min-w-0 items-stretch bg-[var(--cab-card)] ${expanded ? shellCardHeaderDivider : ""}`}
           >
-            <div
-              className={`flex min-w-0 flex-1 items-center gap-3 bg-[var(--cab-card)] px-4 py-3 sm:min-h-[3.25rem] sm:px-5 ${triggerPad} ${gestionaleCollapsibleSectionTitleHitboxClass}`}
+            <button
+              type="button"
+              id={`${panelId}-trigger`}
+              aria-expanded={expanded}
+              aria-controls={`${panelId}-body`}
+              aria-label={toggleLabel}
+              onClick={() => setCollapsed(!collapsed)}
+              className={`group flex min-w-0 w-full flex-1 self-stretch items-center gap-3 bg-[var(--cab-card)] px-4 py-3 text-left touch-manipulation outline-none transition-colors duration-200 ease-out hover:bg-[var(--cab-hover)] active:bg-[var(--cab-hover)] motion-reduce:transition-none sm:min-h-[3.25rem] sm:px-5 [-webkit-tap-highlight-color:transparent] ${triggerPad} ${shellCardHeaderTriggerFocus}`}
             >
               <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
                 {title ? (
@@ -124,22 +133,15 @@ export function ShellCard({
                 ) : null}
                 {subtitle ? <p className={dsTypoSmall}>{subtitle}</p> : null}
               </div>
-            </div>
-            <div className="flex shrink-0 items-center bg-[var(--cab-card)] pr-2 sm:pr-3">
-              <button
-                type="button"
-                id={`${panelId}-trigger`}
-                aria-expanded={expanded}
-                aria-controls={`${panelId}-body`}
-                aria-label={toggleLabel}
-                onClick={() => setCollapsed(!collapsed)}
-                className={`${gestionaleCollapsibleToggleBtnClass} ${
-                  expanded ? gestionaleCollapsibleToggleBtnExpandedClass : ""
+              <span
+                aria-hidden
+                className={`${gestionaleCollapsibleChevronBoxClass} ${
+                  expanded ? gestionaleCollapsibleChevronBoxExpandedClass : ""
                 }`}
               >
                 <ShellCardChevron expanded={expanded} />
-              </button>
-            </div>
+              </span>
+            </button>
             {headerActions ? (
               <div
                 className={`flex shrink-0 items-center gap-2 self-stretch bg-[var(--cab-card)] px-2 sm:px-3 ${

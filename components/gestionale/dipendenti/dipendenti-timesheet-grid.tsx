@@ -28,18 +28,20 @@ import { DipendentiTimesheetCompactCell } from "@/components/gestionale/dipenden
 import {
   buildTimesheetCellTooltip,
   buildTimesheetEmployeeNameTooltip,
+  cellHasData,
   formatTimesheetDayColumnTooltip,
   formatTimesheetFooterDayTooltip,
   formatTimesheetFooterMonthTooltip,
 } from "@/lib/dipendenti/timesheet-cell-display";
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import {
-  computeTimesheetUiTableWidthRem,
+  computeTimesheetUiTableWidthRemFromDays,
+  timesheetDayColumnClass,
   TIMESHEET_UI_CELL_OVERFLOW_CLASS,
-  TIMESHEET_UI_DAY_COL_MIN_CLASS,
   TIMESHEET_UI_NAME_COL_CLASS,
   TIMESHEET_UI_TABLE_CLASS,
   TIMESHEET_UI_TOTAL_COL_CLASS,
+  type TimesheetDayColumnLayout,
 } from "@/lib/dipendenti/timesheet-grid-layout";
 import { gestionaleListTableMasterWrapClass } from "@/lib/ui/gestionale-list-table";
 import { dsScrollbar } from "@/lib/ui/design-system";
@@ -247,14 +249,22 @@ function resolvePointerCrosshair(
   return null;
 }
 
-function dayHeaderClass(isWeekend: boolean): string {
+function dayHeaderClass(layout: TimesheetDayColumnLayout): string {
   return [
     timesheetHeaderThBase,
-    TIMESHEET_UI_DAY_COL_MIN_CLASS,
+    timesheetDayColumnClass(layout),
     TIMESHEET_UI_CELL_OVERFLOW_CLASS,
-    "whitespace-nowrap px-0.5 text-center",
-    isWeekend ? "text-[color:var(--cab-text-muted)]" : "",
+    "whitespace-nowrap text-center",
+    layout.compactWeekend ? "!px-0" : "px-0.5",
+    layout.isWeekend ? "text-[color:var(--cab-text-muted)]" : "",
   ].join(" ");
+}
+
+function dayColumnDataAttrs(layout: TimesheetDayColumnLayout) {
+  return {
+    "data-timesheet-weekend": layout.isWeekend ? "true" : undefined,
+    "data-timesheet-weekend-compact": layout.compactWeekend ? "true" : undefined,
+  } as const;
 }
 
 export function DipendentiTimesheetGrid({
@@ -348,6 +358,16 @@ export function DipendentiTimesheetGrid({
     [days, visibleEmployees, getCellValue],
   );
 
+  const dayColumnLayouts = useMemo((): TimesheetDayColumnLayout[] => {
+    return days.map((d) => {
+      if (!d.isWeekend) {
+        return { isWeekend: false, compactWeekend: false };
+      }
+      const hasAnyData = visibleEmployees.some((emp) => cellHasData(getCellValue(emp.id, d.dateYmd)));
+      return { isWeekend: true, compactWeekend: !hasAnyData };
+    });
+  }, [days, visibleEmployees, getCellValue]);
+
   function formatDayWorkFooter(total: { totaleLavorato: number }): ReactNode {
     return total.totaleLavorato > 0 ? total.totaleLavorato : "—";
   }
@@ -429,19 +449,19 @@ export function DipendentiTimesheetGrid({
     TIMESHEET_UI_CELL_OVERFLOW_CLASS,
   ].join(" ");
   const stickyNameShadow = timesheetStickyColBodyShadow;
-  const dayTd = (weekend: boolean) =>
+  const dayTd = (layout: TimesheetDayColumnLayout) =>
     [
       "relative border-b border-[color:var(--cab-border)] p-0 align-middle min-h-9",
-      TIMESHEET_UI_DAY_COL_MIN_CLASS,
+      timesheetDayColumnClass(layout),
       "min-w-0",
-      weekend ? "" : "bg-[var(--cab-card)]",
+      layout.isWeekend ? "" : "bg-[var(--cab-card)]",
     ].join(" ");
   const totalTd = [
     "border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_25%,var(--cab-card))] px-1 py-1.5 text-center text-xs font-semibold tabular-nums",
     TIMESHEET_UI_TOTAL_COL_CLASS,
     TIMESHEET_UI_CELL_OVERFLOW_CLASS,
   ].join(" ");
-  const tableWidthRem = computeTimesheetUiTableWidthRem(days.length);
+  const tableWidthRem = computeTimesheetUiTableWidthRemFromDays(dayColumnLayouts);
 
   if (visibleEmployees.length === 0) {
     return (
@@ -468,42 +488,60 @@ export function DipendentiTimesheetGrid({
         >
           <colgroup>
             <col data-timesheet-fixed="name" />
-            {days.map((d) => (
-              <col key={d.dateYmd} data-timesheet-day="" />
-            ))}
+            {days.map((d, index) => {
+              const layout = dayColumnLayouts[index]!;
+              return (
+                <col
+                  key={d.dateYmd}
+                  data-timesheet-day=""
+                  {...dayColumnDataAttrs(layout)}
+                />
+              );
+            })}
             <col data-timesheet-fixed="total" />
           </colgroup>
           <GlobalTableHead sticky>
             <GlobalTableHeadLabel
-              label="Dipendente"
+              label="Nome"
               thClassName={`sticky left-0 z-[4] ${timesheetStickyNameCol} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} bg-[var(--cab-surface-2)] py-2`}
             />
-            {days.map((d) => (
-              <th
-                key={d.dateYmd}
-                data-timesheet-day={d.dateYmd}
-                data-timesheet-weekend={d.isWeekend ? "true" : undefined}
-                {...dayAccentProps(d.dateYmd)}
-                className={dayHeaderClass(d.isWeekend)}
-                aria-current={isTodayAccentColumn(d.dateYmd) ? "date" : undefined}
-              >
-                <Tooltip
-                  content={formatTimesheetDayColumnTooltip(d, monthKey)}
-                  side="bottom"
-                  showOnFocus={false}
-                  delayMs={220}
+            {days.map((d, index) => {
+              const layout = dayColumnLayouts[index]!;
+              return (
+                <th
+                  key={d.dateYmd}
+                  data-timesheet-day={d.dateYmd}
+                  {...dayColumnDataAttrs(layout)}
+                  {...dayAccentProps(d.dateYmd)}
+                  className={dayHeaderClass(layout)}
+                  aria-current={isTodayAccentColumn(d.dateYmd) ? "date" : undefined}
                 >
-                  <span className="block w-full min-w-0 text-center">
-                    <span className="gestionale-timesheet-day-accent-day block text-xs font-semibold tabular-nums">
-                      {d.day}
+                  <Tooltip
+                    content={formatTimesheetDayColumnTooltip(d, monthKey)}
+                    side="bottom"
+                    showOnFocus={false}
+                    delayMs={220}
+                  >
+                    <span className="block w-full min-w-0 text-center">
+                      {layout.compactWeekend ? (
+                        <span className="gestionale-timesheet-day-accent-day block text-[10px] font-semibold tabular-nums leading-none">
+                          {d.day}
+                        </span>
+                      ) : (
+                        <>
+                          <span className="gestionale-timesheet-day-accent-day block text-xs font-semibold tabular-nums">
+                            {d.day}
+                          </span>
+                          <span className="mt-0.5 block whitespace-nowrap text-[10px] font-normal normal-case opacity-80">
+                            {d.weekdayShort}
+                          </span>
+                        </>
+                      )}
                     </span>
-                    <span className="mt-0.5 block whitespace-nowrap text-[10px] font-normal normal-case opacity-80">
-                      {d.weekdayShort}
-                    </span>
-                  </span>
-                </Tooltip>
-              </th>
-            ))}
+                  </Tooltip>
+                </th>
+              );
+            })}
             <th
               className={`${timesheetHeaderThBase} ${timesheetTotalsColBorder} ${TIMESHEET_UI_TOTAL_COL_CLASS} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} whitespace-nowrap px-1 text-center`}
             >
@@ -562,13 +600,15 @@ export function DipendentiTimesheetGrid({
                         </span>
                       ) : null}
                     </td>
-                    {days.map((d) => (
+                    {days.map((d, dayIndex) => {
+                      const layout = dayColumnLayouts[dayIndex]!;
+                      return (
                       <td
                         key={d.dateYmd}
                         data-timesheet-day={d.dateYmd}
                         {...dayAccentProps(d.dateYmd)}
-                        data-timesheet-weekend={d.isWeekend ? "true" : undefined}
-                        className={dayTd(d.isWeekend)}
+                        {...dayColumnDataAttrs(layout)}
+                        className={dayTd(layout)}
                       >
                         <DipendentiTimesheetCompactCell
                           layer="work"
@@ -587,7 +627,8 @@ export function DipendentiTimesheetGrid({
                           onClick={() => onCellClick(emp.id, d.dateYmd)}
                         />
                       </td>
-                    ))}
+                      );
+                    })}
                     <td
                       data-timesheet-employee-row={emp.id}
                       data-timesheet-total=""
@@ -606,13 +647,15 @@ export function DipendentiTimesheetGrid({
                     </td>
                   </tr>
                   <tr className={empBodyRowClass} data-timesheet-employee-row={emp.id}>
-                    {days.map((d) => (
+                    {days.map((d, dayIndex) => {
+                      const layout = dayColumnLayouts[dayIndex]!;
+                      return (
                       <td
                         key={d.dateYmd}
                         data-timesheet-day={d.dateYmd}
                         {...dayAccentProps(d.dateYmd)}
-                        data-timesheet-weekend={d.isWeekend ? "true" : undefined}
-                        className={dayTd(d.isWeekend)}
+                        {...dayColumnDataAttrs(layout)}
+                        className={dayTd(layout)}
                       >
                         <DipendentiTimesheetCompactCell
                           layer="absence"
@@ -631,7 +674,8 @@ export function DipendentiTimesheetGrid({
                           onClick={() => onCellClick(emp.id, d.dateYmd)}
                         />
                       </td>
-                    ))}
+                      );
+                    })}
                     <td
                       data-timesheet-employee-row={emp.id}
                       data-timesheet-total=""
@@ -658,21 +702,23 @@ export function DipendentiTimesheetGrid({
                 className={`${timesheetFooterTdBase} sticky left-0 z-[2] ${timesheetStickyNameCol} ${TIMESHEET_UI_CELL_OVERFLOW_CLASS} ${timesheetStickyNamePad} text-left text-[color:var(--cab-text-muted)]`}
                 rowSpan={2}
               >
-                <span className={`${globalTableThLabel} block truncate whitespace-nowrap`}>Totali mese</span>
+                <span className={`${globalTableThLabel} block truncate whitespace-nowrap`}>Totale</span>
               </td>
               {days.map((d, index) => {
                 const dayTotal = dailyTotals[index]!;
+                const layout = dayColumnLayouts[index]!;
                 return (
                   <td
                     key={d.dateYmd}
                     data-timesheet-day={d.dateYmd}
-                    data-timesheet-weekend={d.isWeekend ? "true" : undefined}
+                    {...dayColumnDataAttrs(layout)}
                     {...dayAccentProps(d.dateYmd)}
                     className={[
                       timesheetFooterTdBase,
-                      TIMESHEET_UI_DAY_COL_MIN_CLASS,
+                      timesheetDayColumnClass(layout),
                       TIMESHEET_UI_CELL_OVERFLOW_CLASS,
-                      "px-0.5 text-center text-xs font-semibold tabular-nums",
+                      layout.compactWeekend ? "!px-0" : "px-0.5",
+                      "text-center text-xs font-semibold tabular-nums",
                     ].join(" ")}
                   >
                     <Tooltip
@@ -711,17 +757,19 @@ export function DipendentiTimesheetGrid({
             <tr>
               {days.map((d, index) => {
                 const dayTotal = dailyTotals[index]!;
+                const layout = dayColumnLayouts[index]!;
                 return (
                   <td
                     key={d.dateYmd}
                     data-timesheet-day={d.dateYmd}
-                    data-timesheet-weekend={d.isWeekend ? "true" : undefined}
+                    {...dayColumnDataAttrs(layout)}
                     {...dayAccentProps(d.dateYmd)}
                     className={[
                       timesheetFooterTdBase,
-                      TIMESHEET_UI_DAY_COL_MIN_CLASS,
+                      timesheetDayColumnClass(layout),
                       TIMESHEET_UI_CELL_OVERFLOW_CLASS,
-                      "px-0.5 text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]",
+                      layout.compactWeekend ? "!px-0" : "px-0.5",
+                      "text-center text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]",
                     ].join(" ")}
                   >
                     <Tooltip

@@ -47,6 +47,8 @@ export async function logoutViaUi(page: Page): Promise<void> {
   await page.getByTestId("smoke-account-menu").click();
   await expect(page.getByTestId("smoke-logout")).toBeVisible({ timeout: 10_000 });
   await page.getByTestId("smoke-logout").click();
+  await expect(page.getByTestId("smoke-logout-confirm")).toBeVisible({ timeout: 10_000 });
+  await page.getByTestId("smoke-logout-confirm").click();
   await page.waitForURL(/\/login/, { timeout: 30_000 });
 }
 

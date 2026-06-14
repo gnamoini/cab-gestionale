@@ -295,15 +295,29 @@ function mezziTipoRiga(tipo: MezziLogEntryLike["tipo"]): string {
   return "AGGIORNAMENTO MEZZO";
 }
 
+function mezziLeadLine(entry: MezziLogEntryLike): string | null {
+  const who = formatLogAuthorDisplay(entry.autore);
+  const cosa = formatTitleCasePhrase(entry.mezzo);
+  if (entry.tipo === "aggiunta") {
+    return `${who} ha registrato il mezzo ${cosa}`;
+  }
+  if (entry.tipo === "rimozione") {
+    return `${who} ha rimosso il mezzo ${cosa}`;
+  }
+  return null;
+}
+
 export function buildMezziGestionaleLogViewModel(entry: MezziLogEntryLike): GestionaleLogViewModel {
   const tone = gestionaleLogToneMagazzino(entry.tipo);
   const tipoRiga = mezziTipoRiga(entry.tipo);
   const oggettoRiga = formatTitleCasePhrase(entry.mezzo);
   let modificaRiga: string;
   if (entry.tipo === "aggiunta") {
-    modificaRiga = toBulletModificaRiga(["Nuovo mezzo registrato in anagrafica"]);
+    const lead = mezziLeadLine(entry);
+    modificaRiga = toBulletModificaRiga([lead ?? "Nuovo mezzo registrato in anagrafica"]);
   } else if (entry.tipo === "rimozione") {
-    modificaRiga = toBulletModificaRiga(["Mezzo rimosso dall'anagrafica"]);
+    const lead = mezziLeadLine(entry);
+    modificaRiga = toBulletModificaRiga([lead ?? "Mezzo rimosso dall'anagrafica"]);
   } else if (entry.changes.length) {
     modificaRiga = buildModificaRigaFromChanges(entry.changes);
   } else {

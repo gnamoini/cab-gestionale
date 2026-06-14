@@ -58,10 +58,10 @@ const withIngresso: LavorazioneSchedeBundle = {
 
 async function run(): Promise<void> {
   const qc = new QueryClient();
-  qc.setQueryData(SCHEde_BUNDLES_QUERY_KEY, { [lavId]: emptyBundle });
+  qc.setQueryData(SCHEde_BUNDLES_QUERY_KEY, { [lavId]: { ...emptyBundle, _fetchedAt: Date.now() } });
 
   const afterEnsure = await ensureSchedeBundlesInCache(qc, [lavId]);
-  assert.equal(countSchedePresenti(afterEnsure[lavId]!), 0, "ensure mantiene bundle vuoto già in cache");
+  assert.equal(countSchedePresenti(afterEnsure[lavId]!), 0, "ensure mantiene bundle vuoto già fetchato");
 
   qc.setQueryData(SCHEde_BUNDLES_QUERY_KEY, { [lavId]: withIngresso });
   const optimistic = qc.getQueryData<Record<string, LavorazioneSchedeBundle>>(SCHEde_BUNDLES_QUERY_KEY);

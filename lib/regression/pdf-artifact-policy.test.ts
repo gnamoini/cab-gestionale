@@ -60,6 +60,7 @@ for (const rel of pdfDataModules) {
 const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
 assert.match(requestArtifact, /await fetch\(url/);
 assert.match(requestArtifact, /Generazione PDF in corso/);
+assert.doesNotMatch(requestArtifact, /downloadFileName/);
 const responseHeaders = read("lib/pdf/pdf-artifact-response.ts");
 assert.match(responseHeaders, /X-Cache-Status/);
 assert.match(responseHeaders, /X-PDF-Generate-Ms/);

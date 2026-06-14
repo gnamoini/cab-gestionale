@@ -3,7 +3,8 @@
 import { useMemo } from "react";
 import type { DateRange } from "@/lib/report/date-ranges";
 import { filterEntriesForReportTimesheetKpi } from "@/lib/dipendenti/timesheet-report-kpi-filter";
-import { dateYmdFromDate, formatMonthLabel, monthKeyFromDate, shiftMonthKey } from "@/lib/dipendenti/timesheet-month";
+import { resolveReportTimesheetRange } from "@/lib/dipendenti/timesheet-report-range";
+import { shiftMonthKey } from "@/lib/dipendenti/timesheet-month";
 import type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
@@ -14,23 +15,13 @@ function entriesQueryKey(from: string, to: string) {
   return [...QK.dipendentiTimesheetEntries, from, to] as const;
 }
 
-function reportTimesheetPeriodLabel(range: DateRange): string {
-  const startKey = monthKeyFromDate(range.start);
-  const endKey = monthKeyFromDate(range.end);
-  if (startKey === endKey) return formatMonthLabel(endKey);
-  return `${dateYmdFromDate(range.start)} – ${dateYmdFromDate(range.end)}`;
-}
-
 export function useReportTimesheetKpi(filterRange: DateRange) {
   const { dipendenti: dipendentiOpts } = useGlobalOptions({ debugTag: "useReportTimesheetKpi" });
   const tipiAssenza = dipendentiOpts.tipiAssenza;
 
-  const from = dateYmdFromDate(filterRange.start);
-  const to = dateYmdFromDate(filterRange.end);
-  const monthKeyEnd = monthKeyFromDate(filterRange.end);
-  const monthKeyStart = monthKeyFromDate(filterRange.start);
-  const singleMonth = monthKeyStart === monthKeyEnd;
-  const previousMonthKey = shiftMonthKey(monthKeyEnd, -1);
+  const timesheetRange = useMemo(() => resolveReportTimesheetRange(filterRange), [filterRange]);
+  const { from, to, periodLabel, showMonthDelta, monthKey } = timesheetRange;
+  const previousMonthKey = monthKey ? shiftMonthKey(monthKey, -1) : null;
 
   const employeesQuery = useServiceQuery(QK.dipendentiTimesheetEmployees, () =>
     dipendentiTimesheetService.listEmployees(),
@@ -41,19 +32,19 @@ export function useReportTimesheetKpi(filterRange: DateRange) {
   );
 
   const previousMonthQuery = useServiceQuery(
-    [...QK.dipendentiTimesheetEntries, "prev", previousMonthKey] as const,
-    () => dipendentiTimesheetService.listEntriesForMonth(previousMonthKey),
-    { enabled: singleMonth },
+    [...QK.dipendentiTimesheetEntries, "prev", previousMonthKey ?? ""] as const,
+    () => dipendentiTimesheetService.listEntriesForMonth(previousMonthKey!),
+    { enabled: showMonthDelta && previousMonthKey != null },
   );
 
-  const periodLabel = useMemo(() => reportTimesheetPeriodLabel(filterRange), [filterRange]);
-
   const isLoading =
-    employeesQuery.isPending || entriesQuery.isPending || (singleMonth && previousMonthQuery.isPending);
+    employeesQuery.isPending ||
+    entriesQuery.isPending ||
+    (showMonthDelta && previousMonthQuery.isPending);
   const isError = employeesQuery.isError || entriesQuery.isError;
 
   const rawEntries = (entriesQuery.data ?? []) as DipendenteTimesheetEntryRow[];
-  const rawPreviousEntries = singleMonth
+  const rawPreviousEntries = showMonthDelta
     ? ((previousMonthQuery.data ?? []) as DipendenteTimesheetEntryRow[])
     : [];
 
@@ -68,7 +59,7 @@ export function useReportTimesheetKpi(filterRange: DateRange) {
 
   return {
     periodLabel,
-    singleMonth,
+    singleMonth: showMonthDelta,
     isLoading,
     isError,
     employees: (employeesQuery.data ?? []) as DipendenteTimesheetEmployeeRow[],
@@ -77,7 +68,7 @@ export function useReportTimesheetKpi(filterRange: DateRange) {
     refetch: () => {
       void employeesQuery.refetch();
       void entriesQuery.refetch();
-      if (singleMonth) void previousMonthQuery.refetch();
+      if (showMonthDelta) void previousMonthQuery.refetch();
     },
   };
 }

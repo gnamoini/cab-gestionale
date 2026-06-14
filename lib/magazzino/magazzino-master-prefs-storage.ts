@@ -4,6 +4,7 @@ import {
   mergeProduttoriFromMagazzinoMaster,
   parseProduttoriByFornitore,
 } from "@/lib/magazzino/fornitore-produttore-master";
+import { parseScontoFornitoreByFornitore } from "@/lib/magazzino/fornitore-alternativo-sconto";
 import { parseScontoFornitoreByMarca } from "@/lib/magazzino/marca-fornitore-sconto";
 
 /** @deprecated Persistenza spostata su `public.app_settings` (modulo `magazzino`, chiave `master`). */
@@ -16,6 +17,8 @@ export type MagazzinoMasterPrefs = {
   categorie: string[];
   mezziCompatibili: string[];
   fornitori: string[];
+  /** Sconto % listino fornitore alternativo per acquisti ricambi (chiave normalizzata lowercase). */
+  scontoFornitoreByFornitore?: Record<string, number>;
   /** Elenco globale produttori (fornitori alternativi ricambi). */
   produttori: string[];
   /** @deprecated Migrato in `produttori` — letto solo per merge legacy. */
@@ -39,6 +42,7 @@ export function loadMagazzinoMasterPrefs(): MagazzinoMasterPrefs | null {
         ? (o.mezziCompatibili as string[]).filter((x) => typeof x === "string")
         : [],
       fornitori: Array.isArray(o.fornitori) ? (o.fornitori as string[]).filter((x) => typeof x === "string") : [],
+      scontoFornitoreByFornitore: parseScontoFornitoreByFornitore(o.scontoFornitoreByFornitore),
       produttori: Array.isArray(o.produttori)
         ? (o.produttori as string[]).filter((x) => typeof x === "string")
         : [],

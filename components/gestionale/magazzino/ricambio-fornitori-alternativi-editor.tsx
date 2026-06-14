@@ -3,11 +3,13 @@
 import { memo } from "react";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { CloseButton } from "@/components/design-system";
+import { useRicambioFormOptions } from "@/components/gestionale/magazzino/ricambio-form-options-context";
 import {
   emptyFornitoreAlternativoFormRow,
   type RicambioFornitoreAlternativoFormRow,
 } from "@/lib/magazzino/form";
 import { applyRicambioCodiceInputChange } from "@/lib/magazzino/ricambio-codice";
+import { getScontoFornitoreAlternativo } from "@/lib/magazzino/fornitore-alternativo-sconto";
 import { dsBtnNeutralForm, dsInput } from "@/lib/ui/design-system";
 
 const ricambioFormInputClass = dsInput;
@@ -30,6 +32,8 @@ function patchRow(
 }
 
 function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = false }: Props) {
+  const { magazzinoMaster } = useRicambioFormOptions();
+
   const addRow = () => {
     if (readOnly || rows.length >= 20) return;
     onChange([...rows, emptyFornitoreAlternativoFormRow()]);
@@ -67,7 +71,10 @@ function RicambioFornitoriAlternativiEditorInner({ rows, onChange, readOnly = fa
                   <GlobalSettingsListSelect
                     listKey="magazzino:fornitori"
                     value={row.fornitore}
-                    onChange={(fornitore) => onChange(patchRow(rows, row.id, { fornitore }))}
+                    onChange={(fornitore) => {
+                      const sconto = getScontoFornitoreAlternativo(magazzinoMaster, fornitore);
+                      onChange(patchRow(rows, row.id, { fornitore, sconto: String(sconto) }));
+                    }}
                     disabled={readOnly}
                     selectOnly
                     minSheetOptions={0}

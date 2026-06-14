@@ -23,18 +23,14 @@ import {
   buildStatoTablePillOptions,
 } from "@/lib/global-list/build-lavorazioni-pill-options";
 import {
-  ADDETTI_SETTINGS_PANEL_CLASS,
-  ADDETTI_SETTINGS_TABLE_CLASS,
-  AddettiInsertRow,
-  AddettiSettingsList,
-  ColorSwatchButton,
-  StatoSettingsList,
+  AddettiSettingsSection,
+  PrioritaSettingsSection,
+  StatiSettingsSection,
 } from "@/components/gestionale/lavorazioni/lavorazioni-settings-ui";
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   erpBtnAccent,
   erpBtnNeutral,
-  prioritaBadgeStyle,
   prioritaLabel,
   addettoPillShellClass,
   addettoPillShellStyleForName,
@@ -64,7 +60,6 @@ import {
   dsHubModalTabBar,
   dsSegmentedBtnOn,
 } from "@/lib/ui/design-system";
-import { SETTINGS_PANEL_SHELL } from "@/components/dashboard/settings-list-ui";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
@@ -843,14 +838,11 @@ export function SettingsLavorazioniModal({
   onAddStatoFromLabel,
   onChangeStatoLabel,
   onChangeStatoColor,
-  onChangeStatoClosed,
   onRemoveStato,
   onReorderStato,
   addettiRecords,
   addettoColors,
   prioritaColors,
-  prioritaDb,
-  onChangePrioritaDb,
   onChangePrioritaColor,
   onAddAddetto,
   onUpdateAddetto,
@@ -869,14 +861,11 @@ export function SettingsLavorazioniModal({
   onAddStatoFromLabel: (label: string) => void;
   onChangeStatoLabel: (id: string, label: string) => void;
   onChangeStatoColor: (id: string, hex: string) => void;
-  onChangeStatoClosed?: (id: string, closed: boolean) => void;
   onRemoveStato: (id: string) => void;
   onReorderStato?: (fromIndex: number, toIndex: number) => void;
   addettiRecords: AddettoRecord[];
   addettoColors: Record<string, string>;
   prioritaColors: Partial<Record<PrioritaLav, string>>;
-  prioritaDb?: string[];
-  onChangePrioritaDb?: (next: string[]) => void;
   onChangePrioritaColor: (p: PrioritaLav, hex: string) => void;
   onAddAddetto: (input: { nome: string; cognome?: string | null }) => void;
   onUpdateAddetto: (id: string, patch: { nome?: string; cognome?: string | null }) => void;
@@ -892,21 +881,11 @@ export function SettingsLavorazioniModal({
   embeddedFocus?: SettingsLavorazioniTab | null;
 }) {
   const [tab, setTab] = useState<SettingsTab>("stati");
-  const [nuovoStato, setNuovoStato] = useState("");
-  const [nuovoAddettoNome, setNuovoAddettoNome] = useState("");
-  const [nuovoAddettoCognome, setNuovoAddettoCognome] = useState("");
 
   const lockedTab = layout === "embedded" && embeddedFocus ? embeddedFocus : null;
-  const settingsTabPanelClass = lockedTab ? "w-full space-y-4" : "mx-auto w-full max-w-xl space-y-4";
-  const settingsListDivideClass = lockedTab
-    ? "divide-y divide-[color:var(--cab-border)]"
-    : "divide-y divide-zinc-100 dark:divide-zinc-800";
-  const settingsMutedTextClass = lockedTab
-    ? "text-[color:var(--cab-text-muted)]"
-    : "text-zinc-500 dark:text-zinc-400";
-  const settingsBodyTextClass = lockedTab
-    ? "text-[color:var(--cab-text)]"
-    : "text-zinc-800 dark:text-zinc-100";
+  const embeddedTabPanelClass = "w-full min-w-0";
+  const modalTabPanelClass =
+    "min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-3 sm:p-4 [scrollbar-gutter:stable]";
   const settingsTitle =
     lockedTab === "stati"
       ? "Stati lavorazioni"
@@ -919,6 +898,46 @@ export function SettingsLavorazioniModal({
   useEffect(() => {
     if (lockedTab) setTab(lockedTab);
   }, [lockedTab]);
+
+  const addettiPanel = (
+    <AddettiSettingsSection
+      embedded={Boolean(lockedTab)}
+      addettiRecords={addettiRecords}
+      addettoColors={addettoColors}
+      onAddAddetto={onAddAddetto}
+      onChangeAddettoColor={onChangeAddettoColor}
+      onUpdateAddetto={onUpdateAddetto}
+      onRemove={onRemoveAddetto}
+      attiviAddetti={attiviAddetti}
+      storicoAddetti={storicoAddetti}
+    />
+  );
+
+  const statiPanel = (
+    <StatiSettingsSection
+      layout={lockedTab ? "flat" : "card"}
+      stati={stati}
+      onAddStatoFromLabel={onAddStatoFromLabel}
+      onChangeLabel={onChangeStatoLabel}
+      onChangeStatoColor={onChangeStatoColor}
+      onRemove={onRemoveStato}
+      onReorder={onReorderStato}
+    />
+  );
+
+  const prioritaPanel = (
+    <PrioritaSettingsSection
+      layout={lockedTab ? "flat" : "card"}
+      prioritaColors={prioritaColors}
+      onChangePrioritaColor={onChangePrioritaColor}
+    />
+  );
+
+  if (layout === "embedded" && lockedTab) {
+    if (lockedTab === "addetti") return addettiPanel;
+    if (lockedTab === "stati") return statiPanel;
+    if (lockedTab === "priorita") return prioritaPanel;
+  }
 
   const tabBtn = (id: SettingsTab, label: string) => {
     const active = tab === id;
@@ -940,11 +959,11 @@ export function SettingsLavorazioniModal({
 
   const inner = (
       <div
-        className={`flex min-h-0 w-full min-w-0 flex-col ${
+        className={
           lockedTab
-            ? "max-h-none min-h-0 min-w-0 flex-1 overflow-x-auto overflow-y-visible"
-            : `${gestionaleModalBodyFlexClass} overflow-hidden`
-        }`}
+            ? embeddedTabPanelClass
+            : `flex min-h-0 w-full min-w-0 flex-col ${gestionaleModalBodyFlexClass} overflow-hidden`
+        }
       >
         {!lockedTab ? (
           <div
@@ -961,139 +980,13 @@ export function SettingsLavorazioniModal({
         <div
           role="tabpanel"
           aria-label={tab === "stati" ? "Stati lavorazione" : tab === "priorita" ? "Priorità" : "Addetti"}
-          className={`min-h-0 min-w-0 flex-1 overflow-x-hidden bg-[color:color-mix(in_srgb,var(--cab-surface-2)_35%,var(--cab-card))] p-3 sm:p-4 ${
-            lockedTab ? "overflow-visible" : "overflow-y-auto overscroll-contain [scrollbar-gutter:stable]"
-          }`}
+          className={lockedTab ? embeddedTabPanelClass : modalTabPanelClass}
         >
-          {tab === "stati" ? (
-            <div className={settingsTabPanelClass}>
-              <div className="mb-4 grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-                <input
-                  className={`${dsInput} min-h-10 min-w-0 w-full`}
-                  value={nuovoStato}
-                  placeholder="Nuovo stato (es. Diagnosi, Attesa ricambi…)"
-                  aria-label="Nome nuovo stato"
-                  onChange={(e) => setNuovoStato(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key !== "Enter") return;
-                    e.preventDefault();
-                    const t = nuovoStato.trim();
-                    if (!t) return;
-                    onAddStatoFromLabel(t);
-                    setNuovoStato("");
-                  }}
-                />
-                <button
-                  type="button"
-                  className={`${erpBtnAccent} min-h-10 shrink-0 px-4 text-xs sm:text-sm`}
-                  disabled={!nuovoStato.trim()}
-                  onClick={() => {
-                    const t = nuovoStato.trim();
-                    if (!t) return;
-                    onAddStatoFromLabel(t);
-                    setNuovoStato("");
-                  }}
-                >
-                  Aggiungi stato
-                </button>
-              </div>
-              <p className={`mb-3 text-xs ${settingsMutedTextClass}`}>
-                Scrivi liberamente il nome dello stato. Trascina ⋮⋮ per riordinare il workflow. Gli stati «Archiviato» compaiono nello storico.
-              </p>
-              <StatoSettingsList
-                stati={stati}
-                onChangeLabel={onChangeStatoLabel}
-                onChangeStatoColor={onChangeStatoColor}
-                onChangeStatoClosed={onChangeStatoClosed}
-                onRemove={onRemoveStato}
-                onReorder={onReorderStato}
-                attiviStatoIds={attiviStatoIds}
-                storicoStatoIds={storicoStatoIds}
-                inputClass={dsInput}
-              />
-            </div>
-          ) : null}
+          {tab === "stati" ? statiPanel : null}
 
-          {tab === "priorita" ? (
-            <div className={settingsTabPanelClass}>
-              <ul className={settingsListDivideClass}>
-                {(onChangePrioritaDb ? PRIORITA : prioritaDb?.length ? prioritaDb : PRIORITA).map((p) => {
-                  const pl = p as PrioritaLav;
-                  const hex = prioritaDisplayColor(pl, prioritaColors);
-                  const active = (prioritaDb?.length ? prioritaDb : PRIORITA).includes(p);
-                  return (
-                    <li key={p} className="flex min-h-[2.75rem] flex-wrap items-center gap-2 py-2.5 first:pt-0 last:pb-0">
-                      <span className={`min-w-0 flex-1 text-sm font-medium ${settingsBodyTextClass}`}>
-                        {prioritaLabel(p)}
-                      </span>
-                      {onChangePrioritaDb ? (
-                        <label
-                          htmlFor={`priorita-attiva-${pl}`}
-                          className={`inline-flex items-center gap-1.5 text-[11px] font-medium ${settingsMutedTextClass}`}
-                        >
-                          <input
-                            id={`priorita-attiva-${pl}`}
-                            type="checkbox"
-                            checked={active}
-                            aria-label={`Priorità ${prioritaLabel(p)}: attiva`}
-                            onChange={(e) => {
-                              const next = e.target.checked
-                                ? [...new Set([...(prioritaDb ?? []), p])]
-                                : (prioritaDb ?? PRIORITA).filter((x) => x !== p);
-                              onChangePrioritaDb(next.length ? next : [p]);
-                            }}
-                          />
-                          Attiva
-                        </label>
-                      ) : null}
-                      <span
-                        className="inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-black/10"
-                        style={prioritaBadgeStyle(hex)}
-                      >
-                        {prioritaLabel(p)}
-                      </span>
-                      <ColorSwatchButton
-                        value={hex}
-                        ariaLabel={`Colore priorità ${prioritaLabel(p)}`}
-                        onChange={(h) => onChangePrioritaColor(pl, h)}
-                      />
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-          ) : null}
+          {tab === "priorita" ? prioritaPanel : null}
 
-          {tab === "addetti" ? (
-            <div className={settingsTabPanelClass}>
-              <div className={`${SETTINGS_PANEL_SHELL} ${ADDETTI_SETTINGS_PANEL_CLASS}`}>
-                <div className={ADDETTI_SETTINGS_TABLE_CLASS}>
-                <AddettiInsertRow
-                  nome={nuovoAddettoNome}
-                  cognome={nuovoAddettoCognome}
-                  onNomeChange={setNuovoAddettoNome}
-                  onCognomeChange={setNuovoAddettoCognome}
-                  onAdd={() => {
-                    const nome = nuovoAddettoNome.trim();
-                    if (!nome) return;
-                    onAddAddetto({ nome, cognome: nuovoAddettoCognome.trim() || null });
-                    setNuovoAddettoNome("");
-                    setNuovoAddettoCognome("");
-                  }}
-                />
-                <AddettiSettingsList
-                  addettiRecords={addettiRecords}
-                  addettoColors={addettoColors}
-                  onChangeAddettoColor={onChangeAddettoColor}
-                  onUpdateAddetto={onUpdateAddetto}
-                  onRemove={onRemoveAddetto}
-                  attiviAddetti={attiviAddetti}
-                  storicoAddetti={storicoAddetti}
-                />
-                </div>
-              </div>
-            </div>
-          ) : null}
+          {tab === "addetti" ? addettiPanel : null}
         </div>
       </div>
   );

@@ -1,22 +1,21 @@
 import { normalizeHex } from "@/lib/lavorazioni/color-utils";
 import { addettoThemeColor } from "@/lib/lavorazioni/lavorazioni-theme";
 
-/** Palette base gestionale — assegnazione senza duplicati finché possibile. */
-const ADDETTO_COLOR_POOL = [
-  "#2563eb",
-  "#7c3aed",
-  "#0d9488",
-  "#ea580c",
-  "#db2777",
-  "#4f46e5",
-  "#ca8a04",
-  "#059669",
-  "#0e7490",
-  "#b91c1c",
-  "#4338ca",
-  "#a16207",
-  "#047857",
-];
+/** Palette base gestionale — 12 colori frequenti (assegnazione automatica + picker impostazioni). */
+export const ADDETTO_COLOR_POOL = [
+  "#dc2626", // rosso
+  "#ea580c", // arancione
+  "#ca8a04", // giallo
+  "#16a34a", // verde
+  "#0d9488", // teal
+  "#0891b2", // ciano
+  "#2563eb", // blu
+  "#4f46e5", // indigo
+  "#7c3aed", // viola
+  "#c026d3", // fucsia
+  "#db2777", // rosa
+  "#64748b", // grigio
+] as const;
 
 function hslToHex(h: number, s: number, l: number): string {
   const s1 = s / 100;

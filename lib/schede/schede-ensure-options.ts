@@ -36,6 +36,8 @@ export function shouldRefetchBundleSlice(
   if (!existing) return true;
   if (options?.force) return true;
   if (options?.afterInvalidate && isSchedeEnsureForceOnInvalidate()) return true;
+  /** Placeholder locale / optimistic — mai confermato dal server. */
+  if (existing._fetchedAt == null) return true;
   if (options?.maxAgeMs != null && existing._fetchedAt != null) {
     return Date.now() - existing._fetchedAt > options.maxAgeMs;
   }

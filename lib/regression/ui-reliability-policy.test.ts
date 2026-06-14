@@ -80,6 +80,7 @@ assert.match(
   "main scroll inner wrapper must carry content width + gutter",
 );
 assert.match(appShell, /dsGestionaleScrollEndPad/);
+assert.match(appShell, /suppressGlobalScrollEndPad/);
 assert.match(appShell, /useGestionaleScrollEnd/);
 assert.match(appShell, /useGlobalDropdownPortal/);
 assert.match(appShell, /createPortal\(menu, document\.body\)/);

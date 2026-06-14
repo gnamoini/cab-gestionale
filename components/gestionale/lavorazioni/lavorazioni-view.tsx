@@ -14,7 +14,6 @@ import {
   GlobalTableSortTh,
 } from "@/components/gestionale/global-table";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { CollapsibleAccordionProvider } from "@/lib/ui/collapsible-accordion";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 const LavorazioneCreateModal = dynamic(
   () =>
@@ -79,6 +78,7 @@ import {
   type SchedaConcurrencyResolution,
 } from "@/lib/schede/scheda-concurrency-merge";
 import {
+  ensureSchedeBundlesInCache,
   isSchedaConcurrencyConflict,
   persistSchedeBundle,
   persistSchedeStore,
@@ -213,9 +213,9 @@ import {
   lavorazioneMacchinaLabel as macchinaLabel,
   lavorazioneMezzoIdent as mezzoIdent,
   lavorazioneMezzoIdentParts as mezzoIdentParts,
-  lavorazioneSchedeCount as schedeCountForRow,
   lavorazioneTelaioLabel as telaioLabel,
   lavorazioneUtilizzatoreLabel as utilizzatoreLabel,
+  lavorazioneSchedeBundleRevision,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import {
   LavorazioneArchivioTableRow,
@@ -416,6 +416,21 @@ function cmpCh(
   const ua = new Date(dataCompletamentoIso(a)).getTime();
   const ub = new Date(dataCompletamentoIso(b)).getTime();
   return t(ua === ub ? 0 : ua < ub ? -1 : 1);
+}
+
+const ARCHIVIO_SORT_KEYS_NEED_SCHEde = new Set<SortKeyCh>([
+  "macchina",
+  "mezzoIdent",
+  "cliente",
+  "utilizzatore",
+  "cantiere",
+  "addetto",
+  "oreTotali",
+]);
+
+function archivioSortNeedsFullSchede(sortCol: SortKeyCh | null, sortPhase: SortPhase): boolean {
+  if (sortPhase === "natural" || sortCol === null) return false;
+  return ARCHIVIO_SORT_KEYS_NEED_SCHEde.has(sortCol);
 }
 
 /** Placeholder anagrafica quando il filtro arriva da URL ma il mezzo non è ancora nello snapshot locale. */
@@ -806,13 +821,13 @@ export function LavorazioniView() {
     [mezzoFilterPart],
   );
 
-  const [openListSectionId, setOpenListSectionId] = useState<string | null>("attive");
+  const [archivioSectionOpen, setArchivioSectionOpen] = useState(false);
   const needsChiuseFetch = useMemo(
     () =>
-      openListSectionId === "archivio" ||
+      archivioSectionOpen ||
       Boolean(searchApplied.trim()) ||
       lavorazioniAdvancedFiltersActive(advancedFilters),
-    [advancedFilters, openListSectionId, searchApplied],
+    [advancedFilters, archivioSectionOpen, searchApplied],
   );
 
   const attiveQuery = useLavorazioniList(filtersAttive, gestionaleQueryOpts);
@@ -825,17 +840,29 @@ export function LavorazioniView() {
 
   const attiveRows = attiveQuery.data ?? [];
   const chiuseRows = chiuseQuery.data ?? [];
-  const schedeLavorazioneIds = useMemo(
-    () => [...attiveRows, ...chiuseRows].map((row) => row.id),
-    [attiveRows, chiuseRows],
-  );
-  const { store: schedeStore, invalidate: invalidateSchedeStore, refetch: refetchSchedeStore } =
-    useSchedeBundlesQuery(true, { lavorazioneIds: schedeLavorazioneIds });
 
-  useEffect(() => {
-    if (openListSectionId !== "archivio" || chiuseRows.length === 0) return;
-    void refetchSchedeStore();
-  }, [openListSectionId, chiuseRows.length, refetchSchedeStore]);
+  const hasPageClientFilters =
+    searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
+
+  const needsFullChiuseSchede = useMemo(
+    () => hasPageClientFilters || archivioSortNeedsFullSchede(sortColC, sortPhaseC),
+    [hasPageClientFilters, sortColC, sortPhaseC],
+  );
+
+  const schedeLavorazioneIds = useMemo(() => {
+    const ids = attiveRows.map((row) => row.id);
+    if (needsChiuseFetch && needsFullChiuseSchede) {
+      ids.push(...chiuseRows.map((row) => row.id));
+    }
+    return ids;
+  }, [attiveRows, chiuseRows, needsChiuseFetch, needsFullChiuseSchede]);
+  const {
+    store: schedeStore,
+    invalidate: invalidateSchedeStore,
+    refetch: refetchSchedeStore,
+    isLoading: schedeEnsureLoading,
+    isFetching: schedeEnsureFetching,
+  } = useSchedeBundlesQuery(true, { lavorazioneIds: schedeLavorazioneIds });
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -1305,6 +1332,24 @@ export function LavorazioniView() {
   }, [filtersChiuse, chiuseRowsFiltered.length, searchApplied, advancedFilters, listPageSize, resetPageC]);
   const pagedChiuse = useMemo(() => sliceC(sortedChiuse), [sortedChiuse, sliceC, pageC]);
 
+  const pagedChiuseIdsKey = useMemo(
+    () => pagedChiuse.map((row) => row.id).sort().join(","),
+    [pagedChiuse],
+  );
+
+  useEffect(() => {
+    if (!needsChiuseFetch || needsFullChiuseSchede || !pagedChiuseIdsKey) return;
+    const ids = pagedChiuseIdsKey.split(",").filter(Boolean);
+    void ensureSchedeBundlesInCache(qc, ids);
+  }, [needsChiuseFetch, needsFullChiuseSchede, pagedChiuseIdsKey, qc]);
+
+  const archivioPagedSchedePending = useMemo(
+    () =>
+      pagedChiuse.length > 0 &&
+      pagedChiuse.some((row) => schedeStore[row.id] === undefined),
+    [pagedChiuse, schedeStore],
+  );
+
   const mobileProfileUserIds = useMemo(() => {
     const ids = new Set<string>();
     const collect = (row: LavorazioneListRow) => {
@@ -1324,6 +1369,32 @@ export function LavorazioniView() {
       ),
     [authorName, lazyProfileNames, user?.id],
   );
+
+  const schedeStoreRef = useRef(schedeStore);
+  schedeStoreRef.current = schedeStore;
+  const logsByLavorazioneIdRef = useRef(logsByLavorazioneId);
+  logsByLavorazioneIdRef.current = logsByLavorazioneId;
+
+  const archivioPagedBundleRevisionKey = useMemo(
+    () =>
+      pagedChiuse
+        .map((row) => `${row.id}:${lavorazioneSchedeBundleRevision(schedeStore[row.id])}`)
+        .join(","),
+    [pagedChiuse, schedeStore],
+  );
+
+  const archivioMobileUltimaModificaMap = useMemo(() => {
+    const map = new Map<string, ReturnType<typeof resolveLavorazioneUltimaModifica>>();
+    for (const row of pagedChiuse) {
+      map.set(
+        row.id,
+        resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
+          resolveUserId: resolveMobileProfile(row),
+        }),
+      );
+    }
+    return map;
+  }, [pagedChiuse, archivioPagedBundleRevisionKey, resolveMobileProfile, schedeStore]);
 
   const focusLavorazioneInTable = useCallback(
     (id: string) => {
@@ -1472,14 +1543,20 @@ export function LavorazioniView() {
     [lavModificheLogQuery.data, user?.id, authorName, resolveLavorazioneLogOggetto, statiOpts],
   );
 
-  const hasPageClientFilters =
-    searchApplied.trim().length > 0 || lavorazioniAdvancedFiltersActive(advancedFilters);
-
   const totalFilteredCount = attiveRowsFiltered.length + chiuseRowsFiltered.length;
 
   const loading = attiveQuery.isLoading || chiuseQuery.isLoading;
   const initialListLoading =
     loading && attiveQuery.data === undefined && chiuseQuery.data === undefined;
+  const archivioTableLoading =
+    archivioSectionOpen &&
+    (chiuseQuery.isPending ||
+      (needsFullChiuseSchede
+        ? chiuseRows.length > 0 && schedeEnsureLoading
+        : archivioPagedSchedePending && (schedeEnsureLoading || schedeEnsureFetching)));
+  const archivioCardTitle = needsChiuseFetch
+    ? `Archivio lavorazioni (${chiuseRowsFiltered.length})`
+    : "Archivio lavorazioni";
   const loadErrRaw = attiveQuery.isError ? attiveQuery.error : chiuseQuery.isError ? chiuseQuery.error : null;
   const loadErr = loadErrRaw ? formatSupabaseError(loadErrRaw, { module: "lavorazioni", action: "read" }) : null;
 
@@ -1568,11 +1645,13 @@ export function LavorazioniView() {
     (index: number) => {
       const row = pagedChiuse[index];
       if (!row) return null;
+      const store = schedeStoreRef.current;
+      const logs = logsByLavorazioneIdRef.current;
       return (
         <LavorazioneArchivioTableRow
           key={row.id}
           row={row}
-          bundle={schedeStore[row.id]}
+          bundle={store[row.id]}
           flash={flashRowId === row.id}
           navBulkFlash={navBulkFlashIds.has(row.id)}
           rowIndex={index}
@@ -1580,7 +1659,7 @@ export function LavorazioniView() {
           canEditWorkOrders={canEditWorkOrders}
           mutPendingBlocking={mutPendingBlocking}
           loading={loading}
-          addettoLogs={logsByLavorazioneId.get(row.id)}
+          addettoLogs={logs.get(row.id)}
           addettoColors={globalOpts.lavorazioni.addettoColors}
           onRipristina={onRipristinaArchivioRow}
           onOpenInfo={onOpenArchivioInfo}
@@ -1599,9 +1678,16 @@ export function LavorazioniView() {
       onRipristinaArchivioRow,
       onOpenArchivioInfo,
       onOpenArchivioSchede,
-      schedeStore,
-      logsByLavorazioneId,
     ],
+  );
+
+  const archivioVirtualRows = useMemo(
+    () => ({
+      rowCount: pagedChiuse.length,
+      renderRow: renderArchivioDesktopRow,
+      estimateRowHeight: 72,
+    }),
+    [pagedChiuse.length, renderArchivioDesktopRow, archivioPagedBundleRevisionKey],
   );
 
   async function undoUltimaLavorazione() {
@@ -1757,11 +1843,9 @@ export function LavorazioniView() {
           onPrimeCreate={primeCreateModal}
         />
 
-        <CollapsibleAccordionProvider initialOpenId="attive" onOpenIdChange={setOpenListSectionId}>
         <ShellCard
           title={`Lavorazioni in corso (${attiveRowsFiltered.length})`}
           collapsible
-          accordionId="attive"
           defaultCollapsed={false}
         >
           {listViewMode === "kanban" ? (
@@ -1956,11 +2040,15 @@ export function LavorazioniView() {
 
         {listViewMode === "table" && !initialListLoading ? (
         <ShellCard
-          title={`Archivio lavorazioni (${chiuseRowsFiltered.length})`}
+          title={archivioCardTitle}
           collapsible
-          accordionId="archivio"
-          defaultCollapsed={true}
+          defaultCollapsed
+          onCollapsedChange={(collapsed) => setArchivioSectionOpen(!collapsed)}
         >
+          {!archivioSectionOpen ? null : archivioTableLoading ? (
+            <LoadingLavorazioniListSkeleton withToolbar={false} />
+          ) : (
+          <>
           <LavorazioniDesktopTableShell
             visibilityClass="hidden xl:block"
             className={gestionaleLavorazioniDenseTableClass}
@@ -2034,6 +2122,7 @@ export function LavorazioniView() {
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
                     align="center"
+                    highlightWhenActive={false}
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
                   <GlobalTableSortTh
@@ -2062,11 +2151,7 @@ export function LavorazioniView() {
                 : "Nessun record in archivio."
             }
             colSpan={10}
-            virtualRows={{
-              rowCount: pagedChiuse.length,
-              renderRow: renderArchivioDesktopRow,
-              estimateRowHeight: 72,
-            }}
+            virtualRows={archivioVirtualRows}
           />
 
           <LavorazioniMobileListShell
@@ -2088,9 +2173,7 @@ export function LavorazioniView() {
                 loading={loading}
                 prioritaColors={globalOpts.lavorazioni.prioritaColors}
                 addettoColors={globalOpts.lavorazioni.addettoColors}
-                ultimaModificaInfo={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
-                  resolveUserId: resolveMobileProfile(row),
-                })}
+                ultimaModificaInfo={archivioMobileUltimaModificaMap.get(row.id)!}
                 onRipristina={onRipristinaArchivioRow}
                 onOpenInfo={onOpenArchivioInfo}
                 onOpenSchede={onOpenArchivioSchede}
@@ -2099,9 +2182,10 @@ export function LavorazioniView() {
           </LavorazioniMobileListShell>
 
           {showPagerC ? <TablePagination page={pageC} pageCount={pageCountC} onPageChange={setPageC} label={labelC} /> : null}
+          </>
+          )}
         </ShellCard>
         ) : null}
-        </CollapsibleAccordionProvider>
 
       </div>
 

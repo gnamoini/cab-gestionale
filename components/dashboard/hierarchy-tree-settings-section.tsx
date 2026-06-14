@@ -1,28 +1,21 @@
 "use client";
 
 import {
-  useEffect,
   useMemo,
-  useRef,
   useState,
   type Dispatch,
   type SetStateAction,
 } from "react";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import {
-  SETTINGS_HIERARCHY_MODEL_BOX,
-  SETTINGS_HIERARCHY_MODEL_INPUT,
-  SETTINGS_LIST_UL,
-  SETTINGS_PANEL_SHELL,
-  SETTINGS_SECTION_HINT,
+  SETTINGS_LIST_DIVIDER_UL,
   SettingsEditableStringRow,
   SettingsEmptyState,
-  SettingsQuickAddRow,
-  SettingsRowActionButtons,
+  SettingsListBody,
+  SettingsListSection,
+  SettingsListToolbar,
 } from "@/components/dashboard/settings-list-ui";
 import { useSettingsSimilarGate } from "@/components/dashboard/use-settings-similar-gate";
-import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
-import { ShellCard } from "@/components/gestionale/shell-card";
 import type { HierarchyTreeKey } from "@/lib/mezzi/hierarchy-list-prefs";
 import {
   aggiungiMarcaHierarchy,
@@ -34,154 +27,165 @@ import {
   rinominaModelloHierarchy,
 } from "@/lib/mezzi/hierarchy-list-prefs";
 import type { MezziListePrefs } from "@/lib/mezzi/mezzi-liste-prefs-storage";
+import { filterSettingsHierarchyTree } from "@/lib/settings/settings-list-search";
 import {
-  dsLabel,
+  dsFocus,
   dsPageToolbarCtaCompact,
-  dsPageToolbarMetaChip,
-  dsPageToolbarMetaChipAccent,
 } from "@/lib/ui/design-system";
+import {
+  gestionaleCollapsibleChevronBoxClass,
+  gestionaleCollapsibleChevronBoxExpandedClass,
+  gestionaleCollapsibleChevronIconClass,
+  gestionaleCollapsibleEase,
+  gestionaleCollapsibleHeaderTriggerClass,
+  gestionaleCollapsiblePanelGridClass,
+  gestionaleCollapsiblePanelInnerClass,
+} from "@/lib/ui/gestionale-collapsible-toggle";
 import { PageToolbarCtaLabel } from "@/components/design-system";
+import { HubIconPlus } from "@/components/design-system/hub-table-action-icons";
 
+const HIERARCHY_MARCA_DRAFT_ROW_KEY = "__settings-hierarchy-marca-draft__";
+const HIERARCHY_MODELLO_DRAFT_PREFIX = "__settings-hierarchy-modello-draft__";
 
-function HierarchyModelRow({
-  value,
-  ariaLabel,
-  onRenameBlur,
-  onRemove,
+const HIERARCHY_MARCA_CARD =
+  "overflow-hidden rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-sm)] transition-[box-shadow,border-color] duration-300 motion-reduce:transition-none";
+
+const HIERARCHY_MARCA_CARD_EXPANDED =
+  "border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))] shadow-[var(--cab-shadow-md)]";
+
+const HIERARCHY_MARCA_HEADER_ROW =
+  `flex min-h-11 flex-wrap items-center gap-x-2 gap-y-2 border-b bg-[color:color-mix(in_srgb,var(--cab-surface)_45%,var(--cab-card))] px-3 py-2 transition-[border-color] duration-300 ${gestionaleCollapsibleEase} motion-reduce:transition-none sm:flex-nowrap sm:gap-x-3 [-webkit-tap-highlight-color:transparent]`;
+
+function HierarchyMarcaHeaderRow({
+  marcaNome,
+  expanded,
+  addDisabled,
+  onToggle,
+  onStartAddModel,
 }: {
-  value: string;
-  ariaLabel?: string;
-  onRenameBlur: (previous: string, next: string) => void;
-  onRemove: () => void;
+  marcaNome: string;
+  expanded: boolean;
+  addDisabled: boolean;
+  onToggle: () => void;
+  onStartAddModel: () => void;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  const commit = () => {
-    const next = inputRef.current?.value ?? value;
-    onRenameBlur(value, next);
-  };
-
-  const cancel = () => {
-    if (inputRef.current) inputRef.current.value = value;
-  };
-
   return (
-    <li className={SETTINGS_HIERARCHY_MODEL_BOX}>
-      <input
-        ref={inputRef}
-        className={SETTINGS_HIERARCHY_MODEL_INPUT}
-        defaultValue={value}
-        key={`${value}-hierarchy`}
-        aria-label={ariaLabel ?? `Modifica ${value}`}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
-            e.stopPropagation();
-            commit();
-          }
-          if (e.key === "Escape") {
-            e.preventDefault();
-            e.stopPropagation();
-            cancel();
-          }
-        }}
-      />
-      <SettingsRowActionButtons
-        mode="edit"
-        itemLabel={value}
-        showRemoveInEdit
-        onEdit={() => {}}
-        onConfirm={commit}
-        onCancelEdit={cancel}
-        onRemove={onRemove}
-      />
-    </li>
+    <div
+      className={`${HIERARCHY_MARCA_HEADER_ROW}${
+        expanded ? " border-[color:var(--cab-border)]" : " border-transparent"
+      }`}
+    >
+      <button
+        type="button"
+        className={`${gestionaleCollapsibleHeaderTriggerClass} ${dsFocus}`}
+        aria-expanded={expanded}
+        onClick={onToggle}
+      >
+        <span
+          className={`${gestionaleCollapsibleChevronBoxClass}${
+            expanded ? ` ${gestionaleCollapsibleChevronBoxExpandedClass}` : ""
+          }`}
+        >
+          <svg
+            className={`${gestionaleCollapsibleChevronIconClass}${expanded ? " rotate-180" : ""}`}
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M19 9l-7 7-7-7" />
+          </svg>
+        </span>
+        <span className="min-w-0 truncate text-sm font-semibold text-[color:var(--cab-text)]">{marcaNome}</span>
+      </button>
+      <button
+        type="button"
+        className={`${dsPageToolbarCtaCompact} min-h-11 shrink-0 px-2.5 text-xs sm:w-auto`}
+        disabled={addDisabled}
+        onClick={onStartAddModel}
+      >
+        <HubIconPlus className="h-4 w-4 shrink-0" aria-hidden />
+        <PageToolbarCtaLabel short="Aggiungi" full="Aggiungi" />
+      </button>
+    </div>
   );
 }
 
-function ModelCountChip({ count }: { count: number }) {
-  if (count === 0) {
-    return <span className={dsPageToolbarMetaChip}>Nessun modello</span>;
-  }
-  return (
-    <span className={dsPageToolbarMetaChipAccent}>
-      {count} modell{count === 1 ? "o" : "i"}
-    </span>
-  );
-}
-
-function MarcaModelsPanel({
+function HierarchyMarcaModelloBlock({
   marcaId,
-  modelli,
-  modelDraft,
-  onModelDraftChange,
-  onAddModello,
+  marcaNome,
+  modelliOpen,
+  sortedModelli,
+  modelDraftOpen,
+  onToggle,
+  onStartAddModel,
+  onAddModelloFromDraft,
+  onCancelModelDraft,
   onRenameModello,
   onRemoveModello,
-  gate,
-  treeKey,
-  setListe,
 }: {
   marcaId: string;
-  modelli: { id: string; nome: string }[];
-  modelDraft: string;
-  onModelDraftChange: (v: string) => void;
-  onAddModello: () => void;
-  onRenameModello: (from: string, to: string) => void;
-  onRemoveModello: (modelloId: string, label: string) => void;
-  gate: ReturnType<typeof useSettingsSimilarGate>["gate"];
-  treeKey: HierarchyTreeKey;
-  setListe: Dispatch<SetStateAction<MezziListePrefs>>;
+  marcaNome: string;
+  modelliOpen: boolean;
+  sortedModelli: { id: string; nome: string }[];
+  modelDraftOpen: boolean;
+  onToggle: () => void;
+  onStartAddModel: () => void;
+  onAddModelloFromDraft: (raw: string) => void;
+  onCancelModelDraft: () => void;
+  onRenameModello: (modId: string, from: string, to: string) => void;
+  onRemoveModello: (modId: string, label: string) => void;
 }) {
-  const modelNames = modelli.map((x) => x.nome);
-  const sortedModelli = [...modelli].sort((a, b) =>
-    a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }),
-  );
-  const draftTrimmed = modelDraft.trim();
-
   return (
-    <ul className="space-y-1.5">
-      {sortedModelli.map((mod) => (
-        <HierarchyModelRow
-          key={mod.id}
-          value={mod.nome}
-          ariaLabel={`Nome modello ${mod.nome}`}
-          onRenameBlur={(from, raw) => {
-            const t = raw.trim();
-            if (!t || t === from) return;
-            gate(modelNames, t, from, () => {
-              setListe((prev) => rinominaModelloHierarchy(prev, treeKey, marcaId, mod.id, t));
-              onRenameModello(from, t);
-            });
-          }}
-          onRemove={() => onRemoveModello(mod.id, mod.nome)}
-        />
-      ))}
-      <li className={`${SETTINGS_HIERARCHY_MODEL_BOX} gap-2 sm:gap-1.5`}>
-        <input
-          className={SETTINGS_HIERARCHY_MODEL_INPUT}
-          value={modelDraft}
-          onChange={(e) => onModelDraftChange(e.target.value)}
-          placeholder={sortedModelli.length === 0 ? "Primo modello…" : "Nuovo modello…"}
-          autoComplete="off"
-          aria-label="Nome nuovo modello"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              if (draftTrimmed) onAddModello();
-            }
-          }}
-        />
-        <button
-          type="button"
-          className={`${dsPageToolbarCtaCompact} min-h-10 shrink-0 px-2.5 text-xs sm:w-auto`}
-          disabled={!draftTrimmed}
-          onClick={onAddModello}
+    <div className={`${HIERARCHY_MARCA_CARD}${modelliOpen ? ` ${HIERARCHY_MARCA_CARD_EXPANDED}` : ""}`}>
+      <HierarchyMarcaHeaderRow
+        marcaNome={marcaNome}
+        expanded={modelliOpen}
+        addDisabled={modelDraftOpen}
+        onToggle={onToggle}
+        onStartAddModel={onStartAddModel}
+      />
+      <div
+        role="region"
+        aria-hidden={!modelliOpen}
+        className={`${gestionaleCollapsiblePanelGridClass} ${modelliOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+      >
+        <div
+          className={`${gestionaleCollapsiblePanelInnerClass} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_72%,var(--cab-card))] ${
+            modelliOpen ? "opacity-100" : "opacity-0"
+          }`}
         >
-          <PageToolbarCtaLabel short="+ Modello" full="Aggiungi modello" />
-        </button>
-      </li>
-    </ul>
+          <ul className={SETTINGS_LIST_DIVIDER_UL}>
+            {modelDraftOpen ? (
+              <SettingsEditableStringRow
+                key={`${HIERARCHY_MODELLO_DRAFT_PREFIX}${marcaId}`}
+                draft
+                value=""
+                placeholder={sortedModelli.length === 0 ? "Primo modello…" : "Nuovo modello…"}
+                onRenameBlur={(_, next) => onAddModelloFromDraft(next)}
+                onDraftCancel={onCancelModelDraft}
+                onRemove={onCancelModelDraft}
+              />
+            ) : null}
+            {sortedModelli.map((mod) => (
+              <SettingsEditableStringRow
+                key={mod.id}
+                value={mod.nome}
+                onRenameBlur={(from, raw) => {
+                  const t = raw.trim();
+                  if (!t || t === from) return;
+                  onRenameModello(mod.id, from, t);
+                }}
+                onRemove={() => onRemoveModello(mod.id, mod.nome)}
+              />
+            ))}
+          </ul>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -203,8 +207,8 @@ export function HierarchyTreeSettingsSection({
   const tree = useMemo(() => getHierarchyTree(liste, treeKey), [liste, treeKey]);
   const marcaNames = useMemo(() => tree.map((m) => m.nome), [tree]);
   const { gate, similarDialog } = useSettingsSimilarGate();
-  const [nuovaMarca, setNuovaMarca] = useState("");
-  const [nuovoModelloByMarca, setNuovoModelloByMarca] = useState<Record<string, string>>({});
+  const [marcaDraftOpen, setMarcaDraftOpen] = useState(false);
+  const [modelDraftMarcaId, setModelDraftMarcaId] = useState<string | null>(null);
   const [expandedMarcaIds, setExpandedMarcaIds] = useState<Set<string>>(() => new Set());
   const [q, setQ] = useState("");
   const [pendingDelete, setPendingDelete] = useState<
@@ -218,199 +222,194 @@ export function HierarchyTreeSettingsSection({
     [tree],
   );
 
-  const filteredTree = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    if (!t) return sortedTree;
-    return sortedTree.filter((m) => {
-      if (m.nome.toLowerCase().includes(t)) return true;
-      return m.modelli.some((mod) => mod.nome.toLowerCase().includes(t));
-    });
-  }, [q, sortedTree]);
-
-  useEffect(() => {
-    if (variant !== "modello" || filteredTree.length === 0) return;
-    setExpandedMarcaIds((prev) => {
-      if (prev.size > 0) return prev;
-      return new Set(filteredTree.map((m) => m.id));
-    });
-  }, [variant, filteredTree]);
-
-  useEffect(() => {
-    if (variant !== "modello" || !q.trim()) return;
-    setExpandedMarcaIds(new Set(filteredTree.map((m) => m.id)));
-  }, [variant, q, filteredTree]);
+  const filteredTree = useMemo(() => filterSettingsHierarchyTree(sortedTree, q), [q, sortedTree]);
 
   function setMarcaExpanded(marcaId: string, expanded: boolean) {
+    if (!expanded) {
+      setModelDraftMarcaId((prev) => (prev === marcaId ? null : prev));
+    }
     setExpandedMarcaIds((prev) => {
-      if (q.trim()) {
-        const n = new Set(prev);
-        if (expanded) n.add(marcaId);
-        else n.delete(marcaId);
-        return n;
-      }
-      if (expanded) return new Set([marcaId]);
-      return new Set();
+      const next = new Set(prev);
+      if (expanded) next.add(marcaId);
+      else next.delete(marcaId);
+      return next;
     });
   }
 
-  function setModelDraft(marcaId: string, value: string) {
-    setNuovoModelloByMarca((prev) => ({ ...prev, [marcaId]: value }));
-  }
-
-  function tryAddMarca() {
-    const t = nuovaMarca.trim();
+  function tryAddMarcaFromDraft(raw: string) {
+    const t = raw.trim();
     if (!t) return;
     gate(marcaNames, t, undefined, () => {
       setListe((prev) => aggiungiMarcaHierarchy(prev, treeKey, t));
-      setNuovaMarca("");
+      setMarcaDraftOpen(false);
     });
   }
 
-  function tryAddModello(marcaId: string, modelNames: string[]) {
-    const t = (nuovoModelloByMarca[marcaId] ?? "").trim();
+  function tryAddModelloFromDraft(marcaId: string, modelNames: string[], raw: string) {
+    const t = raw.trim();
     if (!t) return;
     gate(modelNames, t, undefined, () => {
       setListe((prev) => aggiungiModelloHierarchy(prev, treeKey, marcaId, t));
-      setModelDraft(marcaId, "");
+      setModelDraftMarcaId(null);
     });
   }
 
-  return (
-    <div className="w-full space-y-4">
-      {variant === "modello" ? (
-        <p className={SETTINGS_SECTION_HINT}>
-          Modifica il nome nel campo, poi Conferma (o Invio). Annulla ripristina il testo. La riga in basso aggiunge un
-          modello alla marca.
-        </p>
-      ) : null}
-
-      <GestionaleSearchField
-        wrapperClassName="w-full"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Cerca marca o modello…"
-        autoComplete="off"
-        aria-label="Cerca marca o modello"
-      />
-
-      {variant === "marca" ? (
-        <div className={`${SETTINGS_PANEL_SHELL} p-3 sm:p-4`}>
-          <label className="block">
-            <span className={dsLabel}>Nuova marca</span>
-            <div className="mt-2">
-              <SettingsQuickAddRow
-                placeholder="Es. Iveco, Volvo…"
-                value={nuovaMarca}
-                onChange={setNuovaMarca}
-                onAdd={tryAddMarca}
-                addLabelShort="+ Marca"
-                addLabel="Aggiungi marca"
-                inputAriaLabel="Nome nuova marca"
-              />
-            </div>
-          </label>
-        </div>
-      ) : null}
-
-      {filteredTree.length === 0 ? (
-        <SettingsEmptyState>
-          {variant === "marca"
-            ? "Nessuna marca. Aggiungi la prima marca sopra."
-            : "Nessun risultato. Prova un altro testo o aggiungi marche nella sezione Marca."}
-        </SettingsEmptyState>
-      ) : variant === "modello" ? (
-        <div className="space-y-2">
-          {filteredTree.map((m) => {
-            const modelliOpen = expandedMarcaIds.has(m.id);
-            const modelDraft = nuovoModelloByMarca[m.id] ?? "";
-            const modelNames = m.modelli.map((x) => x.nome);
-
-            return (
-              <ShellCard
-                key={m.id}
-                title={m.nome}
-                collapsible
-                compactContent
-                compactHeader
-                headerActionsDivider={false}
-                collapsed={!modelliOpen}
-                onCollapsedChange={(collapsed) => setMarcaExpanded(m.id, !collapsed)}
-                headerActions={<ModelCountChip count={m.modelli.length} />}
-              >
-                <MarcaModelsPanel
-                  marcaId={m.id}
-                  modelli={m.modelli}
-                  modelDraft={modelDraft}
-                  onModelDraftChange={(v) => setModelDraft(m.id, v)}
-                  onAddModello={() => tryAddModello(m.id, modelNames)}
-                  onRenameModello={(from, to) => onRenameModello?.(m.nome, from, to)}
-                  onRemoveModello={(modelloId, label) =>
-                    setPendingDelete({ kind: "modello", marcaId: m.id, modelloId, label })
-                  }
-                  gate={gate}
-                  treeKey={treeKey}
-                  setListe={setListe}
-                />
-              </ShellCard>
-            );
-          })}
-        </div>
-      ) : (
-        <div className={SETTINGS_PANEL_SHELL}>
-          <ul className={`${SETTINGS_LIST_UL} p-2 sm:p-3`}>
-            {filteredTree.map((m) => (
-              <SettingsEditableStringRow
-                key={m.id}
-                value={m.nome}
-                onRenameBlur={(from, raw) => {
-                  const t = raw.trim();
-                  if (!t || t === from) return;
-                  gate(marcaNames, t, from, () => {
-                    setListe((prev) => rinominaMarcaHierarchy(prev, treeKey, m.id, t));
-                    onRenameMarca?.(from, t);
-                  });
-                }}
-                onRemove={() =>
-                  setPendingDelete({
-                    kind: "marca",
-                    marcaId: m.id,
-                    label: m.nome,
-                    modelCount: m.modelli.length,
-                  })
-                }
-              />
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <SettingsEliminaConfirmDialog
-        open={pendingDelete != null}
-        itemLabel={pendingDelete?.label}
-        detail={
-          pendingDelete?.kind === "marca" && pendingDelete.modelCount > 0
-            ? `Verranno eliminati anche ${pendingDelete.modelCount} modello${pendingDelete.modelCount === 1 ? "" : "i"} associati.`
-            : undefined
+  const deleteDialog = (
+    <SettingsEliminaConfirmDialog
+      open={pendingDelete != null}
+      itemLabel={pendingDelete?.label}
+      detail={
+        pendingDelete?.kind === "marca" && pendingDelete.modelCount > 0
+          ? `Verranno eliminati anche ${pendingDelete.modelCount} modello${pendingDelete.modelCount === 1 ? "" : "i"} associati.`
+          : undefined
+      }
+      onCancel={() => setPendingDelete(null)}
+      onConfirm={() => {
+        if (!pendingDelete) return;
+        if (pendingDelete.kind === "marca") {
+          setListe((prev) => eliminaMarcaHierarchy(prev, treeKey, pendingDelete.marcaId));
+          setExpandedMarcaIds((prev) => {
+            const n = new Set(prev);
+            n.delete(pendingDelete.marcaId);
+            return n;
+          });
+        } else {
+          setListe((prev) =>
+            eliminaModelloHierarchy(prev, treeKey, pendingDelete.marcaId, pendingDelete.modelloId),
+          );
         }
-        onCancel={() => setPendingDelete(null)}
-        onConfirm={() => {
-          if (!pendingDelete) return;
-          if (pendingDelete.kind === "marca") {
-            setListe((prev) => eliminaMarcaHierarchy(prev, treeKey, pendingDelete.marcaId));
-            setExpandedMarcaIds((prev) => {
-              const n = new Set(prev);
-              n.delete(pendingDelete.marcaId);
-              return n;
-            });
-          } else {
-            setListe((prev) =>
-              eliminaModelloHierarchy(prev, treeKey, pendingDelete.marcaId, pendingDelete.modelloId),
-            );
-          }
-          setPendingDelete(null);
-        }}
-      />
+        setPendingDelete(null);
+      }}
+    />
+  );
+
+  if (variant === "marca") {
+    const showList = marcaDraftOpen || filteredTree.length > 0;
+
+    return (
+      <>
+        <SettingsListSection layout="flat">
+          <SettingsListToolbar
+            onStartAdd={() => setMarcaDraftOpen(true)}
+            addDisabled={marcaDraftOpen}
+            searchValue={q}
+            onSearchChange={setQ}
+            searchPlaceholder="Cerca marca o modello…"
+            searchAriaLabel="Cerca marca o modello"
+            addLabel="Aggiungi"
+            addLabelShort="Aggiungi"
+          />
+          <SettingsListBody
+            layout="flat"
+            showList={showList}
+            empty={
+              <SettingsEmptyState inline>
+                Nessun elemento. Usa Aggiungi per inserire la prima marca.
+              </SettingsEmptyState>
+            }
+          >
+            <ul className={SETTINGS_LIST_DIVIDER_UL}>
+              {marcaDraftOpen ? (
+                <SettingsEditableStringRow
+                  key={HIERARCHY_MARCA_DRAFT_ROW_KEY}
+                  draft
+                  value=""
+                  placeholder="Es. Iveco, Volvo…"
+                  onRenameBlur={(_, next) => tryAddMarcaFromDraft(next)}
+                  onDraftCancel={() => setMarcaDraftOpen(false)}
+                  onRemove={() => setMarcaDraftOpen(false)}
+                />
+              ) : null}
+              {filteredTree.map((m) => (
+                <SettingsEditableStringRow
+                  key={m.id}
+                  value={m.nome}
+                  onRenameBlur={(from, raw) => {
+                    const t = raw.trim();
+                    if (!t || t === from) return;
+                    gate(marcaNames, t, from, () => {
+                      setListe((prev) => rinominaMarcaHierarchy(prev, treeKey, m.id, t));
+                      onRenameMarca?.(from, t);
+                    });
+                  }}
+                  onRemove={() =>
+                    setPendingDelete({
+                      kind: "marca",
+                      marcaId: m.id,
+                      label: m.nome,
+                      modelCount: m.modelli.length,
+                    })
+                  }
+                />
+              ))}
+            </ul>
+          </SettingsListBody>
+        </SettingsListSection>
+        {deleteDialog}
+        {similarDialog}
+      </>
+    );
+  }
+
+  const showList = filteredTree.length > 0;
+
+  return (
+    <>
+      <SettingsListSection layout="flat">
+        <SettingsListToolbar
+          showAddButton={false}
+          searchValue={q}
+          onSearchChange={setQ}
+          searchPlaceholder="Cerca marca o modello…"
+          searchAriaLabel="Cerca marca o modello"
+        />
+        {showList ? (
+          <div className="mt-3 flex min-w-0 flex-col gap-3" id="hierarchy-modello-list">
+            {filteredTree.map((m) => {
+              const modelliOpen = expandedMarcaIds.has(m.id);
+              const modelNames = m.modelli.map((x) => x.nome);
+              const sortedModelli = [...m.modelli].sort((a, b) =>
+                a.nome.localeCompare(b.nome, "it", { sensitivity: "base" }),
+              );
+
+              return (
+                <HierarchyMarcaModelloBlock
+                  key={m.id}
+                  marcaId={m.id}
+                  marcaNome={m.nome}
+                  modelliOpen={modelliOpen}
+                  sortedModelli={sortedModelli}
+                  modelDraftOpen={modelDraftMarcaId === m.id}
+                  onToggle={() => setMarcaExpanded(m.id, !modelliOpen)}
+                  onStartAddModel={() => {
+                    setModelDraftMarcaId(m.id);
+                    setMarcaExpanded(m.id, true);
+                  }}
+                  onAddModelloFromDraft={(raw) => tryAddModelloFromDraft(m.id, modelNames, raw)}
+                  onCancelModelDraft={() => setModelDraftMarcaId(null)}
+                  onRenameModello={(modId, from, t) => {
+                    gate(modelNames, t, from, () => {
+                      setListe((prev) => rinominaModelloHierarchy(prev, treeKey, m.id, modId, t));
+                      onRenameModello?.(m.nome, from, t);
+                    });
+                  }}
+                  onRemoveModello={(modId, label) =>
+                    setPendingDelete({ kind: "modello", marcaId: m.id, modelloId: modId, label })
+                  }
+                />
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-3">
+            <SettingsEmptyState inline>
+              Nessun risultato. Prova un altro testo o aggiungi marche nella sezione Marca.
+            </SettingsEmptyState>
+          </div>
+        )}
+      </SettingsListSection>
+      {deleteDialog}
       {similarDialog}
-    </div>
+    </>
   );
 }

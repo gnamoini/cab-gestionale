@@ -22,7 +22,9 @@ assert.match(
   /TIMESHEET_UI_TABLE_CLASS[\s\S]*?w-full/,
   "timesheet table must stretch to available width",
 );
-assert.match(grid, /computeTimesheetUiTableWidthRem/, "timesheet grid must set min table width from column budget");
+assert.match(grid, /computeTimesheetUiTableWidthRemFromDays/, "timesheet grid must set min table width from column budget");
+assert.match(grid, /dayColumnLayouts/, "timesheet grid must compute per-day column layout");
+assert.match(grid, /data-timesheet-weekend-compact/, "empty weekend columns must expose compact data attr");
 assert.match(grid, /minWidth: `\$\{tableWidthRem\}rem`/, "timesheet grid must keep horizontal scroll floor");
 assert.match(grid, /width: "100%"/, "timesheet table must fill scroll container");
 assert.match(grid, /overscroll-contain/, "timesheet grid must contain scroll to avoid page scrollbar");
@@ -30,7 +32,7 @@ assert.match(grid, /timesheet-presenze-highlight-layer/, "today highlight must r
 assert.match(grid, /timesheet-presenze-shell/, "timesheet must use shell wrapper for clipped highlight");
 assert.match(grid, /timesheet-presenze-shell[\s\S]*?w-full/, "timesheet shell must use full available width");
 assert.match(grid, /timesheet-presenze-grid[\s\S]*?w-full/, "timesheet scroll grid must use full available width");
-assert.match(grid, /TIMESHEET_UI_DAY_COL_MIN_CLASS/, "day cells must use min-width only for fluid growth");
+assert.match(grid, /timesheetDayColumnClass/, "day cells must use layout-driven column class");
 assert.match(grid, /data-timesheet-fixed="name"/, "colgroup must pin name column width via CSS");
 
 assert.match(compactCell, /data-timesheet-cell-kind/, "filled cells expose kind for square td paint");
@@ -39,12 +41,14 @@ assert.doesNotMatch(compactCell, /active:scale/, "timesheet cell must not scale 
 assert.doesNotMatch(compactCell, /shrink-0/, "compact cell must not block column shrink");
 assert.doesNotMatch(compactCell, /min-w-\[2\.5rem\]/, "compact cell must not enforce min width floor");
 
-assert.match(layout, /TIMESHEET_UI_DAY_COL_MIN_CLASS/, "layout SSOT must export fluid day column min class");
-assert.match(layout, /computeTimesheetUiTableMinWidthPx/, "layout SSOT must export min width helper");
+assert.match(layout, /TIMESHEET_UI_WEEKEND_EMPTY_COL_REM/, "layout SSOT must export compact weekend width");
+assert.match(layout, /computeTimesheetUiTableWidthRemFromDays/, "layout SSOT must export width helper with compact weekends");
+assert.match(layout, /timesheetDayColumnClass/, "layout SSOT must map day layout to column class");
 
 assert.match(css, /\.timesheet-presenze-grid table\s*\{[^}]*table-layout:\s*fixed/, "CSS must enforce table-layout fixed");
 assert.match(css, /col\[data-timesheet-fixed="name"\]/, "CSS must pin name col width");
-assert.match(css, /th\[data-timesheet-day\][\s\S]*min-width:\s*2\.75rem/, "CSS must set day column min width floor");
+assert.match(css, /col\[data-timesheet-weekend-compact="true"\]/, "CSS must pin compact weekend col width");
+assert.match(css, /th\[data-timesheet-weekend-compact="true"\][\s\S]*padding-left:\s*0 !important/, "compact weekend header must drop horizontal padding");
 assert.match(css, /data-timesheet-cell-kind="absence"/, "CSS must paint filled cells on td via cell kind");
 assert.match(
   css,

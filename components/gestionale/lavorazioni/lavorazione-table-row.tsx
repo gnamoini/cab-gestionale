@@ -31,7 +31,8 @@ import {
   lavorazioneCantiereLabel,
   lavorazioneMacchinaLabel,
   lavorazioneMezzoIdentParts,
-  lavorazioneSchedeCount,
+  formatLavorazioneSchedeBadge,
+  lavorazioneSchedeBundleRevision,
   lavorazioneSchedeStoreSlice,
   lavorazioneTelaioLabel,
   lavorazioneUtilizzatoreLabel,
@@ -46,6 +47,7 @@ import { IconActionButton } from "@/components/design-system";
 import {
   addettoPillShellClass,
   addettoPillShellStyleForName,
+  IconRipristinaDaArchivio,
   prioritaLabel,
   prioritaPillShellClass,
   statoPillShellClass,
@@ -63,14 +65,6 @@ function IconCloseWork({ className = dsTableActionGlyph }: { className?: string 
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-    </svg>
-  );
-}
-
-function IconRipristinaDaArchivio({ className = dsTableActionGlyph }: { className?: string }) {
-  return (
-    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v6h6M20 20v-6h-6M5 19A9 9 0 0119 5" />
     </svg>
   );
 }
@@ -180,9 +174,10 @@ function LavorazioneAttivaTableRowInner({
 }: LavorazioneAttivaTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneMacchinaLabel(row, schedeStore);
+  const telaio = lavorazioneTelaioLabel(row, schedeStore);
   const addetto = lavorazioneAddettoLabel(row, schedeStore, defaultAddetto);
   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
-  const schedeCount = lavorazioneSchedeCount(bundle, row);
+  const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
     <tr
@@ -203,7 +198,12 @@ function LavorazioneAttivaTableRowInner({
         <span className="line-clamp-2 break-words">{lavorazioneCantiereLabel(row, schedeStore)}</span>
       </td>
       <td className={`${lavTableTd} min-w-0`}>
-        <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchina}</div>
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchina}</div>
+          {telaio !== "—" ? (
+            <div className="truncate text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">{telaio}</div>
+          ) : null}
+        </div>
       </td>
       <td className={lavTableTd}>
         <MezzoIdentStackCell row={row} bundle={bundle} />
@@ -292,7 +292,7 @@ function LavorazioneAttivaTableRowInner({
           >
             <IconSchede />
             <span className={dsTableActionBadge} aria-hidden>
-              {schedeCount}/3
+              {schedeBadge}
             </span>
           </IconActionButton>
         </div>
@@ -338,7 +338,7 @@ function LavorazioneArchivioTableRowInner({
 }: LavorazioneArchivioTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const telaio = lavorazioneTelaioLabel(row, schedeStore);
-  const schedeCount = lavorazioneSchedeCount(bundle, row);
+  const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
     <tr
@@ -359,12 +359,14 @@ function LavorazioneArchivioTableRowInner({
         <span className="line-clamp-2 break-words">{lavorazioneCantiereLabel(row, schedeStore)}</span>
       </td>
       <td className={`${lavTableTd} min-w-0`}>
-        <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">
-          {lavorazioneMacchinaLabel(row, schedeStore)}
+        <div className="flex min-w-0 flex-col gap-0.5">
+          <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">
+            {lavorazioneMacchinaLabel(row, schedeStore)}
+          </div>
+          {telaio !== "—" ? (
+            <div className="truncate text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">{telaio}</div>
+          ) : null}
         </div>
-        {telaio !== "—" ? (
-          <div className="truncate text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">Telaio: {telaio}</div>
-        ) : null}
       </td>
       <td className={lavTableTd}>
         <MezzoIdentStackCell row={row} bundle={bundle} />
@@ -413,7 +415,7 @@ function LavorazioneArchivioTableRowInner({
           >
             <IconSchede />
             <span className={dsTableActionBadge} aria-hidden>
-              {schedeCount}/3
+              {schedeBadge}
             </span>
           </IconActionButton>
         </div>
@@ -422,4 +424,21 @@ function LavorazioneArchivioTableRowInner({
   );
 }
 
-export const LavorazioneArchivioTableRow = memo(LavorazioneArchivioTableRowInner);
+export const LavorazioneArchivioTableRow = memo(
+  LavorazioneArchivioTableRowInner,
+  (prev, next) =>
+    prev.row === next.row &&
+    prev.flash === next.flash &&
+    prev.navBulkFlash === next.navBulkFlash &&
+    prev.rowIndex === next.rowIndex &&
+    prev.rowCount === next.rowCount &&
+    prev.canEditWorkOrders === next.canEditWorkOrders &&
+    prev.mutPendingBlocking === next.mutPendingBlocking &&
+    prev.loading === next.loading &&
+    prev.addettoLogs === next.addettoLogs &&
+    prev.addettoColors === next.addettoColors &&
+    prev.onRipristina === next.onRipristina &&
+    prev.onOpenInfo === next.onOpenInfo &&
+    prev.onOpenSchede === next.onOpenSchede &&
+    lavorazioneSchedeBundleRevision(prev.bundle) === lavorazioneSchedeBundleRevision(next.bundle),
+);
