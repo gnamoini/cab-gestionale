@@ -14,11 +14,16 @@ import { MezziTable } from "@/components/gestionale/mezzi/mezzi-table";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 import { erpBtnAccent, erpBtnNeutral, erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { compareMezzi, mezzoMatchesUltimaLavFilter, type UltimaLavorazioneFilter } from "@/lib/mezzi/mezzi-helpers";
+import {
+  buildUltimaModificaByMezzoIdFromLogs,
+  resolveMezzoUltimaModificaInfo,
+  type MezzoUltimaModificaInfo,
+} from "@/lib/mezzi/mezzo-ultima-modifica-info";
 import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb, mezzoHaLavorazioneCollegataDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import { dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
-import { Drawer, LoadingErrorState, LoadingFormSkeleton, LoadingTableSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
+import { Drawer, LoadingErrorState, LoadingFormSkeleton, LoadingMezziListSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
@@ -186,6 +191,18 @@ export function MezziView() {
       ),
     [logQuery.data, user?.id, user?.nome],
   );
+
+  const ultimaModificaInfoByMezzoId = useMemo(() => {
+    const fromLogs = buildUltimaModificaByMezzoIdFromLogs(logQuery.data ?? [], {
+      currentUserId: user?.id ?? null,
+      currentDisplayName: user?.nome ?? "",
+    });
+    const map = new Map<string, MezzoUltimaModificaInfo>();
+    for (const m of mezziUi) {
+      map.set(m.id, resolveMezzoUltimaModificaInfo(m, fromLogs));
+    }
+    return map;
+  }, [mezziUi, logQuery.data, user?.id, user?.nome]);
 
   const {
     page: logPage,
@@ -491,11 +508,12 @@ export function MezziView() {
 
           <div className="mt-4">
             {mezziInitialLoading ? (
-              <LoadingTableSkeleton preset="mezzi" />
+              <LoadingMezziListSkeleton withToolbar={false} />
             ) : (
               <MezziTable
                 rows={pagedSorted}
                 interventiByMezzoId={interventiByMezzoId}
+                ultimaModificaInfoByMezzoId={ultimaModificaInfoByMezzoId}
                 inOfficina={inOfficina}
                 sortColumn={sortColumn}
                 sortPhase={sortPhase}

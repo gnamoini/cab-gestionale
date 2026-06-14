@@ -7,11 +7,13 @@ import {
 import {
   PDF_HEADER_BRAND_BLOCK_MM,
   PDF_HEADER_BRAND_TITLE_GAP_MM,
+  PDF_HEADER_CONTENT_GAP_MM,
   PDF_MARGIN_TOP,
   PDF_PREVENTIVO_IVA_PERCENT,
   drawGestionalePdfHeader,
   drawPdfPageFooters,
   measureGestionalePdfHeaderEndY,
+  pdfAdvanceAfterDocumentHeader,
   pdfAdvanceSection,
   pdfContentWidth,
 } from "@/lib/pdf/core/pdf-base-template";
@@ -66,7 +68,7 @@ function buildPreventivoDoc(
     operatore: "Test",
     logoDataUrl,
   });
-  y = pdfAdvanceSection(y);
+  y = pdfAdvanceAfterDocumentHeader(y);
   y = drawPreventivoPdfBody(doc, pageW, y, p, righe, {
     totaleRicambi: p.totaleRicambi,
     totaleManodopera: p.totaleManodopera,
@@ -90,7 +92,7 @@ function buildLavorazioniListDoc(rowCount: number, logoDataUrl: string | null): 
     metaDivider: false,
     logoDataUrl,
   });
-  y = pdfAdvanceSection(y);
+  y = pdfAdvanceAfterDocumentHeader(y);
 
   const body = Array.from({ length: rowCount }, (_, i) => [
     `Cliente ${i + 1}`,
@@ -147,14 +149,13 @@ const yMetaDividerFalse = measureGestionalePdfHeaderEndY(pageWPortrait, "TABELLA
   logoDataUrl: MOCK_LOGO_DATA_URL,
   metaDivider: false,
 });
-const yTitleOnlyWithRule =
+const yTitleOnly =
   PDF_MARGIN_TOP +
   PDF_HEADER_BRAND_BLOCK_MM +
   PDF_HEADER_BRAND_TITLE_GAP_MM +
   6 +
-  2 +
-  4.5;
-assert.equal(yMetaDividerFalse, yTitleOnlyWithRule, "metaDivider false include separatore prima del contenuto");
+  PDF_HEADER_CONTENT_GAP_MM;
+assert.equal(yMetaDividerFalse, yTitleOnly, "header senza metadati termina con gap contenuto, senza rule");
 
 const brandBlockEnd = PDF_MARGIN_TOP + PDF_HEADER_BRAND_BLOCK_MM;
 const docTitleBaselineY = brandBlockEnd + PDF_HEADER_BRAND_TITLE_GAP_MM;

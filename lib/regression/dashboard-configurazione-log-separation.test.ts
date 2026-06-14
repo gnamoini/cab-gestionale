@@ -28,7 +28,14 @@ assert.doesNotMatch(impostazioniModal, /appendDashboardSistemaLog/);
 assert.match(dashboardView, /DashboardSistemaLogListEmbedded/);
 assert.doesNotMatch(dashboardView, /ConfigurazioneLogListEmbedded/);
 
+assert.match(dashLogStorage, /isDashboardSistemaLogScopeEntry/);
+assert.match(dashLogStorage, /reconcileDashboardSistemaLogScope/);
+
 assert.match(dashLogSection, /migrateLegacyDashboardSettingsLogsToConfigurazione/);
+assert.match(dashLogSection, /reconcileDashboardSistemaLogScope/);
+
+assert.match(read("lib/dashboard/dashboard-sistema-log-scope.ts"), /isDashboardSistemaLogScopeEntry/);
+assert.match(read("lib/dashboard/dashboard-sistema-log-scope.ts"), /isConfigurazioneLogLeakEntry/);
 
 assert.match(impostazioniPage, /components\/configurazione\/sistema-impostazioni-page/);
 

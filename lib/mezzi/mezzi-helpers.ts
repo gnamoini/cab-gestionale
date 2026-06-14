@@ -49,15 +49,24 @@ export function countPreventiviPerMezzo(m: MezzoGestito, preventivi: PreventivoR
 export function ultimaLavorazioneLabel(rows: MezzoInterventoLavorazione[]): string {
   if (rows.length === 0) return "—";
   const first = rows[0]!;
+  return formatMezzoListDateLabel(first.dataIngresso);
+}
+
+function formatMezzoListDateLabel(iso: string): string {
+  if (!iso?.trim()) return "—";
   try {
-    return new Date(first.dataIngresso).toLocaleDateString("it-IT", {
+    return new Date(iso).toLocaleDateString("it-IT", {
       day: "2-digit",
       month: "short",
       year: "numeric",
     });
   } catch {
-    return first.dataIngresso.slice(0, 10);
+    return iso.slice(0, 10);
   }
+}
+
+export function ultimaModificaMezzoLabel(iso: string): string {
+  return formatMezzoListDateLabel(iso);
 }
 
 export function hrefDocumentiPerMezzo(m: MezzoGestito): string {

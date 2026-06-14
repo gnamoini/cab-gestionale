@@ -437,6 +437,25 @@ function IconUndoMagazzino({ className = dsTableActionGlyph }: { className?: str
   );
 }
 
+/** Leggermente più grande dei glyph tabella standard — ± scorta. */
+const dsMagazzinoScortaAdjustGlyph = "h-[1.125rem] w-[1.125rem] shrink-0";
+
+function IconMinusMagazzino({ className = dsMagazzinoScortaAdjustGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" d="M5 12h14" />
+    </svg>
+  );
+}
+
+function IconPlusMagazzino({ className = dsMagazzinoScortaAdjustGlyph }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path stroke="currentColor" strokeWidth="2.25" strokeLinecap="round" d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
 const SEARCH_DEBOUNCE_MS = 320;
 
 function magazzinoConsumoMedioTooltip(
@@ -1478,7 +1497,7 @@ export function MagazzinoView() {
                 disabled={!magCanCreateRicambio}
                 onClick={() => adjustScorta(p.id, -1)}
               >
-                −
+                <IconMinusMagazzino />
               </IconActionButton>
               <IconActionButton
                 label="Aumenta"
@@ -1487,7 +1506,7 @@ export function MagazzinoView() {
                 disabled={!magCanCreateRicambio}
                 onClick={() => adjustScorta(p.id, 1)}
               >
-                +
+                <IconPlusMagazzino />
               </IconActionButton>
             </div>
           </td>
@@ -1898,7 +1917,7 @@ export function MagazzinoView() {
                     disabled={!magCanCreateRicambio}
                     onClick={() => adjustScorta(p.id, -1)}
                   >
-                    −
+                    <IconMinusMagazzino />
                   </IconActionButton>
                   <IconActionButton
                     label="Aumenta"
@@ -1907,7 +1926,7 @@ export function MagazzinoView() {
                     disabled={!magCanCreateRicambio}
                     onClick={() => adjustScorta(p.id, 1)}
                   >
-                    +
+                    <IconPlusMagazzino />
                   </IconActionButton>
                   </div>
                 </div>

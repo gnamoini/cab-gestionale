@@ -5,7 +5,7 @@ import {
   drawGestionalePdfHeader,
   drawPdfPageFooters,
   fmtDateIt,
-  pdfAdvanceSection,
+  pdfAdvanceAfterDocumentHeader,
   drawGestionaleDataSectionTable,
   pdfContentWidth,
 } from "@/lib/pdf/core/pdf-base-template";
@@ -60,7 +60,7 @@ export function generateLavorazioniInCorsoPdfBytes(
     metaDivider: false,
     logoDataUrl,
   });
-  y = pdfAdvanceSection(y);
+  y = pdfAdvanceAfterDocumentHeader(y);
 
   const ordered = sortPdfRows(rows);
   const body = ordered.map((row) => [

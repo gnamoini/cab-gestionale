@@ -112,6 +112,7 @@ export {
   LoadingKanbanSkeleton,
   LoadingLavorazioniListSkeleton,
   LoadingMagazzinoListSkeleton,
+  LoadingMezziListSkeleton,
   LoadingReportSkeleton,
   LoadingImpostazioniSkeleton,
   LoadingLoginSkeleton,

@@ -3,7 +3,7 @@ import {
   drawGestionalePdfHeader,
   drawPdfPageFooters,
   fmtDateIt,
-  pdfAdvanceSection,
+  pdfAdvanceAfterDocumentHeader,
   drawGestionaleDataSectionTable,
   pdfContentWidth,
 } from "@/lib/pdf/core/pdf-base-template";
@@ -27,7 +27,7 @@ export function generateReportBundlePdfBytes(
     metaDivider: false,
     logoDataUrl,
   });
-  y = pdfAdvanceSection(y);
+  y = pdfAdvanceAfterDocumentHeader(y);
 
   const body = [
     ["Lavorazioni attive", String(snapshot.lavorazioniCount)],

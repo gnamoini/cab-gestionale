@@ -1,30 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useMemo, useState } from "react";
 import {
+  Drawer,
+  LogEntry,
   NotificationBellTrigger,
-  NotificationEmptyState,
-  NotificationList,
-  NotificationPanelHeader,
-  NotificationPanelShell,
-  NotificationSottoScortaRow,
+  NotificationOpenLink,
   Tooltip,
 } from "@/components/design-system";
 import {
-  useDropdownOutsideDismiss,
-  useGlobalDropdownPortal,
-} from "@/components/gestionale/global-input/use-global-dropdown-portal";
-import { GLOBAL_DROPDOWN_VIEWPORT_PAD } from "@/lib/ui/global-dropdown-portal";
-import {
-  dsNotificationPanelMaxHeightPx,
-  dsNotificationPanelMinWidthPx,
-  dsNotificationPanelWidthPx,
-} from "@/lib/ui/notification-ui";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
+  GestionaleLogEmpty,
+  GestionaleLogList,
+  gestionaleLogDrawerPanelClass,
+  gestionaleLogPanelAsideClass,
+  gestionaleLogScrollEmbeddedClass,
+} from "@/components/gestionale/gestionale-log-ui";
+import { toMagazzinoSottoScortaLogViewModel } from "@/lib/magazzino/magazzino-sotto-scorta-notification-message";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
-
-const PANEL_TITLE_ID = "magazzino-giacenza-panel-title";
 
 function sottoScortaDeficit(p: RicambioMagazzino): number {
   return Math.max(0, p.scortaMinima - p.scorta);
@@ -39,13 +31,23 @@ function sortSottoScortaItems(items: RicambioMagazzino[]): RicambioMagazzino[] {
   });
 }
 
-function resolveNotificationPanelWidth(): number {
-  const vwCap = Math.max(
-    dsNotificationPanelMinWidthPx,
-    (typeof document !== "undefined" ? document.documentElement.clientWidth : 0) -
-      GLOBAL_DROPDOWN_VIEWPORT_PAD * 2,
+function MagazzinoSottoScortaMessageRow({
+  item,
+  onOpen,
+}: {
+  item: RicambioMagazzino;
+  onOpen: () => void;
+}) {
+  const vm = toMagazzinoSottoScortaLogViewModel(item);
+
+  return (
+    <div className="min-w-0">
+      <LogEntry vm={vm} onClick={onOpen} title="Apri ricambio" />
+      <div className="-mt-1 mb-1 px-3">
+        <NotificationOpenLink label="Apri ricambio" onOpen={onOpen} />
+      </div>
+    </div>
   );
-  return Math.min(Math.max(dsNotificationPanelWidthPx, dsNotificationPanelMinWidthPx), vwCap);
 }
 
 export function MagazzinoGiacenzaBell({
@@ -60,43 +62,10 @@ export function MagazzinoGiacenzaBell({
   triggerClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const anchorRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null); // contentRef per portal + outside dismiss
   const sortedItems = useMemo(() => sortSottoScortaItems(items), [items]);
-
-  useBodyScrollLock(open, "MagazzinoGiacenzaBell");
 
   const close = useCallback(() => setOpen(false), []);
   const toggle = useCallback(() => setOpen((v) => !v), []);
-
-  const panelWidthPx = resolveNotificationPanelWidth();
-
-  const { style, floatingRef, isPositioned } = useGlobalDropdownPortal({
-    open: open && mounted,
-    anchorRef,
-    contentRef: panelRef,
-    placement: "bottom-end",
-    matchAnchorWidth: false,
-    panelWidth: panelWidthPx,
-    maxHeight: dsNotificationPanelMaxHeightPx,
-    repositionDeps: [open, sortedItems.length, panelWidthPx],
-  });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useDropdownOutsideDismiss(open, anchorRef, panelRef, close, { when: isPositioned });
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, close]);
 
   const openRicambio = useCallback(
     (id: string) => {
@@ -106,72 +75,49 @@ export function MagazzinoGiacenzaBell({
     [close, onSelectRicambio],
   );
 
-  const subtitle =
-    count === 0
-      ? "Nessun avviso attivo"
-      : `${count} ricamb${count === 1 ? "io" : "i"} da verificare`;
-
   const alertLabel = count > 0 ? `Avvisi giacenza (${count})` : "Avvisi giacenza";
   const hasAlerts = count > 0;
-
-  const panel =
-    open && mounted && style ? (
-      <NotificationPanelShell
-        titleId={PANEL_TITLE_ID}
-        shellRef={floatingRef}
-        style={style}
-        onMouseDown={(e) => e.stopPropagation()}
-        header={
-          <NotificationPanelHeader
-            title="Sotto scorta minima"
-            titleId={PANEL_TITLE_ID}
-            count={count}
-            subtitle={subtitle}
-            onClose={close}
-          />
-        }
-      >
-        {sortedItems.length === 0 ? (
-          <NotificationEmptyState
-            variant="success"
-            description="Nessun ricambio sotto la scorta minima impostata."
-          />
-        ) : (
-          <NotificationList>
-            {sortedItems.map((p) => (
-              <li key={p.id} className="list-none">
-                <NotificationSottoScortaRow
-                  descrizione={p.descrizione}
-                  marca={p.marca}
-                  scorta={p.scorta}
-                  scortaMinima={p.scortaMinima}
-                  codice={p.codiceFornitoreOriginale}
-                  deficit={sottoScortaDeficit(p)}
-                  onClick={() => openRicambio(p.id)}
-                />
-              </li>
-            ))}
-          </NotificationList>
-        )}
-      </NotificationPanelShell>
-    ) : null;
+  const drawerTitle = count > 0 ? `Sotto scorta minima (${count})` : "Sotto scorta minima";
 
   return (
-    <div className="relative shrink-0">
-      <Tooltip content={alertLabel}>
-        <NotificationBellTrigger
-          buttonRef={anchorRef}
-          count={count}
-          active={hasAlerts}
-          activeTone="danger"
-          ariaLabel={alertLabel}
-          ariaExpanded={open}
-          onClick={toggle}
-          className={triggerClassName}
-        />
-      </Tooltip>
+    <>
+      <div className="relative shrink-0">
+        <Tooltip content={alertLabel}>
+          <NotificationBellTrigger
+            count={count}
+            active={hasAlerts}
+            activeTone="danger"
+            ariaLabel={alertLabel}
+            ariaExpanded={open}
+            onClick={toggle}
+            className={triggerClassName}
+          />
+        </Tooltip>
+      </div>
 
-      {typeof document !== "undefined" && panel ? createPortal(panel, document.body) : null}
-    </div>
+      <Drawer
+        open={open}
+        onClose={close}
+        title={drawerTitle}
+        ariaLabel="Avvisi giacenza magazzino"
+        asideClassName={gestionaleLogPanelAsideClass}
+      >
+        <div className={`${gestionaleLogDrawerPanelClass} flex min-h-0 min-w-0 flex-1 flex-col gap-0 p-0 md:p-0`}>
+          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1 px-3 pt-2`}>
+            {sortedItems.length === 0 ? (
+              <GestionaleLogEmpty message="Nessun ricambio sotto la scorta minima impostata." />
+            ) : (
+              <GestionaleLogList>
+                {sortedItems.map((p) => (
+                  <li key={p.id} className="list-none">
+                    <MagazzinoSottoScortaMessageRow item={p} onOpen={() => openRicambio(p.id)} />
+                  </li>
+                ))}
+              </GestionaleLogList>
+            )}
+          </div>
+        </div>
+      </Drawer>
+    </>
   );
 }

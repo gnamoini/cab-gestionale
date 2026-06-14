@@ -4,7 +4,7 @@ import {
   drawPdfPageFooters,
   drawGestionalePdfHeader,
   fmtDateIt,
-  pdfAdvanceSection,
+  pdfAdvanceAfterDocumentHeader,
 } from "@/lib/pdf/core/pdf-base-template";
 import { drawPreventivoPdfBody } from "@/lib/pdf/preventivo-pdf-body";
 import { buildPreventivoOutputRighe } from "@/lib/preventivi/preventivi-struttura";
@@ -33,7 +33,7 @@ export function generatePreventivoPdfBytes(
     operatore,
     logoDataUrl,
   });
-  y = pdfAdvanceSection(y);
+  y = pdfAdvanceAfterDocumentHeader(y);
 
   y = drawPreventivoPdfBody(doc, pageW, y, p, righe, {
     totaleRicambi: p.totaleRicambi,

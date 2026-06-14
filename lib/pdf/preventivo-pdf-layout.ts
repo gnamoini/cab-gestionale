@@ -42,6 +42,10 @@ export const PDF_HEADER_BRAND_BLOCK_MM = 11;
 export const PDF_HEADER_BRAND_MAX_MM = 10.5;
 /** Spazio tra fondo slot brand (logo/testo) e baseline titolo documento (mm). */
 export const PDF_HEADER_BRAND_TITLE_GAP_MM = 4.5;
+/** Spazio tra metadati header (data/operatore) e contenuto — senza linea separatrice (mm). */
+export const PDF_HEADER_CONTENT_GAP_MM = 4;
+/** Gap aggiuntivo dopo `drawGestionalePdfHeader` prima della prima sezione/tabella (mm). */
+export const PDF_HEADER_TO_CONTENT_GAP_MM = 2;
 
 /** Aliquota IVA predefinita per riepilogo documento (imponibile = totale finale calcolato). */
 export const PDF_PREVENTIVO_IVA_PERCENT = 22;
@@ -110,11 +114,16 @@ export function pdfAdvanceSection(y: number, gap = PDF_SECTION_GAP): number {
   return y + gap;
 }
 
+/** Spazio compatto tra fine header documento (titolo/data) e prima tabella — tutti i PDF gestionale. */
+export function pdfAdvanceAfterDocumentHeader(y: number, gap = PDF_HEADER_TO_CONTENT_GAP_MM): number {
+  return y + gap;
+}
+
 export type PreventivoPdfHeaderMeta = {
   numero?: string;
   data?: string;
   operatore?: string;
-  /** Default true: linea orizzontale sotto metadati (data/operatore). */
+  /** @deprecated La linea sotto i metadati non è più disegnata; mantenuto per compatibilità chiamate. */
   metaDivider?: boolean;
   /** Logo branding (data URL) — opzionale. */
   logoDataUrl?: string | null;
@@ -214,8 +223,8 @@ export function drawPreventivoPdfHeader(
     y += 5;
   }
 
-  y += 2;
-  return drawPdfHorizontalRule(doc, y, pageW);
+  y += PDF_HEADER_CONTENT_GAP_MM;
+  return y;
 }
 
 export function drawPdfSectionTitle(doc: jsPDF, y: number, pageW: number, title: string): number {
@@ -224,8 +233,8 @@ export function drawPdfSectionTitle(doc: jsPDF, y: number, pageW: number, title:
   doc.setFontSize(9.25);
   doc.setTextColor(...C_PRIMARY);
   doc.text(title.toUpperCase(), PDF_MARGIN_L, y);
-  y += 4.5;
-  return drawPdfHorizontalRule(doc, y, pageW);
+  y += 4;
+  return y + PDF_SECTION_CONTENT_GAP;
 }
 
 /** Griglia etichetta / valore — omette campi vuoti. */

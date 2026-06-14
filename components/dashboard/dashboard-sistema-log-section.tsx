@@ -12,6 +12,7 @@ import {
 import {
   DASHBOARD_SISTEMA_LOG_STORAGE_KEY,
   loadDashboardSistemaLog,
+  reconcileDashboardSistemaLogScope,
   removeDashboardSistemaLogEntryById,
   type DashboardSistemaLogStored,
 } from "@/lib/dashboard/dashboard-sistema-log-storage";
@@ -74,6 +75,7 @@ function useDashboardSistemaLogEntries(): DashboardSistemaLogStored[] {
   useEffect(() => {
     function refresh() {
       migrateLegacyDashboardSettingsLogsToConfigurazione();
+      reconcileDashboardSistemaLogScope();
       setEntries(loadDashboardSistemaLog());
     }
     refresh();
@@ -128,7 +130,7 @@ export function DashboardSistemaLogListEmbedded({
   const list = (
     <>
       {slice.length === 0 ? (
-        <GestionaleLogEmpty message="Nessuna attività registrata. Le modifiche ai widget della dashboard (es. Cose da fare) compaiono qui." />
+        <GestionaleLogEmpty message="Nessuna attività registrata. Le modifiche al calendario promemoria e alle note compaiono qui." />
       ) : (
         <GestionaleLogList>
           {slice.map((e) => (

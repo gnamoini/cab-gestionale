@@ -26,6 +26,7 @@ assert.match(ssot, /resolveModalWidthClasses/);
 assert.match(ssot, /formMedium/);
 assert.match(ssot, /confirmation/);
 assert.match(ssot, /resolveDrawerAsideClasses/);
+assert.match(ssot, /cab-log-drawer-panel/);
 
 const reExport = read("lib/ui/modal-max-width-class.ts");
 assert.match(reExport, /gestionaleModalWidthConfirmation/);

@@ -23,6 +23,10 @@ import {
 } from "@/lib/media/image-variants";
 import { buildMediaDeliveryUrl } from "@/lib/media/media-delivery-url";
 import {
+  resolveStoredImageVariantPaths,
+  type StoredImageVariantPaths,
+} from "@/lib/media/image-storage-delivery";
+import {
   STORAGE_BUCKETS,
   storageList,
   storageRemove,
@@ -31,15 +35,14 @@ import {
 
 export type ImageScope = ImageStorageScope;
 
-export type StoredImage = {
+export type { StoredImageVariantPaths } from "@/lib/media/image-storage-delivery";
+export { resolveStoredImageVariantPaths } from "@/lib/media/image-storage-delivery";
+
+export type StoredImage = StoredImageVariantPaths & {
   name: string;
   baseName: string;
   /** Path canonico per log (thumb o legacy). */
   path: string;
-  thumbPath: string;
-  fullPath: string;
-  legacyJpegPath?: string;
-  allPaths: string[];
   createdAt: string | null;
   /** URL delivery thumb — proxy stabile (non signed). */
   signedUrl: string;
@@ -91,22 +94,15 @@ function groupListedFiles(prefix: string, files: { name: string; created_at?: st
 }
 
 function storedImageFromGroup(group: GroupedFiles): StoredImage {
-  const thumbPath = group.thumb ?? group.legacy!;
-  const fullPath = group.fullAvif ?? group.fullWebp ?? group.legacy ?? group.thumb!;
-  const allPaths = group.legacy
-    ? [group.legacy]
-    : [group.thumb, group.fullAvif, group.fullWebp].filter((p): p is string => Boolean(p));
+  const paths = resolveStoredImageVariantPaths(group);
 
   return {
     name: group.baseName,
     baseName: group.baseName,
-    path: thumbPath,
-    thumbPath,
-    fullPath,
-    legacyJpegPath: group.legacy,
-    allPaths,
+    path: paths.thumbPath,
+    ...paths,
     createdAt: group.createdAt,
-    signedUrl: deliveryThumbUrl(thumbPath),
+    signedUrl: deliveryThumbUrl(paths.thumbPath),
   };
 }
 

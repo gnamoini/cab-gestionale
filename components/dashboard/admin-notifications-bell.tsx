@@ -1,33 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
-import { createPortal } from "react-dom";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
+  Drawer,
+  LogEntry,
   NotificationBellTrigger,
-  NotificationEmptyState,
-  NotificationList,
-  NotificationMetaLine,
   NotificationOpenLink,
-  NotificationPanelHeader,
-  NotificationPanelShell,
-  NotificationRowBody,
-  NotificationRowHeader,
-  NotificationRowShell,
-  NotificationRowSurface,
-  NotificationSottoScortaRow,
+  NotificationRowDismiss,
   Tooltip,
 } from "@/components/design-system";
 import {
-  useDropdownOutsideDismiss,
-  useGlobalDropdownPortal,
-} from "@/components/gestionale/global-input/use-global-dropdown-portal";
+  GestionaleLogEmpty,
+  GestionaleLogList,
+  gestionaleLogDrawerPanelClass,
+  gestionaleLogPanelAsideClass,
+  gestionaleLogScrollEmbeddedClass,
+} from "@/components/gestionale/gestionale-log-ui";
 import {
   buildAdminNotificationDipendentiHref,
+  buildAdminNotificationDashboardHref,
   buildAdminNotificationLavorazioneHref,
   buildAdminNotificationMagazzinoHref,
 } from "@/lib/lavorazioni/admin-notifications";
-import { formatNotificationRelativeTime } from "@/lib/lavorazioni/format-notification-relative-time";
 import {
   buildAdminDashboardTestNotification,
   isAdminDashboardTestNotification,
@@ -35,8 +30,13 @@ import {
   isDipendentiPresenzeReminderNotification,
   isLavorazioneDashboardNotification,
   isMagazzinoDashboardNotification,
+  notificationStoreKey,
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
+import {
+  getAdminNotificationOpenLinkLabel,
+  toAdminNotificationLogViewModel,
+} from "@/lib/notifications/admin-dashboard-notification-message";
 import { publishAdminDashboardNotification } from "@/lib/notifications/admin-dashboard-desktop";
 import {
   formatDesktopNotificationPermissionStatusLabel,
@@ -46,19 +46,8 @@ import {
 } from "@/lib/lavorazioni/desktop-notifications";
 import { useAuth } from "@/context/auth-context";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { buildAdminNotificationDashboardHref } from "@/lib/lavorazioni/admin-notifications";
-import { GLOBAL_DROPDOWN_VIEWPORT_PAD } from "@/lib/ui/global-dropdown-portal";
 import { dsBtnGhost } from "@/lib/ui/design-system";
-import {
-  dsNotificationPanelMaxHeightPx,
-  dsNotificationPanelMinWidthPx,
-  dsNotificationPanelWidthPx,
-  type NotificationSeverity,
-} from "@/lib/ui/notification-ui";
-import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
-
-const PANEL_TITLE_ID = "admin-notifications-panel-title";
 
 function NotificationsPanelFooter({
   permissionState,
@@ -167,177 +156,7 @@ function NotificationsPanelFooter({
   );
 }
 
-const PROMEMORIA_SECTION_SELECTOR = 'section[aria-label="Calendario promemoria"]';
-
-/** Larghezza colonna calendario promemoria (stesso blocco della dashboard). */
-function measurePromemoriaCalendarColumnWidth(): number | null {
-  if (typeof document === "undefined") return null;
-  const section = document.querySelector(PROMEMORIA_SECTION_SELECTOR);
-  if (!(section instanceof HTMLElement)) return null;
-
-  const calendarCol = section.querySelector(
-    ':scope > div.grid > [aria-label="Calendario promemoria"], :scope > div.grid > div:first-child',
-  );
-  if (calendarCol instanceof HTMLElement) {
-    const w = calendarCol.getBoundingClientRect().width;
-    if (w > 0) return Math.round(w);
-  }
-
-  const innerCalendar = section.querySelector('div[aria-label="Calendario promemoria"]');
-  if (innerCalendar instanceof HTMLElement && innerCalendar !== section) {
-    const w = innerCalendar.getBoundingClientRect().width;
-    if (w > 0) return Math.round(w);
-  }
-
-  const sectionW = section.getBoundingClientRect().width;
-  return sectionW > 0 ? Math.round(sectionW) : null;
-}
-
-function resolveNotificationsPanelWidth(measured: number | null): number {
-  const vwCap = Math.max(
-    dsNotificationPanelMinWidthPx,
-    (typeof document !== "undefined" ? document.documentElement.clientWidth : 0) -
-      GLOBAL_DROPDOWN_VIEWPORT_PAD * 2,
-  );
-  const base = measured ?? dsNotificationPanelWidthPx;
-  return Math.min(Math.max(base, dsNotificationPanelMinWidthPx), vwCap);
-}
-
-function NotificationRowCard({
-  unread,
-  severity = "info",
-  onMarkRead,
-  children,
-}: {
-  unread: boolean;
-  severity?: NotificationSeverity;
-  onMarkRead: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <NotificationRowSurface
-      unread={unread}
-      severity={severity}
-      onClick={onMarkRead}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onMarkRead();
-        }
-      }}
-    >
-      {children}
-    </NotificationRowSurface>
-  );
-}
-
-function LavorazioneNotificationRow({
-  row,
-  unread,
-  onMarkRead,
-  onNavigate,
-}: {
-  row: Extract<AdminDashboardNotification, { kind: "lavorazione_created" }>;
-  unread: boolean;
-  onMarkRead: () => void;
-  onNavigate: () => void;
-}) {
-  const relative = formatNotificationRelativeTime(row.createdAt);
-
-  return (
-    <NotificationRowCard unread={unread} onMarkRead={onMarkRead}>
-      <NotificationRowHeader title="Nuova lavorazione" unread={unread} relative={relative || "Adesso"} />
-      <NotificationRowBody>
-        <NotificationMetaLine label="Cliente" value={row.cliente?.trim() || "—"} />
-        <NotificationMetaLine label="Mezzo" value={row.mezzo?.trim() || "—"} />
-        {row.targa?.trim() ? <NotificationMetaLine label="Targa" value={row.targa.trim()} /> : null}
-        {row.titolo?.trim() ? (
-          <p className="pt-0.5 text-[11px] leading-snug text-[color:var(--cab-text-muted)]">{row.titolo.trim()}</p>
-        ) : null}
-      </NotificationRowBody>
-      <NotificationOpenLink label="Apri lavorazione" onOpen={onNavigate} />
-    </NotificationRowCard>
-  );
-}
-
-function MagazzinoNotificationRow({
-  row,
-  unread,
-  onMarkRead,
-  onNavigate,
-}: {
-  row: Extract<AdminDashboardNotification, { kind: "magazzino_sotto_scorta" }>;
-  unread: boolean;
-  onMarkRead: () => void;
-  onNavigate: () => void;
-}) {
-  const relative = formatNotificationRelativeTime(row.createdAt);
-
-  return (
-    <NotificationSottoScortaRow
-      descrizione={row.descrizione ?? ""}
-      marca={row.marca ?? ""}
-      scorta={row.scorta}
-      scortaMinima={row.scortaMinima}
-      unread={unread}
-      relativeTime={relative || "Adesso"}
-      onClick={onMarkRead}
-    >
-      <NotificationOpenLink label="Apri magazzino" onOpen={onNavigate} />
-    </NotificationSottoScortaRow>
-  );
-}
-
-function DashboardPromemoriaReminderRow({
-  row,
-  unread,
-  onMarkRead,
-  onNavigate,
-}: {
-  row: Extract<AdminDashboardNotification, { kind: "dashboard_promemoria_reminder" }>;
-  unread: boolean;
-  onMarkRead: () => void;
-  onNavigate: () => void;
-}) {
-  const relative = formatNotificationRelativeTime(row.createdAt);
-
-  return (
-    <NotificationRowCard unread={unread} onMarkRead={onMarkRead}>
-      <NotificationRowHeader title="Promemoria calendario" unread={unread} relative={relative || "Adesso"} />
-      <p className="mt-1.5 text-xs leading-snug text-[color:var(--cab-text)]">{row.message}</p>
-      <NotificationOpenLink label="Apri calendario" onOpen={onNavigate} />
-    </NotificationRowCard>
-  );
-}
-
-function DipendentiPresenzeReminderRow({
-  row,
-  unread,
-  onMarkRead,
-  onNavigate,
-}: {
-  row: Extract<AdminDashboardNotification, { kind: "dipendenti_presenze_reminder" }>;
-  unread: boolean;
-  onMarkRead: () => void;
-  onNavigate: () => void;
-}) {
-  const relative = formatNotificationRelativeTime(row.createdAt);
-  const [, y, m, d] = row.dateYmd.match(/^(\d{4})-(\d{2})-(\d{2})$/) ?? [];
-
-  const dateLabel = d && m && y ? `${d}/${m}/${y}` : null;
-
-  return (
-    <NotificationRowCard unread={unread} onMarkRead={onMarkRead}>
-      <NotificationRowHeader title="Presenze dipendenti" unread={unread} relative={relative || "Adesso"} />
-      <p className="mt-1.5 text-xs leading-snug text-[color:var(--cab-text-muted)]">
-        Nessuna presenza registrata{dateLabel ? ` per oggi (${dateLabel})` : " per oggi"}.
-      </p>
-      <NotificationOpenLink label="Apri Dipendenti" onOpen={onNavigate} />
-    </NotificationRowCard>
-  );
-}
-
-function NotificationRow({
+function AdminNotificationMessageRow({
   row,
   unread,
   onMarkRead,
@@ -346,73 +165,36 @@ function NotificationRow({
 }: {
   row: AdminDashboardNotification;
   unread: boolean;
-  onMarkRead: (row: AdminDashboardNotification) => void;
-  onNavigate: (row: AdminDashboardNotification) => void;
-  onDismiss: (row: AdminDashboardNotification) => void;
+  onMarkRead: () => void;
+  onNavigate: () => void;
+  onDismiss: () => void;
 }) {
-  const dismiss = () => onDismiss(row);
-  const markRead = () => onMarkRead(row);
-  const navigate = () => onNavigate(row);
+  const openLabel = getAdminNotificationOpenLinkLabel(row);
+  const vm = toAdminNotificationLogViewModel(row);
 
-  if (isAdminDashboardTestNotification(row)) {
-    const relative = formatNotificationRelativeTime(row.createdAt);
-    return (
-      <NotificationRowShell onDismiss={dismiss}>
-        <NotificationRowCard unread={unread} onMarkRead={markRead}>
-          <NotificationRowHeader title="Test notifiche" unread={unread} relative={relative || undefined} />
-          <p className="mt-1.5 text-xs leading-snug text-[color:var(--cab-text-muted)]">{row.message}</p>
-        </NotificationRowCard>
-      </NotificationRowShell>
-    );
-  }
-
-  if (isDashboardPromemoriaReminderNotification(row)) {
-    return (
-      <NotificationRowShell onDismiss={dismiss}>
-        <DashboardPromemoriaReminderRow
-          row={row}
-          unread={unread}
-          onMarkRead={markRead}
-          onNavigate={navigate}
-        />
-      </NotificationRowShell>
-    );
-  }
-  if (isDipendentiPresenzeReminderNotification(row)) {
-    return (
-      <NotificationRowShell onDismiss={dismiss}>
-        <DipendentiPresenzeReminderRow
-          row={row}
-          unread={unread}
-          onMarkRead={markRead}
-          onNavigate={navigate}
-        />
-      </NotificationRowShell>
-    );
-  }
-  if (isMagazzinoDashboardNotification(row)) {
-    return (
-      <NotificationRowShell onDismiss={dismiss}>
-        <MagazzinoNotificationRow row={row} unread={unread} onMarkRead={markRead} onNavigate={navigate} />
-      </NotificationRowShell>
-    );
-  }
   return (
-    <NotificationRowShell onDismiss={dismiss}>
-      <LavorazioneNotificationRow row={row} unread={unread} onMarkRead={markRead} onNavigate={navigate} />
-    </NotificationRowShell>
+    <div className={`min-w-0 ${unread ? "" : "opacity-80"}`}>
+      <LogEntry
+        vm={vm}
+        onClick={unread ? onMarkRead : undefined}
+        title={unread ? "Segna come letta" : undefined}
+        trailing={<NotificationRowDismiss onDismiss={onDismiss} />}
+      />
+      {openLabel ? (
+        <div className="-mt-1 mb-1 px-3">
+          <NotificationOpenLink label={openLabel} onOpen={onNavigate} />
+        </div>
+      ) : null}
+    </div>
   );
 }
 
 export function AdminNotificationsBell() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const [desktopPermissionState, setDesktopPermissionState] = useState(() =>
     getDesktopNotificationPermissionState(),
   );
-  const anchorRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
   const {
     notifications,
     unreadCount,
@@ -426,32 +208,8 @@ export function AdminNotificationsBell() {
     isUnread,
   } = useAdminNotificationStore();
 
-  useBodyScrollLock(open, "AdminNotificationsBell");
-
   const close = useCallback(() => setOpen(false), []);
   const toggle = useCallback(() => setOpen((v) => !v), []);
-
-  const [panelWidthPx, setPanelWidthPx] = useState(dsNotificationPanelWidthPx);
-
-  const syncPanelWidth = useCallback(() => {
-    const next = resolveNotificationsPanelWidth(measurePromemoriaCalendarColumnWidth());
-    setPanelWidthPx((prev) => (prev === next ? prev : next));
-  }, []);
-
-  const { style, floatingRef, isPositioned } = useGlobalDropdownPortal({
-    open: open && mounted,
-    anchorRef,
-    contentRef: panelRef,
-    placement: "bottom-end",
-    matchAnchorWidth: false,
-    panelWidth: panelWidthPx,
-    maxHeight: dsNotificationPanelMaxHeightPx,
-    repositionDeps: [open, notifications.length, panelWidthPx],
-  });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -461,32 +219,6 @@ export function AdminNotificationsBell() {
   const refreshDesktopPermission = useCallback(() => {
     setDesktopPermissionState(getDesktopNotificationPermissionState());
   }, []);
-
-  useLayoutEffect(() => {
-    if (!open) return;
-    syncPanelWidth();
-    const section = document.querySelector(PROMEMORIA_SECTION_SELECTOR);
-    if (!(section instanceof HTMLElement)) return;
-    const ro = new ResizeObserver(() => syncPanelWidth());
-    ro.observe(section);
-    const grid = section.querySelector(":scope > div.grid");
-    if (grid instanceof HTMLElement) {
-      ro.observe(grid);
-      if (grid.firstElementChild instanceof HTMLElement) ro.observe(grid.firstElementChild);
-    }
-    return () => ro.disconnect();
-  }, [open, syncPanelWidth]);
-
-  useDropdownOutsideDismiss(open, anchorRef, panelRef, close, { when: isPositioned });
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, close]);
 
   const onNavigate = useCallback(
     (row: AdminDashboardNotification) => {
@@ -527,26 +259,53 @@ export function AdminNotificationsBell() {
 
   if ((permLoading || !enabled) && !open) return null;
 
-  const panelSubtitle =
-    unreadCount > 0 ? `${unreadCount} non ${unreadCount === 1 ? "letta" : "lette"}` : undefined;
+  const drawerTitle =
+    unreadCount > 0
+      ? `Notifiche (${unreadCount} non ${unreadCount === 1 ? "letta" : "lette"})`
+      : "Notifiche";
 
-  const panel =
-    open && mounted && style ? (
-      <NotificationPanelShell
-        titleId={PANEL_TITLE_ID}
-        shellRef={floatingRef}
-        style={style}
-        onMouseDown={(e) => e.stopPropagation()}
-        header={
-          <NotificationPanelHeader
-            title="Notifiche"
-            titleId={PANEL_TITLE_ID}
+  return (
+    <>
+      <div className="relative shrink-0">
+        <Tooltip content={unreadCount > 0 ? `Notifiche (${unreadCount})` : "Notifiche"}>
+          <NotificationBellTrigger
             count={unreadCount}
-            subtitle={panelSubtitle}
-            onClose={close}
+            active={unreadCount > 0}
+            activeTone="info"
+            ariaLabel={unreadCount > 0 ? `Notifiche (${unreadCount} non lette)` : "Notifiche"}
+            ariaExpanded={open}
+            onClick={toggle}
           />
-        }
-        footer={
+        </Tooltip>
+      </div>
+
+      <Drawer
+        open={open}
+        onClose={close}
+        title={drawerTitle}
+        ariaLabel="Notifiche dashboard"
+        asideClassName={gestionaleLogPanelAsideClass}
+      >
+        <div className={`${gestionaleLogDrawerPanelClass} flex min-h-0 min-w-0 flex-1 flex-col gap-0 p-0 md:p-0`}>
+          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 flex-1 px-3 pt-2`}>
+            {notifications.length === 0 ? (
+              <GestionaleLogEmpty message="Nessuna notifica al momento." />
+            ) : (
+              <GestionaleLogList>
+                {notifications.map((row) => (
+                  <li key={notificationStoreKey(row)} className="list-none">
+                    <AdminNotificationMessageRow
+                      row={row}
+                      unread={isUnread(row)}
+                      onMarkRead={() => handleMarkRead(row)}
+                      onNavigate={() => onNavigate(row)}
+                      onDismiss={() => handleDismiss(row)}
+                    />
+                  </li>
+                ))}
+              </GestionaleLogList>
+            )}
+          </div>
           <NotificationsPanelFooter
             permissionState={desktopPermissionState}
             onPermissionChange={refreshDesktopPermission}
@@ -555,52 +314,8 @@ export function AdminNotificationsBell() {
             onMarkAllRead={markAllRead}
             onRemoveRead={removeReadNotifications}
           />
-        }
-      >
-        {notifications.length === 0 ? (
-          <NotificationEmptyState variant="neutral" description="Nessuna notifica al momento." />
-        ) : (
-          <NotificationList>
-            {notifications.map((row) => (
-              <li
-                key={
-                  row.kind === "lavorazione_created"
-                    ? row.lavorazioneId
-                    : row.kind === "magazzino_sotto_scorta"
-                      ? row.ricambioId
-                      : row.id
-                }
-                className="list-none"
-              >
-                <NotificationRow
-                  row={row}
-                  unread={isUnread(row)}
-                  onMarkRead={handleMarkRead}
-                  onNavigate={onNavigate}
-                  onDismiss={handleDismiss}
-                />
-              </li>
-            ))}
-          </NotificationList>
-        )}
-      </NotificationPanelShell>
-    ) : null;
-
-  return (
-    <div className="relative shrink-0">
-      <Tooltip content={unreadCount > 0 ? `Notifiche (${unreadCount})` : "Notifiche"}>
-        <NotificationBellTrigger
-          buttonRef={anchorRef}
-          count={unreadCount}
-          active={unreadCount > 0}
-          activeTone="info"
-          ariaLabel={unreadCount > 0 ? `Notifiche (${unreadCount} non lette)` : "Notifiche"}
-          ariaExpanded={open}
-          onClick={toggle}
-        />
-      </Tooltip>
-
-      {typeof document !== "undefined" && panel ? createPortal(panel, document.body) : null}
-    </div>
+        </div>
+      </Drawer>
+    </>
   );
 }

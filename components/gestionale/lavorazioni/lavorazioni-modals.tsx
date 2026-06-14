@@ -54,6 +54,7 @@ import {
   dsModalHeaderInner,
   dsModalHeaderLead,
   dsModalSubtitle,
+  dsModalSubtitleHub,
   dsModalTitle,
   dsModalTitleBlock,
   dsModalFormFooter,
@@ -225,6 +226,34 @@ export function LavorazioniModalHeader({
   belowTitle?: React.ReactNode;
 }) {
   const stacked = Boolean(belowTitle);
+  const hubToolbar = Boolean(actions && subtitle && !stacked);
+
+  if (hubToolbar) {
+    return (
+      <header className={dsLavorazioniModalWindowHeader}>
+        <div className="flex w-full min-w-0 flex-wrap items-start justify-between gap-x-3 gap-y-2">
+          <div className={`${dsModalHeaderLead} min-w-0 basis-[min(100%,12rem)]`}>
+            {onBack ? (
+              <button type="button" className={dsModalBackBtn} onClick={onBack}>
+                ← Indietro
+              </button>
+            ) : null}
+            <div className={dsModalTitleBlock}>
+              <h2 id={titleId} className={dsModalTitle}>
+                {title}
+              </h2>
+              <p className={dsModalSubtitleHub}>{subtitle}</p>
+            </div>
+          </div>
+          <div className="ml-auto flex shrink-0 flex-nowrap items-center justify-end gap-2">
+            {actions}
+            <CloseButton onClick={onRequestClose} className={dsModalCloseBtn} showOnFocus={false} />
+          </div>
+        </div>
+      </header>
+    );
+  }
+
   return (
     <header className={dsLavorazioniModalWindowHeader}>
       <div className={`${dsModalHeaderInner}${stacked ? " items-start sm:items-center" : ""}`}>

@@ -31,6 +31,7 @@ import { loadBrandingLogoDataUrl } from "@/lib/branding/branding-logo-for-pdf";
 import {
   drawGestionalePdfHeader,
   drawPdfPageFooters,
+  pdfAdvanceAfterDocumentHeader,
   pdfAdvanceSection,
   pdfContentWidth,
 } from "@/lib/pdf/core/pdf-base-template";
@@ -64,7 +65,7 @@ export async function buildDipendentePdf(
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   let y = drawGestionalePdfHeader(doc, pageW, title, { metaDivider: false, logoDataUrl });
-  y = pdfAdvanceSection(y);
+  y = pdfAdvanceAfterDocumentHeader(y);
 
   drawDipendentePresenzeVerticalTable(doc, ctx, employee, y, pageW, title);
 
@@ -85,7 +86,7 @@ export async function buildComplessivoPdf(
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
   let y = drawGestionalePdfHeader(doc, pageW, title, { metaDivider: false, logoDataUrl });
-  y = pdfAdvanceSection(y);
+  y = pdfAdvanceAfterDocumentHeader(y);
 
   drawPresenzeMonthlyGrid(doc, ctx, y, pageW, title, { showFooterTotals: true });
 

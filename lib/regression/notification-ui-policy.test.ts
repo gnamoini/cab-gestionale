@@ -48,12 +48,15 @@ assert.match(
   "admin bell must import notification primitives from design-system",
 );
 assert.match(adminBellSrc, /NotificationBellTrigger/);
-assert.match(adminBellSrc, /NotificationPanelShell/);
-assert.match(adminBellSrc, /NotificationPanelHeader/);
-assert.match(adminBellSrc, /NotificationList/);
-assert.match(adminBellSrc, /NotificationSottoScortaRow/);
-assert.match(adminBellSrc, /useGlobalDropdownPortal/);
-assert.match(adminBellSrc, /createPortal/);
+assert.match(adminBellSrc, /Drawer/);
+assert.match(adminBellSrc, /gestionaleLogPanelAsideClass/);
+assert.match(adminBellSrc, /GestionaleLogList/);
+assert.match(adminBellSrc, /LogEntry/);
+assert.match(adminBellSrc, /toAdminNotificationLogViewModel/);
+assert.match(adminBellSrc, /NotificationsPanelFooter/);
+assert.doesNotMatch(adminBellSrc, /useGlobalDropdownPortal/);
+assert.doesNotMatch(adminBellSrc, /createPortal/);
+assert.doesNotMatch(adminBellSrc, /NotificationPanelShell/);
 assert.doesNotMatch(adminBellSrc, /bg-red-600/);
 assert.doesNotMatch(adminBellSrc, /text-zinc-/);
 
@@ -63,11 +66,15 @@ assert.match(
   "magazzino bell must import notification primitives from design-system",
 );
 assert.match(magBellSrc, /NotificationBellTrigger/);
-assert.match(magBellSrc, /NotificationPanelShell/);
-assert.match(magBellSrc, /NotificationPanelHeader/);
-assert.match(magBellSrc, /NotificationSottoScortaRow/);
-assert.match(magBellSrc, /useGlobalDropdownPortal/);
-assert.match(magBellSrc, /createPortal/);
+assert.match(magBellSrc, /Drawer/);
+assert.match(magBellSrc, /gestionaleLogPanelAsideClass/);
+assert.match(magBellSrc, /GestionaleLogList/);
+assert.match(magBellSrc, /LogEntry/);
+assert.match(magBellSrc, /toMagazzinoSottoScortaLogViewModel/);
+assert.doesNotMatch(magBellSrc, /useGlobalDropdownPortal/);
+assert.doesNotMatch(magBellSrc, /createPortal/);
+assert.doesNotMatch(magBellSrc, /NotificationPanelShell/);
+assert.doesNotMatch(magBellSrc, /NotificationSottoScortaRow/);
 assert.doesNotMatch(magBellSrc, /GestionaleModalShell/);
 assert.doesNotMatch(magBellSrc, /GestionaleModalScrollBody/);
 assert.doesNotMatch(magBellSrc, /hidden truncate text-xs font-semibold sm:inline/);

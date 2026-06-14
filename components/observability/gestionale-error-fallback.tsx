@@ -8,6 +8,7 @@ import { ErrorPageCard } from "@/components/observability/error-page-card";
 import { useSafeGestionaleHomeLink } from "@/components/observability/use-safe-gestionale-home-link";
 import {
   buildTechnicalDetail,
+  errorTitle,
   friendlyDescription,
 } from "@/lib/observability/error-message-humanize";
 
@@ -19,10 +20,12 @@ export type GestionaleErrorFallbackProps = {
 };
 
 function GestionaleEmbeddedError({
+  title,
   description,
   technicalDetail,
   onRetry,
 }: {
+  title: string;
   description: string;
   technicalDetail?: string;
   onRetry?: () => void;
@@ -42,11 +45,11 @@ function GestionaleEmbeddedError({
   return (
     <div className="flex min-w-0 flex-col items-center justify-center px-2 py-10">
       <ErrorPageCard
-        eyebrow="Errore di caricamento"
-        title="Errore di caricamento"
+        title={title}
         description={description}
         technicalDetail={technicalDetail}
         showLogo={false}
+        layout="embedded"
         onRetry={onRetry}
         onBack={goBack}
         safeExitHref={safeHome.href}
@@ -58,7 +61,6 @@ function GestionaleEmbeddedError({
 }
 
 function GlobalStandaloneErrorPage({
-  eyebrow,
   title,
   description,
   technicalDetail,
@@ -66,7 +68,6 @@ function GlobalStandaloneErrorPage({
   safeExitHref,
   safeExitLabel,
 }: {
-  eyebrow: string;
   title: string;
   description: string;
   technicalDetail?: string;
@@ -86,7 +87,6 @@ function GlobalStandaloneErrorPage({
     <AuthStandalonePageShell showThemeToggle={false} decorativeBackground={false}>
       <main className="relative z-10 flex min-h-[var(--cab-app-height,100dvh)] w-full flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <ErrorPageCard
-          eyebrow={eyebrow}
           title={title}
           description={description}
           technicalDetail={technicalDetail}
@@ -102,7 +102,6 @@ function GlobalStandaloneErrorPage({
 }
 
 function StandaloneErrorPage({
-  eyebrow,
   title,
   description,
   technicalDetail,
@@ -110,7 +109,6 @@ function StandaloneErrorPage({
   safeExitHref,
   safeExitLabel,
 }: {
-  eyebrow: string;
   title: string;
   description: string;
   technicalDetail?: string;
@@ -132,7 +130,6 @@ function StandaloneErrorPage({
     <AuthStandalonePageShell showThemeToggle={false} decorativeBackground={false}>
       <main className="relative z-10 flex min-h-[var(--cab-app-height,100dvh)] w-full flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <ErrorPageCard
-          eyebrow={eyebrow}
           title={title}
           description={description}
           technicalDetail={technicalDetail}
@@ -154,12 +151,14 @@ export function GestionaleErrorFallback({
   onRetry,
 }: GestionaleErrorFallbackProps) {
   const raw = message?.trim();
+  const title = errorTitle(variant, raw);
   const description = friendlyDescription(variant, raw);
   const technicalDetail = buildTechnicalDetail(raw, digest);
 
   if (variant === "gestionale") {
     return (
       <GestionaleEmbeddedError
+        title={title}
         description={description}
         technicalDetail={technicalDetail}
         onRetry={onRetry}
@@ -170,8 +169,7 @@ export function GestionaleErrorFallback({
   if (variant === "global") {
     return (
       <GlobalStandaloneErrorPage
-        eyebrow="Errore di caricamento"
-        title="Errore di caricamento"
+        title={title}
         description={description}
         technicalDetail={technicalDetail}
         onRetry={onRetry}
@@ -183,8 +181,7 @@ export function GestionaleErrorFallback({
 
   return (
     <StandaloneErrorPage
-      eyebrow="Errore di caricamento"
-      title="Errore di caricamento"
+      title={title}
       description={description}
       technicalDetail={technicalDetail}
       onRetry={onRetry}

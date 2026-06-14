@@ -31,6 +31,8 @@ export type MezzoGestito = {
    * perché non esiste ancora un record corrispondente in anagrafica mezzi.
    */
   hubSynthetic?: boolean;
+  /** ISO timestamp ultimo aggiornamento anagrafica mezzo (DB `updated_at`). */
+  ultimaModifica?: string;
 };
 
 export type MezziSortKey =

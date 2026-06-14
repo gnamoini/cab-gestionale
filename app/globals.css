@@ -313,10 +313,34 @@ html {
   animation: cab-nav-backdrop-in var(--cab-nav-drawer-duration) var(--cab-nav-drawer-ease) reverse both;
 }
 
+.cab-log-drawer-panel,
+.cab-log-drawer-backdrop {
+  --cab-log-drawer-duration: 0.22s;
+  --cab-log-drawer-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cab-log-drawer-panel {
+  animation: cab-drawer-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) both;
+}
+
+.cab-log-drawer-panel[data-state="closing"] {
+  animation: cab-drawer-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) reverse both;
+}
+
+.cab-log-drawer-backdrop {
+  animation: cab-nav-backdrop-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) both;
+}
+
+.cab-log-drawer-backdrop[data-state="closing"] {
+  animation: cab-nav-backdrop-in var(--cab-log-drawer-duration) var(--cab-log-drawer-ease) reverse both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cab-drawer-panel,
   .cab-nav-drawer-panel,
-  .cab-nav-drawer-backdrop {
+  .cab-nav-drawer-backdrop,
+  .cab-log-drawer-panel,
+  .cab-log-drawer-backdrop {
     animation: none;
   }
   .cab-toast-item {

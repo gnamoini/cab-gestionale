@@ -1,5 +1,10 @@
 import type { GestionaleLogEventTone, GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
+import { appendConfigurazioneLogs } from "@/lib/configurazione/configurazione-log-storage";
+import {
+  isDashboardSistemaLogScopeEntry,
+  partitionDashboardSistemaLogEntries,
+} from "@/lib/dashboard/dashboard-sistema-log-scope";
 import { bumpReportDataRefresh } from "@/lib/report/report-broadcast";
 import { dispatchDashboardSistemaLogRefresh } from "@/lib/sistema/cab-events";
 
@@ -12,31 +17,39 @@ function nextId(): string {
   return `dslog-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function loadDashboardSistemaLog(): DashboardSistemaLogStored[] {
+function parseDashboardSistemaLogStored(parsed: unknown): DashboardSistemaLogStored[] {
+  if (!Array.isArray(parsed)) return [];
+  const out: DashboardSistemaLogStored[] = [];
+  for (const x of parsed) {
+    if (!x || typeof x !== "object") continue;
+    const o = x as Record<string, unknown>;
+    const id = typeof o.id === "string" && o.id.trim() ? o.id.trim() : nextId();
+    const tipoRiga = typeof o.tipoRiga === "string" ? o.tipoRiga : "";
+    const oggettoRiga = typeof o.oggettoRiga === "string" ? o.oggettoRiga : "";
+    const modificaRiga = typeof o.modificaRiga === "string" ? o.modificaRiga : "";
+    const autore = typeof o.autore === "string" && o.autore.trim() ? o.autore.trim() : "Sistema";
+    const atIso = typeof o.atIso === "string" && o.atIso.trim() ? o.atIso.trim() : new Date().toISOString();
+    const tone = (typeof o.tone === "string" ? o.tone : "neutral") as GestionaleLogEventTone;
+    if (!tipoRiga || !oggettoRiga) continue;
+    out.push({ id, tipoRiga, oggettoRiga, modificaRiga, autore, atIso, tone });
+  }
+  return out.slice(0, DASHBOARD_SISTEMA_LOG_MAX);
+}
+
+/** Legge tutte le voci dal localStorage senza filtro scope (uso interno / reconcile). */
+export function loadDashboardSistemaLogRaw(): DashboardSistemaLogStored[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(DASHBOARD_SISTEMA_LOG_STORAGE_KEY);
     if (!raw) return [];
-    const parsed = JSON.parse(raw) as unknown;
-    if (!Array.isArray(parsed)) return [];
-    const out: DashboardSistemaLogStored[] = [];
-    for (const x of parsed) {
-      if (!x || typeof x !== "object") continue;
-      const o = x as Record<string, unknown>;
-      const id = typeof o.id === "string" && o.id.trim() ? o.id.trim() : nextId();
-      const tipoRiga = typeof o.tipoRiga === "string" ? o.tipoRiga : "";
-      const oggettoRiga = typeof o.oggettoRiga === "string" ? o.oggettoRiga : "";
-      const modificaRiga = typeof o.modificaRiga === "string" ? o.modificaRiga : "";
-      const autore = typeof o.autore === "string" && o.autore.trim() ? o.autore.trim() : "Sistema";
-      const atIso = typeof o.atIso === "string" && o.atIso.trim() ? o.atIso.trim() : new Date().toISOString();
-      const tone = (typeof o.tone === "string" ? o.tone : "neutral") as GestionaleLogEventTone;
-      if (!tipoRiga || !oggettoRiga) continue;
-      out.push({ id, tipoRiga, oggettoRiga, modificaRiga, autore, atIso, tone });
-    }
-    return out.slice(0, DASHBOARD_SISTEMA_LOG_MAX);
+    return parseDashboardSistemaLogStored(JSON.parse(raw) as unknown);
   } catch {
     return [];
   }
+}
+
+export function loadDashboardSistemaLog(): DashboardSistemaLogStored[] {
+  return loadDashboardSistemaLogRaw().filter(isDashboardSistemaLogScopeEntry);
 }
 
 export function saveDashboardSistemaLog(entries: DashboardSistemaLogStored[]): void {
@@ -49,12 +62,33 @@ export function saveDashboardSistemaLog(entries: DashboardSistemaLogStored[]): v
   }
 }
 
+/** Sposta leak impostazioni al log configurazione e rimuove voci fuori scope dal key dashboard. */
+export function reconcileDashboardSistemaLogScope(): void {
+  if (typeof window === "undefined") return;
+  const all = loadDashboardSistemaLogRaw();
+  if (all.length === 0) return;
+
+  const { keep, configLeak } = partitionDashboardSistemaLogEntries(all);
+  const changed = keep.length !== all.length;
+
+  if (configLeak.length > 0) {
+    appendConfigurazioneLogs(configLeak);
+  }
+  if (changed) {
+    saveDashboardSistemaLog(keep);
+    dispatchDashboardSistemaLogRefresh();
+  }
+}
+
 export function removeDashboardSistemaLogEntryById(id: string): void {
   const next = loadDashboardSistemaLog().filter((e) => e.id !== id);
   saveDashboardSistemaLog(next);
   dispatchDashboardSistemaLogRefresh();
 }
+
 export function appendDashboardSistemaLog(entry: GestionaleLogViewModel): void {
+  if (!isDashboardSistemaLogScopeEntry(entry)) return;
+
   const prev = loadDashboardSistemaLog();
   const row: DashboardSistemaLogStored = { ...entry, id: nextId() };
   const last = prev[0];

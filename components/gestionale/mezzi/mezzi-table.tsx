@@ -2,7 +2,18 @@
 
 import type { ReactNode } from "react";
 import { memo } from "react";
-import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
+import { CardMobile, IconActionButton, Tooltip } from "@/components/design-system";
+import {
+  LavorazioneMobileCardFooter,
+  LavorazioneMobileMetaGrid,
+  LavorazioneMobileMetaItem,
+  formatLavorazioneMobileIdentLine,
+} from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
+import {
+  formatMezzoUltimaModificaMobileLines,
+  formatMezzoUltimaModificaTooltip,
+  type MezzoUltimaModificaInfo,
+} from "@/lib/mezzi/mezzo-ultima-modifica-info";
 import {
   dsTableActionBtnInfo,
   dsTableActionBtnSecondary,
@@ -11,6 +22,7 @@ import {
 import {
   GestionaleListTable,
   GestionaleListTableActionsHead,
+  GestionaleListTableMobileEmpty,
   GlobalTableHeadLabel,
   GlobalTableSortTh,
 } from "@/components/gestionale/global-table";
@@ -135,6 +147,7 @@ function MezziCellIdentificazione({ lines }: { lines: string[] }) {
 export type MezziTableProps = {
   rows: MezzoGestito[];
   interventiByMezzoId: Map<string, MezzoInterventoLavorazione[]>;
+  ultimaModificaInfoByMezzoId: Map<string, MezzoUltimaModificaInfo>;
   inOfficina: (m: MezzoGestito) => boolean;
   sortColumn: MezziSortKey | null;
   sortPhase: MezziSortPhase;
@@ -252,103 +265,132 @@ function MezzoRowInner({
   );
 }
 
+function mezzoAttrezzaturaTitle(m: MezzoGestito): string {
+  const marca = displayScalar(m.marca);
+  const modello = cellIdentValue(m.modello);
+  if (marca === "—") return modello;
+  if (modello === "—") return marca;
+  return `${marca} ${modello}`;
+}
+
+function mezzoTelaioMobileValue(m: MezzoGestito): ReactNode {
+  const marca = displayScalar(m.marcaTelaio);
+  const modello = displayScalar(m.modelloTelaio);
+  if (marca === "—" && modello === "—") return "—";
+  if (modello === "—") return marca;
+  if (marca === "—") return modello;
+  return (
+    <>
+      <span>{marca}</span>
+      <span className="block text-[11px] font-normal leading-snug text-zinc-500 dark:text-zinc-400">{modello}</span>
+    </>
+  );
+}
+
 function MezzoMobileCard({
   m,
   interventi,
+  ultimaModificaInfo,
   inOff: _inOff,
   flash,
   onHub,
 }: {
   m: MezzoGestito;
   interventi: MezzoInterventoLavorazione[];
+  ultimaModificaInfo: MezzoUltimaModificaInfo;
   inOff: boolean;
   flash: boolean;
   onHub: (m: MezzoGestito) => void;
 }) {
-  const ultima = ultimaLavorazioneLabel(interventi);
+  const ultimaLav = ultimaLavorazioneLabel(interventi);
+  const { date: ultimaModifica, autore: ultimaModificaAutore } =
+    formatMezzoUltimaModificaMobileLines(ultimaModificaInfo);
+  const modificaTooltip = formatMezzoUltimaModificaTooltip(ultimaModificaInfo);
   const nLavorazioni = interventi.length;
-  const identLines = identificazioneLines(m);
-  const sectionDivider = "border-b border-zinc-200/80 pb-2 dark:border-zinc-700/80";
-  const metaDt = "text-[10px] font-medium text-zinc-500 dark:text-zinc-400";
-  const metaDd = "mt-0.5 text-xs font-medium leading-snug text-zinc-800 dark:text-zinc-200";
+  const identLine = formatLavorazioneMobileIdentLine({
+    targa: m.targa,
+    matricola: m.matricola,
+    scuderia: m.numeroScuderia ?? "",
+  });
   void _inOff;
   return (
     <CardMobile
       id={`mezzo-row-${m.id}`}
       className={[
-        "gap-0 !p-3 sm:!p-3.5",
+        "min-w-0 h-full gap-0 !p-3 sm:!p-3.5",
         flash ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_35%,transparent)]" : "",
       ]
         .filter(Boolean)
         .join(" ")}
     >
-      <div className={sectionDivider}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Cliente</p>
-            <p className="line-clamp-2 text-[1.05rem] font-semibold leading-snug tracking-tight text-zinc-900 dark:text-zinc-50">
-              {displayScalar(m.cliente)}
+      <div className="border-b border-zinc-200/80 pb-2 dark:border-zinc-700/80">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1 space-y-0.5">
+            <p className="line-clamp-2 text-base font-semibold leading-snug tracking-tight text-[color:var(--cab-text)]">
+              {mezzoAttrezzaturaTitle(m)}
             </p>
+            <p className="truncate text-sm font-medium text-[color:var(--cab-text)]">{displayScalar(m.cliente)}</p>
             {hasUtilizzatore(m.utilizzatore) ? (
-              <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">{m.utilizzatore.trim()}</p>
+              <p className="truncate text-xs text-[color:var(--cab-text-muted)]">{m.utilizzatore.trim()}</p>
+            ) : null}
+            {m.hubSynthetic ? (
+              <p className="text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Sintetico</p>
             ) : null}
           </div>
-          <div className="shrink-0">
-            <p className="text-right text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">N. lavorazioni</p>
-            <span className="mt-1 inline-flex min-w-[2.5rem] justify-center rounded-[var(--ds-radius-lg)] bg-[var(--cab-surface-2)] px-2 py-1 font-mono text-base font-bold tabular-nums text-[color:var(--cab-text)]">
+          <div className="shrink-0 text-right">
+            <p className="text-[10px] font-medium text-zinc-500 dark:text-zinc-400">N. lav.</p>
+            <span className="mt-0.5 inline-flex min-w-[2rem] justify-center rounded-[var(--ds-radius-lg)] bg-[var(--cab-surface-2)] px-1.5 py-0.5 font-mono text-sm font-bold tabular-nums text-[color:var(--cab-text)]">
               {nLavorazioni}
             </span>
           </div>
         </div>
+        {identLine ? (
+          <p
+            className="mt-1 break-words font-medium tabular-nums text-[11px] leading-snug text-[color:var(--cab-text-muted)]"
+            title={identLine}
+          >
+            {identLine}
+          </p>
+        ) : null}
       </div>
-      <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2.5 text-xs">
-        <div>
-          <dt className={metaDt}>Cantiere</dt>
-          <dd className={`${metaDd} text-sm text-zinc-900 dark:text-zinc-50`}>{displayScalar(m.cantiere)}</dd>
-        </div>
-        <div>
-          <dt className={metaDt}>Attrezzatura</dt>
-          <dd className={`${metaDd} text-sm text-zinc-900 dark:text-zinc-50`}>{displayScalar(m.marca)}</dd>
-          <dd className="text-xs text-zinc-500 dark:text-zinc-400">{cellIdentValue(m.modello)}</dd>
-          {m.hubSynthetic ? (
-            <dd className="mt-0.5 text-[10px] font-semibold uppercase text-amber-700 dark:text-amber-300">Sintetico</dd>
-          ) : null}
-        </div>
-        <div>
-          <dt className={metaDt}>Telaio</dt>
-          <dd className={`${metaDd} text-sm text-zinc-900 dark:text-zinc-50`}>{displayScalar(m.marcaTelaio)}</dd>
-          <dd className="text-xs text-zinc-500 dark:text-zinc-400">{displayScalar(m.modelloTelaio)}</dd>
-        </div>
-        <div className="col-span-2">
-          <dt className={metaDt}>Identificazione</dt>
-          <dd className="flex flex-col gap-0.5">
-            {identLines.map((line, i) => (
-              <span key={`${i}-${line}`} className="text-[13px] font-medium leading-snug text-zinc-800 dark:text-zinc-100">
-                {line}
-              </span>
-            ))}
-          </dd>
-        </div>
-        <div className="col-span-2">
-          <dt className={metaDt}>Ultima lavorazione</dt>
-          <dd className={`${metaDd} text-sm`}>{ultima}</dd>
-        </div>
-      </dl>
-      <CardMobileActions spacing="tight" className="mt-2.5 border-t border-zinc-200/80 pt-2.5 dark:border-zinc-700/80">
+
+      <LavorazioneMobileMetaGrid>
+        <LavorazioneMobileMetaItem label="Cantiere" value={displayScalar(m.cantiere)} />
+        <LavorazioneMobileMetaItem label="Telaio" value={mezzoTelaioMobileValue(m)} />
+        <LavorazioneMobileMetaItem label="Ultima lavorazione" value={ultimaLav} className="col-span-2" />
+      </LavorazioneMobileMetaGrid>
+
+      <LavorazioneMobileCardFooter
+        meta={
+          ultimaModifica !== "—" ? (
+            <Tooltip content={modificaTooltip ?? undefined} side="top" multiline>
+              <div className="min-w-0 cursor-default text-xs font-medium leading-tight text-[color:var(--cab-text-muted)]">
+                <p className="min-w-0 truncate tabular-nums">
+                  <span className="sr-only">Ultima modifica: </span>
+                  {ultimaModifica}
+                </p>
+                {ultimaModificaAutore !== "—" ? (
+                  <p className="min-w-0 truncate">{ultimaModificaAutore}</p>
+                ) : null}
+              </div>
+            </Tooltip>
+          ) : null
+        }
+      >
         <MezzoRowActions m={m} onHub={onHub} />
-      </CardMobileActions>
+      </LavorazioneMobileCardFooter>
     </CardMobile>
   );
 }
 
 const MezzoRow = memo(MezzoRowInner);
 
-export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, sortPhase, onSort, flashRowId, onHub }: MezziTableProps) {
+export function MezziTable({ rows, interventiByMezzoId, ultimaModificaInfoByMezzoId, inOfficina, sortColumn, sortPhase, onSort, flashRowId, onHub }: MezziTableProps) {
   return (
     <>
       <GestionaleListTable
         wrapClassName="mt-0"
-        visibilityClass="hidden md:block"
+        visibilityClass="hidden xl:block"
         colgroup={
           <>
             <col className="w-[14%]" />
@@ -402,17 +444,25 @@ export function MezziTable({ rows, interventiByMezzoId, inOfficina, sortColumn, 
         ))}
       </GestionaleListTable>
 
-      <div className="space-y-3 md:hidden">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:hidden">
         {rows.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-            Nessun mezzo corrisponde ai criteri.
-          </p>
+          <div className="col-span-full">
+            <GestionaleListTableMobileEmpty message="Nessun mezzo corrisponde ai criteri." />
+          </div>
         ) : (
           rows.map((m) => (
             <MezzoMobileCard
               key={m.id}
               m={m}
               interventi={interventiByMezzoId.get(m.id) ?? []}
+              ultimaModificaInfo={
+                ultimaModificaInfoByMezzoId.get(m.id) ?? {
+                  iso: "",
+                  autore: "",
+                  summaryShort: "—",
+                  summaryFull: "Nessuna modifica registrata",
+                }
+              }
               inOff={inOfficina(m)}
               flash={flashRowId === m.id}
               onHub={onHub}

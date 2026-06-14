@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { dsModalCloseBtn, dsModalHeader, dsModalHeaderInner, dsModalHeaderLead, dsModalTitle, dsModalTitleBlock, dsZDrawer } from "@/lib/ui/design-system";
 import { cabIosOverlaySurface, cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
 import {
@@ -14,6 +14,13 @@ import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
 import { CloseButton } from "@/components/design-system/close-button";
 import { gestionaleLogPanelAsideClass } from "@/components/gestionale/gestionale-log-ui";
+
+const LOG_DRAWER_MS = 220;
+
+function logDrawerAnimMs(): number {
+  if (typeof window === "undefined") return LOG_DRAWER_MS;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : LOG_DRAWER_MS;
+}
 
 export type DrawerProps = {
   open: boolean;
@@ -38,11 +45,32 @@ export function Drawer({
 }: DrawerProps) {
   const asideRef = useRef<HTMLElement>(null);
   const maxMdDown = useMaxMdDown();
-  useBodyScrollLock(lockScroll && open, "design-system-Drawer");
-  useOverlayBackHandler(open, onClose, "design-system-Drawer");
+  const [mounted, setMounted] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const panelState = closing ? "closing" : "open";
+
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      setClosing(false);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!mounted || open) return;
+    setClosing(true);
+    const id = window.setTimeout(() => {
+      setMounted(false);
+      setClosing(false);
+    }, logDrawerAnimMs());
+    return () => window.clearTimeout(id);
+  }, [mounted, open]);
+
+  useBodyScrollLock(lockScroll && mounted && !closing, "design-system-Drawer");
+  useOverlayBackHandler(mounted && open && !closing, onClose, "design-system-Drawer");
   useMobileModalKeyboard(asideRef);
 
-  if (!open) return null;
+  if (!mounted) return null;
 
   const headerNode = (
     <header className={dsModalHeader}>
@@ -59,7 +87,8 @@ export function Drawer({
 
   return (
     <div
-      className={`fixed inset-0 ${dsZDrawer} flex items-stretch justify-end ${cabIosOverlaySurface} bg-[var(--cab-overlay)] backdrop-blur-[1px]`}
+      className={`cab-log-drawer-backdrop fixed inset-0 ${dsZDrawer} flex items-stretch justify-end ${cabIosOverlaySurface} bg-[var(--cab-overlay)] backdrop-blur-[1px]`}
+      data-state={panelState}
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {
@@ -72,6 +101,7 @@ export function Drawer({
         ref={asideRef}
         {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
         className={asideClassName}
+        data-state={panelState}
         aria-label={ariaLabel ?? title}
         onMouseDown={(e) => e.stopPropagation()}
       >

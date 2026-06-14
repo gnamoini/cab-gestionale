@@ -45,7 +45,7 @@ const MODAL_WIDTH_CLASSES: Record<
 
 const DRAWER_ASIDE_CLASSES: Record<DrawerSize, string> = {
   drawerLog:
-    "flex h-full max-h-dvh min-h-0 w-full max-w-[28rem] flex-col overflow-hidden border-l border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl",
+    "cab-log-drawer-panel flex h-full max-h-dvh min-h-0 w-full max-w-[28rem] flex-col overflow-hidden border-l border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-2xl",
   drawerFilter:
     "cab-drawer-panel absolute inset-y-0 right-0 flex w-[min(100%,var(--cab-modal-width-drawer-filter,22rem))] max-w-full flex-col border-l border-[color:var(--cab-border)] bg-[var(--cab-card)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] shadow-[var(--cab-shadow-lg)]",
   drawerNav:

@@ -1,12 +1,23 @@
 import "server-only";
 
-import { verifyServerSectionRead } from "@/src/lib/auth/server-permission-guards";
+import {
+  verifyServerSectionRead,
+  verifyServerSectionWrite,
+} from "@/src/lib/auth/server-permission-guards";
 import { BRANDING_LOGO_STORAGE_PREFIX } from "@/src/lib/storage/storage-paths";
 import { isImageStorageScope, type ImageStorageScope } from "@/src/lib/storage/storage-config";
 import { normalizeStorageObjectPath } from "@/src/lib/storage/storage-paths";
 
 function sectionForImageScope(scope: ImageStorageScope): "lavorazioni" | "mezzi" | "magazzino" {
   return scope;
+}
+
+async function verifyImageScopeModuleAccess(scope: ImageStorageScope): Promise<boolean> {
+  const [canRead, canWrite] = await Promise.all([
+    verifyServerSectionRead(scope),
+    verifyServerSectionWrite(scope),
+  ]);
+  return canRead || canWrite;
 }
 
 /** Verifica accesso lettura per path oggetto nel bucket `images`. */
@@ -22,5 +33,5 @@ export async function verifyMediaImagePathAccess(objectPath: string): Promise<bo
   if (!scopeRaw || !recordId || !isImageStorageScope(scopeRaw)) return false;
   if (recordId.includes("/")) return false;
 
-  return verifyServerSectionRead(sectionForImageScope(scopeRaw));
+  return verifyImageScopeModuleAccess(sectionForImageScope(scopeRaw));
 }

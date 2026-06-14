@@ -4,6 +4,7 @@ import { AuthStandalonePageShell } from "@/components/gestionale/auth-standalone
 import { ErrorPageCard } from "@/components/observability/error-page-card";
 import {
   buildTechnicalDetail,
+  errorTitle,
   friendlyDescription,
 } from "@/lib/observability/error-message-humanize";
 
@@ -17,6 +18,7 @@ export function GlobalErrorView({
   digest?: string;
   onRetry?: () => void;
 }) {
+  const title = errorTitle("global", message);
   const description = friendlyDescription("global", message);
   const technicalDetail = buildTechnicalDetail(message, digest);
 
@@ -32,8 +34,7 @@ export function GlobalErrorView({
     <AuthStandalonePageShell showThemeToggle={false} decorativeBackground={false}>
       <main className="relative z-10 flex min-h-[var(--cab-app-height,100dvh)] w-full min-w-0 flex-col items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <ErrorPageCard
-          eyebrow="Errore di caricamento"
-          title="Errore di caricamento"
+          title={title}
           description={description}
           technicalDetail={technicalDetail}
           onRetry={onRetry}

@@ -57,6 +57,7 @@ export function toMezzoUI(row: MezzoRow): MezzoGestito {
     note: "",
     priorita: "normale",
     hubSynthetic: false,
+    ultimaModifica: row.updated_at?.trim() || row.created_at?.trim() || undefined,
   };
 }
 

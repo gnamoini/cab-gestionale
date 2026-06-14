@@ -27,6 +27,19 @@ assert.match(clientPhotos, /GestionaleMediaImage/, "client photos must use Gesti
 const imageStorage = read("lib/media/image-storage.ts");
 assert.match(imageStorage, /\.thumb\.webp/, "upload must emit thumb WebP variant");
 assert.match(imageStorage, /\.full\.(avif|webp)/, "upload must emit full AVIF/WebP variants");
+const imageStorageDelivery = read("lib/media/image-storage-delivery.ts");
+assert.match(imageStorageDelivery, /detailPath/, "StoredImage must expose detailPath for proxy delivery");
+
+const gestionaleMediaImage = read("components/gestionale/media/gestionale-media-image.tsx");
+assert.match(gestionaleMediaImage, /onError/, "GestionaleMediaImage must handle load errors");
+assert.match(gestionaleMediaImage, /detailPath/, "GestionaleMediaImage must use detailPath for non-thumb presets");
+
+const lavorazioneMedia = read("components/gestionale/media/lavorazione-media-panel.tsx");
+assert.match(lavorazioneMedia, /GestionaleMediaImage|RecordImageManager/, "lavorazioni media must use shared image stack");
+
+const mezziHub = read("components/gestionale/mezzi/mezzi-hub-detail-modal.tsx");
+assert.match(mezziHub, /RecordImageManager/, "mezzi hub must use RecordImageManager");
+
 assert.doesNotMatch(
   imageStorage,
   /toBlob\([^)]*image\/jpeg[^)]*\)[\s\S]*uploadStoredImage/,

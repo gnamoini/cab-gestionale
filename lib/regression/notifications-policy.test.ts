@@ -57,10 +57,13 @@ assert.match(
   "dashboard_promemoria must not emit cab-sync toasts (local UI toasts only)",
 );
 
-assert.match(bellSrc, /useGlobalDropdownPortal/);
-assert.match(bellSrc, /createPortal/);
-assert.match(bellSrc, /placement: "bottom-end"/);
-assert.match(bellSrc, /useDropdownOutsideDismiss/);
+assert.match(bellSrc, /<Drawer[\s\S]*?gestionaleLogPanelAsideClass/);
+assert.match(bellSrc, /toAdminNotificationLogViewModel/);
+assert.match(bellSrc, /LogEntry/);
+assert.doesNotMatch(bellSrc, /useGlobalDropdownPortal/);
+assert.doesNotMatch(bellSrc, /createPortal/);
+assert.doesNotMatch(bellSrc, /placement: "bottom-end"/);
+assert.doesNotMatch(bellSrc, /useDropdownOutsideDismiss/);
 assert.doesNotMatch(bellSrc, /absolute right-0/);
 assert.doesNotMatch(bellSrc, /100vw/);
 

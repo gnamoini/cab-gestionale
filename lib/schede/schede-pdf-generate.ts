@@ -3,7 +3,7 @@ import {
   drawGestionalePdfHeader,
   drawPdfPageFooters,
   fmtDateIt,
-  pdfAdvanceSection,
+  pdfAdvanceAfterDocumentHeader,
 } from "@/lib/pdf/core/pdf-base-template";
 import { assertInterventoExportAlignment } from "@/lib/domain/intervento-context/intervento-export-alignment";
 import { resolveInterventoDisplayForSurface, schedaIngressoFieldsFromDisplay } from "@/lib/domain/intervento-context/resolve-intervento-display-for-surface";
@@ -50,7 +50,7 @@ export function generateSchedaPdfBytes(opts: {
     operatore,
     logoDataUrl: opts.logoDataUrl,
   });
-  y = pdfAdvanceSection(y);
+  y = pdfAdvanceAfterDocumentHeader(y);
 
   if (opts.doc.tipo === "ingresso") {
     if (!opts.lavorazioneRow) {

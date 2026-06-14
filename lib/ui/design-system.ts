@@ -491,6 +491,9 @@ export const dsModalTitle = `truncate text-base font-semibold leading-tight trac
 
 export const dsModalSubtitle = `mt-0.5 truncate ${dsTypoCaption}`;
 
+/** Sottotitolo hub (mezzo, configurazione): fino a 2 righe senza troncare metadata densi. */
+export const dsModalSubtitleHub = `mt-0.5 line-clamp-2 ${dsTypoCaption}`;
+
 export const dsModalCloseBtn = "h-11 w-11 shrink-0 sm:h-9 sm:w-9";
 
 export const dsModalBackBtn = `${dsPageToolbarBtn} h-9 shrink-0 px-2.5 text-xs sm:px-3`;
