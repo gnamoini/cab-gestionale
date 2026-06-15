@@ -27,7 +27,7 @@ test("admin opens impostazioni and saves parametri economici", async ({ page }) 
   attachConsoleGuards(page);
   await loginViaUi(page, adminCredentials());
   await page.goto("/impostazioni");
-  await expect(page.getByRole("heading", { name: "Impostazioni" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible({ timeout: 30_000 });
   await openParametriEconomici(page);
 
   const input = page.locator("#config-costo-orario-default");
@@ -40,7 +40,7 @@ test("admin opens impostazioni and saves parametri economici", async ({ page }) 
   await saveSettingsAndWait(page);
 
   await page.reload();
-  await expect(page.getByRole("heading", { name: "Impostazioni" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible({ timeout: 30_000 });
   await openParametriEconomici(page);
   await expect(page.locator("#config-costo-orario-default")).toHaveValue(next, { timeout: 30_000 });
 
@@ -53,7 +53,7 @@ test("unsaved changes dialog blocks navigation away from impostazioni", async ({
   attachConsoleGuards(page);
   await loginViaUi(page, adminCredentials());
   await page.goto("/impostazioni");
-  await expect(page.getByRole("heading", { name: "Impostazioni" })).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByRole("heading", { name: "Configurazione" })).toBeVisible({ timeout: 30_000 });
   await openParametriEconomici(page);
 
   const input = page.locator("#config-costo-orario-default");
