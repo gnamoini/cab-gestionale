@@ -6,7 +6,7 @@ import { test, expect } from "@playwright/test";
 test.describe.configure({ mode: "serial" });
 
 async function openParametriEconomici(page: Page): Promise<void> {
-  await page.getByRole("button", { name: "Parametri economici", exact: true }).click();
+  await page.locator("aside").getByRole("button", { name: "Parametri economici", exact: true }).click();
   await expect(page.locator("#config-costo-orario-default")).toBeVisible({ timeout: 15_000 });
 }
 
