@@ -17,6 +17,9 @@ export type SchedaIngressoAnagraficaSection = "cliente" | "attrezzatura" | "tela
 
 const ALL_SECTIONS: SchedaIngressoAnagraficaSection[] = ["cliente", "attrezzatura", "telaio", "dettagli"];
 
+/** Chiude dropdown/sheet aperti quando un altro selector della scheda riceve focus. */
+const SCHEDA_INGRESSO_EXCLUSIVE_GROUP = "scheda-ingresso";
+
 function SchedaIngressoAnagraficaFieldsInner({
   value,
   onPatch,
@@ -70,6 +73,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               onChange={(v) => onPatch({ cliente: v })}
               disabled={disabled}
               required={clienteRequired}
+              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Cliente"
             />
           </FormField>
@@ -81,6 +85,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               value={value.cantiere}
               onChange={(v) => onPatch({ cantiere: v })}
               disabled={disabled}
+              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Cantiere"
             />
           </FormField>
@@ -92,6 +97,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               value={value.utilizzatore}
               onChange={(v) => onPatch({ utilizzatore: v })}
               disabled={disabled}
+              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Utilizzatore"
             />
           </FormField>
@@ -120,6 +126,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               value={value.tipoAttrezzatura}
               onChange={(v) => onPatch({ tipoAttrezzatura: v })}
               disabled={disabled}
+              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Tipo attrezzatura"
             />
           </FormField>
@@ -134,6 +141,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                 onChange={(v) => onPatch({ marcaAttrezzatura: v, modelloAttrezzatura: "" })}
                 disabled={disabled}
                 required={marcaAttrezzaturaRequired}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Marca attrezzatura"
               />
             </FormField>
@@ -147,6 +155,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                 value={value.modelloAttrezzatura}
                 onChange={(v) => onPatch({ modelloAttrezzatura: v })}
                 disabled={disabled}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Modello attrezzatura"
               />
             </FormField>
@@ -160,6 +169,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               siblingIdent={identSibling}
               mezzi={mezzi}
               disabled={disabled}
+              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               onChange={(v) => onPatch({ matricola: v })}
               onExactMezzoMatch={mezzoMatchHandler}
             />
@@ -171,6 +181,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               siblingIdent={identSibling}
               mezzi={mezzi}
               disabled={disabled}
+              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               onChange={(v) => onPatch({ nScuderia: v })}
               onExactMezzoMatch={mezzoMatchHandler}
             />
@@ -201,6 +212,7 @@ function SchedaIngressoAnagraficaFieldsInner({
               value={value.tipoTelaio}
               onChange={(v) => onPatch({ tipoTelaio: v })}
               disabled={disabled}
+              exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
               aria-label="Tipo telaio"
             />
           </FormField>
@@ -214,6 +226,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                 value={value.marcaTelaio}
                 onChange={(v) => onPatch({ marcaTelaio: v, modelloTelaio: "" })}
                 disabled={disabled}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Marca telaio"
               />
             </FormField>
@@ -227,6 +240,7 @@ function SchedaIngressoAnagraficaFieldsInner({
                 value={value.modelloTelaio}
                 onChange={(v) => onPatch({ modelloTelaio: v })}
                 disabled={disabled}
+                exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
                 ariaLabel="Modello telaio"
               />
             </FormField>
@@ -238,6 +252,7 @@ function SchedaIngressoAnagraficaFieldsInner({
             siblingIdent={identSibling}
             mezzi={mezzi}
             disabled={disabled}
+            exclusiveGroup={SCHEDA_INGRESSO_EXCLUSIVE_GROUP}
             onChange={(v) => onPatch({ targa: v })}
             onExactMezzoMatch={mezzoMatchHandler}
           />

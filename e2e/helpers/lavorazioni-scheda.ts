@@ -219,7 +219,10 @@ export async function fillSchedaIngressoCreateForm(
 
   const matricolaInput = modal.getByRole("combobox", { name: /matricola/i });
   await matricolaInput.scrollIntoViewIfNeeded();
+  // Regression: marca dropdown portal non deve bloccare focus/digitazione su matricola (no blur esplicito su marca).
+  await matricolaInput.click();
   await matricolaInput.fill(data.matricola);
+  await expect(matricolaInput).toHaveValue(data.matricola, { timeout: 10_000 });
   await modal.getByLabel("N. scuderia").fill(data.nScuderia);
 
   await fillListCombobox(page, "Tipo telaio", data.tipoTelaio, modal);

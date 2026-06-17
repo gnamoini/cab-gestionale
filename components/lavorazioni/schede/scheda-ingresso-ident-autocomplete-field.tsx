@@ -24,6 +24,8 @@ import {
 import { useClientHydrated } from "@/lib/ui/use-client-hydrated";
 import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
+import { useSelectorExclusiveGroup } from "@/lib/selector-interaction/use-selector-exclusive-group";
+import { useSelectorFocusChain } from "@/lib/selector-interaction/use-selector-focus-chain";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 
 function identPlaceholder(field: SchedaIngressoIdentField): string {
@@ -42,6 +44,7 @@ export function SchedaIngressoIdentAutocompleteField({
   disabled,
   className = "",
   id: idProp,
+  exclusiveGroup,
   onChange,
   onExactMezzoMatch,
 }: {
@@ -54,6 +57,7 @@ export function SchedaIngressoIdentAutocompleteField({
   disabled?: boolean;
   className?: string;
   id?: string;
+  exclusiveGroup?: string;
   onChange: (value: string) => void;
   /** Chiamato quando targa/matricola/scuderia corrisponde a un mezzo registrato. */
   onExactMezzoMatch: (mezzo: MezzoGestito) => void;
@@ -69,6 +73,7 @@ export function SchedaIngressoIdentAutocompleteField({
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipBlurMatch = useRef(false);
   const skipSheetOpenOnFocusRef = useRef(false);
+  const sheetQueryRef = useRef("");
 
   const hydrated = useClientHydrated();
   const isMobile = useMaxMdDown();
@@ -79,6 +84,7 @@ export function SchedaIngressoIdentAutocompleteField({
   const [activeIndex, setActiveIndex] = useState(-1);
   const [focused, setFocused] = useState(false);
   const [sheetQuery, setSheetQuery] = useState("");
+  sheetQueryRef.current = sheetQuery;
 
   const { restoreFocus, captureFocus } = useDropdownFocusRestore(open);
 
@@ -98,7 +104,7 @@ export function SchedaIngressoIdentAutocompleteField({
     repositionDeps: [suggestions.length, value],
   });
 
-  const close = useCallback(() => {
+  const resetUi = useCallback(() => {
     setOpen(false);
     setActiveIndex(-1);
     setFocused(false);
@@ -110,7 +116,20 @@ export function SchedaIngressoIdentAutocompleteField({
     });
   }, [restoreFocus]);
 
-  useDropdownOutsideDismiss(showDesktopDropdown, wrapRef, dropdownRef, close);
+  const { notifyOpening } = useSelectorExclusiveGroup(exclusiveGroup, resetUi);
+
+  const onFocusIn = useCallback((el: HTMLElement) => {
+    void el;
+  }, []);
+
+  const captureTriggerFocus = useSelectorFocusChain({
+    sheetOpen,
+    sheetSearchRef,
+    triggerRef: inputRef,
+    onFocusIn,
+  });
+
+  useDropdownOutsideDismiss(showDesktopDropdown, wrapRef, dropdownRef, resetUi);
 
   const identPreview = useCallback(
     (mezzo: MezzoGestito) => {
@@ -133,26 +152,35 @@ export function SchedaIngressoIdentAutocompleteField({
     [field, mezzi, onExactMezzoMatch, siblingIdent],
   );
 
-  const pickMezzo = useCallback(
-    (mezzo: MezzoGestito) => {
-      skipBlurMatch.current = true;
-      const ident = identPreview(mezzo);
-      onChange(ident === "—" ? "" : ident);
-      close();
-      onExactMezzoMatch(mezzo);
-    },
-    [close, identPreview, onChange, onExactMezzoMatch],
-  );
-
   const commitFreeText = useCallback(
     (raw: string) => {
       const next = raw.trim();
       skipBlurMatch.current = true;
       onChange(next);
-      close();
+      resetUi();
       tryExactMatch(next);
     },
-    [close, onChange, tryExactMatch],
+    [onChange, resetUi, tryExactMatch],
+  );
+
+  const closeSheetWithCommit = useCallback(() => {
+    const pending = sheetQueryRef.current.trim();
+    if (pending && pending !== value.trim()) {
+      commitFreeText(pending);
+      return;
+    }
+    resetUi();
+  }, [commitFreeText, resetUi, value]);
+
+  const pickMezzo = useCallback(
+    (mezzo: MezzoGestito) => {
+      skipBlurMatch.current = true;
+      const ident = identPreview(mezzo);
+      onChange(ident === "—" ? "" : ident);
+      resetUi();
+      onExactMezzoMatch(mezzo);
+    },
+    [identPreview, onChange, onExactMezzoMatch, resetUi],
   );
 
   const tryExactMatchOnBlur = useCallback(() => {
@@ -167,11 +195,13 @@ export function SchedaIngressoIdentAutocompleteField({
     if (disabled || readOnly) return;
     if (blurTimer.current) clearTimeout(blurTimer.current);
     if (open) return;
+    notifyOpening();
     captureFocus();
+    captureTriggerFocus();
     setSheetQuery("");
     setActiveIndex(-1);
     setOpen(true);
-  }, [captureFocus, disabled, open, readOnly]);
+  }, [captureFocus, captureTriggerFocus, disabled, notifyOpening, open, readOnly]);
 
   const renderSuggestion = (mezzo: MezzoGestito, idx: number, variant: "dropdown" | "sheet") => {
     const active = idx === activeIndex;
@@ -214,10 +244,11 @@ export function SchedaIngressoIdentAutocompleteField({
   const onInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (useMobileSheet) return;
     if (e.key === "Escape") {
-      close();
+      resetUi();
       return;
     }
     if (!open && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+      notifyOpening();
       setOpen(true);
       setActiveIndex(suggestions.length ? 0 : -1);
       e.preventDefault();
@@ -244,7 +275,7 @@ export function SchedaIngressoIdentAutocompleteField({
 
   const onSheetSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
-      close();
+      closeSheetWithCommit();
       return;
     }
     if (!suggestions.length) return;
@@ -285,6 +316,9 @@ export function SchedaIngressoIdentAutocompleteField({
     ) : null;
 
   const sheetFreeText = sheetQuery.trim();
+  const triggerClassName = useMobileSheet
+    ? `${globalInputFieldDefault} gestionale-combobox-trigger font-mono cursor-pointer caret-transparent`
+    : `${globalInputFieldDefault} font-mono`;
 
   return (
     <label htmlFor={inputId} className={`block text-xs ${className}`.trim()}>
@@ -293,13 +327,14 @@ export function SchedaIngressoIdentAutocompleteField({
         <input
           ref={inputRef}
           id={inputId}
-          className={`${globalInputFieldDefault} font-mono${useMobileSheet ? " cursor-pointer caret-transparent" : ""}`}
+          className={triggerClassName}
           readOnly={readOnly || useMobileSheet || undefined}
           disabled={disabled}
           value={value}
           onChange={(e) => {
             if (useMobileSheet) return;
             onChange(e.target.value);
+            notifyOpening();
             setOpen(true);
             setActiveIndex(-1);
           }}
@@ -309,6 +344,7 @@ export function SchedaIngressoIdentAutocompleteField({
               if (!skipSheetOpenOnFocusRef.current) openSheet();
               return;
             }
+            notifyOpening();
             setFocused(true);
             setOpen(true);
           }}
@@ -316,7 +352,7 @@ export function SchedaIngressoIdentAutocompleteField({
             if (useMobileSheet) return;
             if (blurTimer.current) clearTimeout(blurTimer.current);
             blurTimer.current = setTimeout(() => {
-              close();
+              resetUi();
               tryExactMatchOnBlur();
             }, 140);
           }}
@@ -338,8 +374,11 @@ export function SchedaIngressoIdentAutocompleteField({
         <GestionaleSearchableSheetSelect
           open={sheetOpen}
           onOpenChange={(next) => {
-            if (!next) close();
-            else setOpen(true);
+            if (!next) closeSheetWithCommit();
+            else {
+              notifyOpening();
+              setOpen(true);
+            }
           }}
           title={label}
           showSearch

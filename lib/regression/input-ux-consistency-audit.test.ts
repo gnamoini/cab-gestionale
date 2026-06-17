@@ -31,6 +31,14 @@ const inlineSelect = read("components/gestionale/lavorazioni/lavorazioni-inline-
 assert.match(schedaAnagrafica, /FormField label="Richiedente" htmlFor=\{fieldId\("richiedente"\)\}/);
 assert.match(schedaAnagrafica, /id=\{fieldId\("richiedente"\)\}/);
 assert.match(schedaAnagrafica, /SchedaIngressoIdentAutocompleteField[\s\S]*field="nScuderia"/);
+assert.match(schedaAnagrafica, /SCHEDA_INGRESSO_EXCLUSIVE_GROUP = "scheda-ingresso"/);
+assert.match(schedaAnagrafica, /exclusiveGroup=\{SCHEDA_INGRESSO_EXCLUSIVE_GROUP\}/);
+
+const identField = read("components/lavorazioni/schede/scheda-ingresso-ident-autocomplete-field.tsx");
+assert.match(identField, /useSelectorExclusiveGroup/);
+assert.match(identField, /useSelectorFocusChain/);
+assert.match(identField, /closeSheetWithCommit/);
+
 assert.match(schedaAnagrafica, /label="N\. scuderia"/);
 assert.match(schedaAnagrafica, /id=\{fieldId\("n-scuderia"\)\}/);
 assert.match(schedaAnagrafica, /FormField label="Ore lavoro" htmlFor=\{fieldId\("ore-lavoro"\)\}/);

@@ -81,6 +81,9 @@ export type GlobalSettingsListSelectProps = {
   /** Valori esclusi dall'elenco (es. segnaposto interni «—»). */
   excludeValues?: readonly string[];
 
+  /** Chiude gli altri GlobalSelect con lo stesso groupId all'apertura. */
+  exclusiveGroup?: string;
+
   "aria-label"?: string;
 
 };
@@ -166,6 +169,8 @@ function GlobalSettingsListSelectInner({
   emptyOptionLabel,
 
   excludeValues,
+
+  exclusiveGroup,
 
   "aria-label": ariaLabel,
 
@@ -322,6 +327,8 @@ function GlobalSettingsListSelectInner({
       listKey === "mezzi:clienti" ||
       listKey === "mezzi:utilizzatori" ||
       listKey === "magazzino:fornitori",
+
+    exclusiveGroup,
 
   };
 

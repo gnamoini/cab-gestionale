@@ -33,6 +33,7 @@ export function CompatHierarchySelect({
   required,
   className,
   id,
+  exclusiveGroup,
 }: {
   tree: HierarchyTreeKey;
   hierarchyKind: GlobalSettingsHierarchyKind;
@@ -45,6 +46,7 @@ export function CompatHierarchySelect({
   required?: boolean;
   className?: string;
   id?: string;
+  exclusiveGroup?: string;
 }) {
   return (
     <GlobalSettingsListSelect
@@ -58,6 +60,7 @@ export function CompatHierarchySelect({
       id={id}
       placeholder={placeholder ?? compatHierarchyPlaceholder(tree, hierarchyKind)}
       allowAdd
+      exclusiveGroup={exclusiveGroup}
       aria-label={ariaLabel}
     />
   );

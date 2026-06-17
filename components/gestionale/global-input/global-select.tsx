@@ -308,7 +308,7 @@ export function GlobalSelect(props: GlobalSelectProps) {
       .replace(/\bcursor-text\b/g, "")
       .replace(/\bappearance-auto\b/g, "appearance-none")
       .trim();
-    return `${normalized} cursor-pointer caret-transparent`;
+    return `${normalized} gestionale-combobox-trigger cursor-pointer caret-transparent overflow-hidden text-ellipsis whitespace-nowrap`;
   }, [variant, inputClassName, effectiveSelectOnly, useSheetTriggerMode]);
 
   useEffect(() => {
