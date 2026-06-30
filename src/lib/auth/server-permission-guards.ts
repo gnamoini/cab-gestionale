@@ -3,6 +3,7 @@ import {
   canWrite,
   canDelete,
   hasPermission,
+  resolveRole,
   type PermissionKey,
   type RbacSection,
 } from "@/lib/auth/rbac";
@@ -22,6 +23,9 @@ const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>
   report: "report",
   documenti: "documenti",
   dipendenti: "dipendenti",
+  fatturazione: "fatturazione",
+  ddt: "ddt",
+  ordini_fornitori: "ordini_fornitori",
 };
 
 async function requireServerPermissions() {
@@ -34,6 +38,12 @@ async function requireServerPermissions() {
 export async function getServerCallerRole(): Promise<string | null> {
   const snap = await requireServerPermissions();
   return snap?.role ?? null;
+}
+
+export async function verifyServerIsAdmin(): Promise<boolean> {
+  const snap = await requireServerPermissions();
+  if (!snap) return false;
+  return resolveRole(snap.role) === "admin";
 }
 
 /** Permesso modulo allineato a RLS `user_effective_can`. */

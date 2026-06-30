@@ -14,6 +14,14 @@ export async function verifyPdfArtifactReadAccess(type: PdfArtifactType): Promis
       return verifyServerSectionRead("report");
     case "preventivo":
       return verifyServerSectionRead("preventivi");
+    case "fattura":
+      return verifyServerSectionRead("fatturazione");
+    case "ddt": {
+      if (await verifyServerSectionRead("ddt")) return true;
+      return verifyServerSectionRead("preventivi");
+    }
+    case "ordine-fornitore":
+      return verifyServerSectionRead("ordini_fornitori");
     case "dipendenti-aziendale":
     case "dipendenti-dipendente":
       return verifyServerSectionRead("dipendenti");

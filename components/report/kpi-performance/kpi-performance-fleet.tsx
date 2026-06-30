@@ -1,12 +1,15 @@
 "use client";
 
+import { KpiPerformanceDisponibilitaClienti } from "@/components/report/kpi-performance/kpi-performance-disponibilita-clienti";
 import { reportSectionGroupDescClass, reportSubsectionTitleClass } from "@/components/report/report-ui-tokens";
 import { dsTableRow, dsTableTd, dsTableWrap, dsScrollbar } from "@/lib/ui/design-system";
 import type { KpiPerformanceFleet } from "@/lib/report/kpi-performance/kpi-performance-types";
 
 export function KpiPerformanceFleet({ data }: { data: KpiPerformanceFleet }) {
   return (
-    <div className="grid min-w-0 gap-6 lg:grid-cols-2">
+    <div className="grid min-w-0 gap-6">
+      <KpiPerformanceDisponibilitaClienti rows={data.disponibilitaPerCliente} />
+      <div className="grid min-w-0 gap-6 lg:grid-cols-2">
       <div className="min-w-0">
         <h3 className={reportSubsectionTitleClass}>Guasti per tipo attrezzatura</h3>
         <p className={`mt-1 ${reportSectionGroupDescClass}`}>Euristica su testo interventi nel periodo.</p>
@@ -51,6 +54,7 @@ export function KpiPerformanceFleet({ data }: { data: KpiPerformanceFleet }) {
             </tbody>
           </table>
         </div>
+      </div>
       </div>
     </div>
   );

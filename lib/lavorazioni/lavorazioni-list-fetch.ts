@@ -304,3 +304,62 @@ export function ingressoSortKey(row: LavorazioneListRow): string {
 
 /** @deprecated Usare `LAVORAZIONI_DETAIL_COLUMNS` — alias per test legacy. */
 export const LAVORAZIONI_LIST_FULL_COLUMNS = LAVORAZIONI_COLUMNS;
+
+/** Fetch sottoinsieme per ID (es. enrich mezzo dashboard top-N). */
+export async function fetchLavorazioniListRowsByIds(
+  sb: SupabaseClient,
+  ids: readonly string[],
+  options?: LavorazioniListFetchOptions & { filters?: LavorazioneFilters },
+): Promise<ServiceResult<LavorazioneListRow[]>> {
+  const uniqueIds = [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
+  if (uniqueIds.length === 0) return success([]);
+
+  const filters: LavorazioneFilters = {
+    includeMezzo: true,
+    fetchMode: "light",
+    includeProfiles: false,
+    archived: false,
+    ...options?.filters,
+  };
+  const clienteRefScope = normalizeClienteRef(options?.clienteRefScope);
+  const fetchMode = resolveFetchMode(filters);
+  const includeMezzo = fetchMode !== "report" && (filters.includeMezzo === true || !!clienteRefScope);
+  const mezziCols = mezziEmbedColumnsForMode(fetchMode);
+  const mezziSelect = clienteRefScope ? `mezzi!inner(${mezziCols})` : `mezzi(${mezziCols})`;
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let q: any = applyLavorazioniNotDeletedFilter(
+    sb
+      .from("lavorazioni")
+      .select(
+        lavorazioniListSelect({
+          fetchMode,
+          includeMezzo,
+          mezziSelect,
+          includeProfiles: false,
+          includeUpdatedByProfile: false,
+        }),
+      )
+      .in("id", uniqueIds),
+  );
+  q = applyLavorazioniListFilters(q, filters);
+  const { data, error } = await q;
+  if (error) return err(error.message);
+
+  const stati = resolveStatiForSanitize(options?.sanitizeStati);
+  const raw = (data ?? []) as LavorazioneListRawRow[];
+  return success(mapRawRows(raw, includeMezzo, stati));
+}
+
+/** Unisce embed mezzo su righe già in cache (dashboard lite BFF). */
+export function mergeMezzoIntoLavorazioneRows(
+  base: readonly LavorazioneListRow[],
+  enriched: readonly LavorazioneListRow[],
+): LavorazioneListRow[] {
+  if (enriched.length === 0) return [...base];
+  const byId = new Map(enriched.map((row) => [row.id, row]));
+  return base.map((row) => {
+    const hit = byId.get(row.id);
+    return hit?.mezzo ? { ...row, mezzo: hit.mezzo } : row;
+  });
+}

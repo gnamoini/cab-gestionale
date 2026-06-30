@@ -7,6 +7,9 @@ import { isoInRange, todayUntilNowRange, type DateRange } from "@/lib/report/dat
 import type { MovimentoRicambioRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
+/** Allineato a SSR dashboard BFF — schede prefetch top-N per priorità. */
+export const DASHBOARD_SCHEde_PREFETCH_LIMIT = 8;
+
 export type DashboardLavWidgetRow = {
   id: string;
   stato: string;
@@ -130,14 +133,28 @@ export function computeDashboardLavWidgetRows(
   limit = 4,
   options?: DashboardLavWidgetRowsOptions,
 ): DashboardLavWidgetRow[] {
+  return pickDashboardPriorityLavorazioneRows(rows, limit).map((row) => toLavWidgetRow(row, options));
+}
+
+/** ID lavorazioni per schede dashboard (priorità decrescente, max N). */
+export function pickDashboardPriorityLavorazioneIds(
+  rows: readonly LavorazioneListRow[],
+  limit = DASHBOARD_SCHEde_PREFETCH_LIMIT,
+): string[] {
+  return pickDashboardPriorityLavorazioneRows(rows, limit).map((row) => row.id);
+}
+
+function pickDashboardPriorityLavorazioneRows(
+  rows: readonly LavorazioneListRow[],
+  limit: number,
+): LavorazioneListRow[] {
   return [...rows]
     .sort((a, b) => {
       const byPriority = comparePrioritaLavorazione(b.priorita, a.priorita);
       if (byPriority !== 0) return byPriority;
       return lavUpdatedAt(b).localeCompare(lavUpdatedAt(a));
     })
-    .slice(0, limit)
-    .map((row) => toLavWidgetRow(row, options));
+    .slice(0, limit);
 }
 
 export function computeDashboardMagWidgetStats(items: readonly RicambioMagazzino[]): DashboardMagWidgetStats {

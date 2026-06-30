@@ -1,3 +1,5 @@
+@import "../global-table/gestionale-list-layout.css";
+
 /* Scope Magazzino — scroll verticale su main.gestionale-scroll-y (no gutter duplicato qui). */
 
 /* Badge scorta: pop + slide numero su +/- */

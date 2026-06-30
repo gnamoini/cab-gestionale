@@ -457,3 +457,9 @@ Non introdurre classi tabella locali (`prevTableTd`, thead custom, `text-sm` sul
 - Se HMR crash su `proxy.ts` / `proxy-handler.ts` (`NextSegmentConfig no longer exists`): usare `**npm run dev:webpack`** temporaneamente mentre si lavora sull'edge auth/RBAC — non disabilitare Turbopack in modo permanente senza motivo.
 - `proxy.ts`: `config.matcher` deve restare **string literal** (no `String.raw` / builder dinamici).
 
+# Caveman Mode
+
+- minimal output
+- no filler words
+- fragment sentences preferred
+- preserve technical correctness

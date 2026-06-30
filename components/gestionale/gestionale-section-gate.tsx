@@ -1,10 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { GestionaleAccessLimited } from "@/components/gestionale/gestionale-access-limited";
-import { LoadingPageSkeleton } from "@/components/design-system";
+import { LoadingErrorState, LoadingPageSkeleton } from "@/components/design-system";
 import { dsStackPage } from "@/lib/ui/design-system";
-import { usePermissions } from "@/src/hooks/use-permissions";
+import { SECTION_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
+import { isBootInvestigationEnabled, logBoot } from "@/lib/observability/boot-investigation";
+import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
+import { usePermissions, useUserPermissionsQuery } from "@/src/hooks/use-permissions";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 
 function GestionaleSectionLoading() {
@@ -26,8 +29,35 @@ export function GestionaleSectionGate({
   children: ReactNode;
 }) {
   const perm = usePermissions(module);
+  const permsQuery = useUserPermissionsQuery();
+  const loadingFailsafe = useLoadingFailsafe(perm.isLoading, SECTION_LOADING_FAILSAFE_MS);
 
-  if (perm.isLoading) return <GestionaleSectionLoading />;
+  useBootInvestigationMount("GestionaleSectionGate", { module });
+
+  useEffect(() => {
+    if (!isBootInvestigationEnabled()) return;
+    logBoot("RENDER", "GestionaleSectionGate", {
+      module,
+      isLoading: perm.isLoading,
+      loadingFailsafe,
+      canRead: perm.canRead,
+    });
+  }, [module, perm.isLoading, perm.canRead, loadingFailsafe]);
+
+  if (perm.isLoading && !loadingFailsafe) return <GestionaleSectionLoading />;
+
+  if (perm.isLoading && loadingFailsafe) {
+    return (
+      <div className={dsStackPage}>
+        <LoadingErrorState
+          title="Verifica permessi in corso troppo a lungo"
+          description="Impossibile completare il controllo permessi. Riprova o contatta un amministratore se il problema persiste."
+          onRetry={() => void permsQuery.refetch()}
+        />
+      </div>
+    );
+  }
+
   if (!perm.canRead) return <GestionaleAccessLimited module={module} />;
 
   return <>{children}</>;

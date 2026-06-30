@@ -8,6 +8,7 @@ import { ReportExecutiveStrip } from "@/components/report/layout/report-executiv
 import { useReportPerformanceContext } from "@/components/report/layout/report-performance-gate";
 import { reportSubsectionTitleClass, reportZoneShellClass } from "@/components/report/report-ui-tokens";
 import type { ReportCompareMode } from "@/lib/report/date-ranges";
+import { countClientiSottoSogliaDisponibilita } from "@/lib/report/kpi-performance/kpi-performance-formulas";
 import { LoadingSkeletonBlock } from "@/components/design-system/loading/loading-skeleton";
 
 export function ReportExecutiveOverview({ compareMode }: { compareMode: ReportCompareMode }) {
@@ -39,7 +40,8 @@ export function ReportExecutiveOverview({ compareMode }: { compareMode: ReportCo
             summaryLine={summaryLine}
             compareActive={compareMode !== "none"}
             health={{
-              disponibilitaPct: perf.fleet.disponibilitaPct,
+              peggiorDisponibilita: perf.fleet.peggiorDisponibilita,
+              clientiSottoSoglia: countClientiSottoSogliaDisponibilita(perf.fleet.disponibilitaPerCliente),
               mezziInOfficina: perf.fleet.mezziInOfficina,
               totalMezzi: perf.fleet.totalMezzi,
               alertCount: perf.alerts.length,

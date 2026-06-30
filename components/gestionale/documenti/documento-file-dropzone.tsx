@@ -9,7 +9,7 @@ import { fileMatchesAccept } from "@/lib/upload/file-accept";
 import { dsTableActionTextBtnPrimary, dsUploadDropExpand, dsUploadDropExpandActive } from "@/lib/ui/design-system";
 import { STORAGE_LIMITS } from "@/src/lib/storage/storage-config";
 
-const ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg";
+const ACCEPT = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.png,.jpg,.jpeg";
 const MAX_MB = Math.round(STORAGE_LIMITS.documentiMaxBytes / (1024 * 1024));
 
 type DocumentoFileDropzoneProps = {

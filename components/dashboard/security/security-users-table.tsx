@@ -58,6 +58,10 @@ import {
   gestionaleListTableActionsGroupEnd,
 } from "@/lib/ui/gestionale-list-table";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
+import {
+  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
+  useGestionaleListLayout,
+} from "@/lib/ui/use-gestionale-list-layout";
 
 export type SecurityUserSortKey = "nome" | "username" | "email" | "ruolo" | "clienteRef" | "clientAccess" | "stato";
 
@@ -186,7 +190,12 @@ type RowEditorProps = {
   roleInputClassName?: string;
 };
 
-function SecurityUserRoleField({ row, readOnly, onRoleChange, roleInputClassName }: RowEditorProps) {
+const SECURITY_ROLE_SELECT_ITEMS = APP_ROLES.map((role) => ({
+  value: role,
+  label: roleLabel(role),
+}));
+
+function SecurityUserRoleField({ row, readOnly, onRoleChange, roleInputClassName, density = "table" }: RowEditorProps) {
   if (readOnly) return <SecurityRoleBadge role={row.ruolo} />;
   return (
     <GlobalSelect
@@ -195,11 +204,15 @@ function SecurityUserRoleField({ row, readOnly, onRoleChange, roleInputClassName
       value={row.ruolo}
       onChange={(v) => onRoleChange(row.id, v as AppRole)}
       aria-label={`Ruolo ${row.nome}`}
+      sheetTitle="Seleziona ruolo"
       inputClassName={roleInputClassName ?? securityDenseSelectBase}
-      items={APP_ROLES.map((role) => ({
-        value: role,
-        label: roleLabel(role),
-      }))}
+      items={SECURITY_ROLE_SELECT_ITEMS}
+      preserveItemOrder
+      showSimilarWarning={false}
+      mobileSheet
+      mobileSheetMode="selectOnly"
+      minSheetOptions={0}
+      className={density === "mobile" ? "w-full" : undefined}
     />
   );
 }
@@ -379,12 +392,10 @@ function SecurityUserMobileCard({
       </div>
 
       <div className="space-y-3 border-t border-[color:var(--cab-border)] pt-3">
-        <label className="flex min-w-0 items-center gap-2">
-          <span className={`w-14 shrink-0 ${fieldLabel}`}>Ruolo</span>
-          <div className="min-w-0 flex-1">
-            <SecurityUserRoleField {...editorProps} />
-          </div>
-        </label>
+        <div className="space-y-1.5">
+          <span className={fieldLabel}>Ruolo</span>
+          <SecurityUserRoleField {...editorProps} />
+        </div>
 
         {isClienteRole ? (
           <div className={clienteBlockClass}>
@@ -426,7 +437,7 @@ function SecurityUserMobileCard({
 
 function SecurityUsersTableSkeleton() {
   return (
-    <div className={`hidden lg:block ${dsScrollbar}`}>
+    <div className={`${GESTIONALE_LIST_DESKTOP_ONLY_CLASS} ${dsScrollbar}`}>
       <div className="rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-1">
         {Array.from({ length: 6 }).map((_, i) => (
           <div key={i} className="border-b border-[color:var(--cab-border)] px-3 py-3 last:border-b-0">
@@ -461,6 +472,7 @@ export function SecurityUsersTable({
   onOpenDetail,
   onRoleChange,
 }: Props) {
+  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "lg" });
   const queryClient = useQueryClient();
   const gestToast = useGestionaleToast();
   const [search, setSearch] = useState("");
@@ -554,7 +566,13 @@ export function SecurityUsersTable({
     resetPage();
   }
 
-  if (loading) return <SecurityUsersTableSkeleton />;
+  if (loading) {
+    return (
+      <div ref={listLayoutRef} className={`min-w-0 max-w-full ${listLayoutClassName}`.trim()}>
+        <SecurityUsersTableSkeleton />
+      </div>
+    );
+  }
 
   const rowProps = {
     readOnly,
@@ -566,6 +584,7 @@ export function SecurityUsersTable({
   };
 
   return (
+    <div ref={listLayoutRef} className={`min-w-0 max-w-full ${listLayoutClassName}`.trim()}>
     <>
       <PageToolbar
         className="mb-3"
@@ -621,8 +640,9 @@ export function SecurityUsersTable({
 
       {filtered.length === 0 ? (
         <>
+          {listLayout === "desktop" ? (
           <GestionaleListTable
-            visibilityClass="hidden lg:block"
+            visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={securityUsersTableClass}
             colSpan={SECURITY_USERS_COL_COUNT}
             empty
@@ -641,12 +661,15 @@ export function SecurityUsersTable({
           >
             {null}
           </GestionaleListTable>
-          <p className={`lg:hidden ${gestionaleListTableMobileEmptyClass}`}>Nessun utente corrisponde ai filtri.</p>
+          ) : (
+          <p className={gestionaleListTableMobileEmptyClass}>Nessun utente corrisponde ai filtri.</p>
+          )}
         </>
       ) : (
         <>
+          {listLayout === "desktop" ? (
           <GestionaleListTable
-            visibilityClass="hidden lg:block"
+            visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={securityUsersTableClass}
             colSpan={SECURITY_USERS_COL_COUNT}
             colgroup={
@@ -688,12 +711,15 @@ export function SecurityUsersTable({
               <SecurityUserTableRow key={row.id} row={row} {...rowProps} />
             ))}
           </GestionaleListTable>
+          ) : null}
 
-          <div className="space-y-3 lg:hidden">
+          {listLayout === "mobile" ? (
+          <div className="space-y-3">
             {paged.map((row) => (
               <SecurityUserMobileCard key={row.id} row={row} {...rowProps} />
             ))}
           </div>
+          ) : null}
 
           {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={pagerLabel} /> : null}
         </>
@@ -721,6 +747,7 @@ export function SecurityUsersTable({
         />
       ) : null}
     </>
+    </div>
   );
 }
 

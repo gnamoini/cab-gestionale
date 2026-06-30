@@ -2,6 +2,11 @@
 
 import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
 import {
+  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
+  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
+  useGestionaleListLayout,
+} from "@/lib/ui/use-gestionale-list-layout";
+import {
   GestionaleListTable,
   GestionaleListTableActionsHead,
   GlobalTableHeadLabel,
@@ -128,15 +133,19 @@ export function LavorazionePreventiviHubList({
   onApriNeiPreventivi,
   onCreaPreventivo,
 }: LavorazionePreventiviHubListProps) {
+  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
+
   if (rows.length === 0) {
     return <PreventiviHubEmptyState onCreaPreventivo={onCreaPreventivo} />;
   }
 
   return (
+    <div ref={listLayoutRef} className={`min-w-0 max-w-full ${listLayoutClassName}`.trim()}>
     <>
+      {listLayout === "desktop" ? (
       <GestionaleListTable
         masterScrollScope={false}
-        visibilityClass="hidden xl:block"
+        visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
         className="w-full min-w-0 text-sm text-zinc-900 dark:text-zinc-100"
         colgroup={
           <>
@@ -209,8 +218,10 @@ export function LavorazionePreventiviHubList({
           </tr>
         ))}
       </GestionaleListTable>
+      ) : null}
 
-      <div className={`space-y-3 xl:hidden ${dsScrollbar}`}>
+      {listLayout === "mobile" ? (
+      <div className={`space-y-3 ${dsScrollbar}`}>
         {rows.map((p) => (
           <CardMobile key={p.id}>
             <div className="flex items-start justify-between gap-3">
@@ -254,6 +265,8 @@ export function LavorazionePreventiviHubList({
           </CardMobile>
         ))}
       </div>
+      ) : null}
     </>
+    </div>
   );
 }

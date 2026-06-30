@@ -8,7 +8,8 @@ import {
 } from "@/components/report/report-ui-tokens";
 
 export type ReportExecutiveHealth = {
-  disponibilitaPct: number | null;
+  peggiorDisponibilita: { cliente: string; disponibilitaPct: number } | null;
+  clientiSottoSoglia: number;
   mezziInOfficina: number;
   totalMezzi: number;
   alertCount: number;
@@ -29,9 +30,14 @@ export function ReportExecutiveStrip({
   compareActive: boolean;
   health?: ReportExecutiveHealth;
 }) {
-  const dispLow = health?.disponibilitaPct != null && health.disponibilitaPct < 75;
+  const dispLow =
+    health?.peggiorDisponibilita != null && health.peggiorDisponibilita.disponibilitaPct < 75;
   const workshopBusy =
     health != null && health.totalMezzi > 0 && health.mezziInOfficina / health.totalMezzi > 0.25;
+
+  const dispMinTitle = health?.peggiorDisponibilita
+    ? `${health.peggiorDisponibilita.cliente}${health.clientiSottoSoglia > 0 ? ` · ${health.clientiSottoSoglia} clienti sotto 75%` : ""}`
+    : "Disponibilità minima per cliente";
 
   return (
     <div className={reportExecutiveStripClass} role="status">
@@ -50,10 +56,10 @@ export function ReportExecutiveStrip({
             <li>
               <span
                 className={`${reportHealthChipClass}${dispLow ? ` ${reportHealthChipWarningClass}` : ""}`}
-                title="Disponibilità flotta (proxy)"
+                title={dispMinTitle}
               >
-                <span className="text-[color:var(--cab-text-muted)]">Disp.</span>
-                <span>{fmtDisp(health.disponibilitaPct)}</span>
+                <span className="text-[color:var(--cab-text-muted)]">Disp. min</span>
+                <span>{fmtDisp(health.peggiorDisponibilita?.disponibilitaPct ?? null)}</span>
               </span>
             </li>
             <li>

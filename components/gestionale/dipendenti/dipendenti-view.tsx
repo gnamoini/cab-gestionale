@@ -32,6 +32,7 @@ import {
 import type { TimesheetEditorTarget, TimesheetEntryUpsert, TimesheetMonthKey, DipendenteTimesheetEmployeeRow } from "@/lib/dipendenti/types";
 import type { TimesheetPeriodMode } from "@/lib/dipendenti/timesheet-month";
 import { dsStackPage } from "@/lib/ui/design-system";
+import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useDipendentiTimesheet } from "@/src/hooks/use-dipendenti-timesheet";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -48,6 +49,7 @@ function formatWorkDateIt(dateYmd: string): string {
 }
 
 export function DipendentiView() {
+  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "md" });
   const [monthKey, setMonthKey] = useState<TimesheetMonthKey>(() => monthKeyFromDate(new Date()));
   const [periodMode] = useState<TimesheetPeriodMode>("month");
   const [weekAnchor, setWeekAnchor] = useState(() => defaultWeekAnchor(monthKeyFromDate(new Date())));
@@ -132,8 +134,9 @@ export function DipendentiView() {
         employees: ts.displayEmployees,
         entries: ts.entries,
         tipiAssenza: ts.tipiAssenza,
+        addettiRecords: ts.addettiRecords,
       }),
-    [monthKey, ts.displayEmployees, ts.entries, ts.tipiAssenza],
+    [monthKey, ts.displayEmployees, ts.entries, ts.tipiAssenza, ts.addettiRecords],
   );
 
   const handleExportPdfComplessivo = useCallback(() => {
@@ -282,7 +285,7 @@ export function DipendentiView() {
 
   return (
     <GestionaleSectionGate module="dipendenti">
-      <div className={layoutPageRoot}>
+      <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
         <PageHeader
           title="Dipendenti"
           actions={
@@ -356,6 +359,7 @@ export function DipendentiView() {
                 </div>
               ) : null}
               <TimesheetTableView
+                listLayout={listLayout}
                 monthKey={monthKey}
                 periodDays={ts.periodDays}
                 employees={ts.displayEmployees}

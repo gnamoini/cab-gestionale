@@ -22,6 +22,8 @@ Matrice permessi moduli e capability. RLS Postgres è il controllo autoritativo.
 | mezzi | `/mezzi` | `ensureSectionWrite("mezzi")` |
 | documenti | `/documenti` | `ensureSectionWrite("documenti")` |
 | dipendenti | `/dipendenti` | `ensureSectionWrite("dipendenti")` |
+| fatturazione | `/fatturazione` | `ensureSectionWrite("fatturazione")` |
+| ddt | *(backend only — UI embedded in `/preventivi`)* | RLS/RPC; grant mirror da `preventivi` |
 | bunder | `/bunder` | modulo bunder |
 | report | `/report` | read report |
 | impostazioni | `/impostazioni` | `can_manage_settings` |

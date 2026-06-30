@@ -13,6 +13,7 @@ import {
   writeCachedServerAuthSnapshot,
 } from "@/src/lib/auth/server-session-cache";
 import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
+import { readProxyForwardedAuthSnapshot } from "@/src/lib/auth/proxy-auth-snapshot-header";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
@@ -56,14 +57,19 @@ async function fetchServerAuthSnapshotWithClient(
   const expiresAt =
     sessionWrap.session?.expires_at != null ? Math.floor(sessionWrap.session.expires_at) : null;
 
-  const { data: prof, error: profErr } = await supabase
-    .from("profiles")
-    .select("nome, ruolo, cliente_ref")
-    .eq("id", authUser.id)
-    .maybeSingle();
+  const [{ data: prof, error: profErr }, { data: permRows, error: permErr }] = await Promise.all([
+    supabase.from("profiles").select("nome, ruolo, cliente_ref").eq("id", authUser.id).maybeSingle(),
+    supabase
+      .from("user_permissions")
+      .select("user_id, module, can_read, can_write, can_admin")
+      .eq("user_id", authUser.id),
+  ]);
 
   if (profErr) {
     console.warn("[auth] server snapshot profilo non leggibile:", profErr.message);
+  }
+  if (permErr) {
+    console.warn("[auth] server snapshot permessi non leggibili:", permErr.message);
   }
 
   let publicUser;
@@ -72,14 +78,6 @@ async function fetchServerAuthSnapshotWithClient(
   } catch (e) {
     console.warn("[auth] server snapshot map user degraded:", e);
     publicUser = mapDegradedPublicAuthUser(authUser);
-  }
-
-  const { data: permRows, error: permErr } = await supabase
-    .from("user_permissions")
-    .select("user_id, module, can_read, can_write, can_admin")
-    .eq("user_id", authUser.id);
-  if (permErr) {
-    console.warn("[auth] server snapshot permessi non leggibili:", permErr.message);
   }
 
   const snap: ServerAuthSnapshot = {
@@ -93,6 +91,9 @@ async function fetchServerAuthSnapshotWithClient(
 }
 
 export async function resolveServerAuthFromCookies(cookies: CookieLike[]): Promise<ServerAuthSnapshot> {
+  const fromProxy = await readProxyForwardedAuthSnapshot();
+  if (fromProxy?.user?.id) return fromProxy;
+
   if (!isSupabasePublicEnvConfigured()) {
     return emptyAuthSnapshot(MISSING_SUPABASE_ENV_MESSAGE);
   }

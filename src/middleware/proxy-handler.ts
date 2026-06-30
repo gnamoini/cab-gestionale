@@ -2,6 +2,11 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { isStagingPublicSlice, isStagingBlockedPathname } from "@/lib/env/staging-public";
 import { resolveServerAuthWithSupabase } from "@/src/lib/auth/resolve-server-auth";
+import {
+  CAB_AUTH_SNAPSHOT_HEADER,
+  encodeServerAuthSnapshotHeader,
+} from "@/src/lib/auth/proxy-auth-snapshot-header";
+import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 import { createSupabaseMiddlewareClient } from "@/src/lib/supabase/middleware-client";
 import {
   ACCESS_DENIED_PATH,
@@ -19,9 +24,19 @@ import {
   parseOperatorGlobalSettingsDbEnabled,
 } from "@/lib/permissions/operator-global-settings";
 import { tryAuthPrecheckEdge, tryEdgeRoute } from "@/src/middleware/edge-router";
+import { logBootServer } from "@/lib/observability/boot-investigation";
 
 const LOGIN_PATH = "/login";
 const RESET_PASSWORD_PATH = "/login/reset-password";
+
+function logEdgeRedirect(from: string, to: string, reason: string): void {
+  logBootServer("REDIRECT", "edge", { from, to, reason }, `${from}→${to}`);
+}
+
+function redirectWithLog(request: NextRequest, pathname: string, to: URL, reason: string): NextResponse {
+  logEdgeRedirect(pathname, `${to.pathname}${to.search}`, reason);
+  return NextResponse.redirect(to);
+}
 
 function requestHadSupabaseAuthCookies(request: NextRequest): boolean {
   return request.cookies.getAll().some((c) => c.name.includes("-auth-token"));
@@ -32,6 +47,24 @@ function isStaticAsset(pathname: string): boolean {
   if (pathname === "/favicon.ico") return true;
   if (/\.(?:ico|png|jpg|jpeg|gif|webp|svg|woff2?|ttf|eot)$/.test(pathname)) return true;
   return false;
+}
+
+/** Inoltra snapshot auth edge→RSC; rimuove header client-forged. */
+function forwardProxyResponse(
+  request: NextRequest,
+  baseResponse: NextResponse,
+  auth?: ServerAuthSnapshot,
+): NextResponse {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.delete(CAB_AUTH_SNAPSHOT_HEADER);
+  if (auth?.user?.id) {
+    requestHeaders.set(CAB_AUTH_SNAPSHOT_HEADER, encodeServerAuthSnapshotHeader(auth));
+  }
+  const out = NextResponse.next({ request: { headers: requestHeaders } });
+  baseResponse.cookies.getAll().forEach((cookie) => {
+    out.cookies.set(cookie);
+  });
+  return out;
 }
 
 /**
@@ -55,12 +88,12 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
 
   if (!supabase) {
     if (pathname === LOGIN_PATH || pathname.startsWith(`${LOGIN_PATH}/`)) {
-      return response;
+      return forwardProxyResponse(request, response);
     }
     const url = request.nextUrl.clone();
     url.pathname = LOGIN_PATH;
     url.searchParams.set("from", pathname === "/" ? "/dashboard" : `${pathname}${request.nextUrl.search}`);
-    return NextResponse.redirect(url);
+    return redirectWithLog(request, pathname, url, "no_supabase_client");
   }
 
   const auth = await resolveServerAuthWithSupabase(supabase, request.cookies.getAll());
@@ -71,9 +104,9 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     const isResetPassword = pathname === RESET_PASSWORD_PATH;
     if (activeUser && !isResetPassword) {
       const home = defaultHomePathForRole(role);
-      return NextResponse.redirect(new URL(home, request.url));
+      return redirectWithLog(request, pathname, new URL(home, request.url), "logged_in_on_login");
     }
-    return response;
+    return forwardProxyResponse(request, response);
   }
 
   if (!activeUser) {
@@ -84,19 +117,19 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     if (requestHadSupabaseAuthCookies(request)) {
       url.searchParams.set("reason", "session_expired");
     }
-    return NextResponse.redirect(url);
+    return redirectWithLog(request, pathname, url, "anonymous");
   }
 
   if (isStagingPublicSlice() && isStagingBlockedPathname(pathname)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     url.searchParams.set("staging_unavailable", "1");
-    return NextResponse.redirect(url);
+    return redirectWithLog(request, pathname, url, "staging_blocked");
   }
 
   if (pathname === "/") {
     const home = defaultHomePathForRole(role);
-    const redirect = NextResponse.redirect(new URL(home, request.url));
+    const redirect = redirectWithLog(request, pathname, new URL(home, request.url), "root_home");
     if (bootTiming) {
       console.info(`[boot-timing] proxy GET / → ${home} ${Date.now() - t0}ms`);
     }
@@ -108,7 +141,7 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     url.pathname = ACCESS_DENIED_PATH;
     url.searchParams.set("from", CLIENTE_HOME_PATH);
     url.searchParams.set("denied", "cliente_route");
-    return NextResponse.redirect(url);
+    return redirectWithLog(request, pathname, url, "cliente_route_denied");
   }
 
   const clientLavorazioniAllowed = hasPermission(role, "viewClientLavorazioni");
@@ -140,7 +173,7 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     url.pathname = ACCESS_DENIED_PATH;
     url.searchParams.set("from", defaultHomePathForRole(role));
     url.searchParams.set("denied", section);
-    return NextResponse.redirect(url);
+    return redirectWithLog(request, pathname, url, `rbac_denied_${section}`);
   }
 
   if (bootTiming && pathname === "/dashboard") {
@@ -152,5 +185,5 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     if (edgeResult) return edgeResult;
   }
 
-  return response;
+  return forwardProxyResponse(request, response, auth);
 }

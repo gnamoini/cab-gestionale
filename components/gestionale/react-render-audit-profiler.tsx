@@ -1,24 +1,48 @@
 "use client";
 
 import { Profiler, type ProfilerOnRenderCallback, type ReactNode } from "react";
+import {
+  countRender,
+  isBootInvestigationEnabled,
+} from "@/lib/observability/boot-investigation";
 import { isReactRenderAuditEnabled, recordProfilerRender } from "@/lib/observability/react-render-audit";
 
 type Props = {
   children: ReactNode;
 };
 
-const onRender: ProfilerOnRenderCallback = (id, phase, actualDuration) => {
-  const phaseNorm = phase === "mount" || phase === "update" || phase === "nested-update" ? phase : "update";
-  recordProfilerRender(id, phaseNorm, actualDuration);
-};
+const PROFILER_IDS = [
+  "gestionale-main",
+  "app-shell-content",
+  "auth-gate-subtree",
+] as const;
 
-/** Dev-only — wraps main content with React Profiler when NEXT_PUBLIC_RENDER_AUDIT=1. */
+function makeOnRender(id: string): ProfilerOnRenderCallback {
+  return (profilerId, phase, actualDuration) => {
+    const phaseNorm =
+      phase === "mount" || phase === "update" || phase === "nested-update" ? phase : "update";
+    if (isReactRenderAuditEnabled()) {
+      recordProfilerRender(profilerId || id, phaseNorm, actualDuration);
+    }
+    if (isBootInvestigationEnabled()) {
+      countRender(profilerId || id, phaseNorm);
+    }
+  };
+}
+
+/** Dev-only — nested Profilers when RENDER_AUDIT or BOOT_INVESTIGATION enabled. */
 export function ReactRenderAuditProfiler({ children }: Props) {
-  if (!isReactRenderAuditEnabled()) return <>{children}</>;
+  const auditOn = isReactRenderAuditEnabled();
+  const bootOn = isBootInvestigationEnabled();
+  if (!auditOn && !bootOn) return <>{children}</>;
 
-  return (
-    <Profiler id="gestionale-main" onRender={onRender}>
-      {children}
-    </Profiler>
-  );
+  let node: ReactNode = children;
+  for (const id of PROFILER_IDS) {
+    node = (
+      <Profiler id={id} onRender={makeOnRender(id)}>
+        {node}
+      </Profiler>
+    );
+  }
+  return <>{node}</>;
 }

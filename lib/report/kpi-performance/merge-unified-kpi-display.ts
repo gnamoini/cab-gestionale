@@ -147,18 +147,6 @@ export function mergeUnifiedKpiDisplay(
       description: UNIFIED_KPI_DISPLAY["lav-tempo"]!.description,
     });
 
-    const dispExec = execById(exec, "disp");
-    items.push({
-      id: "flotta-disp",
-      label: "Disponibilità flotta",
-      value:
-        perf.fleet.disponibilitaPct != null
-          ? `${perf.fleet.disponibilitaPct.toLocaleString("it-IT", { maximumFractionDigits: 1 })}%`
-          : "—",
-      compareRows: execCompareRows(dispExec),
-      description: UNIFIED_KPI_DISPLAY["flotta-disp"]!.description,
-    });
-
     items.push({
       id: "flotta-officina",
       label: "Mezzi in officina",

@@ -1,4 +1,5 @@
 import { formatLivelloCarburanteDisplay } from "@/lib/schede/livello-carburante-value";
+import type { ClienteAnagrafica, ClienteContattoTipo, ClienteSedeFields } from "@/lib/clienti/clienti-anagrafica-types";
 import type { PdfField } from "@/lib/pdf/core/pdf-base-template";
 import { pdfFieldFromValue } from "@/lib/pdf/gestionale-section-table";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
@@ -23,6 +24,67 @@ export function buildClienteAnagraficaPdfFields(source: {
     field("Richiedente", source.richiedente),
   ].filter((f): f is PdfField => f !== null);
 }
+
+function formatSedeLine(sede: ClienteSedeFields): string {
+  const via = [sede.via, sede.numeroCivico].filter(Boolean).join(" ").trim();
+  const loc = [sede.cap, sede.citta, sede.provincia].filter(Boolean).join(" ").trim();
+  return [via, loc].filter(Boolean).join(" — ");
+}
+
+function contattoByTipi(
+  contatti: ClienteAnagrafica["contatti"],
+  ...tipi: ClienteContattoTipo[]
+): string | undefined {
+  for (const tipo of tipi) {
+    const hit = contatti.find((c) => c.tipo === tipo && c.valore.trim());
+    if (hit) return hit.valore.trim();
+  }
+  return undefined;
+}
+
+export function buildClienteFiscalePdfFields(
+  anag: ClienteAnagrafica,
+  opts?: { codiceFiscale?: string },
+): PdfField[] {
+  const field = pdfFieldFromValue;
+  const ragione = anag.ragioneSociale.trim() || anag.nomeDisplay.trim();
+  const legale = formatSedeLine(anag.sedi.legale);
+  const operativa = anag.sedeLegaleUgualeOperativa ? "" : formatSedeLine(anag.sedi.operativa);
+  const pec = contattoByTipi(anag.contatti, "pec");
+  const email = contattoByTipi(anag.contatti, "email");
+  const telefono = contattoByTipi(anag.contatti, "telefono", "cellulare", "whatsapp");
+
+  return [
+    field("Ragione sociale", ragione),
+    field("Sede legale", legale || undefined),
+    operativa ? field("Sede operativa", operativa) : null,
+    field("Partita IVA", anag.partitaIva.trim() || undefined),
+    field("Codice fiscale", opts?.codiceFiscale?.trim() || undefined),
+    field("Codice destinatario (SDI)", anag.codiceDestinatario.trim() || undefined),
+    field("PEC", pec),
+    field("Email", email),
+    field("Telefono", telefono),
+  ].filter((f): f is PdfField => f !== null);
+}
+
+function mergePdfFieldsDeduped(...groups: PdfField[][]): PdfField[] {
+  const seen = new Set<string>();
+  const out: PdfField[] = [];
+  for (const group of groups) {
+    for (const f of group) {
+      const key = `${f.label}::${f.value}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(f);
+    }
+  }
+  return out;
+}
+
+export type PreventivoClientePdfOptions = {
+  clienteAnagrafica?: ClienteAnagrafica | null;
+  codiceFiscale?: string;
+};
 
 export function buildAttrezzaturaAnagraficaPdfFields(source: {
   tipoAttrezzatura?: string;
@@ -102,8 +164,15 @@ export function inferTipoAttrezzaturaPdfLegacy(p: PreventivoRecord): string | un
   return mac;
 }
 
-export function buildPreventivoClientePdfFields(p: PreventivoRecord): PdfField[] {
-  return buildClienteAnagraficaPdfFields(p);
+export function buildPreventivoClientePdfFields(
+  p: PreventivoRecord,
+  opts?: PreventivoClientePdfOptions,
+): PdfField[] {
+  const operativi = buildClienteAnagraficaPdfFields(p);
+  const anag = opts?.clienteAnagrafica;
+  if (!anag?.id) return operativi;
+  const fiscali = buildClienteFiscalePdfFields(anag, { codiceFiscale: opts?.codiceFiscale });
+  return mergePdfFieldsDeduped(fiscali, operativi);
 }
 
 export function buildPreventivoAttrezzaturaPdfFields(p: PreventivoRecord): PdfField[] {

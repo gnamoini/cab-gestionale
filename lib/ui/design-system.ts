@@ -99,6 +99,20 @@ export const dsBtnPrimary = `inline-flex items-center justify-center gap-2 round
 /** A — CTA hero (stesso arancio piatto del primario) */
 export const dsBtnCtaHero = `inline-flex items-center justify-center gap-2 rounded-[var(--ds-radius-lg)] border border-[color:color-mix(in_srgb,var(--cab-primary)_45%,var(--cab-border))] ${cabPrimaryBg} px-5 py-2.5 text-sm font-semibold text-white shadow-[var(--cab-shadow-md)] transition-[box-shadow,background-color] duration-200 ease-out ${cabPrimaryBgHover} hover:shadow-lg ${dsBtnCursor} ${dsFocus} ${dsDisabled}`;
 
+/** IA — Primario pill (gradiente arancione stile Gemini). */
+export const dsBtnAiPrimary =
+  "gestionale-ai-action-btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,#fff)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_color-mix(in_srgb,var(--cab-primary)_22%,transparent),0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_18%,transparent),inset_0_1px_0_color-mix(in_srgb,#fff_28%,transparent)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:brightness-[1.05] hover:shadow-[0_4px_16px_color-mix(in_srgb,var(--cab-primary)_32%,transparent)] active:scale-[0.98] disabled:brightness-100 disabled:shadow-[var(--cab-shadow-sm)]";
+
+export const dsBtnAiPrimarySm =
+  "gestionale-ai-action-btn-primary inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,#fff)] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_1px_2px_color-mix(in_srgb,var(--cab-primary)_22%,transparent),inset_0_1px_0_color-mix(in_srgb,#fff_24%,transparent)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:brightness-[1.05] active:scale-[0.98] disabled:brightness-100";
+
+/** IA — Secondario pill (chip soft arancione stile Gemini). */
+export const dsBtnAiSecondary =
+  "gestionale-ai-action-btn-secondary inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_36%,var(--cab-border))] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-surface))_0%,color-mix(in_srgb,var(--cab-primary)_9%,var(--cab-card))_100%)] px-4 py-2.5 text-sm font-semibold text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)] transition-[transform,box-shadow,background-color,border-color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_52%,var(--cab-border))] hover:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-surface))_0%,color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-card))_100%)] hover:shadow-[var(--cab-shadow-md)] active:scale-[0.98]";
+
+export const dsBtnAiSecondarySm =
+  "gestionale-ai-action-btn-secondary inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_36%,var(--cab-border))] bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))_0%,color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-card))_100%)] px-3 py-2 text-xs font-semibold text-[color:var(--cab-primary)] shadow-[var(--cab-shadow-sm)] transition-[transform,box-shadow,background-color,border-color] duration-200 ease-out hover:border-[color:color-mix(in_srgb,var(--cab-primary)_48%,var(--cab-border))] hover:bg-[linear-gradient(135deg,color-mix(in_srgb,var(--cab-primary)_20%,var(--cab-surface))_0%,color-mix(in_srgb,var(--cab-primary)_11%,var(--cab-card))_100%)] active:scale-[0.98]";
+
 /** CTA toolbar liste — compatto su mobile, hero da sm+. */
 export const dsPageToolbarCtaCompact = `${dsBtnCtaHero} h-11 min-w-0 shrink-0 px-2.5 text-xs whitespace-nowrap sm:px-5 sm:py-2.5 sm:text-sm`;
 
@@ -466,7 +480,7 @@ export const dsPageHeaderShell =
  * wrap da sm quando lo spazio non basta; titolo troncato su mobile stretto.
  */
 export const dsPageHeaderTopRow =
-  "flex min-w-0 max-w-full flex-row flex-nowrap items-center gap-x-2 gap-y-2 max-sm:gap-1.5 sm:flex-wrap sm:gap-x-[length:var(--ds-space-sm)] [&_.cab-page-title-box]:min-w-0 [&_.cab-page-title-box]:max-sm:truncate";
+  "flex min-w-0 max-w-full flex-row flex-wrap items-center gap-x-2 gap-y-2 max-sm:gap-1.5 cab-shell-mobile:flex-wrap cab-shell-tablet:flex-wrap sm:gap-x-[length:var(--ds-space-sm)] [&_.cab-page-title-box]:min-w-0 [&_.cab-page-title-box]:max-sm:truncate";
 
 /** @deprecated alias — usare `dsPageHeaderTopRow` */
 export const dsPageHeaderGrid = dsPageHeaderTopRow;
@@ -521,7 +535,7 @@ export const dsGestionaleContentRail = "flex min-h-0 min-w-0 w-full flex-1 flex-
 export const GESTIONALE_SEARCH_PLACEHOLDER = "Cerca…";
 
 /** Shell toolbar pagina — unico token per liste (scorre col contenuto, no sticky). */
-export const dsPageToolbar = `relative min-w-0 max-w-full rounded-[var(--ds-radius-xl)] ${cabBorder} bg-[color:color-mix(in_srgb,var(--cab-surface-2)_94%,transparent)] p-[length:var(--ds-space-md)] shadow-[var(--cab-shadow-sm)] backdrop-blur-md sm:p-[length:var(--ds-space-lg)]`;
+export const dsPageToolbar = `cab-page-toolbar-surface relative min-w-0 max-w-full rounded-[var(--ds-radius-xl)] ${cabBorder} p-[length:var(--ds-space-md)] shadow-[var(--cab-shadow-sm)] sm:p-[length:var(--ds-space-lg)]`;
 
 /** Chip meta riga toolbar (conteggio, filtri attivi) — compatto, allineato a `dsPageToolbarBtn`. */
 export const dsPageToolbarMetaChipBase =

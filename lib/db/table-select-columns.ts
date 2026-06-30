@@ -54,6 +54,45 @@ export const MOVIMENTI_RICAMBI_COLUMNS =
 export const PREVENTIVI_COLUMNS =
   "id, mezzo_id, lavorazione_id, cliente, totale, dettagli, created_at, updated_at" as const;
 
+export const BILLING_CUSTOMERS_COLUMNS =
+  "id, cliente_label, entity_key, ragione_sociale, partita_iva, codice_fiscale, pec, codice_sdi, indirizzo, note, created_at, updated_at" as const;
+
+export const INVOICES_COLUMNS =
+  "id, numero, anno, status, origine, customer_id, cliente_label, customer_snapshot, data_emissione, data_scadenza, imponibile, iva, totale, pagato, residuo, note, admin_notes, meta, created_by, updated_by, annullata_at, created_at, updated_at" as const;
+
+export const INVOICE_ROWS_COLUMNS =
+  "id, invoice_id, tipo, descrizione, quantita, prezzo_unitario, sconto_percent, iva_percent, imponibile, iva, totale, ricambio_id, lavorazione_id, preventivo_id, meta, created_at" as const;
+
+export const INVOICE_LINKS_COLUMNS =
+  "id, invoice_id, source_type, source_id, allocated_imponibile, allocated_iva, allocated_totale, meta, created_at" as const;
+
+export const INVOICE_PAYMENTS_COLUMNS =
+  "id, invoice_id, data, importo, metodo, riferimento, note, created_by, created_at" as const;
+
+export const DDT_DOCUMENTS_COLUMNS =
+  "id, numero, anno, serie, sede_id, status, data_documento, data_consegna, cliente_label, customer_snapshot, luogo_consegna, preventivo_id, lavorazione_id, mezzo_id, mezzo_snapshot, causale_trasporto, vettore, note, origine, pdf_artifact_hash, created_by, updated_by, annullato_at, stampato_at, consegnato_at, created_at, updated_at" as const;
+
+export const DDT_DOCUMENTS_INDEX_COLUMNS =
+  "id, preventivo_id, status, numero, anno" as const;
+
+export const DDT_ROWS_COLUMNS =
+  "id, ddt_id, ordine, source_type, source_ref, preventivo_id, descrizione, codice, quantita, unita_misura, note, meta, created_at" as const;
+
+export const DDT_LINKS_COLUMNS =
+  "id, ddt_id, source_type, source_id, meta, created_at" as const;
+
+export const PREVENTIVO_DDT_FULFILLMENT_COLUMNS =
+  "preventivo_id, source_ref, qty_preventivo, qty_consegnata, qty_residua" as const;
+
+export const ORDINI_FORNITORI_COLUMNS =
+  "id, numero, status, data_ordine, fornitore_label, fornitore_snapshot, destinazione, destinazione_snapshot, note, imponibile_righe, trasporto, imponibile, iva_percent, iva, totale, lavorazione_id, preventivo_id, scheda_lavorazione_id, pdf_artifact_hash, created_by, updated_by, created_at, updated_at" as const;
+
+export const ORDINI_FORNITORI_RIGHE_COLUMNS =
+  "id, ordine_id, ordine, ricambio_id, codice, descrizione, quantita, prezzo_unitario, sconto_percent, totale_riga, meta, created_at" as const;
+
+export const PREVENTIVI_BILLING_STATUS_COLUMNS =
+  "preventivo_id, preventivo_totale, fatturato, residuo, stato_fatturazione" as const;
+
 export const DOCUMENTI_COLUMNS =
   "id, mezzo_id, marca, modello, categoria, url_file, meta, created_at" as const;
 
@@ -91,3 +130,16 @@ export const LAVORAZIONE_DOCUMENTS_COLUMNS =
 
 export const DASHBOARD_PROMEMORIA_COLUMNS =
   "id, created_at, updated_at, created_by, event_date, event_time, title, description, deleted_at, notified_on, entity_type, entity_id, series_id, recurrence_frequency, recurrence_interval, recurrence_until" as const;
+
+export const CLIENTI_ANAGRAFICHE_COLUMNS =
+  "id, nome_display, entity_key, ragione_sociale, partita_iva, codice_destinatario, sede_legale_uguale_operativa, in_lista_settings, note, updated_by, created_at, updated_at" as const;
+
+/** Include meta (codice_fiscale import) — solo fetch server PDF/fatturazione. */
+export const CLIENTI_ANAGRAFICHE_COLUMNS_WITH_META =
+  `${CLIENTI_ANAGRAFICHE_COLUMNS}, meta` as const;
+
+export const CLIENTI_SEDI_COLUMNS =
+  "id, cliente_id, tipo, via, numero_civico, cap, citta, provincia, stato, created_at, updated_at" as const;
+
+export const CLIENTI_CONTATTI_COLUMNS =
+  "id, cliente_id, etichetta, tipo, valore, ordine, created_at, updated_at" as const;

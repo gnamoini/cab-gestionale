@@ -21,7 +21,6 @@ export const EXECUTIVE_KPI_IDS = [
   "lav-aperti",
   "lav-tempo",
   "cost-tot",
-  "flotta-disp",
   "scorta",
   "clienti",
 ] as const;
@@ -32,7 +31,6 @@ export const EXECUTIVE_PRIMARY_KPI_IDS = [
   "lav-chiusi",
   "cost-tot",
   "clienti",
-  "flotta-disp",
   "lav-media-settimanale",
 ] as const;
 
@@ -49,7 +47,6 @@ export const KPI_TRUST_BY_ID: Record<string, ReportKpiTrust> = {
   "lav-chiusi": "exact",
   "lav-aperti": "exact",
   "lav-tempo": "exact",
-  "flotta-disp": "proxy",
   "flotta-officina": "proxy",
   cost: "snapshot",
   "ric-usati": "exact",

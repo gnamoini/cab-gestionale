@@ -11,11 +11,12 @@ import {
   countInterventiInRitardo,
   countMezziInOfficinaProxy,
   countMezziTotal,
-  disponibilitaFlottaPctProxy,
+  disponibilitaFlottaPerCliente,
   guastiByTipoAttrezzatura,
   heuristicFaultsByMonth,
   mezziConFrequenzaGuastiAlta,
   monthKeysOverlappingRange,
+  peggiorDisponibilitaCliente,
   sottoScortaCount,
   sumManodoperaCostFromSchede,
   sumRicambiCostFromMagLog,
@@ -92,8 +93,8 @@ export function buildKpiPerformanceModel(input: KpiPerformanceBuildInput): KpiPe
   const closedPrev = compareRange ? semanticIndex.completateTotal(compareRange) : null;
   const openCur = countInterventiAperti(attive);
 
-  const dispCur = disponibilitaFlottaPctProxy(mezzi, lavRows);
-  const dispPrev = compareRange ? disponibilitaFlottaPctProxy(mezzi, lavRows) : null;
+  const disponibilitaPerCliente = disponibilitaFlottaPerCliente(mezzi, lavRows);
+  const peggiorDisponibilita = peggiorDisponibilitaCliente(disponibilitaPerCliente);
 
   const inOfficina = countMezziInOfficinaProxy(mezzi, lavRows);
 
@@ -117,15 +118,6 @@ export function buildKpiPerformanceModel(input: KpiPerformanceBuildInput): KpiPe
   const late = countInterventiInRitardo(attive, anchor);
 
   const executive: KpiPerformanceExecutiveCard[] = [
-    {
-      id: "disp",
-      label: "Disponibilità flotta",
-      value: dispCur != null ? `${dispCur.toLocaleString("it-IT", { maximumFractionDigits: 1 })}%` : "—",
-      sub: "Proxy: mezzi senza lavorazione aperta",
-      kind: "proxy",
-      comparePct: dispCur != null && dispPrev != null ? deltaPct(dispPrev, dispCur) : null,
-      compareDelta: null,
-    },
     {
       id: "officina",
       label: "Mezzi in officina",
@@ -206,7 +198,8 @@ export function buildKpiPerformanceModel(input: KpiPerformanceBuildInput): KpiPe
       totalMezzi: mezzi.length,
       mezziInOfficina: inOfficina,
       mezziOperativiProxy: countMezziTotal(mezzi) - inOfficina,
-      disponibilitaPct: dispCur,
+      disponibilitaPerCliente,
+      peggiorDisponibilita,
       avgDowntimeDays: avgDowntimeDaysInPeriod(mezzi, lavRows, range),
       guastiByTipo: guastiByTipoAttrezzatura(mezzi, lavRows, range),
       mezziAltaFrequenzaGuasti: mezziConFrequenzaGuastiAlta(mezzi, lavRows),

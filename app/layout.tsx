@@ -14,6 +14,7 @@ import {
 } from "@/lib/theme/theme-boot-inline-script";
 import { CAB_BRANDING_BOOT_INLINE_SCRIPT } from "@/lib/theme/branding-boot-inline-script";
 import { CAB_CURSOR_AUTOMATION_DOM_SHIELD_INLINE_SCRIPT } from "@/lib/theme/cursor-automation-dom-shield-inline-script";
+import { logBootServer } from "@/lib/observability/boot-investigation";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -52,11 +53,18 @@ export default async function RootLayout({
   const cookieStore = await cookies();
   const serverTheme = resolveServerThemeMode(cookieStore.get(CAB_THEME_STORAGE_KEY)?.value);
 
+  logBootServer("BOOT", "rsc_root_layout", {
+    hasUser: Boolean(initialAuthSnapshot?.user?.id),
+    userId: initialAuthSnapshot?.user?.id ?? null,
+    sessionExpiresAt: initialAuthSnapshot?.session?.expiresAt ?? null,
+    configurationError: initialAuthSnapshot?.configurationError ?? null,
+  });
+
   return (
     <html
       lang="it"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full min-h-[var(--cab-app-height,100dvh)] w-full min-w-full bg-[var(--cab-bg-app)] antialiased${serverTheme === "dark" ? " dark" : ""}`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full min-h-[var(--cab-app-height,100dvh)] w-full min-w-0 max-w-full bg-[var(--cab-bg-app)] antialiased${serverTheme === "dark" ? " dark" : ""}`}
       style={{ colorScheme: serverTheme }}
     >
       <head suppressHydrationWarning>
@@ -84,7 +92,7 @@ export default async function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className="gestionale-scrollbar flex h-[var(--cab-app-height,100dvh)] min-h-[var(--cab-app-height,100dvh)] w-full min-w-full flex-col overflow-x-hidden bg-[var(--cab-bg-app)] font-sans antialiased"
+        className="gestionale-scrollbar flex h-[var(--cab-app-height,100dvh)] min-h-[var(--cab-app-height,100dvh)] w-full min-w-0 max-w-full flex-col overflow-x-hidden bg-[var(--cab-bg-app)] font-sans antialiased"
       >
         <AppProviders initialAuthSnapshot={initialAuthSnapshot}>{children}</AppProviders>
       </body>

@@ -85,7 +85,7 @@ export function SettingsNavSidebar({
   variant?: "default" | "page";
 }) {
   return (
-    <div className={variant === "page" ? "flex min-h-0 flex-1 flex-col overflow-hidden" : "contents"}>
+    <div className={variant === "page" ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden" : "contents"}>
       <div className={SETTINGS_SIDEBAR_OVERVIEW}>
         <SettingsNavOverviewLink
           active={section === SETTINGS_NAV_OVERVIEW_ID}

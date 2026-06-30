@@ -20,6 +20,11 @@ import {
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import {
+  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
+  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
+  type GestionaleListLayout,
+} from "@/lib/ui/use-gestionale-list-layout";
+import {
   GestionaleListTable,
   GestionaleListTableActionsHead,
   GestionaleListTableMobileEmpty,
@@ -145,6 +150,7 @@ function MezziCellIdentificazione({ lines }: { lines: string[] }) {
 }
 
 export type MezziTableProps = {
+  listLayout: GestionaleListLayout;
   rows: MezzoGestito[];
   interventiByMezzoId: Map<string, MezzoInterventoLavorazione[]>;
   ultimaModificaInfoByMezzoId: Map<string, MezzoUltimaModificaInfo>;
@@ -385,12 +391,13 @@ function MezzoMobileCard({
 
 const MezzoRow = memo(MezzoRowInner);
 
-export function MezziTable({ rows, interventiByMezzoId, ultimaModificaInfoByMezzoId, inOfficina, sortColumn, sortPhase, onSort, flashRowId, onHub }: MezziTableProps) {
+export function MezziTable({ listLayout, rows, interventiByMezzoId, ultimaModificaInfoByMezzoId, inOfficina, sortColumn, sortPhase, onSort, flashRowId, onHub }: MezziTableProps) {
   return (
     <>
+      {listLayout === "desktop" ? (
       <GestionaleListTable
         wrapClassName="mt-0"
-        visibilityClass="hidden xl:block"
+        visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
         colgroup={
           <>
             <col className="w-[14%]" />
@@ -443,8 +450,10 @@ export function MezziTable({ rows, interventiByMezzoId, ultimaModificaInfoByMezz
           />
         ))}
       </GestionaleListTable>
+      ) : null}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:hidden">
+      {listLayout === "mobile" ? (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {rows.length === 0 ? (
           <div className="col-span-full">
             <GestionaleListTableMobileEmpty message="Nessun mezzo corrisponde ai criteri." />
@@ -470,6 +479,7 @@ export function MezziTable({ rows, interventiByMezzoId, ultimaModificaInfoByMezz
           ))
         )}
       </div>
+      ) : null}
     </>
   );
 }

@@ -1,0 +1,1179 @@
+{
+  "analyzedAt": "2026-06-17T02:43:16.440Z",
+  "sessionCount": 12,
+  "viewport": {
+    "width": 724,
+    "height": 900
+  },
+  "shellClipLayersPresent": {
+    "htmlOverflowHidden": 12,
+    "bodyOverflowHidden": 12,
+    "cabAppShellOverflowHidden": 12,
+    "mainOverflowXHidden": 12,
+    "gutterMirrorOverflowHidden": 0
+  },
+  "globalHorizClippers": [],
+  "allHorizClippers": [],
+  "globalClippedBleed": [
+    {
+      "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0",
+      "clipKind": "overflow",
+      "exampleSelector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+      "component": "GestionaleShellLayoutProvider",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/impostazioni",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi",
+        "/report"
+      ],
+      "routeCount": 11
+    },
+    {
+      "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0",
+      "clipKind": "overflow",
+      "exampleSelector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+      "component": "AccountMenu",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/impostazioni",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi",
+        "/report"
+      ],
+      "routeCount": 11
+    },
+    {
+      "clippedBy": "div.min-w-0.max-w-full.overflow-x-clip.space-y-[length:var(--ds-space-xl)]",
+      "clipKind": "overflow",
+      "exampleSelector": "section.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)].border-[color:var(--cab-border)]",
+      "component": "ShellCard",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi",
+        "/report"
+      ],
+      "routeCount": 9
+    },
+    {
+      "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core",
+      "clipKind": "overflow",
+      "exampleSelector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+      "component": "Tooltip",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard",
+        "/documenti",
+        "/impostazioni",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi"
+      ],
+      "routeCount": 8
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "button.inline-flex.items-center.justify-center.gap-2",
+      "component": "ToolbarGroupPrimaryRow",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/lavorazioni",
+        "/mezzi",
+        "/preventivi",
+        "/report"
+      ],
+      "routeCount": 8
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "span.inline-flex.min-h-[1.5rem].items-center.gap-1",
+      "component": "PageToolbarResultCount",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi"
+      ],
+      "routeCount": 8
+    }
+  ],
+  "allClippedBleed": [
+    {
+      "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0",
+      "clipKind": "overflow",
+      "exampleSelector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+      "component": "GestionaleShellLayoutProvider",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/impostazioni",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi",
+        "/report"
+      ],
+      "routeCount": 11
+    },
+    {
+      "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0",
+      "clipKind": "overflow",
+      "exampleSelector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+      "component": "AccountMenu",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/impostazioni",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi",
+        "/report"
+      ],
+      "routeCount": 11
+    },
+    {
+      "clippedBy": "div.min-w-0.max-w-full.overflow-x-clip.space-y-[length:var(--ds-space-xl)]",
+      "clipKind": "overflow",
+      "exampleSelector": "section.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)].border-[color:var(--cab-border)]",
+      "component": "ShellCard",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi",
+        "/report"
+      ],
+      "routeCount": 9
+    },
+    {
+      "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core",
+      "clipKind": "overflow",
+      "exampleSelector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+      "component": "Tooltip",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard",
+        "/documenti",
+        "/impostazioni",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi"
+      ],
+      "routeCount": 8
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "button.inline-flex.items-center.justify-center.gap-2",
+      "component": "ToolbarGroupPrimaryRow",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/lavorazioni",
+        "/mezzi",
+        "/preventivi",
+        "/report"
+      ],
+      "routeCount": 8
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "span.inline-flex.min-h-[1.5rem].items-center.gap-1",
+      "component": "PageToolbarResultCount",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard/security",
+        "/dipendenti",
+        "/documenti",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi"
+      ],
+      "routeCount": 8
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+      "component": "ToolbarGroupFiltersToggle",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard/security",
+        "/documenti",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi"
+      ],
+      "routeCount": 7
+    },
+    {
+      "clippedBy": "div.min-h-0.overflow-hidden",
+      "clipKind": "overflow",
+      "exampleSelector": "input#_r_5_.min-h-10.w-full.min-w-0.appearance-none",
+      "component": "GlobalSelect",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/dashboard/security",
+        "/documenti",
+        "/lavorazioni",
+        "/magazzino",
+        "/mezzi",
+        "/preventivi"
+      ],
+      "routeCount": 7
+    },
+    {
+      "clippedBy": "section.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)].border-[color:var(--cab-border)]",
+      "clipKind": "overflow",
+      "exampleSelector": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "component": "ToolbarGroup",
+      "maxDecorPx": 12,
+      "routes": [
+        "/dashboard/security",
+        "/dipendenti",
+        "/lavorazioni",
+        "/magazzino",
+        "/preventivi"
+      ],
+      "routeCount": 5
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "input#lavorazioni-search.w-full.min-h-11.rounded-[var(--ds-radius-lg)].border",
+      "component": "GestionaleSearchField",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/documenti",
+        "/lavorazioni",
+        "/mezzi"
+      ],
+      "routeCount": 4
+    },
+    {
+      "clippedBy": "div.min-h-0.overflow-hidden",
+      "clipKind": "overflow",
+      "exampleSelector": "input#lav-filter-ingresso-da.min-h-10.w-full.min-w-0.cursor-text",
+      "component": "GlobalDatePicker",
+      "maxDecorPx": 12,
+      "routes": [
+        "/bunder",
+        "/lavorazioni",
+        "/preventivi"
+      ],
+      "routeCount": 3
+    },
+    {
+      "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core",
+      "clipKind": "overflow",
+      "exampleSelector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+      "component": "NotificationBellTrigger",
+      "maxDecorPx": 12,
+      "routes": [
+        "/dashboard",
+        "/magazzino"
+      ],
+      "routeCount": 2
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "input#preventivi-search.w-full.min-h-11.rounded-[var(--ds-radius-lg)].border",
+      "component": "GestionaleListSearchField",
+      "maxDecorPx": 12,
+      "routes": [
+        "/magazzino",
+        "/preventivi"
+      ],
+      "routeCount": 2
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+      "component": "ToolbarGroupMetaRow",
+      "maxDecorPx": 12,
+      "routes": [
+        "/documenti",
+        "/magazzino"
+      ],
+      "routeCount": 2
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "button.inline-flex.items-center.justify-center.gap-2",
+      "component": "Tooltip",
+      "maxDecorPx": 12,
+      "routes": [
+        "/dashboard/security",
+        "/magazzino"
+      ],
+      "routeCount": 2
+    },
+    {
+      "clippedBy": "section.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)].border-[color:var(--cab-border)]",
+      "clipKind": "overflow",
+      "exampleSelector": "div#mezzo-row-041c9ab4-3b6e-44f4-b946-c15473a1ef35.flex.flex-col.rounded-xl.border",
+      "component": "CardMobile",
+      "maxDecorPx": 12,
+      "routes": [
+        "/dashboard/security",
+        "/mezzi"
+      ],
+      "routeCount": 2
+    },
+    {
+      "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]",
+      "clipKind": "backdrop-filter",
+      "exampleSelector": "input#_r_1_.w-full.rounded-[var(--ds-radius-lg)].border.border-[color:color-mix(in_srgb,var(--cab-bo",
+      "component": "GlobalSelect",
+      "maxDecorPx": 12,
+      "routes": [
+        "/dipendenti",
+        "/report"
+      ],
+      "routeCount": 2
+    },
+    {
+      "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0",
+      "clipKind": "overflow",
+      "exampleSelector": "a.outline-none.transition-all.duration-150.active:scale-[0.98]",
+      "component": "LinkComponent",
+      "maxDecorPx": 8,
+      "routes": [
+        "/impostazioni",
+        "/preventivi"
+      ],
+      "routeCount": 2
+    },
+    {
+      "clippedBy": "div.min-w-0.max-w-full.overflow-x-clip.space-y-[length:var(--ds-space-xl)]",
+      "clipKind": "overflow",
+      "exampleSelector": "div.relative.min-w-0.max-w-full.overflow-hidden",
+      "component": "DashboardWelcome",
+      "maxDecorPx": 12,
+      "routes": [
+        "/dashboard"
+      ],
+      "routeCount": 1
+    },
+    {
+      "clippedBy": "div.min-w-0.max-w-full.overflow-x-clip.space-y-[length:var(--ds-space-xl)]",
+      "clipKind": "overflow",
+      "exampleSelector": "section.flex.min-h-[220px].flex-col.cursor-default",
+      "component": "DashboardPromemoriaSection",
+      "maxDecorPx": 12,
+      "routes": [
+        "/dashboard"
+      ],
+      "routeCount": 1
+    }
+  ],
+  "routeSummaries": [
+    {
+      "route": "/dashboard",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 4,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 2548.5
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "NotificationBellTrigger",
+          "decorPx": 12,
+          "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/lavorazioni",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 6,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 4065.5
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "Tooltip",
+          "decorPx": 12,
+          "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/lavorazioni-clienti",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 6,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 10394.3
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "span.pointer-events-none.absolute.-right-1.-top-1",
+          "component": "LinkComponent",
+          "decorPx": 12,
+          "clippedBy": "div.min-h-0.overflow-hidden.bg-[var(--cab-card)]"
+        },
+        {
+          "selector": "span.pointer-events-none.absolute.-right-1.-top-1",
+          "component": "LinkComponent",
+          "decorPx": 12,
+          "clippedBy": "div.min-h-0.overflow-hidden.bg-[var(--cab-card)]"
+        },
+        {
+          "selector": "span.pointer-events-none.absolute.-right-1.-top-1",
+          "component": "LinkComponent",
+          "decorPx": 12,
+          "clippedBy": "div.min-h-0.overflow-hidden.bg-[var(--cab-card)]"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/preventivi",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 2,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 506
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "Tooltip",
+          "decorPx": 12,
+          "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/documenti",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 8,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 588
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "Tooltip",
+          "decorPx": 12,
+          "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/magazzino",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 3,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 1498.3
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "NotificationBellTrigger",
+          "decorPx": 12,
+          "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/mezzi",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 4,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 5116.4
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "Tooltip",
+          "decorPx": 12,
+          "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/dipendenti",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 2,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 6659
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "DipendentiPdfToolbar",
+          "decorPx": 12,
+          "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/bunder",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 2,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 504
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "Tooltip",
+          "decorPx": 12,
+          "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/report",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 7,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 5599
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.h-8.shrink-0.rounded-[var(--ds-radius-lg)].px-3",
+          "component": "ToolbarGroupPrimaryRow",
+          "decorPx": 8,
+          "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]"
+        },
+        {
+          "selector": "button.h-8.shrink-0.rounded-[var(--ds-radius-lg)].bg-[color:var(--cab-primary)]",
+          "component": "ToolbarGroupPrimaryRow",
+          "decorPx": 12,
+          "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]"
+        },
+        {
+          "selector": "button.h-8.shrink-0.rounded-[var(--ds-radius-lg)].px-3",
+          "component": "ToolbarGroupPrimaryRow",
+          "decorPx": 8,
+          "clippedBy": "div.relative.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)]"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/impostazioni",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 1,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 515.8
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.min-h-10.w-full.min-w-0.cursor-pointer",
+          "component": "SettingsMobileSectionPicker",
+          "decorPx": 12,
+          "clippedBy": "main.gestionale-scroll-y.gestionale-scrollbar.w-full.gestionale-responsive-core"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    },
+    {
+      "route": "/dashboard/security",
+      "innerWidth": 724,
+      "shellTier": "mobile",
+      "frameWidth": null,
+      "rawClipHitCount": 3,
+      "rootClipperCount": 1,
+      "horizRootClippers": [],
+      "topVertOnly": {
+        "parent": "div.cab-app-shell.flex.min-h-0.h-[var(--cab-app-height,100dvh)]",
+        "vertPx": 1288.8
+      },
+      "clippedBleedCount": 20,
+      "topBleed": [
+        {
+          "selector": "button.inline-flex.min-h-11.min-w-11.shrink-0",
+          "component": "GestionaleShellLayoutProvider",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "button.inline-flex.min-h-[2.5rem].min-w-0.shrink-0",
+          "component": "AccountMenu",
+          "decorPx": 12,
+          "clippedBy": "div.cab-gestionale-scroll-gutter-mirror.w-full.min-w-0"
+        },
+        {
+          "selector": "section.min-w-0.max-w-full.rounded-[var(--ds-radius-xl)].border-[color:var(--cab-border)]",
+          "component": "ShellCard",
+          "decorPx": 12,
+          "clippedBy": "div.min-w-0.max-w-full.overflow-x-clip.space-y-[length:var(--ds-space-xl)]"
+        }
+      ],
+      "fixedOutsideHoriz": [],
+      "shellChain": [
+        {
+          "name": "documentElement",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "body",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "cab-app-shell",
+          "clipContext": "overflow",
+          "overflow": "hidden"
+        },
+        {
+          "name": "main",
+          "clipContext": "overflow",
+          "overflow": "hidden auto"
+        },
+        {
+          "name": "header",
+          "clipContext": "backdrop-filter",
+          "overflow": "visible"
+        }
+      ]
+    }
+  ]
+}

@@ -12,3 +12,11 @@ export const LAVORAZIONI_REPORT_FILTERS: LavorazioneFilters = {
   includeMezzo: false,
   fetchMode: "report",
 };
+
+/** Dashboard SSR: lista attiva senza embed mezzo (enrich top-N server-side). */
+export const LAVORAZIONI_DASHBOARD_STATS_FILTERS: LavorazioneFilters = {
+  includeMezzo: false,
+  fetchMode: "light",
+  includeProfiles: false,
+  archived: false,
+};

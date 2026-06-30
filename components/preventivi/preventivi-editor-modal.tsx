@@ -43,6 +43,7 @@ import {
   dsTable,
   dsTableActionBtnDanger,
   dsTableActionGlyph,
+  dsTableFixed,
   dsTableRow,
   dsTableWrap,
 } from "@/lib/ui/design-system";
@@ -67,6 +68,15 @@ import type { SchedaIngressoFields } from "@/types/schede";
 import { GlobalDatePickerYmd } from "@/components/gestionale/global-input";
 import { PDF_PREVENTIVO_IVA_PERCENT } from "@/lib/pdf/preventivo-pdf-layout";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
+import { DdtDetailDrawer } from "@/components/ddt/ddt-detail-drawer";
+import { DdtPreventivoPanel } from "@/components/ddt/ddt-preventivo-panel";
+import { buildDdtDraftFromPreventivoAuto } from "@/lib/ddt/preventivo-to-ddt-draft";
+import type { DdtDetail } from "@/lib/ddt/types";
+import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
+import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
+import { usePermissions } from "@/src/hooks/use-permissions";
+import { ddtService } from "@/src/services/ddt.service";
+import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { dateInputValueToIso, isoToDateInputValue } from "@/lib/lavorazioni/date-day-only";
 
 function cloneRecord(p: PreventivoRecord): PreventivoRecord {
@@ -170,6 +180,16 @@ export function PreventiviEditorModal({
   const draftRef = useRef<PreventivoRecord | null>(null);
   const [draft, setDraft] = useState<PreventivoRecord | null>(null);
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
+  const [ddtDrawer, setDdtDrawer] = useState<{ open: boolean; detail: DdtDetail | null }>({ open: false, detail: null });
+  const [ddtBusy, setDdtBusy] = useState(false);
+  const prevPerms = usePermissions("preventivi");
+  const toast = useGestionaleToast();
+  const preventivoId = record?.id ?? "";
+  const { getDdtForPreventivo, refetch: refetchDdtIndex, isLoading: ddtIndexLoading } = usePreventivoDdtIndex(
+    preventivoId ? [preventivoId] : [],
+    open && !isNew && Boolean(preventivoId),
+  );
+  const activeDdt = preventivoId ? getDdtForPreventivo(preventivoId) : null;
   const dataCreazioneFieldId = useId();
   const lavorazioniFieldId = useId();
   const costoOrarioFieldId = useId();
@@ -255,6 +275,83 @@ export function PreventiviEditorModal({
     setFields: setAnagraficaFields,
     mezzi: mezziCatalog,
   });
+
+  const openDdtDrawer = useCallback(async (ddtId: string) => {
+    const detail = await ddtService.getDetail(ddtId);
+    if (!detail.success || !detail.data) {
+      toast.errorOnce("ddt-detail", detail.error ?? "Impossibile aprire il DDT.");
+      return;
+    }
+    setDdtDrawer({ open: true, detail: detail.data });
+  }, [toast]);
+
+  const createOrOpenDdt = useCallback(async () => {
+    if (!draft || !preventivoId) return;
+    const existing = getDdtForPreventivo(preventivoId);
+    if (existing) {
+      await openDdtDrawer(existing.id);
+      return;
+    }
+    if (!prevPerms.canWrite) return;
+    setDdtBusy(true);
+    try {
+      const payload = buildDdtDraftFromPreventivoAuto({ preventivo: draft, preventivoId });
+      const created = await ddtService.createOrReplaceForPreventivo(payload);
+      if (!created.success || !created.data) throw new Error(created.error ?? "Creazione DDT non riuscita.");
+      await refetchDdtIndex();
+      await openDdtDrawer(created.data.id);
+      toast.successOnce("ddt-created", "DDT generato.");
+    } catch (e) {
+      toast.errorOnce("ddt-create", e);
+    } finally {
+      setDdtBusy(false);
+    }
+  }, [draft, getDdtForPreventivo, openDdtDrawer, preventivoId, prevPerms.canWrite, refetchDdtIndex, toast]);
+
+  const regenerateDdt = useCallback(async () => {
+    if (!draft || !preventivoId || !prevPerms.canWrite) return;
+    if (!window.confirm("Rigenerare il DDT? Il documento precedente verrà annullato.")) return;
+    setDdtBusy(true);
+    try {
+      const payload = buildDdtDraftFromPreventivoAuto({ preventivo: draft, preventivoId });
+      const created = await ddtService.createOrReplaceForPreventivo(payload);
+      if (!created.success || !created.data) throw new Error(created.error ?? "Rigenerazione non riuscita.");
+      await refetchDdtIndex();
+      await openDdtDrawer(created.data.id);
+      toast.successOnce("ddt-regen", "DDT rigenerato.");
+    } catch (e) {
+      toast.errorOnce("ddt-regen", e);
+    } finally {
+      setDdtBusy(false);
+    }
+  }, [draft, openDdtDrawer, preventivoId, prevPerms.canWrite, refetchDdtIndex, toast]);
+
+  const refreshDdtDrawer = useCallback(async () => {
+    const detail = ddtDrawer.detail;
+    if (!detail) return;
+    const next = await ddtService.getDetail(detail.document.id);
+    if (next.success && next.data) {
+      setDdtDrawer((prev) => ({ ...prev, detail: next.data! }));
+    }
+    void refetchDdtIndex();
+  }, [ddtDrawer.detail, refetchDdtIndex]);
+
+  const printDdtPdf = useCallback(async () => {
+    if (!activeDdt || ddtBusy) return;
+    setDdtBusy(true);
+    try {
+      const opened = await openPdfArtifact("ddt", { id: activeDdt.id });
+      if (opened) {
+        await ddtService.markStampato(activeDdt.id);
+        void refetchDdtIndex();
+        if (ddtDrawer.detail?.document.id === activeDdt.id) void refreshDdtDrawer();
+      }
+    } catch (e) {
+      toast.errorOnce("ddt-print", e);
+    } finally {
+      setDdtBusy(false);
+    }
+  }, [activeDdt, ddtBusy, ddtDrawer.detail?.document.id, refetchDdtIndex, refreshDdtDrawer, toast]);
 
   function patchAnagrafica(partial: Partial<SchedaIngressoFields>) {
     if (!draft) return;
@@ -609,14 +706,23 @@ export function PreventiviEditorModal({
               }
             >
               <div
-                className={`${dsTableWrap} ${dsScrollbar}`}
+                className={`${dsTableWrap} ${dsScrollbar} min-w-0`}
                 role="region"
                 aria-label="Righe ricambi e materiali, scorrimento orizzontale su schermi piccoli"
               >
-                <table className={`${dsTable} min-w-[960px]`}>
+                <table className={`${dsTable} ${dsTableFixed} w-full min-w-0`}>
+                  <colgroup>
+                    <col className="w-[12%]" />
+                    <col className="w-[28%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[12%]" />
+                    <col className="w-[4%]" />
+                  </colgroup>
                   <GlobalTableHead sticky>
                       <GlobalTableHeadLabel label="Codice OE" />
-                      <GlobalTableHeadLabel label="Descrizione" thClassName="min-w-[140px]" />
+                      <GlobalTableHeadLabel label="Descrizione" thClassName="min-w-0" />
                       <GlobalTableHeadLabel label="Qtà" align="right" thClassName="w-24" />
                       <GlobalTableHeadLabel label="Prezzo unit." align="right" thClassName="w-28" />
                       <GlobalTableHeadLabel label="Sconto %" align="right" thClassName="w-24" />
@@ -892,8 +998,35 @@ export function PreventiviEditorModal({
                 />
               </FormField>
             </FormSection>
+
+            {!isNew && record?.id ? (
+              <DdtPreventivoPanel
+                activeDdt={activeDdt}
+                loading={ddtIndexLoading}
+                busy={ddtBusy}
+                canWrite={prevPerms.canWrite}
+                onOpenDrawer={() => {
+                  if (activeDdt) void openDdtDrawer(activeDdt.id);
+                }}
+                onGenerate={() => void createOrOpenDdt()}
+                onRegenerate={() => void regenerateDdt()}
+                onPrintPdf={() => void printDdtPdf()}
+              />
+            ) : null}
           </div>
         </GestionaleModalScrollBody>
+
+        <DdtDetailDrawer
+          open={ddtDrawer.open}
+          detail={ddtDrawer.detail}
+          onClose={() => setDdtDrawer({ open: false, detail: null })}
+          canWrite={prevPerms.canWrite}
+          isAdmin={false}
+          canRegenerate={prevPerms.canWrite}
+          regenerateBusy={ddtBusy}
+          onRegenerate={() => void regenerateDdt()}
+          onChanged={() => void refreshDdtDrawer()}
+        />
 
         <GestionaleUnsavedChangesDialog
           open={unsavedExitOpen}

@@ -2,6 +2,7 @@
 
 import { RecordImageManager, type RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import { LavorazioneDocumentsManager } from "@/components/gestionale/media/lavorazione-documents-manager";
+import { LavorazioneDdtPanel } from "@/components/ddt/lavorazione-ddt-panel";
 import { LAVORAZIONE_DOCUMENT_SLOTS } from "@/lib/lavorazioni/lavorazione-documents";
 import { dsHubModalSection, dsHubModalSectionTitle } from "@/lib/ui/design-system";
 
@@ -40,6 +41,7 @@ export function LavorazioneMediaPanel({
             onDocumentEvent={onDocumentEvent}
           />
         ))}
+        <LavorazioneDdtPanel lavorazioneId={lavorazioneId} />
       </>
     );
   }
@@ -61,6 +63,7 @@ export function LavorazioneMediaPanel({
           canEdit={canEdit}
           onDocumentEvent={onDocumentEvent}
         />
+        <LavorazioneDdtPanel lavorazioneId={lavorazioneId} />
       </div>
     </section>
   );

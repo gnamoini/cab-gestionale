@@ -20,10 +20,12 @@ import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { LoadingFormSkeleton } from "@/components/design-system";
 import { dsDashboardWidgetTitle, dsSurfaceCard } from "@/lib/ui/design-system";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { pickDashboardPriorityLavorazioneIds, DASHBOARD_SCHEde_PREFETCH_LIMIT } from "@/lib/view/dashboard-widgets-selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
 const dashboardFeedScrollClass = layoutScrollYSafe;
@@ -48,7 +50,7 @@ export function DashboardRecentFeeds() {
     { enabled: !staging, ...viewOpts },
   );
   const schedeLavorazioneIds = useMemo(
-    () => (lavListQ.data ?? []).map((row) => row.id),
+    () => pickDashboardPriorityLavorazioneIds(lavListQ.data ?? [], DASHBOARD_SCHEde_PREFETCH_LIMIT),
     [lavListQ.data],
   );
   const { store: schedeStore } = useSchedeBundlesQuery(!staging, {
@@ -67,8 +69,14 @@ export function DashboardRecentFeeds() {
     [lavorazioniById, schedeStore],
   );
 
-  const lavLogsQ = useLogListQuery({ entita: "lavorazioni", limit: 12 }, { enabled: !staging, ...viewOpts });
-  const magLogsQ = useLogListQuery({ entita: "magazzino_ricambi", limit: 12 }, { enabled: !staging, ...viewOpts });
+  const lavLogsQ = useLogListQuery(
+    { entita: "lavorazioni", limit: GESTIONALE_LOG_FEED_LIMIT },
+    { enabled: !staging, ...viewOpts },
+  );
+  const magLogsQ = useLogListQuery(
+    { entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
+    { enabled: !staging, ...viewOpts },
+  );
 
   const lavSlice = useMemo(() => {
     return buildLogModificheDisplayEntries(lavLogsQ.data ?? [], (row) =>
@@ -101,7 +109,7 @@ export function DashboardRecentFeeds() {
   if (staging) return null;
 
   return (
-    <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+    <div className="grid min-w-0 gap-4 cab-shell-desktop:grid-cols-2">
       <section className={`flex min-h-[280px] min-w-0 max-w-full flex-col overflow-hidden ${dsSurfaceCard} p-4 sm:p-5`}>
         <h2 className={dsDashboardWidgetTitle}>Ultime modifiche lavorazioni</h2>
         <div className={`${dashboardFeedScrollClass} mt-3 max-h-[min(360px,52vh)] min-h-0 min-w-0 flex-1 pr-1`}>

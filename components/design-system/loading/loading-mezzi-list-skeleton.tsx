@@ -1,6 +1,10 @@
 "use client";
 
 import { memo } from "react";
+import {
+  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
+  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
+} from "@/lib/ui/use-gestionale-list-layout";
 import { SkeletonCard, SkeletonTable } from "./skeleton-primitives";
 import { SKELETON_MIN_HEIGHT } from "./skeleton-layout-presets";
 
@@ -16,8 +20,8 @@ export const LoadingMezziListSkeleton = memo(function LoadingMezziListSkeleton({
   return (
     <div className={`space-y-4 ${className}`.trim()} role="status" aria-busy="true" aria-label="Caricamento mezzi">
       {withToolbar ? <SkeletonCard minHeightClass={SKELETON_MIN_HEIGHT.toolbar} className="p-0" /> : null}
-      <SkeletonTable visibilityClass="hidden xl:block" minHeightClass={SKELETON_MIN_HEIGHT.tableCompact} />
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:hidden" aria-hidden>
+      <SkeletonTable visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS} minHeightClass={SKELETON_MIN_HEIGHT.tableCompact} />
+      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`} aria-hidden>
         {Array.from({ length: 4 }).map((_, i) => (
           <SkeletonCard key={i} minHeightClass={SKELETON_MIN_HEIGHT.cardMobile} className="min-w-0 h-full" />
         ))}

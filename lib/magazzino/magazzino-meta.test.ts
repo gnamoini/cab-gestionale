@@ -59,6 +59,20 @@ const ltRicambio = defaultRicambioMagazzinoFields({
 assert.equal(ricambioUiToMagazzinoMeta(ltRicambio).unitaMisura, "lt");
 assert.equal(ricambioUiToMagazzinoMeta(defaultRicambioMagazzinoFields({ id: "uuid-pz", descrizione: "Bullone" })).unitaMisura, undefined);
 
+const listinoMeta = {
+  generatoAutomaticamente: true as const,
+  documentoId: "00000000-0000-4000-8000-000000000001",
+  documentoNome: "Listino test",
+  importatoAt: "2026-06-15T12:00:00.000Z",
+  batchId: "00000000-0000-4000-8000-000000000002",
+};
+const listinoRicambio = defaultRicambioMagazzinoFields({
+  id: "uuid-listino",
+  descrizione: "Filtro",
+  listinoImport: listinoMeta,
+});
+assert.deepEqual(ricambioUiToMagazzinoMeta(listinoRicambio).listinoImport, listinoMeta);
+
 const renamed = patchFornitoriAlternativiFornitoreRename(
   {
     fornitoreNonOriginale: "Old",

@@ -98,14 +98,9 @@ export function FilterSelectWrap({ children }: { children: ReactNode }) {
   );
 }
 
-export function prioritaLabel(p: string) {
-  return p.charAt(0).toUpperCase() + p.slice(1);
-}
+import { prioritaLabel, statoPillShellClass } from "@/lib/lavorazioni/lavorazioni-pill-styles";
 
-/** Classi layout pill tabella (colori da `*PillShellStyle` + inline style). */
-export function statoPillShellClass(): string {
-  return "relative inline-flex w-full min-w-0 max-w-full items-center overflow-hidden rounded-lg border border-black/10 shadow-sm shadow-black/15 transition-[filter,box-shadow] duration-200 ease-out hover:shadow-md focus-within:ring-2 focus-within:ring-inset focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_45%,transparent)] dark:border-white/10";
-}
+export { prioritaLabel, statoPillShellClass };
 
 /** Pill stato a larghezza dinamica (fit-content, senza troncamento). */
 export function statoPillShellClassDynamic(): string {

@@ -10,7 +10,8 @@ import {
 
 assert.ok(layoutPageContainer.includes("min-w-0"));
 assert.ok(layoutPageContainer.includes("max-w-full"));
-assert.ok(layoutPageContainer.includes("overflow-x-clip"));
+assert.ok(layoutPageContainer.includes("cab-layout-page-stack"));
+assert.ok(!layoutPageContainer.includes("overflow-x-clip"));
 
 assert.equal(ResponsiveLayoutCore.pageContainer, layoutPageContainer);
 assert.equal(ResponsiveLayoutCore.pageRoot, layoutPageRoot);

@@ -48,7 +48,7 @@ export async function openPdfArtifact(
   pushGestionaleToast("Generazione PDF in corso…", "info", 5000);
 
   try {
-    const res = await fetch(url, { credentials: "same-origin" });
+    const res = await fetch(url, { credentials: "same-origin", cache: "no-store" });
     if (!res.ok) {
       let message = "Generazione PDF non riuscita";
       try {

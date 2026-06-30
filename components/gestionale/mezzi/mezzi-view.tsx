@@ -6,6 +6,7 @@ import { MezziEditModal } from "@/components/gestionale/mezzi/mezzi-edit-modal";
 import { MezziNewModal } from "@/components/gestionale/mezzi/mezzi-new-modal";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
+import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { MezziSearchBar, MezziFilterFields } from "@/components/gestionale/mezzi/mezzi-filters";
 import { MezziHubDetailModal } from "@/components/gestionale/mezzi/mezzi-hub-detail-modal";
@@ -23,6 +24,7 @@ import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb, mezzoHaLavo
 import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import { dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
+import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
 import { Drawer, LoadingErrorState, LoadingFormSkeleton, LoadingMezziListSkeleton, PageToolbar, PageToolbarCtaLabel, PageToolbarResultCount } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
@@ -60,6 +62,7 @@ function naturalMezziOrder(a: MezzoGestito, b: MezzoGestito) {
 }
 
 export function MezziView() {
+  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
   const mezziPerm = usePermissions("mezzi");
   const { user } = useAuth();
   const canEditVehicles = mezziPerm.canWrite;
@@ -421,12 +424,14 @@ export function MezziView() {
 
   return (
     <GestionaleSectionGate module="mezzi">
-    <div className={layoutPageRoot}>
+    <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
       <PageHeader
         title="Mezzi"
         actions={
-          <GestionalePageToolbarActions
+          <div className="flex flex-wrap items-center gap-2">
+            <ModuleImportEntry entity="mezzi" module="mezzi" onCompleted={() => void refetchMezzi()} />
+            <GestionalePageToolbarActions
             canUndo={Boolean(undoableMezziLog)}
             undoDisabled={!canEditVehicles}
             undoPending={updateMut.isPending}
@@ -434,6 +439,7 @@ export function MezziView() {
             onOpenLog={() => setLogOpen(true)}
             logTitle="Storico modifiche anagrafica mezzi"
           />
+          </div>
         }
       />
 
@@ -511,6 +517,7 @@ export function MezziView() {
               <LoadingMezziListSkeleton withToolbar={false} />
             ) : (
               <MezziTable
+                listLayout={listLayout}
                 rows={pagedSorted}
                 interventiByMezzoId={interventiByMezzoId}
                 ultimaModificaInfoByMezzoId={ultimaModificaInfoByMezzoId}

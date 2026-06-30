@@ -28,6 +28,7 @@ import {
   GlobalAttrezzatureModelloSelect,
 } from "@/components/gestionale/global-input";
 import { DocumentoFileDropzone } from "@/components/gestionale/documenti/documento-file-dropzone";
+import { isListinoImportSupportedFileName } from "@/lib/magazzino/listino-import/listino-import-client";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { cabModalLayerClass } from "@/lib/ui/mobile-modal-behavior";
 import { useAuth } from "@/context/auth-context";
@@ -181,10 +182,12 @@ export function UploadDocumentoModal({
   isUploading = false,
   onRequestClose,
   onSubmit,
+  onImportListino,
 }: {
   isUploading?: boolean;
   onRequestClose: () => void;
-  onSubmit: (payload: Omit<DocumentoGestionale, "id">) => void | Promise<void>;
+  onSubmit: (payload: Omit<DocumentoGestionale, "id">) => void | Promise<DocumentoGestionale | void>;
+  onImportListino?: (doc: DocumentoGestionale) => void;
 }) {
   const { authorName } = useAuth();
   const gestToast = useGestionaleToast();
@@ -201,6 +204,7 @@ export function UploadDocumentoModal({
   const [pickedSizeKb, setPickedSizeKb] = useState<number>(0);
   const [marcaInvalid, setMarcaInvalid] = useState(false);
   const [modelloInvalid, setModelloInvalid] = useState(false);
+  const [importListinoToMagazzino, setImportListinoToMagazzino] = useState(false);
   const submitLock = useSubmitLock();
 
   const marcaOnly = isDocumentoMarcaOnlyCategoria(categoria);
@@ -219,11 +223,13 @@ export function UploadDocumentoModal({
     if (!f) {
       setPickedName("");
       setPickedSizeKb(0);
+      setImportListinoToMagazzino(false);
       return;
     }
     setPickedName(f.name);
     setPickedSizeKb(Math.max(1, Math.round(f.size / 1024)));
     if (!nome.trim()) setNome(stripFileExtension(f.name));
+    if (!isListinoImportSupportedFileName(f.name)) setImportListinoToMagazzino(false);
   }
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
@@ -288,7 +294,10 @@ export function UploadDocumentoModal({
         const resolved = resolveDocumentoApplicazione(tmp);
         const { id: _drop, ...payload } = resolved;
         try {
-          await onSubmit(payload as Omit<DocumentoGestionale, "id">);
+          const saved = await onSubmit(payload as Omit<DocumentoGestionale, "id">);
+          if (saved && importListinoToMagazzino && snap.categoria === "listini") {
+            onImportListino?.(saved);
+          }
           onRequestClose();
         } catch {
           /* errore upload: modale resta aperta per correzione / retry */
@@ -296,6 +305,9 @@ export function UploadDocumentoModal({
       },
     );
   }
+
+  const showListinoImportOption =
+    categoria === "listini" && pickedName.trim().length > 0 && isListinoImportSupportedFileName(pickedName);
 
   const canSubmit =
     !isUploading &&
@@ -333,6 +345,24 @@ export function UploadDocumentoModal({
             disabled={isUploading}
             uploadPhase={isUploading ? "uploading" : undefined}
           />
+
+          {showListinoImportOption ? (
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_6%,var(--cab-surface))] px-3 py-2.5">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={importListinoToMagazzino}
+                onChange={(e) => setImportListinoToMagazzino(e.target.checked)}
+                disabled={isUploading}
+              />
+              <span className="min-w-0 text-sm text-[color:var(--cab-text)]">
+                Importa ricambi in magazzino
+                <span className="mt-0.5 block text-xs text-[color:var(--cab-text-muted)]">
+                  Excel/CSV: analisi immediata · PDF: analisi IA con anteprima
+                </span>
+              </span>
+            </label>
+          ) : null}
 
           <label htmlFor="doc-upload-nome" className="block text-xs font-medium text-zinc-500 dark:text-zinc-400">
             Nome file

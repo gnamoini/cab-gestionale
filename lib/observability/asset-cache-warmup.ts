@@ -40,7 +40,7 @@ function runWarmupFetch(url: string): void {
   const key = warmupKey(url);
   activeWarmups += 1;
   warmedAt.set(key, Date.now());
-  void fetch(url, { credentials: "include" })
+  void fetch(url, { credentials: "include", cache: "no-store" })
     .catch(() => {})
     .finally(() => {
       activeWarmups = Math.max(0, activeWarmups - 1);

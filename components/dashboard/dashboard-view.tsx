@@ -32,7 +32,7 @@ const DashboardSistemaLogListEmbedded = dynamic(
 import { AdminNotificationsBell } from "@/components/dashboard/admin-notifications-bell";
 import { Drawer } from "@/components/design-system";
 import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
-import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpBtnNeutral } from "@/lib/ui/erp-tokens";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import { dsStackPage } from "@/lib/ui/design-system";
 

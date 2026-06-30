@@ -5,7 +5,7 @@ import { defaultRicambioMagazzinoFields } from "@/lib/magazzino/ricambio-magazzi
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { buildKpiPerformanceModel } from "@/lib/report/kpi-performance/build-kpi-performance-model";
-import { countMezziInOfficinaProxy, disponibilitaFlottaPctProxy } from "@/lib/report/kpi-performance/kpi-performance-formulas";
+import { countMezziInOfficinaProxy, disponibilitaFlottaPctProxy, disponibilitaFlottaPerCliente, peggiorDisponibilitaCliente } from "@/lib/report/kpi-performance/kpi-performance-formulas";
 import { buildReportSemanticIndex } from "@/lib/report/report-semantic-index";
 import { endOfLocalDay, startOfLocalDay } from "@/lib/report/date-ranges";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -135,6 +135,12 @@ const semanticIndex = buildReportSemanticIndex({
 assert.equal(countMezziInOfficinaProxy([mezzo], [lavRowOpen]), 1);
 assert.equal(disponibilitaFlottaPctProxy([mezzo], [lavRowOpen]), 0);
 
+const dispPerCliente = disponibilitaFlottaPerCliente([mezzo], [lavRowOpen]);
+assert.equal(dispPerCliente.length, 1);
+assert.equal(dispPerCliente[0]!.cliente, "C");
+assert.equal(dispPerCliente[0]!.disponibilitaPct, 0);
+assert.equal(peggiorDisponibilitaCliente(dispPerCliente)?.disponibilitaPct, 0);
+
 const model = buildKpiPerformanceModel({
   anchor: range.end,
   range,
@@ -155,6 +161,8 @@ const model = buildKpiPerformanceModel({
 assert.equal(model.operational.openCount, 1);
 assert.equal(model.operational.closedInPeriod, 1);
 assert.equal(model.fleet.mezziInOfficina, 1);
+assert.equal(model.fleet.disponibilitaPerCliente[0]!.disponibilitaPct, 0);
+assert.equal(model.fleet.peggiorDisponibilita?.cliente, "C");
 assert.equal(model.economic.ricambiCostPeriod, 30);
 assert.ok(model.alerts.some((a) => a.id === "open-late"));
 assert.ok(model.alerts.some((a) => a.id === "sotto-scorta"));

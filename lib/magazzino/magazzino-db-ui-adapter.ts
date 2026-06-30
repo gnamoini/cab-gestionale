@@ -68,6 +68,7 @@ export function magazzinoRowToRicambioUI(
     codiceFornitoreNonOriginale: fromMeta.codiceFornitoreNonOriginale,
     prezzoFornitoreNonOriginale: fromMeta.prezzoFornitoreNonOriginale,
     scontoFornitoreNonOriginale: fromMeta.scontoFornitoreNonOriginale,
+    listinoImport: meta.listinoImport,
   };
 }
 

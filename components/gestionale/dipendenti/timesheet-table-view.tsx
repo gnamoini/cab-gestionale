@@ -11,8 +11,10 @@ import type {
 } from "@/lib/dipendenti/types";
 import { DipendentiMobileDayList } from "@/components/gestionale/dipendenti/dipendenti-mobile-day-list";
 import { DipendentiTimesheetGrid } from "@/components/gestionale/dipendenti/dipendenti-timesheet-grid";
+import type { GestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
 
 export function TimesheetTableView({
+  listLayout,
   monthKey,
   periodDays,
   employees,
@@ -27,6 +29,7 @@ export function TimesheetTableView({
   accentDateYmd = null,
   accentFadingOut = false,
 }: {
+  listLayout: GestionaleListLayout;
   monthKey: TimesheetMonthKey;
   periodDays: readonly TimesheetDayInfo[];
   employees: readonly DipendenteTimesheetEmployeeRow[];
@@ -43,6 +46,7 @@ export function TimesheetTableView({
 }) {
   return (
     <div className="flex-safe-col min-w-0 max-w-full gap-3">
+      {listLayout === "desktop" ? (
       <DipendentiTimesheetGrid
         monthKey={monthKey}
         days={periodDays}
@@ -57,6 +61,8 @@ export function TimesheetTableView({
         accentDateYmd={accentDateYmd}
         accentFadingOut={accentFadingOut}
       />
+      ) : null}
+      {listLayout === "mobile" ? (
       <DipendentiMobileDayList
         periodDays={periodDays}
         employees={employees}
@@ -68,6 +74,7 @@ export function TimesheetTableView({
         tipiAssenza={tipiAssenza}
         readOnly={readOnly}
       />
+      ) : null}
     </div>
   );
 }

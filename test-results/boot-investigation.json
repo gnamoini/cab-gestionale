@@ -1,0 +1,1226 @@
+{
+  "collectedAt": "2026-06-16T22:46:11.947Z",
+  "baseUrl": "http://localhost:3000",
+  "viewports": {
+    "cursor_724": {
+      "innerWidth": 724,
+      "pathname": "/login",
+      "investigation": {
+        "exportedAt": "2026-06-16T22:48:26.689Z",
+        "enabled": true,
+        "eventCount": 18,
+        "events": [
+          {
+            "ts": "2026-06-16T22:48:21.861Z",
+            "atMs": 1781650101861,
+            "tag": "RENDER",
+            "component": "vv_sync",
+            "meta": {
+              "reason": "resize",
+              "keyboardInset": 0,
+              "vvHeight": 900,
+              "vvOffsetTop": 0
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.864Z",
+            "atMs": 1781650101864,
+            "tag": "MOUNT",
+            "component": "BootInvestigationMount"
+          },
+          {
+            "ts": "2026-06-16T22:48:21.865Z",
+            "atMs": 1781650101865,
+            "tag": "BOOT",
+            "component": "client_hydrated",
+            "meta": {
+              "pathname": "/login",
+              "innerWidth": 724,
+              "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.868Z",
+            "atMs": 1781650101868,
+            "tag": "MOUNT",
+            "component": "AuthProvider",
+            "meta": {
+              "initialStatus": "loading",
+              "hasSnapshotUser": false
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.871Z",
+            "atMs": 1781650101871,
+            "tag": "MOUNT",
+            "component": "GlobalLoadingProvider"
+          },
+          {
+            "ts": "2026-06-16T22:48:21.872Z",
+            "atMs": 1781650101872,
+            "tag": "MOUNT",
+            "component": "QueryProvider"
+          },
+          {
+            "ts": "2026-06-16T22:48:21.873Z",
+            "atMs": 1781650101873,
+            "tag": "MOUNT",
+            "component": "AppProviders"
+          },
+          {
+            "ts": "2026-06-16T22:48:21.899Z",
+            "atMs": 1781650101899,
+            "tag": "STORE_UPDATE",
+            "component": "globalLoading",
+            "detail": "false→true",
+            "meta": {
+              "prev": false,
+              "next": true,
+              "message": "Caricamento…",
+              "stackDepth": 1
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.903Z",
+            "atMs": 1781650101903,
+            "tag": "AUTH",
+            "component": "onAuthStateChange",
+            "meta": {
+              "event": "INITIAL_SESSION",
+              "hasSession": false
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.904Z",
+            "atMs": 1781650101904,
+            "tag": "QUERY",
+            "component": "fetch_start",
+            "detail": "[\"app_settings\",\"payload\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "payload"
+              ],
+              "status": "pending",
+              "fetchStatus": "fetching",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.905Z",
+            "atMs": 1781650101905,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"user_prefs\",\"none\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "user_prefs",
+                "none"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.906Z",
+            "atMs": 1781650101906,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"user_prefs\",\"none\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "user_prefs",
+                "none"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "added"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.906Z",
+            "atMs": 1781650101906,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"payload\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "payload"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "added"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.921Z",
+            "atMs": 1781650101921,
+            "tag": "STORE_UPDATE",
+            "component": "auth.status",
+            "detail": "loading→anonymous",
+            "meta": {
+              "prev": "loading",
+              "next": "anonymous"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.922Z",
+            "atMs": 1781650101922,
+            "tag": "AUTH",
+            "component": "AuthProvider",
+            "detail": "loading→anonymous",
+            "meta": {
+              "from": "loading",
+              "to": "anonymous"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.934Z",
+            "atMs": 1781650101934,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"user_prefs\",\"none\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "user_prefs",
+                "none"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.934Z",
+            "atMs": 1781650101934,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"payload\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "payload"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:48:21.936Z",
+            "atMs": 1781650101936,
+            "tag": "STORE_UPDATE",
+            "component": "globalLoading",
+            "detail": "true→false",
+            "meta": {
+              "prev": true,
+              "next": false,
+              "message": "Caricamento…",
+              "stackDepth": 0
+            }
+          }
+        ],
+        "loopAlerts": [],
+        "renderTotals": {},
+        "topRenders": []
+      },
+      "renderAudit": null,
+      "pendingQueries": [],
+      "login": {
+        "loggedIn": false,
+        "reason": "missing SMOKE_ADMIN_* env"
+      }
+    },
+    "mobile_390": {
+      "innerWidth": 390,
+      "pathname": "/login",
+      "investigation": {
+        "exportedAt": "2026-06-16T22:50:40.194Z",
+        "enabled": true,
+        "eventCount": 18,
+        "events": [
+          {
+            "ts": "2026-06-16T22:50:35.374Z",
+            "atMs": 1781650235374,
+            "tag": "RENDER",
+            "component": "vv_sync",
+            "meta": {
+              "reason": "resize",
+              "keyboardInset": 0,
+              "vvHeight": 844,
+              "vvOffsetTop": 0
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.376Z",
+            "atMs": 1781650235376,
+            "tag": "MOUNT",
+            "component": "BootInvestigationMount"
+          },
+          {
+            "ts": "2026-06-16T22:50:35.377Z",
+            "atMs": 1781650235377,
+            "tag": "BOOT",
+            "component": "client_hydrated",
+            "meta": {
+              "pathname": "/login",
+              "innerWidth": 390,
+              "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.382Z",
+            "atMs": 1781650235382,
+            "tag": "MOUNT",
+            "component": "AuthProvider",
+            "meta": {
+              "initialStatus": "loading",
+              "hasSnapshotUser": false
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.384Z",
+            "atMs": 1781650235384,
+            "tag": "MOUNT",
+            "component": "GlobalLoadingProvider"
+          },
+          {
+            "ts": "2026-06-16T22:50:35.386Z",
+            "atMs": 1781650235386,
+            "tag": "MOUNT",
+            "component": "QueryProvider"
+          },
+          {
+            "ts": "2026-06-16T22:50:35.386Z",
+            "atMs": 1781650235386,
+            "tag": "MOUNT",
+            "component": "AppProviders"
+          },
+          {
+            "ts": "2026-06-16T22:50:35.410Z",
+            "atMs": 1781650235410,
+            "tag": "STORE_UPDATE",
+            "component": "globalLoading",
+            "detail": "false→true",
+            "meta": {
+              "prev": false,
+              "next": true,
+              "message": "Caricamento…",
+              "stackDepth": 1
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.415Z",
+            "atMs": 1781650235415,
+            "tag": "AUTH",
+            "component": "onAuthStateChange",
+            "meta": {
+              "event": "INITIAL_SESSION",
+              "hasSession": false
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.416Z",
+            "atMs": 1781650235416,
+            "tag": "QUERY",
+            "component": "fetch_start",
+            "detail": "[\"app_settings\",\"payload\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "payload"
+              ],
+              "status": "pending",
+              "fetchStatus": "fetching",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.416Z",
+            "atMs": 1781650235416,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"user_prefs\",\"none\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "user_prefs",
+                "none"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.417Z",
+            "atMs": 1781650235417,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"user_prefs\",\"none\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "user_prefs",
+                "none"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "added"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.417Z",
+            "atMs": 1781650235417,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"payload\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "payload"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "added"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.432Z",
+            "atMs": 1781650235432,
+            "tag": "STORE_UPDATE",
+            "component": "auth.status",
+            "detail": "loading→anonymous",
+            "meta": {
+              "prev": "loading",
+              "next": "anonymous"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.433Z",
+            "atMs": 1781650235433,
+            "tag": "AUTH",
+            "component": "AuthProvider",
+            "detail": "loading→anonymous",
+            "meta": {
+              "from": "loading",
+              "to": "anonymous"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.446Z",
+            "atMs": 1781650235446,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"user_prefs\",\"none\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "user_prefs",
+                "none"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.446Z",
+            "atMs": 1781650235446,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"payload\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "payload"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:50:35.448Z",
+            "atMs": 1781650235448,
+            "tag": "STORE_UPDATE",
+            "component": "globalLoading",
+            "detail": "true→false",
+            "meta": {
+              "prev": true,
+              "next": false,
+              "message": "Caricamento…",
+              "stackDepth": 0
+            }
+          }
+        ],
+        "loopAlerts": [],
+        "renderTotals": {},
+        "topRenders": []
+      },
+      "renderAudit": null,
+      "pendingQueries": [],
+      "login": {
+        "loggedIn": false,
+        "reason": "missing SMOKE_ADMIN_* env"
+      }
+    },
+    "desktop_1440": {
+      "innerWidth": 1440,
+      "pathname": "/login",
+      "investigation": {
+        "exportedAt": "2026-06-16T22:52:53.534Z",
+        "enabled": true,
+        "eventCount": 18,
+        "events": [
+          {
+            "ts": "2026-06-16T22:52:48.712Z",
+            "atMs": 1781650368712,
+            "tag": "RENDER",
+            "component": "vv_sync",
+            "meta": {
+              "reason": "resize",
+              "keyboardInset": 0,
+              "vvHeight": 900,
+              "vvOffsetTop": 0
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.713Z",
+            "atMs": 1781650368713,
+            "tag": "MOUNT",
+            "component": "BootInvestigationMount"
+          },
+          {
+            "ts": "2026-06-16T22:52:48.715Z",
+            "atMs": 1781650368715,
+            "tag": "BOOT",
+            "component": "client_hydrated",
+            "meta": {
+              "pathname": "/login",
+              "innerWidth": 1440,
+              "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.718Z",
+            "atMs": 1781650368718,
+            "tag": "MOUNT",
+            "component": "AuthProvider",
+            "meta": {
+              "initialStatus": "loading",
+              "hasSnapshotUser": false
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.720Z",
+            "atMs": 1781650368720,
+            "tag": "MOUNT",
+            "component": "GlobalLoadingProvider"
+          },
+          {
+            "ts": "2026-06-16T22:52:48.722Z",
+            "atMs": 1781650368722,
+            "tag": "MOUNT",
+            "component": "QueryProvider"
+          },
+          {
+            "ts": "2026-06-16T22:52:48.723Z",
+            "atMs": 1781650368723,
+            "tag": "MOUNT",
+            "component": "AppProviders"
+          },
+          {
+            "ts": "2026-06-16T22:52:48.754Z",
+            "atMs": 1781650368754,
+            "tag": "STORE_UPDATE",
+            "component": "globalLoading",
+            "detail": "false→true",
+            "meta": {
+              "prev": false,
+              "next": true,
+              "message": "Caricamento…",
+              "stackDepth": 1
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.759Z",
+            "atMs": 1781650368759,
+            "tag": "AUTH",
+            "component": "onAuthStateChange",
+            "meta": {
+              "event": "INITIAL_SESSION",
+              "hasSession": false
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.759Z",
+            "atMs": 1781650368759,
+            "tag": "QUERY",
+            "component": "fetch_start",
+            "detail": "[\"app_settings\",\"payload\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "payload"
+              ],
+              "status": "pending",
+              "fetchStatus": "fetching",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.759Z",
+            "atMs": 1781650368759,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"user_prefs\",\"none\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "user_prefs",
+                "none"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.761Z",
+            "atMs": 1781650368761,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"user_prefs\",\"none\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "user_prefs",
+                "none"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "added"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.761Z",
+            "atMs": 1781650368761,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"payload\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "payload"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "added"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.776Z",
+            "atMs": 1781650368776,
+            "tag": "STORE_UPDATE",
+            "component": "auth.status",
+            "detail": "loading→anonymous",
+            "meta": {
+              "prev": "loading",
+              "next": "anonymous"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.777Z",
+            "atMs": 1781650368777,
+            "tag": "AUTH",
+            "component": "AuthProvider",
+            "detail": "loading→anonymous",
+            "meta": {
+              "from": "loading",
+              "to": "anonymous"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.789Z",
+            "atMs": 1781650368789,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"user_prefs\",\"none\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "user_prefs",
+                "none"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.789Z",
+            "atMs": 1781650368789,
+            "tag": "QUERY",
+            "component": "cache_updated",
+            "detail": "[\"app_settings\",\"payload\"]",
+            "meta": {
+              "queryKey": [
+                "app_settings",
+                "payload"
+              ],
+              "status": "pending",
+              "fetchStatus": "idle",
+              "dataUpdatedAt": 0,
+              "errorUpdatedAt": 0,
+              "eventType": "removed"
+            }
+          },
+          {
+            "ts": "2026-06-16T22:52:48.791Z",
+            "atMs": 1781650368791,
+            "tag": "STORE_UPDATE",
+            "component": "globalLoading",
+            "detail": "true→false",
+            "meta": {
+              "prev": true,
+              "next": false,
+              "message": "Caricamento…",
+              "stackDepth": 0
+            }
+          }
+        ],
+        "loopAlerts": [],
+        "renderTotals": {},
+        "topRenders": []
+      },
+      "renderAudit": null,
+      "pendingQueries": [],
+      "login": {
+        "loggedIn": false,
+        "reason": "missing SMOKE_ADMIN_* env"
+      }
+    }
+  },
+  "consoleSample": [
+    {
+      "ts": 1781649973843,
+      "type": "info",
+      "text": "%c%s%c [BOOT] 2026-06-16T22:46:13.287Z rsc_root_layout background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server   {\"hasUser\":false,\"userId\":null,\"sessionExpiresAt\":null,\"configurationError\":null}"
+    },
+    {
+      "ts": 1781649975741,
+      "type": "debug",
+      "text": "[RENDER] 2026-06-16T22:46:15.738Z vv_sync {reason: resize, keyboardInset: 0, vvHeight: 900, vvOffsetTop: 0}"
+    },
+    {
+      "ts": 1781649975744,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:46:15.743Z BootInvestigationMount"
+    },
+    {
+      "ts": 1781649975744,
+      "type": "debug",
+      "text": "[BOOT] 2026-06-16T22:46:15.744Z client_hydrated {pathname: /login, innerWidth: 724, userAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)}"
+    },
+    {
+      "ts": 1781649975751,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:46:15.750Z AuthProvider {initialStatus: loading, hasSnapshotUser: false}"
+    },
+    {
+      "ts": 1781649975761,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:46:15.760Z GlobalLoadingProvider"
+    },
+    {
+      "ts": 1781649975765,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:46:15.765Z QueryProvider"
+    },
+    {
+      "ts": 1781649975766,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:46:15.765Z AppProviders"
+    },
+    {
+      "ts": 1781649975818,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:46:15.816Z globalLoading — false→true {prev: false, next: true, message: Caricamento…, stackDepth: 1}"
+    },
+    {
+      "ts": 1781649975824,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:46:15.822Z onAuthStateChange {event: INITIAL_SESSION, hasSession: false}"
+    },
+    {
+      "ts": 1781649975826,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:46:15.825Z fetch_start — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: fetching, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781649975826,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:46:15.826Z cache_updated — [\"app_settings\",\"user_prefs\",\"none\"] {queryKey: Array(3), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781649975828,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:46:15.828Z cache_updated — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781649975863,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:46:15.858Z auth.status — loading→anonymous {prev: loading, next: anonymous}"
+    },
+    {
+      "ts": 1781649975863,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:46:15.860Z AuthProvider — loading→anonymous {from: loading, to: anonymous}"
+    },
+    {
+      "ts": 1781649975882,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:46:15.877Z globalLoading — true→false {prev: true, next: false, message: Caricamento…, stackDepth: 0}"
+    },
+    {
+      "ts": 1781650101794,
+      "type": "info",
+      "text": "%c%s%c [BOOT] 2026-06-16T22:48:21.590Z rsc_root_layout background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server   {\"hasUser\":false,\"userId\":null,\"sessionExpiresAt\":null,\"configurationError\":null}"
+    },
+    {
+      "ts": 1781650101863,
+      "type": "debug",
+      "text": "[RENDER] 2026-06-16T22:48:21.861Z vv_sync {reason: resize, keyboardInset: 0, vvHeight: 900, vvOffsetTop: 0}"
+    },
+    {
+      "ts": 1781650101865,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:21.864Z BootInvestigationMount"
+    },
+    {
+      "ts": 1781650101866,
+      "type": "debug",
+      "text": "[BOOT] 2026-06-16T22:48:21.865Z client_hydrated {pathname: /login, innerWidth: 724, userAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)}"
+    },
+    {
+      "ts": 1781650101870,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:21.868Z AuthProvider {initialStatus: loading, hasSnapshotUser: false}"
+    },
+    {
+      "ts": 1781650101872,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:21.871Z GlobalLoadingProvider"
+    },
+    {
+      "ts": 1781650101873,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:21.872Z QueryProvider"
+    },
+    {
+      "ts": 1781650101874,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:21.873Z AppProviders"
+    },
+    {
+      "ts": 1781650101900,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:48:21.899Z globalLoading — false→true {prev: false, next: true, message: Caricamento…, stackDepth: 1}"
+    },
+    {
+      "ts": 1781650101904,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:48:21.903Z onAuthStateChange {event: INITIAL_SESSION, hasSession: false}"
+    },
+    {
+      "ts": 1781650101905,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:48:21.904Z fetch_start — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: fetching, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650101905,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:48:21.905Z cache_updated — [\"app_settings\",\"user_prefs\",\"none\"] {queryKey: Array(3), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650101907,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:48:21.906Z cache_updated — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650101922,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:48:21.921Z auth.status — loading→anonymous {prev: loading, next: anonymous}"
+    },
+    {
+      "ts": 1781650101924,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:48:21.922Z AuthProvider — loading→anonymous {from: loading, to: anonymous}"
+    },
+    {
+      "ts": 1781650101937,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:48:21.936Z globalLoading — true→false {prev: true, next: false, message: Caricamento…, stackDepth: 0}"
+    },
+    {
+      "ts": 1781650107009,
+      "type": "info",
+      "text": "%c%s%c [BOOT] 2026-06-16T22:48:26.774Z rsc_root_layout background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server   {\"hasUser\":false,\"userId\":null,\"sessionExpiresAt\":null,\"configurationError\":null}"
+    },
+    {
+      "ts": 1781650107048,
+      "type": "debug",
+      "text": "[RENDER] 2026-06-16T22:48:27.043Z vv_sync {reason: resize, keyboardInset: 0, vvHeight: 844, vvOffsetTop: 0}"
+    },
+    {
+      "ts": 1781650107051,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:27.050Z BootInvestigationMount"
+    },
+    {
+      "ts": 1781650107052,
+      "type": "debug",
+      "text": "[BOOT] 2026-06-16T22:48:27.051Z client_hydrated {pathname: /login, innerWidth: 390, userAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)}"
+    },
+    {
+      "ts": 1781650107056,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:27.054Z AuthProvider {initialStatus: loading, hasSnapshotUser: false}"
+    },
+    {
+      "ts": 1781650107057,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:27.057Z GlobalLoadingProvider"
+    },
+    {
+      "ts": 1781650107060,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:27.059Z QueryProvider"
+    },
+    {
+      "ts": 1781650107061,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:48:27.060Z AppProviders"
+    },
+    {
+      "ts": 1781650107086,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:48:27.084Z globalLoading — false→true {prev: false, next: true, message: Caricamento…, stackDepth: 1}"
+    },
+    {
+      "ts": 1781650107088,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:48:27.088Z onAuthStateChange {event: INITIAL_SESSION, hasSession: false}"
+    },
+    {
+      "ts": 1781650107089,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:48:27.088Z fetch_start — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: fetching, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650107089,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:48:27.089Z cache_updated — [\"app_settings\",\"user_prefs\",\"none\"] {queryKey: Array(3), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650107091,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:48:27.091Z cache_updated — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650107108,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:48:27.105Z auth.status — loading→anonymous {prev: loading, next: anonymous}"
+    },
+    {
+      "ts": 1781650107108,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:48:27.106Z AuthProvider — loading→anonymous {from: loading, to: anonymous}"
+    },
+    {
+      "ts": 1781650107121,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:48:27.120Z globalLoading — true→false {prev: true, next: false, message: Caricamento…, stackDepth: 0}"
+    },
+    {
+      "ts": 1781650235331,
+      "type": "info",
+      "text": "%c%s%c [BOOT] 2026-06-16T22:50:35.081Z rsc_root_layout background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server   {\"hasUser\":false,\"userId\":null,\"sessionExpiresAt\":null,\"configurationError\":null}"
+    },
+    {
+      "ts": 1781650235376,
+      "type": "debug",
+      "text": "[RENDER] 2026-06-16T22:50:35.374Z vv_sync {reason: resize, keyboardInset: 0, vvHeight: 844, vvOffsetTop: 0}"
+    },
+    {
+      "ts": 1781650235379,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:35.376Z BootInvestigationMount"
+    },
+    {
+      "ts": 1781650235380,
+      "type": "debug",
+      "text": "[BOOT] 2026-06-16T22:50:35.377Z client_hydrated {pathname: /login, innerWidth: 390, userAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)}"
+    },
+    {
+      "ts": 1781650235383,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:35.382Z AuthProvider {initialStatus: loading, hasSnapshotUser: false}"
+    },
+    {
+      "ts": 1781650235384,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:35.384Z GlobalLoadingProvider"
+    },
+    {
+      "ts": 1781650235387,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:35.386Z QueryProvider"
+    },
+    {
+      "ts": 1781650235387,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:35.386Z AppProviders"
+    },
+    {
+      "ts": 1781650235412,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:50:35.410Z globalLoading — false→true {prev: false, next: true, message: Caricamento…, stackDepth: 1}"
+    },
+    {
+      "ts": 1781650235416,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:50:35.415Z onAuthStateChange {event: INITIAL_SESSION, hasSession: false}"
+    },
+    {
+      "ts": 1781650235417,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:50:35.416Z fetch_start — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: fetching, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650235417,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:50:35.416Z cache_updated — [\"app_settings\",\"user_prefs\",\"none\"] {queryKey: Array(3), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650235418,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:50:35.417Z cache_updated — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650235435,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:50:35.432Z auth.status — loading→anonymous {prev: loading, next: anonymous}"
+    },
+    {
+      "ts": 1781650235436,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:50:35.433Z AuthProvider — loading→anonymous {from: loading, to: anonymous}"
+    },
+    {
+      "ts": 1781650235449,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:50:35.448Z globalLoading — true→false {prev: true, next: false, message: Caricamento…, stackDepth: 0}"
+    },
+    {
+      "ts": 1781650240456,
+      "type": "info",
+      "text": "%c%s%c [BOOT] 2026-06-16T22:50:40.275Z rsc_root_layout background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server   {\"hasUser\":false,\"userId\":null,\"sessionExpiresAt\":null,\"configurationError\":null}"
+    },
+    {
+      "ts": 1781650240550,
+      "type": "debug",
+      "text": "[RENDER] 2026-06-16T22:50:40.548Z vv_sync {reason: resize, keyboardInset: 0, vvHeight: 900, vvOffsetTop: 0}"
+    },
+    {
+      "ts": 1781650240551,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:40.550Z BootInvestigationMount"
+    },
+    {
+      "ts": 1781650240552,
+      "type": "debug",
+      "text": "[BOOT] 2026-06-16T22:50:40.551Z client_hydrated {pathname: /login, innerWidth: 1440, userAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)}"
+    },
+    {
+      "ts": 1781650240556,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:40.554Z AuthProvider {initialStatus: loading, hasSnapshotUser: false}"
+    },
+    {
+      "ts": 1781650240557,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:40.556Z GlobalLoadingProvider"
+    },
+    {
+      "ts": 1781650240562,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:40.560Z QueryProvider"
+    },
+    {
+      "ts": 1781650240562,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:50:40.561Z AppProviders"
+    },
+    {
+      "ts": 1781650240584,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:50:40.583Z globalLoading — false→true {prev: false, next: true, message: Caricamento…, stackDepth: 1}"
+    },
+    {
+      "ts": 1781650240587,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:50:40.586Z onAuthStateChange {event: INITIAL_SESSION, hasSession: false}"
+    },
+    {
+      "ts": 1781650240588,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:50:40.587Z fetch_start — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: fetching, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650240588,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:50:40.587Z cache_updated — [\"app_settings\",\"user_prefs\",\"none\"] {queryKey: Array(3), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650240591,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:50:40.590Z cache_updated — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650240602,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:50:40.601Z auth.status — loading→anonymous {prev: loading, next: anonymous}"
+    },
+    {
+      "ts": 1781650240603,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:50:40.602Z AuthProvider — loading→anonymous {from: loading, to: anonymous}"
+    },
+    {
+      "ts": 1781650240619,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:50:40.617Z globalLoading — true→false {prev: true, next: false, message: Caricamento…, stackDepth: 0}"
+    },
+    {
+      "ts": 1781650368646,
+      "type": "info",
+      "text": "%c%s%c [BOOT] 2026-06-16T22:52:48.441Z rsc_root_layout background: #e6e6e6;background: light-dark(rgba(0,0,0,0.1), rgba(255,255,255,0.25));color: #000000;color: light-dark(#000000, #ffffff);border-radius: 2px  Server   {\"hasUser\":false,\"userId\":null,\"sessionExpiresAt\":null,\"configurationError\":null}"
+    },
+    {
+      "ts": 1781650368713,
+      "type": "debug",
+      "text": "[RENDER] 2026-06-16T22:52:48.712Z vv_sync {reason: resize, keyboardInset: 0, vvHeight: 900, vvOffsetTop: 0}"
+    },
+    {
+      "ts": 1781650368715,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:52:48.713Z BootInvestigationMount"
+    },
+    {
+      "ts": 1781650368715,
+      "type": "debug",
+      "text": "[BOOT] 2026-06-16T22:52:48.715Z client_hydrated {pathname: /login, innerWidth: 1440, userAgent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)}"
+    },
+    {
+      "ts": 1781650368719,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:52:48.718Z AuthProvider {initialStatus: loading, hasSnapshotUser: false}"
+    },
+    {
+      "ts": 1781650368722,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:52:48.720Z GlobalLoadingProvider"
+    },
+    {
+      "ts": 1781650368723,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:52:48.722Z QueryProvider"
+    },
+    {
+      "ts": 1781650368724,
+      "type": "debug",
+      "text": "[MOUNT] 2026-06-16T22:52:48.723Z AppProviders"
+    },
+    {
+      "ts": 1781650368757,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:52:48.754Z globalLoading — false→true {prev: false, next: true, message: Caricamento…, stackDepth: 1}"
+    },
+    {
+      "ts": 1781650368759,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:52:48.759Z onAuthStateChange {event: INITIAL_SESSION, hasSession: false}"
+    },
+    {
+      "ts": 1781650368760,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:52:48.759Z fetch_start — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: fetching, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650368760,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:52:48.759Z cache_updated — [\"app_settings\",\"user_prefs\",\"none\"] {queryKey: Array(3), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650368762,
+      "type": "debug",
+      "text": "[QUERY] 2026-06-16T22:52:48.761Z cache_updated — [\"app_settings\",\"payload\"] {queryKey: Array(2), status: pending, fetchStatus: idle, dataUpdatedAt: 0, errorUpdatedAt: 0}"
+    },
+    {
+      "ts": 1781650368779,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:52:48.776Z auth.status — loading→anonymous {prev: loading, next: anonymous}"
+    },
+    {
+      "ts": 1781650368779,
+      "type": "debug",
+      "text": "[AUTH] 2026-06-16T22:52:48.777Z AuthProvider — loading→anonymous {from: loading, to: anonymous}"
+    },
+    {
+      "ts": 1781650368792,
+      "type": "debug",
+      "text": "[STORE_UPDATE] 2026-06-16T22:52:48.791Z globalLoading — true→false {prev: true, next: false, message: Caricamento…, stackDepth: 0}"
+    }
+  ]
+}

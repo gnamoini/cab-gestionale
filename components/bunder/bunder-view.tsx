@@ -55,7 +55,10 @@ import {
   gestionaleListTableTdAzioni,
   gestionaleListTableTdCenter,
   gestionaleListTableActionsGroupEnd,
+  gestionaleListTableMobileEmptyClass,
 } from "@/lib/ui/gestionale-list-table";
+import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
+import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
@@ -68,7 +71,7 @@ import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavor
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { gestionaleConfirmActionsClass } from "@/components/gestionale/gestionale-confirm-dialog";
 import { globalInputFieldFilter } from "@/lib/ui/global-input";
-import { Drawer, IconActionButton } from "@/components/design-system";
+import { Drawer, IconActionButton, CardMobile, CardMobileActions } from "@/components/design-system";
 import {
   GestionaleLogEmpty,
   GestionaleLogEntryFourLines,
@@ -224,6 +227,8 @@ export function BunderView() {
 
   const [bunderSortColumn, setBunderSortColumn] = useState<BunderSortKey | null>(null);
   const [bunderSortPhase, setBunderSortPhase] = useState<BunderSortPhase>("natural");
+  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } =
+    useGestionaleListLayout({ tier: "xl" });
 
   const [editor, setEditor] = useState<{ open: boolean; doc: BunderCommercialDocument | null }>({
     open: false,
@@ -599,13 +604,16 @@ export function BunderView() {
 
   if (bunderQuery.isLoading && docs.length === 0) {
     return (
-      <div className="min-h-[40vh]" aria-busy="true" aria-label="Caricamento documenti BUNDER">
-        <SkeletonTable minHeightClass={SKELETON_MIN_HEIGHT.bunderList} />
+      <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
+        <div className="min-h-[40vh]" aria-busy="true" aria-label="Caricamento documenti BUNDER">
+          <SkeletonTable minHeightClass={SKELETON_MIN_HEIGHT.bunderList} />
+        </div>
       </div>
     );
   }
 
   return (
+    <div ref={listLayoutRef} className={`${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
       <PageHeader
         title="Bunder"
@@ -836,6 +844,7 @@ export function BunderView() {
           }
         />
 
+        {listLayout === "desktop" ? (
         <GestionaleListTable
           visibilityClass="mt-4"
           colgroup={
@@ -972,6 +981,86 @@ export function BunderView() {
                 );
               })}
         </GestionaleListTable>
+        ) : null}
+
+        {listLayout === "mobile" ? (
+        <div className="mt-4 space-y-3">
+          {pagedFiltered.length === 0 ? (
+            <p className={gestionaleListTableMobileEmptyClass}>Nessun documento corrisponde ai filtri.</p>
+          ) : (
+            pagedFiltered.map((d) => {
+              const tot = totaleDocumento(d);
+              const prod = d.righe
+                .map((r) => r.nome)
+                .filter(Boolean)
+                .slice(0, 3)
+                .join(" · ");
+              const dataIt = new Date(d.dataDocumento + "T12:00:00").toLocaleDateString("it-IT");
+              return (
+                <CardMobile key={d.id}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-mono text-xs font-semibold tabular-nums text-[color:var(--cab-text-muted)]">
+                          {d.numeroProgressivo}
+                        </p>
+                        <span className="rounded-md bg-[var(--cab-surface-2)] px-1.5 py-0.5 text-[10px] font-semibold uppercase text-[color:var(--cab-text-muted)]">
+                          {bunderKindLabel(d.kind)}
+                        </span>
+                      </div>
+                      <p className="mt-1 text-sm font-semibold text-[color:var(--cab-text)]">{d.aziendaDestinatario}</p>
+                      <p className="mt-1 line-clamp-2 text-xs text-[color:var(--cab-text-muted)]">{d.oggetto}</p>
+                    </div>
+                    <p className="shrink-0 text-right text-sm font-semibold tabular-nums text-[color:var(--cab-text)]">
+                      {tot.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
+                    </p>
+                  </div>
+                  <dl className="mt-3 grid grid-cols-1 gap-x-3 gap-y-2 text-xs cab-shell-desktop:grid-cols-2">
+                    <div>
+                      <dt className="text-[color:var(--cab-text-muted)]">Data</dt>
+                      <dd className="font-medium tabular-nums text-[color:var(--cab-text)]">{dataIt}</dd>
+                    </div>
+                    <div className="cab-shell-desktop:col-span-2">
+                      <dt className="text-[color:var(--cab-text-muted)]">Prodotti</dt>
+                      <dd className="line-clamp-2 font-medium text-[color:var(--cab-text)]">{prod || "—"}</dd>
+                    </div>
+                  </dl>
+                  <CardMobileActions>
+                    <div className={gestionaleListTableActionsGroupEnd}>
+                      <IconActionButton label="Modifica" className={dsTableActionBtnPrimary} onClick={() => setEditor({ open: true, doc: d })}>
+                        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </IconActionButton>
+                      <IconActionButton label="PDF" className={dsTableActionBtnSecondary} onClick={() => rowPdf(d)}>
+                        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      </IconActionButton>
+                      <IconActionButton label="Word" className={dsTableActionBtnSecondary} onClick={() => rowWord(d)}>
+                        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </IconActionButton>
+                      <IconActionButton label="Duplica" className={dsTableActionBtnSecondary} onClick={() => duplica(d)}>
+                        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m0 4h6a2 2 0 012 2v8a2 2 0 01-2 2h-8a2 2 0 01-2-2v-6" />
+                        </svg>
+                      </IconActionButton>
+                      <IconActionButton label="Elimina" className={dsTableActionBtnDanger} onClick={() => elimina(d)}>
+                        <svg className={dsTableActionGlyph} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} aria-hidden>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </IconActionButton>
+                    </div>
+                  </CardMobileActions>
+                </CardMobile>
+              );
+            })
+          )}
+        </div>
+        ) : null}
+
         {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
       </ShellCard>
       </div>
@@ -1055,5 +1144,6 @@ export function BunderView() {
       </Drawer>
       {confirmDialog}
     </>
+    </div>
   );
 }

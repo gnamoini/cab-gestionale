@@ -85,7 +85,6 @@ async function resolveMezzoIdForRecord(
     if (byCliente?.id) return byCliente.id;
   }
 
-  if (mezziRows.length > 0) return mezziRows[0]!.id;
   return null;
 }
 
@@ -137,7 +136,7 @@ async function syncRecordToDb(
   const legacyId = !isPreventivoUuid(record.id) ? record.id : undefined;
   const mezzoId = await resolveMezzoIdForRecord(record, mezziRows);
   if (!mezzoId) {
-    return { ok: false, error: "Mezzo non trovato per sincronizzare il preventivo." };
+    return { ok: false, error: "Mezzo non trovato per il cliente/lavorazione indicati." };
   }
 
   const existing = await resolveExistingPreventivoRow(record, mezzoId);

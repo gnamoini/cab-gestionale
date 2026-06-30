@@ -13,7 +13,6 @@ import { loadKnownClientiSetFromMezzi } from "@/src/lib/auth/load-known-clienti"
 import { validateCreateUserInput } from "@/lib/validation/admin-user-validation";
 import {
   validateDeleteUserByAdminInput,
-  validateUpdateUserRoleInput,
 } from "@/lib/validation/security-actions-validation";
 import type { ProfileRow } from "@/src/types/supabase-tables";
 import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
@@ -49,10 +48,6 @@ export type SecurityUserAdminRow = {
 
 export type ListUsersByAdminResult =
   | { ok: true; users: SecurityUserAdminRow[] }
-  | { ok: false; message: string };
-
-export type UpdateUserRoleByAdminResult =
-  | { ok: true; user: SecurityUserAdminRow | null }
   | { ok: false; message: string };
 
 export type ResetGlobalChangeLogsResult = { ok: true; deletedCount: number | null } | { ok: false; message: string };
@@ -348,51 +343,6 @@ export async function listUsersByAdminAction(): Promise<ListUsersByAdminResult> 
 
   users.sort((a, b) => a.nome.localeCompare(b.nome, "it"));
   return { ok: true, users };
-}
-
-export async function updateUserRoleByAdminAction(input: { userId: string; role: AppRole }): Promise<UpdateUserRoleByAdminResult> {
-  const parsed = validateUpdateUserRoleInput(input);
-  if (!parsed.ok) return { ok: false, message: parsed.message };
-  const { userId, role: nextRole } = parsed;
-
-  const caller = await assertAdminCaller();
-  if (!caller.ok) return { ok: false, message: caller.message };
-  const admin = serviceAdmin(caller.url, caller.serviceKey);
-
-  const { data: before, error: beforeErr } = await admin.from("profiles").select(PROFILES_COLUMNS).eq("id", userId).maybeSingle();
-  if (beforeErr) return { ok: false, message: beforeErr.message };
-  if (!before) return { ok: false, message: "Profilo non trovato." };
-  const authBefore = await admin.auth.admin.getUserById(userId).catch(() => null);
-  const previousRole = resolveRole((before as ProfileRow).ruolo);
-  if (previousRole === nextRole) return { ok: true, user: userRowFrom(before as ProfileRow) };
-
-  const { data: updated, error: updateErr } = await admin
-    .from("profiles")
-    .update({ ruolo: nextRole })
-    .eq("id", userId)
-    .select(PROFILES_COLUMNS)
-    .single();
-  if (updateErr) return { ok: false, message: updateErr.message };
-
-  await admin.auth.admin.updateUserById(userId, {
-    app_metadata: { ...(authBefore?.data.user?.app_metadata ?? {}), cab_ruolo: nextRole },
-  }).catch(() => {});
-
-  const profile = updated as ProfileRow;
-  await writeSecurityLog(admin, {
-    targetUserId: userId,
-    actorUserId: caller.callerId,
-    nome: profile.nome,
-    previousRole,
-    role: nextRole,
-    actorName: caller.callerName,
-  });
-
-  clearServerAuthSnapshotCacheForUser(userId);
-  invalidateServerRuntimeTruth();
-
-  const authLookup = await admin.auth.admin.getUserById(userId).catch(() => authBefore);
-  return { ok: true, user: userRowFrom(profile, authLookup?.data.user ?? undefined) };
 }
 
 export async function deleteUserByAdminAction(userId: string): Promise<DeleteUserByAdminResult> {

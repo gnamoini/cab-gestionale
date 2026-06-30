@@ -59,7 +59,7 @@ export function ReportOperationalAnalysisZone({ filterRange }: { filterRange: Da
                   Flotta e disponibilità
                 </h2>
                 <p className={`mt-1 ${reportSectionGroupDescClass}`}>
-                  Guasti per tipo attrezzatura, mezzi a rischio e indicatori di officina.
+                  Disponibilità per cliente, guasti per tipo attrezzatura e mezzi a rischio.
                 </p>
               </div>
               <OperationalKpiBlock

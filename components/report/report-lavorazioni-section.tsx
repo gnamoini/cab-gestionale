@@ -224,13 +224,21 @@ function ReportLavorazioniSectionInner({
               Matrice filtrata sul periodo selezionato: totali e variazioni includono solo i mesi nel filtro.
             </p>
           ) : null}
-          <div className={`${globalTableWrap} ${dsScrollbar}`}>
-            <table className={`${globalTableFixed} min-w-[720px]`}>
+          <div className={`${globalTableWrap} ${dsScrollbar} min-w-0`}>
+            <table className={`${globalTableFixed} w-full min-w-0`}>
+              <colgroup>
+                <col className="w-[8%]" />
+                {monthLabels.map((lab, mi) => (
+                  <col key={`col-${mi}-${lab}`} className="w-[6%]" />
+                ))}
+                <col className="w-[8%]" />
+                <col className="w-[8%]" />
+              </colgroup>
               <GlobalTableHead sticky>
                 <tr className={`h-14 ${globalTableHeadEdgeInset}`}>
                   <th
                     scope="col"
-                    className={`${globalTableThCell} ${globalTableThLabel} min-w-[3.5rem] border-b border-[color:var(--cab-border)] text-center`}
+                    className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] text-center`}
                   >
                     Anno
                   </th>
@@ -239,21 +247,21 @@ function ReportLavorazioniSectionInner({
                       key={`h-${mi}-${lab}`}
                       scope="col"
                       title={lab}
-                      className={`${globalTableThCell} ${globalTableThLabel} min-w-[2.5rem] border-b border-[color:var(--cab-border)] px-1 text-center`}
+                      className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] px-1 text-center`}
                     >
                       {lab}
                     </th>
                   ))}
                   <th
                     scope="col"
-                    className={`${globalTableThCell} ${globalTableThLabel} min-w-[3.5rem] border-b border-[color:var(--cab-border)] text-center`}
+                    className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] text-center`}
                   >
                     Totale
                   </th>
                   <th
                     scope="col"
                     title="Variazione percentuale rispetto all'anno precedente"
-                    className={`${globalTableThCell} ${globalTableThLabel} min-w-[3.5rem] border-b border-[color:var(--cab-border)] text-center`}
+                    className={`${globalTableThCell} ${globalTableThLabel} min-w-0 border-b border-[color:var(--cab-border)] text-center`}
                   >
                     Vs prec.
                   </th>
@@ -371,8 +379,14 @@ function ReportLavorazioniSectionInner({
       {manualEntries.length > 0 ? (
         <div className="mt-6">
           <p className={`${dsTypoCaption} mb-2 font-semibold uppercase tracking-wide`}>Storico manuale registrato</p>
-          <div className={`${dsTableWrap} ${dsScrollbar}`}>
-            <table className="w-full min-w-[480px] text-sm">
+          <div className={`${dsTableWrap} ${dsScrollbar} min-w-0`}>
+            <table className="w-full min-w-0 table-fixed text-sm">
+              <colgroup>
+                <col className="w-[22%]" />
+                <col className="w-[18%]" />
+                <col className="w-[48%]" />
+                <col className="w-[12%]" />
+              </colgroup>
               <GlobalTableHead>
                 <GlobalTableHeadLabel label="Periodo" />
                 <GlobalTableHeadLabel label="Completate" />

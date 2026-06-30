@@ -1,5 +1,6 @@
 import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { sortAddettiRecordsByCognomeNome } from "@/lib/lavorazioni/addetto-model";
+import { entryToCellValue } from "@/lib/dipendenti/timesheet-totals";
 import type { DipendenteTimesheetEmployeeRow, DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 
 /** Nome su prima riga, cognome sotto (da addetto collegato o da display_name). */
@@ -66,6 +67,49 @@ export function filterTimesheetEmployeesBySearch(
 /** Ordina record addetti per dropdown dipendenti. */
 export function sortedAddettiForDipendentiFilter(records: readonly AddettoRecord[]): AddettoRecord[] {
   return sortAddettiRecordsByCognomeNome(records);
+}
+
+/** Dipendente con almeno ore o assenze nel periodo entries passato. */
+export function employeeHasMonthActivity(
+  dipendenteId: string,
+  entries: readonly DipendenteTimesheetEntryRow[],
+): boolean {
+  for (const e of entries) {
+    if (e.dipendente_id !== dipendenteId) continue;
+    const cell = entryToCellValue(e);
+    if (cell.oreOrdinarie > 0 || cell.oreStraordinarie > 0 || cell.oreAssenza > 0) return true;
+  }
+  return false;
+}
+
+/**
+ * Dipendenti nel PDF mensile: solo addetti attuali in Impostazioni con attività nel mese.
+ */
+export function selectTimesheetEmployeesForPdfExport(
+  employees: readonly DipendenteTimesheetEmployeeRow[],
+  entries: readonly DipendenteTimesheetEntryRow[],
+  currentAddettiIds: ReadonlySet<string>,
+): DipendenteTimesheetEmployeeRow[] {
+  return employees.filter((emp) => {
+    if (!emp.source_addetto_id || !currentAddettiIds.has(emp.source_addetto_id)) return false;
+    return employeeHasMonthActivity(emp.id, entries);
+  });
+}
+
+export function employeeDisplayNameForPdf(
+  employee: DipendenteTimesheetEmployeeRow,
+  addettiRecords: readonly AddettoRecord[],
+): string {
+  const rec = employee.source_addetto_id
+    ? addettiRecords.find((a) => a.id === employee.source_addetto_id)
+    : undefined;
+  if (rec) {
+    const nome = rec.nome.trim();
+    const cognome = rec.cognome?.trim();
+    if (nome && cognome) return `${nome} ${cognome}`;
+    if (nome) return nome;
+  }
+  return employee.display_name.trim() || "—";
 }
 
 /** ID dipendenti con almeno una entry nel periodo visualizzato (mese/settimana/giorno). */

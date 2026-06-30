@@ -8,11 +8,14 @@ import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 export const permissionsService = {
   /** Permessi granulari dell'utente corrente (RLS: proprie righe o admin vede tutte). */
-  async listMyPermissions(): Promise<ServiceResult<UserPermissionRow[]>> {
+  async listMyPermissions(userId?: string): Promise<ServiceResult<UserPermissionRow[]>> {
     try {
       const c = getBrowserSupabase();
-      const { data: gu } = await c.auth.getUser();
-      const uid = gu.user?.id;
+      let uid = userId?.trim() || null;
+      if (!uid) {
+        const { data: gu } = await c.auth.getUser();
+        uid = gu.user?.id ?? null;
+      }
       if (!uid) return success([]);
 
       const { data, error } = await c.from("user_permissions").select(USER_PERMISSIONS_COLUMNS).eq("user_id", uid);

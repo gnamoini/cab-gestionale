@@ -1,19 +1,18 @@
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
 import type { RuoloUtente, UserPermissionRow } from "@/src/types/supabase-tables";
-import { modulePermissionForRole, resolveRole } from "@/lib/auth/rbac";
+import { resolveRole, roleModuleDefault } from "@/lib/rbac";
 
 export type EffectiveModulePermission = {
   canRead: boolean;
   canWrite: boolean;
-  canAdmin: boolean;
 };
 
-/** Merge righe DB legacy con fallback ruolo ufficiale (`admin` / `operatore` / `ospite`). */
 function isGestionalePermissionModule(module: string): module is GestionalePermissionModule {
   return (GESTIONALE_PERMISSION_MODULES as readonly string[]).includes(module);
 }
 
+/** RBAC_PRECEDENCE steps 2→3: override user_permissions → roleModuleDefault. */
 export function buildEffectivePermissionsByModule(
   ruolo: RuoloUtente | null | undefined,
   rows: UserPermissionRow[] | undefined,
@@ -33,10 +32,9 @@ export function buildEffectivePermissionsByModule(
       out[m] = {
         canRead: row.can_read,
         canWrite: row.can_write,
-        canAdmin: row.can_admin,
       };
     } else {
-      out[m] = modulePermissionForRole(baseRole, m);
+      out[m] = roleModuleDefault(baseRole, m);
     }
   }
 

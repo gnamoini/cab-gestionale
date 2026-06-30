@@ -6,7 +6,6 @@ export const LAVORAZIONE_DOCUMENT_SLOTS: {
   uploadLabel: string;
 }[] = [
   { tipo: "preventivo_upload", label: "Preventivo ufficiale", uploadLabel: "Carica preventivo ufficiale" },
-  { tipo: "ddt", label: "DDT", uploadLabel: "Carica DDT" },
 ];
 
 const PDF_MAGIC = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]);

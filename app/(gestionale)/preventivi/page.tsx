@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { LoadingSuspenseFallback } from "@/components/design-system";
-import { PreventiviView } from "@/components/preventivi/preventivi-view";
+import { PreventiviViewLazy } from "@/components/gestionale/lazy-route-views";
 import { GestionaleHydrationBoundary } from "@/src/components/gestionale/gestionale-hydration-boundary";
 import { prefetchPreventiviPage } from "@/src/lib/react-query/prefetch-gestionale-page";
 
@@ -9,7 +9,7 @@ export default async function PreventiviPage() {
   return (
     <Suspense fallback={<LoadingSuspenseFallback variant="preventivi" />}>
       <GestionaleHydrationBoundary state={dehydratedState}>
-        <PreventiviView />
+        <PreventiviViewLazy />
       </GestionaleHydrationBoundary>
     </Suspense>
   );

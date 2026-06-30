@@ -11,6 +11,7 @@ import {
   useSchedeByLavorazione,
 } from "@/src/services/domain/lavorazioni-domain.queries";
 import { lavorazioniDomainService, type LavorazioneHubData } from "@/src/services/domain/lavorazioni-domain.service";
+import { HUB_QUERY_LOADING_FAILSAFE_MS, usePendingQueryTimeout } from "@/lib/ui/loading-failsafe";
 
 /**
  * Hub lavorazione: query atomiche in parallelo (`lavorazioniDomainQueryKeys`) e composizione pura
@@ -79,7 +80,10 @@ export function useLavorazioneHub(lavorazioneId: string | undefined) {
     );
   }, [base.error, schede.error, mov.error, pv.error, log.error, doc.error, needDocumenti]);
 
-  const isLoading = id.length > 0 && !isError && !hubReady;
+  const isLoadingRaw = id.length > 0 && !isError && !hubReady;
+  const hubTimedOut = usePendingQueryTimeout(isLoadingRaw, HUB_QUERY_LOADING_FAILSAFE_MS);
+  const isLoading = isLoadingRaw && !hubTimedOut;
+  const isErrorEffective = isError || hubTimedOut;
 
   const refetch = useCallback(() => {
     return Promise.all([base.refetch(), schede.refetch(), mov.refetch(), pv.refetch(), doc.refetch(), log.refetch()]).then(() => undefined);
@@ -88,10 +92,16 @@ export function useLavorazioneHub(lavorazioneId: string | undefined) {
   return {
     data,
     isLoading,
-    isError,
-    error,
+    isError: isErrorEffective,
+    error: hubTimedOut && !error ? new Error("Timeout caricamento dati lavorazione") : error,
     isSuccess: hubReady && Boolean(data),
     refetch,
-    status: isError ? ("error" as const) : isLoading ? ("pending" as const) : hubReady ? ("success" as const) : ("pending" as const),
+    status: isErrorEffective
+      ? ("error" as const)
+      : isLoading
+        ? ("pending" as const)
+        : hubReady
+          ? ("success" as const)
+          : ("pending" as const),
   };
 }

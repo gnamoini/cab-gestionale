@@ -8,8 +8,11 @@ import {
 
 assert.match(resolveModalWidthClasses("confirmation"), /28rem/);
 assert.match(resolveModalWidthClasses("formMedium"), /cab-modal-min-w-form-medium/);
+assert.match(resolveModalWidthClasses("formMedium"), /md:w-full/);
 assert.match(resolveModalWidthClasses("formLarge"), /cab-modal-min-w-form-large/);
+assert.match(resolveModalWidthClasses("formLarge"), /md:w-full/);
 assert.match(resolveModalWidthClasses("analytics"), /cab-modal-min-w-analytics/);
+assert.match(resolveModalWidthClasses("analytics"), /md:w-full/);
 
 assert.equal(defaultModalHeightForSize("formSmall"), "compact");
 assert.equal(defaultModalHeightForSize("formLarge"), "standard");

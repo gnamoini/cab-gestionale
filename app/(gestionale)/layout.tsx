@@ -1,4 +1,5 @@
 import { FormUxBoundaryBootstrap } from "@/components/form-ux-migration/form-ux-boundary-bootstrap";
+import { AppProvidersGestionale } from "@/components/app-providers-gestionale";
 import { AppShell } from "@/components/gestionale/app-shell";
 import { GestionaleAuthGate } from "@/components/gestionale/gestionale-auth-gate";
 import { GestionaleSettingsReadyGate } from "@/components/gestionale/gestionale-settings-ready-gate";
@@ -8,17 +9,19 @@ import { OperatorGlobalSettingsProvider } from "@/src/context/operator-global-se
 
 export default function GestionaleLayout({ children }: { children: React.ReactNode }) {
   return (
-    <AppShell>
-      <FormUxBoundaryBootstrap />
-      <GestionaleTopNoticeProvider>
-        <GestionaleAuthGate>
-          <GestionaleSettingsReadyGate>
-            <OperatorGlobalSettingsProvider>
-              <RbacPageGuard>{children}</RbacPageGuard>
-            </OperatorGlobalSettingsProvider>
-          </GestionaleSettingsReadyGate>
-        </GestionaleAuthGate>
-      </GestionaleTopNoticeProvider>
-    </AppShell>
+    <AppProvidersGestionale>
+      <AppShell>
+        <FormUxBoundaryBootstrap />
+        <GestionaleTopNoticeProvider>
+          <GestionaleAuthGate>
+            <GestionaleSettingsReadyGate>
+              <OperatorGlobalSettingsProvider>
+                <RbacPageGuard>{children}</RbacPageGuard>
+              </OperatorGlobalSettingsProvider>
+            </GestionaleSettingsReadyGate>
+          </GestionaleAuthGate>
+        </GestionaleTopNoticeProvider>
+      </AppShell>
+    </AppProvidersGestionale>
   );
 }

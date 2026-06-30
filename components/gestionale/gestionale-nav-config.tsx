@@ -82,6 +82,15 @@ export function IconNavPreventivi(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconNavFatturazione(props: SVGProps<SVGSVGElement>) {
+  return (
+    <SvgIcon {...props}>
+      <path d="M7 3h10a2 2 0 012 2v16l-3-1.5L13 21l-3-1.5L7 21l-3-1.5V5a2 2 0 012-2z" />
+      <path d="M8 8h8M8 12h8M8 16h4" />
+    </SvgIcon>
+  );
+}
+
 export function IconNavReport(props: SVGProps<SVGSVGElement>) {
   return (
     <SvgIcon {...props}>
@@ -135,6 +144,7 @@ export const GESTIONALE_NAV = [
   { href: "/lavorazioni", label: "Lavorazioni", Icon: IconNavLavorazioni },
   { href: "/lavorazioni-clienti", label: PORTALE_CLIENTI_LABEL, Icon: IconNavLavorazioniClient },
   { href: "/preventivi", label: "Preventivi", Icon: IconNavPreventivi },
+  { href: "/fatturazione", label: "Fatturazione", Icon: IconNavFatturazione },
   { href: "/documenti", label: "Documenti", Icon: IconNavDocumenti },
   { href: "/magazzino", label: "Magazzino", Icon: IconNavMagazzino },
   { href: "/mezzi", label: "Mezzi", Icon: IconNavMezzi },

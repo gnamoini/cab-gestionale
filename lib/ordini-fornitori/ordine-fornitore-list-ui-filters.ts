@@ -1,0 +1,66 @@
+import type { OrdineFornitoreRecord, OrdineFornitoreStatus } from "@/lib/ordini-fornitori/types";
+
+export type OrdiniFornitoriPageFilters = {
+  search: string;
+  fornitore: string;
+  status: OrdineFornitoreStatus | "";
+  dateFrom: string;
+  dateTo: string;
+};
+
+export const ORDINI_FORNITORI_FILTERS_EMPTY: OrdiniFornitoriPageFilters = {
+  search: "",
+  fornitore: "",
+  status: "",
+  dateFrom: "",
+  dateTo: "",
+};
+
+export function ordiniFornitoriFiltersActive(f: OrdiniFornitoriPageFilters): boolean {
+  return Boolean(
+    f.fornitore.trim() ||
+      f.status ||
+      f.dateFrom ||
+      f.dateTo,
+  );
+}
+
+function matchesSearch(o: OrdineFornitoreRecord, q: string): boolean {
+  const needle = q.trim().toLowerCase();
+  if (!needle) return true;
+  const hay = [
+    o.numero,
+    o.fornitoreLabel,
+    o.destinazione,
+    o.note,
+    ...o.righe.map((r) => `${r.codice} ${r.descrizione}`),
+  ]
+    .join(" ")
+    .toLowerCase();
+  return hay.includes(needle);
+}
+
+export function ordineFornitoreRowMatchesPageFilters(
+  o: OrdineFornitoreRecord,
+  f: OrdiniFornitoriPageFilters,
+): boolean {
+  if (!matchesSearch(o, f.search)) return false;
+  if (f.fornitore.trim() && o.fornitoreLabel.trim() !== f.fornitore.trim()) return false;
+  if (f.status && o.status !== f.status) return false;
+  if (f.dateFrom && o.dataOrdine < f.dateFrom) return false;
+  if (f.dateTo && o.dataOrdine > f.dateTo) return false;
+  return true;
+}
+
+export function buildOrdiniFornitoriSearchSuggestions(records: readonly OrdineFornitoreRecord[]): string[] {
+  const set = new Set<string>();
+  for (const o of records) {
+    if (o.numero) set.add(o.numero);
+    if (o.fornitoreLabel.trim()) set.add(o.fornitoreLabel.trim());
+    for (const r of o.righe) {
+      if (r.codice?.trim()) set.add(r.codice.trim());
+      if (r.descrizione.trim()) set.add(r.descrizione.trim());
+    }
+  }
+  return [...set].slice(0, 80);
+}

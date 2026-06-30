@@ -23,6 +23,7 @@ import {
   PREVENTIVO_SMALTIMENTO_DESCRIZIONE,
   PREVENTIVO_SMALTIMENTO_PERCENT,
 } from "@/lib/preventivi/preventivi-voci-standard";
+import type { PreventivoClientePdfOptions } from "@/lib/pdf/anagrafica-pdf-fields";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
 export type PreventivoPdfEconomics = {
@@ -180,10 +181,11 @@ export function drawPreventivoPdfBody(
   p: PreventivoRecord,
   righe: readonly PreventivoRigaOutput[],
   economics: PreventivoPdfEconomics,
+  clientePdf?: PreventivoClientePdfOptions,
 ): number {
   let y = startY;
 
-  const anagrafica = buildAnagraficaPdfFields(p);
+  const anagrafica = buildAnagraficaPdfFields(p, clientePdf);
   y = drawGestionaleFieldSectionTable(doc, y, pageW, "Dati anagrafici", anagrafica);
 
   y = drawGestionaleSideBySideFieldSections(

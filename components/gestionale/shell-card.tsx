@@ -110,7 +110,7 @@ export function ShellCard({
       : "Mostra sezione";
 
   return (
-    <section id={id} className={`${dsSurfaceCard} ${layoutPageRoot} overflow-hidden ${className}`}>
+    <section id={id} className={`${dsSurfaceCard} ${layoutPageRoot} cab-shell-card ${className}`}>
       {hasHeader ? (
         collapsible ? (
           <div

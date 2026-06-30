@@ -8,7 +8,7 @@ import { CloseButton, Tooltip } from "@/components/design-system";
 import { useAuth } from "@/context/auth-context";
 import { useGlobalLoading, useShowGlobalLoading } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
-import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpFocus } from "@/lib/ui/erp-tokens";
 import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
 import { CLIENTE_HOME_PATH, shouldHideNavHref, isClienteRole } from "@/lib/auth/rbac";
 import { useRbac } from "@/src/hooks/use-rbac";
@@ -17,15 +17,17 @@ import { useOperatorGlobalSettings } from "@/src/context/operator-global-setting
 import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
 import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
-import { GestionaleConfirmDialog } from "@/components/gestionale/gestionale-confirm-dialog";
+import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
 import {
-  dsGestionaleContentGutter,
   dsGestionaleContentMax,
   dsGestionaleContentRail,
   dsGestionaleContentShellRow,
   dsZModalHigh,
 } from "@/lib/ui/design-system";
 import { layoutPageRoot, layoutResponsiveCoreScope } from "@/lib/ui/responsive-layout-core";
+import { gestionaleShellContentGutterClass } from "@/lib/ui/gestionale-shell-layout";
+import { useGestionaleShellLayoutSync } from "@/lib/ui/use-gestionale-shell-layout-sync";
+import { GestionaleShellLayoutProvider } from "@/context/gestionale-shell-layout-context";
 import dynamic from "next/dynamic";
 
 const DevAuditMounts = dynamic(
@@ -49,8 +51,10 @@ import { dsGestionaleScrollEndPad } from "@/lib/ui/scroll-system";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
-import { useSidebarCollapsed } from "@/lib/ui/use-sidebar-collapsed";
+import { useSidebarHoverExpand } from "@/lib/ui/use-sidebar-collapsed";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
+import { isBootInvestigationEnabled, logBoot, trackRedirect, trackStoreUpdate } from "@/lib/observability/boot-investigation";
+import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
 import {
   accountMenuPortalEnterClass,
@@ -88,6 +92,7 @@ function NavLink({
   disabled,
   badge,
   onNavigate,
+  onExpandIntent,
 }: {
   href: string;
   label: string;
@@ -96,6 +101,7 @@ function NavLink({
   disabled?: boolean;
   badge?: string | null;
   onNavigate?: (href: string) => void;
+  onExpandIntent?: () => void;
 }) {
   const pathname = usePathname();
   const active = isNavTargetCurrent(pathname, href);
@@ -113,12 +119,20 @@ function NavLink({
     </span>
   );
 
+  const navPointerIntentProps = collapsed
+    ? {
+        onPointerEnter: () => onExpandIntent?.(),
+        onFocus: () => onExpandIntent?.(),
+      }
+    : {};
+
   if (disabled) {
     const node = (
       <div
         role="link"
         aria-disabled="true"
         className={`${navLinkBase} cursor-not-allowed opacity-75`}
+        {...navPointerIntentProps}
       >
         {iconWrap}
         <span className="cab-sidebar-nav-label min-w-0 truncate leading-tight">{label}</span>
@@ -145,6 +159,7 @@ function NavLink({
         scheduleRouteTransitionBegin(e, () => onNavigate?.(href));
       }}
       className={`${navLinkBase} ${active ? navLinkActive : navLinkInactive} ${erpFocus}`}
+      {...navPointerIntentProps}
     >
       {iconWrap}
       <span className="cab-sidebar-nav-label min-w-0 truncate leading-tight">{label}</span>
@@ -319,17 +334,19 @@ function AccountMenu() {
         </span>
       </button>
       {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
-      <GestionaleConfirmDialog
-        open={logoutConfirmOpen}
-        title="Uscire dall'account?"
-        message="Verrai disconnesso da questa sessione. Dovrai accedere di nuovo per continuare."
-        confirmLabel="Esci"
-        cancelLabel="Annulla"
-        destructive
-        confirmTestId="smoke-logout-confirm"
-        onCancel={() => setLogoutConfirmOpen(false)}
-        onConfirm={() => void confirmLogout()}
-      />
+      {logoutConfirmOpen ? (
+        <GestionaleConfirmDialogLazy
+          open={logoutConfirmOpen}
+          title="Uscire dall'account?"
+          message="Verrai disconnesso da questa sessione. Dovrai accedere di nuovo per continuare."
+          confirmLabel="Esci"
+          cancelLabel="Annulla"
+          destructive
+          confirmTestId="smoke-logout-confirm"
+          onCancel={() => setLogoutConfirmOpen(false)}
+          onConfirm={() => void confirmLogout()}
+        />
+      ) : null}
     </div>
   );
 }
@@ -410,11 +427,13 @@ function MobileNavDrawer({
   onClose,
   navItems,
   onNavigate,
+  isCompactShell,
 }: {
   open: boolean;
   onClose: () => void;
   navItems: GestionaleNavResolvedItem[];
   onNavigate?: (href: string) => void;
+  isCompactShell: boolean;
 }) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
@@ -442,17 +461,11 @@ function MobileNavDrawer({
   useOverlayBackHandler(mounted && open && !closing, onClose, "MobileNavDrawer");
 
   useEffect(() => {
-    const mq = window.matchMedia("(min-width: 768px)");
-    function dismissForDesktop() {
-      if (!mq.matches) return;
-      setClosing(false);
-      setMounted(false);
-      onClose();
-    }
-    dismissForDesktop();
-    mq.addEventListener("change", dismissForDesktop);
-    return () => mq.removeEventListener("change", dismissForDesktop);
-  }, [onClose]);
+    if (isCompactShell) return;
+    setClosing(false);
+    setMounted(false);
+    onClose();
+  }, [isCompactShell, onClose]);
 
   useEffect(() => {
     if (!mounted || closing || !open) return;
@@ -469,10 +482,10 @@ function MobileNavDrawer({
     return () => document.removeEventListener("keydown", onKey);
   }, [mounted, closing, open, onClose]);
 
-  if (!mounted) return null;
+  if (!mounted || !isCompactShell) return null;
 
   return (
-    <div className={`fixed inset-0 ${dsZModalHigh} overscroll-none md:hidden`} role="presentation">
+    <div className={`fixed inset-0 ${dsZModalHigh} overscroll-none`} role="presentation">
       <button
         type="button"
         className="cab-nav-drawer-backdrop absolute inset-0 touch-none bg-black/50 backdrop-blur-[1px] touch-manipulation"
@@ -509,12 +522,31 @@ function MobileNavDrawer({
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  useBootInvestigationMount("AppShell");
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { collapsed, toggleCollapsed } = useSidebarCollapsed();
+  const shellRef = useRef<HTMLDivElement>(null);
+  const shellColRef = useRef<HTMLDivElement>(null);
+  const mainScrollRef = useRef<HTMLElement | null>(null);
+  const shellLayout = useGestionaleShellLayoutSync({
+    shellRef,
+    shellColRef,
+    mainRef: mainScrollRef,
+  });
+  const { isCompactShell, tier: shellTier } = shellLayout;
+  const contentGutter = gestionaleShellContentGutterClass(shellTier);
+  useGestionaleScrollEnd(mainScrollRef);
+  const {
+    collapsed,
+    sidebarExpanded,
+    collapseSidebar,
+    onSidebarMouseEnter,
+    onSidebarMouseLeave,
+    onSidebarNavIntent,
+    onSidebarFocusCapture,
+    onSidebarBlurCapture,
+  } = useSidebarHoverExpand();
   const [routeLoading, setRouteLoading] = useState(false);
   const routeTransitionStartRef = useRef<number | null>(null);
-  const mainScrollRef = useRef<HTMLElement | null>(null);
-  useGestionaleScrollEnd(mainScrollRef);
   const { user } = useAuth();
   const pathname = usePathname();
   const suppressGlobalScrollEndPad = pathname.startsWith("/impostazioni");
@@ -524,6 +556,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const clienteOnly = isClienteRole(user);
   const homePath = clienteOnly ? CLIENTE_HOME_PATH : "/dashboard";
   useGlobalLoading(routeLoading ? GLOBAL_LOADING_MESSAGES.navigation : null);
+
+  const prevRouteLoadingRef = useRef(false);
+  useEffect(() => {
+    if (!isBootInvestigationEnabled()) return;
+    if (prevRouteLoadingRef.current === routeLoading) return;
+    trackStoreUpdate("routeLoading", prevRouteLoadingRef.current, routeLoading, { pathname });
+    logBoot("RENDER", "AppShell", { routeLoading, pathname }, routeLoading ? "route_loading_on" : "route_loading_off");
+    prevRouteLoadingRef.current = routeLoading;
+  }, [routeLoading, pathname]);
 
   useLayoutEffect(() => {
     healBodyScrollLockState("app-shell-mount");
@@ -553,7 +594,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     }
     setRouteLoading(false);
     setMobileOpen(false);
-  }, [pathname]);
+    collapseSidebar();
+  }, [pathname, collapseSidebar]);
 
   useEffect(() => {
     if (!routeLoading) return;
@@ -592,10 +634,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         setRouteLoading(false);
         return;
       }
+      collapseSidebar();
       routeTransitionStartRef.current = performance.now();
       setRouteLoading(true);
     },
-    [pathname],
+    [pathname, collapseSidebar],
   );
 
   const onHeaderHomeClick = useCallback(
@@ -611,49 +654,79 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [beginRouteTransition, pathname, homePath],
   );
 
-  const asideW = collapsed ? "md:w-[4.25rem]" : "md:w-[12.75rem]";
-  const mainPad = collapsed ? "md:pl-[4.25rem]" : "md:pl-[12.75rem]";
+  const asideWidthClass = sidebarExpanded ? "w-[12.75rem]" : "w-[4.25rem]";
+  const asideW = sidebarExpanded ? `${asideWidthClass} z-50` : asideWidthClass;
+  const mainPad = isCompactShell ? "" : "pl-[4.25rem]";
+  const sidebarTopOffset =
+    "top-[calc(var(--cab-gestionale-top-bar)+env(safe-area-inset-top,0px))]";
 
   return (
-    <div className={`cab-app-shell flex min-h-0 ${cabAppViewportFillClass} max-w-full overflow-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]`}>
+    <GestionaleShellLayoutProvider value={shellLayout}>
+    <div
+      ref={shellRef}
+      className={`cab-app-shell flex min-h-0 flex-col ${cabAppViewportFillClass} max-w-full overflow-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]`}
+    >
+      <header className="cab-ios-sticky-header shrink-0 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_92%,transparent)] backdrop-blur-md supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
+        <div className="cab-gestionale-scroll-gutter-mirror w-full min-w-0">
+          <div className={dsGestionaleContentShellRow}>
+            <div
+              className={`${contentGutter} flex h-14 min-w-0 items-center gap-3 ${
+                isCompactShell
+                  ? "grid grid-cols-[auto_1fr_auto] items-center gap-0"
+                  : "justify-between"
+              }`}
+            >
+              <div className={`flex min-w-0 items-center justify-start gap-3 ${isCompactShell ? "contents" : ""}`}>
+                {isCompactShell ? (
+                  <button
+                    type="button"
+                    data-testid="smoke-nav-drawer-open"
+                    className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] dark:border-[color:var(--cab-border-strong)] ${erpFocus}`}
+                    aria-label="Apri menu"
+                    onClick={() => setMobileOpen(true)}
+                  >
+                    ☰
+                  </button>
+                ) : null}
+                <Link
+                  href={homePath}
+                  onClick={onHeaderHomeClick}
+                  aria-label={CAB_APP_PRODUCT_NAME}
+                  className={`${erpFocus} inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg transition-opacity duration-200 hover:opacity-90 ${
+                    isCompactShell ? "justify-self-center" : "justify-start py-2"
+                  }`}
+                >
+                  <CabLogo height={32} className="shrink-0" sizes="112px" priority />
+                </Link>
+              </div>
+              <div className="flex min-w-0 items-center justify-end">
+                <AccountMenu />
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
       <aside
         data-sidebar-collapsed={collapsed ? "" : undefined}
-        className={`cab-sidebar fixed inset-y-0 left-0 z-40 hidden flex-col overflow-x-hidden border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width] duration-250 ease-out md:flex ${asideW}`}
+        data-sidebar-hover-expanded={sidebarExpanded ? "" : undefined}
+        onMouseEnter={onSidebarMouseEnter}
+        onMouseLeave={onSidebarMouseLeave}
+        onFocusCapture={onSidebarFocusCapture}
+        onBlurCapture={onSidebarBlurCapture}
+        className={`cab-sidebar fixed bottom-0 left-0 z-40 flex-col overflow-x-hidden border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width,box-shadow] duration-[var(--cab-sidebar-motion)] ease-[cubic-bezier(0.2,0,0,1)] ${sidebarTopOffset} ${
+          isCompactShell ? "hidden" : `flex ${asideW}`
+        }`}
       >
-        <div
-          className={
-            collapsed
-              ? `${shellTopBarClass} justify-center px-1.5`
-              : "grid h-14 shrink-0 grid-cols-[1fr_auto] items-center gap-2 border-b border-[color:var(--cab-border)] px-3"
-          }
-        >
-          {!collapsed ? (
-            <div className="flex h-9 min-w-0 items-center justify-center">
-              <Link
-                href={homePath}
-                onClick={onHeaderHomeClick}
-                aria-label={CAB_APP_PRODUCT_NAME}
-                className={`${erpFocus} flex h-9 min-w-0 items-center rounded-lg`}
-              >
-                <CabLogo height={32} priority sizes="112px" />
-              </Link>
-            </div>
-          ) : null}
-          <Tooltip content={collapsed ? "Espandi" : "Comprimi"} side="right">
-            <button
-              type="button"
-              onClick={toggleCollapsed}
-              aria-label={collapsed ? "Espandi menu laterale" : "Comprimi menu laterale"}
-              className={`${erpFocus} hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface-2)] text-sm text-[color:var(--cab-text-muted)] transition-[background-color,border-color,color,transform] duration-200 ease-out hover:bg-[var(--cab-hover)] md:inline-flex dark:border-[color:var(--cab-border-strong)]`}
-              suppressHydrationWarning
-            >
-              {collapsed ? "⟩" : "⟨"}
-            </button>
-          </Tooltip>
-        </div>
         <nav
           className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden p-3"
           aria-label="Sezioni principali"
+          onPointerEnter={(event) => {
+            if (!collapsed) return;
+            if (event.target instanceof Element && event.target.closest(".cab-sidebar-nav-link")) {
+              onSidebarNavIntent();
+            }
+          }}
         >
           {navItems.map((item) => (
             <NavLink
@@ -665,68 +738,36 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               disabled={item.disabled}
               badge={item.badge}
               onNavigate={beginRouteTransition}
+              onExpandIntent={onSidebarNavIntent}
             />
           ))}
         </nav>
       </aside>
 
       <div
-        className={`flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-250 ease-out ${mainPad}`}
+        ref={shellColRef}
+        className={`flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-[var(--cab-sidebar-motion)] ease-out ${mainPad}`}
       >
-        <header className="cab-ios-sticky-header shrink-0 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_92%,transparent)] backdrop-blur-md supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
-          <div className="cab-gestionale-scroll-gutter-mirror w-full min-w-0">
-            <div className={dsGestionaleContentShellRow}>
-              <div
-                className={`${dsGestionaleContentGutter} flex h-14 min-w-0 items-center gap-3 max-md:grid max-md:grid-cols-[auto_1fr_auto] max-md:items-center max-md:gap-0 md:justify-between`}
-              >
-              <div className="flex min-w-0 items-center justify-start gap-3 max-md:contents">
-              <button
-                type="button"
-                data-testid="smoke-nav-drawer-open"
-                className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] md:hidden dark:border-[color:var(--cab-border-strong)] ${erpFocus}`}
-                aria-label="Apri menu"
-                onClick={() => setMobileOpen(true)}
-              >
-                ☰
-              </button>
-              <Link
-                href={homePath}
-                onClick={onHeaderHomeClick}
-                aria-label={CAB_APP_PRODUCT_NAME}
-                className={`${erpFocus} inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg transition-opacity duration-200 hover:opacity-90 max-md:justify-self-center md:justify-start md:py-2`}
-              >
-                <CabLogo
-                  height={32}
-                  className="shrink-0 md:hidden"
-                  sizes="112px"
-                  priority
-                />
-                <CabLogo
-                  height={32}
-                  className="hidden shrink-0 md:block"
-                  sizes="112px"
-                  priority
-                />
-              </Link>
-              </div>
-              <div className="flex min-w-0 items-center justify-end">
-                <AccountMenu />
-              </div>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        <MobileNavDrawer open={mobileOpen} onClose={() => setMobileOpen(false)} navItems={navItems} onNavigate={beginRouteTransition} />
+        <MobileNavDrawer
+          open={mobileOpen}
+          onClose={() => setMobileOpen(false)}
+          navItems={navItems}
+          onNavigate={beginRouteTransition}
+          isCompactShell={isCompactShell}
+        />
 
         {process.env.NODE_ENV === "development" ? <DevAuditMounts /> : null}
 
         <div className={dsGestionaleContentRail}>
           <main
             ref={mainScrollRef}
-            className={`gestionale-scroll-y gestionale-scrollbar w-full ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 pt-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-[max(1rem,env(safe-area-inset-bottom))]`}
+            className={`gestionale-scroll-y gestionale-scrollbar w-full ${layoutResponsiveCoreScope} min-h-0 min-w-0 flex-1 pt-0 ${
+              isCompactShell
+                ? "pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+                : "pb-[max(1rem,env(safe-area-inset-bottom))]"
+            }`}
           >
-            <div className={`${dsGestionaleContentMax} ${layoutPageRoot} ${dsGestionaleContentGutter}`}>
+            <div className={`${dsGestionaleContentMax} ${layoutPageRoot} ${contentGutter}`}>
               {process.env.NODE_ENV === "development" ? (
                 <ReactRenderAuditProfiler>{children}</ReactRenderAuditProfiler>
               ) : (
@@ -740,5 +781,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </div>
+    </GestionaleShellLayoutProvider>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, type CSSProperties, type ReactNode } from "react";
+import { GESTIONALE_LIST_MOBILE_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
 import {
   AddettoSelectField,
   InlineSelectField,
@@ -177,7 +178,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
         <LavorazioneMobileMetaItem label="Cliente" value={lavorazioneClienteLabel(row, schedeStore)} />
         <LavorazioneMobileMetaItem label="Cantiere" value={lavorazioneCantiereLabel(row, schedeStore)} />
         {utilizzatore ? (
-          <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="col-span-2" />
+          <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="cab-shell-desktop:col-span-2" />
         ) : null}
       </LavorazioneMobileMetaGrid>
       <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
@@ -300,7 +301,7 @@ function LavorazioneArchivioMobileCardInner({
         <LavorazioneMobileMetaItem label="Cliente" value={lavorazioneClienteLabel(row, schedeStore)} />
         <LavorazioneMobileMetaItem label="Cantiere" value={lavorazioneCantiereLabel(row, schedeStore)} />
         {utilizzatore ? (
-          <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="col-span-2" />
+          <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="cab-shell-desktop:col-span-2" />
         ) : null}
       </LavorazioneMobileMetaGrid>
       <LavorazioneMobileNote text={lavorazioneNoteOperative(row, schedeStore)} />
@@ -377,7 +378,7 @@ export type LavorazioniMobileListShellProps = {
 
 export function LavorazioniMobileListShell({ empty, emptyMessage, children }: LavorazioniMobileListShellProps) {
   return (
-    <div className="mt-4 space-y-2 xl:hidden">
+    <div className={`mt-4 space-y-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
       {empty ? <LavorazioniMobileEmptyState message={emptyMessage} /> : children}
     </div>
   );

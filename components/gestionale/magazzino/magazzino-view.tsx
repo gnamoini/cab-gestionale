@@ -9,6 +9,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CardMobile,
   CloseButton,
+  GestionaleAiActionButton,
   IconActionButton,
   LoadingButton,
   LoadingFormSkeleton,
@@ -118,6 +119,8 @@ import {
 } from "@/components/design-system";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { MagazzinoAdvancedFilterPanel } from "@/components/gestionale/magazzino/magazzino-advanced-filter-panel";
+import { MagazzinoImportEntry } from "@/components/gestionale/magazzino/magazzino-import-entry";
+import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import type { RecordImageLogEvent } from "@/components/gestionale/media/record-image-manager";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
@@ -161,6 +164,11 @@ import { useMagazzinoLogFeed } from "@/lib/magazzino/use-magazzino-log-feed";
 import { formatCompatMezziArrayForLog } from "@/lib/gestionale-log/log-summary";
 import { useAuth } from "@/context/auth-context";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
+import {
+  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
+  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
+  useGestionaleListLayout,
+} from "@/lib/ui/use-gestionale-list-layout";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { CAB_SETTINGS_KEY, CAB_SETTINGS_MODULE } from "@/src/lib/app-settings/keys";
 import { useCabAppSettingsPayloadQuery, useSettingsUpsertMutation } from "@/src/hooks/gestionale/use-settings-queries";
@@ -168,6 +176,7 @@ import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
 import { Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
 import { useAdminNotificationStore } from "@/src/hooks/gestionale/use-admin-notification-store";
+import { deleteGeneratedListinoRicambiRequest } from "@/lib/magazzino/listino-import/listino-import-client";
 
 function eur(n: number) {
   return new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
@@ -515,6 +524,11 @@ function RicambioCodiceCell({ p }: { p: RicambioMagazzino }) {
 }
 
 export function MagazzinoView() {
+  const {
+    containerRef: listLayoutRef,
+    layout: listLayout,
+    layoutClassName: listLayoutClassName,
+  } = useGestionaleListLayout({ tier: "xl" });
   const { authorName, user } = useAuth();
   const undoSessionId = useUndoSessionId();
   const magUndoScope = useMemo((): MagazzinoUndoScope | null => {
@@ -535,7 +549,7 @@ export function MagazzinoView() {
   const magPerm = permModules.magazzino;
   const { clearMagazzinoNotifications } = useAdminNotificationStore();
   /** Creazione ricambio: `can_write` o `can_admin` sul modulo (viewer resta escluso). */
-  const magCanCreateRicambio = magPerm.canWrite || magPerm.canAdmin;
+  const magCanCreateRicambio = magPerm.canWrite || globalPerm.isAdmin;
   const magCanDeleteRicambio = globalPerm.canDeleteRecords;
   const upsertMagazzinoMaster = useSettingsUpsertMutation();
   const router = useRouter();
@@ -559,6 +573,12 @@ export function MagazzinoView() {
   const queryClient = useQueryClient();
   const magazzinoListQ = useMagazzinoRicambiUIQuery();
   const prodotti = magazzinoListQ.data ?? [];
+  const generatedListinoCount = useMemo(
+    () => prodotti.filter((p) => p.listinoImport?.generatoAutomaticamente).length,
+    [prodotti],
+  );
+  const [deleteGeneratedOpen, setDeleteGeneratedOpen] = useState(false);
+  const [deleteGeneratedLoading, setDeleteGeneratedLoading] = useState(false);
   const magazzinoInitialLoading = magazzinoListQ.isLoading && magazzinoListQ.data === undefined;
   const [searchInput, setSearchInput] = useState("");
   const [searchApplied, setSearchApplied] = useState("");
@@ -1304,6 +1324,38 @@ export function MagazzinoView() {
     ]);
   }
 
+  async function executeDeleteGeneratedListinoRicambi() {
+    if (deleteGeneratedLoading) return;
+    setDeleteGeneratedLoading(true);
+    try {
+      const result = await deleteGeneratedListinoRicambiRequest();
+      const blockedIds = new Set(result.blocked.map((b) => b.id));
+      patchProdotti((prev) =>
+        prev.filter((p) => !p.listinoImport?.generatoAutomaticamente || blockedIds.has(p.id)),
+      );
+      setDeleteGeneratedOpen(false);
+      if (result.deleted > 0) {
+        successDeleted();
+        void invalidateAfterMagazzinoOrMovimenti(queryClient, [
+          cabSyncEventForEntity("magazzino_ricambi", "listino-import-bulk", "entity_deleted", "magazzino_ricambi"),
+        ]);
+      }
+      if (result.blocked.length) {
+        toastError(
+          `${result.deleted} eliminati. ${result.blocked.length} non eliminabili (movimenti collegati).`,
+          { module: "magazzino", action: "delete" },
+        );
+      }
+    } catch (e) {
+      toastError(e instanceof Error ? e.message : "Eliminazione non riuscita.", {
+        module: "magazzino",
+        action: "delete",
+      });
+    } finally {
+      setDeleteGeneratedLoading(false);
+    }
+  }
+
   function closeDetail() {
     setDetail(null);
   }
@@ -1525,12 +1577,14 @@ export function MagazzinoView() {
 
   return (
     <GestionaleSectionGate module="magazzino">
-    <div className={`magazzino-scroll-scope ${layoutPageRoot}`}>
+    <div
+      ref={listLayoutRef}
+      className={`magazzino-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}
+    >
       <PageHeader
         title="Magazzino ricambi"
         actions={
           <GestionalePageToolbarActions
-            className="max-sm:flex-nowrap"
             leading={
               <MagazzinoGiacenzaBell
                 count={sottoScortaTotale}
@@ -1622,6 +1676,24 @@ export function MagazzinoView() {
             onOverflowToggle={() => setToolbarOverflowOpen((o) => !o)}
             overflowActions={
               <>
+                <MagazzinoImportEntry disabled={!magCanCreateRicambio} onCompleted={() => void magazzinoListQ.refetch()} />
+                <ModuleImportEntry
+                  entity="listino_ricambi"
+                  module="magazzino"
+                  buttonLabel="Importa listino"
+                  onCompleted={() => void magazzinoListQ.refetch()}
+                />
+                {magCanDeleteRicambio && generatedListinoCount > 0 ? (
+                  <GestionaleAiActionButton
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    className="w-full justify-center sm:w-auto"
+                    onClick={() => setDeleteGeneratedOpen(true)}
+                  >
+                    Elimina ricambi da listino ({generatedListinoCount})
+                  </GestionaleAiActionButton>
+                ) : null}
                 <button
                   type="button"
                   aria-pressed={soloSottoScorta}
@@ -1680,8 +1752,9 @@ export function MagazzinoView() {
           <LoadingMagazzinoListSkeleton withToolbar={false} />
         ) : (
         <>
+        {listLayout === "desktop" ? (
         <GestionaleListTable
-          visibilityClass="mt-4 hidden xl:block"
+          visibilityClass={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
           colgroup={
             <>
               <col style={{ width: "7.75rem" }} />
@@ -1779,8 +1852,10 @@ export function MagazzinoView() {
         >
           {null}
         </GestionaleListTable>
+        ) : null}
 
-        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:hidden">
+        {listLayout === "mobile" ? (
+        <div className={`mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
           {pagedMagazzino.map((p) => {
             const consumoRow = consumoMap.get(p.id);
             const avgM = consumoRow?.avgMonthly ?? null;
@@ -1934,6 +2009,7 @@ export function MagazzinoView() {
             );
           })}
         </div>
+        ) : null}
         {showPager ? (
           <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} />
         ) : null}
@@ -2054,6 +2130,13 @@ export function MagazzinoView() {
           onOpenRicambio={(id) => focusRicambioInTable(id)}
         />
       ) : null}
+      <SettingsEliminaConfirmDialog
+        open={deleteGeneratedOpen}
+        itemLabel={`${generatedListinoCount} ricambi generati da listino`}
+        detail="Verranno eliminati solo i ricambi creati automaticamente da import listino, esclusi quelli con movimenti collegati."
+        onCancel={() => setDeleteGeneratedOpen(false)}
+        onConfirm={() => void executeDeleteGeneratedListinoRicambi()}
+      />
       <SettingsEliminaConfirmDialog
         open={eliminaRicambioTarget != null}
         itemLabel={eliminaRicambioTarget?.descrizione}

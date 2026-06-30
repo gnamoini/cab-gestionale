@@ -272,6 +272,11 @@ async function propagateOne(entry: SettingsRenameEntry): Promise<SettingsRenameP
       const c = await sb();
       const prof = await countUpdate(c, "profiles", { cliente_ref: to }, { cliente_ref: from });
       out.push({ kind, from, to, updated: prof });
+      const { clientiAnagraficaService } = await import("@/src/services/clienti-anagrafica.service");
+      const anagRes = await clientiAnagraficaService.renameNomeDisplay(from, to);
+      if (anagRes.success) {
+        out.push({ kind, from, to, updated: anagRes.data ?? 0 });
+      }
       break;
     }
     case "utilizzatore": {

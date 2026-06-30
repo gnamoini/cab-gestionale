@@ -1,3 +1,5 @@
+@import "../global-table/gestionale-list-layout.css";
+
 /* Tabella densa Lavorazioni — scroll orizzontale, Azioni sticky a destra, colonne progressive */
 
 .gestionale-lavorazioni-dense-table {
@@ -43,7 +45,7 @@
 /* Kanban Lavorazioni — scroll colonne isolato dal main, board orizzontale */
 
 .lavorazioni-kanban-scope {
-  --lavorazioni-kanban-col-max-h: min(calc(100dvh - 12.5rem), 52rem);
+  --lavorazioni-kanban-col-max-h: min(calc(100dvh - 17rem), 48rem);
 }
 
 .lavorazioni-kanban-board {
@@ -63,20 +65,11 @@
   min-height: 0;
   max-height: 100%;
   overflow-x: hidden;
-  overscroll-behavior-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.lavorazioni-kanban-column-scroll[data-overflowing="true"] {
   overflow-y: auto;
   touch-action: pan-y;
   scrollbar-gutter: stable;
   overscroll-behavior-y: contain;
-}
-
-.lavorazioni-kanban-column-scroll[data-overflowing="false"] {
-  overflow-y: visible;
-  touch-action: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .lavorazioni-kanban-card-hit {
@@ -93,9 +86,6 @@
   min-width: 0;
   overflow-x: hidden;
   overscroll-behavior-x: none;
-  overscroll-y: auto;
-  overscroll-behavior-y: contain;
-  -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   -webkit-tap-highlight-color: transparent;
 }
@@ -107,7 +97,8 @@
 .lavorazioni-kanban-mobile-panel {
   display: grid;
   grid-template-rows: 0fr;
-  transition: grid-template-rows 0.2s ease-out;
+  overflow: hidden;
+  transition: grid-template-rows 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .lavorazioni-kanban-mobile-panel-open {
@@ -117,6 +108,20 @@
 .lavorazioni-kanban-mobile-panel-inner {
   min-height: 0;
   overflow: hidden;
+  transition: opacity 0.3s ease-out;
+}
+
+.lavorazioni-kanban-mobile-panel:not(.lavorazioni-kanban-mobile-panel-open) .lavorazioni-kanban-mobile-panel-inner {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lavorazioni-kanban-mobile-panel,
+  .lavorazioni-kanban-mobile-panel-inner {
+    transition: none;
+  }
 }
 
 .lavorazioni-kanban-loading {

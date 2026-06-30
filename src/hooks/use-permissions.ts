@@ -15,8 +15,8 @@ import { QK } from "@/src/lib/react-query/invalidate-related";
 import { permissionsService } from "@/src/services/permissions.service";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
-async function fetchMyPermissions(): Promise<UserPermissionRow[]> {
-  const r = await permissionsService.listMyPermissions();
+async function fetchMyPermissions(userId: string | undefined): Promise<UserPermissionRow[]> {
+  const r = await permissionsService.listMyPermissions(userId);
   if (!r.success) throw new Error(r.error ?? "Errore permessi");
   return r.data ?? [];
 }
@@ -26,7 +26,7 @@ export function useUserPermissionsQuery(): UseQueryResult<UserPermissionRow[], E
   const { user, status } = useAuth();
   return useQuery({
     queryKey: [...QK.userPermissions, user?.id ?? "anon"] as const,
-    queryFn: fetchMyPermissions,
+    queryFn: () => fetchMyPermissions(user?.id),
     enabled: isAuthSessionEstablished(status) && !!user?.id,
     staleTime: Number.POSITIVE_INFINITY,
     gcTime: 86_400_000,
@@ -137,6 +137,8 @@ const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>
   report: "report",
   documenti: "documenti",
   dipendenti: "dipendenti",
+  fatturazione: "fatturazione",
+  ddt: "ddt",
 };
 
 /** Nav ERP: `user_permissions` per modulo operativo; capability RBAC per security/impostazioni. */

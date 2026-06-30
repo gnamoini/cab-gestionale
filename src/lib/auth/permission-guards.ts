@@ -6,7 +6,7 @@ import { moduleAllows, type ModulePermissionOp } from "@/src/lib/auth/effective-
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { hasCapability, RBAC_DENIED_MESSAGE, type Capability } from "@/lib/rbac";
 import type { RbacEvaluationContext } from "@/lib/rbac";
-import { canRead, canWrite, canDelete, hasPermission, type PermissionKey, type RbacSection } from "@/lib/auth/rbac";
+import { resolveRole, canRead, canWrite, canDelete, hasPermission, type PermissionKey, type RbacSection } from "@/lib/auth/rbac";
 import { fetchClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/fetch-client-effective-permissions";
 import {
   readAuthRoleHint,
@@ -23,6 +23,9 @@ const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>
   report: "report",
   documenti: "documenti",
   dipendenti: "dipendenti",
+  fatturazione: "fatturazione",
+  ddt: "ddt",
+  ordini_fornitori: "ordini_fornitori",
 };
 
 const DENIED_MESSAGE = RBAC_DENIED_MESSAGE;
@@ -66,6 +69,10 @@ export async function ensureOperationalWrite(): Promise<ServiceResult<true>> {
 export async function ensurePermissionOrError(permission: PermissionKey): Promise<void> {
   const allowed = await ensurePermission(permission);
   if (!allowed.success) throw new Error(allowed.error ?? DENIED_MESSAGE);
+}
+
+export async function ensureIsAdmin(): Promise<ServiceResult<true>> {
+  return ensureWithRoleResolution((role) => resolveRole(role) === "admin");
 }
 
 export async function ensureModuleCan(

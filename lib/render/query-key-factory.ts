@@ -37,6 +37,22 @@ export function preventiviRecordsQueryKey() {
   return [...QK.preventivi, null] as const;
 }
 
+export function fatturazioneListQueryKey() {
+  return [...QK.fatturazione, "list"] as const;
+}
+
+export function ddtListQueryKey() {
+  return [...QK.ddt, "list"] as const;
+}
+
+export function ordiniFornitoriListQueryKey() {
+  return [...QK.ordiniFornitori, "list"] as const;
+}
+
+export function preventivoDdtIndexQueryKey(preventivoIds: readonly string[]) {
+  return [...QK.ddt, "preventivo-index", preventivoIds] as const;
+}
+
 export function settingsPayloadQueryKey() {
   return [...QK.settings, "payload"] as const;
 }

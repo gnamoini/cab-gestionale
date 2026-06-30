@@ -1,0 +1,192 @@
+{
+  "generatedAt": "2026-06-11T17:35:37.730Z",
+  "users": [
+    {
+      "email": "github-actions-smoke@cab-gestionale.ci",
+      "id": "28dbfcd9-4c1a-48f7-8319-557157588e9f",
+      "source": "admin"
+    },
+    {
+      "email": "gaetanopedone05@gmail.com",
+      "id": "8a1f95f2-5ffe-42eb-843b-8d19d1d4a78e",
+      "source": "operatore"
+    }
+  ],
+  "results": [
+    {
+      "id": "Q1",
+      "table": "lavorazioni",
+      "label": "lista_attive",
+      "sql": "SELECT id FROM public.lavorazioni WHERE deleted_at IS NULL AND archived = false ORDER BY created_at DESC",
+      "policy": "cap_lavorazioni_select + rbac_can_read_row",
+      "modes": {
+        "rls_off": {
+          "ok": true,
+          "mode": "rls_off",
+          "executionTimeMs": 0.146,
+          "planningTimeMs": 1.02,
+          "actualRows": 14,
+          "filters": [
+            "((deleted_at IS NULL) AND (NOT archived))"
+          ],
+          "hasRbacFilter": false,
+          "nodeType": "Sort"
+        },
+        "rls_on_postgres": {
+          "ok": true,
+          "mode": "rls_on_postgres",
+          "executionTimeMs": 0.132,
+          "planningTimeMs": 1.014,
+          "actualRows": 14,
+          "filters": [
+            "((deleted_at IS NULL) AND (NOT archived))"
+          ],
+          "hasRbacFilter": false,
+          "nodeType": "Sort"
+        },
+        "authenticated_admin": {
+          "userId": "28dbfcd9-4c1a-48f7-8319-557157588e9f",
+          "email": "github-actions-smoke@cab-gestionale.ci",
+          "ok": true,
+          "mode": "authenticated",
+          "executionTimeMs": 10.998,
+          "planningTimeMs": 1.051,
+          "actualRows": 14,
+          "filters": [
+            "rbac_can_read_row('lavorazioni'::text, id)"
+          ],
+          "hasRbacFilter": true,
+          "nodeType": "Index Scan"
+        },
+        "authenticated_operatore": {
+          "userId": "8a1f95f2-5ffe-42eb-843b-8d19d1d4a78e",
+          "email": "gaetanopedone05@gmail.com",
+          "ok": true,
+          "mode": "authenticated",
+          "executionTimeMs": 10.123,
+          "planningTimeMs": 1.016,
+          "actualRows": 14,
+          "filters": [
+            "rbac_can_read_row('lavorazioni'::text, id)"
+          ],
+          "hasRbacFilter": true,
+          "nodeType": "Index Scan"
+        }
+      }
+    },
+    {
+      "id": "Q6",
+      "table": "lavorazioni",
+      "label": "stato_archived_sort",
+      "sql": "SELECT id FROM public.lavorazioni WHERE deleted_at IS NULL AND stato = 'accettazione' AND archived = false ORDER BY created_at DESC",
+      "policy": "cap_lavorazioni_select + rbac_can_read_row",
+      "modes": {
+        "rls_off": {
+          "ok": true,
+          "mode": "rls_off",
+          "executionTimeMs": 0.099,
+          "planningTimeMs": 1.025,
+          "actualRows": 5,
+          "filters": [],
+          "hasRbacFilter": false,
+          "nodeType": "Index Scan"
+        },
+        "rls_on_postgres": {
+          "ok": true,
+          "mode": "rls_on_postgres",
+          "executionTimeMs": 0.096,
+          "planningTimeMs": 1.028,
+          "actualRows": 5,
+          "filters": [],
+          "hasRbacFilter": false,
+          "nodeType": "Index Scan"
+        },
+        "authenticated_admin": {
+          "userId": "28dbfcd9-4c1a-48f7-8319-557157588e9f",
+          "email": "github-actions-smoke@cab-gestionale.ci",
+          "ok": true,
+          "mode": "authenticated",
+          "executionTimeMs": 4.813,
+          "planningTimeMs": 1.038,
+          "actualRows": 5,
+          "filters": [
+            "rbac_can_read_row('lavorazioni'::text, id)"
+          ],
+          "hasRbacFilter": true,
+          "nodeType": "Index Scan"
+        },
+        "authenticated_operatore": {
+          "userId": "8a1f95f2-5ffe-42eb-843b-8d19d1d4a78e",
+          "email": "gaetanopedone05@gmail.com",
+          "ok": true,
+          "mode": "authenticated",
+          "executionTimeMs": 5.892,
+          "planningTimeMs": 1.074,
+          "actualRows": 5,
+          "filters": [
+            "rbac_can_read_row('lavorazioni'::text, id)"
+          ],
+          "hasRbacFilter": true,
+          "nodeType": "Index Scan"
+        }
+      }
+    },
+    {
+      "id": "Q8",
+      "table": "mezzi",
+      "label": "cliente_eq",
+      "sql": "SELECT id FROM public.mezzi WHERE cliente = 'Specchia'",
+      "policy": "cap_mezzi_select + rbac_can_read_row",
+      "modes": {
+        "rls_off": {
+          "ok": true,
+          "mode": "rls_off",
+          "executionTimeMs": 0.126,
+          "planningTimeMs": 8.549,
+          "actualRows": 1,
+          "filters": [],
+          "hasRbacFilter": false,
+          "nodeType": "Index Scan"
+        },
+        "rls_on_postgres": {
+          "ok": true,
+          "mode": "rls_on_postgres",
+          "executionTimeMs": 0.119,
+          "planningTimeMs": 2.194,
+          "actualRows": 1,
+          "filters": [],
+          "hasRbacFilter": false,
+          "nodeType": "Index Scan"
+        },
+        "authenticated_admin": {
+          "userId": "28dbfcd9-4c1a-48f7-8319-557157588e9f",
+          "email": "github-actions-smoke@cab-gestionale.ci",
+          "ok": true,
+          "mode": "authenticated",
+          "executionTimeMs": 2.915,
+          "planningTimeMs": 2.18,
+          "actualRows": 1,
+          "filters": [
+            "rbac_can_read_row('mezzi'::text, id)"
+          ],
+          "hasRbacFilter": true,
+          "nodeType": "Index Scan"
+        },
+        "authenticated_operatore": {
+          "userId": "8a1f95f2-5ffe-42eb-843b-8d19d1d4a78e",
+          "email": "gaetanopedone05@gmail.com",
+          "ok": true,
+          "mode": "authenticated",
+          "executionTimeMs": 3.441,
+          "planningTimeMs": 2.148,
+          "actualRows": 1,
+          "filters": [
+            "rbac_can_read_row('mezzi'::text, id)"
+          ],
+          "hasRbacFilter": true,
+          "nodeType": "Index Scan"
+        }
+      }
+    }
+  ]
+}

@@ -260,7 +260,10 @@ export function DashboardPromemoriaSection() {
       return <LoadingCardSkeleton minHeightClass="min-h-[280px]" rows={4} />;
     }
     return (
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start">
+      <div
+        data-testid="dashboard-promemoria-grid"
+        className="grid min-w-0 gap-5 cab-shell-desktop:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] cab-shell-desktop:items-start"
+      >
         <DashboardPromemoriaCalendar
           selectedYmd={selectedYmd}
           onSelectYmd={handleSelectYmd}

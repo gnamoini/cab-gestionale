@@ -14,15 +14,21 @@ import { getMagazzinoListServer, getMagazzinoReportLightServer } from "@/lib/mag
 import { getMezziListLightServer, getMezziReportLightServer } from "@/lib/mezzi/mezzi-list-fetch-server";
 import { getMovimentiListServer } from "@/lib/movimenti/movimenti-list-fetch-server";
 import { fetchDashboardDataDTOServer } from "@/lib/bff/dashboard-data-fetch-server";
+import { MAGAZZINO_DASHBOARD_KPI_QUERY_KEY } from "@/lib/magazzino/dashboard-mag-query-keys";
+import { QK } from "@/src/lib/react-query/query-keys";
 import { getDocumentiDashboardDTOServer } from "@/lib/bff/documenti-dashboard-fetch-server";
 import { fetchReportDataDTOServer } from "@/lib/bff/report-bundle-fetch-server";
 import { fetchPreventiviRecordsServer } from "@/lib/preventivi/preventivi-fetch-server";
+import { fetchOrdiniFornitoriRecordsServer } from "@/lib/ordini-fornitori/ordine-fornitore-fetch-server";
+import { fetchInvoiceListPayloadServer } from "@/lib/fatturazione/fatturazione-fetch-server";
 import { fetchSchedeBundlesStoreServer } from "@/lib/schede/schede-bundles-fetch-server";
 import { getReportManualEntriesServer } from "@/lib/report/report-manual-entries-fetch-server";
 import { SCHEde_BUNDLES_QUERY_KEY } from "@/src/lib/react-query/query-keys";
 import {
   documentiListQueryKey,
+  fatturazioneListQueryKey,
   mezziListQueryKey,
+  ordiniFornitoriListQueryKey,
   preventiviRecordsQueryKey,
 } from "@/lib/render/query-key-factory";
 import {
@@ -77,8 +83,12 @@ export async function prefetchDashboardPage(): Promise<DehydratedState> {
 
   qc.setQueryData(lav.queryKey, dto.lavorazioni);
   qc.setQueryData(magReport.queryKey, dto.magazzinoReport);
+  qc.setQueryData(MAGAZZINO_DASHBOARD_KPI_QUERY_KEY, dto.magDashboardKpi);
   qc.setQueryData(settings.queryKey, dto.settings);
   qc.setQueryData(SCHEde_BUNDLES_QUERY_KEY, dto.schedeStore);
+  for (const slice of dto.logSlices) {
+    qc.setQueryData([...QK.log, slice.filters] as const, slice.rows);
+  }
   void schedeScope;
 
   return dehydrate(qc);
@@ -182,11 +192,26 @@ export async function prefetchReportPage(): Promise<DehydratedState> {
 export async function prefetchPreventiviPage(): Promise<DehydratedState> {
   const qc = createServerQueryClient();
   const preventivi = resolveInitialLoad({ scopeKey: "preventivi.list" });
-  const res = await fetchPreventiviRecordsServer();
+  const [res, ordiniRes] = await Promise.all([
+    fetchPreventiviRecordsServer(),
+    fetchOrdiniFornitoriRecordsServer(),
+  ]);
   if (res.success && res.data) {
     qc.setQueryData(preventiviRecordsQueryKey(), res.data);
   }
+  if (ordiniRes.success && ordiniRes.data) {
+    qc.setQueryData(ordiniFornitoriListQueryKey(), ordiniRes.data);
+  }
   void preventivi;
+  return dehydrate(qc);
+}
+
+export async function prefetchFatturazionePage(): Promise<DehydratedState> {
+  const qc = createServerQueryClient();
+  const res = await fetchInvoiceListPayloadServer();
+  if (res.success && res.data) {
+    qc.setQueryData(fatturazioneListQueryKey(), res.data);
+  }
   return dehydrate(qc);
 }
 

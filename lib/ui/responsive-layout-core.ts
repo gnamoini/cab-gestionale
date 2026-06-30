@@ -41,7 +41,7 @@ export {
 
 /** Stack pagina sotto PageHeader: spacing + contenimento orizzontale. */
 export const layoutPageContainer =
-  "min-w-0 max-w-full overflow-x-clip space-y-[length:var(--ds-space-xl)]";
+  "cab-layout-page-stack min-w-0 max-w-full space-y-[length:var(--ds-space-xl)]";
 
 /** Root modulo / wrapper interno main (scope scroll CSS opzionale aggiunto dal modulo). */
 export const layoutPageRoot = "min-w-0 max-w-full";

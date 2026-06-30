@@ -16,7 +16,7 @@ const enabled =
   process.env.NODE_ENV === "development" &&
   process.env.NEXT_PUBLIC_RENDER_AUDIT !== "0" &&
   (process.env.NEXT_PUBLIC_RENDER_AUDIT === "1" ||
-    (typeof process.env.NEXT_PUBLIC_RENDER_AUDIT === "undefined" && false));
+    process.env.NEXT_PUBLIC_BOOT_INVESTIGATION === "1");
 
 const counts = new Map<string, RenderAuditEntry>();
 

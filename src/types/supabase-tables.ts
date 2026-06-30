@@ -4,6 +4,7 @@ export type RuoloUtente =
   | "admin"
   | "manager"
   | "operatore"
+  | "addetto_amministrativo"
   | "cliente"
   | "guest"
   | "ospite"
@@ -178,6 +179,120 @@ export type PreventivoRow = {
   updated_at: string;
 };
 
+export type InvoiceStatus =
+  | "bozza"
+  | "da_verificare"
+  | "emessa"
+  | "inviata"
+  | "parzialmente_pagata"
+  | "pagata"
+  | "scaduta"
+  | "annullata";
+
+export type InvoiceRowTipo =
+  | "ricambio"
+  | "articolo_magazzino"
+  | "manodopera"
+  | "lavorazione"
+  | "costo_extra"
+  | "libera";
+
+export type InvoiceLinkSourceType = "preventivo" | "lavorazione" | "mezzo" | "attrezzatura" | "ricambio";
+
+export type InvoicePaymentMetodo = "bonifico" | "contanti" | "assegno" | "pos" | "altro";
+
+export type BillingCustomerRow = {
+  id: string;
+  cliente_label: string;
+  entity_key: string | null;
+  ragione_sociale: string | null;
+  partita_iva: string | null;
+  codice_fiscale: string | null;
+  pec: string | null;
+  codice_sdi: string | null;
+  indirizzo: Record<string, unknown>;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvoiceRow = {
+  id: string;
+  numero: number;
+  anno: number;
+  status: InvoiceStatus;
+  origine: string | null;
+  customer_id: string | null;
+  cliente_label: string;
+  customer_snapshot: Record<string, unknown>;
+  data_emissione: string;
+  data_scadenza: string | null;
+  imponibile: number;
+  iva: number;
+  totale: number;
+  pagato: number;
+  residuo: number;
+  note: string | null;
+  admin_notes: string | null;
+  meta: Record<string, unknown>;
+  created_by: string | null;
+  updated_by: string | null;
+  annullata_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvoiceLineRow = {
+  id: string;
+  invoice_id: string;
+  tipo: InvoiceRowTipo;
+  descrizione: string;
+  quantita: number;
+  prezzo_unitario: number;
+  sconto_percent: number;
+  iva_percent: number;
+  imponibile: number;
+  iva: number;
+  totale: number;
+  ricambio_id: string | null;
+  lavorazione_id: string | null;
+  preventivo_id: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+};
+
+export type InvoiceLinkRow = {
+  id: string;
+  invoice_id: string;
+  source_type: InvoiceLinkSourceType;
+  source_id: string;
+  allocated_imponibile: number;
+  allocated_iva: number;
+  allocated_totale: number;
+  meta: Record<string, unknown>;
+  created_at: string;
+};
+
+export type InvoicePaymentRow = {
+  id: string;
+  invoice_id: string;
+  data: string;
+  importo: number;
+  metodo: InvoicePaymentMetodo;
+  riferimento: string | null;
+  note: string | null;
+  created_by: string | null;
+  created_at: string;
+};
+
+export type PreventivoBillingStatusRow = {
+  preventivo_id: string;
+  preventivo_totale: number;
+  fatturato: number;
+  residuo: number;
+  stato_fatturazione: "non_fatturato" | "parzialmente_fatturato" | "totalmente_fatturato";
+};
+
 export type DocumentoRow = {
   id: string;
   mezzo_id: string | null;
@@ -264,4 +379,150 @@ export type BunderDocumentRow = {
   last_edited_by: string;
   created_at: string;
   updated_at: string;
+};
+
+/** Anagrafica clienti estesa (`clienti_anagrafiche`). */
+export type ClienteAnagraficaRow = {
+  id: string;
+  nome_display: string;
+  entity_key: string;
+  ragione_sociale: string | null;
+  partita_iva: string | null;
+  codice_destinatario: string | null;
+  sede_legale_uguale_operativa: boolean;
+  in_lista_settings: boolean;
+  note: string | null;
+  meta: Record<string, unknown>;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClienteSedeRow = {
+  id: string;
+  cliente_id: string;
+  tipo: "operativa" | "legale";
+  via: string | null;
+  numero_civico: string | null;
+  cap: string | null;
+  citta: string | null;
+  provincia: string | null;
+  stato: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClienteContattoRow = {
+  id: string;
+  cliente_id: string;
+  etichetta: string;
+  tipo: string;
+  valore: string;
+  ordine: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DdtDocumentRow = {
+  id: string;
+  numero: number | null;
+  anno: number;
+  serie: string;
+  sede_id: string | null;
+  status: "bozza" | "confermato" | "stampato" | "consegnato" | "annullato";
+  data_documento: string;
+  data_consegna: string | null;
+  cliente_label: string;
+  customer_snapshot: Record<string, unknown>;
+  luogo_consegna: Record<string, unknown>;
+  preventivo_id: string | null;
+  lavorazione_id: string | null;
+  mezzo_id: string | null;
+  mezzo_snapshot: Record<string, unknown>;
+  causale_trasporto: string | null;
+  vettore: string | null;
+  note: string | null;
+  origine: string;
+  pdf_artifact_hash: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  annullato_at: string | null;
+  stampato_at: string | null;
+  consegnato_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type DdtLineRow = {
+  id: string;
+  ddt_id: string;
+  ordine: number;
+  source_type: string;
+  source_ref: string;
+  preventivo_id: string | null;
+  descrizione: string;
+  codice: string | null;
+  quantita: number;
+  unita_misura: string;
+  note: string | null;
+  meta: Record<string, unknown>;
+  created_at: string;
+};
+
+export type DdtLinkRow = {
+  id: string;
+  ddt_id: string;
+  source_type: string;
+  source_id: string;
+  meta: Record<string, unknown>;
+  created_at: string;
+};
+
+export type PreventivoDdtFulfillmentRow = {
+  preventivo_id: string;
+  source_ref: string;
+  qty_preventivo: number;
+  qty_consegnata: number;
+  qty_residua: number;
+};
+
+export type OrdineFornitoreRow = {
+  id: string;
+  numero: string | null;
+  status: "bozza" | "inviato" | "confermato" | "annullato";
+  data_ordine: string;
+  fornitore_label: string;
+  fornitore_snapshot: Record<string, unknown>;
+  destinazione: string | null;
+  destinazione_snapshot: Record<string, unknown>;
+  note: string | null;
+  imponibile_righe: number;
+  trasporto: number;
+  imponibile: number;
+  iva_percent: number;
+  iva: number;
+  totale: number;
+  lavorazione_id: string | null;
+  preventivo_id: string | null;
+  scheda_lavorazione_id: string | null;
+  pdf_artifact_hash: string | null;
+  created_by: string | null;
+  updated_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type OrdineFornitoreRigaRow = {
+  id: string;
+  ordine_id: string;
+  ordine: number;
+  ricambio_id: string | null;
+  codice: string | null;
+  descrizione: string;
+  quantita: number;
+  prezzo_unitario: number;
+  sconto_percent: number;
+  totale_riga: number;
+  meta: Record<string, unknown>;
+  created_at: string;
 };

@@ -15,6 +15,10 @@ const ReportTrendsZone = dynamic(
   () => import("@/components/report/layout/report-trends-zone").then((m) => m.ReportTrendsZone),
   { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[12rem]" /> },
 );
+const ReportAiAnalysisZone = dynamic(
+  () => import("@/components/report/layout/report-ai-analysis-zone").then((m) => m.ReportAiAnalysisZone),
+  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[10rem]" /> },
+);
 const ReportMaintenanceZone = dynamic(
   () => import("@/components/report/layout/report-maintenance-zone").then((m) => m.ReportMaintenanceZone),
   { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[16rem]" /> },
@@ -41,6 +45,7 @@ import {
 import { useReportLiveData } from "@/lib/report/use-report-live-data";
 import { LoadingErrorState, LoadingReportSkeleton } from "@/components/design-system";
 import { dsStackPage } from "@/lib/ui/design-system";
+import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 
 function fmtYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -238,7 +243,7 @@ export function ReportAnalyticsView() {
 
   if (live.isLoading || !model || !tops || !filterRange || !toolbarProps) {
     return (
-      <div className={dsStackPage}>
+      <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
         {toolbarProps ? (
           <ReportToolbar {...toolbarProps} />
         ) : (
@@ -253,7 +258,7 @@ export function ReportAnalyticsView() {
 
   if (live.isError) {
     return (
-      <div className={dsStackPage}>
+      <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
         <ReportToolbar {...toolbarProps} />
         <ShellCard title="Caricamento non riuscito">
           <LoadingErrorState
@@ -267,7 +272,7 @@ export function ReportAnalyticsView() {
   }
 
   return (
-    <div className={dsStackPage}>
+    <div className={`${dsStackPage} ${layoutPageRoot} min-w-0 max-w-full`}>
       <ReportToolbar {...toolbarProps} />
 
       <ReportPerformanceGate
@@ -280,6 +285,16 @@ export function ReportAnalyticsView() {
       >
         <div className="min-w-0 space-y-4">
           <ReportExecutiveOverview compareMode={compareMode} />
+          <ReportAiAnalysisZone
+            preset={preset}
+            compareMode={compareMode}
+            filterRange={filterRange}
+            compareRange={model.compareRange}
+            model={model}
+            integrityView={live.integrityView}
+            tops={tops}
+            snapshotFingerprint={live.snapshotFingerprint}
+          />
           <ReportTrendsZone filterRange={filterRange} anchor={anchor} semanticIndex={semanticIndex} />
           <ReportOperationalAnalysisZone filterRange={filterRange} />
           <ReportMaintenanceZone

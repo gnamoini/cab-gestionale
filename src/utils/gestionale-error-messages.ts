@@ -2,7 +2,7 @@ import type { GestionalePermissionModule } from "@/src/lib/permissions/gestional
 import { gestionaleModuleLabel } from "@/src/lib/ux/gestionale-module-labels";
 
 export type GestionaleErrorContext = {
-  entity?: "mezzo" | "lavorazione" | "preventivo" | "documento" | "magazzino" | "report";
+  entity?: "mezzo" | "lavorazione" | "preventivo" | "fattura" | "documento" | "magazzino" | "report";
   module?: GestionalePermissionModule;
   action?: "delete" | "update" | "create" | "read";
 };
@@ -43,6 +43,7 @@ function sectionDeniedMessage(ctx?: GestionaleErrorContext): string | null {
   if (ctx?.entity === "mezzo") return "Accesso negato alla sezione Mezzi.";
   if (ctx?.entity === "documento") return "Accesso negato alla sezione Documenti.";
   if (ctx?.entity === "preventivo") return "Accesso negato alla sezione Preventivi.";
+  if (ctx?.entity === "fattura") return "Accesso negato alla sezione Fatturazione.";
   if (ctx?.entity === "report") return "Accesso negato alla sezione Report.";
   return null;
 }

@@ -1,5 +1,5 @@
 /**
- * Policy RBAC Fase 7 — matrice attesa ruoli × capability (S9 documentato in CI).
+ * Policy RBAC v3.1 — capability matrix + addetto_amministrativo + guest audit.
  */
 import assert from "node:assert/strict";
 import { hasCapability } from "@/lib/rbac";
@@ -8,18 +8,65 @@ import { hasPermission } from "@/lib/auth/rbac";
 
 const matrix: Array<{
   role: string;
+  readOp: boolean;
+  writeOp: boolean;
   manageSettings: boolean;
   manageSecurity: boolean;
   viewClientLavorazioni: boolean;
 }> = [
-  { role: "admin", manageSettings: true, manageSecurity: true, viewClientLavorazioni: true },
-  { role: "manager", manageSettings: true, manageSecurity: false, viewClientLavorazioni: false },
-  { role: "operatore", manageSettings: true, manageSecurity: false, viewClientLavorazioni: false },
-  { role: "cliente", manageSettings: false, manageSecurity: false, viewClientLavorazioni: true },
-  { role: "guest", manageSettings: false, manageSecurity: false, viewClientLavorazioni: false },
+  {
+    role: "admin",
+    readOp: true,
+    writeOp: true,
+    manageSettings: true,
+    manageSecurity: true,
+    viewClientLavorazioni: true,
+  },
+  {
+    role: "manager",
+    readOp: true,
+    writeOp: true,
+    manageSettings: true,
+    manageSecurity: false,
+    viewClientLavorazioni: false,
+  },
+  {
+    role: "operatore",
+    readOp: true,
+    writeOp: true,
+    manageSettings: false,
+    manageSecurity: false,
+    viewClientLavorazioni: false,
+  },
+  {
+    role: "addetto_amministrativo",
+    readOp: true,
+    writeOp: true,
+    manageSettings: false,
+    manageSecurity: false,
+    viewClientLavorazioni: false,
+  },
+  {
+    role: "cliente",
+    readOp: false,
+    writeOp: false,
+    manageSettings: false,
+    manageSecurity: false,
+    viewClientLavorazioni: true,
+  },
+  {
+    role: "guest",
+    readOp: true,
+    writeOp: false,
+    manageSettings: false,
+    manageSecurity: false,
+    viewClientLavorazioni: false,
+  },
 ];
 
 for (const row of matrix) {
+  assert.equal(hasCapability({ ruolo: row.role }, "can_read_operational"), row.readOp, `${row.role} readOp`);
+  assert.equal(hasCapability({ ruolo: row.role }, "can_write_operational"), row.writeOp, `${row.role} writeOp`);
   assert.equal(hasCapability({ ruolo: row.role }, "can_manage_settings"), row.manageSettings, `${row.role} settings`);
   assert.equal(hasCapability({ ruolo: row.role }, "can_manage_security"), row.manageSecurity, `${row.role} security`);
   assert.equal(

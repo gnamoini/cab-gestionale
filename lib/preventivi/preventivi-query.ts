@@ -1,6 +1,8 @@
 /** Query sulla pagina Preventivi: filtro per lavorazione collegata. */
 export const Q_PREVENTIVI_LAV = "prevLav";
 export const Q_PREVENTIVI_LAV_ORIG = "prevOrig";
+/** Tab pagina preventivi: preventivi | ordini */
+export const Q_PREVENTIVI_TAB = "prevTab";
 /** Filtro preventivi per mezzo anagrafica (id). */
 export const Q_PREVENTIVI_MEZZO = "prevMezzo";
 /** Apre in modifica il preventivo con questo id. */

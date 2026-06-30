@@ -134,7 +134,7 @@ export function LavorazioneMobileCardHeader({
           <div className="min-w-0 flex-1">
             <LavorazioneMobileCardTitle macchina={macchina} className="pr-1" />
           </div>
-          <div className="w-[min(11.5rem,46%)] shrink-0 self-start">{statusSlot}</div>
+          <div className="min-w-0 max-w-[46%] shrink self-start">{statusSlot}</div>
         </div>
         <LavorazioneMobileCardIngressoRow ingresso={ingresso} secondaryDate={secondaryDate} />
         <LavorazioneMobileCardIdent identLine={identLine} />
@@ -167,14 +167,16 @@ export function LavorazioneMobileCardHeader({
 /** Wrapper pill stato mobile (allineato al badge tabella). */
 export function LavorazioneMobileStatusSlot({ children }: { children: ReactNode }) {
   return (
-    <div className="w-full" role="group" aria-label="Stato lavorazione">
+    <div className="min-w-0 max-w-full" role="group" aria-label="Stato lavorazione">
       {children}
     </div>
   );
 }
 
 export function LavorazioneMobileMetaGrid({ children }: { children: ReactNode }) {
-  return <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2">{children}</dl>;
+  return (
+    <dl className="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-2 cab-shell-desktop:grid-cols-2">{children}</dl>
+  );
 }
 
 export function LavorazioneMobileMetaItem({
@@ -187,9 +189,9 @@ export function LavorazioneMobileMetaItem({
   className?: string;
 }) {
   return (
-    <div className={className}>
+    <div className={`min-w-0 ${className}`.trim()}>
       <dt className={metaDt}>{label}</dt>
-      <dd className={metaDd}>{value}</dd>
+      <dd className={`${metaDd} min-w-0 break-words`}>{value}</dd>
     </div>
   );
 }
@@ -213,7 +215,7 @@ export function LavorazioneMobileControlsPanel({
 }) {
   return (
     <div
-      className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-2 border-t border-zinc-200/60 pt-2.5 dark:border-zinc-700/60"
+      className="mt-2.5 grid grid-cols-1 gap-x-3 gap-y-2 border-t border-zinc-200/60 pt-2.5 cab-shell-desktop:grid-cols-2 dark:border-zinc-700/60"
       role="group"
       aria-label={ariaLabel}
     >

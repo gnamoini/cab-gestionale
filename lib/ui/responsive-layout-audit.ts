@@ -5,6 +5,7 @@
 
 import { FLEX_CONTAINMENT_MARKERS, FLEX_SCOPE_CLASS } from "@/lib/ui/global-flex-system";
 import { FLEX_AUDIT_HYDRATION_DELAY_MS } from "@/lib/ui/flex-system-policy";
+import { isInsideIntentionalHorizontalScroll } from "@/lib/ui/intentional-horizontal-scroll";
 import flexFreezeManifest from "@/lib/ui/flex-freeze-manifest.json";
 
 export { FLEX_AUDIT_HYDRATION_DELAY_MS };
@@ -49,42 +50,13 @@ export function detectPageHorizontalOverflow(): boolean {
   return doc.scrollWidth > doc.clientWidth + 1;
 }
 
-const HORIZONTAL_SCROLL_SCOPE_MARKERS = [
-  "timesheet-presenze-grid",
-  "gestionale-list-table-scope",
-  "lavorazioni-scroll-scope",
-  "overflow-x-auto",
-];
-
-function isInsideIntentionalHorizontalScroll(el: HTMLElement): boolean {
-  let node: HTMLElement | null = el.parentElement;
-  while (node) {
-    const cn = typeof node.className === "string" ? node.className : "";
-    const markedScope = HORIZONTAL_SCROLL_SCOPE_MARKERS.some((m) => cn.includes(m));
-    if (markedScope) return true;
-    const style = window.getComputedStyle(node);
-    const overflowX = style.overflowX;
-    const overflow = style.overflow;
-    const scrollsX =
-      overflowX === "auto" ||
-      overflowX === "scroll" ||
-      overflow === "auto" ||
-      overflow === "scroll";
-    if (scrollsX && node.scrollWidth > node.clientWidth + 1) {
-      return true;
-    }
-    node = node.parentElement;
-  }
-  return false;
-}
-
 /** Elementi il cui bordo destro supera il viewport (esclusi overlay fixed fuori main). */
 export function findViewportOverflowElements(limit = 12): Element[] {
   if (typeof document === "undefined") return [];
   const main = document.querySelector(".cab-app-shell main");
   if (!main) return [];
 
-  const vw = document.documentElement.clientWidth;
+  const vw = typeof window !== "undefined" ? window.innerWidth : document.documentElement.clientWidth;
   const out: Element[] = [];
   const walk = main.querySelectorAll("*");
 
@@ -244,6 +216,11 @@ export function emitResponsiveLayoutAuditWarnings(result: ResponsiveLayoutAuditR
   );
   for (const f of grouped) {
     console.warn(`[${f.kind}] ${f.message}`, f.target, f.detail ?? "");
+  }
+  if (result.hasPageOverflow) {
+    console.warn(
+      `${AUDIT_LOG_PREFIX} hint: controllare elementi con getBoundingClientRect().right > innerWidth (${typeof window !== "undefined" ? window.innerWidth : "?"})`,
+    );
   }
   console.groupEnd();
 }

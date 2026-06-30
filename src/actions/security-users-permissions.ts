@@ -24,6 +24,7 @@ import {
 import { hasModulePermissionOverrides } from "@/lib/security/user-module-permissions";
 import { validateSecurityUserBatchPatches } from "@/lib/validation/security-actions-validation";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
+import { onUserRoleChangedServer } from "@/src/lib/rbac/on-user-role-changed.server";
 import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
 import type { ProfileRow, UserPermissionRow } from "@/src/types/supabase-tables";
 
@@ -61,7 +62,7 @@ export type ListSecurityUsersPermissionsResult =
   | { ok: false; message: string };
 
 export type BatchUpdateSecurityUsersResult =
-  | { ok: true; updatedCount: number }
+  | { ok: true; updatedCount: number; roleChangedUserIds: string[] }
   | { ok: false; message: string };
 
 function roleGrantsClientPortal(role: AppRole): boolean {
@@ -97,9 +98,14 @@ async function applyUserModulePermissions(
   admin: SupabaseClient,
   userId: string,
   modulePermissions: SecurityUserModulePermissionEntry[] | null,
+  userRole?: AppRole,
 ): Promise<boolean> {
   await deleteUserModulePermissions(admin, userId);
   if (!modulePermissions?.length) return true;
+
+  if (userRole === "guest") {
+    throw new Error("Il ruolo Viewer/Audit non ammette override permessi modulo.");
+  }
 
   const rows = modulePermissions.map((entry) => ({
     user_id: userId,
@@ -151,7 +157,12 @@ export async function listSecurityUsersPermissionsAction(): Promise<ListSecurity
 
 async function writeSecurityBatchLog(
   admin: SupabaseClient,
-  input: { actorUserId: string; actorName: string; patches: SecurityUserBatchPatch[] },
+  input: {
+    actorUserId: string;
+    actorName: string;
+    patches: SecurityUserBatchPatch[];
+    profileById: Map<string, ProfileRow>;
+  },
 ) {
   const { error } = await admin.from("log_modifiche").insert({
     entita: "security",
@@ -163,6 +174,13 @@ async function writeSecurityBatchLog(
       actor: input.actorName,
       count: input.patches.length,
       userIds: input.patches.map((p) => p.userId),
+      transitions: input.patches
+        .filter((p) => p.ruolo != null)
+        .map((p) => ({
+          userId: p.userId,
+          from: resolveRole(input.profileById.get(p.userId)?.ruolo),
+          to: p.ruolo,
+        })),
       compact: `(AGGIORNAMENTO UTENTI, ${input.patches.length} modifiche, ${input.actorName})`,
     },
   });
@@ -174,7 +192,7 @@ export async function batchUpdateSecurityUsersAction(
 ): Promise<BatchUpdateSecurityUsersResult> {
   const validated = validateSecurityUserBatchPatches(patches);
   if (!validated.ok) return { ok: false, message: validated.message };
-  if (!validated.patches.length) return { ok: true, updatedCount: 0 };
+  if (!validated.patches.length) return { ok: true, updatedCount: 0, roleChangedUserIds: [] };
 
   const caller = await assertAdminCaller();
   if (!caller.ok) return { ok: false, message: caller.message };
@@ -198,7 +216,7 @@ export async function batchUpdateSecurityUsersAction(
     }))
     .filter((p) => p.userId);
 
-  if (!normalized.length) return { ok: true, updatedCount: 0 };
+  if (!normalized.length) return { ok: true, updatedCount: 0, roleChangedUserIds: [] };
 
   let knownClienti: Set<string>;
   try {
@@ -219,6 +237,7 @@ export async function batchUpdateSecurityUsersAction(
   const profileById = new Map(((profilesBefore ?? []) as ProfileRow[]).map((p) => [p.id, p]));
 
   let updatedCount = 0;
+  const roleChangedUserIds: string[] = [];
 
   for (const patch of normalized) {
     const profile = profileById.get(patch.userId);
@@ -285,29 +304,41 @@ export async function batchUpdateSecurityUsersAction(
 
     const roleChanged = patch.ruolo != null && resolveRole(profile.ruolo) !== patch.ruolo;
     if (roleChanged) {
-      const { error } = await admin.from("profiles").update({ ruolo: patch.ruolo }).eq("id", patch.userId);
-      if (error) return { ok: false, message: error.message };
-      const authLookup = await admin.auth.admin.getUserById(patch.userId).catch(() => null);
-      await admin.auth.admin
-        .updateUserById(patch.userId, {
-          app_metadata: { ...(authLookup?.data.user?.app_metadata ?? {}), cab_ruolo: patch.ruolo },
-        })
-        .catch(() => {});
-      clearServerAuthSnapshotCacheForUser(patch.userId);
+      const { error: roleErr } = await admin.rpc("security_set_user_role", {
+        p_user_id: patch.userId,
+        p_new_role: patch.ruolo,
+      });
+      if (roleErr) return { ok: false, message: roleErr.message };
+
+      const authLookup = await admin.auth.admin.getUserById(patch.userId);
+      if (authLookup.error) return { ok: false, message: authLookup.error.message };
+      const { error: metaErr } = await admin.auth.admin.updateUserById(patch.userId, {
+        app_metadata: { ...(authLookup.data.user?.app_metadata ?? {}), cab_ruolo: patch.ruolo },
+      });
+      if (metaErr) return { ok: false, message: metaErr.message };
+
+      onUserRoleChangedServer(patch.userId);
+      roleChangedUserIds.push(patch.userId);
       updatedCount += 1;
     }
 
     if (patch.modulePermissions !== undefined) {
+      if (effectiveRole === "guest") {
+        return {
+          ok: false,
+          message: "Il ruolo Viewer/Audit non ammette override permessi modulo.",
+        };
+      }
       try {
-        if (await applyUserModulePermissions(admin, patch.userId, patch.modulePermissions)) {
+        if (await applyUserModulePermissions(admin, patch.userId, patch.modulePermissions, effectiveRole)) {
           updatedCount += 1;
         }
       } catch (e) {
         return { ok: false, message: e instanceof Error ? e.message : "Errore salvataggio permessi pagine." };
       }
-    } else if (patch.clearModulePermissions === true || roleChanged) {
+    } else if (patch.clearModulePermissions === true) {
       try {
-        if (await applyUserModulePermissions(admin, patch.userId, null)) {
+        if (await applyUserModulePermissions(admin, patch.userId, null, effectiveRole)) {
           updatedCount += 1;
         }
       } catch (e) {
@@ -320,9 +351,10 @@ export async function batchUpdateSecurityUsersAction(
     actorUserId: caller.callerId,
     actorName: caller.callerName,
     patches: normalized,
+    profileById,
   });
 
-  return { ok: true, updatedCount };
+  return { ok: true, updatedCount, roleChangedUserIds };
 }
 
 export type ClienteAssociationAuditIssue = {

@@ -22,39 +22,39 @@ assertRouteProtection(
   adminSnap,
 );
 
-const operatoreNoReport = resolveEffectivePermissions({
-  userId: "op-1",
-  ruolo: "operatore",
-  permissionRows: [
-    {
-      user_id: "op-1",
-      module: "report",
-      can_read: false,
-      can_write: false,
-      can_admin: false,
-    },
-  ],
-  pilotDbEnabled: false,
-});
-
 assertRouteProtection(
   "operatore",
   [
     { pathname: "/dashboard", allowed: true },
     { pathname: "/report", allowed: false },
     { pathname: "/magazzino", allowed: true },
+    { pathname: "/preventivi", allowed: false },
+    { pathname: "/bunder", allowed: false },
   ],
-  operatoreNoReport,
+  resolveEffectivePermissions({
+    userId: "op-1",
+    ruolo: "operatore",
+    permissionRows: [],
+    pilotDbEnabled: false,
+  }),
 );
 
 assertRouteProtection(
   "guest",
   [
-    { pathname: "/dashboard", allowed: false },
+    { pathname: "/dashboard", allowed: true },
+    { pathname: "/dipendenti", allowed: true },
+    { pathname: "/preventivi", allowed: true },
+    { pathname: "/bunder", allowed: true },
     { pathname: "/impostazioni", allowed: false },
     { pathname: "/login", allowed: true },
   ],
-  null,
+  resolveEffectivePermissions({
+    userId: "guest-1",
+    ruolo: "guest",
+    permissionRows: [],
+    pilotDbEnabled: false,
+  }),
 );
 
 assertRouteProtection(

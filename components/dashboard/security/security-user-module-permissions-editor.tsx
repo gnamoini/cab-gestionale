@@ -6,11 +6,24 @@ import {
   normalizeModuleDraftRow,
   type ModulePermissionDraftRow,
 } from "@/lib/security/user-module-permissions";
-import { SecurityToggle } from "@/components/dashboard/security/security-toggle";
 import { dsBtnGhost, dsScrollbar, dsTable, dsTableRow, dsTableTd, dsTableWrap } from "@/lib/ui/design-system";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
 const ROLE_MODULE_READONLY = new Set<AppRole>(["cliente", "guest"]);
+
+type AccessLevel = "hidden" | "read" | "full";
+
+function toAccessLevel(row: ModulePermissionDraftRow): AccessLevel {
+  if (!row.canRead) return "hidden";
+  if (row.canWrite) return "full";
+  return "read";
+}
+
+function fromAccessLevel(level: AccessLevel): Pick<ModulePermissionDraftRow, "canRead" | "canWrite"> {
+  if (level === "hidden") return { canRead: false, canWrite: false };
+  if (level === "read") return { canRead: true, canWrite: false };
+  return { canRead: true, canWrite: true };
+}
 
 type Props = {
   userId: string;
@@ -50,10 +63,16 @@ export function SecurityUserModulePermissionsEditor({
     );
   }
 
+  function setAccessLevel(module: ModulePermissionDraftRow["module"], level: AccessLevel) {
+    patchModule(module, fromAccessLevel(level));
+  }
+
   if (ROLE_MODULE_READONLY.has(role)) {
     return (
       <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
-        Per il ruolo {role}, l&apos;accesso alle pagine ERP è definito dal ruolo e dal portale clienti (toggle in tabella).
+        {role === "guest"
+          ? "Viewer/Audit: accesso read-only completo a tutti i moduli ERP (non configurabile)."
+          : "Per il ruolo Cliente, l'accesso è definito dal portale clienti."}
       </p>
     );
   }
@@ -61,7 +80,8 @@ export function SecurityUserModulePermissionsEditor({
   return (
     <div className="space-y-2">
       <p className="text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
-        Dashboard, BUNDER, Configurazione e Sicurezza seguono solo il ruolo. Qui imposti le pagine operative (allineate al menu).
+        Dashboard, BUNDER, Configurazione, Sicurezza e Portale Clienti seguono solo il ruolo e non sono
+        modificabili da questa schermata.
       </p>
       {!matrixReadOnly ? (
         <button type="button" className={dsBtnGhost} onClick={onRestoreFromRole}>
@@ -74,8 +94,7 @@ export function SecurityUserModulePermissionsEditor({
             <tr className={dsTableRow}>
               <th className={`${dsTableTd} text-left font-semibold`}>Pagina</th>
               <th className={`${dsTableTd} text-center font-semibold`}>Da ruolo</th>
-              <th className={`${dsTableTd} text-center font-semibold`}>Lettura</th>
-              <th className={`${dsTableTd} text-center font-semibold`}>Scrittura</th>
+              <th className={`${dsTableTd} text-left font-semibold`}>Accesso</th>
             </tr>
           </thead>
           <tbody>
@@ -90,23 +109,20 @@ export function SecurityUserModulePermissionsEditor({
                   ) : null}
                 </td>
                 <td className={`${dsTableTd} text-center text-[color:var(--cab-text-muted)]`}>
-                  {row.roleCanRead ? (row.roleCanWrite ? "R+S" : "R") : "—"}
+                  {row.roleCanRead ? (row.roleCanWrite ? "Completo" : "Sola lettura") : "Nascosto"}
                 </td>
-                <td className={`${dsTableTd} text-center`}>
-                  <SecurityToggle
-                    checked={row.canRead}
+                <td className={dsTableTd}>
+                  <select
+                    className="w-full min-w-0 rounded-md border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] px-2 py-1 text-[11px] text-[color:var(--cab-text)]"
                     disabled={matrixReadOnly}
-                    label={`Lettura ${row.label}`}
-                    onChange={(next) => patchModule(row.module, { canRead: next, canWrite: next ? row.canWrite : false })}
-                  />
-                </td>
-                <td className={`${dsTableTd} text-center`}>
-                  <SecurityToggle
-                    checked={row.canWrite}
-                    disabled={matrixReadOnly || !row.canRead}
-                    label={`Scrittura ${row.label}`}
-                    onChange={(next) => patchModule(row.module, { canWrite: next })}
-                  />
+                    value={toAccessLevel(row)}
+                    aria-label={`Accesso ${row.label}`}
+                    onChange={(e) => setAccessLevel(row.module, e.target.value as AccessLevel)}
+                  >
+                    <option value="hidden">Nascosto</option>
+                    <option value="read">Sola lettura</option>
+                    <option value="full">Accesso completo</option>
+                  </select>
                 </td>
               </tr>
             ))}

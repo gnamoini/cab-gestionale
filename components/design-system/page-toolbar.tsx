@@ -197,7 +197,7 @@ export function PageToolbarResultCount({
         {filtersActive ? <span className={dsPageToolbarMetaChipAccent}>Filtri attivi</span> : null}
       </div>
       {showSearchReset || showFilterReset ? (
-        <div className="flex min-w-0 flex-nowrap items-center gap-1 sm:ms-auto sm:flex-wrap">
+        <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-2 sm:ms-auto sm:flex-wrap">
           {showSearchReset ? (
             <button type="button" onClick={onSearchReset} className={dsPageToolbarMetaActionBtn}>
               <PageToolbarCtaLabel short="Cancella" full="Cancella ricerca" />

@@ -27,13 +27,13 @@ export const PageHeader = memo(function PageHeader({
     <header className={dsPageHeaderShell}>
       <div className="flex min-w-0 flex-col gap-3">
         <div className={`${dsPageHeaderTopRow} cab-page-header-top-row${topRowClassName ? ` ${topRowClassName}` : ""}`}>
-          <div className="flex min-w-0 max-w-full flex-1 items-center gap-2 ps-1 sm:ps-1 md:ps-0">
+          <div className="flex min-w-0 max-w-full flex-1 items-center gap-2 ps-1 cab-shell-desktop:ps-0">
             {leading ? <div className="flex shrink-0 items-center">{leading}</div> : null}
             <h1 className={`${dsPageTitle} ${dsPageTitleToolbarAlign} min-w-0 break-words`}>{title}</h1>
             {titleAddon ? <div className="flex shrink-0 items-center">{titleAddon}</div> : null}
           </div>
           {actions ? (
-            <div className={`${gestionalePageToolbarActionsClass} ms-auto shrink-0`}>{actions}</div>
+            <div className={`${gestionalePageToolbarActionsClass} ms-auto min-w-0 max-w-full`}>{actions}</div>
           ) : null}
         </div>
         {belowTitle ? <div className="min-w-0 w-full">{belowTitle}</div> : null}

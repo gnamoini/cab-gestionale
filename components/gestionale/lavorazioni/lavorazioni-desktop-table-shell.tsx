@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 import { GestionaleListTable } from "@/components/gestionale/global-table";
+import { GESTIONALE_LIST_DESKTOP_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
 
 export type LavorazioniDesktopTableShellProps = {
   visibilityClass?: string;
@@ -20,7 +21,7 @@ export type LavorazioniDesktopTableShellProps = {
 
 /** Shell tabella desktop Lavorazioni — presentational, dati/hook restano nel parent. */
 export function LavorazioniDesktopTableShell({
-  visibilityClass,
+  visibilityClass = GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
   className,
   colgroup,
   headRow,

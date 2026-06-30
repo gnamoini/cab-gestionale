@@ -51,6 +51,10 @@ assert.match(drawerSrc, /Permessi pagine/);
 
 assert.match(editorSrc, /onRestoreFromRole/);
 assert.match(editorSrc, /ROLE_MODULE_READONLY/);
+assert.match(editorSrc, /Accesso completo/);
+assert.match(editorSrc, /Dashboard, BUNDER, Configurazione, Sicurezza e Portale Clienti/);
+
+assert.match(batchSrc, /Viewer\/Audit non ammette override permessi modulo/);
 
 assert.match(patchesSrc, /modulePermissions/);
 assert.match(actionsSrc, /hasModulePermissionOverrides/);
@@ -60,7 +64,7 @@ assert.match(patchesSrc, /patch\.username/);
 assert.match(actionsSrc, /Modifica profilo/);
 assert.match(actionsSrc, /GestionaleListTable/);
 assert.match(actionsSrc, /SecurityUserMobileCard/);
-assert.match(actionsSrc, /lg:hidden/);
+assert.match(actionsSrc, /GESTIONALE_LIST_DESKTOP_ONLY_CLASS/);
 assert.match(actionsSrc, /security-users-dense-table/);
 
 assert.match(batchSrc, /user_permissions/);

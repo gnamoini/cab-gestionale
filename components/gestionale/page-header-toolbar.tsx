@@ -16,11 +16,11 @@ import { useSmUp } from "@/lib/ui/use-sm-up";
 
 /** Shell toolbar header (PageHeader): unico `flex-safe-row` per evitare doppia signature linter. */
 export const gestionalePageToolbarActionsClass =
-  "flex-safe-row min-w-0 max-w-full shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex-wrap";
+  "flex-safe-row min-w-0 max-w-full shrink flex-wrap items-center justify-end gap-2 cab-shell-mobile:flex-wrap cab-shell-tablet:flex-wrap sm:flex-wrap";
 
 /** Contenuto azioni dentro la shell — senza `flex-safe-row` (il wrapper è in PageHeader). */
 export const gestionalePageToolbarActionsInnerClass =
-  "flex min-w-0 max-w-full shrink-0 flex-nowrap items-center justify-end gap-2 sm:flex-wrap";
+  "flex min-w-0 max-w-full shrink-0 flex-wrap items-center justify-end gap-2 cab-shell-mobile:flex-wrap cab-shell-tablet:flex-wrap sm:flex-wrap";
 
 export function GestionaleRefreshToolbarButton({
   busy = false,

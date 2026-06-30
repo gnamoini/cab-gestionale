@@ -37,9 +37,9 @@ const MODAL_WIDTH_CLASSES: Record<
   confirmation: `${MOBILE_FULL_BLEED} md:w-full md:max-w-[28rem]`,
   info: `${MOBILE_FULL_BLEED} md:w-full md:max-w-[32rem]`,
   formSmall: `${MOBILE_FULL_BLEED} md:w-full cab-modal-min-w-form-small md:max-w-xl`,
-  formMedium: `${MOBILE_FULL_BLEED} cab-modal-min-w-form-medium md:max-w-3xl`,
-  formLarge: `${MOBILE_FULL_BLEED} cab-modal-min-w-form-large md:max-w-4xl`,
-  analytics: `${MOBILE_FULL_BLEED} cab-modal-min-w-analytics md:max-w-5xl`,
+  formMedium: `${MOBILE_FULL_BLEED} md:w-full cab-modal-min-w-form-medium md:max-w-3xl`,
+  formLarge: `${MOBILE_FULL_BLEED} md:w-full cab-modal-min-w-form-large md:max-w-4xl`,
+  analytics: `${MOBILE_FULL_BLEED} md:w-full cab-modal-min-w-analytics md:max-w-5xl`,
   fullscreen: "w-full max-w-full",
 };
 

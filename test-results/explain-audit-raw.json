@@ -1,0 +1,390 @@
+﻿{
+  "generatedAt": "2026-06-11T17:20:21.216Z",
+  "projectRef": "oxmnuovsgenqkuwfolqh",
+  "migration": "20260711120000_db_performance_indexes",
+  "tableStats": [
+    {
+      "n_live_tup": 37,
+      "relname": "lavorazioni"
+    },
+    {
+      "n_live_tup": 14,
+      "relname": "magazzino_ricambi"
+    },
+    {
+      "n_live_tup": 38,
+      "relname": "mezzi"
+    },
+    {
+      "n_live_tup": 0,
+      "relname": "movimenti_ricambi"
+    }
+  ],
+  "sampleCliente": "Specchia",
+  "results": [
+    {
+      "id": "Q1",
+      "screen": "lavorazioni",
+      "label": "lista_attive",
+      "sql": "SELECT id FROM public.lavorazioni WHERE deleted_at IS NULL AND archived = false ORDER BY created_at DESC",
+      "expectedIndex": "idx_lavorazioni_active_archived_created | idx_lavorazioni_stato_archived_created",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 0.16,
+        "planningTimeMs": 1.072,
+        "nodeType": "Sort",
+        "actualRows": 14,
+        "planRows": 12,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=14\n  Seq Scan actual_rows=14"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.16,
+        "planningTimeMs": 1.151,
+        "nodeType": "Sort",
+        "actualRows": 14,
+        "planRows": 12,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=14\n  Seq Scan actual_rows=14"
+      }
+    },
+    {
+      "id": "Q2",
+      "screen": "lavorazioni",
+      "label": "lista_archivio",
+      "sql": "SELECT id FROM public.lavorazioni WHERE deleted_at IS NULL AND archived = true ORDER BY created_at DESC",
+      "expectedIndex": "idx_lavorazioni_active_archived_created",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 0.151,
+        "planningTimeMs": 1.117,
+        "nodeType": "Sort",
+        "actualRows": 20,
+        "planRows": 23,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=20\n  Seq Scan actual_rows=20"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.156,
+        "planningTimeMs": 1.058,
+        "nodeType": "Sort",
+        "actualRows": 20,
+        "planRows": 23,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=20\n  Seq Scan actual_rows=20"
+      }
+    },
+    {
+      "id": "Q3",
+      "screen": "lavorazioni",
+      "label": "search_codice_trgm",
+      "sql": "SELECT id FROM public.lavorazioni WHERE deleted_at IS NULL AND codice ILIKE '%26-00%'",
+      "expectedIndex": "idx_lavorazioni_codice_trgm",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 0.165,
+        "planningTimeMs": 16.528,
+        "nodeType": "Seq Scan",
+        "actualRows": 27,
+        "planRows": 10,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Seq Scan actual_rows=27"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.157,
+        "planningTimeMs": 2.677,
+        "nodeType": "Seq Scan",
+        "actualRows": 27,
+        "planRows": 10,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Seq Scan actual_rows=27"
+      }
+    },
+    {
+      "id": "Q4",
+      "screen": "lavorazioni",
+      "label": "search_note_trgm",
+      "sql": "SELECT id FROM public.lavorazioni WHERE deleted_at IS NULL AND note ILIKE '%test%'",
+      "expectedIndex": "idx_lavorazioni_note_trgm",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 0.138,
+        "planningTimeMs": 2.588,
+        "nodeType": "Seq Scan",
+        "actualRows": 0,
+        "planRows": 1,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Seq Scan actual_rows=0"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.139,
+        "planningTimeMs": 2.661,
+        "nodeType": "Seq Scan",
+        "actualRows": 0,
+        "planRows": 1,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Seq Scan actual_rows=0"
+      }
+    },
+    {
+      "id": "Q5",
+      "screen": "lavorazioni",
+      "label": "filter_priorita",
+      "sql": "SELECT id FROM public.lavorazioni WHERE deleted_at IS NULL AND priorita = 'media'",
+      "expectedIndex": "idx_lavorazioni_priorita",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 0.094,
+        "planningTimeMs": 0.945,
+        "nodeType": "Seq Scan",
+        "actualRows": 22,
+        "planRows": 20,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Seq Scan actual_rows=22"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.102,
+        "planningTimeMs": 0.997,
+        "nodeType": "Seq Scan",
+        "actualRows": 22,
+        "planRows": 20,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Seq Scan actual_rows=22"
+      }
+    },
+    {
+      "id": "Q6",
+      "screen": "lavorazioni",
+      "label": "stato_archived_sort",
+      "sql": "SELECT id FROM public.lavorazioni WHERE deleted_at IS NULL AND stato = 'accettazione' AND archived = false ORDER BY created_at DESC",
+      "expectedIndex": "idx_lavorazioni_stato_archived_created",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 1.405,
+        "planningTimeMs": 1.089,
+        "nodeType": "Index Scan",
+        "actualRows": 5,
+        "planRows": 1,
+        "indexesUsed": [
+          "idx_lavorazioni_stato_archived_created"
+        ],
+        "seqScan": false,
+        "planSummary": "Index Scan actual_rows=5 [idx_lavorazioni_stato_archived_created]"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.102,
+        "planningTimeMs": 1.088,
+        "nodeType": "Index Scan",
+        "actualRows": 5,
+        "planRows": 1,
+        "indexesUsed": [
+          "idx_lavorazioni_stato_archived_created"
+        ],
+        "seqScan": false,
+        "planSummary": "Index Scan actual_rows=5 [idx_lavorazioni_stato_archived_created]"
+      }
+    },
+    {
+      "id": "Q7",
+      "screen": "mezzi",
+      "label": "lista",
+      "sql": "SELECT id FROM public.mezzi ORDER BY created_at DESC",
+      "expectedIndex": "(seq scan ÔÇö dataset piccolo)",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 0.227,
+        "planningTimeMs": 0.8,
+        "nodeType": "Sort",
+        "actualRows": 38,
+        "planRows": 38,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=38\n  Seq Scan actual_rows=38"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.147,
+        "planningTimeMs": 0.671,
+        "nodeType": "Sort",
+        "actualRows": 38,
+        "planRows": 38,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=38\n  Seq Scan actual_rows=38"
+      }
+    },
+    {
+      "id": "Q8",
+      "screen": "mezzi",
+      "label": "cliente_eq",
+      "sql": "SELECT id FROM public.mezzi WHERE cliente = 'Specchia'",
+      "expectedIndex": "idx_mezzi_cliente_btree",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 0.807,
+        "planningTimeMs": 2.942,
+        "nodeType": "Index Scan",
+        "actualRows": 1,
+        "planRows": 1,
+        "indexesUsed": [
+          "idx_mezzi_cliente_btree"
+        ],
+        "seqScan": false,
+        "planSummary": "Index Scan actual_rows=1 [idx_mezzi_cliente_btree]"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.116,
+        "planningTimeMs": 2.271,
+        "nodeType": "Index Scan",
+        "actualRows": 1,
+        "planRows": 1,
+        "indexesUsed": [
+          "idx_mezzi_cliente_btree"
+        ],
+        "seqScan": false,
+        "planSummary": "Index Scan actual_rows=1 [idx_mezzi_cliente_btree]"
+      }
+    },
+    {
+      "id": "Q9",
+      "screen": "magazzino",
+      "label": "lista_codice",
+      "sql": "SELECT id FROM public.magazzino_ricambi ORDER BY codice ASC",
+      "expectedIndex": "idx_magazzino_ricambi_codice",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 2.502,
+        "planningTimeMs": 0.75,
+        "nodeType": "Sort",
+        "actualRows": 14,
+        "planRows": 14,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=14\n  Seq Scan actual_rows=14"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.148,
+        "planningTimeMs": 0.59,
+        "nodeType": "Sort",
+        "actualRows": 14,
+        "planRows": 14,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=14\n  Seq Scan actual_rows=14"
+      }
+    },
+    {
+      "id": "Q10",
+      "screen": "magazzino",
+      "label": "search_nome_trgm",
+      "sql": "SELECT id FROM public.magazzino_ricambi WHERE nome ILIKE '%filtro%'",
+      "expectedIndex": "idx_magazzino_ricambi_nome_trgm",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 0.149,
+        "planningTimeMs": 8.222,
+        "nodeType": "Seq Scan",
+        "actualRows": 0,
+        "planRows": 1,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Seq Scan actual_rows=0"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.153,
+        "planningTimeMs": 2.21,
+        "nodeType": "Seq Scan",
+        "actualRows": 0,
+        "planRows": 1,
+        "indexesUsed": [],
+        "seqScan": true,
+        "planSummary": "Seq Scan actual_rows=0"
+      }
+    },
+    {
+      "id": "Q11",
+      "screen": "report",
+      "label": "movimenti_list",
+      "sql": "SELECT id FROM public.movimenti_ricambi ORDER BY created_at DESC",
+      "expectedIndex": "idx_movimenti_ricambi_created_at",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 0.081,
+        "planningTimeMs": 3.629,
+        "nodeType": "Index Scan",
+        "actualRows": 0,
+        "planRows": 530,
+        "indexesUsed": [
+          "idx_movimenti_ricambi_created_at"
+        ],
+        "seqScan": false,
+        "planSummary": "Index Scan actual_rows=0 [idx_movimenti_ricambi_created_at]"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.068,
+        "planningTimeMs": 0.543,
+        "nodeType": "Index Scan",
+        "actualRows": 0,
+        "planRows": 530,
+        "indexesUsed": [
+          "idx_movimenti_ricambi_created_at"
+        ],
+        "seqScan": false,
+        "planSummary": "Index Scan actual_rows=0 [idx_movimenti_ricambi_created_at]"
+      }
+    },
+    {
+      "id": "Q12",
+      "screen": "report",
+      "label": "movimenti_per_ricambio",
+      "sql": "SELECT id FROM public.movimenti_ricambi WHERE ricambio_id = (SELECT id FROM public.magazzino_ricambi LIMIT 1) ORDER BY created_at DESC",
+      "expectedIndex": "idx_movimenti_ricambi_ricambio_created",
+      "withoutRls": {
+        "ok": true,
+        "executionTimeMs": 1.299,
+        "planningTimeMs": 1.655,
+        "nodeType": "Sort",
+        "actualRows": 0,
+        "planRows": 3,
+        "indexesUsed": [
+          "idx_movimenti_ricambi_ricambio_created"
+        ],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=0\n  Limit actual_rows=1\n    Seq Scan actual_rows=1\n  Bitmap Heap Scan actual_rows=0\n    Bitmap Index Scan actual_rows=0 [idx_movimenti_ricambi_ricambio_created]"
+      },
+      "withRls": {
+        "ok": true,
+        "executionTimeMs": 0.118,
+        "planningTimeMs": 0.871,
+        "nodeType": "Sort",
+        "actualRows": 0,
+        "planRows": 3,
+        "indexesUsed": [
+          "idx_movimenti_ricambi_ricambio_created"
+        ],
+        "seqScan": true,
+        "planSummary": "Sort actual_rows=0\n  Limit actual_rows=1\n    Seq Scan actual_rows=1\n  Bitmap Heap Scan actual_rows=0\n    Bitmap Index Scan actual_rows=0 [idx_movimenti_ricambi_ricambio_created]"
+      }
+    }
+  ]
+}

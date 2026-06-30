@@ -1,3 +1,4 @@
+import type { ListinoImportMeta } from "@/lib/magazzino/listino-import/listino-import-meta";
 import type { RicambioCompatRef } from "@/lib/magazzino/ricambio-compat-resolver";
 import type { RicambioUnitaMisura } from "@/lib/magazzino/ricambio-unita-misura";
 
@@ -43,6 +44,8 @@ export interface RicambioMagazzino {
   codiceFornitoreNonOriginale: string;
   prezzoFornitoreNonOriginale: number;
   scontoFornitoreNonOriginale: number;
+  /** Presente se creato da import listino documenti. */
+  listinoImport?: ListinoImportMeta;
 }
 
 export type SortKeyMagazzino =

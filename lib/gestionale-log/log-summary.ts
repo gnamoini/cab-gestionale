@@ -214,6 +214,14 @@ export function entityKindLabel(entita: string): string {
       return "TIMESHEET DIPENDENTE";
     case "bunder_documents":
       return "DOCUMENTO BUNDER";
+    case "invoices":
+      return "FATTURA";
+    case "ddt_documents":
+      return "DDT";
+    case "invoice_payments":
+      return "PAGAMENTO FATTURA";
+    case "billing_customers":
+      return "CLIENTE FATTURAZIONE";
     default:
       return entita.replace(/_/g, " ").toUpperCase();
   }

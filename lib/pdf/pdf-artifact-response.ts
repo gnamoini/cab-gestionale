@@ -14,7 +14,8 @@ export function pdfArtifactResponseHeaders(opts: {
   return {
     "Content-Type": "application/pdf",
     "Content-Disposition": contentDispositionInline(opts.fileName),
-    "Cache-Control": "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800, immutable",
+    // ponytail: URL artifact non include dataHash — no immutable (browser/CDN servirebbe PDF stale).
+    "Cache-Control": "private, no-store, max-age=0",
     "X-Cache-Status": opts.cacheStatus,
     "X-PDF-Generate-Ms": String(opts.generateMs),
     "X-PDF-Data-Hash": opts.dataHash,

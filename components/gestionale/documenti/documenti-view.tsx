@@ -17,6 +17,8 @@ import { buildDocumentPreviewUrl } from "@/lib/documents/document-preview-url";
 import { DocumentThumbnail } from "@/components/gestionale/documenti/document-thumbnail";
 import { useUploadFeedback } from "@/context/upload-feedback-context";
 import { invalidateEntity } from "@/lib/cache/minimal-invalidation-contract";
+import { invalidateAfterMagazzinoOrMovimenti } from "@/src/lib/react-query/invalidate-related";
+import { cabSyncEventForEntity } from "@/lib/sync/gestionale-sync-dispatch";
 import { warmupDocumentPreview } from "@/lib/observability/asset-cache-warmup";
 import { traceMutationLifecycle } from "@/lib/observability/trace-mutation-lifecycle";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
@@ -113,6 +115,13 @@ const DocumentoEditModal = dynamic(
 );
 const DocumentoInfoModal = dynamic(
   () => import("@/components/gestionale/documenti/documenti-modals").then((m) => m.DocumentoInfoModal),
+  { ssr: false },
+);
+const ListinoImportPreviewModal = dynamic(
+  () =>
+    import("@/components/gestionale/documenti/listino-import-preview-modal").then(
+      (m) => m.ListinoImportPreviewModal,
+    ),
   { ssr: false },
 );
 import { buildDocumentiCatalogFromImpostazioni } from "@/lib/documenti/documenti-catalog";
@@ -425,6 +434,7 @@ export function DocumentiView() {
   }, [searchInput]);
 
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [listinoImportDocId, setListinoImportDocId] = useState<string | null>(null);
   const [infoDoc, setInfoDoc] = useState<DocumentoGestionale | null>(null);
   const [editDoc, setEditDoc] = useState<DocumentoGestionale | null>(null);
   const [deleteConfirmDoc, setDeleteConfirmDoc] = useState<DocumentoGestionale | null>(null);
@@ -633,7 +643,7 @@ export function DocumentiView() {
   );
 
   const handleUpload = useCallback(
-    async (payload: Omit<DocumentoGestionale, "id">) => {
+    async (payload: Omit<DocumentoGestionale, "id">): Promise<DocumentoGestionale | void> => {
       if (!canUploadDocuments) return;
       const fileName = payload.nome?.trim() || "documento";
       const result = await runUpload({
@@ -690,6 +700,7 @@ export function DocumentiView() {
         gestToast.errorOnce("documenti-upload", result.error, { module: "documenti" });
         throw new Error(result.error);
       }
+      return result.data;
     },
     [authorTrim, gestToast, refreshDocumenti, canUploadDocuments, runUpload],
   );
@@ -1297,6 +1308,19 @@ export function DocumentiView() {
           isUploading={docUploadInFlight}
           onRequestClose={() => setUploadOpen(false)}
           onSubmit={handleUpload}
+          onImportListino={(doc) => setListinoImportDocId(doc.id)}
+        />
+      ) : null}
+
+      {listinoImportDocId ? (
+        <ListinoImportPreviewModal
+          documentoId={listinoImportDocId}
+          onRequestClose={() => setListinoImportDocId(null)}
+          onCompleted={() => {
+            void invalidateAfterMagazzinoOrMovimenti(qc, [
+              cabSyncEventForEntity("magazzino_ricambi", "listino-import", "entity_created", "magazzino_ricambi"),
+            ]);
+          }}
         />
       ) : null}
 

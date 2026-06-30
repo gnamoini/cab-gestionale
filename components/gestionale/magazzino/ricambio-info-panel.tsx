@@ -109,6 +109,19 @@ export function RicambioInfoPanel({
   return (
     <HubModalPanoramicaPanel gapClass="gap-4">
       <GestionaleInfoCard title="Dati principali">
+        {ricambio.listinoImport?.generatoAutomaticamente ? (
+          <div className="mb-2 rounded-lg border border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))] px-3 py-2">
+            <p className="text-[10px] font-bold uppercase tracking-wide text-[color:color-mix(in_srgb,var(--cab-primary)_85%,var(--cab-text))]">
+              Generato da listino
+            </p>
+            <p className="mt-0.5 text-xs text-[color:var(--cab-text-muted)]">
+              {ricambio.listinoImport.documentoNome}
+              {ricambio.listinoImport.importatoAt
+                ? ` · ${new Date(ricambio.listinoImport.importatoAt).toLocaleDateString("it-IT")}`
+                : ""}
+            </p>
+          </div>
+        ) : null}
         <GestionaleInfoRow label="Marca" value={hubPanoramicaDisplayValue(ricambio.marca)} />
         <GestionaleInfoRow
           label="Cod. OE"

@@ -38,6 +38,7 @@ import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
 import { refetchActiveOperationalSnapshot } from "@/lib/sync/gestionale-snapshot-recovery";
 import { SyncTransportController } from "@/src/lib/runtime/sync/sync-transport-controller";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
+import { onUserRoleChangedClient } from "@/src/lib/rbac/on-user-role-changed.client";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
@@ -50,7 +51,7 @@ const RECONNECT_MAX_ATTEMPTS = 5;
  */
 export function GestionaleRealtimeBridge() {
   const qc = useQueryClient();
-  const { user, status } = useAuth();
+  const { user, status, refresh } = useAuth();
   const { push } = useToastContext();
   const pushRef = useRef(push);
   pushRef.current = push;
@@ -185,11 +186,27 @@ export function GestionaleRealtimeBridge() {
           queryClient: qc,
           refreshOperational: true,
         });
-      } else if (table === "user_permissions" || table === "profiles") {
+      } else if (table === "user_permissions") {
         void invalidateRuntimeTruth({
           reason: "roleOrPermissionsChanged",
           queryClient: qc,
         });
+      } else if (table === "profiles") {
+        const newRuolo = payload?.new?.ruolo;
+        const oldRuolo = payload?.old?.ruolo;
+        const rowId = payload?.new?.id ?? payload?.old?.id;
+        if (rowId === userIdRef.current && newRuolo !== oldRuolo) {
+          void onUserRoleChangedClient(String(rowId), {
+            currentUserId: userIdRef.current ?? undefined,
+            refresh,
+            queryClient: qc,
+          });
+        } else {
+          void invalidateRuntimeTruth({
+            reason: "roleOrPermissionsChanged",
+            queryClient: qc,
+          });
+        }
       }
     };
 

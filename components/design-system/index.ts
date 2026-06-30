@@ -4,6 +4,13 @@
  */
 
 export { Button, PrimaryActionButton, type DsButtonProps, type DsButtonVariant } from "./button";
+export {
+  GestionaleAiActionButton,
+  type GestionaleAiActionButtonProps,
+  type GestionaleAiActionButtonSize,
+  type GestionaleAiActionButtonVariant,
+} from "./gestionale-ai-action-button";
+export { GeminiSparkIcon } from "./gemini-spark-icon";
 export { IconButton, type IconButtonProps } from "./icon-button";
 export { IconActionButton, type IconActionButtonProps } from "./icon-action-button";
 export { Tooltip, type TooltipProps } from "./tooltip";

@@ -1,10 +1,11 @@
 import { Suspense } from "react";
-import { BunderView } from "@/components/bunder/bunder-view";
+import { LoadingSuspenseFallback } from "@/components/design-system";
+import { BunderViewLazy } from "@/components/gestionale/lazy-route-views";
 
 export default function BunderPage() {
   return (
-    <Suspense fallback={null}>
-      <BunderView />
+    <Suspense fallback={<LoadingSuspenseFallback variant="dipendenti" />}>
+      <BunderViewLazy />
     </Suspense>
   );
 }

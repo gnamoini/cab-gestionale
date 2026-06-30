@@ -1,0 +1,1144 @@
+{
+  "generatedAt": "2026-06-11T22:33:45.525Z",
+  "linkedDbAvailable": true,
+  "warnings": [],
+  "inventoryVersion": 1,
+  "tableStats": [
+    {
+      "idx_scan": 160479,
+      "n_live_tup": 10,
+      "n_tup_ins": 10,
+      "n_tup_upd": 31887,
+      "relname": "app_settings",
+      "seq_scan": 7916
+    },
+    {
+      "idx_scan": 1121,
+      "n_live_tup": 7,
+      "n_tup_ins": 12,
+      "n_tup_upd": 17,
+      "relname": "documenti",
+      "seq_scan": 3239
+    },
+    {
+      "idx_scan": 69814,
+      "n_live_tup": 37,
+      "n_tup_ins": 168,
+      "n_tup_upd": 264,
+      "relname": "lavorazioni",
+      "seq_scan": 478847
+    },
+    {
+      "idx_scan": 26711,
+      "n_live_tup": 517,
+      "n_tup_ins": 1350,
+      "n_tup_upd": 0,
+      "relname": "log_modifiche",
+      "seq_scan": 851
+    },
+    {
+      "idx_scan": 677,
+      "n_live_tup": 14,
+      "n_tup_ins": 54,
+      "n_tup_upd": 74,
+      "relname": "magazzino_ricambi",
+      "seq_scan": 516547
+    },
+    {
+      "idx_scan": 390253,
+      "n_live_tup": 38,
+      "n_tup_ins": 253,
+      "n_tup_upd": 63,
+      "relname": "mezzi",
+      "seq_scan": 5147
+    },
+    {
+      "idx_scan": 1867,
+      "n_live_tup": 0,
+      "n_tup_ins": 0,
+      "n_tup_upd": 0,
+      "relname": "movimenti_ricambi",
+      "seq_scan": 8
+    },
+    {
+      "idx_scan": 1653,
+      "n_live_tup": 0,
+      "n_tup_ins": 7,
+      "n_tup_upd": 7,
+      "relname": "preventivi",
+      "seq_scan": 35
+    },
+    {
+      "idx_scan": 94031,
+      "n_live_tup": 37,
+      "n_tup_ins": 163,
+      "n_tup_upd": 100,
+      "relname": "scheda_lavorazione",
+      "seq_scan": 3140
+    }
+  ],
+  "pgStatStatements": {
+    "topByTotalTime": [
+      {
+        "calls": 833943,
+        "mean_exec_time_ms": "6.33",
+        "query_prefix": "SELECT wal->>$5 as type,\n       wal->>$6 as schema,\n       wal->>$7 as table,\n       COALESCE(wal->>$8, $9) as columns,\n",
+        "queryid": "-2403186129333235824",
+        "rows": 843390,
+        "shared_blks_hit": 1529642481,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "5278992.51"
+      },
+      {
+        "calls": 570546,
+        "mean_exec_time_ms": "6.68",
+        "query_prefix": "SELECT wal->>$5 as type,\n       wal->>$6 as schema,\n       wal->>$7 as table,\n       COALESCE(wal->>$8, $9) as columns,\n",
+        "queryid": "8334753485339792266",
+        "rows": 571499,
+        "shared_blks_hit": 1189992295,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "3812308.50"
+      },
+      {
+        "calls": 58339,
+        "mean_exec_time_ms": "35.65",
+        "query_prefix": "select * from storage.search($1,$2,$3,$4,$5,$6,$7,$8)",
+        "queryid": "2952935708722695572",
+        "rows": 5678,
+        "shared_blks_hit": 4325544,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "2079736.79"
+      },
+      {
+        "calls": 483759,
+        "mean_exec_time_ms": "1.41",
+        "query_prefix": "with sub_tables as (\n        select\n        rr.entity\n        from\n        pg_publication_tables pub,\n        lateral (\n",
+        "queryid": "-9221380317684592396",
+        "rows": 477366,
+        "shared_blks_hit": 87108501,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "683609.95"
+      },
+      {
+        "calls": 391656,
+        "mean_exec_time_ms": "1.69",
+        "query_prefix": "with sub_tables as (\n        select\n        rr.entity\n        from\n        pg_publication_tables pub,\n        lateral (\n",
+        "queryid": "-3646219216282172258",
+        "rows": 391656,
+        "shared_blks_hit": 76004211,
+        "shared_blks_read": 3,
+        "total_exec_time_ms": "662703.89"
+      },
+      {
+        "calls": 13340,
+        "mean_exec_time_ms": "37.48",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"log_modifiche\".*, row_to_json(\"log_modifiche_profiles_1\".*)::jsonb AS \"profiles\"",
+        "queryid": "5279740710938406390",
+        "rows": 13340,
+        "shared_blks_hit": 3306702,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "499964.31"
+      },
+      {
+        "calls": 24674,
+        "mean_exec_time_ms": "15.50",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"lavorazioni\".*, row_to_json(\"lavorazioni_mezzi_1\".*)::jsonb AS \"mezzi\" FROM \"pub",
+        "queryid": "4214889323899563948",
+        "rows": 24674,
+        "shared_blks_hit": 3815461,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "382439.89"
+      },
+      {
+        "calls": 14614,
+        "mean_exec_time_ms": "14.15",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"scheda_lavorazione\".* FROM \"public\".\"scheda_lavorazione\"  ORDER BY \"public\".\"sch",
+        "queryid": "5407680113233330879",
+        "rows": 14614,
+        "shared_blks_hit": 2128326,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "206838.92"
+      },
+      {
+        "calls": 189,
+        "mean_exec_time_ms": "604.74",
+        "query_prefix": "SELECT name FROM pg_timezone_names",
+        "queryid": "-7726440967385220442",
+        "rows": 226044,
+        "shared_blks_hit": 0,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "114296.57"
+      },
+      {
+        "calls": 3824,
+        "mean_exec_time_ms": "21.66",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"lavorazioni\".*, row_to_json(\"lavorazioni_updated_by_profile_1\".*)::jsonb AS \"upd",
+        "queryid": "2757103077045122199",
+        "rows": 3824,
+        "shared_blks_hit": 647688,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "82826.65"
+      },
+      {
+        "calls": 66858,
+        "mean_exec_time_ms": "1.16",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"scheda_lavorazione\".* FROM \"public\".\"scheda_lavorazione\"  ORDER BY \"public\".\"sch",
+        "queryid": "-5175780064555551150",
+        "rows": 66858,
+        "shared_blks_hit": 783835,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "77488.58"
+      },
+      {
+        "calls": 37754,
+        "mean_exec_time_ms": "1.93",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"app_settings\".* FROM \"public\".\"app_settings\"  ORDER BY \"public\".\"app_settings\".\"",
+        "queryid": "-8219370248267800713",
+        "rows": 37754,
+        "shared_blks_hit": 1516475,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "72988.34"
+      },
+      {
+        "calls": 3369,
+        "mean_exec_time_ms": "19.17",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"mezzi\".* FROM \"public\".\"mezzi\"  ORDER BY \"public\".\"mezzi\".\"created_at\" DESC  LIM",
+        "queryid": "5903263711406045057",
+        "rows": 3369,
+        "shared_blks_hit": 511673,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "64570.78"
+      },
+      {
+        "calls": 79752,
+        "mean_exec_time_ms": "0.73",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"profiles\".\"ruolo\" FROM \"public\".\"profiles\" WHERE  \"public\".\"profiles\".\"id\" = $1 ",
+        "queryid": "-8112047957517393887",
+        "rows": 79752,
+        "shared_blks_hit": 861309,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "58029.26"
+      },
+      {
+        "calls": 11550,
+        "mean_exec_time_ms": "4.66",
+        "query_prefix": "SELECT * FROM pgbouncer.get_auth($1)",
+        "queryid": "3393632725691790249",
+        "rows": 11550,
+        "shared_blks_hit": 106943,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "53850.10"
+      },
+      {
+        "calls": 8636,
+        "mean_exec_time_ms": "5.81",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"magazzino_ricambi\".* FROM \"public\".\"magazzino_ricambi\"  ORDER BY \"public\".\"magaz",
+        "queryid": "453411522113569527",
+        "rows": 8636,
+        "shared_blks_hit": 346930,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "50176.97"
+      },
+      {
+        "calls": 31967,
+        "mean_exec_time_ms": "1.52",
+        "query_prefix": "WITH pgrst_source AS (UPDATE \"public\".\"app_settings\" SET \"updated_by\" = \"pgrst_body\".\"updated_by\", \"value\" = \"pgrst_body",
+        "queryid": "-8672486700853632250",
+        "rows": 31967,
+        "shared_blks_hit": 972767,
+        "shared_blks_read": 1,
+        "total_exec_time_ms": "48627.53"
+      },
+      {
+        "calls": 169,
+        "mean_exec_time_ms": "261.69",
+        "query_prefix": "SELECT\n  e.name,\n  n.nspname AS schema,\n  e.default_version,\n  x.extversion AS installed_version,\n  e.comment,\n  ev.sche",
+        "queryid": "-2647655532108368607",
+        "rows": 13182,
+        "shared_blks_hit": 1508,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "44226.42"
+      },
+      {
+        "calls": 58631,
+        "mean_exec_time_ms": "0.73",
+        "query_prefix": "SELECT\n          set_config('role', $1, true),\n          set_config('request.jwt.claim.role', $2, true),\n          set_c",
+        "queryid": "112865787942588064",
+        "rows": 58631,
+        "shared_blks_hit": 11223,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "42900.40"
+      },
+      {
+        "calls": 1035,
+        "mean_exec_time_ms": "36.08",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"lavorazioni\".*, row_to_json(\"lavorazioni_mezzi_1\".*)::jsonb AS \"mezzi\" FROM \"pub",
+        "queryid": "-4023164710256604348",
+        "rows": 1035,
+        "shared_blks_hit": 298872,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "37345.95"
+      }
+    ],
+    "topByMeanTime": [
+      {
+        "calls": 189,
+        "mean_exec_time_ms": "604.74",
+        "query_prefix": "SELECT name FROM pg_timezone_names",
+        "queryid": "-7726440967385220442",
+        "rows": 226044,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "114296.57"
+      },
+      {
+        "calls": 169,
+        "mean_exec_time_ms": "261.69",
+        "query_prefix": "SELECT\n  e.name,\n  n.nspname AS schema,\n  e.default_version,\n  x.extversion AS installed_version,\n  e.comment,\n  ev.sche",
+        "queryid": "-2647655532108368607",
+        "rows": 13182,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "44226.42"
+      },
+      {
+        "calls": 34,
+        "mean_exec_time_ms": "161.41",
+        "query_prefix": "SELECT case when pg_is_in_recovery() then $2 else (pg_walfile_name_offset(lsn)).file_name end, lsn::text, pg_is_in_recov",
+        "queryid": "4868794970434878014",
+        "rows": 34,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "5488.08"
+      },
+      {
+        "calls": 108,
+        "mean_exec_time_ms": "99.50",
+        "query_prefix": "with f as (\n      \n-- CTE with sane arg_modes, arg_names, and arg_types.\n-- All three are always of the same length.\n-- ",
+        "queryid": "4566076159892086781",
+        "rows": 12708,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "10745.73"
+      },
+      {
+        "calls": 10,
+        "mean_exec_time_ms": "83.11",
+        "query_prefix": "WITH pgrst_source AS (INSERT INTO \"public\".\"mezzi\"(\"anno\", \"cliente\", \"marca\", \"matricola\", \"meta\", \"modello\", \"numero_s",
+        "queryid": "7030261351459616363",
+        "rows": 10,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "831.11"
+      },
+      {
+        "calls": 12,
+        "mean_exec_time_ms": "75.02",
+        "query_prefix": "with tables as (\nSELECT\n  c.oid :: int8 AS id,\n  nc.nspname AS schema,\n  c.relname AS name,\n  c.relrowsecurity AS rls_en",
+        "queryid": "-2008055246659246241",
+        "rows": 12,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "900.19"
+      },
+      {
+        "calls": 234,
+        "mean_exec_time_ms": "66.50",
+        "query_prefix": "WITH pgrst_source AS (INSERT INTO \"public\".\"mezzi\"(\"anno\", \"cliente\", \"entity_key\", \"marca\", \"matricola\", \"meta\", \"model",
+        "queryid": "-5845825159882080420",
+        "rows": 234,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "15561.95"
+      },
+      {
+        "calls": 34,
+        "mean_exec_time_ms": "65.21",
+        "query_prefix": "WITH pgrst_source AS (INSERT INTO \"public\".\"magazzino_ricambi\"(\"codice\", \"consumo_medio_mensile\", \"costo\", \"entity_key\",",
+        "queryid": "6484252774545043143",
+        "rows": 34,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "2217.22"
+      },
+      {
+        "calls": 189,
+        "mean_exec_time_ms": "55.65",
+        "query_prefix": "WITH\n-- Recursively get the base types of domains\nbase_types AS (\n  WITH RECURSIVE\n  recurse AS (\n    SELECT\n      oid,\n",
+        "queryid": "5299301975933694258",
+        "rows": 6848,
+        "shared_blks_read": 235,
+        "total_exec_time_ms": "10517.10"
+      },
+      {
+        "calls": 333,
+        "mean_exec_time_ms": "52.10",
+        "query_prefix": "SELECT t.oid, t.typname, t.typsend, t.typreceive, t.typoutput, t.typinput,\n       coalesce(d.typelem, t.typelem), coales",
+        "queryid": "8580411586163530256",
+        "rows": 79993,
+        "shared_blks_read": 1,
+        "total_exec_time_ms": "17350.74"
+      },
+      {
+        "calls": 189,
+        "mean_exec_time_ms": "47.00",
+        "query_prefix": "WITH\n-- Recursively get the base types of domains\nbase_types AS (\n  WITH RECURSIVE\n  recurse AS (\n    SELECT\n      oid,\n",
+        "queryid": "-8856799461280935852",
+        "rows": 10837,
+        "shared_blks_read": 90,
+        "total_exec_time_ms": "8883.75"
+      },
+      {
+        "calls": 34,
+        "mean_exec_time_ms": "41.71",
+        "query_prefix": "SELECT labelfile, spcmapfile, lsn FROM pg_backup_stop($1)",
+        "queryid": "-7636120669495855217",
+        "rows": 34,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "1418.19"
+      },
+      {
+        "calls": 174,
+        "mean_exec_time_ms": "40.01",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"lavorazioni\".*, row_to_json(\"lavorazioni_updated_by_profile_1\".*)::jsonb AS \"upd",
+        "queryid": "-998042688019737123",
+        "rows": 174,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "6961.07"
+      },
+      {
+        "calls": 13340,
+        "mean_exec_time_ms": "37.48",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"log_modifiche\".*, row_to_json(\"log_modifiche_profiles_1\".*)::jsonb AS \"profiles\"",
+        "queryid": "5279740710938406390",
+        "rows": 13340,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "499964.31"
+      },
+      {
+        "calls": 289,
+        "mean_exec_time_ms": "36.12",
+        "query_prefix": "select\n        case when not exists (\n          select $2\n          from pg_replication_slots\n          where slot_name ",
+        "queryid": "8155291966402198186",
+        "rows": 289,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "10440.10"
+      },
+      {
+        "calls": 1035,
+        "mean_exec_time_ms": "36.08",
+        "query_prefix": "WITH pgrst_source AS ( SELECT \"public\".\"lavorazioni\".*, row_to_json(\"lavorazioni_mezzi_1\".*)::jsonb AS \"mezzi\" FROM \"pub",
+        "queryid": "-4023164710256604348",
+        "rows": 1035,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "37345.95"
+      },
+      {
+        "calls": 58339,
+        "mean_exec_time_ms": "35.65",
+        "query_prefix": "select * from storage.search($1,$2,$3,$4,$5,$6,$7,$8)",
+        "queryid": "2952935708722695572",
+        "rows": 5678,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "2079736.79"
+      },
+      {
+        "calls": 33,
+        "mean_exec_time_ms": "34.71",
+        "query_prefix": "do $$\n    declare\n        tbl record;\n        seq_name text;\n        new_seq_name text;\n        archive_table_name text;",
+        "queryid": "-4947716871114429284",
+        "rows": 0,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "1145.34"
+      },
+      {
+        "calls": 50,
+        "mean_exec_time_ms": "32.80",
+        "query_prefix": "WITH pgrst_source AS (INSERT INTO \"public\".\"lavorazioni\"(\"data_ingresso\", \"data_uscita\", \"mezzo_id\", \"note\", \"priorita\",",
+        "queryid": "-995367736911602074",
+        "rows": 50,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "1639.92"
+      },
+      {
+        "calls": 125,
+        "mean_exec_time_ms": "31.98",
+        "query_prefix": "SELECT t.oid, t.typname, t.typsend, t.typreceive, t.typoutput, t.typinput,\n       coalesce(d.typelem, t.typelem), coales",
+        "queryid": "8580411586163530256",
+        "rows": 29905,
+        "shared_blks_read": 0,
+        "total_exec_time_ms": "3997.77"
+      }
+    ],
+    "topBySharedBlksRead": [
+      {
+        "calls": 189,
+        "query_prefix": "WITH\n-- Recursively get the base types of domains\nbase_types AS (\n  WITH RECURSIVE\n  recurse AS (\n    SELECT\n      oid,\n",
+        "queryid": "5299301975933694258",
+        "shared_blks_read": 235,
+        "total_exec_time_ms": "10517.10"
+      },
+      {
+        "calls": 189,
+        "query_prefix": "WITH\n-- Recursively get the base types of domains\nbase_types AS (\n  WITH RECURSIVE\n  recurse AS (\n    SELECT\n      oid,\n",
+        "queryid": "-8856799461280935852",
+        "shared_blks_read": 90,
+        "total_exec_time_ms": "8883.75"
+      },
+      {
+        "calls": 3,
+        "query_prefix": "CREATE TABLE IF NOT EXISTS \"realtime\".\"schema_migrations\" (\"version\" bigint, \"inserted_at\" timestamp(0), PRIMARY KEY (\"v",
+        "queryid": "2470460835413338610",
+        "shared_blks_read": 39,
+        "total_exec_time_ms": "52.68"
+      },
+      {
+        "calls": 2,
+        "query_prefix": "DELETE FROM \"users\" AS users WHERE users.id = $1",
+        "queryid": "2488921711840792153",
+        "shared_blks_read": 38,
+        "total_exec_time_ms": "1402.39"
+      },
+      {
+        "calls": 7,
+        "query_prefix": "create extension if not exists pg_trgm",
+        "queryid": "-3929354133975401756",
+        "shared_blks_read": 38,
+        "total_exec_time_ms": "131.17"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "DO $$\nBEGIN\n  IF NOT EXISTS(SELECT *\n    FROM information_schema.columns\n    WHERE table_schema = 'auth' and table_name=",
+        "queryid": "8142655228673104563",
+        "shared_blks_read": 37,
+        "total_exec_time_ms": "30.92"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "-- alter user schema\n\nALTER TABLE auth.users \nADD COLUMN IF NOT EXISTS phone VARCHAR(15) NULL UNIQUE DEFAULT NULL,\nADD C",
+        "queryid": "-7001631309158697374",
+        "shared_blks_read": 29,
+        "total_exec_time_ms": "22.03"
+      },
+      {
+        "calls": 2,
+        "query_prefix": "-- reports-database-large-objects\nSELECT\n        SCHEMA_NAME,\n        relname,\n        table_size\n      FROM\n        (SE",
+        "queryid": "-4699137610195767146",
+        "shared_blks_read": 27,
+        "total_exec_time_ms": "172.37"
+      },
+      {
+        "calls": 189,
+        "query_prefix": "with recursive\npks_fks as (\n  -- pk + fk referencing col\n  select\n    contype::text as contype,\n    conname,\n    array_l",
+        "queryid": "-6019717523838313193",
+        "shared_blks_read": 16,
+        "total_exec_time_ms": "3372.36"
+      },
+      {
+        "calls": 9,
+        "query_prefix": "WITH pgrst_source AS (INSERT INTO \"public\".\"mezzi\"(\"anno\", \"cliente\", \"marca\", \"matricola\", \"modello\", \"numero_scuderia\"",
+        "queryid": "4410558809937101884",
+        "shared_blks_read": 13,
+        "total_exec_time_ms": "467.11"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "-- backfill the auth.identities column by adding an email identity \n-- for all auth.users with an email and password \n\nd",
+        "queryid": "8100258407943524968",
+        "shared_blks_read": 13,
+        "total_exec_time_ms": "3.04"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "-- adds confirmed at\n\nALTER TABLE auth.users\nADD COLUMN IF NOT EXISTS confirmed_at timestamptz GENERATED ALWAYS AS (LEAS",
+        "queryid": "7460466373297018969",
+        "shared_blks_read": 12,
+        "total_exec_time_ms": "13.71"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "DO $$\nBEGIN\n  IF NOT EXISTS(SELECT *\n    FROM information_schema.constraint_column_usage\n    WHERE table_schema = 'auth'",
+        "queryid": "6899829032549089367",
+        "shared_blks_read": 11,
+        "total_exec_time_ms": "13.66"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "-- adds identities table \n\nCREATE TABLE IF NOT EXISTS auth.identities (\n    id text NOT NULL,\n    user_id uuid NOT NULL,",
+        "queryid": "-7829172739439062392",
+        "shared_blks_read": 10,
+        "total_exec_time_ms": "8.55"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "create trigger tr_check_filters\n    before insert or update on realtime.subscription\n    for each row\n    execute functi",
+        "queryid": "-5441789281061864094",
+        "shared_blks_read": 10,
+        "total_exec_time_ms": "5.28"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "do $$\nbegin\n  if not exists\n     (select constraint_name\n      from information_schema.table_constraints\n      where tab",
+        "queryid": "4503289589550455662",
+        "shared_blks_read": 9,
+        "total_exec_time_ms": "12.20"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "create table if not exists realtime.subscription (\n      -- Tracks which users are subscribed to each table\n      id big",
+        "queryid": "-267265658546672857",
+        "shared_blks_read": 9,
+        "total_exec_time_ms": "11.38"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "DO $$\nBEGIN\n    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'buckets' AND column_name = 'max_",
+        "queryid": "-7497515440265900753",
+        "shared_blks_read": 9,
+        "total_exec_time_ms": "18.46"
+      },
+      {
+        "calls": 2432,
+        "query_prefix": "INSERT INTO \"refresh_tokens\" (\"created_at\", \"instance_id\", \"parent\", \"revoked\", \"session_id\", \"token\", \"updated_at\", \"us",
+        "queryid": "6831302621400150014",
+        "shared_blks_read": 8,
+        "total_exec_time_ms": "9372.98"
+      },
+      {
+        "calls": 1,
+        "query_prefix": "alter table auth.saml_relay_states add column if not exists flow_state_id uuid references auth.flow_state(id) on delete ",
+        "queryid": "1926603223177201622",
+        "shared_blks_read": 8,
+        "total_exec_time_ms": "1.98"
+      }
+    ]
+  },
+  "explainResults": [
+    {
+      "id": "Q1",
+      "label": "lista_attive",
+      "withRlsMs": 0.125,
+      "withoutRlsMs": 2.012,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q2",
+      "label": "lista_archivio",
+      "withRlsMs": 0.152,
+      "withoutRlsMs": 0.149,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q3",
+      "label": "search_codice_trgm",
+      "withRlsMs": 0.179,
+      "withoutRlsMs": 0.189,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q4",
+      "label": "search_note_trgm",
+      "withRlsMs": null,
+      "withoutRlsMs": 0.133,
+      "seqScan": null,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q5",
+      "label": "filter_priorita",
+      "withRlsMs": 0.098,
+      "withoutRlsMs": 0.105,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q6",
+      "label": "stato_archived_sort",
+      "withRlsMs": 0.096,
+      "withoutRlsMs": 3.617,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_lavorazioni_stato_archived_created"
+      ]
+    },
+    {
+      "id": "Q7",
+      "label": "lista",
+      "withRlsMs": 0.144,
+      "withoutRlsMs": 2.043,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q8",
+      "label": "cliente_eq",
+      "withRlsMs": 0.104,
+      "withoutRlsMs": 0.114,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_mezzi_cliente_btree"
+      ]
+    },
+    {
+      "id": "Q9",
+      "label": "lista_codice",
+      "withRlsMs": 0.167,
+      "withoutRlsMs": 2.586,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q10",
+      "label": "search_nome_trgm",
+      "withRlsMs": 0.165,
+      "withoutRlsMs": 0.137,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q11",
+      "label": "movimenti_list",
+      "withRlsMs": 0.067,
+      "withoutRlsMs": 0.078,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_movimenti_ricambi_created_at"
+      ]
+    },
+    {
+      "id": "Q12",
+      "label": "movimenti_per_ricambio",
+      "withRlsMs": 0.149,
+      "withoutRlsMs": 0.124,
+      "seqScan": true,
+      "indexesUsed": [
+        "idx_movimenti_ricambi_ricambio_created"
+      ]
+    },
+    {
+      "id": "Q13",
+      "label": "batch_by_lavorazione_ids",
+      "withRlsMs": 0.182,
+      "withoutRlsMs": 3.718,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q14",
+      "label": "lista_with_mezzo_fk",
+      "withRlsMs": 0.069,
+      "withoutRlsMs": 1.852,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_preventivi_created_at"
+      ]
+    },
+    {
+      "id": "Q15",
+      "label": "movimenti_join_mezzo",
+      "withRlsMs": 0.176,
+      "withoutRlsMs": 2.092,
+      "seqScan": true,
+      "indexesUsed": [
+        "idx_lavorazioni_mezzo_id",
+        "idx_movimenti_ricambi_lavorazione_id"
+      ]
+    },
+    {
+      "id": "Q16",
+      "label": "log_modifiche_entita",
+      "withRlsMs": 0.379,
+      "withoutRlsMs": 81.055,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_log_modifiche_created_at"
+      ]
+    },
+    {
+      "id": "Q17",
+      "label": "lista",
+      "withRlsMs": 0.089,
+      "withoutRlsMs": 2.597,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_documenti_created_at"
+      ]
+    },
+    {
+      "id": "Q18",
+      "label": "lavorazioni_mezzi_inner_cliente",
+      "withRlsMs": 0.133,
+      "withoutRlsMs": 1.107,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_mezzi_cliente_btree",
+        "idx_lavorazioni_mezzo_id"
+      ]
+    },
+    {
+      "id": "Q19",
+      "label": "app_settings_select",
+      "withRlsMs": null,
+      "withoutRlsMs": null,
+      "seqScan": null,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q20",
+      "label": "single_lavorazione",
+      "withRlsMs": 0.097,
+      "withoutRlsMs": 0.114,
+      "seqScan": true,
+      "indexesUsed": [
+        "idx_scheda_lavorazione_lavorazione_id"
+      ]
+    }
+  ],
+  "seqScanFindings": [
+    {
+      "id": "Q1",
+      "label": "lista_attive",
+      "liveRows": 37,
+      "executionTimeMs": 0.125,
+      "note": "Seq scan OK — 37 rows < threshold 500",
+      "actionable": false
+    },
+    {
+      "id": "Q2",
+      "label": "lista_archivio",
+      "liveRows": 37,
+      "executionTimeMs": 0.152,
+      "note": "Seq scan OK — 37 rows < threshold 500",
+      "actionable": false
+    },
+    {
+      "id": "Q3",
+      "label": "search_codice_trgm",
+      "liveRows": 37,
+      "executionTimeMs": 0.179,
+      "note": "Seq scan OK — 37 rows < threshold 500",
+      "actionable": false
+    },
+    {
+      "id": "Q5",
+      "label": "filter_priorita",
+      "liveRows": 37,
+      "executionTimeMs": 0.098,
+      "note": "Seq scan OK — 37 rows < threshold 500",
+      "actionable": false
+    },
+    {
+      "id": "Q7",
+      "label": "lista",
+      "liveRows": 38,
+      "executionTimeMs": 0.144,
+      "note": "Seq scan OK — 38 rows < threshold 500",
+      "actionable": false
+    },
+    {
+      "id": "Q9",
+      "label": "lista_codice",
+      "liveRows": null,
+      "executionTimeMs": 0.167,
+      "note": "Review index coverage",
+      "actionable": false
+    },
+    {
+      "id": "Q10",
+      "label": "search_nome_trgm",
+      "liveRows": null,
+      "executionTimeMs": 0.165,
+      "note": "Review index coverage",
+      "actionable": false
+    },
+    {
+      "id": "Q12",
+      "label": "movimenti_per_ricambio",
+      "liveRows": null,
+      "executionTimeMs": 0.149,
+      "note": "Review index coverage",
+      "actionable": false
+    },
+    {
+      "id": "Q13",
+      "label": "batch_by_lavorazione_ids",
+      "liveRows": 37,
+      "executionTimeMs": 0.182,
+      "note": "Seq scan OK — 37 rows < threshold 500",
+      "actionable": false
+    },
+    {
+      "id": "Q15",
+      "label": "movimenti_join_mezzo",
+      "liveRows": 0,
+      "executionTimeMs": 0.176,
+      "note": "Seq scan OK — 0 rows < threshold 500",
+      "actionable": false
+    },
+    {
+      "id": "Q20",
+      "label": "single_lavorazione",
+      "liveRows": 37,
+      "executionTimeMs": 0.097,
+      "note": "Seq scan OK — 37 rows < threshold 500",
+      "actionable": false
+    }
+  ],
+  "proposedIndexes": [],
+  "rlsOverhead": [
+    {
+      "id": "Q1",
+      "label": "lista_attive",
+      "withoutRlsMs": 2.012,
+      "withRlsMs": 0.125,
+      "overheadPct": -93.8
+    },
+    {
+      "id": "Q6",
+      "label": "stato_archived_sort",
+      "withoutRlsMs": 3.617,
+      "withRlsMs": 0.096,
+      "overheadPct": -97.3
+    },
+    {
+      "id": "Q8",
+      "label": "cliente_eq",
+      "withoutRlsMs": 0.114,
+      "withRlsMs": 0.104,
+      "overheadPct": -8.8
+    },
+    {
+      "id": "Q14",
+      "label": "lista_with_mezzo_fk",
+      "withoutRlsMs": 1.852,
+      "withRlsMs": 0.069,
+      "overheadPct": -96.3
+    },
+    {
+      "id": "Q15",
+      "label": "movimenti_join_mezzo",
+      "withoutRlsMs": 2.092,
+      "withRlsMs": 0.176,
+      "overheadPct": -91.6
+    },
+    {
+      "id": "Q16",
+      "label": "log_modifiche_entita",
+      "withoutRlsMs": 81.055,
+      "withRlsMs": 0.379,
+      "overheadPct": -99.5
+    }
+  ],
+  "restBenchmark": {
+    "ok": true,
+    "results": [
+      {
+        "id": "rest-lav-light-attive",
+        "area": "Lavorazioni",
+        "table": "lavorazioni",
+        "select": "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice, mezzi(cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia)",
+        "wallMs": 1272.01,
+        "bytesRaw": 8411,
+        "bytesKb": 8.21,
+        "rowCount": 14,
+        "error": null
+      },
+      {
+        "id": "rest-lav-report",
+        "area": "Report",
+        "table": "lavorazioni",
+        "select": "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice",
+        "wallMs": 115.42,
+        "bytesRaw": 16470,
+        "bytesKb": 16.08,
+        "rowCount": 34,
+        "error": null
+      },
+      {
+        "id": "rest-movimenti",
+        "area": "Report",
+        "table": "movimenti_ricambi",
+        "select": "id, ricambio_id, lavorazione_id, tipo, quantita, created_at",
+        "wallMs": 82.44,
+        "bytesRaw": 2,
+        "bytesKb": 0,
+        "rowCount": 0,
+        "error": null
+      },
+      {
+        "id": "rest-preventivi",
+        "area": "Preventivi",
+        "table": "preventivi",
+        "select": "id, mezzo_id, lavorazione_id, cliente, totale, dettagli, created_at, updated_at, mezzi(id, cliente, marca, modello, targa, matricola, numero_scuderia)",
+        "wallMs": 329.37,
+        "bytesRaw": 2,
+        "bytesKb": 0,
+        "rowCount": 0,
+        "error": null
+      },
+      {
+        "id": "rest-documenti",
+        "area": "Documenti",
+        "table": "documenti",
+        "select": "id, marca, modello, categoria, titolo, descrizione, file_path, created_at, updated_at, mezzo_id",
+        "wallMs": 106,
+        "bytesRaw": 2,
+        "bytesKb": 0,
+        "rowCount": 0,
+        "error": "column documenti.titolo does not exist"
+      }
+    ]
+  },
+  "frequencyAudit": [
+    {
+      "area": "Dashboard",
+      "label": "lavorazioni_attive_light_embed",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Dashboard",
+      "label": "magazzino_report_light",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Dashboard",
+      "label": "schede_bundles_batch",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Dashboard",
+      "label": "app_settings_payload",
+      "necessary": true,
+      "duplicated": true,
+      "avoidable": false,
+      "notes": "tier static — shared across pages"
+    },
+    {
+      "area": "Lavorazioni",
+      "label": "lista_attive_light_embed",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Lavorazioni",
+      "label": "lista_archivio",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Mezzi",
+      "label": "mezzi_list_light",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Magazzino",
+      "label": "magazzino_ricambi_full",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Documenti",
+      "label": "documenti_list",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Report",
+      "label": "lavorazioni_report_light",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Report",
+      "label": "movimenti_full_list",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": "P1 payload candidate if row count high"
+    },
+    {
+      "area": "Preventivi",
+      "label": "preventivi_mezzi_embed",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Hub dettaglio",
+      "label": "lavorazione_hub_6_atoms",
+      "necessary": true,
+      "duplicated": true,
+      "avoidable": true,
+      "notes": "BFF hub exists but not wired — cache-hit from list when warm"
+    },
+    {
+      "area": "Hub dettaglio",
+      "label": "movimenti_by_mezzo_join",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    },
+    {
+      "area": "Hub dettaglio",
+      "label": "log_modifiche_profiles_embed",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": "pg_stat hotspot — idx_log_modifiche_entita_entita_id_created_at exists"
+    },
+    {
+      "area": "Portale cliente",
+      "label": "lavorazioni_mezzi_inner_cliente",
+      "necessary": true,
+      "duplicated": false,
+      "avoidable": false,
+      "notes": null
+    }
+  ],
+  "residualIssues": [
+    "Nessun seq scan azionabile sopra soglia righe in questa run",
+    "Monitorare: SELECT name FROM pg_timezone_names (mean 604.74ms)"
+  ],
+  "recommendations": [
+    "pg_stat: SELECT name FROM pg_timezone_names — mean 604.74ms (189 calls)",
+    "REST latency rest-lav-light-attive: 1272.01ms",
+    "REST latency rest-preventivi: 329.37ms",
+    "Eseguire npm run ops:slow-query-audit post-deploy e confrontare con baseline",
+    "Non aggiungere indici senza EXPLAIN before/after su dataset rappresentativo"
+  ],
+  "hotspots": {
+    "p0": [],
+    "p1": [
+      "pg_stat: SELECT name FROM pg_timezone_names — mean 604.74ms (189 calls)",
+      "REST latency rest-lav-light-attive: 1272.01ms",
+      "REST latency rest-preventivi: 329.37ms"
+    ],
+    "p2": [
+      "Hub dettaglio/lavorazione_hub_6_atoms: fetch evitabile (BFF hub exists but not wired — cache-hit from list when warm)",
+      "RLS rbac_can_read_row O(n) su liste — refactor solo con evidenza produzione",
+      "Hub modali BFF server — ROI insufficiente (documentato)"
+    ]
+  },
+  "baselineComparison": [],
+  "regressions": [],
+  "isBaseline": true
+}

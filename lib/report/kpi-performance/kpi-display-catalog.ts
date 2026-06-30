@@ -34,10 +34,6 @@ export const UNIFIED_KPI_DISPLAY: Record<string, UnifiedKpiDisplayMeta> = {
     order: 5,
     description: "Media giorni tra ingresso e chiusura delle archiviate nel periodo.",
   },
-  "flotta-disp": {
-    order: 6,
-    description: "Percentuale mezzi senza lavorazione aperta (proxy disponibilità).",
-  },
   "flotta-officina": {
     order: 7,
     description: "Mezzi con almeno una lavorazione non archiviata collegata.",

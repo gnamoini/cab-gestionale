@@ -109,15 +109,16 @@ export function lavorazioneMezzoIdent(row: LavorazioneListRow, schedeStore?: Lav
   return interventoMezzoIdentLabel(listRowDisplay(row, schedeStore));
 }
 
-function lavorazioneTelaioParts(tipo?: string | null, marca?: string | null, modello?: string | null): string[] {
-  return [tipo, marca, modello].map((s) => s?.trim()).filter(Boolean) as string[];
+function lavorazioneTelaioParts(marca?: string | null, modello?: string | null): string[] {
+  return [marca, modello].map((s) => s?.trim()).filter(Boolean) as string[];
 }
 
-function lavorazioneTelaioFromParts(tipo?: string | null, marca?: string | null, modello?: string | null): string {
-  const parts = lavorazioneTelaioParts(tipo, marca, modello);
+function lavorazioneTelaioFromParts(_tipo?: string | null, marca?: string | null, modello?: string | null): string {
+  const parts = lavorazioneTelaioParts(marca, modello);
   return parts.length ? parts.join(" ") : "—";
 }
 
+/** Sottotitolo colonna Attrezzatura in lista: marca e modello telaio (senza tipo). */
 export function lavorazioneTelaioLabel(row: LavorazioneListRow, schedeStore: LavorazioneSchedeStore): string {
   const ingresso = schedeStore[row.id]?.ingresso?.campi;
   if (ingresso) {

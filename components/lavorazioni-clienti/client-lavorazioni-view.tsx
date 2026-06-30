@@ -117,6 +117,13 @@ import {
   dsTableRow,
   GESTIONALE_SEARCH_PLACEHOLDER,
 } from "@/lib/ui/design-system";
+import {
+  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
+  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
+  useGestionaleListLayout,
+  type GestionaleListLayout,
+} from "@/lib/ui/use-gestionale-list-layout";
+import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useClientLavorazioniArchivioQuery, useClientLavorazioniInCorsoQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
@@ -287,7 +294,7 @@ function DesktopTable({
 
   return (
     <GestionaleListTable
-      visibilityClass="hidden xl:block"
+      visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
       className={gestionaleLavorazioniDenseTableClass}
       colgroup={colgroup}
       headRow={headRow}
@@ -369,14 +376,14 @@ function MobileCards({
 }) {
   if (bundles.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 xl:hidden">
+      <p className={`rounded-xl border border-dashed border-zinc-200 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
         {emptyMessage}
       </p>
     );
   }
 
   return (
-    <div className="mt-4 space-y-2 xl:hidden">
+    <div className={`mt-4 space-y-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
       {bundles.map(({ row, fields }) => {
         const identLine = formatLavorazioneMobileIdentLine({
           targa: fields.targa,
@@ -453,6 +460,7 @@ function MobileCards({
 }
 
 function LavorazioniSection({
+  listLayout,
   sectionLabel,
   bundles,
   variant,
@@ -468,6 +476,7 @@ function LavorazioniSection({
   onQr,
   schedeStore,
 }: {
+  listLayout: GestionaleListLayout;
   /** Etichetta accessibilità (titolo visibile sulla ShellCard). */
   sectionLabel: string;
   bundles: RowBundle[];
@@ -488,6 +497,7 @@ function LavorazioniSection({
 
   return (
     <section className="min-w-0" aria-label={sectionLabel}>
+      {listLayout === "desktop" ? (
       <DesktopTable
         bundles={bundles}
         variant={variant}
@@ -501,6 +511,8 @@ function LavorazioniSection({
         onIngresso={onIngresso}
         onQr={onQr}
       />
+      ) : null}
+      {listLayout === "mobile" ? (
       <MobileCards
         bundles={bundles}
         variant={variant}
@@ -511,6 +523,7 @@ function LavorazioniSection({
         onIngresso={onIngresso}
         onQr={onQr}
       />
+      ) : null}
     </section>
   );
 }
@@ -528,6 +541,7 @@ function buildRowBundles(
 }
 
 export function ClientLavorazioniView() {
+  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
   const access = useClientLavorazioniAccess();
   const globalOpts = useGlobalOptions({ debugTag: "ClientLavorazioniView" });
   const statiOpts = useMemo(
@@ -764,6 +778,7 @@ export function ClientLavorazioniView() {
             defaultCollapsed={false}
           >
             <LavorazioniSection
+              listLayout={listLayout}
               sectionLabel="Lavorazioni in corso"
               bundles={sortedInCorsoBundles}
               variant="active"
@@ -789,6 +804,7 @@ export function ClientLavorazioniView() {
             defaultCollapsed={true}
           >
             <LavorazioniSection
+              listLayout={listLayout}
               sectionLabel="Lavorazioni completate"
               bundles={sortedArchivioBundles}
               variant="archive"
@@ -812,6 +828,7 @@ export function ClientLavorazioniView() {
   }
 
   return (
+    <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
       <PageHeader
         title={PORTALE_CLIENTI_LABEL}
@@ -899,5 +916,6 @@ export function ClientLavorazioniView() {
 
       {contattaciOpen ? <ClientContattaciDialog open onClose={() => setContattaciOpen(false)} /> : null}
     </>
+    </div>
   );
 }

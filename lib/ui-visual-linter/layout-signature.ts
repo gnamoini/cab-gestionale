@@ -118,6 +118,7 @@ export function extractToolbarSignatureFromStyles(
   className: string,
   searchStyle: StyleSnapshot | null,
   actionsStyle: StyleSnapshot | null,
+  actionsClassName = "",
 ): ToolbarSignature {
   const gapPx = parsePx(rowStyle.gap);
   const isCol = rowStyle.flexDirection === "column";
@@ -132,7 +133,7 @@ export function extractToolbarSignatureFromStyles(
     alignItems: rowStyle.alignItems,
     searchFlexGrow: searchStyle ? parseFloat(searchStyle.flexGrow) || 0 : null,
     actionsShrink: actionsStyle
-      ? parseFloat(actionsStyle.flexShrink) === 0 || className.includes("shrink-0")
+      ? parseFloat(actionsStyle.flexShrink) === 0 || actionsClassName.includes("shrink-0")
       : true,
     wrapPolicy: wrapExplicit ? "explicit" : "none",
   };
@@ -247,13 +248,21 @@ function findActionsCluster(container: HTMLElement): HTMLElement | null {
 
 /** Estrae signature toolbar da elemento DOM. */
 export function extractToolbarSignature(el: HTMLElement): ToolbarSignature | null {
-  const rows = el.querySelectorAll(".flex-safe-row, [class*='flex-safe-row']");
-  const rowEl =
-    rows.length > 0
-      ? (rows[0] as HTMLElement)
-      : el.querySelector(".flex, [class*='flex-row'], [class*='flex-col']") instanceof HTMLElement
-        ? (el.querySelector(".flex, [class*='flex-row'], [class*='flex-col']") as HTMLElement)
-        : el;
+  const elClass = getClassName(el);
+  const elStyle = window.getComputedStyle(el);
+
+  let rowEl: HTMLElement;
+  if (elClass.includes("flex-safe-row") && isFlexDisplay(elStyle)) {
+    rowEl = el;
+  } else {
+    const rows = el.querySelectorAll(".flex-safe-row, [class*='flex-safe-row']");
+    rowEl =
+      rows.length > 0
+        ? (rows[0] as HTMLElement)
+        : el.querySelector(".flex, [class*='flex-row'], [class*='flex-col']") instanceof HTMLElement
+          ? (el.querySelector(".flex, [class*='flex-row'], [class*='flex-col']") as HTMLElement)
+          : el;
+  }
 
   if (!rowEl) return null;
   const rowStyle = styleSnapshotFromDeclaration(window.getComputedStyle(rowEl));
@@ -270,6 +279,7 @@ export function extractToolbarSignature(el: HTMLElement): ToolbarSignature | nul
     getClassName(rowEl),
     searchStyle,
     actionsStyle,
+    actionsEl ? getClassName(actionsEl) : "",
   );
 }
 

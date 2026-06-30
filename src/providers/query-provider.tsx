@@ -10,6 +10,8 @@ import {
 import { useToastContext } from "@/context/toast-context";
 
 import { installLongSessionDevHook } from "@/lib/observability/long-session-dev-hook";
+import { isBootInvestigationEnabled, trackQueryEvent } from "@/lib/observability/boot-investigation";
+import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { formatSupabaseError, isPermissionDeniedError } from "@/src/utils/supabaseErrorHandler";
 
 function QueryErrorToasts({ client }: { client: QueryClient }) {
@@ -54,6 +56,7 @@ function QueryErrorToasts({ client }: { client: QueryClient }) {
 }
 
 export function QueryProvider({ children }: { children: ReactNode }) {
+  useBootInvestigationMount("QueryProvider");
   const [client] = useState(
     () =>
       new QueryClient({
@@ -66,6 +69,34 @@ export function QueryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     installLongSessionDevHook(client);
+    if (!isBootInvestigationEnabled()) return;
+
+    const onQuery = (e: QueryCacheNotifyEvent) => {
+      if (e.type !== "added" && e.type !== "updated" && e.type !== "removed") return;
+      const q = e.query;
+      const meta = {
+        status: q.state.status,
+        fetchStatus: q.state.fetchStatus,
+        dataUpdatedAt: q.state.dataUpdatedAt,
+        errorUpdatedAt: q.state.errorUpdatedAt,
+        eventType: e.type,
+      };
+      if (q.state.fetchStatus === "fetching") {
+        trackQueryEvent("fetch_start", q.queryKey, meta);
+      } else if (q.state.status === "error" && q.state.error) {
+        trackQueryEvent("fetch_error", q.queryKey, {
+          ...meta,
+          error: q.state.error instanceof Error ? q.state.error.message : String(q.state.error),
+        });
+      } else if (q.state.status === "success" && e.type === "updated") {
+        trackQueryEvent("fetch_success", q.queryKey, meta);
+      } else {
+        trackQueryEvent("cache_updated", q.queryKey, meta);
+      }
+    };
+
+    const unsub = client.getQueryCache().subscribe(onQuery);
+    return () => unsub();
   }, [client]);
 
   return (

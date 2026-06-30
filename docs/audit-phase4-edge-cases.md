@@ -253,8 +253,8 @@ Ogni layer può avere edge diversi; **RLS è autoritativo** per mutazioni DB.
 |-------------------|---------------|---------|-----------|
 | **Mobile** (< md) | Drawer nav; card list | kanban open section SS | ✅ `06-mobile-shell` |
 | **Mobile iOS modal** | Body scroll lock release | — | ✅ `04-modal-scroll` |
-| **Tablet** (md+) | Sidebar collapsible | `cab-sidebar-collapsed` LS | 📋 |
-| **Desktop** | Sidebar persistent | LS collapse state | 📋 |
+| **Tablet** (md+) | Sidebar hover-expand (overlay) | stato React in `AppShell` | 📋 |
+| **Desktop** | Sidebar compressa + hover | nessun localStorage | 📋 |
 | **Touch timesheet** | Popover editor cella | — | 📋 |
 | **Print/PDF dipendenti** | jsPDF layout | — | 📋 |
 | **Scrollbar main** | hit target bordo destro | — | ✅ `04-modal-scroll` |

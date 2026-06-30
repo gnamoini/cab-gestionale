@@ -90,6 +90,11 @@
     "ops:performance-snapshot": "node scripts/ops/performance-snapshot.mjs",
     "ops:performance-regression-check": "node scripts/ops/performance-regression-check.mjs",
     "ops:react-render-audit": "node scripts/ops/react-render-audit.mjs",
+    "ops:boot-investigation-collect": "node scripts/ops/boot-investigation-collect.mjs",
+    "ops:boot-investigation-export": "node scripts/ops/boot-investigation-export.mjs",
+    "ops:overflow-audit-collect": "node scripts/ops/overflow-root-cause-collect.mjs",
+    "ops:overflow-audit-report": "node scripts/ops/overflow-root-cause-report.mjs",
+    "ops:overflow-remediation-verify": "node scripts/ops/overflow-remediation-verify.mjs",
     "ops:query-frequency-audit": "node scripts/ops/query-frequency-audit.mjs",
     "audit:rls": "npx tsx scripts/rls-service-audit.ts",
     "audit:supabase": "npx tsx scripts/supabase-audit-inventory.ts",
@@ -97,18 +102,22 @@
     "analyze": "npx tsx scripts/analyze-bundle.ts"
   },
   "dependencies": {
+    "@ai-sdk/google": "^3.0.82",
     "@floating-ui/react-dom": "^2.1.8",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.1",
     "@tanstack/react-query": "^5.66.0",
     "@tanstack/react-virtual": "^3.14.2",
+    "ai": "^6.0.205",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "next": "16.2.6",
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
-    "sharp": "^0.35.1"
+    "sharp": "^0.35.1",
+    "xlsx": "^0.18.5",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@next/bundle-analyzer": "^16.2.7",

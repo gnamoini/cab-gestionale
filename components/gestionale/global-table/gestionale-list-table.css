@@ -3,6 +3,8 @@
  * Applicato via `gestionale-list-table-scope` (e alias `lavorazioni-scroll-scope`).
  */
 
+@import "./gestionale-list-layout.css";
+
 .gestionale-list-table-scope,
 .lavorazioni-scroll-scope {
   scrollbar-gutter: auto;

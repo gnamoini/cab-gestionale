@@ -7,6 +7,7 @@ import {
   pdfAdvanceAfterDocumentHeader,
 } from "@/lib/pdf/core/pdf-base-template";
 import { drawPreventivoPdfBody } from "@/lib/pdf/preventivo-pdf-body";
+import type { PreventivoClientePdfOptions } from "@/lib/pdf/anagrafica-pdf-fields";
 import { buildPreventivoOutputRighe } from "@/lib/preventivi/preventivi-struttura";
 import { buildPreventivoPdfDownloadFileName } from "@/lib/preventivi/preventivo-pdf-filename";
 import { preventivoTipoDocumentoLabel } from "@/lib/preventivi/preventivi-tipo-documento";
@@ -16,6 +17,7 @@ export function generatePreventivoPdfBytes(
   p: PreventivoRecord,
   autore: string,
   logoDataUrl: string | null,
+  clientePdf?: PreventivoClientePdfOptions,
 ): Uint8Array {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -43,7 +45,7 @@ export function generatePreventivoPdfBytes(
     importoIva,
     totaleConIva,
     ivaPercent: PDF_PREVENTIVO_IVA_PERCENT,
-  });
+  }, clientePdf);
 
   drawPdfPageFooters(doc, p.numero);
   return new Uint8Array(doc.output("arraybuffer"));

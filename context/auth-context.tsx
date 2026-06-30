@@ -25,6 +25,12 @@ import { flushPendingModificaLogs } from "@/src/services/internal/audit-log";
 import { notifyUndoSessionChanged } from "@/lib/gestionale-log/use-undo-session-id";
 import { registerGestionaleVisibilityHandler } from "@/lib/ui/gestionale-visibility-coordinator";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
+import {
+  isBootInvestigationEnabled,
+  logBoot,
+  trackStoreUpdate,
+} from "@/lib/observability/boot-investigation";
+import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { clearClientEffectivePermissionsSnapshotCache, publishAuthRoleHint } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { QK } from "@/src/lib/react-query/query-keys";
@@ -134,17 +140,25 @@ export function AuthProvider({
   const lastStableUserRef = useRef<PublicAuthUser | null>(null);
   const clearingSessionRef = useRef(false);
   const skipInitGetSessionRef = useRef(isServerSnapshotFresh(initialSnapshot));
+  const initialSnapshotUserIdRef = useRef(initialSnapshot?.user?.id ?? null);
   const authRestoreStartRef = useRef(typeof performance !== "undefined" ? performance.now() : 0);
   const authRestoreLoggedRef = useRef(skipInitGetSessionRef.current);
   const authInitFailsafeFiredRef = useRef(false);
   const statusRef = useRef<AuthStatus>(initial.status);
+  const prevStatusRef = useRef<AuthStatus>(initial.status);
 
-  if (initialSnapshot?.user?.id) {
-    const permissionsKey = [...QK.userPermissions, initialSnapshot.user.id] as const;
-    if (queryClient.getQueryData(permissionsKey) === undefined) {
-      queryClient.setQueryData(permissionsKey, initialSnapshot.permissions ?? []);
-    }
-  }
+  useBootInvestigationMount("AuthProvider", {
+    initialStatus: initial.status,
+    hasSnapshotUser: Boolean(initialSnapshot?.user?.id),
+  });
+
+  useEffect(() => {
+    if (!isBootInvestigationEnabled()) return;
+    if (prevStatusRef.current === status) return;
+    trackStoreUpdate("auth.status", prevStatusRef.current, status);
+    logBoot("AUTH", "AuthProvider", { from: prevStatusRef.current, to: status }, `${prevStatusRef.current}→${status}`);
+    prevStatusRef.current = status;
+  }, [status]);
 
   useLayoutEffect(() => {
     if (!initialSnapshot?.user?.id) return;
@@ -316,6 +330,9 @@ export function AuthProvider({
     return registerGestionaleVisibilityHandler(() => {
       const currentStatus = statusRef.current;
       if (currentStatus !== "authenticated" && currentStatus !== "degraded") return;
+      if (isBootInvestigationEnabled()) {
+        logBoot("AUTH", "visibility_refresh", { status: currentStatus });
+      }
       void refresh();
     });
   }, [refresh]);
@@ -340,6 +357,9 @@ export function AuthProvider({
 
         const { data: sub } = sb.auth.onAuthStateChange((event, session) => {
           if (cancelled) return;
+          if (isBootInvestigationEnabled()) {
+            logBoot("AUTH", "onAuthStateChange", { event, hasSession: Boolean(session?.user?.id) });
+          }
           if (event === "TOKEN_REFRESHED" && !session) {
             void (async () => {
               const { data, error } = await getSessionWithSoftRetry(sb);
@@ -359,6 +379,13 @@ export function AuthProvider({
             return;
           }
           if (event === "TOKEN_REFRESHED" && session?.user?.id && session.user.id === userIdRef.current) {
+            return;
+          }
+          if (
+            event === "INITIAL_SESSION" &&
+            session?.user?.id &&
+            session.user.id === initialSnapshotUserIdRef.current
+          ) {
             return;
           }
           if (event === "SIGNED_IN" && session?.user) {

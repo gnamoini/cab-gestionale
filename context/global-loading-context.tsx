@@ -12,6 +12,8 @@ import {
 } from "react";
 import { GlobalLoadingOverlay } from "@/components/design-system/global-loading";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
+import { isBootInvestigationEnabled, trackStoreUpdate } from "@/lib/observability/boot-investigation";
+import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 
 const SHOW_DELAY_MS = 300;
 
@@ -43,6 +45,7 @@ function useDelayedActive(active: boolean, delayMs = SHOW_DELAY_MS): boolean {
 }
 
 export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
+  useBootInvestigationMount("GlobalLoadingProvider");
   const [stack, setStack] = useState<StackEntry[]>([]);
   const idRef = useRef(0);
 
@@ -66,6 +69,14 @@ export function GlobalLoadingProvider({ children }: { children: ReactNode }) {
   const active = stack.length > 0;
   const message = stack[stack.length - 1]?.message ?? GLOBAL_LOADING_MESSAGES.default;
   const overlayVisible = useDelayedActive(active);
+
+  const prevActiveRef = useRef(active);
+  useEffect(() => {
+    if (!isBootInvestigationEnabled()) return;
+    if (prevActiveRef.current === active) return;
+    trackStoreUpdate("globalLoading", prevActiveRef.current, active, { message, stackDepth: stack.length });
+    prevActiveRef.current = active;
+  }, [active, message, stack.length]);
 
   const value = useMemo<GlobalLoadingContextValue>(
     () => ({ message, active, push, setTopMessage }),

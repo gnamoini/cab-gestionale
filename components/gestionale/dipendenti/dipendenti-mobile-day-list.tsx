@@ -146,7 +146,7 @@ export function DipendentiMobileDayList({
 
   if (filterEmployeeId && !selected) {
     return (
-      <div className="md:hidden">
+      <div className="gestionale-list-mobile-only">
         <DipendentiEmptyState variant="select-employee" />
       </div>
     );
@@ -154,7 +154,7 @@ export function DipendentiMobileDayList({
 
   if (selected) {
     return (
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-3 gestionale-list-mobile-only">
         <MobileEmployeeDaySection
           employee={selected}
           days={periodDays}
@@ -175,7 +175,7 @@ export function DipendentiMobileDayList({
   }
 
   return (
-    <div className="space-y-4 md:hidden">
+    <div className="space-y-4 gestionale-list-mobile-only">
       <p className={`${dsTypoSmall} text-[color:var(--cab-text-muted)]`}>
         Presenze del mese — tutti i dipendenti
       </p>

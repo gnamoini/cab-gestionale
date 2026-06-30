@@ -54,6 +54,12 @@ assert.match(preventiviServer, /verifyServerSectionRead/, "preventivi server fet
 const prefetch = read("src/lib/react-query/prefetch-gestionale-page.ts");
 assert.match(prefetch, /dehydrate/, "prefetch module must dehydrate query client");
 assert.match(prefetch, /resolveInitialLoad|query-key-factory/, "prefetch must use render-path orchestrator or key factory");
+assert.doesNotMatch(
+  prefetch,
+  /from "@\/src\/lib\/react-query\/invalidate-related"/,
+  "prefetch must not import client invalidate-related (QK.log breaks under RSC)",
+);
+assert.match(prefetch, /from "@\/src\/lib\/react-query\/query-keys"/, "prefetch must import QK from query-keys");
 
 const hydration = read("src/components/gestionale/gestionale-hydration-boundary.tsx");
 assert.match(hydration, /HydrationBoundary/, "hydration boundary must wrap HydrationBoundary");

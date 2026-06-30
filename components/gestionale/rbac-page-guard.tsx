@@ -15,6 +15,8 @@ import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effec
 import { LoadingView } from "@/components/design-system/loading";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
+import { isBootInvestigationEnabled, logBoot, trackRedirect } from "@/lib/observability/boot-investigation";
+import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 
 const RBAC_LOADING_FAILSAFE_MS = 8_000;
 
@@ -39,6 +41,7 @@ function AccessDeniedPanel({ homePath }: { homePath: string }) {
  * Complementa il middleware (URL diretti) con controllo client post-sessione.
  */
 export function RbacPageGuard({ children }: { children: ReactNode }) {
+  useBootInvestigationMount("RbacPageGuard");
   const { user, status } = useAuth();
   const pathname = usePathname();
   const router = useRouter();
@@ -50,6 +53,17 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
   const sessionReady = isAuthSessionEstablished(status);
   const checkingPerms = sessionReady && permsLoading && !loadingFailsafe;
   const showLoadingGate = status === "loading" || checkingPerms;
+
+  useEffect(() => {
+    if (!isBootInvestigationEnabled()) return;
+    logBoot("RENDER", "RbacPageGuard", {
+      status,
+      showLoadingGate,
+      loadingFailsafe,
+      permsLoading,
+      pathname,
+    });
+  }, [status, showLoadingGate, loadingFailsafe, permsLoading, pathname]);
 
   useEffect(() => {
     if (!showLoadingGate) {
@@ -66,6 +80,13 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
     return () => window.clearTimeout(id);
   }, [showLoadingGate]);
 
+  useEffect(() => {
+    if (!isBootInvestigationEnabled()) return;
+    if (loadingFailsafe && showLoadingGate) {
+      logBoot("AUTH", "RbacPageGuard", { event: "failsafe_fired", pathname }, "loading_failsafe_8s");
+    }
+  }, [loadingFailsafe, showLoadingGate, pathname]);
+
   const allowed =
     sessionReady &&
     !checkingPerms &&
@@ -80,7 +101,9 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
     if (!sessionReady || checkingPerms) return;
     if (pathname === ACCESS_DENIED_PATH) return;
     if (!allowed) {
-      router.replace(`${ACCESS_DENIED_PATH}?from=${encodeURIComponent(pathname)}`);
+      const to = `${ACCESS_DENIED_PATH}?from=${encodeURIComponent(pathname)}`;
+      trackRedirect(pathname, to, "rbac_denied", "rbac");
+      router.replace(to);
     }
   }, [allowed, checkingPerms, pathname, router, sessionReady]);
 

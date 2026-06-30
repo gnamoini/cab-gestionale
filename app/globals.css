@@ -1,6 +1,10 @@
 @import "tailwindcss";
+@import "../components/gestionale/global-table/gestionale-list-layout.css";
 
 @custom-variant dark (&:where(.dark, .dark *));
+@custom-variant cab-shell-mobile (&:where(.cab-app-shell[data-gestionale-shell-tier="mobile"] *));
+@custom-variant cab-shell-tablet (&:where(.cab-app-shell[data-gestionale-shell-tier="tablet"] *));
+@custom-variant cab-shell-desktop (&:where(.cab-app-shell[data-gestionale-shell-tier="desktop"] *));
 
 html {
   -webkit-text-size-adjust: 100%;
@@ -13,7 +17,7 @@ html {
 }
 
 :root {
-  --cab-app-width: 100vw;
+  --cab-app-width: 100%;
   --cab-app-height: 100dvh;
   --cab-vv-height: 100dvh;
   --cab-vv-offset-top: 0px;
@@ -64,6 +68,9 @@ html {
   --ds-space-lg: 1rem;
   --ds-space-xl: 1.5rem;
   --ds-space-2xl: 2rem;
+
+  /** Margine paint oltre clip edge — shadow-sm + focus ring-offset senza overflow layout. */
+  --cab-paint-clip-margin: 12px;
 }
 
 .dark {
@@ -444,6 +451,16 @@ html.dark select option {
     background-color: var(--cab-scrollbar-thumb-hover);
   }
 
+  /** Trigger GlobalSelect selectOnly / readonly — nasconde scrollbar nativa (Windows Chromium). */
+  .gestionale-combobox-trigger {
+    overflow: hidden;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .gestionale-combobox-trigger::-webkit-scrollbar {
+    display: none;
+  }
+
   /**
    * Titolo pagina allineato ai pulsanti toolbar: la scatola di layout usa cap/ex,
    * senza contare discendenti (g, p, y…) per il centraggio verticale.
@@ -533,17 +550,16 @@ html.dark select option {
   max-width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
+  overflow-clip-margin: var(--cab-paint-clip-margin);
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  /* Mobile: auto evita doppia track (gutter + thumb); desktop: stable allinea header mirror. */
+  /* Default auto — stable solo su tier desktop shell (evita clip/gutter in preview compatto). */
   scrollbar-gutter: auto;
 }
 
-@media (min-width: 768px) {
-  .cab-ios-scroll-y,
-  .gestionale-scroll-y {
-    scrollbar-gutter: stable;
-  }
+.cab-app-shell[data-gestionale-shell-tier="desktop"] .cab-ios-scroll-y,
+.cab-app-shell[data-gestionale-shell-tier="desktop"] .gestionale-scroll-y {
+  scrollbar-gutter: stable;
 }
 
 .gestionale-scroll-end-pad {
@@ -567,13 +583,58 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
 /** Stessa larghezza utile del main con `scrollbar-gutter: stable` (mirror solo sul wrapper, non sul padding). */
 .cab-gestionale-scroll-gutter-mirror {
   overflow: hidden;
+  overflow-clip-margin: var(--cab-paint-clip-margin);
   scrollbar-gutter: auto;
+  box-sizing: border-box;
+  padding-inline-end: var(--cab-main-scrollbar-inset, 0px);
 }
 
-@media (min-width: 768px) {
-  .cab-gestionale-scroll-gutter-mirror {
-    scrollbar-gutter: stable;
-  }
+/** Stack pagina sotto PageHeader — clip layout orizzontale con margine paint per shadow card. */
+.cab-layout-page-stack {
+  overflow-x: clip;
+  overflow-clip-margin: var(--cab-paint-clip-margin);
+}
+
+/** ShellCard — border-radius + collapse; paint margin per shadow/focus ring header. */
+.cab-shell-card {
+  overflow: hidden;
+  overflow-clip-margin: var(--cab-paint-clip-margin);
+}
+
+/** Toolbar liste — blur isolato su ::before per non clipare shadow/ring dei figli. */
+.cab-page-toolbar-surface {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.cab-page-toolbar-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: inherit;
+  background: color-mix(in srgb, var(--cab-surface-2) 94%, transparent);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.cab-page-toolbar-surface > * {
+  position: relative;
+  z-index: 1;
+}
+
+.cab-app-shell[data-gestionale-shell-tier="desktop"] .cab-gestionale-scroll-gutter-mirror {
+  scrollbar-gutter: stable;
+}
+
+.cab-app-shell[data-gestionale-shell-tier="mobile"],
+.cab-app-shell[data-gestionale-shell-tier="tablet"] {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
 }
 
 /* ResponsiveLayoutCore — media e contenimento globale nel main gestionale */
@@ -647,7 +708,7 @@ body[data-cab-scroll-lock-count] {
 
 /* Sidebar collapse — label fade + icone che si centrano con la larghezza */
 .cab-app-shell {
-  --cab-sidebar-motion: 250ms;
+  --cab-sidebar-motion: 180ms;
   --cab-gestionale-top-bar: 3.5rem;
   --cab-settings-sidebar-inset: var(--ds-space-md);
   --cab-settings-sidebar-height: calc(
@@ -672,18 +733,18 @@ body[data-cab-scroll-lock-count] {
     --cab-scroll-end-pad: max(3rem, min(10dvh, 4.5rem));
   }
 
-  /* Larghezza minima modali desktop — SSOT con --cab-modal-width-* (Tailwind arbitrary min-w non affidabile). */
+  /* Larghezza minima modali desktop — SSOT con --cab-modal-width-*; cap 100% evita overflow su tablet. */
   .cab-modal-min-w-form-small {
-    min-width: var(--cab-modal-width-form-small);
+    min-width: min(var(--cab-modal-width-form-small), 100%);
   }
   .cab-modal-min-w-form-medium {
-    min-width: var(--cab-modal-width-form-medium);
+    min-width: min(var(--cab-modal-width-form-medium), 100%);
   }
   .cab-modal-min-w-form-large {
-    min-width: var(--cab-modal-width-form-large);
+    min-width: min(var(--cab-modal-width-form-large), 100%);
   }
   .cab-modal-min-w-analytics {
-    min-width: var(--cab-modal-width-analytics);
+    min-width: min(var(--cab-modal-width-analytics), 100%);
   }
 }
 
@@ -713,10 +774,18 @@ body[data-cab-scroll-lock-count] {
   opacity: 1;
   overflow: hidden;
   transition:
-    max-width var(--cab-sidebar-motion) ease-out,
-    opacity 180ms ease-out,
+    max-width var(--cab-sidebar-motion) cubic-bezier(0.2, 0, 0, 1),
+    opacity 120ms ease-out,
     margin-inline var(--cab-sidebar-motion) ease-out,
     flex-grow var(--cab-sidebar-motion) ease-out;
+}
+
+.cab-sidebar[data-sidebar-hover-expanded] .cab-sidebar-nav-label {
+  transition-delay: 30ms;
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-label {
+  transition-delay: 0ms;
 }
 
 .cab-sidebar .cab-sidebar-nav-badge {
@@ -753,6 +822,12 @@ body[data-cab-scroll-lock-count] {
   pointer-events: none;
 }
 
+@media (min-width: 768px) {
+  .cab-sidebar[data-sidebar-hover-expanded] {
+    box-shadow: var(--cab-shadow-lg);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cab-sidebar,
   .cab-sidebar .cab-sidebar-nav,
@@ -771,6 +846,9 @@ body:has(.cab-app-shell) {
   height: var(--cab-app-height, 100dvh);
   max-height: var(--cab-app-height, 100dvh);
   overscroll-behavior: none;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 body:has(.cab-app-shell) .cab-app-shell {
@@ -853,4 +931,43 @@ body:has(.cab-app-shell) .cab-app-shell {
     width: 1.625rem;
     height: 1.625rem;
   }
+}
+
+/* Tasti azioni IA — gradiente arancione stile Gemini */
+.gestionale-ai-action-btn-primary {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cab-primary) 72%, white) 0%,
+    var(--cab-primary) 46%,
+    color-mix(in srgb, var(--cab-primary) 90%, #c2410c) 100%
+  );
+}
+
+.gestionale-ai-action-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--cab-primary) 78%, white) 0%,
+    color-mix(in srgb, var(--cab-primary) 96%, #fff) 48%,
+    color-mix(in srgb, var(--cab-primary) 88%, #c2410c) 100%
+  );
+}
+
+@keyframes gestionale-ai-spark-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(0.92);
+  }
+}
+
+.gestionale-ai-action-btn-icon-pulse {
+  animation: gestionale-ai-spark-pulse 1.2s ease-in-out infinite;
+}
+
+.gestionale-ai-action-btn-loading {
+  cursor: wait;
 }

@@ -14,14 +14,21 @@ import {
 import { PageHeader } from "@/components/gestionale/page-header";
 import { IconNavLavorazioni } from "@/components/gestionale/gestionale-nav-config";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
+import { ModuleImportEntry } from "@/components/data-import/module-import-entry";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
 const PreventiviEditorModal = dynamic(
   () => import("@/components/preventivi/preventivi-editor-modal").then((m) => m.PreventiviEditorModal),
   { ssr: false },
 );
+import { OrdiniFornitoriView } from "@/components/ordini-fornitori/ordini-fornitori-view";
+import { DdtDetailDrawer } from "@/components/ddt/ddt-detail-drawer";
+import { DdtStatusBadge } from "@/components/ddt/ddt-status-badge";
+import { buildDdtDraftFromPreventivoAuto } from "@/lib/ddt/preventivo-to-ddt-draft";
+import type { DdtDetail } from "@/lib/ddt/types";
 import { PreventivoEliminaConfirmDialog } from "@/components/preventivi/preventivo-elimina-confirm-dialog";
 import { PreventiviAdvancedFilterPanel } from "@/components/preventivi/preventivi-advanced-filter-panel";
+import { PreventivoBillingBadge } from "@/components/fatturazione/preventivo-billing-badge";
 import { GestionaleListSearchField } from "@/components/gestionale/gestionale-list-search-field";
 import { useAuth } from "@/context/auth-context";
 import { usePermissionsSnapshot } from "@/src/hooks/use-permissions";
@@ -48,7 +55,7 @@ import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-stor
 import { buildNewPreventivoFromLavorazioneContext } from "@/lib/preventivi/generate-preventivo-from-lavorazione";
 import { buildPreventiviLavorazioneFocusHref } from "@/lib/preventivi/preventivi-lavorazione-href";
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
-import { Q_PREVENTIVI_LAV, Q_PREVENTIVI_LAV_ORIG, Q_PREVENTIVI_MEZZO, Q_PREVENTIVI_NUOVO, Q_PREVENTIVI_OPEN } from "@/lib/preventivi/preventivi-query";
+import { Q_PREVENTIVI_LAV, Q_PREVENTIVI_LAV_ORIG, Q_PREVENTIVI_MEZZO, Q_PREVENTIVI_NUOVO, Q_PREVENTIVI_OPEN, Q_PREVENTIVI_TAB } from "@/lib/preventivi/preventivi-query";
 import { readAndClearPendingPreventivoPayload, markEphemeralPreventivoDraft, clearEphemeralPreventivoDraft, readEphemeralPreventivoDraftId } from "@/lib/preventivi/preventivi-session-bridge";
 import {
   appendPreventiviChangeLog,
@@ -62,6 +69,9 @@ import {
   removePreventivoRecord,
 } from "@/lib/preventivi/preventivi-sync-adapter";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
+import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
+import { ddtService } from "@/src/services/ddt.service";
+import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi-billing-query";
 import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
@@ -81,6 +91,9 @@ import {
   dsPageToolbarBtn,
   dsPageToolbarCtaCompact,
   dsStackPage,
+  dsSegmentedBtnOff,
+  dsSegmentedBtnOn,
+  dsSegmentedWrap,
   GESTIONALE_SEARCH_PLACEHOLDER,
   dsTableRow,
   dsTableActionsGroup,
@@ -91,6 +104,11 @@ import {
   dsTableActionGlyph,
 } from "@/lib/ui/design-system";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
+import {
+  GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
+  GESTIONALE_LIST_MOBILE_ONLY_CLASS,
+  useGestionaleListLayout,
+} from "@/lib/ui/use-gestionale-list-layout";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { erpBtnNuovaLavorazione } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
@@ -165,18 +183,29 @@ function PreventivoRowActions({
   hrefLav,
   canEditWorkOrders,
   canDeleteRecords,
+  canWritePreventivi,
+  canReadPreventivi,
+  activeDdt,
+  ddtBusy,
   autore,
   onEdit,
   onDelete,
+  onDdtAction,
 }: {
   p: PreventivoRecord;
   hrefLav: string | null;
   canEditWorkOrders: boolean;
   canDeleteRecords: boolean;
+  canWritePreventivi: boolean;
+  canReadPreventivi: boolean;
+  activeDdt: { status: DdtDetail["document"]["status"] } | null;
+  ddtBusy: boolean;
   autore: string;
   onEdit: (rec: PreventivoRecord) => void;
   onDelete: (rec: PreventivoRecord) => void;
+  onDdtAction: (rec: PreventivoRecord) => void;
 }) {
+  const showDdt = canReadPreventivi && (canWritePreventivi || activeDdt != null);
   return (
     <>
       {hrefLav ? (
@@ -198,6 +227,19 @@ function PreventivoRowActions({
       >
         <IconPreventivoEdit />
       </IconActionButton>
+      {showDdt ? (
+        <IconActionButton
+          label={activeDdt ? "Apri DDT" : "Genera DDT"}
+          className={dsTableActionBtnSecondary}
+          disabled={ddtBusy || (!canWritePreventivi && !activeDdt)}
+          onClick={() => onDdtAction(p)}
+        >
+          <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase">
+            DDT
+            {activeDdt ? <DdtStatusBadge status={activeDdt.status} /> : null}
+          </span>
+        </IconActionButton>
+      ) : null}
       <IconActionButton
         label="PDF"
         className={dsTableActionBtnSecondary}
@@ -255,17 +297,34 @@ function comparePreventivo(a: PreventivoRecord, b: PreventivoRecord, key: Preven
 }
 
 export function PreventiviView() {
+  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
   const { global: globalPerm, modules: permModules } = usePermissionsSnapshot();
   const prevPerm = permModules.preventivi;
+  const ordiniPerm = permModules.ordini_fornitori;
   const canEditWorkOrders = prevPerm.canWrite;
+  const canReadPreventivi = prevPerm.canRead;
+  const canWritePreventivi = prevPerm.canWrite;
   const canDeleteRecords = prevPerm.canWrite && globalPerm.canDeleteRecords;
   const router = useRouter();
   const searchParams = useSearchParams();
+  const pageTabRaw = searchParams.get(Q_PREVENTIVI_TAB);
+  const pageTab = pageTabRaw === "ordini" && ordiniPerm.canRead ? "ordini" : "preventivi";
+  const setPageTab = useCallback(
+    (tab: "preventivi" | "ordini") => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "preventivi") params.delete(Q_PREVENTIVI_TAB);
+      else params.set(Q_PREVENTIVI_TAB, tab);
+      const qs = params.toString();
+      router.replace(qs ? `?${qs}` : "?", { scroll: false });
+    },
+    [router, searchParams],
+  );
   const { authorName: autore } = useAuth();
   const gestToast = useGestionaleToast();
   const queryClient = useQueryClient();
   const { records: rows, mezziRows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
     usePreventiviRecordsQuery();
+  const { byPreventivoId: preventiviBillingById } = usePreventiviBillingQuery();
   const preventiviReadyMarked = useRef(false);
   useEffect(() => {
     if (preventiviReadyMarked.current || rows.length === 0) return;
@@ -335,6 +394,12 @@ export function PreventiviView() {
   }, []);
   const [eliminaConfirmRecord, setEliminaConfirmRecord] = useState<PreventivoRecord | null>(null);
   const [eliminaPending, setEliminaPending] = useState(false);
+  const [ddtDrawer, setDdtDrawer] = useState<{
+    open: boolean;
+    detail: DdtDetail | null;
+    preventivo: PreventivoRecord | null;
+  }>({ open: false, detail: null, preventivo: null });
+  const [ddtBusyId, setDdtBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (searchParams.get(Q_PREVENTIVI_NUOVO) !== "1") {
@@ -381,6 +446,7 @@ export function PreventiviView() {
   useEffect(() => {
     const orphanId = readEphemeralPreventivoDraftId();
     if (!orphanId) return;
+    if (editor.open && editor.isRollbackDraft) return;
     const openId = searchParams.get(Q_PREVENTIVI_OPEN)?.trim();
     const nuovo = searchParams.get(Q_PREVENTIVI_NUOVO);
     if (openId === orphanId || nuovo === "1") return;
@@ -388,7 +454,7 @@ export function PreventiviView() {
       clearEphemeralPreventivoDraft();
       reload();
     });
-  }, [searchParams, reload]);
+  }, [searchParams, reload, editor.open, editor.isRollbackDraft, queryClient]);
 
   const filterLavId = searchParams.get(Q_PREVENTIVI_LAV)?.trim() || "";
   const filterOrigRaw = searchParams.get(Q_PREVENTIVI_LAV_ORIG)?.trim() || "";
@@ -487,6 +553,75 @@ export function PreventiviView() {
     });
     return list;
   }, [filteredRows, sortColumn, sortPhase]);
+
+  const preventivoIdsForDdt = useMemo(() => sortedRows.map((r) => r.id), [sortedRows]);
+  const { getDdtForPreventivo, refetch: refetchDdtIndex } = usePreventivoDdtIndex(preventivoIdsForDdt);
+
+  const openDdtDrawer = useCallback(
+    async (preventivo: PreventivoRecord, ddtId: string) => {
+      const detail = await ddtService.getDetail(ddtId);
+      if (!detail.success || !detail.data) {
+        gestToast.errorOnce("ddt-detail", detail.error ?? "Impossibile aprire il DDT.");
+        return;
+      }
+      setDdtDrawer({ open: true, detail: detail.data, preventivo });
+    },
+    [gestToast],
+  );
+
+  const handleDdtAction = useCallback(
+    async (preventivo: PreventivoRecord) => {
+      const existing = getDdtForPreventivo(preventivo.id);
+      if (existing) {
+        await openDdtDrawer(preventivo, existing.id);
+        return;
+      }
+      if (!canWritePreventivi) return;
+      setDdtBusyId(preventivo.id);
+      try {
+        const draft = buildDdtDraftFromPreventivoAuto({ preventivo, preventivoId: preventivo.id });
+        const created = await ddtService.createOrReplaceForPreventivo(draft);
+        if (!created.success || !created.data) throw new Error(created.error ?? "Creazione DDT non riuscita.");
+        await refetchDdtIndex();
+        await openDdtDrawer(preventivo, created.data.id);
+        gestToast.successOnce("ddt-created", "DDT generato.");
+      } catch (e) {
+        gestToast.errorOnce("ddt-create", e);
+      } finally {
+        setDdtBusyId(null);
+      }
+    },
+    [canWritePreventivi, getDdtForPreventivo, gestToast, openDdtDrawer, refetchDdtIndex],
+  );
+
+  const handleRegenerateDdt = useCallback(async () => {
+    const preventivo = ddtDrawer.preventivo;
+    if (!preventivo || !canWritePreventivi) return;
+    if (!window.confirm("Rigenerare il DDT? Il documento precedente verrà annullato.")) return;
+    setDdtBusyId(preventivo.id);
+    try {
+      const draft = buildDdtDraftFromPreventivoAuto({ preventivo, preventivoId: preventivo.id });
+      const created = await ddtService.createOrReplaceForPreventivo(draft);
+      if (!created.success || !created.data) throw new Error(created.error ?? "Rigenerazione non riuscita.");
+      await refetchDdtIndex();
+      await openDdtDrawer(preventivo, created.data.id);
+      gestToast.successOnce("ddt-regen", "DDT rigenerato.");
+    } catch (e) {
+      gestToast.errorOnce("ddt-regen", e);
+    } finally {
+      setDdtBusyId(null);
+    }
+  }, [canWritePreventivi, ddtDrawer.preventivo, gestToast, openDdtDrawer, refetchDdtIndex]);
+
+  const refreshDdtDrawer = useCallback(async () => {
+    const detail = ddtDrawer.detail;
+    if (!detail) return;
+    const next = await ddtService.getDetail(detail.document.id);
+    if (next.success && next.data) {
+      setDdtDrawer((prev) => ({ ...prev, detail: next.data! }));
+    }
+    void refetchDdtIndex();
+  }, [ddtDrawer.detail, refetchDdtIndex]);
 
   const listPageSize = useResponsiveListPageSize();
   const preventiviPagerDeps = useMemo(
@@ -589,6 +724,7 @@ export function PreventiviView() {
     });
     void appendPreventivoSynced(rec, mezziRows, { queryClient }).then((res) => {
       if (!res.ok) {
+        pendingHandledRef.current = false;
         gestToast.errorOnce("preventivi-save", res.error, { module: "preventivi" });
         return;
       }
@@ -598,12 +734,12 @@ export function PreventiviView() {
       draftConfirmedRef.current = false;
       reload();
       setEditor({ open: true, record: saved, isNew: false, isRollbackDraft: true });
+      const sp = new URLSearchParams(searchParams.toString());
+      sp.delete(Q_PREVENTIVI_NUOVO);
+      sp.set(Q_PREVENTIVI_OPEN, saved.id);
+      const q = sp.toString();
+      router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
     });
-    const sp = new URLSearchParams(searchParams.toString());
-    sp.delete(Q_PREVENTIVI_NUOVO);
-    sp.set(Q_PREVENTIVI_OPEN, rec.id);
-    const q = sp.toString();
-    router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
   }, [searchParams, router, mezziSnap, magSnap, autore, rows, mezziRows, queryClient]);
 
   useEffect(() => {
@@ -685,22 +821,52 @@ export function PreventiviView() {
 
   return (
     <GestionaleSectionGate module="preventivi">
-    <div className={`lavorazioni-scroll-scope ${layoutPageRoot}`}>
+    <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
       <PageHeader
         title="Preventivi"
         actions={
-          <GestionalePageToolbarActions
+          <div className="flex flex-wrap items-center gap-2">
+            <ModuleImportEntry entity="preventivi" module="preventivi" />
+            <GestionalePageToolbarActions
             canUndo={false}
             undoDisabled
             onOpenLog={() => setLogOpen(true)}
             logTitle="Storico modifiche preventivi (ultime 200)"
           />
+          </div>
         }
       />
 
       <div className={dsStackPage}>
 
+      {ordiniPerm.canRead ? (
+        <div className={`${dsSegmentedWrap} w-fit`} role="tablist" aria-label="Sezione documenti">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pageTab === "preventivi"}
+            className={pageTab === "preventivi" ? dsSegmentedBtnOn : dsSegmentedBtnOff}
+            onClick={() => setPageTab("preventivi")}
+          >
+            Preventivi
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pageTab === "ordini"}
+            className={pageTab === "ordini" ? dsSegmentedBtnOn : dsSegmentedBtnOff}
+            onClick={() => setPageTab("ordini")}
+          >
+            Ordini fornitori
+          </button>
+        </div>
+      ) : null}
+
+      {pageTab === "ordini" ? (
+        <OrdiniFornitoriView />
+      ) : (
+        <>
       {bannerFilter}
       {bannerMezzo}
 
@@ -729,7 +895,7 @@ export function PreventiviView() {
             search={
               <GestionaleListSearchField
                 id="preventivi-search"
-                wrapperClassName="min-w-0 flex-1 sm:min-w-[12rem]"
+                wrapperClassName="min-w-0 flex-1"
                 placeholder={GESTIONALE_SEARCH_PLACEHOLDER}
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
@@ -768,19 +934,22 @@ export function PreventiviView() {
 
         {preventiviInitialLoading ? (
           <>
-            <LoadingTableSkeleton preset="generic" wrapClassName="mt-4" visibilityClass="hidden xl:block" actionButtonCount={3} />
-            <div className="mt-4 space-y-3 xl:hidden" aria-hidden>
+            {listLayout === "desktop" ? (
+            <LoadingTableSkeleton preset="generic" wrapClassName="mt-4" visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS} actionButtonCount={3} />
+            ) : (
+            <div className="mt-4 space-y-3">
               {Array.from({ length: 3 }).map((_, i) => (
                 <LoadingCardSkeleton key={i} minHeightClass="min-h-[140px]" rows={3} />
               ))}
             </div>
+            )}
           </>
         ) : (
         <>
+        {listLayout === "desktop" ? (
         <GestionaleListTable
-          masterScrollScope={false}
           wrapClassName="mt-4"
-          visibilityClass="hidden xl:block"
+          visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
           colgroup={
             <>
               <col className="w-[5.25rem]" />
@@ -805,7 +974,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[5.25rem] min-w-[5.25rem]"
+                  thClassName="w-[5.25rem]"
                 />
                 <GlobalTableSortTh
                   label="Tipo"
@@ -814,7 +983,7 @@ export function PreventiviView() {
                   sortPhase={sortPhase}
                   onSort={onSortMain}
                   contentChipInset
-                  thClassName="w-[5rem] min-w-[5rem]"
+                  thClassName="w-[5rem]"
                 />
                 <GlobalTableSortTh
                   label="Data"
@@ -822,7 +991,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[5.75rem] min-w-[5.75rem]"
+                  thClassName="w-[5.75rem]"
                 />
                 <GlobalTableSortTh
                   label="Cliente"
@@ -862,7 +1031,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[4.5rem] min-w-[4.5rem]"
+                  thClassName="w-[4.5rem]"
                 />
                 <GlobalTableSortTh
                   label="Matricola"
@@ -870,7 +1039,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[5.25rem] min-w-[5.25rem]"
+                  thClassName="w-[5.25rem]"
                 />
                 <GlobalTableSortTh
                   label="Scud."
@@ -878,7 +1047,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[4.25rem] min-w-[4.25rem]"
+                  thClassName="w-[4.25rem]"
                 />
                 <GlobalTableSortTh
                   label="Totale"
@@ -886,7 +1055,7 @@ export function PreventiviView() {
                   sortColumn={sortColumn}
                   sortPhase={sortPhase}
                   onSort={onSortMain}
-                  thClassName="w-[6.25rem] min-w-[6.25rem]"
+                  thClassName="w-[6.25rem]"
                 />
                 <GestionaleListTableActionsHead />
             </>
@@ -909,7 +1078,10 @@ export function PreventiviView() {
                     }`}
                   >
                     <td className={`whitespace-nowrap ${prevTableTd} font-mono text-xs font-semibold tabular-nums text-zinc-900 dark:text-zinc-100`}>
-                      {p.numero}
+                      <span className="inline-flex items-center gap-1.5">
+                        {p.numero}
+                        <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
+                      </span>
                     </td>
                     <td className={`whitespace-nowrap ${gestionaleListTableTdPill}`}>
                       <span className={preventivoTipoDocumentoBadgeClass(p.tipoDocumento)} title={preventivoTipoDocumentoLabel(p.tipoDocumento)}>
@@ -950,9 +1122,14 @@ export function PreventiviView() {
                           hrefLav={hrefLav}
                           canEditWorkOrders={canEditWorkOrders}
                           canDeleteRecords={canDeleteRecords}
+                          canWritePreventivi={canWritePreventivi}
+                          canReadPreventivi={canReadPreventivi}
+                          activeDdt={getDdtForPreventivo(p.id)}
+                          ddtBusy={ddtBusyId === p.id}
                           autore={autore}
                           onEdit={apriModifica}
                           onDelete={openEliminaConfirm}
+                          onDdtAction={(rec) => void handleDdtAction(rec)}
                         />
                       </div>
                     </td>
@@ -960,8 +1137,10 @@ export function PreventiviView() {
                 );
               })}
         </GestionaleListTable>
+        ) : null}
 
-        <div className="mt-4 space-y-3 xl:hidden">
+        {listLayout === "mobile" ? (
+        <div className="mt-4 space-y-3">
           {pagedRows.length === 0 ? (
             <p className={gestionaleListTableMobileEmptyClass}>{tableEmptyMessage}</p>
           ) : (
@@ -980,6 +1159,7 @@ export function PreventiviView() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-mono text-xs font-semibold tabular-nums text-zinc-500 dark:text-zinc-400">{p.numero}</p>
+                        <PreventivoBillingBadge status={preventiviBillingById.get(p.id)?.stato_fatturazione} />
                         <span className={preventivoTipoDocumentoBadgeClass(p.tipoDocumento)}>
                           {preventivoTipoDocumentoLabel(p.tipoDocumento, "short")}
                         </span>
@@ -993,7 +1173,7 @@ export function PreventiviView() {
                       {p.totaleFinale.toLocaleString("it-IT", { minimumFractionDigits: 2 })} €
                     </p>
                   </div>
-                  <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                  <dl className="mt-3 grid grid-cols-1 gap-x-3 gap-y-2 text-xs cab-shell-desktop:grid-cols-2">
                     <div>
                       <dt className="text-zinc-500 dark:text-zinc-400">Tipo</dt>
                       <dd className="font-medium text-zinc-800 dark:text-zinc-200">
@@ -1033,9 +1213,14 @@ export function PreventiviView() {
                       hrefLav={hrefLav}
                       canEditWorkOrders={canEditWorkOrders}
                       canDeleteRecords={canDeleteRecords}
+                      canWritePreventivi={canWritePreventivi}
+                      canReadPreventivi={canReadPreventivi}
+                      activeDdt={getDdtForPreventivo(p.id)}
+                      ddtBusy={ddtBusyId === p.id}
                       autore={autore}
                       onEdit={apriModifica}
                       onDelete={openEliminaConfirm}
+                      onDdtAction={(rec) => void handleDdtAction(rec)}
                     />
                   </CardMobileActions>
                 </CardMobile>
@@ -1043,6 +1228,7 @@ export function PreventiviView() {
             })
           )}
         </div>
+        ) : null}
 
         {showPager ? <TablePagination page={page} pageCount={pageCount} onPageChange={setPage} label={label} /> : null}
         </>
@@ -1064,6 +1250,8 @@ export function PreventiviView() {
           else gestToast.errorOnce("preventivi-editor", msg, { module: "preventivi" });
         }}
       />
+        </>
+      )}
       </div>
 
       <PreventivoEliminaConfirmDialog
@@ -1076,6 +1264,18 @@ export function PreventiviView() {
         onConfirm={() => {
           void confirmEliminaPreventivo();
         }}
+      />
+
+      <DdtDetailDrawer
+        open={ddtDrawer.open}
+        detail={ddtDrawer.detail}
+        onClose={() => setDdtDrawer({ open: false, detail: null, preventivo: null })}
+        canWrite={canWritePreventivi}
+        isAdmin={globalPerm.isAdmin}
+        canRegenerate={canWritePreventivi}
+        regenerateBusy={ddtDrawer.preventivo != null && ddtBusyId === ddtDrawer.preventivo.id}
+        onRegenerate={() => void handleRegenerateDdt()}
+        onChanged={() => void refreshDdtDrawer()}
       />
 
       <Drawer

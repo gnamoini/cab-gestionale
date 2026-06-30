@@ -1,6 +1,8 @@
+import { isPreventivoUuid } from "@/lib/preventivi/preventivi-db-mapper";
 import { TEXT_SHORT } from "@/lib/validation/text-field-limits";
 
 export const PREVENTIVO_WRITABLE_KEYS = [
+  "id",
   "mezzo_id",
   "lavorazione_id",
   "cliente",
@@ -11,6 +13,7 @@ export const PREVENTIVO_WRITABLE_KEYS = [
 export type PreventivoWritableKey = (typeof PREVENTIVO_WRITABLE_KEYS)[number];
 
 export type PreventivoWritePayload = {
+  id?: string;
   mezzo_id?: string;
   lavorazione_id?: string | null;
   cliente?: string;
@@ -28,7 +31,9 @@ export function pickPreventivoWritePayload(data: Record<string, unknown>): Preve
   const out: PreventivoWritePayload = {};
   for (const key of PREVENTIVO_WRITABLE_KEYS) {
     if (!(key in data) || data[key] === undefined) continue;
-    if (key === "cliente" && typeof data.cliente === "string") {
+    if (key === "id" && typeof data.id === "string" && isPreventivoUuid(data.id)) {
+      out.id = data.id.trim();
+    } else if (key === "cliente" && typeof data.cliente === "string") {
       out.cliente = normalizePreventivoCliente(data.cliente);
     } else if (key === "mezzo_id" && typeof data.mezzo_id === "string") {
       out.mezzo_id = data.mezzo_id.trim();

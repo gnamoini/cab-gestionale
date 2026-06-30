@@ -27,6 +27,6 @@ export const SKELETON_GRID = {
   dashboardKpi: "grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-4",
   dashboardWidgetsLg: "hidden min-w-0 gap-4 lg:grid lg:grid-cols-2",
   dashboardWidgetsMobile: "space-y-3 lg:hidden",
-  preventiviMobileStack: "mt-4 space-y-2 xl:hidden",
-  lavorazioniMobileStack: "mt-4 space-y-2 xl:hidden",
+  preventiviMobileStack: "mt-4 space-y-2",
+  lavorazioniMobileStack: "mt-4 space-y-2",
 } as const;

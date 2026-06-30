@@ -10,8 +10,8 @@ import {
   formatWorkCellShortLabel,
 } from "@/lib/dipendenti/timesheet-cell-display";
 import {
-  employeeDisplayName,
   entriesForEmployee,
+  pdfEmployeeDisplayName,
   type DipendentiPdfContext,
 } from "@/lib/dipendenti/pdf/dipendenti-pdf-context";
 import {
@@ -60,7 +60,7 @@ export async function buildDipendentePdf(
   logoOverride?: string | null,
 ): Promise<JsPDFDoc> {
   const logoDataUrl = logoOverride !== undefined ? logoOverride : await loadBrandingLogoDataUrl();
-  const displayName = employeeDisplayName(employee, ctx.entries);
+  const displayName = pdfEmployeeDisplayName(ctx, employee);
   const title = timesheetDipendenteTitle(ctx.monthKey, displayName);
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageW = doc.internal.pageSize.getWidth();
@@ -335,7 +335,7 @@ function drawPresenzeMonthlyGrid(
   for (const emp of employees) {
     const empEntries = entriesForEmployee(emp.id, ctx.entries);
     const totals = computeMonthTotals(empEntries);
-    const name = employeeDisplayName(emp, ctx.entries);
+    const name = pdfEmployeeDisplayName(ctx, emp);
 
     const workCells = days.map((d) => {
       const cell = cellForDay(empEntries, d.dateYmd);

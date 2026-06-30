@@ -5,7 +5,7 @@ import {
   buildDipendentePdf,
 } from "@/lib/dipendenti/pdf/dipendenti-pdf-sections";
 import {
-  employeeDisplayName,
+  pdfEmployeeDisplayName,
   type DipendentiPdfContext,
 } from "@/lib/dipendenti/pdf/dipendenti-pdf-context";
 import type { DipendenteTimesheetEmployeeRow } from "@/lib/dipendenti/types";
@@ -42,6 +42,6 @@ export function dipendentiDipendenteFileName(
   return buildDipendentiPdfDownloadFileName({
     monthKey: ctx.monthKey,
     kind: "dipendente",
-    employeeName: employeeDisplayName(employee, ctx.entries),
+    employeeName: pdfEmployeeDisplayName(ctx, employee),
   });
 }

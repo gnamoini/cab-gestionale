@@ -74,8 +74,8 @@ const timesheetFooterTdBase =
 const timesheetPresenzeShellClass = [
   "timesheet-presenze-shell",
   "relative",
-  "hidden md:block",
-  "w-full min-w-0 max-w-full overflow-hidden",
+  "gestionale-list-desktop-only",
+  "w-full min-w-0 max-w-full",
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)]",
 ].join(" ");
 
@@ -83,7 +83,7 @@ const timesheetTableScrollClass = [
   gestionaleListTableMasterWrapClass,
   "timesheet-presenze-grid",
   dsScrollbar,
-  "w-full max-h-[min(70vh,40rem)] max-w-full overflow-x-auto overflow-y-auto overscroll-contain [scrollbar-gutter:auto]",
+  "w-full min-w-0 max-h-[min(70vh,40rem)] max-w-full overflow-x-auto overflow-y-auto overscroll-contain [scrollbar-gutter:auto]",
 ].join(" ");
 
 type TimesheetTodayRailBox = { left: number; top: number; width: number; height: number };

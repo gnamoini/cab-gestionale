@@ -26,6 +26,9 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [{ source: "/ddt", destination: "/preventivi", permanent: false }];
+  },
 };
 
 export default withBundleAnalyzer(nextConfig);

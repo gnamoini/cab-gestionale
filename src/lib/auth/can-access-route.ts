@@ -5,7 +5,7 @@ import {
   type RbacSection,
   type RbacUser,
 } from "@/lib/auth/rbac";
-import type { RbacEvaluationContext } from "@/lib/rbac";
+import { hasCapability, type RbacEvaluationContext } from "@/lib/rbac";
 import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
@@ -18,27 +18,50 @@ const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>
   report: "report",
   documenti: "documenti",
   dipendenti: "dipendenti",
+  fatturazione: "fatturazione",
+  ddt: "ddt",
 };
+
+/** Hard gate / derived — non passano da user_permissions (RBAC_PRECEDENCE step 1). */
+const NON_MODULE_SECTIONS = new Set<RbacSection>([
+  "dashboard",
+  "bunder",
+  "security",
+  "impostazioni",
+  "lavorazioni_clienti",
+]);
 
 export type CanAccessRouteInput = {
   user: RbacUser;
   pathname: string;
   opts?: CanAccessPageOptions;
   ctx?: RbacEvaluationContext;
-  /** Se presente, applica anche `user_permissions` (fail-closed su modulo mappato). */
+  /** Se presente, applica user_permissions + ROLE_MODULE_DEFAULTS (step 2→3). */
   snapshot?: EffectivePermissionsSnapshot | null;
 };
 
-/** Accesso route: capability/ruolo + opzionale moduli granulari dal truth layer. */
+/** Accesso route: hard gate + moduli ERP via snapshot (precedence allineata). */
 export function canAccessRoute(input: CanAccessRouteInput): boolean {
   const { user, pathname, opts, ctx, snapshot } = input;
   const effectiveCtx = ctx ?? snapshot?.rbacContext;
-  if (!canAccessPage(user, pathname, opts, effectiveCtx)) return false;
-  if (!snapshot) return true;
-
   const section = pathnameToSection(pathname);
-  const module = section ? SECTION_TO_MODULE[section] : undefined;
-  if (!module) return true;
 
-  return moduleAllows(snapshot.modules, module, "read");
+  if (!section || NON_MODULE_SECTIONS.has(section)) {
+    return canAccessPage(user, pathname, opts, effectiveCtx);
+  }
+
+  const module = SECTION_TO_MODULE[section];
+  if (!module) {
+    return canAccessPage(user, pathname, opts, effectiveCtx);
+  }
+
+  if (!hasCapability(user, "can_read_operational", effectiveCtx)) {
+    return false;
+  }
+
+  if (snapshot) {
+    return moduleAllows(snapshot.modules, module, "read");
+  }
+
+  return canAccessPage(user, pathname, opts, effectiveCtx);
 }

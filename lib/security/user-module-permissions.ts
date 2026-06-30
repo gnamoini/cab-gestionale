@@ -1,4 +1,4 @@
-import { modulePermissionForRole, resolveRole, type AppRole } from "@/lib/auth/rbac";
+import { roleModuleDefault, resolveRole, type AppRole } from "@/lib/rbac";
 import {
   GESTIONALE_PERMISSION_MODULES,
   type GestionalePermissionModule,
@@ -14,6 +14,9 @@ export const MODULE_PAGE_LABELS: Record<GestionalePermissionModule, string> = {
   report: "Report",
   documenti: "Documenti",
   dipendenti: "Dipendenti",
+  fatturazione: "Fatturazione",
+  ddt: "DDT",
+  ordini_fornitori: "Ordini fornitori",
 };
 
 export type ModulePermissionDraftRow = {
@@ -38,8 +41,9 @@ function rowsForUser(rows: UserPermissionRow[] | undefined, userId: string): Use
 export function roleDefaultForModule(
   ruolo: AppRole,
   module: GestionalePermissionModule,
-): { canRead: boolean; canWrite: boolean; canAdmin: boolean } {
-  return modulePermissionForRole(ruolo, module);
+): { canRead: boolean; canWrite: boolean } {
+  const d = roleModuleDefault(resolveRole(ruolo), module);
+  return { canRead: d.canRead, canWrite: d.canWrite };
 }
 
 export function computeModulePermissionDraft(

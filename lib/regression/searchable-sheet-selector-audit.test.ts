@@ -76,6 +76,8 @@ const ghostGuard = read("lib/selector-interaction/suppress-selector-ghost-click.
 assert.match(ghostGuard, /armSelectorGhostClickGuard/);
 assert.match(ghostGuard, /blockOnce/);
 assert.match(sheet, /armSelectorGhostClickGuard/);
+assert.match(sheet, /cab-app-shell/);
+assert.match(sheet, /healBodyScrollLockState\("sheet-close"\)/);
 assert.match(bottomSheet, /armSelectorGhostClickGuard/);
 assert.match(bottomSheet, /onPointerDown/);
 assert.match(globalSelect, /armSelectorGhostClickGuard/);

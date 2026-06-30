@@ -17,7 +17,6 @@ import { addettoDisplayColor } from "@/lib/lavorazioni/addetto-colors-assign";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { partitionKanbanRows, sortKanbanCards } from "@/lib/lavorazioni/kanban-operational";
 import {
-  DEFAULT_LAVORAZIONE_STATO_ID,
   isStatoClosed,
   migrateStatoConfigId,
   resolveStatoId,
@@ -31,24 +30,7 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { lavorazioneMezzoIdentParts } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import type { LavorazioneSchedeStore } from "@/types/schede";
-
-/** Vista Kanban: «Attesa preventivo» non ha colonna dedicata — card sotto Accettazione. */
-function isAttesaPreventivoStato(col: StatoLavorazioneConfig): boolean {
-  const id = col.id.trim().toLowerCase();
-  const migrated = migrateStatoConfigId(col.id).toLowerCase();
-  const label = col.label.trim().toLowerCase();
-  if (label.includes("attesa preventivo")) return true;
-  if (migrated === "attesa_preventivo" || migrated === "in_attesa_preventivo") return true;
-  if (id === "lav-stato-att-prev" || id.includes("att-prev") || id.includes("att_prev")) return true;
-  return false;
-}
-
-function findAccettazioneColumnId(columns: readonly StatoLavorazioneConfig[]): string {
-  const hit =
-    columns.find((c) => migrateStatoConfigId(c.id) === DEFAULT_LAVORAZIONE_STATO_ID) ??
-    columns.find((c) => c.label.trim().toLowerCase().includes("accettazione"));
-  return hit?.id ?? DEFAULT_LAVORAZIONE_STATO_ID;
-}
+import type { GestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
 
 function findCompletateColumnConfig(stati: readonly StatoLavorazioneConfig[]): StatoLavorazioneConfig {
   const hit =
@@ -266,6 +248,7 @@ const KanbanCard = memo(function KanbanCard({
 KanbanCard.displayName = "KanbanCard";
 
 export function LavorazioniKanbanView({
+  layout = "desktop",
   rows,
   columns,
   statiOpts,
@@ -281,6 +264,7 @@ export function LavorazioniKanbanView({
   onOpenRow,
   onOpenClosedRow,
 }: {
+  layout?: GestionaleListLayout;
   rows: readonly LavorazioneListRow[];
   columns: readonly StatoLavorazioneConfig[];
   statiOpts: readonly StatoLavorazioneConfig[];
@@ -301,39 +285,20 @@ export function LavorazioniKanbanView({
     [columns],
   );
 
-  const kanbanColumns = useMemo(
-    () => operationalColumns.filter((col) => !isAttesaPreventivoStato(col)),
-    [operationalColumns],
-  );
-
-  const accettazioneColumnId = useMemo(() => findAccettazioneColumnId(operationalColumns), [operationalColumns]);
-
-  const attesaPreventivoColumns = useMemo(
-    () => operationalColumns.filter(isAttesaPreventivoStato),
-    [operationalColumns],
-  );
+  const kanbanColumns = operationalColumns;
 
   const { operational: operationalRows, completate: completateRows } = useMemo(
     () => partitionKanbanRows(rows, statiOpts),
     [rows, statiOpts],
   );
 
-  const { byStato, attesaPreventivoByStato } = useMemo(() => {
+  const byStato = useMemo(() => {
     const statiList = [...statiOpts];
     const map = new Map<string, LavorazioneListRow[]>();
-    const attesaMap = new Map<string, LavorazioneListRow[]>();
     for (const col of kanbanColumns) map.set(col.id, []);
-    for (const col of attesaPreventivoColumns) attesaMap.set(col.id, []);
-    const fallbackAttesaId = attesaPreventivoColumns[0]?.id;
 
     for (const row of operationalRows) {
       const statoId = resolveStatoId(row.stato, statiList);
-      const statoCol = statiList.find((c) => c.id === statoId);
-      if (statoCol && isAttesaPreventivoStato(statoCol)) {
-        const attesaList = attesaMap.get(statoId) ?? (fallbackAttesaId ? attesaMap.get(fallbackAttesaId) : undefined);
-        attesaList?.push(row);
-        continue;
-      }
       const list = map.get(statoId);
       if (list) list.push(row);
     }
@@ -341,40 +306,21 @@ export function LavorazioniKanbanView({
     for (const col of kanbanColumns) {
       map.set(col.id, sortKanbanCards(map.get(col.id) ?? []));
     }
-    for (const col of attesaPreventivoColumns) {
-      attesaMap.set(col.id, sortKanbanCards(attesaMap.get(col.id) ?? []));
-    }
 
-    return { byStato: map, attesaPreventivoByStato: attesaMap };
-  }, [operationalRows, kanbanColumns, attesaPreventivoColumns, statiOpts]);
+    return map;
+  }, [operationalRows, kanbanColumns, statiOpts]);
 
   const completateColumn = useMemo(() => findCompletateColumnConfig(statiOpts), [statiOpts]);
   const completateItems = useMemo(() => sortKanbanCards(completateRows), [completateRows]);
   const openClosedRow = onOpenClosedRow ?? onOpenRow;
 
   const mobileSections = useMemo((): KanbanMobileSection[] => {
-    const sections: KanbanMobileSection[] = [];
-    for (const col of kanbanColumns) {
-      if (col.id === accettazioneColumnId && attesaPreventivoColumns.length > 0) {
-        sections.push({
-          id: col.id,
-          col,
-          items: byStato.get(col.id) ?? [],
-          nested: attesaPreventivoColumns.map((apCol) => ({
-            col: apCol,
-            items: attesaPreventivoByStato.get(apCol.id) ?? [],
-          })),
-          onOpen: onOpenRow,
-        });
-      } else {
-        sections.push({
-          id: col.id,
-          col,
-          items: byStato.get(col.id) ?? [],
-          onOpen: onOpenRow,
-        });
-      }
-    }
+    const sections: KanbanMobileSection[] = kanbanColumns.map((col) => ({
+      id: col.id,
+      col,
+      items: byStato.get(col.id) ?? [],
+      onOpen: onOpenRow,
+    }));
     sections.push({
       id: completateColumn.id,
       col: completateColumn,
@@ -382,17 +328,7 @@ export function LavorazioniKanbanView({
       onOpen: openClosedRow,
     });
     return sections;
-  }, [
-    kanbanColumns,
-    accettazioneColumnId,
-    attesaPreventivoColumns,
-    byStato,
-    attesaPreventivoByStato,
-    completateColumn,
-    completateItems,
-    onOpenRow,
-    openClosedRow,
-  ]);
+  }, [kanbanColumns, byStato, completateColumn, completateItems, onOpenRow, openClosedRow]);
 
   const mobileCardLabels = useMemo(
     () => ({
@@ -455,40 +391,6 @@ export function LavorazioniKanbanView({
   );
 
   const renderColumn = (col: StatoLavorazioneConfig) => {
-    if (col.id === accettazioneColumnId && attesaPreventivoColumns.length > 0) {
-      const accItems = byStato.get(col.id) ?? [];
-      const attesaSections = attesaPreventivoColumns.map((apCol) => ({
-        col: apCol,
-        items: attesaPreventivoByStato.get(apCol.id) ?? [],
-      }));
-      return (
-        <section
-          key={col.id}
-          className={KANBAN_COLUMN_SECTION_CLASS}
-          aria-label={`Colonna ${col.label}`}
-        >
-          {renderStatoHeader(col, accItems.length)}
-          <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
-            {accItems.length === 0 ? (
-              <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
-            ) : (
-              renderKanbanCards(accItems)
-            )}
-            {attesaSections.map(({ col: apCol, items }) => (
-              <div key={apCol.id} className="space-y-2 border-t border-zinc-200/80 pt-2 dark:border-zinc-700/80">
-                {renderStatoHeader(apCol, items.length, "border-b-0 px-0 py-0")}
-                {items.length === 0 ? (
-                  <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
-                ) : (
-                  renderKanbanCards(items)
-                )}
-              </div>
-            ))}
-          </KanbanColumnScroll>
-        </section>
-      );
-    }
-
     const items = byStato.get(col.id) ?? [];
     return (
       <section
@@ -527,7 +429,8 @@ export function LavorazioniKanbanView({
 
   return (
     <div className="lavorazioni-kanban-scope space-y-3 max-w-full overflow-x-hidden">
-      <div className="min-w-0 max-w-full lg:hidden">
+      {layout === "mobile" ? (
+      <div className="min-w-0 max-w-full">
         <LavorazioniKanbanMobileBoard
           sections={mobileSections}
           statiOpts={statiOpts}
@@ -540,13 +443,14 @@ export function LavorazioniKanbanView({
           cardLabels={mobileCardLabels}
         />
       </div>
-
-      <div className="lavorazioni-kanban-board gestionale-scrollbar hidden min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1 lg:block">
+      ) : (
+      <div className="lavorazioni-kanban-board gestionale-scrollbar min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
         <div className="flex h-[var(--lavorazioni-kanban-col-max-h)] min-h-[18rem] w-max min-w-full items-stretch gap-3 lg:w-full">
           {kanbanColumns.map(renderColumn)}
           {renderCompletateColumn()}
         </div>
       </div>
+      )}
     </div>
   );
 }

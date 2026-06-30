@@ -8,7 +8,7 @@ import {
   resolveGestionaleNav,
   type GestionaleNavHref,
 } from "@/components/gestionale/gestionale-nav-config";
-import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { erpFocus } from "@/lib/ui/erp-tokens";
 import { useAuth } from "@/context/auth-context";
 import { shouldHideNavHref } from "@/lib/auth/rbac";
 import {
@@ -22,9 +22,9 @@ import { useOperatorGlobalSettings } from "@/src/context/operator-global-setting
 import { isNavTargetCurrent } from "@/src/lib/navigation/route-transition";
 
 const QUICK_NAV_DESC: Partial<Record<GestionaleNavHref, string>> = {
-  "/dashboard": "Panoramica operativa",
   "/lavorazioni": "Officina e ordini di lavoro",
   "/preventivi": "Preventivi e quotazioni",
+  "/fatturazione": "Fatture, incassi e SDI",
   "/documenti": "Archivio documenti",
   "/magazzino": "Ricambi e giacenze",
   "/mezzi": "Anagrafica mezzi e attrezzature",
@@ -121,8 +121,9 @@ export function DashboardQuickNav() {
             },
             { operatorGlobalSettingsDbEnabled: operatorPilot.dbEnabled },
           ),
-      }).filter(
+      }      ).filter(
         (item) =>
+          item.href !== "/dashboard" &&
           item.href !== "/dashboard/security" &&
           item.href !== "/impostazioni" &&
           item.href !== "/lavorazioni-clienti" &&
@@ -136,7 +137,7 @@ export function DashboardQuickNav() {
       <h2 id="dashboard-quick-nav-title" className={dsDashboardWidgetTitle}>
         Navigazione rapida
       </h2>
-      <div className="mt-4 grid min-w-0 grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+      <div className="mt-4 grid min-w-0 grid-cols-2 gap-3 cab-shell-desktop:grid-cols-4">
         {items.map((item) => {
           const active = isNavTargetCurrent(pathname, item.href);
           const description = QUICK_NAV_DESC[item.href] ?? "Apri modulo";

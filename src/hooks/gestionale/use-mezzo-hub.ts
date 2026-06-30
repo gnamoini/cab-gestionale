@@ -10,6 +10,7 @@ import {
   useMezzoPreventivi,
 } from "@/src/services/domain/mezzo-domain.queries";
 import { mezzoDomainService, type MezzoHubData } from "@/src/services/domain/mezzo-domain.service";
+import { HUB_QUERY_LOADING_FAILSAFE_MS, usePendingQueryTimeout } from "@/lib/ui/loading-failsafe";
 
 /**
  * Hub mezzo: attiva in parallelo le query atomiche (`mezzoDomainQueryKeys`) e compone il payload
@@ -61,7 +62,10 @@ export function useMezzoHub(mezzoId: string | undefined) {
     return e ?? null;
   }, [base.error, lav.error, pv.error, doc.error, log.error, mov.error]);
 
-  const isLoading = id.length > 0 && !isError && !hubReady;
+  const isLoadingRaw = id.length > 0 && !isError && !hubReady;
+  const hubTimedOut = usePendingQueryTimeout(isLoadingRaw, HUB_QUERY_LOADING_FAILSAFE_MS);
+  const isLoading = isLoadingRaw && !hubTimedOut;
+  const isErrorEffective = isError || hubTimedOut;
 
   const refetch = useCallback(() => {
     return Promise.all([base.refetch(), lav.refetch(), pv.refetch(), doc.refetch(), log.refetch(), mov.refetch()]).then(() => undefined);
@@ -70,10 +74,16 @@ export function useMezzoHub(mezzoId: string | undefined) {
   return {
     data,
     isLoading,
-    isError,
-    error,
+    isError: isErrorEffective,
+    error: hubTimedOut && !error ? new Error("Timeout caricamento dati mezzo") : error,
     isSuccess: hubReady && Boolean(data),
     refetch,
-    status: isError ? ("error" as const) : isLoading ? ("pending" as const) : hubReady ? ("success" as const) : ("pending" as const),
+    status: isErrorEffective
+      ? ("error" as const)
+      : isLoading
+        ? ("pending" as const)
+        : hubReady
+          ? ("success" as const)
+          : ("pending" as const),
   };
 }

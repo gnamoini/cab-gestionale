@@ -5,6 +5,7 @@
 
 import { computeKeyboardInset, syncKeyboardCssVars } from "@/lib/ui/mobile-modal-behavior";
 import { syncAppViewportFill } from "@/lib/ui/viewport-fill-sync";
+import { isBootInvestigationEnabled, logBoot } from "@/lib/observability/boot-investigation";
 
 export type ViewportChangeReason = "resize" | "scroll" | "orientation" | "window-resize";
 
@@ -24,6 +25,8 @@ let subscriberId = 0;
 const subscribers = new Map<number, ViewportSubscriber>();
 let rafCoalesce: number | null = null;
 let pendingReason: ViewportChangeReason = "resize";
+let vvSyncCount = 0;
+let vvSyncWindowStart = 0;
 
 type StableWaiter = {
   stableFrames: number;
@@ -84,6 +87,21 @@ function runViewportSync(reason: ViewportChangeReason): void {
   const snapshot = getViewportSnapshot();
   notifySubscribers(reason);
   processStableWaiters(snapshot);
+
+  if (isBootInvestigationEnabled()) {
+    vvSyncCount += 1;
+    const now = Date.now();
+    if (vvSyncWindowStart === 0) vvSyncWindowStart = now;
+    if (now - vvSyncWindowStart >= 1000) {
+      if (vvSyncCount > 5) {
+        logBoot("RENDER", "vv_sync", { syncPerSec: vvSyncCount, reason: pendingReason }, "high_sync_rate");
+      }
+      vvSyncCount = 0;
+      vvSyncWindowStart = now;
+    } else if (vvSyncCount === 1) {
+      logBoot("RENDER", "vv_sync", { reason, ...snapshot });
+    }
+  }
 }
 
 function scheduleViewportSync(reason: ViewportChangeReason): void {

@@ -204,9 +204,9 @@ export function SettingsDiscountField({
 }
 
 export const SETTINGS_LIST_ROW =
-  "group flex min-h-11 flex-wrap items-center gap-x-2 gap-y-2 bg-[var(--cab-card)] px-3 py-2 transition-[background-color] duration-150 ease-out hover:bg-[var(--cab-hover)] sm:flex-nowrap sm:gap-x-3 [-webkit-tap-highlight-color:transparent]";
+  "group flex min-h-11 min-w-0 w-full max-w-full flex-wrap items-center gap-x-2 gap-y-2 bg-[var(--cab-card)] px-3 py-2 transition-[background-color] duration-150 ease-out hover:bg-[var(--cab-hover)] sm:flex-nowrap sm:gap-x-3 [-webkit-tap-highlight-color:transparent]";
 
-export const SETTINGS_ROW_ACTIONS_GROUP = "flex shrink-0 items-stretch gap-1";
+export const SETTINGS_ROW_ACTIONS_GROUP = "flex min-w-0 shrink-0 items-stretch gap-1";
 
 function SettingsIconCheck({ className = dsTableActionGlyph }: { className?: string }) {
   return (

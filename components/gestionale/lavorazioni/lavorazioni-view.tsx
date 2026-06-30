@@ -5,6 +5,8 @@ import "./lavorazioni-select-theme.css";
 
 import dynamic from "next/dynamic";
 import { useLavorazioniPdfWarmup } from "@/lib/observability/asset-cache-warmup";
+import { useGestionaleListLayout, GESTIONALE_LIST_DESKTOP_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
+import { LIST_QUERY_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -467,6 +469,8 @@ function navMezzoFilterBadgeLabel(m: MezzoGestito): string {
 
 export function LavorazioniView() {
   useLavorazioniPdfWarmup();
+  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
+  const { containerRef: kanbanLayoutRef, layout: kanbanLayout, layoutClassName: kanbanLayoutClassName } = useGestionaleListLayout({ tier: "lg" });
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -1546,8 +1550,10 @@ export function LavorazioniView() {
   const totalFilteredCount = attiveRowsFiltered.length + chiuseRowsFiltered.length;
 
   const loading = attiveQuery.isLoading || chiuseQuery.isLoading;
-  const initialListLoading =
+  const initialListLoadingRaw =
     loading && attiveQuery.data === undefined && chiuseQuery.data === undefined;
+  const listLoadingFailsafe = useLoadingFailsafe(initialListLoadingRaw, LIST_QUERY_LOADING_FAILSAFE_MS);
+  const initialListLoading = initialListLoadingRaw && !listLoadingFailsafe;
   const archivioTableLoading =
     archivioSectionOpen &&
     (chiuseQuery.isPending ||
@@ -1558,7 +1564,11 @@ export function LavorazioniView() {
     ? `Archivio lavorazioni (${chiuseRowsFiltered.length})`
     : "Archivio lavorazioni";
   const loadErrRaw = attiveQuery.isError ? attiveQuery.error : chiuseQuery.isError ? chiuseQuery.error : null;
-  const loadErr = loadErrRaw ? formatSupabaseError(loadErrRaw, { module: "lavorazioni", action: "read" }) : null;
+  const loadErr = loadErrRaw
+    ? formatSupabaseError(loadErrRaw, { module: "lavorazioni", action: "read" })
+    : listLoadingFailsafe && initialListLoadingRaw
+      ? "Il caricamento delle lavorazioni sta impiegando troppo tempo. Verifica la connessione e riprova."
+      : null;
 
   const onConcludiAction = useCallback(
     (row: LavorazioneListRow) => {
@@ -1769,7 +1779,7 @@ export function LavorazioniView() {
 
   return (
     <GestionaleSectionGate module="lavorazioni">
-    <div className={`lavorazioni-scroll-scope ${layoutPageRoot}`}>
+    <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
       <LavorazioniPageHeaderToolbar
         listRefreshBusy={listRefreshBusy}
@@ -1849,7 +1859,9 @@ export function LavorazioniView() {
           defaultCollapsed={false}
         >
           {listViewMode === "kanban" ? (
+            <div ref={kanbanLayoutRef} className={kanbanLayoutClassName}>
             <LavorazioniKanbanView
+              layout={kanbanLayout}
               rows={attiveRowsFiltered}
               columns={statiInCorsoOpts}
               statiOpts={statiOpts}
@@ -1877,12 +1889,14 @@ export function LavorazioniView() {
                 setSchedeRow({ row, origine: "storico", initialTab: "panoramica", dialogSize: "compact" })
               }
             />
+            </div>
           ) : initialListLoading ? (
             <LoadingLavorazioniListSkeleton withToolbar={false} />
           ) : (
             <>
+          {listLayout === "desktop" ? (
           <LavorazioniDesktopTableShell
-            visibilityClass="hidden xl:block"
+            visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
@@ -1983,7 +1997,9 @@ export function LavorazioniView() {
               estimateRowHeight: 72,
             }}
           />
+          ) : null}
 
+          {listLayout === "mobile" ? (
           <LavorazioniMobileListShell
             empty={pagedAttive.length === 0}
             emptyMessage={
@@ -2031,6 +2047,7 @@ export function LavorazioniView() {
               );
             })}
           </LavorazioniMobileListShell>
+          ) : null}
 
 
           {showPagerA ? <TablePagination page={pageA} pageCount={pageCountA} onPageChange={setPageA} label={labelA} /> : null}
@@ -2049,8 +2066,9 @@ export function LavorazioniView() {
             <LoadingLavorazioniListSkeleton withToolbar={false} />
           ) : (
           <>
+          {listLayout === "desktop" ? (
           <LavorazioniDesktopTableShell
-            visibilityClass="hidden xl:block"
+            visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
             className={gestionaleLavorazioniDenseTableClass}
             colgroup={
               <>
@@ -2153,7 +2171,9 @@ export function LavorazioniView() {
             colSpan={10}
             virtualRows={archivioVirtualRows}
           />
+          ) : null}
 
+          {listLayout === "mobile" ? (
           <LavorazioniMobileListShell
             empty={pagedChiuse.length === 0}
             emptyMessage={
@@ -2180,6 +2200,7 @@ export function LavorazioniView() {
               />
             ))}
           </LavorazioniMobileListShell>
+          ) : null}
 
           {showPagerC ? <TablePagination page={pageC} pageCount={pageCountC} onPageChange={setPageC} label={labelC} /> : null}
           </>

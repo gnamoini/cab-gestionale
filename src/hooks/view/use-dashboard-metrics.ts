@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
 import { RuntimeEvents, trackRuntimeEvent } from "@/lib/observability/events";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { isStagingPublicSlice } from "@/lib/env/staging-public";
 import {
   computeDashboardMagDailyMovementsFromLogs,
@@ -12,6 +12,8 @@ import {
   computeDashboardLavWidgetRows,
   computeDashboardLavWidgetStats,
   computeDashboardMagSottoScortaRicambi,
+  pickDashboardPriorityLavorazioneIds,
+  DASHBOARD_SCHEde_PREFETCH_LIMIT,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { computeReportMagazzinoKpiWidgetFromUi } from "@/lib/report/report-kpi-selectors";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
@@ -23,6 +25,7 @@ import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
+import { MAGAZZINO_DASHBOARD_KPI_QUERY_KEY } from "@/lib/magazzino/dashboard-mag-query-keys";
 
 const LAV_FILTERS = {
   includeMezzo: true as const,
@@ -59,13 +62,18 @@ export function useDashboardMetrics() {
 
   const lavQuery = useLavorazioniList(LAV_FILTERS, viewOpts);
   const schedeLavorazioneIds = useMemo(
-    () => (lavQuery.data ?? []).map((row) => row.id),
+    () => pickDashboardPriorityLavorazioneIds(lavQuery.data ?? [], DASHBOARD_SCHEde_PREFETCH_LIMIT),
     [lavQuery.data],
   );
   const { store: schedeStore } = useSchedeBundlesQuery(!staging, {
     lavorazioneIds: schedeLavorazioneIds,
   });
   const magQuery = useMagazzinoRicambiUIQuery(undefined, { ...viewOpts, variant: "report" });
+  const magKpiHydrated = useQuery({
+    queryKey: MAGAZZINO_DASHBOARD_KPI_QUERY_KEY,
+    queryFn: () => ({ sottoScorta: 0, capitale: 0 }),
+    enabled: false,
+  });
   const magLogsQ = useLogListQuery(
     { entita: "magazzino_ricambi", limit: GESTIONALE_LOG_FEED_LIMIT },
     { enabled: !staging, ...viewOpts },
@@ -94,8 +102,9 @@ export function useDashboardMetrics() {
 
   const magStats = useMemo(() => {
     if (staging) return { capitale: 0, sottoScorta: 0 };
+    if (magKpiHydrated.data) return magKpiHydrated.data;
     return computeReportMagazzinoKpiWidgetFromUi(magQuery.data ?? []);
-  }, [magQuery.data, staging]);
+  }, [magKpiHydrated.data, magQuery.data, staging]);
 
   const magSottoScortaRicambi = useMemo(
     () => (staging ? [] : computeDashboardMagSottoScortaRicambi(magQuery.data ?? [])),

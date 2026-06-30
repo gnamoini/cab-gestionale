@@ -59,13 +59,25 @@ for (const rel of pdfDataModules) {
 
 const requestArtifact = read("lib/pdf/request-pdf-artifact.ts");
 assert.match(requestArtifact, /await fetch\(url/);
+assert.match(requestArtifact, /cache:\s*"no-store"/);
 assert.match(requestArtifact, /Generazione PDF in corso/);
 assert.doesNotMatch(requestArtifact, /downloadFileName/);
 const responseHeaders = read("lib/pdf/pdf-artifact-response.ts");
 assert.match(responseHeaders, /X-Cache-Status/);
 assert.match(responseHeaders, /X-PDF-Generate-Ms/);
+assert.match(responseHeaders, /"Cache-Control":\s*"private, no-store, max-age=0"/);
+assert.doesNotMatch(responseHeaders, /"Cache-Control":\s*"public[^"]*immutable/);
 
 const generateServer = read("lib/pdf-artifacts/pdf-artifact-generate.server.ts");
 assert.match(generateServer, /uploadPdfArtifactBestEffort/);
+assert.match(generateServer, /fetchSchedeBundlesStoreServer/);
+assert.match(generateServer, /mapLavorazioniListRowsToPdfRows\(lavRows,/);
+assert.match(generateServer, /LAVORAZIONI_IN_CORSO_PDF_MAP_VERSION/);
+
+const pdfMap = read("lib/lavorazioni/lavorazioni-pdf-map.ts");
+assert.match(pdfMap, /statoLavorazioneLabel/);
+assert.match(pdfMap, /prioritaLabel/);
+assert.match(pdfMap, /lavorazioneAddettoLabel/);
+assert.doesNotMatch(pdfMap, /addetto:\s*"—"/);
 
 console.log("pdf-artifact-policy: OK");

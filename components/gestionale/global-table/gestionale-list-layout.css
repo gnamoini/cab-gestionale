@@ -1,0 +1,28 @@
+/* Lista tabella vs card — layout da hook (viewport + container, preview IDE) */
+
+.gestionale-list-layout-mobile .gestionale-list-desktop-only,
+.gestionale-list-desktop-only {
+  display: none;
+}
+
+.gestionale-list-layout-desktop .gestionale-list-desktop-only {
+  display: block;
+}
+
+.gestionale-list-layout-desktop .gestionale-list-mobile-only {
+  display: none;
+}
+
+/* Alias legacy Lavorazioni — rimuovere quando tutti i consumer usano gestionale-list-* */
+.lavorazioni-list-layout-mobile .lavorazioni-list-desktop-only,
+.lavorazioni-list-desktop-only {
+  display: none;
+}
+
+.lavorazioni-list-layout-desktop .lavorazioni-list-desktop-only {
+  display: block;
+}
+
+.lavorazioni-list-layout-desktop .lavorazioni-list-mobile-only {
+  display: none;
+}

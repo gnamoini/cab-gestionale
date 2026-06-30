@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ImportEntity } from "@/lib/data-import/core/types";
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/context/auth-context";
@@ -16,6 +17,7 @@ import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestional
 import { HierarchyTreeSettingsSection } from "@/components/dashboard/hierarchy-tree-settings-section";
 import { SettingsBrandingSection } from "@/components/dashboard/settings-branding-section";
 import { SettingsClientiCommercialiList } from "@/components/dashboard/settings/settings-clienti-list";
+import { SettingsImportEntry } from "@/components/dashboard/settings/settings-import-entry";
 import { SettingsMagazzinoFornitoriList } from "@/components/dashboard/settings/settings-magazzino-fornitori-list";
 import { SettingsMagazzinoMarcheList } from "@/components/dashboard/settings/settings-magazzino-marche-list";
 import { SettingsMainPanel, SettingsMobileSectionPicker, SettingsNavSidebar } from "@/components/dashboard/settings/settings-nav-shell";
@@ -111,6 +113,14 @@ import {
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { erpBtnNeutral } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
+
+function SettingsImportBar({ entity }: { entity: ImportEntity }) {
+  return (
+    <div className="mb-3 flex w-full justify-end">
+      <SettingsImportEntry entity={entity} />
+    </div>
+  );
+}
 
 export function SistemaImpostazioniWorkspace({
   open = true,
@@ -851,6 +861,12 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {lavEmbeddedFocus ? (
+              <>
+                {section === "op-addetti" ? (
+                  <div className="mb-3 flex justify-end">
+                    <SettingsImportBar entity="settings_addetti" />
+                  </div>
+                ) : null}
               <SettingsLavorazioniModal
                 layout="embedded"
                 embeddedFocus={lavEmbeddedFocus}
@@ -958,6 +974,7 @@ export function SistemaImpostazioniWorkspace({
                 storicoAddetti={storicoAddetti}
                 onRequestClose={handleRequestClose}
               />
+              </>
             ) : null}
 
             {section === "op-dipendenti-assenze" ? (
@@ -968,6 +985,7 @@ export function SistemaImpostazioniWorkspace({
 
             {section === "mag-marche" ? (
               <div className="w-full">
+                <SettingsImportBar entity="settings_marche" />
                 <SettingsMagazzinoMarcheList
                   layout={listLayout}
                   mag={mag}
@@ -979,6 +997,7 @@ export function SistemaImpostazioniWorkspace({
 
             {section === "mag-fornitori" ? (
               <div className="w-full">
+                <SettingsImportBar entity="settings_fornitori" />
                 <SettingsMagazzinoFornitoriList
                   layout={listLayout}
                   mag={mag}
@@ -990,6 +1009,7 @@ export function SistemaImpostazioniWorkspace({
 
             {section === "mag-produttori" ? (
               <div className="w-full">
+                <SettingsImportBar entity="settings_produttori" />
                 <SettingsUnifiedStringList
                   layout={listLayout}
                   title="Produttori"
@@ -1017,6 +1037,7 @@ export function SistemaImpostazioniWorkspace({
 
             {section === "mag-categorie" ? (
               <div className="w-full">
+                <SettingsImportBar entity="settings_categorie" />
                 <SettingsUnifiedStringList
                   layout={listLayout}
                   title="Categorie magazzino"
@@ -1061,6 +1082,8 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {section === "att-marca" ? (
+              <>
+                <SettingsImportBar entity="settings_hierarchy_attrezzature" />
               <HierarchyTreeSettingsSection
                 treeKey="attrezzature"
                 variant="marca"
@@ -1071,6 +1094,7 @@ export function SistemaImpostazioniWorkspace({
                   queueRename({ kind: "hierarchy_modello_attrezzature", from, to, marcaContext, tree: "attrezzature" })
                 }
               />
+              </>
             ) : null}
 
             {section === "att-modello" ? (
@@ -1114,7 +1138,9 @@ export function SistemaImpostazioniWorkspace({
             ) : null}
 
             {section === "tel-marca" ? (
-              <HierarchyTreeSettingsSection
+              <>
+                <SettingsImportBar entity="settings_hierarchy_telai" />
+                <HierarchyTreeSettingsSection
                 treeKey="telai"
                 variant="marca"
                 liste={liste}
@@ -1124,6 +1150,7 @@ export function SistemaImpostazioniWorkspace({
                   queueRename({ kind: "hierarchy_modello_telai", from, to, marcaContext, tree: "telai" })
                 }
               />
+              </>
             ) : null}
 
             {section === "tel-modello" ? (
@@ -1161,6 +1188,7 @@ export function SistemaImpostazioniWorkspace({
 
             {section === "cli-utilizzatore" ? (
               <div className="w-full">
+                <SettingsImportBar entity="settings_utilizzatori" />
                 <SettingsUnifiedStringList
                   layout={listLayout}
                   title="Utilizzatori"
@@ -1185,6 +1213,7 @@ export function SistemaImpostazioniWorkspace({
 
             {section === "cli-cantiere" ? (
               <div className="w-full">
+                <SettingsImportBar entity="settings_cantieri" />
                 <SettingsUnifiedStringList
                   layout={listLayout}
                   title="Cantieri"

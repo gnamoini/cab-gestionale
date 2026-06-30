@@ -13,7 +13,7 @@ import {
   dsTypoSmall,
 } from "@/lib/ui/design-system";
 import { formatTitleCasePhrase } from "@/lib/gestionale-log/view-model";
-import { prioritaLabel, statoPillShellClass } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { prioritaLabel, statoPillShellClass } from "@/lib/lavorazioni/lavorazioni-pill-styles";
 import { lavTablePillTextClass } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
 import { prioritaDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
@@ -310,7 +310,7 @@ export function DashboardOperationalCards() {
   } = useDashboardMetrics();
 
   return (
-    <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div className="grid min-w-0 gap-4 cab-shell-desktop:grid-cols-2">
       <DashboardLavorazioniWidget
         loading={lavLoading}
         error={lavError}

@@ -235,8 +235,8 @@ export function ReportMagazzinoSection({
         </p>
       ) : null}
 
-      <div className={`${dsTableWrap} ${dsScrollbar}`}>
-        <table className="w-full min-w-[720px] table-fixed border-separate border-spacing-0 text-sm text-[color:var(--cab-text)]">
+      <div className={`${dsTableWrap} ${dsScrollbar} min-w-0`}>
+        <table className="w-full min-w-0 table-fixed border-separate border-spacing-0 text-sm text-[color:var(--cab-text)]">
           <colgroup>
             <col style={{ width: "22%" }} />
             <col style={{ width: "13%" }} />

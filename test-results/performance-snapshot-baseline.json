@@ -1,0 +1,411 @@
+{
+  "generatedAt": "2026-06-11T22:43:07.931Z",
+  "linkedDbAvailable": false,
+  "warnings": [
+    "EXPLAIN from slow-query-audit.json fallback"
+  ],
+  "routes": [
+    {
+      "route": "/lavorazioni",
+      "label": "Lavorazioni list + schede batch",
+      "payloadKb": 8.21,
+      "queryCount": 2,
+      "serverExecutionMs": null,
+      "hydrationMs": null,
+      "clientComputeMs": null,
+      "bundleKb": null,
+      "cacheHitRatio": null,
+      "budget": {
+        "maxPayloadKb": 12,
+        "maxQueries": 2,
+        "maxServerMs": 2,
+        "maxHydrationMs": 3000,
+        "maxClientMs": 100
+      },
+      "sources": {
+        "rest": "rest-lav-light-attive",
+        "explain": "Q1"
+      }
+    },
+    {
+      "route": "/report",
+      "label": "Report BFF 6-wave",
+      "payloadKb": 16.08,
+      "queryCount": 6,
+      "serverExecutionMs": null,
+      "hydrationMs": null,
+      "clientComputeMs": null,
+      "bundleKb": null,
+      "cacheHitRatio": null,
+      "budget": {
+        "maxPayloadKb": 20,
+        "maxQueries": 6,
+        "maxServerMs": 5,
+        "maxHydrationMs": 3500,
+        "maxClientMs": 150
+      },
+      "sources": {
+        "rest": "rest-lav-report",
+        "explain": "Q1"
+      }
+    },
+    {
+      "route": "/mezzi",
+      "label": "Mezzi list light",
+      "payloadKb": 13.35,
+      "queryCount": 1,
+      "serverExecutionMs": null,
+      "hydrationMs": null,
+      "clientComputeMs": null,
+      "bundleKb": null,
+      "cacheHitRatio": null,
+      "budget": {
+        "maxPayloadKb": 8,
+        "maxQueries": 1,
+        "maxServerMs": 2,
+        "maxHydrationMs": 2500,
+        "maxClientMs": 80
+      },
+      "sources": {
+        "rest": "rest-mezzi-list",
+        "explain": "Q7"
+      }
+    },
+    {
+      "route": "/magazzino",
+      "label": "Magazzino list + settings",
+      "payloadKb": 7.43,
+      "queryCount": 2,
+      "serverExecutionMs": null,
+      "hydrationMs": null,
+      "clientComputeMs": null,
+      "bundleKb": null,
+      "cacheHitRatio": null,
+      "budget": {
+        "maxPayloadKb": 15,
+        "maxQueries": 2,
+        "maxServerMs": 2,
+        "maxHydrationMs": 3000,
+        "maxClientMs": 100
+      },
+      "sources": {
+        "rest": "rest-magazzino-list",
+        "explain": "Q9"
+      }
+    },
+    {
+      "route": "/dashboard",
+      "label": "Dashboard BFF",
+      "payloadKb": 8.21,
+      "queryCount": 4,
+      "serverExecutionMs": null,
+      "hydrationMs": null,
+      "clientComputeMs": null,
+      "bundleKb": null,
+      "cacheHitRatio": null,
+      "budget": {
+        "maxPayloadKb": 25,
+        "maxQueries": 4,
+        "maxServerMs": 5,
+        "maxHydrationMs": 3500,
+        "maxClientMs": 120
+      },
+      "sources": {
+        "rest": "rest-lav-light-attive",
+        "explain": "Q1"
+      }
+    },
+    {
+      "route": "/documenti",
+      "label": "Documenti dashboard BFF",
+      "payloadKb": 0,
+      "queryCount": 3,
+      "serverExecutionMs": null,
+      "hydrationMs": null,
+      "clientComputeMs": null,
+      "bundleKb": null,
+      "cacheHitRatio": null,
+      "budget": {
+        "maxPayloadKb": 12,
+        "maxQueries": 3,
+        "maxServerMs": 3,
+        "maxHydrationMs": 3000,
+        "maxClientMs": 100
+      },
+      "sources": {
+        "rest": "rest-documenti",
+        "explain": "Q17"
+      }
+    }
+  ],
+  "bundle": {
+    "firstLoadJsKb": null,
+    "routeChunks": {}
+  },
+  "explainSummary": [
+    {
+      "id": "Q1",
+      "label": "lista_attive",
+      "withRlsMs": 0.131,
+      "withoutRlsMs": 0.181,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q2",
+      "label": "lista_archivio",
+      "withRlsMs": 0.158,
+      "withoutRlsMs": 0.14,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q3",
+      "label": "search_codice_trgm",
+      "withRlsMs": 0.145,
+      "withoutRlsMs": 0.162,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q4",
+      "label": "search_note_trgm",
+      "withRlsMs": 0.156,
+      "withoutRlsMs": 0.131,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q5",
+      "label": "filter_priorita",
+      "withRlsMs": 0.107,
+      "withoutRlsMs": 0.097,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q6",
+      "label": "stato_archived_sort",
+      "withRlsMs": 0.098,
+      "withoutRlsMs": 0.173,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_lavorazioni_stato_archived_created"
+      ]
+    },
+    {
+      "id": "Q7",
+      "label": "lista",
+      "withRlsMs": 0.134,
+      "withoutRlsMs": 0.218,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q8",
+      "label": "cliente_eq",
+      "withRlsMs": 0.097,
+      "withoutRlsMs": 0.153,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_mezzi_cliente_btree"
+      ]
+    },
+    {
+      "id": "Q9",
+      "label": "lista_codice",
+      "withRlsMs": 0.153,
+      "withoutRlsMs": 1.355,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q10",
+      "label": "search_nome_trgm",
+      "withRlsMs": 0.129,
+      "withoutRlsMs": 0.124,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q11",
+      "label": "movimenti_list",
+      "withRlsMs": 0.062,
+      "withoutRlsMs": 0.064,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_movimenti_ricambi_created_at"
+      ]
+    },
+    {
+      "id": "Q12",
+      "label": "movimenti_per_ricambio",
+      "withRlsMs": 0.733,
+      "withoutRlsMs": 0.114,
+      "seqScan": true,
+      "indexesUsed": [
+        "idx_movimenti_ricambi_ricambio_created"
+      ]
+    },
+    {
+      "id": "Q13",
+      "label": "batch_by_lavorazione_ids",
+      "withRlsMs": 0.157,
+      "withoutRlsMs": 0.208,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q14",
+      "label": "lista_with_mezzo_fk",
+      "withRlsMs": 0.063,
+      "withoutRlsMs": 0.105,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_preventivi_created_at"
+      ]
+    },
+    {
+      "id": "Q15",
+      "label": "movimenti_join_mezzo",
+      "withRlsMs": 0.147,
+      "withoutRlsMs": 0.159,
+      "seqScan": true,
+      "indexesUsed": [
+        "idx_lavorazioni_mezzo_id",
+        "idx_movimenti_ricambi_lavorazione_id"
+      ]
+    },
+    {
+      "id": "Q16",
+      "label": "log_modifiche_entita",
+      "withRlsMs": 0.38,
+      "withoutRlsMs": 1.66,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_log_modifiche_created_at"
+      ]
+    },
+    {
+      "id": "Q17",
+      "label": "lista",
+      "withRlsMs": 0.089,
+      "withoutRlsMs": 0.093,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_documenti_created_at"
+      ]
+    },
+    {
+      "id": "Q18",
+      "label": "lavorazioni_mezzi_inner_cliente",
+      "withRlsMs": 0.144,
+      "withoutRlsMs": 0.15,
+      "seqScan": false,
+      "indexesUsed": [
+        "idx_mezzi_cliente_btree",
+        "idx_lavorazioni_mezzo_id"
+      ]
+    },
+    {
+      "id": "Q19",
+      "label": "app_settings_select",
+      "withRlsMs": 0.152,
+      "withoutRlsMs": 6.801,
+      "seqScan": true,
+      "indexesUsed": []
+    },
+    {
+      "id": "Q20",
+      "label": "single_lavorazione",
+      "withRlsMs": 0.087,
+      "withoutRlsMs": 0.133,
+      "seqScan": true,
+      "indexesUsed": [
+        "idx_scheda_lavorazione_lavorazione_id"
+      ]
+    }
+  ],
+  "restBenchmark": [
+    {
+      "id": "rest-lav-light-attive",
+      "area": "Lavorazioni",
+      "table": "lavorazioni",
+      "select": "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice, mezzi(cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia)",
+      "wallMs": 1048.44,
+      "bytesRaw": 8411,
+      "bytesKb": 8.21,
+      "rowCount": 14,
+      "error": null
+    },
+    {
+      "id": "rest-lav-report",
+      "area": "Report",
+      "table": "lavorazioni",
+      "select": "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice",
+      "wallMs": 103.82,
+      "bytesRaw": 16470,
+      "bytesKb": 16.08,
+      "rowCount": 34,
+      "error": null
+    },
+    {
+      "id": "rest-movimenti",
+      "area": "Report",
+      "table": "movimenti_ricambi",
+      "select": "id, ricambio_id, lavorazione_id, tipo, quantita, created_at",
+      "wallMs": 90.17,
+      "bytesRaw": 2,
+      "bytesKb": 0,
+      "rowCount": 0,
+      "error": null
+    },
+    {
+      "id": "rest-preventivi",
+      "area": "Preventivi",
+      "table": "preventivi",
+      "select": "id, mezzo_id, lavorazione_id, cliente, totale, dettagli, created_at, updated_at, mezzi(id, cliente, marca, modello, targa, matricola, numero_scuderia)",
+      "wallMs": 147.48,
+      "bytesRaw": 2,
+      "bytesKb": 0,
+      "rowCount": 0,
+      "error": null
+    },
+    {
+      "id": "rest-documenti",
+      "area": "Documenti",
+      "table": "documenti",
+      "select": "id, marca, modello, categoria, titolo, descrizione, file_path, created_at, updated_at, mezzo_id",
+      "wallMs": 106.19,
+      "bytesRaw": 2,
+      "bytesKb": 0,
+      "rowCount": 0,
+      "error": "column documenti.titolo does not exist"
+    },
+    {
+      "id": "rest-mezzi-list",
+      "area": "Mezzi",
+      "table": "mezzi",
+      "select": "id, cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia, tipo_attrezzatura, anno, entity_key, created_at, updated_at",
+      "wallMs": 83.94,
+      "bytesRaw": 13670,
+      "bytesKb": 13.35,
+      "rowCount": 38,
+      "error": null
+    },
+    {
+      "id": "rest-magazzino-list",
+      "area": "Magazzino",
+      "table": "magazzino_ricambi",
+      "select": "id, codice, nome, marca, quantita, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_at, updated_at",
+      "wallMs": 102.27,
+      "bytesRaw": 7610,
+      "bytesKb": 7.43,
+      "rowCount": 14,
+      "error": null
+    }
+  ],
+  "slowQueryAuditRef": "test-results/slow-query-audit.json",
+  "cacheHitRatio": null,
+  "isBaseline": true
+}

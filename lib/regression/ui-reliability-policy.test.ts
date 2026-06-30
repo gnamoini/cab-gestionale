@@ -30,9 +30,14 @@ const pageLayout = read("components/design-system/page-layout.tsx");
 
 // --- Global CSS utilities ---
 assert.match(globalsCss, /html:has\(\.cab-app-shell\)/);
+assert.match(globalsCss, /html:has\(\.cab-app-shell\)[\s\S]*width:\s*100%/);
+assert.doesNotMatch(globalsCss, /--cab-host-layout-width/);
 assert.match(globalsCss, /body:has\(\.cab-app-shell\)[\s\S]*overflow:\s*hidden/);
 assert.match(globalsCss, /\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*auto/);
-assert.match(globalsCss, /@media \(min-width: 768px\)[\s\S]*\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*stable/);
+assert.match(
+  globalsCss,
+  /data-gestionale-shell-tier="desktop"[\s\S]*\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*stable/,
+);
 
 assert.match(globalsCss, /\.flex-safe\s*\{/);
 assert.match(globalsCss, /\.flex-fill,\s*\n?\s*\.flex-fill-safe\s*\{/);
@@ -66,17 +71,17 @@ assert.match(appShell, /gestionale-scroll-y/);
 assert.match(appShell, /dsGestionaleContentShellRow/);
 assert.match(appShell, /dsGestionaleContentRail/);
 assert.match(appShell, /dsGestionaleContentMax/);
-assert.match(appShell, /dsGestionaleContentGutter/);
+assert.match(appShell, /gestionaleShellContentGutterClass/);
 assert.match(appShell, /cab-gestionale-scroll-gutter-mirror/);
 assert.match(appShell, /gestionale-scroll-y gestionale-scrollbar w-full/);
 assert.match(
   appShell,
-  /cab-gestionale-scroll-gutter-mirror[\s\S]*>\s*\n\s*<div[\s\S]*dsGestionaleContentShellRow[\s\S]*dsGestionaleContentGutter/,
+  /cab-gestionale-scroll-gutter-mirror[\s\S]*>\s*\n\s*<div[\s\S]*dsGestionaleContentShellRow[\s\S]*contentGutter/,
   "gutter mirror must wrap shell row then padded header row",
 );
 assert.match(
   appShell,
-  /dsGestionaleContentMax[\s\S]*layoutPageRoot[\s\S]*dsGestionaleContentGutter/,
+  /dsGestionaleContentMax[\s\S]*layoutPageRoot[\s\S]*contentGutter/,
   "main scroll inner wrapper must carry content width + gutter",
 );
 assert.match(appShell, /dsGestionaleScrollEndPad/);

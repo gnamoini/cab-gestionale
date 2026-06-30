@@ -5,6 +5,7 @@ import {
   DIPENDENTI_TIMESHEET_ENTRIES_COLUMNS,
 } from "@/lib/db/table-select-columns";
 import { buildDipendentiPdfContext, type DipendentiPdfContext } from "@/lib/dipendenti/pdf/dipendenti-pdf-context";
+import { selectTimesheetEmployeesForPdfExport } from "@/lib/dipendenti/dipendenti-employee-display";
 import { monthDateRange } from "@/lib/dipendenti/timesheet-month";
 import type { TimesheetMonthKey } from "@/lib/dipendenti/types";
 import { resolveCabAppSettingsResolvedServer } from "@/lib/app-settings/resolve-settings-for-server";
@@ -31,12 +32,18 @@ export async function fetchDipendentiPdfContextServer(
   ]);
   if (empRes.error) return err(empRes.error.message);
   if (entRes.error) return err(entRes.error.message);
+  const allEmployees = (empRes.data ?? []) as DipendenteTimesheetEmployeeRow[];
+  const entries = (entRes.data ?? []) as DipendenteTimesheetEntryRow[];
+  const addettiRecords = settings.lavorazioni.addettiRecords;
+  const currentAddettiIds = new Set(addettiRecords.map((a) => a.id));
+  const employees = selectTimesheetEmployeesForPdfExport(allEmployees, entries, currentAddettiIds);
   return success(
     buildDipendentiPdfContext({
       monthKey,
-      employees: (empRes.data ?? []) as DipendenteTimesheetEmployeeRow[],
-      entries: (entRes.data ?? []) as DipendenteTimesheetEntryRow[],
+      employees,
+      entries,
       tipiAssenza: settings.dipendenti.tipiAssenza,
+      addettiRecords,
     }),
   );
 }

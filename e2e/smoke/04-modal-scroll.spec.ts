@@ -1,4 +1,4 @@
-import { assertNoBodyScrollLock } from "../helpers/regression";
+import { assertGestionalePageScrollUnlocked } from "../helpers/regression";
 import { attachConsoleGuards } from "../helpers/console";
 import { adminCredentials, loginViaUi } from "../fixtures/auth";
 import { test, expect } from "@playwright/test";
@@ -12,7 +12,7 @@ test("mobile drawer releases body scroll lock", async ({ page }) => {
   await expect(page.getByRole("dialog", { name: "Menu principale" })).toBeVisible();
   await page.getByRole("dialog", { name: "Menu principale" }).getByRole("button", { name: "Chiudi" }).click();
   await expect(page.getByRole("dialog", { name: "Menu principale" })).not.toBeVisible();
-  await assertNoBodyScrollLock(page);
+  await assertGestionalePageScrollUnlocked(page);
 });
 
 test("mobile nav drawer scrolls menu items", async ({ page }) => {
@@ -54,7 +54,7 @@ test("mobile nav drawer scrolls menu items", async ({ page }) => {
 
   await page.getByRole("dialog", { name: "Menu principale" }).getByRole("button", { name: "Chiudi" }).click();
   await expect(dialog).not.toBeVisible();
-  await assertNoBodyScrollLock(page);
+  await assertGestionalePageScrollUnlocked(page);
 });
 
 test("main scrollbar track is reachable at viewport right edge", async ({ page }) => {
@@ -161,7 +161,7 @@ test("mobile log drawer scroll host scrolls content", async ({ page }) => {
 
   await page.getByRole("button", { name: "Chiudi" }).click();
   await expect(logDrawer).not.toBeVisible();
-  await assertNoBodyScrollLock(page);
+  await assertGestionalePageScrollUnlocked(page);
 });
 
 test("log drawer locks body scroll and restores on close", async ({ page }) => {
@@ -182,5 +182,5 @@ test("log drawer locks body scroll and restores on close", async ({ page }) => {
 
   await page.getByRole("button", { name: "Chiudi" }).click();
   await expect(logDrawer).not.toBeVisible();
-  await assertNoBodyScrollLock(page);
+  await assertGestionalePageScrollUnlocked(page);
 });

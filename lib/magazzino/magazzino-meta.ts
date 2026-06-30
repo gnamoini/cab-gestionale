@@ -14,6 +14,10 @@ import {
   type RicambioCompatRef,
 } from "@/lib/magazzino/ricambio-compat-resolver";
 import {
+  parseListinoImportMeta,
+  type ListinoImportMeta,
+} from "@/lib/magazzino/listino-import/listino-import-meta";
+import {
   parseRicambioUnitaMisura,
   type RicambioUnitaMisura,
 } from "@/lib/magazzino/ricambio-unita-misura";
@@ -36,6 +40,8 @@ export type MagazzinoRicambioMeta = {
   scontoFornitoreNonOriginale?: number;
   /** Nome operatore che ha effettuato l'ultima modifica ai dati ricambio. */
   autoreUltimaModifica?: string;
+  /** Ricambio creato da import listino documenti. */
+  listinoImport?: ListinoImportMeta;
 };
 
 function num(v: unknown, fallback = 0): number {
@@ -101,6 +107,7 @@ export function parseMagazzinoRicambioMeta(raw: unknown): MagazzinoRicambioMeta 
     fornitoriAlternativi: fornitoriAlternativi.length ? fornitoriAlternativi : undefined,
     ...legacyFlat,
     autoreUltimaModifica: str(m.autoreUltimaModifica) || undefined,
+    listinoImport: parseListinoImportMeta(m.listinoImport),
   };
 }
 
@@ -137,6 +144,7 @@ export function ricambioUiToMagazzinoMeta(
     fornitoriAlternativi: fornitoriAlternativi.length ? fornitoriAlternativi : undefined,
     ...legacySync,
     autoreUltimaModifica: r.autoreUltimaModifica.trim() || undefined,
+    listinoImport: r.listinoImport,
   };
 }
 

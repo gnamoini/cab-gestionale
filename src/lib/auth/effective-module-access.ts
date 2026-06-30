@@ -6,7 +6,7 @@ import {
 } from "@/src/lib/permissions/effective-permissions";
 import type { RuoloUtente, UserPermissionRow } from "@/src/types/supabase-tables";
 
-export type ModulePermissionOp = "read" | "write" | "admin";
+export type ModulePermissionOp = "read" | "write";
 
 export function moduleAllows(
   map: Record<GestionalePermissionModule, EffectiveModulePermission>,
@@ -14,9 +14,7 @@ export function moduleAllows(
   op: ModulePermissionOp,
 ): boolean {
   const row = map[module];
-  if (op === "read") return row.canRead;
-  if (op === "write") return row.canWrite;
-  return row.canAdmin;
+  return op === "read" ? row.canRead : row.canWrite;
 }
 
 export function buildModuleAccessMap(

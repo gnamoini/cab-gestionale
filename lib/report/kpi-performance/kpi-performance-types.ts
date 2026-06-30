@@ -36,11 +36,14 @@ export type KpiPerformanceEconomic = {
   topComponents: { id: string; nome: string; totalUscite: number }[];
 };
 
+import type { ClienteDisponibilitaRow } from "@/lib/report/kpi-performance/kpi-performance-formulas";
+
 export type KpiPerformanceFleet = {
   totalMezzi: number;
   mezziInOfficina: number;
   mezziOperativiProxy: number;
-  disponibilitaPct: number | null;
+  disponibilitaPerCliente: ClienteDisponibilitaRow[];
+  peggiorDisponibilita: { cliente: string; disponibilitaPct: number } | null;
   avgDowntimeDays: number | null;
   guastiByTipo: { tipo: string; count: number }[];
   mezziAltaFrequenzaGuasti: { mezzoId: string; label: string }[];

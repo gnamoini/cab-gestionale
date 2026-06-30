@@ -87,6 +87,84 @@ export function disponibilitaFlottaPctProxy(
   return round2((op / tot) * 100);
 }
 
+export type ClienteDisponibilitaRow = {
+  cliente: string;
+  totalMezzi: number;
+  mezziOperativi: number;
+  mezziInOfficina: number;
+  disponibilitaPct: number | null;
+};
+
+function clienteKey(mezzo: MezzoGestito): string {
+  return mezzo.cliente.trim() || "—";
+}
+
+/**
+ * Disponibilità flotta % per cliente (proxy).
+ * Formula per cliente: (mezziOperativi / mezziTotaliCliente) × 100.
+ */
+export function disponibilitaFlottaPerCliente(
+  mezzi: readonly MezzoGestito[],
+  lavRows: readonly LavorazioneListRow[],
+): ClienteDisponibilitaRow[] {
+  const buckets = new Map<string, MezzoGestito[]>();
+  for (const m of mezzi) {
+    const key = clienteKey(m);
+    const list = buckets.get(key) ?? [];
+    list.push(m);
+    buckets.set(key, list);
+  }
+
+  const rows: ClienteDisponibilitaRow[] = [];
+  for (const [cliente, group] of buckets) {
+    const total = group.length;
+    const mezziOperativi = countMezziOperativiProxy(group, lavRows);
+    const mezziInOfficina = countMezziInOfficinaProxy(group, lavRows);
+    rows.push({
+      cliente,
+      totalMezzi: total,
+      mezziOperativi,
+      mezziInOfficina,
+      disponibilitaPct: total === 0 ? null : round2((mezziOperativi / total) * 100),
+    });
+  }
+
+  return rows.sort(
+    (a, b) => b.totalMezzi - a.totalMezzi || a.cliente.localeCompare(b.cliente, "it"),
+  );
+}
+
+/** Cliente con disponibilità minima (pareggio → più mezzi in anagrafica). */
+export function peggiorDisponibilitaCliente(
+  rows: readonly ClienteDisponibilitaRow[],
+): { cliente: string; disponibilitaPct: number } | null {
+  let worst: ClienteDisponibilitaRow | null = null;
+  for (const row of rows) {
+    if (row.disponibilitaPct == null) continue;
+    if (!worst) {
+      worst = row;
+      continue;
+    }
+    if (row.disponibilitaPct < worst.disponibilitaPct!) {
+      worst = row;
+      continue;
+    }
+    if (row.disponibilitaPct === worst.disponibilitaPct && row.totalMezzi > worst.totalMezzi) {
+      worst = row;
+    }
+  }
+  if (!worst || worst.disponibilitaPct == null) return null;
+  return { cliente: worst.cliente, disponibilitaPct: worst.disponibilitaPct };
+}
+
+/** Conteggio clienti con disponibilità sotto soglia (default 75%). */
+export function countClientiSottoSogliaDisponibilita(
+  rows: readonly ClienteDisponibilitaRow[],
+  sogliaPct = 75,
+): number {
+  return rows.filter((r) => r.disponibilitaPct != null && r.disponibilitaPct < sogliaPct).length;
+}
+
 /** Formula: COUNT(lavorazioni NOT archived) — passato come attive.length dal bundle report. */
 export function countInterventiAperti(attive: readonly LavorazioneAttiva[]): number {
   return attive.length;

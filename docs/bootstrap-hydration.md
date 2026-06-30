@@ -32,8 +32,9 @@ Pattern da evitare nel render iniziale:
 | `localStorage` / `sessionStorage` in `useState(() => load…())` | Init valore vuoto SSR-safe; `useEffect` per hydrate |
 | `Date.now()` / `new Date()` per UI “oggi” | `mounted` + calcolo dopo mount |
 | `Math.random()` in render | Solo in callback / effect |
+| `resolveGestionaleShellTier` / viewport in `useState` initializer | Init `SSR_SAFE_SHELL_LAYOUT_STATE`; sync in `useLayoutEffect` ([`use-gestionale-shell-layout-sync.ts`](../lib/ui/use-gestionale-shell-layout-sync.ts)) |
 
-View già allineate: `ThemeToggle`, `DashboardWelcome`, sidebar collapse (`useSidebarCollapsed` / `useSyncExternalStore`), `useUndoSessionId` (`useSyncExternalStore`).
+View già allineate: `ThemeToggle`, `DashboardWelcome`, sidebar desktop (`useSidebarHoverExpand` — compressa di default, espansione hover/focus), `useUndoSessionId` (`useSyncExternalStore`).
 
 ## Theme SSR vs client (anti-FOUC)
 

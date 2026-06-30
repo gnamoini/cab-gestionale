@@ -33,6 +33,7 @@ import {
   useSecurityUsersPermissionsQuery,
 } from "@/src/hooks/use-security-users-permissions-query";
 import { QK } from "@/src/lib/react-query/invalidate-related";
+import { onUserRoleChangedClient } from "@/src/lib/rbac/on-user-role-changed.client";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import {
   computeModulePermissionDraft,
@@ -204,18 +205,38 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
         gestToast.error(res.message);
         return;
       }
-      await invalidateRuntimeTruth({
-        reason: "roleOrPermissionsChanged",
-        queryClient,
-      });
+      const ids = res.roleChangedUserIds ?? [];
+
+      if (ids.length > 0) {
+        await Promise.all(
+          ids.map((id) =>
+            onUserRoleChangedClient(id, {
+              currentUserId: sessionUser?.id,
+              refresh: async () => {},
+              queryClient,
+            }),
+          ),
+        );
+
+        if (sessionUser?.id && ids.includes(sessionUser.id)) {
+          await new Promise<void>((resolve) => {
+            queueMicrotask(() => {
+              void refresh().finally(resolve);
+            });
+          });
+        }
+      } else {
+        await invalidateRuntimeTruth({
+          reason: "roleOrPermissionsChanged",
+          queryClient,
+        });
+      }
+
       const fresh = await queryClient.fetchQuery({
         queryKey: QK.securityUsersPermissions,
         queryFn: fetchSecurityUsersPermissionsQuery,
       });
       syncFromServer(fresh.users, fresh.permissionRows);
-      if (patches.some((p) => p.userId === sessionUser?.id)) {
-        await refresh();
-      }
       gestToast.successOnce("security-users-save", GESTIONALE_TOAST.successSaved);
     } finally {
       setSaving(false);
