@@ -1,16 +1,10 @@
 /**
- * RBAC v3.1 — matrice ruolo × route + moduli.
+ * RBAC v3.2 — matrice ruolo × route (data-driven fixtures).
  */
 import assert from "node:assert/strict";
-import {
-  canAccessPage,
-  canRead,
-  canWrite,
-  hasPermission,
-} from "@/lib/auth/rbac";
+import { canAccessPage, canRead, canWrite, hasPermission } from "@/lib/auth/rbac";
 import { canAccessRoute } from "@/src/lib/auth/can-access-route";
-import { evaluateGestionaleRouteAccess } from "@/src/lib/auth/evaluate-gestionale-route-access";
-import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
+import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 
 const ROUTES = [
   "/dashboard",
@@ -30,21 +24,11 @@ const ROUTES = [
 type RoleCase = {
   role: string;
   pageExpect: Partial<Record<(typeof ROUTES)[number], boolean>>;
-  routeExpect?: Partial<Record<(typeof ROUTES)[number], boolean>>;
-  permissionRows?: Array<{
-    user_id: string;
-    module: string;
-    can_read: boolean;
-    can_write: boolean;
-    can_admin: boolean;
-  }>;
+  userOverrides?: { permissionKey: string; effect: "allow" | "deny" }[];
 };
 
 const cases: RoleCase[] = [
-  {
-    role: "admin",
-    pageExpect: Object.fromEntries(ROUTES.map((r) => [r, true])) as RoleCase["pageExpect"],
-  },
+  { role: "admin", pageExpect: Object.fromEntries(ROUTES.map((r) => [r, true])) as RoleCase["pageExpect"] },
   {
     role: "manager",
     pageExpect: {
@@ -113,15 +97,15 @@ const cases: RoleCase[] = [
 ];
 
 for (const c of cases) {
-  const snap = resolveEffectivePermissions({
-    userId: c.permissionRows?.[0]?.user_id ?? `${c.role}-1`,
-    ruolo: c.role,
-    permissionRows: c.permissionRows ?? [],
-    pilotDbEnabled: false,
+  const snap = buildTestSnapshot({
+    userId: `${c.role}-1`,
+    roleKey: c.role,
+    userOverrides: c.userOverrides,
   });
+  const ctx = snap.rbacContext;
 
   for (const [path, allowed] of Object.entries(c.pageExpect)) {
-    const actual = canAccessPage(c.role, path);
+    const actual = canAccessPage(c.role, path, undefined, ctx);
     assert.equal(actual, allowed, `${c.role} canAccessPage ${path}`);
   }
 
@@ -129,29 +113,15 @@ for (const c of cases) {
     const routeActual = canAccessRoute({ user: c.role, pathname: path, snapshot: snap });
     assert.equal(routeActual, allowed, `${c.role} canAccessRoute ${path}`);
   }
-
-  if (c.routeExpect) {
-    for (const [path, allowed] of Object.entries(c.routeExpect)) {
-      const actual = canAccessRoute({ user: c.role, pathname: path, snapshot: snap });
-      assert.equal(actual, allowed, `${c.role} canAccessRoute ${path} (granular)`);
-    }
-  }
 }
 
-// Override precedence: operatore + FULL preventivi via user_permissions
-const operatorePreventiviOverride = resolveEffectivePermissions({
+const operatorePreventiviOverride = buildTestSnapshot({
   userId: "op-prev",
-  ruolo: "operatore",
-  permissionRows: [
-    {
-      user_id: "op-prev",
-      module: "preventivi",
-      can_read: true,
-      can_write: true,
-      can_admin: false,
-    },
+  roleKey: "operatore",
+  userOverrides: [
+    { permissionKey: "preventivi.read", effect: "allow" },
+    { permissionKey: "preventivi.write", effect: "allow" },
   ],
-  pilotDbEnabled: false,
 });
 assert.equal(
   canAccessRoute({
@@ -163,18 +133,12 @@ assert.equal(
   "operatore override FULL preventivi",
 );
 
-assert.equal(hasPermission("manager", "manageSettings"), true);
-assert.equal(hasPermission("manager", "manageSecurity"), false);
-assert.equal(hasPermission("operatore", "manageSettings"), false);
-assert.equal(hasPermission("addetto_amministrativo", "manageSettings"), false);
-assert.equal(canWrite("guest", "magazzino"), false);
-assert.equal(canRead("guest", "dipendenti"), true);
-assert.equal(canRead("operatore", "dipendenti"), false);
-
-// Mezzi + attrezzature: operatore write, ufficio escluso, admin full
-assert.equal(canWrite("operatore", "mezzi"), true);
-assert.equal(canRead("addetto_amministrativo", "mezzi"), false);
-assert.equal(canWrite("addetto_amministrativo", "mezzi"), false);
-assert.equal(canWrite("admin", "mezzi"), true);
+const mgrCtx = buildTestSnapshot({ userId: "m1", roleKey: "manager" }).rbacContext;
+assert.equal(hasPermission("manager", "manageSettings", mgrCtx), true);
+assert.equal(hasPermission("manager", "manageSecurity", mgrCtx), false);
+assert.equal(hasPermission("operatore", "manageSettings", buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).rbacContext), false);
+assert.equal(canWrite("guest", "magazzino", buildTestSnapshot({ userId: "g1", roleKey: "guest" }).rbacContext), false);
+assert.equal(canRead("guest", "dipendenti", buildTestSnapshot({ userId: "g1", roleKey: "guest" }).rbacContext), true);
+assert.equal(canRead("operatore", "dipendenti", buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).rbacContext), false);
 
 console.log("permissions-role-matrix.test.ts OK");

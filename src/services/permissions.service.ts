@@ -48,4 +48,5 @@ export const permissionsService = {
       return serviceFailFromError(e);
     }
   },
+
 };

@@ -8,7 +8,7 @@ import type { ProfileRow } from "@/src/types/supabase-tables";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 
 export type ProfileFilters = {
-  ruolo?: ProfileRow["ruolo"];
+  roleKey?: string;
   search?: string;
 };
 
@@ -23,7 +23,7 @@ export const authService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = getBrowserSupabase();
       let q = sb.from("profiles").select(PROFILES_COLUMNS).order("nome", { ascending: true });
-      if (filters?.ruolo) q = q.eq("ruolo", filters.ruolo);
+      if (filters?.roleKey) q = q.eq("role_key", filters.roleKey);
       if (filters?.search?.trim()) q = q.ilike("nome", `%${filters.search.trim()}%`);
       const { data, error } = await q;
       if (error) return err(error.message);

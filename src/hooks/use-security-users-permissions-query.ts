@@ -13,6 +13,8 @@ export type SecurityUsersQueryData = {
   users: SecurityUserPermissionRow[];
   portalSettingsUpdatedAt: string | null;
   permissionRows: UserPermissionRow[];
+  rolePermissionKeysByRole: Record<string, string[]>;
+  assignableRoles: { key: string; name: string }[];
 };
 
 export async function fetchSecurityUsersPermissionsQuery(): Promise<SecurityUsersQueryData> {
@@ -22,6 +24,8 @@ export async function fetchSecurityUsersPermissionsQuery(): Promise<SecurityUser
     users: res.users,
     portalSettingsUpdatedAt: res.portalSettingsUpdatedAt,
     permissionRows: res.permissionRows,
+    rolePermissionKeysByRole: res.rolePermissionKeysByRole,
+    assignableRoles: res.assignableRoles,
   };
 }
 
@@ -47,5 +51,7 @@ export function useSecurityUsersPermissionsQuery(enabled = true) {
     users,
     portalSettingsUpdatedAt: query.data?.portalSettingsUpdatedAt ?? null,
     permissionRows: query.data?.permissionRows ?? [],
+    rolePermissionKeysByRole: query.data?.rolePermissionKeysByRole ?? {},
+    assignableRoles: query.data?.assignableRoles ?? [],
   };
 }

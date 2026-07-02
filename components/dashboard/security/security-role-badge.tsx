@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { roleLabel, type AppRole } from "@/lib/auth/rbac";
+import { roleLabel, resolveRole, type AppRole } from "@/lib/auth/rbac";
 import {
   formatSecurityWhen,
   SECURITY_USER_PRESENCE_LABEL,
@@ -25,9 +25,10 @@ const PRESENCE_TONE: Record<SecurityUserPresence, { text: string; dot: string }>
   never: { text: "text-[color:var(--cab-text-muted)]", dot: "bg-zinc-400" },
 };
 
-export function SecurityRoleBadge({ role }: { role: AppRole }) {
+export function SecurityRoleBadge({ role }: { role: string }) {
+  const canonical = resolveRole(role);
   return (
-    <span className={`inline-flex min-w-0 max-w-full rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${ROLE_TONE[role] ?? ROLE_TONE.guest}`}>
+    <span className={`inline-flex min-w-0 max-w-full rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${ROLE_TONE[canonical] ?? ROLE_TONE.guest}`}>
       {roleLabel(role)}
     </span>
   );

@@ -1,14 +1,9 @@
 import assert from "node:assert/strict";
 import { assertRouteProtection } from "@/lib/regression/assert-route-protection";
 import { assertPermissionConsistency } from "@/lib/regression/assert-permission-consistency";
-import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
+import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 
-const adminSnap = resolveEffectivePermissions({
-  userId: "admin-1",
-  ruolo: "admin",
-  permissionRows: [],
-  pilotDbEnabled: false,
-});
+const adminSnap = buildTestSnapshot({ userId: "admin-1", roleKey: "admin" });
 
 assertPermissionConsistency(adminSnap);
 
@@ -30,12 +25,7 @@ assertRouteProtection(
     { pathname: "/magazzino", allowed: true },
     { pathname: "/preventivi", allowed: false },
   ],
-  resolveEffectivePermissions({
-    userId: "op-1",
-    ruolo: "operatore",
-    permissionRows: [],
-    pilotDbEnabled: false,
-  }),
+  buildTestSnapshot({ userId: "op-1", roleKey: "operatore" }),
 );
 
 assertRouteProtection(
@@ -47,12 +37,7 @@ assertRouteProtection(
     { pathname: "/impostazioni", allowed: false },
     { pathname: "/login", allowed: true },
   ],
-  resolveEffectivePermissions({
-    userId: "guest-1",
-    ruolo: "guest",
-    permissionRows: [],
-    pilotDbEnabled: false,
-  }),
+  buildTestSnapshot({ userId: "guest-1", roleKey: "guest" }),
 );
 
 assertRouteProtection(
@@ -63,7 +48,7 @@ assertRouteProtection(
     { pathname: "/lavorazioni-clienti", allowed: true },
     { pathname: "/lavorazioni-clienti/abc", allowed: true },
   ],
-  null,
+  buildTestSnapshot({ userId: "cliente-1", roleKey: "cliente" }),
 );
 
 console.log("rbac-route-matrix.test.ts OK");

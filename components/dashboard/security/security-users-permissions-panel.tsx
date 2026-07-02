@@ -65,10 +65,12 @@ type Props = {
 function buildModuleSnapshots(
   users: EditableSecurityUser[],
   permissionRows: import("@/src/types/supabase-tables").UserPermissionRow[],
+  rolePermissionKeysByRole: Record<string, string[]>,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const u of users) {
-    const draft = computeModulePermissionDraft(u.ruolo, u.id, permissionRows);
+    const keys = rolePermissionKeysByRole[resolveRole(u.ruolo)] ?? [];
+    const draft = computeModulePermissionDraft(keys, u.id, permissionRows);
     out[u.id] = snapshotModuleDraft(draft);
   }
   return out;
@@ -77,10 +79,12 @@ function buildModuleSnapshots(
 function buildModuleDrafts(
   users: EditableSecurityUser[],
   permissionRows: import("@/src/types/supabase-tables").UserPermissionRow[],
+  rolePermissionKeysByRole: Record<string, string[]>,
 ): Record<string, ModulePermissionDraftRow[]> {
   const out: Record<string, ModulePermissionDraftRow[]> = {};
   for (const u of users) {
-    out[u.id] = buildInitialModuleDraft(u.ruolo, u.id, permissionRows);
+    const keys = rolePermissionKeysByRole[resolveRole(u.ruolo)] ?? [];
+    out[u.id] = buildInitialModuleDraft(keys, u.id, permissionRows);
   }
   return out;
 }
@@ -103,6 +107,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
   const usersQ = sharedUsersQ ?? internalUsersQ;
   const serverUsers = usersQ.users;
   const permissionRows = usersQ.permissionRows;
+  const rolePermissionKeysByRole = usersQ.rolePermissionKeysByRole;
   const globalOpts = useGlobalOptions({ debugTag: "SecurityUsersPermissions" });
   const knownClienti = useMemo(
     () => buildKnownClientiSet(globalOpts.mezziListe.clienti ?? []),
@@ -113,17 +118,17 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
     if (!usersQ.isSuccess || hydratedRef.current) return;
     setDraftRows(serverUsers);
     setSavedSnapshot(rowsSnapshot(serverUsers));
-    setModuleDrafts(buildModuleDrafts(serverUsers, permissionRows));
-    setSavedModuleSnapshots(buildModuleSnapshots(serverUsers, permissionRows));
+    setModuleDrafts(buildModuleDrafts(serverUsers, permissionRows, rolePermissionKeysByRole));
+    setSavedModuleSnapshots(buildModuleSnapshots(serverUsers, permissionRows, rolePermissionKeysByRole));
     hydratedRef.current = true;
-  }, [usersQ.isSuccess, serverUsers, permissionRows]);
+  }, [usersQ.isSuccess, serverUsers, permissionRows, rolePermissionKeysByRole]);
 
   const syncFromServer = useCallback(
-    (users: EditableSecurityUser[], perms: typeof permissionRows) => {
+    (users: EditableSecurityUser[], perms: typeof permissionRows, roleKeys: typeof rolePermissionKeysByRole) => {
       setDraftRows(users);
       setSavedSnapshot(rowsSnapshot(users));
-      setModuleDrafts(buildModuleDrafts(users, perms));
-      setSavedModuleSnapshots(buildModuleSnapshots(users, perms));
+      setModuleDrafts(buildModuleDrafts(users, perms, roleKeys));
+      setSavedModuleSnapshots(buildModuleSnapshots(users, perms, roleKeys));
     },
     [],
   );
@@ -162,8 +167,8 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
   }, [moduleDrafts, selectedUserId]);
 
   const handleCancel = useCallback(() => {
-    syncFromServer(serverUsers, permissionRows);
-  }, [serverUsers, permissionRows, syncFromServer]);
+    syncFromServer(serverUsers, permissionRows, rolePermissionKeysByRole);
+  }, [serverUsers, permissionRows, rolePermissionKeysByRole, syncFromServer]);
 
   const handleSave = useCallback(async () => {
     if (!isDirty) return;
@@ -180,10 +185,11 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
       savedModuleSnapshots,
       moduleDrafts,
       permissionRows,
+      rolePermissionKeysByRole,
     );
     if (!patches.length) {
       setSavedSnapshot(rowsSnapshot(draftRows));
-      setSavedModuleSnapshots(buildModuleSnapshots(draftRows, permissionRows));
+      setSavedModuleSnapshots(buildModuleSnapshots(draftRows, permissionRows, rolePermissionKeysByRole));
       return;
     }
 
@@ -237,7 +243,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
         queryKey: QK.securityUsersPermissions,
         queryFn: fetchSecurityUsersPermissionsQuery,
       });
-      syncFromServer(fresh.users, fresh.permissionRows);
+      syncFromServer(fresh.users, fresh.permissionRows, fresh.rolePermissionKeysByRole);
       gestToast.successOnce("security-users-save", GESTIONALE_TOAST.successSaved);
     } finally {
       setSaving(false);
@@ -279,27 +285,32 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
         if (!ok) return;
       }
       const res = await usersQ.refetch();
-      if (res.data?.users) syncFromServer(res.data.users, res.data.permissionRows);
+      if (res.data?.users) syncFromServer(res.data.users, res.data.permissionRows, res.data.rolePermissionKeysByRole);
       hydratedRef.current = true;
     })();
   }, [confirm, isDirty, usersQ, syncFromServer]);
 
-  const handleRoleChange = useCallback((userId: string, ruolo: AppRole) => {
-    const role = resolveRole(ruolo);
-    setModuleDrafts((prev) => ({
-      ...prev,
-      [userId]: computeModulePermissionDraft(role, userId, []),
-    }));
-  }, []);
+  const handleRoleChange = useCallback(
+    (userId: string, ruolo: string) => {
+      const role = resolveRole(ruolo);
+      const keys = rolePermissionKeysByRole[role] ?? [];
+      setModuleDrafts((prev) => ({
+        ...prev,
+        [userId]: computeModulePermissionDraft(keys, userId, permissionRows),
+      }));
+    },
+    [permissionRows, rolePermissionKeysByRole],
+  );
 
   const handleRestoreModuleFromRole = useCallback(() => {
     if (!selectedUser) return;
     const role = resolveRole(selectedUser.ruolo);
+    const keys = rolePermissionKeysByRole[role] ?? [];
     setModuleDrafts((prev) => ({
       ...prev,
-      [selectedUser.id]: computeModulePermissionDraft(role, selectedUser.id, []),
+      [selectedUser.id]: computeModulePermissionDraft(keys, selectedUser.id, permissionRows),
     }));
-  }, [selectedUser]);
+  }, [selectedUser, permissionRows, rolePermissionKeysByRole]);
 
   const handleModuleDraftChange = useCallback(
     (rows: ModulePermissionDraftRow[]) => {
@@ -381,6 +392,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
           loading={usersQ.isLoading}
           readOnly={readOnly}
           permissionRows={permissionRows}
+          assignableRoles={usersQ.assignableRoles}
           knownClienti={knownClienti}
           currentUserId={sessionUser?.id}
           onRowsChange={setDraftRows}

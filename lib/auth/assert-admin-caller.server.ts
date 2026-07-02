@@ -32,7 +32,7 @@ export async function assertAdminCaller(): Promise<AdminCallerContext> {
 
   const { data: prof, error: profErr } = await sbUser
     .from("profiles")
-    .select("nome, ruolo")
+    .select("nome, role_key")
     .eq("id", caller.id)
     .maybeSingle();
   if (profErr) return { ok: false, message: profErr.message };

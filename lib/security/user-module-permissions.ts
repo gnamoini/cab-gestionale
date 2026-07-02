@@ -1,4 +1,3 @@
-import { roleModuleDefault, resolveRole, type AppRole } from "@/lib/rbac";
 import {
   GESTIONALE_PERMISSION_MODULES,
   type GestionalePermissionModule,
@@ -28,10 +27,12 @@ export type ModulePermissionDraftRow = {
   canRead: boolean;
   canWrite: boolean;
   isCustomized: boolean;
+  overrideRead: "inherit" | "allow" | "deny";
+  overrideWrite: "inherit" | "allow" | "deny";
 };
 
 export type ModulePermissionPersistPlan = {
-  upserts: { module: GestionalePermissionModule; canRead: boolean; canWrite: boolean }[];
+  overrides: { permissionKey: string; effect: "allow" | "deny" }[];
   deleteAll: boolean;
 };
 
@@ -39,55 +40,76 @@ function rowsForUser(rows: UserPermissionRow[] | undefined, userId: string): Use
   return (rows ?? []).filter((r) => r.user_id === userId);
 }
 
-export function roleDefaultForModule(
-  ruolo: AppRole,
+function roleDefaultFromKeys(
+  rolePermissionKeys: string[],
   module: GestionalePermissionModule,
 ): { canRead: boolean; canWrite: boolean } {
-  const d = roleModuleDefault(resolveRole(ruolo), module);
-  return { canRead: d.canRead, canWrite: d.canWrite };
+  const set = new Set(rolePermissionKeys);
+  return {
+    canRead: set.has(`${module}.read`),
+    canWrite: set.has(`${module}.write`),
+  };
+}
+
+function userOverrideEffect(
+  userRows: UserPermissionRow[],
+  module: GestionalePermissionModule,
+  op: "read" | "write",
+): "inherit" | "allow" | "deny" {
+  const key = `${module}.${op}`;
+  const row = userRows.find((r) => r.permissions?.key === key);
+  if (!row) return "inherit";
+  return row.effect === "allow" ? "allow" : "deny";
+}
+
+function effectiveFromOverride(
+  roleVal: boolean,
+  override: "inherit" | "allow" | "deny",
+): boolean {
+  if (override === "allow") return true;
+  if (override === "deny") return false;
+  return roleVal;
 }
 
 export function computeModulePermissionDraft(
-  ruolo: AppRole,
+  rolePermissionKeys: string[],
   userId: string,
   allPermissionRows: UserPermissionRow[] | undefined,
 ): ModulePermissionDraftRow[] {
-  const role = resolveRole(ruolo);
   const userRows = rowsForUser(allPermissionRows, userId);
-  const byModule = new Map<GestionalePermissionModule, UserPermissionRow>();
-  for (const row of userRows) {
-    const mod = row.module;
-    if (mod && (GESTIONALE_PERMISSION_MODULES as readonly string[]).includes(mod)) {
-      byModule.set(mod as GestionalePermissionModule, row);
-    }
-  }
 
   return GESTIONALE_PERMISSION_MODULES.map((module) => {
-    const roleDef = roleDefaultForModule(role, module);
-    const dbRow = byModule.get(module);
-    const canRead = dbRow ? Boolean(dbRow.can_read) : roleDef.canRead;
-    const canWrite = dbRow ? Boolean(dbRow.can_write) : roleDef.canWrite;
+    const roleDef = roleDefaultFromKeys(rolePermissionKeys, module);
+    const overrideRead = userOverrideEffect(userRows, module, "read");
+    const overrideWrite = userOverrideEffect(userRows, module, "write");
+    const canRead = effectiveFromOverride(roleDef.canRead, overrideRead);
+    const canWrite = canRead ? effectiveFromOverride(roleDef.canWrite, overrideWrite) : false;
     const isCustomized =
-      dbRow != null &&
-      (dbRow.can_read !== roleDef.canRead || dbRow.can_write !== roleDef.canWrite);
+      overrideRead !== "inherit" ||
+      overrideWrite !== "inherit" ||
+      canRead !== roleDef.canRead ||
+      canWrite !== roleDef.canWrite;
+
     return {
       module,
       label: MODULE_PAGE_LABELS[module],
       roleCanRead: roleDef.canRead,
       roleCanWrite: roleDef.canWrite,
       canRead,
-      canWrite: canRead ? canWrite : false,
+      canWrite,
       isCustomized,
+      overrideRead,
+      overrideWrite,
     };
   });
 }
 
 export function hasModulePermissionOverrides(
-  ruolo: AppRole,
+  rolePermissionKeys: string[],
   userId: string,
   allPermissionRows: UserPermissionRow[] | undefined,
 ): boolean {
-  return computeModulePermissionDraft(ruolo, userId, allPermissionRows).some((r) => r.isCustomized);
+  return computeModulePermissionDraft(rolePermissionKeys, userId, allPermissionRows).some((r) => r.isCustomized);
 }
 
 export function normalizeModuleDraftRow(row: ModulePermissionDraftRow): ModulePermissionDraftRow {
@@ -109,50 +131,55 @@ export function modulePermissionDraftEquals(a: ModulePermissionDraftRow[], b: Mo
 }
 
 export function snapshotModuleDraft(rows: ModulePermissionDraftRow[]): string {
-  return JSON.stringify(
-    rows.map((r) => ({ m: r.module, r: r.canRead, w: r.canWrite })),
-  );
+  return JSON.stringify(rows.map((r) => ({ m: r.module, r: r.canRead, w: r.canWrite })));
 }
 
-/** Confronta draft con default ruolo → upsert solo dove serve override; deleteAll se nessun override. */
+/** Confronta draft con permessi ruolo → override allow/deny solo dove diverge dal ruolo. */
 export function planModulePermissionPersist(
-  ruolo: AppRole,
+  rolePermissionKeys: string[],
   draft: ModulePermissionDraftRow[],
 ): ModulePermissionPersistPlan {
-  const role = resolveRole(ruolo);
-  const upserts: ModulePermissionPersistPlan["upserts"] = [];
+  const overrides: ModulePermissionPersistPlan["overrides"] = [];
 
   for (const row of draft.map(normalizeModuleDraftRow)) {
-    const roleDef = roleDefaultForModule(role, row.module);
-    const matchesRole = row.canRead === roleDef.canRead && row.canWrite === roleDef.canWrite;
-    if (!matchesRole) {
-      upserts.push({
-        module: row.module,
-        canRead: row.canRead,
-        canWrite: row.canWrite,
+    const roleDef = roleDefaultFromKeys(rolePermissionKeys, row.module);
+    if (row.canRead !== roleDef.canRead) {
+      overrides.push({
+        permissionKey: `${row.module}.read`,
+        effect: row.canRead ? "allow" : "deny",
+      });
+    }
+    if (row.canWrite !== roleDef.canWrite) {
+      overrides.push({
+        permissionKey: `${row.module}.write`,
+        effect: row.canWrite ? "allow" : "deny",
       });
     }
   }
 
   return {
-    upserts,
-    deleteAll: upserts.length === 0,
+    overrides,
+    deleteAll: overrides.length === 0,
   };
 }
 
 export function modulePermissionsPayloadFromDraft(
-  ruolo: AppRole,
+  rolePermissionKeys: string[],
   draft: ModulePermissionDraftRow[],
 ): { module: GestionalePermissionModule; canRead: boolean; canWrite: boolean }[] | null {
-  const plan = planModulePermissionPersist(ruolo, draft);
+  const plan = planModulePermissionPersist(rolePermissionKeys, draft);
   if (plan.deleteAll) return null;
-  return plan.upserts;
+  const modules = new Map<GestionalePermissionModule, { canRead: boolean; canWrite: boolean }>();
+  for (const row of draft.map(normalizeModuleDraftRow)) {
+    modules.set(row.module, { canRead: row.canRead, canWrite: row.canWrite });
+  }
+  return [...modules.entries()].map(([module, access]) => ({ module, ...access }));
 }
 
 export function buildInitialModuleDraft(
-  ruolo: AppRole,
+  rolePermissionKeys: string[],
   userId: string,
   permissionRows: UserPermissionRow[],
 ): ModulePermissionDraftRow[] {
-  return computeModulePermissionDraft(resolveRole(ruolo), userId, permissionRows);
+  return computeModulePermissionDraft(rolePermissionKeys, userId, permissionRows);
 }

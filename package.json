@@ -15,6 +15,7 @@
     "start": "next start",
     "lint": "eslint",
     "test:permissions": "npx tsx src/lib/permissions/effective-permissions.test.ts",
+    "test:rbac": "npx tsx src/lib/permissions/effective-permissions.test.ts && npx tsx lib/regression/rbac-data-driven-resolver.test.ts && npx tsx lib/regression/permissions-role-matrix.test.ts && npx tsx lib/regression/security-rbac-policy.test.ts && npx tsx lib/regression/security-roles-actions.test.ts && npx tsx lib/regression/rbac-route-matrix.test.ts && npx tsx lib/regression/role-switch-hardening.test.ts && npx tsx lib/security/build-security-user-patches.test.ts && npx tsx lib/security/user-module-permissions.test.ts && npx tsx lib/regression/role-module-parity.test.ts && npx tsx lib/rbac.capability.test.ts",
     "test:operator-global-settings": "npx tsx lib/permissions/operator-global-settings.test.ts",
     "ci:tsc": "npx tsx scripts/ci-tsc-gate.ts",
     "ci:build": "npx tsx scripts/ci-build-gate.ts",
@@ -117,6 +118,7 @@
     "qrcode": "^1.5.4",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "server-only": "^0.0.1",
     "sharp": "^0.35.1",
     "xlsx": "^0.18.5",
     "zod": "^4.4.3"

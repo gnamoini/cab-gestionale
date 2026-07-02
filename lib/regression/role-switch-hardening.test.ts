@@ -74,14 +74,9 @@ for (const f of RUNTIME_FILES) {
 }
 
 import { assertRouteProtection } from "@/lib/regression/assert-route-protection";
-import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
+import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 
-const managerSnap = resolveEffectivePermissions({
-  userId: "m1",
-  ruolo: "manager",
-  permissionRows: [],
-  pilotDbEnabled: false,
-});
+const managerSnap = buildTestSnapshot({ userId: "m1", roleKey: "manager" });
 
 assertRouteProtection(
   "manager",

@@ -10,6 +10,7 @@ import { logSecurityPageAccessAction } from "@/src/actions/security-read";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { SecurityUsersPermissionsPanel } from "@/components/dashboard/security/security-users-permissions-panel";
+import { SecurityRolesPanel } from "@/components/dashboard/security/security-roles-panel";
 import {
   SecurityMonitoringSection,
   useRecentActivityRows,
@@ -35,7 +36,7 @@ import type { PilotControlStatus } from "@/src/lib/runtime/truth-layer/resolve-p
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 
-type SecurityDashboardTab = "users" | "monitoring" | "release";
+type SecurityDashboardTab = "users" | "roles" | "monitoring" | "release";
 
 function fmtYmd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -241,6 +242,13 @@ export function SecurityDashboardView() {
           panelId="security-panel-users"
         />
         <HubModalTab
+          id="security-tab-roles"
+          label="Ruoli e matrice"
+          active={activeTab === "roles"}
+          onSelect={() => setActiveTab("roles")}
+          panelId="security-panel-roles"
+        />
+        <HubModalTab
           id="security-tab-monitoring"
           label="Monitoraggio accessi"
           active={activeTab === "monitoring"}
@@ -259,6 +267,12 @@ export function SecurityDashboardView() {
       {activeTab === "users" ? (
         <div id="security-panel-users" role="tabpanel" aria-labelledby="security-tab-users">
           <SecurityUsersPermissionsPanel readOnly={!isAdmin} sharedUsersQ={usersQ} />
+        </div>
+      ) : null}
+
+      {activeTab === "roles" ? (
+        <div id="security-panel-roles" role="tabpanel" aria-labelledby="security-tab-roles">
+          <SecurityRolesPanel readOnly={!isAdmin} />
         </div>
       ) : null}
 

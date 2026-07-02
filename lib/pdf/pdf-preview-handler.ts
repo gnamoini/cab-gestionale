@@ -1,4 +1,4 @@
-import { hasCapability } from "@/lib/rbac";
+import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
 import { isPdfPreviewPostRateLimited } from "@/lib/preventivi/pdf-preview-rate-limit";
 import { PDF_MAGIC, PDF_PREVIEW_MAX_BYTES } from "@/lib/pdf/pdf-preview-config";
 import { verifyServerModuleCan } from "@/src/lib/auth/server-permission-guards";
@@ -44,8 +44,8 @@ async function canUsePdfPreview(): Promise<boolean> {
   if (await verifyServerModuleCan("dipendenti", "read")) return true;
 
   const snap = await resolveServerEffectivePermissions();
-  if (!snap?.role) return false;
-  return hasCapability({ ruolo: snap.role }, "can_read_operational");
+  if (!snap?.resolved) return false;
+  return hasResolvedCapability(snap.resolved, "can_read_operational");
 }
 
 export type PdfPreviewHandlerOptions = {

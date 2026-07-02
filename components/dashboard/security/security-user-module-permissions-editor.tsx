@@ -2,30 +2,58 @@
 
 import { resolveRole, ROLE_LABELS, type AppRole } from "@/lib/auth/rbac";
 import {
-  buildInitialModuleDraft,
-  computeModulePermissionDraft,
   normalizeModuleDraftRow,
   type ModulePermissionDraftRow,
 } from "@/lib/security/user-module-permissions";
 import { dsBtnGhost, dsScrollbar, dsTable, dsTableRow, dsTableTd, dsTableWrap } from "@/lib/ui/design-system";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
-export { buildInitialModuleDraft };
+export { buildInitialModuleDraft } from "@/lib/security/user-module-permissions";
 
 const ROLE_MODULE_READONLY = new Set<AppRole>(["cliente", "guest"]);
 
-type AccessLevel = "hidden" | "read" | "full";
+type OverrideEffect = ModulePermissionDraftRow["overrideRead"];
 
-function toAccessLevel(row: ModulePermissionDraftRow): AccessLevel {
-  if (!row.canRead) return "hidden";
-  if (row.canWrite) return "full";
-  return "read";
+function roleAccessLabel(canRead: boolean, canWrite: boolean): string {
+  if (!canRead) return "Nascosto";
+  if (canWrite) return "Completo";
+  return "Sola lettura";
 }
 
-function fromAccessLevel(level: AccessLevel): Pick<ModulePermissionDraftRow, "canRead" | "canWrite"> {
-  if (level === "hidden") return { canRead: false, canWrite: false };
-  if (level === "read") return { canRead: true, canWrite: false };
-  return { canRead: true, canWrite: true };
+function effectiveAccessLabel(canRead: boolean, canWrite: boolean): string {
+  return roleAccessLabel(canRead, canWrite);
+}
+
+function recomputeRow(
+  row: ModulePermissionDraftRow,
+  patch: Partial<Pick<ModulePermissionDraftRow, "overrideRead" | "overrideWrite">>,
+): ModulePermissionDraftRow {
+  const overrideRead = patch.overrideRead ?? row.overrideRead;
+  const overrideWrite = patch.overrideWrite ?? row.overrideWrite;
+
+  let canRead = row.roleCanRead;
+  if (overrideRead === "allow") canRead = true;
+  if (overrideRead === "deny") canRead = false;
+
+  let canWrite = row.roleCanWrite;
+  if (overrideWrite === "allow") canWrite = true;
+  if (overrideWrite === "deny") canWrite = false;
+  if (!canRead) canWrite = false;
+
+  const isCustomized =
+    overrideRead !== "inherit" ||
+    overrideWrite !== "inherit" ||
+    canRead !== row.roleCanRead ||
+    canWrite !== row.roleCanWrite;
+
+  return normalizeModuleDraftRow({
+    ...row,
+    overrideRead,
+    overrideWrite,
+    canRead,
+    canWrite,
+    isCustomized,
+  });
 }
 
 type Props = {
@@ -42,7 +70,6 @@ export function SecurityUserModulePermissionsEditor({
   userId,
   ruolo,
   readOnly,
-  permissionRows,
   draft,
   onDraftChange,
   onRestoreFromRole,
@@ -50,16 +77,21 @@ export function SecurityUserModulePermissionsEditor({
   const role = resolveRole(ruolo);
   const matrixReadOnly = readOnly || ROLE_MODULE_READONLY.has(role);
 
-  function patchModule(module: ModulePermissionDraftRow["module"], patch: Partial<ModulePermissionDraftRow>) {
+  function patchModule(
+    module: ModulePermissionDraftRow["module"],
+    patch: Partial<Pick<ModulePermissionDraftRow, "overrideRead" | "overrideWrite">>,
+  ) {
     onDraftChange(
-      draft.map((row) =>
-        row.module === module ? normalizeModuleDraftRow({ ...row, ...patch }) : row,
-      ),
+      draft.map((row) => (row.module === module ? recomputeRow(row, patch) : row)),
     );
   }
 
-  function setAccessLevel(module: ModulePermissionDraftRow["module"], level: AccessLevel) {
-    patchModule(module, fromAccessLevel(level));
+  function setOverride(
+    module: ModulePermissionDraftRow["module"],
+    field: "overrideRead" | "overrideWrite",
+    effect: OverrideEffect,
+  ) {
+    patchModule(module, { [field]: effect });
   }
 
   if (ROLE_MODULE_READONLY.has(role)) {
@@ -76,20 +108,22 @@ export function SecurityUserModulePermissionsEditor({
     <div className="space-y-2">
       <p className="text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
         Dashboard, Configurazione, Sicurezza e Portale Clienti seguono solo il ruolo e non sono
-        modificabili da questa schermata.
+        modificabili da questa schermata. Precedenza: deny &gt; allow &gt; ruolo.
       </p>
       {!matrixReadOnly ? (
         <button type="button" className={dsBtnGhost} onClick={onRestoreFromRole}>
           Ripristina permessi da ruolo
         </button>
       ) : null}
-      <div className={`${dsTableWrap} max-h-[min(16rem,40vh)] ${dsScrollbar}`}>
+      <div className={`${dsTableWrap} max-h-[min(20rem,45vh)] ${dsScrollbar}`}>
         <table className={`${dsTable} text-[11px]`}>
           <thead>
             <tr className={dsTableRow}>
               <th className={`${dsTableTd} text-left font-semibold`}>Pagina</th>
               <th className={`${dsTableTd} text-center font-semibold`}>Da ruolo</th>
-              <th className={`${dsTableTd} text-left font-semibold`}>Accesso</th>
+              <th className={`${dsTableTd} text-center font-semibold`}>Override lettura</th>
+              <th className={`${dsTableTd} text-center font-semibold`}>Override scrittura</th>
+              <th className={`${dsTableTd} text-center font-semibold`}>Effettivo</th>
             </tr>
           </thead>
           <tbody>
@@ -99,25 +133,51 @@ export function SecurityUserModulePermissionsEditor({
                   <span className="font-medium text-[color:var(--cab-text)]">{row.label}</span>
                   {row.isCustomized ? (
                     <span className="ml-1.5 rounded bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-surface))] px-1 py-0.5 text-[9px] font-bold uppercase text-[color:var(--cab-primary)]">
-                      Custom
+                      Override
                     </span>
                   ) : null}
                 </td>
                 <td className={`${dsTableTd} text-center text-[color:var(--cab-text-muted)]`}>
-                  {row.roleCanRead ? (row.roleCanWrite ? "Completo" : "Sola lettura") : "Nascosto"}
+                  {roleAccessLabel(row.roleCanRead, row.roleCanWrite)}
                 </td>
                 <td className={dsTableTd}>
                   <select
                     className="w-full min-w-0 rounded-md border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] px-2 py-1 text-[11px] text-[color:var(--cab-text)]"
                     disabled={matrixReadOnly}
-                    value={toAccessLevel(row)}
-                    aria-label={`Accesso ${row.label}`}
-                    onChange={(e) => setAccessLevel(row.module, e.target.value as AccessLevel)}
+                    value={row.overrideRead}
+                    aria-label={`Override lettura ${row.label}`}
+                    onChange={(e) =>
+                      setOverride(row.module, "overrideRead", e.target.value as OverrideEffect)
+                    }
                   >
-                    <option value="hidden">Nascosto</option>
-                    <option value="read">Sola lettura</option>
-                    <option value="full">Accesso completo</option>
+                    <option value="inherit">Eredita</option>
+                    <option value="allow">Allow</option>
+                    <option value="deny">Deny</option>
                   </select>
+                </td>
+                <td className={dsTableTd}>
+                  <select
+                    className="w-full min-w-0 rounded-md border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] px-2 py-1 text-[11px] text-[color:var(--cab-text)]"
+                    disabled={matrixReadOnly || !row.canRead && row.overrideRead === "deny"}
+                    value={row.overrideWrite}
+                    aria-label={`Override scrittura ${row.label}`}
+                    onChange={(e) =>
+                      setOverride(row.module, "overrideWrite", e.target.value as OverrideEffect)
+                    }
+                  >
+                    <option value="inherit">Eredita</option>
+                    <option value="allow">Allow</option>
+                    <option value="deny">Deny</option>
+                  </select>
+                </td>
+                <td
+                  className={`${dsTableTd} text-center font-medium ${
+                    row.isCustomized
+                      ? "text-[color:var(--cab-primary)]"
+                      : "text-[color:var(--cab-text-muted)]"
+                  }`}
+                >
+                  {effectiveAccessLabel(row.canRead, row.canWrite)}
                 </td>
               </tr>
             ))}

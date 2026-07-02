@@ -22,7 +22,7 @@ export type ValidatedSecurityUserBatchPatch = {
   nome?: string;
   cognome?: string | null;
   username?: string;
-  ruolo?: AppRole;
+  ruolo?: string;
   clienteRef?: string | null;
   /** null = ripristina permessi da ruolo (delete overrides). */
   modulePermissions?: ValidatedModulePermissionEntry[] | null;
@@ -91,6 +91,13 @@ export function validateOptionalDisplayName(nome: string | null | undefined): st
   return null;
 }
 
+const ROLE_KEY_RE = /^[a-z][a-z0-9_]{0,63}$/;
+
+export function validateRoleKeyValue(roleKey: string | null | undefined): roleKey is string {
+  if (!roleKey) return false;
+  return ROLE_KEY_RE.test(roleKey);
+}
+
 export function validateAppRoleValue(ruolo: string | null | undefined): ruolo is AppRole {
   if (!ruolo) return false;
   return (APP_ROLES as readonly string[]).includes(ruolo);
@@ -156,7 +163,7 @@ export function validateSecurityUserBatchPatches(
     }
 
     if (p.ruolo !== undefined) {
-      if (typeof p.ruolo !== "string" || !validateAppRoleValue(p.ruolo)) {
+      if (typeof p.ruolo !== "string" || !validateRoleKeyValue(p.ruolo)) {
         return { ok: false, message: "Ruolo non valido." };
       }
       patch.ruolo = p.ruolo;
@@ -267,7 +274,7 @@ export async function validateLastAdminTarget(
   const { count, error } = await admin
     .from("profiles")
     .select("id", { count: "exact", head: true })
-    .eq("ruolo", "admin");
+    .eq("role_key", "admin");
   if (error) return error.message;
   if ((count ?? 0) <= 1) {
     if (operation === "delete") {

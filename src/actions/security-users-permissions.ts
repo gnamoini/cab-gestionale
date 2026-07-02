@@ -21,7 +21,7 @@ import { assertAdminCaller } from "@/lib/auth/assert-admin-caller.server";
 import { listUsersByAdminAction } from "@/src/actions/admin-users";
 import type { SecurityUserAdminRow } from "@/src/actions/admin-users.types";
 import { isUserBanned } from "@/lib/auth/user-ban-state";
-import { hasModulePermissionOverrides } from "@/lib/security/user-module-permissions";
+import { loadAllUserPermissionRows as loadRbacUserPermissionRows, listAllRoles, loadRolePermissionKeys } from "@/src/lib/rbac/load-rbac-data";
 import {
   validateLastAdminTarget,
   validateSecurityUserBatchPatches,
@@ -29,7 +29,8 @@ import {
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { onUserRoleChangedServer } from "@/src/lib/rbac/on-user-role-changed.server";
 import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
-import type { ProfileRow, UserPermissionRow } from "@/src/types/supabase-tables";
+import { hasModulePermissionOverrides } from "@/lib/security/user-module-permissions";
+import type { ProfileRow, RoleRow, UserPermissionRow } from "@/src/types/supabase-tables";
 
 export type SecurityUserModulePermissionEntry = {
   module: GestionalePermissionModule;
@@ -49,7 +50,7 @@ export type SecurityUserBatchPatch = {
   nome?: string;
   cognome?: string | null;
   username?: string;
-  ruolo?: AppRole;
+  ruolo?: string;
   clienteRef?: string | null;
   modulePermissions?: SecurityUserModulePermissionEntry[] | null;
   clearModulePermissions?: boolean;
@@ -61,6 +62,8 @@ export type ListSecurityUsersPermissionsResult =
       users: SecurityUserPermissionRow[];
       portalSettingsUpdatedAt: string | null;
       permissionRows: UserPermissionRow[];
+      rolePermissionKeysByRole: Record<string, string[]>;
+      assignableRoles: Pick<RoleRow, "key" | "name">[];
     }
   | { ok: false; message: string };
 
@@ -68,28 +71,22 @@ export type BatchUpdateSecurityUsersResult =
   | { ok: true; updatedCount: number; roleChangedUserIds: string[] }
   | { ok: false; message: string };
 
-function roleGrantsClientPortal(role: AppRole): boolean {
-  return hasPermission(role, "viewClientLavorazioni");
+function roleGrantsClientPortal(rolePermissionKeys: string[]): boolean {
+  return rolePermissionKeys.includes("can_access_client_area");
 }
 
-function toPermissionRow(user: SecurityUserAdminRow, permissionRows: UserPermissionRow[]): SecurityUserPermissionRow {
-  const fromRole = roleGrantsClientPortal(user.ruolo);
+function toPermissionRow(
+  user: SecurityUserAdminRow,
+  permissionRows: UserPermissionRow[],
+  rolePermissionKeys: string[],
+): SecurityUserPermissionRow {
+  const fromRole = roleGrantsClientPortal(rolePermissionKeys);
   return {
     ...user,
     clientLavorazioniAccessFromRole: fromRole,
     clientLavorazioniAccess: fromRole,
-    hasModulePermissionOverrides: hasModulePermissionOverrides(user.ruolo, user.id, permissionRows),
+    hasModulePermissionOverrides: hasModulePermissionOverrides(rolePermissionKeys, user.id, permissionRows),
   };
-}
-
-async function loadAllUserPermissionRows(
-  admin: SupabaseClient,
-  userIds: string[],
-): Promise<UserPermissionRow[]> {
-  if (userIds.length === 0) return [];
-  const { data, error } = await admin.from("user_permissions").select(USER_PERMISSIONS_COLUMNS).in("user_id", userIds);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as UserPermissionRow[];
 }
 
 async function deleteUserModulePermissions(admin: SupabaseClient, userId: string): Promise<void> {
@@ -102,6 +99,7 @@ async function applyUserModulePermissions(
   userId: string,
   modulePermissions: SecurityUserModulePermissionEntry[] | null,
   userRole?: AppRole,
+  rolePermissionKeys?: string[],
 ): Promise<boolean> {
   await deleteUserModulePermissions(admin, userId);
   if (!modulePermissions?.length) return true;
@@ -110,15 +108,53 @@ async function applyUserModulePermissions(
     throw new Error(`Il ruolo ${ROLE_LABELS.guest} non ammette override permessi modulo.`);
   }
 
-  const rows = modulePermissions.map((entry) => ({
-    user_id: userId,
-    module: entry.module,
-    can_read: entry.canRead,
-    can_write: entry.canWrite,
-    can_admin: false,
-  }));
+  const { data: perms, error: permErr } = await admin.from("permissions").select("id, key");
+  if (permErr) throw new Error(permErr.message);
+  const permByKey = new Map((perms ?? []).map((p) => [p.key as string, p.id as string]));
 
-  const { error } = await admin.from("user_permissions").upsert(rows, { onConflict: "user_id,module" });
+  const { computeModulePermissionDraft, planModulePermissionPersist } = await import(
+    "@/lib/security/user-module-permissions"
+  );
+  const roleKeys = rolePermissionKeys ?? [];
+  const draft = computeModulePermissionDraft(roleKeys, userId, []).map((row) => {
+    const entry = modulePermissions.find((e) => e.module === row.module);
+    if (!entry) return row;
+    return {
+      ...row,
+      canRead: entry.canRead,
+      canWrite: entry.canRead ? entry.canWrite : false,
+      isCustomized: true,
+      overrideRead:
+        entry.canRead === row.roleCanRead
+          ? ("inherit" as const)
+          : entry.canRead
+            ? ("allow" as const)
+            : ("deny" as const),
+      overrideWrite:
+        entry.canWrite === row.roleCanWrite
+          ? ("inherit" as const)
+          : entry.canWrite
+            ? ("allow" as const)
+            : ("deny" as const),
+    };
+  });
+
+  const plan = planModulePermissionPersist(roleKeys, draft);
+
+  if (plan.deleteAll) return true;
+
+  const rows = plan.overrides
+    .map((o: { permissionKey: string; effect: "allow" | "deny" }) => {
+      const permission_id = permByKey.get(o.permissionKey);
+      if (!permission_id) return null;
+      return { user_id: userId, permission_id, effect: o.effect };
+    })
+    .filter(
+      (r): r is { user_id: string; permission_id: string; effect: "allow" | "deny" } => r != null,
+    );
+
+  if (!rows.length) return true;
+  const { error } = await admin.from("user_permissions").upsert(rows, { onConflict: "user_id,permission_id" });
   if (error) throw new Error(error.message);
   return true;
 }
@@ -146,7 +182,7 @@ export async function listSecurityUsersPermissionsAction(): Promise<ListSecurity
   const userIds = usersRes.users.map((u) => u.id);
   let permissionRows: UserPermissionRow[] = [];
   try {
-    permissionRows = await loadAllUserPermissionRows(serviceAdmin, userIds);
+    permissionRows = await loadRbacUserPermissionRows(serviceAdmin, userIds);
   } catch (e) {
     return {
       ok: false,
@@ -154,8 +190,31 @@ export async function listSecurityUsersPermissionsAction(): Promise<ListSecurity
     };
   }
 
-  const users = usersRes.users.map((u) => toPermissionRow(u, permissionRows));
-  return { ok: true, users, portalSettingsUpdatedAt: row?.updated_at ?? null, permissionRows };
+  const assignableRoles = (await listAllRoles(serviceAdmin))
+    .filter((r) => r.is_active)
+    .map((r) => ({ key: r.key, name: r.name }));
+
+  const uniqueRoles = [
+    ...new Set([...usersRes.users.map((u) => resolveRole(u.ruolo)), ...assignableRoles.map((r) => r.key)]),
+  ];
+  const roleKeysMap = new Map<string, string[]>();
+  await Promise.all(
+    uniqueRoles.map(async (rk) => {
+      roleKeysMap.set(rk, await loadRolePermissionKeys(serviceAdmin, rk));
+    }),
+  );
+
+  const users = usersRes.users.map((u) =>
+    toPermissionRow(u, permissionRows, roleKeysMap.get(resolveRole(u.ruolo)) ?? []),
+  );
+  return {
+    ok: true,
+    users,
+    portalSettingsUpdatedAt: row?.updated_at ?? null,
+    permissionRows,
+    rolePermissionKeysByRole: Object.fromEntries(roleKeysMap),
+    assignableRoles,
+  };
 }
 
 async function writeSecurityBatchLog(
@@ -181,7 +240,7 @@ async function writeSecurityBatchLog(
         .filter((p) => p.ruolo != null)
         .map((p) => ({
           userId: p.userId,
-          from: resolveRole(input.profileById.get(p.userId)?.ruolo),
+          from: resolveRole(input.profileById.get(p.userId)?.role_key),
           to: p.ruolo,
         })),
       compact: `(AGGIORNAMENTO UTENTI, ${input.patches.length} modifiche, ${input.actorName})`,
@@ -312,7 +371,7 @@ export async function batchUpdateSecurityUsersAction(
       }
     }
 
-    const effectiveRole = patch.ruolo != null ? patch.ruolo : resolveRole(profile.ruolo);
+    const effectiveRole = patch.ruolo != null ? patch.ruolo : resolveRole(profile.role_key);
     const effectiveClienteRef =
       patch.clienteRef !== undefined ? patch.clienteRef : normalizeClienteRef(profile.cliente_ref);
     const clienteRefErr = validateClienteAssociationForRole(effectiveRole, effectiveClienteRef, knownClienti);
@@ -331,16 +390,16 @@ export async function batchUpdateSecurityUsersAction(
       }
     }
 
-    const roleChanged = patch.ruolo != null && resolveRole(profile.ruolo) !== patch.ruolo;
+    const roleChanged = patch.ruolo != null && resolveRole(profile.role_key) !== patch.ruolo;
     if (roleChanged) {
-      const prevRole = resolveRole(profile.ruolo);
+      const prevRole = resolveRole(profile.role_key);
       if (prevRole === "admin" && patch.ruolo !== "admin") {
         const lastAdminErr = await validateLastAdminTarget(admin, patch.userId, prevRole, "role_downgrade");
         if (lastAdminErr) return { ok: false, message: lastAdminErr };
       }
       const { error: roleErr } = await admin.rpc("security_set_user_role", {
         p_user_id: patch.userId,
-        p_new_role: patch.ruolo,
+        p_role_key: patch.ruolo,
       });
       if (roleErr) return { ok: false, message: roleErr.message };
 

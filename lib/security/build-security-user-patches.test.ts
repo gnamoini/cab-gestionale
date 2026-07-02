@@ -30,12 +30,18 @@ const saved = [baseUser({ clienteRef: null })];
 const draftWithCliente = [baseUser({ clienteRef: "AMIU Bari" })];
 const draftUnchanged = [baseUser({ clienteRef: null })];
 
-const patches = buildSecurityUserPatches(saved, draftWithCliente, {}, {}, []);
+import { rbacSeedPermissionKeysForRole } from "@/lib/rbac-seed";
+
+const patches = buildSecurityUserPatches(saved, draftWithCliente, {}, {}, [], {
+  cliente: rbacSeedPermissionKeysForRole("cliente"),
+});
 assert.equal(patches.length, 1, "one patch when clienteRef changes");
 assert.equal(patches[0]?.userId, USER_ID, "patch userId");
 assert.equal(patches[0]?.clienteRef, "AMIU Bari", "patch clienteRef");
 
-const noPatches = buildSecurityUserPatches(saved, draftUnchanged, {}, {}, []);
+const noPatches = buildSecurityUserPatches(saved, draftUnchanged, {}, {}, [], {
+  cliente: rbacSeedPermissionKeysForRole("cliente"),
+});
 assert.equal(noPatches.length, 0, "no patch when clienteRef unchanged");
 
 console.log("build-security-user-patches.test.ts OK");

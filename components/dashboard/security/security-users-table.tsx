@@ -189,29 +189,32 @@ type RowEditorProps = {
   row: EditableSecurityUser;
   readOnly: boolean;
   knownClienti?: Set<string>;
-  onRoleChange: (userId: string, ruolo: AppRole) => void;
+  onRoleChange: (userId: string, ruolo: string) => void;
   onPatch: (userId: string, patch: Partial<EditableSecurityUser>) => void;
   density?: "table" | "mobile";
   roleInputClassName?: string;
+  roleSelectItems: { value: string; label: string }[];
 };
 
-const SECURITY_ROLE_SELECT_ITEMS = APP_ROLES.map((role) => ({
-  value: role,
-  label: roleLabel(role),
-}));
-
-function SecurityUserRoleField({ row, readOnly, onRoleChange, roleInputClassName, density = "table" }: RowEditorProps) {
+function SecurityUserRoleField({
+  row,
+  readOnly,
+  onRoleChange,
+  roleInputClassName,
+  roleSelectItems,
+  density = "table",
+}: RowEditorProps) {
   if (readOnly) return <SecurityRoleBadge role={row.ruolo} />;
   return (
     <GlobalSelect
       selectOnly
       variant="default"
       value={row.ruolo}
-      onChange={(v) => onRoleChange(row.id, v as AppRole)}
+      onChange={(v) => onRoleChange(row.id, v)}
       aria-label={`Ruolo ${securityUserDisplayName(row)}`}
       sheetTitle="Seleziona ruolo"
       inputClassName={roleInputClassName ?? securityDenseSelectBase}
-      items={SECURITY_ROLE_SELECT_ITEMS}
+      items={roleSelectItems}
       preserveItemOrder
       showSimilarWarning={false}
       mobileSheet
@@ -312,16 +315,18 @@ function SecurityUserTableRow({
   onEditName,
   onRoleChange,
   onPatch,
+  roleSelectItems,
 }: {
   row: EditableSecurityUser;
   readOnly: boolean;
   knownClienti?: Set<string>;
   onOpenDetail: (userId: string) => void;
   onEditName: (userId: string) => void;
-  onRoleChange: (userId: string, ruolo: AppRole) => void;
+  onRoleChange: (userId: string, ruolo: string) => void;
   onPatch: (userId: string, patch: Partial<EditableSecurityUser>) => void;
+  roleSelectItems: { value: string; label: string }[];
 }) {
-  const editorProps: RowEditorProps = { row, readOnly, knownClienti, onRoleChange, onPatch };
+  const editorProps: RowEditorProps = { row, readOnly, knownClienti, onRoleChange, onPatch, roleSelectItems };
   return (
     <GestionaleListTableRow>
       <td className={`min-w-0 ${securityUsersTableTd}`}>
@@ -357,14 +362,16 @@ function SecurityUserMobileCard({
   onEditName,
   onRoleChange,
   onPatch,
+  roleSelectItems,
 }: {
   row: EditableSecurityUser;
   readOnly: boolean;
   knownClienti?: Set<string>;
   onOpenDetail: (userId: string) => void;
   onEditName: (userId: string) => void;
-  onRoleChange: (userId: string, ruolo: AppRole) => void;
+  onRoleChange: (userId: string, ruolo: string) => void;
   onPatch: (userId: string, patch: Partial<EditableSecurityUser>) => void;
+  roleSelectItems: { value: string; label: string }[];
 }) {
   const associationErr = rowClienteAssociationError(row, knownClienti);
   const isClienteRole = row.ruolo === "cliente";
@@ -374,6 +381,7 @@ function SecurityUserMobileCard({
     knownClienti,
     onRoleChange,
     onPatch,
+    roleSelectItems,
     density: "mobile",
     roleInputClassName: securityDenseSelectBase,
   };
@@ -459,11 +467,12 @@ type Props = {
   loading: boolean;
   readOnly: boolean;
   permissionRows: UserPermissionRow[];
+  assignableRoles?: { key: string; name: string }[];
   knownClienti?: Set<string>;
   currentUserId?: string | null;
   onRowsChange: (rows: EditableSecurityUser[]) => void;
   onOpenDetail: (userId: string) => void;
-  onRoleChange?: (userId: string, ruolo: AppRole) => void;
+  onRoleChange?: (userId: string, ruolo: string) => void;
 };
 
 export function SecurityUsersTable({
@@ -471,6 +480,7 @@ export function SecurityUsersTable({
   loading,
   readOnly,
   permissionRows,
+  assignableRoles,
   knownClienti,
   currentUserId,
   onRowsChange,
@@ -488,6 +498,14 @@ export function SecurityUsersTable({
   const [sortPhase, setSortPhase] = useState<ReportSortPhase>("natural");
   const [editNameUserId, setEditNameUserId] = useState<string | null>(null);
   const [deletePending, setDeletePending] = useState(false);
+
+  const roleSelectItems = useMemo(
+    () =>
+      assignableRoles?.length
+        ? assignableRoles.map((r) => ({ value: r.key, label: r.name }))
+        : APP_ROLES.map((role) => ({ value: role, label: roleLabel(role) })),
+    [assignableRoles],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -556,8 +574,9 @@ export function SecurityUsersTable({
     onRowsChange(rows.map((r) => (r.id === userId ? { ...r, ...patch } : r)));
   }
 
-  function handleRoleChange(userId: string, ruolo: AppRole) {
-    onRowsChange(rows.map((r) => (r.id === userId ? applyRoleToRow(r, ruolo) : r)));
+  function handleRoleChange(userId: string, ruolo: string) {
+    const resolved = resolveRole(ruolo);
+    onRowsChange(rows.map((r) => (r.id === userId ? applyRoleToRow(r, resolved) : r)));
     onRoleChange?.(userId, ruolo);
   }
 
@@ -590,6 +609,7 @@ export function SecurityUsersTable({
     onEditName: setEditNameUserId,
     onRoleChange: handleRoleChange,
     onPatch: patchRow,
+    roleSelectItems,
   };
 
   return (

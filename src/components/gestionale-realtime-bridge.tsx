@@ -192,10 +192,10 @@ export function GestionaleRealtimeBridge() {
           queryClient: qc,
         });
       } else if (table === "profiles") {
-        const newRuolo = payload?.new?.ruolo;
-        const oldRuolo = payload?.old?.ruolo;
+        const newRoleKey = payload?.new?.role_key;
+        const oldRoleKey = payload?.old?.role_key;
         const rowId = payload?.new?.id ?? payload?.old?.id;
-        if (rowId === userIdRef.current && newRuolo !== oldRuolo) {
+        if (rowId === userIdRef.current && newRoleKey !== oldRoleKey) {
           void onUserRoleChangedClient(String(rowId), {
             currentUserId: userIdRef.current ?? undefined,
             refresh,

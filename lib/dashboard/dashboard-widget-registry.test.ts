@@ -28,7 +28,12 @@ const EXPECTED_WIDGETS: Record<string, DashboardWidgetId[]> = {
 };
 
 function visibleIds(role: string, staging: boolean): DashboardWidgetId[] {
-  const modules = buildModuleAccessMap(role, []);
+  const modules = buildModuleAccessMap({
+    userId: "00000000-0000-4000-8000-000000000099",
+    roleKey: role,
+    rolePermissionKeys: [],
+    rows: [],
+  });
   return dashboardWidgetIds(resolveVisibleDashboardWidgets({ modules, staging }));
 }
 

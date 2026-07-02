@@ -129,7 +129,7 @@ function userRowFrom(
     cognome,
     username: profile?.username?.trim() || null,
     email: authUser?.email ?? "",
-    ruolo: resolveRole(profile?.ruolo),
+    ruolo: resolveRole(profile?.role_key),
     clienteRef: normalizeClienteRef(profile?.cliente_ref),
     createdAt: authUser?.created_at ?? profile?.created_at ?? null,
     lastSignInAt: authUser?.last_sign_in_at ?? null,
@@ -234,7 +234,7 @@ export async function createUserByAdminAction(input: CreateUserByAdminInput): Pr
 
   const { data: row, error: verifyErr } = await admin
     .from("profiles")
-    .select("id, nome, ruolo, username")
+    .select("id, nome, role_key, username")
     .eq("id", userId)
     .maybeSingle();
   if (verifyErr || !row) {
@@ -350,13 +350,13 @@ export async function deleteUserByAdminAction(userId: string): Promise<DeleteUse
 
   const { data: profile, error: profileErr } = await admin
     .from("profiles")
-    .select("id, nome, ruolo")
+    .select("id, nome, role_key")
     .eq("id", parsed.userId)
     .maybeSingle();
   if (profileErr) return { ok: false, message: profileErr.message };
   if (!profile) return { ok: false, message: "Profilo non trovato." };
 
-  const targetRole = resolveRole((profile as ProfileRow).ruolo);
+  const targetRole = resolveRole((profile as ProfileRow).role_key);
   const lastAdminErr = await validateLastAdminTarget(admin, parsed.userId, targetRole, "delete");
   if (lastAdminErr) return { ok: false, message: lastAdminErr };
 
@@ -464,13 +464,13 @@ export async function setUserAccountEnabledByAdminAction(input: {
 
   const { data: profile, error: profileErr } = await admin
     .from("profiles")
-    .select("id, nome, ruolo")
+    .select("id, nome, role_key")
     .eq("id", parsed.userId)
     .maybeSingle();
   if (profileErr) return { ok: false, message: profileErr.message };
   if (!profile) return { ok: false, message: "Profilo non trovato." };
 
-  const targetRole = resolveRole((profile as ProfileRow).ruolo);
+  const targetRole = resolveRole((profile as ProfileRow).role_key);
   if (!parsed.enabled) {
     const lastAdminErr = await validateLastAdminTarget(admin, parsed.userId, targetRole, "disable");
     if (lastAdminErr) return { ok: false, message: lastAdminErr };

@@ -1,8 +1,23 @@
 # RBAC matrix — Gestionale CAB
 
-Matrice permessi moduli e capability. RLS Postgres è il controllo autoritativo.
+Matrice permessi moduli e capability. **Postgres è la SSOT runtime** (`roles`, `permissions`, `role_permissions`, `user_roles`, `user_permissions`).
+
+`lib/rbac.ts` / `lib/rbac-seed.ts` contengono solo seed statico per migrazioni e test — **nessun fallback runtime** alla matrice TS.
 
 **Audit completo:** [`audit-phase8-permissions-audit.md`](./audit-phase8-permissions-audit.md)
+
+## Precedenza effettiva
+
+1. **Admin bypass** (SQL + TS resolver)
+2. **Override utente `deny`**
+3. **Override utente `allow`**
+4. **Permessi ruolo** (`role_permissions`, solo allow)
+5. **Default deny**
+
+Funzioni canoniche:
+
+- SQL: `rbac_user_effective_permission`, `user_effective_can`, `rbac_has_capability`
+- TS: `src/lib/rbac/resolve-user-permissions.ts` → snapshot per request
 
 ## Layer difensivi
 
@@ -11,6 +26,11 @@ Matrice permessi moduli e capability. RLS Postgres è il controllo autoritativo.
 3. `GestionaleSectionGate` — modulo per pagina
 4. Service `ensureSectionRead/Write/Delete` — client guard
 5. Supabase RLS — authoritative
+
+## Gestione in UI
+
+- **Sicurezza → Ruoli e matrice**: CRUD ruoli custom + matrice `role_permissions`
+- **Sicurezza → Utenti**: assegnazione `role_key`, override allow/deny per modulo
 
 ## Moduli (`GestionalePermissionModule`)
 
@@ -37,7 +57,7 @@ Matrice permessi moduli e capability. RLS Postgres è il controllo autoritativo.
 | `can_write_operational` | Scrittura moduli operativi |
 | `can_manage_settings` | Impostazioni globali |
 | `can_manage_security` | Utenti e permessi |
-| `editWorkOrders` | Lavorazioni, schede (non preventivi write — allineato EC-006) |
+| `can_access_client_area` | Portale clienti |
 
 ## Portale clienti
 
@@ -47,6 +67,8 @@ Accesso via `userHasClientLavorazioniAccess` + allowlist in `app_settings`.
 
 ```bash
 npm run audit:rls
+npx tsx lib/regression/rbac-data-driven-resolver.test.ts
 npx tsx lib/regression/security-rbac-policy.test.ts
 npx tsx lib/regression/permissions-role-matrix.test.ts
+npx tsx lib/regression/rbac-route-matrix.test.ts
 ```

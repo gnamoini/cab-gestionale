@@ -1,5 +1,3 @@
-import "server-only";
-
 import { isOperatorGlobalSettingsEnabled } from "@/lib/permissions/operator-global-settings";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
 import { validateProductionEnv } from "@/lib/ops/validate-production-env";

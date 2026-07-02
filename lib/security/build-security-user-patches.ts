@@ -1,6 +1,6 @@
-import { buildInitialModuleDraft } from "@/lib/security/user-module-permissions";
 import { resolveRole } from "@/lib/auth/rbac";
 import {
+  buildInitialModuleDraft,
   modulePermissionsPayloadFromDraft,
   snapshotModuleDraft,
   type ModulePermissionDraftRow,
@@ -34,6 +34,7 @@ export function buildSecurityUserPatches(
   savedModuleSnapshots: Record<string, string>,
   draftModuleDrafts: Record<string, ModulePermissionDraftRow[]>,
   permissionRows: UserPermissionRow[],
+  rolePermissionKeysByRole: Record<string, string[]>,
 ): SecurityUserBatchPatch[] {
   const savedById = new Map(saved.map((r) => [r.id, r]));
   const patches: SecurityUserBatchPatch[] = [];
@@ -71,13 +72,17 @@ export function buildSecurityUserPatches(
       patch.clienteRef = row.clienteRef ?? null;
       dirty = true;
     }
+    const roleKeys = rolePermissionKeysByRole[resolveRole(orig.ruolo)] ?? [];
     const savedModSnap =
       savedModuleSnapshots[row.id] ??
-      snapshotModuleDraft(buildInitialModuleDraft(orig.ruolo, orig.id, permissionRows));
+      snapshotModuleDraft(buildInitialModuleDraft(roleKeys, orig.id, permissionRows));
     const draftMod = draftModuleDrafts[row.id];
     const draftModSnap = draftMod ? snapshotModuleDraft(draftMod) : savedModSnap;
     if (!roleChanged && draftModSnap !== savedModSnap && draftMod) {
-      patch.modulePermissions = modulePermissionsPayloadFromDraft(resolveRole(row.ruolo), draftMod);
+      patch.modulePermissions = modulePermissionsPayloadFromDraft(
+        rolePermissionKeysByRole[resolveRole(row.ruolo)] ?? roleKeys,
+        draftMod,
+      );
       dirty = true;
     }
 

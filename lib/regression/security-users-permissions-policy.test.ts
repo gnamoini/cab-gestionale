@@ -55,7 +55,7 @@ assert.match(drawerSrc, /Permessi pagine/);
 
 assert.match(editorSrc, /onRestoreFromRole/);
 assert.match(editorSrc, /ROLE_MODULE_READONLY/);
-assert.match(editorSrc, /Accesso completo/);
+assert.match(editorSrc, /Completo/);
 assert.match(editorSrc, /Dashboard, Configurazione, Sicurezza e Portale Clienti/);
 
 assert.match(batchSrc, /ROLE_LABELS\.guest.*non ammette override permessi modulo/);
