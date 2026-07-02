@@ -8,7 +8,7 @@ import type { User } from "@supabase/supabase-js";
 
 type ProfileAuthSlice = Pick<
   ProfileRow,
-  "nome" | "cognome" | "username" | "ruolo" | "cliente_ref" | "created_at"
+  "nome" | "cognome" | "username" | "role_key" | "cliente_ref" | "created_at"
 > | null;
 
 function profileFieldsFromRow(profile: ProfileAuthSlice): {
@@ -38,7 +38,8 @@ export function mapSupabaseUserToPublicAuthUser(
     profileNome: composedProfileName,
     userMetadata: { ...sessionUser.app_metadata, ...sessionUser.user_metadata },
   });
-  const ruoloFromProfile = typeof profile?.ruolo === "string" ? profile.ruolo : null;
+  const roleKey = typeof profile?.role_key === "string" ? profile.role_key : null;
+  const ruolo = resolveRole(roleKey) as RuoloUtente;
   return {
     id: sessionUser.id,
     email: sessionUser.email ?? "",
@@ -47,7 +48,8 @@ export function mapSupabaseUserToPublicAuthUser(
     cognome,
     username,
     createdAt,
-    ruolo: resolveRole(ruoloFromProfile) as RuoloUtente,
+    roleKey: ruolo,
+    ruolo,
     clienteRef: normalizeClienteRef(profile?.cliente_ref),
   };
 }
@@ -65,6 +67,7 @@ export function mapDegradedPublicAuthUser(sessionUser: User): PublicAuthUser {
     cognome: null,
     username: null,
     createdAt: null,
+    roleKey: "guest",
     ruolo: "guest",
     clienteRef: null,
   };

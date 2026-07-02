@@ -13,8 +13,9 @@ import {
   type CanAccessPageOptions,
   type PermissionKey,
   type RbacSection,
+  type Capability,
 } from "@/lib/auth/rbac";
-import { hasCapability, type Capability } from "@/lib/rbac";
+import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 
 export function useRbac() {
@@ -33,8 +34,9 @@ export function useRbac() {
     [rbacUser, rbacCtx],
   );
   const hasCapabilityFn = useCallback(
-    (capability: Capability) => hasCapability(rbacUser, capability, rbacCtx),
-    [rbacUser, rbacCtx],
+    (capability: Capability) =>
+      snapshot?.resolved ? hasResolvedCapability(snapshot.resolved, capability) : false,
+    [snapshot?.resolved],
   );
   const canReadFn = useCallback(
     (section: RbacSection) => canRead(rbacUser, section, rbacCtx),

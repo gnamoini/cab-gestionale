@@ -1,42 +1,65 @@
+import type { Capability } from "@/lib/rbac";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
-import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
-import type { RuoloUtente, UserPermissionRow } from "@/src/types/supabase-tables";
-import { resolveRole, roleModuleDefault } from "@/lib/rbac";
+import {
+  resolveUserPermissions,
+  type ResolvedPermissions,
+  type UserPermissionOverrideInput,
+} from "@/src/lib/rbac/resolve-user-permissions";
+import { resolveRole } from "@/lib/auth/rbac";
+import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
 export type EffectiveModulePermission = {
   canRead: boolean;
   canWrite: boolean;
 };
 
-function isGestionalePermissionModule(module: string): module is GestionalePermissionModule {
-  return (GESTIONALE_PERMISSION_MODULES as readonly string[]).includes(module);
+export type BuildEffectivePermissionsInput = {
+  userId: string;
+  roleKey: string | null | undefined;
+  rolePermissionKeys?: string[];
+  userOverrides?: UserPermissionOverrideInput[];
+  permissionRows?: UserPermissionRow[];
+};
+
+function overridesFromRows(rows: UserPermissionRow[] | undefined): UserPermissionOverrideInput[] {
+  const out: UserPermissionOverrideInput[] = [];
+  for (const row of rows ?? []) {
+    const key = row.permissions?.key;
+    if (key && (row.effect === "allow" || row.effect === "deny")) {
+      out.push({ permissionKey: key, effect: row.effect });
+    }
+  }
+  return out;
 }
 
-/** RBAC_PRECEDENCE steps 2→3: override user_permissions → roleModuleDefault. */
+function mergeUserOverrides(input: BuildEffectivePermissionsInput): UserPermissionOverrideInput[] {
+  return [...(input.userOverrides ?? []), ...overridesFromRows(input.permissionRows)];
+}
+
+/** Build resolved permissions from DB rows. Fail-closed if rolePermissionKeys empty. */
 export function buildEffectivePermissionsByModule(
-  ruolo: RuoloUtente | null | undefined,
-  rows: UserPermissionRow[] | undefined,
+  input: BuildEffectivePermissionsInput,
 ): Record<GestionalePermissionModule, EffectiveModulePermission> {
-  const baseRole = resolveRole(ruolo);
-  const rowByModule = new Map<GestionalePermissionModule, UserPermissionRow>();
-  for (const row of rows ?? []) {
-    if (isGestionalePermissionModule(row.module)) {
-      rowByModule.set(row.module, row);
-    }
-  }
+  const roleKey = resolveRole(input.roleKey);
+  const resolved = resolveUserPermissions({
+    userId: input.userId,
+    roleKey,
+    rolePermissionKeys: input.rolePermissionKeys ?? [],
+    userOverrides: mergeUserOverrides(input),
+  });
+  return resolved.modules;
+}
 
-  const out = {} as Record<GestionalePermissionModule, EffectiveModulePermission>;
-  for (const m of GESTIONALE_PERMISSION_MODULES) {
-    const row = rowByModule.get(m);
-    if (row) {
-      out[m] = {
-        canRead: row.can_read,
-        canWrite: row.can_write,
-      };
-    } else {
-      out[m] = roleModuleDefault(baseRole, m);
-    }
-  }
+export function buildResolvedPermissions(input: BuildEffectivePermissionsInput): ResolvedPermissions {
+  const roleKey = resolveRole(input.roleKey);
+  return resolveUserPermissions({
+    userId: input.userId,
+    roleKey,
+    rolePermissionKeys: input.rolePermissionKeys ?? [],
+    userOverrides: mergeUserOverrides(input),
+  });
+}
 
-  return out;
+export function capabilitiesFromResolved(resolved: ResolvedPermissions): Record<Capability, boolean> {
+  return resolved.capabilities;
 }

@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { permissionsService } from "@/src/services/permissions.service";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { buildEffectivePermissionsByModule, type EffectiveModulePermission } from "@/src/lib/permissions/effective-permissions";
 import {
@@ -12,13 +13,32 @@ import { navHrefToSection, canWriteAnyOperational, resolveRole, type RbacSection
 import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { QK } from "@/src/lib/react-query/invalidate-related";
-import { permissionsService } from "@/src/services/permissions.service";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
 async function fetchMyPermissions(userId: string | undefined): Promise<UserPermissionRow[]> {
   const r = await permissionsService.listMyPermissions(userId);
   if (!r.success) throw new Error(r.error ?? "Errore permessi");
   return r.data ?? [];
+}
+
+/** Role permission keys from DB (SSOT). */
+export function useRolePermissionKeysQuery(): UseQueryResult<string[], Error> {
+  const { user, status } = useAuth();
+  return useQuery({
+    queryKey: [...QK.userPermissions, "role-keys", user?.id ?? "anon"] as const,
+    queryFn: async () => {
+      const r = await permissionsService.listMyRolePermissionKeys(user?.id);
+      if (!r.success) throw new Error(r.error ?? "Errore permessi ruolo");
+      return r.data ?? [];
+    },
+    enabled: isAuthSessionEstablished(status) && !!user?.id,
+    staleTime: Number.POSITIVE_INFINITY,
+    gcTime: 86_400_000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    retry: 1,
+  });
 }
 
 /** Una sola fetch per sessione (invalidare esplicitamente dopo cambio permessi admin). */
@@ -91,9 +111,10 @@ export function usePermissionsSnapshot(): PermissionsSnapshot {
   const rbac = useRbac();
   const { user, status } = useAuth();
   const permsQuery = useUserPermissionsQuery();
+  const roleKeysQuery = useRolePermissionKeysQuery();
   const authLoading = status === "loading";
-  const moduleLoading = authLoading || permsQuery.isLoading;
-  const ruolo = user?.ruolo;
+  const moduleLoading =
+    authLoading || permsQuery.isLoading || roleKeysQuery.isLoading;
 
   const global = useMemo(
     () => buildGlobalPermissions(user, rbac, authLoading),
@@ -108,13 +129,18 @@ export function usePermissionsSnapshot(): PermissionsSnapshot {
   );
 
   const modules = useMemo(() => {
-    const map = buildEffectivePermissionsByModule(ruolo, permsQuery.data);
+    const map = buildEffectivePermissionsByModule({
+      userId: user?.id ?? "",
+      roleKey: user?.roleKey ?? user?.ruolo,
+      rolePermissionKeys: roleKeysQuery.data ?? [],
+      permissionRows: permsQuery.data,
+    });
     const out = {} as Record<GestionalePermissionModule, ModulePermission>;
     for (const mod of GESTIONALE_PERMISSION_MODULES) {
       out[mod] = { ...map[mod], isLoading: moduleLoading };
     }
     return out;
-  }, [ruolo, permsQuery.data, moduleLoading]);
+  }, [user?.id, user?.roleKey, user?.ruolo, roleKeysQuery.data, moduleLoading]);
 
   return useMemo(() => ({ global, modules }), [global, modules]);
 }
@@ -146,6 +172,7 @@ export function useNavHrefPermission(href: string): { canRead: boolean; canWrite
   const rbac = useRbac();
   const { user, status } = useAuth();
   const permsQuery = useUserPermissionsQuery();
+  const roleKeysQuery = useRolePermissionKeysQuery();
   const moduleFromHref = gestionaleNavHrefToModule(href);
   const section = navHrefToSection(href);
 
@@ -156,12 +183,21 @@ export function useNavHrefPermission(href: string): { canRead: boolean; canWrite
 
     const mod = moduleFromHref ?? SECTION_TO_MODULE[section];
     if (mod) {
-      const map = buildEffectivePermissionsByModule(user?.ruolo, permsQuery.data);
+      const map = buildEffectivePermissionsByModule({
+        userId: user?.id ?? "",
+        roleKey: user?.roleKey ?? user?.ruolo,
+        rolePermissionKeys: roleKeysQuery.data ?? [],
+        permissionRows: permsQuery.data,
+      });
       const row = map[mod];
       return {
         canRead: row.canRead,
         canWrite: row.canWrite,
-        isLoading: rbac.isLoading || status === "loading" || permsQuery.isLoading,
+        isLoading:
+          rbac.isLoading ||
+          status === "loading" ||
+          permsQuery.isLoading ||
+          roleKeysQuery.isLoading,
       };
     }
 
@@ -177,7 +213,11 @@ export function useNavHrefPermission(href: string): { canRead: boolean; canWrite
     rbac.isLoading,
     rbac.canRead,
     rbac.canWrite,
+    user?.id,
+    user?.roleKey,
     user?.ruolo,
+    roleKeysQuery.data,
+    roleKeysQuery.isLoading,
     permsQuery.data,
     permsQuery.isLoading,
     status,

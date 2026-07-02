@@ -14,7 +14,8 @@ export async function resolveServerEffectivePermissions(): Promise<EffectivePerm
 
   return resolveEffectivePermissions({
     userId: session.user.id,
-    ruolo: session.user.ruolo,
+    roleKey: session.user.roleKey ?? session.user.ruolo,
+    rolePermissionKeys: session.rolePermissionKeys,
     permissionRows: session.permissions,
     pilotDbEnabled,
   });

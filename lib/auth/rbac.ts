@@ -9,13 +9,17 @@ import {
   type CanonicalRole,
   type Capability,
   type RbacEvaluationContext,
-  hasCapability,
   RBAC_DENIED_MESSAGE,
   resolveCanonicalRole,
   resolveRole,
   ROLE_LABELS,
-  roleModuleDefault,
 } from "@/lib/rbac";
+import {
+  canReadModule as resolvedCanReadModule,
+  canWriteModule as resolvedCanWriteModule,
+  hasResolvedCapability,
+} from "@/src/lib/rbac/resolve-user-permissions";
+import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 
 export {
   CANONICAL_ROLES,
@@ -23,15 +27,18 @@ export {
   type CanonicalRole,
   type Capability,
   type RbacEvaluationContext,
-  hasCapability,
   RBAC_DENIED_MESSAGE,
   resolveCanonicalRole,
   resolveRole,
   ROLE_LABELS,
-  roleModuleDefault,
 };
 export const APP_ROLES = CANONICAL_ROLES;
 export const normalizeRole = resolveRole;
+
+function capFromCtx(ctx: RbacEvaluationContext | undefined, cap: Capability): boolean {
+  if (ctx?.resolved) return hasResolvedCapability(ctx.resolved, cap);
+  return false;
+}
 
 export type PermissionKey =
   | "manageUsers"
@@ -92,38 +99,35 @@ const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>
   ordini_fornitori: "ordini_fornitori",
 };
 
-function moduleSectionAccess(user: RbacUser, section: RbacSection): SectionAccess {
+function moduleSectionAccess(section: RbacSection, ctx?: RbacEvaluationContext): SectionAccess {
   const module = SECTION_TO_MODULE[section];
-  if (!module) {
+  if (!module || !ctx?.resolved) {
     return { read: false, write: false, delete: false };
   }
-  const perm = roleModuleDefault(resolveRole(user), module);
-  return {
-    read: perm.canRead,
-    write: perm.canWrite,
-    delete: perm.canWrite,
-  };
+  const read = resolvedCanReadModule(ctx.resolved, module);
+  const write = resolvedCanWriteModule(ctx.resolved, module);
+  return { read, write, delete: write };
 }
 
-function sectionAccess(user: RbacUser, section: RbacSection, ctx?: RbacEvaluationContext): SectionAccess {
+function sectionAccess(_user: RbacUser, section: RbacSection, ctx?: RbacEvaluationContext): SectionAccess {
   if (section === "impostazioni") {
-    const s = hasCapability(user, "can_manage_settings", ctx);
+    const s = capFromCtx(ctx, "can_manage_settings");
     return { read: s, write: s, delete: s };
   }
   if (section === "security") {
-    const s = hasCapability(user, "can_manage_security", ctx);
+    const s = capFromCtx(ctx, "can_manage_security");
     return { read: s, write: s, delete: s };
   }
   if (section === "lavorazioni_clienti") {
-    const r = hasCapability(user, "can_access_client_area", ctx);
+    const r = capFromCtx(ctx, "can_access_client_area");
     return { read: r, write: false, delete: false };
   }
   if (section === "dashboard") {
-    const read = hasCapability(user, "can_read_operational", ctx);
+    const read = capFromCtx(ctx, "can_read_operational");
     return { read, write: false, delete: false };
   }
   if (SECTION_TO_MODULE[section]) {
-    return moduleSectionAccess(user, section);
+    return moduleSectionAccess(section, ctx);
   }
   return { read: false, write: false, delete: false };
 }
@@ -133,9 +137,9 @@ export function hasPermission(user: RbacUser, permission: PermissionKey, ctx?: R
   switch (permission) {
     case "manageUsers":
     case "manageSecurity":
-      return hasCapability(user, "can_manage_security", ctx);
+      return capFromCtx(ctx, "can_manage_security");
     case "manageSettings":
-      return hasCapability(user, "can_manage_settings", ctx);
+      return capFromCtx(ctx, "can_manage_settings");
     case "editInventory":
       return canWrite(user, "magazzino", ctx);
     case "editWorkOrders":
@@ -145,13 +149,13 @@ export function hasPermission(user: RbacUser, permission: PermissionKey, ctx?: R
     case "uploadDocuments":
       return canWrite(user, "documenti", ctx);
     case "deleteRecords":
-      return hasCapability(user, "can_write_operational", ctx) && resolveRole(user) !== "guest";
+      return capFromCtx(ctx, "can_write_operational") && resolveRole(user) !== "guest";
     case "viewReports":
       return canRead(user, "report", ctx);
     case "viewAuditLogs":
-      return hasCapability(user, "can_manage_security", ctx);
+      return capFromCtx(ctx, "can_manage_security");
     case "viewClientLavorazioni":
-      return hasCapability(user, "can_access_client_area", ctx);
+      return capFromCtx(ctx, "can_access_client_area");
     default:
       return false;
   }
@@ -170,11 +174,12 @@ export function canDelete(user: RbacUser, section: RbacSection, ctx?: RbacEvalua
 }
 
 export function resolveClientLavorazioniPortalAccess(
-  role: string | null | undefined,
+  _role: string | null | undefined,
   _userId?: string | null | undefined,
   _settingsEnabledUserIds?: string[],
+  ctx?: RbacEvaluationContext,
 ): boolean {
-  return hasPermission(role, "viewClientLavorazioni");
+  return capFromCtx(ctx, "can_access_client_area");
 }
 
 export function isClienteRole(user: RbacUser): boolean {
@@ -238,24 +243,14 @@ export function navHrefToSection(href: string): RbacSection | null {
   return pathnameToSection(href);
 }
 
-export type GestionalePermissionModule =
-  | "magazzino"
-  | "preventivi"
-  | "lavorazioni"
-  | "mezzi"
-  | "report"
-  | "documenti"
-  | "dipendenti"
-  | "fatturazione"
-  | "ddt"
-  | "ordini_fornitori";
+export type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 
 export function canReadModule(
   user: RbacUser,
   module: GestionalePermissionModule,
   ctx?: RbacEvaluationContext,
 ): boolean {
-  return canRead(user, SECTION_TO_MODULE[module] as RbacSection, ctx);
+  return modulePermissionForRole(user, module, ctx).canRead;
 }
 
 export function canWriteModule(
@@ -263,16 +258,19 @@ export function canWriteModule(
   module: GestionalePermissionModule,
   ctx?: RbacEvaluationContext,
 ): boolean {
-  return canWrite(user, SECTION_TO_MODULE[module] as RbacSection, ctx);
+  return modulePermissionForRole(user, module, ctx).canWrite;
 }
 
 export function modulePermissionForRole(
-  user: RbacUser,
+  _user: RbacUser,
   module: GestionalePermissionModule,
-  _ctx?: RbacEvaluationContext,
+  ctx?: RbacEvaluationContext,
 ): { canRead: boolean; canWrite: boolean } {
-  const d = roleModuleDefault(resolveRole(user), module);
-  return { canRead: d.canRead, canWrite: d.canWrite };
+  if (!ctx?.resolved) return { canRead: false, canWrite: false };
+  return {
+    canRead: resolvedCanReadModule(ctx.resolved, module),
+    canWrite: resolvedCanWriteModule(ctx.resolved, module),
+  };
 }
 
 export function isReadOnlyRole(user: RbacUser): boolean {
@@ -280,8 +278,8 @@ export function isReadOnlyRole(user: RbacUser): boolean {
   return role === "guest" || role === "cliente";
 }
 
-export function canWriteAnyOperational(user: RbacUser, ctx?: RbacEvaluationContext): boolean {
-  return hasCapability(user, "can_write_operational", ctx);
+export function canWriteAnyOperational(_user: RbacUser, ctx?: RbacEvaluationContext): boolean {
+  return capFromCtx(ctx, "can_write_operational");
 }
 
 export function isPathAllowedForCliente(pathname: string): boolean {

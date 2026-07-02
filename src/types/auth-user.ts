@@ -11,6 +11,9 @@ export type PublicAuthUser = {
   cognome: string | null;
   username: string | null;
   createdAt: string | null;
+  /** profiles.role_key — ruolo canonico. */
+  roleKey: RuoloUtente;
+  /** @deprecated Alias di roleKey */
   ruolo: RuoloUtente;
   /** Label cliente (`mezzi.cliente`) per portale e RLS. */
   clienteRef: string | null;

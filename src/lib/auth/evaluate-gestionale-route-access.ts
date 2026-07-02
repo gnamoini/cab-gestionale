@@ -1,9 +1,11 @@
 import {
   canAccessPage,
   pathnameToSection,
+  resolveRole,
   type CanAccessPageOptions,
   type RbacUser,
 } from "@/lib/auth/rbac";
+import { rbacSeedPermissionKeysForRole } from "@/lib/rbac-seed";
 import type { RbacEvaluationContext } from "@/lib/rbac";
 import { canAccessRoute } from "@/src/lib/auth/can-access-route";
 import {
@@ -36,12 +38,18 @@ export function evaluateGestionaleRouteAccess(input: EvaluateGestionaleRouteAcce
 
   const snapshot =
     input.userId != null
-      ? resolveEffectivePermissions({
-          userId: input.userId,
-          ruolo: typeof input.user === "object" && input.user != null ? input.user.ruolo : input.user,
-          permissionRows: input.permissionRows ?? [],
-          pilotDbEnabled,
-        })
+      ? (() => {
+          const roleKey = resolveRole(
+            typeof input.user === "object" && input.user != null ? input.user.ruolo : input.user,
+          );
+          return resolveEffectivePermissions({
+            userId: input.userId,
+            roleKey,
+            rolePermissionKeys: rbacSeedPermissionKeysForRole(roleKey),
+            permissionRows: input.permissionRows ?? [],
+            pilotDbEnabled,
+          });
+        })()
       : null;
 
   const opts: CanAccessPageOptions | undefined =

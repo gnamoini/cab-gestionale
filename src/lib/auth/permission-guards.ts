@@ -4,7 +4,8 @@ import { userHasClientLavorazioniAccess } from "@/lib/lavorazioni/client-portal-
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { moduleAllows, type ModulePermissionOp } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
-import { hasCapability, RBAC_DENIED_MESSAGE, type Capability } from "@/lib/rbac";
+import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
+import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
 import type { RbacEvaluationContext } from "@/lib/rbac";
 import { resolveRole, canRead, canWrite, canDelete, hasPermission, type PermissionKey, type RbacSection } from "@/lib/auth/rbac";
 import { fetchClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/fetch-client-effective-permissions";
@@ -63,7 +64,9 @@ export async function ensurePermission(permission: PermissionKey): Promise<Servi
 
 /** Allineato a RLS `can_write_operational` (promemoria dashboard, ecc.). */
 export async function ensureOperationalWrite(): Promise<ServiceResult<true>> {
-  return ensureWithRoleResolution((role, ctx) => hasCapability(role, "can_write_operational", ctx));
+  return ensureWithRoleResolution((_role, ctx) =>
+    ctx?.resolved ? hasResolvedCapability(ctx.resolved, "can_write_operational") : false,
+  );
 }
 
 export async function ensurePermissionOrError(permission: PermissionKey): Promise<void> {

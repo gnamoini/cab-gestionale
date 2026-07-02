@@ -7,6 +7,7 @@ import { readClientEffectivePermissionsSnapshotCache, readAuthRoleHint } from "@
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
+import { loadRolePermissionKeys } from "@/src/lib/rbac/load-rbac-data";
 import {
   OPERATOR_GLOBAL_SETTINGS_KEY,
   OPERATOR_GLOBAL_SETTINGS_MODULE,
@@ -45,8 +46,11 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
 
   try {
     const [{ data: prof }, { data: permRows }, { data: settingsRow }] = await Promise.all([
-      sb.from("profiles").select("ruolo").eq("id", userId).maybeSingle(),
-      sb.from("user_permissions").select("user_id, module, can_read, can_write, can_admin").eq("user_id", userId),
+      sb.from("profiles").select("role_key").eq("id", userId).maybeSingle(),
+      sb
+        .from("user_permissions")
+        .select("user_id, permission_id, effect, permissions(key, module, action)")
+        .eq("user_id", userId),
       sb
         .from("app_settings")
         .select("value")
@@ -55,15 +59,18 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
         .maybeSingle(),
     ]);
 
-    let ruolo = typeof prof?.ruolo === "string" ? prof.ruolo : null;
+    let roleKey = typeof prof?.role_key === "string" ? prof.role_key : null;
     const cachedAfterFetch = readClientEffectivePermissionsSnapshotCache();
-    if (!ruolo && cachedAfterFetch?.userId === userId && cachedAfterFetch.role !== "guest") {
-      ruolo = cachedAfterFetch.role;
+    if (!roleKey && cachedAfterFetch?.userId === userId && cachedAfterFetch.role !== "guest") {
+      roleKey = cachedAfterFetch.roleKey;
     }
-    if (!ruolo) {
+    if (!roleKey) {
       const hint = readAuthRoleHint();
-      if (hint?.userId === userId) ruolo = hint.ruolo;
+      if (hint?.userId === userId) roleKey = hint.ruolo;
     }
+    if (!roleKey) roleKey = "guest";
+
+    const rolePermissionKeys = await loadRolePermissionKeys(sb, roleKey);
 
     const pilotDbEnabled = readOperatorGlobalSettingsDbEnabledFromRows(
       settingsRow
@@ -73,8 +80,9 @@ export async function fetchClientEffectivePermissionsSnapshot(): Promise<Effecti
 
     const snap = resolveEffectivePermissions({
       userId,
-      ruolo,
-      permissionRows: (permRows ?? []) as UserPermissionRow[],
+      roleKey,
+      rolePermissionKeys,
+      permissionRows: (permRows ?? []) as unknown as UserPermissionRow[],
       pilotDbEnabled,
     });
     trackRuntimeEvent(RuntimeEvents.rbacResolveSuccess, {

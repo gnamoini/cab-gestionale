@@ -6,6 +6,7 @@ export type ServerAuthSnapshot = {
   user: PublicAuthUser | null;
   session: { expiresAt: number | null };
   permissions: UserPermissionRow[];
+  rolePermissionKeys: string[];
   configurationError: string | null;
 };
 
@@ -13,5 +14,6 @@ export const EMPTY_SERVER_AUTH_SNAPSHOT: ServerAuthSnapshot = {
   user: null,
   session: { expiresAt: null },
   permissions: [],
+  rolePermissionKeys: [],
   configurationError: null,
 };

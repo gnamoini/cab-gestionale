@@ -10,7 +10,7 @@ export async function verifyClientePortalScopeServer(): Promise<boolean> {
   } = await sb.auth.getUser();
   if (!user?.id) return false;
 
-  const { data: prof } = await sb.from("profiles").select("ruolo, cliente_ref").eq("id", user.id).maybeSingle();
-  if (resolveRole(prof?.ruolo) !== "cliente") return true;
+  const { data: prof } = await sb.from("profiles").select("role_key, cliente_ref").eq("id", user.id).maybeSingle();
+  if (resolveRole(prof?.role_key) !== "cliente") return true;
   return !!normalizeClienteRef(prof?.cliente_ref);
 }

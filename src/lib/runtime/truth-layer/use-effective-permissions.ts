@@ -4,7 +4,7 @@ import { useEffect, useMemo } from "react";
 import { cabDevWarn } from "@/src/lib/observability/dev-warn";
 import { useAuth } from "@/context/auth-context";
 import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
-import { useUserPermissionsQuery } from "@/src/hooks/use-permissions";
+import { useUserPermissionsQuery, useRolePermissionKeysQuery } from "@/src/hooks/use-permissions";
 import { publishClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
@@ -19,22 +19,26 @@ export function useEffectivePermissions(): {
   const { user, status } = useAuth();
   const operatorPilot = useOperatorGlobalSettings();
   const permsQuery = useUserPermissionsQuery();
+  const roleKeysQuery = useRolePermissionKeysQuery();
 
   const isLoading =
     status === "loading" ||
-    (Boolean(user?.id) && permsQuery.isLoading && permsQuery.fetchStatus !== "idle" && !permsQuery.data);
+    (Boolean(user?.id) &&
+      ((permsQuery.isLoading && permsQuery.fetchStatus !== "idle" && !permsQuery.data) ||
+        (roleKeysQuery.isLoading && roleKeysQuery.fetchStatus !== "idle" && !roleKeysQuery.data)));
 
   const snapshot = useMemo(() => {
     if (!user?.id) return EMPTY_SNAPSHOT;
     const snap = resolveEffectivePermissions({
       userId: user.id,
-      ruolo: user.ruolo,
+      roleKey: user.roleKey ?? user.ruolo,
+      rolePermissionKeys: roleKeysQuery.data ?? [],
       permissionRows: permsQuery.data,
       pilotDbEnabled: operatorPilot.dbEnabled,
     });
     publishClientEffectivePermissionsSnapshot(snap);
     return snap;
-  }, [user?.id, user?.ruolo, permsQuery.data, operatorPilot.dbEnabled]);
+  }, [user?.id, user?.roleKey, user?.ruolo, roleKeysQuery.data, permsQuery.data, operatorPilot.dbEnabled]);
 
   useEffect(() => {
     /* snapshot già pubblicato in useMemo; effect mantenuto per compat hot reload */

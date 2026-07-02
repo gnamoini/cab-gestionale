@@ -56,16 +56,17 @@ export function computeModulePermissionDraft(
   const userRows = rowsForUser(allPermissionRows, userId);
   const byModule = new Map<GestionalePermissionModule, UserPermissionRow>();
   for (const row of userRows) {
-    if ((GESTIONALE_PERMISSION_MODULES as readonly string[]).includes(row.module)) {
-      byModule.set(row.module as GestionalePermissionModule, row);
+    const mod = row.module;
+    if (mod && (GESTIONALE_PERMISSION_MODULES as readonly string[]).includes(mod)) {
+      byModule.set(mod as GestionalePermissionModule, row);
     }
   }
 
   return GESTIONALE_PERMISSION_MODULES.map((module) => {
     const roleDef = roleDefaultForModule(role, module);
     const dbRow = byModule.get(module);
-    const canRead = dbRow ? dbRow.can_read : roleDef.canRead;
-    const canWrite = dbRow ? dbRow.can_write : roleDef.canWrite;
+    const canRead = dbRow ? Boolean(dbRow.can_read) : roleDef.canRead;
+    const canWrite = dbRow ? Boolean(dbRow.can_write) : roleDef.canWrite;
     const isCustomized =
       dbRow != null &&
       (dbRow.can_read !== roleDef.canRead || dbRow.can_write !== roleDef.canWrite);

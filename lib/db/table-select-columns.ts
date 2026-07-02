@@ -4,7 +4,7 @@
  */
 
 export const PROFILES_COLUMNS =
-  "id, nome, cognome, username, ruolo, cliente_ref, created_at, updated_at" as const;
+  "id, nome, cognome, username, role_key, cliente_ref, created_at, updated_at" as const;
 
 export const LAVORAZIONI_COLUMNS =
   "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice, target_type, attrezzatura_id" as const;
@@ -129,7 +129,7 @@ export const APP_SETTINGS_AUDIT_COLUMNS =
   "id, module, key, old_value, new_value, updated_by, updated_at" as const;
 
 export const USER_PERMISSIONS_COLUMNS =
-  "user_id, module, can_read, can_write, can_admin" as const;
+  "user_id, permission_id, effect, created_at, updated_at" as const;
 
 export const AUTH_LOGS_COLUMNS =
   "id, user_id, email, action, ip, user_agent, created_at" as const;

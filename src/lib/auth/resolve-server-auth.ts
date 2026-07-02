@@ -16,6 +16,7 @@ import {
 import type { ServerAuthSnapshot } from "@/src/lib/auth/server-auth-types";
 import { readProxyForwardedAuthSnapshot } from "@/src/lib/auth/proxy-auth-snapshot-header";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
+import { loadRolePermissionKeys, loadUserPermissionOverrides } from "@/src/lib/rbac/load-rbac-data";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
 
 type CookieLike = { name: string; value: string };
@@ -70,10 +71,10 @@ async function fetchServerAuthSnapshotWithClient(
     sessionWrap.session?.expires_at != null ? Math.floor(sessionWrap.session.expires_at) : null;
 
   const [{ data: prof, error: profErr }, { data: permRows, error: permErr }] = await Promise.all([
-    supabase.from("profiles").select("nome, cognome, username, ruolo, cliente_ref, created_at").eq("id", authUser.id).maybeSingle(),
+    supabase.from("profiles").select("nome, cognome, username, role_key, cliente_ref, created_at").eq("id", authUser.id).maybeSingle(),
     supabase
       .from("user_permissions")
-      .select("user_id, module, can_read, can_write, can_admin")
+      .select("user_id, permission_id, effect, permissions(key, module, action)")
       .eq("user_id", authUser.id),
   ]);
 
@@ -82,6 +83,14 @@ async function fetchServerAuthSnapshotWithClient(
   }
   if (permErr) {
     console.warn("[auth] server snapshot permessi non leggibili:", permErr.message);
+  }
+
+  const roleKey = typeof prof?.role_key === "string" ? prof.role_key : "guest";
+  let rolePermissionKeys: string[] = [];
+  try {
+    rolePermissionKeys = await loadRolePermissionKeys(supabase, roleKey);
+  } catch (e) {
+    console.warn("[auth] role permissions load failed:", e);
   }
 
   let publicUser;
@@ -95,7 +104,8 @@ async function fetchServerAuthSnapshotWithClient(
   const snap: ServerAuthSnapshot = {
     user: publicUser,
     session: { expiresAt },
-    permissions: (permRows ?? []) as UserPermissionRow[],
+    permissions: (permRows ?? []) as unknown as UserPermissionRow[],
+    rolePermissionKeys,
     configurationError: null,
   };
   writeCachedServerAuthSnapshot(fingerprint, snap);

@@ -14,13 +14,38 @@ export type RuoloUtente =
 /** @deprecated Usare `RuoloUtente`. */
 export type RuoloProfile = RuoloUtente;
 
+export type RoleRow = {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  is_system: boolean;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PermissionRow = {
+  id: string;
+  key: string;
+  module: string | null;
+  action: string | null;
+  label: string;
+  description: string | null;
+  is_system: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ProfileRow = {
   id: string;
   nome: string;
   cognome?: string | null;
   /** Nome utente univoco per login (minuscolo, 3–32 caratteri). */
   username?: string | null;
-  ruolo: RuoloUtente;
+  role_key: string;
+  /** @deprecated Alias — use role_key */
+  ruolo?: RuoloUtente;
   /** Etichetta cliente (mezzi.cliente) per utenti ruolo=cliente. */
   cliente_ref?: string | null;
   created_at: string;
@@ -475,13 +500,19 @@ export type AppSettingsAuditRow = {
   updated_at: string;
 };
 
-/** Tabella `user_permissions` — permessi granulari per modulo. */
+/** Tabella `user_permissions` — override utente (permission_id + effect). */
 export type UserPermissionRow = {
   user_id: string;
-  module: string;
-  can_read: boolean;
-  can_write: boolean;
-  can_admin: boolean;
+  permission_id: string;
+  effect: "allow" | "deny";
+  created_at?: string;
+  updated_at?: string;
+  permissions?: Pick<PermissionRow, "key" | "module" | "action"> | null;
+  /** @deprecated Colonne legacy pre-migrazione RBAC — solo compat tipi security UI. */
+  module?: string;
+  can_read?: boolean;
+  can_write?: boolean;
+  can_admin?: boolean;
 };
 
 /** Tabella `auth_logs` — eventi autenticazione. */

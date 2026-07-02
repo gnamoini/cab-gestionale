@@ -5,7 +5,8 @@ import {
   type RbacSection,
   type RbacUser,
 } from "@/lib/auth/rbac";
-import { hasCapability, type RbacEvaluationContext } from "@/lib/rbac";
+import type { RbacEvaluationContext } from "@/lib/rbac";
+import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
 import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
@@ -35,7 +36,7 @@ export type CanAccessRouteInput = {
   pathname: string;
   opts?: CanAccessPageOptions;
   ctx?: RbacEvaluationContext;
-  /** Se presente, applica user_permissions + ROLE_MODULE_DEFAULTS (step 2→3). */
+  /** Se presente, applica user_permissions + role_permissions via snapshot DB. */
   snapshot?: EffectivePermissionsSnapshot | null;
 };
 
@@ -54,7 +55,8 @@ export function canAccessRoute(input: CanAccessRouteInput): boolean {
     return canAccessPage(user, pathname, opts, effectiveCtx);
   }
 
-  if (!hasCapability(user, "can_read_operational", effectiveCtx)) {
+  const resolved = snapshot?.resolved ?? effectiveCtx?.resolved;
+  if (!resolved || !hasResolvedCapability(resolved, "can_read_operational")) {
     return false;
   }
 
