@@ -10,6 +10,7 @@ export const GESTIONALE_PERMISSION_MODULES = [
   "fatturazione",
   "ddt",
   "ordini_fornitori",
+  "document_capture",
 ] as const;
 
 export type GestionalePermissionModule = (typeof GESTIONALE_PERMISSION_MODULES)[number];

@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Modal } from "@/components/design-system/modal";
+import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
+import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import { createUserByAdminAction } from "@/src/actions/admin-users";
@@ -20,7 +22,7 @@ import {
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import {
-  dsBtnGhost,
+  dsBtnNeutral,
   dsBtnPrimary,
   dsInput,
   dsSectionTitle,
@@ -37,6 +39,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
   const gestToast = useGestionaleToast();
   const qc = useQueryClient();
   const [nome, setNome] = useState("");
+  const [cognome, setCognome] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -54,6 +57,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
   useEffect(() => {
     if (!open) return;
     setNome("");
+    setCognome("");
     setUsername("");
     setEmail("");
     setPassword("");
@@ -71,6 +75,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
       submitLock,
       () => ({
         nome,
+        cognome,
         username,
         email,
         password,
@@ -107,6 +112,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
         setPending(true);
         const res = await createUserByAdminAction({
           nome: snap.nome.trim(),
+          cognome: snap.cognome.trim() || null,
           username: snap.username.trim(),
           email: snap.email.trim(),
           password: snap.password,
@@ -125,17 +131,19 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
     );
   }
 
+  if (!open) return null;
+
   return (
-    <Modal
-      open={open}
-      onClose={() => {
+    <GestionaleModalShell
+      modalSize="formSmall"
+      title="Nuovo utente"
+      titleId="security-create-user-title"
+      onRequestClose={() => {
         if (!pending) onClose();
       }}
-      title="Nuovo utente"
-      modalSize="formSmall"
       footer={
-        <>
-          <button type="button" className={dsBtnGhost} onClick={() => onClose()} disabled={pending}>
+        <div className="flex w-full min-w-0 justify-end gap-2">
+          <button type="button" className={dsBtnNeutral} onClick={() => onClose()} disabled={pending}>
             Annulla
           </button>
           <button
@@ -151,9 +159,10 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
           >
             {pending ? "Creazione…" : "Crea utente"}
           </button>
-        </>
+        </div>
       }
     >
+      <GestionaleModalScrollBody className={gestionaleModalBodyFlexClass}>
       <p className="mb-4 text-xs text-[color:var(--cab-text-muted)]">
         Creazione tramite Supabase Auth e tabella <code className="rounded bg-[var(--cab-surface-2)] px-1">profiles</code>.
         Ruoli ufficiali: admin, manager, operatore, cliente e guest.
@@ -170,8 +179,18 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
             className={`${dsInput} mt-1 w-full`}
             value={nome}
             onChange={(e) => setNome(e.target.value)}
-            autoComplete="name"
+            autoComplete="given-name"
             required
+            disabled={pending}
+          />
+        </label>
+        <label className="block min-w-0">
+          <span className={dsSectionTitle}>Cognome</span>
+          <input
+            className={`${dsInput} mt-1 w-full`}
+            value={cognome}
+            onChange={(e) => setCognome(e.target.value)}
+            autoComplete="family-name"
             disabled={pending}
           />
         </label>
@@ -295,6 +314,7 @@ export function SecurityCreateUserModal({ open, onClose }: Props) {
           </p>
         ) : null}
       </form>
-    </Modal>
+      </GestionaleModalScrollBody>
+    </GestionaleModalShell>
   );
 }

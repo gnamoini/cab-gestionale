@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
@@ -68,7 +69,7 @@ function useStableDateRange(range: DateRange | null | undefined): DateRange | nu
   }, [startMs, endMs]);
 }
 
-function readInitialPeriodPrefs(): {
+function readInitialPeriodPrefs(searchParams: URLSearchParams | null): {
   preset: ReportPeriodPreset;
   compareMode: ReportCompareMode;
   customFrom: string;
@@ -80,6 +81,34 @@ function readInitialPeriodPrefs(): {
     customFrom: "",
     customTo: "",
   };
+
+  const fromUrl = searchParams?.get("from")?.trim() ?? "";
+  const toUrl = searchParams?.get("to")?.trim() ?? "";
+  const presetUrl = searchParams?.get("preset")?.trim() ?? "";
+  const compareUrl = searchParams?.get("compare")?.trim() ?? "";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(fromUrl) && /^\d{4}-\d{2}-\d{2}$/.test(toUrl)) {
+    const compareMode =
+      compareUrl === "prev_period" || compareUrl === "prev_year" || compareUrl === "none"
+        ? (compareUrl as ReportCompareMode)
+        : ("prev_period" as ReportCompareMode);
+    return {
+      preset: "custom",
+      compareMode,
+      customFrom: fromUrl,
+      customTo: toUrl,
+    };
+  }
+
+  if (presetUrl === "current_week" && /^\d{4}-\d{2}-\d{2}$/.test(fromUrl)) {
+    return {
+      preset: "custom",
+      compareMode: compareUrl === "prev_period" ? "prev_period" : "none",
+      customFrom: fromUrl,
+      customTo: toUrl || fromUrl,
+    };
+  }
+
   const saved = loadReportPeriodPrefs();
   if (!saved) return defaults;
   let nextPreset = saved.preset;
@@ -99,8 +128,9 @@ function readInitialPeriodPrefs(): {
 }
 
 export function ReportAnalyticsView() {
+  const searchParams = useSearchParams();
   const anchor = useMemo(() => new Date(), []);
-  const [initialPrefs] = useState(readInitialPeriodPrefs);
+  const [initialPrefs] = useState(() => readInitialPeriodPrefs(searchParams));
   const [preset, setPreset] = useState<ReportPeriodPreset>(initialPrefs.preset);
   const [customFrom, setCustomFrom] = useState(initialPrefs.customFrom);
   const [customTo, setCustomTo] = useState(initialPrefs.customTo);

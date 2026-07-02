@@ -14,7 +14,7 @@ function read(rel: string): string {
 const loadingFailsafe = read("lib/ui/loading-failsafe.ts");
 const sectionGate = read("components/gestionale/gestionale-section-gate.tsx");
 const rbacGuard = read("components/gestionale/rbac-page-guard.tsx");
-const bunderPage = read("app/(gestionale)/bunder/page.tsx");
+const fatturazionePage = read("app/(gestionale)/fatturazione/page.tsx");
 const shellSync = read("lib/ui/use-gestionale-shell-layout-sync.ts");
 
 assert.match(loadingFailsafe, /SECTION_LOADING_FAILSAFE_MS = 8_000/);
@@ -28,8 +28,8 @@ assert.match(sectionGate, /LoadingErrorState/);
 
 assert.match(rbacGuard, /RBAC_LOADING_FAILSAFE_MS = 8_000/);
 
-assert.match(bunderPage, /LoadingSuspenseFallback/);
-assert.doesNotMatch(bunderPage, /fallback=\{null\}/);
+assert.match(fatturazionePage, /LoadingSuspenseFallback/);
+assert.doesNotMatch(fatturazionePage, /fallback=\{null\}/);
 
 assert.match(shellSync, /useState<GestionaleShellLayoutState>\(SSR_SAFE_SHELL_LAYOUT_STATE\)/);
 assert.match(shellSync, /SSR_SAFE_SHELL_LAYOUT_STATE/);

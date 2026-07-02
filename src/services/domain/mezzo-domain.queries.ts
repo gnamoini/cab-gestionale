@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { useSharedEntityQuery } from "@/src/hooks/use-shared-entity-query";
 import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
-import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { documentiService } from "@/src/services/documenti.service";
 import { err, success } from "@/src/services/service-result";
 import {
@@ -35,7 +35,7 @@ function mezzoIdOrEmpty(mezzoId: string | undefined): string {
   return mezzoId?.trim() ?? "";
 }
 
-/** Riga mezzo (anagrafica). */
+/** Riga mezzo (anagrafica V2 con attrezzatura joinata). */
 export function useMezzoBase(mezzoId: string | undefined, dedupTag?: string) {
   const id = mezzoIdOrEmpty(mezzoId);
   return useSharedEntityQuery({
@@ -43,7 +43,7 @@ export function useMezzoBase(mezzoId: string | undefined, dedupTag?: string) {
     entityId: id,
     scope: "detail",
     queryKey: mezzoDomainQueryKeys.base(id),
-    queryFn: () => mezziService.getById(id),
+    queryFn: () => mezziService.getGestitoById(id),
     enabled: id.length > 0,
     staleTime: MEZZO_ATOMIC_STALE_MS,
     dedupTag,
@@ -80,7 +80,7 @@ export function useMezzoDocumenti(mezzoId: string | undefined) {
     mezzoDomainQueryKeys.documenti(id, marca || "__pending__"),
     async () => {
       if (!base.data) return err("Mezzo non trovato");
-      const mezzoG = toMezzoUI(base.data);
+      const mezzoG = base.data;
       const res = await documentiService.getAll({ marca: mezzoG.marca });
       if (!res.success) return res;
       const filtered = (res.data ?? []).filter((row) =>

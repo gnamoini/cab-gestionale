@@ -49,6 +49,8 @@ export type InterventoWriteDeps = {
     data_ingresso: string;
     note: string | null;
     created_by: string;
+    target_type: import("@/src/types/supabase-tables").InterventoTargetType;
+    attrezzatura_id: string | null;
   }) => Promise<LavorazioneRow>;
   updateLavorazione?: (id: string, patch: LavorazioneUpdate) => Promise<void>;
   persistScheda?: (input: {

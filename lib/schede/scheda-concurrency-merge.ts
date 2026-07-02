@@ -1,4 +1,8 @@
 import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
+import {
+  copySchedaIngressoFieldFromClient,
+  schedaIngressoFieldHasClientValue,
+} from "@/lib/schede/scheda-ingresso-typed-fields";
 import type { LavorazioneSchedeBundle } from "@/types/schede";
 import type { SchedaIngressoFields } from "@/types/schede";
 
@@ -12,8 +16,8 @@ export function mergeSchedaIngressoFieldsPreferClient(
   const base = mergeSchedaIngressoFields(server, client);
   const next = { ...base };
   for (const key of Object.keys(client) as (keyof SchedaIngressoFields)[]) {
-    const v = String(client[key] ?? "").trim();
-    if (v) next[key] = client[key];
+    if (!schedaIngressoFieldHasClientValue(key, client)) continue;
+    copySchedaIngressoFieldFromClient(next, client, key);
   }
   return next;
 }

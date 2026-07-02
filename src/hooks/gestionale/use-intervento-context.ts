@@ -11,7 +11,6 @@ import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni
 import { useSchedeBundle } from "@/src/hooks/use-schede-store-query";
 import { useLavorazioneBase } from "@/src/services/domain/lavorazioni-domain.queries";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 
 export function useInterventoContext(
@@ -31,24 +30,18 @@ export function useInterventoContext(
   );
   const mezziQ = useMezziListQuery(undefined, { enabled, staleTime: 30_000 });
 
-  const mezzoRow = useMemo(() => {
+  const mezzoGestito = useMemo(() => {
+    if (options?.mezzoGestito) return options.mezzoGestito;
     const mezzoId = base.data?.mezzo_id?.trim();
     if (!mezzoId) return null;
     const rows = mezziQ.data ?? [];
     return rows.find((m) => m.id === mezzoId) ?? null;
-  }, [base.data?.mezzo_id, mezziQ.data]);
-
-  const mezzoGestito = useMemo(() => {
-    if (options?.mezzoGestito) return options.mezzoGestito;
-    if (mezzoRow) return toMezzoUI(mezzoRow);
-    return null;
-  }, [mezzoRow, options?.mezzoGestito]);
+  }, [base.data?.mezzo_id, mezziQ.data, options?.mezzoGestito]);
 
   const context = useMemo((): InterventoContext | undefined => {
     if (!enabled || !base.data) return undefined;
     return composeInterventoContextFromBundle(id, schedeBundle ?? null, {
       lavorazioneRow: base.data as LavorazioneRow,
-      mezzoRow,
       mezzoGestito,
       legacyLavorazione: options?.legacyLavorazione ?? null,
     });
@@ -58,7 +51,6 @@ export function useInterventoContext(
     schedeBundle,
     id,
     mezzoGestito,
-    mezzoRow,
     options?.legacyLavorazione,
   ]);
 

@@ -9,11 +9,11 @@ import {
   type CanonicalRole,
   type Capability,
   type RbacEvaluationContext,
-  canAccessBunder,
   hasCapability,
   RBAC_DENIED_MESSAGE,
   resolveCanonicalRole,
   resolveRole,
+  ROLE_LABELS,
   roleModuleDefault,
 } from "@/lib/rbac";
 
@@ -23,11 +23,11 @@ export {
   type CanonicalRole,
   type Capability,
   type RbacEvaluationContext,
-  canAccessBunder,
   hasCapability,
   RBAC_DENIED_MESSAGE,
   resolveCanonicalRole,
   resolveRole,
+  ROLE_LABELS,
   roleModuleDefault,
 };
 export const APP_ROLES = CANONICAL_ROLES;
@@ -54,7 +54,6 @@ export type RbacSection =
   | "documenti"
   | "magazzino"
   | "mezzi"
-  | "bunder"
   | "report"
   | "dipendenti"
   | "fatturazione"
@@ -76,6 +75,7 @@ export type CanAccessPageOptions = {
 };
 
 export const CLIENTE_HOME_PATH = "/lavorazioni-clienti";
+export const SECURITY_HOME_PATH = "/sicurezza";
 export const ACCESS_DENIED_PATH = "/acesso-negato";
 export const READONLY_PERMISSION_HINT = RBAC_DENIED_MESSAGE;
 
@@ -121,11 +121,6 @@ function sectionAccess(user: RbacUser, section: RbacSection, ctx?: RbacEvaluatio
   if (section === "dashboard") {
     const read = hasCapability(user, "can_read_operational", ctx);
     return { read, write: false, delete: false };
-  }
-  if (section === "bunder") {
-    const read = canAccessBunder(user, "read");
-    const write = canAccessBunder(user, "write");
-    return { read, write, delete: write };
   }
   if (SECTION_TO_MODULE[section]) {
     return moduleSectionAccess(user, section);
@@ -187,13 +182,7 @@ export function isClienteRole(user: RbacUser): boolean {
 }
 
 export function roleLabel(user: RbacUser): string {
-  const role = resolveRole(user);
-  if (role === "admin") return "Admin System";
-  if (role === "manager") return "Admin Operativo";
-  if (role === "operatore") return "Personale Officina";
-  if (role === "addetto_amministrativo") return "Addetto Preventivi";
-  if (role === "cliente") return "Cliente";
-  return "Viewer / Audit";
+  return ROLE_LABELS[resolveRole(user)];
 }
 
 export function defaultHomePathForRole(user: RbacUser): string {
@@ -204,6 +193,7 @@ export function pathnameToSection(pathname: string): RbacSection | null {
   const path = pathname.split("?")[0]?.replace(/\/+$/, "") || "/";
   if (path === ACCESS_DENIED_PATH) return null;
   if (path === "/login" || path.startsWith("/login/")) return null;
+  if (path.startsWith(SECURITY_HOME_PATH)) return "security";
   if (path.startsWith("/dashboard/security")) return "security";
   if (path === "/dashboard" || path.startsWith("/dashboard/")) return "dashboard";
   if (path.startsWith("/lavorazioni-clienti")) return "lavorazioni_clienti";
@@ -212,7 +202,6 @@ export function pathnameToSection(pathname: string): RbacSection | null {
   if (path.startsWith("/documenti")) return "documenti";
   if (path.startsWith("/magazzino")) return "magazzino";
   if (path.startsWith("/mezzi")) return "mezzi";
-  if (path.startsWith("/bunder")) return "bunder";
   if (path.startsWith("/report")) return "report";
   if (path.startsWith("/dipendenti")) return "dipendenti";
   if (path.startsWith("/fatturazione")) return "fatturazione";

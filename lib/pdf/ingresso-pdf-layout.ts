@@ -71,8 +71,20 @@ export function drawIngressoPdfBody(
 
   y = drawGestionaleFieldSectionTable(doc, y, pageW, "Data", data);
   y = drawGestionaleFieldSectionTable(doc, y, pageW, "Cliente", anagSections.cliente);
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Attrezzatura", anagSections.attrezzatura);
-  y = drawGestionaleFieldSectionTable(doc, y, pageW, "Telaio", anagSections.telaio);
+  const targetType =
+    row.target_type ??
+    scheda.campi.targetType ??
+    (anagSections.attrezzatura.length ? "attrezzatura" : "telaio");
+  if (targetType === "attrezzatura" && anagSections.attrezzatura.length > 0) {
+    y = drawGestionaleFieldSectionTable(doc, y, pageW, "Attrezzatura", anagSections.attrezzatura);
+  }
+  if (targetType === "telaio" && anagSections.telaio.length > 0) {
+    y = drawGestionaleFieldSectionTable(doc, y, pageW, "Telaio", anagSections.telaio);
+  }
+  if (targetType !== "telaio" && targetType !== "attrezzatura") {
+    y = drawGestionaleFieldSectionTable(doc, y, pageW, "Attrezzatura", anagSections.attrezzatura);
+    y = drawGestionaleFieldSectionTable(doc, y, pageW, "Telaio", anagSections.telaio);
+  }
   y = drawGestionaleFieldSectionTable(doc, y, pageW, "Altre informazioni", altreInformazioni, {
     multiline: true,
   });

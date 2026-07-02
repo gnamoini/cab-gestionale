@@ -93,8 +93,28 @@ export function preventivoRowToRecord(row: PreventivoRow, mezzo: MezzoRow | null
       typeof det.descrizioneGenerataAuto === "string"
         ? det.descrizioneGenerataAuto
         : stub.descrizioneGenerataAuto,
+    descriptionGenerationId:
+      typeof det.descriptionGenerationId === "string" ? det.descriptionGenerationId : stub.descriptionGenerationId,
+    descriptionEngineMeta:
+      det.descriptionEngineMeta && typeof det.descriptionEngineMeta === "object"
+        ? (det.descriptionEngineMeta as PreventivoRecord["descriptionEngineMeta"])
+        : stub.descriptionEngineMeta,
     createdBy: typeof det.createdBy === "string" ? det.createdBy : stub.createdBy,
     lastEditedBy: typeof det.lastEditedBy === "string" ? det.lastEditedBy : stub.lastEditedBy,
+    targetType:
+      det.targetType === "telaio" || det.targetType === "attrezzatura"
+        ? det.targetType
+        : stub.targetType,
+    attrezzaturaId: typeof det.attrezzaturaId === "string" ? det.attrezzaturaId : stub.attrezzaturaId,
+    attrezzaturaMarca: typeof det.attrezzaturaMarca === "string" ? det.attrezzaturaMarca : stub.attrezzaturaMarca,
+    attrezzaturaModello:
+      typeof det.attrezzaturaModello === "string" ? det.attrezzaturaModello : stub.attrezzaturaModello,
+    attrezzaturaMatricola:
+      typeof det.attrezzaturaMatricola === "string" ? det.attrezzaturaMatricola : stub.attrezzaturaMatricola,
+    attrezzaturaSnapshot:
+      det.attrezzaturaSnapshot && typeof det.attrezzaturaSnapshot === "object"
+        ? (det.attrezzaturaSnapshot as PreventivoRecord["attrezzaturaSnapshot"])
+        : stub.attrezzaturaSnapshot,
     dataCreazione: row.created_at,
     aggiornatoAt: row.updated_at,
     totaleFinale: row.totale,

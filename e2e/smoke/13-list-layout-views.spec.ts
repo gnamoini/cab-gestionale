@@ -16,7 +16,6 @@ const XL_LIST_ROUTES: ListLayoutRoute[] = [
   { path: "/magazzino", readyText: "Magazzino" },
   { path: "/preventivi", readyText: "Preventivi" },
   { path: "/lavorazioni-clienti", readyText: "Lavorazioni in corso" },
-  { path: "/bunder", readyText: "Bunder" },
 ];
 
 async function getGestionaleListLayoutMode(page: Page): Promise<"desktop" | "mobile" | "unknown"> {
@@ -100,12 +99,12 @@ test("list layout /dipendenti: mobile viewport shows mobile timesheet branch", a
   expect(await getGestionaleListLayoutMode(page)).toBe("mobile");
 });
 
-test("list layout /dashboard/security: mobile viewport shows user cards", async ({ page }) => {
+test("list layout /sicurezza: mobile viewport shows user cards", async ({ page }) => {
   test.setTimeout(90_000);
   attachConsoleGuards(page);
   await page.setViewportSize(MOBILE_VIEWPORT);
   await loginViaUi(page, adminCredentials());
-  await gotoListRouteReady(page, { path: "/dashboard/security", readyText: "Utenti" });
+  await gotoListRouteReady(page, { path: "/sicurezza", readyText: "Utenti" });
 
   expect(await getGestionaleListLayoutMode(page)).toBe("mobile");
   expect(await listTableMounted(page)).toBe(false);

@@ -24,14 +24,12 @@ assert.match(realtimeConfig, /GESTIONALE_REALTIME_POLL_MS = 20_000/);
 
 const reportView = read("components/gestionale/report/report-view.tsx");
 const documentiView = read("components/gestionale/documenti/documenti-view.tsx");
-const bunderView = read("components/bunder/bunder-view.tsx");
 const preventiviView = read("components/preventivi/preventivi-view.tsx");
 const lavorazioniView = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
 const magazzinoView = read("components/gestionale/magazzino/magazzino-view.tsx");
 
 for (const [name, src] of [
   ["documenti-view", documentiView],
-  ["bunder-view", bunderView],
   ["preventivi-view", preventiviView],
   ["lavorazioni-view", lavorazioniView],
   ["magazzino-view", magazzinoView],
@@ -55,7 +53,6 @@ assert.match(read("components/gestionale/global-table/gestionale-list-table.css"
 const lazyPdf = read("lib/pdf/lazy-pdf-modules.ts");
 assert.match(lazyPdf, /importLavorazioniListPdf/);
 assert.match(lazyPdf, /importPreventiviPdf/);
-assert.match(lazyPdf, /importBunderPdf/);
 assert.match(lazyPdf, /importDipendentiPdfSections/);
 
 const lavorazioniViewPdf = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
@@ -90,13 +87,6 @@ assert.doesNotMatch(
   preventiviViewPdf,
   /from "@\/lib\/preventivi\/preventivi-pdf"/,
   "preventivi-view should not statically import preventivi-pdf",
-);
-
-const bunderViewPdf = read("components/bunder/bunder-view.tsx");
-assert.doesNotMatch(
-  bunderViewPdf,
-  /from "@\/lib\/bunder\/bunder-pdf"/,
-  "bunder-view should not statically import bunder-pdf",
 );
 
 const dipendentiExport = read("lib/dipendenti/pdf/dipendenti-pdf-export.ts");

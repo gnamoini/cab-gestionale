@@ -4,6 +4,7 @@ export const STORAGE_BUCKETS = {
   documenti: "documenti",
   documentiThumbnails: "documenti-thumbnails",
   pdfArtifacts: "pdf-artifacts",
+  documentCapture: "document-capture",
 } as const;
 
 export type StorageBucketId = (typeof STORAGE_BUCKETS)[keyof typeof STORAGE_BUCKETS];
@@ -15,6 +16,7 @@ export type ImageStorageScope = (typeof IMAGE_STORAGE_SCOPES)[number];
 export const STORAGE_LIMITS = {
   imagesMaxBytes: 10 * 1024 * 1024,
   documentiMaxBytes: 100 * 1024 * 1024,
+  documentCaptureMaxBytes: 15 * 1024 * 1024,
   pdfArtifactsMaxBytes: 15 * 1024 * 1024,
   documentiThumbnailsMaxBytes: 2 * 1024 * 1024,
   imagesMaxPerRecord: 10,

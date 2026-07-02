@@ -1,4 +1,4 @@
-import { buildInitialModuleDraft } from "@/components/dashboard/security/security-user-module-permissions-editor";
+import { buildInitialModuleDraft } from "@/lib/security/user-module-permissions";
 import { resolveRole } from "@/lib/auth/rbac";
 import {
   modulePermissionsPayloadFromDraft,
@@ -19,10 +19,10 @@ export function rowsSnapshot(rows: EditableSecurityUser[]): string {
     rows.map((r) => ({
       id: r.id,
       nome: r.nome.trim(),
+      cognome: r.cognome?.trim() || null,
       username: normalizeUsername(r.username ?? ""),
       ruolo: r.ruolo,
       clienteRef: r.clienteRef,
-      clientLavorazioniAccess: r.clientLavorazioniAccess,
       clientLavorazioniAccessFromRole: r.clientLavorazioniAccessFromRole,
     })),
   );
@@ -46,6 +46,12 @@ export function buildSecurityUserPatches(
 
     if (row.nome.trim() !== orig.nome.trim()) {
       patch.nome = row.nome.trim();
+      dirty = true;
+    }
+    const nextCognome = row.cognome?.trim() || null;
+    const origCognome = orig.cognome?.trim() || null;
+    if (nextCognome !== origCognome) {
+      patch.cognome = nextCognome;
       dirty = true;
     }
     const nextUsername = normalizeUsername(row.username ?? "");

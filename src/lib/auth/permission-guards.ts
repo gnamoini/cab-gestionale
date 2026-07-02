@@ -61,7 +61,7 @@ export async function ensurePermission(permission: PermissionKey): Promise<Servi
   return ensureWithRoleResolution((role, ctx) => hasPermission(role, permission, ctx));
 }
 
-/** Allineato a RLS `can_write_operational` (promemoria dashboard, bunder, ecc.). */
+/** Allineato a RLS `can_write_operational` (promemoria dashboard, ecc.). */
 export async function ensureOperationalWrite(): Promise<ServiceResult<true>> {
   return ensureWithRoleResolution((role, ctx) => hasCapability(role, "can_write_operational", ctx));
 }

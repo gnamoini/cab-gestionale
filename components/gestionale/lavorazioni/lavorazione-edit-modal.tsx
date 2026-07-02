@@ -4,7 +4,12 @@ import { useState, type FormEvent } from "react";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
-import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
+import {
+  useMezzoCreateMutation,
+  useMezzoUpdateMutation,
+} from "@/src/hooks/gestionale/use-mezzo-mutations";
+import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
+import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { gestionaleFormFocusScopeProps } from "@/components/gestionale/gestionale-form-focus-scope";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
@@ -21,8 +26,46 @@ import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
+import type { SchedaIngressoFields } from "@/types/schede";
 
 const LAVORAZIONE_EDIT_FORM_ID = "lavorazione-edit-form";
+
+function fieldsFromEditForm(input: {
+  row: LavorazioneListRow;
+  cliente: string;
+  utilizzatore: string;
+  marca: string;
+  modello: string;
+  targa: string;
+  matricola: string;
+  numeroScuderia: string;
+  note: string;
+}): SchedaIngressoFields {
+  return {
+    targetType: input.row.target_type ?? "attrezzatura",
+    attrezzaturaId: input.row.attrezzatura_id ?? null,
+    dataIngresso: input.row.data_ingresso?.slice(0, 10) ?? "",
+    cliente: input.cliente,
+    cantiere: "",
+    utilizzatore: input.utilizzatore,
+    tipoAttrezzatura: input.row.mezzo?.tipo_attrezzatura?.trim() ?? "",
+    marcaAttrezzatura: input.marca,
+    modelloAttrezzatura: input.modello,
+    matricola: input.matricola,
+    nScuderia: input.numeroScuderia,
+    oreLavoro: "",
+    tipoTelaio: input.row.mezzo?.tipo_telaio?.trim() ?? "",
+    marcaTelaio: input.row.mezzo?.marca_telaio?.trim() ?? "",
+    modelloTelaio: input.row.mezzo?.modello_telaio?.trim() ?? "",
+    targa: input.targa,
+    km: input.row.mezzo?.km != null ? String(input.row.mezzo.km) : "",
+    descrizioneAnomalia: "",
+    livelloCarburante: "",
+    addettoAccettazione: "",
+    richiedente: "",
+    noteIntervento: input.note,
+  };
+}
 
 export function LavorazioneEditModal({
   row,
@@ -38,7 +81,9 @@ export function LavorazioneEditModal({
   onDelete?: () => void;
 }) {
   const update = useLavorazioneUpdateMutation();
+  const createMezzo = useMezzoCreateMutation();
   const updateMezzo = useMezzoUpdateMutation();
+  const mezziListQ = useMezziListQuery();
   const gestToast = useGestionaleToast();
   const { confirm, confirmDialog } = useGestionaleConfirm();
   const [cliente, setCliente] = useState(() => row.mezzo?.cliente?.trim() ?? "");
@@ -50,6 +95,7 @@ export function LavorazioneEditModal({
   const [numeroScuderia, setNumeroScuderia] = useState(() => row.mezzo?.numero_scuderia?.trim() ?? "");
   const [note, setNote] = useState(() => (row.note ?? "").trim());
   const submitLock = useSubmitLock();
+  const pending = update.isPending || createMezzo.isPending || updateMezzo.isPending;
 
   async function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,21 +119,25 @@ export function LavorazioneEditModal({
           return;
         }
         try {
-          if (row.mezzo_id) {
-            await updateMezzo.mutateAsync({
-              id: row.mezzo_id,
-              data: {
-                cliente: snap.cliente.trim(),
-                utilizzatore: snap.utilizzatore.trim() || null,
-                marca: snap.marca.trim(),
-                modello: snap.modello.trim(),
-                targa: snap.targa.trim() || null,
-                matricola: snap.matricola.trim(),
-                numero_scuderia: snap.numeroScuderia.trim() || null,
-              },
-            });
-          }
-          await update.mutateAsync({ id: row.id, data: { note: snap.note.trim() || null } });
+          const catalog = mezziListQ.data ?? [];
+          const schedaFields = fieldsFromEditForm({ row, ...snap });
+          const upsert = await upsertMezzoFromSchedaIngresso({
+            fields: schedaFields,
+            mezziCatalog: catalog,
+            preferredMezzoId: row.mezzo_id,
+            create: (data) => createMezzo.mutateAsync(data),
+            update: (id, data) => updateMezzo.mutateAsync({ id, data }),
+          });
+
+          const lavPatch: Parameters<typeof update.mutateAsync>[0]["data"] = {
+            note: snap.note.trim() || null,
+          };
+          if (upsert.mezzoId && upsert.mezzoId !== row.mezzo_id) lavPatch.mezzo_id = upsert.mezzoId;
+          if (upsert.targetType && upsert.targetType !== row.target_type) lavPatch.target_type = upsert.targetType;
+          const nextAttId = upsert.targetType === "attrezzatura" ? (upsert.attrezzaturaId ?? null) : null;
+          if (nextAttId !== (row.attrezzatura_id ?? null)) lavPatch.attrezzatura_id = nextAttId;
+
+          await update.mutateAsync({ id: row.id, data: lavPatch });
           gestToast.successSaved();
           onClose();
         } catch (err) {
@@ -110,7 +160,7 @@ export function LavorazioneEditModal({
             type="button"
             className={`${erpBtnNeutral} min-h-11`}
             onClick={onClose}
-            disabled={update.isPending || updateMezzo.isPending}
+            disabled={pending}
           >
             Annulla
           </button>
@@ -118,7 +168,7 @@ export function LavorazioneEditModal({
             type="submit"
             form={LAVORAZIONE_EDIT_FORM_ID}
             className={`${erpBtnAccent} min-h-11`}
-            loading={update.isPending || updateMezzo.isPending}
+            loading={pending}
             preset="salva"
           >
             Salva
@@ -127,7 +177,7 @@ export function LavorazioneEditModal({
             <button
               type="button"
               className={`${dsBtnDanger} min-h-11 basis-full sm:basis-auto`}
-              disabled={update.isPending || updateMezzo.isPending}
+              disabled={pending}
               onClick={() => {
                 void confirm({
                   title: "Eliminare lavorazione?",
@@ -161,7 +211,7 @@ export function LavorazioneEditModal({
                 className="mt-1 w-full"
                 value={cliente}
                 onChange={setCliente}
-                disabled={update.isPending || updateMezzo.isPending}
+                disabled={pending}
                 required
                 aria-label="Cliente"
               />
@@ -173,7 +223,7 @@ export function LavorazioneEditModal({
                 className="mt-1"
                 value={utilizzatore}
                 onChange={setUtilizzatore}
-                disabled={update.isPending || updateMezzo.isPending}
+                disabled={pending}
                 aria-label="Utilizzatore"
               />
             </label>
@@ -187,7 +237,7 @@ export function LavorazioneEditModal({
                   setMarca(v);
                   setModello("");
                 }}
-                disabled={update.isPending || updateMezzo.isPending}
+                disabled={pending}
                 required
                 aria-label="Marca attrezzatura"
               />
@@ -200,22 +250,22 @@ export function LavorazioneEditModal({
                 className="mt-1 w-full"
                 value={modello}
                 onChange={setModello}
-                disabled={update.isPending || updateMezzo.isPending}
+                disabled={pending}
                 required
                 aria-label="Modello attrezzatura"
               />
             </label>
             <label className="block">
               <span className={dsLabel}>Targa</span>
-              <input className={`${dsInput} mt-1 w-full`} value={targa} onChange={(e) => setTarga(e.target.value)} disabled={update.isPending || updateMezzo.isPending} />
+              <input className={`${dsInput} mt-1 w-full`} value={targa} onChange={(e) => setTarga(e.target.value)} disabled={pending} />
             </label>
             <label className="block">
               <span className={dsLabel}>Matricola</span>
-              <input className={`${dsInput} mt-1 w-full`} value={matricola} onChange={(e) => setMatricola(e.target.value)} disabled={update.isPending || updateMezzo.isPending} required />
+              <input className={`${dsInput} mt-1 w-full`} value={matricola} onChange={(e) => setMatricola(e.target.value)} disabled={pending} required />
             </label>
             <label className="block sm:col-span-2">
               <span className={dsLabel}>N. scuderia</span>
-              <input className={`${dsInput} mt-1 w-full`} value={numeroScuderia} onChange={(e) => setNumeroScuderia(e.target.value)} disabled={update.isPending || updateMezzo.isPending} />
+              <input className={`${dsInput} mt-1 w-full`} value={numeroScuderia} onChange={(e) => setNumeroScuderia(e.target.value)} disabled={pending} />
             </label>
           </div>
 
@@ -226,7 +276,7 @@ export function LavorazioneEditModal({
               size="lg"
               value={note}
               onChange={(v) => setNote(sliceInputValue(v, TEXT_LONG))}
-              disabled={update.isPending || updateMezzo.isPending}
+              disabled={pending}
               rows={4}
               maxLength={TEXT_LONG}
             />

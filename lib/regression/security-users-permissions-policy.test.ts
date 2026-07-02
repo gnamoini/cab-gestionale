@@ -24,6 +24,10 @@ const editModalSrc = fs.readFileSync(
   path.join(ROOT, "components/dashboard/security/security-edit-name-modal.tsx"),
   "utf8",
 );
+const createModalSrc = fs.readFileSync(
+  path.join(ROOT, "components/dashboard/security-create-user-modal.tsx"),
+  "utf8",
+);
 const patchesSrc = fs.readFileSync(path.join(ROOT, "lib/security/build-security-user-patches.ts"), "utf8");
 const batchSrc = fs.readFileSync(path.join(ROOT, "src/actions/security-users-permissions.ts"), "utf8");
 const invalidateSrc = fs.readFileSync(
@@ -52,9 +56,9 @@ assert.match(drawerSrc, /Permessi pagine/);
 assert.match(editorSrc, /onRestoreFromRole/);
 assert.match(editorSrc, /ROLE_MODULE_READONLY/);
 assert.match(editorSrc, /Accesso completo/);
-assert.match(editorSrc, /Dashboard, BUNDER, Configurazione, Sicurezza e Portale Clienti/);
+assert.match(editorSrc, /Dashboard, Configurazione, Sicurezza e Portale Clienti/);
 
-assert.match(batchSrc, /Viewer\/Audit non ammette override permessi modulo/);
+assert.match(batchSrc, /ROLE_LABELS\.guest.*non ammette override permessi modulo/);
 
 assert.match(patchesSrc, /modulePermissions/);
 assert.match(actionsSrc, /hasModulePermissionOverrides/);
@@ -88,6 +92,8 @@ assert.match(actionsSrc, /currentUserId/);
 assert.match(actionsSrc, /allowAdd=\{false\}/);
 assert.match(actionsSrc, /Cerca o seleziona/);
 
+assert.match(actionsSrc, /accountEnabled/);
+assert.match(createModalSrc, /GestionaleModalShell/);
 assert.match(editModalSrc, /GestionaleModalShell/);
 assert.match(editModalSrc, /footer=\{/);
 assert.match(editModalSrc, /dsBtnNeutral/);
@@ -100,6 +106,8 @@ assert.match(invalidateSrc, /QK\.userPermissions/);
 assert.match(invalidateSrc, /QK\.securityUsersPermissions/);
 
 assert.match(dashboardSrc, /SecurityUsersPermissionsPanel/);
+assert.match(dashboardSrc, /SecurityMonitoringSection/);
+assert.match(dashboardSrc, /SecurityReleaseSection/);
 assert.doesNotMatch(dashboardSrc, /UserDetailDrawer/);
 assert.match(dashboardSrc, /Monitoraggio accessi/);
 assert.match(dashboardSrc, /Release e pilot/);

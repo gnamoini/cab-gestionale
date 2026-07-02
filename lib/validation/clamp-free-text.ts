@@ -1,6 +1,6 @@
+import type { SchedaIngressoStringKey } from "@/lib/schede/scheda-ingresso-typed-fields";
 import { normalizeLivelloCarburanteStored } from "@/lib/schede/livello-carburante-value";
 import { clampText, clampTextTrimmed, TEXT_EXTRA, TEXT_LONG, TEXT_MEDIUM, TEXT_SHORT } from "@/lib/validation/text-field-limits";
-import type { BunderCommercialDocument, BunderProductRiga } from "@/lib/bunder/types";
 import type {
   LavorazioneSchedeBundle,
   SchedaIngressoFields,
@@ -13,7 +13,7 @@ function clampField(value: string, max: number): string {
 }
 
 function clampIngressoCampi(campi: SchedaIngressoFields): SchedaIngressoFields {
-  const shortKeys: (keyof SchedaIngressoFields)[] = [
+  const shortKeys: SchedaIngressoStringKey[] = [
     "cliente",
     "cantiere",
     "utilizzatore",
@@ -86,45 +86,5 @@ export function clampSchedeBundle(bundle: LavorazioneSchedeBundle): LavorazioneS
       ? clampLavorazioniDoc(bundle.lavorazioni)
       : bundle.lavorazioni,
     ricambi: bundle.ricambi ? clampRicambiDoc(bundle.ricambi) : bundle.ricambi,
-  };
-}
-
-function clampBunderRiga(r: BunderProductRiga): BunderProductRiga {
-  return {
-    ...r,
-    codice: clampTextTrimmed(r.codice, TEXT_SHORT),
-    nome: clampTextTrimmed(r.nome, TEXT_SHORT),
-    descrizioneTecnica: clampField(r.descrizioneTecnica, TEXT_EXTRA),
-  };
-}
-
-export function clampBunderDocument(doc: BunderCommercialDocument): BunderCommercialDocument {
-  return {
-    ...doc,
-    numeroProgressivo: clampTextTrimmed(doc.numeroProgressivo, TEXT_SHORT),
-    luogo: clampTextTrimmed(doc.luogo, TEXT_SHORT),
-    aziendaDestinatario: clampTextTrimmed(doc.aziendaDestinatario, TEXT_SHORT),
-    indirizzo: clampField(doc.indirizzo, TEXT_LONG),
-    cap: clampField(doc.cap, TEXT_SHORT),
-    citta: clampTextTrimmed(doc.citta, TEXT_SHORT),
-    referente: clampTextTrimmed(doc.referente, TEXT_SHORT),
-    oggetto: clampField(doc.oggetto, TEXT_LONG),
-    settore: clampTextTrimmed(doc.settore, TEXT_SHORT),
-    intro: clampField(doc.intro, TEXT_EXTRA),
-    clausoleLegali: clampField(doc.clausoleLegali, TEXT_EXTRA),
-    chiusura: clampField(doc.chiusura, TEXT_LONG),
-    noteFirma: clampField(doc.noteFirma, TEXT_LONG),
-    riferimentoInterno: clampTextTrimmed(doc.riferimentoInterno, TEXT_SHORT),
-    righe: doc.righe.map(clampBunderRiga),
-    condizioni: {
-      iva: clampField(doc.condizioni.iva, TEXT_MEDIUM),
-      resa: clampField(doc.condizioni.resa, TEXT_MEDIUM),
-      trasporto: clampField(doc.condizioni.trasporto, TEXT_MEDIUM),
-      assemblaggio: clampField(doc.condizioni.assemblaggio, TEXT_MEDIUM),
-      consegna: clampField(doc.condizioni.consegna, TEXT_MEDIUM),
-      pagamento: clampField(doc.condizioni.pagamento, TEXT_MEDIUM),
-      garanzia: clampField(doc.condizioni.garanzia, TEXT_MEDIUM),
-      validitaOfferta: clampField(doc.condizioni.validitaOfferta, TEXT_MEDIUM),
-    },
   };
 }

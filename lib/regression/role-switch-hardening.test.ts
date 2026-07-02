@@ -86,7 +86,7 @@ const managerSnap = resolveEffectivePermissions({
 assertRouteProtection(
   "manager",
   [
-    { pathname: "/dashboard/security", allowed: false },
+    { pathname: "/sicurezza", allowed: false },
     { pathname: "/magazzino", allowed: true },
   ],
   managerSnap,

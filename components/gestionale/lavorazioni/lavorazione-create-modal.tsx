@@ -10,7 +10,6 @@ import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gest
 import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useQueryClient } from "@tanstack/react-query";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { executeInterventoWrite } from "@/lib/domain/intervento-context/write-contract";
 import { resolveMezzoFromScheda } from "@/lib/domain/mezzo/resolve-mezzo-from-scheda";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
@@ -20,7 +19,6 @@ import { persistSchedeStore } from "@/lib/schede/schede-sync-adapter";
 import { newSchedaMeta } from "@/lib/schede/schede-ui";
 import { isStatoInConfig, resolveDefaultLavorazioneStatoId } from "@/src/shared/selectors";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
-import type { MezzoRow } from "@/src/types/supabase-tables";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import { mergeSchedaIngressoFields } from "@/lib/schede/scheda-ingresso-reuse";
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
@@ -120,7 +118,7 @@ export function LavorazioneCreateModal({
     [globalOpts.lavorazioni.prioritaDb],
   );
   const addettiOpts = globalOpts.lavorazioni.addetti;
-  const mezziUi = useMemo(() => (mezziQ.data ?? []).map(toMezzoUI), [mezziQ.data]);
+  const mezziUi = mezziQ.data ?? [];
   const mezziCatalog = useMemo(
     () => sharedMezziCatalog ?? (mezziUi.length > 0 ? mezziUi : [...mezzi]),
     [sharedMezziCatalog, mezziUi, mezzi],
@@ -233,9 +231,9 @@ export function LavorazioneCreateModal({
   const resolveFreshCatalog = useCallback(async (): Promise<MezzoGestito[]> => {
     await qc.refetchQueries({ queryKey: QK.mezzi });
     const freshRows =
-      qc.getQueryData<MezzoRow[]>(mezziListQueryKey("list", null)) ??
-      qc.getQueriesData<MezzoRow[]>({ queryKey: QK.mezzi }).find(([, data]) => data?.length)?.[1];
-    if (freshRows?.length) return freshRows.map(toMezzoUI);
+      qc.getQueryData<MezzoGestito[]>(mezziListQueryKey("list", null)) ??
+      qc.getQueriesData<MezzoGestito[]>({ queryKey: QK.mezzi }).find(([, data]) => data?.length)?.[1];
+    if (freshRows?.length) return freshRows;
     return [...mezziCatalog];
   }, [qc, mezziCatalog]);
 
@@ -391,6 +389,8 @@ export function LavorazioneCreateModal({
                 data_uscita: null,
                 note: input.note,
                 created_by: input.created_by,
+                target_type: input.target_type,
+                attrezzatura_id: input.attrezzatura_id,
               }),
             persistScheda: async ({ lavorazioneId, fields, createdBy: by }) => {
               const store = loadLavorazioneSchedeStore();
@@ -506,6 +506,7 @@ export function LavorazioneCreateModal({
           onMezzoDialogAccept={acceptMezzoPrompt}
           onMezzoDialogDismiss={dismissMezzoPrompt}
           mezzoLinked={Boolean(mezzoId.trim())}
+          mezzoId={mezzoId}
           sharedGlobalOpts={globalOpts}
           sharedMezziCatalog={mezziCatalog}
         />

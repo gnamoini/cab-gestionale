@@ -1,10 +1,6 @@
 "use client";
 
 import {
-  loadAdminNotificationStore,
-  upsertAdminNotification,
-} from "@/lib/lavorazioni/admin-notification-store";
-import {
   formatDashboardPromemoriaReminderDesktopBody,
   DASHBOARD_PROMEMORIA_REMINDER_DESKTOP_TITLE,
 } from "@/lib/dashboard/dashboard-promemoria-reminder";
@@ -25,11 +21,23 @@ import {
   formatDipendentiPresenzeReminderDesktopBody,
 } from "@/lib/dipendenti/dipendenti-presenze-reminder";
 import {
+  formatLavorazioneCompletataToastMessage,
+  formatPreventivoApprovatoToastMessage,
+  buildAdminNotificationFatturazioneHref,
+  buildAdminNotificationPreventivoHref,
+} from "@/lib/lavorazioni/admin-notifications";
+import { formatLavorazioniRitardoDigestBody } from "@/lib/lavorazioni/lavorazioni-ritardo-digest";
+import { formatFattureScaduteDigestBody } from "@/lib/fatturazione/fatture-scadute-digest";
+import {
   isAdminDashboardTestNotification,
   isDashboardPromemoriaReminderNotification,
   isDipendentiPresenzeReminderNotification,
+  isFattureScaduteDigestNotification,
+  isLavorazioneCompletataNotification,
   isLavorazioneDashboardNotification,
+  isLavorazioniRitardoDigestNotification,
   isMagazzinoDashboardNotification,
+  isPreventivoApprovatoNotification,
   notificationStoreKey,
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
@@ -50,6 +58,38 @@ export function adminDashboardNotificationDesktopPayload(
       title: "Nuova lavorazione",
       body: formatAdminNotificationDesktopBody(notification),
       href: buildAdminNotificationLavorazioneHref(notification.lavorazioneId),
+      tag: notificationStoreKey(notification),
+    };
+  }
+  if (isLavorazioneCompletataNotification(notification)) {
+    return {
+      title: "Lavorazione completata",
+      body: formatLavorazioneCompletataToastMessage(notification),
+      href: buildAdminNotificationLavorazioneHref(notification.lavorazioneId),
+      tag: notificationStoreKey(notification),
+    };
+  }
+  if (isLavorazioniRitardoDigestNotification(notification)) {
+    return {
+      title: "Lavorazioni in ritardo",
+      body: formatLavorazioniRitardoDigestBody(notification),
+      href: "/lavorazioni",
+      tag: notificationStoreKey(notification),
+    };
+  }
+  if (isPreventivoApprovatoNotification(notification)) {
+    return {
+      title: "Preventivo approvato",
+      body: formatPreventivoApprovatoToastMessage(notification),
+      href: buildAdminNotificationPreventivoHref(notification.preventivoId),
+      tag: notificationStoreKey(notification),
+    };
+  }
+  if (isFattureScaduteDigestNotification(notification)) {
+    return {
+      title: "Fatture scadute",
+      body: formatFattureScaduteDigestBody(notification),
+      href: buildAdminNotificationFatturazioneHref(),
       tag: notificationStoreKey(notification),
     };
   }
@@ -106,14 +146,8 @@ export function dispatchAdminDashboardDesktopNotification(
   return true;
 }
 
-/** Inserisce in campanella + invia desktop (unico punto per notifiche admin). */
-export async function publishAdminDashboardNotification(
-  userId: string,
-  notification: AdminDashboardNotification,
-): Promise<{ added: boolean; desktop: boolean }> {
-  const key = notificationStoreKey(notification);
-  const existed = Boolean(loadAdminNotificationStore(userId).items[key]);
-  upsertAdminNotification(userId, notification);
-  const desktop = dispatchAdminDashboardDesktopNotification(notification);
-  return { added: !existed, desktop };
-}
+export {
+  publishNotification,
+  publishAdminDashboardNotification,
+  type PublishNotificationResult,
+} from "@/lib/notifications/publish-notification";

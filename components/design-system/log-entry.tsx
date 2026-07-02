@@ -1,12 +1,24 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { KeyboardEvent, ReactNode } from "react";
 import { memo } from "react";
 import { Tooltip } from "@/components/design-system/tooltip";
 import { erpFocus } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import { filterAuditMetadataModifiche, parseModificheLines, sanitizeLogOggettoRiga } from "@/lib/gestionale-log/log-summary";
 import type { GestionaleLogEventTone, GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
 import { formatGestionaleLogMetaLine } from "@/lib/gestionale-log/view-model";
+
+const LOG_ENTRY_SHELL_CLASS =
+  "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] px-3";
+
+const LOG_ENTRY_INTERACTIVE_CLASS = `w-full cursor-pointer text-left transition-colors hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[var(--cab-hover)] ${erpFocus}`;
+
+function logEntryActivate(onClick: () => void, e: KeyboardEvent<HTMLDivElement>) {
+  if (e.key === "Enter" || e.key === " ") {
+    e.preventDefault();
+    onClick();
+  }
+}
 
 const TONE_BADGE: Record<GestionaleLogEventTone, string> = {
   create: "bg-emerald-500/15 text-emerald-800 dark:text-emerald-300",
@@ -84,31 +96,66 @@ function LogEntryBody({ vm, trailing }: { vm: GestionaleLogViewModel; trailing?:
   );
 }
 
+function LogEntryInteractive({
+  onClick,
+  title,
+  className = LOG_ENTRY_INTERACTIVE_CLASS,
+  children,
+}: {
+  onClick: () => void;
+  title?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const interactive = (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onClick}
+      onKeyDown={(e) => logEntryActivate(onClick, e)}
+      className={className}
+    >
+      {children}
+    </div>
+  );
+
+  if (title?.trim()) {
+    return <Tooltip content={title}>{interactive}</Tooltip>;
+  }
+
+  return interactive;
+}
+
 /** Voce log strutturata: tipo → oggetto → modifiche → meta. */
 export const LogEntry = memo(function LogEntry({ vm, onClick, title, trailing }: LogEntryProps) {
-  const body = <LogEntryBody vm={vm} trailing={trailing} />;
+  if (onClick && trailing) {
+    return (
+      <div className={`${LOG_ENTRY_SHELL_CLASS} group relative`}>
+        <div className="pr-7">
+          <LogEntryInteractive onClick={onClick} title={title}>
+            <LogEntryBody vm={vm} />
+          </LogEntryInteractive>
+        </div>
+        <div className="absolute right-1.5 top-1.5 z-[1]">{trailing}</div>
+      </div>
+    );
+  }
 
   if (onClick) {
-    const button = (
-      <button
-        type="button"
+    return (
+      <LogEntryInteractive
         onClick={onClick}
-        className={`w-full cursor-pointer rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] px-3 text-left transition-colors hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[var(--cab-hover)] ${erpFocus}`}
+        title={title}
+        className={`${LOG_ENTRY_SHELL_CLASS} ${LOG_ENTRY_INTERACTIVE_CLASS}`}
       >
-        {body}
-      </button>
+        <LogEntryBody vm={vm} trailing={trailing} />
+      </LogEntryInteractive>
     );
-
-    if (title?.trim()) {
-      return <Tooltip content={title}>{button}</Tooltip>;
-    }
-
-    return button;
   }
 
   return (
-    <div className="rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] px-3">
-      {body}
+    <div className={LOG_ENTRY_SHELL_CLASS}>
+      <LogEntryBody vm={vm} trailing={trailing} />
     </div>
   );
 });

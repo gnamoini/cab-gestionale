@@ -28,7 +28,7 @@ export const VIEW_QUERY_DEFAULTS = {
 } as const;
 
 /**
- * Opzioni React Query per VIEW layer (dashboard, report, bunder, security).
+ * Opzioni React Query per VIEW layer (dashboard, report, security).
  * Condivide queryKey con CORE ma riduce refetch aggressivi quando la view è l'unico subscriber.
  */
 export function useViewQueryOpts(overrides?: ViewQueryOptsOverrides) {

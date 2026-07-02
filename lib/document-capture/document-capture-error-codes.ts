@@ -1,0 +1,18 @@
+/** Error codes SSOT — Document Capture telemetry/API. */
+
+export const DOCUMENT_CAPTURE_ERROR_CODES = [
+  "UPLOAD_FAILED",
+  "PLAN_STALE",
+  "APPLY_FAILED",
+  "APPLY_IN_PROGRESS",
+  "UNAUTHORIZED",
+  "TENANT_MISSING",
+  "RATE_LIMITED",
+  "NOT_CONFIGURED",
+] as const;
+
+export type DocumentCaptureErrorCode = (typeof DOCUMENT_CAPTURE_ERROR_CODES)[number];
+
+export function isDocumentCaptureErrorCode(value: string): value is DocumentCaptureErrorCode {
+  return (DOCUMENT_CAPTURE_ERROR_CODES as readonly string[]).includes(value);
+}

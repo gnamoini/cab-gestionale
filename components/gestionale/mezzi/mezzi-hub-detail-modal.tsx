@@ -52,6 +52,7 @@ import {
   fmtMezziHubDt,
   type MezziHubTabId,
 } from "@/components/gestionale/mezzi/mezzi-hub-ui";
+import { MezziHubAttrezzaturePanel } from "@/components/gestionale/mezzi/mezzi-hub-attrezzature-panel";
 import {
   dsScrollbar,
   dsTable,
@@ -191,6 +192,8 @@ export function MezziHubDetailModal({
     switch (id) {
       case "panoramica":
         return "Panoramica";
+      case "attrezzature":
+        return "Attrezzature";
       case "foto":
         return "Foto";
       case "lavorazioni":
@@ -336,6 +339,9 @@ export function MezziHubDetailModal({
           </HubModalPanoramicaPanel>
         ) : null}
 
+        {tab === "attrezzature" ? (
+          <MezziHubAttrezzaturePanel mezzoId={mezzo.id} canEdit={canEdit} />
+        ) : null}
         {tab === "foto" ? (
           <RecordImageManager
             scope="mezzi"
@@ -458,7 +464,14 @@ export function MezziHubDetailModal({
                       <MezziHubTimelineKindBadge kind={ev.kind} />
                       <div className="min-w-0 flex-1">
                         <MezziHubListMeta>{fmtMezziHubDt(ev.at)}</MezziHubListMeta>
-                        <MezziHubListTitle>{ev.title}</MezziHubListTitle>
+                        <MezziHubListTitle>
+                          {ev.title}
+                          {ev.targetBadge ? (
+                            <span className="ml-2 rounded bg-[var(--cab-surface-2)] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--cab-text-muted)]">
+                              {ev.targetBadge}
+                            </span>
+                          ) : null}
+                        </MezziHubListTitle>
                         {ev.subtitle ? <MezziHubListSubtitle>{ev.subtitle}</MezziHubListSubtitle> : null}
                       </div>
                     </div>

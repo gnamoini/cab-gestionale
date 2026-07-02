@@ -1,7 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
+import {
+  attrezzatureCatalogToHierarchyTree,
+  fetchAttrezzatureCatalogEntries,
+  resolveMezziListeWithFleetCatalog,
+} from "@/lib/attrezzature/attrezzature-catalog";
+import { migrateMezziListePrefs, type AttrezzaturaMarca } from "@/lib/mezzi/attrezzature-prefs";
+import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { createMezziListePrefsDefault } from "@/lib/mezzi/mezzi-liste-prefs-storage";
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { PrioritaLav } from "@/lib/lavorazioni/types";
@@ -19,6 +26,7 @@ import {
 } from "@/src/shared/selectors";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import type { CabAppSettingsResolved } from "@/src/lib/app-settings/resolve-from-rows";
+import { success } from "@/src/services/service-result";
 import { DEFAULT_PRIORITA_LAVORAZIONI_DB } from "@/src/lib/app-settings/resolve-from-rows";
 import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
@@ -48,12 +56,17 @@ export type GlobalOptionsSlice = {
   };
 };
 
-function sliceFromResolved(resolved: CabAppSettingsResolved, source: GlobalOptionsSlice["source"]): GlobalOptionsSlice {
+function sliceFromResolved(
+  resolved: CabAppSettingsResolved,
+  source: GlobalOptionsSlice["source"],
+  fleetAttrezzatureTree?: ReturnType<typeof attrezzatureCatalogToHierarchyTree>,
+): GlobalOptionsSlice {
   const stati = buildStatiLavorazioniOptions(resolved.lavorazioni.stati);
   const statiInCorso = statiLavorazioniInCorsoOptions(stati);
   const statiChiusi = statiLavorazioniChiusiOptions(stati);
   const statiRapidi = statiLavorazioniRapidiOptions(stati);
-  const mezziListe = migrateMezziListePrefs(resolved.mezziListe);
+  const baseListe = migrateMezziListePrefs(resolved.mezziListe);
+  const mezziListe = resolveMezziListeWithFleetCatalog(baseListe, fleetAttrezzatureTree ?? []);
 
   return {
     isLoading: false,
@@ -91,8 +104,19 @@ function emptySlice(): GlobalOptionsSlice {
 export function useGlobalOptions(options?: { enabled?: boolean; debugTag?: string }): GlobalOptionsSlice {
   const enabled = options?.enabled ?? true;
   const q = useCabAppSettingsPayloadQuery({ enabled, tier: "static" });
+  const fleetQ = useServiceQuery<AttrezzaturaMarca[], readonly ["attrezzature-fleet-catalog"]>(
+    ["attrezzature-fleet-catalog"],
+    async () => {
+      const sb = getBrowserSupabase();
+      return success(
+        attrezzatureCatalogToHierarchyTree(await fetchAttrezzatureCatalogEntries(sb)),
+      );
+    },
+    { enabled, staleTime: 60_000 },
+  );
   const resolved = q.data?.resolved;
   const tag = options?.debugTag ?? "useGlobalOptions";
+  const fleetTree = fleetQ.data;
 
   return useMemo(() => {
     if (!enabled) return { ...emptySlice(), source: "unavailable" as const };
@@ -101,13 +125,13 @@ export function useGlobalOptions(options?: { enabled?: boolean; debugTag?: strin
 
     if (q.isPending && !resolved) {
       debugSelectOptions(tag, { status: "loading", source: "fallback" });
-      return { ...sliceFromResolved(fallbackResolved, "fallback"), isLoading: true };
+      return { ...sliceFromResolved(fallbackResolved, "fallback", fleetTree), isLoading: true };
     }
 
     if (q.isError && !resolved) {
       debugSelectOptions(tag, { status: "error", message: q.error?.message, source: "fallback" });
       return {
-        ...sliceFromResolved(fallbackResolved, "fallback"),
+        ...sliceFromResolved(fallbackResolved, "fallback", fleetTree),
         isLoading: false,
         isError: true,
         error: q.error ?? new Error("Impostazioni non disponibili"),
@@ -125,8 +149,8 @@ export function useGlobalOptions(options?: { enabled?: boolean; debugTag?: strin
       marcheCount: fallbackResolved.mezziListe.marche.length,
     });
 
-    return sliceFromResolved(fallbackResolved, resolved ? "app_settings" : "fallback");
-  }, [enabled, q.isPending, q.isError, q.error, resolved, tag]);
+    return sliceFromResolved(fallbackResolved, resolved ? "app_settings" : "fallback", fleetTree);
+  }, [enabled, q.isPending, q.isError, q.error, resolved, tag, fleetTree]);
 }
 
 /** Alias richiesti dalla specifica. */

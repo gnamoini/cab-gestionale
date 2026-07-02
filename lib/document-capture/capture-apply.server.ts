@@ -1,0 +1,378 @@
+import "server-only";
+
+import {
+  assertCapturePlanFresh,
+  buildCaptureApplyPlanFromFields,
+  hashCaptureFieldsRows,
+  type ApprovedCreatesJson,
+  type CaptureApplyPlan,
+} from "@/lib/document-capture/capture-apply-plan";
+import { mapCaptureFieldsToIngresso, type CaptureFieldRow } from "@/lib/document-capture/capture-field-mapper";
+import {
+  beginCaptureApplyRpc,
+  CaptureApplyInProgressError,
+  completeCaptureApplyRpc,
+} from "@/lib/document-capture/capture-apply-rpc.server";
+import {
+  createCaptureInterventoWriteDeps,
+  fetchCaptureMezziCatalog,
+} from "@/lib/document-capture/capture-intervento-write-deps.server";
+import { mutateCaptureWithEvent } from "@/lib/document-capture/mutate-capture-with-event.server";
+import { resolveFieldsForHash } from "@/lib/document-capture/resolve-fields-for-hash";
+import { CapturePlanStaleError, hashConfirmedCaptureFields } from "@/lib/document-capture/capture-plan-staleness";
+import { executeInterventoWrite } from "@/lib/domain/intervento-context/write-contract";
+import { parseItalianDayDisplayToIso } from "@/lib/ui/italian-date-input-mask";
+import { auditContext, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
+
+export type { CaptureApplyPlan, ApprovedCreatesJson };
+export { CaptureApplyInProgressError, CapturePlanStaleError };
+
+function parseIngressoIso(dataIngresso: string): string {
+  const iso = parseItalianDayDisplayToIso(dataIngresso);
+  if (iso) return `${iso}T12:00:00.000Z`;
+  return new Date().toISOString();
+}
+
+async function loadCaptureFields(captureId: string): Promise<CaptureFieldRow[]> {
+  const sb = await createSupabaseServerUserClient();
+  const { data } = await sb
+    .from("document_capture_fields")
+    .select("field_key, confirmed_value, normalized_value")
+    .eq("document_capture_id", captureId);
+  return (data ?? []) as CaptureFieldRow[];
+}
+
+async function findCommittedApply(captureId: string, dryRunApplicationId: string) {
+  const sb = await createSupabaseServerUserClient();
+  const { data: applyRows } = await sb
+    .from("document_capture_applications")
+    .select("id, status, plan_json")
+    .eq("document_capture_id", captureId)
+    .eq("kind", "apply")
+    .eq("status", "committed");
+
+  return (applyRows ?? []).find(
+    (row) =>
+      (row.plan_json as { sourceDryRunApplicationId?: string } | null)?.sourceDryRunApplicationId ===
+      dryRunApplicationId,
+  );
+}
+
+async function runCaptureApplySaga(input: {
+  captureId: string;
+  applicationId: string;
+  userId: string;
+  resume?: boolean;
+  existingLavorazioneId?: string | null;
+}): Promise<{ ok: true; lavorazioneId: string; mezzoId: string }> {
+  const sb = await createSupabaseServerUserClient();
+
+  const { data: capture } = await sb
+    .from("document_capture")
+    .select("id, company_id, capture_version, updated_at, status, mezzo_id, lavorazione_id, attrezzatura_id")
+    .eq("id", input.captureId)
+    .maybeSingle();
+
+  const { data: application } = await sb
+    .from("document_capture_applications")
+    .select("*")
+    .eq("id", input.applicationId)
+    .eq("document_capture_id", input.captureId)
+    .eq("kind", "dry_run")
+    .maybeSingle();
+
+  if (!capture || !application) {
+    throw new Error("Dry-run non trovato");
+  }
+
+  const fields = await loadCaptureFields(input.captureId);
+  const currentHash = hashCaptureFieldsRows(fields);
+  assertCapturePlanFresh({
+    applicationCaptureVersion: application.capture_version,
+    applicationCaptureUpdatedAt: application.capture_updated_at,
+    applicationSourceFieldsHash: application.source_fields_hash,
+    captureCaptureVersion: capture.capture_version,
+    captureUpdatedAt: capture.updated_at,
+    currentFieldsHash: currentHash,
+  });
+
+  const approvedCreates = (application.approved_creates_json ?? {}) as ApprovedCreatesJson;
+  const ingressoFields = mapCaptureFieldsToIngresso(fields);
+  const idempotencyKey = `document-capture-apply:${input.applicationId}`;
+  const existingLavorazioneId = input.existingLavorazioneId ?? capture.lavorazione_id;
+
+  await beginCaptureApplyRpc({
+    captureId: input.captureId,
+    applicationId: input.applicationId,
+    resume: input.resume,
+  });
+
+  const deps = createCaptureInterventoWriteDeps({
+    userId: input.userId,
+    captureFields: fields,
+    approvedCreates: {
+      mezzo: approvedCreates.mezzo !== false,
+      lavorazioni: approvedCreates.lavorazioni !== false,
+      ricambi: approvedCreates.ricambi !== false,
+    },
+  });
+
+  const mezzoCatalog = await fetchCaptureMezziCatalog();
+
+  try {
+    const { result: saga } = await executeInterventoWrite(
+      {
+        mode: "create",
+        idempotencyKey,
+        fields: ingressoFields,
+        lavorazioneId: existingLavorazioneId,
+        mezziCatalog: mezzoCatalog,
+        meta: {
+          statoId: "accettazione",
+          priorita: "normale",
+          mezzoIdHint: capture.mezzo_id,
+          dataIngressoIso: parseIngressoIso(ingressoFields.dataIngresso),
+          note: ingressoFields.noteIntervento.trim() || ingressoFields.descrizioneAnomalia.trim() || null,
+          createdBy: input.userId,
+        },
+      },
+      deps,
+    );
+
+    if (!saga.ok) {
+      const eventType = saga.lavorazioneId ? "apply_partial" : "apply_failed";
+      const failPlan = {
+        sourceDryRunApplicationId: input.applicationId,
+        stage: saga.stage,
+        error: saga.error,
+        lavorazioneId: saga.lavorazioneId ?? null,
+      };
+
+      await sb.from("document_capture_applications").insert({
+        company_id: capture.company_id,
+        document_capture_id: input.captureId,
+        kind: "apply",
+        status: "failed",
+        source_fields_hash: application.source_fields_hash,
+        capture_version: capture.capture_version,
+        capture_updated_at: capture.updated_at,
+        plan_json: failPlan,
+        approved_creates_json: application.approved_creates_json,
+        created_by: input.userId,
+        error_message: saga.error,
+      });
+
+      await completeCaptureApplyRpc({
+        captureId: input.captureId,
+        applicationId: input.applicationId,
+        success: false,
+        eventType,
+        lavorazioneId: saga.lavorazioneId ?? null,
+        payload: failPlan,
+      });
+
+      throw new Error(saga.error);
+    }
+
+    const applyPlan = {
+      ...(application.plan_json as Record<string, unknown>),
+      sourceDryRunApplicationId: input.applicationId,
+      lavorazioneId: saga.lavorazioneId,
+      mezzoId: saga.mezzoId,
+    };
+
+    await sb.from("document_capture_applications").insert({
+      company_id: capture.company_id,
+      document_capture_id: input.captureId,
+      kind: "apply",
+      status: "committed",
+      source_fields_hash: application.source_fields_hash,
+      capture_version: capture.capture_version,
+      capture_updated_at: capture.updated_at,
+      plan_json: applyPlan,
+      approved_creates_json: application.approved_creates_json,
+      created_by: input.userId,
+      committed_at: new Date().toISOString(),
+    });
+
+    await completeCaptureApplyRpc({
+      captureId: input.captureId,
+      applicationId: input.applicationId,
+      success: true,
+      eventType: "apply_committed",
+      lavorazioneId: saga.lavorazioneId,
+      mezzoId: saga.mezzoId,
+      payload: applyPlan,
+    });
+
+    await writeModificaLog(sb, {
+      entita: "lavorazioni",
+      entita_id: saga.lavorazioneId,
+      azione: "CREATE",
+      payload: auditSnapshot(
+        {
+          lavorazioneId: saga.lavorazioneId,
+          mezzoId: saga.mezzoId,
+          document_capture_id: input.captureId,
+          applicationId: input.applicationId,
+          fieldsHash: currentHash,
+        },
+        auditContext("Document Capture apply"),
+      ),
+      autore_id: input.userId,
+    });
+
+    return { ok: true, lavorazioneId: saga.lavorazioneId, mezzoId: saga.mezzoId };
+  } catch (e) {
+    if (e instanceof Error && e.message.includes("apply")) throw e;
+    throw e;
+  }
+}
+
+export async function buildCaptureDryRunApplication(captureId: string): Promise<{
+  applicationId: string;
+  plan: CaptureApplyPlan;
+}> {
+  const sb = await createSupabaseServerUserClient();
+  const { data: auth } = await sb.auth.getUser();
+  const userId = auth.user?.id ?? null;
+
+  const { data: capture, error } = await sb
+    .from("document_capture")
+    .select("id, company_id, capture_version, updated_at, lavorazione_id, mezzo_id, attrezzatura_id, status")
+    .eq("id", captureId)
+    .maybeSingle();
+
+  if (error || !capture) {
+    throw new Error("Capture non trovato");
+  }
+
+  if (capture.status !== "review" && capture.status !== "dry_run") {
+    throw new Error("Stato capture non valido per dry-run");
+  }
+
+  const fields = await loadCaptureFields(captureId);
+  const sourceFieldsHash = hashCaptureFieldsRows(fields);
+  const approvedCreates = { mezzo: true, lavorazioni: true, ricambi: true } satisfies ApprovedCreatesJson;
+
+  const plan = buildCaptureApplyPlanFromFields({
+    fields,
+    lavorazioneId: capture.lavorazione_id,
+    mezzoId: capture.mezzo_id,
+    attrezzaturaId: capture.attrezzatura_id,
+    approvedCreates,
+    createdBy: userId ?? "Document Capture",
+  });
+
+  const { data: app, error: appError } = await sb
+    .from("document_capture_applications")
+    .insert({
+      company_id: capture.company_id,
+      document_capture_id: captureId,
+      kind: "dry_run",
+      status: "pending",
+      source_fields_hash: sourceFieldsHash,
+      capture_version: capture.capture_version,
+      capture_updated_at: capture.updated_at,
+      plan_json: plan,
+      approved_creates_json: approvedCreates,
+      created_by: userId,
+    })
+    .select("id")
+    .single();
+
+  if (appError || !app) {
+    throw new Error(appError?.message ?? "Dry-run non salvato");
+  }
+
+  await mutateCaptureWithEvent({
+    captureId,
+    eventType: "dry_run",
+    idempotencyKey: `dry_run:${app.id}`,
+    payload: { applicationId: app.id, sourceFieldsHash },
+    newStatus: "dry_run",
+  });
+
+  return { applicationId: app.id, plan };
+}
+
+export async function applyDocumentCapturePlan(input: {
+  captureId: string;
+  applicationId: string;
+}): Promise<{ ok: true; lavorazioneId: string }> {
+  const sb = await createSupabaseServerUserClient();
+  const { data: auth } = await sb.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) {
+    throw new Error("Sessione assente");
+  }
+
+  const existingApply = await findCommittedApply(input.captureId, input.applicationId);
+  if (existingApply) {
+    const lavId = (existingApply.plan_json as { lavorazioneId?: string })?.lavorazioneId;
+    if (lavId) return { ok: true, lavorazioneId: lavId };
+  }
+
+  const { data: capture } = await sb
+    .from("document_capture")
+    .select("status")
+    .eq("id", input.captureId)
+    .maybeSingle();
+
+  if (capture?.status !== "dry_run") {
+    throw new Error("Apply consentito solo da stato dry_run");
+  }
+
+  const result = await runCaptureApplySaga({
+    captureId: input.captureId,
+    applicationId: input.applicationId,
+    userId,
+  });
+
+  return { ok: true, lavorazioneId: result.lavorazioneId };
+}
+
+export async function resumeFailedCaptureApply(input: {
+  captureId: string;
+  applicationId: string;
+}): Promise<{ ok: true; lavorazioneId: string }> {
+  const sb = await createSupabaseServerUserClient();
+  const { data: auth } = await sb.auth.getUser();
+  const userId = auth.user?.id;
+  if (!userId) throw new Error("Sessione assente");
+
+  const { data: capture } = await sb
+    .from("document_capture")
+    .select("status")
+    .eq("id", input.captureId)
+    .maybeSingle();
+
+  if (capture?.status !== "failed") {
+    throw new Error("Resume consentito solo da failed");
+  }
+
+  const { data: failedApply } = await sb
+    .from("document_capture_applications")
+    .select("plan_json")
+    .eq("document_capture_id", input.captureId)
+    .eq("kind", "apply")
+    .eq("status", "failed")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const partialLavId = (failedApply?.plan_json as { lavorazioneId?: string | null } | null)?.lavorazioneId ?? null;
+
+  const result = await runCaptureApplySaga({
+    captureId: input.captureId,
+    applicationId: input.applicationId,
+    userId,
+    resume: true,
+    existingLavorazioneId: partialLavId,
+  });
+
+  return { ok: true, lavorazioneId: result.lavorazioneId };
+}
+
+export { hashConfirmedCaptureFields, resolveFieldsForHash };

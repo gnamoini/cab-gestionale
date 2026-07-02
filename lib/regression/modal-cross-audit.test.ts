@@ -65,7 +65,6 @@ assert.match(hubPanoramica, /GestionaleTextarea/);
 const buttonSaveFiles = [
   "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
   "components/preventivi/preventivi-editor-modal.tsx",
-  "components/bunder/bunder-editor-modal.tsx",
   "components/design-system/hub-modal-panoramica.tsx",
 ] as const;
 

@@ -28,6 +28,16 @@ export function clientCredentials(): SmokeCredentials | null {
   return { email, password };
 }
 
+async function ensureAccountMenuVisible(page: Page): Promise<void> {
+  const accountMenu = page.getByTestId("smoke-account-menu");
+  if (await accountMenu.isVisible()) return;
+  const drawerOpen = page.getByTestId("smoke-nav-drawer-open");
+  if (await drawerOpen.isVisible()) {
+    await drawerOpen.click();
+  }
+  await expect(accountMenu).toBeVisible({ timeout: 15_000 });
+}
+
 export async function loginViaUi(page: Page, creds: SmokeCredentials): Promise<void> {
   await expect(async () => {
     await page.goto("/login");
@@ -40,11 +50,13 @@ export async function loginViaUi(page: Page, creds: SmokeCredentials): Promise<v
     });
   }).toPass({ timeout: 90_000 });
 
-  await expect(page.getByTestId("smoke-account-menu")).toBeVisible({ timeout: 15_000 });
+  await ensureAccountMenuVisible(page);
 }
 
 export async function logoutViaUi(page: Page): Promise<void> {
+  await ensureAccountMenuVisible(page);
   await page.getByTestId("smoke-account-menu").click();
+  await expect(page.getByTestId("profile-sheet")).toBeVisible({ timeout: 10_000 });
   await expect(page.getByTestId("smoke-logout")).toBeVisible({ timeout: 10_000 });
   await page.getByTestId("smoke-logout").click();
   await expect(page.getByTestId("smoke-logout-confirm")).toBeVisible({ timeout: 10_000 });

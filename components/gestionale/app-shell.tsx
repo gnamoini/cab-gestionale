@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { createPortal } from "react-dom";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
 import { CloseButton, Tooltip } from "@/components/design-system";
 import { useAuth } from "@/context/auth-context";
-import { useGlobalLoading, useShowGlobalLoading } from "@/context/global-loading-context";
+import { useGlobalLoading } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { erpFocus } from "@/lib/ui/erp-tokens";
 import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
@@ -14,14 +13,20 @@ import { CLIENTE_HOME_PATH, shouldHideNavHref, isClienteRole } from "@/lib/auth/
 import { useRbac } from "@/src/hooks/use-rbac";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
-import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
-import { UserProfileAvatar } from "@/components/gestionale/user-profile-avatar";
-import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
+import { SidebarSessionPanel } from "@/components/gestionale/sidebar-session-panel";
+import {
+  SidebarNavIconWrap,
+  sidebarNavIconShellActive,
+  sidebarNavIconShellInactive,
+  sidebarNavLinkActive,
+  sidebarNavLinkBase,
+  sidebarNavLinkInactive,
+} from "@/components/gestionale/sidebar-nav-icon-wrap";
+import { ProfileSheetProvider } from "@/components/profile/profile-sheet-context";
 import {
   dsGestionaleContentMax,
   dsGestionaleContentRail,
-  dsGestionaleContentShellRow,
   dsZModalHigh,
 } from "@/lib/ui/design-system";
 import { layoutPageRoot, layoutResponsiveCoreScope } from "@/lib/ui/responsive-layout-core";
@@ -56,33 +61,11 @@ import { recordHealthMetric } from "@/lib/observability/runtime-health";
 import { isBootInvestigationEnabled, logBoot, trackRedirect, trackStoreUpdate } from "@/lib/observability/boot-investigation";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
-import {
-  accountMenuPortalEnterClass,
-  accountMenuPortalPanel,
-  accountMenuHeaderClass,
-  accountMenuItemClass,
-  accountMenuItemMutedIconClass,
-  accountMenuTriggerBaseClass,
-  accountMenuTriggerOpenClass,
-  accountMenuTriggerLabelClass,
-  accountMenuTriggerChevronWrapClass,
-} from "@/lib/ui/global-input";
-import {
-  useDropdownOutsideDismiss,
-  useGlobalDropdownPortal,
-} from "@/components/gestionale/global-input/use-global-dropdown-portal";
+
+const mobileNavOpenBtnClass = `inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] dark:border-[color:var(--cab-border-strong)] ${erpFocus}`;
 
 const shellTopBarClass =
   "flex h-14 shrink-0 items-center border-b border-[color:var(--cab-border)]";
-
-const navLinkBase =
-  "cab-sidebar-nav-link group relative flex min-h-10 shrink-0 items-center gap-2.5 rounded-lg px-2.5 text-sm font-medium";
-
-const navLinkInactive =
-  "text-zinc-600 hover:bg-zinc-100/95 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/90 dark:hover:text-zinc-100";
-
-const navLinkActive =
-  "bg-[color:color-mix(in_srgb,var(--cab-primary)_14%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_22%,transparent)] before:absolute before:left-0 before:top-1/2 before:h-8 before:w-[3px] before:-translate-y-1/2 before:rounded-r-full before:bg-[color:var(--cab-primary)] dark:bg-[color:color-mix(in_srgb,var(--cab-primary)_18%,var(--cab-card))] dark:text-white dark:shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_35%,transparent)]";
 
 function NavLink({
   href,
@@ -93,6 +76,7 @@ function NavLink({
   badge,
   onNavigate,
   onExpandIntent,
+  onActiveNavClick,
 }: {
   href: string;
   label: string;
@@ -102,21 +86,18 @@ function NavLink({
   badge?: string | null;
   onNavigate?: (href: string) => void;
   onExpandIntent?: () => void;
+  onActiveNavClick?: () => void;
 }) {
   const pathname = usePathname();
   const active = isNavTargetCurrent(pathname, href);
 
   const iconWrap = (
-    <span
-      className={`cab-sidebar-nav-icon flex h-7 w-7 shrink-0 items-center justify-center rounded-md ${
-        active && !disabled
-          ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_22%,var(--cab-surface-2))] text-[color:var(--cab-primary)]"
-          : "bg-zinc-100 text-zinc-500 group-hover:bg-zinc-200 group-hover:text-zinc-700 dark:bg-zinc-800/80 dark:text-zinc-400 dark:group-hover:bg-zinc-700 dark:group-hover:text-zinc-200"
-      } ${disabled ? "opacity-60" : ""}`}
-      aria-hidden
+    <SidebarNavIconWrap
+      shellClass={active && !disabled ? sidebarNavIconShellActive : sidebarNavIconShellInactive}
+      dimmed={disabled}
     >
       <Icon className="h-4 w-4" />
-    </span>
+    </SidebarNavIconWrap>
   );
 
   const navPointerIntentProps = collapsed
@@ -131,13 +112,13 @@ function NavLink({
       <div
         role="link"
         aria-disabled="true"
-        className={`${navLinkBase} cursor-not-allowed opacity-75`}
+        className={`${sidebarNavLinkBase} cursor-not-allowed opacity-75`}
         {...navPointerIntentProps}
       >
         {iconWrap}
         <span className="cab-sidebar-nav-label min-w-0 truncate leading-tight">{label}</span>
         {badge ? (
-          <span className="cab-sidebar-nav-badge ml-auto max-w-[4rem] shrink-0 overflow-hidden rounded bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200">
+          <span className="cab-sidebar-nav-badge max-w-[4rem] shrink-0 overflow-hidden rounded bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200">
             {badge}
           </span>
         ) : null}
@@ -155,10 +136,15 @@ function NavLink({
     <Link
       href={href}
       onClick={(e) => {
-        if (isNavTargetCurrent(pathname, href)) return;
+        if (isNavTargetCurrent(pathname, href)) {
+          e.preventDefault();
+          (e.currentTarget as HTMLElement).blur();
+          onActiveNavClick?.();
+          return;
+        }
         scheduleRouteTransitionBegin(e, () => onNavigate?.(href));
       }}
-      className={`${navLinkBase} ${active ? navLinkActive : navLinkInactive} ${erpFocus}`}
+      className={`${sidebarNavLinkBase} ${active ? sidebarNavLinkActive : sidebarNavLinkInactive} ${erpFocus}`}
       {...navPointerIntentProps}
     >
       {iconWrap}
@@ -172,182 +158,6 @@ function NavLink({
     <Tooltip content={label} side="right">
       {node}
     </Tooltip>
-  );
-}
-
-function AccountMenuChevronIcon({ open }: { open: boolean }) {
-  return (
-    <svg
-      className={`h-3.5 w-3.5 shrink-0 text-[color:var(--cab-text-muted)] transition-transform duration-200 ease-out ${
-        open ? "rotate-180" : ""
-      }`}
-      viewBox="0 0 16 16"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      aria-hidden
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4 6l4 4 4-4" />
-    </svg>
-  );
-}
-
-function AccountMenuLogoutIcon({ className = accountMenuItemMutedIconClass }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-    </svg>
-  );
-}
-
-function AccountMenu() {
-  const { user, logout, status } = useAuth();
-  const [open, setOpen] = useState(false);
-  const [menuEntered, setMenuEntered] = useState(false);
-  const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const close = useCallback(() => setOpen(false), []);
-
-  const { style: portalStyle, scrollInside, placementOriginClass, isPositioned, floatingRef } =
-    useGlobalDropdownPortal({
-      open,
-      anchorRef: triggerRef,
-      contentRef: menuRef,
-      placement: "bottom-end",
-      matchAnchorWidth: false,
-      panelWidth: 208,
-      maxHeight: 384,
-    });
-
-  useLayoutEffect(() => {
-    if (!open || !isPositioned) {
-      setMenuEntered(false);
-      return;
-    }
-    const frame = requestAnimationFrame(() => {
-      requestAnimationFrame(() => setMenuEntered(true));
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [open, isPositioned]);
-
-  useDropdownOutsideDismiss(open, triggerRef, menuRef, close, { when: isPositioned });
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
-    }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [open, close]);
-
-  const showGlobalLoading = useShowGlobalLoading();
-
-  async function confirmLogout() {
-    setLogoutConfirmOpen(false);
-    showGlobalLoading(GLOBAL_LOADING_MESSAGES.logout);
-    await logout();
-    window.location.assign("/login");
-  }
-
-  function requestLogout() {
-    close();
-    setLogoutConfirmOpen(true);
-  }
-
-  const label = user?.nome?.trim() || "Account";
-
-  const menu =
-    open && portalStyle ? (
-      <div
-        ref={floatingRef}
-        role="menu"
-        aria-label="Menu account"
-        style={portalStyle}
-        className={`${accountMenuPortalPanel} ${placementOriginClass} ${
-          menuEntered ? accountMenuPortalEnterClass : "opacity-0"
-        } ${scrollInside ? "overflow-y-auto" : "overflow-hidden"}`}
-      >
-        <div role="presentation" className={accountMenuHeaderClass}>
-          <UserProfileAvatar
-            nome={user?.nome ?? (status === "loading" ? "·" : undefined)}
-            email={user?.email}
-            variant="header"
-          />
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold leading-tight text-[color:var(--cab-text)]">
-              {user?.nome ?? "Utente"}
-            </p>
-            {user?.email ? (
-              <p className="mt-0.5 truncate text-xs text-[color:var(--cab-text-muted)]">{user.email}</p>
-            ) : null}
-          </div>
-        </div>
-        <div
-          role="presentation"
-          className={`${accountMenuItemClass} justify-between gap-3 text-[color:var(--cab-text-muted)]`}
-        >
-          <span className="flex min-w-0 items-center gap-2.5">
-            <ThemeModeIcon className={accountMenuItemMutedIconClass} />
-            Aspetto
-          </span>
-          <ThemeToggle variant="switch" />
-        </div>
-        <button
-          type="button"
-          role="menuitem"
-          data-testid="smoke-logout"
-          onClick={() => requestLogout()}
-          className={`${accountMenuItemClass} hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_8%,var(--cab-hover))] ${erpFocus}`}
-        >
-          <AccountMenuLogoutIcon />
-          Esci
-        </button>
-      </div>
-    ) : null;
-
-  return (
-    <div className="relative">
-      <button
-        ref={triggerRef}
-        type="button"
-        data-testid="smoke-account-menu"
-        onClick={() => setOpen((v) => !v)}
-        className={`${accountMenuTriggerBaseClass} ${open ? accountMenuTriggerOpenClass : ""}`}
-        aria-expanded={open}
-        aria-haspopup="menu"
-        aria-label={label === "Account" ? "Menu account" : `Menu account: ${label}`}
-      >
-        <UserProfileAvatar
-          nome={user?.nome ?? (status === "loading" ? "·" : undefined)}
-          email={user?.email}
-          variant="header"
-          className={open ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-primary)_40%,transparent)]" : ""}
-        />
-        <span className={accountMenuTriggerLabelClass} suppressHydrationWarning>
-          {label}
-        </span>
-        <span className={accountMenuTriggerChevronWrapClass}>
-          <AccountMenuChevronIcon open={open} />
-        </span>
-      </button>
-      {typeof document !== "undefined" && menu ? createPortal(menu, document.body) : null}
-      {logoutConfirmOpen ? (
-        <GestionaleConfirmDialogLazy
-          open={logoutConfirmOpen}
-          title="Uscire dall'account?"
-          message="Verrai disconnesso da questa sessione. Dovrai accedere di nuovo per continuare."
-          confirmLabel="Esci"
-          cancelLabel="Annulla"
-          destructive
-          confirmTestId="smoke-logout-confirm"
-          onCancel={() => setLogoutConfirmOpen(false)}
-          onConfirm={() => void confirmLogout()}
-        />
-      ) : null}
-    </div>
   );
 }
 
@@ -508,13 +318,16 @@ function MobileNavDrawer({
             <CloseButton onClick={onClose} />
           </div>
         </div>
+        <SidebarSessionPanel variant="drawer" placement="brand" onOpenInbox={onClose} />
         <nav
-          className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] [-webkit-overflow-scrolling:touch]"
+          className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col p-3 pb-0"
           aria-label="Sezioni principali"
         >
-          {navItems.map((item) => (
-            <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} onNavigate={onNavigate} />
-          ))}
+          <div className="gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
+            {navItems.map((item) => (
+              <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} onNavigate={onNavigate} />
+            ))}
+          </div>
         </nav>
       </div>
     </div>
@@ -525,6 +338,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   useBootInvestigationMount("AppShell");
   const [mobileOpen, setMobileOpen] = useState(false);
   const shellRef = useRef<HTMLDivElement>(null);
+  const sidebarAsideRef = useRef<HTMLElement>(null);
   const shellColRef = useRef<HTMLDivElement>(null);
   const mainScrollRef = useRef<HTMLElement | null>(null);
   const shellLayout = useGestionaleShellLayoutSync({
@@ -646,80 +460,73 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       if (pathname === homePath) {
         e.preventDefault();
         setRouteLoading(false);
+        collapseSidebar();
+        (e.currentTarget as HTMLElement).blur();
         window.scrollTo({ top: 0, behavior: "smooth" });
         return;
       }
       scheduleRouteTransitionBegin(e, () => beginRouteTransition(homePath));
     },
-    [beginRouteTransition, pathname, homePath],
+    [beginRouteTransition, collapseSidebar, pathname, homePath],
   );
 
   const asideWidthClass = sidebarExpanded ? "w-[12.75rem]" : "w-[4.25rem]";
   const asideW = sidebarExpanded ? `${asideWidthClass} z-50` : asideWidthClass;
   const mainPad = isCompactShell ? "" : "pl-[4.25rem]";
   const sidebarTopOffset =
-    "top-[calc(var(--cab-gestionale-top-bar)+env(safe-area-inset-top,0px))]";
+    "top-0 supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]";
 
   return (
     <GestionaleShellLayoutProvider value={shellLayout}>
+    <ProfileSheetProvider>
     <div
       ref={shellRef}
       className={`cab-app-shell flex min-h-0 flex-col ${cabAppViewportFillClass} max-w-full overflow-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]`}
     >
-      <header className="cab-ios-sticky-header shrink-0 border-b border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-card)_92%,transparent)] backdrop-blur-md supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]">
-        <div className="cab-gestionale-scroll-gutter-mirror w-full min-w-0">
-          <div className={dsGestionaleContentShellRow}>
-            <div
-              className={`${contentGutter} flex h-14 min-w-0 items-center gap-3 ${
-                isCompactShell
-                  ? "grid grid-cols-[auto_1fr_auto] items-center gap-0"
-                  : "justify-between"
-              }`}
-            >
-              <div className={`flex min-w-0 items-center justify-start gap-3 ${isCompactShell ? "contents" : ""}`}>
-                {isCompactShell ? (
-                  <button
-                    type="button"
-                    data-testid="smoke-nav-drawer-open"
-                    className={`inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] dark:border-[color:var(--cab-border-strong)] ${erpFocus}`}
-                    aria-label="Apri menu"
-                    onClick={() => setMobileOpen(true)}
-                  >
-                    ☰
-                  </button>
-                ) : null}
-                <Link
-                  href={homePath}
-                  onClick={onHeaderHomeClick}
-                  aria-label={CAB_APP_PRODUCT_NAME}
-                  className={`${erpFocus} inline-flex min-h-11 min-w-0 items-center justify-center rounded-lg transition-opacity duration-200 hover:opacity-90 ${
-                    isCompactShell ? "justify-self-center" : "justify-start py-2"
-                  }`}
-                >
-                  <CabLogo height={32} className="shrink-0" sizes="112px" priority />
-                </Link>
-              </div>
-              <div className="flex min-w-0 items-center justify-end">
-                <AccountMenu />
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
+      {isCompactShell ? (
+          <button
+            type="button"
+            data-testid="smoke-nav-drawer-open"
+            className={`cab-mobile-nav-open fixed left-3 top-[max(0.75rem,env(safe-area-inset-top))] z-30 ${mobileNavOpenBtnClass}`}
+            aria-label="Apri menu"
+            onClick={() => setMobileOpen(true)}
+          >
+            ☰
+          </button>
+      ) : null}
 
       <aside
+        ref={sidebarAsideRef}
         data-sidebar-collapsed={collapsed ? "" : undefined}
         data-sidebar-hover-expanded={sidebarExpanded ? "" : undefined}
         onMouseEnter={onSidebarMouseEnter}
         onMouseLeave={onSidebarMouseLeave}
         onFocusCapture={onSidebarFocusCapture}
         onBlurCapture={onSidebarBlurCapture}
-        className={`cab-sidebar fixed bottom-0 left-0 z-40 flex-col overflow-x-hidden border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width,box-shadow] duration-[var(--cab-sidebar-motion)] ease-[cubic-bezier(0.2,0,0,1)] ${sidebarTopOffset} ${
+        className={`cab-sidebar fixed bottom-0 left-0 z-40 flex-col overflow-x-hidden border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width,box-shadow] duration-[var(--cab-sidebar-width-motion)] ease-[var(--cab-sidebar-ease-out)] ${sidebarTopOffset} ${
           isCompactShell ? "hidden" : `flex ${asideW}`
         }`}
       >
+        <div className="cab-sidebar-brand shrink-0">
+          <Link
+            href={homePath}
+            onClick={onHeaderHomeClick}
+            aria-label={CAB_APP_PRODUCT_NAME}
+            className={`${erpFocus} flex min-h-10 min-w-0 items-center justify-center overflow-hidden rounded-lg transition-opacity duration-200 hover:opacity-90`}
+          >
+            <CabLogo height={28} className="shrink-0" sizes="112px" priority />
+          </Link>
+        </div>
+        {!isCompactShell ? (
+          <SidebarSessionPanel
+            variant="sidebar"
+            placement="brand"
+            sidebarCollapsed={collapsed && !sidebarExpanded}
+            onSidebarExpandIntent={onSidebarNavIntent}
+          />
+        ) : null}
         <nav
-          className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden p-3"
+          className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col p-3 pb-0"
           aria-label="Sezioni principali"
           onPointerEnter={(event) => {
             if (!collapsed) return;
@@ -728,25 +535,28 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             }
           }}
         >
-          {navItems.map((item) => (
-            <NavLink
-              key={item.href}
-              href={item.href}
-              label={item.label}
-              Icon={item.Icon}
-              collapsed={collapsed}
-              disabled={item.disabled}
-              badge={item.badge}
-              onNavigate={beginRouteTransition}
-              onExpandIntent={onSidebarNavIntent}
-            />
-          ))}
+          <div className="gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain [-webkit-overflow-scrolling:touch]">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.href}
+                href={item.href}
+                label={item.label}
+                Icon={item.Icon}
+                collapsed={collapsed}
+                disabled={item.disabled}
+                badge={item.badge}
+                onNavigate={beginRouteTransition}
+                onExpandIntent={onSidebarNavIntent}
+                onActiveNavClick={collapseSidebar}
+              />
+            ))}
+          </div>
         </nav>
       </aside>
 
       <div
         ref={shellColRef}
-        className={`flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-[var(--cab-sidebar-motion)] ease-out ${mainPad}`}
+        className={`flex min-h-0 min-w-0 flex-1 flex-col transition-[padding] duration-[var(--cab-sidebar-width-motion)] ease-out ${mainPad}`}
       >
         <MobileNavDrawer
           open={mobileOpen}
@@ -781,6 +591,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </div>
+    </ProfileSheetProvider>
     </GestionaleShellLayoutProvider>
   );
 }

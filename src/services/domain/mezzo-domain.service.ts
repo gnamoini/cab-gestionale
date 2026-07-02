@@ -2,20 +2,22 @@ import {
   documentoRowToGestionale,
   logModificaRowToMezziHubLogEntry,
   preventivoRowToRecordStub,
-  toMezzoUI,
   type MezziHubLogEntry,
 } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { mezzoGestitoToEmbedRow } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import {
   interventiMezzoDaLavorazioniDb,
   labelLavorazioneStatoDb,
   mezzoHaLavorazioneAttivaDb,
 } from "@/lib/mezzi/interventi-from-lavorazioni-db";
 import { logAutoreLabel } from "@/lib/gestionale-log/log-modifiche-view-model";
+import { interventoTargetBadge } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
+import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { MezzoInterventoLavorazione } from "@/lib/mezzi/types";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { DocumentoGestionale } from "@/lib/types/gestionale";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { DocumentoRow, LogModificaRow, MezzoRow, MovimentoRicambioRow, PreventivoRow } from "@/src/types/supabase-tables";
+import type { DocumentoRow, LogModificaRow, MezzoRow, MovimentoRicambioRow, PreventivoRow, AssetTimelineProjectionRow } from "@/src/types/supabase-tables";
 
 export type MezzoHubKpi = {
   totaleLavorazioni: number;
@@ -24,7 +26,7 @@ export type MezzoHubKpi = {
   preventiviCount: number;
 };
 
-export type MezzoTimelineKind = "lavorazione" | "log" | "movimento";
+export type MezzoTimelineKind = "lavorazione" | "log" | "movimento" | "lifecycle";
 
 export type MezzoTimelineItem = {
   id: string;
@@ -32,6 +34,7 @@ export type MezzoTimelineItem = {
   at: string;
   title: string;
   subtitle?: string;
+  targetBadge?: string;
   ref?: { lavorazioneId?: string; origine?: "attiva" | "storico" };
 };
 
@@ -50,40 +53,42 @@ export type MezzoHubData = {
 
 /** Snapshot read-only da sole query React Query (nessun IO). */
 export type MezzoQueriesSnapshot = {
-  mezzoRow: MezzoRow | null | undefined;
+  mezzoGestito: MezzoGestito | null | undefined;
   lavorazioni: LavorazioneListRow[];
   preventiviRows: PreventivoRow[];
   documentiRows: DocumentoRow[];
   logRows: LogModificaRow[];
   movimentiRows: MovimentoRicambioRow[];
+  lifecycleRows?: AssetTimelineProjectionRow[];
 };
 
 type MezzoHubCore = {
-  mezzoRow: MezzoRow;
+  mezzoGestito: MezzoGestito;
   lavorazioni: LavorazioneListRow[];
   preventiviRows: PreventivoRow[];
   documentiRows: DocumentoRow[];
   logRows: LogModificaRow[];
   movimentiRows: MovimentoRicambioRow[];
+  lifecycleRows?: AssetTimelineProjectionRow[];
 };
 
 function toCore(snapshot: MezzoQueriesSnapshot): MezzoHubCore | null {
-  if (!snapshot.mezzoRow) return null;
+  if (!snapshot.mezzoGestito) return null;
   return {
-    mezzoRow: snapshot.mezzoRow,
+    mezzoGestito: snapshot.mezzoGestito,
     lavorazioni: snapshot.lavorazioni,
     preventiviRows: snapshot.preventiviRows,
     documentiRows: snapshot.documentiRows,
     logRows: snapshot.logRows,
     movimentiRows: snapshot.movimentiRows,
+    lifecycleRows: snapshot.lifecycleRows,
   };
 }
 
 function deriveKpi(core: MezzoHubCore): MezzoHubKpi {
-  const mezzoG = toMezzoUI(core.mezzoRow);
   return {
     totaleLavorazioni: core.lavorazioni.length,
-    lavorazioneAttiva: mezzoHaLavorazioneAttivaDb(mezzoG, core.lavorazioni),
+    lavorazioneAttiva: mezzoHaLavorazioneAttivaDb(core.mezzoGestito, core.lavorazioni),
     documentiCount: core.documentiRows.length,
     preventiviCount: core.preventiviRows.length,
   };
@@ -94,12 +99,17 @@ function buildTimeline(core: MezzoHubCore): MezzoTimelineItem[] {
 
   for (const lav of core.lavorazioni) {
     const at = lav.data_ingresso?.trim() ? lav.data_ingresso : lav.created_at;
+    const targetBadge =
+      lav.target_type === "telaio" || lav.target_type === "attrezzatura"
+        ? interventoTargetBadge(lav.target_type)
+        : undefined;
     items.push({
       id: `lav-${lav.id}`,
       kind: "lavorazione",
       at,
       title: `Lavorazione · ${labelLavorazioneStatoDb(lav.stato)}`,
       subtitle: (lav.note ?? "").trim() || undefined,
+      targetBadge,
       ref: {
         lavorazioneId: lav.id,
         origine: lav.archived === true ? "storico" : "attiva",
@@ -132,6 +142,17 @@ function buildTimeline(core: MezzoHubCore): MezzoTimelineItem[] {
     });
   }
 
+  for (const row of core.lifecycleRows ?? []) {
+    if (row.mezzo_id !== core.mezzoGestito.id) continue;
+    items.push({
+      id: `life-${row.source_id}`,
+      kind: "lifecycle",
+      at: row.event_at,
+      title: row.label,
+      subtitle: row.event_subtype,
+    });
+  }
+
   items.sort((a, b) => {
     const tb = new Date(b.at).getTime();
     const ta = new Date(a.at).getTime();
@@ -142,13 +163,13 @@ function buildTimeline(core: MezzoHubCore): MezzoTimelineItem[] {
 }
 
 function assembleHubData(core: MezzoHubCore): MezzoHubData {
-  const mezzoG = toMezzoUI(core.mezzoRow);
+  const mezzoRow = mezzoGestitoToEmbedRow(core.mezzoGestito);
   return {
-    mezzoId: core.mezzoRow.id,
-    mezzoRow: core.mezzoRow,
+    mezzoId: core.mezzoGestito.id,
+    mezzoRow,
     lavorazioni: core.lavorazioni,
-    interventi: interventiMezzoDaLavorazioniDb(mezzoG, core.lavorazioni),
-    preventivi: core.preventiviRows.map((r) => preventivoRowToRecordStub(r, core.mezzoRow)),
+    interventi: interventiMezzoDaLavorazioniDb(core.mezzoGestito, core.lavorazioni),
+    preventivi: core.preventiviRows.map((r) => preventivoRowToRecordStub(r, mezzoRow)),
     documenti: core.documentiRows.map(documentoRowToGestionale),
     log: core.logRows.map((row) => logModificaRowToMezziHubLogEntry(row)),
     movimenti: core.movimentiRows,

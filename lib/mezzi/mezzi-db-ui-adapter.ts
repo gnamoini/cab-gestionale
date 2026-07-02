@@ -21,6 +21,12 @@ import type {
 } from "@/src/types/supabase-tables";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import {
+  attrezzatureForMezzo,
+  composeMezzoGestitoFromRows,
+  mezzoGestitoFromRow,
+} from "@/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito";
+import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 
 function str(v: string | null | undefined, fallback = "—"): string {
   const t = v?.trim();
@@ -32,34 +38,20 @@ function matricolaUi(v: string | null | undefined): string {
   return t && t.length > 0 ? t : "Non assegnata";
 }
 
-/** Campi UI non presenti su DB: valori di default stabili. */
+/** @deprecated Usare mezzoGestitoFromRow */
 export function toMezzoUI(row: MezzoRow): MezzoGestito {
-  const meta = parseMezzoMeta(row.meta);
-  return {
-    id: row.id,
-    cliente: row.cliente,
-    utilizzatore: str(row.utilizzatore, "—"),
-    marca: row.marca,
-    modello: row.modello,
-    targa: str(row.targa, "—"),
-    matricola: matricolaUi(row.matricola),
-    numeroScuderia: row.numero_scuderia?.trim() || undefined,
-    tipoAttrezzatura: str(row.tipo_attrezzatura, "—"),
-    cantiere: meta.cantiere,
-    tipoTelaio: meta.tipoTelaio,
-    marcaTelaio: meta.marcaTelaio,
-    modelloTelaio: meta.modelloTelaio,
-    anno: row.anno ?? new Date().getFullYear(),
-    oreKm: meta.oreLavoro ?? 0,
-    km: meta.km,
-    statoAttuale: "Operativo",
-    dataUltimaUscita: row.updated_at?.slice(0, 10) || "—",
-    note: "",
-    priorita: "normale",
-    hubSynthetic: false,
-    ultimaModifica: row.updated_at?.trim() || row.created_at?.trim() || undefined,
-  };
+  return mezzoGestitoFromRow(row);
 }
+
+/** @deprecated Usare mezzoGestitoFromRow(row, { attrezzatura }) */
+export function toMezzoUIWithAttrezzatura(
+  row: MezzoRow,
+  primaryAttrezzatura: AttrezzaturaRow | null,
+): MezzoGestito {
+  return mezzoGestitoFromRow(row, { attrezzatura: primaryAttrezzatura });
+}
+
+export { mezzoGestitoFromRow };
 
 const CAT_MAP: Record<DocumentoRow["categoria"], DocumentoGestionale["categoria"]> = {
   listino: "listini",
@@ -132,6 +124,32 @@ function emptyManodopera(): PreventivoRecord["manodopera"] {
 /** Stub per lista hub / PDF minimi da riga Supabase (dettagli JSON opzionale). */
 export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | null): PreventivoRecord {
   const det = (row.dettagli ?? {}) as Record<string, unknown>;
+  const snapRaw = det.attrezzaturaSnapshot as Record<string, unknown> | undefined;
+  const hasFrozenTarget = det.targetType === "telaio" || det.targetType === "attrezzatura";
+  const snapMarca =
+    typeof snapRaw?.marca === "string"
+      ? snapRaw.marca
+      : typeof det.attrezzaturaMarca === "string"
+        ? det.attrezzaturaMarca
+        : typeof det.marcaAttrezzatura === "string"
+          ? det.marcaAttrezzatura
+          : "";
+  const snapModello =
+    typeof snapRaw?.modello === "string"
+      ? snapRaw.modello
+      : typeof det.attrezzaturaModello === "string"
+        ? det.attrezzaturaModello
+        : typeof det.modelloAttrezzatura === "string"
+          ? det.modelloAttrezzatura
+          : "";
+  const snapMatricola =
+    typeof snapRaw?.matricola === "string"
+      ? snapRaw.matricola
+      : typeof det.attrezzaturaMatricola === "string"
+        ? det.attrezzaturaMatricola
+        : typeof det.matricola === "string"
+          ? det.matricola
+          : "";
   const numero = typeof det.numero === "string" && det.numero.trim() ? det.numero.trim() : `PV-${row.id.slice(0, 8)}`;
   const stato = (typeof det.stato === "string" ? det.stato : "bozza") as PreventivoStato;
   const righeRaw = det.righeRicambi;
@@ -150,7 +168,7 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
       : emptyManodopera();
 
   const m = mezzo;
-  const mezzoUi = m ? toMezzoUI(m) : null;
+  const mezzoUi = m && !hasFrozenTarget ? mezzoGestitoFromRow(m) : null;
   return {
     id: row.id,
     numero,
@@ -166,14 +184,16 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
     macchinaRiassunto:
       typeof det.macchinaRiassunto === "string"
         ? det.macchinaRiassunto
-        : m
-          ? `${m.marca} ${m.modello}`.trim()
-          : "—",
+        : hasFrozenTarget
+          ? `${snapMarca} ${snapModello}`.trim() || "—"
+          : m
+            ? `${m.marca} ${m.modello}`.trim()
+            : "—",
     targa: m ? str(m.targa, "") : typeof det.targa === "string" ? det.targa : "",
-    matricola: m?.matricola ?? (typeof det.matricola === "string" ? det.matricola : ""),
+    matricola: hasFrozenTarget ? snapMatricola : m?.matricola ?? (typeof det.matricola === "string" ? det.matricola : ""),
     nScuderia: m?.numero_scuderia ?? (typeof det.nScuderia === "string" ? det.nScuderia : "") ?? "",
-    marcaAttrezzatura: m?.marca ?? (typeof det.marcaAttrezzatura === "string" ? det.marcaAttrezzatura : ""),
-    modelloAttrezzatura: m?.modello ?? (typeof det.modelloAttrezzatura === "string" ? det.modelloAttrezzatura : ""),
+    marcaAttrezzatura: hasFrozenTarget ? snapMarca : m?.marca ?? (typeof det.marcaAttrezzatura === "string" ? det.marcaAttrezzatura : ""),
+    modelloAttrezzatura: hasFrozenTarget ? snapModello : m?.modello ?? (typeof det.modelloAttrezzatura === "string" ? det.modelloAttrezzatura : ""),
     tipoAttrezzatura:
       typeof det.tipoAttrezzatura === "string"
         ? det.tipoAttrezzatura
@@ -197,12 +217,28 @@ export function preventivoRowToRecordStub(row: PreventivoRow, mezzo: MezzoRow | 
           : mezzoUi?.oreKm != null && mezzoUi.oreKm > 0
             ? String(mezzoUi.oreKm)
             : "",
+    targetType:
+      det.targetType === "telaio" || det.targetType === "attrezzatura" ? det.targetType : undefined,
+    attrezzaturaId: typeof det.attrezzaturaId === "string" ? det.attrezzaturaId : null,
+    attrezzaturaMarca: typeof det.attrezzaturaMarca === "string" ? det.attrezzaturaMarca : snapMarca || undefined,
+    attrezzaturaModello: typeof det.attrezzaturaModello === "string" ? det.attrezzaturaModello : snapModello || undefined,
+    attrezzaturaMatricola: typeof det.attrezzaturaMatricola === "string" ? det.attrezzaturaMatricola : snapMatricola || undefined,
+    attrezzaturaSnapshot:
+      snapRaw && typeof snapRaw === "object" && typeof snapRaw.marca === "string"
+        ? (snapRaw as PreventivoRecord["attrezzaturaSnapshot"])
+        : undefined,
     livelloCarburante: typeof det.livelloCarburante === "string" ? det.livelloCarburante : "",
     richiedente: typeof det.richiedente === "string" ? det.richiedente : "",
     descrizioneLavorazioniCliente: typeof det.descrizioneLavorazioniCliente === "string" ? det.descrizioneLavorazioniCliente : "—",
     descrizioneLavorazioniTecnicaSorgente:
       typeof det.descrizioneLavorazioniTecnicaSorgente === "string" ? det.descrizioneLavorazioniTecnicaSorgente : "",
     descrizioneGenerataAuto: typeof det.descrizioneGenerataAuto === "string" ? det.descrizioneGenerataAuto : "",
+    descriptionGenerationId:
+      typeof det.descriptionGenerationId === "string" ? det.descriptionGenerationId : undefined,
+    descriptionEngineMeta:
+      det.descriptionEngineMeta && typeof det.descriptionEngineMeta === "object"
+        ? (det.descriptionEngineMeta as PreventivoRecord["descriptionEngineMeta"])
+        : undefined,
     righeRicambi,
     manodopera,
     noteFinali: typeof det.noteFinali === "string" ? det.noteFinali : "",
@@ -286,7 +322,7 @@ export function logModificaRowToMezziHubLogEntry(
       const beforeRow = p.before as MezzoRow;
       const afterRow = p.after as MezzoRow;
       mezzo = mezzoLogOggettoLabelFromRow(afterRow);
-      changes = diffMezzoChanges(toMezzoUI(beforeRow), toMezzoUI(afterRow));
+      changes = diffMezzoChanges(mezzoGestitoFromRow(beforeRow), mezzoGestitoFromRow(afterRow));
     }
   }
 
@@ -300,3 +336,5 @@ export function logModificaRowToMezziHubLogEntry(
     changes,
   };
 }
+
+export { attrezzatureForMezzo };

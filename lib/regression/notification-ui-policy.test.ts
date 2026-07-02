@@ -13,10 +13,11 @@ function read(rel: string): string {
 
 const magBellSrc = read("components/gestionale/magazzino/magazzino-giacenza-bell.tsx");
 const adminBellSrc = read("components/dashboard/admin-notifications-bell.tsx");
+const centerBellSrc = read("components/gestionale/notification-center-bell.tsx");
 const designSystemIndexSrc = read("components/design-system/index.ts");
 const primitivesSrc = read("components/design-system/notifications/notification-primitives.tsx");
 const tokensSrc = read("lib/ui/notification-ui.ts");
-const widgetSrc = read("components/dashboard/dashboard-operational-cards.tsx");
+const widgetSrc = read("components/dashboard/widgets/dashboard-magazzino-kpi-widget.tsx");
 
 assert.match(tokensSrc, /NotificationSeverity/);
 assert.match(tokensSrc, /dsNotificationRowSurface/);
@@ -59,6 +60,27 @@ assert.doesNotMatch(adminBellSrc, /createPortal/);
 assert.doesNotMatch(adminBellSrc, /NotificationPanelShell/);
 assert.doesNotMatch(adminBellSrc, /bg-red-600/);
 assert.doesNotMatch(adminBellSrc, /text-zinc-/);
+
+assert.match(
+  centerBellSrc,
+  /@\/components\/design-system/,
+  "notification center must import notification primitives from design-system",
+);
+assert.match(centerBellSrc, /NotificationBellIcon/);
+assert.match(centerBellSrc, /sidebarNavLinkBase|cab-sidebar-session-row/);
+assert.match(centerBellSrc, /cab-notification-bell--arrive/);
+assert.match(centerBellSrc, /SidebarNavIconWrap/);
+assert.doesNotMatch(centerBellSrc, /cab-sidebar-session-icon-btn/);
+assert.match(centerBellSrc, /Drawer/);
+assert.match(centerBellSrc, /gestionaleLogPanelAsideClass/);
+assert.match(centerBellSrc, /GestionaleLogList/);
+assert.match(centerBellSrc, /LogEntry/);
+assert.match(centerBellSrc, /toInboxNotificationLogViewModel/);
+assert.match(centerBellSrc, /NotificationsPanelFooter/);
+assert.doesNotMatch(centerBellSrc, /useGlobalDropdownPortal/);
+assert.doesNotMatch(centerBellSrc, /createPortal/);
+assert.doesNotMatch(centerBellSrc, /NotificationPanelShell/);
+assert.doesNotMatch(centerBellSrc, /bg-red-600/);
 
 assert.match(
   magBellSrc,

@@ -46,7 +46,6 @@ assert.equal(
   lavorazioneCreatedEventToIntent({
     event,
     pathname: "/dashboard",
-    isAdmin: false,
     isLocalCreate: false,
   }),
   null,
@@ -56,7 +55,6 @@ assert.equal(
   lavorazioneCreatedEventToIntent({
     event,
     pathname: "/dashboard",
-    isAdmin: true,
     isLocalCreate: true,
   }),
   null,
@@ -66,7 +64,6 @@ assert.equal(
   lavorazioneCreatedEventToIntent({
     event,
     pathname: "/lavorazioni",
-    isAdmin: true,
     isLocalCreate: false,
   }),
   null,
@@ -75,7 +72,6 @@ assert.equal(
 const intent = lavorazioneCreatedEventToIntent({
   event,
   pathname: "/magazzino",
-  isAdmin: true,
   isLocalCreate: false,
   row: {
     id: "lav-1",
@@ -145,7 +141,6 @@ const magNotif = magazzinoCrossingToNotification({
   prev: { scorta: 10, scortaMinima: 5 },
   curr: { scorta: 3, scortaMinima: 5 },
   pathname: "/dashboard",
-  isAdmin: true,
   ricambio: {
     id: "ric-1",
     marca: "Bosch",
@@ -163,7 +158,6 @@ assert.equal(
     prev: { scorta: 3, scortaMinima: 5 },
     curr: { scorta: 2, scortaMinima: 5 },
     pathname: "/dashboard",
-    isAdmin: true,
   }),
   null,
 );
@@ -174,7 +168,6 @@ assert.equal(
     prev: { scorta: 10, scortaMinima: 5 },
     curr: { scorta: 3, scortaMinima: 5 },
     pathname: "/magazzino",
-    isAdmin: true,
   }),
   null,
 );

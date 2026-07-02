@@ -41,6 +41,18 @@ const BUCKET_OPTIONS: Record<
     fileSizeLimit: STORAGE_LIMITS.documentiThumbnailsMaxBytes,
     allowedMimeTypes: ["image/webp"],
   },
+  [STORAGE_BUCKETS.documentCapture]: {
+    public: false,
+    fileSizeLimit: STORAGE_LIMITS.documentCaptureMaxBytes,
+    allowedMimeTypes: [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/heic",
+      "image/heif",
+    ],
+  },
 };
 
 function isAlreadyExistsError(message: string): boolean {

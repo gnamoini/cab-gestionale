@@ -18,6 +18,7 @@ export type ProductionReadinessFinding = {
 export type ProductionReadinessDbSnapshot = {
   connected: boolean;
   operatorGlobalSettingsDbEnabled: boolean;
+  mezzoAttrezzatureV2DbEnabled: boolean;
   documentiBucketPublic: boolean | null;
   legacyPublicDocumentUrlCount: number;
   storageOrphanObjectCount: number | null;
@@ -36,6 +37,9 @@ export type ProductionReadinessCodeScan = {
   realtimePollingFallbackPresent: boolean;
   logBatcherPresent: boolean;
   isOperatorGlobalSettingsUsedInRbac: boolean;
+  legacyMezziColumnWriteHits: { file: string; line: number }[];
+  legacyAdapterImportOutsideAllowlist: { file: string; line: number }[];
+  r4DropMigrationInAutoPath: boolean;
 };
 
 export type ProductionReadinessInput = {

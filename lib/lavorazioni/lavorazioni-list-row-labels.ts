@@ -7,13 +7,30 @@ import {
   resolveInterventoIdent,
 } from "@/lib/domain/intervento-context";
 import { schedaIngressoFieldsFromDisplay } from "@/lib/domain/intervento-context/resolve-intervento-display-for-surface";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { mezzoGestitoFromRow } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
 import { countSchedePresenti } from "@/lib/schede/schede-ui";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { InterventoDisplay } from "@/lib/domain/intervento-context/intervento-context.types";
 import type { LavorazioneSchedeBundle, LavorazioneSchedeStore } from "@/types/schede";
+import { resolveInterventoOggettoDisplay } from "@/lib/domain/mezzo-attrezzatura/intervento-oggetto-display";
+
+export function lavorazioneOggettoLabel(
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
+): string {
+  const ctx = composeInterventoContextFromListRow(row, schedeStore);
+  return resolveInterventoOggettoDisplay(ctx).label;
+}
+
+export function lavorazioneOggettoBadge(
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
+): string {
+  const ctx = composeInterventoContextFromListRow(row, schedeStore);
+  return resolveInterventoOggettoDisplay(ctx).badge;
+}
 
 export function lavorazioneSchedeStoreSlice(
   lavorazioneId: string,
@@ -137,7 +154,7 @@ export function lavorazioneTelaioLabel(row: LavorazioneListRow, schedeStore: Lav
   if (fromFields !== "—") return fromFields;
 
   if (row.mezzo) {
-    const mezzo = toMezzoUI(row.mezzo);
+    const mezzo = mezzoGestitoFromRow(row.mezzo, { attrezzaturaId: row.attrezzatura_id });
     const fromMezzo = lavorazioneTelaioFromParts(mezzo.tipoTelaio, mezzo.marcaTelaio, mezzo.modelloTelaio);
     if (fromMezzo !== "—") return fromMezzo;
   }

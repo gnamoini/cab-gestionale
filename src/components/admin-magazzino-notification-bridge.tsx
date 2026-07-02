@@ -12,7 +12,8 @@ import {
   isMagazzinoNotificationsPath,
 } from "@/lib/lavorazioni/admin-notifications";
 import { markCabSyncToastSuppressed } from "@/lib/notifications/cab-sync-toast-suppress";
-import { publishAdminDashboardNotification } from "@/lib/notifications/admin-dashboard-desktop";
+import { publishNotification } from "@/lib/notifications/publish-notification";
+import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import {
   findRicambioInListCache,
   stockSnapshotFromListCache,
@@ -26,18 +27,19 @@ import {
 } from "@/lib/magazzino/ricambio-stock-snapshot-registry";
 import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
-import { usePermissions } from "@/src/hooks/use-permissions";
+import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
+import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import type { MagazzinoRicambioRow } from "@/src/types/supabase-tables";
 
 const CLIENT_DEDUP_MS = 30_000;
 
 /**
- * Bridge admin: cab-sync entity_updated magazzino_ricambi → crossing sotto scorta → localStorage store.
- * Nessuna modifica a realtime bridge, truth layer o invalidate system.
+ * Bridge: cab-sync entity_updated magazzino_ricambi → crossing sotto scorta → inbox.
  */
 export function AdminMagazzinoNotificationBridge() {
   const { user } = useAuth();
-  const { isAdmin, isLoading } = usePermissions();
+  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
+  const { mode } = useNotificationsV2Mode();
   const pathname = usePathname() ?? "";
   const { push } = useToastContext();
   const queryClient = useQueryClient();
@@ -45,6 +47,10 @@ export function AdminMagazzinoNotificationBridge() {
   const mezziListe = settingsPayload?.resolved?.mezziListe;
   const seenRef = useRef<Map<string, number>>(new Map());
   const seededRef = useRef(false);
+
+  const staffEligible =
+    !permsLoading &&
+    isStaffInboxEligible(snapshot ? { ruolo: snapshot.role } : user, snapshot?.rbacContext);
 
   const seedRegistryFromCache = useCallback(() => {
     if (seededRef.current || !mezziListe) return;
@@ -57,7 +63,7 @@ export function AdminMagazzinoNotificationBridge() {
   const handleRicambioUpdated = useCallback(
     (ricambioId: string) => {
       const userId = user?.id;
-      if (!isAdmin || !userId) return;
+      if (!staffEligible || !userId) return;
 
       const now = Date.now();
       for (const [k, ts] of seenRef.current) {
@@ -81,7 +87,6 @@ export function AdminMagazzinoNotificationBridge() {
           curr,
           ricambio,
           pathname,
-          isAdmin: true,
         });
 
         setRicambioStockSnapshot(ricambioId, curr);
@@ -90,7 +95,7 @@ export function AdminMagazzinoNotificationBridge() {
 
         markCabSyncToastSuppressed("magazzino_ricambi", "entity_updated", ricambioId);
 
-        void publishAdminDashboardNotification(userId, notification);
+        void publishNotification(userId, notification, mode);
 
         if (isDashboardNotificationsPath(pathname) || isMagazzinoNotificationsPath(pathname)) return true;
 
@@ -104,7 +109,7 @@ export function AdminMagazzinoNotificationBridge() {
         resolveAndNotify();
       });
     },
-    [isAdmin, mezziListe, pathname, push, queryClient, user?.id],
+    [mezziListe, mode, pathname, push, queryClient, staffEligible, user?.id],
   );
 
   useCabSyncListener(
@@ -119,12 +124,12 @@ export function AdminMagazzinoNotificationBridge() {
   );
 
   useEffect(() => {
-    if (!isAdmin || isLoading || !mezziListe) return;
+    if (!staffEligible || permsLoading || !mezziListe) return;
     seedRegistryFromCache();
-  }, [isAdmin, isLoading, mezziListe, seedRegistryFromCache]);
+  }, [mezziListe, permsLoading, seedRegistryFromCache, staffEligible]);
 
   useEffect(() => {
-    if (!isAdmin || isLoading || !user?.id || !mezziListe) return;
+    if (!staffEligible || permsLoading || !user?.id || !mezziListe) return;
     const unsub = queryClient.getQueryCache().subscribe((event) => {
       if (event.type !== "updated") return;
       const key = event.query.queryKey;
@@ -132,7 +137,7 @@ export function AdminMagazzinoNotificationBridge() {
       seedRegistryFromCache();
     });
     return unsub;
-  }, [isAdmin, isLoading, mezziListe, queryClient, seedRegistryFromCache, user?.id]);
+  }, [mezziListe, permsLoading, queryClient, seedRegistryFromCache, staffEligible, user?.id]);
 
   return null;
 }

@@ -29,7 +29,7 @@ import {
 } from "@/lib/ui/design-system";
 import { resolveModalMaxWidthClass } from "@/lib/ui/modal-max-width-class";
 import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
-import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { requestPasswordResetEmail } from "@/lib/auth/request-password-reset.client";
 import {
   formatLoginIdentifierInput,
   isValidEmailFormat,
@@ -208,11 +208,9 @@ export function LoginForm() {
     }
     setResetPending(true);
     try {
-      const sb = getBrowserSupabase();
-      const redirectTo = typeof window !== "undefined" ? `${window.location.origin}/login/reset-password` : undefined;
-      const { error: err } = await sb.auth.resetPasswordForEmail(trimmed, { redirectTo });
-      if (err) {
-        setResetError("Impossibile completare la richiesta. Riprova tra poco.");
+      const res = await requestPasswordResetEmail(trimmed);
+      if (!res.ok) {
+        setResetError(res.message);
         return;
       }
       setResetDone(true);

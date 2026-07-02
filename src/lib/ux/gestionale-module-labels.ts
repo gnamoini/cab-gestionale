@@ -11,6 +11,7 @@ export const GESTIONALE_MODULE_LABELS: Record<GestionalePermissionModule, string
   fatturazione: "Fatturazione",
   ddt: "Documenti di trasporto",
   ordini_fornitori: "Ordini fornitori",
+  document_capture: "Acquisizione documenti",
 };
 
 export function gestionaleModuleLabel(module: GestionalePermissionModule): string {

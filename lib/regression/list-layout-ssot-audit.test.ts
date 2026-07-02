@@ -62,11 +62,6 @@ const xlViews: Array<{ file: string; mustHave: RegExp[]; mustNot: RegExp[] }> = 
     mustHave: [/useGestionaleListLayout/, /listLayout === "desktop"/, /listLayout === "mobile"/],
     mustNot: [/hidden xl:block/, /xl:hidden/],
   },
-  {
-    file: "components/bunder/bunder-view.tsx",
-    mustHave: [/useGestionaleListLayout\(\{ tier: "xl" \}\)/, /listLayout === "desktop"/, /listLayout === "mobile"/, /CardMobile/],
-    mustNot: [/hidden xl:block/, /xl:hidden/],
-  },
 ];
 
 for (const { file, mustHave, mustNot } of xlViews) {

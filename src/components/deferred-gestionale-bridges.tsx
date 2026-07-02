@@ -8,6 +8,8 @@ import { AdminLavorazioniNotificationBridge } from "@/src/components/admin-lavor
 import { AdminDashboardPromemoriaReminderBridge } from "@/src/components/admin-dashboard-promemoria-reminder-bridge";
 import { AdminDipendentiPresenzeReminderBridge } from "@/src/components/admin-dipendenti-presenze-reminder-bridge";
 import { AdminMagazzinoNotificationBridge } from "@/src/components/admin-magazzino-notification-bridge";
+import { AdminPreventiviNotificationBridge } from "@/src/components/admin-preventivi-notification-bridge";
+import { AdminScheduledDigestNotificationBridge } from "@/src/components/admin-scheduled-digest-notification-bridge";
 import { GestionaleNotificationsBridge } from "@/src/components/gestionale-notifications-bridge";
 import { GestionaleRealtimeBridge } from "@/src/components/gestionale-realtime-bridge";
 import { GestionaleSnapshotRecoveryBridge } from "@/src/components/gestionale-snapshot-recovery-bridge";
@@ -55,6 +57,8 @@ export function DeferredGestionaleBridges() {
       <GestionaleNotificationsBridge />
       <AdminLavorazioniNotificationBridge />
       <AdminMagazzinoNotificationBridge />
+      <AdminPreventiviNotificationBridge />
+      <AdminScheduledDigestNotificationBridge />
       <AdminDipendentiPresenzeReminderBridge />
       <AdminDashboardPromemoriaReminderBridge />
       <GestionaleSnapshotRecoveryBridge />

@@ -1,0 +1,44 @@
+[
+  {
+    "id": "bench-pinza-freno-001",
+    "technicalBlob": "Sostituzione pinza freno",
+    "anomaliaText": "perdita liquido freni",
+    "approvedLines": [
+      "Smontaggio gruppo frenante interessato",
+      "Sostituzione pinza freno anteriore",
+      "Pulizia componenti e ripristino collegamenti",
+      "Spurgo circuito frenante",
+      "Controllo finale impianto frenante"
+    ],
+    "approvedActivityIds": [
+      "freni_smontaggio_gruppo",
+      "freni_sostituzione_pinza",
+      "freni_pulizia_componenti",
+      "freni_spurgo_circuito",
+      "freni_controllo_finale"
+    ]
+  },
+  {
+    "id": "bench-pastiglie-002",
+    "technicalBlob": "Sostituzione pastiglie freno",
+    "approvedLines": [
+      "Smontaggio gruppo frenante interessato",
+      "Sostituzione pastiglie freno",
+      "Controllo finale impianto frenante"
+    ],
+    "approvedActivityIds": [
+      "freni_smontaggio_gruppo",
+      "freni_sostituzione_pastiglie",
+      "freni_controllo_finale"
+    ]
+  },
+  {
+    "id": "bench-elettrico-003",
+    "technicalBlob": "Diagnosi impianto elettrico",
+    "approvedLines": [
+      "Diagnosi impianto elettrico",
+      "Verifica funzionamento impianto elettrico"
+    ],
+    "approvedActivityIds": ["elett_diagnosi", "elett_verifica_funzionamento"]
+  }
+]

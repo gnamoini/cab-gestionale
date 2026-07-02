@@ -28,8 +28,24 @@ export function resolveServerThemeMode(cookieValue: string | undefined | null): 
 export function applyPersistedThemeToDocument(mode: PersistedThemeMode): void {
   if (typeof document === "undefined") return;
   const isDark = mode === "dark";
-  document.documentElement.classList.toggle("dark", isDark);
-  document.documentElement.style.colorScheme = isDark ? "dark" : "light";
+  const root = document.documentElement;
+  const needsApply =
+    root.classList.contains("dark") !== isDark ||
+    root.style.colorScheme !== (isDark ? "dark" : "light");
+  if (!needsApply) return;
+
+  const guard = document.createElement("style");
+  guard.id = "cab-theme-no-transition";
+  guard.textContent =
+    "*,*::before,*::after{transition:none!important;animation:none!important}";
+  document.head.appendChild(guard);
+
+  root.classList.toggle("dark", isDark);
+  root.style.colorScheme = isDark ? "dark" : "light";
+
+  // ponytail: reflow singolo — evita interpolazione di migliaia di transition Tailwind al toggle .dark
+  void root.offsetWidth;
+  guard.remove();
 }
 
 export function readThemeBootCache(): PersistedThemeMode | null {

@@ -79,7 +79,6 @@ export const DS_LOCK_FILE_ALLOWLIST = [
   "app-shell.tsx",
   "supabase-configuration-banner",
   "preventivi-editor-modal",
-  "bunder-editor-modal",
   "sistema-impostazioni-modal",
   "report-magazzino-section",
   "components/report/",

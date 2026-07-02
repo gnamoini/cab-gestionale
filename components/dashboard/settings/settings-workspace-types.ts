@@ -18,7 +18,9 @@ export type SistemaSectionId =
   | "tel-tipo"
   | "tel-marca"
   | "tel-modello"
-  | "sys-economici";
+  | "sys-officina-profilo"
+  | "sys-economici"
+  | "sys-tkb-kb";
 
 export type SettingsNavEntry =
   | { kind: "group"; label: string }
@@ -53,7 +55,9 @@ export const SETTINGS_NAV_STRUCTURE: SettingsNavEntry[] = [
   { kind: "item", id: "tel-marca", label: "Marca telaio" },
   { kind: "item", id: "tel-modello", label: "Modello telaio" },
   { kind: "group", label: "Sistema" },
+  { kind: "item", id: "sys-officina-profilo", label: "Profilo officina" },
   { kind: "item", id: "sys-economici", label: "Parametri economici" },
+  { kind: "item", id: "sys-tkb-kb", label: "Knowledge Base tecnica" },
 ];
 
 export const SETTINGS_NAV_ITEM_COUNT = SETTINGS_NAV_STRUCTURE.filter((e) => e.kind === "item").length;

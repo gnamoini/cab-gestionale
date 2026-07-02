@@ -38,6 +38,12 @@ assert.match(
   globalsCss,
   /data-gestionale-shell-tier="desktop"[\s\S]*\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*stable/,
 );
+assert.match(
+  globalsCss,
+  /main\.gestionale-scroll-y\[data-cab-main-scroll-lock\][\s\S]*scrollbar-gutter:\s*stable/,
+);
+assert.match(globalsCss, /data-cab-scroll-lock-fixed-compensate/);
+assert.match(globalsCss, /--cab-scroll-lock-gap/);
 
 assert.match(globalsCss, /\.flex-safe\s*\{/);
 assert.match(globalsCss, /\.flex-fill,\s*\n?\s*\.flex-fill-safe\s*\{/);
@@ -66,19 +72,14 @@ assert.doesNotMatch(pageLayout, /useLayoutEffect|window\.innerWidth|matchMedia/)
 
 // --- SSR/hydration: app-shell layout tokens CSS-only (no width sync in render) ---
 const appShell = read("components/gestionale/app-shell.tsx");
+const accountMenu = read("components/gestionale/account-menu.tsx");
 assert.match(appShell, /layoutResponsiveCoreScope/);
 assert.match(appShell, /gestionale-scroll-y/);
-assert.match(appShell, /dsGestionaleContentShellRow/);
 assert.match(appShell, /dsGestionaleContentRail/);
 assert.match(appShell, /dsGestionaleContentMax/);
 assert.match(appShell, /gestionaleShellContentGutterClass/);
-assert.match(appShell, /cab-gestionale-scroll-gutter-mirror/);
+assert.doesNotMatch(appShell, /cab-gestionale-scroll-gutter-mirror/);
 assert.match(appShell, /gestionale-scroll-y gestionale-scrollbar w-full/);
-assert.match(
-  appShell,
-  /cab-gestionale-scroll-gutter-mirror[\s\S]*>\s*\n\s*<div[\s\S]*dsGestionaleContentShellRow[\s\S]*contentGutter/,
-  "gutter mirror must wrap shell row then padded header row",
-);
 assert.match(
   appShell,
   /dsGestionaleContentMax[\s\S]*layoutPageRoot[\s\S]*contentGutter/,
@@ -87,13 +88,11 @@ assert.match(
 assert.match(appShell, /dsGestionaleScrollEndPad/);
 assert.match(appShell, /suppressGlobalScrollEndPad/);
 assert.match(appShell, /useGestionaleScrollEnd/);
-assert.match(appShell, /useGlobalDropdownPortal/);
-assert.match(appShell, /createPortal\(menu, document\.body\)/);
-assert.doesNotMatch(
-  appShell,
-  /AccountMenu[\s\S]*role="menu"[\s\S]*absolute right-0/,
-  "account menu must portal (header gutter mirror clips overflow:hidden)",
-);
+assert.match(appShell, /SidebarSessionPanel/);
+assert.match(appShell, /ProfileSheetProvider/);
+assert.match(accountMenu, /ProfileSheet/);
+assert.match(accountMenu, /aria-haspopup="dialog"/);
+assert.doesNotMatch(accountMenu, /useGlobalDropdownPortal/);
 assert.doesNotMatch(
   designSystem,
   /dsGestionaleContentRail = `[^`]*\bmx-auto/,

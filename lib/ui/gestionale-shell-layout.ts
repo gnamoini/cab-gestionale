@@ -3,6 +3,8 @@
  * Usuario IDE: misura min tra shell, colonna flex-1, main e viewport effettivo.
  */
 
+import { MAIN_SCROLL_LOCK_ATTR } from "@/lib/ui/scroll-lock-attrs";
+
 export type GestionaleShellTier = "mobile" | "tablet" | "desktop";
 
 export const GESTIONALE_SHELL_TIER_ATTR = "data-gestionale-shell-tier";
@@ -84,6 +86,18 @@ function setPxVarIfChanged(root: HTMLElement, name: string, px: number | null): 
   root.style.setProperty(name, next);
 }
 
+function resolveFrozenMainScrollbarInset(main: HTMLElement, measured: number): number {
+  if (!main.hasAttribute(MAIN_SCROLL_LOCK_ATTR)) return measured;
+  const lockedPad = parseInt(main.style.paddingInlineEnd, 10);
+  if (Number.isFinite(lockedPad) && lockedPad > 0) return lockedPad;
+  const prev = parseInt(
+    document.documentElement.style.getPropertyValue(CAB_MAIN_SCROLLBAR_INSET_VAR),
+    10,
+  );
+  if (Number.isFinite(prev) && prev > 0) return prev;
+  return measured;
+}
+
 /** Sincronizza --cab-main-content-width e --cab-main-scrollbar-inset (no host width su html). */
 export function syncHostLayoutWidthCssVars(
   opts: SyncHostLayoutWidthCssVarsOptions = {},
@@ -107,7 +121,8 @@ export function syncHostLayoutWidthCssVars(
   if (isLayoutMeasurable(main) && main.clientWidth > 0) {
     mainContentWidth = main.clientWidth;
     setPxVarIfChanged(root, CAB_MAIN_CONTENT_WIDTH_VAR, mainContentWidth);
-    const scrollbarInset = Math.max(0, Math.round(main.offsetWidth - main.clientWidth));
+    const measuredInset = Math.max(0, Math.round(main.offsetWidth - main.clientWidth));
+    const scrollbarInset = resolveFrozenMainScrollbarInset(main, measuredInset);
     setPxVarIfChanged(root, CAB_MAIN_SCROLLBAR_INSET_VAR, scrollbarInset > 0 ? scrollbarInset : null);
   } else {
     if (root.style.getPropertyValue(CAB_MAIN_CONTENT_WIDTH_VAR)) {

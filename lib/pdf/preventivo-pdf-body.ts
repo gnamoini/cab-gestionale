@@ -188,13 +188,24 @@ export function drawPreventivoPdfBody(
   const anagrafica = buildAnagraficaPdfFields(p, clientePdf);
   y = drawGestionaleFieldSectionTable(doc, y, pageW, "Dati anagrafici", anagrafica);
 
-  y = drawGestionaleSideBySideFieldSections(
-    doc,
-    y,
-    pageW,
-    { title: "Attrezzatura", fields: buildPreventivoAttrezzaturaPdfFields(p) },
-    { title: "Telaio (Mezzo)", fields: buildPreventivoTelaioMezzoPdfFields(p) },
-  );
+  const targetType = p.targetType ?? (p.marcaAttrezzatura.trim() ? "attrezzatura" : "telaio");
+  if (targetType === "telaio") {
+    y = drawGestionaleFieldSectionTable(
+      doc,
+      y,
+      pageW,
+      "Oggetto intervento — Telaio",
+      buildPreventivoTelaioMezzoPdfFields(p),
+    );
+  } else {
+    y = drawGestionaleSideBySideFieldSections(
+      doc,
+      y,
+      pageW,
+      { title: "Oggetto intervento — Attrezzatura", fields: buildPreventivoAttrezzaturaPdfFields(p) },
+      { title: "Telaio (identificazione)", fields: buildPreventivoTelaioMezzoPdfFields(p) },
+    );
+  }
 
   const lavBody = buildLavorazioniEffettuatePdfRows(p, righe);
   if (lavBody.length > 0) {

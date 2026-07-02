@@ -7,10 +7,10 @@ import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-
 import { useFormEngine } from "@/lib/forms/form-engine";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
-  formToMezzoUpdate,
   gestitoToMezzoForm,
   MezzoFormFields,
 } from "@/components/gestionale/mezzi/mezzi-form-fields";
+import { persistMezzoFormUpdate } from "@/lib/mezzi/persist-mezzo-form";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
@@ -58,13 +58,17 @@ export function MezziEditModal({
         return;
       }
       const id = mezzo.id;
-      updateMut.mutate(
-        { id, data: formToMezzoUpdate(currentForm) },
-        {
-          onSuccess: () => onSaved(id),
-          onError: onSaveError,
-        },
-      );
+      try {
+        await persistMezzoFormUpdate({
+          mezzoId: id,
+          attrezzaturaId: null,
+          form: currentForm,
+          updateMezzo: (mezzoId, data) => updateMut.mutateAsync({ id: mezzoId, data }),
+        });
+        onSaved(id);
+      } catch (err) {
+        onSaveError(err);
+      }
     });
   }
 

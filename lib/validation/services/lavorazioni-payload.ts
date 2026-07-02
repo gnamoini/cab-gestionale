@@ -1,3 +1,7 @@
+import {
+  validateLavorazioneTargetForInsert,
+  type InterventoTargetType,
+} from "@/lib/domain/mezzo-attrezzatura/intervento-target";
 import { TEXT_LONG } from "@/lib/validation/text-field-limits";
 import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 
@@ -8,6 +12,8 @@ export const LAVORAZIONE_WRITABLE_KEYS = [
   "data_ingresso",
   "data_uscita",
   "note",
+  "target_type",
+  "attrezzatura_id",
 ] as const;
 
 export type LavorazioneWritableKey = (typeof LAVORAZIONE_WRITABLE_KEYS)[number];
@@ -19,6 +25,16 @@ export type LavorazioneWritePayload = {
   data_ingresso?: string | null;
   data_uscita?: string | null;
   note?: string | null;
+  target_type?: InterventoTargetType;
+  attrezzatura_id?: string | null;
+};
+
+export type LavorazioneCreatePayload = LavorazioneWritePayload & {
+  mezzo_id: string;
+  stato: StatoLavorazione;
+  priorita: PrioritaLavorazione;
+  target_type: InterventoTargetType;
+  attrezzatura_id: string | null;
 };
 
 export function normalizeLavorazioneNote(raw: string | null | undefined): string | null {
@@ -52,7 +68,44 @@ export function pickLavorazioneWritePayload(data: Record<string, unknown>): Lavo
       out.note = normalizeLavorazioneNote(
         data.note === null || data.note === undefined ? null : String(data.note),
       );
+    } else if (key === "target_type") {
+      const t = data.target_type;
+      if (t === "telaio" || t === "attrezzatura") out.target_type = t;
+    } else if (key === "attrezzatura_id") {
+      out.attrezzatura_id =
+        data.attrezzatura_id === null || data.attrezzatura_id === undefined
+          ? null
+          : String(data.attrezzatura_id).trim() || null;
     }
   }
   return out;
+}
+
+/** Payload INSERT lavorazione con target validato (speculare al CHECK DB). */
+export function pickLavorazioneCreatePayload(data: Record<string, unknown>): LavorazioneCreatePayload {
+  const picked = pickLavorazioneWritePayload(data);
+  const mezzoId = picked.mezzo_id?.trim();
+  if (!mezzoId) {
+    throw new Error("mezzo_id obbligatorio per la creazione lavorazione.");
+  }
+  if (!picked.stato) {
+    throw new Error("stato obbligatorio per la creazione lavorazione.");
+  }
+  if (!picked.priorita) {
+    throw new Error("priorita obbligatoria per la creazione lavorazione.");
+  }
+
+  const target = validateLavorazioneTargetForInsert(
+    picked.target_type ?? data.target_type,
+    picked.attrezzatura_id !== undefined ? picked.attrezzatura_id : data.attrezzatura_id,
+  );
+
+  return {
+    ...picked,
+    mezzo_id: mezzoId,
+    stato: picked.stato,
+    priorita: picked.priorita,
+    target_type: target.target_type,
+    attrezzatura_id: target.attrezzatura_id,
+  };
 }

@@ -3,10 +3,16 @@ import {
   isAdminDashboardTestNotification,
   isDashboardPromemoriaReminderNotification,
   isDipendentiPresenzeReminderNotification,
+  isFattureScaduteDigestNotification,
+  isLavorazioneCompletataNotification,
   isLavorazioneDashboardNotification,
+  isLavorazioniRitardoDigestNotification,
   isMagazzinoDashboardNotification,
+  isPreventivoApprovatoNotification,
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
+import { formatFattureScaduteDigestBody } from "@/lib/fatturazione/fatture-scadute-digest";
+import { formatLavorazioniRitardoDigestBody } from "@/lib/lavorazioni/lavorazioni-ritardo-digest";
 
 function toBulletModificaRiga(lines: string[]): string {
   const filtered = lines.map((l) => l.trim()).filter(Boolean);
@@ -18,7 +24,11 @@ function toBulletModificaRiga(lines: string[]): string {
 export function getAdminNotificationOpenLinkLabel(row: AdminDashboardNotification): string | null {
   if (isAdminDashboardTestNotification(row)) return null;
   if (isLavorazioneDashboardNotification(row)) return "Apri lavorazione";
+  if (isLavorazioneCompletataNotification(row)) return "Apri lavorazione";
+  if (isLavorazioniRitardoDigestNotification(row)) return "Apri lavorazioni";
+  if (isPreventivoApprovatoNotification(row)) return "Apri preventivo";
   if (isMagazzinoDashboardNotification(row)) return "Apri magazzino";
+  if (isFattureScaduteDigestNotification(row)) return "Apri fatturazione";
   if (isDipendentiPresenzeReminderNotification(row)) return "Apri Dipendenti";
   if (isDashboardPromemoriaReminderNotification(row)) return "Apri calendario";
   return null;
@@ -55,16 +65,61 @@ export function toAdminNotificationLogViewModel(row: AdminDashboardNotification)
     };
   }
 
-  if (isMagazzinoDashboardNotification(row)) {
-    const oggetto = row.descrizione?.trim() || "Ricambio sotto scorta";
-    const lines: string[] = [];
-    if (row.marca?.trim()) lines.push(`Marca: ${row.marca.trim()}`);
-    lines.push(`Scorta: ${row.scorta} (min. ${row.scortaMinima})`);
+  if (isLavorazioneCompletataNotification(row)) {
+    const oggetto = row.cliente?.trim() || row.titolo?.trim() || "Lavorazione completata";
     return {
       tone: "update",
-      tipoRiga: "SOTTO SCORTA",
+      tipoRiga: "COMPLETATA",
+      oggettoRiga: oggetto,
+      modificaRiga: toBulletModificaRiga(["Pronta per follow-up amministrativo"]),
+      autore: row.createdBy?.trim() || "Sistema",
+      atIso,
+    };
+  }
+
+  if (isLavorazioniRitardoDigestNotification(row)) {
+    return {
+      tone: "neutral",
+      tipoRiga: "IN RITARDO",
+      oggettoRiga: `${row.count} lavorazioni in ritardo`,
+      modificaRiga: toBulletModificaRiga([formatLavorazioniRitardoDigestBody(row)]),
+      autore: "Sistema",
+      atIso,
+    };
+  }
+
+  if (isPreventivoApprovatoNotification(row)) {
+    return {
+      tone: "create",
+      tipoRiga: "PREVENTIVO",
+      oggettoRiga: row.numero?.trim() || "Preventivo approvato",
+      modificaRiga: toBulletModificaRiga([row.cliente?.trim() || "Approvato — procedi con fatturazione"]),
+      autore: "Sistema",
+      atIso,
+    };
+  }
+
+  if (isMagazzinoDashboardNotification(row)) {
+    const oggetto = row.descrizione?.trim() || (row.esaurito ? "Ricambio esaurito" : "Ricambio sotto scorta");
+    const lines: string[] = [];
+    if (row.marca?.trim()) lines.push(`Marca: ${row.marca.trim()}`);
+    lines.push(row.esaurito ? "Scorta: 0" : `Scorta: ${row.scorta} (min. ${row.scortaMinima})`);
+    return {
+      tone: "update",
+      tipoRiga: row.esaurito ? "ESAURITO" : "SOTTO SCORTA",
       oggettoRiga: oggetto,
       modificaRiga: toBulletModificaRiga(lines),
+      autore: "Sistema",
+      atIso,
+    };
+  }
+
+  if (isFattureScaduteDigestNotification(row)) {
+    return {
+      tone: "neutral",
+      tipoRiga: "FATTURE",
+      oggettoRiga: `${row.count} fatture scadute`,
+      modificaRiga: toBulletModificaRiga([formatFattureScaduteDigestBody(row)]),
       autore: "Sistema",
       atIso,
     };

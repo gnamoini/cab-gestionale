@@ -31,6 +31,21 @@ const SchedeLavorazioneModal = dynamic(
     })),
   { ssr: false },
 );
+const LavorazioniCaptureDropOverlay = dynamic(
+  () =>
+    import("@/components/document-capture/lavorazioni-capture-drop-overlay").then((m) => ({
+      default: m.LavorazioniCaptureDropOverlay,
+    })),
+  { ssr: false },
+);
+const DocumentCaptureHistoryPanel = dynamic(
+  () =>
+    import("@/components/document-capture/document-capture-history-panel").then((m) => ({
+      default: m.DocumentCaptureHistoryPanel,
+    })),
+  { ssr: false },
+);
+import { SchedaBlankPdfActions } from "@/components/document-capture/scheda-blank-pdf-actions";
 import type { SchedeLavorazioneDialogSize } from "@/components/lavorazioni/schede/schede-lavorazione-modal";
 import { LoadingKanbanSkeleton } from "@/components/design-system";
 const LavorazioniKanbanView = dynamic(
@@ -41,7 +56,6 @@ const LavorazioniKanbanView = dynamic(
 import { LavorazioneConcludiConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-concludi-confirm-dialog";
 import { LavorazioneEliminaConfirmDialog } from "@/components/gestionale/lavorazioni/lavorazione-elimina-confirm-dialog";
 import { type TablePillOption } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { lavorazioneMatchesMezzo } from "@/lib/mezzi/lavorazioni-sync";
 import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
@@ -154,7 +168,7 @@ import { mezziService } from "@/src/services/mezzi.service";
 import {
   runLavorazioniToolbarRefresh,
 } from "@/src/lib/react-query/refetch-lavorazioni-operational-data";
-import type { MezzoRow, PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
+import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import { useAuth } from "@/context/auth-context";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -509,6 +523,7 @@ export function LavorazioniView() {
     () => buildLavorazioniPillOptionsFromGlobal(globalOpts),
     [globalOpts],
   );
+  const macchinaColLabel = "Oggetto";
 
   const statiRapidiPillOpts = useMemo(
     () => tablePillOptions.stati(statiRapidiOpts),
@@ -542,7 +557,7 @@ export function LavorazioniView() {
 
   const mezziCatalog = useMemo(() => {
     const rows = Array.isArray(mezziListQ.data) ? mezziListQ.data : [];
-    return [...rows.map(toMezzoUI)].sort((a, b) =>
+    return [...rows].sort((a, b) =>
       `${a.marca} ${a.modello}`.localeCompare(`${b.marca} ${b.modello}`, "it"),
     );
   }, [mezziListQ.data]);
@@ -572,6 +587,7 @@ export function LavorazioniView() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createModalWarm, setCreateModalWarm] = useState(false);
+  const [captureRefreshKey, setCaptureRefreshKey] = useState(0);
 
   const preloadCreateModal = useCallback(() => {
     void qc.prefetchQuery({
@@ -835,10 +851,8 @@ export function LavorazioniView() {
   );
 
   const attiveQuery = useLavorazioniList(filtersAttive, gestionaleQueryOpts);
-  const chiuseQuery = useLavorazioniList(filtersChiuse, {
-    ...gestionaleQueryOpts,
-    enabled: needsChiuseFetch,
-  });
+  // ponytail: lista light sempre in cache per conteggio header archivio (schede restano lazy)
+  const chiuseQuery = useLavorazioniList(filtersChiuse, gestionaleQueryOpts);
 
   const { undoable: undoableLavLog, logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
 
@@ -1458,11 +1472,11 @@ export function LavorazioniView() {
   async function syncIngressoToBackend(staleRow: LavorazioneListRow, campi: SchedaIngressoFields) {
     await qc.refetchQueries({ queryKey: QK.mezzi });
     const freshRows =
-      qc.getQueryData<MezzoRow[]>(mezziListQueryKey("list", null)) ??
-      qc.getQueriesData<MezzoRow[]>({ queryKey: QK.mezzi }).find(([, data]) => data?.length)?.[1] ??
+      qc.getQueryData<MezzoGestito[]>(mezziListQueryKey("list", null)) ??
+      qc.getQueriesData<MezzoGestito[]>({ queryKey: QK.mezzi }).find(([, data]) => data?.length)?.[1] ??
       mezziListQ.data ??
       [];
-    const catalog = freshRows.map(toMezzoUI);
+    const catalog = freshRows;
 
     await qc.refetchQueries({ queryKey: QK.lavorazioniQueries });
     const freshRow =
@@ -1560,9 +1574,7 @@ export function LavorazioniView() {
       (needsFullChiuseSchede
         ? chiuseRows.length > 0 && schedeEnsureLoading
         : archivioPagedSchedePending && (schedeEnsureLoading || schedeEnsureFetching)));
-  const archivioCardTitle = needsChiuseFetch
-    ? `Archivio lavorazioni (${chiuseRowsFiltered.length})`
-    : "Archivio lavorazioni";
+  const archivioCardTitle = `Archivio lavorazioni (${chiuseRowsFiltered.length})`;
   const loadErrRaw = attiveQuery.isError ? attiveQuery.error : chiuseQuery.isError ? chiuseQuery.error : null;
   const loadErr = loadErrRaw
     ? formatSupabaseError(loadErrRaw, { module: "lavorazioni", action: "read" })
@@ -1828,6 +1840,17 @@ export function LavorazioniView() {
           </div>
         ) : null}
 
+        {canEditWorkOrders ? (
+          <ShellCard title="Acquisizione digitale schede" className="space-y-3">
+            <SchedaBlankPdfActions />
+            <LavorazioniCaptureDropOverlay
+              enabled={canEditWorkOrders}
+              onUploaded={() => setCaptureRefreshKey((k) => k + 1)}
+            />
+            <DocumentCaptureHistoryPanel refreshKey={captureRefreshKey} />
+          </ShellCard>
+        ) : null}
+
         <LavorazioniListToolbar
           canEditWorkOrders={canEditWorkOrders}
           createdBy={createdBy}
@@ -1937,7 +1960,7 @@ export function LavorazioniView() {
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
                   <GlobalTableSortTh
-                    label="Attrezzatura"
+                    label={macchinaColLabel}
                     columnKey="macchina"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
@@ -2111,7 +2134,7 @@ export function LavorazioniView() {
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
                   <GlobalTableSortTh
-                    label="Attrezzatura"
+                    label={macchinaColLabel}
                     columnKey="macchina"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}

@@ -31,3 +31,7 @@ export function lavorazioniListQueryKey(
       : stableLavorazioniFiltersKey(filtersOrStableKey);
   return [...QK.lavorazioniQueries, "list", fk, clientPortal ? "portal" : "ops"] as const;
 }
+
+export function isLavorazioniListQueryKey(queryKey: readonly unknown[]): boolean {
+  return queryKey[0] === QK.lavorazioniQueries[0] && queryKey[1] === "list";
+}

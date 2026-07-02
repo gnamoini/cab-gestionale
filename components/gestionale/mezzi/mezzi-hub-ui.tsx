@@ -10,10 +10,19 @@ import {
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { dsBtnNeutral, dsBtnPrimary } from "@/lib/ui/design-system";
 
-export type MezziHubTabId = "panoramica" | "foto" | "lavorazioni" | "timeline" | "preventivi" | "documenti" | "log";
+export type MezziHubTabId =
+  | "panoramica"
+  | "attrezzature"
+  | "foto"
+  | "lavorazioni"
+  | "timeline"
+  | "preventivi"
+  | "documenti"
+  | "log";
 
 export const MEZZI_HUB_TAB_ORDER: readonly MezziHubTabId[] = [
   "panoramica",
+  "attrezzature",
   "foto",
   "lavorazioni",
   "timeline",
@@ -95,9 +104,19 @@ export function MezziHubListSubtitle({ children }: { children: ReactNode }) {
   return <p className="mt-0.5 text-xs leading-snug text-[color:var(--cab-text-muted)]">{children}</p>;
 }
 
-export function MezziHubTimelineKindBadge({ kind }: { kind: "lavorazione" | "log" | "movimento" }) {
+export function MezziHubTimelineKindBadge({
+  kind,
+}: {
+  kind: "lavorazione" | "log" | "movimento" | "lifecycle";
+}) {
   const label =
-    kind === "lavorazione" ? "Lavorazione" : kind === "movimento" ? "Magazzino" : "Anagrafica";
+    kind === "lavorazione"
+      ? "Lavorazione"
+      : kind === "movimento"
+        ? "Magazzino"
+        : kind === "lifecycle"
+          ? "Asset"
+          : "Anagrafica";
   const tone =
     kind === "lavorazione"
       ? "border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-primary)_12%,var(--cab-card))] text-[color:color-mix(in_srgb,var(--cab-primary)_90%,var(--cab-text))]"

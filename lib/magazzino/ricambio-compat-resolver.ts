@@ -65,6 +65,7 @@ export function dedupeCompatRefsPreferExplicitModels(refs: readonly RicambioComp
 }
 
 function findMarcaByNome(liste: MezziListePrefs, tree: HierarchyTreeKey, nome: string) {
+  // ponytail: `liste` deve essere già mergeata con flotta (useGlobalOptions / useGlobalListOptions).
   return getHierarchyTree(migrateMezziListePrefs(liste), tree).find((m) => norm(m.nome) === norm(nome));
 }
 

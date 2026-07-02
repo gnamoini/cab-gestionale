@@ -91,7 +91,13 @@ async function run(): Promise<void> {
     {
       upsertMezzo: async () => {
         upsertCalls += 1;
-        return { mezzoId: "mezzo-new", created: false, updated: true };
+        return {
+          mezzoId: "mezzo-new",
+          created: false,
+          updated: true,
+          targetType: "attrezzatura" as const,
+          attrezzaturaId: "b2c3d4e5-f6a7-4890-bcde-f12345678901",
+        };
       },
       updateLavorazione: async (_id, patch) => {
         patchedMezzoId = patch.mezzo_id;

@@ -1,9 +1,8 @@
 /**
- * RBAC v3.1 — matrice ruolo × route + moduli + bunder hard gate.
+ * RBAC v3.1 — matrice ruolo × route + moduli.
  */
 import assert from "node:assert/strict";
 import {
-  canAccessBunder,
   canAccessPage,
   canRead,
   canWrite,
@@ -22,10 +21,9 @@ const ROUTES = [
   "/mezzi",
   "/report",
   "/dipendenti",
-  "/bunder",
   "/fatturazione",
   "/impostazioni",
-  "/dashboard/security",
+  "/sicurezza",
   "/lavorazioni-clienti",
 ] as const;
 
@@ -53,10 +51,9 @@ const cases: RoleCase[] = [
       "/dashboard": true,
       "/magazzino": true,
       "/report": true,
-      "/bunder": true,
       "/dipendenti": true,
       "/impostazioni": true,
-      "/dashboard/security": false,
+      "/sicurezza": false,
       "/lavorazioni-clienti": false,
     },
   },
@@ -71,10 +68,9 @@ const cases: RoleCase[] = [
       "/preventivi": false,
       "/report": false,
       "/dipendenti": false,
-      "/bunder": false,
       "/fatturazione": false,
       "/impostazioni": false,
-      "/dashboard/security": false,
+      "/sicurezza": false,
       "/lavorazioni-clienti": false,
     },
   },
@@ -87,10 +83,9 @@ const cases: RoleCase[] = [
       "/report": true,
       "/magazzino": false,
       "/lavorazioni": false,
-      "/bunder": false,
       "/dipendenti": false,
       "/impostazioni": false,
-      "/dashboard/security": false,
+      "/sicurezza": false,
     },
   },
   {
@@ -101,9 +96,8 @@ const cases: RoleCase[] = [
       "/preventivi": true,
       "/dipendenti": true,
       "/report": true,
-      "/bunder": true,
       "/impostazioni": false,
-      "/dashboard/security": false,
+      "/sicurezza": false,
       "/lavorazioni-clienti": false,
     },
   },
@@ -114,7 +108,6 @@ const cases: RoleCase[] = [
       "/magazzino": false,
       "/lavorazioni-clienti": true,
       "/impostazioni": false,
-      "/bunder": false,
     },
   },
 ];
@@ -177,9 +170,11 @@ assert.equal(hasPermission("addetto_amministrativo", "manageSettings"), false);
 assert.equal(canWrite("guest", "magazzino"), false);
 assert.equal(canRead("guest", "dipendenti"), true);
 assert.equal(canRead("operatore", "dipendenti"), false);
-assert.equal(canAccessBunder("guest", "read"), true);
-assert.equal(canAccessBunder("guest", "write"), false);
-assert.equal(canAccessBunder("operatore", "read"), false);
-assert.equal(canAccessBunder("manager", "write"), true);
+
+// Mezzi + attrezzature: operatore write, ufficio escluso, admin full
+assert.equal(canWrite("operatore", "mezzi"), true);
+assert.equal(canRead("addetto_amministrativo", "mezzi"), false);
+assert.equal(canWrite("addetto_amministrativo", "mezzi"), false);
+assert.equal(canWrite("admin", "mezzi"), true);
 
 console.log("permissions-role-matrix.test.ts OK");

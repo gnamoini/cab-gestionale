@@ -5,16 +5,12 @@ import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
-import { DashboardQuickNav } from "@/components/dashboard/dashboard-quick-nav";
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { LoadingCardSkeleton } from "@/components/design-system";
+import { useCalendarV2Enabled } from "@/src/hooks/use-calendar-v2-enabled";
 
-const DashboardOperationalCards = dynamic(
-  () => import("@/components/dashboard/dashboard-operational-cards").then((m) => m.DashboardOperationalCards),
-  { loading: () => <LoadingCardSkeleton /> },
-);
-const DashboardRecentFeeds = dynamic(
-  () => import("@/components/dashboard/dashboard-recent-feeds").then((m) => m.DashboardRecentFeeds),
+const DashboardWidgetGrid = dynamic(
+  () => import("@/components/dashboard/dashboard-widget-grid").then((m) => m.DashboardWidgetGrid),
   { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[10rem]" /> },
 );
 const DashboardPromemoriaSection = dynamic(
@@ -24,12 +20,16 @@ const DashboardPromemoriaSection = dynamic(
     ),
   { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
 );
+const CalendarV2Section = dynamic(
+  () => import("@/components/dashboard/calendar-v2/calendar-v2-section").then((m) => m.CalendarV2Section),
+  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
+);
 const DashboardSistemaLogListEmbedded = dynamic(
   () =>
     import("@/components/dashboard/dashboard-sistema-log-section").then((m) => m.DashboardSistemaLogListEmbedded),
   { ssr: false },
 );
-import { AdminNotificationsBell } from "@/components/dashboard/admin-notifications-bell";
+import { DashboardNotificationsToolbarLeading } from "@/components/dashboard/dashboard-notifications-toolbar-leading";
 import { Drawer } from "@/components/design-system";
 import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
 import { erpBtnNeutral } from "@/lib/ui/erp-tokens";
@@ -40,6 +40,7 @@ export function DashboardView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const staging = isStagingPublicSlice();
+  const calendarV2Enabled = useCalendarV2Enabled();
   const [logOpen, setLogOpen] = useState(false);
   const [stagingRouteHint, setStagingRouteHint] = useState(false);
 
@@ -61,7 +62,7 @@ export function DashboardView() {
             <GestionalePageToolbarActions
               canUndo={false}
               undoDisabled
-              leading={<AdminNotificationsBell />}
+              leading={<DashboardNotificationsToolbarLeading />}
               onOpenLog={() => setLogOpen(true)}
               logTitle="Log modifiche dashboard"
             />
@@ -82,10 +83,8 @@ export function DashboardView() {
         ) : null}
 
         <DashboardWelcome />
-        {!staging ? <DashboardPromemoriaSection /> : null}
-        <DashboardOperationalCards />
-        <DashboardQuickNav />
-        <DashboardRecentFeeds />
+        {!staging ? (calendarV2Enabled ? <CalendarV2Section /> : <DashboardPromemoriaSection />) : null}
+        <DashboardWidgetGrid />
       </div>
 
       {staging ? null : (

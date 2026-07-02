@@ -21,7 +21,6 @@ const DIRECT_TABLE_SKELETON_IMPORT_RE =
 const VIEW_GLOB_DIRS = [
   "components/gestionale",
   "components/preventivi",
-  "components/bunder",
   "components/dashboard",
   "components/lavorazioni-clienti",
   "components/report",
@@ -74,7 +73,7 @@ function findViewDoubleRepresentation(): string[] {
   const files: string[] = [];
   for (const d of VIEW_GLOB_DIRS) walkTsx(d, files);
   for (const rel of files) {
-    if (!/-view\.tsx$/.test(rel) && !rel.includes("bunder-view")) continue;
+    if (!/-view\.tsx$/.test(rel)) continue;
     const text = fs.readFileSync(path.join(ROOT, rel), "utf8");
     const hasSpinner = /\bLoadingView\b|\bGlobalLoadingView\b/.test(text);
     const hasPageSkeleton = /\bLoading(?:Page|Dashboard|Report|Dipendenti|Lavorazioni|Magazzino|Mezzi|Documenti|Preventivi|Impostazioni|Kanban|ClientDetail)[\w]*Skeleton\b/.test(text);

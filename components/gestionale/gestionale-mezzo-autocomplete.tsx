@@ -11,7 +11,6 @@ import {
   useGlobalDropdownPortal,
 } from "@/components/gestionale/global-input/use-global-dropdown-portal";
 import { mezzoMatchesSmartQuery } from "@/lib/mezzi/identificazione-mezzo";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { dsBtnNeutral, dsLabel } from "@/lib/ui/design-system";
 import { globalInputDropdownPortalPanel } from "@/lib/ui/global-input";
@@ -62,7 +61,7 @@ export function GestionaleMezzoAutocomplete({
       count: rows.length,
       isLoading: mezziQ.isLoading,
     });
-    return rows.map(toMezzoUI).sort((a, b) => mezzoUiLabel(a).localeCompare(mezzoUiLabel(b), "it"));
+    return [...rows].sort((a, b) => mezzoUiLabel(a).localeCompare(mezzoUiLabel(b), "it"));
   }, [mezziQ.data, mezziQ.isLoading]);
 
   const selected = useMemo(() => mezziUi.find((m) => m.id === value) ?? null, [mezziUi, value]);

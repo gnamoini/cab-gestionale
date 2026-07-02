@@ -32,6 +32,14 @@ const desktopNotifSrc = fs.readFileSync(
   path.join(ROOT, "lib/lavorazioni/desktop-notifications.ts"),
   "utf8",
 );
+const lavBridgeSrc = fs.readFileSync(
+  path.join(ROOT, "src/components/admin-lavorazioni-notification-bridge.tsx"),
+  "utf8",
+);
+const centerBellSrc = fs.readFileSync(
+  path.join(ROOT, "components/gestionale/notification-center-bell.tsx"),
+  "utf8",
+);
 const bridgesPromptSrc = fs.readFileSync(
   path.join(ROOT, "src/components/desktop-notification-permission-prompt.tsx"),
   "utf8",
@@ -43,13 +51,21 @@ for (const bridge of [
   "GestionaleNotificationsBridge",
   "AdminLavorazioniNotificationBridge",
   "AdminMagazzinoNotificationBridge",
+  "AdminPreventiviNotificationBridge",
+  "AdminScheduledDigestNotificationBridge",
   "AdminDipendentiPresenzeReminderBridge",
   "AdminDashboardPromemoriaReminderBridge",
 ]) {
   assert.match(bridgesSrc, new RegExp(bridge), `missing bridge: ${bridge}`);
 }
 
-assert.match(dispatchSrc, /bunder_documents/);
+const catalogSrc = fs.readFileSync(
+  path.join(ROOT, "lib/notifications/notification-event-catalog.ts"),
+  "utf8",
+);
+assert.match(catalogSrc, /NOTIFICATION_EVENT_CATALOG/);
+assert.match(catalogSrc, /lavorazione_completata/);
+
 assert.match(dispatchSrc, /dashboard_promemoria/);
 assert.match(
   dispatchSrc,
@@ -71,12 +87,21 @@ assert.match(dispatchSrc, /isCabSyncToastSuppressed/);
 assert.match(magBridgeSrc, /markCabSyncToastSuppressed/);
 assert.match(realtimeSrc, /Impostazioni aggiornate da un altro utente/);
 
+assert.match(magBridgeSrc, /publishNotification/);
+assert.match(lavBridgeSrc, /publishNotification/);
+assert.match(lavBridgeSrc, /isStaffInboxEligible/);
+
+assert.match(centerBellSrc, /<Drawer[\s\S]*?gestionaleLogPanelAsideClass/);
+assert.match(centerBellSrc, /toInboxNotificationLogViewModel/);
+assert.match(centerBellSrc, /Carica altre/);
+assert.match(centerBellSrc, /useNotificationCenter/);
+
 assert.doesNotMatch(
   desktopDispatchSrc,
   /requestDesktopNotificationPermissionOnce/,
   "dispatch must not auto-request browser permission",
 );
-assert.match(desktopDispatchSrc, /getDesktopNotificationPermissionState/);
+assert.match(desktopDispatchSrc, /dispatchAdminDashboardDesktopNotification/);
 const onceMarker = "export async function requestDesktopNotificationPermissionOnce";
 const interactiveMarker = "export async function requestDesktopNotificationPermissionInteractive";
 const onceFnStart = desktopNotifSrc.indexOf(onceMarker);

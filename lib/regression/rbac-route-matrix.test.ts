@@ -29,7 +29,6 @@ assertRouteProtection(
     { pathname: "/report", allowed: false },
     { pathname: "/magazzino", allowed: true },
     { pathname: "/preventivi", allowed: false },
-    { pathname: "/bunder", allowed: false },
   ],
   resolveEffectivePermissions({
     userId: "op-1",
@@ -45,7 +44,6 @@ assertRouteProtection(
     { pathname: "/dashboard", allowed: true },
     { pathname: "/dipendenti", allowed: true },
     { pathname: "/preventivi", allowed: true },
-    { pathname: "/bunder", allowed: true },
     { pathname: "/impostazioni", allowed: false },
     { pathname: "/login", allowed: true },
   ],

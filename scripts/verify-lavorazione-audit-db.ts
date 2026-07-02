@@ -65,12 +65,12 @@ function campiFromContenuto(contenuto: unknown): Record<string, string> | null {
 }
 
 function compareCampi(
-  expected: Record<string, string>,
+  expected: Record<string, string | null | undefined>,
   actual: Record<string, string> | null,
   keys: readonly string[],
 ): RowResult[] {
   return keys.map((field) => {
-    const exp = expected[field] ?? "";
+    const exp = String(expected[field] ?? "");
     const act = actual?.[field] ?? "";
     return { field, expected: exp, actual: act, ok: exp === act };
   });

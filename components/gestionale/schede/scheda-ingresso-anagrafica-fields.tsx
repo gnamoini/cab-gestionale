@@ -1,16 +1,27 @@
 "use client";
 
-import { memo, useId } from "react";
+import { memo, useEffect, useId, useMemo, useState } from "react";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
+import { InterventoTargetSelect } from "@/components/gestionale/intervento/intervento-target-select";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { LivelloCarburanteSegmentedSelect } from "@/components/gestionale/schede/livello-carburante-segmented-select";
 import { CompatHierarchySelect } from "@/components/gestionale/magazzino/compat-hierarchy-multi-select";
 import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoIdentAutocompleteField } from "@/lib/selector-core/legacy-selector-adapters";
+import { attrezzatureForMezzo } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import type { AttrezzaturaGestita } from "@/lib/attrezzature/types";
+import {
+  defaultTargetTypeForProfilo,
+  showAttrezzaturaSections,
+  showTelaioSections,
+} from "@/lib/officina/officina-profilo-operativo";
+import { useOfficinaProfiloOperativo } from "@/lib/officina/use-officina-profilo-operativo";
 import { dsInput } from "@/lib/ui/design-system";
 import { sliceInputValue, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import { attrezzatureService } from "@/src/services/attrezzature.service";
+import type { AttrezzaturaRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
 
 export type SchedaIngressoAnagraficaSection = "cliente" | "attrezzatura" | "telaio" | "dettagli";
@@ -33,6 +44,7 @@ function SchedaIngressoAnagraficaFieldsInner({
   clienteRequired = false,
   marcaAttrezzaturaRequired = false,
   mezzoLinked = false,
+  mezzoId = "",
 }: {
   value: SchedaIngressoFields;
   onPatch: (patch: Partial<SchedaIngressoFields>) => void;
@@ -46,8 +58,42 @@ function SchedaIngressoAnagraficaFieldsInner({
   clienteRequired?: boolean;
   marcaAttrezzaturaRequired?: boolean;
   mezzoLinked?: boolean;
+  mezzoId?: string;
 }) {
-  const show = (s: SchedaIngressoAnagraficaSection) => sections.includes(s);
+  const profilo = useOfficinaProfiloOperativo();
+  const resolvedSections = useMemo(() => {
+    if (sections) return sections;
+    const out: SchedaIngressoAnagraficaSection[] = ["cliente"];
+    if (showAttrezzaturaSections(profilo)) out.push("attrezzatura");
+    if (showTelaioSections(profilo)) out.push("telaio");
+    out.push("dettagli");
+    return out;
+  }, [sections, profilo]);
+  const show = (s: SchedaIngressoAnagraficaSection) => resolvedSections.includes(s);
+  const targetType = value.targetType ?? defaultTargetTypeForProfilo(profilo);
+  const showAttSection = show("attrezzatura") && targetType !== "telaio";
+  const showTelSection = show("telaio") && targetType !== "attrezzatura";
+  const [attrezzature, setAttrezzature] = useState<readonly AttrezzaturaGestita[]>([]);
+
+  useEffect(() => {
+    if (!mezzoId.trim()) {
+      setAttrezzature([]);
+      return;
+    }
+    let cancelled = false;
+    void attrezzatureService.listByMezzo(mezzoId.trim()).then((res) => {
+      if (cancelled || !res.success) return;
+      setAttrezzature(attrezzatureForMezzo((res.data ?? []) as AttrezzaturaRow[], mezzoId.trim()));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [mezzoId]);
+
+  useEffect(() => {
+    if (value.targetType) return;
+    onPatch({ targetType: defaultTargetTypeForProfilo(profilo) });
+  }, [value.targetType, profilo, onPatch]);
   const inputFieldClass = `block w-full ${dsInput}`;
   const listSelectWrapClass = "w-full";
   const mezzoMatchHandler = onExactMezzoMatch ?? (() => {});
@@ -113,10 +159,19 @@ function SchedaIngressoAnagraficaFieldsInner({
               aria-label="Richiedente"
             />
           </FormField>
+          <FormField label="Oggetto intervento">
+            <InterventoTargetSelect
+              value={targetType}
+              attrezzaturaId={value.attrezzaturaId}
+              attrezzature={attrezzature}
+              disabled={disabled}
+              onChange={(t, attrezzaturaId) => onPatch({ targetType: t, attrezzaturaId })}
+            />
+          </FormField>
         </FormSection>
       ) : null}
 
-      {show("attrezzatura") ? (
+      {showAttSection ? (
         <FormSection title="Anagrafica attrezzatura">
           <FormField label="Tipo attrezzatura" htmlFor={fieldId("tipo-attrezzatura")}>
             <GlobalSettingsListSelect
@@ -202,7 +257,7 @@ function SchedaIngressoAnagraficaFieldsInner({
         </FormSection>
       ) : null}
 
-      {show("telaio") ? (
+      {showTelSection ? (
         <FormSection title="Anagrafica mezzo / telaio">
           <FormField label="Tipo telaio" htmlFor={fieldId("tipo-telaio")}>
             <GlobalSettingsListSelect

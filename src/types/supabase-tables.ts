@@ -17,6 +17,7 @@ export type RuoloProfile = RuoloUtente;
 export type ProfileRow = {
   id: string;
   nome: string;
+  cognome?: string | null;
   /** Nome utente univoco per login (minuscolo, 3–32 caratteri). */
   username?: string | null;
   ruolo: RuoloUtente;
@@ -38,22 +39,153 @@ export type TipoMovimentoRicambio = "entrata" | "uscita";
 
 export type CategoriaDocumento = "listino" | "manuale" | "catalogo" | "certificazione" | "altro";
 
+export type InterventoTargetType = "telaio" | "attrezzatura";
+
 export type MezzoRow = {
   id: string;
   cliente: string;
   utilizzatore: string | null;
-  marca: string;
-  modello: string;
   targa: string | null;
-  matricola: string | null;
   numero_scuderia: string | null;
-  tipo_attrezzatura: string | null;
   anno: number | null;
   meta: Record<string, unknown> | null;
   /** Chiave normalizzata per dedupe/ricerca (Global Validation Layer). */
   entity_key?: string | null;
+  /** Campi attrezzatura su embed UI/report (da join tabella attrezzature, non colonne DB). */
+  marca?: string;
+  modello?: string;
+  matricola?: string | null;
+  tipo_attrezzatura?: string | null;
+  /** Telaio — colonne promote da meta (migrazione attrezzature). */
+  marca_telaio?: string | null;
+  modello_telaio?: string | null;
+  tipo_telaio?: string | null;
+  telaio_num?: string | null;
+  km?: number | null;
+  note?: string | null;
   created_at: string;
   updated_at: string;
+};
+
+/** MezzoRow con campi attrezzatura compositi (embed join / report). */
+export type MezzoEmbedRow = MezzoRow & {
+  marca: string;
+  modello: string;
+  tipo_attrezzatura: string;
+};
+
+export type AttrezzaturaRow = {
+  id: string;
+  mezzo_id: string;
+  marca: string;
+  modello: string;
+  tipo_attrezzatura: string | null;
+  matricola: string | null;
+  portata: string | null;
+  anno: number | null;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type AssetKind = "mezzo" | "attrezzatura";
+
+export type ComplianceRuleKind =
+  | "revisione"
+  | "tagliando"
+  | "assicurazione"
+  | "bollo"
+  | "verifica_attrezzatura"
+  | "collaudo"
+  | "altro";
+
+export type ComplianceTriggerKind = "date_interval" | "fixed_date" | "km_interval" | "one_shot";
+
+export type MileageSource = "scheda" | "manual" | "import" | "correction";
+
+export type AssignmentChangeReason =
+  | "installazione"
+  | "smontaggio"
+  | "spostamento"
+  | "correzione"
+  | "altro";
+
+export type ComplianceRecordEsito = "ok" | "non_conforme" | "rinviato";
+
+export type AssetComplianceRuleRow = {
+  id: string;
+  asset_kind: AssetKind;
+  mezzo_id: string | null;
+  attrezzatura_id: string | null;
+  rule_kind: ComplianceRuleKind;
+  trigger_kind: ComplianceTriggerKind;
+  interval_months: number | null;
+  fixed_month: number | null;
+  fixed_day: number | null;
+  km_interval: number | null;
+  last_completed_at: string | null;
+  next_due_at: string | null;
+  next_due_km: number | null;
+  alert_days_before: number;
+  is_active: boolean;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+  created_by: string | null;
+};
+
+export type AssetComplianceRecordRow = {
+  id: string;
+  rule_id: string | null;
+  asset_kind: AssetKind;
+  mezzo_id: string | null;
+  attrezzatura_id: string | null;
+  rule_kind: ComplianceRuleKind;
+  completed_at: string;
+  km_at_completion: number | null;
+  document_ref: string | null;
+  esito: ComplianceRecordEsito;
+  note: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type AssetAssignmentHistoryRow = {
+  id: string;
+  attrezzatura_id: string;
+  mezzo_id: string;
+  valid_from: string;
+  valid_to: string | null;
+  change_reason: AssignmentChangeReason;
+  note: string | null;
+  created_at: string;
+  created_by: string | null;
+};
+
+export type AssetMileageReadingRow = {
+  id: string;
+  mezzo_id: string;
+  recorded_at: string;
+  km: number;
+  source: MileageSource;
+  lavorazione_id: string | null;
+  created_by: string | null;
+  note: string | null;
+  created_at: string;
+};
+
+export type AssetTimelineProjectionRow = {
+  event_category: string;
+  event_domain: "lifecycle";
+  source_id: string;
+  asset_kind: AssetKind;
+  mezzo_id: string | null;
+  attrezzatura_id: string | null;
+  event_at: string;
+  event_subtype: string;
+  priority: "low" | "medium" | "high" | "urgent";
+  label: string;
 };
 
 export type LavorazioneRow = {
@@ -76,6 +208,9 @@ export type LavorazioneRow = {
   deleted_at?: string | null;
   /** Codice umano display (es. 26-0001). Generato server-side. */
   codice?: string | null;
+  /** Target intervento: telaio (mezzo) o attrezzatura installata. */
+  target_type?: InterventoTargetType;
+  attrezzatura_id?: string | null;
 };
 
 /** PDF allegato lavorazione (`lavorazione_documents`). */
@@ -367,20 +502,6 @@ export type AuthLogWithProfileRow = AuthLogRow & {
   profiles: { id: string; nome: string } | null;
 };
 
-/** Documenti commerciali BUNDER (`bunder_documents`). */
-export type BunderDocumentRow = {
-  id: string;
-  kind: string;
-  numero_progressivo: string;
-  data_documento: string;
-  azienda_destinatario: string;
-  payload: Record<string, unknown>;
-  created_by: string;
-  last_edited_by: string;
-  created_at: string;
-  updated_at: string;
-};
-
 /** Anagrafica clienti estesa (`clienti_anagrafiche`). */
 export type ClienteAnagraficaRow = {
   id: string;
@@ -449,6 +570,9 @@ export type DdtDocumentRow = {
   annullato_at: string | null;
   stampato_at: string | null;
   consegnato_at: string | null;
+  target_type?: InterventoTargetType | null;
+  attrezzatura_id?: string | null;
+  attrezzatura_snapshot?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };

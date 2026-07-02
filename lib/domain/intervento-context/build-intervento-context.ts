@@ -1,4 +1,4 @@
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { mezzoGestitoFromRow } from "@/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import {
@@ -14,19 +14,27 @@ import type {
   InterventoContextFetchDeps,
   InterventoContextInputs,
   InterventoIdent,
+  InterventoTargetSnapshot,
+  InterventoTargetType,
   LavorazioneSnapshot,
   MezzoSnapshot,
   SchedaIngressoSnapshot,
 } from "@/lib/domain/intervento-context/intervento-context.types";
+import { resolveTargetTypeFromScheda } from "@/lib/domain/mezzo-attrezzatura/intervento-target";
+import { attrezzaturaRowFromEnrichedMezzo, composeMezzoGestitoFromRows, pickAttrezzaturaForContext } from "@/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito";
 import { fetchSchedeBundleForLavorazione } from "@/lib/schede/schede-sync-adapter";
 import { lavorazioniService } from "@/src/services/lavorazioni.service";
 import { mezziService } from "@/src/services/mezzi.service";
+import { fetchAttrezzatureForMezzoIds } from "@/lib/mezzi/mezzi-attrezzature-batch";
+import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeBundle, LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 
 function emptySchedaIngressoFields(): SchedaIngressoFields {
   return {
+    targetType: "attrezzatura",
+    attrezzaturaId: null,
     dataIngresso: "",
     cliente: "",
     cantiere: "",
@@ -51,7 +59,7 @@ function emptySchedaIngressoFields(): SchedaIngressoFields {
 }
 
 function mezzoSnapshotFromRow(row: MezzoRow | null | undefined, gestito?: MezzoGestito | null): MezzoSnapshot {
-  const g = gestito ?? (row ? toMezzoUI(row) : null);
+  const g = gestito ?? (row ? mezzoGestitoFromRow(row) : null);
   if (!g) {
     return {
       id: null,
@@ -144,6 +152,53 @@ function detectIdentMismatch(
   return !interventoIdentEquals(fromScheda, fromMezzo);
 }
 
+function targetSnapshotFromInputs(inputs: InterventoContextInputs): InterventoTargetSnapshot {
+  const row = inputs.lavorazioneRow;
+  const att = inputs.attrezzaturaRow;
+  const scheda = inputs.ingressoCampi;
+  const targetType: InterventoTargetType =
+    row?.target_type ??
+    scheda?.targetType ??
+    resolveTargetTypeFromScheda({
+      targetType: scheda?.targetType,
+      marcaAttrezzatura: scheda?.marcaAttrezzatura,
+      attrezzaturaId: scheda?.attrezzaturaId,
+    });
+
+  if (targetType === "telaio") {
+    return {
+      targetType: "telaio",
+      attrezzatura: { id: null, marca: "", modello: "", matricola: "", present: false },
+    };
+  }
+
+  const marca =
+    att?.marca?.trim() ||
+    scheda?.marcaAttrezzatura?.trim() ||
+    inputs.mezzoGestito?.marca?.trim() ||
+    "";
+  const modello =
+    att?.modello?.trim() ||
+    scheda?.modelloAttrezzatura?.trim() ||
+    inputs.mezzoGestito?.modello?.trim() ||
+    "";
+
+  return {
+    targetType: "attrezzatura",
+    attrezzatura: {
+      id: row?.attrezzatura_id ?? att?.id ?? scheda?.attrezzaturaId ?? null,
+      marca,
+      modello,
+      matricola:
+        att?.matricola?.trim() ||
+        scheda?.matricola?.trim() ||
+        inputs.mezzoGestito?.matricola?.trim() ||
+        "",
+      present: Boolean(marca || modello || att?.id),
+    },
+  };
+}
+
 export function composeInterventoContext(inputs: InterventoContextInputs): InterventoContext {
   const lavorazioneId = inputs.lavorazioneId.trim();
   const mezzo = mezzoSnapshotFromRow(inputs.mezzoRow, inputs.mezzoGestito);
@@ -183,6 +238,7 @@ export function composeInterventoContext(inputs: InterventoContextInputs): Inter
     lavorazione,
     schedaIngresso,
     ident,
+    target: targetSnapshotFromInputs(inputs),
     meta: {
       schedaMissing: !schedaIngresso.present,
       mezzoUnlinked: !lavorazione.mezzoId,
@@ -226,10 +282,19 @@ export function composeInterventoContextFromListRow(
 ): InterventoContext {
   const bundle = schedeStore?.[row.id];
   const ing = bundle?.ingresso ?? null;
+  const attrezzaturaRow =
+    row.attrezzatura_id && row.mezzo
+      ? attrezzaturaRowFromEnrichedMezzo(
+          row.mezzo,
+          row.attrezzatura_id,
+          row.mezzo_id ?? row.mezzo.id,
+        )
+      : null;
   return composeInterventoContext({
     lavorazioneId: row.id,
     lavorazioneRow: row,
     mezzoRow: row.mezzo,
+    attrezzaturaRow,
     ingressoCampi: ing?.campi ?? null,
     ingressoSorgente: ing?.sorgente ?? null,
     ingressoUpdatedAt: ing?.updatedAt ?? null,
@@ -269,6 +334,10 @@ const defaultFetchDeps = (): InterventoContextFetchDeps => ({
     const res = await mezziService.getById(id);
     return res.success ? res.data : null;
   },
+  async fetchAttrezzaturesForMezzo(mezzoId) {
+    const sb = getBrowserSupabase();
+    return fetchAttrezzatureForMezzoIds(sb, [mezzoId]);
+  },
   async fetchSchedeBundle(lavorazioneId) {
     const bundle = await fetchSchedeBundleForLavorazione(lavorazioneId);
     if (!bundle?.ingresso) return { ingresso: null };
@@ -289,14 +358,24 @@ export async function fetchInterventoContextInputs(
   const id = lavorazioneId.trim();
   const lavRow = await deps.getLavorazioneById(id);
   let mezzoRow: MezzoRow | null = null;
+  let mezzoGestito: MezzoGestito | null = null;
+  let attrezzaturaRow: import("@/src/types/supabase-tables").AttrezzaturaRow | null = null;
   if (lavRow?.mezzo_id?.trim()) {
-    mezzoRow = await deps.getMezzoById(lavRow.mezzo_id.trim());
+    const mid = lavRow.mezzo_id.trim();
+    mezzoRow = await deps.getMezzoById(mid);
+    if (mezzoRow) {
+      const attRows = await deps.fetchAttrezzaturesForMezzo(mid);
+      attrezzaturaRow = pickAttrezzaturaForContext(attRows, mid, lavRow.attrezzatura_id);
+      mezzoGestito = composeMezzoGestitoFromRows(mezzoRow, attrezzaturaRow);
+    }
   }
   const bundle = await deps.fetchSchedeBundle(id);
   return {
     lavorazioneId: id,
     lavorazioneRow: lavRow,
     mezzoRow,
+    mezzoGestito,
+    attrezzaturaRow,
     ingressoCampi: bundle?.ingresso?.campi ?? null,
     ingressoSorgente: bundle?.ingresso?.sorgente ?? null,
     ingressoUpdatedAt: bundle?.ingresso?.updatedAt ?? null,

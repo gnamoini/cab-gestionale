@@ -21,7 +21,7 @@ import {
   type MezzoUltimaModificaInfo,
 } from "@/lib/mezzi/mezzo-ultima-modifica-info";
 import { interventiMezzoDaLavorazioniDb, mezzoHaLavorazioneAttivaDb, mezzoHaLavorazioneCollegataDb } from "@/lib/mezzi/interventi-from-lavorazioni-db";
-import { logModificaRowToMezziHubLogEntry, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { logModificaRowToMezziHubLogEntry } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito, MezzoInterventoLavorazione, MezziSortKey, MezziSortPhase } from "@/lib/mezzi/types";
 import { dsPageToolbarCtaCompact, dsStackPage } from "@/lib/ui/design-system";
 import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
@@ -101,7 +101,7 @@ export function MezziView() {
   const mezziInitialLoading = mezziLoading && mezzoRowsRaw === undefined && !mezziError;
 
   const { data: lavRows = [] } = useLavorazioniList({ includeMezzo: true });
-  const mezziUi = useMemo(() => mezzoRows.map(toMezzoUI), [mezzoRows]);
+  const mezziUi = mezzoRows;
 
   const interventiByMezzoId = useMemo(() => {
     const map = new Map<string, MezzoInterventoLavorazione[]>();

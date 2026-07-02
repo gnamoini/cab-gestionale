@@ -17,6 +17,7 @@ export const MODULE_PAGE_LABELS: Record<GestionalePermissionModule, string> = {
   fatturazione: "Fatturazione",
   ddt: "DDT",
   ordini_fornitori: "Ordini fornitori",
+  document_capture: "Acquisizione documenti",
 };
 
 export type ModulePermissionDraftRow = {
@@ -145,4 +146,12 @@ export function modulePermissionsPayloadFromDraft(
   const plan = planModulePermissionPersist(ruolo, draft);
   if (plan.deleteAll) return null;
   return plan.upserts;
+}
+
+export function buildInitialModuleDraft(
+  ruolo: AppRole,
+  userId: string,
+  permissionRows: UserPermissionRow[],
+): ModulePermissionDraftRow[] {
+  return computeModulePermissionDraft(resolveRole(ruolo), userId, permissionRows);
 }

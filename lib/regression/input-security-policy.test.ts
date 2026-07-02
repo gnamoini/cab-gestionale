@@ -28,7 +28,7 @@ const adminUsers = read("src/actions/admin-users.ts");
 assert.doesNotMatch(adminUsers, /password\.length < 6/);
 
 const loginForm = read("app/login/login-form.tsx");
-assert.match(loginForm, /\/login\/reset-password/);
+assert.match(loginForm, /request-password-reset\.client/);
 
 const middleware = read("src/middleware/proxy-handler.ts");
 assert.match(middleware, /RESET_PASSWORD_PATH/);
@@ -49,9 +49,6 @@ assert.match(promemoria, /PROMEMORIA_DESCRIPTION_MAX/);
 
 const schedeSync = read("lib/schede/schede-sync-adapter.ts");
 assert.match(schedeSync, /clampSchedeBundle/);
-
-const bunderSync = read("lib/bunder/bunder-sync-adapter.ts");
-assert.match(bunderSync, /clampBunderDocument/);
 
 const checklist = read("docs/checklists/pre-deploy-checklist.md");
 assert.match(checklist, /20260706120000_input_text_limits\.sql/);

@@ -12,6 +12,7 @@ export type AdminNotificationStoreState = {
 };
 
 /** Limite voci in localStorage — evita quota exceeded e liste infinite (fase 10 audit). */
+/** ponytail: DEPRECATED — sunset quando notifications_v2_mode=on stabile ≥7gg prod; rollback via flag off. */
 export const ADMIN_NOTIFICATION_STORE_MAX_ITEMS = 150;
 
 const STORAGE_PREFIX = "cab:admin-dashboard-notifications:";

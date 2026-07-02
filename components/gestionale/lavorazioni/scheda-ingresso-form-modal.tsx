@@ -14,7 +14,6 @@ import {
 import { useGlobalOptions, type GlobalOptionsSlice } from "@/src/hooks/use-global-options";
 import { orderPrioritaList } from "@/lib/lavorazioni/priorita-order";
 import { prioritaDisplayColor, statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import {
   applyCopyLastSchedaMatch,
@@ -31,6 +30,10 @@ import {
 import type { LavorazioneSchedeStore, SchedaIngressoFields } from "@/types/schede";
 import type { PrioritaLavorazione } from "@/src/types/supabase-tables";
 import { normalizeLivelloCarburanteStored } from "@/lib/schede/livello-carburante-value";
+import {
+  applySchedaIngressoTypedFields,
+  type SchedaIngressoStringKey,
+} from "@/lib/schede/scheda-ingresso-typed-fields";
 import { sliceInputValue, TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
 import type { LavorazioneArchiviata, LavorazioneAttiva, PrioritaLav } from "@/lib/lavorazioni/types";
 import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
@@ -104,10 +107,11 @@ export function normalizeSchedaIngressoFields(
   const base = emptySchedaIngressoFields(addettoDefault);
   if (!raw) return base;
   const out = { ...base };
-  for (const key of Object.keys(base) as (keyof SchedaIngressoFields)[]) {
+  for (const key of Object.keys(base) as SchedaIngressoStringKey[]) {
     const v = raw[key];
     if (v !== undefined && v !== null) out[key] = String(v);
   }
+  applySchedaIngressoTypedFields(out, raw);
   out.livelloCarburante = normalizeLivelloCarburanteStored(out.livelloCarburante);
   return out;
 }
@@ -173,6 +177,7 @@ export function SchedaIngressoFormBody({
   onMezzoDialogAccept,
   onMezzoDialogDismiss,
   mezzoLinked = false,
+  mezzoId = "",
   prependContent,
   sharedGlobalOpts,
   sharedMezziCatalog,
@@ -199,6 +204,7 @@ export function SchedaIngressoFormBody({
   onMezzoDialogAccept?: () => void;
   onMezzoDialogDismiss?: () => void;
   mezzoLinked?: boolean;
+  mezzoId?: string;
   /** Contenuto opzionale in cima allo scroll (banner, avvisi). */
   prependContent?: ReactNode;
   sharedGlobalOpts?: GlobalOptionsSlice;
@@ -223,7 +229,7 @@ export function SchedaIngressoFormBody({
     [globalOpts.lavorazioni.prioritaDb],
   );
   const addettiOpts = globalOpts.lavorazioni.addetti;
-  const mezziUi = useMemo(() => (mezziQ.data ?? []).map(toMezzoUI), [mezziQ.data]);
+  const mezziUi = mezziQ.data ?? [];
   const mezziCatalog = useMemo(
     () => sharedMezziCatalog ?? (mezziUi.length > 0 ? mezziUi : [...mezzi]),
     [sharedMezziCatalog, mezziUi, mezzi],
@@ -486,6 +492,7 @@ export function SchedaIngressoFormBody({
           clienteRequired={variant === "create-lavorazione"}
           marcaAttrezzaturaRequired={variant === "create-lavorazione"}
           mezzoLinked={mezzoLinked}
+          mezzoId={mezzoId}
         />
 
         {heavySectionsReady ? (
@@ -572,7 +579,7 @@ export function SchedaIngressoEditModal({
   );
 
   const mezziQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
-  const mezziUi = useMemo(() => (mezziQ.data ?? []).map(toMezzoUI), [mezziQ.data]);
+  const mezziUi = mezziQ.data ?? [];
   const mezziCatalog = useMemo(
     () => (mezziUi.length > 0 ? mezziUi : [...mezzi]),
     [mezziUi, mezzi],

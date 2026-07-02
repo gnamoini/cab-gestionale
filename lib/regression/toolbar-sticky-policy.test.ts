@@ -12,7 +12,6 @@ const SCAN_DIRS = [
   "components/gestionale",
   "components/dashboard",
   "components/preventivi",
-  "components/bunder",
   "components/lavorazioni-clienti",
 ];
 
@@ -23,7 +22,6 @@ const ALLOWLIST_SUBSTR = [
   "app-shell.tsx",
   "supabase-configuration-banner",
   "preventivi-editor-modal",
-  "bunder-editor-modal",
   "sistema-impostazioni-modal",
   "report-magazzino-section",
 ];

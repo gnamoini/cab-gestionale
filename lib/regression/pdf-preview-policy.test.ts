@@ -33,10 +33,6 @@ const handler = read("lib/pdf/pdf-preview-handler.ts");
 assert.match(handler, /PDF_MAGIC/);
 assert.match(handler, /can_read_operational/);
 
-const bunderPdf = read("lib/bunder/bunder-pdf.ts");
-assert.match(bunderPdf, /openPdfArtifact/);
-assert.doesNotMatch(bunderPdf, /from\s+["']jspdf["']/);
-
 const previewRouteDeprecation = read("app/api/pdf/preview/route.ts");
 assert.match(previewRouteDeprecation, /deprecated:\s*true/);
 

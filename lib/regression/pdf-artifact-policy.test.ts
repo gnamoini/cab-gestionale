@@ -33,7 +33,6 @@ const migratedOpeners = [
   "lib/lavorazioni/lavorazioni-list-pdf.ts",
   "lib/preventivi/preventivi-pdf.ts",
   "lib/schede/schede-pdf.ts",
-  "lib/bunder/bunder-pdf.ts",
   "lib/dipendenti/pdf/dipendenti-pdf-export.ts",
 ];
 
@@ -49,7 +48,6 @@ const pdfDataModules = [
   "lib/preventivi/preventivi-fetch-server.ts",
   "lib/schede/schede-fetch-server.ts",
   "lib/dipendenti/dipendenti-pdf-data.server.ts",
-  "lib/bunder/bunder-fetch-server.ts",
 ];
 
 for (const rel of pdfDataModules) {

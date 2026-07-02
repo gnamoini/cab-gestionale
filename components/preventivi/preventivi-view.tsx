@@ -39,6 +39,11 @@ import { mezzoFromLavorazione, preventivoMatchesMezzo } from "@/lib/mezzi/mezzi-
 import { normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
 import { migrateMezziListePrefs } from "@/lib/mezzi/attrezzature-prefs";
 import {
+  loadPreventiviLearningMerged,
+  migratePreventiviLearningToSettings,
+} from "@/lib/preventivi/preventivi-learning-sync";
+import { savePreventiviLearning } from "@/lib/preventivi/preventivi-learning-storage";
+import {
   buildPreventiviFilterCatalog,
   loadPreventiviAdvancedFiltersPersisted,
   PREVENTIVI_ADVANCED_FILTERS_EMPTY,
@@ -72,9 +77,8 @@ import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { ddtService } from "@/src/services/ddt.service";
 import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi-billing-query";
-import { useMagazzinoRicambiUIQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { LoadingCardSkeleton, LoadingTableSkeleton } from "@/components/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
@@ -322,10 +326,14 @@ export function PreventiviView() {
   const { authorName: autore } = useAuth();
   const gestToast = useGestionaleToast();
   const queryClient = useQueryClient();
-  const { records: rows, mezziRows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
+  const { records: rows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
     usePreventiviRecordsQuery();
   const { byPreventivoId: preventiviBillingById } = usePreventiviBillingQuery();
   const preventiviReadyMarked = useRef(false);
+  useEffect(() => {
+    void loadPreventiviLearningMerged().then((merged) => savePreventiviLearning(merged));
+    void migratePreventiviLearningToSettings();
+  }, []);
   useEffect(() => {
     if (preventiviReadyMarked.current || rows.length === 0) return;
     preventiviReadyMarked.current = true;
@@ -336,7 +344,8 @@ export function PreventiviView() {
     }
   }, [rows.length]);
   const preventiviInitialLoading = preventiviQueryLoading && rows.length === 0;
-  const mezziSnap = useMemo(() => mezziRows.map(toMezzoUI), [mezziRows]);
+  const mezziListQ = useMezziListQuery();
+  const mezziSnap = mezziListQ.data ?? [];
   const magazzinoQ = useMagazzinoRicambiUIQuery();
   const magSnap = magazzinoQ.data ?? [];
   const lavorazioniListQ = useLavorazioniList({ includeMezzo: true });
@@ -722,7 +731,7 @@ export function PreventiviView() {
       autore: autore.trim() || "Operatore",
       existingRecords: rows,
     });
-    void appendPreventivoSynced(rec, mezziRows, { queryClient }).then((res) => {
+    void appendPreventivoSynced(rec, mezziSnap, { queryClient }).then((res) => {
       if (!res.ok) {
         pendingHandledRef.current = false;
         gestToast.errorOnce("preventivi-save", res.error, { module: "preventivi" });
@@ -740,7 +749,7 @@ export function PreventiviView() {
       const q = sp.toString();
       router.replace(q ? `/preventivi?${q}` : "/preventivi", { scroll: false });
     });
-  }, [searchParams, router, mezziSnap, magSnap, autore, rows, mezziRows, queryClient]);
+  }, [searchParams, router, mezziSnap, magSnap, autore, rows, queryClient]);
 
   useEffect(() => {
     if (!focusPreventivoId) return;
@@ -1241,7 +1250,6 @@ export function PreventiviView() {
         isNew={editor.isNew}
         isRollbackDraft={editor.isRollbackDraft}
         autore={autore.trim() || "Operatore"}
-        mezziRows={mezziRows}
         allRecords={rows}
         onClose={closeEditor}
         onSaved={onEditorSaved}

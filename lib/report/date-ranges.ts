@@ -46,10 +46,51 @@ function addLocalDays(d: Date, days: number): Date {
 }
 
 /** Lunedì 00:00 della settimana locale che contiene `d`. */
-function startOfLocalWeekMonday(d: Date): Date {
+export function startOfLocalWeekMonday(d: Date): Date {
   const day = d.getDay();
   const daysSinceMonday = day === 0 ? 6 : day - 1;
   return startOfLocalDay(addLocalDays(d, -daysSinceMonday));
+}
+
+export function parseYmdToLocalDate(ymd: string): Date | null {
+  return parseYmd(ymd);
+}
+
+export function ymdFromDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export function monthKeyFromYmd(ymd: string): string | null {
+  const d = parseYmd(ymd);
+  if (!d) return null;
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+}
+
+/** Intervallo lun–dom (inclusivo) della settimana che contiene `ymd`. */
+export function weekRangeFromYmd(ymd: string): DateRange | null {
+  const d = parseYmd(ymd);
+  if (!d) return null;
+  const start = startOfLocalWeekMonday(d);
+  const end = endOfLocalDay(addLocalDays(start, 6));
+  return { start, end };
+}
+
+export function dayRangeFromYmd(ymd: string): DateRange | null {
+  const d = parseYmd(ymd);
+  if (!d) return null;
+  return { start: startOfLocalDay(d), end: endOfLocalDay(d) };
+}
+
+/** Range calendario del mese `YYYY-MM`. */
+export function monthRangeFromKey(monthKey: string): DateRange | null {
+  const m = /^(\d{4})-(\d{2})$/.exec(monthKey.trim());
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]) - 1;
+  if (mo < 0 || mo > 11) return null;
+  const start = startOfLocalDay(new Date(y, mo, 1));
+  const end = endOfLocalDay(new Date(y, mo + 1, 0));
+  return { start, end };
 }
 
 /** Indice trimestre 0–3 per mese locale. */

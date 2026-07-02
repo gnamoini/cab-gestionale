@@ -1,5 +1,6 @@
 /** Validazione input server actions sicurezza / impostazioni portale clienti. */
 
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { APP_ROLES, type AppRole } from "@/lib/auth/rbac";
 import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
 import { normalizeUsername, usernameFieldError } from "@/src/lib/auth/username";
@@ -19,10 +20,10 @@ const MAX_BATCH_PATCHES = 100;
 export type ValidatedSecurityUserBatchPatch = {
   userId: string;
   nome?: string;
+  cognome?: string | null;
   username?: string;
   ruolo?: AppRole;
   clienteRef?: string | null;
-  clientLavorazioniAccess?: boolean;
   /** null = ripristina permessi da ruolo (delete overrides). */
   modulePermissions?: ValidatedModulePermissionEntry[] | null;
   /** Se true con cambio ruolo, elimina override moduli prima del nuovo ruolo. */
@@ -71,6 +72,14 @@ export function validateUserId(userId: string | null | undefined): string | null
   const t = userId?.trim() ?? "";
   if (!t) return "Utente non valido.";
   if (!UUID_RE.test(t)) return "ID utente non valido.";
+  return null;
+}
+
+export function validateOptionalCognome(cognome: string | null | undefined): string | null {
+  if (cognome == null) return null;
+  const t = cognome.trim();
+  if (!t) return null;
+  if (t.length > 120) return "Cognome troppo lungo (max 120 caratteri).";
   return null;
 }
 
@@ -129,6 +138,15 @@ export function validateSecurityUserBatchPatches(
       patch.nome = p.nome.trim();
     }
 
+    if (p.cognome !== undefined) {
+      if (p.cognome !== null && typeof p.cognome !== "string") {
+        return { ok: false, message: "Cognome non valido." };
+      }
+      const cognomeErr = validateOptionalCognome(p.cognome as string | null);
+      if (cognomeErr) return { ok: false, message: cognomeErr };
+      patch.cognome = typeof p.cognome === "string" ? p.cognome.trim() || null : null;
+    }
+
     if (p.username !== undefined) {
       if (typeof p.username !== "string") return { ok: false, message: "Nome utente non valido." };
       const normalized = normalizeUsername(p.username);
@@ -153,13 +171,6 @@ export function validateSecurityUserBatchPatches(
       );
       if (clienteRefErr) return { ok: false, message: clienteRefErr };
       patch.clienteRef = normalizeClienteRef(p.clienteRef as string | null | undefined);
-    }
-
-    if (p.clientLavorazioniAccess !== undefined) {
-      if (typeof p.clientLavorazioniAccess !== "boolean") {
-        return { ok: false, message: "Flag accesso clienti non valido." };
-      }
-      patch.clientLavorazioniAccess = p.clientLavorazioniAccess;
     }
 
     if (p.modulePermissions !== undefined) {
@@ -223,4 +234,49 @@ export function validateDeleteUserByAdminInput(
     return { ok: false, message: "Non puoi eliminare il tuo account da qui." };
   }
   return { ok: true, userId: trimmed };
+}
+
+export function validateSetUserAccountEnabledInput(
+  input: unknown,
+  callerId: string | null | undefined,
+): { ok: true; userId: string; enabled: boolean } | { ok: false; message: string } {
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    return { ok: false, message: "Richiesta non valida." };
+  }
+  const raw = input as Record<string, unknown>;
+  const userIdErr = validateUserId(typeof raw.userId === "string" ? raw.userId : "");
+  if (userIdErr) return { ok: false, message: userIdErr };
+  if (typeof raw.enabled !== "boolean") {
+    return { ok: false, message: "Flag abilitazione non valido." };
+  }
+  const userId = (raw.userId as string).trim();
+  if (!raw.enabled && callerId && userId === callerId) {
+    return { ok: false, message: "Non puoi disattivare il tuo account." };
+  }
+  return { ok: true, userId, enabled: raw.enabled };
+}
+
+/** Impedisce delete/disable/downgrade dell'ultimo admin attivo. */
+export async function validateLastAdminTarget(
+  admin: SupabaseClient,
+  _targetUserId: string,
+  targetRole: AppRole,
+  operation: "delete" | "disable" | "role_downgrade",
+): Promise<string | null> {
+  if (targetRole !== "admin") return null;
+  const { count, error } = await admin
+    .from("profiles")
+    .select("id", { count: "exact", head: true })
+    .eq("ruolo", "admin");
+  if (error) return error.message;
+  if ((count ?? 0) <= 1) {
+    if (operation === "delete") {
+      return "Impossibile eliminare l'ultimo amministratore del sistema.";
+    }
+    if (operation === "disable") {
+      return "Impossibile disattivare l'ultimo amministratore del sistema.";
+    }
+    return "Impossibile rimuovere il ruolo admin all'ultimo amministratore.";
+  }
+  return null;
 }

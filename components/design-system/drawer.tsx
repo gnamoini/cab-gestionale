@@ -1,7 +1,26 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
-import { dsModalCloseBtn, dsModalHeader, dsModalHeaderInner, dsModalHeaderLead, dsModalTitle, dsModalTitleBlock, dsZDrawer } from "@/lib/ui/design-system";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import {
+  dsModalCloseBtn,
+  dsModalHeader,
+  dsModalHeaderInner,
+  dsModalHeaderLead,
+  dsModalTitle,
+  dsModalTitleBlock,
+  dsZDrawer,
+} from "@/lib/ui/design-system";
+import {
+  dispatchGestionaleOverlayClosed,
+  restoreGestionaleDrawerFocus,
+} from "@/lib/ui/use-sidebar-collapsed";
 import { cabIosOverlaySurface, cabModalScrollKeyboardPad } from "@/lib/ui/ios-mobile-tokens";
 import {
   CAB_MODAL_ROOT_ATTR,
@@ -12,6 +31,7 @@ import { useBodyScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { useMaxMdDown } from "@/lib/ui/use-max-md-down";
 import { useMobileModalKeyboard } from "@/lib/ui/use-mobile-modal-keyboard";
+import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import { CloseButton } from "@/components/design-system/close-button";
 import { gestionaleLogPanelAsideClass } from "@/components/gestionale/gestionale-log-ui";
 
@@ -22,6 +42,13 @@ function logDrawerAnimMs(): number {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 1 : LOG_DRAWER_MS;
 }
 
+function shouldSkipDrawerEscape(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) return true;
+  return false;
+}
+
 export type DrawerProps = {
   open: boolean;
   onClose: () => void;
@@ -30,8 +57,14 @@ export type DrawerProps = {
   /** Larghezza aside (default log panel). */
   asideClassName?: string;
   ariaLabel?: string;
+  /** Id titolo per aria-labelledby (default generato). */
+  titleId?: string;
   /** Default true. Impostare false se la pagina gestisce già il body scroll lock (overlay multipli). */
   lockScroll?: boolean;
+  /** Default true — chiusura con Escape (salta campi editabili). */
+  closeOnEscape?: boolean;
+  /** Ripristina focus su questo elemento alla chiusura. */
+  restoreFocusRef?: RefObject<HTMLElement | null>;
 };
 
 export function Drawer({
@@ -41,13 +74,20 @@ export function Drawer({
   children,
   asideClassName = gestionaleLogPanelAsideClass,
   ariaLabel,
+  titleId: titleIdProp,
   lockScroll = true,
+  closeOnEscape = true,
+  restoreFocusRef,
 }: DrawerProps) {
   const asideRef = useRef<HTMLElement>(null);
+  const autoTitleId = useRef(`cab-drawer-title-${Math.random().toString(36).slice(2, 9)}`);
+  const titleId = titleIdProp ?? autoTitleId.current;
   const maxMdDown = useMaxMdDown();
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
   const panelState = closing ? "closing" : "open";
+  const isActive = mounted && open && !closing;
+  const { restoreFocus } = useDropdownFocusRestore(isActive);
 
   useEffect(() => {
     if (open) {
@@ -62,13 +102,42 @@ export function Drawer({
     const id = window.setTimeout(() => {
       setMounted(false);
       setClosing(false);
+      restoreGestionaleDrawerFocus({
+        trigger: restoreFocusRef?.current ?? null,
+        restoreCapturedFocus: restoreFocus,
+      });
     }, logDrawerAnimMs());
     return () => window.clearTimeout(id);
-  }, [mounted, open]);
+  }, [mounted, open, restoreFocus, restoreFocusRef]);
 
   useBodyScrollLock(lockScroll && mounted && !closing, "design-system-Drawer");
-  useOverlayBackHandler(mounted && open && !closing, onClose, "design-system-Drawer");
+  const requestClose = useCallback(() => {
+    onClose();
+    dispatchGestionaleOverlayClosed();
+  }, [onClose]);
+
+  useOverlayBackHandler(isActive, requestClose, "design-system-Drawer");
   useMobileModalKeyboard(asideRef);
+
+  useEffect(() => {
+    if (!isActive || !closeOnEscape) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      if (shouldSkipDrawerEscape(e.target)) return;
+      requestClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [isActive, closeOnEscape, requestClose]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const id = window.requestAnimationFrame(() => {
+      const btn = asideRef.current?.querySelector('button[aria-label="Chiudi"]');
+      if (btn instanceof HTMLButtonElement) btn.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [isActive]);
 
   if (!mounted) return null;
 
@@ -77,10 +146,12 @@ export function Drawer({
       <div className={dsModalHeaderInner}>
         <div className={dsModalHeaderLead}>
           <div className={dsModalTitleBlock}>
-            <h2 className={dsModalTitle}>{title}</h2>
+            <h2 id={titleId} className={dsModalTitle}>
+              {title}
+            </h2>
           </div>
         </div>
-        <CloseButton onClick={onClose} className={dsModalCloseBtn} />
+        <CloseButton onClick={requestClose} className={dsModalCloseBtn} />
       </div>
     </header>
   );
@@ -93,7 +164,7 @@ export function Drawer({
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) {
           e.preventDefault();
-          onClose();
+          requestClose();
         }
       }}
     >
@@ -102,7 +173,10 @@ export function Drawer({
         {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
         className={asideClassName}
         data-state={panelState}
-        aria-label={ariaLabel ?? title}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-label={ariaLabel}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div

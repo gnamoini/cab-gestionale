@@ -1,6 +1,7 @@
 import { isMagazzinoNotificationsPath } from "@/lib/lavorazioni/admin-notifications";
 import {
-  didCrossBelowMin,
+  didCrossToZero,
+  shouldNotifyStockCrossing,
   type StockSnapshot,
 } from "@/lib/magazzino/ricambio-stock-crossing";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
@@ -9,6 +10,7 @@ import type { MagazzinoSottoScortaNotification } from "@/lib/notifications/admin
 export function ricambioToMagazzinoSottoScortaNotification(
   ricambio: RicambioMagazzino,
   createdAt?: string,
+  esaurito = false,
 ): MagazzinoSottoScortaNotification {
   const now = createdAt?.trim() || new Date().toISOString();
   return {
@@ -19,6 +21,7 @@ export function ricambioToMagazzinoSottoScortaNotification(
     descrizione: ricambio.descrizione?.trim() || "—",
     scorta: Math.max(0, Math.round(ricambio.scorta)),
     scortaMinima: Math.max(0, Math.round(ricambio.scortaMinima)),
+    esaurito,
     createdAt: now,
   };
 }
@@ -29,16 +32,15 @@ export function magazzinoCrossingToNotification(input: {
   curr: StockSnapshot;
   ricambio?: RicambioMagazzino | null;
   pathname: string;
-  isAdmin: boolean;
 }): MagazzinoSottoScortaNotification | null {
-  const { ricambioId, prev, curr, ricambio, pathname, isAdmin } = input;
-  if (!isAdmin) return null;
+  const { ricambioId, prev, curr, ricambio, pathname } = input;
   if (isMagazzinoNotificationsPath(pathname)) return null;
-  if (!prev) return null;
-  if (!didCrossBelowMin(prev, curr)) return null;
+  if (!shouldNotifyStockCrossing(prev, curr)) return null;
+
+  const esaurito = prev ? didCrossToZero(prev, curr) : curr.scorta === 0;
 
   if (ricambio?.id === ricambioId) {
-    return ricambioToMagazzinoSottoScortaNotification(ricambio);
+    return ricambioToMagazzinoSottoScortaNotification(ricambio, undefined, esaurito);
   }
 
   return {
@@ -49,6 +51,7 @@ export function magazzinoCrossingToNotification(input: {
     descrizione: ricambio?.descrizione?.trim() || "—",
     scorta: curr.scorta,
     scortaMinima: curr.scortaMinima,
+    esaurito,
     createdAt: new Date().toISOString(),
   };
 }

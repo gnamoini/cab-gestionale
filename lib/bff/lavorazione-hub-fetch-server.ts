@@ -10,7 +10,7 @@ import {
   MEZZI_LIST_LIGHT_COLUMNS,
 } from "@/lib/db/table-select-columns";
 import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
-import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import {

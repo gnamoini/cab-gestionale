@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/context/auth-context";
+import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import {
   clearMagazzinoNotifications,
   countReadAdminNotifications,
@@ -18,13 +19,18 @@ import {
   type AdminNotificationStoreState,
 } from "@/lib/lavorazioni/admin-notification-store";
 import type { AdminDashboardNotification } from "@/lib/notifications/admin-dashboard-notifications";
-import { useRbac } from "@/src/hooks/use-rbac";
+import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
 
 export function useAdminNotificationStore() {
   const { user } = useAuth();
-  const rbac = useRbac();
+  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
+  const { readsDb, isLoading: flagLoading } = useNotificationsV2Mode();
   const userId = user?.id ?? "";
-  const enabled = rbac.canRead("dashboard") && !rbac.isLoading && userId.length > 0;
+  const staffEligible =
+    !permsLoading &&
+    isStaffInboxEligible(snapshot ? { ruolo: snapshot.role } : user, snapshot?.rbacContext);
+  const enabled = staffEligible && !flagLoading && !readsDb && userId.length > 0;
 
   // SSR/hydration: mai leggere localStorage nel render iniziale (vedi docs/bootstrap-hydration.md).
   const [state, setState] = useState<AdminNotificationStoreState>(emptyAdminNotificationStore);
@@ -94,7 +100,7 @@ export function useAdminNotificationStore() {
     clearMagazzinoNotifications: clearMagazzinoNotifs,
     isUnread,
     canReadDashboard: enabled,
-    permLoading: rbac.isLoading,
+    permLoading: permsLoading || flagLoading,
     enabled,
   };
 }

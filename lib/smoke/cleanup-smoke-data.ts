@@ -26,7 +26,7 @@ export type SmokeCleanupReport = {
 
 type LavorazioneRow = { id: string; note: string | null; mezzo_id: string | null };
 type SchedaRow = { lavorazione_id: string; contenuto: unknown };
-type MezzoRow = { id: string; cliente: string | null; marca: string | null; matricola: string | null; meta: unknown };
+type MezzoRow = { id: string; cliente: string | null; targa: string | null; meta: unknown };
 type DocumentoRow = { id: string; nome_file: string | null; url_file: string };
 type RicambioRow = { id: string; codice: string };
 type AppSettingRow = { id: string; module: string; key: string; value: Record<string, unknown> };
@@ -42,7 +42,7 @@ function schedaContainsSmokeToken(contenuto: unknown): boolean {
 }
 
 function mezzoContainsSmokeToken(row: MezzoRow): boolean {
-  const parts = [row.cliente, row.marca, row.matricola];
+  const parts = [row.cliente, row.targa];
   if (parts.some((p) => containsSmokeAuditToken(p))) return true;
   try {
     return containsSmokeAuditToken(JSON.stringify(row.meta ?? {}));
@@ -88,7 +88,7 @@ async function findSmokeRicambi(admin: SupabaseClient): Promise<RicambioRow[]> {
 }
 
 async function findOrphanSmokeMezzi(admin: SupabaseClient, excludeLavorazioneIds: Set<string>): Promise<string[]> {
-  const { data: mezzi, error: mezziErr } = await admin.from("mezzi").select("id, cliente, marca, matricola, meta");
+  const { data: mezzi, error: mezziErr } = await admin.from("mezzi").select("id, cliente, targa, meta");
   if (mezziErr) throw new Error(`mezzi: ${mezziErr.message}`);
 
   const { data: lavRefs, error: lavErr } = await admin.from("lavorazioni").select("id, mezzo_id");

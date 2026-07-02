@@ -50,7 +50,7 @@ import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import type { LavorazioneUpdate } from "@/src/services/lavorazioni.service";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { SchedaIngressoFields } from "@/types/schede";
-import type { PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
+import type { PrioritaLavorazione, StatoLavorazione, InterventoTargetType } from "@/src/types/supabase-tables";
 
 export type CreateInterventoStage = "upsert-mezzo" | "create-lavorazione" | "persist-scheda";
 
@@ -79,6 +79,8 @@ export type CreateInterventoTransactionPlan = {
       data_ingresso: string;
       note: string | null;
       created_by: string;
+      target_type: import("@/src/types/supabase-tables").InterventoTargetType;
+      attrezzatura_id: string | null;
     }) => Promise<LavorazioneRow>;
     persistScheda: (input: {
       lavorazioneId: string;
@@ -102,6 +104,8 @@ export async function createInterventoTransaction(
   let lavorazioneId =
     plan.existingLavorazioneId?.trim() || ledgerEntry?.lavorazioneId?.trim() || null;
   let mezzoId: string | null = ledgerEntry?.mezzoId?.trim() || null;
+  let targetType: InterventoTargetType | null = null;
+  let attrezzaturaId: string | null = null;
 
   if (idempotencyKey) {
     logInterventoTelemetry("intervento_create_started", { lavorazioneId: lavorazioneId ?? undefined });
@@ -164,6 +168,8 @@ export async function createInterventoTransaction(
         preferredMezzoId: meta.mezzoIdHint,
       });
       mezzoId = upsert.mezzoId;
+      targetType = upsert.targetType ?? null;
+      attrezzaturaId = upsert.attrezzaturaId ?? null;
     } catch (err) {
       const message = err instanceof Error ? err.message : "Errore upsert mezzo.";
       auditInterventoContext(null, "write-mezzo", { stage: "upsert-mezzo", extra: { error: message } });
@@ -183,12 +189,21 @@ export async function createInterventoTransaction(
             preferredMezzoId: meta.mezzoIdHint,
           });
           mezzoId = upsert.mezzoId;
+          targetType = upsert.targetType ?? null;
+          attrezzaturaId = upsert.attrezzaturaId ?? null;
         } catch {
           recordTraceStep(trace, "v1_create", "failed");
           return { ok: false, stage: "upsert-mezzo", error: "Mezzo non risolto." };
         }
       }
     try {
+      if (!targetType) {
+        return {
+          ok: false,
+          stage: "create-lavorazione",
+          error: "Target intervento non risolto dopo upsert mezzo.",
+        };
+      }
       const row = await deps.createLavorazione({
         mezzo_id: mezzoId!,
         stato: meta.statoId,
@@ -196,6 +211,8 @@ export async function createInterventoTransaction(
         data_ingresso: meta.dataIngressoIso,
         note: meta.note,
         created_by: meta.createdBy,
+        target_type: targetType,
+        attrezzatura_id: targetType === "attrezzatura" ? attrezzaturaId : null,
       });
       lavorazioneId = row.id;
       if (idempotencyKey) {

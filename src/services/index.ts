@@ -1,5 +1,9 @@
 export { authService } from "@/src/services/auth.service";
 export { mezziService } from "@/src/services/mezzi.service";
+export { attrezzatureService } from "@/src/services/attrezzature.service";
+export { assetComplianceService } from "@/src/services/asset-compliance.service";
+export { assetMileageService } from "@/src/services/asset-mileage.service";
+export { assetTimelineService } from "@/src/services/asset-timeline.service";
 export { lavorazioniService, type LavorazioneListRow } from "@/src/services/lavorazioni.service";
 export { schedeService } from "@/src/services/schede.service";
 export { magazzinoService } from "@/src/services/magazzino.service";

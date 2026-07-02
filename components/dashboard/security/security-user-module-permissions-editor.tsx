@@ -1,13 +1,16 @@
 "use client";
 
-import { resolveRole, type AppRole } from "@/lib/auth/rbac";
+import { resolveRole, ROLE_LABELS, type AppRole } from "@/lib/auth/rbac";
 import {
+  buildInitialModuleDraft,
   computeModulePermissionDraft,
   normalizeModuleDraftRow,
   type ModulePermissionDraftRow,
 } from "@/lib/security/user-module-permissions";
 import { dsBtnGhost, dsScrollbar, dsTable, dsTableRow, dsTableTd, dsTableWrap } from "@/lib/ui/design-system";
 import type { UserPermissionRow } from "@/src/types/supabase-tables";
+
+export { buildInitialModuleDraft };
 
 const ROLE_MODULE_READONLY = new Set<AppRole>(["cliente", "guest"]);
 
@@ -34,14 +37,6 @@ type Props = {
   onDraftChange: (rows: ModulePermissionDraftRow[]) => void;
   onRestoreFromRole: () => void;
 };
-
-export function buildInitialModuleDraft(
-  ruolo: AppRole,
-  userId: string,
-  permissionRows: UserPermissionRow[],
-): ModulePermissionDraftRow[] {
-  return computeModulePermissionDraft(resolveRole(ruolo), userId, permissionRows);
-}
 
 export function SecurityUserModulePermissionsEditor({
   userId,
@@ -71,7 +66,7 @@ export function SecurityUserModulePermissionsEditor({
     return (
       <p className="text-xs leading-snug text-[color:var(--cab-text-muted)]">
         {role === "guest"
-          ? "Viewer/Audit: accesso read-only completo a tutti i moduli ERP (non configurabile)."
+          ? `${ROLE_LABELS.guest}: accesso read-only completo a tutti i moduli ERP (non configurabile).`
           : "Per il ruolo Cliente, l'accesso è definito dal portale clienti."}
       </p>
     );
@@ -80,7 +75,7 @@ export function SecurityUserModulePermissionsEditor({
   return (
     <div className="space-y-2">
       <p className="text-[11px] leading-snug text-[color:var(--cab-text-muted)]">
-        Dashboard, BUNDER, Configurazione, Sicurezza e Portale Clienti seguono solo il ruolo e non sono
+        Dashboard, Configurazione, Sicurezza e Portale Clienti seguono solo il ruolo e non sono
         modificabili da questa schermata.
       </p>
       {!matrixReadOnly ? (

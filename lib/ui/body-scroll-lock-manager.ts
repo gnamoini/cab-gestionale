@@ -3,9 +3,17 @@
  * Nessun altro modulo deve scrivere overflow/touch-action su html/body per le modali.
  */
 
-export const BODY_LOCK_ATTR = "data-cab-scroll-lock-count";
+import { syncAppViewportFill } from "@/lib/ui/viewport-fill-sync";
+import {
+  BODY_LOCK_ATTR,
+  MAIN_SCROLL_LOCK_ATTR,
+  SCROLL_LOCK_GAP_VAR,
+} from "@/lib/ui/scroll-lock-attrs";
+
 const BODY_LOCK_SCROLL_Y = "data-cab-scroll-lock-y";
 const MAIN_SCROLL_SELECTOR = "main.gestionale-scroll-y";
+
+export { BODY_LOCK_ATTR, MAIN_SCROLL_LOCK_ATTR, SCROLL_LOCK_GAP_VAR } from "@/lib/ui/scroll-lock-attrs";
 
 type LockEntry = { id: number; source: string; epoch: number };
 
@@ -19,6 +27,81 @@ let healTimer: ReturnType<typeof setTimeout> | null = null;
 let mainLockCount = 0;
 let savedMainScrollTop = 0;
 let savedMainOverflow = "";
+let savedMainPaddingInlineEnd = "";
+let lockedMainScrollbarPadPx = 0;
+
+function measureElementScrollbarColumnWidth(el: HTMLElement): number {
+  return Math.max(0, el.offsetWidth - el.clientWidth);
+}
+
+function mainHasVerticalScrollOverflow(main: HTMLElement): boolean {
+  return main.scrollHeight > main.clientHeight + 1;
+}
+
+/** Padding su main solo se gutter non è stable e la colonna scrollbar occupa layout. */
+function shouldPadMainForScrollbarLock(main: HTMLElement): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.getComputedStyle(main).scrollbarGutter === "stable") return false;
+  if (!mainHasVerticalScrollOverflow(main)) return false;
+  return measureElementScrollbarColumnWidth(main) > 0;
+}
+
+function syncMainScrollbarLockCompensation(main: HTMLElement): void {
+  lockedMainScrollbarPadPx = 0;
+  const contentWidthBefore = main.clientWidth;
+
+  if (shouldPadMainForScrollbarLock(main)) {
+    const preGap = measureElementScrollbarColumnWidth(main);
+    if (preGap > 0) {
+      lockedMainScrollbarPadPx = preGap;
+      main.style.paddingInlineEnd = `${preGap}px`;
+    }
+  }
+
+  main.style.overflow = "hidden";
+
+  // ponytail: fallback se stable gutter non trattiene la larghezza (browser edge case)
+  const delta = main.clientWidth - contentWidthBefore;
+  if (delta > 0) {
+    const next = Math.max(lockedMainScrollbarPadPx, delta);
+    if (next !== lockedMainScrollbarPadPx) {
+      lockedMainScrollbarPadPx = next;
+      main.style.paddingInlineEnd = `${next}px`;
+    }
+  }
+}
+
+function restoreMainScrollLockStyles(main: HTMLElement): void {
+  main.style.overflow = savedMainOverflow;
+  main.style.paddingInlineEnd = savedMainPaddingInlineEnd;
+  main.scrollTop = savedMainScrollTop;
+  main.removeAttribute(MAIN_SCROLL_LOCK_ATTR);
+  lockedMainScrollbarPadPx = 0;
+}
+
+function setScrollLockGapVar(gapPx: number): void {
+  if (typeof document === "undefined") return;
+  const root = document.documentElement;
+  if (gapPx <= 0) {
+    root.style.removeProperty(SCROLL_LOCK_GAP_VAR);
+    return;
+  }
+  root.style.setProperty(SCROLL_LOCK_GAP_VAR, `${gapPx}px`);
+}
+
+function clearScrollLockGapVar(): void {
+  if (typeof document === "undefined") return;
+  document.documentElement.style.removeProperty(SCROLL_LOCK_GAP_VAR);
+}
+
+/** true mentre almeno un lock tiene bloccato main.gestionale-scroll-y. */
+export function isGestionaleMainScrollLockActive(): boolean {
+  return mainLockCount > 0;
+}
+
+export function getGestionaleMainScrollLockCompensationPx(): number {
+  return lockedMainScrollbarPadPx;
+}
 
 function isIosLikeSafari(): boolean {
   if (typeof navigator === "undefined") return false;
@@ -71,6 +154,7 @@ export function clearBodyScrollLockStyles(): void {
   document.body.style.right = "";
   document.body.style.width = "";
   document.body.removeAttribute(BODY_LOCK_SCROLL_Y);
+  clearScrollLockGapVar();
 
   if (hadFixed && Number.isFinite(scrollY)) {
     window.scrollTo(0, scrollY);
@@ -84,9 +168,7 @@ function clearMainScrollLockStyles(): void {
   if (typeof document === "undefined") return;
   const main = document.querySelector(MAIN_SCROLL_SELECTOR) as HTMLElement | null;
   if (!main) return;
-  main.style.overflow = savedMainOverflow;
-  main.scrollTop = savedMainScrollTop;
-  main.removeAttribute("data-cab-main-scroll-lock");
+  restoreMainScrollLockStyles(main);
   mainLockCount = 0;
 }
 
@@ -107,6 +189,9 @@ function applyBodyScrollLock(): void {
   if (shouldCompensateScrollbarGap()) {
     const gap = Math.max(0, window.innerWidth - document.documentElement.clientWidth);
     document.body.style.paddingRight = `${gap}px`;
+    setScrollLockGapVar(gap);
+  } else {
+    clearScrollLockGapVar();
   }
 
   if (useFixedLock) {
@@ -126,10 +211,13 @@ function applyMainScrollLock(source?: string): void {
   if (mainLockCount === 0) {
     savedMainScrollTop = main.scrollTop;
     savedMainOverflow = main.style.overflow;
-    main.style.overflow = "hidden";
+    savedMainPaddingInlineEnd = main.style.paddingInlineEnd;
+    if (source) main.setAttribute(MAIN_SCROLL_LOCK_ATTR, source);
+    syncMainScrollbarLockCompensation(main);
+  } else if (source) {
+    main.setAttribute(MAIN_SCROLL_LOCK_ATTR, source);
   }
   mainLockCount += 1;
-  if (source) main.setAttribute("data-cab-main-scroll-lock", source);
 }
 
 function releaseMainScrollLock(): void {
@@ -137,9 +225,15 @@ function releaseMainScrollLock(): void {
   if (!main || mainLockCount <= 0) return;
   mainLockCount -= 1;
   if (mainLockCount === 0) {
-    main.style.overflow = savedMainOverflow;
-    main.scrollTop = savedMainScrollTop;
-    main.removeAttribute("data-cab-main-scroll-lock");
+    restoreMainScrollLockStyles(main);
+  }
+}
+
+function refreshMainScrollLockStyles(): void {
+  const main = document.querySelector(MAIN_SCROLL_SELECTOR) as HTMLElement | null;
+  if (!main || mainLockCount <= 0) return;
+  if (lockedMainScrollbarPadPx > 0) {
+    main.style.paddingInlineEnd = `${lockedMainScrollbarPadPx}px`;
   }
 }
 
@@ -224,10 +318,14 @@ export function healBodyScrollLockState(_reason?: string): void {
     clearBodyScrollLockStyles();
   }
   const main = document.querySelector(MAIN_SCROLL_SELECTOR) as HTMLElement | null;
-  const hadMainLock = mainLockCount === 0 && main?.style.overflow === "hidden";
+  const hadMainLock =
+    mainLockCount === 0 &&
+    main &&
+    (main.style.overflow === "hidden" || main.hasAttribute(MAIN_SCROLL_LOCK_ATTR));
   if (hadMainLock && main) {
     main.style.overflow = "";
-    main.removeAttribute("data-cab-main-scroll-lock");
+    main.style.paddingInlineEnd = "";
+    main.removeAttribute(MAIN_SCROLL_LOCK_ATTR);
   }
   syncLockAttr();
 }
@@ -255,14 +353,13 @@ export function probeBodyScrollLockStuck(): boolean {
   return true;
 }
 
-import { syncAppViewportFill } from "@/lib/ui/viewport-fill-sync";
-
 /** Re-applica lock attivo o cura stili fantasma dopo resize/orientationchange. */
 export function refreshBodyScrollLockOnViewportChange(reason = "viewport-resize"): void {
   if (typeof window === "undefined" || typeof document === "undefined") return;
   syncAppViewportFill();
   if (lockStack.length > 0) {
     applyBodyScrollLock();
+    refreshMainScrollLockStyles();
     return;
   }
   healBodyScrollLockState(reason);

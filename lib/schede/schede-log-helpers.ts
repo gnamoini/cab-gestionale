@@ -10,6 +10,8 @@ export const SCHEDA_LAVORAZIONI_LABEL = "Scheda Lavorazioni";
 export const SCHEDA_RICAMBI_LABEL = "Scheda Ricambi";
 
 const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
+  targetType: "Target intervento",
+  attrezzaturaId: "Attrezzatura",
   dataIngresso: "Data ingresso",
   cliente: "Cliente",
   cantiere: "Cantiere",

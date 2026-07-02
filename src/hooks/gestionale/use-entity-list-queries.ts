@@ -33,7 +33,13 @@ import { mezziService, type MezzoFilters } from "@/src/services/mezzi.service";
 import { movimentiService, type MovimentiFilters } from "@/src/services/movimenti.service";
 import { preventiviService, type PreventiviFilters } from "@/src/services/preventivi.service";
 import { schedeService, type SchedaFilters } from "@/src/services/schede.service";
-import type { DocumentoRow, LogModificaWithProfileRow, MezzoRow, MovimentoRicambioRow, PreventivoRow } from "@/src/types/supabase-tables";
+import type { MezzoGestito } from "@/lib/mezzi/types";
+import type {
+  DocumentoRow,
+  LogModificaWithProfileRow,
+  MovimentoRicambioRow,
+  PreventivoRow,
+} from "@/src/types/supabase-tables";
 
 type RqOpts<T> = Omit<UseQueryOptions<T, Error, T, readonly unknown[]>, "queryKey" | "queryFn">;
 
@@ -41,7 +47,7 @@ export type { MezziListVariant };
 
 export function useMezziListQuery(
   filters?: MezzoFilters,
-  options?: RqOpts<MezzoRow[]> & { variant?: MezziListVariant },
+  options?: RqOpts<MezzoGestito[]> & { variant?: MezziListVariant },
 ) {
   const { variant = "list", ...rqOpts } = options ?? {};
   const gestOpts = useGestionaleQueryOpts();

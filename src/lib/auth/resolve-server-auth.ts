@@ -1,3 +1,4 @@
+import { isUserBanned } from "@/lib/auth/user-ban-state";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE, readSupabasePublicEnv } from "@/lib/env/supabase-public";
 import {
@@ -53,12 +54,23 @@ async function fetchServerAuthSnapshotWithClient(
     return snap;
   }
 
+  if (isUserBanned(authUser)) {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      /* ignore */
+    }
+    const snap = emptyAuthSnapshot();
+    writeCachedServerAuthSnapshot(fingerprint, snap);
+    return snap;
+  }
+
   const { data: sessionWrap } = await supabase.auth.getSession();
   const expiresAt =
     sessionWrap.session?.expires_at != null ? Math.floor(sessionWrap.session.expires_at) : null;
 
   const [{ data: prof, error: profErr }, { data: permRows, error: permErr }] = await Promise.all([
-    supabase.from("profiles").select("nome, ruolo, cliente_ref").eq("id", authUser.id).maybeSingle(),
+    supabase.from("profiles").select("nome, cognome, username, ruolo, cliente_ref, created_at").eq("id", authUser.id).maybeSingle(),
     supabase
       .from("user_permissions")
       .select("user_id, module, can_read, can_write, can_admin")
@@ -132,6 +144,17 @@ export async function resolveServerAuthWithSupabase(
 
   const authUser = authData?.user ?? null;
   if (!authUser) {
+    const snap = emptyAuthSnapshot();
+    writeCachedServerAuthSnapshot(fingerprint, snap);
+    return snap;
+  }
+
+  if (isUserBanned(authUser)) {
+    try {
+      await supabase.auth.signOut();
+    } catch {
+      /* ignore */
+    }
     const snap = emptyAuthSnapshot();
     writeCachedServerAuthSnapshot(fingerprint, snap);
     return snap;

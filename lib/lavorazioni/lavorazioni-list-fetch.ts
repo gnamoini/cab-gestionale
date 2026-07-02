@@ -29,6 +29,7 @@ import type {
 import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import { logLavorazioniListPipelineDebug } from "@/lib/lavorazioni/lavorazioni-list-pipeline-debug";
+import { enrichLavorazioniListRowsWithAttrezzature } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -248,7 +249,11 @@ export async function fetchLavorazioniListRows(
 
   if (error) return err(error.message);
   const raw = (data ?? []) as LavorazioneListRawRow[];
-  return success(mapRawRows(raw, includeMezzo, options?.sanitizeStati));
+  let mapped = mapRawRows(raw, includeMezzo, options?.sanitizeStati);
+  if (includeMezzo && mapped.length > 0) {
+    mapped = await enrichLavorazioniListRowsWithAttrezzature(sb, mapped);
+  }
+  return success(mapped);
 }
 
 export type LavorazioniListAuthorizedOptions = {

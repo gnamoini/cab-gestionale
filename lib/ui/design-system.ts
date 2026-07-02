@@ -151,7 +151,7 @@ export const dsTextarea = `${dsInput} gestionale-textarea min-h-[var(--cab-texta
 /** Tetto default auto-grow textarea (scroll interno oltre il limite — sicuro mobile/iOS). */
 export const gestionaleTextareaMaxHeightDefault = "min(35dvh, 16rem)";
 
-/** Tetto compatto per celle tabella (Bunder, schede). */
+/** Tetto compatto per celle tabella (schede). */
 export const gestionaleTextareaMaxHeightCompact = "min(28dvh, 8rem)";
 
 export type GestionaleTextareaSize = "sm" | "md" | "lg";

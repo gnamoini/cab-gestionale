@@ -17,7 +17,7 @@ assert(validateUserId(USER_ID) === null, "valid uuid");
 assert(validateUserId("not-uuid") !== null, "invalid uuid");
 
 const batch = validateSecurityUserBatchPatches([
-  { userId: USER_ID, nome: "Mario Rossi", ruolo: "operatore", clientLavorazioniAccess: true },
+  { userId: USER_ID, nome: "Mario Rossi", ruolo: "operatore" },
 ]);
 assert(batch.ok === true, "valid batch");
 if (batch.ok) {

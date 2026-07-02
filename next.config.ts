@@ -1,16 +1,37 @@
 import type { NextConfig } from "next";
 import path from "path";
+import { readFileSync } from "fs";
 import { fileURLToPath } from "url";
 import bundleAnalyzer from "@next/bundle-analyzer";
 import { getHttpSecurityHeaders } from "./lib/security/http-security-headers";
 
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
+function readPackageVersion(): string {
+  try {
+    const raw = readFileSync(path.join(projectRoot, "package.json"), "utf8");
+    const pkg = JSON.parse(raw) as { version?: string };
+    return pkg.version?.trim() || "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+}
+
+const appBuildTime = new Date().toISOString();
+const appVersion = readPackageVersion();
+const appCommit = process.env.VERCEL_GIT_COMMIT_SHA?.trim().slice(0, 7) ?? "";
+
 const withBundleAnalyzer = bundleAnalyzer({
   enabled: process.env.ANALYZE === "true",
 });
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_APP_VERSION: appVersion,
+    NEXT_PUBLIC_APP_BUILD_TIME: appBuildTime,
+    NEXT_PUBLIC_APP_COMMIT: appCommit,
+    NEXT_PUBLIC_VERCEL_ENV: process.env.VERCEL_ENV?.trim() ?? "",
+  },
   /** Evita root inference errata (HMR loop / segment-config churn su Windows). */
   turbopack: {
     root: projectRoot,
@@ -27,7 +48,15 @@ const nextConfig: NextConfig = {
     ];
   },
   async redirects() {
-    return [{ source: "/ddt", destination: "/preventivi", permanent: false }];
+    return [
+      { source: "/ddt", destination: "/preventivi", permanent: false },
+      { source: "/dashboard/security", destination: "/sicurezza", permanent: true },
+      {
+        source: "/dashboard/security/production-readiness",
+        destination: "/sicurezza/production-readiness",
+        permanent: true,
+      },
+    ];
   },
 };
 

@@ -1,12 +1,15 @@
 "use client";
 
 import { MEZZI_COLUMNS } from "@/lib/db/table-select-columns";
-import { fetchMezziListRows } from "@/lib/mezzi/mezzi-list-fetch";
+import { fetchMezziGestitiListRows, fetchMezziListRows } from "@/lib/mezzi/mezzi-list-fetch";
+import { fetchMezzoGestitoById } from "@/lib/mezzi/mezzi-attrezzature-batch";
+import type { MezzoGestito } from "@/lib/mezzi/types";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { MezzoRow } from "@/src/types/supabase-tables";
+import { logAttrezzatureV2WritePath } from "@/lib/observability/attrezzature-v2-telemetry";
 import { attachMezzoEntityKey } from "@/lib/validation/entity-persistence";
 import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
 import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
@@ -94,7 +97,30 @@ export function mezzoDeleteBlockedByLavorazioni(
 export const mezziService = {
   countDependencies: countMezzoDependencies,
 
-  async getAll(filters?: MezzoFilters): Promise<ServiceResult<MezzoRow[]>> {
+  async getAll(filters?: MezzoFilters): Promise<ServiceResult<MezzoGestito[]>> {
+    try {
+      const allowed = await ensureSectionRead("mezzi");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+      const c = await sb();
+      return fetchMezziGestitiListRows(c, { filters, variant: "list" });
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  async getAllForReport(filters?: MezzoFilters): Promise<ServiceResult<MezzoGestito[]>> {
+    try {
+      const allowed = await ensureSectionRead("mezzi");
+      if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+      const c = await sb();
+      return fetchMezziGestitiListRows(c, { filters, variant: "report" });
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
+  /** Righe DB grezze (uso interno / import). */
+  async getAllRows(filters?: MezzoFilters): Promise<ServiceResult<MezzoRow[]>> {
     try {
       const allowed = await ensureSectionRead("mezzi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
@@ -105,12 +131,14 @@ export const mezziService = {
     }
   },
 
-  async getAllForReport(filters?: MezzoFilters): Promise<ServiceResult<MezzoRow[]>> {
+  async getGestitoById(id: string): Promise<ServiceResult<MezzoGestito>> {
     try {
       const allowed = await ensureSectionRead("mezzi");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      return fetchMezziListRows(c, { filters, variant: "report" });
+      const gestito = await fetchMezzoGestitoById(c, id);
+      if (!gestito) return err("Mezzo non trovato");
+      return success(gestito);
     } catch (e) {
       return serviceFailFromError(e);
     }
@@ -135,7 +163,10 @@ export const mezziService = {
       const allowed = await ensurePermission("editVehicles");
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
-      const payload = attachMezzoEntityKey(sanitizeMezzoWritePayload(data));
+      const payload = attachMezzoEntityKey(
+        sanitizeMezzoWritePayload(data, { v2Enabled: true, source: "mezziService.create" }),
+      );
+      logAttrezzatureV2WritePath({ path: "v2", operation: "create" });
       const { data: row, error } = await c.from("mezzi").insert(payload).select(MEZZI_COLUMNS).single();
       if (error) return err(error.message);
       const r = row as MezzoRow;
@@ -152,7 +183,12 @@ export const mezziService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const c = await sb();
       const payload =
-        Object.keys(data).length > 0 ? attachMezzoEntityKey(sanitizeMezzoWritePayload(data)) : data;
+        Object.keys(data).length > 0
+          ? attachMezzoEntityKey(
+              sanitizeMezzoWritePayload(data, { v2Enabled: true, source: "mezziService.update" }),
+            )
+          : data;
+      logAttrezzatureV2WritePath({ path: "v2", operation: "update" });
       const { data: before, error: e0 } = await c.from("mezzi").select(MEZZI_COLUMNS).eq("id", id).maybeSingle();
       if (e0) return err(e0.message);
       const { data: row, error } = await c.from("mezzi").update(payload).eq("id", id).select(MEZZI_COLUMNS).single();

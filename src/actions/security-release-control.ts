@@ -10,7 +10,7 @@ import {
 import { fetchProductionReadinessDbSnapshot } from "@/lib/production/fetch-production-readiness-db";
 import { validateProductionReadiness } from "@/lib/production/production-readiness";
 import { scanProductionReadinessCode } from "@/lib/production/production-readiness-scan";
-import type { ProductionReadinessCategory } from "@/lib/production/production-readiness-types";
+import type { ProductionReadinessCategory, ProductionReadinessResult } from "@/lib/production/production-readiness-types";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 import { verifyServerPermission } from "@/src/lib/auth/server-permission-guards";
 import { invalidateServerRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth.server";
@@ -33,7 +33,7 @@ export type ChecklistItem = {
 
 export type SecurityReleaseControlPayload = {
   pilot: PilotControlStatus;
-  readiness: ReturnType<typeof validateProductionReadiness>;
+  readiness: ProductionReadinessResult;
   checklist: ChecklistItem[];
 };
 

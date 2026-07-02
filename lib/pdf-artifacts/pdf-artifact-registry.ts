@@ -12,7 +12,6 @@ export const PDF_ARTIFACT_TYPES = [
   "ordine-fornitore",
   "dipendenti-aziendale",
   "dipendenti-dipendente",
-  "bunder",
 ] as const;
 
 export type PdfArtifactType = (typeof PDF_ARTIFACT_TYPES)[number];

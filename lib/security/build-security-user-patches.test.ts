@@ -9,13 +9,16 @@ const USER_ID = "11111111-1111-4111-8111-111111111111";
 function baseUser(overrides: Partial<EditableSecurityUser> = {}): EditableSecurityUser {
   return {
     id: USER_ID,
-    nome: "Cliente Test",
+    nome: "Cliente",
+    cognome: null,
     username: "cliente",
     email: "cliente@test.it",
     ruolo: "cliente",
     clienteRef: null,
     createdAt: null,
     lastSignInAt: null,
+    accountEnabled: true,
+    bannedUntil: null,
     clientLavorazioniAccess: true,
     clientLavorazioniAccessFromRole: true,
     hasModulePermissionOverrides: false,

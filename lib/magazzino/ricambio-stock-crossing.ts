@@ -17,6 +17,17 @@ export function didCrossBelowMin(prev: StockSnapshot, curr: StockSnapshot): bool
   return isStockSufficient(prev) && isStockBelowMin(curr);
 }
 
+/** Transizione a zero pezzi (anche se già sotto minimo). */
+export function didCrossToZero(prev: StockSnapshot, curr: StockSnapshot): boolean {
+  return prev.scorta > 0 && curr.scorta === 0;
+}
+
+/** Crossing notificabile: sotto minimo o esaurimento. */
+export function shouldNotifyStockCrossing(prev: StockSnapshot | undefined, curr: StockSnapshot): boolean {
+  if (!prev) return false;
+  return didCrossBelowMin(prev, curr) || didCrossToZero(prev, curr);
+}
+
 export function stockSnapshotFromRicambio(row: {
   scorta: number;
   scortaMinima: number;

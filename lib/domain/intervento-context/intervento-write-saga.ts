@@ -4,6 +4,7 @@ import {
   buildIdentDeltaFromContext,
 } from "@/lib/domain/intervento-context/intervento-audit";
 import { composeInterventoContext } from "@/lib/domain/intervento-context/build-intervento-context";
+import { appendMileageFromScheda } from "@/lib/domain/asset-lifecycle/append-mileage-from-scheda";
 import { isInterventoWriteRpcEnabled } from "@/lib/domain/intervento-context/intervento-write-flags";
 import {
   clearInterventoWriteLedger,
@@ -120,6 +121,8 @@ export async function runInterventoWriteSaga(
   let lavorazioneId =
     plan.lavorazioneId?.trim() || getInterventoWriteLedgerEntry(idempotencyKey)?.lavorazioneId?.trim() || null;
   let mezzoId: string | null = getInterventoWriteLedgerEntry(idempotencyKey)?.mezzoId?.trim() || null;
+  let attrezzaturaId: string | null = null;
+  let targetType: import("@/src/types/supabase-tables").InterventoTargetType = "attrezzatura";
 
   const resolved = resolveMezzoFromScheda({
     scheda: fields,
@@ -180,6 +183,8 @@ export async function runInterventoWriteSaga(
           preferredMezzoId: isCreateMeta(plan.meta) ? plan.meta.mezzoIdHint : null,
         });
         mezzoId = upsert.mezzoId;
+        attrezzaturaId = upsert.attrezzaturaId ?? null;
+        targetType = upsert.targetType ?? "attrezzatura";
         auditInterventoContext(null, "write-mezzo", {
           preferredMezzoId: isCreateMeta(plan.meta) ? plan.meta.mezzoIdHint : null,
           resolvedMezzoId: resolved.mezzoId,
@@ -200,6 +205,8 @@ export async function runInterventoWriteSaga(
             preferredMezzoId: isCreateMeta(plan.meta) ? plan.meta.mezzoIdHint : null,
           });
           mezzoId = upsert.mezzoId;
+          attrezzaturaId = upsert.attrezzaturaId ?? null;
+          targetType = upsert.targetType ?? "attrezzatura";
         } catch {
           /* retry path */
         }
@@ -216,6 +223,8 @@ export async function runInterventoWriteSaga(
           data_ingresso: meta.dataIngressoIso,
           note: meta.note,
           created_by: meta.createdBy,
+          target_type: targetType,
+          attrezzatura_id: targetType === "attrezzatura" ? attrezzaturaId : null,
         });
         lavorazioneId = row.id;
         upsertInterventoWriteLedger(idempotencyKey, { lavorazioneId, mezzoId });
@@ -257,11 +266,13 @@ export async function runInterventoWriteSaga(
 
     recordTraceStep(trace, "v1_persist", "started");
     try {
-      const { mezzoId: resolvedMezzoId } = await deps.upsertMezzo({
+      const upsert = await deps.upsertMezzo({
         fields,
         preferredMezzoId: row.mezzo_id,
       });
-      mezzoId = resolvedMezzoId;
+      mezzoId = upsert.mezzoId;
+      attrezzaturaId = upsert.attrezzaturaId ?? null;
+      targetType = upsert.targetType ?? targetType;
 
       const note = fields.noteIntervento?.trim() || null;
       const parsedIngresso = parseItalianDayDisplayToIso(fields.dataIngresso.trim());
@@ -270,6 +281,9 @@ export async function runInterventoWriteSaga(
       if (parsedIngresso.ok) lavPatch.data_ingresso = parsedIngresso.iso;
       const currentFk = row.mezzo_id?.trim() || "";
       if (mezzoId && mezzoId !== currentFk) lavPatch.mezzo_id = mezzoId;
+      if (targetType && targetType !== row.target_type) lavPatch.target_type = targetType;
+      const nextAttId = targetType === "attrezzatura" ? attrezzaturaId : null;
+      if ((row.attrezzatura_id ?? null) !== nextAttId) lavPatch.attrezzatura_id = nextAttId;
 
       if (Object.keys(lavPatch).length) {
         await deps.updateLavorazione(row.id, lavPatch);
@@ -325,6 +339,17 @@ export async function runInterventoWriteSaga(
   }
 
   const finalMezzoId = mezzoId ?? resolved.mezzoId ?? "";
+  if (finalMezzoId) {
+    try {
+      await appendMileageFromScheda({
+        mezzoId: finalMezzoId,
+        kmText: fields.km,
+        lavorazioneId,
+      });
+    } catch {
+      // ponytail: mileage storico non blocca write intervento
+    }
+  }
   runFinalizeStage(idempotencyKey, lavorazioneId, finalMezzoId);
   return finishSagaTrace(trace, {
     ok: true,

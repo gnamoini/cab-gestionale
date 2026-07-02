@@ -12,21 +12,6 @@
       "rule": "flex-wrap-unscoped"
     },
     {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 594,
-      "rule": "flex-no-containment"
-    },
-    {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 731,
-      "rule": "flex-wrap-unscoped"
-    },
-    {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 945,
-      "rule": "flex-no-containment"
-    },
-    {
       "file": "components/dashboard/admin-notifications-bell.tsx",
       "line": 206,
       "rule": "modal-custom-shell"

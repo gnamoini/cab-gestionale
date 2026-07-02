@@ -27,7 +27,7 @@ Matrice permessi moduli e capability. RLS Postgres è il controllo autoritativo.
 | bunder | `/bunder` | modulo bunder |
 | report | `/report` | read report |
 | impostazioni | `/impostazioni` | `can_manage_settings` |
-| security | `/dashboard/security` | `can_manage_security` |
+| security | `/sicurezza` | `can_manage_security` |
 
 ## Capability globali
 

@@ -4,11 +4,11 @@ import type { QueryClient } from "@tanstack/react-query";
 import { clearPreventiviLocalEntityData, loadPreventivi } from "@/lib/preventivi/preventivi-storage";
 import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import { dispatchGestionaleLocalMutation } from "@/lib/sync/gestionale-sync-dispatch";
-import type { MezzoRow } from "@/src/types/supabase-tables";
+import type { MezzoGestito } from "@/lib/mezzi/types";
 
 /** Import idempotente localStorage → Supabase (admin / one-shot da impostazioni). */
 export async function migratePreventiviLocalToDb(
-  mezziRows: readonly MezzoRow[],
+  mezziGestiti: readonly MezzoGestito[],
   options?: { queryClient?: QueryClient; clearLocalOnSuccess?: boolean },
 ): Promise<{ migrated: number; skipped: number; errors: string[] }> {
   const local = loadPreventivi();
@@ -17,7 +17,7 @@ export async function migratePreventiviLocalToDb(
   const errors: string[] = [];
 
   for (const p of local) {
-    const res = await persistPreventivoRecord(p, mezziRows, {
+    const res = await persistPreventivoRecord(p, mezziGestiti, {
       queryClient: options?.queryClient,
       skipDispatch: true,
     });

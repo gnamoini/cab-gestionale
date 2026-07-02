@@ -7,7 +7,7 @@ import {
   LogEntry,
   NotificationBellTrigger,
   NotificationOpenLink,
-  NotificationRowDismiss,
+  NotificationRowShell,
   Tooltip,
 } from "@/components/design-system";
 import {
@@ -20,16 +20,22 @@ import {
 import {
   buildAdminNotificationDipendentiHref,
   buildAdminNotificationDashboardHref,
+  buildAdminNotificationFatturazioneHref,
   buildAdminNotificationLavorazioneHref,
   buildAdminNotificationMagazzinoHref,
+  buildAdminNotificationPreventivoHref,
 } from "@/lib/lavorazioni/admin-notifications";
 import {
   buildAdminDashboardTestNotification,
   isAdminDashboardTestNotification,
   isDashboardPromemoriaReminderNotification,
   isDipendentiPresenzeReminderNotification,
+  isFattureScaduteDigestNotification,
+  isLavorazioneCompletataNotification,
   isLavorazioneDashboardNotification,
+  isLavorazioniRitardoDigestNotification,
   isMagazzinoDashboardNotification,
+  isPreventivoApprovatoNotification,
   notificationStoreKey,
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
@@ -174,12 +180,13 @@ function AdminNotificationMessageRow({
 
   return (
     <div className={`min-w-0 ${unread ? "" : "opacity-80"}`}>
-      <LogEntry
-        vm={vm}
-        onClick={unread ? onMarkRead : undefined}
-        title={unread ? "Segna come letta" : undefined}
-        trailing={<NotificationRowDismiss onDismiss={onDismiss} />}
-      />
+      <NotificationRowShell onDismiss={onDismiss}>
+        <LogEntry
+          vm={vm}
+          onClick={unread ? onMarkRead : undefined}
+          title={unread ? "Segna come letta" : undefined}
+        />
+      </NotificationRowShell>
       {openLabel ? (
         <div className="-mt-1 mb-1 px-3">
           <NotificationOpenLink label={openLabel} onOpen={onNavigate} />
@@ -224,12 +231,24 @@ export function AdminNotificationsBell() {
     (row: AdminDashboardNotification) => {
       close();
       if (isAdminDashboardTestNotification(row)) return;
-      if (isLavorazioneDashboardNotification(row)) {
+      if (isLavorazioneDashboardNotification(row) || isLavorazioneCompletataNotification(row)) {
         router.push(buildAdminNotificationLavorazioneHref(row.lavorazioneId));
+        return;
+      }
+      if (isLavorazioniRitardoDigestNotification(row)) {
+        router.push("/lavorazioni");
+        return;
+      }
+      if (isPreventivoApprovatoNotification(row)) {
+        router.push(buildAdminNotificationPreventivoHref(row.preventivoId));
         return;
       }
       if (isMagazzinoDashboardNotification(row)) {
         router.push(buildAdminNotificationMagazzinoHref(row.ricambioId));
+        return;
+      }
+      if (isFattureScaduteDigestNotification(row)) {
+        router.push(buildAdminNotificationFatturazioneHref());
         return;
       }
       if (isDipendentiPresenzeReminderNotification(row)) {

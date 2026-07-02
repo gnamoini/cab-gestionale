@@ -35,9 +35,11 @@ export function SecurityRoleBadge({ role }: { role: AppRole }) {
 
 export function SecurityStatusBadge({
   lastSignInAt,
+  accountEnabled = true,
   align = "start",
 }: {
   lastSignInAt: string | null;
+  accountEnabled?: boolean;
   align?: "start" | "end";
 }) {
   const [mounted, setMounted] = useState(false);
@@ -51,6 +53,17 @@ export function SecurityStatusBadge({
         <span className="inline-flex min-w-0 items-center gap-1.5 text-xs text-[color:var(--cab-text-muted)]">
           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-zinc-400" aria-hidden />
           —
+        </span>
+      </span>
+    );
+  }
+
+  if (!accountEnabled) {
+    return (
+      <span className={`inline-flex min-w-0 max-w-full flex-col gap-0.5 ${alignClass}`}>
+        <span className="inline-flex min-w-0 items-center gap-1.5 text-xs font-medium text-[color:var(--cab-danger)]">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[color:var(--cab-danger)]" aria-hidden />
+          Disattivato
         </span>
       </span>
     );

@@ -1,7 +1,8 @@
 import "server-only";
 
 import { cache } from "react";
-import { enrichLavorazioneListRowsWithMezzi, mezziRowsToIdMap } from "@/lib/db/dto-mappers";
+import { enrichLavorazioneListRowsWithMezzi } from "@/lib/db/dto-mappers";
+import { mezziGestitiToEmbedMap } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import { getLavorazioniReportLightServer } from "@/lib/lavorazioni/lavorazioni-list-fetch-server";
 import { getMagazzinoReportLightServer } from "@/lib/magazzino/magazzino-list-fetch-server";
 import { getMezziReportLightServer } from "@/lib/mezzi/mezzi-list-fetch-server";
@@ -26,8 +27,8 @@ export const fetchReportPdfDataSnapshot = cache(async (): Promise<ReportPdfDataS
   ]);
 
   const lavRows = lavRes.success ? (lavRes.data ?? []) : [];
-  const mezziRows = mezziRes.success ? (mezziRes.data ?? []) : [];
-  const mezziById = mezziRowsToIdMap(mezziRows);
+  const mezziGestiti = mezziRes.success ? (mezziRes.data ?? []) : [];
+  const mezziById = mezziGestitiToEmbedMap(mezziGestiti);
   const enriched = enrichLavorazioneListRowsWithMezzi(lavRows, mezziById);
   const magRows = magRes.success ? (magRes.data ?? []) : [];
   const movRows = movRes.success ? (movRes.data ?? []) : [];
@@ -39,7 +40,7 @@ export const fetchReportPdfDataSnapshot = cache(async (): Promise<ReportPdfDataS
     lavorazioniCount: enriched.filter((r) => r.archived !== true).length,
     lavorazioniArchivioCount: enriched.filter((r) => r.archived === true).length,
     magazzinoCount: magRows.length,
-    mezziCount: mezziRows.length,
+    mezziCount: mezziGestiti.length,
     movimentiCount: movRows.length,
     magazzinoGiacenzaTotale,
   };

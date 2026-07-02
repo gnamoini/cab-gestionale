@@ -14,15 +14,18 @@ import {
 } from "@/src/lib/auth/cliente-portal-scope";
 import { loadKnownClientiSetFromMezzi } from "@/src/lib/auth/load-known-clienti";
 import { normalizeUsername } from "@/src/lib/auth/username";
-import { hasPermission, resolveRole, type AppRole } from "@/lib/auth/rbac";
+import { hasPermission, resolveRole, ROLE_LABELS, type AppRole } from "@/lib/auth/rbac";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
-import {
-  assertAdminCaller,
-  listUsersByAdminAction,
-  type SecurityUserAdminRow,
-} from "@/src/actions/admin-users";
+import { createServiceAdminClient } from "@/lib/supabase/create-service-admin-client.server";
+import { assertAdminCaller } from "@/lib/auth/assert-admin-caller.server";
+import { listUsersByAdminAction } from "@/src/actions/admin-users";
+import type { SecurityUserAdminRow } from "@/src/actions/admin-users.types";
+import { isUserBanned } from "@/lib/auth/user-ban-state";
 import { hasModulePermissionOverrides } from "@/lib/security/user-module-permissions";
-import { validateSecurityUserBatchPatches } from "@/lib/validation/security-actions-validation";
+import {
+  validateLastAdminTarget,
+  validateSecurityUserBatchPatches,
+} from "@/lib/validation/security-actions-validation";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { onUserRoleChangedServer } from "@/src/lib/rbac/on-user-role-changed.server";
 import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
@@ -44,10 +47,10 @@ export type SecurityUserPermissionRow = SecurityUserAdminRow & {
 export type SecurityUserBatchPatch = {
   userId: string;
   nome?: string;
+  cognome?: string | null;
   username?: string;
   ruolo?: AppRole;
   clienteRef?: string | null;
-  clientLavorazioniAccess?: boolean;
   modulePermissions?: SecurityUserModulePermissionEntry[] | null;
   clearModulePermissions?: boolean;
 };
@@ -104,7 +107,7 @@ async function applyUserModulePermissions(
   if (!modulePermissions?.length) return true;
 
   if (userRole === "guest") {
-    throw new Error("Il ruolo Viewer/Audit non ammette override permessi modulo.");
+    throw new Error(`Il ruolo ${ROLE_LABELS.guest} non ammette override permessi modulo.`);
   }
 
   const rows = modulePermissions.map((entry) => ({
@@ -197,20 +200,17 @@ export async function batchUpdateSecurityUsersAction(
   const caller = await assertAdminCaller();
   if (!caller.ok) return { ok: false, message: caller.message };
 
-  const { createClient } = await import("@supabase/supabase-js");
-  const admin = createClient(caller.url, caller.serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
+  const admin = createServiceAdminClient(caller.url, caller.serviceKey);
   const sbUser = await createSupabaseServerUserClient();
 
   const normalized = validated.patches
     .map((p) => ({
       userId: p.userId,
       nome: p.nome,
+      cognome: p.cognome,
       username: p.username,
       ruolo: p.ruolo != null ? resolveRole(p.ruolo) : undefined,
       clienteRef: p.clienteRef,
-      clientLavorazioniAccess: p.clientLavorazioniAccess,
       modulePermissions: p.modulePermissions,
       clearModulePermissions: p.clearModulePermissions,
     }))
@@ -236,6 +236,19 @@ export async function batchUpdateSecurityUsersAction(
   if (profilesLoadErr) return { ok: false, message: profilesLoadErr.message };
   const profileById = new Map(((profilesBefore ?? []) as ProfileRow[]).map((p) => [p.id, p]));
 
+  for (const patch of normalized) {
+    const authLookup = await admin.auth.admin.getUserById(patch.userId);
+    if (authLookup.error) {
+      return { ok: false, message: authLookup.error.message };
+    }
+    if (isUserBanned(authLookup.data.user)) {
+      return {
+        ok: false,
+        message: "Impossibile modificare un utente disattivato. Riattivalo prima di applicare altre modifiche.",
+      };
+    }
+  }
+
   let updatedCount = 0;
   const roleChangedUserIds: string[] = [];
 
@@ -253,6 +266,22 @@ export async function batchUpdateSecurityUsersAction(
         })
         .catch(() => {});
       updatedCount += 1;
+    }
+
+    if (patch.cognome !== undefined) {
+      const currentCognome =
+        typeof profile.cognome === "string" && profile.cognome.trim() ? profile.cognome.trim() : null;
+      const nextCognome = patch.cognome?.trim() || null;
+      if (nextCognome !== currentCognome) {
+        const { error } = await admin.from("profiles").update({ cognome: nextCognome }).eq("id", patch.userId);
+        if (error) return { ok: false, message: error.message };
+        await admin.auth.admin
+          .updateUserById(patch.userId, {
+            app_metadata: { cab_cognome: nextCognome },
+          })
+          .catch(() => {});
+        updatedCount += 1;
+      }
     }
 
     if (patch.username != null) {
@@ -304,6 +333,11 @@ export async function batchUpdateSecurityUsersAction(
 
     const roleChanged = patch.ruolo != null && resolveRole(profile.ruolo) !== patch.ruolo;
     if (roleChanged) {
+      const prevRole = resolveRole(profile.ruolo);
+      if (prevRole === "admin" && patch.ruolo !== "admin") {
+        const lastAdminErr = await validateLastAdminTarget(admin, patch.userId, prevRole, "role_downgrade");
+        if (lastAdminErr) return { ok: false, message: lastAdminErr };
+      }
       const { error: roleErr } = await admin.rpc("security_set_user_role", {
         p_user_id: patch.userId,
         p_new_role: patch.ruolo,
@@ -326,7 +360,7 @@ export async function batchUpdateSecurityUsersAction(
       if (effectiveRole === "guest") {
         return {
           ok: false,
-          message: "Il ruolo Viewer/Audit non ammette override permessi modulo.",
+          message: `Il ruolo ${ROLE_LABELS.guest} non ammette override permessi modulo.`,
         };
       }
       try {

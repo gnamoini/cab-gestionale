@@ -14,6 +14,16 @@ import { interventoWriteService } from "@/src/services/intervento-write.service"
 import { success } from "@/src/services/service-result";
 import type { SchedaIngressoFields } from "@/types/schede";
 
+const ATT_ID = "b2c3d4e5-f6a7-4890-bcde-f12345678901";
+
+const mockUpsertAttrezzatura = (mezzoId: string) => ({
+  mezzoId,
+  created: true,
+  updated: false,
+  targetType: "attrezzatura" as const,
+  attrezzaturaId: ATT_ID,
+});
+
 const fields: SchedaIngressoFields = {
   dataIngresso: "01/06/2026",
   cliente: "Cliente Test",
@@ -106,7 +116,7 @@ async function testV1Create(): Promise<void> {
       },
     },
     {
-      upsertMezzo: async () => ({ mezzoId: "m-trace", created: true, updated: false }),
+      upsertMezzo: async () => mockUpsertAttrezzatura("m-trace"),
       createLavorazione: async () => ({ id: "lav-trace" } as never),
       persistScheda: async () => ({ ok: true as const }),
     },
@@ -134,7 +144,13 @@ async function testV1Edit(): Promise<void> {
       meta: { row },
     },
     {
-      upsertMezzo: async () => ({ mezzoId: "mezzo-new", created: false, updated: true }),
+      upsertMezzo: async () => ({
+        mezzoId: "mezzo-new",
+        created: false,
+        updated: true,
+        targetType: "attrezzatura" as const,
+        attrezzaturaId: ATT_ID,
+      }),
       updateLavorazione: async () => {},
     },
   );
@@ -164,7 +180,7 @@ async function testV2Saga(): Promise<void> {
       },
     },
     {
-      upsertMezzo: async () => ({ mezzoId: "m-saga", created: true, updated: false }),
+      upsertMezzo: async () => mockUpsertAttrezzatura("m-saga"),
       createLavorazione: async () => ({ id: "lav-saga" } as never),
       persistScheda: async () => ({ ok: true as const }),
     },
@@ -235,7 +251,13 @@ async function testShadowImmutableAfterFinalize(): Promise<void> {
       meta: { row },
     },
     {
-      upsertMezzo: async () => ({ mezzoId: "mezzo-new", created: false, updated: true }),
+      upsertMezzo: async () => ({
+        mezzoId: "mezzo-new",
+        created: false,
+        updated: true,
+        targetType: "attrezzatura" as const,
+        attrezzaturaId: ATT_ID,
+      }),
       updateLavorazione: async () => {},
     },
   );
@@ -255,7 +277,13 @@ async function testShadowImmutableAfterFinalize(): Promise<void> {
       meta: { row },
     },
     {
-      upsertMezzo: async () => ({ mezzoId: "mezzo-new", created: false, updated: true }),
+      upsertMezzo: async () => ({
+        mezzoId: "mezzo-new",
+        created: false,
+        updated: true,
+        targetType: "attrezzatura" as const,
+        attrezzaturaId: ATT_ID,
+      }),
       updateLavorazione: async () => {},
     },
     authoritative,

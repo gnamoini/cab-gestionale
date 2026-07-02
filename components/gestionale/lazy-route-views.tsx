@@ -54,11 +54,6 @@ export const SistemaImpostazioniPageViewLazy = dynamic(
   { loading: () => <LoadingSuspenseFallback variant="impostazioni" /> },
 );
 
-export const BunderViewLazy = dynamic(
-  () => import("@/components/bunder/bunder-view").then((m) => m.BunderView),
-  { loading: () => <LoadingSuspenseFallback variant="dipendenti" /> },
-);
-
 export const ClientLavorazioniViewLazy = dynamic(
   () =>
     import("@/components/lavorazioni-clienti/client-lavorazioni-view").then((m) => m.ClientLavorazioniView),

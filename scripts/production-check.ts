@@ -53,6 +53,15 @@ const CHECK_GROUPS: { label: string; ids: string[] }[] = [
     ids: ["storage-legacy-document-urls", "storage-public-url-in-code", "storage-resolve-documento-legacy"],
   },
   {
+    label: "attrezzature-v2",
+    ids: [
+      "attrezzature-v2-r4-auto-migration",
+      "attrezzature-v2-legacy-write-hits",
+      "attrezzature-v2-legacy-adapter-import",
+      "attrezzature-v2-db-disabled-prod",
+    ],
+  },
+  {
     label: "ops-env",
     ids: [
       "ops-env-pilot-production",

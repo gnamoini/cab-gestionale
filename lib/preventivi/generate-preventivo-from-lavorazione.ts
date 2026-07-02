@@ -6,7 +6,11 @@ import { nextPreventivoNumeroForLavorazione } from "@/lib/preventivi/preventivo-
 import { nextPreventivoId } from "@/lib/preventivi/preventivi-records-from-cache";
 import { ensurePreventivoStruttura } from "@/lib/preventivi/preventivi-struttura";
 import { PREVENTIVO_TIPO_DOCUMENTO_DEFAULT } from "@/lib/preventivi/preventivi-tipo-documento";
-import { trasformaDescrizioneLavorazioni } from "@/lib/preventivi/trasforma-descrizione";
+import {
+  buildPersistGenerationPayload,
+  generatePreventivoDescription,
+  persistGenerationClient,
+} from "@/lib/preventivi/description-engine";
 import { calcolaTotaliPreventivo } from "@/lib/preventivi/preventivi-totals";
 import type { PreventivoManodopera, PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
@@ -23,6 +27,7 @@ import {
   canonicalInputsFromPreventivoContext,
   resolveInterventoCanonical,
 } from "@/lib/domain/intervento-context/resolve-intervento-canonical";
+import { createAttrezzaturaSnapshot } from "@/lib/domain/mezzo-attrezzatura/create-attrezzatura-snapshot";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 
 export function buildNewPreventivoFromLavorazioneContext(opts: {
@@ -52,6 +57,10 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
   const { exportFields } = resolveInterventoCanonical("export", canonicalInputs);
   const anag: PreventivoAnagraficaPatch = anagraficaFromSchedaIngresso(exportFields);
   assertInterventoExportAlignment(lavorazioneRow, schedeStore, { preventivoPatch: anag });
+  const targetType =
+    lavorazioneRow.target_type ??
+    exportFields.targetType ??
+    (anag.marcaAttrezzatura.trim() ? "attrezzatura" : "telaio");
   const {
     cliente,
     cantiere,
@@ -82,7 +91,7 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     techParts.join("\n").trim() || lav.noteInterne.trim() || "Intervento di manutenzione e controllo generale.";
 
   const codiciRicambi = (ricScheda?.campi.righe ?? []).map((r) => r.codice.trim()).filter(Boolean);
-  const autoCliente = trasformaDescrizioneLavorazioni(technicalBlob, {
+  const descCtx = {
     lavorazioneId: lav.id,
     cliente,
     targa,
@@ -92,7 +101,41 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     macchinaRiassunto,
     codiciRicambi,
     existingPreventiviRecords: existingRecords,
+  };
+
+  const ricambiForDesc = (ricScheda?.campi.righe ?? []).map((r) => {
+    const mag = r.ricambioId ? magazzino.find((x) => x.id === r.ricambioId) : undefined;
+    return {
+      ricambioId: r.ricambioId,
+      descrizione: mag?.descrizione?.trim() || r.ricambioNome.trim(),
+      codice: mag?.codiceFornitoreOriginale?.trim() || r.codice.trim(),
+    };
   });
+
+  const preventivoIdPreview = nextPreventivoId();
+  const composed = generatePreventivoDescription({
+    technicalBlob,
+    anomaliaText: anomaliaIngresso || undefined,
+    noteIntervento: ing?.noteIntervento?.trim() || undefined,
+    targetType: targetType === "attrezzatura" ? "attrezzatura" : "telaio",
+    tipoAttrezzatura,
+    marcaModello: [marcaAttrezzatura, modelloAttrezzatura].filter(Boolean).join(" "),
+    ricambi: ricambiForDesc,
+    ctx: descCtx,
+  });
+
+  const autoCliente = composed.clienteText;
+  const descriptionGenerationId = composed.meta.generationId;
+  const descriptionEngineMeta = composed.meta;
+
+  persistGenerationClient(
+    buildPersistGenerationPayload({
+      composed,
+      preventivoId: preventivoIdPreview,
+      lavorazioneId: lav.id,
+      createdBy: autore,
+    }),
+  );
 
   const righeRicambiRaw: PreventivoRigaRicambio[] = (ricScheda?.campi.righe ?? []).map((r) => {
     const mag = r.ricambioId ? magazzino.find((x) => x.id === r.ricambioId) : undefined;
@@ -150,8 +193,20 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
 
   const noteFinali = infer.noteFinaliTipiche;
 
+  const attrezzaturaId = lavorazioneRow.attrezzatura_id ?? exportFields.attrezzaturaId ?? null;
+  const attrezzaturaSnapshot =
+    targetType === "attrezzatura"
+      ? createAttrezzaturaSnapshot({
+          id: attrezzaturaId,
+          marca: marcaAttrezzatura,
+          modello: modelloAttrezzatura,
+          matricola,
+          tipoAttrezzatura,
+        })
+      : undefined;
+
   const draft: PreventivoRecord = {
-    id: nextPreventivoId(),
+    id: preventivoIdPreview,
     numero: nextPreventivoNumeroForLavorazione(
       lavorazioneDisplayCodice(lav),
       tuttiPv,
@@ -181,9 +236,17 @@ export function buildNewPreventivoFromLavorazioneContext(opts: {
     km,
     livelloCarburante,
     richiedente,
+    targetType,
+    attrezzaturaId,
+    attrezzaturaMarca: marcaAttrezzatura,
+    attrezzaturaModello: modelloAttrezzatura,
+    attrezzaturaMatricola: matricola,
+    attrezzaturaSnapshot,
     descrizioneLavorazioniCliente: autoCliente,
     descrizioneLavorazioniTecnicaSorgente: technicalBlob,
     descrizioneGenerataAuto: autoCliente,
+    descriptionGenerationId,
+    descriptionEngineMeta,
     righeRicambi,
     manodopera,
     sanificazionePrezzo: 0,

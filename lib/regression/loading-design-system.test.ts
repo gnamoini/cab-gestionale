@@ -54,6 +54,6 @@ assert.ok(GLOBAL_LOADING_MESSAGES.magazzino.includes("magazzino"));
 assert.ok(GLOBAL_LOADING_MESSAGES.documenti.includes("documenti"));
 assert.ok(GLOBAL_LOADING_MESSAGES.clienti.includes("clienti"));
 assert.ok(GLOBAL_LOADING_MESSAGES.permessi.includes("permessi"));
-assert.ok(SKELETON_MIN_HEIGHT.bunderList);
+assert.ok(SKELETON_MIN_HEIGHT.tableDesktop);
 
 console.log("loading-design-system.test: OK");

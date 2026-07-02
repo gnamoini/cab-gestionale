@@ -6,6 +6,7 @@ export type CabSyncEntity =
   | "lavorazioni"
   | "lavorazione_documents"
   | "mezzi"
+  | "attrezzature"
   | "magazzino_ricambi"
   | "movimenti_ricambi"
   | "preventivi"
@@ -13,7 +14,6 @@ export type CabSyncEntity =
   | "scheda_lavorazione"
   | "log_modifiche"
   | "dashboard_promemoria"
-  | "bunder_documents"
   | "dipendenti_timesheet_employees"
   | "dipendenti_timesheet_entries"
   | "user_permissions";
@@ -29,6 +29,7 @@ const TABLE_ENTITY: Record<string, CabSyncEntity> = {
   lavorazioni: "lavorazioni",
   lavorazione_documents: "lavorazione_documents",
   mezzi: "mezzi",
+  attrezzature: "attrezzature",
   magazzino_ricambi: "magazzino_ricambi",
   movimenti_ricambi: "movimenti_ricambi",
   preventivi: "preventivi",
@@ -36,7 +37,6 @@ const TABLE_ENTITY: Record<string, CabSyncEntity> = {
   scheda_lavorazione: "scheda_lavorazione",
   log_modifiche: "log_modifiche",
   dashboard_promemoria: "dashboard_promemoria",
-  bunder_documents: "bunder_documents",
   dipendenti_timesheet_employees: "dipendenti_timesheet_employees",
   dipendenti_timesheet_entries: "dipendenti_timesheet_entries",
   user_permissions: "user_permissions",

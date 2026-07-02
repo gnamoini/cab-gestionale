@@ -706,10 +706,25 @@ body[data-cab-scroll-lock-count] {
   overscroll-behavior: none;
 }
 
+/** Pagine senza app shell (login): opt-in per header/barre fixed allineate al body padding. */
+body[data-cab-scroll-lock-count]:not(:has(.cab-app-shell)) [data-cab-scroll-lock-fixed-compensate] {
+  padding-right: var(--cab-scroll-lock-gap, 0px);
+}
+
+/** Scroll lock: mantieni gutter colonna scrollbar su main (evita layout shift tier tablet/mobile). */
+main.gestionale-scroll-y[data-cab-main-scroll-lock] {
+  scrollbar-gutter: stable;
+}
+
 /* Sidebar collapse — label fade + icone che si centrano con la larghezza */
 .cab-app-shell {
-  --cab-sidebar-motion: 180ms;
-  --cab-gestionale-top-bar: 3.5rem;
+  --cab-sidebar-motion: 150ms;
+  --cab-sidebar-width-motion: 150ms;
+  --cab-sidebar-label-in: 110ms;
+  --cab-sidebar-label-out: 80ms;
+  --cab-sidebar-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+  --cab-sidebar-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --cab-gestionale-top-bar: 0px;
   --cab-settings-sidebar-inset: var(--ds-space-md);
   --cab-settings-sidebar-height: calc(
     var(--cab-vv-height, 100dvh) - var(--cab-gestionale-top-bar) - env(safe-area-inset-top, 0px) -
@@ -748,78 +763,193 @@ body[data-cab-scroll-lock-count] {
   }
 }
 
-.cab-sidebar .cab-sidebar-nav {
-  transition: padding var(--cab-sidebar-motion) ease-out;
-}
-
 .cab-sidebar .cab-sidebar-nav-link {
   transition:
-    padding var(--cab-sidebar-motion) ease-out,
-    gap var(--cab-sidebar-motion) ease-out,
     background-color 200ms ease-out,
     color 200ms ease-out,
     box-shadow 200ms ease-out;
 }
 
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-link::before {
+  display: none;
+}
+
+/** Rail compatto: icona fissa colonna 1 — solo label/badge/chevron collassano. */
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-link {
+  background-color: transparent;
+  box-shadow: none;
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-label {
+  max-width: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-badge,
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-account-chevron {
+  max-width: 0;
+  margin-inline: 0;
+  opacity: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+/** Allineamento verticale logo sidebar ↔ titolo PageHeader (stesso pt + row h-10). */
+.cab-sidebar-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  padding-inline: var(--ds-space-md);
+  padding-top: var(--ds-space-md);
+  padding-bottom: 0.5rem;
+}
+
+.cab-sidebar-session--brand {
+  min-width: 0;
+  padding-inline: var(--ds-space-md);
+  padding-bottom: var(--ds-space-md);
+  border-bottom: 1px solid color-mix(in srgb, var(--cab-border) 85%, transparent);
+}
+
+.cab-nav-drawer-panel .cab-sidebar-session--brand {
+  padding-inline: var(--ds-space-md);
+  padding-top: 0.5rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--cab-border) 85%, transparent);
+}
+
+@media (min-width: 640px) {
+  .cab-sidebar-brand {
+    padding-top: var(--ds-space-lg);
+  }
+}
+
+/** Padding orizzontale via `p-3` sul nodo (stesso inset delle voci nav). */
+.cab-sidebar-session {
+  min-width: 0;
+}
+
+.cab-sidebar-session-user--open,
+.cab-sidebar-session-item--open {
+  background: color-mix(in srgb, var(--cab-primary) 10%, var(--cab-surface));
+}
+
+.cab-sidebar-session-user .cab-sidebar-nav-label,
+.cab-sidebar-session-row .cab-sidebar-nav-label {
+  justify-self: start;
+  text-align: left;
+}
+
+.cab-sidebar .cab-sidebar-session-expand-chevron {
+  display: block;
+}
+
+@keyframes cab-notification-bell-arrive {
+  0% {
+    transform: rotate(0deg);
+  }
+  20% {
+    transform: rotate(-8deg);
+  }
+  40% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-4deg);
+  }
+  80% {
+    transform: rotate(4deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
+
+@keyframes cab-notification-badge-arrive {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+}
+
+.cab-notification-bell-icon--arrive {
+  animation: cab-notification-bell-arrive 600ms ease-out;
+}
+
+.cab-notification-bell--arrive span.pointer-events-none.absolute {
+  animation: cab-notification-badge-arrive 600ms ease-out;
+}
+
+/** @deprecated alias — use `.cab-sidebar-session` */
+.cab-sidebar-account {
+  min-width: 0;
+}
+
+.cab-sidebar .cab-sidebar-nav-icon-slot {
+  grid-column: 1;
+  width: 1.75rem;
+  min-width: 1.75rem;
+  flex-shrink: 0;
+}
+
 .cab-sidebar .cab-sidebar-nav-icon {
   transition:
-    transform var(--cab-sidebar-motion) cubic-bezier(0.4, 0, 0.2, 1),
     background-color 200ms ease-out,
     color 200ms ease-out;
 }
 
 .cab-sidebar .cab-sidebar-nav-label {
-  flex: 1 1 auto;
+  grid-column: 2;
+  min-width: 0;
   max-width: 11rem;
   opacity: 1;
   overflow: hidden;
+  white-space: nowrap;
   transition:
-    max-width var(--cab-sidebar-motion) cubic-bezier(0.2, 0, 0, 1),
-    opacity 120ms ease-out,
-    margin-inline var(--cab-sidebar-motion) ease-out,
-    flex-grow var(--cab-sidebar-motion) ease-out;
-}
-
-.cab-sidebar[data-sidebar-hover-expanded] .cab-sidebar-nav-label {
-  transition-delay: 30ms;
+    max-width var(--cab-sidebar-width-motion) var(--cab-sidebar-ease-out),
+    opacity var(--cab-sidebar-label-in) ease-out;
 }
 
 .cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-label {
-  transition-delay: 0ms;
+  transition:
+    max-width var(--cab-sidebar-label-out) var(--cab-sidebar-ease-in),
+    opacity var(--cab-sidebar-label-out) ease-in;
+}
+
+.cab-sidebar .cab-sidebar-nav-badge,
+.cab-sidebar .cab-sidebar-account-chevron {
+  grid-column: 3;
 }
 
 .cab-sidebar .cab-sidebar-nav-badge {
   transition:
-    max-width var(--cab-sidebar-motion) ease-out,
-    opacity 150ms ease-out,
-    margin-inline var(--cab-sidebar-motion) ease-out;
-}
-
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav {
-  padding-inline: 0.5rem;
-}
-
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-link {
-  justify-content: center;
-  gap: 0;
-  padding-inline: 0.5rem;
-}
-
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-label {
-  flex-grow: 0;
-  flex-basis: 0;
-  max-width: 0;
-  margin-inline: 0;
-  opacity: 0;
-  pointer-events: none;
+    max-width var(--cab-sidebar-width-motion) ease-out,
+    opacity var(--cab-sidebar-label-in) ease-out,
+    margin-inline var(--cab-sidebar-width-motion) ease-out;
 }
 
 .cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-badge {
-  max-width: 0;
-  margin-inline: 0;
-  opacity: 0;
+  transition:
+    max-width var(--cab-sidebar-label-out) ease-in,
+    opacity var(--cab-sidebar-label-out) ease-in,
+    margin-inline var(--cab-sidebar-label-out) ease-in;
+}
+
+.cab-sidebar .cab-sidebar-account-chevron {
   overflow: hidden;
-  pointer-events: none;
+  transition:
+    max-width var(--cab-sidebar-width-motion) ease-out,
+    opacity var(--cab-sidebar-label-in) ease-out,
+    margin-inline var(--cab-sidebar-width-motion) ease-out;
+}
+
+.cab-sidebar {
+  will-change: width;
 }
 
 @media (min-width: 768px) {
@@ -830,12 +960,16 @@ body[data-cab-scroll-lock-count] {
 
 @media (prefers-reduced-motion: reduce) {
   .cab-sidebar,
-  .cab-sidebar .cab-sidebar-nav,
   .cab-sidebar .cab-sidebar-nav-link,
+  .cab-sidebar .cab-sidebar-nav-icon-slot,
   .cab-sidebar .cab-sidebar-nav-icon,
   .cab-sidebar .cab-sidebar-nav-label,
-  .cab-sidebar .cab-sidebar-nav-badge {
+  .cab-sidebar .cab-sidebar-nav-badge,
+  .cab-sidebar .cab-sidebar-account-chevron,
+  .cab-notification-bell-icon--arrive,
+  .cab-notification-bell--arrive span.pointer-events-none.absolute {
     transition-duration: 0.01ms !important;
+    animation: none !important;
   }
 }
 

@@ -4,14 +4,14 @@
  */
 
 export const PROFILES_COLUMNS =
-  "id, nome, username, ruolo, cliente_ref, created_at, updated_at" as const;
+  "id, nome, cognome, username, ruolo, cliente_ref, created_at, updated_at" as const;
 
 export const LAVORAZIONI_COLUMNS =
-  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice" as const;
+  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice, target_type, attrezzatura_id" as const;
 
 /** Lista gestionale — senza `deleted_at` (filtro server); profili esclusi (lazy). */
 export const LAVORAZIONI_LIST_LIGHT_COLUMNS =
-  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice" as const;
+  "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, codice, target_type, attrezzatura_id" as const;
 
 export const LAVORAZIONI_DETAIL_COLUMNS = LAVORAZIONI_COLUMNS;
 
@@ -19,28 +19,49 @@ export const LAVORAZIONI_DETAIL_COLUMNS = LAVORAZIONI_COLUMNS;
 export const LAVORAZIONI_REPORT_LIGHT_COLUMNS =
   "id, mezzo_id, stato, priorita, data_ingresso, data_uscita, note, created_by, created_at, updated_at, updated_by, archived, archived_at, deleted_at, codice" as const;
 
-/** Colonne mezzo usate da liste lavorazioni / lookup leggeri. */
+/** Colonne mezzo usate da liste lavorazioni / lookup leggeri (telaio + ident; attrezzatura via join). */
 export const MEZZI_LIST_EMBED_COLUMNS =
-  "id, cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia, tipo_attrezzatura, anno, entity_key" as const;
+  "id, cliente, utilizzatore, targa, numero_scuderia, anno, entity_key, marca_telaio, modello_telaio, tipo_telaio" as const;
 
 /** Embed mezzo minimo per tabella/kanban lista lavorazioni. */
 export const MEZZI_EMBED_LIGHT_COLUMNS =
-  "cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia" as const;
+  "cliente, utilizzatore, targa, numero_scuderia, marca_telaio, modello_telaio" as const;
 
-/** Lista mezzi — include `meta` (cantiere e telaio in tabella). */
+/** Lista mezzi — telaio + ident (attrezzatura via tabella dedicata). */
 export const MEZZI_LIST_LIGHT_COLUMNS =
-  "id, cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia, tipo_attrezzatura, anno, meta, entity_key, created_at, updated_at" as const;
+  "id, cliente, utilizzatore, targa, numero_scuderia, anno, meta, entity_key, created_at, updated_at, marca_telaio, modello_telaio, tipo_telaio, telaio_num, km, note" as const;
 
 /** Report classifiche / KPI mezzi. */
 export const MEZZI_REPORT_LIGHT_COLUMNS =
-  "id, marca, modello, targa, matricola, numero_scuderia, cliente, tipo_attrezzatura" as const;
+  "id, targa, matricola, numero_scuderia, cliente, marca_telaio, modello_telaio, tipo_telaio" as const;
 
 /** Report widget magazzino — subset KPI (meta per mapping UI). */
 export const MAGAZZINO_REPORT_LIGHT_COLUMNS =
   "id, codice, nome, marca, quantita, costo, prezzo_vendita, consumo_medio_mensile, meta, entity_key, created_at, updated_at" as const;
 
 export const MEZZI_COLUMNS =
-  "id, cliente, utilizzatore, marca, modello, targa, matricola, numero_scuderia, tipo_attrezzatura, anno, meta, entity_key, created_at, updated_at" as const;
+  "id, cliente, utilizzatore, targa, numero_scuderia, anno, meta, entity_key, marca_telaio, modello_telaio, tipo_telaio, telaio_num, km, note, created_at, updated_at" as const;
+
+export const ATTREZZATURE_COLUMNS =
+  "id, mezzo_id, marca, modello, tipo_attrezzatura, matricola, portata, anno, note, created_at, updated_at, created_by" as const;
+
+export const ATTREZZATURE_EMBED_LIGHT_COLUMNS =
+  "id, mezzo_id, marca, modello, tipo_attrezzatura, matricola" as const;
+
+export const ASSET_COMPLIANCE_RULES_COLUMNS =
+  "id, asset_kind, mezzo_id, attrezzatura_id, rule_kind, trigger_kind, interval_months, fixed_month, fixed_day, km_interval, last_completed_at, next_due_at, next_due_km, alert_days_before, is_active, note, created_at, updated_at, created_by" as const;
+
+export const ASSET_COMPLIANCE_RECORDS_COLUMNS =
+  "id, rule_id, asset_kind, mezzo_id, attrezzatura_id, rule_kind, completed_at, km_at_completion, document_ref, esito, note, created_at, created_by" as const;
+
+export const ASSET_ASSIGNMENT_HISTORY_COLUMNS =
+  "id, attrezzatura_id, mezzo_id, valid_from, valid_to, change_reason, note, created_at, created_by" as const;
+
+export const ASSET_MILEAGE_READINGS_COLUMNS =
+  "id, mezzo_id, recorded_at, km, source, lavorazione_id, created_by, note, created_at" as const;
+
+export const ASSET_TIMELINE_PROJECTION_COLUMNS =
+  "event_category, event_domain, source_id, asset_kind, mezzo_id, attrezzatura_id, event_at, event_subtype, priority, label" as const;
 
 export const SCHEDA_LAVORAZIONE_COLUMNS =
   "id, lavorazione_id, tipo, contenuto, created_at, updated_at" as const;
@@ -70,7 +91,7 @@ export const INVOICE_PAYMENTS_COLUMNS =
   "id, invoice_id, data, importo, metodo, riferimento, note, created_by, created_at" as const;
 
 export const DDT_DOCUMENTS_COLUMNS =
-  "id, numero, anno, serie, sede_id, status, data_documento, data_consegna, cliente_label, customer_snapshot, luogo_consegna, preventivo_id, lavorazione_id, mezzo_id, mezzo_snapshot, causale_trasporto, vettore, note, origine, pdf_artifact_hash, created_by, updated_by, annullato_at, stampato_at, consegnato_at, created_at, updated_at" as const;
+  "id, numero, anno, serie, sede_id, status, data_documento, data_consegna, cliente_label, customer_snapshot, luogo_consegna, preventivo_id, lavorazione_id, mezzo_id, mezzo_snapshot, target_type, attrezzatura_id, attrezzatura_snapshot, causale_trasporto, vettore, note, origine, pdf_artifact_hash, created_by, updated_by, annullato_at, stampato_at, consegnato_at, created_at, updated_at" as const;
 
 export const DDT_DOCUMENTS_INDEX_COLUMNS =
   "id, preventivo_id, status, numero, anno" as const;
@@ -112,9 +133,6 @@ export const USER_PERMISSIONS_COLUMNS =
 
 export const AUTH_LOGS_COLUMNS =
   "id, user_id, email, action, ip, user_agent, created_at" as const;
-
-export const BUNDER_DOCUMENTS_COLUMNS =
-  "id, kind, numero_progressivo, data_documento, azienda_destinatario, payload, created_by, last_edited_by, created_at, updated_at" as const;
 
 export const DIPENDENTI_TIMESHEET_EMPLOYEES_COLUMNS =
   "id, display_name, source_addetto_name, source_addetto_id, in_settings, created_at, updated_at" as const;

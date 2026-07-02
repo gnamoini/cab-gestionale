@@ -1,6 +1,13 @@
+import "server-only";
+
 import { createClient } from "@supabase/supabase-js";
 import { assertSupabasePublicEnv } from "@/lib/env/supabase-public";
 import { readSupabaseServiceRoleKey } from "@/lib/env/supabase-service-role";
+import {
+  MEZZO_ATTREZZATURE_V2_KEY,
+  MEZZO_ATTREZZATURE_V2_MODULE,
+  parseMezzoAttrezzatureV2DbEnabled,
+} from "@/lib/officina/mezzo-attrezzature-v2-flag";
 import {
   OPERATOR_GLOBAL_SETTINGS_KEY,
   OPERATOR_GLOBAL_SETTINGS_MODULE,
@@ -16,6 +23,7 @@ export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionRe
   const base: ProductionReadinessDbSnapshot = {
     connected: false,
     operatorGlobalSettingsDbEnabled: false,
+    mezzoAttrezzatureV2DbEnabled: false,
     documentiBucketPublic: null,
     legacyPublicDocumentUrlCount: 0,
     storageOrphanObjectCount: null,
@@ -45,6 +53,13 @@ export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionRe
       .eq("key", OPERATOR_GLOBAL_SETTINGS_KEY)
       .maybeSingle();
 
+    const { data: attrezzatureV2Row } = await admin
+      .from("app_settings")
+      .select("value")
+      .eq("module", MEZZO_ATTREZZATURE_V2_MODULE)
+      .eq("key", MEZZO_ATTREZZATURE_V2_KEY)
+      .maybeSingle();
+
     if (settingsErr) {
       if (process.env.CI === "true" || process.env.CI === "1") {
         console.log(`[production:check] app_settings query failed: ${settingsErr.message}`);
@@ -60,6 +75,7 @@ export async function fetchProductionReadinessDbSnapshot(): Promise<ProductionRe
     return {
       connected: true,
       operatorGlobalSettingsDbEnabled: parseOperatorGlobalSettingsDbEnabled(settingsRow?.value),
+      mezzoAttrezzatureV2DbEnabled: parseMezzoAttrezzatureV2DbEnabled(attrezzatureV2Row?.value),
       documentiBucketPublic: documentiBucket?.public ?? null,
       legacyPublicDocumentUrlCount: storageDiag.legacyPublicDocumentUrlCount,
       storageOrphanObjectCount: storageDiag.storageOrphanObjectCount,

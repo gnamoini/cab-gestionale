@@ -12,7 +12,7 @@ import { resolveInterventoDisplay } from "@/lib/domain/intervento-context/resolv
 import { schedaIngressoFieldsFromDisplay } from "@/lib/domain/intervento-context/resolve-intervento-display-for-surface";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
 import type { MezzoGestito } from "@/lib/mezzi/types";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { mezzoGestitoFromRow } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MezzoRow, PrioritaLavorazione, StatoLavorazione } from "@/src/types/supabase-tables";
 import type {
@@ -91,7 +91,7 @@ function buildContext(inputs: InterventoCanonicalInputs): InterventoContext {
       inputs.mezzoRow && "marca" in inputs.mezzoRow
         ? (inputs.mezzoRow as MezzoGestito)
         : inputs.mezzoRow
-          ? toMezzoUI(inputs.mezzoRow as MezzoRow)
+          ? mezzoGestitoFromRow(inputs.mezzoRow as MezzoRow)
           : null;
     return composeInterventoContextFromBundle(inputs.bundle.lavorazioneId, inputs.bundle, {
       mezzoGestito,

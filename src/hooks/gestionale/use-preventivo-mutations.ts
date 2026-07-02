@@ -3,23 +3,23 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { persistPreventivoRecord, removePreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
-import type { MezzoRow } from "@/src/types/supabase-tables";
+import type { MezzoGestito } from "@/lib/mezzi/types";
 
 export function usePreventivoPersistMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async ({
       record,
-      mezziRows,
+      mezziGestiti,
       expectedUpdatedAt,
       skipDispatch,
     }: {
       record: PreventivoRecord;
-      mezziRows: readonly MezzoRow[];
+      mezziGestiti: readonly MezzoGestito[];
       expectedUpdatedAt?: string;
       skipDispatch?: boolean;
     }) => {
-      const res = await persistPreventivoRecord(record, mezziRows, {
+      const res = await persistPreventivoRecord(record, mezziGestiti, {
         expectedUpdatedAt,
         queryClient,
         skipDispatch,

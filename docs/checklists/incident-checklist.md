@@ -18,7 +18,7 @@ Vedi [observability-ops.md](../observability-ops.md) per definizioni severity.
 2. [ ] Sintomo replicabile con utente specifico?
 3. [ ] Console JSON: filtrare per `route`, `userId`, `level=error|warn`
 4. [ ] `ops.health.snapshot`: spike `pollingFallback`, `hydrationMismatch`?
-5. [ ] `/dashboard/security/production-readiness` — blockers?
+5. [ ] `/sicurezza/production-readiness` — blockers?
 6. [ ] Supabase status page / realtime connectivity
 
 ## Triage per sintomo

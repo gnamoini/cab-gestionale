@@ -1,3 +1,5 @@
+import "server-only";
+
 import { isOperatorGlobalSettingsEnabled } from "@/lib/permissions/operator-global-settings";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
 import { validateProductionEnv } from "@/lib/ops/validate-production-env";
@@ -51,6 +53,7 @@ export function validateProductionReadiness(input: ProductionReadinessInput = {}
   const db: ProductionReadinessDbSnapshot = input.db ?? {
     connected: false,
     operatorGlobalSettingsDbEnabled: false,
+    mezzoAttrezzatureV2DbEnabled: false,
     documentiBucketPublic: null,
     legacyPublicDocumentUrlCount: 0,
     storageOrphanObjectCount: null,
@@ -272,6 +275,43 @@ export function validateProductionReadiness(input: ProductionReadinessInput = {}
       id: "ux-realtime-polling-fallback",
       category: "ux",
       message: "Realtime: fallback polling e websocket coesistono (comportamento atteso offline, verificare in prod).",
+    });
+  }
+
+  // —— ATTREZZATURE V2 ——
+  if (codeScan.r4DropMigrationInAutoPath) {
+    pushFinding(blockers, {
+      id: "attrezzature-v2-r4-auto-migration",
+      category: "database",
+      message: "Migration R4 drop colonne legacy mezzi presente in supabase/migrations/ (non manual/).",
+      detail: "Spostare in supabase/migrations/manual/ fino a production:check green.",
+    });
+  }
+
+  if (codeScan.legacyMezziColumnWriteHits.length > 0) {
+    pushFinding(blockers, {
+      id: "attrezzature-v2-legacy-write-hits",
+      category: "code",
+      message: "Write legacy mezzi attrezzatura cols fuori allowlist.",
+      detail: formatHits(codeScan.legacyMezziColumnWriteHits),
+    });
+  }
+
+  if (codeScan.legacyAdapterImportOutsideAllowlist.length > 0) {
+    pushFinding(blockers, {
+      id: "attrezzature-v2-legacy-adapter-import",
+      category: "code",
+      message: "Import compose-mezzo-gestito fuori allowlist centralizzata.",
+      detail: formatHits(codeScan.legacyAdapterImportOutsideAllowlist),
+    });
+  }
+
+  if (productionTarget && db.connected && !db.mezzoAttrezzatureV2DbEnabled) {
+    pushFinding(warnings, {
+      id: "attrezzature-v2-db-disabled-prod",
+      category: "feature-flag",
+      message: "app_settings.mezzo_attrezzature_v2 disattivato nel target DB production.",
+      detail: "Attivare solo dopo soak staging e production:check attrezzature-v2 green.",
     });
   }
 

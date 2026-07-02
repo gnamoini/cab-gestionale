@@ -8,6 +8,7 @@ import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { FormField } from "@/components/gestionale/schede/gestionale-form-section";
+import { profileDisplayName } from "@/lib/auth/profile-display-name";
 import { useUsernameAvailability } from "@/src/hooks/use-username-availability";
 import { sanitizeUsernameInput, usernameFieldError } from "@/src/lib/auth/username";
 import { gestionaleModalBodyFlexClass } from "@/lib/ui/modal-max-width-class";
@@ -16,6 +17,7 @@ import { dsBtnDanger, dsBtnNeutral, dsInput } from "@/lib/ui/design-system";
 
 export type SecurityEditProfileValues = {
   nome: string;
+  cognome: string | null;
   username: string;
 };
 
@@ -23,6 +25,7 @@ type Props = {
   open: boolean;
   userId: string;
   initialNome: string;
+  initialCognome: string | null;
   initialUsername: string;
   userEmail?: string;
   readOnly?: boolean;
@@ -38,6 +41,7 @@ export function SecurityEditNameModal({
   open,
   userId,
   initialNome,
+  initialCognome,
   initialUsername,
   userEmail,
   readOnly = false,
@@ -49,16 +53,18 @@ export function SecurityEditNameModal({
   onDelete,
 }: Props) {
   const [nome, setNome] = useState(initialNome);
+  const [cognome, setCognome] = useState(initialCognome ?? "");
   const [username, setUsername] = useState(initialUsername);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
       setNome(initialNome);
+      setCognome(initialCognome ?? "");
       setUsername(initialUsername);
       setDeleteConfirmOpen(false);
     }
-  }, [open, initialNome, initialUsername]);
+  }, [open, initialNome, initialCognome, initialUsername]);
 
   const usernameErr = useMemo(() => usernameFieldError(username), [username]);
   const usernameAvailability = useUsernameAvailability(username, {
@@ -93,7 +99,8 @@ export function SecurityEditNameModal({
 
   if (!open) return null;
 
-  const displayName = initialNome.trim() || userEmail || "questo utente";
+  const displayName =
+    profileDisplayName({ nome: initialNome, cognome: initialCognome }) || userEmail || "questo utente";
 
   return (
     <>
@@ -156,6 +163,7 @@ export function SecurityEditNameModal({
               submitLock,
               () => ({
                 nome,
+                cognome,
                 username,
                 readOnly,
                 pending: Boolean(pending),
@@ -164,6 +172,7 @@ export function SecurityEditNameModal({
               }),
               (snap) => {
                 const trimmedNome = snap.nome.trim();
+                const trimmedCognome = snap.cognome.trim() || null;
                 const normalizedUsername = sanitizeUsernameInput(snap.username);
                 const snapUsernameErr = usernameFieldError(normalizedUsername);
                 const snapCanSave =
@@ -175,7 +184,7 @@ export function SecurityEditNameModal({
                   !snap.pending &&
                   !snap.deletePending;
                 if (!snapCanSave || snapUsernameErr) return;
-                onSave({ nome: trimmedNome, username: normalizedUsername });
+                onSave({ nome: trimmedNome, cognome: trimmedCognome, username: normalizedUsername });
               },
             );
           }}
@@ -187,15 +196,25 @@ export function SecurityEditNameModal({
               </p>
             ) : null}
 
-            <FormField label="Nome visualizzato" required>
+            <FormField label="Nome" required>
               <input
                 className={`${dsInput} w-full`}
                 value={nome}
                 onChange={(e) => setNome(e.target.value)}
-                autoComplete="name"
+                autoComplete="given-name"
                 required
                 disabled={busy || readOnly}
                 autoFocus
+              />
+            </FormField>
+
+            <FormField label="Cognome">
+              <input
+                className={`${dsInput} w-full`}
+                value={cognome}
+                onChange={(e) => setCognome(e.target.value)}
+                autoComplete="family-name"
+                disabled={busy || readOnly}
               />
             </FormField>
 

@@ -1,9 +1,6 @@
 import "server-only";
 
 import { loadBrandingLogoDataUrlServer } from "@/lib/branding/branding-logo-for-pdf.server";
-import { fetchBunderDocumentServer } from "@/lib/bunder/bunder-fetch-server";
-import { totaleDocumento } from "@/lib/bunder/bunder-generate-default";
-import { bunderPdfFileName, generateBunderPdfBytes } from "@/lib/bunder/bunder-pdf-generate";
 import { fetchDipendentiPdfContextServer } from "@/lib/dipendenti/dipendenti-pdf-data.server";
 import {
   dipendentiComplessivoFileName,
@@ -392,30 +389,6 @@ async function deliverPdfArtifactInner(
       }
       const logo = await loadBrandingLogoDataUrlServer();
       bytes = await generateDipendentiDipendentePdfBytes(ctx, employee, logo);
-      await uploadPdfArtifactBestEffort(objectPath, bytes);
-      break;
-    }
-    case "bunder": {
-      const id = query.id?.trim();
-      if (!id) return err("Parametro id mancante");
-      const docRes = await fetchBunderDocumentServer(id);
-      if (!docRes.success || !docRes.data) return err(docRes.error ?? "Documento non trovato");
-      const doc = docRes.data;
-      dataHash = stableHashPayload({
-        id: doc.id,
-        updatedAt: doc.updatedAt,
-        totale: totaleDocumento(doc),
-        righeCount: doc.righe.length,
-      });
-      scopeId = id;
-      fileName = bunderPdfFileName(doc);
-      objectPath = resolvePdfArtifactRef(type, scopeId, dataHash).objectPath;
-      bytes = await getCachedPdfArtifactBytes(objectPath);
-      if (bytes) {
-        cacheStatus = "HIT";
-        break;
-      }
-      bytes = generateBunderPdfBytes(doc, autore);
       await uploadPdfArtifactBestEffort(objectPath, bytes);
       break;
     }

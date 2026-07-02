@@ -25,7 +25,7 @@ Eseguire **entro 30 minuti** dal deploy production su Vercel.
 
 ## RBAC spot check
 
-- [ ] Admin accede a `/dashboard/security`
+- [ ] Admin accede a `/sicurezza`
 - [ ] Operatore **non** accede a sezioni admin (se utente test disponibile)
 - [ ] Guest reindirizzato a login
 
@@ -38,7 +38,7 @@ Eseguire **entro 30 minuti** dal deploy production su Vercel.
 
 ## Production readiness dashboard
 
-- [ ] `/dashboard/security/production-readiness` — nessun blocker
+- [ ] `/sicurezza/production-readiness` — nessun blocker
 - [ ] Security Release Control — READY (informativo, non blocca deploy)
 
 ## Database performance (linked Supabase CLI)

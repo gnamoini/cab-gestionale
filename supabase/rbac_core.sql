@@ -571,33 +571,6 @@ begin
 end;
 $$;
 
-create or replace function public.rbac_bunder_can(p_op text)
-returns boolean
-language plpgsql
-stable
-security definer
-set search_path = public
-as $$
-declare
-  v_role text;
-begin
-  v_role := public.rbac_normalized_role();
-  if v_role is null or v_role = '' then
-    return false;
-  end if;
-
-  if p_op = 'read' then
-    return v_role in ('admin', 'manager', 'guest');
-  end if;
-
-  if p_op in ('write', 'delete') then
-    return v_role in ('admin', 'manager');
-  end if;
-
-  return false;
-end;
-$$;
-
 create or replace function public.user_effective_can(p_module text, p_op text)
 returns boolean
 language plpgsql

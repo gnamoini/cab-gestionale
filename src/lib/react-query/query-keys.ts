@@ -40,8 +40,9 @@ export const QK = {
   /** Entries timesheet per mese. */
   dipendentiTimesheetEntries: ["dipendenti_timesheet_entries"] as const,
   dipendentiTimesheetMonthKeysWithData: ["dipendenti_timesheet_month_keys_with_data"] as const,
-  /** Documenti commerciali BUNDER. */
-  bunder: ["bunder_documents"] as const,
+  /** Inbox notifiche v2. */
+  notificationsInbox: ["notifications", "inbox"] as const,
+  notificationsUnread: ["notifications", "unread-count"] as const,
 };
 
 /** Bundle schede per lavorazione — unica cache React Query (derivata da DB). */

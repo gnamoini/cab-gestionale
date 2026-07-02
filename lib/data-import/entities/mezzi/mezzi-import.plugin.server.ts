@@ -11,6 +11,8 @@ import type { ImportExecuteResult, ImportFieldDef, ImportMappingConfig, ImportPr
 import { IMPORT_EXECUTE_CHUNK, IMPORT_MAX_PREVIEW_ROWS } from "@/lib/data-import/core/types";
 import { lookupClienteByNameOrPiva } from "@/lib/data-import/core/relation-resolver.server";
 import { attachMezzoEntityKey } from "@/lib/validation/entity-persistence";
+import { sanitizeMezzoWritePayload } from "@/lib/validation/services/mezzi-payload";
+import { upsertAttrezzaturaForMezzoImport } from "@/lib/data-import/entities/mezzi/mezzi-import-attrezzatura.server";
 import { createSupabaseServerUserClient } from "@/src/lib/supabase/server-user-client";
 
 export const MEZZI_IMPORT_FIELDS: ImportFieldDef[] = [
@@ -127,7 +129,10 @@ export const mezziImportPlugin: ImportEntityPlugin = {
     const rowsSlice = truncated ? allRows.slice(0, IMPORT_MAX_PREVIEW_ROWS) : allRows;
 
     const sb = await createSupabaseServerUserClient();
-    const { data: existing } = await sb.from("mezzi").select("id, targa, matricola, cliente");
+    const [{ data: existingMezzi }, { data: existingAtt }] = await Promise.all([
+      sb.from("mezzi").select("id, targa, matricola, cliente"),
+      sb.from("attrezzature").select("id, mezzo_id, matricola"),
+    ]);
 
     const previewRows: Array<ImportPreviewRowBase & MezziImportRow> = [];
     for (const r of rowsSlice) {
@@ -139,11 +144,27 @@ export const mezziImportPlugin: ImportEntityPlugin = {
       if (!clienteLookup.ok) {
         issues.push({ field: "cliente", message: clienteLookup.message, severity: "warning" });
       }
-      const dup = (existing ?? []).find(
-        (m) =>
-          (r.targa && m.targa && norm(m.targa) === norm(r.targa)) ||
-          (r.matricola && m.matricola && norm(m.matricola) === norm(r.matricola)),
-      );
+      let dup: { id: string; label?: string } | undefined;
+      if (r.targa) {
+        const targa = r.targa;
+        const byTarga = (existingMezzi ?? []).find(
+          (m) => m.targa && norm(m.targa) === norm(targa),
+        );
+        if (byTarga) dup = { id: byTarga.id, label: byTarga.targa ?? undefined };
+      }
+      if (!dup && r.matricola) {
+        const matricola = r.matricola;
+        const byAttMat = (existingAtt ?? []).find(
+          (a) => a.matricola && norm(a.matricola) === norm(matricola),
+        );
+        if (byAttMat) dup = { id: byAttMat.mezzo_id, label: matricola };
+        else {
+          const legacy = (existingMezzi ?? []).find(
+            (m) => m.matricola && norm(m.matricola) === norm(matricola),
+          );
+          if (legacy) dup = { id: legacy.id, label: legacy.matricola ?? matricola };
+        }
+      }
       const severity = issues.some((i) => i.severity === "error") ? "error" : issues.length ? "warning" : "valid";
       previewRows.push({
         ...r,
@@ -151,7 +172,7 @@ export const mezziImportPlugin: ImportEntityPlugin = {
         issues,
         suggestedAction: dup ? "skip" : issues.some((i) => i.severity === "error") ? "skip" : "create_new",
         duplicateId: dup?.id,
-        duplicateLabel: dup?.targa ?? dup?.matricola ?? undefined,
+        duplicateLabel: dup?.label ?? dup?.id,
       });
     }
 
@@ -213,18 +234,23 @@ export const mezziImportPlugin: ImportEntityPlugin = {
         if (d.cantiere) meta.cantiere = d.cantiere;
         if (d.telaio) meta.telaio = d.telaio;
 
-        const payload = attachMezzoEntityKey({
-          cliente: clienteLabel,
-          utilizzatore: d.utilizzatore ?? null,
-          marca: d.marca ?? undefined,
-          modello: d.modello ?? undefined,
-          targa: d.targa ?? undefined,
-          matricola: d.matricola ?? undefined,
-          numero_scuderia: d.numero_scuderia ?? null,
-          tipo_attrezzatura: d.tipo_attrezzatura ?? null,
-          anno: d.anno ?? null,
-          meta,
-        });
+        const payload = attachMezzoEntityKey(
+          sanitizeMezzoWritePayload(
+            {
+              cliente: clienteLabel,
+              utilizzatore: d.utilizzatore ?? null,
+              marca: d.marca ?? undefined,
+              modello: d.modello ?? undefined,
+              targa: d.targa ?? undefined,
+              matricola: d.matricola ?? undefined,
+              numero_scuderia: d.numero_scuderia ?? null,
+              tipo_attrezzatura: d.tipo_attrezzatura ?? null,
+              anno: d.anno ?? null,
+              meta,
+            },
+            { v2Enabled: true, source: "mezziImport.execute" },
+          ),
+        );
 
         if ((d.action === "update" || d.action === "replace") && d.duplicateId) {
           const { error } = await sb.from("mezzi").update(payload).eq("id", d.duplicateId);
@@ -232,15 +258,29 @@ export const mezziImportPlugin: ImportEntityPlugin = {
             result.stats.errors += 1;
             result.errors.push({ rowIndex: d.rowIndex, message: error.message });
           } else {
-            result.stats.updated += 1;
+            const attRes = await upsertAttrezzaturaForMezzoImport(sb, d.duplicateId, d);
+            if (!attRes.ok) {
+              result.stats.errors += 1;
+              result.errors.push({ rowIndex: d.rowIndex, message: attRes.message });
+            } else {
+              result.stats.updated += 1;
+            }
           }
         } else if (d.action === "create") {
-          const { error } = await sb.from("mezzi").insert(payload);
+          const { data: inserted, error } = await sb.from("mezzi").insert(payload).select("id").single();
           if (error) {
             result.stats.errors += 1;
             result.errors.push({ rowIndex: d.rowIndex, message: error.message });
           } else {
-            result.stats.created += 1;
+            const mezzoId = String((inserted as { id: string }).id);
+            const attRes = await upsertAttrezzaturaForMezzoImport(sb, mezzoId, d);
+            if (!attRes.ok) {
+              await sb.from("mezzi").delete().eq("id", mezzoId);
+              result.stats.errors += 1;
+              result.errors.push({ rowIndex: d.rowIndex, message: attRes.message });
+            } else {
+              result.stats.created += 1;
+            }
           }
         }
       }

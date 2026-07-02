@@ -106,7 +106,7 @@ export function FatturazioneDetailDrawer({
   const canDeleteDraft = canWrite && invoiceIsDeletable(inv.status);
 
   const body = (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h3 className="text-lg font-semibold text-[color:var(--cab-text)]">{invoiceDisplayNumber(inv)}</h3>

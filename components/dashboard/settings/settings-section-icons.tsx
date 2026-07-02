@@ -208,7 +208,9 @@ export const SETTINGS_SECTION_ICONS: Record<SistemaSectionId, SettingsSectionIco
   "tel-tipo": IconNavMezzi,
   "tel-marca": IconAttMarca,
   "tel-modello": IconAttModello,
+  "sys-officina-profilo": IconNavMezzi,
   "sys-economici": IconEconomici,
+  "sys-tkb-kb": IconEconomici,
 };
 
 export function SettingsSectionIcon({

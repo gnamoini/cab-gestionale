@@ -15,13 +15,12 @@ import { subscribeReportDataRefresh } from "@/lib/report/report-broadcast";
 import { useReportViewQueryOpts } from "@/lib/view/view-query-opts";
 import {
   enrichLavorazioneListRowsWithMezzi,
-  mezziRowsToIdMap,
 } from "@/lib/db/dto-mappers";
+import { mezziGestitiToEmbedMap } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import { useMagazzinoListQuery, useMezziListQuery, useMovimentiListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settings-queries";
 import { useReportManualEntriesQuery } from "@/src/hooks/view/use-report-manual-entries";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 
 /** Tutte le lavorazioni non eliminate; mezzo join client-side da anagrafica slim. */
 const LAV_LIST_FILTERS = { includeMezzo: false as const, fetchMode: "report" as const };
@@ -120,13 +119,13 @@ export function useReportLiveData() {
     const rows = lavQuery.data ?? [];
     const needsClientEnrich = rows.some((row) => Boolean(row.mezzo_id?.trim()) && row.mezzo == null);
     if (!needsClientEnrich) return rows;
-    const mezziById = mezziRowsToIdMap(mezziQuery.data ?? []);
+    const mezziById = mezziGestitiToEmbedMap(mezziQuery.data ?? []);
     return enrichLavorazioneListRowsWithMezzi(rows, mezziById);
   }, [lavQuery.data, mezziQuery.data]);
 
   const integrityData = useMemo(() => {
     const magazzino = mapMagazzinoRowsToUI(magQuery.data ?? [], "Sistema", mezziListe);
-    const mezzi = (mezziQuery.data ?? []).map(toMezzoUI);
+    const mezzi = mezziQuery.data ?? [];
     const queryMeta: ReportIntegrityQueryMeta[] = [
       queryMetaForDataset("lavorazioni", lavQuery),
       queryMetaForDataset("magazzino", magQuery),

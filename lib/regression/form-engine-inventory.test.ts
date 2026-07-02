@@ -106,12 +106,6 @@ const INVENTORY: MigrationExpect[] = [
     patterns: [/runButtonSubmit/, /useSubmitLock/],
   },
   {
-    rel: "components/bunder/bunder-editor-modal.tsx",
-    category: "B",
-    migrated: true,
-    patterns: [/runButtonSubmit/, /useSubmitLock/],
-  },
-  {
     rel: "components/design-system/hub-modal-panoramica.tsx",
     category: "B",
     migrated: true,

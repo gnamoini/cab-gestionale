@@ -1,4 +1,4 @@
-import type { DdtDocumentRow, DdtLineRow, DdtLinkRow, PreventivoDdtFulfillmentRow } from "@/src/types/supabase-tables";
+import type { DdtDocumentRow, DdtLineRow, DdtLinkRow, InterventoTargetType, PreventivoDdtFulfillmentRow } from "@/src/types/supabase-tables";
 
 export type DdtStatus = "bozza" | "confermato" | "stampato" | "consegnato" | "annullato";
 
@@ -59,6 +59,9 @@ export type DdtCreateInput = {
   lavorazione_id?: string | null;
   mezzo_id?: string | null;
   mezzo_snapshot?: DdtMezzoSnapshot;
+  target_type?: InterventoTargetType | null;
+  attrezzatura_id?: string | null;
+  attrezzatura_snapshot?: Record<string, unknown>;
   causale_trasporto?: string | null;
   vettore?: string | null;
   note?: string | null;

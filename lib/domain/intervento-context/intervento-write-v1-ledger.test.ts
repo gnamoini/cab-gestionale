@@ -32,7 +32,7 @@ const fields: SchedaIngressoFields = {
   noteIntervento: "",
 };
 
-async function run(): Promise<void> {
+async function testLedgerSkip(): Promise<void> {
   const key = "v1-idem-test";
   clearInterventoWriteLedger(key);
   upsertInterventoWriteLedger(key, { lavorazioneId: "lav-existing", mezzoId: "m-existing" });
@@ -73,6 +73,52 @@ async function run(): Promise<void> {
   assert.equal(persistCalls, 1);
   assert.equal(res.ok && res.lavorazioneId, "lav-existing");
   clearInterventoWriteLedger(key);
+}
+
+async function testCreatePropagatesTarget(): Promise<void> {
+  const key = "v1-target-propagate";
+  clearInterventoWriteLedger(key);
+
+  let capturedTarget: string | undefined;
+  let capturedAttId: string | null | undefined;
+
+  const res = await createInterventoTransaction({
+    fields,
+    idempotencyKey: key,
+    mezziCatalog: [],
+    meta: {
+      statoId: "accettazione",
+      priorita: "media",
+      dataIngressoIso: "2026-06-01T12:00:00.000Z",
+      note: null,
+      createdBy: "tester",
+    },
+    deps: {
+      upsertMezzo: async () => ({
+        mezzoId: "m-new",
+        created: true,
+        updated: false,
+        targetType: "attrezzatura",
+        attrezzaturaId: "b2c3d4e5-f6a7-4890-bcde-f12345678901",
+      }),
+      createLavorazione: async (input) => {
+        capturedTarget = input.target_type;
+        capturedAttId = input.attrezzatura_id;
+        return { id: "lav-new" } as never;
+      },
+      persistScheda: async () => ({ ok: true as const }),
+    },
+  });
+
+  assert.equal(res.ok && res.lavorazioneId, "lav-new");
+  assert.equal(capturedTarget, "attrezzatura");
+  assert.equal(capturedAttId, "b2c3d4e5-f6a7-4890-bcde-f12345678901");
+  clearInterventoWriteLedger(key);
+}
+
+async function run(): Promise<void> {
+  await testLedgerSkip();
+  await testCreatePropagatesTarget();
 }
 
 void run().then(() => {

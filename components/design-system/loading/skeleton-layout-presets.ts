@@ -17,7 +17,6 @@ export const SKELETON_MIN_HEIGHT = {
   kpiRow: "min-h-[4.5rem]",
   settingsNav: "min-h-[12rem]",
   settingsContent: "min-h-[24rem]",
-  bunderList: "min-h-[32rem]",
   loginCard: "min-h-[22rem]",
   modalMd: "min-h-[20rem]",
   modalLg: "min-h-[28rem]",

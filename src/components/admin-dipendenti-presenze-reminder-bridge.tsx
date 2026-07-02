@@ -9,11 +9,9 @@ import {
   isDipendentiNotificationsPath,
   shouldShowLightLavorazioneAlert,
 } from "@/lib/lavorazioni/admin-notifications";
-import {
-  getUnreadCount,
-  loadAdminNotificationStore,
-} from "@/lib/lavorazioni/admin-notification-store";
-import { publishAdminDashboardNotification } from "@/lib/notifications/admin-dashboard-desktop";
+import { loadAdminNotificationStore } from "@/lib/lavorazioni/admin-notification-store";
+import { publishNotification } from "@/lib/notifications/publish-notification";
+import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import {
   buildDipendentiPresenzeReminderNotification,
   DIPENDENTI_PRESENZE_REMINDER_TOAST,
@@ -23,36 +21,36 @@ import {
 } from "@/lib/dipendenti/dipendenti-presenze-reminder";
 import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
 import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
-import { usePermissions } from "@/src/hooks/use-permissions";
+import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
+import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 
 const CHECK_INTERVAL_MS = 60_000;
 
-function applyUnreadDocumentTitle(userId: string): void {
-  if (typeof document === "undefined") return;
-  const count = getUnreadCount(loadAdminNotificationStore(userId));
-  if (count <= 0) return;
-  const base = document.title.replace(/^\(\d+\+?\)\s*/, "");
-  document.title = `(${count}) ${base}`;
-}
-
 /**
- * Promemoria admin: alle 17:00 nei giorni feriali, se non ci sono presenze per oggi.
+ * Promemoria: alle 17:00 nei giorni feriali, se non ci sono presenze per oggi.
  */
 export function AdminDipendentiPresenzeReminderBridge() {
   const { user } = useAuth();
-  const { isAdmin, isLoading } = usePermissions();
+  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
+  const { mode, writesLegacy } = useNotificationsV2Mode();
   const pathname = usePathname() ?? "";
   const { push } = useToastContext();
   const checkInFlightRef = useRef(false);
 
+  const staffEligible =
+    !permsLoading &&
+    isStaffInboxEligible(snapshot ? { ruolo: snapshot.role } : user, snapshot?.rbacContext);
+
   const runCheck = useCallback(async () => {
     const userId = user?.id;
-    if (!isAdmin || !userId || checkInFlightRef.current) return;
+    if (!staffEligible || !userId || checkInFlightRef.current) return;
     if (!shouldRunDipendentiPresenzeReminderCheck()) return;
 
     const today = todayDateYmd();
-    const store = loadAdminNotificationStore(userId);
-    if (store.items[dipendentiPresenzeReminderStoreKey(today)]) return;
+    if (writesLegacy) {
+      const store = loadAdminNotificationStore(userId);
+      if (store.items[dipendentiPresenzeReminderStoreKey(today)]) return;
+    }
 
     checkInFlightRef.current = true;
     try {
@@ -61,9 +59,7 @@ export function AdminDipendentiPresenzeReminderBridge() {
       if (hasAnyPresenzeRecorded(res.data ?? [])) return;
 
       const notification = buildDipendentiPresenzeReminderNotification(today);
-      void publishAdminDashboardNotification(userId, notification).then(() => {
-        applyUnreadDocumentTitle(userId);
-      });
+      await publishNotification(userId, notification, mode);
 
       if (isDashboardNotificationsPath(pathname)) return;
 
@@ -73,20 +69,20 @@ export function AdminDipendentiPresenzeReminderBridge() {
     } finally {
       checkInFlightRef.current = false;
     }
-  }, [isAdmin, pathname, push, user?.id]);
+  }, [mode, pathname, push, staffEligible, user?.id, writesLegacy]);
 
   useEffect(() => {
-    if (!isAdmin || isLoading || !user?.id) return;
+    if (!staffEligible || permsLoading || !user?.id) return;
     void runCheck();
     const id = window.setInterval(() => void runCheck(), CHECK_INTERVAL_MS);
     return () => window.clearInterval(id);
-  }, [isAdmin, isLoading, runCheck, user?.id]);
+  }, [permsLoading, runCheck, staffEligible, user?.id]);
 
   useEffect(() => {
-    if (!isAdmin || isLoading || !user?.id) return;
+    if (!staffEligible || permsLoading || !user?.id) return;
     if (!isDipendentiNotificationsPath(pathname)) return;
     void runCheck();
-  }, [isAdmin, isLoading, pathname, runCheck, user?.id]);
+  }, [pathname, permsLoading, runCheck, staffEligible, user?.id]);
 
   return null;
 }

@@ -3,6 +3,21 @@ import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni
 import type { LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
 import type { SchedaIngressoFields } from "@/types/schede";
 
+export type InterventoTargetType = "telaio" | "attrezzatura";
+
+export type AttrezzaturaSnapshot = {
+  id: string | null;
+  marca: string;
+  modello: string;
+  matricola: string;
+  present: boolean;
+};
+
+export type InterventoTargetSnapshot = {
+  targetType: InterventoTargetType;
+  attrezzatura: AttrezzaturaSnapshot;
+};
+
 export type InterventoSourceOfTruth = "scheda" | "lavorazione" | "mezzo";
 
 export type InterventoIdent = {
@@ -59,6 +74,7 @@ export type InterventoContext = {
   lavorazione: LavorazioneSnapshot;
   schedaIngresso: SchedaIngressoSnapshot;
   ident: InterventoIdent;
+  target: InterventoTargetSnapshot;
   meta: InterventoContextMeta;
 };
 
@@ -89,11 +105,13 @@ export type InterventoContextInputs = {
   ingressoCampi?: SchedaIngressoFields | null;
   ingressoSorgente?: "generata" | "file_esterno" | null;
   ingressoUpdatedAt?: string | null;
+  attrezzaturaRow?: import("@/src/types/supabase-tables").AttrezzaturaRow | null;
 };
 
 export type InterventoContextFetchDeps = {
   getLavorazioneById: (id: string) => Promise<LavorazioneRow | null>;
   getMezzoById: (id: string) => Promise<MezzoRow | null>;
+  fetchAttrezzaturesForMezzo: (mezzoId: string) => Promise<import("@/src/types/supabase-tables").AttrezzaturaRow[]>;
   fetchSchedeBundle: (lavorazioneId: string) => Promise<{
     ingresso: {
       campi: SchedaIngressoFields;

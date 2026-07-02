@@ -17,10 +17,10 @@ export function setObsContext(partial: Partial<LogContext>): void {
 /** Deriva operation da pathname (prefisso route). */
 export function operationFromRoute(pathname: string): ObsOperation {
   const path = pathname.split("?")[0]?.replace(/\/+$/, "") || "/";
-  if (path.startsWith("/dashboard/security") || path.startsWith("/login")) return "auth";
+  if (path.startsWith("/sicurezza") || path.startsWith("/login")) return "auth";
   if (path.startsWith("/report")) return "report";
   if (path.startsWith("/documenti")) return "documenti";
-  if (path.startsWith("/lavorazioni") || path.startsWith("/preventivi") || path.startsWith("/magazzino") || path.startsWith("/mezzi") || path.startsWith("/bunder")) {
+  if (path.startsWith("/lavorazioni") || path.startsWith("/preventivi") || path.startsWith("/magazzino") || path.startsWith("/mezzi")) {
     return "crud";
   }
   if (path.startsWith("/impostazioni")) return "system";

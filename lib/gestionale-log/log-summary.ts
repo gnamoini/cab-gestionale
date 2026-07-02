@@ -212,8 +212,6 @@ export function entityKindLabel(entita: string): string {
       return "SICUREZZA";
     case "dipendenti":
       return "TIMESHEET DIPENDENTE";
-    case "bunder_documents":
-      return "DOCUMENTO BUNDER";
     case "invoices":
       return "FATTURA";
     case "ddt_documents":
@@ -320,11 +318,6 @@ function buildOggettoFromRecord(entita: string, raw: Record<string, unknown>): s
     }
     case "profiles":
       return formatTitleCasePhrase(pickStr(raw, ["nome", "email"]) || "Utente");
-    case "bunder_documents": {
-      const numero = pickStr(raw, ["numero_progressivo"]);
-      const dest = formatTitleCasePhrase(pickStr(raw, ["azienda_destinatario"]));
-      return joinOggetto([numero, dest]);
-    }
     case "dipendenti": {
       const nome = formatTitleCasePhrase(pickStr(raw, ["employee_display_name_snapshot"]));
       const data = pickStr(raw, ["work_date"]);

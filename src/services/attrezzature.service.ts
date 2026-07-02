@@ -1,0 +1,215 @@
+"use client";
+
+import { ATTREZZATURE_COLUMNS } from "@/lib/db/table-select-columns";
+import { resolveAssetLifecycleV1EnabledClient } from "@/lib/officina/resolve-asset-lifecycle-v1-client";
+import { isAssetLifecycleSubFlagActive } from "@/lib/officina/asset-lifecycle-v1-flag";
+import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
+import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
+import { auditContext, auditDiff, auditSnapshot, writeModificaLog } from "@/src/services/internal/audit-log";
+import { err, success, type ServiceResult } from "@/src/services/service-result";
+import type { AssignmentChangeReason, AttrezzaturaRow } from "@/src/types/supabase-tables";
+import { humanizeGestionaleError } from "@/src/utils/gestionale-error-messages";
+import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
+
+const ENTITA = "attrezzature";
+
+export type AttrezzaturaInsert = Omit<AttrezzaturaRow, "id" | "created_at" | "updated_at" | "created_by"> & {
+  created_by?: string | null;
+};
+export type AttrezzaturaUpdate = Partial<Omit<AttrezzaturaInsert, "mezzo_id">> & {
+  mezzo_id?: string;
+};
+
+async function sb() {
+  return getBrowserSupabase();
+}
+
+function oggettoAttrezzatura(r: AttrezzaturaRow) {
+  const parts = [r.marca?.trim(), r.modello?.trim(), r.matricola?.trim()].filter(Boolean);
+  return parts.length ? auditContext(parts.join(" ")) : undefined;
+}
+
+async function openAssignmentIfEnabled(
+  client: Awaited<ReturnType<typeof sb>>,
+  attrezzaturaId: string,
+  mezzoId: string,
+  reason: AssignmentChangeReason = "installazione",
+): Promise<void> {
+  const flags = resolveAssetLifecycleV1EnabledClient();
+  if (!isAssetLifecycleSubFlagActive(flags, "assignment_history")) return;
+  const { data: user } = await client.auth.getUser();
+  await client.rpc("open_attrezzatura_assignment", {
+    p_attrezzatura_id: attrezzaturaId,
+    p_mezzo_id: mezzoId,
+    p_change_reason: reason,
+    p_actor_id: user.user?.id ?? null,
+  });
+}
+
+export const attrezzatureService = {
+  async listByMezzo(mezzoId: string): Promise<ServiceResult<AttrezzaturaRow[]>> {
+    const allowed = await ensureSectionRead("mezzi");
+    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+    try {
+      const client = await sb();
+      const { data, error } = await client
+        .from("attrezzature")
+        .select(ATTREZZATURE_COLUMNS)
+        .eq("mezzo_id", mezzoId)
+        .order("created_at", { ascending: true });
+      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "read" }));
+      return success((data ?? []) as AttrezzaturaRow[]);
+    } catch (e) {
+      return serviceFailFromError<AttrezzaturaRow[]>(e, [], { entity: "mezzo", action: "read" });
+    }
+  },
+
+  async getById(id: string): Promise<ServiceResult<AttrezzaturaRow | null>> {
+    const allowed = await ensureSectionRead("mezzi");
+    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+    try {
+      const client = await sb();
+      const { data, error } = await client
+        .from("attrezzature")
+        .select(ATTREZZATURE_COLUMNS)
+        .eq("id", id)
+        .maybeSingle();
+      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "read" }));
+      return success((data as AttrezzaturaRow | null) ?? null);
+    } catch (e) {
+      return serviceFailFromError<AttrezzaturaRow | null>(e, null, { entity: "mezzo", action: "read" });
+    }
+  },
+
+  async findByMatricola(mezzoId: string, matricola: string): Promise<ServiceResult<AttrezzaturaRow | null>> {
+    const m = matricola.trim();
+    if (!m) return success(null);
+    const allowed = await ensureSectionRead("mezzi");
+    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+    try {
+      const client = await sb();
+      const { data, error } = await client
+        .from("attrezzature")
+        .select(ATTREZZATURE_COLUMNS)
+        .eq("mezzo_id", mezzoId)
+        .eq("matricola", m)
+        .maybeSingle();
+      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "read" }));
+      return success((data as AttrezzaturaRow | null) ?? null);
+    } catch (e) {
+      return serviceFailFromError<AttrezzaturaRow | null>(e, null, { entity: "mezzo", action: "read" });
+    }
+  },
+
+  async create(data: AttrezzaturaInsert): Promise<ServiceResult<AttrezzaturaRow>> {
+    const allowed = await ensurePermission("editVehicles");
+    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+    try {
+      const client = await sb();
+      const { data: user } = await client.auth.getUser();
+      const payload = { ...data, created_by: user.user?.id ?? null };
+      const { data: row, error } = await client.from("attrezzature").insert(payload).select(ATTREZZATURE_COLUMNS).single();
+      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "create" }));
+      const r = row as AttrezzaturaRow;
+      await openAssignmentIfEnabled(client, r.id, r.mezzo_id, "installazione");
+      await writeModificaLog(client, {
+        entita: ENTITA,
+        entita_id: r.id,
+        azione: "CREATE",
+        payload: auditSnapshot(r, oggettoAttrezzatura(r)),
+      });
+      return success(r);
+    } catch (e) {
+      return serviceFailFromError<AttrezzaturaRow>(e, null as never, { entity: "mezzo", action: "create" });
+    }
+  },
+
+  async update(id: string, patch: AttrezzaturaUpdate): Promise<ServiceResult<AttrezzaturaRow>> {
+    const allowed = await ensurePermission("editVehicles");
+    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+    try {
+      const client = await sb();
+      const beforeRes = await this.getById(id);
+      if (!beforeRes.success || !beforeRes.data) {
+        return err(beforeRes.error ?? "Attrezzatura non trovata.");
+      }
+      const before = beforeRes.data;
+
+      if (patch.mezzo_id != null && patch.mezzo_id !== before.mezzo_id) {
+        const flags = resolveAssetLifecycleV1EnabledClient();
+        if (isAssetLifecycleSubFlagActive(flags, "assignment_history")) {
+          const { data: user } = await client.auth.getUser();
+          const { data: row, error } = await client.rpc("reassign_attrezzatura_mezzo", {
+            p_attrezzatura_id: id,
+            p_new_mezzo_id: patch.mezzo_id,
+            p_change_reason: "spostamento",
+            p_actor_id: user.user?.id ?? null,
+          });
+          if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "update" }));
+          const { mezzo_id: _drop, ...rest } = patch;
+          if (Object.keys(rest).length === 0) {
+            const updated = row as AttrezzaturaRow;
+            await writeModificaLog(client, {
+              entita: ENTITA,
+              entita_id: id,
+              azione: "UPDATE",
+              payload: auditDiff(before, updated, oggettoAttrezzatura(updated)),
+            });
+            return success(updated);
+          }
+          patch = rest;
+        }
+      }
+
+      const { data: row, error } = await client
+        .from("attrezzature")
+        .update(patch)
+        .eq("id", id)
+        .select(ATTREZZATURE_COLUMNS)
+        .single();
+      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "update" }));
+      const r = row as AttrezzaturaRow;
+      await writeModificaLog(client, {
+        entita: ENTITA,
+        entita_id: id,
+        azione: "UPDATE",
+        payload: auditDiff(before, r, oggettoAttrezzatura(r)),
+      });
+      return success(r);
+    } catch (e) {
+      return serviceFailFromError<AttrezzaturaRow>(e, null as never, { entity: "mezzo", action: "update" });
+    }
+  },
+
+  async remove(id: string): Promise<ServiceResult<void>> {
+    const allowed = await ensurePermission("editVehicles");
+    if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
+    try {
+      const client = await sb();
+      const beforeRes = await this.getById(id);
+      const before = beforeRes.data;
+      const flags = resolveAssetLifecycleV1EnabledClient();
+      if (before && isAssetLifecycleSubFlagActive(flags, "assignment_history")) {
+        await client.rpc("close_attrezzatura_assignment", {
+          p_attrezzatura_id: id,
+          p_change_reason: "smontaggio",
+        });
+      }
+      const { error } = await client.from("attrezzature").delete().eq("id", id);
+      if (error) return err(humanizeGestionaleError(error.message, { entity: "mezzo", action: "delete" }));
+      if (before) {
+        await writeModificaLog(client, {
+          entita: ENTITA,
+          entita_id: id,
+          azione: "DELETE",
+          payload: auditSnapshot(before, oggettoAttrezzatura(before)),
+        });
+      }
+      return success(undefined);
+    } catch (e) {
+      return serviceFailFromError<void>(e, undefined, { entity: "mezzo", action: "delete" });
+    }
+  },
+};
+
+export { ENTITA as ATTREZZATURE_ENTITA };

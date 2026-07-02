@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { armSelectorGhostClickGuard } from "@/lib/selector-interaction/suppress-selector-ghost-click";
 import { CloseButton } from "@/components/design-system";
+import { useDropdownFocusRestore } from "@/lib/ui/use-dropdown-focus-restore";
 import {
   CAB_MODAL_ROOT_ATTR,
   CAB_STICKY_HEADER_ATTR,
@@ -20,6 +21,13 @@ const sheetBackdropClass =
 const sheetPanelClass =
   "relative z-[1] flex w-full max-h-[min(92%,100%)] min-h-0 touch-auto flex-col overflow-hidden rounded-t-[var(--ds-radius-xl)] border border-b-0 border-[color:var(--cab-border)] bg-[var(--cab-card)] pb-[env(safe-area-inset-bottom)] shadow-[var(--cab-shadow-lg)] animate-[gestionale-sheet-in_280ms_cubic-bezier(0.22,1,0.36,1)]";
 
+function shouldSkipSheetEscape(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tag = target.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable) return true;
+  return false;
+}
+
 export function GestionaleMobileBottomSheet({
   open,
   onRequestClose,
@@ -32,6 +40,8 @@ export function GestionaleMobileBottomSheet({
   layerClassName,
   panelRef,
   className = "",
+  closeOnEscape = true,
+  restoreFocusRef,
 }: {
   open: boolean;
   onRequestClose: () => void;
@@ -45,14 +55,48 @@ export function GestionaleMobileBottomSheet({
   layerClassName?: string;
   panelRef?: RefObject<HTMLDivElement | null>;
   className?: string;
+  closeOnEscape?: boolean;
+  restoreFocusRef?: RefObject<HTMLElement | null>;
 }) {
   const prevOpenRef = useRef(open);
+  const innerPanelRef = useRef<HTMLDivElement | null>(null);
+
+  function assignPanelRef(node: HTMLDivElement | null) {
+    innerPanelRef.current = node;
+    if (panelRef) panelRef.current = node;
+  }
+  const { restoreFocus } = useDropdownFocusRestore(open);
+
   useEffect(() => {
     if (prevOpenRef.current && !open) {
       armSelectorGhostClickGuard();
+      restoreFocus();
+      restoreFocusRef?.current?.focus({ preventScroll: true });
     }
     prevOpenRef.current = open;
-  }, [open]);
+  }, [open, restoreFocus, restoreFocusRef]);
+
+  useEffect(() => {
+    if (!open || !closeOnEscape) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key !== "Escape") return;
+      if (shouldSkipSheetEscape(e.target)) return;
+      armSelectorGhostClickGuard();
+      onRequestClose();
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open, closeOnEscape, onRequestClose]);
+
+  useEffect(() => {
+    if (!open) return;
+    const id = window.requestAnimationFrame(() => {
+      const root = panelRef?.current ?? innerPanelRef.current;
+      const btn = root?.querySelector('button[aria-label="Chiudi"]');
+      if (btn instanceof HTMLButtonElement) btn.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [open, panelRef]);
 
   const requestClose = () => {
     armSelectorGhostClickGuard();
@@ -81,7 +125,7 @@ export function GestionaleMobileBottomSheet({
         }}
       />
       <div
-        ref={panelRef}
+        ref={assignPanelRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}

@@ -41,7 +41,7 @@ Checklist master per il rollout reale del gestionale CAB. Usare insieme alle che
 ### Fase 2 — Operatori (5–10 utenti)
 
 - [ ] Onboarding per modulo (magazzino, lavorazioni, mezzi, …)
-- [ ] Verificare RBAC operatore su route sensibili (`/impostazioni`, `/dashboard/security`)
+- [ ] Verificare RBAC operatore su route sensibili (`/impostazioni`, `/sicurezza`)
 - [ ] Test mobile su dispositivi reali (iOS/Android)
 - [ ] Nessun report di hydration mismatch o log storm
 

@@ -54,10 +54,3 @@ export function dispatchDocumentiLogRefresh(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new Event(CAB_DOCUMENTI_LOG_REFRESH));
 }
-
-export const CAB_BUNDER_LOG_REFRESH = "cab-bunder-log-refresh";
-
-export function dispatchBunderLogRefresh(): void {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new Event(CAB_BUNDER_LOG_REFRESH));
-}

@@ -54,6 +54,14 @@ export type PreventivoRecord = {
   marcaTelaio: string;
   modelloTelaio: string;
   km: string;
+  /** Migrazione mezzo + attrezzature. */
+  targetType?: "telaio" | "attrezzatura";
+  attrezzaturaId?: string | null;
+  attrezzaturaMarca?: string;
+  attrezzaturaModello?: string;
+  attrezzaturaMatricola?: string;
+  /** Snapshot immutabile attrezzatura al momento emissione. */
+  attrezzaturaSnapshot?: import("@/lib/domain/mezzo-attrezzatura/create-attrezzatura-snapshot").AttrezzaturaDocumentSnapshot;
   livelloCarburante: string;
   richiedente: string;
   descrizioneLavorazioniCliente: string;
@@ -61,6 +69,10 @@ export type PreventivoRecord = {
   descrizioneLavorazioniTecnicaSorgente: string;
   /** Prima bozza cliente-friendly generata automaticamente. */
   descrizioneGenerataAuto: string;
+  /** FK logica generazione Description Engine. */
+  descriptionGenerationId?: string;
+  /** Meta aggregata generazione (provenance in tabella dedicata). */
+  descriptionEngineMeta?: import("@/lib/preventivi/description-engine/types").DescriptionEngineMeta;
   righeRicambi: PreventivoRigaRicambio[];
   manodopera: PreventivoManodopera;
   /** Voce obbligatoria qty 1 — prezzo opzionale. */

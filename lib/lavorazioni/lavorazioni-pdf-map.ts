@@ -1,3 +1,5 @@
+import { composeInterventoContextFromListRow } from "@/lib/domain/intervento-context/build-intervento-context";
+import { resolveInterventoOggettoDisplay } from "@/lib/domain/mezzo-attrezzatura/intervento-oggetto-display";
 import { formatIdentificazionePdfCell } from "@/lib/lavorazioni/lavorazioni-pdf-format";
 import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { prioritaLabel } from "@/lib/lavorazioni/lavorazioni-pill-styles";
@@ -17,10 +19,8 @@ export type LavorazioniPdfMapContext = {
 };
 
 function mezzoLabel(row: LavorazioneListRow): string {
-  const m = row.mezzo;
-  if (!m) return "—";
-  const parts = [m.marca, m.modello].map((p) => (p ?? "").trim()).filter(Boolean);
-  return parts.length ? parts.join(" ") : "—";
+  const ctx = composeInterventoContextFromListRow(row);
+  return resolveInterventoOggettoDisplay(ctx).label.trim() || "—";
 }
 
 function clienteFromRow(row: LavorazioneListRow): string {

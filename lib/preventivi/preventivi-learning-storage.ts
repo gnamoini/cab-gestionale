@@ -1,4 +1,5 @@
 import { PREVENTIVI_LEARNING_STORAGE_KEY } from "@/lib/preventivi/constants";
+import { queueDescriptionSuggestion } from "@/lib/preventivi/description-engine/learning-suggestions";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 
 export type PreventivoLearningStore = {
@@ -165,7 +166,14 @@ export function recordPreventivoDescriptionLearning(p: PreventivoRecord): void {
   const cliente = p.descrizioneLavorazioniCliente.trim();
   if (!tech || !cliente) return;
   if (cliente !== p.descrizioneGenerataAuto) {
-    recordDescriptionCorrection(tech, cliente);
+    queueDescriptionSuggestion({
+      preventivoId: p.id,
+      technicalSourceNorm: normPhrase(tech),
+      suggestedFrom: p.descrizioneGenerataAuto,
+      suggestedTo: cliente,
+      suggestionType: "full_mapping",
+      createdBy: p.lastEditedBy,
+    });
     recordLineLevelPhraseMap(p);
   }
   recordApprovedPreventivoVersion(p);

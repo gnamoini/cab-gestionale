@@ -115,7 +115,7 @@ async function loadPublicUserFromSessionUser(sessionUser: User): Promise<PublicA
   const sb = getBrowserSupabase();
   const { data: row, error } = await sb
     .from("profiles")
-    .select("nome, ruolo, cliente_ref")
+    .select("nome, cognome, username, ruolo, cliente_ref, created_at")
     .eq("id", sessionUser.id)
     .maybeSingle();
   if (error) {

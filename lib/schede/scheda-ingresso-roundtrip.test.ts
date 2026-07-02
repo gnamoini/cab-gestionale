@@ -6,6 +6,12 @@ import { bundleToSchedaPayloads } from "@/lib/schede/schede-db-mapper";
 import { clampSchedeBundle } from "@/lib/validation/clamp-free-text";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
 import { TEXT_EXTRA, TEXT_LONG } from "@/lib/validation/text-field-limits";
+import {
+  applySchedaIngressoTypedFields,
+  copySchedaIngressoFieldFromClient,
+  isSchedaIngressoFieldEmpty,
+  type SchedaIngressoStringKey,
+} from "@/lib/schede/scheda-ingresso-typed-fields";
 import type { LavorazioneSchedeBundle, SchedaIngressoFields } from "@/types/schede";
 
 const MULTILINE_ANOMALIA = "Riga 1\nRiga 2\n\nRiga 4 àèù & < > \" '";
@@ -44,10 +50,11 @@ function normalizeSchedaIngressoFields(
   const base = emptySchedaIngressoFields(addettoDefault);
   if (!raw) return base;
   const out = { ...base };
-  for (const key of Object.keys(base) as (keyof SchedaIngressoFields)[]) {
+  for (const key of Object.keys(base) as SchedaIngressoStringKey[]) {
     const v = raw[key];
     if (v !== undefined && v !== null) out[key] = String(v);
   }
+  applySchedaIngressoTypedFields(out, raw);
   return out;
 }
 

@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { documentiService } from "@/src/services/documenti.service";
 import { useDocumentiListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
-import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { deleteDocumentoStoragePath } from "@/lib/documenti/delete-documento-fully";
 import {
   gestionaleToDocumentoInsert,
@@ -382,7 +382,7 @@ export function DocumentiView() {
   const mezziQuery = useMezziListQuery();
   const documentiQuery = useDocumentiListQuery();
   const documentiInitialLoading = documentiQuery.isLoading && documentiQuery.data === undefined;
-  const mezziSnap = useMemo(() => (mezziQuery.data ?? []).map(toMezzoUI), [mezziQuery.data]);
+  const mezziSnap = mezziQuery.data ?? [];
   const { runUpload, isUploading: docUploadInFlight } = useUploadFeedback();
   const [docMutating, setDocMutating] = useState(false);
   const docBusy = docMutating || docUploadInFlight;

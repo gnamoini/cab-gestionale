@@ -1,18 +1,36 @@
 import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
-import { documentoRowToGestionale, toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { documentoRowToGestionale, mezzoGestitoFromRow } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { documentiService } from "@/src/services/documenti.service";
 import { mezziService } from "@/src/services/mezzi.service";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import type { DocumentoRow, MezzoRow } from "@/src/types/supabase-tables";
 
 export type LavorazioneDocumentiSliceOpts = {
-  /** Mezzo già in cache (lista/hub) — abilita fetch documenti in parallelo al getById. */
+  /** Mezzo già in cache (lista/hub) — embed arricchito con attrezzatura. */
   mezzoHint?: MezzoRow | null;
+  attrezzaturaId?: string | null;
 };
+
+async function resolveMezzoGestitoForDocumenti(
+  mezzoId: string,
+  opts?: LavorazioneDocumentiSliceOpts,
+): Promise<ServiceResult<ReturnType<typeof mezzoGestitoFromRow>>> {
+  const hint = opts?.mezzoHint;
+  const hintMarca = hint?.marca?.trim();
+  if (hint && hintMarca && hintMarca !== "—") {
+    return success(
+      mezzoGestitoFromRow(hint, { attrezzaturaId: opts?.attrezzaturaId }),
+    );
+  }
+  const gestitoRes = await mezziService.getGestitoById(mezzoId);
+  if (!gestitoRes.success || !gestitoRes.data) {
+    return err(gestitoRes.error ?? "Mezzo non trovato");
+  }
+  return success(gestitoRes.data);
+}
 
 /**
  * Documenti compatibili marca/modello per lavorazione.
- * Con `mezzoHint` (marca nota): `getById` ∥ `getAll(marca)` → −1 RTT vs catena sequenziale.
  */
 export async function fetchLavorazioneDocumentiSlice(
   mezzoId: string,
@@ -21,31 +39,15 @@ export async function fetchLavorazioneDocumentiSlice(
   const id = mezzoId.trim();
   if (!id) return success([]);
 
-  const hint = opts?.mezzoHint;
-  const hintMarca = hint?.marca?.trim() ?? "";
-
-  if (hint && hintMarca) {
-    const mezzoG = toMezzoUI(hint);
-    const [mezzoRes, docRes] = await Promise.all([
-      mezziService.getById(id),
-      documentiService.getAll({ marca: hintMarca }),
-    ]);
-    if (!mezzoRes.success || !mezzoRes.data) return err(mezzoRes.error ?? "Mezzo non trovato");
-    if (!docRes.success) return docRes;
-    const filtered = (docRes.data ?? []).filter((row) =>
-      documentoMatchesMarcaModello(documentoRowToGestionale(row), mezzoG.marca, mezzoG.modello),
-    );
-    return success(filtered);
-  }
-
-  const mezzoRes = await mezziService.getById(id);
+  const mezzoRes = await resolveMezzoGestitoForDocumenti(id, opts);
   if (!mezzoRes.success || !mezzoRes.data) return err(mezzoRes.error ?? "Mezzo non trovato");
-  const mezzoG = toMezzoUI(mezzoRes.data);
+  const mezzoG = mezzoRes.data;
   const marca = mezzoG.marca.trim();
-  if (!marca) return success([]);
-  const res = await documentiService.getAll({ marca });
-  if (!res.success) return res;
-  const filtered = (res.data ?? []).filter((row) =>
+  if (!marca || marca === "—") return success([]);
+
+  const docRes = await documentiService.getAll({ marca });
+  if (!docRes.success) return docRes;
+  const filtered = (docRes.data ?? []).filter((row) =>
     documentoMatchesMarcaModello(documentoRowToGestionale(row), mezzoG.marca, mezzoG.modello),
   );
   return success(filtered);

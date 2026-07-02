@@ -200,6 +200,7 @@ export function SecurityUsersPermissionsPanel({ readOnly = false, sharedUsersQ }
 
     setSaving(true);
     try {
+      // ponytail: batch Option B — fail-fast per patch; draft locale preservato (no syncFromServer su errore).
       const res = await batchUpdateSecurityUsersAction(patches);
       if (!res.ok) {
         gestToast.error(res.message);

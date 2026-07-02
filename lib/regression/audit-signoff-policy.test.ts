@@ -80,7 +80,6 @@ const E2E_SPECS = [
   "e2e/smoke/05-document-lifecycle.spec.ts",
   "e2e/smoke/06-mobile-shell.spec.ts",
   "e2e/smoke/07-hydration-runtime.spec.ts",
-  "e2e/smoke/08-bunder.spec.ts",
   "e2e/smoke/09-dipendenti.spec.ts",
   "e2e/smoke/10-preventivi.spec.ts",
   "e2e/smoke/11-client-portal.spec.ts",
@@ -107,7 +106,7 @@ assert.match(smokeRegression, /smoke-regression-lists/);
 assert.match(smokeRegression, /--core/);
 
 const migrations = [
-  "supabase/migrations/20260704120000_bunder_documents.sql",
+  "supabase/migrations/20260901140000_drop_bunder_module.sql",
   "supabase/migrations/20260704130000_deprecate_supporto_tables.sql",
   "supabase/migrations/20260705120000_gestionale_sync_realtime_gaps.sql",
 ] as const;

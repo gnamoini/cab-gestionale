@@ -3,7 +3,6 @@
  */
 import assert from "node:assert/strict";
 import {
-  canAccessBunder,
   resolveModuleAccess,
   roleModuleDefault,
   resolveCanonicalRole,
@@ -68,15 +67,6 @@ assert.equal(
   }),
   false,
 );
-
-// bunder hard gate (not module)
-assert.equal(canAccessBunder("admin", "write"), true);
-assert.equal(canAccessBunder("manager", "read"), true);
-assert.equal(canAccessBunder("guest", "read"), true);
-assert.equal(canAccessBunder("guest", "write"), false);
-assert.equal(canAccessBunder("operatore", "read"), false);
-assert.equal(canAccessBunder("addetto_amministrativo", "read"), false);
-assert.equal(canAccessBunder("cliente", "read"), false);
 
 // legacy commerciale → addetto
 assert.equal(resolveCanonicalRole("commerciale"), "addetto_amministrativo");

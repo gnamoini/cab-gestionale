@@ -90,12 +90,25 @@ export function generateDdtPdfBytes(
   }
 
   const mezzo = d.mezzo_snapshot as Record<string, unknown>;
+  const attSnap = (d.attrezzatura_snapshot ?? {}) as Record<string, unknown>;
+  const targetType = d.target_type ?? (attSnap.marca || attSnap.modello ? "attrezzatura" : null);
   const mezzoParts = [
     mezzo.targa ? `Targa ${mezzo.targa}` : null,
     mezzo.matricola ? `Matricola ${mezzo.matricola}` : null,
     mezzo.telaio ? `Telaio ${mezzo.telaio}` : null,
-    mezzo.attrezzatura ? String(mezzo.attrezzatura) : null,
   ].filter(Boolean);
+  if (targetType === "attrezzatura") {
+    const attLabel = [attSnap.marca, attSnap.modello, attSnap.matricola].filter(Boolean).map(String).join(" ");
+    if (attLabel) mezzoParts.push(`Attrezzatura ${attLabel}`);
+  } else if (targetType === "telaio") {
+    const tel = [mezzo.marca_telaio ?? mezzo.marca, mezzo.modello_telaio ?? mezzo.modello]
+      .filter(Boolean)
+      .map(String)
+      .join(" ");
+    if (tel) mezzoParts.push(`Telaio ${tel}`);
+  } else if (mezzo.attrezzatura) {
+    mezzoParts.push(String(mezzo.attrezzatura));
+  }
   if (mezzoParts.length) {
     doc.text(`Mezzo: ${mezzoParts.join(" · ")}`, 14, y);
     y += 5;

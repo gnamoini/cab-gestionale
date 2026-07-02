@@ -25,8 +25,13 @@ export type SchedaMeta = {
   fileEsterno: SchedaFileEsterno | null;
 };
 
+export type InterventoTargetTypeScheda = "telaio" | "attrezzatura";
+
 /** SCHEDA INGRESSO — campi officina. */
 export type SchedaIngressoFields = {
+  /** Target intervento (migrazione mezzo + attrezzature). */
+  targetType?: InterventoTargetTypeScheda;
+  attrezzaturaId?: string | null;
   dataIngresso: string;
   cliente: string;
   cantiere: string;

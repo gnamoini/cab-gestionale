@@ -17,6 +17,7 @@ import type { PreventivoRecord } from "@/lib/preventivi/types";
 import { lavorazioneListRowToAttiva } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import { lavorazioneMatchesMezzo, normMezzoKey } from "@/lib/mezzi/lavorazioni-sync";
 import type { MezzoGestito } from "@/lib/mezzi/types";
+import { mezzoGestitoToEmbedRow } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import { findMezzoForLavorazione } from "@/lib/schede/schede-autofill";
 import {
   cabSyncEventForEntity,
@@ -25,8 +26,7 @@ import {
 import { preventiviService } from "@/src/services/preventivi.service";
 import type { PreventiviFilters } from "@/src/services/preventivi.service";
 import { lavorazioniService, type LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { MezzoRow, PreventivoRow } from "@/src/types/supabase-tables";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import type { PreventivoRow } from "@/src/types/supabase-tables";
 
 export const PREVENTIVI_CONCURRENCY_CONFLICT =
   "Un altro utente ha aggiornato questo preventivo. Ricarica e riprova.";
@@ -57,31 +57,30 @@ function notifyPreventiviMutation(
 
 async function resolveMezzoIdForRecord(
   record: PreventivoRecord,
-  mezziRows: readonly MezzoRow[],
+  mezziGestiti: readonly MezzoGestito[],
 ): Promise<string | null> {
   const stored = (record as unknown as { mezzoId?: string }).mezzoId;
   if (typeof stored === "string" && isPreventivoUuid(stored)) return stored;
-
-  const gestiti: MezzoGestito[] = mezziRows.map((r) => toMezzoUI(r));
 
   if (isPreventivoUuid(record.lavorazioneId)) {
     const lavRes = await lavorazioniService.getById(record.lavorazioneId);
     if (lavRes.success && lavRes.data) {
       const row = lavRes.data;
       if (row.mezzo_id && isPreventivoUuid(row.mezzo_id)) return row.mezzo_id;
-      const mezzoRow = mezziRows.find((m) => m.id === row.mezzo_id) ?? null;
+      const mezzoEmbed = mezziGestiti.find((m) => m.id === row.mezzo_id);
+      const mezzoRow = mezzoEmbed ? mezzoGestitoToEmbedRow(mezzoEmbed) : null;
       const listRow = { ...row, mezzo: mezzoRow } as LavorazioneListRow;
       const lav = lavorazioneListRowToAttiva(listRow);
-      const m = findMezzoForLavorazione(gestiti, lav);
+      const m = findMezzoForLavorazione([...mezziGestiti], lav);
       if (m?.id && isPreventivoUuid(m.id)) return m.id;
-      const hit = gestiti.find((g) => lavorazioneMatchesMezzo(g, lav));
+      const hit = mezziGestiti.find((g) => lavorazioneMatchesMezzo(g, lav));
       if (hit?.id && isPreventivoUuid(hit.id)) return hit.id;
     }
   }
 
   const clienteKey = normMezzoKey(record.cliente);
   if (clienteKey) {
-    const byCliente = mezziRows.find((m) => normMezzoKey(m.cliente) === clienteKey);
+    const byCliente = mezziGestiti.find((m) => normMezzoKey(m.cliente) === clienteKey);
     if (byCliente?.id) return byCliente.id;
   }
 
@@ -125,16 +124,21 @@ async function resolveExistingPreventivoRow(
   return { row: hit };
 }
 
+function mezzoEmbedForId(mezziGestiti: readonly MezzoGestito[], mezzoId: string) {
+  const g = mezziGestiti.find((m) => m.id === mezzoId);
+  return g ? mezzoGestitoToEmbedRow(g) : null;
+}
+
 async function syncRecordToDb(
   record: PreventivoRecord,
-  mezziRows: readonly MezzoRow[],
+  mezziGestiti: readonly MezzoGestito[],
   expectedUpdatedAt?: string,
 ): Promise<
   | { ok: true; record: PreventivoRecord; legacyId?: string; created: boolean }
   | { ok: false; error: string }
 > {
   const legacyId = !isPreventivoUuid(record.id) ? record.id : undefined;
-  const mezzoId = await resolveMezzoIdForRecord(record, mezziRows);
+  const mezzoId = await resolveMezzoIdForRecord(record, mezziGestiti);
   if (!mezzoId) {
     return { ok: false, error: "Mezzo non trovato per il cliente/lavorazione indicati." };
   }
@@ -165,7 +169,7 @@ async function syncRecordToDb(
     if (!upd.data) return { ok: false, error: "Aggiornamento fallito." };
     return {
       ok: true,
-      record: preventivoRowToRecord(upd.data, mezziRows.find((m) => m.id === mezzoId) ?? null),
+      record: preventivoRowToRecord(upd.data, mezzoEmbedForId(mezziGestiti, mezzoId)),
       legacyId,
       created: false,
     };
@@ -173,7 +177,7 @@ async function syncRecordToDb(
 
   const ins = await preventiviService.create(preventivoRecordToInsert(record, mezzoId));
   if (!ins.success || !ins.data) return { ok: false, error: ins.error ?? "Creazione fallito." };
-  const synced = preventivoRowToRecord(ins.data, mezziRows.find((m) => m.id === mezzoId) ?? null);
+  const synced = preventivoRowToRecord(ins.data, mezzoEmbedForId(mezziGestiti, mezzoId));
   return { ok: true, record: synced, legacyId, created: true };
 }
 
@@ -183,13 +187,13 @@ function mirrorLocalLegacy(record: PreventivoRecord): void {
 
 export async function persistPreventivoRecord(
   record: PreventivoRecord,
-  mezziRows: readonly MezzoRow[],
+  mezziGestiti: readonly MezzoGestito[],
   options?: PreventivoPersistOptions,
 ): Promise<{ ok: true; record: PreventivoRecord } | { ok: false; error: string }> {
   const hydrated = { ...record, aggiornatoAt: new Date().toISOString() };
 
   if (!options?.skipDb) {
-    const db = await syncRecordToDb(hydrated, mezziRows, options?.expectedUpdatedAt);
+    const db = await syncRecordToDb(hydrated, mezziGestiti, options?.expectedUpdatedAt);
     if (db.ok) {
       notifyPreventiviMutation(
         options?.queryClient,
@@ -213,10 +217,10 @@ export async function persistPreventivoRecord(
 
 export async function appendPreventivoSynced(
   record: PreventivoRecord,
-  mezziRows: readonly MezzoRow[],
+  mezziGestiti: readonly MezzoGestito[],
   options?: PreventivoPersistOptions,
 ): Promise<{ ok: true; record: PreventivoRecord } | { ok: false; error: string }> {
-  return persistPreventivoRecord(record, mezziRows, options);
+  return persistPreventivoRecord(record, mezziGestiti, options);
 }
 
 export async function removePreventivoRecord(

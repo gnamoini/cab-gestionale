@@ -25,7 +25,6 @@ const SECTION_TO_MODULE: Partial<Record<RbacSection, GestionalePermissionModule>
 /** Hard gate / derived — non passano da user_permissions (RBAC_PRECEDENCE step 1). */
 const NON_MODULE_SECTIONS = new Set<RbacSection>([
   "dashboard",
-  "bunder",
   "security",
   "impostazioni",
   "lavorazioni_clienti",

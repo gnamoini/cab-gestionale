@@ -1,5 +1,6 @@
 import type { ReactNode, SVGProps } from "react";
 import { isStagingPublicSlice, STAGING_MODULE_BADGE, STAGING_SAFE_HREFS } from "@/lib/env/staging-public";
+import { SECURITY_HOME_PATH } from "@/lib/auth/rbac";
 import { PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 
 function SvgIcon(props: SVGProps<SVGSVGElement> & { children: ReactNode }) {
@@ -99,15 +100,6 @@ export function IconNavReport(props: SVGProps<SVGSVGElement>) {
   );
 }
 
-export function IconNavBunder(props: SVGProps<SVGSVGElement>) {
-  return (
-    <SvgIcon {...props}>
-      <path d="M8 4h12a2 2 0 012 2v14H8a2 2 0 01-2-2V6a2 2 0 012-2z" />
-      <path d="M8 8h12M8 12h10M8 16h8" />
-    </SvgIcon>
-  );
-}
-
 export function IconNavSettings(props: SVGProps<SVGSVGElement>) {
   return (
     <SvgIcon {...props}>
@@ -149,10 +141,9 @@ export const GESTIONALE_NAV = [
   { href: "/magazzino", label: "Magazzino", Icon: IconNavMagazzino },
   { href: "/mezzi", label: "Mezzi", Icon: IconNavMezzi },
   { href: "/dipendenti", label: "Dipendenti", Icon: IconNavDipendenti },
-  { href: "/bunder", label: "BUNDER", Icon: IconNavBunder },
   { href: "/report", label: "Report", Icon: IconNavReport },
   { href: "/impostazioni", label: "Configurazione", Icon: IconNavSettings },
-  { href: "/dashboard/security", label: "Sicurezza", Icon: IconNavSecurity },
+  { href: SECURITY_HOME_PATH, label: "Sicurezza", Icon: IconNavSecurity },
 ] as const;
 
 export type GestionaleNavHref = (typeof GESTIONALE_NAV)[number]["href"];

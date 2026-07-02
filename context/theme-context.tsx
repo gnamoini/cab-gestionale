@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useRef, type ReactNode } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import {
   applyPersistedThemeToDocument,
@@ -20,98 +11,100 @@ import {
   DEFAULT_PERSISTED_THEME_MODE,
   type PersistedThemeMode,
 } from "@/lib/theme/user-theme-prefs";
+import {
+  getThemeRuntimeState,
+  patchThemeRuntimeState,
+  useThemeRuntimeStore,
+} from "@/lib/theme/theme-runtime-store";
 import { useUserThemePrefsQuery, useUserThemeUpsertMutation } from "@/src/hooks/gestionale/use-user-theme-prefs";
 
 export type { PersistedThemeMode };
 
-type ThemeContextValue = {
-  resolved: PersistedThemeMode;
-  /** True dopo bootstrap locale (evita mismatch idratazione sul toggle). */
-  themeReady: boolean;
-  /** Salvataggio preferenza su DB in corso. */
-  themeSaving: boolean;
-  toggleLightDark: () => void;
-};
+const toggleLightDarkRef: { current: () => void } = { current: () => {} };
 
-const ThemeContext = createContext<ThemeContextValue | null>(null);
-
-export function ThemeProvider({ children }: { children: ReactNode }) {
+/** Hook/query isolati: re-render solo di questo nodo null, non di `{children}`. */
+function ThemePrefsController() {
   const { user, status } = useAuth();
   const userId = isAuthSessionEstablished(status) ? user?.id : undefined;
 
-  const [resolved, setResolved] = useState<PersistedThemeMode>(DEFAULT_PERSISTED_THEME_MODE);
-  const [themeReady, setThemeReady] = useState(false);
   const optimisticThemeRef = useRef<PersistedThemeMode | null>(null);
 
   const prefsQuery = useUserThemePrefsQuery(userId, status);
   const themeMutation = useUserThemeUpsertMutation(userId);
 
-  /** Allinea React alla cache boot (DOM già impostato dallo script blocking in RootLayout). */
-  useEffect(() => {
-    const boot = resolveBootThemeMode();
-    setResolved(boot);
-    applyPersistedThemeToDocument(boot);
-    writeThemeBootCache(boot);
-    setThemeReady(true);
-    document.documentElement.dataset.ready = "1";
-  }, []);
+  const applyResolved = useCallback(
+    (mode: PersistedThemeMode) => {
+      applyPersistedThemeToDocument(mode);
+      writeThemeBootCache(mode);
+      patchThemeRuntimeState({ resolved: mode });
+    },
+    [],
+  );
 
-  /** Preferenza DB autenticato (source of truth); assenza riga → default globale dark. */
-  useEffect(() => {
-    if (!userId || prefsQuery.isLoading) return;
-    if (optimisticThemeRef.current) return;
-
-    const serverTheme = prefsQuery.data?.theme;
-    const next = serverTheme ?? DEFAULT_PERSISTED_THEME_MODE;
-    setResolved(next);
-    applyPersistedThemeToDocument(next);
-    writeThemeBootCache(next);
-  }, [userId, prefsQuery.isLoading, prefsQuery.data?.theme]);
-
-  /** Logout / sessione assente: torna alla cache locale (login e app coerenti). */
-  useEffect(() => {
-    if (userId) return;
-    optimisticThemeRef.current = null;
-    const boot = resolveBootThemeMode();
-    setResolved(boot);
-    applyPersistedThemeToDocument(boot);
-  }, [userId]);
-
-  const applyResolved = useCallback((mode: PersistedThemeMode) => {
-    setResolved(mode);
-    applyPersistedThemeToDocument(mode);
-    writeThemeBootCache(mode);
-  }, []);
-
-  const toggleLightDark = useCallback(() => {
-    const next: PersistedThemeMode = resolved === "dark" ? "light" : "dark";
+  toggleLightDarkRef.current = () => {
+    const next: PersistedThemeMode = getThemeRuntimeState().resolved === "dark" ? "light" : "dark";
     optimisticThemeRef.current = next;
     applyResolved(next);
 
     if (!userId) return;
 
+    patchThemeRuntimeState({ themeSaving: true });
     themeMutation.mutate(next, {
       onSettled: () => {
         optimisticThemeRef.current = null;
+        patchThemeRuntimeState({ themeSaving: false });
       },
     });
-  }, [applyResolved, resolved, themeMutation, userId]);
+  };
 
-  const value = useMemo(
-    () => ({
-      resolved,
-      themeReady,
-      themeSaving: themeMutation.isPending,
-      toggleLightDark,
-    }),
-    [resolved, themeReady, themeMutation.isPending, toggleLightDark],
+  useEffect(() => {
+    const boot = resolveBootThemeMode();
+    applyPersistedThemeToDocument(boot);
+    writeThemeBootCache(boot);
+    patchThemeRuntimeState({ resolved: boot, themeReady: true });
+    document.documentElement.dataset.ready = "1";
+  }, []);
+
+  useEffect(() => {
+    if (!userId || prefsQuery.isLoading) return;
+    if (optimisticThemeRef.current) return;
+
+    const next = prefsQuery.data?.theme ?? DEFAULT_PERSISTED_THEME_MODE;
+    if (next === getThemeRuntimeState().resolved) return;
+
+    applyPersistedThemeToDocument(next);
+    writeThemeBootCache(next);
+    patchThemeRuntimeState({ resolved: next });
+  }, [userId, prefsQuery.isLoading, prefsQuery.data?.theme, applyResolved]);
+
+  useEffect(() => {
+    if (userId) return;
+    optimisticThemeRef.current = null;
+    const boot = resolveBootThemeMode();
+    if (boot === getThemeRuntimeState().resolved) return;
+    applyPersistedThemeToDocument(boot);
+    writeThemeBootCache(boot);
+    patchThemeRuntimeState({ resolved: boot, themeSaving: false });
+  }, [userId]);
+
+  return null;
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <ThemePrefsController />
+      {children}
+    </>
   );
-
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {
-  const ctx = useContext(ThemeContext);
-  if (!ctx) throw new Error("useTheme must be used within ThemeProvider");
-  return ctx;
+  const { resolved, themeReady, themeSaving } = useThemeRuntimeStore();
+  return {
+    resolved,
+    themeReady,
+    themeSaving,
+    toggleLightDark: () => toggleLightDarkRef.current(),
+  };
 }

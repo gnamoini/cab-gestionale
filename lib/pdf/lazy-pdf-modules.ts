@@ -9,10 +9,6 @@ export async function importPreventiviPdf() {
   return import("@/lib/preventivi/preventivi-pdf");
 }
 
-export async function importBunderPdf() {
-  return import("@/lib/bunder/bunder-pdf");
-}
-
 export async function importDipendentiPdfSections() {
   return import("@/lib/dipendenti/pdf/dipendenti-pdf-sections");
 }

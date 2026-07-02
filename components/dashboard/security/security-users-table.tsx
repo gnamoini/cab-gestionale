@@ -34,6 +34,7 @@ import { GestionaleSearchField } from "@/components/gestionale/gestionale-search
 import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { SecurityInlineNotice } from "@/components/dashboard/security/security-inline-notice";
 import { APP_ROLES, hasPermission, resolveRole, roleLabel, type AppRole } from "@/lib/auth/rbac";
+import { securityUserDisplayName } from "@/lib/auth/profile-display-name";
 import {
   buildSecurityUserPatches,
   rowsSnapshot,
@@ -117,6 +118,9 @@ function compareUsers(a: EditableSecurityUser, b: EditableSecurityUser, key: Sec
     case "clientAccess":
       return dir * (Number(a.clientLavorazioniAccess) - Number(b.clientLavorazioniAccess));
     case "stato": {
+      const aOff = a.accountEnabled === false ? 0 : 1;
+      const bOff = b.accountEnabled === false ? 0 : 1;
+      if (aOff !== bOff) return dir * (aOff - bOff);
       const av = a.lastSignInAt ?? "";
       const bv = b.lastSignInAt ?? "";
       return dir * av.localeCompare(bv);
@@ -144,10 +148,11 @@ export function rowClienteAssociationError(
 }
 
 function UserIdentityCell({ row }: { row: EditableSecurityUser }) {
-  const title = [row.nome, row.email, row.username].filter(Boolean).join(" · ");
+  const displayName = securityUserDisplayName(row);
+  const title = [displayName, row.email, row.username].filter(Boolean).join(" · ");
   return (
     <div className="flex min-w-0 flex-col gap-0.5" title={title}>
-      <span className={identityPrimaryClass}>{row.nome}</span>
+      <span className={identityPrimaryClass}>{displayName}</span>
       <span className={identitySecondaryClass}>{row.email || "—"}</span>
       {row.username ? <span className={identityUsernameClass}>@{row.username}</span> : null}
     </div>
@@ -203,7 +208,7 @@ function SecurityUserRoleField({ row, readOnly, onRoleChange, roleInputClassName
       variant="default"
       value={row.ruolo}
       onChange={(v) => onRoleChange(row.id, v as AppRole)}
-      aria-label={`Ruolo ${row.nome}`}
+      aria-label={`Ruolo ${securityUserDisplayName(row)}`}
       sheetTitle="Seleziona ruolo"
       inputClassName={roleInputClassName ?? securityDenseSelectBase}
       items={SECURITY_ROLE_SELECT_ITEMS}
@@ -244,7 +249,7 @@ function SecurityUserClienteField({ row, readOnly, knownClienti, onPatch, densit
           if (isCliente && !next) return;
           onPatch(row.id, { clienteRef: next });
         }}
-        aria-label={`Cliente associato ${row.nome}`}
+        aria-label={`Cliente associato ${securityUserDisplayName(row)}`}
         aria-invalid={!!associationErr || undefined}
         aria-describedby={associationErr ? errorId : undefined}
         inputClassName={securityDenseSearchClass(associationErr)}
@@ -335,7 +340,7 @@ function SecurityUserTableRow({
         <PermissionsBadge row={row} />
       </td>
       <td className={`min-w-0 ${securityUsersTableTd}`}>
-        <SecurityStatusBadge lastSignInAt={row.lastSignInAt} />
+        <SecurityStatusBadge lastSignInAt={row.lastSignInAt} accountEnabled={row.accountEnabled} />
       </td>
       <td className={gestionaleListTableTdAzioni}>
         <SecurityUserRowActions row={row} readOnly={readOnly} onOpenDetail={onOpenDetail} onEditName={onEditName} />
@@ -384,11 +389,11 @@ function SecurityUserMobileCard({
     <CardMobile className={`gap-3 !p-3 sm:!p-3.5 ${cardAccentClass}`.trim()}>
       <div className="flex min-w-0 items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className={identityPrimaryClass}>{row.nome}</p>
+          <p className={identityPrimaryClass}>{securityUserDisplayName(row)}</p>
           <p className={`mt-0.5 ${identitySecondaryClass}`}>{row.email || "—"}</p>
           {row.username ? <p className={`mt-0.5 ${identityUsernameClass}`}>@{row.username}</p> : null}
         </div>
-        <SecurityStatusBadge lastSignInAt={row.lastSignInAt} align="end" />
+        <SecurityStatusBadge lastSignInAt={row.lastSignInAt} accountEnabled={row.accountEnabled} align="end" />
       </div>
 
       <div className="space-y-3 border-t border-[color:var(--cab-border)] pt-3">
@@ -477,6 +482,7 @@ export function SecurityUsersTable({
   const gestToast = useGestionaleToast();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
+  const [accountFilter, setAccountFilter] = useState<"all" | "active" | "disabled">("all");
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [sortColumn, setSortColumn] = useState<SecurityUserSortKey | null>(null);
   const [sortPhase, setSortPhase] = useState<ReportSortPhase>("natural");
@@ -487,6 +493,8 @@ export function SecurityUsersTable({
     const q = search.trim().toLowerCase();
     let list = rows;
     if (roleFilter !== "all") list = list.filter((r) => r.ruolo === roleFilter);
+    if (accountFilter === "active") list = list.filter((r) => r.accountEnabled !== false);
+    if (accountFilter === "disabled") list = list.filter((r) => r.accountEnabled === false);
     if (q) {
       list = list.filter(
         (r) =>
@@ -503,7 +511,7 @@ export function SecurityUsersTable({
       list = [...list].sort((a, b) => a.nome.localeCompare(b.nome, "it"));
     }
     return list;
-  }, [rows, search, roleFilter, sortColumn, sortPhase]);
+  }, [rows, search, roleFilter, accountFilter, sortColumn, sortPhase]);
 
   const {
     page,
@@ -553,11 +561,12 @@ export function SecurityUsersTable({
     onRoleChange?.(userId, ruolo);
   }
 
-  const filtersActive = roleFilter !== "all";
+  const filtersActive = roleFilter !== "all" || accountFilter !== "all";
   const searchActive = search.trim().length > 0;
 
   function resetFilters() {
     setRoleFilter("all");
+    setAccountFilter("all");
     resetPage();
   }
 
@@ -607,23 +616,43 @@ export function SecurityUsersTable({
         filterDrawerTitle="Filtra utenti"
         onFilterReset={resetFilters}
         filtersPanel={
-          <label className="flex min-w-0 flex-col gap-1 sm:max-w-xs">
-            <span className="text-[11px] font-medium text-[color:var(--cab-text-muted)]">Ruolo</span>
-            <GlobalSelect
-              selectOnly
-              variant="filter"
-              value={roleFilter}
-              onChange={(v) => {
-                setRoleFilter(v as "all" | AppRole);
-                resetPage();
-              }}
-              aria-label="Filtra ruolo"
-              items={[
-                { value: "all", label: "Tutti i ruoli" },
-                ...APP_ROLES.map((role) => ({ value: role, label: roleLabel(role) })),
-              ]}
-            />
-          </label>
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <label className="flex min-w-0 flex-col gap-1 sm:max-w-xs">
+              <span className="text-[11px] font-medium text-[color:var(--cab-text-muted)]">Ruolo</span>
+              <GlobalSelect
+                selectOnly
+                variant="filter"
+                value={roleFilter}
+                onChange={(v) => {
+                  setRoleFilter(v as "all" | AppRole);
+                  resetPage();
+                }}
+                aria-label="Filtra ruolo"
+                items={[
+                  { value: "all", label: "Tutti i ruoli" },
+                  ...APP_ROLES.map((role) => ({ value: role, label: roleLabel(role) })),
+                ]}
+              />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1 sm:max-w-xs">
+              <span className="text-[11px] font-medium text-[color:var(--cab-text-muted)]">Stato account</span>
+              <GlobalSelect
+                selectOnly
+                variant="filter"
+                value={accountFilter}
+                onChange={(v) => {
+                  setAccountFilter(v as "all" | "active" | "disabled");
+                  resetPage();
+                }}
+                aria-label="Filtra stato account"
+                items={[
+                  { value: "all", label: "Tutti" },
+                  { value: "active", label: "Attivi" },
+                  { value: "disabled", label: "Disattivati" },
+                ]}
+              />
+            </label>
+          </div>
         }
         meta={
           <PageToolbarResultCount
@@ -654,7 +683,7 @@ export function SecurityUsersTable({
                 <GlobalTableHeadLabel label="Cliente associato" />
                 <GlobalTableHeadLabel label={`Accesso ${PORTALE_CLIENTI_LABEL}`} />
                 <GlobalTableHeadLabel label="Permessi" />
-                <GlobalTableHeadLabel label="Ultimo accesso" />
+                <GlobalTableHeadLabel label="Stato account" />
                 <GestionaleListTableActionsHead />
               </>
             }
@@ -702,7 +731,7 @@ export function SecurityUsersTable({
                   onSort={handleSort}
                 />
                 <GlobalTableHeadLabel label="Permessi" />
-                <GlobalTableSortTh label="Ultimo accesso" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
+                <GlobalTableSortTh label="Stato account" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} onSort={handleSort} />
                 <GestionaleListTableActionsHead />
               </>
             }
@@ -730,6 +759,7 @@ export function SecurityUsersTable({
           open
           userId={editNameUser.id}
           initialNome={editNameUser.nome}
+          initialCognome={editNameUser.cognome}
           initialUsername={editNameUser.username ?? ""}
           userEmail={editNameUser.email}
           readOnly={readOnly}
@@ -739,6 +769,7 @@ export function SecurityUsersTable({
           onSave={(values: SecurityEditProfileValues) => {
             patchRow(editNameUser.id, {
               nome: values.nome,
+              cognome: values.cognome,
               username: values.username,
             });
             setEditNameUserId(null);

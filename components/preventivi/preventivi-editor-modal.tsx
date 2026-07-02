@@ -23,8 +23,10 @@ import {
 import { importPreventiviPdf } from "@/lib/pdf/lazy-pdf-modules";
 import { appendPreventiviChangeLog } from "@/lib/preventivi/preventivi-change-log-storage";
 import { persistPreventivoRecord } from "@/lib/preventivi/preventivi-sync-adapter";
-import type { MezzoRow } from "@/src/types/supabase-tables";
+import { useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { maybeRecordLearningOnSave } from "@/lib/preventivi/trasforma-descrizione";
+import type { DescrizionePreventivoContext } from "@/lib/preventivi/preventivi-descrizione-aggregator";
+import { regeneratePreventivoDescription } from "@/lib/preventivi/regenerate-preventivo-description";
 import type { PreventivoRecord, PreventivoRigaRicambio } from "@/lib/preventivi/types";
 import {
   PREVENTIVO_TIPI_DOCUMENTO,
@@ -56,7 +58,6 @@ import { useCabAppSettingsPayloadQuery } from "@/src/hooks/gestionale/use-settin
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import { SchedaIngressoAnagraficaFields } from "@/components/gestionale/schede/scheda-ingresso-anagrafica-fields";
 import { MezzoRegistratoIngressoDialog } from "@/components/lavorazioni/schede/mezzo-registrato-ingresso-dialog";
-import { toMezzoUI } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import {
   anagraficaFromMezzo,
   applyAnagraficaPatchToPreventivo,
@@ -141,6 +142,23 @@ function extractLavorazioniClienteSpecifiche(composed: string): string {
   return pulisciDescrizioneLavorazioniSpecifiche(composed);
 }
 
+function buildDescCtxFromPreventivo(
+  draft: PreventivoRecord,
+  allRecords: readonly PreventivoRecord[],
+): DescrizionePreventivoContext {
+  return {
+    lavorazioneId: draft.lavorazioneId,
+    cliente: draft.cliente,
+    targa: draft.targa,
+    matricola: draft.matricola,
+    marcaAttrezzatura: draft.marcaAttrezzatura,
+    modelloAttrezzatura: draft.modelloAttrezzatura,
+    macchinaRiassunto: draft.macchinaRiassunto,
+    codiciRicambi: draft.righeRicambi.map((r) => r.codiceOE).filter((c) => c && c !== "—"),
+    existingPreventiviRecords: allRecords,
+  };
+}
+
 function SectionTotal({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3 border-t border-[color:var(--cab-border)] pt-2 text-sm">
@@ -156,7 +174,6 @@ export function PreventiviEditorModal({
   isNew,
   isRollbackDraft = false,
   autore,
-  mezziRows,
   allRecords,
   onClose,
   onSaved,
@@ -167,7 +184,6 @@ export function PreventiviEditorModal({
   isNew: boolean;
   isRollbackDraft?: boolean;
   autore: string;
-  mezziRows: readonly MezzoRow[];
   allRecords: readonly PreventivoRecord[];
   onClose: () => void;
   onSaved: () => void;
@@ -182,6 +198,7 @@ export function PreventiviEditorModal({
   const [unsavedExitOpen, setUnsavedExitOpen] = useState(false);
   const [ddtDrawer, setDdtDrawer] = useState<{ open: boolean; detail: DdtDetail | null }>({ open: false, detail: null });
   const [ddtBusy, setDdtBusy] = useState(false);
+  const [descRegenBusy, setDescRegenBusy] = useState(false);
   const prevPerms = usePermissions("preventivi");
   const toast = useGestionaleToast();
   const preventivoId = record?.id ?? "";
@@ -252,7 +269,8 @@ export function PreventiviEditorModal({
     return JSON.stringify(applyTotals(cur)) !== JSON.stringify(applyTotals(base));
   }, [draft, applyTotals]);
 
-  const mezziCatalog = useMemo(() => mezziRows.map(toMezzoUI), [mezziRows]);
+  const mezziListQ = useMezziListQuery(undefined, { enabled: open, staleTime: 30_000 });
+  const mezziCatalog = mezziListQ.data ?? [];
 
   const anagraficaFields = useMemo(
     () => (draft ? preventivoToSchedaIngressoSlice(draft) : null),
@@ -307,6 +325,28 @@ export function PreventiviEditorModal({
       setDdtBusy(false);
     }
   }, [draft, getDdtForPreventivo, openDdtDrawer, preventivoId, prevPerms.canWrite, refetchDdtIndex, toast]);
+
+  const canRegenerateDescription =
+    Boolean(draft?.stato === "bozza" && draft.descrizioneLavorazioniTecnicaSorgente.trim() && prevPerms.canWrite);
+
+  const regenerateDescription = useCallback(() => {
+    if (!draft || !canRegenerateDescription) return;
+    setDescRegenBusy(true);
+    try {
+      const ctx = buildDescCtxFromPreventivo(draft, allRecords);
+      const seq = (draft.descriptionEngineMeta?.generationSequence ?? 0) + 1;
+      const next = regeneratePreventivoDescription(draft, ctx, {
+        autore: autore.trim() || "Operatore",
+        generationSequence: seq,
+      });
+      setDraft(applyTotals(next));
+      toast.successOnce("desc-regen", "Descrizione rigenerata dalla scheda tecnica.");
+    } catch (e) {
+      toast.errorOnce("desc-regen", e);
+    } finally {
+      setDescRegenBusy(false);
+    }
+  }, [allRecords, applyTotals, autore, canRegenerateDescription, draft, toast]);
 
   const regenerateDdt = useCallback(async () => {
     if (!draft || !preventivoId || !prevPerms.canWrite) return;
@@ -488,7 +528,7 @@ export function PreventiviEditorModal({
     const baseline = baselineRef.current;
     maybeRecordLearningOnSave(baseline, next);
 
-    const res = await persistPreventivoRecord(next, mezziRows, {
+    const res = await persistPreventivoRecord(next, mezziCatalog, {
       expectedUpdatedAt: !isNew ? baseline?.aggiornatoAt : undefined,
       queryClient,
     });
@@ -675,7 +715,21 @@ export function PreventiviEditorModal({
               />
             ) : null}
 
-            <FormSection title="Lavorazioni effettuate">
+            <FormSection
+              title="Lavorazioni effettuate"
+              action={
+                canRegenerateDescription ? (
+                  <button
+                    type="button"
+                    className={dsBtnNeutral}
+                    disabled={descRegenBusy}
+                    onClick={regenerateDescription}
+                  >
+                    {descRegenBusy ? "Rigenerazione…" : "Rigenera da scheda"}
+                  </button>
+                ) : null
+              }
+            >
               <FormField label="Lavorazioni specifiche (testo cliente)" htmlFor={lavorazioniFieldId}>
                 <GestionaleTextarea
                   id={lavorazioniFieldId}
@@ -693,7 +747,16 @@ export function PreventiviEditorModal({
                 />
               </FormField>
               <p className="text-[11px] text-[color:var(--cab-text-muted)]">
-                Le modifiche al testo allenano il modello per preventivi simili futuri.
+                Le modifiche al testo vengono registrate come suggerimenti per revisione admin; non aggiornano il
+                catalogo TKB.
+                {draft.descriptionGenerationId ? (
+                  <span className="mt-1 block tabular-nums">
+                    Generazione: {draft.descriptionGenerationId.slice(0, 8)}…
+                    {draft.descriptionEngineMeta?.kbVersion != null
+                      ? ` · KB v${draft.descriptionEngineMeta.kbVersion}`
+                      : null}
+                  </span>
+                ) : null}
               </p>
             </FormSection>
 

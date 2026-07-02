@@ -6,7 +6,7 @@ import { test, expect, type Page } from "@playwright/test";
 const MOBILE_VIEWPORT = { width: 390, height: 844 };
 const DESKTOP_VIEWPORT = { width: 1440, height: 900 };
 
-const MOBILE_ROUTES = ["/dashboard", "/lavorazioni", "/magazzino", "/dipendenti", "/mezzi", "/preventivi", "/bunder", "/fatturazione"] as const;
+const MOBILE_ROUTES = ["/dashboard", "/lavorazioni", "/magazzino", "/dipendenti", "/mezzi", "/preventivi", "/fatturazione"] as const;
 
 async function getGestionaleListLayoutMode(page: Page): Promise<"desktop" | "mobile" | "unknown"> {
   return page.evaluate(() => {

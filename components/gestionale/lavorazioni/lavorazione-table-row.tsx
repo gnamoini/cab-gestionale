@@ -30,6 +30,8 @@ import {
   lavorazioneAddettoLabel,
   lavorazioneCantiereLabel,
   lavorazioneMacchinaLabel,
+  lavorazioneOggettoBadge,
+  lavorazioneOggettoLabel,
   lavorazioneMezzoIdentParts,
   formatLavorazioneSchedeBadge,
   lavorazioneSchedeBundleRevision,
@@ -40,8 +42,8 @@ import {
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
-import { gestionaleListTableRowClass, gestionaleListTableRowTone } from "@/lib/ui/gestionale-list-table";
-import { gestionaleListTableIsLastRow, gestionaleListTableLastRowAttr } from "@/lib/ui/gestionale-list-table";
+import { InterventoTargetBadge } from "@/components/gestionale/intervento/intervento-target-badge";
+import { gestionaleListTableIsLastRow, gestionaleListTableLastRowAttr, gestionaleListTableRowClass, gestionaleListTableRowTone } from "@/lib/ui/gestionale-list-table";
 import { dsTableActionGlyph } from "@/lib/ui/design-system";
 import { IconActionButton } from "@/components/design-system";
 import {
@@ -173,7 +175,8 @@ function LavorazioneAttivaTableRowInner({
   onOpenSchede,
 }: LavorazioneAttivaTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
-  const macchina = lavorazioneMacchinaLabel(row, schedeStore);
+  const macchina = lavorazioneOggettoLabel(row, schedeStore);
+  const oggettoBadge = lavorazioneOggettoBadge(row, schedeStore);
   const telaio = lavorazioneTelaioLabel(row, schedeStore);
   const addetto = lavorazioneAddettoLabel(row, schedeStore, defaultAddetto);
   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
@@ -199,10 +202,15 @@ function LavorazioneAttivaTableRowInner({
       </td>
       <td className={`${lavTableTd} min-w-0`}>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchina}</div>
-          {telaio !== "—" ? (
-            <div className="truncate text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">{telaio}</div>
-          ) : null}
+          <div className="flex min-w-0 items-center gap-1.5">
+            {oggettoBadge ? (
+              <InterventoTargetBadge
+                targetType={oggettoBadge === "TELAIO" ? "telaio" : "attrezzatura"}
+                attrezzaturaMarca={macchina}
+              />
+            ) : null}
+            <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchina}</div>
+          </div>
         </div>
       </td>
       <td className={lavTableTd}>
@@ -337,7 +345,7 @@ function LavorazioneArchivioTableRowInner({
   onOpenSchede,
 }: LavorazioneArchivioTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
-  const telaio = lavorazioneTelaioLabel(row, schedeStore);
+  const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
 
   return (
@@ -361,11 +369,8 @@ function LavorazioneArchivioTableRowInner({
       <td className={`${lavTableTd} min-w-0`}>
         <div className="flex min-w-0 flex-col gap-0.5">
           <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">
-            {lavorazioneMacchinaLabel(row, schedeStore)}
+            {macchina}
           </div>
-          {telaio !== "—" ? (
-            <div className="truncate text-[10px] leading-tight text-zinc-500 dark:text-zinc-400">{telaio}</div>
-          ) : null}
         </div>
       </td>
       <td className={lavTableTd}>

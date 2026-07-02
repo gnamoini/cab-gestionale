@@ -35,6 +35,8 @@ import {
 } from "@/components/dashboard/settings/settings-workspace-types";
 import { SettingsDipendentiAssenzeSection } from "@/components/dashboard/settings-dipendenti-assenze-section";
 import { SettingsEconomiciSection } from "@/components/dashboard/settings/settings-economici-section";
+import { SettingsTkbAdminSection } from "@/components/dashboard/settings/settings-tkb-admin-section";
+import { SettingsOfficinaProfiloSection } from "@/components/dashboard/settings/settings-officina-profilo-section";
 import { SettingsEliminaConfirmDialog } from "@/components/dashboard/settings-elimina-confirm-dialog";
 import { SettingsRinominaPropagaDialog } from "@/components/dashboard/settings-rinomina-propaga-dialog";
 import { useSettingsSidebarScrollportHeight } from "@/components/dashboard/settings/use-settings-sidebar-scrollport-height";
@@ -1083,6 +1085,10 @@ export function SistemaImpostazioniWorkspace({
 
             {section === "att-marca" ? (
               <>
+                <p className="mb-4 rounded-md border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                  Gerarchia attrezzature sincronizzata dalla flotta; le preferenze qui servono solo per ricambi orfani
+                  senza match in anagrafica mezzi.
+                </p>
                 <SettingsImportBar entity="settings_hierarchy_attrezzature" />
               <HierarchyTreeSettingsSection
                 treeKey="attrezzature"
@@ -1258,6 +1264,9 @@ export function SistemaImpostazioniWorkspace({
               />
             ) : null}
 
+            {section === "sys-officina-profilo" ? <SettingsOfficinaProfiloSection /> : null}
+
+
             {section === "sys-economici" ? (
               <SettingsEconomiciSection
                 layout={listLayout}
@@ -1265,6 +1274,8 @@ export function SistemaImpostazioniWorkspace({
                 onChange={(v) => setEco({ costoOrarioDefault: v })}
               />
             ) : null}
+
+            {section === "sys-tkb-kb" ? <SettingsTkbAdminSection /> : null}
 
             {pageMode ? <div aria-hidden className={dsGestionaleScrollEndPad} /> : null}
           </SettingsMainPanel>

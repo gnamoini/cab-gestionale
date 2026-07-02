@@ -4,7 +4,6 @@ import {
   DOCUMENTI_COLUMNS,
   LOG_MODIFICHE_COLUMNS,
   LAVORAZIONI_LIST_LIGHT_COLUMNS,
-  MEZZI_LIST_EMBED_COLUMNS,
   MEZZI_LIST_LIGHT_COLUMNS,
   MOVIMENTI_RICAMBI_COLUMNS,
   PREVENTIVI_COLUMNS,
@@ -12,6 +11,7 @@ import {
 import { mapLavorazioneLightToListRow } from "@/lib/db/dto-mappers";
 import { documentoMatchesMarcaModello } from "@/lib/documenti/documenti-match";
 import { documentoRowToGestionale } from "@/lib/mezzi/mezzi-db-ui-adapter";
+import { fetchMezzoGestitoById } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
 import { LOG_MODIFICHE_RETENTION_PER_ENTITA } from "@/lib/gestionale-log/log-modifiche-retention";
 import {
@@ -44,7 +44,7 @@ export async function fetchMezzoDetailDTOServer(mezzoId: string): Promise<Servic
   if (!id) return err("ID mezzo mancante.");
 
   const sb = await createSupabaseServerUserClient();
-  const lavSelect = `${LAVORAZIONI_LIST_LIGHT_COLUMNS}, mezzi(${MEZZI_LIST_EMBED_COLUMNS})`;
+  const lavSelect = LAVORAZIONI_LIST_LIGHT_COLUMNS;
 
   const [mezzoRes, lavRes, pvRes, logRes] = await Promise.all([
     sb.from("mezzi").select(MEZZI_LIST_LIGHT_COLUMNS).eq("id", id).maybeSingle(),
@@ -63,8 +63,10 @@ export async function fetchMezzoDetailDTOServer(mezzoId: string): Promise<Servic
   if (!mezzoRes.data) return err("Mezzo non trovato");
 
   const mezzoRow = mezzoRes.data as MezzoRow;
-  const marca = mezzoRow.marca?.trim() ?? "";
-  const modello = mezzoRow.modello?.trim() ?? "";
+  const mezzoGestito = await fetchMezzoGestitoById(sb, id, mezzoRow);
+  if (!mezzoGestito) return err("Mezzo non trovato");
+  const marca = mezzoGestito.marca?.trim() ?? "";
+  const modello = mezzoGestito.modello?.trim() ?? "";
   const lavRows = (lavRes.data ?? []) as unknown as (LavorazioneRow & { mezzi?: unknown })[];
   const lavorazioni = lavRows.map((r) => mapLavorazioneLightToListRow(r));
   const lavIds = lavorazioni.map((r) => r.id);
@@ -83,7 +85,7 @@ export async function fetchMezzoDetailDTOServer(mezzoId: string): Promise<Servic
   );
 
   const snapshot: MezzoQueriesSnapshot = {
-    mezzoRow,
+    mezzoGestito,
     lavorazioni,
     preventiviRows: (pvRes.data ?? []) as PreventivoRow[],
     documentiRows,

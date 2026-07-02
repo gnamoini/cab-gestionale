@@ -1,3 +1,5 @@
+import "server-only";
+
 import fs from "node:fs";
 import path from "node:path";
 import { GESTIONALE_PERMISSION_MODULES } from "@/src/lib/permissions/gestionale-modules";
@@ -34,6 +36,22 @@ const USE_TOAST_ALLOWLIST = new Set([
   "src/providers/query-provider.tsx",
   "src/components/gestionale-notifications-bridge.tsx",
   "src/components/gestionale-realtime-bridge.tsx",
+]);
+
+/** Write legacy mezzi attrezzatura cols — bloccati in production scan (V2 SSOT). */
+const LEGACY_MEZZI_WRITE_ALLOWLIST = new Set([
+  "lib/domain/mezzo-attrezzatura/backfill-rules.ts",
+  "lib/domain/mezzo-attrezzatura/upsert-from-scheda-v2.ts",
+  "lib/regression/dto-mappers.test.ts",
+  "lib/regression/intervento-export-ui-alignment.test.ts",
+]);
+
+const LEGACY_READ_ADAPTER_IMPORT_ALLOWLIST = new Set([
+  "lib/mezzi/mezzi-db-ui-adapter.ts",
+  "lib/mezzi/mezzi-attrezzature-batch.ts",
+  "lib/domain/mezzo-attrezzatura/compose-mezzo-gestito.ts",
+  "lib/domain/intervento-context/build-intervento-context.ts",
+  "lib/data-import/entities/mezzi/mezzi-import-attrezzatura.server.ts",
 ]);
 
 function normalizeRel(p: string): string {
@@ -111,6 +129,9 @@ export function scanProductionReadinessCode(repoRoot = process.cwd()): Productio
   const rbacBypassOutsideCentralFunction: ProductionReadinessCodeScan["rbacBypassOutsideCentralFunction"] = [];
   const directUseToastHits: ProductionReadinessCodeScan["directUseToastHits"] = [];
   const legacyDialogHits: ProductionReadinessCodeScan["legacyDialogHits"] = [];
+  const legacyMezziColumnWriteHits: ProductionReadinessCodeScan["legacyMezziColumnWriteHits"] = [];
+  const legacyAdapterImportOutsideAllowlist: ProductionReadinessCodeScan["legacyAdapterImportOutsideAllowlist"] =
+    [];
 
   let realtimePollingFallbackPresent = false;
   let logBatcherPresent = false;
@@ -191,7 +212,37 @@ export function scanProductionReadinessCode(repoRoot = process.cwd()): Productio
         legacyDialogHits.push({ file: rel, line });
       }
     }
+
+    if (!LEGACY_MEZZI_WRITE_ALLOWLIST.has(rel) && !rel.endsWith(".test.ts")) {
+      const rows = content.split(/\r?\n/);
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i]!;
+        if (!/\b(marca|modello|matricola|tipo_attrezzatura)\s*:/.test(row)) continue;
+        const windowText = rows.slice(Math.max(0, i - 2), i + 3).join("\n");
+        const looksLikeMezziPayloadWrite =
+          /\.from\s*\(\s*["']mezzi["']\s*\)\.(insert|update)\s*\(/.test(windowText) ||
+          /attachMezzoEntityKey\s*\(\s*\{[\s\S]{0,400}\b(marca|modello|matricola|tipo_attrezzatura)\s*:/.test(windowText) ||
+          /(MezzoInsert|MezzoUpdate)[\s\S]{0,120}\b(marca|modello|matricola|tipo_attrezzatura)\s*:/.test(windowText);
+        if (looksLikeMezziPayloadWrite) {
+          legacyMezziColumnWriteHits.push({ file: rel, line: i + 1 });
+        }
+      }
+    }
+
+    if (
+      /from\s+["']@\/lib\/domain\/mezzo-attrezzatura\/compose-mezzo-gestito["']/.test(content) &&
+      !LEGACY_READ_ADAPTER_IMPORT_ALLOWLIST.has(rel) &&
+      !rel.endsWith(".test.ts")
+    ) {
+      for (const line of lineHits(content, /from\s+["']@\/lib\/domain\/mezzo-attrezzatura\/compose-mezzo-gestito["']/)) {
+        legacyAdapterImportOutsideAllowlist.push({ file: rel, line });
+      }
+    }
   }
+
+  const r4DropMigrationInAutoPath = fs.existsSync(
+    path.join(repoRoot, "supabase", "migrations", "20260801120500_drop_mezzi_legacy_attrezzatura.sql"),
+  );
 
   return {
     legacyResolveDocumentoFileUrlHits,
@@ -200,6 +251,9 @@ export function scanProductionReadinessCode(repoRoot = process.cwd()): Productio
     rbacBypassOutsideCentralFunction,
     directUseToastHits,
     legacyDialogHits,
+    legacyMezziColumnWriteHits,
+    legacyAdapterImportOutsideAllowlist,
+    r4DropMigrationInAutoPath,
     realtimePollingFallbackPresent,
     logBatcherPresent,
     isOperatorGlobalSettingsUsedInRbac,

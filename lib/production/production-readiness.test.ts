@@ -10,6 +10,9 @@ const cleanScan: ProductionReadinessCodeScan = {
   rbacBypassOutsideCentralFunction: [],
   directUseToastHits: [],
   legacyDialogHits: [],
+  legacyMezziColumnWriteHits: [],
+  legacyAdapterImportOutsideAllowlist: [],
+  r4DropMigrationInAutoPath: false,
   realtimePollingFallbackPresent: false,
   logBatcherPresent: false,
   isOperatorGlobalSettingsUsedInRbac: true,
@@ -18,6 +21,7 @@ const cleanScan: ProductionReadinessCodeScan = {
 const cleanDb = {
   connected: true,
   operatorGlobalSettingsDbEnabled: false,
+  mezzoAttrezzatureV2DbEnabled: false,
   documentiBucketPublic: false,
   legacyPublicDocumentUrlCount: 0,
   storageOrphanObjectCount: null,

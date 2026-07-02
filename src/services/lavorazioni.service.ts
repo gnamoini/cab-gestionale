@@ -1,7 +1,7 @@
 "use client";
 
 import { LAVORAZIONI_COLUMNS } from "@/lib/db/table-select-columns";
-import { pickLavorazioneWritePayload } from "@/lib/validation/services/lavorazioni-payload";
+import { pickLavorazioneCreatePayload, pickLavorazioneWritePayload } from "@/lib/validation/services/lavorazioni-payload";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { ensurePermission, ensureSectionRead } from "@/src/lib/auth/permission-guards";
 import { formatLavorazioneLogOggettoLabel } from "@/lib/lavorazioni/lavorazione-log-oggetto";
@@ -128,7 +128,7 @@ export const lavorazioniService = {
       if (!allowed.success) return err(allowed.error ?? "Permesso richiesto.");
       const sb = await c();
       const userId = await authUserId(sb);
-      const picked = pickLavorazioneWritePayload(data as Record<string, unknown>);
+      const picked = pickLavorazioneCreatePayload(data as Record<string, unknown>);
       const createdBy =
         typeof data.created_by === "string" && data.created_by.trim()
           ? data.created_by.trim()

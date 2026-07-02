@@ -25,8 +25,6 @@ export async function verifyPdfArtifactReadAccess(type: PdfArtifactType): Promis
     case "dipendenti-aziendale":
     case "dipendenti-dipendente":
       return verifyServerSectionRead("dipendenti");
-    case "bunder":
-      return verifyServerSectionRead("bunder");
     default: {
       const _exhaustive: never = type;
       return _exhaustive;

@@ -1,5 +1,6 @@
 import type { DdtCreateInput, DdtLinkInput, DdtMezzoSnapshot, DdtRowInput, PreventivoDdtSelectableLine } from "@/lib/ddt/types";
 import { buildPreventivoOutputRighe } from "@/lib/preventivi/preventivi-struttura";
+import { createAttrezzaturaSnapshot } from "@/lib/domain/mezzo-attrezzatura/create-attrezzatura-snapshot";
 import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { PreventivoDdtFulfillmentRow } from "@/src/types/supabase-tables";
 
@@ -127,6 +128,9 @@ export function buildDdtDraftFromPreventivo(input: {
     links.push({ source_type: "lavorazione", source_id: input.preventivo.lavorazioneId });
   }
 
+  const p = input.preventivo;
+  const targetType = p.targetType ?? (p.marcaAttrezzatura.trim() ? "attrezzatura" : "telaio");
+
   return {
     confirm: input.confirm ?? true,
     status: input.confirm ? "confermato" : "bozza",
@@ -143,7 +147,19 @@ export function buildDdtDraftFromPreventivo(input: {
     preventivo_id: input.preventivoId,
     lavorazione_id: input.preventivo.lavorazioneId ?? null,
     mezzo_id: input.mezzoId ?? null,
-    mezzo_snapshot: buildMezzoSnapshotFromPreventivo(input.preventivo),
+    mezzo_snapshot: buildMezzoSnapshotFromPreventivo(p),
+    target_type: targetType,
+    attrezzatura_id: p.attrezzaturaId ?? null,
+    attrezzatura_snapshot:
+      targetType === "attrezzatura"
+        ? createAttrezzaturaSnapshot({
+            id: p.attrezzaturaId ?? null,
+            marca: p.attrezzaturaMarca ?? p.marcaAttrezzatura ?? "",
+            modello: p.attrezzaturaModello ?? p.modelloAttrezzatura ?? "",
+            matricola: p.attrezzaturaMatricola ?? p.matricola ?? null,
+            tipoAttrezzatura: p.tipoAttrezzatura ?? null,
+          })
+        : {},
     causale_trasporto: input.causale_trasporto ?? "Consegna merci",
     vettore: input.vettore ?? null,
     note: input.note ?? null,

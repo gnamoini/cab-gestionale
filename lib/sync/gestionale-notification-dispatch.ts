@@ -82,10 +82,6 @@ export function gestionaleCabSyncToastMessage(event: CabSyncEvent): string | nul
       const verb = entityVerb(event);
       return verb ? `Documento ${verb}${REMOTE_SUFFIX}` : null;
     }
-    case "bunder_documents": {
-      const verb = entityVerb(event);
-      return verb ? `Documento BUNDER ${verb}${REMOTE_SUFFIX}` : null;
-    }
     case "log_modifiche":
     case "app_settings":
     default:

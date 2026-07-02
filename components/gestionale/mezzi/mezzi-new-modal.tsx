@@ -6,8 +6,8 @@ import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { useFormEngine } from "@/lib/forms/form-engine";
 import { erpBtnAccent } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+import { persistMezzoFormCreate } from "@/lib/mezzi/persist-mezzo-form";
 import {
-  formToMezzoInsert,
   getEmptyMezzoForm,
   MezzoFormFields,
 } from "@/components/gestionale/mezzi/mezzi-form-fields";
@@ -55,13 +55,16 @@ export function MezziNewModal({
         onValidationError("Compila almeno cliente e marca attrezzatura.");
         return;
       }
-      createMut.mutate(formToMezzoInsert(currentForm), {
-        onSuccess: (row) => {
-          reset(getEmptyMezzoForm());
-          onCreated(row);
-        },
-        onError: onSaveError,
-      });
+      try {
+        const row = await persistMezzoFormCreate({
+          form: currentForm,
+          createMezzo: (data) => createMut.mutateAsync(data),
+        });
+        reset(getEmptyMezzoForm());
+        onCreated(row);
+      } catch (err) {
+        onSaveError(err);
+      }
     });
   }
 

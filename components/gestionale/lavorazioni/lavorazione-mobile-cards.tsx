@@ -39,6 +39,7 @@ import {
   lavorazioneCantiereLabel,
   lavorazioneClienteLabel,
   lavorazioneMacchinaLabel,
+  lavorazioneOggettoLabel,
   lavorazioneMezzoIdentParts,
   formatLavorazioneSchedeBadge,
   lavorazioneSchedeBundleRevision,
@@ -144,7 +145,7 @@ function LavorazioneAttivaMobileCardInner(props: LavorazioneAttivaMobileCardProp
   } = props;
 
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
-  const macchina = lavorazioneMacchinaLabel(row, schedeStore);
+  const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
   const addetto = lavorazioneAddettoLabel(row, schedeStore, defaultAddetto);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);
@@ -280,7 +281,7 @@ function LavorazioneArchivioMobileCardInner({
   onOpenSchede,
 }: LavorazioneArchivioMobileCardProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
-  const macchina = lavorazioneMacchinaLabel(row, schedeStore);
+  const macchina = lavorazioneOggettoLabel(row, schedeStore);
   const utilizzatore = lavorazioneUtilizzatoreLabel(row, schedeStore);
   const addetto = lavorazioneAddettoLabel(row, schedeStore, "", addettoLogs);
   const schedeBadge = formatLavorazioneSchedeBadge(bundle);

@@ -14,6 +14,7 @@ export const GESTIONALE_TABLE_QUERY_KEYS: Record<string, readonly QueryKeyTuple[
   lavorazioni: [QK.lavorazioniQueries, QK.mezzoQueries],
   lavorazione_documents: [QK.lavorazioniQueries],
   mezzi: [QK.mezzi, QK.mezzoQueries, QK.lavorazioniQueries],
+  attrezzature: [QK.mezzi, QK.mezzoQueries, QK.lavorazioniQueries],
   magazzino_ricambi: [QK.magazzino, QK.movimenti, QK.lavorazioniQueries],
   movimenti_ricambi: [QK.movimenti, QK.magazzino, QK.lavorazioniQueries],
   preventivi: [QK.preventivi, QK.lavorazioniQueries],
@@ -23,7 +24,6 @@ export const GESTIONALE_TABLE_QUERY_KEYS: Record<string, readonly QueryKeyTuple[
   dashboard_promemoria: [["dashboard-promemoria"]],
   app_settings: [QK.settings],
   profiles: [QK.profiles],
-  bunder_documents: [QK.bunder],
   dipendenti_timesheet_employees: [
     QK.dipendentiTimesheetEmployees,
     QK.dipendentiTimesheetEmployeeIdsWithEntries,

@@ -5,41 +5,6 @@
   "checksum": "1ab670ec1d125efcff65482df66ef8c346ea37753094ab6defd4e88360625a0a",
   "entries": [
     {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 669,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 678,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 687,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 696,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 705,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 733,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/bunder/bunder-view.tsx",
-      "line": 743,
-      "reason": "toolbar-without-containment"
-    },
-    {
       "file": "components/gestionale/mezzi/mezzi-filters.tsx",
       "line": 133,
       "reason": "toolbar-without-containment"

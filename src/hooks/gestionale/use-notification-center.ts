@@ -1,0 +1,172 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
+import type { InboxCursor, InboxNotificationRow } from "@/lib/notifications/notification-types";
+import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
+import { RealtimeInboxCoordinator } from "@/lib/notifications/realtime-inbox-coordinator";
+import { notificationsV2ReadsDb } from "@/lib/notifications/notifications-v2-flag";
+import { notificationsService } from "@/src/services/notifications.service";
+import { QK } from "@/src/lib/react-query/invalidate-related";
+import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
+
+const PAGE_SIZE = 50;
+
+function cursorFromRow(row: InboxNotificationRow): InboxCursor {
+  return {
+    priority_rank: row.priority_rank,
+    created_at: row.created_at,
+    id: row.id,
+  };
+}
+
+export function useNotificationCenter(drawerOpen = false) {
+  const { user, status } = useAuth();
+  const userId = user?.id ?? "";
+  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
+  const { readsDb, mode } = useNotificationsV2Mode();
+  const queryClient = useQueryClient();
+  const coordinatorRef = useRef<RealtimeInboxCoordinator | null>(null);
+
+  const rbacCtx = snapshot?.rbacContext;
+  const enabled =
+    isAuthSessionEstablished(status) &&
+    userId.length > 0 &&
+    !permsLoading &&
+    readsDb &&
+    isStaffInboxEligible(snapshot?.role ? { ruolo: snapshot.role } : user, rbacCtx);
+
+  const inboxQuery = useInfiniteQuery({
+    queryKey: [...QK.notificationsInbox, userId] as const,
+    queryFn: async ({ pageParam }) => {
+      const res = await notificationsService.listInbox({
+        limit: PAGE_SIZE,
+        cursor: pageParam ?? null,
+      });
+      if (!res.success) throw new Error(res.error ?? "Errore inbox");
+      return res.data ?? [];
+    },
+    initialPageParam: null as InboxCursor | null,
+    getNextPageParam: (lastPage) => {
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      const last = lastPage[lastPage.length - 1];
+      return last ? cursorFromRow(last) : undefined;
+    },
+    enabled,
+    staleTime: 30_000,
+  });
+
+  const unreadQuery = useQuery({
+    queryKey: [...QK.notificationsUnread, userId] as const,
+    queryFn: async () => {
+      const res = await notificationsService.countUnread();
+      if (!res.success) throw new Error(res.error ?? "Errore conteggio");
+      return res.data ?? 0;
+    },
+    enabled,
+    staleTime: 15_000,
+  });
+
+  const notifications = useMemo(
+    () => inboxQuery.data?.pages.flat() ?? [],
+    [inboxQuery.data?.pages],
+  );
+
+  const unreadCount = unreadQuery.data ?? 0;
+  const readCount = useMemo(
+    () => notifications.filter((n) => !n.is_unread).length,
+    [notifications],
+  );
+
+  const refresh = useCallback(async () => {
+    await Promise.all([inboxQuery.refetch(), unreadQuery.refetch()]);
+  }, [inboxQuery, unreadQuery]);
+
+  const markNotificationRead = useCallback(
+    async (row: InboxNotificationRow) => {
+      if (!enabled || !row.is_unread) return;
+      await notificationsService.markRead(row.id);
+      await refresh();
+    },
+    [enabled, refresh],
+  );
+
+  const markAllRead = useCallback(async () => {
+    if (!enabled) return;
+    let total = 0;
+    for (let i = 0; i < 10; i++) {
+      const res = await notificationsService.markAllRead(200);
+      if (!res.success) break;
+      total += res.data ?? 0;
+      if ((res.data ?? 0) === 0) break;
+    }
+    if (total > 0) await refresh();
+  }, [enabled, refresh]);
+
+  const dismissNotification = useCallback(
+    async (row: InboxNotificationRow) => {
+      if (!enabled) return;
+      await notificationsService.dismiss(row.id);
+      await refresh();
+    },
+    [enabled, refresh],
+  );
+
+  const removeReadNotifications = useCallback(async () => {
+    if (!enabled) return;
+    const readRows = notifications.filter((n) => !n.is_unread);
+    await Promise.all(readRows.map((r) => notificationsService.dismiss(r.id)));
+    await refresh();
+  }, [enabled, notifications, refresh]);
+
+  const loadMore = useCallback(() => {
+    if (inboxQuery.hasNextPage && !inboxQuery.isFetchingNextPage) {
+      void inboxQuery.fetchNextPage();
+    }
+  }, [inboxQuery]);
+
+  useEffect(() => {
+    if (!enabled) {
+      coordinatorRef.current?.stop();
+      coordinatorRef.current = null;
+      return;
+    }
+    const coord = new RealtimeInboxCoordinator({ userId, queryClient, drawerOpen });
+    coordinatorRef.current = coord;
+    void coord.start();
+    return () => {
+      coord.stop();
+      coordinatorRef.current = null;
+    };
+  }, [enabled, userId, queryClient]);
+
+  useEffect(() => {
+    coordinatorRef.current?.setDrawerOpen(drawerOpen);
+  }, [drawerOpen]);
+
+  return {
+    notifications,
+    unreadCount,
+    readCount,
+    enabled,
+    mode,
+    isLoading: inboxQuery.isLoading || unreadQuery.isLoading || permsLoading,
+    isUnread: (row: InboxNotificationRow) => row.is_unread,
+    markNotificationRead,
+    markAllRead,
+    dismissNotification,
+    removeReadNotifications,
+    loadMore,
+    hasMore: Boolean(inboxQuery.hasNextPage),
+    isLoadingMore: inboxQuery.isFetchingNextPage,
+    channelStatus: coordinatorRef.current?.channelStatus ?? "off",
+  };
+}
+
+/** Hook legacy wrapper: delega a v2 quando readsDb. */
+export function useNotificationCenterOrLegacyEnabled(): boolean {
+  const { readsDb } = useNotificationsV2Mode();
+  return readsDb;
+}

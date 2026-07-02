@@ -19,6 +19,7 @@ import {
 } from "@/lib/settings/settings-inline-edit-keyboard";
 import { dsFocus, dsInput, dsTypoCaption } from "@/lib/ui/design-system";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
+import { useRbac } from "@/src/hooks/use-rbac";
 
 const noteActionGlyph = "h-3.5 w-3.5 shrink-0";
 
@@ -54,25 +55,29 @@ function IconTrash({ className = noteActionGlyph }: { className?: string }) {
   );
 }
 
-function NotesEmptyState() {
+function NotesEmptyState({ readOnly }: { readOnly?: boolean }) {
   return (
     <div
       className="flex min-h-[5.5rem] min-w-0 flex-1 flex-col items-center justify-center rounded-[var(--ds-radius-lg)] border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_30%,var(--cab-surface))] px-4 py-5 text-center"
       role="status"
     >
       <p className="text-sm font-medium text-[color:var(--cab-text)]">Nessuna nota</p>
-      <p className={`mt-1 max-w-[16rem] ${dsTypoCaption}`}>Aggiungi il primo promemoria nel campo sopra.</p>
+      <p className={`mt-1 max-w-[16rem] ${dsTypoCaption}`}>
+        {readOnly ? "Nessuna nota locale salvata." : "Aggiungi il primo promemoria nel campo sopra."}
+      </p>
     </div>
   );
 }
 
 function DashboardNoteRow({
   task,
+  readOnly,
   onToggleDone,
   onRename,
   onRemove,
 }: {
   task: DashboardTask;
+  readOnly?: boolean;
   onToggleDone: (task: DashboardTask) => void;
   onRename: (task: DashboardTask, next: string) => void;
   onRemove: (task: DashboardTask) => void;
@@ -94,15 +99,17 @@ function DashboardNoteRow({
 
   return (
     <li className={`${noteRowBaseClass} ${task.done ? noteRowDoneClass : noteRowActiveClass}`}>
-      <input
-        type="checkbox"
-        checked={task.done}
-        onChange={() => onToggleDone(task)}
-        className={noteCheckboxClass}
-        aria-label={task.done ? "Segna come da fare" : "Segna come completata"}
-      />
+      {readOnly ? null : (
+        <input
+          type="checkbox"
+          checked={task.done}
+          onChange={() => onToggleDone(task)}
+          className={noteCheckboxClass}
+          aria-label={task.done ? "Segna come da fare" : "Segna come completata"}
+        />
+      )}
 
-      {editing ? (
+      {editing && !readOnly ? (
         <input
           className={noteListInputClass}
           defaultValue={task.text}
@@ -121,28 +128,32 @@ function DashboardNoteRow({
         </span>
       )}
 
-      <div className="flex shrink-0 items-center gap-0.5" role="group" aria-label="Azioni nota">
-        {!editing ? (
-          <button type="button" className={noteActionBtnClass} title="Modifica" aria-label={`Modifica ${task.text}`} onClick={startEdit}>
-            <IconPencil />
+      {!readOnly ? (
+        <div className="flex shrink-0 items-center gap-0.5" role="group" aria-label="Azioni nota">
+          {!editing ? (
+            <button type="button" className={noteActionBtnClass} title="Modifica" aria-label={`Modifica ${task.text}`} onClick={startEdit}>
+              <IconPencil />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={`${noteActionBtnClass} hover:text-[color:var(--cab-danger)]`}
+            title="Elimina"
+            aria-label={`Elimina ${task.text}`}
+            onClick={() => onRemove(task)}
+          >
+            <IconTrash />
           </button>
-        ) : null}
-        <button
-          type="button"
-          className={`${noteActionBtnClass} hover:text-[color:var(--cab-danger)]`}
-          title="Elimina"
-          aria-label={`Elimina ${task.text}`}
-          onClick={() => onRemove(task)}
-        >
-          <IconTrash />
-        </button>
-      </div>
+        </div>
+      ) : null}
     </li>
   );
 }
 
 export function DashboardTasksPanel() {
   const { authorName } = useAuth();
+  const rbac = useRbac();
+  const readOnly = rbac.isGuest;
   const { confirm: askConfirm, confirmDialog } = useGestionaleConfirm();
   const [tasks, setTasks] = useState<DashboardTask[]>([]);
   const [ready, setReady] = useState(false);
@@ -235,23 +246,25 @@ export function DashboardTasksPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-3">
-      <div className="flex shrink-0 items-stretch gap-2">
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => handleSettingsAddRowEnter(e, add)}
-          placeholder="Aggiungi nota…"
-          className={`${dsInput} min-h-9 min-w-0 flex-1 py-2 ${dsFocus}`}
-          maxLength={500}
-          aria-label="Testo nuova nota"
-        />
-        <Button size="sm" className="shrink-0 px-3" disabled={!draft.trim()} onClick={add}>
-          Aggiungi
-        </Button>
-      </div>
+      {readOnly ? null : (
+        <div className="flex shrink-0 items-stretch gap-2">
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => handleSettingsAddRowEnter(e, add)}
+            placeholder="Aggiungi nota…"
+            className={`${dsInput} min-h-9 min-w-0 flex-1 py-2 ${dsFocus}`}
+            maxLength={500}
+            aria-label="Testo nuova nota"
+          />
+          <Button size="sm" className="shrink-0 px-3" disabled={!draft.trim()} onClick={add}>
+            Aggiungi
+          </Button>
+        </div>
+      )}
 
       {tasks.length === 0 ? (
-        <NotesEmptyState />
+        <NotesEmptyState readOnly={readOnly} />
       ) : (
         <>
           <div className="flex shrink-0 items-center justify-between gap-2">
@@ -260,7 +273,7 @@ export function DashboardTasksPanel() {
               {doneCount > 0 ? ` · ${doneCount} completat${doneCount === 1 ? "a" : "e"}` : ""}
               {tasks.length >= DASHBOARD_TASKS_MAX ? ` · limite ${DASHBOARD_TASKS_MAX}` : ""}
             </p>
-            {doneCount > 0 ? (
+            {!readOnly && doneCount > 0 ? (
               <button
                 type="button"
                 className={`shrink-0 ${dsTypoCaption} font-medium text-[color:var(--cab-danger)] underline-offset-2 hover:underline ${dsFocus}`}
@@ -275,6 +288,7 @@ export function DashboardTasksPanel() {
               <DashboardNoteRow
                 key={t.id}
                 task={t}
+                readOnly={readOnly}
                 onToggleDone={toggleDone}
                 onRename={renameTask}
                 onRemove={removeTask}

@@ -83,6 +83,8 @@ test("buildNewPreventivoFromLavorazioneContext id è uuid valido", () => {
     existingRecords: [],
   });
   assert.match(rec.id, /^[0-9a-f-]{36}$/i);
+  assert.match(rec.descriptionGenerationId ?? "", /^[0-9a-f-]{36}$/i);
+  assert.equal(rec.descriptionEngineMeta?.engineVersion, "tde_v1");
 });
 
 console.log("generate-preventivo-from-lavorazione.test.ts OK");

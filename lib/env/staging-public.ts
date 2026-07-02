@@ -14,7 +14,6 @@ const STAGING_BLOCKED_PREFIXES = [
   "/preventivi",
   "/documenti",
   "/magazzino",
-  "/bunder",
   "/report",
   "/dipendenti",
 ] as const;

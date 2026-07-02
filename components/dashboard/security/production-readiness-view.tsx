@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/gestionale/page-header";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { runProductionReadinessCheckAction } from "@/src/actions/production-readiness";
 import type { ProductionReadinessResult } from "@/lib/production/production-readiness-types";
+import { SECURITY_HOME_PATH } from "@/lib/auth/rbac";
 import {
   dsBtnNeutral,
   dsBtnPrimary,
@@ -79,7 +80,7 @@ export function ProductionReadinessView() {
         description="Gate automatico pilot → production: verifica flag, storage, RBAC e coerenza codice prima del deploy."
         actions={
           <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Link href="/dashboard/security" className={dsBtnNeutral}>
+            <Link href={SECURITY_HOME_PATH} className={dsBtnNeutral}>
               ← Sicurezza
             </Link>
             <button type="button" className={dsPageToolbarBtn} onClick={() => void runCheck()} disabled={loading}>

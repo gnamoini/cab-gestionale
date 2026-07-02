@@ -72,7 +72,6 @@ const migratedSamples = [
   "components/gestionale/lavorazioni/scheda-ingresso-form-modal.tsx",
   "components/gestionale/magazzino/ricambio-form-fields.tsx",
   "components/lavorazioni/schede/schede-lavorazione-modal.tsx",
-  "components/bunder/bunder-editor-modal.tsx",
   "components/gestionale/documenti/documenti-modals.tsx",
 ] as const;
 

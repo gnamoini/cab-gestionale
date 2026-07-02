@@ -5,6 +5,7 @@ import {
   CAB_LOGO_PDF_MAX_HEIGHT_MM,
   pdfImageFormatFromDataUrl,
 } from "@/lib/branding/branding-logo-for-pdf";
+import { OFFICINA_LEGAL_NAME } from "@/lib/officina/officina-identity";
 
 export {
   buildPreventivoAttrezzaturaPdfFields,
@@ -34,7 +35,7 @@ export const PDF_SECTION_GAP = 5.5;
 /** Spazio tra titolo sezione e contenuto (mm). */
 export const PDF_SECTION_CONTENT_GAP = 2;
 
-export const PDF_COMPANY_NAME = "CENTRO ASSISTENZA BARI SRL";
+export const PDF_COMPANY_NAME = OFFICINA_LEGAL_NAME;
 
 /** Altezza fissa slot brand header (logo centrato o fallback testuale). */
 export const PDF_HEADER_BRAND_BLOCK_MM = 11;

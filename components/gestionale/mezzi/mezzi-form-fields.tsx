@@ -67,17 +67,21 @@ export function gestitoToMezzoForm(m: MezzoGestito): MezzoFormState {
 export function formToMezzoInsert(f: MezzoFormState): MezzoInsert {
   const annoParsed = parseInt(f.anno, 10);
   const anno = Math.max(1980, Math.min(2035, Number.isFinite(annoParsed) ? annoParsed : new Date().getFullYear()));
+  const kmParsed = parseInt(f.km, 10);
   return {
     cliente: f.cliente.trim(),
     utilizzatore: f.utilizzatore.trim() || null,
-    marca: f.marca.trim(),
-    modello: f.modello.trim() || "—",
     targa: f.targa.trim() || null,
-    matricola: f.matricola.trim() || null,
     numero_scuderia: f.numeroScuderia.trim() || null,
-    tipo_attrezzatura: f.tipoAttrezzatura.trim() || null,
     anno,
     meta: mezzoFormToMeta(f) as Record<string, unknown>,
+    entity_key: null,
+    marca_telaio: f.marcaTelaio.trim() || null,
+    modello_telaio: f.modelloTelaio.trim() || null,
+    tipo_telaio: f.tipoTelaio.trim() || null,
+    telaio_num: null,
+    km: Number.isFinite(kmParsed) ? kmParsed : null,
+    note: null,
   };
 }
 

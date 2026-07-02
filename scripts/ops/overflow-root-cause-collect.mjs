@@ -54,10 +54,9 @@ const ROUTES = [
   "/magazzino",
   "/mezzi",
   "/dipendenti",
-  "/bunder",
   "/report",
   "/impostazioni",
-  "/dashboard/security",
+  "/sicurezza",
 ];
 
 async function tryLogin(page) {

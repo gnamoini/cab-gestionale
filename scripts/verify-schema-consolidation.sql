@@ -45,7 +45,7 @@ where n.nspname = 'public'
     'magazzino_ricambi', 'movimenti_ricambi', 'preventivi', 'documenti',
     'log_modifiche', 'app_settings', 'app_settings_audit', 'user_permissions',
     'auth_logs', 'segnalazioni', 'support_notes', 'lavorazione_documents',
-    'report_manual_entries', 'bunder_documents', 'dashboard_promemoria',
+    'report_manual_entries', 'dashboard_promemoria',
     'dipendenti_timesheet_employees', 'dipendenti_timesheet_entries'
   )
 order by c.relname;

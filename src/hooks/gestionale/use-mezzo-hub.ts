@@ -39,7 +39,7 @@ export function useMezzoHub(mezzoId: string | undefined) {
 
   const snapshot = useMemo(
     () => ({
-      mezzoRow: base.data,
+      mezzoGestito: base.data,
       lavorazioni: lav.data ?? [],
       preventiviRows: pv.data ?? [],
       documentiRows: doc.data ?? [],

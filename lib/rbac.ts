@@ -11,13 +11,12 @@
  *    - security      → can_manage_security
  *    - impostazioni  → can_manage_settings
  *    - portale       → can_access_client_area (+ sandbox cliente)
- *    - bunder        → canAccessBunder(op) / rbac_bunder_can(op)
  *    - dashboard     → can_read_operational (staff only, derived, non overridabile)
  *    - admin bypass  → admin = allow (eccetto domini cliente sandbox)
  *
  * 2. user_permissions (override per modulo ERP, se riga presente)
  *    - solo i 9 moduli in GESTIONALE_PERMISSION_MODULES
- *    - mai bunder, dashboard, security, impostazioni, portale
+ *    - mai dashboard, security, impostazioni, portale
  *
  * 3. ROLE MODULE FALLBACK (per i 9 moduli ERP)
  *    - guest            → guestAuditModuleDefault() — read ALL modules, write NEVER
@@ -39,6 +38,16 @@ export const CANONICAL_ROLES = [
 ] as const;
 
 export type CanonicalRole = (typeof CANONICAL_ROLES)[number];
+
+/** Etichette UI ruolo — SSOT display (ID tecnici invariati). */
+export const ROLE_LABELS: Record<CanonicalRole, string> = {
+  admin: "Admin",
+  manager: "Direttore",
+  operatore: "Personale Tecnico",
+  addetto_amministrativo: "Personale Amministrativo",
+  guest: "Ospite",
+  cliente: "Cliente",
+};
 
 export const CAPABILITIES = [
   "can_read_operational",
@@ -104,6 +113,7 @@ export const ROLE_MODULE_DEFAULTS: Record<
     lavorazioni: "rw",
     mezzi: "rw",
     documenti: "rw",
+    document_capture: "rw",
   },
   addetto_amministrativo: {
     preventivi: "rw",
@@ -168,13 +178,6 @@ export function resolveModuleAccess(
     : roleModuleDefault(role, module);
 
   return op === "read" ? perm.canRead : perm.canWrite;
-}
-
-/** BUNDER hard gate — mirror di rbac_bunder_can() SQL. */
-export function canAccessBunder(user: RbacUserInput, op: "read" | "write"): boolean {
-  const role = resolveCanonicalRole(user);
-  if (op === "read") return role === "admin" || role === "manager" || role === "guest";
-  return role === "admin" || role === "manager";
 }
 
 /** Matrice ruolo → capability (unica). Admin: tutte true. */

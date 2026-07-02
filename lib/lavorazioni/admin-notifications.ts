@@ -37,6 +37,14 @@ export function isLavorazioniNotificationsPath(pathname: string): boolean {
   return pathname === "/lavorazioni" || pathname.startsWith("/lavorazioni/");
 }
 
+export function isPreventiviNotificationsPath(pathname: string): boolean {
+  return pathname === "/preventivi" || pathname.startsWith("/preventivi/");
+}
+
+export function isFatturazioneNotificationsPath(pathname: string): boolean {
+  return pathname === "/fatturazione" || pathname.startsWith("/fatturazione/");
+}
+
 export function isMagazzinoNotificationsPath(pathname: string): boolean {
   return pathname === "/magazzino" || pathname.startsWith("/magazzino/");
 }
@@ -93,6 +101,14 @@ export function adminMagazzinoNotificationDedupKey(ricambioId: string): string {
   return `admin-mag-notif:${ricambioId}`;
 }
 
+export function buildAdminNotificationPreventivoHref(preventivoId: string): string {
+  return `/preventivi?focus=${encodeURIComponent(preventivoId)}`;
+}
+
+export function buildAdminNotificationFatturazioneHref(): string {
+  return "/fatturazione?scadenzaPreset=scadute";
+}
+
 export function buildAdminNotificationMagazzinoHref(ricambioId: string): string {
   const sp = new URLSearchParams();
   sp.set(Q_FOCUS_RICAMBIO, ricambioId);
@@ -100,9 +116,30 @@ export function buildAdminNotificationMagazzinoHref(ricambioId: string): string 
 }
 
 export function formatMagazzinoSottoScortaToastMessage(
-  notification: Pick<MagazzinoSottoScortaNotification, "marca" | "descrizione" | "scorta" | "scortaMinima">,
+  notification: Pick<
+    MagazzinoSottoScortaNotification,
+    "marca" | "descrizione" | "scorta" | "scortaMinima" | "esaurito"
+  >,
 ): string {
   const label = [notification.marca?.trim(), notification.descrizione?.trim()].filter(Boolean).join(" · ");
-  const qty = `${notification.scorta}/${notification.scortaMinima}`;
-  return label ? `Sotto scorta: ${label} (${qty})` : `Sotto scorta minima (${qty})`;
+  const prefix = notification.esaurito ? "Esaurito" : "Sotto scorta";
+  const qty = notification.esaurito ? "0" : `${notification.scorta}/${notification.scortaMinima}`;
+  return label ? `${prefix}: ${label} (${qty})` : `${prefix} (${qty})`;
+}
+
+export function formatLavorazioneCompletataToastMessage(
+  intent: Pick<NotificationIntent, "cliente" | "mezzo" | "titolo">,
+): string {
+  const parts = [intent.cliente?.trim(), intent.mezzo?.trim()].filter(Boolean);
+  const code = intent.titolo?.trim();
+  if (parts.length > 0) return `Lavorazione completata: ${parts.join(" · ")}`;
+  return code ? `Lavorazione completata: ${code}` : "Lavorazione completata";
+}
+
+export function formatPreventivoApprovatoToastMessage(input: {
+  numero: string;
+  cliente: string;
+}): string {
+  const parts = [input.numero?.trim(), input.cliente?.trim()].filter(Boolean);
+  return parts.length > 0 ? `Preventivo approvato: ${parts.join(" · ")}` : "Preventivo approvato";
 }

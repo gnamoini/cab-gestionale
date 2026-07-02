@@ -37,7 +37,7 @@ const ALLOWLIST_TOKENS = [
 const FILE_ALLOWLIST = [
   "global-table", "gestionale-list-table.css", "lavorazioni-scroll.css",
   "lavorazioni-kanban-view", "components/report/", "preventivi-editor-modal",
-  "bunder-editor-modal", "sistema-impostazioni-modal", "report-magazzino-section",
+  "sistema-impostazioni-modal", "report-magazzino-section",
 ];
 
 function normalizePath(p) {

@@ -48,16 +48,10 @@ function sameScuderia(a: { nScuderia?: string }, b: { nScuderia?: string }): boo
   return Boolean(na && nb && na === nb);
 }
 
-function isIngressoFieldEmpty(key: keyof SchedaIngressoFields, value: string): boolean {
-  if (key === "dataIngresso") return false;
-  const t = value.trim();
-  if (!t) return true;
-  if (t === "—") return true;
-  if (key === "matricola" && t.toLowerCase() === "non assegnata") return true;
-  return false;
-}
-
-/** Campi da non copiare dalla scheda precedente (nuovo ingresso). */
+import {
+  copySchedaIngressoFieldFromClient,
+  isSchedaIngressoFieldEmpty,
+} from "@/lib/schede/scheda-ingresso-typed-fields";
 const INGRESSO_FIELDS_NEVER_COPY: ReadonlySet<keyof SchedaIngressoFields> = new Set(["dataIngresso"]);
 
 export type LastSchedaIngressoMatch = {
@@ -169,8 +163,8 @@ export function mergeSchedaIngressoFields(
   const next = { ...current };
   for (const key of Object.keys(source) as (keyof SchedaIngressoFields)[]) {
     if (INGRESSO_FIELDS_NEVER_COPY.has(key)) continue;
-    if (isIngressoFieldEmpty(key, next[key])) {
-      next[key] = source[key];
+    if (isSchedaIngressoFieldEmpty(key, next[key])) {
+      copySchedaIngressoFieldFromClient(next, source, key);
     }
   }
   return next;
