@@ -12,12 +12,13 @@ import {
   ACCESS_DENIED_PATH,
   CLIENTE_HOME_PATH,
   defaultHomePathForRole,
-  hasPermission,
   isClienteRole,
   isPathAllowedForCliente,
   pathnameToSection,
 } from "@/lib/auth/rbac";
 import { evaluateGestionaleRouteAccess } from "@/src/lib/auth/evaluate-gestionale-route-access";
+import { createRbacNavAccess, isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
+import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import {
   OPERATOR_GLOBAL_SETTINGS_KEY,
   OPERATOR_GLOBAL_SETTINGS_MODULE,
@@ -144,8 +145,6 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     return redirectWithLog(request, pathname, url, "cliente_route_denied");
   }
 
-  const clientLavorazioniAllowed = hasPermission(role, "viewClientLavorazioni");
-
   const section = pathnameToSection(pathname);
   let pilotDbEnabled = false;
   if (section === "impostazioni") {
@@ -158,6 +157,19 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
     pilotDbEnabled = parseOperatorGlobalSettingsDbEnabled(pilotRow?.value);
   }
 
+  const clientLavorazioniAllowed = (() => {
+    if (!activeUser?.id) return false;
+    const snap = resolveEffectivePermissions({
+      userId: activeUser.id,
+      roleKey: activeUser.roleKey ?? activeUser.ruolo,
+      rolePermissionKeys: auth.rolePermissionKeys ?? [],
+      permissionRows: auth.permissions ?? [],
+      pilotDbEnabled,
+    });
+    if (!isRbacSnapshotReady(snap)) return false;
+    return createRbacNavAccess(snap).canAccessHref("/lavorazioni-clienti");
+  })();
+
   if (
     section &&
     !evaluateGestionaleRouteAccess({
@@ -165,6 +177,7 @@ export async function handleProxyRequest(request: NextRequest): Promise<NextResp
       userId: activeUser.id,
       pathname,
       permissionRows: auth.permissions ?? [],
+      rolePermissionKeys: auth.rolePermissionKeys ?? [],
       pilotDbEnabled,
       clientLavorazioniAllowed,
     })

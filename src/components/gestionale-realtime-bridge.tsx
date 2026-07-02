@@ -37,7 +37,7 @@ import { cabSyncEventFromPostgresChange } from "@/lib/sync/cab-sync-bus";
 import { dispatchGestionaleAction } from "@/lib/sync/gestionale-sync-dispatch";
 import { refetchActiveOperationalSnapshot } from "@/lib/sync/gestionale-snapshot-recovery";
 import { SyncTransportController } from "@/src/lib/runtime/sync/sync-transport-controller";
-import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
+import { invalidateRbacTruthClient } from "@/src/lib/rbac/invalidate-rbac-truth";
 import { onUserRoleChangedClient } from "@/src/lib/rbac/on-user-role-changed.client";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { useSettingsModalOpen } from "@/src/context/settings-modal-open-context";
@@ -181,15 +181,16 @@ export function GestionaleRealtimeBridge() {
     const onAuthCriticalChange = (table: string, payload?: PostgresChangePayload) => {
       if (table === "app_settings") {
         if (payload && !isOperatorGlobalSettingsPilotPayload(payload)) return;
-        void invalidateRuntimeTruth({
+        void invalidateRbacTruthClient({
           reason: "pilotChanged",
           queryClient: qc,
-          refreshOperational: true,
         });
       } else if (table === "user_permissions") {
-        void invalidateRuntimeTruth({
+        void invalidateRbacTruthClient({
           reason: "roleOrPermissionsChanged",
           queryClient: qc,
+          currentUserId: userIdRef.current,
+          refreshAuth: refresh,
         });
       } else if (table === "profiles") {
         const newRoleKey = payload?.new?.role_key;
@@ -202,7 +203,7 @@ export function GestionaleRealtimeBridge() {
             queryClient: qc,
           });
         } else {
-          void invalidateRuntimeTruth({
+          void invalidateRbacTruthClient({
             reason: "roleOrPermissionsChanged",
             queryClient: qc,
           });

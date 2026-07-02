@@ -1,22 +1,28 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
-import { resolveRole, hasPermission } from "@/lib/auth/rbac";
+import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+import { isRbacSnapshotReady, snapshotHasPermission } from "@/src/lib/rbac/rbac-snapshot-access";
 
-/** Accesso portale clienti: role-only (admin/cliente), sincrono come le altre voci nav. */
+/** Accesso portale clienti via snapshot RBAC (admin/cliente capability). */
 export function useClientLavorazioniAccess() {
   const { user, status } = useAuth();
+  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
   const sessionReady = isAuthSessionEstablished(status);
-  const role = resolveRole(user?.ruolo);
-  const roleGrantsPortal = hasPermission(role, "viewClientLavorazioni");
+
+  const roleGrantsPortal = useMemo(() => {
+    if (!isRbacSnapshotReady(snapshot)) return false;
+    return snapshotHasPermission(snapshot, "viewClientLavorazioni");
+  }, [snapshot]);
+
   const allowed = sessionReady && !!user?.id && roleGrantsPortal;
 
   const refetch = useCallback(async () => undefined, []);
 
   return {
     allowed,
-    isLoading: !sessionReady,
+    isLoading: !sessionReady || permsLoading,
     isError: false,
     error: null as Error | null,
     refetch,

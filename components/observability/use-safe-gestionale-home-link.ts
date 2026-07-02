@@ -8,15 +8,7 @@ import {
   type GestionaleNavHref,
 } from "@/components/gestionale/gestionale-nav-config";
 import { resolveFirstAccessibleNavHref } from "@/lib/auth/resolve-post-login-redirect";
-import {
-  canAccessPage,
-  shouldHideNavHref,
-  type CanAccessPageOptions,
-  type RbacEvaluationContext,
-} from "@/lib/auth/rbac";
-import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
-import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
-import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
+import { useRbacNavAccess } from "@/src/hooks/use-rbac-nav-access";
 
 export type SafeGestionaleHomeLink = {
   href: string;
@@ -35,15 +27,13 @@ export function labelForGestionaleNavHref(href: string): string {
 /** Destinazione sicura post-errore / 404 — prima voce menu accessibile (come post-login). */
 export function useSafeGestionaleHomeLink(): SafeGestionaleHomeLink {
   const { user, status } = useAuth();
-  const clientLav = useClientLavorazioniAccess();
-  const { isLoading: permsLoading } = useEffectivePermissions();
+  const { navAccess, isNavLoading, isNavReady } = useRbacNavAccess();
 
   const sessionReady = isAuthSessionEstablished(status);
-  const permissionsReady = !user?.id || !permsLoading;
-  const ready = sessionReady && permissionsReady;
+  const ready = sessionReady && (isNavReady || !user?.id);
 
   return useMemo(() => {
-    if (!ready) {
+    if (!ready || isNavLoading) {
       return { href: "/dashboard", label: "Caricamento…", ready: false };
     }
 
@@ -51,22 +41,22 @@ export function useSafeGestionaleHomeLink(): SafeGestionaleHomeLink {
       return { href: "/login", label: labelForGestionaleNavHref("/login"), ready: true };
     }
 
-    const navOpts: CanAccessPageOptions = {
-      clientLavorazioniAllowed: clientLav.allowed,
-    };
+    if (!navAccess) {
+      return { href: "/dashboard", label: labelForGestionaleNavHref("/dashboard"), ready: true };
+    }
 
     const firstNavItem = resolveGestionaleNav({
-      hideHref: (href) => shouldHideNavHref(user, href, navOpts),
-    }).find((item) => !item.disabled && canAccessPage(user, item.href, navOpts));
+      hideHref: (href) => navAccess.shouldHideHref(href),
+    }).find((item) => !item.disabled && navAccess.canAccessHref(item.href));
 
-    const href = firstNavItem?.href ?? resolveFirstAccessibleNavHref(user, navOpts);
+    const href = firstNavItem?.href ?? resolveFirstAccessibleNavHref(navAccess);
 
     return {
       href,
       label: labelForGestionaleNavHref(href),
       ready: true,
     };
-  }, [ready, user, clientLav.allowed]);
+  }, [ready, isNavLoading, user, navAccess]);
 }
 
 export type AccessibleQuickNavLink = {
@@ -82,42 +72,28 @@ export function useAccessibleQuickNavLinks(opts?: {
   const max = opts?.max ?? 4;
   const excludeHref = opts?.excludeHref;
   const { user, status } = useAuth();
-  const clientLav = useClientLavorazioniAccess();
-  const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
-  const operatorPilot = useOperatorGlobalSettings();
-
-  const rbacCtx: RbacEvaluationContext = useMemo(
-    () => snapshot?.rbacContext ?? { operatorGlobalSettingsDbEnabled: operatorPilot.dbEnabled },
-    [snapshot?.rbacContext, operatorPilot.dbEnabled],
-  );
+  const { navAccess, isNavLoading, isNavReady } = useRbacNavAccess();
 
   const sessionReady = isAuthSessionEstablished(status);
-  const permissionsReady = !user?.id || !permsLoading;
-  const ready = sessionReady && permissionsReady;
-
-  const pageOpts = useMemo(
-    () => ({ clientLavorazioniAllowed: clientLav.allowed }),
-    [clientLav.allowed],
-  );
+  const ready = sessionReady && isNavReady && !isNavLoading && !!user?.id && !!navAccess;
 
   return useMemo(() => {
-    if (!ready || !user?.id) {
+    if (!ready || !navAccess) {
       return { links: [], ready: false };
     }
 
     const items = resolveGestionaleNav({
-      hideHref: (href) =>
-        shouldHideNavHref(user, href, { clientLavorazioniAllowed: clientLav.allowed }, rbacCtx),
+      hideHref: (href) => navAccess.shouldHideHref(href),
     }).filter(
       (item) =>
         !item.disabled &&
         item.href !== excludeHref &&
-        canAccessPage(user, item.href, pageOpts, rbacCtx),
+        navAccess.canAccessHref(item.href),
     );
 
     return {
       ready: true,
       links: items.slice(0, max).map((item) => ({ href: item.href, label: item.label })),
     };
-  }, [ready, user, clientLav.allowed, excludeHref, max, pageOpts, rbacCtx]);
+  }, [ready, navAccess, excludeHref, max]);
 }

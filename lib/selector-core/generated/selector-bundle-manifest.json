@@ -1,11 +1,13 @@
 {
   "versions": [
-    "v0"
+    "vA",
+    "vB"
   ],
   "schemaHashes": {
-    "v0": "58089af3c1b2cbe8c16b30c951e8d00a9bb96fc3891904edc47cd28d6062b3a1"
+    "vB": "58089af3c1b2cbe8c16b30c951e8d00a9bb96fc3891904edc47cd28d6062b3a1",
+    "vA": "58089af3c1b2cbe8c16b30c951e8d00a9bb96fc3891904edc47cd28d6062b3a1"
   },
-  "generatedAt": "2026-06-01T12:00:00.000Z",
+  "generatedAt": "2026-07-02T17:19:49.882Z",
   "pointerEpoch": {
     "activeVersion": "v0",
     "previousVersion": "v0",

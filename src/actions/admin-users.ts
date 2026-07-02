@@ -43,7 +43,7 @@ import type {
 } from "@/src/actions/admin-users.types";
 import type { ProfileRow } from "@/src/types/supabase-tables";
 import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
-import { invalidateServerRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth.server";
+import { invalidateRbacTruthServer } from "@/src/lib/rbac/invalidate-rbac-truth.server";
 
 const RUOLI = CANONICAL_ROLES;
 
@@ -375,7 +375,7 @@ export async function deleteUserByAdminAction(userId: string): Promise<DeleteUse
   }
 
   clearServerAuthSnapshotCacheForUser(parsed.userId);
-  invalidateServerRuntimeTruth();
+  invalidateRbacTruthServer();
   return { ok: true };
 }
 
@@ -495,7 +495,7 @@ export async function setUserAccountEnabledByAdminAction(input: {
   }
 
   clearServerAuthSnapshotCacheForUser(parsed.userId);
-  invalidateServerRuntimeTruth();
+  invalidateRbacTruthServer();
 
   await writeSecurityAuditLog(admin, {
     actorUserId: caller.callerId,

@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
 import { clienteRoleRequiresRef, validateClienteRefForRole } from "@/src/lib/auth/cliente-portal-scope";
 import { hasPermission } from "@/lib/auth/rbac";
+import type { RequiredRbacContext } from "@/lib/rbac";
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 
 const matrix: Array<{
@@ -31,7 +32,7 @@ for (const row of matrix) {
   assert.equal(hasResolvedCapability(r, "can_manage_settings"), row.manageSettings, `${row.role} settings`);
   assert.equal(hasResolvedCapability(r, "can_manage_security"), row.manageSecurity, `${row.role} security`);
   assert.equal(
-    hasPermission(row.role, "viewClientLavorazioni", snap.rbacContext),
+    hasPermission(row.role, "viewClientLavorazioni", snap.rbacContext as RequiredRbacContext),
     row.viewClientLavorazioni,
     `${row.role} client portal`,
   );

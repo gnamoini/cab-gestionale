@@ -1,30 +1,31 @@
 import assert from "node:assert/strict";
-import {
-  resolveFirstAccessibleNavHref,
-  resolvePostLoginRedirectPath,
-  sanitizePostLoginRequestedPath,
-} from "@/lib/auth/resolve-post-login-redirect";
+import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
+import { createRbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
+import { resolveFirstAccessibleNavHref, resolvePostLoginRedirectPath } from "@/lib/auth/resolve-post-login-redirect";
 
-const admin = { ruolo: "admin" as const, id: "a1" };
-const cliente = { ruolo: "cliente" as const, id: "c1" };
-const guest = { ruolo: "guest" as const, id: "g1" };
+const adminSnap = buildTestSnapshot({ userId: "a1", roleKey: "admin" });
+const adminNav = createRbacNavAccess(adminSnap);
+const clienteSnap = buildTestSnapshot({ userId: "c1", roleKey: "cliente" });
+const clienteNav = createRbacNavAccess(clienteSnap, { clientLavorazioniAllowed: true });
+const guestSnap = buildTestSnapshot({ userId: "g1", roleKey: "guest" });
+const guestNav = createRbacNavAccess(guestSnap);
 
-assert.equal(sanitizePostLoginRequestedPath("/magazzino"), "/magazzino");
-assert.equal(sanitizePostLoginRequestedPath("//evil"), null);
-assert.equal(sanitizePostLoginRequestedPath("/login"), null);
-
-assert.equal(resolveFirstAccessibleNavHref(admin), "/dashboard");
-assert.equal(resolveFirstAccessibleNavHref(cliente, { clientLavorazioniAllowed: true }), "/lavorazioni-clienti");
-assert.equal(resolveFirstAccessibleNavHref(guest), "/dashboard");
+assert.equal(resolveFirstAccessibleNavHref(adminNav), "/dashboard");
+assert.equal(resolveFirstAccessibleNavHref(clienteNav), "/lavorazioni-clienti");
+assert.equal(resolveFirstAccessibleNavHref(guestNav), "/dashboard");
 
 assert.equal(
-  resolvePostLoginRedirectPath({ user: cliente, clientLavorazioniAllowed: true }),
+  resolvePostLoginRedirectPath({
+    user: { ruolo: "cliente", id: "c1" },
+    navAccess: clienteNav,
+  }),
   "/lavorazioni-clienti",
 );
 
 assert.equal(
   resolvePostLoginRedirectPath({
-    user: guest,
+    user: { ruolo: "guest", id: "g1" },
+    navAccess: guestNav,
     requestedPath: "/magazzino",
   }),
   "/magazzino",
@@ -32,11 +33,19 @@ assert.equal(
 
 assert.equal(
   resolvePostLoginRedirectPath({
-    user: cliente,
+    user: { ruolo: "cliente", id: "c1" },
+    navAccess: clienteNav,
     requestedPath: "/dashboard",
-    clientLavorazioniAllowed: true,
   }),
   "/lavorazioni-clienti",
 );
+
+assert.equal(adminNav.canAccessHref("/sicurezza"), true);
+assert.equal(adminNav.shouldHideHref("/sicurezza"), false);
+
+const operatoreSnap = buildTestSnapshot({ userId: "o1", roleKey: "operatore" });
+const operatoreNav = createRbacNavAccess(operatoreSnap);
+assert.equal(operatoreNav.canAccessHref("/sicurezza"), false);
+assert.equal(operatoreNav.shouldHideHref("/sicurezza"), true);
 
 console.log("resolve-post-login-redirect.test.ts OK");

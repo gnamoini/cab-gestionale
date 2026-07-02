@@ -61,6 +61,15 @@ jobs:
         env:
           NODE_ENV: production
 
+      - name: ESLint
+        run: npm run lint
+
+      - name: RBAC regression tests
+        run: npm run test:rbac
+
+      - name: RBAC hardening tests
+        run: npm run test:rbac:hardening
+
       - name: UX enforcement
         run: npm run ux:enforce
 

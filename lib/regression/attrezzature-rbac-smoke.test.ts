@@ -2,6 +2,12 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
 import { canRead, canWrite } from "@/lib/auth/rbac";
+import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
+import type { RequiredRbacContext } from "@/lib/rbac";
+
+function ctx(roleKey: string): RequiredRbacContext {
+  return buildTestSnapshot({ userId: `${roleKey}-1`, roleKey }).rbacContext as RequiredRbacContext;
+}
 
 const repoRoot = process.cwd();
 const rlsSql = fs.readFileSync(
@@ -15,12 +21,12 @@ assert.match(rlsSql, /rbac_scope_cliente/);
 assert.match(rlsSql, /join public\.mezzi m on m\.id = a\.mezzo_id/);
 
 // Modulo mezzi: operatore write, ufficio escluso, admin full
-assert.equal(canRead("operatore", "mezzi"), true);
-assert.equal(canWrite("operatore", "mezzi"), true);
-assert.equal(canRead("addetto_amministrativo", "mezzi"), false);
-assert.equal(canWrite("addetto_amministrativo", "mezzi"), false);
-assert.equal(canRead("admin", "mezzi"), true);
-assert.equal(canWrite("admin", "mezzi"), true);
+assert.equal(canRead("operatore", "mezzi", ctx("operatore")), true);
+assert.equal(canWrite("operatore", "mezzi", ctx("operatore")), true);
+assert.equal(canRead("addetto_amministrativo", "mezzi", ctx("addetto_amministrativo")), false);
+assert.equal(canWrite("addetto_amministrativo", "mezzi", ctx("addetto_amministrativo")), false);
+assert.equal(canRead("admin", "mezzi", ctx("admin")), true);
+assert.equal(canWrite("admin", "mezzi", ctx("admin")), true);
 
 const importPlugin = fs.readFileSync(
   path.join(repoRoot, "lib/data-import/entities/mezzi/mezzi-import.plugin.server.ts"),

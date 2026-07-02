@@ -7,6 +7,7 @@ import {
   type PermissionKey,
   type RbacSection,
 } from "@/lib/auth/rbac";
+import type { RequiredRbacContext } from "@/lib/rbac";
 import {
   buildModuleAccessMap,
   moduleAllows,
@@ -59,7 +60,7 @@ export async function verifyServerModuleCan(
 export async function verifyServerPermission(permission: PermissionKey): Promise<boolean> {
   const snap = await requireServerPermissions();
   if (!snap) return false;
-  return hasPermission(snap.role, permission, snap.rbacContext);
+  return hasPermission(snap.role, permission, snap.rbacContext as RequiredRbacContext);
 }
 
 export async function verifyServerSectionRead(section: RbacSection): Promise<boolean> {
@@ -67,7 +68,7 @@ export async function verifyServerSectionRead(section: RbacSection): Promise<boo
   if (mod) return verifyServerModuleCan(mod, "read");
   const snap = await requireServerPermissions();
   if (!snap) return false;
-  return canRead(snap.role, section, snap.rbacContext);
+  return canRead(snap.role, section, snap.rbacContext as RequiredRbacContext);
 }
 
 export async function verifyServerSectionWrite(section: RbacSection): Promise<boolean> {
@@ -75,7 +76,7 @@ export async function verifyServerSectionWrite(section: RbacSection): Promise<bo
   if (mod) return verifyServerModuleCan(mod, "write");
   const snap = await requireServerPermissions();
   if (!snap) return false;
-  return canWrite(snap.role, section, snap.rbacContext);
+  return canWrite(snap.role, section, snap.rbacContext as RequiredRbacContext);
 }
 
 export async function verifyServerSectionDelete(section: RbacSection): Promise<boolean> {
@@ -83,7 +84,7 @@ export async function verifyServerSectionDelete(section: RbacSection): Promise<b
   if (mod) return verifyServerModuleCan(mod, "write");
   const snap = await requireServerPermissions();
   if (!snap) return false;
-  return canDelete(snap.role, section, snap.rbacContext);
+  return canDelete(snap.role, section, snap.rbacContext as RequiredRbacContext);
 }
 
 /** @deprecated Usare resolveServerEffectivePermissions().modules */

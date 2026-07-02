@@ -15,58 +15,90 @@ import {
   type RbacSection,
   type Capability,
 } from "@/lib/auth/rbac";
+import type { RequiredRbacContext } from "@/lib/rbac";
 import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
+import { readStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
 
 export function useRbac() {
   const { user, status } = useAuth();
   const clientLav = useClientLavorazioniAccess();
   const { snapshot, isLoading: permsLoading } = useEffectivePermissions();
-  const isLoading = status === "loading" || permsLoading;
-  const role = snapshot?.role ?? user?.ruolo ?? "guest";
-  const rbacCtx = snapshot?.rbacContext ?? { operatorGlobalSettingsDbEnabled: false };
-  const rbacUser = snapshot ? snapshot.role : user;
-  const operatorGlobalSettingsPilotActive = snapshot?.pilot.effectiveEnabled ?? false;
+  const sticky = readStickyRbacSnapshot();
+  const effectiveSnap =
+    snapshot && isRbacSnapshotReady(snapshot)
+      ? snapshot
+      : sticky && isRbacSnapshotReady(sticky)
+        ? sticky
+        : null;
+
+  const isLoading = status === "loading" || (permsLoading && !effectiveSnap);
+  const role = effectiveSnap?.role ?? user?.ruolo ?? "guest";
+  const rbacCtx = effectiveSnap?.rbacContext as RequiredRbacContext | undefined;
+  const rbacUser = effectiveSnap ? effectiveSnap.role : user;
+  const operatorGlobalSettingsPilotActive = effectiveSnap?.pilot.effectiveEnabled ?? false;
   const clientLavorazioniAllowed = clientLav.allowed;
 
   const hasPermission = useCallback(
-    (permission: PermissionKey) => checkPermission(rbacUser, permission, rbacCtx),
+    (permission: PermissionKey) => {
+      if (!rbacCtx || !rbacUser) return false;
+      return checkPermission(rbacUser, permission, rbacCtx);
+    },
     [rbacUser, rbacCtx],
   );
   const hasCapabilityFn = useCallback(
     (capability: Capability) =>
-      snapshot?.resolved ? hasResolvedCapability(snapshot.resolved, capability) : false,
-    [snapshot?.resolved],
+      effectiveSnap?.resolved ? hasResolvedCapability(effectiveSnap.resolved, capability) : false,
+    [effectiveSnap?.resolved],
   );
   const canReadFn = useCallback(
-    (section: RbacSection) => canRead(rbacUser, section, rbacCtx),
+    (section: RbacSection) => {
+      if (!rbacCtx || !rbacUser) return false;
+      return canRead(rbacUser, section, rbacCtx);
+    },
     [rbacUser, rbacCtx],
   );
   const canWriteFn = useCallback(
-    (section: RbacSection) => canWrite(rbacUser, section, rbacCtx),
+    (section: RbacSection) => {
+      if (!rbacCtx || !rbacUser) return false;
+      return canWrite(rbacUser, section, rbacCtx);
+    },
     [rbacUser, rbacCtx],
   );
   const canDeleteFn = useCallback(
-    (section: RbacSection) => canDelete(rbacUser, section, rbacCtx),
+    (section: RbacSection) => {
+      if (!rbacCtx || !rbacUser) return false;
+      return canDelete(rbacUser, section, rbacCtx);
+    },
     [rbacUser, rbacCtx],
   );
   const canAccessPageFn = useCallback(
-    (pathname: string, opts?: CanAccessPageOptions) =>
-      canAccessPage(rbacUser, pathname, { clientLavorazioniAllowed, ...opts }, rbacCtx),
+    (pathname: string, opts?: CanAccessPageOptions) => {
+      if (!rbacCtx || !rbacUser) return false;
+      return canAccessPage(rbacUser, pathname, { clientLavorazioniAllowed, ...opts }, rbacCtx);
+    },
     [rbacUser, rbacCtx, clientLavorazioniAllowed],
   );
   const guardWrite = useCallback(
-    (section: RbacSection, onDenied?: (msg: string) => void) =>
-      denyUnless(canWrite(rbacUser, section, rbacCtx), onDenied),
+    (section: RbacSection, onDenied?: (msg: string) => void) => {
+      if (!rbacCtx || !rbacUser) return denyUnless(false, onDenied);
+      return denyUnless(canWrite(rbacUser, section, rbacCtx), onDenied);
+    },
     [rbacUser, rbacCtx],
   );
   const guardRead = useCallback(
-    (section: RbacSection, onDenied?: (msg: string) => void) =>
-      denyUnless(canRead(rbacUser, section, rbacCtx), onDenied),
+    (section: RbacSection, onDenied?: (msg: string) => void) => {
+      if (!rbacCtx || !rbacUser) return denyUnless(false, onDenied);
+      return denyUnless(canRead(rbacUser, section, rbacCtx), onDenied);
+    },
     [rbacUser, rbacCtx],
   );
   const assertWrite = useCallback(
-    (section: RbacSection) => assertAllowed(canWrite(rbacUser, section, rbacCtx)),
+    (section: RbacSection) => {
+      if (!rbacCtx || !rbacUser) assertAllowed(false);
+      else assertAllowed(canWrite(rbacUser, section, rbacCtx));
+    },
     [rbacUser, rbacCtx],
   );
 
@@ -100,7 +132,7 @@ export function useRbac() {
       isOspite: isGuest,
       isCliente,
       isReadOnly,
-      effectivePermissions: snapshot,
+      effectivePermissions: effectiveSnap,
     }),
     [
       user,
@@ -122,7 +154,7 @@ export function useRbac() {
       isGuest,
       isCliente,
       isReadOnly,
-      snapshot,
+      effectiveSnap,
     ],
   );
 }

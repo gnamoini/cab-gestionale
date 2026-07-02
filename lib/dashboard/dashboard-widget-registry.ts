@@ -2,29 +2,61 @@ import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import type { EffectiveModulePermission } from "@/src/lib/permissions/effective-permissions";
 
+export type DashboardWidgetSection =
+  | "kpi-header"
+  | "alerts"
+  | "wip"
+  | "magazzino"
+  | "admin"
+  | "activity"
+  | "calendar"
+  | "optional";
+
+export const DASHBOARD_SECTION_ORDER: readonly DashboardWidgetSection[] = [
+  "kpi-header",
+  "alerts",
+  "wip",
+  "admin",
+  "magazzino",
+  "activity",
+  "calendar",
+  "optional",
+] as const;
+
 export type DashboardWidgetId =
+  | "operational-kpi-header"
+  | "alerts-anomalies"
   | "lavorazioni-kpi"
+  | "admin-backlog"
   | "magazzino-kpi"
+  | "recent-activity"
+  | "operational-calendar"
   | "local-notes"
   | "recent-lavorazioni"
   | "recent-ricambi";
 
 export type DashboardWidgetDefinition = {
   id: DashboardWidgetId;
+  section: DashboardWidgetSection;
   order: number;
   layout: "half" | "full";
   requiredModule?: GestionalePermissionModule;
   hideInStaging?: boolean;
 };
 
-// ponytail: visibility = hideInStaging | moduleAllows(read) | always-on (local-notes)
+// ponytail: visibility = hideInStaging | moduleAllows(read) | always-on (local-notes, kpi-header)
 export const DASHBOARD_WIDGET_REGISTRY: readonly DashboardWidgetDefinition[] = [
-  { id: "lavorazioni-kpi", order: 10, layout: "half", requiredModule: "lavorazioni" },
-  { id: "magazzino-kpi", order: 20, layout: "half", requiredModule: "magazzino", hideInStaging: true },
-  { id: "local-notes", order: 30, layout: "half" },
-  { id: "recent-lavorazioni", order: 50, layout: "half", requiredModule: "lavorazioni", hideInStaging: true },
-  { id: "recent-ricambi", order: 60, layout: "half", requiredModule: "magazzino", hideInStaging: true },
+  { id: "operational-kpi-header", section: "kpi-header", order: 5, layout: "full" },
+  { id: "alerts-anomalies", section: "alerts", order: 10, layout: "full" },
+  { id: "lavorazioni-kpi", section: "wip", order: 20, layout: "full", requiredModule: "lavorazioni" },
+  { id: "admin-backlog", section: "admin", order: 30, layout: "half" },
+  { id: "magazzino-kpi", section: "magazzino", order: 40, layout: "half", requiredModule: "magazzino", hideInStaging: true },
+  { id: "recent-activity", section: "activity", order: 50, layout: "full", hideInStaging: true },
+  { id: "operational-calendar", section: "calendar", order: 60, layout: "full" },
+  { id: "local-notes", section: "optional", order: 70, layout: "half" },
 ] as const;
+
+const LEGACY_WIDGET_IDS: readonly DashboardWidgetId[] = ["recent-lavorazioni", "recent-ricambi"];
 
 function isWidgetVisible(
   def: DashboardWidgetDefinition,
@@ -37,7 +69,7 @@ function isWidgetVisible(
 }
 
 export function isKnownDashboardWidgetId(id: string): id is DashboardWidgetId {
-  return DASHBOARD_WIDGET_REGISTRY.some((w) => w.id === id);
+  return DASHBOARD_WIDGET_REGISTRY.some((w) => w.id === id) || LEGACY_WIDGET_IDS.includes(id as DashboardWidgetId);
 }
 
 export function resolveVisibleDashboardWidgets(input: {
@@ -52,4 +84,19 @@ export function resolveVisibleDashboardWidgets(input: {
 
 export function dashboardWidgetIds(widgets: readonly DashboardWidgetDefinition[]): DashboardWidgetId[] {
   return widgets.map((w) => w.id);
+}
+
+export function groupVisibleWidgetsBySection(
+  widgets: readonly DashboardWidgetDefinition[],
+): Map<DashboardWidgetSection, DashboardWidgetDefinition[]> {
+  const map = new Map<DashboardWidgetSection, DashboardWidgetDefinition[]>();
+  for (const section of DASHBOARD_SECTION_ORDER) {
+    map.set(section, []);
+  }
+  for (const w of widgets) {
+    const list = map.get(w.section) ?? [];
+    list.push(w);
+    map.set(w.section, list);
+  }
+  return map;
 }

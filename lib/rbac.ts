@@ -34,6 +34,11 @@ export type RbacEvaluationContext = {
   resolved?: ResolvedPermissions;
 };
 
+/** Runtime auth checks require a resolved snapshot — fail-closed without it. */
+export type RequiredRbacContext = RbacEvaluationContext & {
+  resolved: ResolvedPermissions;
+};
+
 /** @deprecated Seed only — not used at runtime. */
 export const ROLE_MODULE_DEFAULTS = RBAC_SEED_ROLE_MODULE_DEFAULTS;
 

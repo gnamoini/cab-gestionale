@@ -2,7 +2,7 @@
 
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { useAuth } from "@/context/auth-context";
-import { hasPermission } from "@/lib/auth/rbac";
+import { useRbac } from "@/src/hooks/use-rbac";
 import { QK } from "@/src/lib/react-query/invalidate-related";
 import {
   appSettingsAuditService,
@@ -17,6 +17,7 @@ export function useAppSettingsAuditQuery(
   params: AppSettingsAuditListParams = {},
 ): UseQueryResult<AppSettingsAuditRow[], Error> {
   const { user } = useAuth();
+  const rbac = useRbac();
   const limit = params.limit ?? 200;
   const module = params.module ?? "";
   const key = params.key ?? "";
@@ -28,7 +29,7 @@ export function useAppSettingsAuditQuery(
       if (!r.success) throw new Error(r.error ?? "Errore lettura audit impostazioni");
       return r.data ?? [];
     },
-    enabled: hasPermission(user, "manageSecurity"),
+    enabled: !!user?.id && rbac.hasPermission("manageSecurity"),
     staleTime: 60_000,
     gcTime: 300_000,
   });

@@ -9,7 +9,7 @@ import {
   GESTIONALE_PERMISSION_MODULES,
   type GestionalePermissionModule,
 } from "@/src/lib/permissions/gestionale-modules";
-import { navHrefToSection, canWriteAnyOperational, resolveRole, type RbacSection } from "@/lib/auth/rbac";
+import { navHrefToSection, resolveRole, type RbacSection } from "@/lib/auth/rbac";
 import { gestionaleNavHrefToModule } from "@/src/lib/permissions/gestionale-modules";
 import { useRbac } from "@/src/hooks/use-rbac";
 import { QK } from "@/src/lib/react-query/invalidate-related";
@@ -178,7 +178,7 @@ export function useNavHrefPermission(href: string): { canRead: boolean; canWrite
 
   return useMemo(() => {
     if (!section) {
-      return { canRead: true, canWrite: canWriteAnyOperational(rbac.user), isLoading: rbac.isLoading };
+      return { canRead: true, canWrite: rbac.hasCapability("can_write_operational"), isLoading: rbac.isLoading };
     }
 
     const mod = moduleFromHref ?? SECTION_TO_MODULE[section];

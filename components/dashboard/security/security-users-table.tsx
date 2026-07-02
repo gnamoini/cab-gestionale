@@ -33,7 +33,9 @@ import { TablePagination } from "@/components/gestionale/table-pagination";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { GlobalSelect, GlobalSettingsListSelect } from "@/components/gestionale/global-input";
 import { SecurityInlineNotice } from "@/components/dashboard/security/security-inline-notice";
-import { APP_ROLES, hasPermission, resolveRole, roleLabel, type AppRole } from "@/lib/auth/rbac";
+import { APP_ROLES, resolveRole, roleLabel, type AppRole } from "@/lib/auth/rbac";
+import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
+import { isRbacSnapshotReady, snapshotHasPermission } from "@/src/lib/rbac/rbac-snapshot-access";
 import { securityUserDisplayName } from "@/lib/auth/profile-display-name";
 import {
   buildSecurityUserPatches,
@@ -131,7 +133,9 @@ function compareUsers(a: EditableSecurityUser, b: EditableSecurityUser, key: Sec
 }
 
 function applyRoleToRow(row: EditableSecurityUser, ruolo: AppRole): EditableSecurityUser {
-  const fromRole = hasPermission(ruolo, "viewClientLavorazioni");
+  const snap = buildTestSnapshot({ userId: row.id, roleKey: ruolo });
+  const fromRole =
+    isRbacSnapshotReady(snap) && snapshotHasPermission(snap, "viewClientLavorazioni");
   return {
     ...row,
     ruolo,

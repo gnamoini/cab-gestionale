@@ -31,8 +31,15 @@ import {
   trackStoreUpdate,
 } from "@/lib/observability/boot-investigation";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
-import { clearClientEffectivePermissionsSnapshotCache, publishAuthRoleHint } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
+import { invalidateRbacTruthClient } from "@/src/lib/rbac/invalidate-rbac-truth";
+import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
+import {
+  publishAuthRoleHint,
+  publishClientEffectivePermissionsSnapshot,
+} from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
 import { invalidateRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
+import { publishStickyRbacSnapshot } from "@/src/lib/rbac/sticky-rbac-snapshot";
+import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
 import { QK } from "@/src/lib/react-query/query-keys";
 import { clearInvalidAuthSession } from "@/src/lib/auth/clear-invalid-auth-session";
 import { clearRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
@@ -166,6 +173,21 @@ export function AuthProvider({
       [...QK.userPermissions, initialSnapshot.user.id] as const,
       initialSnapshot.permissions ?? [],
     );
+    queryClient.setQueryData(
+      [...QK.userPermissions, "role-keys", initialSnapshot.user.id] as const,
+      initialSnapshot.rolePermissionKeys ?? [],
+    );
+    const snap = resolveEffectivePermissions({
+      userId: initialSnapshot.user.id,
+      roleKey: initialSnapshot.user.roleKey ?? initialSnapshot.user.ruolo,
+      rolePermissionKeys: initialSnapshot.rolePermissionKeys ?? [],
+      permissionRows: initialSnapshot.permissions ?? [],
+      pilotDbEnabled: false,
+    });
+    if (isRbacSnapshotReady(snap)) {
+      publishClientEffectivePermissionsSnapshot(snap);
+      publishStickyRbacSnapshot(snap);
+    }
   }, [initialSnapshot, queryClient]);
 
   useLayoutEffect(() => {
@@ -536,8 +558,7 @@ export function AuthProvider({
       }
     }
     trackRuntimeEvent(RuntimeEvents.authLogout, { userId: uid ?? "anon" });
-    clearClientEffectivePermissionsSnapshotCache();
-    await invalidateRuntimeTruth({ reason: "logout", queryClient });
+    await invalidateRbacTruthClient({ reason: "logout", queryClient });
     await transitionToAnonymous();
     resetUndoSession();
     notifyUndoSessionChanged();

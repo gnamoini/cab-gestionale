@@ -1,9 +1,7 @@
 import "server-only";
 
-import { clearServerAuthSnapshotCacheForUser } from "@/src/lib/auth/server-session-cache";
-import { invalidateServerRuntimeTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth.server";
+import { invalidateRbacTruthServer } from "@/src/lib/rbac/invalidate-rbac-truth.server";
 
 export function onUserRoleChangedServer(userId: string): void {
-  clearServerAuthSnapshotCacheForUser(userId);
-  invalidateServerRuntimeTruth();
+  invalidateRbacTruthServer({ affectedUserId: userId });
 }

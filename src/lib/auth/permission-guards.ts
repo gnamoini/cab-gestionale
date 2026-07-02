@@ -1,18 +1,16 @@
 "use client";
 
-import { userHasClientLavorazioniAccess } from "@/lib/lavorazioni/client-portal-access";
+import { userHasClientLavorazioniAccessFromSnapshot } from "@/lib/lavorazioni/client-portal-access";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { moduleAllows, type ModulePermissionOp } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
 import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
 import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
-import type { RbacEvaluationContext } from "@/lib/rbac";
+import type { RequiredRbacContext } from "@/lib/rbac";
 import { resolveRole, canRead, canWrite, canDelete, hasPermission, type PermissionKey, type RbacSection } from "@/lib/auth/rbac";
 import { fetchClientEffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/fetch-client-effective-permissions";
-import {
-  readAuthRoleHint,
-  readClientEffectivePermissionsSnapshotCache,
-} from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
+import { readClientEffectivePermissionsSnapshotCache } from "@/src/lib/runtime/truth-layer/client-effective-permissions-cache";
+import { isRbacSnapshotReady } from "@/src/lib/rbac/rbac-snapshot-access";
 import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 
@@ -37,36 +35,38 @@ export async function getCurrentRoleForPermissionCheck(): Promise<string | null>
   return snap?.role ?? null;
 }
 
-/** Cache → auth hint → fetch profilo (stesso ordine di `useRbac` / UI). */
-async function ensureWithRoleResolution(
-  check: (role: string, ctx?: RbacEvaluationContext) => boolean,
+async function ensureWithSnapshot(
+  check: (ctx: RequiredRbacContext, role: string) => boolean,
 ): Promise<ServiceResult<true>> {
   const cached = readClientEffectivePermissionsSnapshotCache();
-  if (cached && check(cached.role, cached.rbacContext)) return success(true);
-
-  const hint = readAuthRoleHint();
-  if (hint && check(hint.ruolo)) return success(true);
+  if (cached && isRbacSnapshotReady(cached) && check(cached.rbacContext as RequiredRbacContext, cached.role)) {
+    return success(true);
+  }
 
   const snap = await fetchClientEffectivePermissionsSnapshot();
-  if (snap && check(snap.role, snap.rbacContext)) return success(true);
+  if (snap && isRbacSnapshotReady(snap) && check(snap.rbacContext as RequiredRbacContext, snap.role)) {
+    return success(true);
+  }
 
   const cachedAfter = readClientEffectivePermissionsSnapshotCache();
-  if (cachedAfter && check(cachedAfter.role, cachedAfter.rbacContext)) return success(true);
-
-  if (hint && check(hint.ruolo)) return success(true);
+  if (
+    cachedAfter &&
+    isRbacSnapshotReady(cachedAfter) &&
+    check(cachedAfter.rbacContext as RequiredRbacContext, cachedAfter.role)
+  ) {
+    return success(true);
+  }
 
   return err(DENIED_MESSAGE);
 }
 
 export async function ensurePermission(permission: PermissionKey): Promise<ServiceResult<true>> {
-  return ensureWithRoleResolution((role, ctx) => hasPermission(role, permission, ctx));
+  return ensureWithSnapshot((ctx, role) => hasPermission(role, permission, ctx));
 }
 
 /** Allineato a RLS `can_write_operational` (promemoria dashboard, ecc.). */
 export async function ensureOperationalWrite(): Promise<ServiceResult<true>> {
-  return ensureWithRoleResolution((_role, ctx) =>
-    ctx?.resolved ? hasResolvedCapability(ctx.resolved, "can_write_operational") : false,
-  );
+  return ensureWithSnapshot((ctx) => hasResolvedCapability(ctx.resolved, "can_write_operational"));
 }
 
 export async function ensurePermissionOrError(permission: PermissionKey): Promise<void> {
@@ -75,7 +75,7 @@ export async function ensurePermissionOrError(permission: PermissionKey): Promis
 }
 
 export async function ensureIsAdmin(): Promise<ServiceResult<true>> {
-  return ensureWithRoleResolution((role) => resolveRole(role) === "admin");
+  return ensureWithSnapshot((_ctx, role) => resolveRole(role) === "admin");
 }
 
 export async function ensureModuleCan(
@@ -90,33 +90,24 @@ export async function ensureModuleCan(
 export async function ensureSectionRead(section: RbacSection): Promise<ServiceResult<true>> {
   const mod = SECTION_TO_MODULE[section];
   if (mod) return ensureModuleCan(mod, "read");
-  return ensureWithRoleResolution((role, ctx) => canRead(role, section, ctx));
+  return ensureWithSnapshot((ctx, role) => canRead(role, section, ctx));
 }
 
 export async function ensureSectionWrite(section: RbacSection): Promise<ServiceResult<true>> {
   const mod = SECTION_TO_MODULE[section];
   if (mod) return ensureModuleCan(mod, "write");
-  return ensureWithRoleResolution((role, ctx) => canWrite(role, section, ctx));
+  return ensureWithSnapshot((ctx, role) => canWrite(role, section, ctx));
 }
 
 export async function ensureSectionDelete(section: RbacSection): Promise<ServiceResult<true>> {
   const mod = SECTION_TO_MODULE[section];
   if (mod) return ensureModuleCan(mod, "write");
-  return ensureWithRoleResolution((role, ctx) => canDelete(role, section, ctx));
+  return ensureWithSnapshot((ctx, role) => canDelete(role, section, ctx));
 }
 
 export async function ensureSectionWriteOrError(section: RbacSection): Promise<void> {
   const allowed = await ensureSectionWrite(section);
   if (!allowed.success) throw new Error(allowed.error ?? DENIED_MESSAGE);
-}
-
-async function loadClientPortalAccessForCurrentUser(): Promise<{ role: string | null; userId: string | null }> {
-  const sb = getBrowserSupabase();
-  const { data: auth } = await sb.auth.getUser();
-  const userId = auth.user?.id ?? null;
-  if (!userId) return { role: null, userId: null };
-  const snap = await fetchClientEffectivePermissionsSnapshot();
-  return { role: snap?.role ?? null, userId };
 }
 
 /** `profiles.cliente_ref` dell'utente corrente (portale / filtri lista). */
@@ -128,10 +119,12 @@ export async function loadCallerClienteRef(): Promise<string | null> {
   return normalizeClienteRef(prof?.cliente_ref);
 }
 
-/** Portale lavorazioni clienti: solo ruoli admin e cliente. */
+/** Portale lavorazioni clienti via snapshot. */
 export async function ensureClientLavorazioniAccess(): Promise<ServiceResult<true>> {
-  const { role, userId } = await loadClientPortalAccessForCurrentUser();
-  if (!userId) return err("Sessione non valida.");
-  if (!userHasClientLavorazioniAccess(role, userId)) return err(CLIENT_DENIED);
+  const snap = await fetchClientEffectivePermissionsSnapshot();
+  if (!snap?.userId) return err("Sessione non valida.");
+  if (!isRbacSnapshotReady(snap) || !userHasClientLavorazioniAccessFromSnapshot(snap)) {
+    return err(CLIENT_DENIED);
+  }
   return success(true);
 }

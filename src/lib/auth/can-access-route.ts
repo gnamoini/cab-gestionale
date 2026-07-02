@@ -5,7 +5,7 @@ import {
   type RbacSection,
   type RbacUser,
 } from "@/lib/auth/rbac";
-import type { RbacEvaluationContext } from "@/lib/rbac";
+import type { RequiredRbacContext } from "@/lib/rbac";
 import { hasResolvedCapability } from "@/src/lib/rbac/resolve-user-permissions";
 import { moduleAllows } from "@/src/lib/auth/effective-module-access";
 import type { GestionalePermissionModule } from "@/src/lib/permissions/gestionale-modules";
@@ -35,7 +35,7 @@ export type CanAccessRouteInput = {
   user: RbacUser;
   pathname: string;
   opts?: CanAccessPageOptions;
-  ctx?: RbacEvaluationContext;
+  ctx?: RequiredRbacContext;
   /** Se presente, applica user_permissions + role_permissions via snapshot DB. */
   snapshot?: EffectivePermissionsSnapshot | null;
 };
@@ -47,12 +47,14 @@ export function canAccessRoute(input: CanAccessRouteInput): boolean {
   const section = pathnameToSection(pathname);
 
   if (!section || NON_MODULE_SECTIONS.has(section)) {
-    return canAccessPage(user, pathname, opts, effectiveCtx);
+    if (!effectiveCtx?.resolved) return false;
+    return canAccessPage(user, pathname, opts, effectiveCtx as RequiredRbacContext);
   }
 
   const module = SECTION_TO_MODULE[section];
   if (!module) {
-    return canAccessPage(user, pathname, opts, effectiveCtx);
+    if (!effectiveCtx?.resolved) return false;
+    return canAccessPage(user, pathname, opts, effectiveCtx as RequiredRbacContext);
   }
 
   const resolved = snapshot?.resolved ?? effectiveCtx?.resolved;
@@ -64,5 +66,6 @@ export function canAccessRoute(input: CanAccessRouteInput): boolean {
     return moduleAllows(snapshot.modules, module, "read");
   }
 
-  return canAccessPage(user, pathname, opts, effectiveCtx);
+  if (!effectiveCtx?.resolved) return false;
+  return canAccessPage(user, pathname, opts, effectiveCtx as RequiredRbacContext);
 }

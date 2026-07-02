@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Badge, LoadingCardSkeleton } from "@/components/design-system";
+import { useControlTowerContext } from "@/components/dashboard/control-tower-metrics-provider";
+import { CONTROL_TOWER_KPI_WINDOW_LABEL } from "@/lib/dashboard/control-tower-constants";
+import { LoadingCardSkeleton } from "@/components/design-system";
 import {
   dsDashboardWidgetTitle,
   dsFocus,
@@ -12,127 +14,72 @@ import {
   dsNotificationWidgetDangerChip,
   dsNotificationWidgetDangerRow,
 } from "@/lib/ui/notification-ui";
-import {
-  formatDashboardMagMovementTime,
-  formatDashboardMagRicambioTitle,
-  formatDashboardMagScortaDeficit,
-} from "@/lib/view/dashboard-widgets-selectors";
-import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
+import { formatDashboardMagRicambioTitle, formatDashboardMagScortaDeficit } from "@/lib/view/dashboard-widgets-selectors";
 
 const kpiCardClass = `${dsSurfaceInteractiveKpi} min-w-0 max-w-full overflow-hidden ${dsFocus}`;
-const widgetTitleClass = dsDashboardWidgetTitle;
-
-function WidgetLoading() {
-  return <LoadingCardSkeleton minHeightClass="min-h-[220px]" rows={3} />;
-}
-
-function WidgetError() {
-  return <p className={`${dsTypoCaption} text-[color:var(--cab-danger)]`}>Dati non disponibili.</p>;
-}
-
-function WidgetEmpty({ message }: { message: string }) {
-  return <p className={dsTypoCaption}>{message}</p>;
-}
-
-function KpiStat({ label, value, valueClassName }: { label: string; value: string; valueClassName?: string }) {
-  return (
-    <div className="min-w-0">
-      <p className={`${dsTypoCaption} truncate`}>{label}</p>
-      <p className={`mt-0.5 text-lg font-semibold tabular-nums text-[color:var(--cab-text)] ${valueClassName ?? ""}`.trim()}>
-        {value}
-      </p>
-    </div>
-  );
-}
-
-type MagazzinoSottoScortaRow = ReturnType<typeof useDashboardMetrics>["magSottoScortaRicambi"][number];
-
-function MagazzinoSottoScortaListItem({ r }: { r: MagazzinoSottoScortaRow }) {
-  return (
-    <li>
-      <div className={dsNotificationWidgetDangerRow}>
-        <p className="min-w-0 flex-1 truncate text-sm font-semibold leading-snug text-[color:var(--cab-text)]">
-          {formatDashboardMagRicambioTitle(r.marca, r.label)}
-        </p>
-        <span className={`${dsNotificationWidgetDangerChip} tabular-nums`}>
-          {formatDashboardMagScortaDeficit(r.scorta, r.scortaMinima)}
-        </span>
-      </div>
-    </li>
-  );
-}
 
 export function DashboardMagazzinoKpiWidget() {
-  const {
-    staging,
-    magStats,
-    magSottoScortaRicambi,
-    magDailyMovements,
-    magRecentMovements,
-    magLoading,
-    magError,
-  } = useDashboardMetrics();
+  const { staging, slices, isLoading } = useControlTowerContext();
+  const mag = slices?.magazzinoOps;
 
-  const sottoScortaPreview = magSottoScortaRicambi.slice(0, 3);
+  if (staging) {
+    return (
+      <section className={`${kpiCardClass} p-4`}>
+        <h2 className={dsDashboardWidgetTitle}>Magazzino operativo</h2>
+        <p className={`${dsTypoCaption} mt-4`}>Anteprima disabilitata in staging pubblico.</p>
+      </section>
+    );
+  }
+
+  if (isLoading && !mag) {
+    return <LoadingCardSkeleton minHeightClass="min-h-[12rem]" rows={3} />;
+  }
+
+  const sottoPreview = mag?.sottoScortaPreview ?? [];
 
   return (
     <Link href="/magazzino" className={kpiCardClass} aria-label="Apri magazzino">
-      <h2 className={`${widgetTitleClass} min-w-0 truncate`}>Magazzino</h2>
-      {staging ? (
-        <p className={`${dsTypoCaption} mt-4`}>Anteprima disabilitata in staging pubblico.</p>
-      ) : magLoading ? (
-        <div className="mt-4">
-          <WidgetLoading />
+      <h2 className={dsDashboardWidgetTitle}>Magazzino operativo</h2>
+      <p className={`${dsTypoCaption} mt-1`}>{CONTROL_TOWER_KPI_WINDOW_LABEL} · movimenti</p>
+      <div className="mt-4 grid min-w-0 grid-cols-2 gap-2 sm:grid-cols-3">
+        <div>
+          <p className={dsTypoCaption}>Sotto scorta</p>
+          <p className="mt-0.5 text-lg font-semibold tabular-nums text-[color:var(--cab-text)]">{mag?.sottoScortaCount ?? 0}</p>
         </div>
-      ) : magError ? (
-        <div className="mt-4">
-          <WidgetError />
+        <div>
+          <p className={dsTypoCaption}>Movimenti settimana</p>
+          <p className="mt-0.5 text-lg font-semibold tabular-nums">{mag?.movimentiSettimana ?? 0}</p>
         </div>
+      </div>
+      {sottoPreview.length > 0 ? (
+        <ul className="mt-4 space-y-2">
+          {sottoPreview.map((r) => (
+            <li key={r.id}>
+              <div className={dsNotificationWidgetDangerRow}>
+                <p className="min-w-0 flex-1 truncate text-sm font-semibold">{formatDashboardMagRicambioTitle(r.marca, r.label)}</p>
+                <span className={`${dsNotificationWidgetDangerChip} tabular-nums`}>
+                  {formatDashboardMagScortaDeficit(r.scorta, r.scortaMinima)}
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
       ) : (
-        <>
-          <div className="mt-4 grid min-w-0 grid-cols-3 gap-2 sm:gap-3">
-            <KpiStat
-              label="Sotto scorta"
-              value={String(magStats.sottoScorta)}
-              valueClassName={
-                magStats.sottoScorta > 0 ? "text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))]" : undefined
-              }
-            />
-            <KpiStat label="Entrate oggi" value={String(magDailyMovements.entrate)} />
-            <KpiStat label="Uscite oggi" value={String(magDailyMovements.uscite)} />
-          </div>
-          <div className="mt-4 space-y-3">
-            {magStats.sottoScorta > 0 ? (
-              <ul className="space-y-2">
-                {sottoScortaPreview.map((r) => (
-                  <MagazzinoSottoScortaListItem key={r.id} r={r} />
-                ))}
-              </ul>
-            ) : (
-              <p className={dsTypoCaption}>Scorte OK · nessun alert</p>
-            )}
-            <div>
-              <p className={`${dsTypoCaption} mb-1.5 font-semibold uppercase tracking-wide`}>Ultimi movimenti</p>
-              {magRecentMovements.length === 0 ? (
-                <WidgetEmpty message="Nessun movimento." />
-              ) : (
-                <ul className="space-y-1.5">
-                  {magRecentMovements.map((m) => (
-                    <li key={m.id} className="flex min-w-0 items-center gap-2 text-sm">
-                      <Badge tone={m.tipo === "entrata" ? "ok" : "danger"}>{m.tipo === "entrata" ? "Entrata" : "Uscita"}</Badge>
-                      <span className="min-w-0 flex-1 truncate text-[color:var(--cab-text)]">{m.label}</span>
-                      <span className={`${dsTypoCaption} shrink-0 tabular-nums`}>×{m.quantita}</span>
-                      <span className={`${dsTypoCaption} shrink-0 tabular-nums text-[color:var(--cab-text-muted)]`}>
-                        {formatDashboardMagMovementTime(m.at)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          </div>
-        </>
+        <p className={`${dsTypoCaption} mt-4`}>Scorte OK</p>
       )}
+      {(mag?.topConsumo.length ?? 0) > 0 ? (
+        <div className="mt-4">
+          <p className={`${dsTypoCaption} mb-1.5 font-semibold uppercase tracking-wide`}>Più consumati</p>
+          <ul className="space-y-1">
+            {mag!.topConsumo.map((r) => (
+              <li key={r.id} className="flex justify-between gap-2 text-sm">
+                <span className="min-w-0 truncate">{r.label}</span>
+                <span className="shrink-0 tabular-nums">×{r.totalUscite}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </Link>
   );
 }

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { useAuth, isAuthFullyAuthenticated } from "@/context/auth-context";
 import { clearGestionaleToasts } from "@/context/toast-context";
 import { resolvePostLoginRedirectPath } from "@/lib/auth/resolve-post-login-redirect";
+import { buildBootstrapRbacSnapshot, createRbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import {
   AuthStandaloneCardHeader,
@@ -158,10 +159,17 @@ export function LoginForm() {
   useEffect(() => {
     if (!isAuthFullyAuthenticated(status)) return;
 
-    const target = resolvePostLoginRedirectPath({
-      user: user ? { ruolo: user.ruolo, id: user.id } : null,
-      requestedPath: searchParams.get("from"),
+    if (!user?.id) return;
+
+    const bootstrap = buildBootstrapRbacSnapshot(user.id, user.roleKey ?? user.ruolo);
+    const navAccess = createRbacNavAccess(bootstrap, {
       clientLavorazioniAllowed: clientLavAccess.allowed,
+    });
+
+    const target = resolvePostLoginRedirectPath({
+      user: { ruolo: user.ruolo, id: user.id },
+      navAccess,
+      requestedPath: searchParams.get("from"),
     });
 
     let finalTarget = target;

@@ -2,11 +2,11 @@ import { resolveGestionaleNav, type GestionaleNavHref } from "@/components/gesti
 import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
 import {
   ACCESS_DENIED_PATH,
-  canAccessPage,
-  shouldHideNavHref,
+  defaultHomePathForRole,
   type CanAccessPageOptions,
   type RbacUser,
 } from "@/lib/auth/rbac";
+import type { RbacNavAccess } from "@/src/lib/rbac/rbac-snapshot-access";
 
 const DASHBOARD_FALLBACK = "/dashboard";
 
@@ -28,44 +28,41 @@ function stagingBlocksRedirect(path: string): boolean {
 
 /** Prima voce menu accessibile (ordine `GESTIONALE_NAV`), esclusi staging disabilitati. */
 export function resolveFirstAccessibleNavHref(
-  user: RbacUser,
-  opts?: CanAccessPageOptions,
+  navAccess: RbacNavAccess,
 ): string {
   const items = resolveGestionaleNav({
-    hideHref: (href: GestionaleNavHref) =>
-      shouldHideNavHref(user, href, {
-        clientLavorazioniAllowed: opts?.clientLavorazioniAllowed,
-      }),
+    hideHref: (href: GestionaleNavHref) => navAccess.shouldHideHref(href),
   });
-  const first = items.find((item) => !item.disabled);
+  const first = items.find((item) => !item.disabled && navAccess.canAccessHref(item.href));
   return first?.href ?? DASHBOARD_FALLBACK;
 }
 
 export type ResolvePostLoginRedirectInput = {
   user: RbacUser | null;
+  navAccess: RbacNavAccess | null;
   /** Query `from` o deep link esplicito post-login. */
   requestedPath?: string | null;
 } & CanAccessPageOptions;
 
 /**
  * Destinazione post-login: deep link consentito, altrimenti prima pagina del menu,
- * fallback dashboard.
+ * fallback home per ruolo.
  */
 export function resolvePostLoginRedirectPath(input: ResolvePostLoginRedirectInput): string {
   if (!input.user) return DASHBOARD_FALLBACK;
 
-  const accessOpts: CanAccessPageOptions = {
-    clientLavorazioniAllowed: input.clientLavorazioniAllowed,
-  };
+  if (!input.navAccess) {
+    return defaultHomePathForRole(input.user);
+  }
 
   const requested = sanitizePostLoginRequestedPath(input.requestedPath);
   if (
     requested &&
     !stagingBlocksRedirect(requested) &&
-    canAccessPage(input.user, requested, accessOpts)
+    input.navAccess.canAccessRoute(requested)
   ) {
     return requested;
   }
 
-  return resolveFirstAccessibleNavHref(input.user, accessOpts);
+  return resolveFirstAccessibleNavHref(input.navAccess);
 }

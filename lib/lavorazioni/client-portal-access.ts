@@ -1,4 +1,6 @@
-import { CLIENTE_HOME_PATH, hasPermission } from "@/lib/auth/rbac";
+import { CLIENTE_HOME_PATH } from "@/lib/auth/rbac";
+import type { RbacSnapshotBound } from "@/src/lib/rbac/rbac-snapshot-access";
+import { snapshotHasPermission } from "@/src/lib/rbac/rbac-snapshot-access";
 
 /** Etichetta UI: nav laterale, titoli pagina, impostazioni accesso. */
 export const PORTALE_CLIENTI_LABEL = "Portale Clienti";
@@ -22,12 +24,9 @@ export function parseClientPortalAccess(value: unknown): ClientPortalAccessSetti
   return { enabledUserIds };
 }
 
-export function userHasClientLavorazioniAccess(
-  role: string | null | undefined,
-  _userId?: string | null | undefined,
-  _settings?: ClientPortalAccessSettings,
-): boolean {
-  return hasPermission(role, "viewClientLavorazioni");
+/** Portale clienti: capability da snapshot (SSOT runtime). */
+export function userHasClientLavorazioniAccessFromSnapshot(snap: RbacSnapshotBound): boolean {
+  return snapshotHasPermission(snap, "viewClientLavorazioni");
 }
 
 export function clientLavorazioniListPath(): string {

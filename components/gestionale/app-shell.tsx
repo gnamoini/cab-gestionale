@@ -9,10 +9,10 @@ import { useGlobalLoading } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { erpFocus } from "@/lib/ui/erp-tokens";
 import { resolveGestionaleNav, type GestionaleNavResolvedItem } from "@/components/gestionale/gestionale-nav-config";
-import { CLIENTE_HOME_PATH, shouldHideNavHref, isClienteRole } from "@/lib/auth/rbac";
+import { CLIENTE_HOME_PATH, isClienteRole } from "@/lib/auth/rbac";
 import { useRbac } from "@/src/hooks/use-rbac";
-import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
-import { useOperatorGlobalSettings } from "@/src/context/operator-global-settings-context";
+import { useRbacNavAccess } from "@/src/hooks/use-rbac-nav-access";
+import { SidebarNavSkeleton } from "@/components/gestionale/sidebar-nav-skeleton";
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
 import { SidebarSessionPanel } from "@/components/gestionale/sidebar-session-panel";
 import {
@@ -238,12 +238,14 @@ function MobileNavDrawer({
   navItems,
   onNavigate,
   isCompactShell,
+  isNavLoading,
 }: {
   open: boolean;
   onClose: () => void;
   navItems: GestionaleNavResolvedItem[];
   onNavigate?: (href: string) => void;
   isCompactShell: boolean;
+  isNavLoading: boolean;
 }) {
   const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
@@ -324,9 +326,13 @@ function MobileNavDrawer({
           aria-label="Sezioni principali"
         >
           <div className="gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y [-webkit-overflow-scrolling:touch]">
-            {navItems.map((item) => (
-              <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} onNavigate={onNavigate} />
-            ))}
+            {isNavLoading ? (
+              <SidebarNavSkeleton />
+            ) : (
+              navItems.map((item) => (
+                <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} onNavigate={onNavigate} />
+              ))
+            )}
           </div>
         </nav>
       </div>
@@ -365,8 +371,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const suppressGlobalScrollEndPad = pathname.startsWith("/impostazioni");
   const rbac = useRbac();
-  const clientLavAccess = useClientLavorazioniAccess();
-  const operatorPilot = useOperatorGlobalSettings();
+  const { navAccess, isNavLoading } = useRbacNavAccess();
   const clienteOnly = isClienteRole(user);
   const homePath = clienteOnly ? CLIENTE_HOME_PATH : "/dashboard";
   useGlobalLoading(routeLoading ? GLOBAL_LOADING_MESSAGES.navigation : null);
@@ -384,21 +389,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     healBodyScrollLockState("app-shell-mount");
   }, []);
 
-  const navItems = useMemo(
-    () =>
-      resolveGestionaleNav({
-        hideHref: (href) =>
-          shouldHideNavHref(
-            user,
-            href,
-            {
-              clientLavorazioniAllowed: clientLavAccess.allowed,
-            },
-            { operatorGlobalSettingsDbEnabled: operatorPilot.dbEnabled },
-          ),
-      }),
-    [user, clientLavAccess.allowed, operatorPilot.dbEnabled],
-  );
+  const navItems = useMemo(() => {
+    if (!navAccess) return [] as GestionaleNavResolvedItem[];
+    return resolveGestionaleNav({
+      hideHref: (href) => navAccess.shouldHideHref(href),
+    });
+  }, [navAccess]);
 
   useEffect(() => {
     if (routeTransitionStartRef.current != null) {
@@ -536,20 +532,24 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           }}
         >
           <div className="gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden overscroll-contain [-webkit-overflow-scrolling:touch]">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.href}
-                href={item.href}
-                label={item.label}
-                Icon={item.Icon}
-                collapsed={collapsed}
-                disabled={item.disabled}
-                badge={item.badge}
-                onNavigate={beginRouteTransition}
-                onExpandIntent={onSidebarNavIntent}
-                onActiveNavClick={collapseSidebar}
-              />
-            ))}
+            {isNavLoading ? (
+              <SidebarNavSkeleton />
+            ) : (
+              navItems.map((item) => (
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  Icon={item.Icon}
+                  collapsed={collapsed}
+                  disabled={item.disabled}
+                  badge={item.badge}
+                  onNavigate={beginRouteTransition}
+                  onExpandIntent={onSidebarNavIntent}
+                  onActiveNavClick={collapseSidebar}
+                />
+              ))
+            )}
           </div>
         </nav>
       </aside>
@@ -564,6 +564,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           navItems={navItems}
           onNavigate={beginRouteTransition}
           isCompactShell={isCompactShell}
+          isNavLoading={isNavLoading}
         />
 
         {process.env.NODE_ENV === "development" ? <DevAuditMounts /> : null}

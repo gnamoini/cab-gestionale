@@ -4,6 +4,7 @@
 import assert from "node:assert/strict";
 import { canAccessPage, canRead, canWrite, hasPermission } from "@/lib/auth/rbac";
 import { canAccessRoute } from "@/src/lib/auth/can-access-route";
+import type { RequiredRbacContext } from "@/lib/rbac";
 import { buildTestSnapshot } from "@/lib/regression/rbac-test-fixtures";
 
 const ROUTES = [
@@ -102,7 +103,7 @@ for (const c of cases) {
     roleKey: c.role,
     userOverrides: c.userOverrides,
   });
-  const ctx = snap.rbacContext;
+  const ctx = snap.rbacContext as RequiredRbacContext;
 
   for (const [path, allowed] of Object.entries(c.pageExpect)) {
     const actual = canAccessPage(c.role, path, undefined, ctx);
@@ -133,12 +134,12 @@ assert.equal(
   "operatore override FULL preventivi",
 );
 
-const mgrCtx = buildTestSnapshot({ userId: "m1", roleKey: "manager" }).rbacContext;
+const mgrCtx = buildTestSnapshot({ userId: "m1", roleKey: "manager" }).rbacContext as RequiredRbacContext;
 assert.equal(hasPermission("manager", "manageSettings", mgrCtx), true);
 assert.equal(hasPermission("manager", "manageSecurity", mgrCtx), false);
-assert.equal(hasPermission("operatore", "manageSettings", buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).rbacContext), false);
-assert.equal(canWrite("guest", "magazzino", buildTestSnapshot({ userId: "g1", roleKey: "guest" }).rbacContext), false);
-assert.equal(canRead("guest", "dipendenti", buildTestSnapshot({ userId: "g1", roleKey: "guest" }).rbacContext), true);
-assert.equal(canRead("operatore", "dipendenti", buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).rbacContext), false);
+assert.equal(hasPermission("operatore", "manageSettings", buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).rbacContext as RequiredRbacContext), false);
+assert.equal(canWrite("guest", "magazzino", buildTestSnapshot({ userId: "g1", roleKey: "guest" }).rbacContext as RequiredRbacContext), false);
+assert.equal(canRead("guest", "dipendenti", buildTestSnapshot({ userId: "g1", roleKey: "guest" }).rbacContext as RequiredRbacContext), true);
+assert.equal(canRead("operatore", "dipendenti", buildTestSnapshot({ userId: "o1", roleKey: "operatore" }).rbacContext as RequiredRbacContext), false);
 
 console.log("permissions-role-matrix.test.ts OK");

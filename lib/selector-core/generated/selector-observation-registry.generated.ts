@@ -2,7 +2,7 @@
 import type { ObservationRegistrySnapshot } from "@/lib/selector-core/selector-observation-types";
 
 export const OBSERVATION_REGISTRY_SNAPSHOT: ObservationRegistrySnapshot = {
-  "builtAt": "2026-06-11T04:34:20.998Z",
+  "builtAt": "2026-07-02T17:23:23.817Z",
   "domains": {
     "runtime": {
       "modules": [
@@ -897,6 +897,8 @@ export const OBSERVATION_REGISTRY_SNAPSHOT: ObservationRegistrySnapshot = {
     "lib/regression/selector-concurrency-race.test.ts",
     "lib/regression/selector-decision-engine-audit.test.ts",
     "lib/regression/selector-domain-policy-audit.test.ts",
+    "lib/regression/selector-exclusive-group.test.ts",
+    "lib/regression/selector-ghost-click-guard.test.ts",
     "lib/regression/selector-hardening-audit.test.ts",
     "lib/regression/selector-post-change-validation.test.ts",
     "lib/regression/selector-query-ssot-audit.test.ts",

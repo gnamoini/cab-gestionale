@@ -13,6 +13,7 @@ import {
   resolveCanonicalRole,
   resolveRole,
   ROLE_LABELS,
+  type RequiredRbacContext,
 } from "@/lib/rbac";
 import {
   canReadModule as resolvedCanReadModule,
@@ -27,6 +28,7 @@ export {
   type CanonicalRole,
   type Capability,
   type RbacEvaluationContext,
+  type RequiredRbacContext,
   RBAC_DENIED_MESSAGE,
   resolveCanonicalRole,
   resolveRole,
@@ -36,8 +38,17 @@ export const APP_ROLES = CANONICAL_ROLES;
 export const normalizeRole = resolveRole;
 
 function capFromCtx(ctx: RbacEvaluationContext | undefined, cap: Capability): boolean {
-  if (ctx?.resolved) return hasResolvedCapability(ctx.resolved, cap);
-  return false;
+  if (!ctx?.resolved) return false;
+  return hasResolvedCapability(ctx.resolved, cap);
+}
+
+/** @internal Test-only — documents fail-closed without resolved snapshot. */
+export function hasPermissionUnsafe(
+  user: RbacUser,
+  permission: PermissionKey,
+  ctx?: RbacEvaluationContext,
+): boolean {
+  return hasPermission(user, permission, ctx as RequiredRbacContext);
 }
 
 export type PermissionKey =
@@ -133,7 +144,7 @@ function sectionAccess(_user: RbacUser, section: RbacSection, ctx?: RbacEvaluati
 }
 
 /** Derivate da capability + matrice moduli. */
-export function hasPermission(user: RbacUser, permission: PermissionKey, ctx?: RbacEvaluationContext): boolean {
+export function hasPermission(user: RbacUser, permission: PermissionKey, ctx: RequiredRbacContext): boolean {
   switch (permission) {
     case "manageUsers":
     case "manageSecurity":
@@ -161,15 +172,15 @@ export function hasPermission(user: RbacUser, permission: PermissionKey, ctx?: R
   }
 }
 
-export function canRead(user: RbacUser, section: RbacSection, ctx?: RbacEvaluationContext): boolean {
+export function canRead(user: RbacUser, section: RbacSection, ctx: RequiredRbacContext): boolean {
   return sectionAccess(user, section, ctx).read;
 }
 
-export function canWrite(user: RbacUser, section: RbacSection, ctx?: RbacEvaluationContext): boolean {
+export function canWrite(user: RbacUser, section: RbacSection, ctx: RequiredRbacContext): boolean {
   return sectionAccess(user, section, ctx).write;
 }
 
-export function canDelete(user: RbacUser, section: RbacSection, ctx?: RbacEvaluationContext): boolean {
+export function canDelete(user: RbacUser, section: RbacSection, ctx: RequiredRbacContext): boolean {
   return sectionAccess(user, section, ctx).delete;
 }
 
@@ -177,7 +188,7 @@ export function resolveClientLavorazioniPortalAccess(
   _role: string | null | undefined,
   _userId?: string | null | undefined,
   _settingsEnabledUserIds?: string[],
-  ctx?: RbacEvaluationContext,
+  ctx?: RequiredRbacContext,
 ): boolean {
   return capFromCtx(ctx, "can_access_client_area");
 }
@@ -217,8 +228,8 @@ export function pathnameToSection(pathname: string): RbacSection | null {
 export function canAccessPage(
   user: RbacUser,
   pathname: string,
-  opts?: CanAccessPageOptions,
-  ctx?: RbacEvaluationContext,
+  opts: CanAccessPageOptions | undefined,
+  ctx: RequiredRbacContext,
 ): boolean {
   const section = pathnameToSection(pathname);
   if (!section) return true;
@@ -278,7 +289,7 @@ export function isReadOnlyRole(user: RbacUser): boolean {
   return role === "guest" || role === "cliente";
 }
 
-export function canWriteAnyOperational(_user: RbacUser, ctx?: RbacEvaluationContext): boolean {
+export function canWriteAnyOperational(_user: RbacUser, ctx: RequiredRbacContext): boolean {
   return capFromCtx(ctx, "can_write_operational");
 }
 
@@ -290,8 +301,8 @@ export function isPathAllowedForCliente(pathname: string): boolean {
 export function shouldHideNavHref(
   user: RbacUser,
   href: string,
-  opts?: { clientLavorazioniAllowed?: boolean },
-  ctx?: RbacEvaluationContext,
+  opts: { clientLavorazioniAllowed?: boolean } | undefined,
+  ctx: RequiredRbacContext,
 ): boolean {
   const section = pathnameToSection(href);
   if (!section) return false;
