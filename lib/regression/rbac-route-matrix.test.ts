@@ -11,6 +11,7 @@ assertRouteProtection(
   "admin",
   [
     { pathname: "/dashboard", allowed: true },
+    { pathname: "/agenda", allowed: true },
     { pathname: "/report", allowed: true },
     { pathname: "/impostazioni", allowed: true },
   ],

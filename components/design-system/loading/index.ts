@@ -47,6 +47,10 @@ export { LoadingDocumentiListSkeleton } from "./loading-documenti-list-skeleton"
 export { LoadingPreventiviListSkeleton } from "./loading-preventivi-list-skeleton";
 export { LoadingReportSkeleton } from "./loading-report-skeleton";
 export { LoadingImpostazioniSkeleton } from "./loading-impostazioni-skeleton";
+export { LoadingAgendaSkeleton, LoadingAgendaContentSkeleton } from "./loading-agenda-skeleton";
+export { LoadingFatturazioneSkeleton, LoadingFatturazioneListSkeleton } from "./loading-fatturazione-skeleton";
+export { LoadingSicurezzaSkeleton } from "./loading-sicurezza-skeleton";
+export { LoadingProductionReadinessSkeleton } from "./loading-production-readiness-skeleton";
 export { LoadingLoginSkeleton } from "./loading-login-skeleton";
 export { LoadingClientDetailSkeleton } from "./loading-client-detail-skeleton";
 export { LoadingToolbarSkeleton } from "./loading-toolbar-skeleton";
@@ -78,6 +82,7 @@ export {
   type SkeletonDashboardWidgetProps,
   type SkeletonDashboardWidgetVariant,
 } from "./skeleton-primitives";
+export { resolveLoadingPageSkeletonVariant } from "./resolve-loading-page-skeleton-variant";
 export { LoadingPageShellSkeleton, type LoadingPageShellSkeletonProps } from "./loading-page-shell-skeleton";
 
 /** Alias legacy — stesso componente. */

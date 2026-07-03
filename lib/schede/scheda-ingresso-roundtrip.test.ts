@@ -142,6 +142,20 @@ assert.equal(doc.campi.descrizioneAnomalia, MULTILINE_ANOMALIA);
 assert.equal(doc.campi.noteIntervento, MULTILINE_NOTE);
 assert.equal(doc.campi.cliente, "Cliente Audit");
 
+const FIRMA_DATA_URL = "data:image/png;base64,iVBORw0KGgo=";
+const bundleFirma: LavorazioneSchedeBundle = {
+  ...bundle,
+  ingresso: {
+    ...bundle.ingresso!,
+    campi: { ...campi, richiedenteFirma: FIRMA_DATA_URL },
+  },
+};
+const clampedFirma = clampSchedeBundle(bundleFirma);
+assert.equal(clampedFirma.ingresso!.campi.richiedenteFirma, FIRMA_DATA_URL);
+const firmaPayload = bundleToSchedaPayloads(clampedFirma)[0]!;
+const firmaDoc = (firmaPayload.contenuto as { doc: { campi: SchedaIngressoFields } }).doc;
+assert.equal(firmaDoc.campi.richiedenteFirma, FIRMA_DATA_URL);
+
 const noteFromScheda = lavorazioneNoteOperative(
   { id: "lav-audit-1", note: "fallback row note" },
   { "lav-audit-1": clamped },

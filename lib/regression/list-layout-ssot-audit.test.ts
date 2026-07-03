@@ -13,18 +13,20 @@ function read(rel: string): string {
 
 const layoutCss = read("components/gestionale/global-table/gestionale-list-layout.css");
 const layoutHook = read("lib/ui/use-gestionale-list-layout.ts");
+const pageLayoutResolver = read("lib/ui/resolve-gestionale-page-layout.ts");
 const globalsCss = read("app/globals.css");
 
 assert.match(layoutCss, /\.gestionale-list-layout-desktop/);
 assert.match(layoutCss, /\.gestionale-list-mobile-only/);
 assert.match(globalsCss, /gestionale-list-layout\.css/);
 assert.match(layoutHook, /ResizeObserver/);
-assert.match(layoutHook, /resolveGestionaleListViewportWidth/);
-assert.match(layoutHook, /visualViewport/);
-assert.match(layoutHook, /TIER_THRESHOLDS/);
-assert.match(layoutHook, /minViewport: 1280, minContainer: 1024/);
-assert.match(layoutHook, /minContainer: 896/);
-assert.match(layoutHook, /minContainer: 640/);
+assert.match(layoutHook, /resolveGestionalePageLayout/);
+assert.match(layoutHook, /useLayoutEffect/);
+assert.match(layoutHook, /useGestionaleShellLayout/);
+assert.doesNotMatch(layoutHook, /readGestionaleShellTierFromDom/);
+assert.match(pageLayoutResolver, /GESTIONALE_LIST_MIN_VIEWPORT_XL/);
+assert.match(pageLayoutResolver, /1280/);
+assert.match(pageLayoutResolver, /1024/);
 
 const xlViews: Array<{ file: string; mustHave: RegExp[]; mustNot: RegExp[] }> = [
   {
@@ -54,8 +56,8 @@ const xlViews: Array<{ file: string; mustHave: RegExp[]; mustNot: RegExp[] }> = 
   },
   {
     file: "components/lavorazioni-clienti/client-lavorazioni-view.tsx",
-    mustHave: [/useGestionaleListLayout/, /listLayout={listLayout}/],
-    mustNot: [/hidden xl:block/, /xl:hidden/],
+    mustHave: [/useClientPortalPageOrchestrator/, /listLayout={listLayout}/, /canRender/],
+    mustNot: [/hidden xl:block/, /xl:hidden/, /useGestionaleListLayout/, /readGestionaleShellTierFromDom/],
   },
   {
     file: "components/lavorazioni/schede/lavorazione-preventivi-hub-list.tsx",

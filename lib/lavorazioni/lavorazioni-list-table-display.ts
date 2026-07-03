@@ -38,9 +38,16 @@ export function lavorazioneOreTotaliSchedaLabel(
 }
 
 /** Permanenza tra ingresso e completamento/archivio. */
+export function lavorazionePermanenzaFineIso(row: LavorazioneListRow): string {
+  const closed = row.archived_at?.trim() || row.data_uscita?.trim();
+  if (closed) return closed;
+  return new Date().toISOString();
+}
+
+/** Permanenza tra ingresso e completamento/archivio. */
 export function lavorazionePermanenzaGiorniLabel(row: LavorazioneListRow): string {
   const ingresso = (row.data_ingresso ?? row.created_at) as string;
-  const fine = lavorazioneDataCompletamentoIso(row);
+  const fine = lavorazionePermanenzaFineIso(row);
   const ms = durataMsStorico(ingresso, fine);
   if (ms <= 0) return "—";
   const g = ms / 86400000;

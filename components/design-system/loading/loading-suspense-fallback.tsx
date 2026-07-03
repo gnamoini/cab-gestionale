@@ -26,6 +26,10 @@ const VARIANT_HEIGHT: Partial<Record<LoadingPageSkeletonVariant, string>> = {
   kanban: "min-h-[24rem]",
   login: SKELETON_MIN_HEIGHT.loginCard,
   "client-detail": "min-h-[20rem]",
+  agenda: "min-h-[36rem]",
+  fatturazione: "min-h-[32rem]",
+  sicurezza: SKELETON_MIN_HEIGHT.sicurezzaPanel,
+  "production-readiness": "min-h-[28rem]",
 };
 
 /**

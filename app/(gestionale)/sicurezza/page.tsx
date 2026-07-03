@@ -4,7 +4,7 @@ import { SecurityDashboardViewLazy } from "@/components/gestionale/lazy-route-vi
 
 export default function SicurezzaPage() {
   return (
-    <Suspense fallback={<LoadingSuspenseFallback variant="dashboard" />}>
+    <Suspense fallback={<LoadingSuspenseFallback variant="sicurezza" />}>
       <SecurityDashboardViewLazy />
     </Suspense>
   );

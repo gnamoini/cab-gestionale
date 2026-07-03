@@ -35,7 +35,7 @@ export const PreventiviViewLazy = dynamic(
 
 export const FatturazioneViewLazy = dynamic(
   () => import("@/components/fatturazione/fatturazione-view").then((m) => m.FatturazioneView),
-  { loading: () => <LoadingSuspenseFallback variant="default" /> },
+  { loading: () => <LoadingSuspenseFallback variant="fatturazione" /> },
 );
 
 export const MezziViewLazy = dynamic(
@@ -62,7 +62,7 @@ export const ClientLavorazioniViewLazy = dynamic(
 
 export const SecurityDashboardViewLazy = dynamic(
   () => import("@/components/dashboard/security-dashboard-view").then((m) => m.SecurityDashboardView),
-  { loading: () => <LoadingSuspenseFallback variant="dashboard" /> },
+  { loading: () => <LoadingSuspenseFallback variant="sicurezza" /> },
 );
 
 export const ProductionReadinessViewLazy = dynamic(
@@ -70,5 +70,11 @@ export const ProductionReadinessViewLazy = dynamic(
     import("@/components/dashboard/security/production-readiness-view").then(
       (m) => m.ProductionReadinessView,
     ),
-  { loading: () => <LoadingSuspenseFallback variant="dashboard" /> },
+  { loading: () => <LoadingSuspenseFallback variant="production-readiness" /> },
+);
+
+export const AgendaOfficinaViewLazy = dynamic(
+  () =>
+    import("@/components/workshop-schedule/agenda-officina-view").then((m) => m.AgendaOfficinaView),
+  { loading: () => <LoadingSuspenseFallback variant="agenda" /> },
 );

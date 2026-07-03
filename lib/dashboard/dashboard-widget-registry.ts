@@ -53,6 +53,7 @@ export const DASHBOARD_WIDGET_REGISTRY: readonly DashboardWidgetDefinition[] = [
   { id: "magazzino-kpi", section: "magazzino", order: 40, layout: "half", requiredModule: "magazzino", hideInStaging: true },
   { id: "recent-activity", section: "activity", order: 50, layout: "full", hideInStaging: true },
   { id: "local-notes", section: "optional", order: 70, layout: "half" },
+  { id: "operational-calendar", section: "calendar", order: 65, layout: "full" },
 ] as const;
 
 const LEGACY_WIDGET_IDS: readonly DashboardWidgetId[] = [

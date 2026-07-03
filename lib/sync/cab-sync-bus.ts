@@ -14,6 +14,7 @@ export type CabSyncEntity =
   | "scheda_lavorazione"
   | "log_modifiche"
   | "dashboard_promemoria"
+  | "workshop_schedule_events"
   | "dipendenti_timesheet_employees"
   | "dipendenti_timesheet_entries"
   | "user_permissions";
@@ -37,6 +38,7 @@ const TABLE_ENTITY: Record<string, CabSyncEntity> = {
   scheda_lavorazione: "scheda_lavorazione",
   log_modifiche: "log_modifiche",
   dashboard_promemoria: "dashboard_promemoria",
+  workshop_schedule_events: "workshop_schedule_events",
   dipendenti_timesheet_employees: "dipendenti_timesheet_employees",
   dipendenti_timesheet_entries: "dipendenti_timesheet_entries",
   user_permissions: "user_permissions",

@@ -176,13 +176,29 @@ export function GestionaleInfoCard({
 export function GestionaleInfoSubgroup({
   title,
   children,
+  dense = false,
 }: {
   title: string;
   children: ReactNode;
+  dense?: boolean;
 }) {
   return (
-    <div className={dsGestionaleInfoCardSubgroup}>
-      <p className={dsGestionaleInfoCardSubgroupTitle}>{title}</p>
+    <div
+      className={
+        dense
+          ? "mt-2.5 border-t border-[color:var(--cab-border)] pt-2 first:mt-0 first:border-t-0 first:pt-0"
+          : dsGestionaleInfoCardSubgroup
+      }
+    >
+      <p
+        className={
+          dense
+            ? "mb-1 text-[10px] font-semibold uppercase tracking-wide text-[color:var(--cab-text-muted)]"
+            : dsGestionaleInfoCardSubgroupTitle
+        }
+      >
+        {title}
+      </p>
       {children}
     </div>
   );

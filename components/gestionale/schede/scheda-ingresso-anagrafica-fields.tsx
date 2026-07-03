@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useId, useMemo, useState } from "react";
+import { Tooltip } from "@/components/design-system";
 import { CopiaUltimaSchedaIngressoBanner } from "@/components/gestionale/lavorazioni/copia-ultima-scheda-ingresso-banner";
 import { InterventoTargetSelect } from "@/components/gestionale/intervento/intervento-target-select";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input";
@@ -8,7 +9,10 @@ import { LivelloCarburanteSegmentedSelect } from "@/components/gestionale/schede
 import { CompatHierarchySelect } from "@/components/gestionale/magazzino/compat-hierarchy-multi-select";
 import { GestionaleNumberInput } from "@/components/gestionale/gestionale-number-input";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
+import { RichiedenteFirmaDisplay } from "@/components/gestionale/schede/richiedente-firma-display";
+import { RichiedenteFirmaCaptureModal } from "@/components/gestionale/schede/richiedente-firma-capture-modal";
 import { SchedaIngressoIdentAutocompleteField } from "@/lib/selector-core/legacy-selector-adapters";
+import { hasSignatureDataUrl } from "@/lib/media/signature-pad";
 import { attrezzatureForMezzo } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import type { AttrezzaturaGestita } from "@/lib/attrezzature/types";
 import {
@@ -17,7 +21,7 @@ import {
   showTelaioSections,
 } from "@/lib/officina/officina-profilo-operativo";
 import { useOfficinaProfiloOperativo } from "@/lib/officina/use-officina-profilo-operativo";
-import { dsInput } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsBtnNeutralIconForm, dsInput } from "@/lib/ui/design-system";
 import { sliceInputValue, TEXT_SHORT } from "@/lib/validation/text-field-limits";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { attrezzatureService } from "@/src/services/attrezzature.service";
@@ -77,6 +81,7 @@ function SchedaIngressoAnagraficaFieldsInner({
   const showAttSection = show("attrezzatura") && targetType !== "telaio";
   const showTelSection = show("telaio");
   const [attrezzature, setAttrezzature] = useState<readonly AttrezzaturaGestita[]>([]);
+  const [firmaModalOpen, setFirmaModalOpen] = useState(false);
 
   useEffect(() => {
     if (!mezzoId.trim()) {
@@ -151,17 +156,52 @@ function SchedaIngressoAnagraficaFieldsInner({
             />
           </FormField>
           <FormField label="Richiedente" htmlFor={fieldId("richiedente")}>
-            <input
-              id={fieldId("richiedente")}
-              className={inputFieldClass}
-              value={value.richiedente}
-              onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
-              disabled={disabled}
-              placeholder="Nome libero"
-              maxLength={TEXT_SHORT}
-              aria-label="Richiedente"
-            />
+            <div className="flex min-w-0 items-start gap-2">
+              <input
+                id={fieldId("richiedente")}
+                className={`min-w-0 flex-1 ${inputFieldClass}`}
+                value={value.richiedente}
+                onChange={(e) => onPatch({ richiedente: sliceInputValue(e.target.value, TEXT_SHORT) })}
+                disabled={disabled}
+                placeholder="Nome libero"
+                maxLength={TEXT_SHORT}
+                aria-label="Richiedente"
+              />
+              <Tooltip content={hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "Modifica firma" : "Acquisisci firma"}>
+                <button
+                  type="button"
+                  className={`${dsBtnNeutralIconForm} ${hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "ring-2 ring-[color:color-mix(in_srgb,var(--cab-success)_45%,transparent)]" : ""}`}
+                  disabled={disabled}
+                  aria-label={hasSignatureDataUrl(value.richiedenteFirma ?? "") ? "Modifica firma richiedente" : "Acquisisci firma richiedente"}
+                  onClick={() => setFirmaModalOpen(true)}
+                >
+                  <svg className="h-4 w-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 20h9" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                </button>
+              </Tooltip>
+            </div>
+            {hasSignatureDataUrl(value.richiedenteFirma ?? "") ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <RichiedenteFirmaDisplay dataUrl={value.richiedenteFirma} consultable />
+                <button
+                  type="button"
+                  className={dsBtnNeutral}
+                  disabled={disabled}
+                  onClick={() => onPatch({ richiedenteFirma: "" })}
+                >
+                  Rimuovi firma
+                </button>
+              </div>
+            ) : null}
           </FormField>
+          <RichiedenteFirmaCaptureModal
+            open={firmaModalOpen}
+            initialDataUrl={value.richiedenteFirma ?? ""}
+            onClose={() => setFirmaModalOpen(false)}
+            onSave={(dataUrl) => onPatch({ richiedenteFirma: dataUrl })}
+          />
           {showInterventoTargetToggle ? (
             <FormField label="Oggetto intervento">
               <InterventoTargetSelect

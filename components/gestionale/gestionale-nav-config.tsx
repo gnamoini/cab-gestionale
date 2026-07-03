@@ -30,6 +30,16 @@ export function IconNavDashboard(props: SVGProps<SVGSVGElement>) {
   );
 }
 
+export function IconNavAgenda(props: SVGProps<SVGSVGElement>) {
+  return (
+    <SvgIcon {...props}>
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+      <path d="M8 14h2M14 14h2" />
+    </SvgIcon>
+  );
+}
+
 export function IconNavSecurity(props: SVGProps<SVGSVGElement>) {
   return (
     <SvgIcon {...props}>
@@ -133,6 +143,7 @@ export function IconNavDipendenti(props: SVGProps<SVGSVGElement>) {
 
 export const GESTIONALE_NAV = [
   { href: "/dashboard", label: "Dashboard", Icon: IconNavDashboard },
+  { href: "/agenda", label: "Agenda", Icon: IconNavAgenda },
   { href: "/lavorazioni", label: "Lavorazioni", Icon: IconNavLavorazioni },
   { href: "/lavorazioni-clienti", label: PORTALE_CLIENTI_LABEL, Icon: IconNavLavorazioniClient },
   { href: "/preventivi", label: "Preventivi", Icon: IconNavPreventivi },

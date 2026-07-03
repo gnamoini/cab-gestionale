@@ -38,18 +38,15 @@ import {
 } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
 import { ClientLavorazionePhotoStrip } from "@/components/lavorazioni-clienti/client-lavorazione-photos";
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
+import type { AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import {
   buildClientPortalRowFields,
 } from "@/lib/lavorazioni/client-portal-row-fields";
 import {
   buildClientPortalFilterCatalog,
   clientPortalFiltersActive,
-  CLIENT_PORTAL_FILTERS_EMPTY,
   filterClientPortalBundles,
-  loadClientPortalFiltersPersisted,
   logClientPortalPipelineDebug,
-  saveClientPortalFiltersPersisted,
-  type ClientPortalListFilters,
   type ClientPortalRowBundle,
 } from "@/lib/lavorazioni/client-portal-list-filters";
 import { clientLavorazioniDetailPath, PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
@@ -77,23 +74,21 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
 import {
   LavorazioneIngressoDateCellFromIso,
+  lavTablePrimaryTextClass,
   dsTableActionBtnWithBadge,
   lavTableActionBtnPrimary,
   lavTableActionBtnSecondary,
   lavTableActionsRow,
-  lavTableColAttrezzaturaClass,
-  lavTableColAzioniClass,
-  lavTableColCantiereClass,
-  lavTableColClienteClass,
-  lavTableColIdentificazioneClass,
-  lavTableColIngressoClass,
+  lavTableColPillSpacerClass,
   lavTableColStatoAddettoInset,
   lavTableTd,
   lavTableTdAzioni,
   lavTableTdPill,
+  lavTableTdPillSpacerClass,
   lavTableTdPillWrap,
+  lavTableThPillSpacerClass,
   LavorazioniClienteUtilStack,
-  LavorazioniMezzoIdentStack,
+  LavorazioniMezzoIdentCells,
   cycleLavorazioniTableSort,
   useLavorazioniListTableColStyles,
   type LavorazioniListTableColStyles,
@@ -103,7 +98,17 @@ import {
   buildLavorazioneRowProfileResolver,
   resolveLavorazioneUltimaModifica,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
-import { gestionaleLavorazioniDenseTableClass } from "@/lib/ui/gestionale-list-table";
+import {
+  clientPortalColCantiereClass,
+  clientPortalColClienteClass,
+  clientPortalColIngressoClass,
+  clientPortalColMatricolaClass,
+  clientPortalColAzioniClass,
+  clientPortalColOggettoClass,
+  clientPortalColScuderiaClass,
+  clientPortalColTargaClass,
+  gestionaleClientPortalDenseTableClass,
+} from "@/lib/ui/client-portal-list-table";
 import {
   sortClientPortalBundles,
   type ClientPortalSortKey,
@@ -117,24 +122,13 @@ import {
 import {
   GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
   GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  useGestionaleListLayout,
   type GestionaleListLayout,
 } from "@/lib/ui/use-gestionale-list-layout";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
-import { useViewQueryOpts } from "@/lib/view/view-query-opts";
-import { useClientLavorazioniArchivioQuery, useClientLavorazioniInCorsoQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
-import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
-import { useClientLavorazioniRefresh } from "@/src/hooks/use-client-lavorazioni-refresh";
-import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
-import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
-import { useGlobalOptions } from "@/src/hooks/use-global-options";
-import {
-  lavorazioniDomainQueryKeys,
-  stableLavorazioniFiltersKey,
-} from "@/src/services/domain/lavorazioni-domain.queries";
+import { CLIENTE_HOME_PATH } from "@/lib/auth/rbac";
+import { useClientPortalPageOrchestrator } from "@/src/hooks/use-client-portal-page-orchestrator";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
 const SEARCH_DEBOUNCE_MS = 400;
@@ -232,25 +226,31 @@ function DesktopTable({
   const colgroup =
     variant === "active" ? (
       <>
-        <col className={lavTableColIngressoClass} />
-        <col className={lavTableColClienteClass} />
-        <col className={lavTableColCantiereClass} />
-        <col className={lavTableColAttrezzaturaClass} />
-        <col className={lavTableColIdentificazioneClass} />
+        <col className={clientPortalColIngressoClass} />
+        <col className={clientPortalColClienteClass} />
+        <col className={clientPortalColCantiereClass} />
+        <col className={clientPortalColOggettoClass} />
+        <col className={clientPortalColScuderiaClass} />
+        <col className={clientPortalColTargaClass} />
+        <col className={clientPortalColMatricolaClass} />
+        <col className={lavTableColPillSpacerClass} />
         <col style={colStyles.statoPillColStyle} />
         <col style={colStyles.addettoPillColStyle} />
-        <col className={lavTableColAzioniClass} />
+        <col className={clientPortalColAzioniClass} />
       </>
     ) : (
       <>
-        <col className={lavTableColIngressoClass} />
-        <col className={lavTableColClienteClass} />
-        <col className={lavTableColCantiereClass} />
-        <col className={lavTableColAttrezzaturaClass} />
-        <col className={lavTableColIdentificazioneClass} />
+        <col className={clientPortalColIngressoClass} />
+        <col className={clientPortalColClienteClass} />
+        <col className={clientPortalColCantiereClass} />
+        <col className={clientPortalColOggettoClass} />
+        <col className={clientPortalColScuderiaClass} />
+        <col className={clientPortalColTargaClass} />
+        <col className={clientPortalColMatricolaClass} />
+        <col className={lavTableColPillSpacerClass} />
         <col style={colStyles.statoPillColStyle} />
         <col style={colStyles.addettoPillColStyle} />
-        <col className={lavTableColAzioniClass} />
+        <col className={clientPortalColAzioniClass} />
       </>
     );
 
@@ -261,7 +261,10 @@ function DesktopTable({
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Oggetto" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="Identificazione" columnKey="mezzoIdent" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+        <GlobalTableSortTh label="N. scuderia" columnKey="nScuderia" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
+        <GlobalTableSortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
+        <GlobalTableSortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
+        <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
         <GlobalTableSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GestionaleListTableActionsHead />
@@ -272,7 +275,10 @@ function DesktopTable({
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Oggetto" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="Identificazione" columnKey="mezzoIdent" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+        <GlobalTableSortTh label="N. scuderia" columnKey="nScuderia" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
+        <GlobalTableSortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
+        <GlobalTableSortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
+        <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
         <GlobalTableSortTh label="Completamento" columnKey="completamento" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GestionaleListTableActionsHead />
@@ -282,12 +288,12 @@ function DesktopTable({
   return (
     <GestionaleListTable
       visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
-      className={gestionaleLavorazioniDenseTableClass}
+      className={gestionaleClientPortalDenseTableClass}
       colgroup={colgroup}
       headRow={headRow}
       empty={bundles.length === 0}
       emptyMessage={emptyMessage}
-      colSpan={8}
+      colSpan={11}
     >
       {bundles.map(({ row, fields }) => (
         <tr key={row.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
@@ -301,13 +307,12 @@ function DesktopTable({
             <span className="line-clamp-2 break-words">{fields.cantiere}</span>
           </td>
           <td className={`${lavTableTd} min-w-0`}>
-            <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">
+            <div className={`truncate ${lavTablePrimaryTextClass}`}>
               {fields.attrezzatura}
             </div>
           </td>
-          <td className={lavTableTd}>
-            <LavorazioniMezzoIdentStack targa={fields.targa} matricola={fields.matricola} nScuderia={fields.nScuderia} />
-          </td>
+          <LavorazioniMezzoIdentCells targa={fields.targa} matricola={fields.matricola} nScuderia={fields.nScuderia} />
+          <td className={lavTableTdPillSpacerClass} aria-hidden="true" />
           {variant === "active" ? (
             <>
               <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`} style={colStyles.statoPillColStyle}>
@@ -325,7 +330,11 @@ function DesktopTable({
           )}
           <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`} style={colStyles.addettoPillColStyle}>
             <div className={lavTableTdPillWrap}>
-              <LavorazioneAddettoReadOnlyPill addetto={fields.addetto} addettoColors={addettoColors} />
+              <LavorazioneAddettoReadOnlyPill
+                addetto={fields.addetto}
+                colorKey={fields.addettoNome}
+                addettoColors={addettoColors}
+              />
             </div>
           </td>
           <td className={lavTableTdAzioni}>
@@ -416,7 +425,11 @@ function MobileCards({
                 layout="stack"
                 className={variant === "archive" ? "col-span-2" : undefined}
               >
-                <LavorazioneAddettoReadOnlyPill addetto={fields.addetto} addettoColors={addettoColors} />
+                <LavorazioneAddettoReadOnlyPill
+                addetto={fields.addetto}
+                colorKey={fields.addettoNome}
+                addettoColors={addettoColors}
+              />
               </LavMobileInlineField>
             </LavorazioneMobileControlsPanel>
             <div className="mt-2.5">
@@ -516,78 +529,42 @@ function LavorazioniSection({
 function buildRowBundles(
   rows: readonly LavorazioneListRow[],
   schedeStore: LavorazioneSchedeStore,
-  logsByLav: Map<string, LogModificaRow[]>,
   addettiGlobali: readonly string[],
+  addettiRecords: readonly AddettoRecord[],
 ): RowBundle[] {
   return rows.map((row) => ({
     row,
-    fields: buildClientPortalRowFields(row, schedeStore, logsByLav.get(row.id) ?? [], addettiGlobali),
+    fields: buildClientPortalRowFields(row, schedeStore, addettiGlobali, addettiRecords),
   }));
 }
 
 export function ClientLavorazioniView() {
-  const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
-  const access = useClientLavorazioniAccess();
-  const globalOpts = useGlobalOptions({ debugTag: "ClientLavorazioniView" });
+  const o = useClientPortalPageOrchestrator();
+  const {
+    containerRef: listLayoutRef,
+    layout: listLayout,
+    layoutClassName: listLayoutClassName,
+    canRender,
+    accessDenied,
+    contract,
+    persistence,
+    refresh: refreshClientData,
+    refreshBusy,
+  } = o;
+
+  const { filters, searchInput, setSearchInput, patchFilters, resetFilters } = persistence;
+  const l0 = contract.l0;
+  const schedeStore = contract.l1?.schedeStore ?? {};
+
   const statiOpts = useMemo(
-    () => filterClientPortalStatiOptions(globalOpts.lavorazioni.stati),
-    [globalOpts.lavorazioni.stati],
+    () => filterClientPortalStatiOptions(l0?.statiOpts ?? []),
+    [l0?.statiOpts],
   );
   const statoOrderIds = useMemo(() => statiOpts.map((s) => s.id), [statiOpts]);
-  const addettiGlobali = globalOpts.lavorazioni.addetti;
+  const addettiGlobali = l0?.addettiGlobali ?? [];
+  const addettiRecords = l0?.addettiRecords ?? [];
   const colStyles = useLavorazioniListTableColStyles(statiOpts, [], addettiGlobali);
-  const addettoColors = globalOpts.lavorazioni.addettoColors;
-  const viewOpts = useViewQueryOpts();
-  const inCorsoQ = useClientLavorazioniInCorsoQuery(access.allowed);
-  const archivioQ = useClientLavorazioniArchivioQuery(access.allowed);
-  const schedeLavorazioneIds = useMemo(
-    () => [...(inCorsoQ.data ?? []), ...(archivioQ.data ?? [])].map((row) => row.id),
-    [inCorsoQ.data, archivioQ.data],
-  );
-  const { store: schedeStore } = useSchedeBundlesQuery(access.allowed, {
-    viewLayer: true,
-    lavorazioneIds: schedeLavorazioneIds,
-  });
-  const logsQ = useLogListQuery(
-    { entita: "lavorazioni", limit: 2000 },
-    {
-      enabled: access.allowed,
-      ...viewOpts,
-    },
-  );
-  const { refresh: refreshClientData, busy: refreshBusy } = useClientLavorazioniRefresh(inCorsoQ, archivioQ, logsQ);
-
-  const logsByLav = useMemo(() => {
-    const map = new Map<string, NonNullable<typeof logsQ.data>>();
-    for (const lg of logsQ.data ?? []) {
-      const id = lg.entita_id;
-      if (!id) continue;
-      const arr = map.get(id) ?? [];
-      arr.push(lg);
-      map.set(id, arr);
-    }
-    return map;
-  }, [logsQ.data]);
-
-  const [filters, setFilters] = useState<ClientPortalListFilters>(CLIENT_PORTAL_FILTERS_EMPTY);
-  const [searchInput, setSearchInput] = useState("");
-  const [filtersHydrated, setFiltersHydrated] = useState(false);
-
-  useEffect(() => {
-    const initial = loadClientPortalFiltersPersisted() ?? CLIENT_PORTAL_FILTERS_EMPTY;
-    setFilters(initial);
-    setSearchInput(initial.search);
-    setFiltersHydrated(true);
-  }, []);
-  const [filtriEspansi, setFiltriEspansi] = useState(false);
-
-  const patchFilters = useCallback((patch: Partial<ClientPortalListFilters>) => {
-    setFilters((prev) => {
-      const next = { ...prev, ...patch };
-      saveClientPortalFiltersPersisted(next);
-      return next;
-    });
-  }, []);
+  const addettoColors = l0?.addettoColors ?? {};
 
   useEffect(() => {
     const t = window.setTimeout(() => patchFilters({ search: searchInput.trim() }), SEARCH_DEBOUNCE_MS);
@@ -597,6 +574,7 @@ export function ClientLavorazioniView() {
   const [qrRow, setQrRow] = useState<LavorazioneListRow | null>(null);
   const [ingressoRow, setIngressoRow] = useState<LavorazioneListRow | null>(null);
   const [contattaciOpen, setContattaciOpen] = useState(false);
+  const [filtriEspansi, setFiltriEspansi] = useState(false);
 
   const [sortInCorsoCol, setSortInCorsoCol] = useState<ClientPortalSortKey | null>(null);
   const [sortInCorsoPhase, setSortInCorsoPhase] = useState<GlobalTableSortPhase>("natural");
@@ -606,13 +584,13 @@ export function ClientLavorazioniView() {
   const filtersActive = clientPortalFiltersActive(filters);
 
   const allInCorsoBundles = useMemo(
-    () => buildRowBundles(inCorsoQ.data ?? [], schedeStore, logsByLav, addettiGlobali),
-    [inCorsoQ.data, schedeStore, logsByLav, addettiGlobali],
+    () => buildRowBundles(l0?.inCorsoRows ?? [], schedeStore, addettiGlobali, addettiRecords),
+    [l0?.inCorsoRows, schedeStore, addettiGlobali, addettiRecords],
   );
 
   const allArchivioBundles = useMemo(
-    () => buildRowBundles(archivioQ.data ?? [], schedeStore, logsByLav, addettiGlobali),
-    [archivioQ.data, schedeStore, logsByLav, addettiGlobali],
+    () => buildRowBundles(l0?.archivioRows ?? [], schedeStore, addettiGlobali, addettiRecords),
+    [l0?.archivioRows, schedeStore, addettiGlobali, addettiRecords],
   );
 
   const defaultAddetto = addettiGlobali[0] ?? "";
@@ -623,46 +601,40 @@ export function ClientLavorazioniView() {
       schedeStore,
       addettiGlobali,
       defaultAddetto,
-      logsByLav,
     );
-  }, [allInCorsoBundles, allArchivioBundles, schedeStore, addettiGlobali, defaultAddetto, logsByLav]);
+  }, [allInCorsoBundles, allArchivioBundles, schedeStore, addettiGlobali, defaultAddetto]);
 
   const inCorsoBundles = useMemo(
-    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, defaultAddetto, "in_corso", logsByLav),
-    [allInCorsoBundles, filters, schedeStore, defaultAddetto, logsByLav],
+    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, defaultAddetto, "in_corso"),
+    [allInCorsoBundles, filters, schedeStore, defaultAddetto],
   );
 
   const archivioBundles = useMemo(
-    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, defaultAddetto, "archivio", logsByLav),
-    [allArchivioBundles, filters, schedeStore, defaultAddetto, logsByLav],
+    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, defaultAddetto, "archivio"),
+    [allArchivioBundles, filters, schedeStore, defaultAddetto],
   );
 
   useEffect(() => {
-    if (!access.allowed) return;
+    if (accessDenied || !l0) return;
     logClientPortalPipelineDebug({
-      inCorsoRaw: inCorsoQ.data?.length ?? 0,
-      archivioRaw: archivioQ.data?.length ?? 0,
+      inCorsoRaw: l0.inCorsoRows.length,
+      archivioRaw: l0.archivioRows.length,
       bundlesInCorso: allInCorsoBundles.length,
       bundlesArchivio: allArchivioBundles.length,
       filteredInCorso: inCorsoBundles.length,
       filteredArchivio: archivioBundles.length,
       filters,
       filtersActive,
-      queryKeyInCorso: lavorazioniDomainQueryKeys.list(
-        stableLavorazioniFiltersKey({ archived: false, includeMezzo: true }),
-        true,
-      ),
     });
   }, [
-    access.allowed,
+    accessDenied,
     allArchivioBundles.length,
     allInCorsoBundles.length,
-    archivioQ.data,
     filters,
     filtersActive,
     inCorsoBundles.length,
     archivioBundles.length,
-    inCorsoQ.data,
+    l0,
   ]);
 
   const sortedInCorsoBundles = useMemo(
@@ -698,26 +670,24 @@ export function ClientLavorazioniView() {
   const resetRicerca = useCallback(() => {
     setSearchInput("");
     patchFilters({ search: "" });
-  }, [patchFilters]);
+  }, [patchFilters, setSearchInput]);
 
   const resetFiltri = useCallback(() => {
-    setSearchInput("");
-    setFilters(CLIENT_PORTAL_FILTERS_EMPTY);
-    saveClientPortalFiltersPersisted(CLIENT_PORTAL_FILTERS_EMPTY);
+    resetFilters();
     setFiltriEspansi(false);
-  }, []);
+  }, [resetFilters]);
 
-  if (!access.allowed) {
+  if (accessDenied) {
     return (
       <>
         <PageHeader title={PORTALE_CLIENTI_LABEL} />
         <div className={dsStackPage}>
           <ShellCard>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
-              Non hai permesso per consultare il portale clienti. Contatta un amministratore per abilitare l&apos;accesso da Sicurezza → Accesso Lavorazioni Clienti.
+              Non hai permesso per consultare il portale clienti. Contatta un amministratore per assegnare il ruolo Cliente.
             </p>
-            <Link href="/dashboard" className={`mt-4 inline-flex ${dsBtnNeutral}`}>
-              Torna alla dashboard
+            <Link href={CLIENTE_HOME_PATH} className={`mt-4 inline-flex ${dsBtnNeutral}`}>
+              Torna al portale
             </Link>
           </ShellCard>
         </div>
@@ -725,19 +695,11 @@ export function ClientLavorazioniView() {
     );
   }
 
-  const listLoading = !filtersHydrated || inCorsoQ.isLoading || archivioQ.isLoading;
-  const listError = inCorsoQ.error ?? archivioQ.error;
-
-  const listInitialLoading =
-    listLoading && inCorsoQ.data === undefined && archivioQ.data === undefined;
+  const listError = contract.l0Status === "error" ? contract.error : null;
 
   let bodyContent: ReactNode;
-  if (listInitialLoading) {
-    bodyContent = (
-      <ShellCard title="Lavorazioni in corso">
-        <ClientLavorazioniLoadingSkeleton />
-      </ShellCard>
-    );
+  if (!canRender) {
+    bodyContent = <ClientLavorazioniLoadingSkeleton />;
   } else if (listError) {
     bodyContent = (
       <ShellCard>
@@ -745,8 +707,7 @@ export function ClientLavorazioniView() {
           title="Impossibile caricare le lavorazioni"
           description="Controlla la connessione e riprova."
           onRetry={() => {
-            void inCorsoQ.refetch();
-            void archivioQ.refetch();
+            void contract.retryL0();
           }}
         />
       </ShellCard>
@@ -886,8 +847,8 @@ export function ClientLavorazioniView() {
           onClose={() => setIngressoRow(null)}
           row={ingressoRow}
           schedeStore={schedeStore}
-          logs={logsByLav.get(ingressoRow.id) ?? []}
           addettiGlobali={addettiGlobali}
+          addettiRecords={addettiRecords}
         />
       ) : null}
 

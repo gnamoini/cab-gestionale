@@ -44,6 +44,30 @@ function ClientDocumentSlotCard({
   return <GestionaleInfoCard compact title={label} subtitle={subtitle} actions={actions} />;
 }
 
+function ClientDocumentSlotsBody({
+  rows,
+  onOpen,
+  onDownload,
+}: {
+  rows: readonly LavorazioneDocumentRow[];
+  onOpen: (tipo: LavorazioneDocumentRow["tipo"]) => void;
+  onDownload: (tipo: LavorazioneDocumentRow["tipo"]) => void;
+}) {
+  return (
+    <>
+      {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
+        <ClientDocumentSlotCard
+          key={slot.tipo}
+          label={slot.label}
+          doc={lavorazioneDocumentByTipo(rows, slot.tipo)}
+          onOpen={() => onOpen(slot.tipo)}
+          onDownload={() => onDownload(slot.tipo)}
+        />
+      ))}
+    </>
+  );
+}
+
 export function ClientLavorazioneDocumentsPanel({
   lavorazioneId,
   embedded = false,
@@ -55,51 +79,76 @@ export function ClientLavorazioneDocumentsPanel({
   const docsQ = useClientLavorazioneDocumentsQuery(lavorazioneId);
   const loading = docsQ.isLoading && docsQ.data == null;
   const rows = docsQ.data?.rows ?? [];
+  const docsError = docsQ.isError;
+
+  const openDoc = (tipo: LavorazioneDocumentRow["tipo"]) => {
+    const doc = lavorazioneDocumentByTipo(rows, tipo);
+    if (!doc) return;
+    window.open(lavorazioneDocumentDeliveryUrl(doc, "preview"), "_blank", "noopener,noreferrer");
+  };
+
+  const downloadDoc = (tipo: LavorazioneDocumentRow["tipo"]) => {
+    const doc = lavorazioneDocumentByTipo(rows, tipo);
+    if (!doc) return;
+    const a = document.createElement("a");
+    a.href = lavorazioneDocumentDeliveryUrl(doc, "download");
+    a.download = doc.filename;
+    a.rel = "noopener";
+    a.click();
+  };
 
   if (loading) {
-    const loadingCard = (
-      <GestionaleInfoCard
-        compact
-        title="Documenti"
-        subtitle={
-          <span className="inline-flex items-center gap-1.5">
-            <LoadingSpinner size="sm" label="Caricamento documenti…" />
-            Caricamento documenti…
-          </span>
-        }
-      />
+    const loadingCards = (
+      <>
+        {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
+          <GestionaleInfoCard
+            key={slot.tipo}
+            compact
+            title={slot.label}
+            subtitle={
+              <span className="inline-flex items-center gap-1.5">
+                <LoadingSpinner size="sm" label="Caricamento documenti…" />
+                Caricamento…
+              </span>
+            }
+          />
+        ))}
+      </>
     );
-    if (embedded) return loadingCard;
-    return <div className={`flex min-w-0 flex-col ${dsGapMd}`}>{loadingCard}</div>;
+    if (embedded) return loadingCards;
+    return <div className={`flex min-w-0 flex-col ${dsGapMd}`}>{loadingCards}</div>;
   }
 
-  const body = (
-    <div className={`flex min-w-0 flex-col ${dsGapMd}`}>
-      {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
-        <ClientDocumentSlotCard
-          key={slot.tipo}
-          label={slot.label}
-          doc={lavorazioneDocumentByTipo(rows, slot.tipo)}
-          onOpen={() => {
-            const doc = lavorazioneDocumentByTipo(rows, slot.tipo);
-            if (!doc) return;
-            window.open(lavorazioneDocumentDeliveryUrl(doc, "preview"), "_blank", "noopener,noreferrer");
-          }}
-          onDownload={() => {
-            const doc = lavorazioneDocumentByTipo(rows, slot.tipo);
-            if (!doc) return;
-            const a = document.createElement("a");
-            a.href = lavorazioneDocumentDeliveryUrl(doc, "download");
-            a.download = doc.filename;
-            a.rel = "noopener";
-            a.click();
-          }}
-        />
-      ))}
-    </div>
-  );
+  if (docsError) {
+    const errorCards = (
+      <>
+        {CLIENT_PORTAL_DOCUMENT_SLOTS.map((slot) => (
+          <GestionaleInfoCard
+            key={slot.tipo}
+            compact
+            title={slot.label}
+            subtitle={
+              <button
+                type="button"
+                className="text-left text-sm text-red-600 underline dark:text-red-400"
+                onClick={() => void docsQ.refetch()}
+              >
+                Errore — riprova
+              </button>
+            }
+          />
+        ))}
+      </>
+    );
+    if (embedded) return errorCards;
+    return <div className={`flex min-w-0 flex-col ${dsGapMd}`}>{errorCards}</div>;
+  }
 
-  return body;
+  const body = <ClientDocumentSlotsBody rows={rows} onOpen={openDoc} onDownload={downloadDoc} />;
+
+  if (embedded) return body;
+
+  return <div className={`flex min-w-0 flex-col ${dsGapMd}`}>{body}</div>;
 }
 
 export function ClientLavorazioneDocumentsDialog({

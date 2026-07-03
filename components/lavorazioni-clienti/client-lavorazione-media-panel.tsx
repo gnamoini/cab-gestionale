@@ -2,11 +2,10 @@
 
 import { ClientLavorazioneDocumentsPanel } from "@/components/lavorazioni-clienti/client-lavorazione-documents";
 import { ClientLavorazionePhotoGallery } from "@/components/lavorazioni-clienti/client-lavorazione-photos";
-import { dsGapMd } from "@/lib/ui/design-system";
 
 export function ClientLavorazioneMediaPanel({ lavorazioneId }: { lavorazioneId: string }) {
   return (
-    <div className={`flex min-w-0 flex-col ${dsGapMd}`}>
+    <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-3">
       <ClientLavorazionePhotoGallery lavorazioneId={lavorazioneId} max={5} embedded />
       <ClientLavorazioneDocumentsPanel lavorazioneId={lavorazioneId} embedded />
     </div>

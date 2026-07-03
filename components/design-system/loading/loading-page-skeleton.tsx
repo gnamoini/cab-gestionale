@@ -1,8 +1,12 @@
 "use client";
 
 import { memo } from "react";
+import { LoadingAgendaSkeleton } from "./loading-agenda-skeleton";
 import { LoadingClientDetailSkeleton } from "./loading-client-detail-skeleton";
 import { LoadingDashboardSkeleton } from "./loading-dashboard-skeleton";
+import { LoadingFatturazioneSkeleton } from "./loading-fatturazione-skeleton";
+import { LoadingProductionReadinessSkeleton } from "./loading-production-readiness-skeleton";
+import { LoadingSicurezzaSkeleton } from "./loading-sicurezza-skeleton";
 import { LoadingDipendentiSkeleton } from "./loading-dipendenti-skeleton";
 import { LoadingDocumentiListSkeleton } from "./loading-documenti-list-skeleton";
 import { LoadingImpostazioniSkeleton } from "./loading-impostazioni-skeleton";
@@ -31,7 +35,11 @@ export type LoadingPageSkeletonVariant =
   | "impostazioni"
   | "login"
   | "client-detail"
-  | "compact";
+  | "compact"
+  | "agenda"
+  | "fatturazione"
+  | "sicurezza"
+  | "production-readiness";
 
 export type LoadingPageSkeletonProps = {
   variant?: LoadingPageSkeletonVariant;
@@ -54,8 +62,20 @@ export const LoadingPageSkeleton = memo(function LoadingPageSkeleton({
   variant = "default",
   className = "",
 }: LoadingPageSkeletonProps) {
+  if (variant === "agenda") {
+    return <LoadingAgendaSkeleton className={className} />;
+  }
   if (variant === "dashboard") {
     return <LoadingDashboardSkeleton className={className} />;
+  }
+  if (variant === "fatturazione") {
+    return <LoadingFatturazioneSkeleton className={className} />;
+  }
+  if (variant === "sicurezza") {
+    return <LoadingSicurezzaSkeleton className={className} />;
+  }
+  if (variant === "production-readiness") {
+    return <LoadingProductionReadinessSkeleton className={className} />;
   }
   if (variant === "dipendenti") {
     return <LoadingDipendentiSkeleton className={className} />;

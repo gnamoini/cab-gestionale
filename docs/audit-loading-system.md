@@ -18,7 +18,7 @@ Ultimo aggiornamento: standardizzazione skeleton a contenitore unico.
 | Background refetch | Testo toolbar «Aggiornamento…» | Skeleton full-page |
 | Mutation `meta.globalLoading` | `LoadingOverlay` (spinner) | Skeleton stessa area |
 | Upload | `LoadingProgressBar` (+ spinner sm) | Skeleton lista |
-| Auth / gate | `LoadingView` o barra sottile | Skeleton pagina ERP |
+| Auth / gate | barra sottile o skeleton route | Skeleton pagina ERP |
 
 ## Primitive globali (nuovo standard)
 
@@ -64,8 +64,11 @@ Ultimo aggiornamento: standardizzazione skeleton a contenitore unico.
 | `/magazzino` | table box | migrato |
 | `/documenti` | table box | migrato |
 | `/impostazioni` | nav + content boxes | migrato |
-| `/bunder` | table box | migrato |
-| `/lavorazioni-clienti` | come lavorazioni | migrato |
+| `/agenda` | toolbar + calendario + timeline + sidebar | migrato |
+| `/fatturazione` | KPI + toolbar + table box | migrato |
+| `/sicurezza` | tab bar + panel box | migrato |
+| `/sicurezza/production-readiness` | esito + 2 card box | migrato |
+| `/lavorazioni-clienti/[id]` | header + 2 card box | migrato |
 | Login / reset | spinner (auth) | invariato |
 
 ## Verifica manuale

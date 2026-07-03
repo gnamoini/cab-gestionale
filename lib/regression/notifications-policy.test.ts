@@ -54,7 +54,7 @@ for (const bridge of [
   "AdminPreventiviNotificationBridge",
   "AdminScheduledDigestNotificationBridge",
   "AdminDipendentiPresenzeReminderBridge",
-  "AdminDashboardPromemoriaReminderBridge",
+  "AdminWorkshopScheduleNotificationBridge",
 ]) {
   assert.match(bridgesSrc, new RegExp(bridge), `missing bridge: ${bridge}`);
 }

@@ -169,12 +169,15 @@ export function LavorazionePrioritaReadOnlyPill({
 export function LavorazioneAddettoReadOnlyPill({
   addetto,
   addettoColors,
+  colorKey,
   fullWidth = true,
   actionRow = false,
   actionRowFixedWidth = false,
 }: {
   addetto: string;
   addettoColors: Record<string, string | undefined>;
+  /** Chiave nome per colori pill (default: `addetto`). */
+  colorKey?: string;
   fullWidth?: boolean;
   actionRow?: boolean;
   actionRowFixedWidth?: boolean;
@@ -187,11 +190,12 @@ export function LavorazioneAddettoReadOnlyPill({
       </span>
     );
   }
+  const key = (colorKey ?? label).trim();
   return (
     <LavorazioneReadOnlyPill
       label={label}
       shellClass={addettoPillShellClass()}
-      shellStyle={addettoPillShellStyleForName(label, addettoColors)}
+      shellStyle={addettoPillShellStyleForName(key, addettoColors)}
       fullWidth={fullWidth}
       actionRow={actionRow}
       actionRowFixedWidth={actionRowFixedWidth}

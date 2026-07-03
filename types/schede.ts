@@ -52,6 +52,8 @@ export type SchedaIngressoFields = {
   addettoAccettazione: string;
   /** Richiedente intervento (testo libero). */
   richiedente: string;
+  /** Firma richiedente (PNG data URL). */
+  richiedenteFirma?: string;
   /** Note operative aggiuntive (distinte da descrizione anomalia). */
   noteIntervento: string;
 };

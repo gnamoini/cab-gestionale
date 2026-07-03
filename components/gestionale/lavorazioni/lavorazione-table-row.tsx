@@ -10,7 +10,9 @@ import {
 } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import {
   LavorazioniClienteUtilStack,
+  LavorazioniMezzoIdentCells,
   LavorazioneIngressoDateCell,
+  lavTablePrimaryTextClass,
   lavTableActionBtnDanger,
   lavTableActionBtnInfo,
   lavTableActionBtnPrimary,
@@ -24,6 +26,7 @@ import {
   lavTableTdPill,
   lavTableTdPillWrap,
   lavTableColStatoAddettoInset,
+  lavTableTdPillSpacerClass,
   LavorazioneOrePermanenzaCell,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
@@ -99,25 +102,10 @@ function ClienteUtilizzatoreCell({
   return <LavorazioniClienteUtilStack cliente={cliente} utilizzatore={utilizzatore} />;
 }
 
-function MezzoIdentStackCell({ row, bundle }: { row: LavorazioneListRow; bundle?: LavorazioneSchedeBundle }) {
+function MezzoIdentCells({ row, bundle }: { row: LavorazioneListRow; bundle?: LavorazioneSchedeBundle }) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const p = lavorazioneMezzoIdentParts(row, schedeStore);
-  const lines = [p.targa, p.matricola, p.scuderia ? `N. ${p.scuderia}` : ""].filter(Boolean);
-  if (lines.length === 0) {
-    return <span className="text-sm text-zinc-400">—</span>;
-  }
-  return (
-    <div className="min-w-0 leading-snug">
-      {lines.map((text, index) => (
-        <div
-          key={`${text}-${index}`}
-          className="truncate text-[13px] font-medium text-zinc-900 dark:text-zinc-100"
-        >
-          {text}
-        </div>
-      ))}
-    </div>
-  );
+  return <LavorazioniMezzoIdentCells targa={p.targa} matricola={p.matricola} nScuderia={p.scuderia} />;
 }
 
 export type LavorazioneAttivaTableRowProps = {
@@ -199,14 +187,13 @@ function LavorazioneAttivaTableRowInner({
         <span className="line-clamp-2 break-words">{lavorazioneCantiereLabel(row, schedeStore)}</span>
       </td>
       <td className={`${lavTableTd} min-w-0`}>
-        <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchina}</div>
+        <div className={`truncate ${lavTablePrimaryTextClass}`}>{macchina}</div>
       </td>
-      <td className={lavTableTd}>
-        <MezzoIdentStackCell row={row} bundle={bundle} />
-      </td>
-      <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
+      <MezzoIdentCells row={row} bundle={bundle} />
+      <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
         <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
       </td>
+      <td className={lavTableTdPillSpacerClass} aria-hidden="true" />
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <InlineSelectField
@@ -356,17 +343,16 @@ function LavorazioneArchivioTableRowInner({
       </td>
       <td className={`${lavTableTd} min-w-0`}>
         <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">
+          <div className={`truncate ${lavTablePrimaryTextClass}`}>
             {macchina}
           </div>
         </div>
       </td>
-      <td className={lavTableTd}>
-        <MezzoIdentStackCell row={row} bundle={bundle} />
-      </td>
-      <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
+      <MezzoIdentCells row={row} bundle={bundle} />
+      <td className={`${lavTableTd} gestionale-list-table-col-note min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
         <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
       </td>
+      <td className={lavTableTdPillSpacerClass} aria-hidden="true" />
       <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />

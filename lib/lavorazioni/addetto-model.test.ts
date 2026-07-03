@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   addettiLegacyNomi,
   addettoDisplayName,
+  addettoDisplayNameFromNome,
   migrateLegacyAddettiStrings,
   parseAddettiRecordsFromPayload,
   syncLavorazioniAddettiFromRecords,
@@ -15,6 +16,13 @@ import {
 // displayName senza cognome
 {
   assert.equal(addettoDisplayName({ nome: "Marco Rossi", cognome: null }), "Marco Rossi");
+}
+
+// displayNameFromNome con record
+{
+  const records = [{ id: "v", nome: "Vito", cognome: "Rossi" }];
+  assert.equal(addettoDisplayNameFromNome(records, "Vito"), "Vito Rossi");
+  assert.equal(addettoDisplayNameFromNome(records, "Sconosciuto"), "Sconosciuto");
 }
 
 // proiezione legacy nomi

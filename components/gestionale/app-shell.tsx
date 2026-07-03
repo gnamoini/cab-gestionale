@@ -343,7 +343,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     shellColRef,
     mainRef: mainScrollRef,
   });
-  const { isCompactShell, tier: shellTier } = shellLayout;
+  const { isCompactShell, tier: shellTier, contentWidth: shellContentWidth } = shellLayout;
+  const showMobileNavOpen = isCompactShell && shellContentWidth > 0;
   const contentGutter = gestionaleShellContentGutterClass(shellTier);
   useGestionaleScrollEnd(mainScrollRef);
   const {
@@ -470,7 +471,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       ref={shellRef}
       className={`cab-app-shell flex min-h-0 flex-col ${cabAppViewportFillClass} max-w-full overflow-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]`}
     >
-      {isCompactShell ? (
+      {showMobileNavOpen ? (
           <button
             type="button"
             data-testid="smoke-nav-drawer-open"
@@ -502,7 +503,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             href={homePath}
             onClick={onHeaderHomeClick}
             aria-label={CAB_APP_PRODUCT_NAME}
-            className={`${erpFocus} flex min-h-10 min-w-0 items-center justify-center overflow-hidden rounded-lg transition-opacity duration-200 hover:opacity-90`}
+            className={`${erpFocus} flex w-full min-h-10 min-w-0 items-center justify-center overflow-hidden rounded-lg transition-opacity duration-200 hover:opacity-90`}
           >
             <CabLogo height={28} className="shrink-0" sizes="112px" priority />
           </Link>

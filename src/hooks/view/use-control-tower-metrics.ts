@@ -19,7 +19,9 @@ import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries"
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
+import { workshopScheduleService } from "@/src/services/workshop-schedule.service";
 import { ymdFromDate } from "@/lib/report/date-ranges";
+import { ymdFromIso } from "@/lib/workshop-schedule/datetime";
 import {
   pickDashboardPriorityLavorazioneIds,
   DASHBOARD_SCHEde_PREFETCH_LIMIT,
@@ -28,6 +30,7 @@ import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { QK } from "@/src/lib/react-query/query-keys";
+import { workshopScheduleQueryKeys } from "@/src/services/domain/workshop-schedule-domain.queries";
 import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
 import type { DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
 import type { DashboardMagMovementRow } from "@/lib/view/dashboard-widgets-selectors";
@@ -140,6 +143,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     headerVisible,
     alertsVisible,
     wipVisible,
+    visibleIds,
     dipendentiOpts,
   } = shell;
 
@@ -178,6 +182,19 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     return { from: ymdFromDate(prev.start), to: ymdFromDate(cur.end) };
   }, []);
 
+  const needAgenda = !staging && visibleIds.has("operational-calendar");
+  const agendaRange = useMemo(() => {
+    const today = ymdFromIso(new Date().toISOString());
+    return {
+      start: new Date(`${today}T00:00:00`).toISOString(),
+      end: new Date(`${today}T23:59:59`).toISOString(),
+    };
+  }, []);
+  const agendaQ = useServiceQuery(
+    [...workshopScheduleQueryKeys.root, "control-tower", agendaRange.start] as const,
+    () => workshopScheduleService.enrichedView(agendaRange.start, agendaRange.end),
+    { enabled: needAgenda, ...viewOpts },
+  );
   const needTimesheet = !staging && headerVisible && canDipendenti;
   const timesheetQ = useServiceQuery(
     [...QK.dipendentiTimesheetEntries, "control-tower", timesheetRange.from, timesheetRange.to] as const,
@@ -217,6 +234,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
       timesheetEntries: (timesheetQ.data ?? []) as DipendenteTimesheetEntryRow[],
       tipiAssenza: dipendentiOpts.tipiAssenza,
       statiLavorazione: dash.globalOpts.lavorazioni.stati,
+      agendaSessions: agendaQ.data ?? [],
       includeLavorazioni: canLavorazioni,
       includeMagazzino: canMagazzino,
       includeAdmin: needAdminData,
@@ -247,6 +265,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     timesheetQ.data,
     dipendentiOpts.tipiAssenza,
     dash.globalOpts.lavorazioni.stati,
+    agendaQ.data,
     canLavorazioni,
     canMagazzino,
     needAdminData,
@@ -260,6 +279,7 @@ export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: Cont
     (!staging && headerVisible && canPreventivi && preventiviQ.isLoading) ||
     (needInvoices && invoicesQ.isLoading) ||
     (needTimesheet && timesheetQ.isPending) ||
+    (needAgenda && agendaQ.isPending) ||
     (activityEnabled && (lavLogsQ.isLoading || magLogsQ.isLoading || movLogsQ.isLoading));
 
   return {

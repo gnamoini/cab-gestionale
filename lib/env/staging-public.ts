@@ -28,6 +28,6 @@ export function isStagingBlockedPathname(pathname: string): boolean {
 }
 
 /** Moduli sempre disponibili nello slice staging. */
-export const STAGING_SAFE_HREFS = ["/dashboard", "/lavorazioni", "/mezzi"] as const;
+export const STAGING_SAFE_HREFS = ["/dashboard", "/agenda", "/lavorazioni", "/mezzi"] as const;
 
 export const STAGING_MODULE_BADGE = "In aggiornamento";

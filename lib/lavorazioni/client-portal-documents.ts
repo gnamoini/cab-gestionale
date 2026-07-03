@@ -4,6 +4,7 @@ import type { LavorazioneDocumentTipo } from "@/src/types/supabase-tables";
 /** Etichette documenti nel portale clienti (senza terminologia interna officina). */
 export function clientPortalDocumentLabel(tipo: LavorazioneDocumentTipo, defaultLabel: string): string {
   if (tipo === "preventivo_upload") return "Preventivo";
+  if (tipo === "ddt") return "DDT";
   return defaultLabel;
 }
 

@@ -6,7 +6,9 @@ export type ClientPortalSortKey =
   | "cliente"
   | "cantiere"
   | "attrezzatura"
-  | "mezzoIdent"
+  | "nScuderia"
+  | "targa"
+  | "matricola"
   | "stato"
   | "completamento"
   | "addetto";
@@ -45,13 +47,12 @@ function cmpBundle(
       return t(cmpStr(fa.cantiere, fb.cantiere));
     case "attrezzatura":
       return t(cmpStr(fa.attrezzatura, fb.attrezzatura));
-    case "mezzoIdent":
-      return t(
-        cmpStr(
-          `${fa.targa}\t${fa.matricola}\t${fa.nScuderia}`,
-          `${fb.targa}\t${fb.matricola}\t${fb.nScuderia}`,
-        ),
-      );
+    case "nScuderia":
+      return t(cmpStr(fa.nScuderia, fb.nScuderia));
+    case "targa":
+      return t(cmpStr(fa.targa, fb.targa));
+    case "matricola":
+      return t(cmpStr(fa.matricola, fb.matricola));
     case "addetto":
       return t(cmpStr(fa.addetto, fb.addetto));
     case "stato":

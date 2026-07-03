@@ -2,7 +2,6 @@ import {
   clientPortalRowMatchesSearch,
   type ClientPortalRowFields,
 } from "@/lib/lavorazioni/client-portal-row-fields";
-import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
 import {
   buildLavorazioniFilterCatalog,
   FILTER_ALL,
@@ -17,7 +16,6 @@ import {
 import { migrateStatoConfigId } from "@/lib/lavorazioni/stati-dynamic";
 import { lavRowMatchesGlobalSearch } from "@/lib/lavorazioni/lavorazioni-list-ui-filters";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
 export type ClientPortalSectionFilter = LavorazioniSectionFilter;
@@ -141,13 +139,12 @@ export function saveClientPortalFiltersPersisted(f: ClientPortalListFilters): vo
 
 export type ClientPortalRowBundle = { row: LavorazioneListRow; fields: ClientPortalRowFields };
 
-/** Catalogo filtri portale — mezzi dalle righe + addetti arricchiti dai log. */
+/** Catalogo filtri portale — mezzi dalle righe + addetti da schede/righe. */
 export function buildClientPortalFilterCatalog(
   bundles: readonly ClientPortalRowBundle[],
   schedeStore: LavorazioneSchedeStore,
   addettiGlobali: readonly string[],
   defaultAddetto: string,
-  logsByLav?: ReadonlyMap<string, readonly LogModificaRow[]>,
 ): LavorazioniFilterCatalog {
   const rows = bundles.map((b) => b.row);
   const mezziById = new Map<string, NonNullable<LavorazioneListRow["mezzo"]>>();
@@ -164,14 +161,9 @@ export function buildClientPortalFilterCatalog(
     defaultAddetto,
   );
 
-  if (!logsByLav?.size) return catalog;
-
   const addettiSet = new Set(catalog.addetti);
-  for (const row of rows) {
-    const logs = logsByLav.get(row.id);
-    if (!logs?.length) continue;
-    const fromLog = latestAddettoFromLogs(logs);
-    if (fromLog !== "—") addettiSet.add(fromLog);
+  for (const { fields } of bundles) {
+    if (fields.addettoNome !== "—") addettiSet.add(fields.addettoNome);
   }
 
   return {
@@ -186,7 +178,6 @@ export function clientPortalBundleMatchesFilters(
   schedeStore: LavorazioneSchedeStore,
   defaultAddetto: string,
   variant: LavorazioniListFilterVariant,
-  logs?: readonly LogModificaRow[],
 ): boolean {
   const { row, fields } = bundle;
 
@@ -194,7 +185,7 @@ export function clientPortalBundleMatchesFilters(
 
   const { search: _s, ...advanced } = f;
   const isoRow = { ...row, data_ingresso: fields.dataIngressoIso || row.data_ingresso };
-  if (!lavRowMatchesAdvancedFilters(isoRow, advanced, schedeStore, defaultAddetto, variant, logs)) return false;
+  if (!lavRowMatchesAdvancedFilters(isoRow, advanced, schedeStore, defaultAddetto, variant)) return false;
 
   return true;
 }
@@ -205,17 +196,9 @@ export function filterClientPortalBundles(
   schedeStore: LavorazioneSchedeStore,
   defaultAddetto: string,
   variant: LavorazioniListFilterVariant,
-  logsByLav?: ReadonlyMap<string, readonly LogModificaRow[]>,
 ): ClientPortalRowBundle[] {
   return bundles.filter((b) =>
-    clientPortalBundleMatchesFilters(
-      b,
-      f,
-      schedeStore,
-      defaultAddetto,
-      variant,
-      logsByLav?.get(b.row.id),
-    ),
+    clientPortalBundleMatchesFilters(b, f, schedeStore, defaultAddetto, variant),
   );
 }
 

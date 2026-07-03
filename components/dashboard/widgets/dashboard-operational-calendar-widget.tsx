@@ -1,23 +1,21 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { LoadingCardSkeleton } from "@/components/design-system";
-import { useCalendarV2Enabled } from "@/src/hooks/use-calendar-v2-enabled";
+import Link from "next/link";
+import { buildAgendaHref } from "@/lib/navigation/agenda-links";
+import { DashboardAgendaKpiWidget } from "@/components/dashboard/widgets/dashboard-agenda-kpi-widget";
+import { erpBtnNeutral } from "@/lib/ui/erp-tokens";
+import { dsStackPage } from "@/lib/ui/design-system";
 
-const CalendarV2Section = dynamic(
-  () => import("@/components/dashboard/calendar-v2/calendar-v2-section").then((m) => m.CalendarV2Section),
-  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
-);
-const DashboardPromemoriaSection = dynamic(
-  () =>
-    import("@/components/dashboard/promemoria/dashboard-promemoria-section").then(
-      (m) => m.DashboardPromemoriaSection,
-    ),
-  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
-);
-
-/** Compat renderer — calendario dashboard completo (non lista T+7). */
+/** Calendario operativo — KPI agenda + link Agenda Officina. */
 export function DashboardOperationalCalendarWidget() {
-  const calendarV2Enabled = useCalendarV2Enabled();
-  return calendarV2Enabled ? <CalendarV2Section /> : <DashboardPromemoriaSection />;
+  return (
+    <div className={dsStackPage}>
+      <DashboardAgendaKpiWidget />
+      <div className="flex justify-end">
+        <Link href={buildAgendaHref()} className={erpBtnNeutral}>
+          Pianificazione completa
+        </Link>
+      </div>
+    </div>
+  );
 }

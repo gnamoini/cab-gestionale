@@ -4,6 +4,7 @@ import {
   lavorazioneClienteLabel as clienteLabel,
   lavorazioneMacchinaLabel as macchinaLabel,
   lavorazioneMezzoIdent as mezzoIdent,
+  lavorazioneMezzoIdentParts,
   lavorazioneUtilizzatoreLabel as utilizzatoreLabel,
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { lavorazioneOreLavoroSortValue } from "@/lib/lavorazioni/lavorazioni-list-table-display";
@@ -14,6 +15,9 @@ import type { LavorazioneSchedeStore } from "@/types/schede";
 export type LavorazioneSchedeSortRowIndex = {
   macchina: string;
   mezzoIdent: string;
+  targa: string;
+  matricola: string;
+  nScuderia: string;
   cliente: string;
   utilizzatore: string;
   cantiere: string;
@@ -33,9 +37,13 @@ export function buildLavorazioneSchedeSortIndex(
   const index: Record<string, LavorazioneSchedeSortRowIndex> = {};
   for (const row of rows) {
     const slice: LavorazioneSchedeStore = schedeStore[row.id] ? { [row.id]: schedeStore[row.id] } : {};
+    const ident = lavorazioneMezzoIdentParts(row, slice);
     index[row.id] = {
       macchina: macchinaLabel(row, slice),
       mezzoIdent: mezzoIdent(row, slice),
+      targa: ident.targa || "—",
+      matricola: ident.matricola || "—",
+      nScuderia: ident.scuderia || "—",
       cliente: clienteLabel(row, slice),
       utilizzatore: utilizzatoreLabel(row, slice),
       cantiere: cantiereLabel(row, slice),

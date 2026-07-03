@@ -923,6 +923,25 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   justify-content: center;
 }
 
+/** Rail collassata: logo centrato sull'asse icona (stesso anchor di nav + avatar). */
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand {
+  padding-inline: 0.75rem;
+}
+
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand > a {
+  justify-content: flex-start;
+}
+
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-brand > a img {
+  margin-inline-start: var(--cab-sidebar-icon-anchor);
+  transform: translateX(calc(var(--cab-sidebar-icon-size) / 2 - 50%));
+}
+
+.cab-sidebar[data-sidebar-collapsed][data-sidebar-hover-expanded] .cab-sidebar-brand > a img {
+  margin-inline-start: 0;
+  transform: none;
+}
+
 .cab-sidebar-session--brand {
   min-width: 0;
   padding-inline: 0;

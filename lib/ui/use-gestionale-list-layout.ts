@@ -1,13 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useGestionaleShellLayout } from "@/context/gestionale-shell-layout-context";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
+import {
+  gestionalePageLayoutSsrHint,
+  resolveGestionalePageLayout,
+  type GestionaleListLayoutTier,
+} from "./resolve-gestionale-page-layout";
 import {
   measureElementLayoutWidth,
-  readGestionaleShellTierFromDom,
   resolveGestionaleShellViewportWidth,
 } from "./gestionale-shell-layout";
 
-export type GestionaleListLayoutTier = "xl" | "lg" | "md";
+export type { GestionaleListLayoutTier } from "./resolve-gestionale-page-layout";
 export type GestionaleListLayout = "desktop" | "mobile";
 
 export const GESTIONALE_LIST_DESKTOP_ONLY_CLASS = "gestionale-list-desktop-only";
@@ -23,16 +28,20 @@ export function gestionaleListLayoutViewportMq(tier: GestionaleListLayoutTier): 
   return `(min-width: ${TIER_THRESHOLDS[tier].minViewport}px)`;
 }
 
-/** Tabella/desktop se viewport e container (pannello) sufficientemente larghi. */
+/** @deprecated Usare resolveGestionalePageLayout — alias tier-aware per test legacy. */
 export function resolveGestionaleListLayout(
   tier: GestionaleListLayoutTier,
   viewportWidth: number,
   containerWidth: number,
+  shellContentWidth = viewportWidth,
 ): GestionaleListLayout {
-  const { minViewport, minContainer } = TIER_THRESHOLDS[tier];
-  if (viewportWidth < minViewport) return "mobile";
-  if (containerWidth < minContainer) return "mobile";
-  return "desktop";
+  return resolveGestionalePageLayout({
+    viewportWidth,
+    containerWidth,
+    shellContentWidth,
+    ssrHint: shellContentWidth > 0 ? "measured" : "unknown",
+    listTier: tier,
+  });
 }
 
 export function gestionaleListLayoutClassName(layout: GestionaleListLayout): string {
@@ -93,39 +102,33 @@ export type UseGestionaleListLayoutOptions = {
 };
 
 /**
- * Layout lista gestionale: breakpoint tier + larghezza container (preview IDE / split).
+ * Layout lista gestionale — thin wrapper su resolveGestionalePageLayout (RULES R1–R5).
  * Attaccare `containerRef` alla root pagina (`*-scroll-scope` / `layoutPageRoot`).
  */
 export function useGestionaleListLayout(options: UseGestionaleListLayoutOptions = {}) {
   const tier = options.tier ?? "xl";
+  const shell = useGestionaleShellLayout();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [layout, setLayout] = useState<GestionaleListLayout>("mobile");
+  const [containerWidth, setContainerWidth] = useState(0);
   const syncRafRef = useRef(0);
 
-  const sync = useCallback(() => {
+  const measureContainer = useCallback(() => {
     const el = containerRef.current;
-    if (!el || typeof window === "undefined") return;
-    const shellTier = readGestionaleShellTierFromDom();
-    if (shellTier === "mobile" || shellTier === "tablet") {
-      setLayout("mobile");
-      return;
-    }
-    const viewportWidth = resolveGestionaleShellViewportWidth();
-    const containerWidth = resolveGestionaleListContainerWidth(el);
-    const next = resolveGestionaleListLayout(tier, viewportWidth, containerWidth);
-    setLayout((prev) => (prev === next ? prev : next));
-  }, [tier]);
+    if (!el || typeof window === "undefined") return 0;
+    return resolveGestionaleListContainerWidth(el);
+  }, []);
 
-  const scheduleSync = useCallback(() => {
+  const scheduleMeasure = useCallback(() => {
     if (syncRafRef.current) return;
     syncRafRef.current = requestAnimationFrame(() => {
       syncRafRef.current = 0;
-      sync();
+      const w = measureContainer();
+      setContainerWidth((prev) => (prev === w ? prev : w));
     });
-  }, [sync]);
+  }, [measureContainer]);
 
-  useEffect(() => {
-    scheduleSync();
+  useLayoutEffect(() => {
+    scheduleMeasure();
     const el = containerRef.current;
     const main =
       el?.closest("main.gestionale-scroll-y") ??
@@ -136,32 +139,45 @@ export function useGestionaleListLayout(options: UseGestionaleListLayoutOptions 
       typeof document !== "undefined"
         ? document.querySelector(".cab-app-shell > div.flex-1")
         : null;
-    const shell =
+    const shellEl =
       typeof document !== "undefined" ? document.querySelector(".cab-app-shell") : null;
     const mq = window.matchMedia(gestionaleListLayoutViewportMq(tier));
-    mq.addEventListener("change", scheduleSync);
-    window.addEventListener("resize", scheduleSync);
+    mq.addEventListener("change", scheduleMeasure);
+    window.addEventListener("resize", scheduleMeasure);
     const vv = window.visualViewport;
-    vv?.addEventListener("resize", scheduleSync);
+    vv?.addEventListener("resize", scheduleMeasure);
     const ro =
       typeof ResizeObserver !== "undefined"
         ? new ResizeObserver(() => {
-            scheduleSync();
+            scheduleMeasure();
           })
         : null;
     if (el && ro) ro.observe(el);
     if (main instanceof HTMLElement && ro) ro.observe(main);
     if (shellCol instanceof HTMLElement && ro) ro.observe(shellCol);
-    if (shell instanceof HTMLElement && ro) ro.observe(shell);
+    if (shellEl instanceof HTMLElement && ro) ro.observe(shellEl);
     return () => {
       if (syncRafRef.current) cancelAnimationFrame(syncRafRef.current);
       syncRafRef.current = 0;
-      mq.removeEventListener("change", scheduleSync);
-      window.removeEventListener("resize", scheduleSync);
-      vv?.removeEventListener("resize", scheduleSync);
+      mq.removeEventListener("change", scheduleMeasure);
+      window.removeEventListener("resize", scheduleMeasure);
+      vv?.removeEventListener("resize", scheduleMeasure);
       ro?.disconnect();
     };
-  }, [scheduleSync, tier]);
+  }, [scheduleMeasure, tier]);
+
+  const viewportWidth =
+    typeof window !== "undefined" ? resolveGestionaleShellViewportWidth() : 0;
+  const shellContentWidth = shell.contentWidth;
+  const ssrHint = gestionalePageLayoutSsrHint(shellContentWidth);
+
+  const layout = resolveGestionalePageLayout({
+    viewportWidth,
+    containerWidth,
+    shellContentWidth,
+    ssrHint,
+    listTier: tier,
+  });
 
   return {
     containerRef,

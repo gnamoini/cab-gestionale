@@ -239,8 +239,8 @@ export const globalInputFieldFilterSelect = gestionaleSelectFilterClass;
 /** Combobox filtri searchable (GlobalSelect default). */
 export const globalInputFieldFilter = globalInputFieldFilterSearch;
 
-/** Campo data in filtri (icona calendario a destra). */
-export const globalInputFieldFilterDate = `${globalInputFieldFilterSearch} pr-11`;
+/** Campo data in filtri (layout split input + calendario — v. `globalInputDatePickerShell`). */
+export const globalInputFieldFilterDate = globalInputFieldFilterSearch;
 
 export const globalInputInvalidRing =
   " border-[color:color-mix(in_srgb,var(--cab-danger)_55%,var(--cab-border))] ring-1 ring-[color:color-mix(in_srgb,var(--cab-danger)_28%,transparent)]";
@@ -253,17 +253,91 @@ export function resolveGestionaleInputClassName(baseClass: string, invalid?: boo
 export const globalInputInvalidMessage =
   "mt-1 text-[11px] font-medium text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]";
 
-export const globalInputCalendarBtn = [
-  "absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center",
-  "rounded-md border border-[color:var(--cab-border-strong)]",
+const globalInputDatePickerShellChrome = [
+  "flex w-full min-w-0 items-stretch overflow-hidden",
+  "rounded-[var(--ds-radius-lg)]",
+  "border border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))]",
+  "bg-[var(--cab-surface)]",
+  "shadow-[var(--cab-shadow-sm)]",
+  "transition-[border-color,box-shadow,background-color] duration-200 ease-out",
+  "hover:border-[color:color-mix(in_srgb,var(--cab-primary)_42%,var(--cab-border))]",
+  "hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-surface))]",
+  "focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))]",
+  "focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]",
+  "touch-manipulation",
+].join(" ");
+
+/** Shell filtri / toolbar — bordo unico attorno a input testo + trigger calendario. */
+export const globalInputDatePickerShellFilter = globalInputDatePickerShellChrome;
+
+/** Shell form default (bordo leggermente più marcato come `dsInput`). */
+export const globalInputDatePickerShellDefault = [
+  "flex w-full min-w-0 items-stretch overflow-hidden",
+  "rounded-[var(--ds-radius-lg)]",
+  "border border-[color:color-mix(in_srgb,var(--cab-border-strong)_90%,var(--cab-border))]",
+  "bg-[var(--cab-surface)]",
+  "shadow-[var(--cab-shadow-sm)]",
+  "transition-[border-color,box-shadow,background-color] duration-200 ease-out",
+  "hover:border-[color:var(--cab-border-strong)]",
+  "focus-within:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))]",
+  "focus-within:ring-2 focus-within:ring-[color:color-mix(in_srgb,var(--cab-primary)_26%,transparent)]",
+  "touch-manipulation",
+].join(" ");
+
+/** Segmento testo date picker (senza bordo — chrome sulla shell). */
+export const globalInputDatePickerInput = [
+  "min-h-10 min-w-0 flex-1 border-0 bg-transparent",
+  "px-3 py-2",
+  dsIosInputTextSize,
+  "font-medium leading-snug text-[color:var(--cab-text)]",
+  "outline-none shadow-none ring-0",
+  "placeholder:text-[color:var(--cab-text-muted)]",
+].join(" ");
+
+/** Trigger calendario affiancato — stessa altezza del campo (`items-stretch` sulla shell). */
+export const globalInputDatePickerCalendarBtn = [
+  "flex w-10 shrink-0 items-center justify-center self-stretch",
+  "border-0 border-l border-[color:color-mix(in_srgb,var(--cab-border-strong)_88%,var(--cab-border))]",
   "bg-[color:color-mix(in_srgb,var(--cab-surface-2)_88%,#000)]",
-  "text-[color:var(--cab-text)] shadow-[var(--cab-shadow-sm)] outline-none transition",
-  "hover:border-[color:color-mix(in_srgb,var(--cab-primary)_50%,var(--cab-border))]",
+  "text-[color:var(--cab-text)] outline-none transition",
   "hover:bg-[color:color-mix(in_srgb,var(--cab-primary)_10%,var(--cab-surface))]",
   "hover:text-[color:var(--cab-primary)]",
-  "focus-visible:border-[color:color-mix(in_srgb,var(--cab-primary)_55%,var(--cab-border))]",
-  "focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]",
+  "focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:color-mix(in_srgb,var(--cab-primary)_28%,transparent)]",
+  "disabled:pointer-events-none disabled:opacity-50",
 ].join(" ");
+
+/** @deprecated Usare `globalInputDatePickerCalendarBtn` nel layout split. */
+export const globalInputCalendarBtn = globalInputDatePickerCalendarBtn;
+
+/** Rimuove chrome duplicato quando `inputClassName` passa token campo intero (es. filtri). */
+export function stripDatePickerFieldChrome(className: string): string {
+  return className
+    .split(/\s+/)
+    .filter((tok) => {
+      if (!tok) return false;
+      if (/^pr-/.test(tok)) return false;
+      if (tok === "w-full" || tok === "min-w-0") return false;
+      if (/^rounded/.test(tok)) return false;
+      if (tok === "border" || /^border-/.test(tok)) return false;
+      if (/^shadow/.test(tok)) return false;
+      if (tok === "outline-none" || /^outline-/.test(tok)) return false;
+      if (/^hover:/.test(tok) || /^focus:/.test(tok) || /^focus-visible:/.test(tok)) return false;
+      if (tok.startsWith("bg-")) return false;
+      if (tok === "appearance-auto" || tok === "cursor-text") return false;
+      if (/^transition/.test(tok)) return false;
+      if (tok === "touch-manipulation") return false;
+      return true;
+    })
+    .join(" ");
+}
+
+/** Classi layout (h/mt/w) da applicare alla shell, non al segmento testo. */
+export function extractDatePickerShellLayoutClass(className: string): string {
+  return className
+    .split(/\s+/)
+    .filter((tok) => /^(?:w-full|!?h-\S+|!?min-h-\S+|mt-\S+|mb-\S+)$/.test(tok))
+    .join(" ");
+}
 
 const globalInputCalendarChrome = [
   "w-full min-w-0",

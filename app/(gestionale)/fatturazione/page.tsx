@@ -7,7 +7,7 @@ import { prefetchFatturazionePage } from "@/src/lib/react-query/prefetch-gestion
 export default async function FatturazionePage() {
   const dehydratedState = await prefetchFatturazionePage();
   return (
-    <Suspense fallback={<LoadingSuspenseFallback variant="default" />}>
+    <Suspense fallback={<LoadingSuspenseFallback variant="fatturazione" />}>
       <GestionaleHydrationBoundary state={dehydratedState}>
         <FatturazioneViewLazy />
       </GestionaleHydrationBoundary>

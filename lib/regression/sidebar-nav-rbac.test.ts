@@ -14,6 +14,7 @@ function visibleHrefs(roleKey: string, clientLavorazioniAllowed = false): string
 
 const admin = visibleHrefs("admin");
 assert.ok(admin.includes("/dashboard"), "admin: dashboard");
+assert.ok(admin.includes("/agenda"), "admin: agenda");
 assert.ok(admin.includes("/magazzino"), "admin: magazzino");
 assert.ok(admin.includes("/sicurezza"), "admin: sicurezza");
 assert.equal(admin.length, GESTIONALE_NAV.length, "admin vede tutte le voci");

@@ -80,7 +80,7 @@ import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi
 import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
-import { LoadingCardSkeleton, LoadingTableSkeleton } from "@/components/design-system";
+import { LoadingPreventiviListSkeleton } from "@/components/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
@@ -950,17 +950,7 @@ export function PreventiviView() {
         </section>
 
         {preventiviInitialLoading ? (
-          <>
-            {listLayout === "desktop" ? (
-            <LoadingTableSkeleton preset="generic" wrapClassName="mt-4" visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS} actionButtonCount={3} />
-            ) : (
-            <div className="mt-4 space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <LoadingCardSkeleton key={i} minHeightClass="min-h-[140px]" rows={3} />
-              ))}
-            </div>
-            )}
-          </>
+          <LoadingPreventiviListSkeleton withToolbar={false} className="mt-4" />
         ) : (
         <>
         {listLayout === "desktop" ? (

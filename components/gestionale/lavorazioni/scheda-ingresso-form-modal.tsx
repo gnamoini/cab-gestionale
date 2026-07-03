@@ -95,6 +95,7 @@ export function emptySchedaIngressoFields(addettoDefault = ""): SchedaIngressoFi
     livelloCarburante: "",
     addettoAccettazione: addettoDefault,
     richiedente: "",
+    richiedenteFirma: "",
     noteIntervento: "",
   };
 }
@@ -112,6 +113,9 @@ export function normalizeSchedaIngressoFields(
     if (v !== undefined && v !== null) out[key] = String(v);
   }
   applySchedaIngressoTypedFields(out, raw);
+  if (raw.richiedenteFirma !== undefined && raw.richiedenteFirma !== null) {
+    out.richiedenteFirma = String(raw.richiedenteFirma);
+  }
   out.livelloCarburante = normalizeLivelloCarburanteStored(out.livelloCarburante);
   return out;
 }
@@ -133,7 +137,7 @@ export function SchedaIngressoFormModalShell({
   variant: SchedaIngressoFormVariant;
   subtitle?: string;
   children: ReactNode;
-  footer: ReactNode;
+  footer?: ReactNode;
   modalSize?: ModalSize;
   modalHeight?: ModalHeight;
 }) {

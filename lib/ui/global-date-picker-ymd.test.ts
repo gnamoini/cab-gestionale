@@ -2,6 +2,8 @@
  * GlobalDatePickerYmd: digitazione parziale non aggiorna YMD finché il parse non è valido.
  */
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   isoToDateInputValue,
   isoToItDisplay,
@@ -9,6 +11,12 @@ import {
 import {
   parseItalianDayDisplayToIso,
 } from "@/lib/ui/italian-date-input-mask";
+import {
+  extractDatePickerShellLayoutClass,
+  globalInputDatePickerCalendarBtn,
+  globalInputDatePickerShellFilter,
+  stripDatePickerFieldChrome,
+} from "@/lib/ui/global-input";
 
 function onChangeYmdStyle(next: string, state: { ymd: string; draft: string }) {
   state.draft = next;
@@ -47,5 +55,29 @@ assert.deepEqual(blur("06/07/26", ""), { ymd: "2026-07-06", display: "06/07/2026
 assert.deepEqual(blur("bad", "2026-06-15"), { ymd: "2026-06-15", display: "bad" });
 assert.deepEqual(blur("31/15/2026", "2026-06-15"), { ymd: "2026-06-15", display: "31/15/2026" });
 assert.deepEqual(blur("31/06/26", "2026-06-15"), { ymd: "2026-06-15", display: "31/06/26" });
+
+assert.ok(
+  globalInputDatePickerCalendarBtn.includes("self-stretch"),
+  "calendar trigger must match input height",
+);
+assert.ok(
+  !globalInputDatePickerShellFilter.includes("absolute"),
+  "date picker shell must use flex split layout",
+);
+assert.equal(
+  stripDatePickerFieldChrome("w-full pr-11 rounded-[var(--ds-radius-lg)] border h-10 mt-1 !text-xs"),
+  "h-10 mt-1 !text-xs",
+);
+assert.equal(
+  extractDatePickerShellLayoutClass("w-full pr-11 h-10 mt-1"),
+  "w-full h-10 mt-1",
+);
+
+const pickerSrc = readFileSync(
+  join(process.cwd(), "components/gestionale/global-input/global-date-picker.tsx"),
+  "utf8",
+);
+assert.match(pickerSrc, /globalInputDatePickerShellFilter/);
+assert.match(pickerSrc, /globalInputDatePickerCalendarBtn/);
 
 console.log("global-date-picker-ymd.test.ts: ok");

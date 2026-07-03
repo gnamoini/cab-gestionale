@@ -4,13 +4,16 @@ import {
   clientPortalClienteLabel,
   clientPortalDataIngressoLabel,
 } from "@/lib/lavorazioni/client-portal-row-fields";
+import { addettoDisplayNameFromNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import {
   DEFAULT_LAVORAZIONE_STATO_ID,
   DEFAULT_STATI_LAVORAZIONI_WORKFLOW,
   migrateStatoConfigId,
+  resolveStatoId,
 } from "@/lib/lavorazioni/stati-dynamic";
+import { extractPayloadFieldChanges } from "@/lib/gestionale-log/log-summary";
 import { isLogReverted } from "@/lib/gestionale-log/undo";
 import { getOrCreateBundle } from "@/lib/schede/lavorazioni-schede-storage";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
@@ -39,6 +42,7 @@ export type ClientTimelineEvent = {
   at: string;
   title: string;
   subtitle?: string;
+  statoId: string;
 };
 
 type StatoTimelineStep = {
@@ -68,6 +72,14 @@ const INGRESSO_LABELS: { key: keyof SchedaIngressoFields; label: string; multili
   { key: "richiedente", label: "Richiedente" },
   { key: "noteIntervento", label: "Note intervento", multiline: true },
 ];
+
+function resolveTimelineStatoId(
+  raw: string | null | undefined,
+  statiOpts: { id: string; label: string; color?: string }[],
+): string | null {
+  if (!raw?.trim()) return null;
+  return resolveStatoId(raw, statiOpts);
+}
 
 function readStatoId(raw: unknown): string | null {
   if (typeof raw !== "string" || !raw.trim()) return null;
@@ -125,24 +137,114 @@ function compareStatoSteps(
   return a.id.localeCompare(b.id);
 }
 
-function pushStatoStep(steps: StatoTimelineStep[], step: StatoTimelineStep): void {
+function readStatoChangeFromUpdateLog(row: LogModificaRow): { before: string | null; after: string | null } {
+  const { before, after } = readAuditBeforeAfter(row);
+  let beforeStato = readStatoId(before?.stato);
+  let afterStato = readStatoId(after?.stato);
+  if (beforeStato && afterStato) return { before: beforeStato, after: afterStato };
+
+  const statoChange = extractPayloadFieldChanges(row.payload).find((c) => c.key === "stato");
+  if (statoChange) {
+    beforeStato = beforeStato ?? readStatoId(statoChange.before);
+    afterStato = afterStato ?? readStatoId(statoChange.after);
+  }
+  return { before: beforeStato, after: afterStato };
+}
+
+function sameTimelineStato(
+  a: string,
+  b: string,
+  statiOpts: { id: string; label: string; color?: string }[],
+): boolean {
+  const ra = resolveTimelineStatoId(a, statiOpts);
+  const rb = resolveTimelineStatoId(b, statiOpts);
+  return Boolean(ra && rb && ra === rb);
+}
+
+function pushStatoStep(
+  steps: StatoTimelineStep[],
+  step: StatoTimelineStep,
+  statiOpts: { id: string; label: string; color?: string }[],
+): void {
   const last = steps[steps.length - 1];
-  if (last && last.statoId === step.statoId) return;
+  if (last && sameTimelineStato(last.statoId, step.statoId, statiOpts)) return;
   steps.push(step);
+}
+
+function findLastTransitionToStato(
+  logs: readonly LogModificaRow[],
+  targetStatoId: string,
+  statiOpts: { id: string; label: string; color?: string }[],
+): string | null {
+  const sorted = [...logs]
+    .filter((row) => !isLogReverted(row))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id.localeCompare(a.id));
+
+  for (const lg of sorted) {
+    if (lg.azione === "UPDATE") {
+      const { before, after } = readStatoChangeFromUpdateLog(lg);
+      const afterResolved = resolveTimelineStatoId(after, statiOpts);
+      const beforeResolved = resolveTimelineStatoId(before, statiOpts);
+      if (afterResolved === targetStatoId && beforeResolved !== afterResolved) {
+        return lg.created_at;
+      }
+      continue;
+    }
+
+    if (lg.azione === "CREATE") {
+      const snap = readSnapshotRecord(lg);
+      const stato =
+        resolveTimelineStatoId(readStatoId(snap?.stato), statiOpts) ??
+        resolveTimelineStatoId(readStatoId(readAuditBeforeAfter(lg).after?.stato), statiOpts);
+      if (stato === targetStatoId) return lg.created_at;
+    }
+  }
+
+  return null;
+}
+
+function ensureCurrentStatoInSteps(
+  steps: StatoTimelineStep[],
+  currentStatoRaw: string | null | undefined,
+  currentAt: string | null | undefined,
+  logs: readonly LogModificaRow[],
+  statiOpts: { id: string; label: string; color?: string }[],
+  anchorAt: string,
+): StatoTimelineStep[] {
+  const currentId = resolveTimelineStatoId(currentStatoRaw, statiOpts);
+  if (!currentId) return steps;
+
+  const last = steps[steps.length - 1];
+  const transitionAt = findLastTransitionToStato(logs, currentId, statiOpts);
+  const resolvedAt = transitionAt ?? currentAt?.trim() ?? anchorAt;
+
+  if (last && sameTimelineStato(last.statoId, currentId, statiOpts)) {
+    if (transitionAt && last.at !== transitionAt) {
+      return [...steps.slice(0, -1), { ...last, at: transitionAt }];
+    }
+    return steps;
+  }
+
+  return [
+    ...steps,
+    { id: `stato-current-${currentId}`, at: resolvedAt, statoId: currentId },
+  ];
 }
 
 function ensureAccettazioneFirst(
   steps: StatoTimelineStep[],
   anchorAt: string,
+  statiOpts: { id: string; label: string; color?: string }[],
 ): StatoTimelineStep[] {
-  const accId = migrateStatoConfigId(DEFAULT_LAVORAZIONE_STATO_ID);
-  if (steps.some((s) => s.statoId === accId)) return steps;
+  const accId = resolveStatoId(DEFAULT_LAVORAZIONE_STATO_ID, statiOpts);
+  if (steps.some((s) => sameTimelineStato(s.statoId, accId, statiOpts))) return steps;
   return [{ id: "stato-synthetic-accettazione", at: anchorAt, statoId: accId }, ...steps];
 }
 
 function buildStatoTimelineSteps(
   logs: readonly LogModificaRow[],
   anchorAt: string,
+  statiOpts: { id: string; label: string; color?: string }[],
 ): StatoTimelineStep[] {
   const steps: StatoTimelineStep[] = [];
   const sorted = [...logs]
@@ -152,43 +254,54 @@ function buildStatoTimelineSteps(
   for (const lg of sorted) {
     if (lg.azione === "CREATE") {
       const snap = readSnapshotRecord(lg);
-      const stato = readStatoId(snap?.stato) ?? readStatoId(readAuditBeforeAfter(lg).after?.stato);
+      const rawStato = readStatoId(snap?.stato) ?? readStatoId(readAuditBeforeAfter(lg).after?.stato);
+      const stato = resolveTimelineStatoId(rawStato, statiOpts);
       if (stato) {
-        pushStatoStep(steps, { id: `stato-create-${lg.id}`, at: lg.created_at, statoId: stato });
+        pushStatoStep(steps, { id: `stato-create-${lg.id}`, at: lg.created_at, statoId: stato }, statiOpts);
       }
       continue;
     }
 
     if (lg.azione !== "UPDATE") continue;
 
-    const { before, after } = readAuditBeforeAfter(lg);
-    const beforeStato = readStatoId(before?.stato);
-    const afterStato = readStatoId(after?.stato);
+    const { before, after } = readStatoChangeFromUpdateLog(lg);
+    const beforeStato = resolveTimelineStatoId(before, statiOpts);
+    const afterStato = resolveTimelineStatoId(after, statiOpts);
     if (!afterStato || beforeStato === afterStato) continue;
 
     if (beforeStato) {
       const last = steps[steps.length - 1];
-      if (!last || last.statoId !== beforeStato) {
-        pushStatoStep(steps, { id: `stato-before-${lg.id}`, at: lg.created_at, statoId: beforeStato });
+      if (!last || !sameTimelineStato(last.statoId, beforeStato, statiOpts)) {
+        pushStatoStep(steps, { id: `stato-before-${lg.id}`, at: lg.created_at, statoId: beforeStato }, statiOpts);
       }
     }
 
-    pushStatoStep(steps, { id: `stato-${lg.id}`, at: lg.created_at, statoId: afterStato });
+    pushStatoStep(steps, { id: `stato-${lg.id}`, at: lg.created_at, statoId: afterStato }, statiOpts);
   }
 
-  const withAccettazione = ensureAccettazioneFirst(steps, anchorAt);
-  return withAccettazione;
+  return ensureAccettazioneFirst(steps, anchorAt, statiOpts);
+}
+
+function withPortalAddettoDisplayNames(
+  campi: SchedaIngressoFields,
+  addettiRecords: readonly AddettoRecord[],
+): SchedaIngressoFields {
+  const acc = campi.addettoAccettazione?.trim();
+  if (!acc || acc === "—" || !addettiRecords.length) return campi;
+  return { ...campi, addettoAccettazione: addettoDisplayNameFromNome(addettiRecords, acc) };
 }
 
 export function resolveClientPortalSchedaIngressoFields(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore,
-  logs: readonly LogModificaRow[],
   addettiGlobali: readonly string[],
+  addettiRecords: readonly AddettoRecord[] = [],
 ): SchedaIngressoFields {
   const bundle = getOrCreateBundle(schedeStore, row.id);
-  if (bundle.ingresso?.campi) return bundle.ingresso.campi;
-  const vm = buildClientPortalRowFields(row, schedeStore, logs, addettiGlobali);
+  if (bundle.ingresso?.campi) {
+    return withPortalAddettoDisplayNames(bundle.ingresso.campi, addettiRecords);
+  }
+  const vm = buildClientPortalRowFields(row, schedeStore, addettiGlobali, addettiRecords);
   const display = resolveLavorazioneContextWithAttrezzatura(row, schedeStore);
   const m = row.mezzo;
   const attMarca =
@@ -261,10 +374,15 @@ export function buildClientTimelineHeader(
 export function buildClientTimelineIngressoFields(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore,
-  logs: readonly LogModificaRow[],
   addettiGlobali: readonly string[],
+  addettiRecords: readonly AddettoRecord[] = [],
 ): ClientTimelineIngressoField[] {
-  const fields = resolveClientPortalSchedaIngressoFields(row, schedeStore, logs, addettiGlobali);
+  const fields = resolveClientPortalSchedaIngressoFields(
+    row,
+    schedeStore,
+    addettiGlobali,
+    addettiRecords,
+  );
   return INGRESSO_LABELS.map(({ key, label, multiline }) => ({
     label,
     value: fields[key]?.trim() || "—",
@@ -275,16 +393,57 @@ export function buildClientTimelineIngressoFields(
 export function buildClientTimelineEvents(
   logs: readonly LogModificaRow[],
   statiOpts: { id: string; label: string; color?: string }[] = [],
-  options?: { anchorAt?: string },
+  options?: { anchorAt?: string; currentStatoId?: string | null; currentAt?: string | null },
 ): ClientTimelineEvent[] {
   const anchorAt = options?.anchorAt ?? logs[0]?.created_at ?? new Date(0).toISOString();
-  const steps = buildStatoTimelineSteps(logs, anchorAt).sort((a, b) => compareStatoSteps(a, b, statiOpts));
+  const fromLogs = buildStatoTimelineSteps(logs, anchorAt, statiOpts);
+  const steps = ensureCurrentStatoInSteps(
+    fromLogs,
+    options?.currentStatoId,
+    options?.currentAt,
+    logs,
+    statiOpts,
+    anchorAt,
+  ).sort((a, b) => compareStatoSteps(a, b, statiOpts));
 
   return steps.map((step) => ({
     id: step.id,
     at: step.at,
     title: `Stato · ${statoLavorazioneLabel(step.statoId, statiOpts)}`,
+    statoId: step.statoId,
   }));
+}
+
+/** Portale clienti (sola lettura): date stato da riga, senza log modifiche. */
+export function buildClientPortalStatoTimelineFromRow(
+  statiOpts: { id: string; label: string; color?: string }[],
+  options?: { anchorAt?: string; currentStatoId?: string | null; currentAt?: string | null },
+): ClientTimelineEvent[] {
+  const anchorAt = options?.anchorAt ?? new Date(0).toISOString();
+  const currentAt = options?.currentAt?.trim() || anchorAt;
+  const accId = resolveStatoId(DEFAULT_LAVORAZIONE_STATO_ID, statiOpts);
+  const currentId = resolveTimelineStatoId(options?.currentStatoId, statiOpts);
+  if (!currentId) return [];
+
+  const events: ClientTimelineEvent[] = [
+    {
+      id: "stato-row-accettazione",
+      at: anchorAt,
+      title: `Stato · ${statoLavorazioneLabel(accId, statiOpts)}`,
+      statoId: accId,
+    },
+  ];
+
+  if (!sameTimelineStato(accId, currentId, statiOpts)) {
+    events.push({
+      id: "stato-row-current",
+      at: currentAt,
+      title: `Stato · ${statoLavorazioneLabel(currentId, statiOpts)}`,
+      statoId: currentId,
+    });
+  }
+
+  return events;
 }
 
 export function fmtClientTimelineWhen(iso: string): string {

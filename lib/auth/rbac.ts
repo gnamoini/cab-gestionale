@@ -212,6 +212,7 @@ export function pathnameToSection(pathname: string): RbacSection | null {
   if (path === "/login" || path.startsWith("/login/")) return null;
   if (path.startsWith(SECURITY_HOME_PATH)) return "security";
   if (path.startsWith("/dashboard/security")) return "security";
+  if (path === "/agenda" || path.startsWith("/agenda/")) return "dashboard";
   if (path === "/dashboard" || path.startsWith("/dashboard/")) return "dashboard";
   if (path.startsWith("/lavorazioni-clienti")) return "lavorazioni_clienti";
   if (path.startsWith("/lavorazioni")) return "lavorazioni";

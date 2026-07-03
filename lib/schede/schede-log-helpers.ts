@@ -31,6 +31,7 @@ const INGRESSO_LABELS: Record<keyof SchedaIngressoFields, string> = {
   livelloCarburante: "Livello carburante",
   addettoAccettazione: "Addetto accettazione",
   richiedente: "Richiedente",
+  richiedenteFirma: "Firma richiedente",
   noteIntervento: "Note",
 };
 
@@ -42,9 +43,16 @@ export function diffSchedaIngressoCampi(
   (Object.keys(INGRESSO_LABELS) as (keyof SchedaIngressoFields)[]).forEach((k) => {
     const a = prima[k] ?? "";
     const b = dopo[k] ?? "";
-    if (a !== b) {
-      out.push({ campo: INGRESSO_LABELS[k], prima: a || "—", dopo: b || "—" });
+    if (a === b) return;
+    if (k === "richiedenteFirma") {
+      out.push({
+        campo: INGRESSO_LABELS[k],
+        prima: String(a).trim() ? "Presente" : "—",
+        dopo: String(b).trim() ? "Presente" : "—",
+      });
+      return;
     }
+    out.push({ campo: INGRESSO_LABELS[k], prima: a || "—", dopo: b || "—" });
   });
   return out;
 }

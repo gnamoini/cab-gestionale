@@ -63,6 +63,9 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { InvoiceRow, LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import type { DashboardPromemoriaRow } from "@/lib/dashboard/dashboard-promemoria-types";
+import type { WorkshopScheduleSessionView } from "@/lib/workshop-schedule/types";
+import { computeDayCapacity } from "@/lib/workshop-schedule/day-capacity";
+import { sessionDurationMinutes, ymdFromIso } from "@/lib/workshop-schedule/datetime";
 
 export type ControlTowerKpiMetric = {
   id: string;
@@ -190,6 +193,7 @@ export type ControlTowerBaseInput = {
   logMovimenti?: readonly LogModificaRow[];
   logAdmin?: readonly LogModificaRow[];
   promemoria?: readonly DashboardPromemoriaRow[];
+  agendaSessions?: readonly WorkshopScheduleSessionView[];
   timesheetEntries?: readonly DipendenteTimesheetEntryRow[];
   tipiAssenza?: readonly TipoAssenzaConfig[];
   statiLavorazione?: readonly StatoLavorazioneConfig[];
@@ -829,10 +833,61 @@ export function buildControlTowerActivityFeedSlice(input: ControlTowerBaseInput)
   };
 }
 
+export type ControlTowerAgendaKpiSlice = {
+  plannedHoursToday: number;
+  eventsToday: number;
+  overdueCount: number;
+  scheduledCount: number;
+  saturationPct: number;
+};
+
+export function buildControlTowerAgendaKpiSlice(
+  input: Pick<ControlTowerBaseInput, "agendaSessions" | "anchor">,
+): ControlTowerAgendaKpiSlice {
+  const anchor = input.anchor ?? new Date();
+  const todayYmd = ymdFromIso(anchor.toISOString());
+  const now = anchor.getTime();
+  const sessions = (input.agendaSessions ?? []).filter(
+    (s) => ymdFromIso(s.startAt) === todayYmd && s.planningStatus !== "cancelled",
+  );
+  const plannedMinutes = sessions.reduce((acc, s) => acc + sessionDurationMinutes(s.startAt, s.endAt), 0);
+  const capacity = computeDayCapacity(todayYmd, sessions);
+  return {
+    plannedHoursToday: Math.round((plannedMinutes / 60) * 10) / 10,
+    eventsToday: sessions.length,
+    overdueCount: sessions.filter(
+      (s) => !["completed", "cancelled"].includes(s.planningStatus) && Date.parse(s.endAt) < now,
+    ).length,
+    scheduledCount: sessions.filter((s) => s.planningStatus === "scheduled").length,
+    saturationPct: capacity.saturationPct,
+  };
+}
+
 export function buildControlTowerCalendarSlice(
-  input: Pick<ControlTowerBaseInput, "promemoria" | "anchor">,
+  input: Pick<ControlTowerBaseInput, "promemoria" | "agendaSessions" | "anchor">,
 ): ControlTowerCalendarSlice {
   const anchor = input.anchor ?? new Date();
+  const agenda = input.agendaSessions ?? [];
+  if (agenda.length > 0) {
+    const startYmd = ymdFromDate(anchor);
+    const end = new Date(anchor);
+    end.setDate(end.getDate() + CONTROL_TOWER_CALENDAR_FORWARD_DAYS);
+    const endYmd = ymdFromDate(end);
+    const items: ControlTowerCalendarItem[] = agenda
+      .filter((s) => {
+        const ymd = ymdFromIso(s.startAt);
+        return ymd >= startYmd && ymd <= endYmd && s.planningStatus !== "cancelled";
+      })
+      .sort((a, b) => a.startAt.localeCompare(b.startAt))
+      .slice(0, 12)
+      .map((s) => ({
+        id: s.id,
+        ymd: ymdFromIso(s.startAt),
+        title: s.title.trim() || "Sessione",
+        kind: "appuntamento" as const,
+      }));
+    return { items };
+  }
   const promemoria = input.promemoria ?? [];
   const startYmd = ymdFromDate(anchor);
   const end = new Date(anchor);
@@ -881,6 +936,7 @@ export function composeControlTowerSlices(
     magazzinoOps: buildControlTowerMagazzinoOpsSlice(input),
     activityFeed: buildControlTowerActivityFeedSlice(input),
     calendar: buildControlTowerCalendarSlice(input),
+    agendaKpi: buildControlTowerAgendaKpiSlice(input),
   };
 }
 

@@ -3,11 +3,13 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { PageHeader } from "@/components/gestionale/page-header";
 import { GestionalePageToolbarActions } from "@/components/gestionale/page-header-toolbar";
 import { LoadingCardSkeleton } from "@/components/design-system";
 import { DashboardWelcome } from "@/components/dashboard/dashboard-welcome";
 import { useCalendarV2Enabled } from "@/src/hooks/use-calendar-v2-enabled";
+import { buildAgendaHref } from "@/lib/navigation/agenda-links";
 import { DashboardNotificationsToolbarLeading } from "@/components/dashboard/dashboard-notifications-toolbar-leading";
 import { Drawer } from "@/components/design-system";
 import { gestionaleLogDrawerPanelClass } from "@/components/gestionale/gestionale-log-ui";
@@ -23,13 +25,6 @@ const DashboardControlTowerLayout = dynamic(
 );
 const CalendarV2Section = dynamic(
   () => import("@/components/dashboard/calendar-v2/calendar-v2-section").then((m) => m.CalendarV2Section),
-  { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
-);
-const DashboardPromemoriaSection = dynamic(
-  () =>
-    import("@/components/dashboard/promemoria/dashboard-promemoria-section").then(
-      (m) => m.DashboardPromemoriaSection,
-    ),
   { loading: () => <LoadingCardSkeleton minHeightClass="min-h-[8rem]" /> },
 );
 const DashboardSistemaLogListEmbedded = dynamic(
@@ -85,7 +80,19 @@ export function DashboardView() {
         ) : null}
 
         <DashboardWelcome />
-        {!staging ? (calendarV2Enabled ? <CalendarV2Section /> : <DashboardPromemoriaSection />) : null}
+        {!staging ? (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:var(--cab-border)] bg-[color:var(--cab-surface)] px-3 py-2">
+              <p className="text-sm text-[color:var(--cab-text-muted)]">
+                Promemoria e pianificazione officina sono in Agenda.
+              </p>
+              <Link href={buildAgendaHref()} className={erpBtnNeutral}>
+                Apri Agenda
+              </Link>
+            </div>
+            {calendarV2Enabled ? <CalendarV2Section /> : null}
+          </>
+        ) : null}
         <DashboardControlTowerLayout />
       </div>
 

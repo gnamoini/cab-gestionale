@@ -1,6 +1,11 @@
 "use client";
 
-import { memo, useMemo, type KeyboardEvent } from "react";
+import { memo, useCallback, useMemo, type KeyboardEvent, type ReactNode } from "react";
+import {
+  KanbanDndBoard,
+  KanbanDndDraggable,
+  KanbanDndDropZone,
+} from "@/components/gestionale/lavorazioni/lavorazioni-kanban-dnd";
 import { LoadingKanbanSkeleton } from "@/components/design-system";
 import { KanbanColumnScroll } from "@/components/gestionale/lavorazioni/kanban-column-scroll";
 import { KanbanVirtualColumnScroll } from "@/components/gestionale/lavorazioni/kanban-virtual-column-scroll";
@@ -131,7 +136,7 @@ const KANBAN_COLUMN_SCROLL_CLASS =
   "lavorazioni-kanban-column-scroll gestionale-scrollbar flex flex-col gap-2 p-2";
 
 const KANBAN_COLUMN_SECTION_CLASS =
-  "lavorazioni-kanban-column flex h-full min-h-0 w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30";
+  "lavorazioni-kanban-column flex h-full min-h-0 min-w-[17.5rem] shrink-0 flex-col rounded-xl border border-zinc-200/90 bg-zinc-50/50 dark:border-zinc-700/80 dark:bg-zinc-900/30 lg:flex-1 lg:min-w-[17.5rem]";
 
 const KANBAN_UNMAPPED_COLUMN_CLASS =
   `${KANBAN_COLUMN_SECTION_CLASS} border-amber-300/80 dark:border-amber-700/60`;
@@ -286,6 +291,8 @@ export function LavorazioniKanbanView({
   loading,
   emptyMessage,
   closedEmptyMessage = "Nessuna lavorazione completata.",
+  canDrag = false,
+  onMoveStato,
   onOpenRow,
   onOpenClosedRow,
 }: {
@@ -302,12 +309,17 @@ export function LavorazioniKanbanView({
   loading: boolean;
   emptyMessage: string;
   closedEmptyMessage?: string;
+  /** Desktop Kanban DnD — richiede permesso edit. */
+  canDrag?: boolean;
+  onMoveStato?: (row: LavorazioneListRow, nextStato: string) => void;
   onOpenRow: (row: LavorazioneListRow) => void;
   onOpenClosedRow?: (row: LavorazioneListRow) => void;
 }) {
   const kanbanColumns = useMemo(() => kanbanWorkflowColumns(columns), [columns]);
+  const workflowColumnIds = useMemo(() => new Set(kanbanColumns.map((c) => c.id)), [kanbanColumns]);
   const accettazioneColumnId = useMemo(() => findAccettazioneColumnId(columns), [columns]);
   const attesaPreventivoCol = useMemo(() => findAttesaPreventivoColumnConfig(statiOpts), [statiOpts]);
+  const dndEnabled = canDrag && Boolean(onMoveStato);
 
   const partition = useMemo(
     () => partitionKanbanByColumn(rows, columns, statiOpts),
@@ -383,6 +395,70 @@ export function LavorazioniKanbanView({
     [schedeStore, defaultAddetto],
   );
 
+  const renderKanbanCard = useCallback(
+    (
+      row: LavorazioneListRow,
+      onOpen: (row: LavorazioneListRow) => void,
+      flash: boolean,
+    ) => (
+      <KanbanCard
+        row={row}
+        schedeStore={schedeStore}
+        defaultAddetto={defaultAddetto}
+        prioritaColors={prioritaColors}
+        addettoColors={addettoColors}
+        flash={flash}
+        onOpen={() => onOpen(row)}
+      />
+    ),
+    [schedeStore, defaultAddetto, prioritaColors, addettoColors],
+  );
+
+  const renderDragOverlay = useCallback(
+    (row: LavorazioneListRow) =>
+      renderKanbanCard(row, onOpenRow, flashRowId === row.id || navBulkFlashIds.has(row.id)),
+    [renderKanbanCard, onOpenRow, flashRowId, navBulkFlashIds],
+  );
+
+  const renderKanbanCards = (
+    items: readonly LavorazioneListRow[],
+    onOpen: (row: LavorazioneListRow) => void = onOpenRow,
+  ) =>
+    items.map((row) => {
+      const flash = flashRowId === row.id || navBulkFlashIds.has(row.id);
+      const card = renderKanbanCard(row, onOpen, flash);
+      if (!dndEnabled) {
+        return (
+          <div key={row.id} className="contents">
+            {card}
+          </div>
+        );
+      }
+      return (
+        <KanbanDndDraggable
+          key={row.id}
+          id={row.id}
+          ariaLabel={`Trascina lavorazione ${macchinaLabel(row, schedeStore)}`}
+        >
+          {card}
+        </KanbanDndDraggable>
+      );
+    });
+
+  const wrapColumnDrop = (
+    columnId: string,
+    className: string,
+    content: ReactNode,
+    droppable = true,
+  ) =>
+    dndEnabled && droppable ? (
+      <KanbanDndDropZone id={columnId} className={className}>
+        {content}
+      </KanbanDndDropZone>
+    ) : (
+      <div className={className}>{content}</div>
+    );
+
   if (loading) {
     return <LoadingKanbanSkeleton />;
   }
@@ -398,23 +474,6 @@ export function LavorazioniKanbanView({
       </p>
     );
   }
-
-  const renderKanbanCards = (
-    items: readonly LavorazioneListRow[],
-    onOpen: (row: LavorazioneListRow) => void = onOpenRow,
-  ) =>
-    items.map((row) => (
-      <KanbanCard
-        key={row.id}
-        row={row}
-        schedeStore={schedeStore}
-        defaultAddetto={defaultAddetto}
-        prioritaColors={prioritaColors}
-        addettoColors={addettoColors}
-        flash={flashRowId === row.id || navBulkFlashIds.has(row.id)}
-        onOpen={() => onOpen(row)}
-      />
-    ));
 
   const renderStatoHeader = (statoCol: StatoLavorazioneConfig, count: number, className?: string) => (
     <div
@@ -447,23 +506,31 @@ export function LavorazioniKanbanView({
           aria-label={`Colonna ${col.label}`}
         >
           {renderStatoHeader(col, accItems.length)}
-          <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
-            {accItems.length === 0 ? (
-              <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
-            ) : (
-              renderKanbanCards(accItems)
-            )}
-            {attesaNestedForUi.map(({ col: apCol, items }) => (
-              <div key={apCol.id} className="space-y-2 border-t border-zinc-200/80 pt-2 dark:border-zinc-700/80">
-                {renderStatoHeader(apCol, items.length, "border-b-0 px-0 py-0")}
-                {items.length === 0 ? (
-                  <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
-                ) : (
-                  renderKanbanCards(items)
-                )}
-              </div>
-            ))}
-          </KanbanColumnScroll>
+          {wrapColumnDrop(
+            col.id,
+            "flex min-h-0 flex-1 flex-col",
+            <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
+              {accItems.length === 0 ? (
+                <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
+              ) : (
+                renderKanbanCards(accItems)
+              )}
+              {attesaNestedForUi.map(({ col: apCol, items }) => (
+                <div key={apCol.id} className="space-y-2 border-t border-zinc-200/80 pt-2 dark:border-zinc-700/80">
+                  {renderStatoHeader(apCol, items.length, "border-b-0 px-0 py-0")}
+                  {wrapColumnDrop(
+                    apCol.id,
+                    "min-h-[2rem]",
+                    items.length === 0 ? (
+                      <p className="py-3 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
+                    ) : (
+                      renderKanbanCards(items)
+                    ),
+                  )}
+                </div>
+              ))}
+            </KanbanColumnScroll>,
+          )}
         </section>
       );
     }
@@ -472,13 +539,17 @@ export function LavorazioniKanbanView({
     return (
       <section key={col.id} className={sectionClass} aria-label={`Colonna ${col.label}`}>
         {renderStatoHeader(col, items.length)}
-        <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
-          {items.length === 0 ? (
-            <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
-          ) : (
-            renderKanbanCards(items)
-          )}
-        </KanbanColumnScroll>
+        {wrapColumnDrop(
+          col.id,
+          "flex min-h-0 flex-1 flex-col",
+          <KanbanColumnScroll columnId={col.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
+            {items.length === 0 ? (
+              <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
+            ) : (
+              renderKanbanCards(items)
+            )}
+          </KanbanColumnScroll>,
+        )}
       </section>
     );
   };
@@ -490,19 +561,23 @@ export function LavorazioniKanbanView({
       aria-label="Colonna Completate"
     >
       {renderStatoHeader(completateColumn, completateItems.length)}
-      <KanbanVirtualColumnScroll
-        columnId={completateColumn.id}
-        className={KANBAN_COLUMN_SCROLL_CLASS}
-        items={completateItems}
-      >
-        {(visible) =>
-          completateItems.length === 0 ? (
-            <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">{closedEmptyMessage}</p>
-          ) : (
-            renderKanbanCards(visible as LavorazioneListRow[], openClosedRow)
-          )
-        }
-      </KanbanVirtualColumnScroll>
+      {wrapColumnDrop(
+        completateColumn.id,
+        "flex min-h-0 flex-1 flex-col",
+        <KanbanVirtualColumnScroll
+          columnId={completateColumn.id}
+          className={KANBAN_COLUMN_SCROLL_CLASS}
+          items={completateItems}
+        >
+          {(visible) =>
+            completateItems.length === 0 ? (
+              <p className="py-6 text-center text-[11px] text-zinc-400 dark:text-zinc-500">{closedEmptyMessage}</p>
+            ) : (
+              renderKanbanCards(visible as LavorazioneListRow[], openClosedRow)
+            )
+          }
+        </KanbanVirtualColumnScroll>,
+      )}
     </section>
   );
 
@@ -515,9 +590,14 @@ export function LavorazioniKanbanView({
         aria-label="Colonna Stato non mappato"
       >
         {renderStatoHeader(UNMAPPED_COLUMN_CONFIG, unmapped.length)}
-        <KanbanColumnScroll columnId={UNMAPPED_COLUMN_CONFIG.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
-          {renderKanbanCards(unmapped)}
-        </KanbanColumnScroll>
+        {wrapColumnDrop(
+          UNMAPPED_COLUMN_CONFIG.id,
+          "flex min-h-0 flex-1 flex-col",
+          <KanbanColumnScroll columnId={UNMAPPED_COLUMN_CONFIG.id} className={KANBAN_COLUMN_SCROLL_CLASS}>
+            {renderKanbanCards(unmapped)}
+          </KanbanColumnScroll>,
+          false,
+        )}
       </section>
     );
   };
@@ -541,15 +621,30 @@ export function LavorazioniKanbanView({
   }
 
   if (layout === "desktop") {
+    const board = (
+      <div className="lavorazioni-kanban-board gestionale-scrollbar min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
+        <div className="flex h-[var(--lavorazioni-kanban-col-max-h)] min-h-[18rem] w-max min-w-full flex-row flex-nowrap items-stretch gap-3">
+          {kanbanColumns.map((col) => renderColumn(col))}
+          {renderUnmappedColumn()}
+          {renderCompletateColumn()}
+        </div>
+      </div>
+    );
+
     return (
       <div className="lavorazioni-kanban-scope max-w-full space-y-3 overflow-x-hidden">
-        <div className="lavorazioni-kanban-board gestionale-scrollbar min-h-0 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-1">
-          <div className="flex h-[var(--lavorazioni-kanban-col-max-h)] min-h-[18rem] w-max min-w-full flex-row flex-nowrap items-stretch gap-3">
-            {kanbanColumns.map((col) => renderColumn(col))}
-            {renderUnmappedColumn()}
-            {renderCompletateColumn()}
-          </div>
-        </div>
+        <KanbanDndBoard
+          enabled={dndEnabled}
+          rows={rows}
+          statiOpts={statiOpts}
+          workflowColumnIds={workflowColumnIds}
+          completateColumnId={completateColumn.id}
+          attesaPreventivoColumnId={attesaPreventivoCol.id}
+          onMoveStato={(row, stato) => onMoveStato?.(row, stato)}
+          renderDragOverlay={renderDragOverlay}
+        >
+          {board}
+        </KanbanDndBoard>
       </div>
     );
   }

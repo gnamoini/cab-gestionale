@@ -3,13 +3,63 @@
 /* Tabella densa Lavorazioni — scroll orizzontale, Azioni sticky a destra, colonne progressive */
 
 .gestionale-lavorazioni-dense-table {
-  min-width: 68rem;
+  min-width: 70rem;
 }
 
-/* Colonne Stato / Addetto — leggermente più a destra rispetto ai campi testo. */
+/* Portale Clienti — 11 colonne. */
+.gestionale-client-portal-dense-table {
+  min-width: 62rem;
+}
+
+@media (max-width: 1400px) {
+  .gestionale-client-portal-dense-table {
+    min-width: 56rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .gestionale-client-portal-dense-table {
+    min-width: 50rem;
+  }
+}
+
+/* Colonne Stato / Addetto — pill strette, leggero inset tra le due. */
 .gestionale-lavorazioni-dense-table .gestionale-list-table-col-stato-addetto-inset {
-  padding-left: 1.25rem;
-  padding-right: 0.375rem;
+  padding-left: 0.375rem;
+  padding-right: 0.25rem;
+}
+
+/* Spacer flessibile tra Note e pill — centra il blocco Stato/Priorità/Addetto nello spazio residuo. */
+.gestionale-lavorazioni-dense-table col.gestionale-list-table-col-pill-spacer {
+  width: auto;
+}
+
+.gestionale-lavorazioni-dense-table th.gestionale-list-table-col-pill-spacer,
+.gestionale-lavorazioni-dense-table td.gestionale-list-table-col-pill-spacer {
+  width: auto;
+  padding: 0;
+  border: 0;
+}
+
+/* Portale: senza col Note lo spacer flessibile creava buco enorme — collassa dopo regola Lavorazioni. */
+.gestionale-lavorazioni-dense-table.gestionale-client-portal-dense-table col.gestionale-list-table-col-pill-spacer {
+  width: 0;
+  max-width: 0;
+}
+
+.gestionale-lavorazioni-dense-table.gestionale-client-portal-dense-table th.gestionale-list-table-col-pill-spacer,
+.gestionale-lavorazioni-dense-table.gestionale-client-portal-dense-table td.gestionale-list-table-col-pill-spacer {
+  width: 0;
+  max-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Azioni portale — colonna stretta, padding simmetrico 1rem. */
+.gestionale-lavorazioni-dense-table.gestionale-client-portal-dense-table .gestionale-list-table-actions-head,
+.gestionale-lavorazioni-dense-table.gestionale-client-portal-dense-table .gestionale-list-table-actions-cell {
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
 }
 
 @media (max-width: 1400px) {
@@ -17,9 +67,9 @@
     min-width: 62rem;
   }
 
-  .gestionale-lavorazioni-dense-table col:nth-child(6),
-  .gestionale-lavorazioni-dense-table thead th:nth-child(6),
-  .gestionale-lavorazioni-dense-table tbody td:nth-child(6) {
+  .gestionale-lavorazioni-dense-table col.gestionale-list-table-col-note,
+  .gestionale-lavorazioni-dense-table thead th.gestionale-list-table-col-note,
+  .gestionale-lavorazioni-dense-table tbody td.gestionale-list-table-col-note {
     display: none;
   }
 }
@@ -29,9 +79,9 @@
     min-width: 54rem;
   }
 
-  .gestionale-lavorazioni-dense-table col:nth-child(5),
-  .gestionale-lavorazioni-dense-table thead th:nth-child(5),
-  .gestionale-lavorazioni-dense-table tbody td:nth-child(5) {
+  .gestionale-lavorazioni-dense-table col.gestionale-list-table-col-ident,
+  .gestionale-lavorazioni-dense-table thead th.gestionale-list-table-col-ident,
+  .gestionale-lavorazioni-dense-table tbody td.gestionale-list-table-col-ident {
     display: none;
   }
 }
@@ -145,6 +195,18 @@
 
 .lavorazioni-kanban-card-flash {
   box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--cab-primary) 45%, transparent);
+}
+
+/* Desktop Kanban DnD — placeholder + drop highlight */
+.lavorazioni-kanban-card-dragging {
+  opacity: 0.35;
+}
+
+.lavorazioni-kanban-column-drop-over {
+  background-color: color-mix(in srgb, var(--cab-primary) 6%, transparent);
+  outline: 2px dashed color-mix(in srgb, var(--cab-primary) 35%, var(--cab-border));
+  outline-offset: -2px;
+  border-radius: 0.75rem;
 }
 
 .lavorazioni-kanban-mobile-card {

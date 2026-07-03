@@ -106,16 +106,22 @@ export const gestionaleListTableRowClass = `${gestionaleListTableRowBaseClass} $
 /** Padding e allineamento sinistro (`px-2 py-1`) — master Lavorazioni. */
 export const gestionaleListTableTd = globalTableTdBody;
 
-/** Celle centrate (date, numeri). */
+/** Celle centrate (date, numeri, identificativi mezzo). */
 export const gestionaleListTableTdCenter =
-  "box-border px-2.5 py-1 align-middle text-center text-xs font-medium tabular-nums text-zinc-800 dark:text-zinc-100";
+  "box-border px-2 py-1 align-middle text-center text-xs font-medium tabular-nums text-zinc-800 dark:text-zinc-100";
 
-/** Celle pill (stato, priorità, addetto) — stesso padding orizzontale di `globalTableThCell` (px-2.5). */
+/** Celle identificazione mezzo (targa / matricola / scuderia) — mono compatto. */
+export const gestionaleListTableTdIdent =
+  "gestionale-list-table-col-ident box-border px-2 py-1 align-middle text-center text-[13px] font-medium leading-tight tabular-nums text-zinc-900 dark:text-zinc-100";
+
+/** Celle pill (stato, priorità, addetto) — stesso padding orizzontale delle altre celle. */
 export const gestionaleListTableTdPill =
-  "box-border overflow-hidden px-2.5 py-1 align-middle text-center";
+  "box-border overflow-hidden px-2 py-1 align-middle text-center";
 /** Inset colonne Stato/Addetto — tabella densa Lavorazioni (`lavorazioni-scroll.css`). */
 export const gestionaleListTableColStatoAddettoInsetClass =
   "gestionale-list-table-col-stato-addetto-inset";
+/** Cella/colonna spacer pill — tabella densa Lavorazioni. */
+export const gestionaleListTableColPillSpacerClass = "gestionale-list-table-col-pill-spacer";
 /** Pill a tutta larghezza colonna (larghezza da `<col>` / colgroup). */
 export const gestionaleListTableTdPillWrap = "box-border w-full min-w-0 max-w-full";
 
@@ -154,14 +160,23 @@ export const gestionaleListTableMobileStackClass = "mt-4 space-y-3 md:hidden";
 
 // —— Larghezze colonne dati (preset Lavorazioni — riusare in portale clienti) ——
 
-export const gestionaleListColIngressoClass = "w-[7%]";
-export const gestionaleListColCodiceClass = "w-[6%]";
-export const gestionaleListColClienteClass = "w-[10%]";
-export const gestionaleListColCantiereClass = "w-[6.5%]";
-export const gestionaleListColAttrezzaturaClass = "w-[13%]";
+export const gestionaleListColIngressoClass = "w-[6%]";
+export const gestionaleListColCodiceClass = "w-[5.5%]";
+export const gestionaleListColClienteClass = "w-[9%]";
+export const gestionaleListColCantiereClass = "w-[5.5%]";
+export const gestionaleListColAttrezzaturaClass = "w-[11%]";
+/** @deprecated Sostituito da scuderia / targa / matricola. */
 export const gestionaleListColIdentificazioneClass = "w-[10%]";
-export const gestionaleListColNoteClass = "w-[8%]";
+export const gestionaleListColScuderiaClass =
+  "w-[3.25rem] min-w-[3.25rem] gestionale-list-table-col-ident";
+export const gestionaleListColTargaClass =
+  "w-[5.25rem] min-w-[5.25rem] gestionale-list-table-col-ident";
+export const gestionaleListColMatricolaClass =
+  "w-[6.25rem] min-w-[6.25rem] gestionale-list-table-col-ident";
+export const gestionaleListColNoteClass = "w-[7%] gestionale-list-table-col-note";
 export const gestionaleListColAzioniClass = "w-[11.5rem] min-w-[11.5rem]";
+/** Colonna flessibile prima delle pill — assorbe lo spazio residuo (`table-fixed`) e spinge Stato/Addetto a destra. */
+export const gestionaleListColPillSpacerClass = gestionaleListTableColPillSpacerClass;
 
 /** Utility: combina classi riga con stato highlight (navigazione da URL). */
 export function gestionaleListTableRowClassNames(extra?: string): string {

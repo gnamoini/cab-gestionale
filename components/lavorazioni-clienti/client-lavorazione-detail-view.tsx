@@ -11,7 +11,6 @@ import { ClientLavorazioneInformazioniPanel } from "@/components/lavorazioni-cli
 import { ClientLavorazioneMediaPanel } from "@/components/lavorazioni-clienti/client-lavorazione-media-panel";
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
 import {
-  ClientLavorazioneAvanzamentoPanel,
   ClientLavorazioneTimelinePanel,
   clientTimelinePageTitle,
 } from "@/components/lavorazioni-clienti/client-lavorazione-timeline-panel";
@@ -22,10 +21,8 @@ import {
   resolveClientPortalStatoId,
 } from "@/lib/lavorazioni/client-portal-stati";
 import { lavorazioneRefLabel } from "@/lib/lavorazioni/client-portal-ui";
-import { statoDisplayColor } from "@/lib/lavorazioni/lavorazioni-theme";
-import { readablePillStyleFromHex } from "@/lib/lavorazioni/table-pill-readability";
 import { HubModalPanoramicaPanel, IconActionButton, LoadingClientDetailSkeleton } from "@/components/design-system";
-import { dsBtnNeutral, dsGapXl, dsStackPage } from "@/lib/ui/design-system";
+import { dsBtnNeutral, dsGapMd, dsGapXl, dsStackPage } from "@/lib/ui/design-system";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useClientLavorazioneDetailQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
 import { useClientLavorazioniRefresh } from "@/src/hooks/use-client-lavorazioni-refresh";
@@ -34,6 +31,9 @@ import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 
 const CLIENT_PORTAL_BACK_LABEL = `Torna a ${PORTALE_CLIENTI_LABEL}`;
+
+const CLIENT_PORTAL_SECTION_TITLE_CLASS =
+  "text-xs font-bold uppercase tracking-wide text-[color:var(--cab-text-muted)]";
 
 export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: string }) {
   const router = useRouter();
@@ -66,11 +66,11 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
     lavorazioneIds: [lavorazioneId],
   });
   const addettiGlobali = globalOpts.lavorazioni.addetti;
+  const addettiRecords = globalOpts.lavorazioni.addettiRecords;
   const [qrOpen, setQrOpen] = useState(false);
 
   const detail = detailQ.data;
   const row = detail?.row;
-  const logs = detail?.logs ?? [];
 
   const { refresh: refreshClientData, busy: refreshBusy } = useClientLavorazioniRefresh(detailQ);
 
@@ -78,9 +78,6 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
 
   const resolvedStato = row ? resolveClientPortalStatoId(row.stato, statiOpts) : null;
   const statoLabel = resolvedStato ? statoLavorazioneLabel(resolvedStato, statiOpts) || resolvedStato : "—";
-  const statoStyle = resolvedStato
-    ? readablePillStyleFromHex(statoDisplayColor(resolvedStato, statiOpts))
-    : undefined;
 
   const pageTitle = useMemo(() => {
     if (!row) return PORTALE_CLIENTI_LABEL;
@@ -106,8 +103,8 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
         <div className={`${dsStackPage} min-w-0 max-w-full`}>
           <ShellCard>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">Non hai permesso per visualizzare questa lavorazione.</p>
-            <Link href="/dashboard" className={`mt-4 inline-flex ${dsBtnNeutral}`}>
-              Torna alla dashboard
+            <Link href={listPath} onClick={goToClientList} className={`mt-4 inline-flex ${dsBtnNeutral}`}>
+              {CLIENT_PORTAL_BACK_LABEL}
             </Link>
           </ShellCard>
         </div>
@@ -170,21 +167,30 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
             <ClientLavorazioneTimelinePanel
               row={row}
               schedeStore={schedeStore}
-              logs={logs}
               addettiGlobali={addettiGlobali}
+              statiOpts={statiOpts}
+              statoId={resolvedStato ?? ""}
               statoLabel={statoLabel}
-              statoStyle={statoStyle}
             />
-            <ClientLavorazioneInformazioniPanel
-              row={row}
-              schedeStore={schedeStore}
-              logs={logs}
-              addettiGlobali={addettiGlobali}
-            />
-            <ClientLavorazioneMediaPanel lavorazioneId={row.id} />
-            <div className="border-t border-[color:var(--cab-border)] pt-[length:var(--ds-space-xl)]">
-              <ClientLavorazioneAvanzamentoPanel logs={logs} statiOpts={statiOpts} row={row} />
-            </div>
+
+            <section
+              className={`flex min-w-0 flex-col ${dsGapMd} border-t border-[color:var(--cab-border)] pt-[length:var(--ds-space-xl)]`}
+            >
+              <h2 className={CLIENT_PORTAL_SECTION_TITLE_CLASS}>Dettaglio scheda ingresso</h2>
+              <ClientLavorazioneInformazioniPanel
+                row={row}
+                schedeStore={schedeStore}
+                addettiGlobali={addettiGlobali}
+                addettiRecords={addettiRecords}
+              />
+            </section>
+
+            <section
+              className={`flex min-w-0 flex-col ${dsGapMd} border-t border-[color:var(--cab-border)] pt-[length:var(--ds-space-xl)]`}
+            >
+              <h2 className={CLIENT_PORTAL_SECTION_TITLE_CLASS}>Documentazione</h2>
+              <ClientLavorazioneMediaPanel lavorazioneId={row.id} />
+            </section>
           </HubModalPanoramicaPanel>
         </ShellCard>
       </div>

@@ -14,6 +14,7 @@ import type { composeControlTowerSlices } from "@/lib/dashboard/control-tower-se
 
 type ControlTowerSlices = ReturnType<typeof composeControlTowerSlices> & {
   headerKpi: ReturnType<typeof composeControlTowerSlices>["headerKpi"];
+  agendaKpi?: ReturnType<typeof composeControlTowerSlices>["agendaKpi"];
 };
 
 type ControlTowerContextValue = {

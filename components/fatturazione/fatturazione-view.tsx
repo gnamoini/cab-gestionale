@@ -50,7 +50,7 @@ import {
   CardMobile,
   CardMobileActions,
   Drawer,
-  LoadingTableSkeleton,
+  LoadingFatturazioneListSkeleton,
   PageToolbar,
   PageToolbarCtaLabel,
   PageToolbarResultCount,
@@ -258,12 +258,7 @@ export function FatturazioneView() {
               />
             </section>
             {isLoading ? (
-              <LoadingTableSkeleton
-                preset="generic"
-                wrapClassName="mt-4"
-                visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
-                actionButtonCount={1}
-              />
+              <LoadingFatturazioneListSkeleton withToolbar={false} />
             ) : layout === "desktop" ? (
               <GestionaleListTable
                 wrapClassName="mt-4"

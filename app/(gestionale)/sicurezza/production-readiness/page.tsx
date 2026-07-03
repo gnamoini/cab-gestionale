@@ -4,7 +4,7 @@ import { ProductionReadinessViewLazy } from "@/components/gestionale/lazy-route-
 
 export default function SicurezzaProductionReadinessPage() {
   return (
-    <Suspense fallback={<LoadingSuspenseFallback variant="dashboard" />}>
+    <Suspense fallback={<LoadingSuspenseFallback variant="production-readiness" />}>
       <ProductionReadinessViewLazy />
     </Suspense>
   );

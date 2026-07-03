@@ -49,6 +49,11 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      {
+        source: "/dashboard/agenda",
+        destination: "/agenda",
+        permanent: true,
+      },
       { source: "/ddt", destination: "/preventivi", permanent: false },
       { source: "/dashboard/security", destination: "/sicurezza", permanent: true },
       {

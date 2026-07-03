@@ -125,12 +125,21 @@ export function ClientLavorazionePhotoGallery({
   const photosQ = useClientLavorazionePhotosQuery(lavorazioneId, { max });
   const loading = photosQ.isLoading && photosQ.data == null;
   const images = photosQ.data ?? [];
+  const photosError = photosQ.isError;
 
   const subtitle = loading ? (
     <span className="inline-flex items-center gap-1.5">
       <LoadingSpinner size="sm" label="Caricamento foto…" />
       Caricamento foto…
     </span>
+  ) : photosError ? (
+    <button
+      type="button"
+      className="text-left text-sm text-red-600 underline dark:text-red-400"
+      onClick={() => void photosQ.refetch()}
+    >
+      Errore caricamento foto — riprova
+    </button>
   ) : images.length === 0 ? (
     "Nessuna foto caricata"
   ) : (

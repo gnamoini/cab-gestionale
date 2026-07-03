@@ -2,7 +2,7 @@ import type { InterventoTargetTypeScheda, SchedaIngressoFields } from "@/types/s
 
 export type SchedaIngressoStringKey = Exclude<
   keyof SchedaIngressoFields,
-  "targetType" | "attrezzaturaId"
+  "targetType" | "attrezzaturaId" | "richiedenteFirma"
 >;
 
 export function applySchedaIngressoTypedFields(
@@ -55,6 +55,10 @@ export function copySchedaIngressoFieldFromClient(
   }
   if (key === "attrezzaturaId") {
     if (client.attrezzaturaId) next.attrezzaturaId = client.attrezzaturaId;
+    return;
+  }
+  if (key === "richiedenteFirma") {
+    if (client.richiedenteFirma) next.richiedenteFirma = client.richiedenteFirma;
     return;
   }
   next[key] = client[key];

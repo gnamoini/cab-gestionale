@@ -12,7 +12,8 @@ import {
 import { canAccessRoute } from "@/src/lib/auth/can-access-route";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
-import { LoadingView } from "@/components/design-system/loading";
+import { LoadingSuspenseFallback } from "@/components/design-system/loading/loading-suspense-fallback";
+import { resolveLoadingPageSkeletonVariant } from "@/components/design-system/loading/resolve-loading-page-skeleton-variant";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { isBootInvestigationEnabled, logBoot, trackRedirect } from "@/lib/observability/boot-investigation";
@@ -109,9 +110,10 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
   }, [allowed, checkingPerms, pathname, router, sessionReady]);
 
   if (showLoadingGate && !loadingFailsafe) {
+    const skeletonVariant = resolveLoadingPageSkeletonVariant(pathname);
     return (
-      <div className="flex min-w-0 min-h-[40vh] items-center justify-center" aria-busy="true">
-        <LoadingView message={GLOBAL_LOADING_MESSAGES.permessi} spinnerSize="md" />
+      <div className="min-w-0" aria-busy="true" aria-label={GLOBAL_LOADING_MESSAGES.permessi}>
+        <LoadingSuspenseFallback variant={skeletonVariant} />
       </div>
     );
   }

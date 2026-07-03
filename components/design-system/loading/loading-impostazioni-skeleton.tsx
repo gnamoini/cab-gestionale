@@ -25,10 +25,7 @@ export const LoadingImpostazioniSkeleton = memo(function LoadingImpostazioniSkel
       <div className={SETTINGS_PAGE_GRID}>
         <SkeletonBlock className={`${SETTINGS_SIDEBAR_SHELL} ${SKELETON_MIN_HEIGHT.settingsNav}`} />
         <div className={`${SETTINGS_MAIN_PANEL} ${SKELETON_MIN_HEIGHT.settingsContent} space-y-4`}>
-          <div className="space-y-2">
-            <SkeletonBlock className="h-5 w-40" />
-            <SkeletonBlock className="h-3 w-full max-w-md" />
-          </div>
+          <SkeletonBlock className="min-h-[3rem] w-full" />
           <SkeletonForm sections={1} minHeightClass="min-h-[12rem]" />
         </div>
       </div>

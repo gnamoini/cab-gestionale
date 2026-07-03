@@ -20,6 +20,13 @@ export const SKELETON_MIN_HEIGHT = {
   loginCard: "min-h-[22rem]",
   modalMd: "min-h-[20rem]",
   modalLg: "min-h-[28rem]",
+  agendaCalendar: "min-h-[18rem]",
+  agendaMain: "min-h-[24rem]",
+  agendaSidebar: "min-h-[18rem]",
+  tabBar: "min-h-9 w-full",
+  sicurezzaPanel: "min-h-[32rem]",
+  productionReadinessOutcome: "min-h-[5rem]",
+  productionReadinessCard: "min-h-[16rem]",
 } as const;
 
 export const SKELETON_GRID = {

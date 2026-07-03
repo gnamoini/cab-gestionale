@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildClientTimelineEvents } from "@/lib/lavorazioni/client-portal-timeline";
+import { buildClientTimelineEvents, buildClientPortalStatoTimelineFromRow } from "@/lib/lavorazioni/client-portal-timeline";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
 
 const statiOpts = [
@@ -98,5 +98,66 @@ const createWithAccettazione = buildClientTimelineEvents(
 assert.equal(createWithAccettazione.length, 2);
 assert.equal(createWithAccettazione[0]?.title, "Stato · Accettazione");
 assert.equal(createWithAccettazione[0]?.at, "2026-05-26T08:00:00.000Z");
+
+const statiWithDaLavorare = [
+  ...statiOpts,
+  { id: "da_lavorare", label: "Da lavorare", color: "#eab308" },
+];
+
+const currentStatoWithoutLog = buildClientTimelineEvents(
+  [],
+  statiWithDaLavorare,
+  {
+    anchorAt: "2026-07-01T08:00:00.000Z",
+    currentStatoId: "da_lavorare",
+    currentAt: "2026-07-03T09:02:00.000Z",
+  },
+);
+
+assert.equal(currentStatoWithoutLog.length, 2, "must show accettazione + stato corrente");
+assert.equal(currentStatoWithoutLog[1]?.title, "Stato · Da lavorare");
+assert.equal(currentStatoWithoutLog[1]?.at, "2026-07-03T09:02:00.000Z");
+
+const legacyIdResolved = buildClientTimelineEvents(
+  [
+    log({
+      id: "u5",
+      azione: "UPDATE",
+      created_at: "2026-07-02T10:00:00.000Z",
+      payload: {
+        before: { stato: "accettazione" },
+        after: { stato: "lav-stato-da-lavorare" },
+      },
+    }),
+  ],
+  [{ id: "accettazione", label: "Accettazione" }, { id: "in_coda", label: "Da lavorare" }],
+  {
+    anchorAt: "2026-07-01T08:00:00.000Z",
+    currentStatoId: "in_coda",
+    currentAt: "2026-07-03T09:02:00.000Z",
+  },
+);
+
+assert.ok(
+  legacyIdResolved.some((e) => e.title === "Stato · Da lavorare"),
+  "legacy stato id must resolve to configured label",
+);
+assert.equal(
+  legacyIdResolved.find((e) => e.title === "Stato · Da lavorare")?.at,
+  "2026-07-02T10:00:00.000Z",
+  "must use log timestamp when transition exists",
+);
+
+const fromRow = buildClientPortalStatoTimelineFromRow(
+  [{ id: "accettazione", label: "Accettazione" }, { id: "attesa_ricambi", label: "Attesa ricambi" }],
+  {
+    anchorAt: "2026-07-01T08:00:00.000Z",
+    currentStatoId: "attesa_ricambi",
+    currentAt: "2026-07-03T09:02:00.000Z",
+  },
+);
+assert.equal(fromRow.length, 2);
+assert.equal(fromRow[0]?.at, "2026-07-01T08:00:00.000Z");
+assert.equal(fromRow[1]?.at, "2026-07-03T09:02:00.000Z");
 
 console.log("client-portal-timeline.test.ts OK");

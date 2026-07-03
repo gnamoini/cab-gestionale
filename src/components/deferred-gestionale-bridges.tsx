@@ -5,7 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import { registerCompatDevTools } from "@/lib/magazzino/compat/compat-dev-tools";
 import { AdminLavorazioniNotificationBridge } from "@/src/components/admin-lavorazioni-notification-bridge";
-import { AdminDashboardPromemoriaReminderBridge } from "@/src/components/admin-dashboard-promemoria-reminder-bridge";
+import { AdminWorkshopScheduleNotificationBridge } from "@/src/components/admin-workshop-schedule-notification-bridge";
 import { AdminDipendentiPresenzeReminderBridge } from "@/src/components/admin-dipendenti-presenze-reminder-bridge";
 import { AdminMagazzinoNotificationBridge } from "@/src/components/admin-magazzino-notification-bridge";
 import { AdminPreventiviNotificationBridge } from "@/src/components/admin-preventivi-notification-bridge";
@@ -60,7 +60,7 @@ export function DeferredGestionaleBridges() {
       <AdminPreventiviNotificationBridge />
       <AdminScheduledDigestNotificationBridge />
       <AdminDipendentiPresenzeReminderBridge />
-      <AdminDashboardPromemoriaReminderBridge />
+      <AdminWorkshopScheduleNotificationBridge />
       <GestionaleSnapshotRecoveryBridge />
     </>
   );

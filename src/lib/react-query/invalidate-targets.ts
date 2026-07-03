@@ -22,6 +22,7 @@ export const GESTIONALE_TABLE_QUERY_KEYS: Record<string, readonly QueryKeyTuple[
   scheda_lavorazione: [QK.schede, QK.lavorazioniQueries],
   log_modifiche: [QK.log],
   dashboard_promemoria: [["dashboard-promemoria"]],
+  workshop_schedule_events: [["workshop_schedule_events"]],
   app_settings: [QK.settings],
   profiles: [QK.profiles],
   dipendenti_timesheet_employees: [

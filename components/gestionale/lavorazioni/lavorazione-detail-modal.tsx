@@ -25,6 +25,7 @@ import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-siz
 import { GlobalTableHead, GlobalTableHeadLabel } from "@/components/gestionale/global-table";
 import { dsScrollbar, dsTable, dsTableRow, dsTableWrap } from "@/lib/ui/design-system";
 import { useLavorazioneHub } from "@/src/hooks/gestionale/use-lavorazione-hub";
+import dynamic from "next/dynamic";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import {
@@ -33,6 +34,11 @@ import {
   erpFocus,
   prioritaLabel,
 } from "@/components/gestionale/lavorazioni/lavorazioni-shared";
+
+const LavorazionePlanningPanel = dynamic(
+  () => import("@/components/lavorazioni/lavorazione-planning-panel").then((m) => m.LavorazionePlanningPanel),
+  { loading: () => <p className="text-xs text-zinc-500">Pianificazione…</p> },
+);
 
 type TabId = "panoramica" | "schede" | "movimenti" | "preventivi" | "documenti" | "attivita";
 
@@ -247,6 +253,7 @@ export function LavorazioneDetailModal({ lavorazioneId, onClose }: { lavorazione
                 <p className="text-[10px] font-bold uppercase text-zinc-500">Note</p>
                 <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">{(hub.lavorazione.note ?? "").trim() || "—"}</p>
               </div>
+              <LavorazionePlanningPanel lavorazioneId={lavorazioneId} />
               <div className="flex flex-wrap gap-2">
                 <Link
                   href={buildPreventiviArchivioFilterHref(

@@ -109,3 +109,14 @@ export function findAddettoByNome(records: readonly AddettoRecord[], nome: strin
   const norm = nome.trim().toLowerCase();
   return records.find((r) => r.nome.trim().toLowerCase() === norm);
 }
+
+/** Etichetta UI da chiave `nome` (scheda/log); fallback al nome grezzo se record assente. */
+export function addettoDisplayNameFromNome(
+  records: readonly AddettoRecord[],
+  nome: string,
+): string {
+  const trimmed = nome.trim();
+  if (!trimmed || trimmed === "—") return "—";
+  const rec = findAddettoByNome(records, trimmed);
+  return rec ? addettoDisplayName(rec) : trimmed;
+}

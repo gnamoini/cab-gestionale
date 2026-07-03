@@ -148,6 +148,7 @@ import {
 import { useLavorazioneProfileNamesQuery } from "@/src/hooks/use-lavorazione-profile-names-query";
 import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
 import { useLavorazioneConcludeMutation, useLavorazioneRemoveMutation, useLavorazioneRestoreMutation, useLavorazioneUpdateMutation } from "@/src/hooks/gestionale/use-lavorazione-mutations";
+import { useLavorazioneStatoMoveMutation } from "@/src/hooks/gestionale/use-lavorazione-stato-move-mutation";
 import { useMezzoCreateMutation, useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { mezziListQueryKey } from "@/lib/render/query-key-factory";
 import { QK } from "@/src/lib/react-query/invalidate-related";
@@ -192,10 +193,15 @@ import {
   lavTableColAzioniClass,
   lavTableColCantiereClass,
   lavTableColClienteClass,
-  lavTableColIdentificazioneClass,
+  lavTableColMatricolaClass,
+  lavTableColScuderiaClass,
+  lavTableColTargaClass,
   lavTableColIngressoClass,
   lavTableColNoteClass,
+  lavTableColPillSpacerClass,
   lavTableColStatoAddettoInset,
+  lavTableTdPillSpacerClass,
+  lavTableThPillSpacerClass,
   lavTablePillColStyleFromLabels,
   lavTableTdPill,
   lavTableTdAzioni,
@@ -338,7 +344,9 @@ type SortKeyAtt =
   | "utilizzatore"
   | "cantiere"
   | "macchina"
-  | "mezzoIdent"
+  | "nScuderia"
+  | "targa"
+  | "matricola"
   | "note"
   | "stato"
   | "priorita"
@@ -349,7 +357,9 @@ type SortKeyCh =
   | "utilizzatore"
   | "cantiere"
   | "macchina"
-  | "mezzoIdent"
+  | "nScuderia"
+  | "targa"
+  | "matricola"
   | "note"
   | "completamento"
   | "oreTotali"
@@ -372,7 +382,9 @@ function cmpAtt(
   const ia = sortIndex[a.id];
   const ib = sortIndex[b.id];
   if (k === "macchina") return t(cmpStr(ia?.macchina ?? "—", ib?.macchina ?? "—"));
-  if (k === "mezzoIdent") return t(cmpStr(ia?.mezzoIdent ?? "", ib?.mezzoIdent ?? ""));
+  if (k === "targa") return t(cmpStr(ia?.targa ?? "", ib?.targa ?? ""));
+  if (k === "matricola") return t(cmpStr(ia?.matricola ?? "", ib?.matricola ?? ""));
+  if (k === "nScuderia") return t(cmpStr(ia?.nScuderia ?? "", ib?.nScuderia ?? ""));
   if (k === "cliente") return t(cmpStr(ia?.cliente ?? "—", ib?.cliente ?? "—"));
   if (k === "utilizzatore") return t(cmpStr(ia?.utilizzatore ?? "", ib?.utilizzatore ?? ""));
   if (k === "cantiere") return t(cmpStr(ia?.cantiere ?? "—", ib?.cantiere ?? "—"));
@@ -401,7 +413,9 @@ function cmpCh(
   const ia = sortIndex[a.id];
   const ib = sortIndex[b.id];
   if (k === "macchina") return t(cmpStr(ia?.macchina ?? "—", ib?.macchina ?? "—"));
-  if (k === "mezzoIdent") return t(cmpStr(ia?.mezzoIdent ?? "", ib?.mezzoIdent ?? ""));
+  if (k === "targa") return t(cmpStr(ia?.targa ?? "", ib?.targa ?? ""));
+  if (k === "matricola") return t(cmpStr(ia?.matricola ?? "", ib?.matricola ?? ""));
+  if (k === "nScuderia") return t(cmpStr(ia?.nScuderia ?? "", ib?.nScuderia ?? ""));
   if (k === "cliente") return t(cmpStr(ia?.cliente ?? "—", ib?.cliente ?? "—"));
   if (k === "utilizzatore") return t(cmpStr(ia?.utilizzatore ?? "", ib?.utilizzatore ?? ""));
   if (k === "cantiere") return t(cmpStr(ia?.cantiere ?? "—", ib?.cantiere ?? "—"));
@@ -424,7 +438,9 @@ function cmpCh(
 
 const ARCHIVIO_SORT_KEYS_NEED_SCHEde = new Set<SortKeyCh>([
   "macchina",
-  "mezzoIdent",
+  "nScuderia",
+  "targa",
+  "matricola",
   "cliente",
   "utilizzatore",
   "cantiere",
@@ -985,6 +1001,12 @@ export function LavorazioniView() {
     }, 1400);
   }, []);
 
+  const { moveStato } = useLavorazioneStatoMoveMutation({
+    statiChiusiIds,
+    onSuccess: flashRow,
+    onError: (_id, err) => gestToast.errorOnce(`lav-stato-${_id}`, err, { module: "lavorazioni" }),
+  });
+
   const createdBy = user?.id ?? null;
 
   const mutErr = updateLav.isError ? updateLav.error?.message : removeLav.isError ? removeLav.error?.message : null;
@@ -994,19 +1016,9 @@ export function LavorazioniView() {
   const onStatoRow = useCallback(
     (row: LavorazioneListRow, next: string) => {
       if (!canEditWorkOrders) return;
-      const nuovo = next as StatoLavorazione;
-      const data: LavorazioneUpdate = { stato: nuovo };
-      if (!statiChiusiIds.includes(nuovo)) {
-        data.data_uscita = null;
-      }
-      updateLav.mutate(
-        { id: row.id, data },
-        {
-          onSuccess: () => flashRow(row.id),
-        },
-      );
+      moveStato(row.id, next);
     },
-    [updateLav, flashRow, statiChiusiIds, canEditWorkOrders],
+    [moveStato, canEditWorkOrders],
   );
 
   const onPrioritaRow = useCallback(
@@ -1776,6 +1788,13 @@ export function LavorazioniView() {
           onPrimeCreate={primeCreateModal}
         />
 
+        {initialListLoading ? (
+          listViewMode === "kanban" ? (
+            <LoadingKanbanSkeleton />
+          ) : (
+            <LoadingLavorazioniListSkeleton withToolbar={false} />
+          )
+        ) : (
         <ShellCard
           title={`Lavorazioni in corso (${attiveRowsFiltered.length})`}
           collapsible
@@ -1794,6 +1813,8 @@ export function LavorazioniView() {
               flashRowId={flashRowId}
               navBulkFlashIds={navBulkFlashIds}
               loading={loading}
+              canDrag={canEditWorkOrders}
+              onMoveStato={onStatoRow}
               emptyMessage={
                 hasPageClientFilters || navMezzoFilter
                   ? "Nessuna lavorazione corrisponde alla ricerca o ai filtri selezionati."
@@ -1811,8 +1832,6 @@ export function LavorazioniView() {
                 setSchedeRow({ row, origine: "storico", initialTab: "panoramica", dialogSize: "compact" })
               }
             />
-          ) : initialListLoading ? (
-            <LoadingLavorazioniListSkeleton withToolbar={false} />
           ) : (
             <>
           {listLayout === "desktop" ? (
@@ -1825,8 +1844,11 @@ export function LavorazioniView() {
                 <col className={lavTableColClienteClass} />
                 <col className={lavTableColCantiereClass} />
                 <col className={lavTableColAttrezzaturaClass} />
-                <col className={lavTableColIdentificazioneClass} />
+                <col className={lavTableColScuderiaClass} />
+                <col className={lavTableColTargaClass} />
+                <col className={lavTableColMatricolaClass} />
                 <col className={lavTableColNoteClass} />
+                <col className={lavTableColPillSpacerClass} />
                 <col style={statoPillColStyle} />
                 <col style={prioritaPillColStyle} />
                 <col style={addettoPillColStyle} />
@@ -1865,10 +1887,30 @@ export function LavorazioniView() {
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
                   <GlobalTableSortTh
-                    label="Identificazione"
-                    columnKey="mezzoIdent"
+                    label="N. scuderia"
+                    columnKey="nScuderia"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
+                    align="center"
+                    thClassName="gestionale-list-table-col-ident"
+                    onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
+                  />
+                  <GlobalTableSortTh
+                    label="Targa"
+                    columnKey="targa"
+                    sortColumn={sortColA}
+                    sortPhase={sortPhaseA}
+                    align="center"
+                    thClassName="gestionale-list-table-col-ident"
+                    onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
+                  />
+                  <GlobalTableSortTh
+                    label="Matricola"
+                    columnKey="matricola"
+                    sortColumn={sortColA}
+                    sortPhase={sortPhaseA}
+                    align="center"
+                    thClassName="gestionale-list-table-col-ident"
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
                   <GlobalTableSortTh
@@ -1876,8 +1918,10 @@ export function LavorazioniView() {
                     columnKey="note"
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
+                    thClassName="gestionale-list-table-col-note"
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
+                  <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
                   <GlobalTableSortTh
                     label="Stato"
                     columnKey="stato"
@@ -1913,7 +1957,7 @@ export function LavorazioniView() {
                 ? "Nessuna lavorazione in corso corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessuna lavorazione in corso."
             }
-            colSpan={10}
+            colSpan={13}
             virtualRows={{
               rowCount: pagedAttive.length,
               renderRow: renderAttiveDesktopRow,
@@ -1984,6 +2028,7 @@ export function LavorazioniView() {
             </>
           )}
         </ShellCard>
+        )}
 
         {listViewMode === "table" && !initialListLoading ? (
         <ShellCard
@@ -2006,8 +2051,11 @@ export function LavorazioniView() {
                 <col className={lavTableColClienteClass} />
                 <col className={lavTableColCantiereClass} />
                 <col className={lavTableColAttrezzaturaClass} />
-                <col className={lavTableColIdentificazioneClass} />
+                <col className={lavTableColScuderiaClass} />
+                <col className={lavTableColTargaClass} />
+                <col className={lavTableColMatricolaClass} />
                 <col className={lavTableColNoteClass} />
+                <col className={lavTableColPillSpacerClass} />
                 <col style={statoPillColStyle} />
                 <col style={prioritaPillColStyle} />
                 <col style={addettoPillColStyle} />
@@ -2049,11 +2097,30 @@ export function LavorazioniView() {
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
                   <GlobalTableSortTh
-                    label="Identificazione"
-                    columnKey="mezzoIdent"
+                    label="N. scuderia"
+                    columnKey="nScuderia"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
-                    align="left"
+                    align="center"
+                    thClassName="gestionale-list-table-col-ident"
+                    onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
+                  />
+                  <GlobalTableSortTh
+                    label="Targa"
+                    columnKey="targa"
+                    sortColumn={sortColC}
+                    sortPhase={sortPhaseC}
+                    align="center"
+                    thClassName="gestionale-list-table-col-ident"
+                    onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
+                  />
+                  <GlobalTableSortTh
+                    label="Matricola"
+                    columnKey="matricola"
+                    sortColumn={sortColC}
+                    sortPhase={sortPhaseC}
+                    align="center"
+                    thClassName="gestionale-list-table-col-ident"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
                   <GlobalTableSortTh
@@ -2061,9 +2128,10 @@ export function LavorazioniView() {
                     columnKey="note"
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
-                    align="left"
+                    thClassName="gestionale-list-table-col-note"
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
+                  <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
                   <GlobalTableSortTh
                     label="Completamento"
                     columnKey="completamento"
@@ -2100,7 +2168,7 @@ export function LavorazioniView() {
                 ? "Nessun record in archivio corrisponde alla ricerca o ai filtri selezionati."
                 : "Nessun record in archivio."
             }
-            colSpan={10}
+            colSpan={13}
             virtualRows={archivioVirtualRows}
           />
           ) : null}

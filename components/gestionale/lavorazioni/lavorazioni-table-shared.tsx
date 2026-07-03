@@ -27,8 +27,14 @@ import {
   gestionaleListColClienteClass,
   gestionaleListColCodiceClass,
   gestionaleListColIdentificazioneClass,
+  gestionaleListColMatricolaClass,
+  gestionaleListColScuderiaClass,
+  gestionaleListColTargaClass,
+  gestionaleListTableTdIdent,
   gestionaleListColIngressoClass,
   gestionaleListColNoteClass,
+  gestionaleListColPillSpacerClass,
+  gestionaleListTableColPillSpacerClass,
   gestionaleListTableMasterWrapClass,
   gestionaleListTableTd,
   gestionaleListTableTdAzioni,
@@ -88,13 +94,16 @@ export const lavTableColPillMinStyle = lavTableColStatoClass;
 export const lavTableTdPill = gestionaleListTableTdPill;
 export const lavTableTdPillWrap = gestionaleListTableTdPillWrap;
 export const lavTableColStatoAddettoInset = gestionaleListTableColStatoAddettoInsetClass;
+export const lavTableColPillSpacerClass = gestionaleListColPillSpacerClass;
+export const lavTableThPillSpacerClass = gestionaleListTableColPillSpacerClass;
+export const lavTableTdPillSpacerClass = gestionaleListTableColPillSpacerClass;
 
 /** Padding orizzontale celle pill (px-2.5 × 2, allineato a `globalTableThCell`). */
-const LAV_TABLE_PILL_COL_PAD_REM = 1.25;
+const LAV_TABLE_PILL_COL_PAD_REM = 1;
 
 function lavTablePillContentWidthRem(labels: readonly string[]): number {
   const maxLen = labels.reduce((m, l) => Math.max(m, l.trim().length), 0);
-  return Math.min(12.5, Math.max(7.75, maxLen * 0.56 + 1.95));
+  return Math.min(9.25, Math.max(6.25, maxLen * 0.48 + 1.55));
 }
 
 /** Larghezza uniforme pill tabella = etichetta più lunga del tipo (stato / priorità / addetto). */
@@ -105,7 +114,7 @@ export function lavTablePillWrapStyleFromLabels(labels: readonly string[]): CSSP
 /** Larghezza colonna `<col>`: contenuto pill + padding celle. */
 export function lavTablePillColStyleFromLabels(labels: readonly string[]): CSSProperties {
   const w = lavTablePillColWidthRem(labels);
-  return { width: `${w}rem`, maxWidth: `${w}rem` };
+  return { width: `${w}rem`, minWidth: `${w}rem`, maxWidth: `${w}rem` };
 }
 
 export function lavTablePillColWidthRem(labels: readonly string[]): number {
@@ -118,6 +127,10 @@ export const lavTableColClienteClass = gestionaleListColClienteClass;
 export const lavTableColCantiereClass = gestionaleListColCantiereClass;
 export const lavTableColAttrezzaturaClass = gestionaleListColAttrezzaturaClass;
 export const lavTableColIdentificazioneClass = gestionaleListColIdentificazioneClass;
+export const lavTableColScuderiaClass = gestionaleListColScuderiaClass;
+export const lavTableColTargaClass = gestionaleListColTargaClass;
+export const lavTableColMatricolaClass = gestionaleListColMatricolaClass;
+export const lavTableTdIdent = gestionaleListTableTdIdent;
 export const lavTableColNoteClass = gestionaleListColNoteClass;
 export const lavTableColAzioniClass = gestionaleListColAzioniClass;
 export const lavTableThAzioni = gestionaleListTableThAzioni;
@@ -135,6 +148,10 @@ export const lavTableThAzioniAttive = lavTableThAzioni;
 /** @deprecated Alias di `lavTableThAzioni`. */
 export const lavTableThAzioniArchivio = lavTableThAzioni;
 
+/** Testo principale colonne Ingresso / Cliente / Oggetto — stessa dimensione e peso. */
+export const lavTablePrimaryTextClass =
+  "text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-100";
+
 export function LavorazioneIngressoDateCell({
   row,
   schedeStore,
@@ -147,9 +164,13 @@ export function LavorazioneIngressoDateCell({
     schedeStore?.[row.id]?.ingresso?.campi.dataIngresso,
   );
   const { date } = formatLavorazioneIngressoDisplay(iso);
+  const permanenza = lavorazionePermanenzaGiorniLabel(row);
   return (
-    <div className="min-w-0 text-left text-xs font-medium tabular-nums text-zinc-800 dark:text-zinc-100">
-      {date}
+    <div className="flex min-w-0 flex-col gap-0.5 text-left">
+      <span className={`tabular-nums ${lavTablePrimaryTextClass}`}>{date}</span>
+      {permanenza !== "—" ? (
+        <span className="text-[11px] font-normal leading-tight text-zinc-500 dark:text-zinc-400">{permanenza}</span>
+      ) : null}
     </div>
   );
 }
@@ -164,7 +185,7 @@ export function LavorazioneIngressoDateCellFromIso({
   const { date } = formatLavorazioneIngressoDisplay(iso);
   return (
     <div
-      className={`min-w-0 text-xs font-medium tabular-nums text-zinc-800 dark:text-zinc-100 ${
+      className={`min-w-0 text-sm font-medium tabular-nums leading-snug text-zinc-900 dark:text-zinc-100 ${
         align === "center" ? "text-center" : "text-left"
       }`}
     >
@@ -215,7 +236,7 @@ export function LavorazioniClienteUtilStack({
     <div className="min-w-0 leading-tight">
       <TruncatedTextTooltip
         text={cliente}
-        className="truncate text-sm font-medium text-zinc-800 dark:text-zinc-100"
+        className={`truncate ${lavTablePrimaryTextClass}`}
       />
       {utilizzatoreStackVisible(utilizzatore) ? (
         <TruncatedTextTooltip
@@ -227,7 +248,44 @@ export function LavorazioniClienteUtilStack({
   );
 }
 
-/** Stack targa / matricola / scuderia — stesso markup tabella Lavorazioni. */
+/** Tre colonne identificazione — scuderia, targa, matricola. */
+export function LavorazioniMezzoIdentCells({
+  targa,
+  matricola,
+  nScuderia,
+}: {
+  targa: string;
+  matricola: string;
+  nScuderia?: string;
+}) {
+  const scuderia = (nScuderia ?? "").trim();
+  return (
+    <>
+      <td className={lavTableTdIdent}>
+        <LavorazioniMezzoIdentCell value={scuderia} />
+      </td>
+      <td className={lavTableTdIdent}>
+        <LavorazioniMezzoIdentCell value={targa} />
+      </td>
+      <td className={lavTableTdIdent}>
+        <LavorazioniMezzoIdentCell value={matricola} />
+      </td>
+    </>
+  );
+}
+
+/** Singolo campo identificazione mezzo — colonna tabella compatta. */
+export function LavorazioniMezzoIdentCell({ value }: { value: string }) {
+  const t = value.trim();
+  if (!t || t === "—") {
+    return <span className="text-sm text-zinc-400">—</span>;
+  }
+  return (
+    <TruncatedTextTooltip text={t} className="block truncate text-[13px] font-medium leading-tight text-zinc-900 dark:text-zinc-100" />
+  );
+}
+
+/** @deprecated Stack verticale — solo mobile / legacy. */
 export function LavorazioniMezzoIdentStack({
   targa,
   matricola,

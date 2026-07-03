@@ -4,7 +4,7 @@ import "./security-users-table.css";
 
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { CardMobile, CardMobileActions, IconActionButton } from "@/components/design-system";
+import { CardMobile, CardMobileActions, IconActionButton, LoadingTableSkeleton } from "@/components/design-system";
 import { HubIconPencil } from "@/components/design-system/hub-table-action-icons";
 import {
   SecurityEditNameModal,
@@ -47,7 +47,6 @@ import { PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 import {
   dsBtnGhost,
   dsScrollbar,
-  dsSkeletonPulse,
   dsTableActionBtnInfo,
   dsTableActionBtnSecondary,
   dsTableActionGlyph,
@@ -454,15 +453,12 @@ function SecurityUserMobileCard({
 
 function SecurityUsersTableSkeleton() {
   return (
-    <div className={`${GESTIONALE_LIST_DESKTOP_ONLY_CLASS} ${dsScrollbar}`}>
-      <div className="rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] p-1">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="border-b border-[color:var(--cab-border)] px-3 py-3 last:border-b-0">
-            <div className={`h-4 w-full ${dsSkeletonPulse}`} />
-          </div>
-        ))}
-      </div>
-    </div>
+    <LoadingTableSkeleton
+      preset="generic"
+      visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS}
+      wrapClassName={dsScrollbar}
+      className="min-h-[24rem]"
+    />
   );
 }
 

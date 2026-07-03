@@ -34,12 +34,15 @@ import {
   type ItalianDateYearRange,
 } from "@/lib/ui/italian-date-input-mask";
 import {
-  globalInputCalendarBtn,
+  extractDatePickerShellLayoutClass,
   globalInputCalendarPortalPanel,
-  globalInputFieldDefault,
-  globalInputFieldFilterDate,
+  globalInputDatePickerCalendarBtn,
+  globalInputDatePickerInput,
+  globalInputDatePickerShellDefault,
+  globalInputDatePickerShellFilter,
   globalInputInvalidMessage,
   globalInputInvalidRing,
+  stripDatePickerFieldChrome,
 } from "@/lib/ui/global-input";
 
 export type GlobalDatePickerProps = {
@@ -59,15 +62,24 @@ export type GlobalDatePickerProps = {
   yearRange?: ItalianDateYearRange;
 };
 
-function fieldClassForVariant(
+function shellClassForVariant(variant: "default" | "filter"): string {
+  return variant === "filter" ? globalInputDatePickerShellFilter : globalInputDatePickerShellDefault;
+}
+
+function inputSegmentClassForVariant(
   variant: "default" | "filter",
   inputClassName?: string,
 ): string {
-  const calendarPad = "pr-11";
-  if (inputClassName) {
-    return /\bpr-\S+/.test(inputClassName) ? inputClassName : `${inputClassName} ${calendarPad}`;
-  }
-  return variant === "filter" ? globalInputFieldFilterDate : `${globalInputFieldDefault} pr-11`;
+  const base =
+    variant === "default" ? `${globalInputDatePickerInput} py-2.5` : globalInputDatePickerInput;
+  if (!inputClassName?.trim()) return base;
+  const extra = stripDatePickerFieldChrome(inputClassName);
+  return extra ? `${base} ${extra}` : base;
+}
+
+function shellLayoutClassFromInput(inputClassName?: string): string {
+  if (!inputClassName?.trim()) return "";
+  return extractDatePickerShellLayoutClass(inputClassName);
 }
 
 export function GlobalDatePicker({
@@ -102,8 +114,12 @@ export function GlobalDatePicker({
   );
   const showInvalid = validation.status === "invalid" && value.trim().length > 0;
 
-  const fieldClass = fieldClassForVariant(variant, inputClassName);
-  const inputClass = showInvalid ? `${fieldClass}${globalInputInvalidRing}` : fieldClass;
+  const shellClass = shellClassForVariant(variant);
+  const shellLayoutClass = shellLayoutClassFromInput(inputClassName);
+  const inputClass = inputSegmentClassForVariant(variant, inputClassName);
+  const shellCombined = showInvalid
+    ? `${shellClass}${shellLayoutClass ? ` ${shellLayoutClass}` : ""}${globalInputInvalidRing}`
+    : `${shellClass}${shellLayoutClass ? ` ${shellLayoutClass}` : ""}`;
 
   const closeCalendar = useCallback(() => setOpen(false), []);
 
@@ -208,7 +224,7 @@ export function GlobalDatePicker({
 
   return (
     <div className="w-full">
-      <div ref={wrapRef} className="relative w-full">
+      <div ref={wrapRef} className={shellCombined}>
         <input
           ref={inputRef}
           id={inputId}
@@ -266,7 +282,7 @@ export function GlobalDatePicker({
         />
         <button
           type="button"
-          className={globalInputCalendarBtn}
+          className={globalInputDatePickerCalendarBtn}
           aria-label="Apri calendario"
           aria-expanded={open}
           disabled={disabled}

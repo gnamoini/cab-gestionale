@@ -52,7 +52,10 @@ import {
   copySchedaIngressoFieldFromClient,
   isSchedaIngressoFieldEmpty,
 } from "@/lib/schede/scheda-ingresso-typed-fields";
-const INGRESSO_FIELDS_NEVER_COPY: ReadonlySet<keyof SchedaIngressoFields> = new Set(["dataIngresso"]);
+const INGRESSO_FIELDS_NEVER_COPY: ReadonlySet<keyof SchedaIngressoFields> = new Set([
+  "dataIngresso",
+  "richiedenteFirma",
+]);
 
 export type LastSchedaIngressoMatch = {
   campi: SchedaIngressoFields;
