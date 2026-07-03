@@ -57,7 +57,6 @@ assert.match(unsavedDlg, /Salva ed esci/);
 // Liste figlie montano dialog elimina/simile
 const listFiles = [
   "components/dashboard/settings/settings-unified-string-list.tsx",
-  "components/dashboard/settings/settings-clienti-list.tsx",
   "components/dashboard/settings/settings-magazzino-marche-list.tsx",
   "components/dashboard/hierarchy-tree-settings-section.tsx",
 ];

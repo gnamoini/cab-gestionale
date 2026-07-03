@@ -22,6 +22,7 @@ const colorPicker = read("components/gestionale/settings-color-picker-popover.ts
 const listUi = read("components/dashboard/settings-list-ui.tsx");
 const assenze = read("components/dashboard/settings-dipendenti-assenze-section.tsx");
 const hierarchy = read("components/dashboard/hierarchy-tree-settings-section.tsx");
+const settingsEconomici = read("components/dashboard/settings/settings-economici-section.tsx");
 const branding = read("components/dashboard/settings-branding-section.tsx");
 const eliminaDlg = read("components/dashboard/settings-elimina-confirm-dialog.tsx");
 const propagaDlg = read("components/dashboard/settings-rinomina-propaga-dialog.tsx");
@@ -47,24 +48,25 @@ assert.doesNotMatch(configSources, /<select\b/);
 assert.doesNotMatch(configSources, /<datalist\b/);
 
 assert.match(settingsUnifiedList, /addAriaLabel/);
-assert.match(settingsClienti, /inputAriaLabel="Nuovo cliente"/);
-assert.match(settingsMarche, /inputAriaLabel="Nuova marca"/);
-assert.match(settingsWorkspace, /htmlFor="config-costo-orario-default"/);
+assert.match(settingsClienti, /addAriaLabel="Nuovo cliente"/);
+assert.match(settingsMarche, /placeholder="Nuova marca"/);
+assert.match(settingsEconomici, /FIELD_ID = "config-costo-orario-default"/);
+assert.match(settingsEconomici, /htmlFor=\{FIELD_ID\}/);
 assert.match(settingsClienti, /settingsConfigFieldId\("config-sconto-cliente"/);
-assert.match(settingsWorkspace, /inputMode="decimal"/);
+assert.match(settingsEconomici, /inputMode="decimal"/);
 assert.match(settingsNav, /aria-current=\{active \? "true" : undefined\}/);
 assert.match(settingsNav, /SettingsMainPanel/);
 assert.match(settingsNav, /GestionaleModalScrollBody/);
 assert.match(settingsWorkspace, /SettingsMainPanel/);
 
-assert.match(listUi, /min-h-10/);
+assert.match(listUi, /min-h-11/);
 
-assert.match(lavorazioniSettings, /aria-label=\{`Nome stato \$\{s\.label/);
+assert.match(lavorazioniSettings, /aria-label=\{`Nome stato \$\{stato\.label/);
 assert.match(lavorazioniSettings, /ariaLabel=\{`Colore priorità \$\{label\}`\}/);
 assert.match(lavorazioniSettings, /PrioritaSettingsSection/);
 
-assert.match(assenze, /SETTINGS_LIST_INPUT/);
-assert.match(assenze, /inputMode="text"/);
+assert.match(assenze, /SETTINGS_LIST_INPUT_EDIT/);
+assert.match(assenze, /spellCheck=\{false\}/);
 
 assert.match(hierarchy, /SettingsEditableStringRow/);
 assert.match(hierarchy, /min-h-11/);

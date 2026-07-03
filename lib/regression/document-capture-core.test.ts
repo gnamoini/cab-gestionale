@@ -25,8 +25,8 @@ assert.match(sql, /rbac_user_company_id/);
 const permSql = fs.readFileSync(migrationPerm, "utf8");
 assert.match(permSql, /document_capture/);
 
-const rbac = fs.readFileSync(path.join(ROOT, "lib/rbac.ts"), "utf8");
-assert.match(rbac, /document_capture/);
+const rbacSeed = fs.readFileSync(path.join(ROOT, "lib/rbac-seed.ts"), "utf8");
+assert.match(rbacSeed, /document_capture/);
 
 const modules = fs.readFileSync(path.join(ROOT, "src/lib/permissions/gestionale-modules.ts"), "utf8");
 assert.match(modules, /document_capture/);
@@ -45,7 +45,10 @@ assert.match(applyLock, /document_capture_begin_apply/);
 assert.match(applyLock, /document_capture_complete_apply/);
 assert.match(applyLock, /document_capture_abort_apply/);
 
-const lavView = fs.readFileSync(path.join(ROOT, "components/gestionale/lavorazioni/lavorazioni-view.tsx"), "utf8");
-assert.match(lavView, /LavorazioniDigitalCaptureLauncher/);
+const lavToolbar = fs.readFileSync(
+  path.join(ROOT, "components/gestionale/lavorazioni/lavorazioni-page-toolbar.tsx"),
+  "utf8",
+);
+assert.match(lavToolbar, /LavorazioniDigitalCaptureLauncher/);
 
 console.log("document-capture-core.test.ts OK");

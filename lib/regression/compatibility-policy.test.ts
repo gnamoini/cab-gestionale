@@ -21,8 +21,8 @@ assert.match(globalsCss, /--cab-vv-height:\s*100dvh/);
 assert.match(globalsCss, /safe-area-inset/);
 assert.match(globalsCss, /-webkit-overflow-scrolling:\s*touch/);
 
-const appProviders = read("components/app-providers.tsx");
-assert.match(appProviders, /IosInteractionStability/);
+const appProvidersCore = read("components/app-providers-core.tsx");
+assert.match(appProvidersCore, /IosInteractionStability/);
 
 const iosTokens = read("lib/ui/ios-mobile-tokens.ts");
 assert.match(iosTokens, /dsIosInputTextSize = "text-base md:text-sm"/);

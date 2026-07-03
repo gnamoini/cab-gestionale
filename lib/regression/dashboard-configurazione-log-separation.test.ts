@@ -37,6 +37,6 @@ assert.match(dashLogSection, /reconcileDashboardSistemaLogScope/);
 assert.match(read("lib/dashboard/dashboard-sistema-log-scope.ts"), /isDashboardSistemaLogScopeEntry/);
 assert.match(read("lib/dashboard/dashboard-sistema-log-scope.ts"), /isConfigurazioneLogLeakEntry/);
 
-assert.match(impostazioniPage, /components\/configurazione\/sistema-impostazioni-page/);
+assert.match(impostazioniPage, /SistemaImpostazioniPageViewLazy/);
 
 console.log("dashboard-configurazione-log-separation.test.ts: OK");
