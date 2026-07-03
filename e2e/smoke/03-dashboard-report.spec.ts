@@ -9,7 +9,7 @@ test("dashboard and report load without infinite spinner", async ({ page }) => {
   await page.goto("/dashboard");
   await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
   await expect(page.getByText("Benvenuto nel gestionale officina.")).toBeVisible({ timeout: 45_000 });
-  await expect(page.getByText("Settimana corrente (lun–oggi)")).toBeVisible({ timeout: 45_000 });
+  await expect(page.getByText("Settimana corrente (lun–oggi)", { exact: true })).toBeVisible({ timeout: 45_000 });
   const spinners = page.locator('[class*="animate-spin"]');
   if ((await spinners.count()) > 0) {
     await expect(spinners.first()).not.toBeVisible({ timeout: 45_000 });

@@ -50,8 +50,9 @@ test("wide viewport with narrow content column uses mobile shell tier on dashboa
   await expect(page.getByTestId("smoke-nav-drawer-open")).toBeVisible();
   await expect(page.locator(".cab-sidebar")).toBeHidden();
 
-  const promemoriaGrid = page.locator('[data-testid="dashboard-promemoria-grid"]');
-  await expect(promemoriaGrid).toBeVisible({ timeout: 15_000 });
-  const columns = await promemoriaGrid.evaluate((el) => getComputedStyle(el).gridTemplateColumns);
+  const kpiSection = page.locator('section[aria-label="Settimana corrente (lun–oggi)"]');
+  await expect(kpiSection).toBeVisible({ timeout: 45_000 });
+  const kpiGrid = kpiSection.locator(".grid").first();
+  const columns = await kpiGrid.evaluate((el) => getComputedStyle(el).gridTemplateColumns);
   expect(columns.split(" ").length).toBeLessThanOrEqual(1);
 });

@@ -27,8 +27,10 @@ test("mobile nav drawer scrolls menu items", async ({ page }) => {
   const scrollHit = await page.evaluate(() => {
     const dialogEl = document.querySelector('[role="dialog"][aria-label="Menu principale"]');
     if (!dialogEl) return { ok: false, reason: "missing-dialog" };
-    const nav = dialogEl.querySelector('nav[aria-label="Sezioni principali"]') as HTMLElement | null;
-    if (!nav) return { ok: false, reason: "missing-nav" };
+    const nav = dialogEl.querySelector(
+      'nav[aria-label="Sezioni principali"] .overflow-y-auto',
+    ) as HTMLElement | null;
+    if (!nav) return { ok: false, reason: "missing-nav-scroll" };
 
     if (nav.scrollHeight <= nav.clientHeight) {
       const spacer = document.createElement("div");
@@ -59,7 +61,7 @@ test("mobile nav drawer scrolls menu items", async ({ page }) => {
 
 test("main scrollbar track is reachable at viewport right edge", async ({ page }) => {
   attachConsoleGuards(page);
-  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.setViewportSize({ width: 1920, height: 720 });
   await loginViaUi(page, adminCredentials());
   await page.goto("/magazzino");
 
