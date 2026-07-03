@@ -76,7 +76,7 @@ export function AgendaFiltersBar({
 
   return (
     <div className="flex min-w-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
+      <div className="flex min-w-0 flex-wrap items-end gap-x-3 gap-y-2">
         <FilterSelect
           id="agenda-filter-type"
           label="Tipo"
@@ -162,7 +162,7 @@ export function AgendaFiltersBar({
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         {!canWrite ? (
           <Tooltip content="Il tuo profilo può consultare l'agenda ma non modificare le sessioni">
             <span className={dsBadgeNeutral}>Solo lettura</span>

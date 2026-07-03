@@ -15,7 +15,7 @@ export function AgendaCapacityCard({ capacity }: { capacity: DayCapacitySnapshot
 
   return (
     <div className="rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3 shadow-[var(--cab-shadow-sm)]">
-      <div className="flex flex-wrap items-start justify-between gap-2">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2">
         <div>
           <p className={dsSectionTitle}>Capacità giornaliera</p>
           <p className={`mt-0.5 ${dsTypoCaption}`}>

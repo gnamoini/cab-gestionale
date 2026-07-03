@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { inferHistoryAction, planningSnapshot } from "@/lib/workshop-schedule/workshop-schedule-audit";
 
 assert.equal(inferHistoryAction(null, { start_at: "a" }), "created");
@@ -8,7 +9,7 @@ const before = planningSnapshot({ start_at: "a", end_at: "b", work_order_id: nul
 const after = planningSnapshot({ start_at: "c", end_at: "b", work_order_id: null });
 assert.equal(inferHistoryAction(before, after), "duration_changed");
 
-const migration = require("node:fs").readFileSync(
+const migration = fs.readFileSync(
   "supabase/migrations/20260905120000_workshop_schedule_events.sql",
   "utf8",
 );

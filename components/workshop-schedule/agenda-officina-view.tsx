@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CalendarV2Grid } from "@/components/dashboard/calendar-v2/calendar-v2-grid";
 import type { CalendarSelection } from "@/components/dashboard/calendar-v2/calendar-v2-types";
@@ -68,7 +68,7 @@ export function AgendaOfficinaView() {
   const [filters, setFilters] = useState<WorkshopScheduleFilters>(() =>
     parsed.workOrderId ? { workOrderId: parsed.workOrderId } : {},
   );
-  const [selectedSession, setSelectedSession] = useState<WorkshopScheduleSessionView | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
   const [formSeed, setFormSeed] = useState<{ startAt: string; endAt: string } | null>(null);
 
@@ -166,12 +166,11 @@ export function AgendaOfficinaView() {
     [router, selectedYmd, viewMode, filters.workOrderId, parsed.hourSlot],
   );
 
-  useEffect(() => {
-    if (parsed.eventId && sessions.length) {
-      const found = sessions.find((s) => s.id === parsed.eventId);
-      if (found) setSelectedSession(found);
-    }
-  }, [parsed.eventId, sessions]);
+  const selectedSession = useMemo(() => {
+    const id = selectedSessionId ?? parsed.eventId ?? null;
+    if (!id || !sessions.length) return null;
+    return sessions.find((s) => s.id === id) ?? null;
+  }, [selectedSessionId, parsed.eventId, sessions]);
 
   const weekSessions = useMemo(() => {
     if (viewMode !== "week") return [];
@@ -227,7 +226,7 @@ export function AgendaOfficinaView() {
         <AgendaToolbarShell>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <AgendaFiltersBar filters={filters} onChange={setFilters} canWrite={canWriteAgenda} />
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <AgendaViewTabs
                 viewMode={viewMode}
                 onViewModeChange={(v) => {
@@ -241,7 +240,7 @@ export function AgendaOfficinaView() {
                     type="button"
                     className={dsBtnPrimary}
                     onClick={() => {
-                      setSelectedSession(null);
+                      setSelectedSessionId(null);
                       setFormSeed(null);
                       setFormOpen(true);
                     }}
@@ -289,11 +288,8 @@ export function AgendaOfficinaView() {
                 axis={intelligence.gantt.axis}
                 selectedSessionId={selectedSession?.id}
                 onSelectSession={(id) => {
-                  const found = sessions.find((s) => s.id === id);
-                  if (found) {
-                    setSelectedSession(found);
-                    syncUrl({ event: id });
-                  }
+                  setSelectedSessionId(id);
+                  syncUrl({ event: id });
                 }}
               />
             ) : viewMode === "insight" ? (
@@ -312,7 +308,7 @@ export function AgendaOfficinaView() {
                     selectedId={selectedSession?.id}
                     isToday={col.ymd === todayYmd()}
                     onSelect={(s) => {
-                      setSelectedSession(s);
+                      setSelectedSessionId(s.id);
                       syncUrl({ event: s.id });
                     }}
                   />
@@ -331,7 +327,7 @@ export function AgendaOfficinaView() {
                   selectedId={selectedSession?.id}
                   emptyMessage="Nessuna sessione nel mese selezionato."
                   onSelect={(s) => {
-                    setSelectedSession(s);
+                    setSelectedSessionId(s.id);
                     syncUrl({ event: s.id });
                   }}
                 />
@@ -343,13 +339,13 @@ export function AgendaOfficinaView() {
                   sessions={sessions}
                   selectedId={selectedSession?.id}
                   onSelect={(s) => {
-                    setSelectedSession(s);
+                    setSelectedSessionId(s.id);
                     syncUrl({ event: s.id });
                   }}
                   onSlotClick={(startAt, endAt) => {
                     if (!canWriteAgenda) return;
                     setFormSeed({ startAt, endAt });
-                    setSelectedSession(null);
+                    setSelectedSessionId(null);
                     setFormOpen(true);
                   }}
                 />
@@ -358,7 +354,10 @@ export function AgendaOfficinaView() {
                     dayYmd={selectedYmd}
                     sessions={sessions.filter((s) => ymdFromIso(s.startAt) === selectedYmd)}
                     selectedId={selectedSession?.id}
-                    onSelect={setSelectedSession}
+                    onSelect={(s) => {
+                      setSelectedSessionId(s.id);
+                      syncUrl({ event: s.id });
+                    }}
                     onReschedule={(id, startAt, endAt) => {
                       void patchTimesMutation.mutateAsync({ id, startAt, endAt });
                     }}
@@ -383,7 +382,7 @@ export function AgendaOfficinaView() {
                     Suggerimenti automatici — clic per precompilare il form (60 min)
                   </p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex min-w-0 flex-wrap gap-2">
                   {suggestions.slice(0, 4).map((slot) => (
                     <Tooltip
                       key={slot.startAt}
@@ -431,7 +430,7 @@ export function AgendaOfficinaView() {
               canWriteAgenda
                 ? (session) => {
                     setFormSeed({ startAt: session.start_at, endAt: session.end_at });
-                    setSelectedSession(null);
+                    setSelectedSessionId(null);
                     setFormOpen(true);
                   }
                 : undefined
@@ -484,7 +483,7 @@ export function AgendaOfficinaView() {
           selectedSession
             ? async (id) => {
                 await deleteMutation.mutateAsync(id);
-                setSelectedSession(null);
+                setSelectedSessionId(null);
                 setFormOpen(false);
                 syncUrl({ event: null });
               }

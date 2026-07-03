@@ -41,7 +41,7 @@ export function AgendaInsightsPanel({
             key={`${insight.type}-${i}`}
             className={`rounded-[var(--ds-radius-lg)] border p-3 text-xs shadow-[var(--cab-shadow-sm)] ${SEVERITY_PANEL_CLASS[insight.severity]}`}
           >
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <span className="font-semibold text-[color:var(--cab-text)]">
                 {INSIGHT_TYPE_LABELS[insight.type]}
               </span>

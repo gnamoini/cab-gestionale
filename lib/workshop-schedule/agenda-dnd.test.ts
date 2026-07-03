@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { DND_PATCH_ALLOWED_FIELDS, DND_PATCH_FORBIDDEN_FIELDS } from "@/lib/workshop-schedule/types";
 
 assert.deepEqual(
@@ -7,7 +8,7 @@ assert.deepEqual(
 );
 assert.ok(DND_PATCH_FORBIDDEN_FIELDS.includes("work_order_id"));
 
-const migration = require("node:fs").readFileSync(
+const migration = fs.readFileSync(
   "supabase/migrations/20260905120000_workshop_schedule_events.sql",
   "utf8",
 );

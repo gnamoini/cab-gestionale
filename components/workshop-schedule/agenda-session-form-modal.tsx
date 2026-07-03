@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
@@ -70,14 +70,9 @@ export function AgendaSessionFormModal({
   onSubmit: (values: AgendaSessionFormValues) => void;
   onDelete?: (id: string) => void;
 }) {
-  const [form, setForm] = useState<AgendaSessionFormValues>(() => defaultForm(initial, workOrderIdPrefill));
+  if (!open) return null;
 
-  useEffect(() => {
-    if (open) setForm(defaultForm(initial, workOrderIdPrefill));
-  }, [open, initial, workOrderIdPrefill]);
-
-  const isBlock = form.eventType === "blocco_agenda";
-  const readOnly = !canWrite;
+  const formKey = `${initial?.id ?? "new"}:${initial?.startAt ?? ""}:${initial?.endAt ?? ""}:${workOrderIdPrefill ?? ""}`;
 
   return (
     <GestionaleModalShell
@@ -86,6 +81,44 @@ export function AgendaSessionFormModal({
       title={initial?.id ? "Modifica sessione" : "Nuova sessione"}
       titleId="agenda-session-form-title"
     >
+      <AgendaSessionFormBody
+        key={formKey}
+        initial={initial}
+        workOrderIdPrefill={workOrderIdPrefill}
+        canWrite={canWrite}
+        saving={saving}
+        onClose={onClose}
+        onSubmit={onSubmit}
+        onDelete={onDelete}
+      />
+    </GestionaleModalShell>
+  );
+}
+
+function AgendaSessionFormBody({
+  initial,
+  workOrderIdPrefill,
+  canWrite,
+  saving,
+  onClose,
+  onSubmit,
+  onDelete,
+}: {
+  initial?: WorkshopScheduleSessionView | null;
+  workOrderIdPrefill?: string | null;
+  canWrite: boolean;
+  saving?: boolean;
+  onClose: () => void;
+  onSubmit: (values: AgendaSessionFormValues) => void;
+  onDelete?: (id: string) => void;
+}) {
+  const [form, setForm] = useState<AgendaSessionFormValues>(() => defaultForm(initial, workOrderIdPrefill));
+
+  const isBlock = form.eventType === "blocco_agenda";
+  const readOnly = !canWrite;
+
+  return (
+    <>
       <GestionaleModalScrollBody className="space-y-4 p-4 text-sm">
         <label className="block">
           <span className={fieldLabel}>Titolo</span>
@@ -229,7 +262,7 @@ export function AgendaSessionFormModal({
         </label>
       </GestionaleModalScrollBody>
 
-      <div className="flex shrink-0 flex-wrap justify-between gap-2 border-t border-[color:var(--cab-border)] p-3">
+      <div className="flex min-w-0 shrink-0 flex-wrap justify-between gap-2 border-t border-[color:var(--cab-border)] p-3">
         <div>
           {initial?.id && onDelete && canWrite ? (
             <button type="button" className={dsBtnDanger} disabled={saving} onClick={() => onDelete(initial.id)}>
@@ -237,7 +270,7 @@ export function AgendaSessionFormModal({
             </button>
           ) : null}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-w-0 flex-wrap gap-2">
           <button type="button" className={dsBtnNeutral} onClick={onClose}>
             Chiudi
           </button>
@@ -248,7 +281,7 @@ export function AgendaSessionFormModal({
           ) : null}
         </div>
       </div>
-    </GestionaleModalShell>
+    </>
   );
 }
 

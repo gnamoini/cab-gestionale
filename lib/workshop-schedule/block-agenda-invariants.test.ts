@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { validateBloccoAgendaShape } from "@/lib/workshop-schedule/invariants";
 
 assert.equal(
@@ -21,7 +22,7 @@ assert.equal(
   false,
 );
 
-const migration = require("node:fs").readFileSync(
+const migration = fs.readFileSync(
   "supabase/migrations/20260905120000_workshop_schedule_events.sql",
   "utf8",
 );

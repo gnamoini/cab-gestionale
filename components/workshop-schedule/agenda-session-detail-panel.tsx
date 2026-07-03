@@ -24,13 +24,13 @@ export function AgendaSessionDetailPanel({
 }) {
   return (
     <div className={`${dsSurfacePanelStatic} min-h-0 gap-3 p-4`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className={dsSectionTitle}>{session.title}</p>
           {session.description ? (
             <p className={`mt-1 ${dsTypoCaption}`}>{session.description}</p>
           ) : null}
-          <div className="mt-2 flex flex-wrap gap-2">
+          <div className="mt-2 flex min-w-0 flex-wrap gap-2">
             <span className={PLANNING_STATUS_BADGE_CLASS[session.planningStatus]}>
               {PLANNING_STATUS_LABELS[session.planningStatus]}
             </span>
@@ -44,7 +44,7 @@ export function AgendaSessionDetailPanel({
             ) : null}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex min-w-0 flex-wrap gap-2">
           {session.workOrderId ? (
             <Tooltip content="Apri la lavorazione collegata">
               <Link

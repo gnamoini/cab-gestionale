@@ -19,6 +19,8 @@ export function useClientPortalFiltersPersistence() {
   const [filtersHydrated, setFiltersHydrated] = useState(false);
   const [restoring, setRestoring] = useState(true);
 
+  // ponytail: hydration client-only — useState lazy init causerebbe mismatch SSR
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- restore persisted filters after mount
   useEffect(() => {
     const initial = readFiltersSync();
     setFilters(initial);

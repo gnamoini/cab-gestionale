@@ -14,7 +14,7 @@ export function DashboardAgendaKpiWidget() {
 
   return (
     <section className={dsSurfaceCard}>
-      <div className="flex flex-wrap items-start justify-between gap-2 border-b border-[color:var(--cab-border)] px-3 py-2">
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2 border-b border-[color:var(--cab-border)] px-3 py-2">
         <h2 className="text-sm font-semibold text-[color:var(--cab-text)]">Agenda officina · oggi</h2>
         <Link href={buildAgendaHref()} className={erpBtnNeutral}>
           Apri Agenda
