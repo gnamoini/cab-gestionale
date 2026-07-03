@@ -140,9 +140,10 @@ export function scanProductionReadinessCode(repoRoot = process.cwd()): Productio
     if (SKIP_SCAN_PREFIXES.some((p) => rel.startsWith(p))) continue;
 
     if (
-      rel === "lib/rbac.ts" &&
+      (rel === "lib/rbac.ts" || rel === "lib/auth/rbac.ts") &&
       (/operatore:\s*\{[\s\S]*?can_manage_settings:\s*true/.test(content) ||
-        content.includes("isOperatorGlobalSettingsEnabled"))
+        content.includes("isOperatorGlobalSettingsEnabled") ||
+        content.includes('capFromCtx(ctx, "can_manage_settings")'))
     ) {
       isOperatorGlobalSettingsUsedInRbac = true;
     }

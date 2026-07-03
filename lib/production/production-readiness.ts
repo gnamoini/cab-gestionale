@@ -213,7 +213,7 @@ export function validateProductionReadiness(input: ProductionReadinessInput = {}
     pushFinding(blockers, {
       id: "rbac-central-function-missing",
       category: "rbac",
-      message: "lib/rbac.ts non abilita can_manage_settings per operatore (matrice o pilot centralizzato).",
+      message: "lib/auth/rbac.ts non abilita can_manage_settings (matrice seed, pilot o capFromCtx centralizzato).",
     });
   }
 
