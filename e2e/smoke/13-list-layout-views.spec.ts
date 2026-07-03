@@ -33,7 +33,7 @@ async function listTableMounted(page: Page): Promise<boolean> {
 
 async function gotoListRouteReady(page: Page, route: ListLayoutRoute) {
   await page.goto(route.path);
-  await expect(page.getByText(route.readyText, { exact: false })).toBeVisible({
+  await expect(page.locator("main").getByText(route.readyText, { exact: false })).toBeVisible({
     timeout: 60_000,
   });
 }

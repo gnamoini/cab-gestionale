@@ -30,10 +30,11 @@ export function clientCredentials(): SmokeCredentials | null {
 
 async function ensureAccountMenuVisible(page: Page): Promise<void> {
   const accountMenu = page.getByTestId("smoke-account-menu");
-  if (await accountMenu.isVisible()) return;
+  if (await accountMenu.isVisible().catch(() => false)) return;
   const drawerOpen = page.getByTestId("smoke-nav-drawer-open");
-  if (await drawerOpen.isVisible()) {
-    await drawerOpen.click();
+  if (await drawerOpen.isVisible().catch(() => false)) {
+    await drawerOpen.click({ timeout: 15_000 });
+    await expect(page.getByRole("dialog", { name: "Menu principale" })).toBeVisible({ timeout: 10_000 });
   }
   await expect(accountMenu).toBeVisible({ timeout: 15_000 });
 }

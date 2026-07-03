@@ -23,14 +23,14 @@ async function listTableMounted(page: Page): Promise<boolean> {
 
 async function gotoLavorazioniTableReady(page: Page) {
   await page.goto("/lavorazioni");
-  await expect(page.getByText("Lavorazioni in corso", { exact: false })).toBeVisible({
+  await expect(page.locator("main").getByText("Lavorazioni in corso", { exact: false })).toBeVisible({
     timeout: 60_000,
   });
 }
 
 async function gotoMagazzinoTableReady(page: Page) {
   await page.goto("/magazzino");
-  await expect(page.getByText("Magazzino ricambi", { exact: false })).toBeVisible({
+  await expect(page.locator("main").getByText("Magazzino ricambi", { exact: false })).toBeVisible({
     timeout: 60_000,
   });
 }
