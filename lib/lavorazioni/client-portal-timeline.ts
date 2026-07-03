@@ -1,11 +1,10 @@
 import {
   buildClientPortalRowFields,
-  clientPortalAttrezzaturaLabel,
   clientPortalCantiereLabel,
   clientPortalClienteLabel,
   clientPortalDataIngressoLabel,
-  clientPortalMezzoIdent,
 } from "@/lib/lavorazioni/client-portal-row-fields";
+import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
 import {
   DEFAULT_LAVORAZIONE_STATO_ID,
@@ -190,21 +189,34 @@ export function resolveClientPortalSchedaIngressoFields(
   const bundle = getOrCreateBundle(schedeStore, row.id);
   if (bundle.ingresso?.campi) return bundle.ingresso.campi;
   const vm = buildClientPortalRowFields(row, schedeStore, logs, addettiGlobali);
+  const display = resolveLavorazioneContextWithAttrezzatura(row, schedeStore);
   const m = row.mezzo;
+  const attMarca =
+    display.targetType === "attrezzatura" && display.attrezzaturaLine !== "—"
+      ? vm.marca !== "—"
+        ? vm.marca
+        : ""
+      : "";
+  const attModello =
+    display.targetType === "attrezzatura" && display.attrezzaturaLine !== "—"
+      ? vm.modello !== "—"
+        ? vm.modello
+        : ""
+      : "";
   return {
     dataIngresso: vm.dataIngresso === "—" ? "" : vm.dataIngresso,
     cliente: vm.cliente === "—" ? "" : vm.cliente,
     cantiere: vm.cantiere === "—" ? "" : vm.cantiere,
     utilizzatore: vm.utilizzatore === "—" ? "" : vm.utilizzatore,
     tipoAttrezzatura: m?.tipo_attrezzatura?.trim() ?? "",
-    marcaAttrezzatura: m?.marca?.trim() ?? "",
-    modelloAttrezzatura: m?.modello?.trim() ?? "",
+    marcaAttrezzatura: attMarca,
+    modelloAttrezzatura: attModello,
     matricola: vm.matricola === "—" ? "" : vm.matricola,
     nScuderia: vm.nScuderia === "—" ? "" : vm.nScuderia,
     oreLavoro: "",
-    tipoTelaio: "",
-    marcaTelaio: "",
-    modelloTelaio: "",
+    tipoTelaio: m?.tipo_telaio?.trim() ?? "",
+    marcaTelaio: m?.marca_telaio?.trim() ?? "",
+    modelloTelaio: m?.modello_telaio?.trim() ?? "",
     targa: vm.targa === "—" ? "" : vm.targa,
     km: "",
     descrizioneAnomalia: row.note?.trim() ?? "",
@@ -219,11 +231,11 @@ export function buildClientTimelineHeader(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore,
 ): ClientTimelineHeader {
-  const ident = clientPortalMezzoIdent(row, schedeStore);
+  const display = resolveLavorazioneContextWithAttrezzatura(row, schedeStore);
   const cliente = clientPortalClienteLabel(row, schedeStore);
   const cantiere = clientPortalCantiereLabel(row, schedeStore);
-  const attrezzatura = clientPortalAttrezzaturaLabel(row, schedeStore);
-  const targa = ident.targa;
+  const attrezzatura = display.oggettoLabel;
+  const targa = display.ident.targa;
   const codice = lavorazioneDisplayCodice({ id: row.id, codice: row.codice });
   const clienteOk = cliente !== "—" ? cliente : null;
   let identificativo: string;
@@ -241,7 +253,7 @@ export function buildClientTimelineHeader(
     cantiere,
     attrezzatura,
     targa,
-    matricola: ident.matricola,
+    matricola: display.ident.matricola,
     identificativo,
   };
 }

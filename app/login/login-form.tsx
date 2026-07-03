@@ -17,6 +17,7 @@ import { GlobalLoadingView } from "@/components/design-system/global-loading";
 import { useGlobalLoading } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { isStagingBlockedPathname, isStagingPublicSlice } from "@/lib/env/staging-public";
+import { deferredRouterReplace, deferredRouterRefresh } from "@/lib/navigation/deferred-app-router";
 import { isSupabasePublicEnvConfigured, MISSING_SUPABASE_ENV_MESSAGE } from "@/lib/env/supabase-public";
 import {
   dsBtnNeutral,
@@ -177,8 +178,8 @@ export function LoginForm() {
       finalTarget = "/dashboard?staging_unavailable=1";
     }
 
-    router.replace(finalTarget);
-    router.refresh();
+    deferredRouterReplace(router, finalTarget);
+    deferredRouterRefresh(router);
   }, [status, user, clientLavAccess.allowed, router, searchParams]);
 
   useEffect(() => {

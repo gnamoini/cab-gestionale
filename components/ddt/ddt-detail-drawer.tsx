@@ -10,6 +10,7 @@ import { dsBtnNeutralForm } from "@/lib/ui/design-system";
 import type { DdtDetail } from "@/lib/ddt/types";
 import { ddtDisplayNumber } from "@/lib/ddt/ddt-list-ui-filters";
 import { ddtService } from "@/src/services/ddt.service";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 export function DdtDetailDrawer({
@@ -35,6 +36,7 @@ export function DdtDetailDrawer({
 }) {
   const isMobile = useMaxMdDown();
   const toast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const [busy, setBusy] = useState(false);
   const doc = detail?.document;
 
@@ -71,7 +73,13 @@ export function DdtDetailDrawer({
 
   const cancel = useCallback(async () => {
     if (!doc || busy || !isAdmin) return;
-    if (!window.confirm("Annullare questo DDT?")) return;
+    const ok = await confirm({
+      title: "Annullare DDT",
+      message: "Annullare questo DDT?",
+      confirmLabel: "Annulla DDT",
+      destructive: true,
+    });
+    if (!ok) return;
     setBusy(true);
     try {
       const res = await ddtService.cancel(doc.id);
@@ -84,7 +92,7 @@ export function DdtDetailDrawer({
     } finally {
       setBusy(false);
     }
-  }, [busy, isAdmin, doc, onChanged, onClose, toast]);
+  }, [busy, confirm, isAdmin, doc, onChanged, onClose, toast]);
 
   if (!doc || !detail) return null;
 
@@ -182,14 +190,17 @@ export function DdtDetailDrawer({
   );
 
   return (
-    <Drawer
-      open={open}
-      onClose={onClose}
-      title="Dettaglio DDT"
-      ariaLabel="Dettaglio DDT"
-      asideClassName={isMobile ? undefined : resolveDrawerAsideClasses("drawerLog")}
-    >
-      {body}
-    </Drawer>
+    <>
+      <Drawer
+        open={open}
+        onClose={onClose}
+        title="Dettaglio DDT"
+        ariaLabel="Dettaglio DDT"
+        asideClassName={isMobile ? undefined : resolveDrawerAsideClasses("drawerLog")}
+      >
+        {body}
+      </Drawer>
+      {confirmDialog}
+    </>
   );
 }

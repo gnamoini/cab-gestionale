@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent, type ReactNode } from "react";
-import { CloseButton, Tooltip } from "@/components/design-system";
+import { CloseButton } from "@/components/design-system";
 import { useAuth } from "@/context/auth-context";
 import { useGlobalLoading } from "@/context/global-loading-context";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
@@ -15,14 +15,12 @@ import { useRbacNavAccess } from "@/src/hooks/use-rbac-nav-access";
 import { SidebarNavSkeleton } from "@/components/gestionale/sidebar-nav-skeleton";
 import { CabLogo, CAB_APP_PRODUCT_NAME } from "@/components/gestionale/cab-logo";
 import { SidebarSessionPanel } from "@/components/gestionale/sidebar-session-panel";
+import { SidebarNavRow } from "@/components/gestionale/sidebar-nav-row";
 import {
-  SidebarNavIconWrap,
-  sidebarNavIconShellActive,
-  sidebarNavIconShellInactive,
-  sidebarNavLinkActive,
-  sidebarNavLinkBase,
-  sidebarNavLinkInactive,
-} from "@/components/gestionale/sidebar-nav-icon-wrap";
+  sidebarAsideWidthCollapsedClass,
+  sidebarAsideWidthExpandedClass,
+  sidebarNavCountBadgeClass,
+} from "@/lib/ui/sidebar-layout";
 import { ProfileSheetProvider } from "@/components/profile/profile-sheet-context";
 import {
   dsGestionaleContentMax,
@@ -46,13 +44,14 @@ const ReactRenderAuditProfiler = dynamic(
 );
 import {
   isNavTargetCurrent,
+  isSidebarNavLinkCurrent,
   ROUTE_LOADING_FAILSAFE_MS,
   ROUTE_TRANSITION_CANCEL_EVENT,
   scheduleRouteTransitionBegin,
 } from "@/src/lib/navigation/route-transition";
 import { useGestionaleMainScrollLock } from "@/lib/ui/use-body-scroll-lock";
 import { useGestionaleScrollEnd } from "@/lib/ui/use-gestionale-scroll-end";
-import { dsGestionaleScrollEndPad } from "@/lib/ui/scroll-system";
+import { dsGestionaleScrollEndPadFade } from "@/lib/ui/scroll-system";
 import { useOverlayBackHandler } from "@/lib/ui/use-overlay-back-handler";
 import { healBodyScrollLockState } from "@/lib/ui/body-scroll-lock-manager";
 import { cabAppViewportFillClass } from "@/lib/ui/viewport-fill-sync";
@@ -91,74 +90,66 @@ function NavLink({
   const pathname = usePathname();
   const active = isNavTargetCurrent(pathname, href);
 
-  const iconWrap = (
-    <SidebarNavIconWrap
-      shellClass={active && !disabled ? sidebarNavIconShellActive : sidebarNavIconShellInactive}
-      dimmed={disabled}
-    >
-      <Icon className="h-4 w-4" />
-    </SidebarNavIconWrap>
-  );
-
-  const navPointerIntentProps = collapsed
+  const navPointerIntentProps = collapsed && !active
     ? {
         onPointerEnter: () => onExpandIntent?.(),
         onFocus: () => onExpandIntent?.(),
       }
     : {};
 
-  if (disabled) {
-    const node = (
-      <div
-        role="link"
-        aria-disabled="true"
-        className={`${sidebarNavLinkBase} cursor-not-allowed opacity-75`}
-        {...navPointerIntentProps}
-      >
-        {iconWrap}
-        <span className="cab-sidebar-nav-label min-w-0 truncate leading-tight">{label}</span>
-        {badge ? (
-          <span className="cab-sidebar-nav-badge max-w-[4rem] shrink-0 overflow-hidden rounded bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200">
-            {badge}
-          </span>
-        ) : null}
-      </div>
-    );
-    if (!collapsed) return node;
-    return (
-      <Tooltip content={badge ? "Non disponibile" : label} side="right">
-        {node}
-      </Tooltip>
-    );
-  }
+  const suppressActiveRailFocus = collapsed && active && !disabled;
 
-  const node = (
-    <Link
+  const trailing = badge ? (
+    <span className={`${sidebarNavCountBadgeClass}`}>{badge}</span>
+  ) : undefined;
+
+  const sharedProps = {
+    active,
+    collapsed,
+    icon: <Icon className="h-4 w-4" />,
+    label,
+    trailing,
+    ...navPointerIntentProps,
+  };
+
+  const row = disabled ? (
+    <SidebarNavRow
+      as="div"
+      disabled
+      active={active}
+      collapsed={collapsed}
+      icon={sharedProps.icon}
+      label={label}
+      trailing={trailing}
+      railTooltip={badge ? "Non disponibile" : label}
+      {...navPointerIntentProps}
+    />
+  ) : (
+    <SidebarNavRow
+      as="link"
       href={href}
-      onClick={(e) => {
+      active={active}
+      collapsed={collapsed}
+      icon={sharedProps.icon}
+      label={label}
+      trailing={trailing}
+      railTooltip={label}
+      onMouseDown={(e: ReactMouseEvent<HTMLAnchorElement>) => {
+        if (suppressActiveRailFocus) e.preventDefault();
+      }}
+      onClick={(e: ReactMouseEvent<HTMLAnchorElement>) => {
         if (isNavTargetCurrent(pathname, href)) {
           e.preventDefault();
-          (e.currentTarget as HTMLElement).blur();
           onActiveNavClick?.();
           return;
         }
         scheduleRouteTransitionBegin(e, () => onNavigate?.(href));
       }}
-      className={`${sidebarNavLinkBase} ${active ? sidebarNavLinkActive : sidebarNavLinkInactive} ${erpFocus}`}
       {...navPointerIntentProps}
-    >
-      {iconWrap}
-      <span className="cab-sidebar-nav-label min-w-0 truncate leading-tight">{label}</span>
-    </Link>
+    />
   );
 
-  if (!collapsed) return node;
-
-  return (
-    <Tooltip content={label} side="right">
-      {node}
-    </Tooltip>
-  );
+  return row;
 }
 
 function MobileNavRow({
@@ -466,7 +457,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     [beginRouteTransition, collapseSidebar, pathname, homePath],
   );
 
-  const asideWidthClass = sidebarExpanded ? "w-[12.75rem]" : "w-[4.25rem]";
+  const asideWidthClass = sidebarExpanded ? sidebarAsideWidthExpandedClass : sidebarAsideWidthCollapsedClass;
   const asideW = sidebarExpanded ? `${asideWidthClass} z-50` : asideWidthClass;
   const mainPad = isCompactShell ? "" : "pl-[4.25rem]";
   const sidebarTopOffset =
@@ -497,7 +488,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         data-sidebar-hover-expanded={sidebarExpanded ? "" : undefined}
         onMouseEnter={onSidebarMouseEnter}
         onMouseLeave={onSidebarMouseLeave}
-        onFocusCapture={onSidebarFocusCapture}
+        onFocusCapture={(event) => {
+          if (isSidebarNavLinkCurrent(event.target, pathname)) return;
+          onSidebarFocusCapture();
+        }}
         onBlurCapture={onSidebarBlurCapture}
         className={`cab-sidebar fixed bottom-0 left-0 z-40 flex-col overflow-x-hidden border-r border-[color:var(--cab-border)] bg-[var(--cab-card)] transition-[width,box-shadow] duration-[var(--cab-sidebar-width-motion)] ease-[var(--cab-sidebar-ease-out)] ${sidebarTopOffset} ${
           isCompactShell ? "hidden" : `flex ${asideW}`
@@ -526,7 +520,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           aria-label="Sezioni principali"
           onPointerEnter={(event) => {
             if (!collapsed) return;
-            if (event.target instanceof Element && event.target.closest(".cab-sidebar-nav-link")) {
+            if (isSidebarNavLinkCurrent(event.target, pathname)) return;
+            if (event.target instanceof Element && event.target.closest(".cab-sidebar-nav-row")) {
               onSidebarNavIntent();
             }
           }}
@@ -546,7 +541,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   badge={item.badge}
                   onNavigate={beginRouteTransition}
                   onExpandIntent={onSidebarNavIntent}
-                  onActiveNavClick={collapseSidebar}
+                  onActiveNavClick={() => {
+                    if (sidebarExpanded) collapseSidebar();
+                  }}
                 />
               ))
             )}
@@ -585,7 +582,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 children
               )}
               {!suppressGlobalScrollEndPad ? (
-                <div aria-hidden className={dsGestionaleScrollEndPad} />
+                <div aria-hidden className={dsGestionaleScrollEndPadFade} />
               ) : null}
             </div>
           </main>

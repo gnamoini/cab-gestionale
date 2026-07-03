@@ -22,8 +22,8 @@ import {
   DASHBOARD_PROMEMORIA_REMINDER_DESKTOP_TITLE,
 } from "@/lib/dashboard/dashboard-promemoria-reminder";
 import {
-  DIPENDENTI_PRESENZE_REMINDER_DESKTOP_TITLE,
   formatDipendentiPresenzeReminderDesktopBody,
+  formatDipendentiPresenzeReminderTitle,
 } from "@/lib/dipendenti/dipendenti-presenze-reminder";
 import {
   getDesktopNotificationPermissionState,
@@ -135,8 +135,8 @@ function legacyToCreateInput(notification: AdminDashboardNotification): CreateNo
   if (isDipendentiPresenzeReminderNotification(notification)) {
     return {
       type: "dipendenti_presenze_reminder",
-      title: DIPENDENTI_PRESENZE_REMINDER_DESKTOP_TITLE,
-      body: formatDipendentiPresenzeReminderDesktopBody(notification.dateYmd),
+      title: formatDipendentiPresenzeReminderTitle(notification.count),
+      body: formatDipendentiPresenzeReminderDesktopBody(notification),
       href: buildAdminNotificationDipendentiHref(),
       dedup_key: dipendentiPresenzeReminderDedupKey(notification.dateYmd),
     };
@@ -221,8 +221,8 @@ function desktopPayloadFromLegacy(notification: AdminDashboardNotification) {
   }
   if (isDipendentiPresenzeReminderNotification(notification)) {
     return {
-      title: DIPENDENTI_PRESENZE_REMINDER_DESKTOP_TITLE,
-      body: formatDipendentiPresenzeReminderDesktopBody(notification.dateYmd),
+      title: formatDipendentiPresenzeReminderTitle(notification.count),
+      body: formatDipendentiPresenzeReminderDesktopBody(notification),
       href: buildAdminNotificationDipendentiHref(),
       tag: key,
     };

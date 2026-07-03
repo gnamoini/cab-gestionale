@@ -76,6 +76,7 @@ function normalizeItem(raw: unknown): AdminDashboardNotification | null {
       kind: "dipendenti_presenze_reminder",
       id,
       dateYmd,
+      count: typeof obj.count === "number" && obj.count > 0 ? obj.count : 1,
       createdAt: typeof obj.createdAt === "string" ? obj.createdAt : new Date().toISOString(),
     };
   }

@@ -10,8 +10,8 @@ function normScuderia(v: string): string {
   return n;
 }
 
-export function normalizeInterventoIdentField(key: keyof InterventoIdent, value: string): string {
-  const t = value.trim();
+export function normalizeInterventoIdentField(key: keyof InterventoIdent, value: string | null | undefined): string {
+  const t = value?.trim() ?? "";
   if (key === "matricola" && t.toLowerCase() === "non assegnata") return "";
   if (t === "—") return "";
   return t;

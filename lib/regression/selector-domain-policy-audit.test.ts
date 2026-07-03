@@ -55,8 +55,10 @@ assert.doesNotMatch(
   /<InlineSelectField[\s\S]{0,80}tablePillOptions\.addetto/,
 );
 
-assert.match(lavFilter, /selectorDomain="lavorazioni"/);
-assert.doesNotMatch(lavFilter, /selectOnly[\s\S]{0,200}Filtra addetto/);
+assert.match(lavFilter, /Filtra marca/);
+assert.match(lavFilter, /Filtra cantiere/);
+assert.doesNotMatch(lavFilter, /Filtra addetto/);
+assert.doesNotMatch(lavFilter, /selectorDomain="lavorazioni"/);
 
 assert.match(timesheet, /selectOnly[\s\S]{0,200}filterEmployeeId/);
 assert.match(timesheet, /aria-label="Seleziona dipendente"/);

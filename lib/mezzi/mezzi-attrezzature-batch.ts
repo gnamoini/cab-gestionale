@@ -1,4 +1,4 @@
-import { ATTREZZATURE_COLUMNS } from "@/lib/db/table-select-columns";
+import { ATTREZZATURE_COLUMNS, MEZZI_LIST_LIGHT_COLUMNS } from "@/lib/db/table-select-columns";
 import {
   composeMezzoGestitoFromRows,
   mezzoGestitoFromRow,
@@ -71,7 +71,7 @@ export async function fetchMezzoGestitoById(
   if (!id) return null;
   let row = mezzoRow ?? null;
   if (!row) {
-    const { data, error } = await sb.from("mezzi").select("*").eq("id", id).maybeSingle();
+    const { data, error } = await sb.from("mezzi").select(MEZZI_LIST_LIGHT_COLUMNS).eq("id", id).maybeSingle();
     if (error) throw new Error(error.message);
     if (!data) return null;
     row = data as MezzoRow;

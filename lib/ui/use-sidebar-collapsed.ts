@@ -28,8 +28,41 @@ export function dispatchGestionaleOverlayClosed(): void {
   window.dispatchEvent(new CustomEvent(GESTIONALE_OVERLAY_CLOSED_EVENT));
 }
 
-/** Cursore ancora sopra la sidebar (inclusi figli portal nel DOM tree). */
-export function isSidebarPointerActive(aside: HTMLElement): boolean {
+type SidebarPointerCoords = { x: number; y: number };
+
+/** Cursore dentro il viewport — fuori bordo (es. sweep a sinistra) non conta come hover sidebar. */
+export function isPointerInViewport(pointer: SidebarPointerCoords): boolean {
+  if (typeof window === "undefined") return true;
+  return (
+    pointer.x >= 0 &&
+    pointer.y >= 0 &&
+    pointer.x < window.innerWidth &&
+    pointer.y < window.innerHeight
+  );
+}
+
+function isPointerOverRect(pointer: SidebarPointerCoords, rect: DOMRect): boolean {
+  return (
+    pointer.x >= rect.left &&
+    pointer.x <= rect.right &&
+    pointer.y >= rect.top &&
+    pointer.y <= rect.bottom
+  );
+}
+
+/** Cursore ancora sopra la sidebar — bounds + elementFromPoint (affidabile su sweep rapidi). */
+export function isSidebarPointerActive(
+  aside: HTMLElement,
+  pointer?: SidebarPointerCoords | null,
+): boolean {
+  if (pointer && Number.isFinite(pointer.x) && Number.isFinite(pointer.y)) {
+    if (!isPointerInViewport(pointer)) return false;
+    const rect = aside.getBoundingClientRect();
+    if (!isPointerOverRect(pointer, rect)) return false;
+    const hit = document.elementFromPoint(pointer.x, pointer.y);
+    if (hit instanceof Node) return aside.contains(hit);
+    return false;
+  }
   if (aside.matches(":hover")) return true;
   const hovered = document.querySelector(":hover");
   return Boolean(hovered && aside.contains(hovered));
@@ -108,6 +141,8 @@ export function useSidebarHoverExpand(): {
   const hoverReopenBlockedUntilRef = useRef(0);
   const expandedAtRef = useRef(0);
   const suppressFocusExpandUntilRef = useRef(0);
+  const lastPointerRef = useRef<SidebarPointerCoords | null>(null);
+  const pointerReconcileRafRef = useRef<number | null>(null);
 
   const sidebarExpanded = sidebarHovered || sidebarFocused;
   const collapsed = !sidebarExpanded;
@@ -168,10 +203,27 @@ export function useSidebarHoverExpand(): {
   const reconcileSidebarPointer = useCallback(
     (aside: HTMLElement | null) => {
       if (!aside) return;
-      if (isSidebarPointerActive(aside) || isSidebarFocusActive(aside)) return;
+      if (
+        isSidebarPointerActive(aside, lastPointerRef.current) ||
+        isSidebarFocusActive(aside)
+      ) {
+        return;
+      }
       collapseSidebar();
     },
     [collapseSidebar],
+  );
+
+  const schedulePointerReconcile = useCallback(
+    (aside: HTMLElement | null) => {
+      if (!aside) return;
+      if (pointerReconcileRafRef.current != null) return;
+      pointerReconcileRafRef.current = requestAnimationFrame(() => {
+        pointerReconcileRafRef.current = null;
+        reconcileSidebarPointer(aside);
+      });
+    },
+    [reconcileSidebarPointer],
   );
 
   const onSidebarMouseEnter = useCallback(() => {
@@ -184,8 +236,6 @@ export function useSidebarHoverExpand(): {
 
     if (sidebarHoveredRef.current) return;
 
-    if (Date.now() < hoverReopenBlockedUntilRef.current) return;
-
     if (hoverOpenTimerRef.current) return;
 
     if (timings.openDelayMs === 0) {
@@ -195,6 +245,13 @@ export function useSidebarHoverExpand(): {
 
     hoverOpenTimerRef.current = setTimeout(() => {
       hoverOpenTimerRef.current = null;
+      const aside = document.querySelector("aside.cab-sidebar");
+      if (
+        !(aside instanceof HTMLElement) ||
+        !isSidebarPointerActive(aside, lastPointerRef.current)
+      ) {
+        return;
+      }
       setHovered(true);
     }, timings.openDelayMs);
   }, [expandSidebarNow, setHovered]);
@@ -208,24 +265,34 @@ export function useSidebarHoverExpand(): {
       return;
     }
 
-    if (!sidebarHoveredRef.current) return;
-
     if (hoverCloseTimerRef.current) clearTimeout(hoverCloseTimerRef.current);
 
-    if (timings.closeDelayMs === 0) {
+    const finishPointerLeave = () => {
+      const aside = document.querySelector("aside.cab-sidebar");
+      if (
+        aside instanceof HTMLElement &&
+        isSidebarPointerActive(aside, lastPointerRef.current)
+      ) {
+        return;
+      }
       setHovered(false);
+      setSidebarFocused(false);
       scheduleHoverCooldown();
+    };
+
+    if (timings.closeDelayMs === 0) {
+      finishPointerLeave();
       return;
     }
 
     hoverCloseTimerRef.current = setTimeout(() => {
       hoverCloseTimerRef.current = null;
-      setHovered(false);
-      scheduleHoverCooldown();
+      finishPointerLeave();
     }, timings.closeDelayMs);
   }, [scheduleHoverCooldown, setHovered]);
 
   const onSidebarNavIntent = useCallback(() => {
+    if (Date.now() < suppressFocusExpandUntilRef.current) return;
     if (sidebarHoveredRef.current) return;
     expandSidebarNow();
   }, [expandSidebarNow]);
@@ -254,6 +321,44 @@ export function useSidebarHoverExpand(): {
   );
 
   useEffect(() => clearAllTimers, [clearAllTimers]);
+
+  useEffect(() => {
+    const trackPointer = (event: PointerEvent) => {
+      lastPointerRef.current = { x: event.clientX, y: event.clientY };
+    };
+    window.addEventListener("pointermove", trackPointer, { passive: true });
+    return () => window.removeEventListener("pointermove", trackPointer);
+  }, []);
+
+  useEffect(() => {
+    if (!sidebarExpanded) return;
+    const aside = document.querySelector("aside.cab-sidebar");
+    if (!(aside instanceof HTMLElement)) return;
+
+    const onPointerActivity = () => schedulePointerReconcile(aside);
+
+    const onDocumentMouseOut = (event: MouseEvent) => {
+      if (event.relatedTarget != null) return;
+      collapseSidebar();
+    };
+
+    window.addEventListener("pointermove", onPointerActivity, { passive: true });
+    window.addEventListener("pointerdown", onPointerActivity, { passive: true });
+    window.addEventListener("blur", onPointerActivity);
+    document.addEventListener("mouseout", onDocumentMouseOut);
+    schedulePointerReconcile(aside);
+
+    return () => {
+      window.removeEventListener("pointermove", onPointerActivity);
+      window.removeEventListener("pointerdown", onPointerActivity);
+      window.removeEventListener("blur", onPointerActivity);
+      document.removeEventListener("mouseout", onDocumentMouseOut);
+      if (pointerReconcileRafRef.current != null) {
+        cancelAnimationFrame(pointerReconcileRafRef.current);
+        pointerReconcileRafRef.current = null;
+      }
+    };
+  }, [collapseSidebar, schedulePointerReconcile, sidebarExpanded]);
 
   useEffect(() => {
     const onOverlayClosed = () => {

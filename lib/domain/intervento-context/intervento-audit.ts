@@ -79,8 +79,8 @@ export function buildIdentDeltaFromContext(ctx: InterventoContext): Record<strin
   if (!c || !ctx.mezzo.present) return delta;
 
   for (const key of ["targa", "matricola", "nScuderia"] as const) {
-    const schedaVal = (key === "nScuderia" ? c.nScuderia : c[key]).trim();
-    const mezzoVal = (key === "nScuderia" ? ctx.mezzo.nScuderia : ctx.mezzo[key]).trim();
+    const schedaVal = (key === "nScuderia" ? c.nScuderia : c[key])?.trim() ?? "";
+    const mezzoVal = (key === "nScuderia" ? ctx.mezzo.nScuderia : ctx.mezzo[key])?.trim() ?? "";
     if (schedaVal && mezzoVal && schedaVal.toLowerCase() !== mezzoVal.toLowerCase()) {
       delta[key] = { scheda: schedaVal, mezzo: mezzoVal };
     }

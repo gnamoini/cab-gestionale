@@ -58,7 +58,7 @@ export function FormField({
           {label}
           {required ? <GestionaleRequiredMark /> : null}
         </label>
-        <div className="mt-1">{children}</div>
+        <div className="mt-1.5">{children}</div>
       </div>
     );
   }
@@ -68,7 +68,7 @@ export function FormField({
         {label}
         {required ? <GestionaleRequiredMark /> : null}
       </span>
-      <div className="mt-1">{children}</div>
+      <div className="mt-1.5">{children}</div>
     </div>
   );
 }

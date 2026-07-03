@@ -42,14 +42,14 @@ assert.equal(shouldShowDesktopLavorazioneNotification("/lavorazioni"), false);
 
 const event = { type: "entity_created" as const, entity: "lavorazioni" as const, id: "lav-1" };
 
-assert.equal(
-  lavorazioneCreatedEventToIntent({
-    event,
-    pathname: "/dashboard",
-    isLocalCreate: false,
-  }),
-  null,
-);
+const minimalDash = lavorazioneCreatedEventToIntent({
+  event,
+  pathname: "/dashboard",
+  isLocalCreate: false,
+});
+assert.ok(minimalDash);
+assert.equal(minimalDash?.lavorazioneId, "lav-1");
+assert.equal(minimalDash?.titolo, "lav-1");
 
 assert.equal(
   lavorazioneCreatedEventToIntent({

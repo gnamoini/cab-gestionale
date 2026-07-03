@@ -43,7 +43,7 @@ export type KpiPerformanceBuildInput = {
   magazzino: RicambioMagazzino[];
   magLog: MagazzinoChangeLogEntry[];
   magazzinoRows: MagazzinoRicambioRow[];
-  lavRows: LavorazioneListRow[];
+  lavRows: readonly LavorazioneListRow[];
   semanticIndex: ReportSemanticIndex;
   schedeStore: LavorazioneSchedeStore | null;
   schedeLoaded: boolean;

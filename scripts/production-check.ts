@@ -9,7 +9,7 @@
  * Locale (advisory): PRODUCTION_CHECK_REQUIRE_DB=1 npm run production:check
  */
 import { exitWithGate, printGateHeader, printGateResult } from "../lib/ci/gate-output";
-import { fetchProductionReadinessDbSnapshot } from "../lib/production/fetch-production-readiness-db";
+import { fetchProductionReadinessDbSnapshot } from "../lib/production/fetch-production-readiness-db.impl";
 import { validateProductionReadiness } from "../lib/production/production-readiness";
 import { scanProductionReadinessCode } from "../lib/production/production-readiness-scan";
 import type { ProductionReadinessFinding } from "../lib/production/production-readiness-types";

@@ -2,10 +2,16 @@ import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
+export type KanbanMobileNestedSection = {
+  col: StatoLavorazioneConfig;
+  items: readonly LavorazioneListRow[];
+};
+
 export type KanbanMobileSection = {
   id: string;
   col: StatoLavorazioneConfig;
   items: readonly LavorazioneListRow[];
+  nested?: readonly KanbanMobileNestedSection[];
   onOpen: (row: LavorazioneListRow) => void;
 };
 

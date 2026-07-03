@@ -1,6 +1,11 @@
 import "server-only";
 
-import { ATTREZZATURE_COLUMNS, MEZZI_COLUMNS, SCHEDA_LAVORAZIONE_COLUMNS } from "@/lib/db/table-select-columns";
+import {
+  ATTREZZATURE_COLUMNS,
+  LAVORAZIONI_COLUMNS,
+  MEZZI_COLUMNS,
+  SCHEDA_LAVORAZIONE_COLUMNS,
+} from "@/lib/db/table-select-columns";
 import { fetchMezziGestitiListRows } from "@/lib/mezzi/mezzi-list-fetch";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { MezzoSchedaValidationError, upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
@@ -161,7 +166,7 @@ export function createCaptureInterventoWriteDeps(input: {
         created_by: lavInput.created_by,
         updated_by: lavInput.created_by,
       };
-      const { data: row, error } = await sb.from("lavorazioni").insert(insertPayload).select("*").single();
+      const { data: row, error } = await sb.from("lavorazioni").insert(insertPayload).select(LAVORAZIONI_COLUMNS).single();
       if (error || !row) throw new Error(error?.message ?? "Creazione lavorazione fallita");
       await writeModificaLog(sb, {
         entita: "lavorazioni",

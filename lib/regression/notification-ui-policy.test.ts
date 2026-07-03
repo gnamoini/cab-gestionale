@@ -23,7 +23,8 @@ assert.match(tokensSrc, /NotificationSeverity/);
 assert.match(tokensSrc, /dsNotificationRowSurface/);
 assert.match(tokensSrc, /dsNotificationBellBadgeBase/);
 assert.match(tokensSrc, /dsNotificationPanelWidthPx/);
-assert.match(tokensSrc, /dsNotificationBellBadgeAnchor/);
+assert.match(tokensSrc, /dsNotificationBellBadgeAnchorRail/);
+assert.match(tokensSrc, /dsNotificationSidebarTrailingCount/);
 assert.match(tokensSrc, /h-4 w-4 shrink-0 opacity-90/);
 assert.match(tokensSrc, /dsNotificationPanelMaxHeightPx/);
 
@@ -67,13 +68,16 @@ assert.match(
   "notification center must import notification primitives from design-system",
 );
 assert.match(centerBellSrc, /NotificationBellIcon/);
-assert.match(centerBellSrc, /sidebarNavLinkBase|cab-sidebar-session-row/);
+assert.match(centerBellSrc, /SidebarNavRow/);
 assert.match(centerBellSrc, /cab-notification-bell--arrive/);
-assert.match(centerBellSrc, /SidebarNavIconWrap/);
+assert.match(centerBellSrc, /NotificationCountBadge/);
+assert.match(centerBellSrc, /variant="rail"/);
 assert.doesNotMatch(centerBellSrc, /cab-sidebar-session-icon-btn/);
 assert.match(centerBellSrc, /Drawer/);
 assert.match(centerBellSrc, /gestionaleLogPanelAsideClass/);
-assert.match(centerBellSrc, /GestionaleLogList/);
+assert.match(centerBellSrc, /Elimina tutte/);
+assert.match(centerBellSrc, /dismissAllNotifications/);
+assert.match(centerBellSrc, /gestionaleLogDrawerScrollInsetClass/);
 assert.match(centerBellSrc, /LogEntry/);
 assert.match(centerBellSrc, /toInboxNotificationLogViewModel/);
 assert.match(centerBellSrc, /NotificationsPanelFooter/);
@@ -112,7 +116,7 @@ assert.match(widgetSrc, /dsNotificationWidgetDangerChip/);
 assert.doesNotMatch(widgetSrc, /magSottoScortaPillHex/);
 assert.match(
   widgetSrc,
-  /function MagazzinoSottoScortaListItem[\s\S]*?dsNotificationWidgetDangerRow/,
+  /sottoPreview\.map[\s\S]*?dsNotificationWidgetDangerRow/,
   "sotto scorta widget row must use shared danger tokens",
 );
 

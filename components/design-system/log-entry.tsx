@@ -11,6 +11,12 @@ import { formatGestionaleLogMetaLine } from "@/lib/gestionale-log/view-model";
 const LOG_ENTRY_SHELL_CLASS =
   "rounded-[var(--ds-radius-lg)] border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_40%,var(--cab-card))] px-3";
 
+const LOG_ENTRY_INBOX_SHELL_CLASS =
+  "gestionale-inbox-log-entry rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] px-3.5 shadow-[var(--cab-shadow-sm)] transition-[border-color,box-shadow,background-color] duration-200";
+
+const LOG_ENTRY_INBOX_SHELL_INTERACTIVE =
+  "cursor-pointer hover:border-[color:color-mix(in_srgb,var(--cab-primary)_34%,var(--cab-border))] hover:bg-[var(--cab-hover)] hover:shadow-[var(--cab-shadow-md)]";
+
 const LOG_ENTRY_INTERACTIVE_CLASS = `w-full cursor-pointer text-left transition-colors hover:border-[color:color-mix(in_srgb,var(--cab-primary)_35%,var(--cab-border))] hover:bg-[var(--cab-hover)] ${erpFocus}`;
 
 function logEntryActivate(onClick: () => void, e: KeyboardEvent<HTMLDivElement>) {
@@ -45,9 +51,26 @@ export type LogEntryProps = {
   onClick?: () => void;
   title?: string;
   trailing?: ReactNode;
+  /** Card inbox notifiche — layout compatto senza dot laterale. */
+  variant?: "default" | "inbox";
 };
 
-function LogEntryBody({ vm, trailing }: { vm: GestionaleLogViewModel; trailing?: ReactNode }) {
+function resolveShellClass(variant: "default" | "inbox", interactive: boolean): string {
+  if (variant === "inbox") {
+    return `${LOG_ENTRY_INBOX_SHELL_CLASS}${interactive ? ` ${LOG_ENTRY_INBOX_SHELL_INTERACTIVE}` : ""}`;
+  }
+  return LOG_ENTRY_SHELL_CLASS;
+}
+
+function LogEntryBody({
+  vm,
+  trailing,
+  variant = "default",
+}: {
+  vm: GestionaleLogViewModel;
+  trailing?: ReactNode;
+  variant?: "default" | "inbox";
+}) {
   const voided = vm.annullato === true;
   const rawModifiche = parseModificheLines(vm.modificaRiga);
   let modifiche = filterAuditMetadataModifiche(rawModifiche);
@@ -55,6 +78,38 @@ function LogEntryBody({ vm, trailing }: { vm: GestionaleLogViewModel; trailing?:
     modifiche = ["Modifica registrata"];
   }
   const badge = TONE_BADGE[vm.tone];
+
+  if (variant === "inbox") {
+    return (
+      <div className={`min-w-0 py-3 ${voided ? "opacity-65" : ""}`}>
+        <div className="min-w-0 space-y-2">
+          <span
+            className={`inline-flex max-w-full items-center rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${badge}`}
+          >
+            {vm.tipoRiga}
+          </span>
+
+          <p
+            className={`text-sm font-semibold leading-snug text-[color:var(--cab-text)] ${voided ? "line-through" : ""}`}
+          >
+            {sanitizeLogOggettoRiga(vm.oggettoRiga)}
+          </p>
+
+          {modifiche.length > 0 ? (
+            <p
+              className={`text-xs leading-relaxed text-[color:var(--cab-text-muted)] line-clamp-3 ${voided ? "line-through" : ""}`}
+            >
+              {modifiche.map((l) => l.replace(/^•\s*/, "")).join(" · ")}
+            </p>
+          ) : null}
+
+          <p className="border-t border-[color:color-mix(in_srgb,var(--cab-border)_70%,transparent)] pt-2 text-[11px] tabular-nums text-[color:var(--cab-text-muted)]">
+            {formatGestionaleLogMetaLine(vm.autore, vm.atIso)}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`flex min-w-0 gap-3 py-3 ${voided ? "opacity-65" : ""}`}>
@@ -127,16 +182,29 @@ function LogEntryInteractive({
 }
 
 /** Voce log strutturata: tipo → oggetto → modifiche → meta. */
-export const LogEntry = memo(function LogEntry({ vm, onClick, title, trailing }: LogEntryProps) {
-  if (onClick && trailing) {
+export const LogEntry = memo(function LogEntry({
+  vm,
+  onClick,
+  title,
+  trailing,
+  variant = "default",
+}: LogEntryProps) {
+  const inbox = variant === "inbox";
+  const shellClass = resolveShellClass(variant, Boolean(onClick));
+
+  if (trailing) {
+    const content = onClick ? (
+      <LogEntryInteractive onClick={onClick} title={title} className={inbox ? `w-full ${erpFocus}` : undefined}>
+        <LogEntryBody vm={vm} variant={variant} />
+      </LogEntryInteractive>
+    ) : (
+      <LogEntryBody vm={vm} variant={variant} />
+    );
+
     return (
-      <div className={`${LOG_ENTRY_SHELL_CLASS} group relative`}>
-        <div className="pr-7">
-          <LogEntryInteractive onClick={onClick} title={title}>
-            <LogEntryBody vm={vm} />
-          </LogEntryInteractive>
-        </div>
-        <div className="absolute right-1.5 top-1.5 z-[1]">{trailing}</div>
+      <div className={`${shellClass} group relative`}>
+        <div className={inbox ? "pr-8" : "pr-7"}>{content}</div>
+        <div className={`absolute z-[1] ${inbox ? "right-2 top-2" : "right-1.5 top-1.5"}`}>{trailing}</div>
       </div>
     );
   }
@@ -146,16 +214,16 @@ export const LogEntry = memo(function LogEntry({ vm, onClick, title, trailing }:
       <LogEntryInteractive
         onClick={onClick}
         title={title}
-        className={`${LOG_ENTRY_SHELL_CLASS} ${LOG_ENTRY_INTERACTIVE_CLASS}`}
+        className={`${shellClass} ${inbox ? erpFocus : LOG_ENTRY_INTERACTIVE_CLASS}`}
       >
-        <LogEntryBody vm={vm} trailing={trailing} />
+        <LogEntryBody vm={vm} variant={variant} />
       </LogEntryInteractive>
     );
   }
 
   return (
-    <div className={LOG_ENTRY_SHELL_CLASS}>
-      <LogEntryBody vm={vm} trailing={trailing} />
+    <div className={shellClass}>
+      <LogEntryBody vm={vm} variant={variant} />
     </div>
   );
 });

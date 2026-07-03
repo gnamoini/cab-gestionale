@@ -32,11 +32,10 @@ export function SidebarSessionPanel({
     variant === "sidebar" && sidebarCollapsed && onSidebarExpandIntent
       ? {
           onPointerEnter: (event: PointerEvent<HTMLElement>) => {
-            if (event.target instanceof Element && event.target.closest(".cab-sidebar-nav-link")) {
+            if (event.target instanceof Element && event.target.closest(".cab-sidebar-nav-row")) {
               onSidebarExpandIntent();
             }
           },
-          onFocusCapture: () => onSidebarExpandIntent(),
         }
       : {};
 
@@ -47,6 +46,7 @@ export function SidebarSessionPanel({
           variant={variant}
           sidebarCollapsed={sidebarCollapsed}
           onExpandIntent={onSidebarExpandIntent}
+          onOpenProfile={onOpenInbox}
         />
         <NotificationCenterMount
           embedded

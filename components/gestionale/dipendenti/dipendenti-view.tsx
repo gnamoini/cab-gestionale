@@ -27,11 +27,16 @@ import {
   currentMonthKey,
   isDateInMonthKey,
   monthKeyFromDate,
+  shiftMonthKey,
   todayDateYmd,
 } from "@/lib/dipendenti/timesheet-month";
 import type { TimesheetEditorTarget, TimesheetEntryUpsert, TimesheetMonthKey, DipendenteTimesheetEmployeeRow } from "@/lib/dipendenti/types";
 import type { TimesheetPeriodMode } from "@/lib/dipendenti/timesheet-month";
-import { dsStackPage } from "@/lib/ui/design-system";
+import { dsFocus, dsPageToolbarIconBtn, dsStackPage } from "@/lib/ui/design-system";
+import {
+  CalendarNavChevronLeft,
+  CalendarNavChevronRight,
+} from "@/components/gestionale/global-input/calendar-nav-icons";
 import { useGestionaleListLayout } from "@/lib/ui/use-gestionale-list-layout";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { useDipendentiTimesheet } from "@/src/hooks/use-dipendenti-timesheet";
@@ -342,7 +347,29 @@ export function DipendentiView() {
               readOnly={readOnly}
             />
           ) : ts.loadPhase === "ready" ? (
-            <ShellCard title="Tabella presenze">
+            <ShellCard
+              title="Tabella presenze"
+              headerActions={
+                <div className="flex items-center gap-1" role="group" aria-label="Navigazione mese">
+                  <button
+                    type="button"
+                    className={`${dsPageToolbarIconBtn} ${dsFocus} shrink-0`}
+                    aria-label="Mese precedente"
+                    onClick={() => handleMonthKey(shiftMonthKey(monthKey, -1))}
+                  >
+                    <CalendarNavChevronLeft />
+                  </button>
+                  <button
+                    type="button"
+                    className={`${dsPageToolbarIconBtn} ${dsFocus} shrink-0`}
+                    aria-label="Mese successivo"
+                    onClick={() => handleMonthKey(shiftMonthKey(monthKey, 1))}
+                  >
+                    <CalendarNavChevronRight />
+                  </button>
+                </div>
+              }
+            >
               {ts.entriesDegraded ? (
                 <div
                   className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/40 dark:text-amber-100"

@@ -113,6 +113,9 @@ export const gestionaleListTableTdCenter =
 /** Celle pill (stato, priorità, addetto) — stesso padding orizzontale di `globalTableThCell` (px-2.5). */
 export const gestionaleListTableTdPill =
   "box-border overflow-hidden px-2.5 py-1 align-middle text-center";
+/** Inset colonne Stato/Addetto — tabella densa Lavorazioni (`lavorazioni-scroll.css`). */
+export const gestionaleListTableColStatoAddettoInsetClass =
+  "gestionale-list-table-col-stato-addetto-inset";
 /** Pill a tutta larghezza colonna (larghezza da `<col>` / colgroup). */
 export const gestionaleListTableTdPillWrap = "box-border w-full min-w-0 max-w-full";
 

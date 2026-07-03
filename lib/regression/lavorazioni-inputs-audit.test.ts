@@ -73,6 +73,7 @@ assert.match(
 const modals = read("components/gestionale/lavorazioni/lavorazioni-modals.tsx");
 assert.match(ingressoForm, /GestionaleModalScrollBody/);
 assert.match(modals, /useMobileModalKeyboard/);
+assert.match(modals, /createPortal/);
 assert.match(modals, /GlobalFixedListPillSelect/);
 assert.doesNotMatch(modals, /<select\b/);
 

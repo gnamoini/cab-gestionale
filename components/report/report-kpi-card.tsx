@@ -3,13 +3,14 @@
 import type { KpiCompareRow } from "@/lib/report/build-report-model";
 import { ReportSparkline } from "@/components/report/report-sparkline";
 import {
+  reportArrowAndTone,
+  reportCompareBadgeClass,
   reportCompareToneClass,
   reportKpiDescriptionClass,
   reportKpiTrustPillClass,
   reportMetricCardClass,
   reportMetricCardCompactClass,
   reportMetricCardHeroClass,
-  type ReportCompareTone,
 } from "@/components/report/report-ui-tokens";
 import { REPORT_KPI_TRUST_LABELS, type ReportKpiTrust } from "@/lib/report/kpi-display-clusters";
 
@@ -19,31 +20,13 @@ function fmtPct(p: number | null): string | null {
   return `${s}${p.toLocaleString("it-IT", { maximumFractionDigits: 1 })}%`;
 }
 
-function arrowAndTone(
-  deltaPct: number | null,
-  invert: boolean | undefined,
-): { arrow: string; tone: ReportCompareTone } {
-  if (deltaPct == null || !Number.isFinite(deltaPct)) return { arrow: "→", tone: "flat" };
-  if (deltaPct === 0) return { arrow: "→", tone: "flat" };
-  if (invert) {
-    if (deltaPct < 0) return { arrow: "↑", tone: "up" };
-    return { arrow: "↓", tone: "down" };
-  }
-  if (deltaPct > 0) return { arrow: "↑", tone: "up" };
-  return { arrow: "↓", tone: "down" };
-}
-
 function CompareInline({ rows }: { rows: KpiCompareRow[] }) {
   const row = rows[0];
   if (!row) return null;
   const pctStr = fmtPct(row.deltaPct);
-  const { arrow, tone } = arrowAndTone(row.deltaPct, row.invert);
-  const tc = reportCompareToneClass(tone);
+  const { arrow, tone } = reportArrowAndTone(row.deltaPct, row.invert);
   return (
-    <span
-      className={`inline-flex shrink-0 items-center gap-1 rounded-md border border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_60%,var(--cab-card))] px-2 py-0.5 text-[11px] font-semibold tabular-nums ${tc}`}
-      title={row.label}
-    >
+    <span className={reportCompareBadgeClass(tone)} title={row.label}>
       <span className="text-xs leading-none">{arrow}</span>
       {row.deltaAbs != null ? <span>{row.deltaAbs}</span> : null}
       {pctStr != null ? <span className="font-normal opacity-90">{pctStr}</span> : row.deltaAbs == null ? <span>—</span> : null}
@@ -56,7 +39,7 @@ function CompareBlock({ rows }: { rows: KpiCompareRow[] }) {
     <div className="mt-3 space-y-1.5 border-t border-[color:var(--cab-border)] pt-3">
       {rows.map((row) => {
         const pctStr = fmtPct(row.deltaPct);
-        const { arrow, tone } = arrowAndTone(row.deltaPct, row.invert);
+        const { arrow, tone } = reportArrowAndTone(row.deltaPct, row.invert);
         const tc = reportCompareToneClass(tone);
         return (
           <div key={row.label} className="flex min-w-0 flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5 text-xs">

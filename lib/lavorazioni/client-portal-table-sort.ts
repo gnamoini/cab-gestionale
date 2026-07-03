@@ -7,17 +7,12 @@ export type ClientPortalSortKey =
   | "cantiere"
   | "attrezzatura"
   | "mezzoIdent"
-  | "note"
   | "stato"
   | "completamento"
   | "addetto";
 
 function cmpStr(a: string, b: string): number {
   return a.localeCompare(b, "it", { sensitivity: "base" });
-}
-
-function noteText(bundle: ClientPortalRowBundle): string {
-  return bundle.fields.noteIntervento.trim();
 }
 
 function cmpBundle(
@@ -57,8 +52,6 @@ function cmpBundle(
           `${fb.targa}\t${fb.matricola}\t${fb.nScuderia}`,
         ),
       );
-    case "note":
-      return t(cmpStr(noteText(a), noteText(b)));
     case "addetto":
       return t(cmpStr(fa.addetto, fb.addetto));
     case "stato":

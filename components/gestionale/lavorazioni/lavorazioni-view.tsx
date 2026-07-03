@@ -6,6 +6,7 @@ import "./lavorazioni-select-theme.css";
 import dynamic from "next/dynamic";
 import { useLavorazioniPdfWarmup } from "@/lib/observability/asset-cache-warmup";
 import { useGestionaleListLayout, GESTIONALE_LIST_DESKTOP_ONLY_CLASS } from "@/lib/ui/use-gestionale-list-layout";
+import { useKanbanViewportLayout } from "@/lib/ui/use-kanban-viewport-layout";
 import { LIST_QUERY_LOADING_FAILSAFE_MS, useLoadingFailsafe } from "@/lib/ui/loading-failsafe";
 import { useUIAutonomyFixEngine } from "@/lib/ui-autonomy-fix/use-ui-autonomy-fix-engine";
 import { useCallback, useEffect, useMemo, useRef, useState, startTransition, type Dispatch, type ReactNode, type SetStateAction } from "react";
@@ -17,6 +18,8 @@ import {
 } from "@/components/gestionale/global-table";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { TablePagination } from "@/components/gestionale/table-pagination";
+import { ServerListLoadMore } from "@/components/gestionale/server-list-load-more";
+import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
 const LavorazioneCreateModal = dynamic(
   () =>
     import("@/components/gestionale/lavorazioni/lavorazione-create-modal").then((m) => ({
@@ -31,21 +34,6 @@ const SchedeLavorazioneModal = dynamic(
     })),
   { ssr: false },
 );
-const LavorazioniCaptureDropOverlay = dynamic(
-  () =>
-    import("@/components/document-capture/lavorazioni-capture-drop-overlay").then((m) => ({
-      default: m.LavorazioniCaptureDropOverlay,
-    })),
-  { ssr: false },
-);
-const DocumentCaptureHistoryPanel = dynamic(
-  () =>
-    import("@/components/document-capture/document-capture-history-panel").then((m) => ({
-      default: m.DocumentCaptureHistoryPanel,
-    })),
-  { ssr: false },
-);
-import { SchedaBlankPdfActions } from "@/components/document-capture/scheda-blank-pdf-actions";
 import type { SchedeLavorazioneDialogSize } from "@/components/lavorazioni/schede/schede-lavorazione-modal";
 import { LoadingKanbanSkeleton } from "@/components/design-system";
 const LavorazioniKanbanView = dynamic(
@@ -61,6 +49,7 @@ import { lavRowToMatchShape } from "@/lib/mezzi/mezzi-db-ui-adapter";
 import { upsertMezzoFromSchedaIngresso } from "@/lib/mezzi/upsert-mezzo-from-scheda";
 import type { MezzoGestito } from "@/lib/mezzi/types";
 import { Q_FOCUS_LAV_ROW, Q_FOCUS_MEZZO, Q_LAVORAZIONI_MEZZO_ID } from "@/lib/navigation/dashboard-log-links";
+import { deferredRouterReplace, deferredRouterRefresh } from "@/lib/navigation/deferred-app-router";
 import {
   buildLavorazioniPillOptionsFromGlobal,
 } from "@/lib/global-list/build-lavorazioni-pill-options";
@@ -147,8 +136,6 @@ import {
   logAutoreLabel,
 } from "@/lib/gestionale-log/log-modifiche-view-model";
 import { lavorazioneLogContextFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";
-import { auditPayload, pickExistingFields } from "@/lib/gestionale-log/undo";
-import { withUndoSessionPayload } from "@/lib/gestionale-log/undo-session";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
 import type { LavorazioneArchiviata, LavorazioneAttiva } from "@/lib/lavorazioni/types";
@@ -208,6 +195,7 @@ import {
   lavTableColIdentificazioneClass,
   lavTableColIngressoClass,
   lavTableColNoteClass,
+  lavTableColStatoAddettoInset,
   lavTablePillColStyleFromLabels,
   lavTableTdPill,
   lavTableTdAzioni,
@@ -484,7 +472,7 @@ function navMezzoFilterBadgeLabel(m: MezzoGestito): string {
 export function LavorazioniView() {
   useLavorazioniPdfWarmup();
   const { containerRef: listLayoutRef, layout: listLayout, layoutClassName: listLayoutClassName } = useGestionaleListLayout({ tier: "xl" });
-  const { containerRef: kanbanLayoutRef, layout: kanbanLayout, layoutClassName: kanbanLayoutClassName } = useGestionaleListLayout({ tier: "lg" });
+  const kanbanViewportLayout = useKanbanViewportLayout();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -587,8 +575,6 @@ export function LavorazioniView() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [createModalWarm, setCreateModalWarm] = useState(false);
-  const [captureRefreshKey, setCaptureRefreshKey] = useState(0);
-
   const preloadCreateModal = useCallback(() => {
     void qc.prefetchQuery({
       queryKey: mezziListQueryKey("list", null),
@@ -851,10 +837,13 @@ export function LavorazioniView() {
   );
 
   const attiveQuery = useLavorazioniList(filtersAttive, gestionaleQueryOpts);
-  // ponytail: lista light sempre in cache per conteggio header archivio (schede restano lazy)
-  const chiuseQuery = useLavorazioniList(filtersChiuse, gestionaleQueryOpts);
+  const chiuseQuery = useLavorazioniList(filtersChiuse, {
+    ...gestionaleQueryOpts,
+    enabled: needsChiuseFetch,
+  });
+  const serverListPagination = isServerListPaginationEnabled();
 
-  const { undoable: undoableLavLog, logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
+  const { logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
 
   const attiveRows = attiveQuery.data ?? [];
   const chiuseRows = chiuseQuery.data ?? [];
@@ -1228,7 +1217,7 @@ export function LavorazioniView() {
         const lavId = rawFocus.slice("hub-lav-".length);
         openDetailById(lavId);
         flashRow(lavId);
-        router.replace(pathname, { scroll: false });
+        deferredRouterReplace(router, pathname, { scroll: false });
       }, 80);
       return () => window.clearTimeout(t);
     }
@@ -1239,7 +1228,7 @@ export function LavorazioniView() {
     if (!rawMezzo) return;
 
     const t = window.setTimeout(() => {
-      router.replace(pathname, { scroll: false });
+      deferredRouterReplace(router, pathname, { scroll: false });
       const mezzo = mezziCatalog.find((m) => m.id === rawMezzo);
       const resolved = mezzo ? { ...mezzo } : mezzoFilterStubFromId(rawMezzo);
       setNavMezzoFilter(resolved);
@@ -1450,7 +1439,7 @@ export function LavorazioniView() {
     if (!id) return;
     const t = window.setTimeout(() => {
       focusLavorazioneInTable(id);
-      router.replace(pathname, { scroll: false });
+      deferredRouterReplace(router, pathname, { scroll: false });
     }, 80);
     return () => window.clearTimeout(t);
   }, [searchParams, pathname, router, focusLavorazioneInTable]);
@@ -1564,8 +1553,7 @@ export function LavorazioniView() {
   const totalFilteredCount = attiveRowsFiltered.length + chiuseRowsFiltered.length;
 
   const loading = attiveQuery.isLoading || chiuseQuery.isLoading;
-  const initialListLoadingRaw =
-    loading && attiveQuery.data === undefined && chiuseQuery.data === undefined;
+  const initialListLoadingRaw = attiveQuery.isPending;
   const listLoadingFailsafe = useLoadingFailsafe(initialListLoadingRaw, LIST_QUERY_LOADING_FAILSAFE_MS);
   const initialListLoading = initialListLoadingRaw && !listLoadingFailsafe;
   const archivioTableLoading =
@@ -1712,79 +1700,6 @@ export function LavorazioniView() {
     [pagedChiuse.length, renderArchivioDesktopRow, archivioPagedBundleRevisionKey],
   );
 
-  async function undoUltimaLavorazione() {
-    if (!canEditWorkOrders || !undoableLavLog) return;
-    const payload = auditPayload(undoableLavLog);
-    const before = payload.before;
-    if (!before) return;
-    const okUndo = await confirm({
-      title: "Annullare l'ultima modifica?",
-      message: "Verrà ripristinato l'ultimo cambiamento reversibile sulle lavorazioni.",
-      confirmLabel: "Annulla modifica",
-      destructive: true,
-    });
-    if (!okUndo) return;
-    const data = pickExistingFields<LavorazioneUpdate>(before, ["mezzo_id", "stato", "priorita", "data_ingresso", "data_uscita", "note", "created_by"]);
-    try {
-      let rollbackUpdateLog: LogModificaRow | null = null;
-      if (Object.keys(data).length > 0) {
-        await updateLav.mutateAsync({ id: undoableLavLog.entita_id, data });
-        const generatedUpdate = await logService.getByEntita("lavorazioni", undoableLavLog.entita_id, 5);
-        rollbackUpdateLog = generatedUpdate.success
-          ? (generatedUpdate.data?.find((row) => row.id !== undoableLavLog.id && row.azione === "UPDATE") ?? null)
-          : null;
-      }
-      if (typeof before.addetto === "string") {
-        {
-          const prev = schedeStore;
-          const current = getOrCreateBundle(prev, undoableLavLog.entita_id);
-          if (current.ingresso) {
-            const updated = {
-              ...prev,
-              [undoableLavLog.entita_id]: {
-                ...current,
-                ingresso: {
-                  ...current.ingresso,
-                  updatedAt: new Date().toISOString(),
-                  updatedBy: authorName.trim() || "Operatore",
-                  campi: { ...current.ingresso.campi, addettoAccettazione: before.addetto as string },
-                },
-              },
-            };
-            persistSchedeAndSync(persistSchedeStore(updated, undoableLavLog.entita_id));
-          }
-        }
-      }
-      const undoLog = await logService.create({
-        entita: "lavorazioni",
-        entita_id: undoableLavLog.entita_id,
-        azione: "UNDO",
-        autore_id: user?.id ?? null,
-        payload: withUndoSessionPayload({
-          reverted_log_id: undoableLavLog.id,
-          before: payload.after ?? null,
-          after: before,
-        }),
-      });
-      if (rollbackUpdateLog) {
-        await logService.markReverted(rollbackUpdateLog.id, {
-          reverted_by: user?.id ?? null,
-          undo_log_id: undoLog.success ? undoLog.data?.id : null,
-          permission: "editWorkOrders",
-        });
-      }
-      await logService.markReverted(undoableLavLog.id, {
-        reverted_by: user?.id ?? null,
-        undo_log_id: undoLog.success ? undoLog.data?.id : null,
-        permission: "editWorkOrders",
-      });
-      await lavModificheLogQuery.refetch();
-      flashRow(undoableLavLog.entita_id);
-    } catch (e) {
-      gestToast.error(e, { module: "lavorazioni", action: "update" });
-    }
-  }
-
   const onPrintLavorazioniInCorso = useCallback(() => {
     void openPdfArtifact("lavorazioni-in-corso");
   }, []);
@@ -1796,10 +1711,6 @@ export function LavorazioniView() {
       <LavorazioniPageHeaderToolbar
         listRefreshBusy={listRefreshBusy}
         onRefresh={() => void refreshLavorazioniLists()}
-        canUndo={Boolean(undoableLavLog)}
-        undoDisabled={!canEditWorkOrders}
-        undoPending={mutPendingBlocking}
-        onUndo={() => void undoUltimaLavorazione()}
         onOpenLog={() => setLavLogOpen(true)}
         onPrint={onPrintLavorazioniInCorso}
         listViewMode={listViewMode}
@@ -1840,17 +1751,6 @@ export function LavorazioniView() {
           </div>
         ) : null}
 
-        {canEditWorkOrders ? (
-          <ShellCard title="Acquisizione digitale schede" className="space-y-3">
-            <SchedaBlankPdfActions />
-            <LavorazioniCaptureDropOverlay
-              enabled={canEditWorkOrders}
-              onUploaded={() => setCaptureRefreshKey((k) => k + 1)}
-            />
-            <DocumentCaptureHistoryPanel refreshKey={captureRefreshKey} />
-          </ShellCard>
-        ) : null}
-
         <LavorazioniListToolbar
           canEditWorkOrders={canEditWorkOrders}
           createdBy={createdBy}
@@ -1882,9 +1782,8 @@ export function LavorazioniView() {
           defaultCollapsed={false}
         >
           {listViewMode === "kanban" ? (
-            <div ref={kanbanLayoutRef} className={kanbanLayoutClassName}>
             <LavorazioniKanbanView
-              layout={kanbanLayout}
+              layout={kanbanViewportLayout}
               rows={attiveRowsFiltered}
               columns={statiInCorsoOpts}
               statiOpts={statiOpts}
@@ -1912,7 +1811,6 @@ export function LavorazioniView() {
                 setSchedeRow({ row, origine: "storico", initialTab: "panoramica", dialogSize: "compact" })
               }
             />
-            </div>
           ) : initialListLoading ? (
             <LoadingLavorazioniListSkeleton withToolbar={false} />
           ) : (
@@ -1986,6 +1884,7 @@ export function LavorazioniView() {
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
                     align="center"
+                    thClassName={lavTableColStatoAddettoInset}
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
                   <GlobalTableSortTh
@@ -2002,6 +1901,7 @@ export function LavorazioniView() {
                     sortColumn={sortColA}
                     sortPhase={sortPhaseA}
                     align="center"
+                    thClassName={lavTableColStatoAddettoInset}
                     onSort={(k) => cycleSort(sortColA, setSortColA, setSortPhaseA, k as SortKeyAtt)}
                   />
                   <GestionaleListTableActionsHead />
@@ -2074,6 +1974,13 @@ export function LavorazioniView() {
 
 
           {showPagerA ? <TablePagination page={pageA} pageCount={pageCountA} onPageChange={setPageA} label={labelA} /> : null}
+          {serverListPagination ? (
+            <ServerListLoadMore
+              hasNextPage={attiveQuery.hasNextPage}
+              isFetchingNextPage={attiveQuery.isFetchingNextPage}
+              controls={attiveQuery.controls}
+            />
+          ) : null}
             </>
           )}
         </ShellCard>
@@ -2164,6 +2071,7 @@ export function LavorazioniView() {
                     sortPhase={sortPhaseC}
                     align="center"
                     highlightWhenActive={false}
+                    thClassName={lavTableColStatoAddettoInset}
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
                   <GlobalTableSortTh
@@ -2180,6 +2088,7 @@ export function LavorazioniView() {
                     sortColumn={sortColC}
                     sortPhase={sortPhaseC}
                     align="center"
+                    thClassName={lavTableColStatoAddettoInset}
                     onSort={(k) => cycleSort(sortColC, setSortColC, setSortPhaseC, k as SortKeyCh)}
                   />
                   <GestionaleListTableActionsHead />
@@ -2226,6 +2135,13 @@ export function LavorazioniView() {
           ) : null}
 
           {showPagerC ? <TablePagination page={pageC} pageCount={pageCountC} onPageChange={setPageC} label={labelC} /> : null}
+          {serverListPagination && needsChiuseFetch ? (
+            <ServerListLoadMore
+              hasNextPage={chiuseQuery.hasNextPage}
+              isFetchingNextPage={chiuseQuery.isFetchingNextPage}
+              controls={chiuseQuery.controls}
+            />
+          ) : null}
           </>
           )}
         </ShellCard>

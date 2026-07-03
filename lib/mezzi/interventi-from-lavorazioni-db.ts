@@ -97,6 +97,6 @@ export function mezzoHaLavorazioneAttivaDb(m: MezzoGestito, rows: readonly Lavor
 }
 
 /** Lavorazione non eliminata (in corso o archiviata) collegata per identità mezzo. */
-export function mezzoHaLavorazioneCollegataDb(m: MezzoGestito, rows: LavorazioneListRow[]): boolean {
+export function mezzoHaLavorazioneCollegataDb(m: MezzoGestito, rows: readonly LavorazioneListRow[]): boolean {
   return rows.some((row) => lavorazioneCollegataMezzoDb(m, row));
 }

@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { invalidationJitterDelayMs } from "@/lib/sync/invalidation-jitter";
 import type { CabSyncEvent } from "@/lib/sync/cab-sync-bus";
 import {
   markEntitiesInvalidated,
@@ -164,7 +165,7 @@ export function enqueueInvalidateGestionaleTables(
   batch.timer = setTimeout(() => {
     batch.timer = null;
     flushInvalidateBatch(qc);
-  }, INVALIDATE_BATCH_WINDOW_MS);
+  }, INVALIDATE_BATCH_WINDOW_MS + invalidationJitterDelayMs());
 }
 
 export function enqueueInvalidateQueryKeys(
@@ -198,7 +199,7 @@ export function enqueueInvalidateQueryKeys(
   batch.timer = setTimeout(() => {
     batch!.timer = null;
     flushQueryKeyBatch(qc);
-  }, INVALIDATE_BATCH_WINDOW_MS);
+  }, INVALIDATE_BATCH_WINDOW_MS + invalidationJitterDelayMs());
 }
 
 export function flushAllInvalidateBatches(qc: QueryClient): void {

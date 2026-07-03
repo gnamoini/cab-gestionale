@@ -2,6 +2,10 @@
 
 import { useMemo } from "react";
 import { useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
+import { adaptLegacyToListQueryResult } from "@/lib/lavorazioni/adapt-legacy-list-result";
+import { useLavorazioniListV2 } from "@/lib/lavorazioni/use-lavorazioni-list-v2";
+import type { ListQueryResult } from "@/lib/domain/list-types";
+import { isServerListPaginationEnabled } from "@/lib/performance/list-pagination-rollout";
 import { lavorazioneSchedeRowsQueryKey } from "@/lib/schede/schede-domain-query-cache";
 import { useServiceQuery } from "@/src/hooks/use-service-query";
 import { useSharedEntityQuery } from "@/src/hooks/use-shared-entity-query";
@@ -55,8 +59,37 @@ type LavListOpts = Omit<
   clientPortal?: boolean;
 };
 
-/** Lista lavorazioni con filtri opzionali (chiave cache derivata da `stableLavorazioniFiltersKey`). */
-export function useLavorazioniList(filters?: LavorazioneFilters, options?: LavListOpts) {
+export type { ListQueryResult };
+
+/** Lista lavorazioni — facade R-10: sempre ListQueryResult; flag sceglie V2 vs legacy adapter. */
+export function useLavorazioniList(
+  filters?: LavorazioneFilters,
+  options?: LavListOpts,
+): ListQueryResult<LavorazioneListRow> {
+  const v2Enabled = isServerListPaginationEnabled();
+  const clientPortal = options?.clientPortal === true;
+  const { clientPortal: _cp, ...queryOpts } = options ?? {};
+  const enabled = queryOpts.enabled !== false;
+
+  const legacyQuery = useLavorazioniListLegacy(filters, {
+    ...queryOpts,
+    clientPortal,
+    enabled: !v2Enabled && enabled,
+  });
+
+  const staleMs =
+    typeof queryOpts.staleTime === "number" ? queryOpts.staleTime : LA_STALE_MS;
+
+  const v2Result = useLavorazioniListV2(filters, {
+    enabled: v2Enabled && enabled,
+    clientPortal,
+    staleTime: staleMs,
+  });
+
+  return v2Enabled ? v2Result : adaptLegacyToListQueryResult(legacyQuery);
+}
+
+function useLavorazioniListLegacy(filters?: LavorazioneFilters, options?: LavListOpts) {
   const fk = stableLavorazioniFiltersKey(filters);
   const clientPortal = options?.clientPortal === true;
   const { clientPortal: _cp, ...queryOpts } = options ?? {};

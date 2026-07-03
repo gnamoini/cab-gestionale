@@ -17,6 +17,7 @@ import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { isBootInvestigationEnabled, logBoot, trackRedirect } from "@/lib/observability/boot-investigation";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
+import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 
 const RBAC_LOADING_FAILSAFE_MS = 8_000;
 
@@ -103,7 +104,7 @@ export function RbacPageGuard({ children }: { children: ReactNode }) {
     if (!allowed) {
       const to = `${ACCESS_DENIED_PATH}?from=${encodeURIComponent(pathname)}`;
       trackRedirect(pathname, to, "rbac_denied", "rbac");
-      router.replace(to);
+      deferredRouterReplace(router, to);
     }
   }, [allowed, checkingPerms, pathname, router, sessionReady]);
 

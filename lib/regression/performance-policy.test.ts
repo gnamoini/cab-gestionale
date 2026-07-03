@@ -54,6 +54,7 @@ const lazyPdf = read("lib/pdf/lazy-pdf-modules.ts");
 assert.match(lazyPdf, /importLavorazioniListPdf/);
 assert.match(lazyPdf, /importPreventiviPdf/);
 assert.match(lazyPdf, /importDipendentiPdfSections/);
+assert.match(read("lib/pdf/pdf-worker-pilot.ts"), /runPdfGenerationInWorker/);
 
 const lavorazioniViewPdf = read("components/gestionale/lavorazioni/lavorazioni-view.tsx");
 assert.doesNotMatch(
@@ -150,6 +151,14 @@ assert.doesNotMatch(lavListFetch, /return `\*,/, "lavorazioni list select must n
 assert.match(lavorazioniView, /fetchMode:\s*"light"/);
 assert.match(lavorazioniView, /needsChiuseFetch/);
 assert.match(lavorazioniView, /useLavorazioneProfileNamesQuery/);
+assert.match(lavorazioniView, /ServerListLoadMore/);
+
+const dashboardMetrics = read("src/hooks/view/use-dashboard-metrics.ts");
+assert.match(dashboardMetrics, /useLavorazioniReportSlice/);
+assert.doesNotMatch(dashboardMetrics, /includeMezzo:\s*true/, "dashboard must not full-list embed mezzo");
+
+const mezziView = read("components/gestionale/mezzi/mezzi-view.tsx");
+assert.match(mezziView, /useLavorazioniReportSlice/);
 
 const reportLiveData = read("lib/report/use-report-live-data.ts");
 assert.doesNotMatch(reportLiveData, /LAV_ARCHIVIO_FILTERS/, "report must use single lavorazioni fetch");

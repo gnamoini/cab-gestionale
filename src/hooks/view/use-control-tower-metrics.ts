@@ -7,29 +7,94 @@ import {
   composeControlTowerSlices,
   filterControlTowerKpiClusters,
 } from "@/lib/dashboard/control-tower-selectors";
+import {
+  getControlTowerCurrentWeekRange,
+  getControlTowerPreviousWeekSameWindowRange,
+} from "@/lib/dashboard/control-tower-time-ranges";
 import { resolveVisibleDashboardWidgets } from "@/lib/dashboard/dashboard-widget-registry";
 import { useDashboardMetrics } from "@/src/hooks/view/use-dashboard-metrics";
 import { usePreventiviRecordsQuery } from "@/src/hooks/gestionale/use-preventivi-records-query";
 import { useInvoicesQuery } from "@/src/hooks/gestionale/use-invoices-query";
-import { useLogListQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
+import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
 import { GESTIONALE_LOG_FEED_LIMIT } from "@/lib/react-query/query-layer-policies";
 import { useViewQueryOpts } from "@/lib/view/view-query-opts";
-import { monthKeyFromYmd } from "@/lib/report/date-ranges";
-import { todayDateYmd } from "@/lib/dipendenti/timesheet-month";
-import { useDashboardPromemoria } from "@/src/hooks/use-dashboard-promemoria";
-import type { DashboardPromemoriaMonthKey } from "@/lib/dashboard/dashboard-promemoria-types";
+import { ymdFromDate } from "@/lib/report/date-ranges";
 import {
   pickDashboardPriorityLavorazioneIds,
   DASHBOARD_SCHEde_PREFETCH_LIMIT,
 } from "@/lib/view/dashboard-widgets-selectors";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
+import { useGlobalOptions } from "@/src/hooks/use-global-options";
+import { useServiceQuery } from "@/src/hooks/use-service-query";
+import { QK } from "@/src/lib/react-query/query-keys";
+import { dipendentiTimesheetService } from "@/src/services/dipendenti-timesheet.service";
+import type { DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
+import type { DashboardMagMovementRow } from "@/lib/view/dashboard-widgets-selectors";
+import type { RicambioMagazzino } from "@/lib/magazzino/types";
+import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
+import type { EffectivePermissionsSnapshot } from "@/src/lib/runtime/truth-layer/types";
+import type { DashboardWidgetDefinition } from "@/lib/dashboard/dashboard-widget-registry";
 
-export function useControlTowerMetrics() {
+export type ControlTowerDashSlice = {
+  globalOpts: ReturnType<typeof useGlobalOptions>;
+  lavRows: readonly LavorazioneListRow[];
+  ricambi: readonly RicambioMagazzino[];
+  magRecentMovements: readonly DashboardMagMovementRow[];
+  isLoading: boolean;
+};
+
+export function controlTowerDashSliceFromMetrics(
+  dash: ReturnType<typeof useDashboardMetrics>,
+): ControlTowerDashSlice {
+  return {
+    globalOpts: dash.globalOpts,
+    lavRows: dash.lavQuery.data ?? [],
+    ricambi: dash.magQuery.data ?? [],
+    magRecentMovements: dash.magRecentMovements,
+    isLoading: dash.isLoading,
+  };
+}
+
+/** Fallback when no dashboard widgets are visible — no lav/mag fetch. */
+export function controlTowerEmptyDashSlice(
+  globalOpts: ReturnType<typeof useGlobalOptions>,
+): ControlTowerDashSlice {
+  return {
+    globalOpts,
+    lavRows: [],
+    ricambi: [],
+    magRecentMovements: [],
+    isLoading: false,
+  };
+}
+
+export type ControlTowerShell = {
+  staging: boolean;
+  rbacLoading: boolean;
+  modules: EffectivePermissionsSnapshot["modules"] | undefined;
+  visibleWidgets: DashboardWidgetDefinition[];
+  visibleIds: Set<string>;
+  canLavorazioni: boolean;
+  canMagazzino: boolean;
+  canPreventivi: boolean;
+  canFatturazione: boolean;
+  canDipendenti: boolean;
+  adminBacklogVisible: boolean;
+  activityVisible: boolean;
+  headerVisible: boolean;
+  alertsVisible: boolean;
+  wipVisible: boolean;
+  globalOpts: ReturnType<typeof useGlobalOptions>;
+  dipendentiOpts: ReturnType<typeof useGlobalOptions>["dipendenti"];
+};
+
+export function useControlTowerShell(): ControlTowerShell {
   const staging = isStagingPublicSlice();
-  const viewOpts = useViewQueryOpts();
   const { snapshot, isLoading: rbacLoading } = useEffectivePermissions();
   const modules = snapshot?.modules;
+  const globalOpts = useGlobalOptions({ debugTag: "useControlTowerMetrics" });
+  const { dipendenti: dipendentiOpts } = globalOpts;
 
   const visibleWidgets = useMemo(
     () => (modules ? resolveVisibleDashboardWidgets({ modules, staging }) : []),
@@ -37,23 +102,53 @@ export function useControlTowerMetrics() {
   );
   const visibleIds = useMemo(() => new Set(visibleWidgets.map((w) => w.id)), [visibleWidgets]);
 
-  const canLavorazioni = modules ? moduleAllows(modules, "lavorazioni", "read") : false;
-  const canMagazzino = modules ? moduleAllows(modules, "magazzino", "read") : false;
-  const canPreventivi = modules ? moduleAllows(modules, "preventivi", "read") : false;
-  const canFatturazione = modules ? moduleAllows(modules, "fatturazione", "read") : false;
+  return {
+    staging,
+    rbacLoading,
+    modules,
+    visibleWidgets,
+    visibleIds,
+    canLavorazioni: modules ? moduleAllows(modules, "lavorazioni", "read") : false,
+    canMagazzino: modules ? moduleAllows(modules, "magazzino", "read") : false,
+    canPreventivi: modules ? moduleAllows(modules, "preventivi", "read") : false,
+    canFatturazione: modules ? moduleAllows(modules, "fatturazione", "read") : false,
+    canDipendenti: modules ? moduleAllows(modules, "dipendenti", "read") : false,
+    adminBacklogVisible: visibleIds.has("admin-backlog"),
+    activityVisible: visibleIds.has("recent-activity"),
+    headerVisible: visibleIds.has("operational-kpi-header"),
+    alertsVisible: visibleIds.has("alerts-anomalies"),
+    wipVisible: visibleIds.has("lavorazioni-kpi"),
+    globalOpts,
+    dipendentiOpts,
+  };
+}
 
-  const adminBacklogVisible = visibleIds.has("admin-backlog");
-  const activityVisible = visibleIds.has("recent-activity");
-  const calendarVisible = visibleIds.has("operational-calendar");
-  const headerVisible = visibleIds.has("operational-kpi-header");
-  const alertsVisible = visibleIds.has("alerts-anomalies");
-  const wipVisible = visibleIds.has("lavorazioni-kpi");
+export function useControlTowerMetricsValue(shell: ControlTowerShell, dash: ControlTowerDashSlice) {
+  const viewOpts = useViewQueryOpts();
+  const {
+    staging,
+    rbacLoading,
+    modules,
+    visibleWidgets,
+    canLavorazioni,
+    canMagazzino,
+    canPreventivi,
+    canFatturazione,
+    canDipendenti,
+    adminBacklogVisible,
+    activityVisible,
+    headerVisible,
+    alertsVisible,
+    wipVisible,
+    dipendentiOpts,
+  } = shell;
 
-  const dash = useDashboardMetrics();
-
-  const needAdminData = !staging && adminBacklogVisible && (canPreventivi || canFatturazione);
-  const preventiviQ = usePreventiviRecordsQuery(needAdminData && canPreventivi);
-  const invoicesQ = useInvoicesQuery(needAdminData && canFatturazione);
+  const needAdminData =
+    !staging &&
+    ((adminBacklogVisible && canFatturazione) || (headerVisible && (canPreventivi || canFatturazione)));
+  const preventiviQ = usePreventiviRecordsQuery(!staging && headerVisible && canPreventivi);
+  const needInvoices = !staging && (adminBacklogVisible || headerVisible) && canFatturazione;
+  const invoicesQ = useInvoicesQuery(needInvoices);
 
   const activityEnabled = !staging && activityVisible;
   const lavLogsQ = useLogListQuery(
@@ -77,20 +172,24 @@ export function useControlTowerMetrics() {
     { enabled: activityEnabled && canFatturazione, ...viewOpts },
   );
 
-  const mezziQ = useMezziListQuery(undefined, {
-    ...viewOpts,
-    enabled: !staging && headerVisible && canLavorazioni,
-    staleTime: 60_000,
-  });
+  const timesheetRange = useMemo(() => {
+    const cur = getControlTowerCurrentWeekRange();
+    const prev = getControlTowerPreviousWeekSameWindowRange();
+    return { from: ymdFromDate(prev.start), to: ymdFromDate(cur.end) };
+  }, []);
 
-  const monthKey = (monthKeyFromYmd(todayDateYmd()) ?? "1970-01") as DashboardPromemoriaMonthKey;
-  const promemoriaQ = useDashboardPromemoria(!staging && calendarVisible ? monthKey : ("0000-00" as DashboardPromemoriaMonthKey));
+  const needTimesheet = !staging && headerVisible && canDipendenti;
+  const timesheetQ = useServiceQuery(
+    [...QK.dipendentiTimesheetEntries, "control-tower", timesheetRange.from, timesheetRange.to] as const,
+    () => dipendentiTimesheetService.listEntriesForRange(timesheetRange.from, timesheetRange.to),
+    { enabled: needTimesheet, ...viewOpts },
+  );
 
   const schedeIds = useMemo(
-    () => pickDashboardPriorityLavorazioneIds(dash.lavQuery.data ?? [], DASHBOARD_SCHEde_PREFETCH_LIMIT),
-    [dash.lavQuery.data],
+    () => pickDashboardPriorityLavorazioneIds(dash.lavRows, DASHBOARD_SCHEde_PREFETCH_LIMIT),
+    [dash.lavRows],
   );
-  const needSchede = !staging && (alertsVisible || wipVisible) && canLavorazioni;
+  const needSchede = !staging && (alertsVisible || wipVisible || activityVisible) && canLavorazioni;
   const { store: schedeStore } = useSchedeBundlesQuery(needSchede, { lavorazioneIds: schedeIds });
 
   const adminLogRows = useMemo(() => {
@@ -103,23 +202,25 @@ export function useControlTowerMetrics() {
   const slices = useMemo(() => {
     if (!modules) return null;
     const composed = composeControlTowerSlices({
-      lavRows: dash.lavQuery.data ?? [],
+      lavRows: dash.lavRows,
       schedeStore,
       defaultAddetto: dash.globalOpts.lavorazioni.addetti[0] ?? "",
-      ricambi: dash.magQuery.data ?? [],
+      ricambi: dash.ricambi,
       magMovements: dash.magRecentMovements,
       movimentiLogs: movLogsQ.data ?? [],
-      mezzi: mezziQ.data ?? [],
       preventivi: preventiviQ.records,
       invoices: invoicesQ.invoices,
       logLavorazioni: lavLogsQ.data ?? [],
       logMagazzino: magLogsQ.data ?? [],
       logMovimenti: movLogsQ.data ?? [],
       logAdmin: adminLogRows,
-      promemoria: calendarVisible ? promemoriaQ.rows : [],
+      timesheetEntries: (timesheetQ.data ?? []) as DipendenteTimesheetEntryRow[],
+      tipiAssenza: dipendentiOpts.tipiAssenza,
+      statiLavorazione: dash.globalOpts.lavorazioni.stati,
       includeLavorazioni: canLavorazioni,
       includeMagazzino: canMagazzino,
       includeAdmin: needAdminData,
+      includeDipendenti: needTimesheet,
     });
     return {
       ...composed,
@@ -127,44 +228,55 @@ export function useControlTowerMetrics() {
         lavorazioni: canLavorazioni,
         magazzino: canMagazzino,
         admin: needAdminData,
+        dipendenti: canDipendenti,
       }),
     };
   }, [
     modules,
-    dash.lavQuery.data,
+    dash.lavRows,
     dash.globalOpts.lavorazioni.addetti,
-    dash.magQuery.data,
+    dash.ricambi,
     dash.magRecentMovements,
     schedeStore,
     movLogsQ.data,
-    mezziQ.data,
     preventiviQ.records,
     invoicesQ.invoices,
     lavLogsQ.data,
     magLogsQ.data,
     adminLogRows,
-    calendarVisible,
-    promemoriaQ.rows,
+    timesheetQ.data,
+    dipendentiOpts.tipiAssenza,
+    dash.globalOpts.lavorazioni.stati,
     canLavorazioni,
     canMagazzino,
     needAdminData,
+    canDipendenti,
+    needTimesheet,
   ]);
 
   const isLoading =
     rbacLoading ||
     dash.isLoading ||
-    (needAdminData && canPreventivi && preventiviQ.isLoading) ||
-    (needAdminData && canFatturazione && invoicesQ.isLoading) ||
-    (headerVisible && canLavorazioni && mezziQ.isLoading) ||
+    (!staging && headerVisible && canPreventivi && preventiviQ.isLoading) ||
+    (needInvoices && invoicesQ.isLoading) ||
+    (needTimesheet && timesheetQ.isPending) ||
     (activityEnabled && (lavLogsQ.isLoading || magLogsQ.isLoading || movLogsQ.isLoading));
 
   return {
     staging,
     visibleWidgets,
     slices,
-    dash,
     isLoading,
     canPreventivi,
     canFatturazione,
+    canLavorazioni,
+    canMagazzino,
   };
+}
+
+/** @deprecated Prefer ControlTowerMetricsProvider conditional mount. */
+export function useControlTowerMetrics() {
+  const shell = useControlTowerShell();
+  const dash = controlTowerDashSliceFromMetrics(useDashboardMetrics());
+  return useControlTowerMetricsValue(shell, dash);
 }

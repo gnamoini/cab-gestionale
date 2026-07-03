@@ -3,6 +3,7 @@
 import {
   cloneElement,
   isValidElement,
+  useEffect,
   useRef,
   type FocusEvent,
   type MouseEvent,
@@ -81,7 +82,7 @@ export function Tooltip({
     : content?.trim()
       ? tooltipDisplayContent(content)
       : content;
-  const { open, visible, coords, triggerProps } = useTooltip({
+  const { open, visible, coords, triggerProps, hideImmediate } = useTooltip({
     content: displayContent,
     disabled,
     delayMs,
@@ -91,6 +92,8 @@ export function Tooltip({
     anchorRef,
     contentRef,
   });
+
+  useEffect(() => () => hideImmediate(), [hideImmediate]);
 
   if (!isValidElement(children)) {
     return children as ReactNode;

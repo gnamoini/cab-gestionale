@@ -53,6 +53,7 @@ export function useTooltip({
   open: boolean;
   visible: boolean;
   coords: TooltipCoords | null;
+  hideImmediate: () => void;
   triggerProps: {
     onMouseEnter: (e: MouseEvent<HTMLElement>) => void;
     onMouseLeave: (e: MouseEvent<HTMLElement>) => void;
@@ -299,6 +300,7 @@ export function useTooltip({
     open,
     visible,
     coords,
+    hideImmediate,
     triggerProps: {
       onMouseEnter,
       onMouseLeave,

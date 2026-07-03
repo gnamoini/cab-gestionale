@@ -139,6 +139,7 @@ export const REGRESSION_CORE: readonly string[] = [
   "lib/regression/client-portal-contattaci-audit.test.ts",
   "lib/regression/client-portal-modal-ux-audit.test.ts",
   "lib/regression/client-portal-mobile-cards-audit.test.ts",
+  "lib/lavorazioni/client-portal-v2-display.test.ts",
   "lib/regression/rollout-state-machine.test.ts",
   "lib/regression/rollout-controller.test.ts",
   "lib/regression/auto-rollback-engine.test.ts",

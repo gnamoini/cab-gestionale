@@ -31,7 +31,6 @@ import { ordiniFornitoriListQueryKey } from "@/lib/render/query-key-factory";
 import {
   GESTIONALE_LIST_DESKTOP_ONLY_CLASS,
   GESTIONALE_LIST_MOBILE_ONLY_CLASS,
-  useGestionaleListLayout,
 } from "@/lib/ui/use-gestionale-list-layout";
 import { useClientPagination } from "@/lib/ui/use-client-pagination";
 import { useResponsiveListPageSize } from "@/lib/ui/use-responsive-list-page-size";
@@ -144,7 +143,12 @@ export function OrdiniFornitoriView() {
   const { page, setPage, pageCount, sliceItems, showPager, label } = useClientPagination(sortedRows.length, pageSize);
   const pageRows = sliceItems(sortedRows);
 
-  const { layout: listLayout } = useGestionaleListLayout();
+  const hasOrdiniListFilters =
+    ordiniFornitoriFiltersActive(filters) || searchInput.trim().length > 0;
+  const tableEmptyMessage = hasOrdiniListFilters
+    ? "Nessun ordine corrisponde alla ricerca o ai filtri selezionati."
+    : "Nessun ordine in archivio.";
+
   const searchSuggestionPool = useMemo(() => buildOrdiniFornitoriSearchSuggestions(records), [records]);
 
   function onSortMain(k: OrdineFornitoreSortKey) {
@@ -301,37 +305,39 @@ export function OrdiniFornitoriView() {
         </section>
 
         {isLoading ? (
-          listLayout === "desktop" ? (
-            <LoadingTableSkeleton preset="generic" wrapClassName="mt-4" visibilityClass={GESTIONALE_LIST_DESKTOP_ONLY_CLASS} actionButtonCount={3} />
-          ) : (
-            <div className="mt-4 space-y-3">
+          <>
+            <LoadingTableSkeleton
+              preset="generic"
+              wrapClassName={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
+              actionButtonCount={3}
+            />
+            <div className={`mt-4 space-y-3 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
               {Array.from({ length: 3 }).map((_, i) => (
                 <LoadingCardSkeleton key={i} minHeightClass="min-h-[120px]" rows={3} />
               ))}
             </div>
-          )
-        ) : listLayout === "desktop" ? (
-          <GestionaleListTable masterScrollScope={false} wrapClassName={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
-            headRow={
-              <>
-                <GlobalTableSortTh label="Numero" columnKey="numero" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
-                <GlobalTableSortTh label="Data" columnKey="dataOrdine" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
-                <GlobalTableSortTh label="Fornitore" columnKey="fornitore" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
-                <GlobalTableSortTh label="Destinazione" columnKey="destinazione" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
-                <GlobalTableSortTh label="Totale" columnKey="totale" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} align="right" />
-                <GlobalTableSortTh label="Stato" columnKey="status" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
-                <GestionaleListTableActionsHead />
-              </>
-            }
-          >
-              {pageRows.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className={gestionaleListTableMobileEmptyClass}>
-                    Nessun ordine trovato.
-                  </td>
-                </tr>
-              ) : (
-                pageRows.map((o) => (
+          </>
+        ) : (
+          <>
+            <GestionaleListTable
+              masterScrollScope={false}
+              wrapClassName={`mt-4 ${GESTIONALE_LIST_DESKTOP_ONLY_CLASS}`}
+              headRow={
+                <>
+                  <GlobalTableSortTh label="Numero" columnKey="numero" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
+                  <GlobalTableSortTh label="Data" columnKey="dataOrdine" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
+                  <GlobalTableSortTh label="Fornitore" columnKey="fornitore" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
+                  <GlobalTableSortTh label="Destinazione" columnKey="destinazione" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
+                  <GlobalTableSortTh label="Totale" columnKey="totale" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} align="right" />
+                  <GlobalTableSortTh label="Stato" columnKey="status" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSortMain} />
+                  <GestionaleListTableActionsHead />
+                </>
+              }
+              empty={pageRows.length === 0}
+              emptyMessage={tableEmptyMessage}
+              colSpan={7}
+            >
+              {pageRows.map((o) => (
                   <tr key={o.id} className={gestionaleListTableRowClass}>
                     <td className={`whitespace-nowrap ${gestionaleListTableTd} font-mono text-xs font-semibold tabular-nums`}>
                       {o.numero || "—"}
@@ -387,15 +393,14 @@ export function OrdiniFornitoriView() {
                       </div>
                     </td>
                   </tr>
-                ))
-              )}
-          </GestionaleListTable>
-        ) : (
-          <div className={`mt-4 space-y-3 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
-            {pageRows.length === 0 ? (
-              <p className={gestionaleListTableMobileEmptyClass}>Nessun ordine trovato.</p>
-            ) : (
-              pageRows.map((o) => (
+                ))}
+            </GestionaleListTable>
+
+            <div className={`mt-4 space-y-3 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+              {pageRows.length === 0 ? (
+                <p className={gestionaleListTableMobileEmptyClass}>{tableEmptyMessage}</p>
+              ) : (
+                pageRows.map((o) => (
                 <CardMobile key={o.id}>
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
@@ -420,7 +425,8 @@ export function OrdiniFornitoriView() {
                 </CardMobile>
               ))
             )}
-          </div>
+            </div>
+          </>
         )}
 
         {showPager ? (

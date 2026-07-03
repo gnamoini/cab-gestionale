@@ -77,8 +77,13 @@ const lgViews: Array<{
 }> = [
   {
     file: "components/gestionale/lavorazioni/lavorazioni-kanban-view.tsx",
-    mustHave: [/layout === "mobile"/, /LavorazioniKanbanMobileBoard/],
-    mustNot: [/lg:hidden/, /hidden lg:block/],
+    mustHave: [/layout === "mobile"/, /layout === "desktop"/, /layout === undefined/, /LavorazioniKanbanMobileBoard/],
+    mustNot: [/lg:hidden/, /hidden lg:block/, /useGestionaleListLayout/],
+  },
+  {
+    file: "components/gestionale/lavorazioni/lavorazioni-view.tsx",
+    mustHave: [/useKanbanViewportLayout/],
+    mustNot: [/kanbanLayoutRef/, /useGestionaleListLayout\(\{ tier: "lg" \}\)/],
   },
   {
     file: "components/dashboard/security/security-users-table.tsx",

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
+  assertKanbanPartitionInvariant,
   compareKanbanCards,
   isKanbanCompletateRow,
   isKanbanVisible,
+  partitionKanbanByColumn,
   partitionKanbanRows,
   sortKanbanCards,
 } from "@/lib/lavorazioni/kanban-operational";
@@ -14,6 +16,15 @@ const STATI: StatoLavorazioneConfig[] = [
   { id: "in_lavorazione", label: "In lavorazione", color: "#0284c7" },
   { id: "completata", label: "Completata", color: "#15803d", closed: true },
 ];
+
+const STATI_WITH_ATTESA: StatoLavorazioneConfig[] = [
+  { id: "accettazione", label: "Accettazione", color: "#52525b" },
+  { id: "attesa_preventivo", label: "Attesa preventivo", color: "#ea580c" },
+  { id: "in_lavorazione", label: "In lavorazione", color: "#0284c7" },
+  { id: "completata", label: "Completata", color: "#15803d", closed: true },
+];
+
+const COLUMNS_IN_CORSO: StatoLavorazioneConfig[] = STATI_WITH_ATTESA.filter((s) => s.id !== "completata");
 
 function row(overrides: Partial<LavorazioneListRow> & { id: string }): LavorazioneListRow {
   const now = "2026-01-15T10:00:00.000Z";
@@ -132,6 +143,39 @@ function row(overrides: Partial<LavorazioneListRow> & { id: string }): Lavorazio
   for (const r of completate) {
     assert.equal(opIds.has(r.id), false, `duplicate id in both buckets: ${r.id}`);
   }
+}
+
+// Caso 8: partitionKanbanByColumn — attesa preventivo in nested subset only
+{
+  const rawRowsFixture: LavorazioneListRow[] = [
+    row({ id: "acc1", stato: "accettazione" }),
+    row({ id: "ap1", stato: "attesa_preventivo" }),
+    row({ id: "lav1", stato: "in_lavorazione" }),
+  ];
+  const partition = partitionKanbanByColumn(rawRowsFixture, COLUMNS_IN_CORSO, STATI_WITH_ATTESA);
+  assert.deepEqual(partition.attesaPreventivoNested.map((r) => r.id), ["ap1"]);
+  assert.deepEqual(partition.byStato.get("accettazione")?.map((r) => r.id), ["acc1"]);
+  assert.deepEqual(partition.byStato.get("in_lavorazione")?.map((r) => r.id), ["lav1"]);
+  assert.equal(partition.unmapped.length, 0);
+  assertKanbanPartitionInvariant(partition, rawRowsFixture, STATI_WITH_ATTESA);
+}
+
+// Caso 9: partitionKanbanByColumn — stato sconosciuto → unmapped only
+{
+  const rawRowsFixture: LavorazioneListRow[] = [row({ id: "unk1", stato: "stato_inesistente_xyz" })];
+  const partition = partitionKanbanByColumn(rawRowsFixture, COLUMNS_IN_CORSO, STATI_WITH_ATTESA);
+  assert.deepEqual(partition.unmapped.map((r) => r.id), ["unk1"]);
+  assert.equal(partition.attesaPreventivoNested.length, 0);
+  assert.equal([...partition.byStato.values()].flat().length, 0);
+  assertKanbanPartitionInvariant(partition, rawRowsFixture, STATI_WITH_ATTESA);
+}
+
+// Caso 10: unmapped sempre presente (anche vuoto)
+{
+  const rawRowsFixture: LavorazioneListRow[] = [row({ id: "op1", stato: "in_lavorazione" })];
+  const partition = partitionKanbanByColumn(rawRowsFixture, COLUMNS_IN_CORSO, STATI_WITH_ATTESA);
+  assert.ok(Array.isArray(partition.unmapped));
+  assert.equal(partition.unmapped.length, 0);
 }
 
 console.log("kanban-operational.test.ts OK");

@@ -71,3 +71,31 @@ export function reportCompareToneClass(tone: ReportCompareTone): string {
     ? "text-[color:color-mix(in_srgb,var(--cab-success)_92%,var(--cab-text))]"
     : "text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))]";
 }
+
+/** Freccia semantica + tono (rispetta `invert` per metriche dove meno è meglio). */
+export function reportArrowAndTone(
+  deltaPct: number | null,
+  invert?: boolean,
+): { arrow: string; tone: ReportCompareTone } {
+  if (deltaPct == null || !Number.isFinite(deltaPct)) return { arrow: "→", tone: "flat" };
+  if (deltaPct === 0) return { arrow: "→", tone: "flat" };
+  if (invert) {
+    if (deltaPct < 0) return { arrow: "↑", tone: "up" };
+    return { arrow: "↓", tone: "down" };
+  }
+  if (deltaPct > 0) return { arrow: "↑", tone: "up" };
+  return { arrow: "↓", tone: "down" };
+}
+
+/** Pill comparazione KPI — bordo e sfondo tintati dal tono. */
+export function reportCompareBadgeClass(tone: ReportCompareTone): string {
+  const base =
+    "inline-flex shrink-0 items-center gap-1 rounded-md border px-1.5 py-0.5 text-[11px] font-semibold tabular-nums";
+  if (tone === "flat") {
+    return `${base} border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_60%,var(--cab-card))] text-[color:var(--cab-text-muted)]`;
+  }
+  if (tone === "up") {
+    return `${base} border-[color:color-mix(in_srgb,var(--cab-success)_38%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-success)_12%,var(--cab-card))] text-[color:color-mix(in_srgb,var(--cab-success)_92%,var(--cab-text))]`;
+  }
+  return `${base} border-[color:color-mix(in_srgb,var(--cab-danger)_38%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-card))] text-[color:color-mix(in_srgb,var(--cab-danger)_92%,var(--cab-text))]`;
+}

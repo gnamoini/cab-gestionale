@@ -52,11 +52,14 @@ export const DASHBOARD_WIDGET_REGISTRY: readonly DashboardWidgetDefinition[] = [
   { id: "admin-backlog", section: "admin", order: 30, layout: "half" },
   { id: "magazzino-kpi", section: "magazzino", order: 40, layout: "half", requiredModule: "magazzino", hideInStaging: true },
   { id: "recent-activity", section: "activity", order: 50, layout: "full", hideInStaging: true },
-  { id: "operational-calendar", section: "calendar", order: 60, layout: "full" },
   { id: "local-notes", section: "optional", order: 70, layout: "half" },
 ] as const;
 
-const LEGACY_WIDGET_IDS: readonly DashboardWidgetId[] = ["recent-lavorazioni", "recent-ricambi"];
+const LEGACY_WIDGET_IDS: readonly DashboardWidgetId[] = [
+  "recent-lavorazioni",
+  "recent-ricambi",
+  "operational-calendar",
+];
 
 function isWidgetVisible(
   def: DashboardWidgetDefinition,

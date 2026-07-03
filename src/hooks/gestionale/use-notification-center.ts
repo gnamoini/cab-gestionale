@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import type { InboxCursor, InboxNotificationRow } from "@/lib/notifications/notification-types";
@@ -75,23 +75,10 @@ export function useNotificationCenter(drawerOpen = false) {
   );
 
   const unreadCount = unreadQuery.data ?? 0;
-  const readCount = useMemo(
-    () => notifications.filter((n) => !n.is_unread).length,
-    [notifications],
-  );
 
   const refresh = useCallback(async () => {
     await Promise.all([inboxQuery.refetch(), unreadQuery.refetch()]);
   }, [inboxQuery, unreadQuery]);
-
-  const markNotificationRead = useCallback(
-    async (row: InboxNotificationRow) => {
-      if (!enabled || !row.is_unread) return;
-      await notificationsService.markRead(row.id);
-      await refresh();
-    },
-    [enabled, refresh],
-  );
 
   const markAllRead = useCallback(async () => {
     if (!enabled) return;
@@ -105,6 +92,18 @@ export function useNotificationCenter(drawerOpen = false) {
     if (total > 0) await refresh();
   }, [enabled, refresh]);
 
+  const markedAllOnOpenRef = useRef(false);
+
+  useEffect(() => {
+    if (!drawerOpen) {
+      markedAllOnOpenRef.current = false;
+      return;
+    }
+    if (!enabled || markedAllOnOpenRef.current) return;
+    markedAllOnOpenRef.current = true;
+    void markAllRead();
+  }, [drawerOpen, enabled, markAllRead]);
+
   const dismissNotification = useCallback(
     async (row: InboxNotificationRow) => {
       if (!enabled) return;
@@ -114,12 +113,28 @@ export function useNotificationCenter(drawerOpen = false) {
     [enabled, refresh],
   );
 
-  const removeReadNotifications = useCallback(async () => {
-    if (!enabled) return;
-    const readRows = notifications.filter((n) => !n.is_unread);
-    await Promise.all(readRows.map((r) => notificationsService.dismiss(r.id)));
-    await refresh();
-  }, [enabled, notifications, refresh]);
+  const [isDismissingAll, setIsDismissingAll] = useState(false);
+
+  const dismissAllNotifications = useCallback(async () => {
+    if (!enabled || isDismissingAll) return 0;
+    setIsDismissingAll(true);
+    try {
+      let total = 0;
+      for (let i = 0; i < 10; i++) {
+        const res = await notificationsService.listInbox({ limit: 200, cursor: null });
+        if (!res.success) break;
+        const rows = res.data ?? [];
+        if (rows.length === 0) break;
+        const results = await Promise.all(rows.map((row) => notificationsService.dismiss(row.id)));
+        total += results.filter((r) => r.success).length;
+        if (rows.length < 200) break;
+      }
+      if (total > 0) await refresh();
+      return total;
+    } finally {
+      setIsDismissingAll(false);
+    }
+  }, [enabled, isDismissingAll, refresh]);
 
   const loadMore = useCallback(() => {
     if (inboxQuery.hasNextPage && !inboxQuery.isFetchingNextPage) {
@@ -149,15 +164,12 @@ export function useNotificationCenter(drawerOpen = false) {
   return {
     notifications,
     unreadCount,
-    readCount,
     enabled,
     mode,
     isLoading: inboxQuery.isLoading || unreadQuery.isLoading || permsLoading,
-    isUnread: (row: InboxNotificationRow) => row.is_unread,
-    markNotificationRead,
-    markAllRead,
     dismissNotification,
-    removeReadNotifications,
+    dismissAllNotifications,
+    isDismissingAll,
     loadMore,
     hasMore: Boolean(inboxQuery.hasNextPage),
     isLoadingMore: inboxQuery.isFetchingNextPage,

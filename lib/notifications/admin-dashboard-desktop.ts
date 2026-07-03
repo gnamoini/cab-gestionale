@@ -17,8 +17,8 @@ import {
   showDesktopAdminNotification,
 } from "@/lib/lavorazioni/desktop-notifications";
 import {
-  DIPENDENTI_PRESENZE_REMINDER_DESKTOP_TITLE,
   formatDipendentiPresenzeReminderDesktopBody,
+  formatDipendentiPresenzeReminderTitle,
 } from "@/lib/dipendenti/dipendenti-presenze-reminder";
 import {
   formatLavorazioneCompletataToastMessage,
@@ -103,8 +103,8 @@ export function adminDashboardNotificationDesktopPayload(
   }
   if (isDipendentiPresenzeReminderNotification(notification)) {
     return {
-      title: DIPENDENTI_PRESENZE_REMINDER_DESKTOP_TITLE,
-      body: formatDipendentiPresenzeReminderDesktopBody(notification.dateYmd),
+      title: formatDipendentiPresenzeReminderTitle(notification.count),
+      body: formatDipendentiPresenzeReminderDesktopBody(notification),
       href: buildAdminNotificationDipendentiHref(),
       tag: notificationStoreKey(notification),
     };

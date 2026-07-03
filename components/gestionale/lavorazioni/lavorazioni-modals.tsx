@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { createPortal } from "react-dom";
 import { runSubmitFromGetter, useSubmitLock } from "@/lib/forms/form-engine";
 import { useDevModalLayoutLint } from "@/lib/ui-visual-linter/use-visual-layout-linter";
 import { recordHealthMetric } from "@/lib/observability/runtime-health";
@@ -395,53 +396,56 @@ export function LavorazioniModalShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [onRequestClose]);
 
-  return (
-    <div
-      className={`${dsLavorazioniModalLayer} ${layerClassName ?? ""}`}
-      role="presentation"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) {
-          e.preventDefault();
-          onRequestClose();
-        }
-      }}
-    >
-      <div
-        ref={(el) => {
-          dialogFocus.ref.current = el;
-          if (modalRootRef) modalRootRef.current = el;
-        }}
-        {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
-        className={`${dialogSurfaceClass} ${flexShrinkSafe} flex-safe-col touch-auto cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={labelledBy}
-        onKeyDown={dialogFocus.onKeyDown}
-        onMouseDown={(e) => e.stopPropagation()}
-      >
+  return typeof document === "undefined"
+    ? null
+    : createPortal(
         <div
-          {...(maxMdDown ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
-          className={`flex min-h-0 min-w-0 flex-1 flex-col ${
-            maxMdDown
-              ? `${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} overflow-y-auto`
-              : "overflow-hidden"
-          }`.trim()}
+          className={`${dsLavorazioniModalLayer} ${layerClassName ?? ""}`}
+          role="presentation"
+          onMouseDown={(e) => {
+            if (e.target === e.currentTarget) {
+              e.preventDefault();
+              onRequestClose();
+            }
+          }}
         >
-          {headerNode}
-          <div className="flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden">
-            {children}
-          </div>
-        </div>
-        {footer ? (
-          <footer
-            className={`${dsModalFormFooter} max-md:pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]`}
+          <div
+            ref={(el) => {
+              dialogFocus.ref.current = el;
+              if (modalRootRef) modalRootRef.current = el;
+            }}
+            {...{ [CAB_MODAL_ROOT_ATTR]: "" }}
+            className={`${dialogSurfaceClass} ${flexShrinkSafe} flex-safe-col touch-auto cursor-default ${dialogMaxWidth} ${alignTop ? "md:mt-3 md:self-start" : ""}`}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby={labelledBy}
+            onKeyDown={dialogFocus.onKeyDown}
+            onMouseDown={(e) => e.stopPropagation()}
           >
-            {footer}
-          </footer>
-        ) : null}
-      </div>
-    </div>
-  );
+            <div
+              {...(maxMdDown ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
+              className={`flex min-h-0 min-w-0 flex-1 flex-col ${
+                maxMdDown
+                  ? `${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} overflow-y-auto`
+                  : "overflow-hidden"
+              }`.trim()}
+            >
+              {headerNode}
+              <div className="flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden">
+                {children}
+              </div>
+            </div>
+            {footer ? (
+              <footer
+                className={`${dsModalFormFooter} max-md:pb-[max(0.75rem,env(safe-area-inset-bottom,0px))]`}
+              >
+                {footer}
+              </footer>
+            ) : null}
+          </div>
+        </div>,
+        document.body,
+      );
 }
 
 export function EditLavorazioneModal({

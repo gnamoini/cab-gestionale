@@ -2,7 +2,7 @@
  * Verifica connettività Supabase con env corrente (CI diagnostics).
  */
 import { createHash } from "node:crypto";
-import { fetchProductionReadinessDbSnapshot } from "@/lib/production/fetch-production-readiness-db";
+import { fetchProductionReadinessDbSnapshot } from "../lib/production/fetch-production-readiness-db.impl";
 
 function jwtRole(key: string | undefined): string {
   if (!key?.includes(".")) return "missing-or-not-jwt";

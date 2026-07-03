@@ -11,7 +11,11 @@ export type DescriptionSourceType =
   | "legacy_similarity"
   | "legacy_context"
   | "suggestion_approved"
-  | "operator_rephrased";
+  | "operator_rephrased"
+  | "history_same_mezzo"
+  | "history_same_client"
+  | "history_similar_mezzo"
+  | "history_similar_intervento";
 
 export type ConfidenceFactors = {
   keywordMatch: number;
@@ -84,6 +88,15 @@ export type DescriptionEngineMeta = {
   semanticFingerprintPre?: string;
   semanticFingerprintPost?: string;
   suggestionIdsApplied?: string[];
+  operativeHistory?: {
+    candidatesEvaluated: number;
+    topCaseId?: string;
+    topTier: string;
+    historyScore: number;
+    tkbScore: number;
+    fusedScore: number;
+    clientBoostApplied: boolean;
+  };
 };
 
 export type ComposedDescription = {
@@ -106,7 +119,11 @@ export type DescriptionEngineInput = {
   generationSequence?: number;
   preventivoId?: string;
   lavorazioneId?: string;
+  mezzoId?: string;
+  cliente?: string;
   autore?: string;
+  /** Snapshot pubblicato (da API server); evita seed in-memory. */
+  publishedSnapshot?: import("@/lib/domain/technical-knowledge-base").TkbPublishedSnapshot;
   /** ponytail: opt-in via NEXT_PUBLIC_TDE_AI_POLISH=1 + polishFn esplicito */
   aiPolishFn?: (texts: string[]) => string[];
 };

@@ -174,14 +174,26 @@ export function validateSnapshotVersion(
   return result;
 }
 
+function generatedPathsFromPointer(pointerPath: string) {
+  const generatedDir = path.dirname(pointerPath);
+  return {
+    generatedSnapshotsDir: path.join(generatedDir, "snapshots"),
+    registryGeneratedPath: path.join(generatedDir, "registry.generated.ts"),
+    bundleManifestPath: path.join(generatedDir, "selector-bundle-manifest.json"),
+    rollbackRegistryGeneratedPath: path.join(generatedDir, "selector-rollback-registry.generated.ts"),
+  };
+}
+
 export function stageSnapshot(
   version: string,
   storeDir = DEFAULT_SNAPSHOT_STORE_DIR,
   registry?: Pick<PromotionRegistryState, "proposals">,
+  pointerPath = DEFAULT_ACTIVE_POINTER_PATH,
 ): SelectorRuntimeSnapshot {
   validateSnapshotVersion(version, storeDir, registry);
   setLifecycleState(version, "staged", storeDir);
-  syncSnapshotBundle(storeDir);
+  const paths = generatedPathsFromPointer(pointerPath);
+  syncSnapshotBundle(storeDir, paths.generatedSnapshotsDir, paths.registryGeneratedPath, undefined, pointerPath, paths.bundleManifestPath, paths.rollbackRegistryGeneratedPath);
   return getSnapshot(version, storeDir);
 }
 
@@ -197,7 +209,8 @@ export function activateSnapshot(
   }
 
   getSnapshot(version, storeDir);
-  syncSnapshotBundle(storeDir);
+  const paths = generatedPathsFromPointer(pointerPath);
+  syncSnapshotBundle(storeDir, paths.generatedSnapshotsDir, paths.registryGeneratedPath, undefined, pointerPath, paths.bundleManifestPath, paths.rollbackRegistryGeneratedPath);
   atomicPointerActivate(version, pointerPath);
 
   const versions = new Set(manifest.versions);
@@ -251,7 +264,8 @@ export function rollbackToSnapshot(
   pointerPath = DEFAULT_ACTIVE_POINTER_PATH,
 ): SelectorRuntimeSnapshot {
   getSnapshot(version, storeDir);
-  syncSnapshotBundle(storeDir);
+  const paths = generatedPathsFromPointer(pointerPath);
+  syncSnapshotBundle(storeDir, paths.generatedSnapshotsDir, paths.registryGeneratedPath, undefined, pointerPath, paths.bundleManifestPath, paths.rollbackRegistryGeneratedPath);
   atomicPointerActivate(version, pointerPath);
   return activateSnapshot(version, storeDir, pointerPath);
 }
@@ -285,7 +299,7 @@ export function buildAndPublishSnapshot(
   }
 
   validateSnapshotVersion(snapshot.version, storeDir, registry);
-  stageSnapshot(snapshot.version, storeDir, registry);
+  stageSnapshot(snapshot.version, storeDir, registry, pointerPath);
   return activateSnapshot(snapshot.version, storeDir, pointerPath);
 }
 

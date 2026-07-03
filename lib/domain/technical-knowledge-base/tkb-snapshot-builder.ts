@@ -1,3 +1,4 @@
+import { canonicalizeDraftBundle } from "./canonicalize";
 import { sha256Canonical } from "./hash";
 import type { CatalogActivity, TkbDraftBundle, TkbPublishedSnapshot } from "./types";
 
@@ -49,24 +50,43 @@ export function buildPublishedSnapshot(
   kbVersion: number,
   publishedAt: string,
 ): TkbPublishedSnapshot {
-  validateTkbDraftBundle(bundle);
+  const stripped: TkbDraftBundle = {
+    componenti: bundle.componenti,
+    sintomi: bundle.sintomi,
+    categorie: bundle.categorie,
+    procedure: bundle.procedure,
+    interventi: bundle.interventi,
+    ricambiMap: bundle.ricambiMap,
+    searchIndex: bundle.searchIndex,
+  };
+  validateTkbDraftBundle(stripped);
   return {
     schemaVersion: 1,
     kbVersion,
     publishedAt,
-    componenti: bundle.componenti,
-    sintomi: bundle.sintomi,
-    categorie: bundle.categorie,
-    procedure: bundle.procedure.map((p) => ({ ...p, publishStatus: "published" as const })),
-    interventi: bundle.interventi.map((i) => ({ ...i, publishStatus: "published" as const })),
-    ricambiMap: bundle.ricambiMap.filter((m) => m.active),
+    componenti: stripped.componenti,
+    sintomi: stripped.sintomi,
+    categorie: stripped.categorie,
+    procedure: stripped.procedure.map((p) => ({ ...p, publishStatus: "published" as const })),
+    interventi: stripped.interventi.map((i) => ({ ...i, publishStatus: "published" as const })),
+    ricambiMap: stripped.ricambiMap.filter((m) => m.active),
+    searchIndex: stripped.searchIndex,
   };
 }
 
 export function hashDraftBundle(bundle: TkbDraftBundle): string {
-  return sha256Canonical(bundle);
+  const { buildReport: _r, ...core } = bundle;
+  return sha256Canonical(canonicalizeDraftBundle(core));
 }
 
 export function hashPublishedSnapshot(snapshot: TkbPublishedSnapshot): string {
-  return sha256Canonical(snapshot);
+  return sha256Canonical(canonicalizeDraftBundle({
+    componenti: snapshot.componenti,
+    sintomi: snapshot.sintomi,
+    categorie: snapshot.categorie,
+    procedure: snapshot.procedure,
+    interventi: snapshot.interventi,
+    ricambiMap: snapshot.ricambiMap,
+    searchIndex: snapshot.searchIndex,
+  }));
 }

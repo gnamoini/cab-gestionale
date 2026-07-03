@@ -106,6 +106,15 @@ export type TkbPublishedSnapshot = {
   procedure: TkbProcedure[];
   interventi: TkbIntervento[];
   ricambiMap: TkbRicambioMapEntry[];
+  /** Indici di ricerca pre-calcolati (opzionale, contract v1 estensione). */
+  searchIndex?: TkbSearchIndex;
+};
+
+export type TkbSearchIndex = {
+  keywordToInterventi: Record<string, string[]>;
+  componentToInterventi: Record<string, string[]>;
+  synonymToComponentSlug: Record<string, string>;
+  activityById: Record<string, { interventoSlug: string; activity: CatalogActivity }>;
 };
 
 export type TkbDraftBundle = {
@@ -115,6 +124,74 @@ export type TkbDraftBundle = {
   procedure: TkbProcedure[];
   interventi: TkbIntervento[];
   ricambiMap: TkbRicambioMapEntry[];
+  buildReport?: TkbBuildReport;
+  searchIndex?: TkbSearchIndex;
+};
+
+export type TkbEntityKind =
+  | "categoria"
+  | "componente"
+  | "sintomo"
+  | "procedure"
+  | "intervento"
+  | "ricambioMap";
+
+export type TkbSourceFragment = {
+  sourceId: string;
+  precedence: number;
+  entityKind: TkbEntityKind;
+  entityKey: string;
+  payload: unknown;
+  relations?: { kind: string; targetKey: string }[];
+  provenance: { origin: string; updatedAt?: string; recordId?: string };
+};
+
+export type TkbBuildMode = "full" | "incremental";
+
+export type TkbChangeHint = {
+  entityType: string;
+  entityId: string;
+  operation: "insert" | "update" | "delete";
+};
+
+export type TkbAdapterStats = {
+  durationMs: number;
+  fetched: number;
+  included: number;
+  excluded: number;
+  fragments: number;
+};
+
+export type TkbBuildReport = {
+  builtAt: string;
+  durationMs: number;
+  buildMode: TkbBuildMode;
+  pipelineVersion: string;
+  builderVersion: string;
+  counts: {
+    interventi: number;
+    componenti: number;
+    sintomi: number;
+    categorie: number;
+    procedure: number;
+    ricambiMap: number;
+    activities: number;
+  };
+  delta: { added: number; updated: number; removed: number };
+  merge: { performed: number; duplicatesFound: number; conflictsResolved: number };
+  excluded: { deleted: number; inactive: number; invalid: number; rbacDenied: number };
+  warnings: string[];
+  adapters: Record<string, TkbAdapterStats>;
+};
+
+export type TkbKbStats = {
+  interventi: number;
+  componenti: number;
+  descrizioni: number;
+  categorie: number;
+  excludedDeleted: number;
+  sourceCoverage: Record<string, { included: number; fetched: number }>;
+  warnings: string[];
 };
 
 export type TkbMatchInput = {
@@ -142,4 +219,24 @@ export type PublishTkbResult = {
   draftHash: string;
   created: boolean;
   idempotent: boolean;
+};
+
+export type BenchmarkCase = {
+  id: string;
+  technicalBlob: string;
+  anomaliaText?: string;
+  approvedLines: string[];
+  approvedActivityIds?: string[];
+};
+
+export type BenchmarkReport = {
+  engine: "legacy" | "tde_v1";
+  cases: number;
+  kbCoverage: number;
+  oar: number;
+  zeroEditRate: number;
+  unwantedLineRate: number;
+  thr: number;
+  tierDistribution: Record<string, number>;
+  kbStats?: TkbKbStats;
 };

@@ -4,10 +4,17 @@ import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode, Ref } from "r
 import { CloseButton } from "@/components/design-system/close-button";
 import {
   dsNotificationBellBadgeAnchor,
+  dsNotificationBellBadgeAnchorRail,
   dsNotificationBellBadgeBase,
+  dsNotificationBellBadgeBaseRail,
   dsNotificationBellBadgeCompact,
   dsNotificationBellBadgeWide,
+  dsNotificationBellBadgeRailCompact,
+  dsNotificationBellBadgeRailWide,
   dsNotificationBellIcon,
+  dsNotificationBellIconRail,
+  dsNotificationSidebarTrailingCount,
+  dsNotificationSidebarTrailingCountWide,
   dsNotificationDangerAccentText,
   dsNotificationDangerDetailText,
   dsNotificationListClass,
@@ -39,14 +46,14 @@ import {
   dsScrollbar,
 } from "@/lib/ui/design-system";
 
-export function NotificationBellIcon() {
+export function NotificationBellIcon({ variant = "default" }: { variant?: "default" | "rail" }) {
   return (
     <svg
-      className={dsNotificationBellIcon}
+      className={variant === "rail" ? dsNotificationBellIconRail : dsNotificationBellIcon}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={2}
+      strokeWidth={variant === "rail" ? 2.25 : 2}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden
@@ -60,13 +67,34 @@ export function NotificationBellIcon() {
   );
 }
 
-export function NotificationCountBadge({ count }: { count: number }) {
+export function NotificationCountBadge({
+  count,
+  variant = "default",
+}: {
+  count: number;
+  variant?: "default" | "rail" | "sidebarTrailing";
+}) {
   if (count <= 0) return null;
   const label = formatNotificationCountBadge(count);
   const wide = count > 9;
+
+  if (variant === "sidebarTrailing") {
+    return (
+      <span
+        className={`${dsNotificationSidebarTrailingCount} ${wide ? dsNotificationSidebarTrailingCountWide : ""}`}
+        aria-hidden
+      >
+        {label}
+      </span>
+    );
+  }
+
+  const rail = variant === "rail";
   return (
     <span
-      className={`${dsNotificationBellBadgeAnchor} ${dsNotificationBellBadgeBase} ${wide ? dsNotificationBellBadgeWide : dsNotificationBellBadgeCompact}`}
+      className={`${rail ? dsNotificationBellBadgeAnchorRail : dsNotificationBellBadgeAnchor} ${
+        rail ? dsNotificationBellBadgeBaseRail : dsNotificationBellBadgeBase
+      } ${wide ? (rail ? dsNotificationBellBadgeRailWide : dsNotificationBellBadgeWide) : rail ? dsNotificationBellBadgeRailCompact : dsNotificationBellBadgeCompact}`}
       aria-hidden
     >
       {label}
@@ -162,12 +190,19 @@ export function NotificationRowSurface({
   return <div className={surfaceClass}>{children}</div>;
 }
 
-export function NotificationRowDismiss({ onDismiss }: { onDismiss: () => void }) {
+export function NotificationRowDismiss({
+  onDismiss,
+  embedded = false,
+}: {
+  onDismiss: () => void;
+  /** Dentro la shell LogEntry (posizionamento dal parent). */
+  embedded?: boolean;
+}) {
   return (
     <button
       type="button"
       aria-label="Elimina notifica"
-      className={`absolute right-1.5 top-1.5 z-[1] rounded-md p-1 text-[color:var(--cab-text-muted)] opacity-70 transition-opacity hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] hover:opacity-100 ${dsFocus}`}
+      className={`${embedded ? "" : "absolute right-1.5 top-1.5 z-[1] "}rounded-md p-1 text-[color:var(--cab-text-muted)] opacity-70 transition-opacity hover:bg-[var(--cab-hover)] hover:text-[color:var(--cab-text)] hover:opacity-100 ${dsFocus}`}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();

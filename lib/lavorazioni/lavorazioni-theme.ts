@@ -38,7 +38,7 @@ export function statoThemeColor(statoId: string): string {
 }
 
 /** Colore effettivo stato: override da config o fallback tema. */
-export function statoDisplayColor(statoId: string, stati: StatoLavorazioneConfig[]): string {
+export function statoDisplayColor(statoId: string, stati: readonly StatoLavorazioneConfig[]): string {
   const nh = normalizeHex(stati.find((s) => s.id === statoId)?.color);
   if (nh) return nh;
   return statoThemeColor(statoId);

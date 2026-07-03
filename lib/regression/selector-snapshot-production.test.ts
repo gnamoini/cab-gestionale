@@ -2,6 +2,7 @@
  * v5.3 / v5.3.1 production hardening — schema gate, atomic pointer, lifecycle, runtime loader.
  */
 import assert from "node:assert/strict";
+import { execSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -34,6 +35,16 @@ import {
   writeManifest,
 } from "@/lib/selector-core/selector-snapshot-registry";
 import type { SelectorRuntimeSnapshot } from "@/lib/selector-core/types";
+
+const ROOT = process.cwd();
+
+function restoreProjectSelectorGenerated(): void {
+  try {
+    execSync("git restore lib/selector-core/generated/", { cwd: ROOT, stdio: "ignore" });
+  } catch {
+    // ponytail: best-effort — test must not leave bundled registry corrupted
+  }
+}
 
 const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "selector-v53-prod-"));
 const storeDir = path.join(tmpRoot, "store");
@@ -158,5 +169,6 @@ withProcessEnv({ NODE_ENV: "production", NEXT_PUBLIC_SELECTOR_ACTIVE_VERSION: "v
 });
 
 fs.rmSync(tmpRoot, { recursive: true, force: true });
+restoreProjectSelectorGenerated();
 
 console.log("selector-snapshot-production.test.ts OK");

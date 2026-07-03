@@ -43,7 +43,7 @@ import {
   useMezziListQuery,
 } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
-import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { useMezzoRemoveMutation } from "@/src/hooks/gestionale/use-mezzo-remove-mutation";
 import { useMezzoUpdateMutation } from "@/src/hooks/gestionale/use-mezzo-mutations";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
@@ -100,7 +100,7 @@ export function MezziView() {
   const mezzoRows = mezzoRowsRaw ?? [];
   const mezziInitialLoading = mezziLoading && mezzoRowsRaw === undefined && !mezziError;
 
-  const { data: lavRows = [] } = useLavorazioniList({ includeMezzo: true });
+  const { data: lavRows = [] } = useLavorazioniReportSlice({ mezziRows: mezzoRows });
   const mezziUi = mezzoRows;
 
   const interventiByMezzoId = useMemo(() => {

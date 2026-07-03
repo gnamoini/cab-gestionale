@@ -10,8 +10,8 @@ const profileAvatarInitialClass =
 const variantShell = {
   header: "flex min-w-0 h-8 w-8 shrink-0 rounded-full bg-[color:var(--cab-primary)]",
   sidebar: "flex min-w-0 h-9 w-9 shrink-0 rounded-lg bg-[color:var(--cab-primary)]",
-  /** Avatar rail sidebar — allineato a `.cab-sidebar-nav-icon`, stesso arancione/bianco. */
-  rail: "flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[color:var(--cab-primary)]",
+  /** Avatar rail sidebar — tondo, stesso arancione/bianco delle icone nav. */
+  rail: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--cab-primary)]",
 } as const;
 
 const variantInitial = {

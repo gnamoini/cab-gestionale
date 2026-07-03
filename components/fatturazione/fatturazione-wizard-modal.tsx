@@ -7,6 +7,7 @@ import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavor
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
 import { GlobalSelect } from "@/components/gestionale/global-input";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { FormField, FormSection } from "@/components/gestionale/schede/gestionale-form-section";
 import {
   billingSnapshotFromAnagrafica,
@@ -477,7 +478,7 @@ export function FatturazioneWizardModal({
             />
           </FormField>
           <FormField label="Note">
-            <textarea className={dsInput} rows={3} value={note} onChange={(e) => setNote(e.target.value)} />
+            <GestionaleTextarea rows={3} value={note} onChange={setNote} />
           </FormField>
           <p className="text-sm text-[color:var(--cab-text-muted)]">
             Cliente: <strong>{clienteLabel}</strong> — Totale: <strong>{formatInvoiceMoney(totals.totale)}</strong>

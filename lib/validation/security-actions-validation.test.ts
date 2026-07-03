@@ -28,7 +28,7 @@ if (batch.ok) {
 assert(validateSecurityUserBatchPatches([]).ok === true, "empty batch ok");
 assert(validateSecurityUserBatchPatches({}).ok === false, "non-array rejected");
 assert(
-  validateSecurityUserBatchPatches([{ userId: USER_ID, ruolo: "superadmin" }]).ok === false,
+  validateSecurityUserBatchPatches([{ userId: USER_ID, ruolo: "SuperAdmin" }]).ok === false,
   "invalid role rejected",
 );
 

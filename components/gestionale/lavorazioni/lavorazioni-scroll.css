@@ -6,6 +6,12 @@
   min-width: 68rem;
 }
 
+/* Colonne Stato / Addetto — leggermente più a destra rispetto ai campi testo. */
+.gestionale-lavorazioni-dense-table .gestionale-list-table-col-stato-addetto-inset {
+  padding-left: 1.25rem;
+  padding-right: 0.375rem;
+}
+
 @media (max-width: 1400px) {
   .gestionale-lavorazioni-dense-table {
     min-width: 62rem;

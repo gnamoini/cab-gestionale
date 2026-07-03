@@ -118,7 +118,7 @@ export function isReportValidLavorazioneRow(
 
 /** Esclude eliminate e relazioni mezzo orfane prima del bundle report. */
 export function filterReportLavorazioniRows(
-  rows: LavorazioneListRow[],
+  rows: readonly LavorazioneListRow[],
   validMezzoIds: ReadonlySet<string>,
 ): { rows: LavorazioneListRow[]; excludedCount: number } {
   const out: LavorazioneListRow[] = [];
@@ -137,7 +137,7 @@ export function filterReportLavorazioniRows(
  * Report: distingue in corso (`archived=false`) vs archiviate (`archived=true`).
  * Esclude righe con `deleted_at` (defense in depth oltre a RLS/query).
  */
-export function splitLavorazioniListRowsForReport(rows: LavorazioneListRow[]): {
+export function splitLavorazioniListRowsForReport(rows: readonly LavorazioneListRow[]): {
   attive: LavorazioneAttiva[];
   storico: LavorazioneArchiviata[];
 } {

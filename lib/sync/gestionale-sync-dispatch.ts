@@ -237,6 +237,24 @@ export function dispatchGestionaleAction(
 
   if (options.source === "local_mutation") {
     broadcastGestionaleInvalidate(uniqueTables, entityIdByTable);
+    const tkbTables = new Set([
+      "lavorazioni",
+      "scheda_lavorazione",
+      "magazzino_ricambi",
+      "preventivi",
+      "attrezzature",
+      "mezzi",
+      "app_settings",
+    ]);
+    if (uniqueTables.some((t) => tkbTables.has(t))) {
+      void import("@/src/actions/tkb-admin").then(({ enqueueTkbSyncAction }) => {
+        for (const table of uniqueTables) {
+          if (!tkbTables.has(table)) continue;
+          const id = entityIdByTable?.get(table) ?? "bulk";
+          void enqueueTkbSyncAction(table, id);
+        }
+      });
+    }
   }
 }
 

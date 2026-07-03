@@ -75,17 +75,17 @@ export const accountMenuPortalPanel = [
 export const accountMenuHeaderClass =
   "mx-1.5 mt-1.5 mb-1 flex items-center gap-3 rounded-[var(--ds-radius-md)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_42%,var(--cab-card))] px-2.5 py-2.5 ring-1 ring-[color:color-mix(in_srgb,var(--cab-border)_60%,transparent)]";
 
-/** Trigger profilo nel blocco sessione (griglia nav via sidebarNavLinkBase). */
+/** Trigger profilo nel blocco sessione (SidebarNavRow). */
 export const accountMenuSessionTriggerClass =
-  "cab-sidebar-session-user w-full text-left transition-colors duration-150";
+  "cab-sidebar-nav-row w-full text-left transition-colors duration-150";
 
 /** Voci espandibili (drawer inline / portal sidebar). */
 export const accountMenuSessionMenuClass =
   "cab-sidebar-session-menu border-t border-[color:color-mix(in_srgb,var(--cab-border)_80%,transparent)] px-1 py-1";
 
-/** Riga notifiche nel blocco sessione (griglia nav via sidebarNavLinkBase). */
+/** Riga notifiche nel blocco sessione (SidebarNavRow). */
 export const sidebarSessionRowClass =
-  "cab-sidebar-session-row w-full text-left transition-colors duration-150";
+  "cab-sidebar-nav-row w-full text-left transition-colors duration-150";
 
 export const accountMenuItemClass =
   "flex w-full min-h-11 items-center gap-2.5 rounded-[var(--ds-radius-md)] px-2.5 py-2 text-left text-xs font-medium text-[color:var(--cab-text)] transition-colors duration-150 hover:bg-[var(--cab-hover)] sm:min-h-10";

@@ -12,6 +12,7 @@ import {
   type AdminDashboardNotification,
 } from "@/lib/notifications/admin-dashboard-notifications";
 import { formatFattureScaduteDigestBody } from "@/lib/fatturazione/fatture-scadute-digest";
+import { formatDipendentiPresenzeReminderBody, formatDipendentiPresenzeReminderTitle } from "@/lib/dipendenti/dipendenti-presenze-reminder";
 import { formatLavorazioniRitardoDigestBody } from "@/lib/lavorazioni/lavorazioni-ritardo-digest";
 
 function toBulletModificaRiga(lines: string[]): string {
@@ -137,16 +138,11 @@ export function toAdminNotificationLogViewModel(row: AdminDashboardNotification)
   }
 
   if (isDipendentiPresenzeReminderNotification(row)) {
-    const [, y, m, d] = row.dateYmd.match(/^(\d{4})-(\d{2})-(\d{2})$/) ?? [];
-    const dateLabel = d && m && y ? `${d}/${m}/${y}` : null;
-    const detail = dateLabel
-      ? `Nessuna presenza registrata per oggi (${dateLabel})`
-      : "Nessuna presenza registrata per oggi";
     return {
-      tone: "neutral",
+      tone: "reopen",
       tipoRiga: "PRESENZE",
-      oggettoRiga: "Dipendenti",
-      modificaRiga: toBulletModificaRiga([detail]),
+      oggettoRiga: formatDipendentiPresenzeReminderTitle(row.count),
+      modificaRiga: toBulletModificaRiga([formatDipendentiPresenzeReminderBody(row)]),
       autore: "Sistema",
       atIso,
     };

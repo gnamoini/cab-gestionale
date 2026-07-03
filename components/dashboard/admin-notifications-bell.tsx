@@ -13,7 +13,9 @@ import {
 import {
   GestionaleLogEmpty,
   GestionaleLogList,
-  gestionaleLogDrawerPanelClass,
+  gestionaleLogDrawerFooterClass,
+  gestionaleLogDrawerPanelStackClass,
+  gestionaleLogDrawerScrollInsetClass,
   gestionaleLogPanelAsideClass,
   gestionaleLogScrollEmbeddedClass,
 } from "@/components/gestionale/gestionale-log-ui";
@@ -107,7 +109,7 @@ function NotificationsPanelFooter({
   };
 
   return (
-    <footer className="flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-3 py-2.5">
+    <footer className={gestionaleLogDrawerFooterClass}>
       <div className="flex-safe-row min-w-0 max-w-full flex-nowrap items-center justify-between gap-x-2 gap-y-1.5 sm:flex-wrap">
         <span className="text-xs text-[color:var(--cab-text-muted)]">
           Desktop{" "}
@@ -305,8 +307,8 @@ export function AdminNotificationsBell() {
         ariaLabel="Notifiche dashboard"
         asideClassName={gestionaleLogPanelAsideClass}
       >
-        <div className={`${gestionaleLogDrawerPanelClass} flex min-h-0 min-w-0 flex-1 flex-col gap-0 p-0 md:p-0`}>
-          <div className={`${gestionaleLogScrollEmbeddedClass} min-h-0 min-w-0 flex-1 px-3 pt-2`}>
+        <div className={gestionaleLogDrawerPanelStackClass}>
+          <div className={`${gestionaleLogScrollEmbeddedClass} ${gestionaleLogDrawerScrollInsetClass} min-h-0 min-w-0 flex-1`}>
             {notifications.length === 0 ? (
               <GestionaleLogEmpty message="Nessuna notifica al momento." />
             ) : (

@@ -12,7 +12,7 @@ import type { LavorazioneSchedeStore } from "@/types/schede";
 const OPEN_SECTION_STORAGE_KEY = "lavorazioni-kanban-mobile-open-section";
 
 function pickDefaultOpenSectionId(sections: readonly KanbanMobileSection[]): string {
-  const withItems = sections.find((s) => s.items.length > 0);
+  const withItems = sections.find((s) => s.items.length > 0 || (s.nested?.some((n) => n.items.length > 0) ?? false));
   return withItems?.id ?? sections[0]?.id ?? "";
 }
 
@@ -42,6 +42,11 @@ function ChevronIcon({ open }: { open: boolean }) {
       />
     </svg>
   );
+}
+
+function sectionTotalCount(section: KanbanMobileSection): number {
+  const nested = section.nested?.reduce((acc, n) => acc + n.items.length, 0) ?? 0;
+  return section.items.length + nested;
 }
 
 type MobileBoardProps = {
@@ -74,7 +79,6 @@ export function LavorazioniKanbanMobileBoard({
 }: MobileBoardProps) {
   const sectionIdsKey = useMemo(() => sections.map((s) => s.id).join("|"), [sections]);
   const [openSectionId, setOpenSectionId] = useState("");
-  /** Evita di ri-sincronizzare ad ogni render quando `sections` è un nuovo array con gli stessi id. */
   const lastSyncedSectionIdsKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
@@ -107,10 +111,15 @@ export function LavorazioniKanbanMobileBoard({
     });
   }, []);
 
-  const renderStatoHeaderInner = (statoCol: StatoLavorazioneConfig, count: number) => (
+  const renderStatoHeaderInner = (statoCol: StatoLavorazioneConfig, count: number, compact?: boolean) => (
     <>
       <span
-        className="inline-flex max-w-[min(100%,14rem)] items-center rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide"
+        className={[
+          "inline-flex max-w-[min(100%,14rem)] items-center rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide",
+          compact ? "text-[10px]" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         style={readablePillStyleFromHex(statoDisplayColor(statoCol.id, [...statiOpts]))}
       >
         <span className="truncate">{statoCol.label}</span>
@@ -141,6 +150,7 @@ export function LavorazioniKanbanMobileBoard({
     <div className="lavorazioni-kanban-mobile min-w-0 max-w-full space-y-2 pb-2">
       {sections.map((section) => {
         const open = openSectionId === section.id;
+        const total = sectionTotalCount(section);
         const panelId = `kanban-mobile-panel-${section.id}`;
         const headerId = `kanban-mobile-header-${section.id}`;
 
@@ -157,9 +167,7 @@ export function LavorazioniKanbanMobileBoard({
               onClick={() => toggleSection(section.id)}
               className="flex min-h-11 w-full items-center justify-between gap-3 px-3 py-3 text-left touch-manipulation"
             >
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                {renderStatoHeaderInner(section.col, section.items.length)}
-              </div>
+              <div className="flex min-w-0 flex-1 items-center gap-2">{renderStatoHeaderInner(section.col, total)}</div>
               <ChevronIcon open={open} />
             </button>
 
@@ -170,19 +178,29 @@ export function LavorazioniKanbanMobileBoard({
               aria-hidden={!open}
               className={`lavorazioni-kanban-mobile-panel ${open ? "lavorazioni-kanban-mobile-panel-open" : ""}`}
             >
-              <div
-                className={[
-                  "lavorazioni-kanban-mobile-panel-inner px-2 pb-3 pt-1",
-                  open ? "border-t border-zinc-200/80 dark:border-zinc-700/80" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
-              >
-                {section.items.length === 0 ? (
+              <div className="lavorazioni-kanban-mobile-panel-inner border-t border-zinc-200/80 px-2 pb-3 pt-1 dark:border-zinc-700/80">
+                {section.items.length === 0 && !(section.nested?.some((n) => n.items.length > 0) ?? false) ? (
                   <p className="py-4 text-center text-xs text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
                 ) : (
                   <div className="flex flex-col gap-2.5">
                     {section.items.map((row) => renderMobileCard(row, section.onOpen))}
+                    {section.nested?.map((nested) => (
+                      <div
+                        key={nested.col.id}
+                        className="space-y-2 rounded-lg border border-dashed border-zinc-200/90 bg-white/50 p-2 dark:border-zinc-700/80 dark:bg-zinc-950/30"
+                      >
+                        <div className="flex items-center justify-between gap-2 px-0.5">
+                          {renderStatoHeaderInner(nested.col, nested.items.length, true)}
+                        </div>
+                        {nested.items.length === 0 ? (
+                          <p className="py-2 text-center text-[11px] text-zinc-400 dark:text-zinc-500">Nessuna lavorazione</p>
+                        ) : (
+                          <div className="flex flex-col gap-2.5">
+                            {nested.items.map((row) => renderMobileCard(row, section.onOpen))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

@@ -46,7 +46,6 @@ assert.match(applyLock, /document_capture_complete_apply/);
 assert.match(applyLock, /document_capture_abort_apply/);
 
 const lavView = fs.readFileSync(path.join(ROOT, "components/gestionale/lavorazioni/lavorazioni-view.tsx"), "utf8");
-assert.match(lavView, /LavorazioniCaptureDropOverlay/);
-assert.match(lavView, /DocumentCaptureHistoryPanel/);
+assert.match(lavView, /LavorazioniDigitalCaptureLauncher/);
 
 console.log("document-capture-core.test.ts OK");

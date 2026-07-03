@@ -19,6 +19,8 @@ export const LoadingDashboardSkeleton = memo(function LoadingDashboardSkeleton({
       aria-label="Caricamento dashboard"
     >
       <SkeletonBlock className={SKELETON_MIN_HEIGHT.pageHeader} />
+      <SkeletonDashboardWidget variant="welcome" />
+      <SkeletonDashboardWidget variant="promemoria" />
       <span className="sr-only">{CONTROL_TOWER_KPI_WINDOW_LABEL}</span>
       <SkeletonDashboardWidget variant="kpi" />
       <SkeletonBlock className={`w-full ${SKELETON_MIN_HEIGHT.kpiRow}`} />

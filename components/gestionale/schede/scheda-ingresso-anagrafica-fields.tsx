@@ -71,8 +71,11 @@ function SchedaIngressoAnagraficaFieldsInner({
   }, [sections, profilo]);
   const show = (s: SchedaIngressoAnagraficaSection) => resolvedSections.includes(s);
   const targetType = value.targetType ?? defaultTargetTypeForProfilo(profilo);
+  const showInterventoTargetToggle =
+    showAttrezzaturaSections(profilo) && showTelaioSections(profilo);
+  // Attrezzatura implica sempre un telaio (campi opzionali); telaio può esistere senza attrezzatura.
   const showAttSection = show("attrezzatura") && targetType !== "telaio";
-  const showTelSection = show("telaio") && targetType !== "attrezzatura";
+  const showTelSection = show("telaio");
   const [attrezzature, setAttrezzature] = useState<readonly AttrezzaturaGestita[]>([]);
 
   useEffect(() => {
@@ -159,15 +162,17 @@ function SchedaIngressoAnagraficaFieldsInner({
               aria-label="Richiedente"
             />
           </FormField>
-          <FormField label="Oggetto intervento">
-            <InterventoTargetSelect
-              value={targetType}
-              attrezzaturaId={value.attrezzaturaId}
-              attrezzature={attrezzature}
-              disabled={disabled}
-              onChange={(t, attrezzaturaId) => onPatch({ targetType: t, attrezzaturaId })}
-            />
-          </FormField>
+          {showInterventoTargetToggle ? (
+            <FormField label="Oggetto intervento">
+              <InterventoTargetSelect
+                value={targetType}
+                attrezzaturaId={value.attrezzaturaId}
+                attrezzature={attrezzature}
+                disabled={disabled}
+                onChange={(t, attrezzaturaId) => onPatch({ targetType: t, attrezzaturaId })}
+              />
+            </FormField>
+          ) : null}
         </FormSection>
       ) : null}
 

@@ -10,9 +10,9 @@ import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { MovimentoRicambioRow, ReportManualEntryRow } from "@/src/types/supabase-tables";
 
 export type ReportTruthContext = {
-  lavorazioniRaw: LavorazioneListRow[];
+  lavorazioniRaw: readonly LavorazioneListRow[];
   /** Fetch dedicato archivio (`archived=true`) — source-of-truth per metriche completate. */
-  lavorazioniArchivioRaw?: LavorazioneListRow[];
+  lavorazioniArchivioRaw?: readonly LavorazioneListRow[];
   magazzino: RicambioMagazzino[];
   mezzi: MezzoGestito[];
   movimenti: MovimentoRicambioRow[];

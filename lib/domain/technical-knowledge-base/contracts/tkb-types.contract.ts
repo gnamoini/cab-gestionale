@@ -48,6 +48,14 @@ export const tkbPublishedSnapshotSchema = z.object({
   procedure: z.array(z.any()),
   interventi: z.array(z.any()),
   ricambiMap: z.array(z.any()),
+  searchIndex: z
+    .object({
+      keywordToInterventi: z.record(z.string(), z.array(z.string())),
+      componentToInterventi: z.record(z.string(), z.array(z.string())),
+      synonymToComponentSlug: z.record(z.string(), z.string()),
+      activityById: z.record(z.string(), z.any()),
+    })
+    .optional(),
 });
 
 export type TkbPublishedSnapshotContract = z.infer<typeof tkbPublishedSnapshotSchema>;

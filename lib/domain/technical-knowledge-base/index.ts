@@ -1,22 +1,31 @@
 export type {
+  BenchmarkCase,
+  BenchmarkReport,
   CatalogActivity,
   CatalogActivityType,
   InterventoActivityOverride,
   PublishTkbResult,
   RicambioMatchQuality,
+  TkbBuildReport,
   TkbCategoria,
   TkbCompatibilita,
   TkbComponente,
   TkbDraftBundle,
   TkbIntervento,
+  TkbKbStats,
   TkbMatchInput,
   TkbMatchResult,
   TkbProcedure,
   TkbPublishStatus,
   TkbPublishedSnapshot,
   TkbRicambioMapEntry,
+  TkbSearchIndex,
   TkbSintomo,
+  TkbSourceFragment,
 } from "./types";
+
+export { canonicalizeDraftBundle, canonicalizeSlug } from "./canonicalize";
+export { TKB_PIPELINE_VERSION, TKB_BUILDER_VERSION, TKB_BUILD_VERSION } from "./versions";
 
 export { sha256Canonical, canonicalJsonStringify } from "./hash";
 export {

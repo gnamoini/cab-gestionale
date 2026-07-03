@@ -1,5 +1,22 @@
+import {
+  buildLogModificaSummary,
+  filterAuditMetadataModifiche,
+  modificheToModificaRiga,
+} from "@/lib/gestionale-log/log-summary";
+import { reconcileLogModificaRows } from "@/lib/gestionale-log/log-event-pipeline";
+import { isLogReverted } from "@/lib/gestionale-log/undo";
+import type { GestionaleLogViewModel } from "@/lib/gestionale-log/view-model";
+import { Q_FOCUS_LAV_ROW, Q_FOCUS_RICAMBIO } from "@/lib/navigation/dashboard-log-links";
+import { lavorazioneLogOggettoFromListRow } from "@/lib/lavorazioni/lavorazione-log-oggetto";
+import type { StatoLavorazioneConfig } from "@/lib/lavorazioni/types";
 import { isLavorazioneInCorso } from "@/lib/lavorazioni/archived";
 import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import {
+  lavorazioneClienteLabel,
+  lavorazioneMacchinaLabel,
+  lavorazioneMezzoIdentParts,
+  lavorazioneOggettoLabel,
+} from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import {
   buildReportLavorazioniBundle,
   countCompletedInRange,
@@ -7,15 +24,17 @@ import {
 } from "@/lib/report/lavorazioni-report-selectors";
 import { splitLavorazioniListRowsForReport } from "@/lib/lavorazioni/lavorazioni-report-adapter";
 import {
-  avgDowntimeDaysInPeriod,
   countInterventiInRitardo,
   sottoScortaCount,
 } from "@/lib/report/kpi-performance/kpi-performance-formulas";
+import { filterEntriesForReportTimesheetKpi } from "@/lib/dipendenti/timesheet-report-kpi-filter";
+import { computeMonthTotals } from "@/lib/dipendenti/timesheet-totals";
+import type { DipendenteTimesheetEntryRow } from "@/lib/dipendenti/types";
+import type { TipoAssenzaConfig } from "@/lib/dipendenti/tipi-assenza-model";
+import type { PreventivoRecord } from "@/lib/preventivi/types";
 import type { MagazzinoChangeLogEntry } from "@/lib/magazzino/magazzino-change-log-storage";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import { buildRicambiConsumoRanking } from "@/lib/magazzino/ricambio-consumo-from-log";
-import type { MezzoGestito } from "@/lib/mezzi/types";
-import type { PreventivoRecord } from "@/lib/preventivi/types";
 import {
   CONTROL_TOWER_ACTIVITY_MAX,
   CONTROL_TOWER_CALENDAR_FORWARD_DAYS,
@@ -49,14 +68,16 @@ export type ControlTowerKpiMetric = {
   id: string;
   label: string;
   value: number;
+  prevValue: number | null;
   deltaPct: number | null;
   deltaAbs: string | null;
   invert?: boolean;
   snapshot?: boolean;
+  unit?: "count" | "hours";
 };
 
 export type ControlTowerKpiCluster = {
-  id: "lavorazioni" | "ricambi" | "amministrazione" | "efficienza";
+  id: "lavorazioni" | "ricambi" | "amministrazione" | "dipendenti";
   label: string;
   metrics: ControlTowerKpiMetric[];
 };
@@ -108,7 +129,6 @@ export type ControlTowerWipSlice = {
 };
 
 export type ControlTowerAdminBacklogSlice = {
-  preventiviInAttesa: number;
   fattureDaEmettere: number;
   fattureScadute: number;
 };
@@ -129,16 +149,16 @@ export type ControlTowerMagazzinoOpsSlice = {
 
 export type ControlTowerActivityItem = {
   id: string;
-  domain: "lavorazioni" | "magazzino" | "amministrazione";
+  domain: "lavorazioni" | "ricambi" | "amministrazione";
   at: string;
-  label: string;
-  detail?: string;
+  vm: GestionaleLogViewModel;
+  href: string | null;
 };
 
 export type ControlTowerActivityFeedSlice = {
   byDomain: {
     lavorazioni: ControlTowerActivityItem[];
-    magazzino: ControlTowerActivityItem[];
+    ricambi: ControlTowerActivityItem[];
     amministrazione: ControlTowerActivityItem[];
   };
 };
@@ -163,7 +183,6 @@ export type ControlTowerBaseInput = {
   magLog?: readonly MagazzinoChangeLogEntry[];
   magMovements?: readonly DashboardMagMovementRow[];
   movimentiLogs?: readonly LogModificaRow[];
-  mezzi?: readonly MezzoGestito[];
   preventivi?: readonly PreventivoRecord[];
   invoices?: readonly InvoiceRow[];
   logLavorazioni?: readonly LogModificaRow[];
@@ -171,6 +190,9 @@ export type ControlTowerBaseInput = {
   logMovimenti?: readonly LogModificaRow[];
   logAdmin?: readonly LogModificaRow[];
   promemoria?: readonly DashboardPromemoriaRow[];
+  timesheetEntries?: readonly DipendenteTimesheetEntryRow[];
+  tipiAssenza?: readonly TipoAssenzaConfig[];
+  statiLavorazione?: readonly StatoLavorazioneConfig[];
 };
 
 function daysBetween(isoStart: string, end: Date): number {
@@ -192,19 +214,21 @@ function isActiveLavorazione(row: LavorazioneListRow): boolean {
   return isLavorazioneInCorso(row);
 }
 
-function macchinaLabel(row: LavorazioneListRow): string {
-  const m = row.mezzo;
-  return m ? `${m.marca} ${m.modello}`.trim() : "—";
+function macchinaLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
+  const label = lavorazioneMacchinaLabel(row, schedeStore);
+  if (label !== "—") return label;
+  const oggetto = lavorazioneOggettoLabel(row, schedeStore);
+  return oggetto !== "—" ? oggetto : "—";
 }
 
-function mezzoIdent(row: LavorazioneListRow): string | null {
-  const m = row.mezzo;
-  if (!m) return null;
+function mezzoIdent(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string | null {
+  const parts = lavorazioneMezzoIdentParts(row, schedeStore);
+  const cliente = lavorazioneClienteLabel(row, schedeStore);
   return formatDashboardLavWidgetMezzoIdent({
-    cliente: m.cliente ?? undefined,
-    matricola: m.matricola ?? undefined,
-    nScuderia: m.numero_scuderia ?? undefined,
-    targa: m.targa ?? undefined,
+    cliente: cliente !== "—" ? cliente : undefined,
+    matricola: parts.matricola || undefined,
+    nScuderia: parts.scuderia || undefined,
+    targa: parts.targa || undefined,
   });
 }
 
@@ -218,8 +242,8 @@ function toWipRow(
   return {
     id: row.id,
     stato: row.stato,
-    macchina: macchinaLabel(row),
-    mezzoIdent: mezzoIdent(row),
+    macchina: macchinaLabel(row, schedeStore),
+    mezzoIdent: mezzoIdent(row, schedeStore),
     addetto: addettoRaw || null,
     giorniSenzaUpdate: Math.floor(daysBetween(lavUpdatedAt(row), anchor)),
     giorniDaIngresso: Math.floor(daysBetween(lavIngressIso(row), anchor)),
@@ -239,14 +263,27 @@ function metric(
   label: string,
   cur: number,
   prev: number | null,
-  opts?: { invert?: boolean; snapshot?: boolean; formatDelta?: (n: number) => string },
+  opts?: {
+    invert?: boolean;
+    snapshot?: boolean;
+    unit?: "count" | "hours";
+    formatDelta?: (n: number) => string;
+  },
 ): ControlTowerKpiMetric {
-  const delta = prev != null ? cur - prev : null;
+  const value = opts?.unit === "hours" ? Math.round(cur * 10) / 10 : cur;
+  const prevValue =
+    opts?.snapshot || prev == null
+      ? null
+      : opts?.unit === "hours"
+        ? Math.round(prev * 10) / 10
+        : prev;
+  const delta = prevValue != null ? value - prevValue : null;
   return {
     id,
     label,
-    value: cur,
-    deltaPct: prev != null && !opts?.snapshot ? deltaPct(prev, cur) : null,
+    value,
+    prevValue,
+    deltaPct: prevValue != null && !opts?.snapshot ? deltaPct(prevValue, value) : null,
     deltaAbs:
       opts?.snapshot || delta == null
         ? null
@@ -255,7 +292,27 @@ function metric(
           : `${delta >= 0 ? "+" : ""}${delta}`,
     invert: opts?.invert,
     snapshot: opts?.snapshot,
+    unit: opts?.unit,
   };
+}
+
+function filterTimesheetEntriesInYmdRange(
+  entries: readonly DipendenteTimesheetEntryRow[],
+  range: DateRange,
+): DipendenteTimesheetEntryRow[] {
+  const from = ymdFromDate(range.start);
+  const to = ymdFromDate(range.end);
+  return entries.filter((e) => e.work_date >= from && e.work_date <= to);
+}
+
+function timesheetTotalsInRange(
+  entries: readonly DipendenteTimesheetEntryRow[],
+  range: DateRange,
+  tipiAssenza?: readonly TipoAssenzaConfig[],
+) {
+  const inRange = filterTimesheetEntriesInYmdRange(entries, range);
+  const filtered = filterEntriesForReportTimesheetKpi(inRange, tipiAssenza);
+  return computeMonthTotals(filtered);
 }
 
 function countMovimentiInRange(logs: readonly LogModificaRow[] | undefined, range: DateRange): number {
@@ -391,6 +448,7 @@ export function buildControlTowerHeaderKpiSlice(
     includeLavorazioni?: boolean;
     includeMagazzino?: boolean;
     includeAdmin?: boolean;
+    includeDipendenti?: boolean;
   },
 ): ControlTowerHeaderKpiSlice {
   const anchor = input.anchor ?? new Date();
@@ -400,8 +458,9 @@ export function buildControlTowerHeaderKpiSlice(
   const { attive } = splitLavorazioniListRowsForReport([...input.lavRows]);
   const preventivi = input.preventivi ?? [];
   const invoices = input.invoices ?? [];
-  const mezzi = input.mezzi ?? [];
   const magLog = input.magLog ?? [];
+  const timesheetEntries = input.timesheetEntries ?? [];
+  const tipiAssenza = input.tipiAssenza;
 
   const clusters: ControlTowerKpiCluster[] = [];
 
@@ -420,15 +479,22 @@ export function buildControlTowerHeaderKpiSlice(
         metric("lav-ritardo", "In ritardo", lateCount, null, { snapshot: true }),
       ],
     });
-    const avgCur = mezzi.length ? avgDowntimeDaysInPeriod(mezzi, [...input.lavRows], range) : null;
-    const avgPrev = mezzi.length ? avgDowntimeDaysInPeriod(mezzi, [...input.lavRows], prevRange) : null;
+  }
+
+  if (input.includeDipendenti) {
+    const curTotals = timesheetTotalsInRange(timesheetEntries, range, tipiAssenza);
+    const prevTotals = timesheetTotalsInRange(timesheetEntries, prevRange, tipiAssenza);
     clusters.push({
-      id: "efficienza",
-      label: "Efficienza",
+      id: "dipendenti",
+      label: "Personale",
       metrics: [
-        metric("tempo-medio", "Tempo medio lav.", avgCur != null ? Math.round(avgCur * 10) / 10 : 0, avgPrev, {
+        metric("dip-ore", "Ore lavorate", curTotals.totaleLavorato, prevTotals.totaleLavorato, { unit: "hours" }),
+        metric("dip-straord", "Straordinari", curTotals.oreStraordinarie, prevTotals.oreStraordinarie, {
+          unit: "hours",
+        }),
+        metric("dip-assenze", "Ore assenza", curTotals.oreAssenza, prevTotals.oreAssenza, {
+          unit: "hours",
           invert: true,
-          formatDelta: (n) => `${n >= 0 ? "+" : ""}${Math.round(n * 10) / 10}g`,
         }),
       ],
     });
@@ -571,9 +637,8 @@ export function buildControlTowerWipSlice(input: ControlTowerBaseInput): Control
 }
 
 export function buildControlTowerAdminBacklogSlice(
-  input: Pick<ControlTowerBaseInput, "preventivi" | "invoices" | "anchor">,
+  input: Pick<ControlTowerBaseInput, "invoices" | "anchor">,
 ): ControlTowerAdminBacklogSlice {
-  const preventivi = input.preventivi ?? [];
   const invoices = input.invoices ?? [];
   const anchor = input.anchor ?? new Date();
   const todayYmd = anchor.toISOString().slice(0, 10);
@@ -581,7 +646,6 @@ export function buildControlTowerAdminBacklogSlice(
     (i) => i.status !== "annullata" && i.residuo > 0 && i.data_scadenza != null && i.data_scadenza < todayYmd,
   ).length;
   return {
-    preventiviInAttesa: preventivi.filter((p) => p.stato === "inviato").length,
     fattureDaEmettere: invoices.filter((i) => i.status === "bozza" || i.status === "da_verificare").length,
     fattureScadute: scadute,
   };
@@ -610,46 +674,156 @@ export function buildControlTowerMagazzinoOpsSlice(input: ControlTowerBaseInput)
   };
 }
 
+function logOggettoFromPayload(payload: unknown): string | undefined {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) return undefined;
+  const ctx = (payload as Record<string, unknown>).context;
+  if (ctx && typeof ctx === "object" && !Array.isArray(ctx)) {
+    const oggetto = (ctx as Record<string, unknown>).oggetto;
+    if (typeof oggetto === "string" && oggetto.trim()) return oggetto.trim();
+  }
+  return undefined;
+}
+
+function isGenericLavorazioneOggetto(oggetto: string): boolean {
+  const t = oggetto.trim();
+  return !t || t === "—" || t === "Lavorazione" || /^Scheda\s·\s/i.test(t);
+}
+
+function activityAutoreLabel(
+  row: LogModificaRow & { profiles?: { id: string; nome: string } | null },
+): string {
+  const profileNome = row.profiles?.nome?.trim();
+  if (profileNome) return profileNome;
+  if (row.autore_id) return `Utente ${row.autore_id.slice(0, 8)}…`;
+  return "Sistema";
+}
+
+function briefActivityModificaRiga(modificaRiga: string, maxLines = 2): string {
+  const lines = filterAuditMetadataModifiche(
+    modificaRiga
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((l) => l.replace(/^•\s*/, "")),
+  );
+  if (lines.length <= maxLines) return lines.map((l) => `• ${l}`).join("\n");
+  return `${lines
+    .slice(0, maxLines)
+    .map((l) => `• ${l}`)
+    .join("\n")}\n• …`;
+}
+
+function activityFocusHref(row: LogModificaRow): string | null {
+  if (row.entita === "lavorazioni" && row.entita_id?.trim()) {
+    const sp = new URLSearchParams();
+    sp.set(Q_FOCUS_LAV_ROW, row.entita_id.trim());
+    return `/lavorazioni?${sp.toString()}`;
+  }
+  if (row.entita === "magazzino_ricambi" && row.entita_id?.trim()) {
+    const sp = new URLSearchParams();
+    sp.set(Q_FOCUS_RICAMBIO, row.entita_id.trim());
+    return `/magazzino?${sp.toString()}`;
+  }
+  if (row.entita === "movimenti_ricambi") return "/magazzino";
+  if (row.entita === "preventivi") return "/preventivi";
+  if (row.entita === "fatturazione") return "/fatturazione";
+  if (row.entita === "mezzi") return "/mezzi";
+  if (row.entita === "documenti") return "/documenti";
+  return null;
+}
+
+function resolveActivityOggetto(
+  row: LogModificaRow,
+  summaryOggetto: string,
+  lavById: ReadonlyMap<string, LavorazioneListRow>,
+  schedeStore?: LavorazioneSchedeStore,
+): string {
+  const fromPayload = logOggettoFromPayload(row.payload);
+  if (fromPayload && fromPayload !== "—") return fromPayload;
+  if (row.entita === "lavorazioni") {
+    const lav = lavById.get(row.entita_id);
+    if (lav) {
+      const label = lavorazioneLogOggettoFromListRow(lav, schedeStore);
+      if (label !== "—") return label;
+    }
+  }
+  if (!isGenericLavorazioneOggetto(summaryOggetto)) return summaryOggetto;
+  return summaryOggetto;
+}
+
+type ActivityMapContext = {
+  statiLavorazione?: readonly StatoLavorazioneConfig[];
+  lavById: ReadonlyMap<string, LavorazioneListRow>;
+  schedeStore?: LavorazioneSchedeStore;
+};
+
 function mapLogToActivity(
   rows: readonly LogModificaRow[] | undefined,
   domain: ControlTowerActivityItem["domain"],
   range: DateRange,
+  ctx: ActivityMapContext,
 ): ControlTowerActivityItem[] {
   if (!rows?.length) return [];
-  const seen = new Map<string, ControlTowerActivityItem>();
-  for (const row of [...rows].sort((a, b) => b.created_at.localeCompare(a.created_at))) {
-    if (!isoInRange(row.created_at, range)) continue;
-    const entityId = row.entita_id?.trim() || "—";
-    const key = `${entityId}:${row.azione}`;
-    if (seen.has(key)) continue;
-    seen.set(key, {
+  const inRange = rows.filter((row) => isoInRange(row.created_at, range));
+  const consolidated = reconcileLogModificaRows(inRange);
+  const out: ControlTowerActivityItem[] = [];
+
+  for (const row of consolidated.sort((a, b) => b.created_at.localeCompare(a.created_at))) {
+    const reverted = isLogReverted(row);
+    const summary = buildLogModificaSummary({
+      entita: row.entita,
+      entita_id: row.entita_id,
+      azione: reverted ? "UNDO" : row.azione,
+      payload: row.payload,
+      annullato: reverted,
+      statiLavorazione: row.entita === "lavorazioni" ? [...(ctx.statiLavorazione ?? [])] : undefined,
+    });
+    const oggetto = resolveActivityOggetto(row, summary.oggettoRiga, ctx.lavById, ctx.schedeStore);
+    const vm: GestionaleLogViewModel = {
+      tone: summary.tone,
+      tipoRiga: summary.tipoRiga,
+      oggettoRiga: oggetto,
+      modificaRiga: briefActivityModificaRiga(modificheToModificaRiga(summary.modifiche)),
+      autore: activityAutoreLabel(row),
+      atIso: row.created_at,
+      annullato: reverted,
+    };
+    out.push({
       id: `${domain}:${row.id}`,
       domain,
       at: row.created_at,
-      label: row.entita,
-      detail: row.azione,
+      vm,
+      href: activityFocusHref(row),
     });
   }
-  return [...seen.values()];
+  return out;
 }
 
 /** Activity feed — unico dominio dashboard con `last_7_days`. */
 export function buildControlTowerActivityFeedSlice(input: ControlTowerBaseInput): ControlTowerActivityFeedSlice {
   const anchor = input.anchor ?? new Date();
   const range = resolvePresetRange(anchor, "last_7_days");
-  const lavorazioni = mapLogToActivity(input.logLavorazioni, "lavorazioni", range);
-  const magazzino = [
-    ...mapLogToActivity(input.logMagazzino, "magazzino", range),
-    ...mapLogToActivity(input.logMovimenti, "magazzino", range),
-  ];
-  const amministrazione = mapLogToActivity(input.logAdmin, "amministrazione", range);
-  const all = [...lavorazioni, ...magazzino, ...amministrazione]
+  const ctx: ActivityMapContext = {
+    statiLavorazione: input.statiLavorazione,
+    lavById: new Map(input.lavRows.map((r) => [r.id, r])),
+    schedeStore: input.schedeStore,
+  };
+  const perDomainMax = Math.max(6, Math.ceil(CONTROL_TOWER_ACTIVITY_MAX / 3));
+  const lavorazioni = mapLogToActivity(input.logLavorazioni, "lavorazioni", range, ctx).slice(0, perDomainMax);
+  const ricambi = [
+    ...mapLogToActivity(input.logMagazzino, "ricambi", range, ctx),
+    ...mapLogToActivity(input.logMovimenti, "ricambi", range, ctx),
+  ]
+    .sort((a, b) => b.at.localeCompare(a.at))
+    .slice(0, perDomainMax);
+  const amministrazione = mapLogToActivity(input.logAdmin, "amministrazione", range, ctx).slice(0, perDomainMax);
+  const all = [...lavorazioni, ...ricambi, ...amministrazione]
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, CONTROL_TOWER_ACTIVITY_MAX);
   return {
     byDomain: {
       lavorazioni: all.filter((i) => i.domain === "lavorazioni"),
-      magazzino: all.filter((i) => i.domain === "magazzino"),
+      ricambi: all.filter((i) => i.domain === "ricambi"),
       amministrazione: all.filter((i) => i.domain === "amministrazione"),
     },
   };
@@ -679,10 +853,11 @@ export function buildControlTowerCalendarSlice(
 
 export function filterControlTowerKpiClusters(
   slice: ControlTowerHeaderKpiSlice,
-  opts: { lavorazioni: boolean; magazzino: boolean; admin: boolean },
+  opts: { lavorazioni: boolean; magazzino: boolean; admin: boolean; dipendenti: boolean },
 ): ControlTowerHeaderKpiSlice {
   const clusters = slice.clusters.filter((c) => {
-    if (c.id === "lavorazioni" || c.id === "efficienza") return opts.lavorazioni;
+    if (c.id === "lavorazioni") return opts.lavorazioni;
+    if (c.id === "dipendenti") return opts.dipendenti;
     if (c.id === "ricambi") return opts.magazzino;
     if (c.id === "amministrazione") return opts.admin;
     return true;
@@ -695,6 +870,7 @@ export function composeControlTowerSlices(
     includeLavorazioni?: boolean;
     includeMagazzino?: boolean;
     includeAdmin?: boolean;
+    includeDipendenti?: boolean;
   },
 ) {
   return {

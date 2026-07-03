@@ -2,7 +2,7 @@
 
 Checklist gate **Fase 0c → 1b**:
 
-- [x] `TkbPublishedSnapshot` schemaVersion 1 con Zod
+- [x] `TkbPublishedSnapshot` schemaVersion 1 con Zod (+ `searchIndex?` opzionale)
 - [x] `GeneratedDescriptionLine` + `DescriptionEngineMeta` contratti
 - [x] Snapshot round-trip test
 - [x] Publish idempotente test

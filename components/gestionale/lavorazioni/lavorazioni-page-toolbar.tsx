@@ -24,6 +24,7 @@ import type {
   LavorazioniFilterCatalog,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import { READONLY_PERMISSION_HINT } from "@/src/lib/auth/permissions";
+import { LavorazioniDigitalCaptureLauncher } from "@/components/document-capture/lavorazioni-digital-capture-launcher";
 
 function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
   return (
@@ -37,10 +38,6 @@ function IconPrint({ className = "h-4 w-4 shrink-0" }: { className?: string }) {
 export type LavorazioniPageHeaderToolbarProps = {
   listRefreshBusy: boolean;
   onRefresh: () => void;
-  canUndo: boolean;
-  undoDisabled: boolean;
-  undoPending: boolean;
-  onUndo: () => void;
   onOpenLog: () => void;
   onPrint: () => void;
   listViewMode: "table" | "kanban";
@@ -51,10 +48,6 @@ export type LavorazioniPageHeaderToolbarProps = {
 export function LavorazioniPageHeaderToolbar({
   listRefreshBusy,
   onRefresh,
-  canUndo,
-  undoDisabled,
-  undoPending,
-  onUndo,
   onOpenLog,
   onPrint,
   listViewMode,
@@ -68,10 +61,8 @@ export function LavorazioniPageHeaderToolbar({
           leading={
             <GestionaleRefreshToolbarButton busy={listRefreshBusy} onClick={onRefresh} />
           }
-          canUndo={canUndo}
-          undoDisabled={undoDisabled}
-          undoPending={undoPending}
-          onUndo={onUndo}
+          showUndo={false}
+          canUndo={false}
           onOpenLog={onOpenLog}
           logTitle="Storico modifiche lavorazioni"
           overflowActions={
@@ -167,22 +158,25 @@ export function LavorazioniListToolbar({
       <section aria-label="Azioni e filtri lavorazioni (in corso e archivio)">
         <PageToolbar
           primaryAction={
-            <button
-              type="button"
-              onClick={onOpenCreate}
-              onPointerEnter={onPrimeCreate}
-              className={dsPageToolbarCtaCompact}
-              disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}
-              title={
-                !canEditWorkOrders
-                  ? READONLY_PERMISSION_HINT
-                  : !createdBy
-                    ? "Accedi per creare una lavorazione."
-                    : undefined
-              }
-            >
-              <PageToolbarCtaLabel short="+ Nuova" full="+ Nuova lavorazione" />
-            </button>
+            <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-2">
+              <button
+                type="button"
+                onClick={onOpenCreate}
+                onPointerEnter={onPrimeCreate}
+                className={dsPageToolbarCtaCompact}
+                disabled={mutPendingBlocking || !createdBy || !canEditWorkOrders}
+                title={
+                  !canEditWorkOrders
+                    ? READONLY_PERMISSION_HINT
+                    : !createdBy
+                      ? "Accedi per creare una lavorazione."
+                      : undefined
+                }
+              >
+                <PageToolbarCtaLabel short="+ Nuova" full="+ Nuova lavorazione" />
+              </button>
+              <LavorazioniDigitalCaptureLauncher enabled={canEditWorkOrders} size="md" className="h-11 shrink-0" />
+            </div>
           }
           search={
             <GestionaleSearchField

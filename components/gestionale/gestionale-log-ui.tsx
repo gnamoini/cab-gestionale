@@ -85,6 +85,17 @@ export const gestionaleLogScrollEmbeddedClass =
 export const gestionaleLogDrawerPanelClass =
   "flex min-w-0 flex-col gap-2 p-3 max-md:flex-none max-md:overflow-visible md:min-h-0 md:min-w-0 md:flex-1 md:overflow-hidden";
 
+/** Stack scroll + footer/action — padding esterno delegato ai figli (no `p-3`/`gap-2`). */
+export const gestionaleLogDrawerPanelStackClass =
+  "flex min-h-0 min-w-0 flex-1 flex-col max-md:flex-none max-md:overflow-visible md:min-h-0 md:min-w-0 md:flex-1 md:overflow-hidden";
+
+/** Inset lista scroll dentro `gestionaleLogDrawerPanelStackClass` — allineato a `dsModalHeader` (px-4). */
+export const gestionaleLogDrawerScrollInsetClass = "px-4 pt-3 pb-4";
+
+/** Footer azioni drawer log/notifiche — gutter orizzontale coerente con scroll inset. */
+export const gestionaleLogDrawerFooterClass =
+  "flex shrink-0 flex-col gap-2 border-t border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_55%,var(--cab-card))] px-4 py-3";
+
 export const gestionaleLogPanelAsideClass = resolveDrawerAsideClasses("drawerLog");
 
 /** @deprecated — usare token `dsModalHeader` (allineato a `Drawer` / modali gestionale). */

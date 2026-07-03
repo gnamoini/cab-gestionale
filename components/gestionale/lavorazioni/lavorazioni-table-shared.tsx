@@ -33,6 +33,7 @@ import {
   gestionaleListTableTd,
   gestionaleListTableTdAzioni,
   gestionaleListTableTdCenter,
+  gestionaleListTableColStatoAddettoInsetClass,
   gestionaleListTableTdPill,
   gestionaleListTableTdPillWrap,
   gestionaleListTableThAzioni,
@@ -86,6 +87,7 @@ export const lavTableColPillMinStyle = lavTableColStatoClass;
 
 export const lavTableTdPill = gestionaleListTableTdPill;
 export const lavTableTdPillWrap = gestionaleListTableTdPillWrap;
+export const lavTableColStatoAddettoInset = gestionaleListTableColStatoAddettoInsetClass;
 
 /** Padding orizzontale celle pill (px-2.5 × 2, allineato a `globalTableThCell`). */
 const LAV_TABLE_PILL_COL_PAD_REM = 1.25;
@@ -102,7 +104,8 @@ export function lavTablePillWrapStyleFromLabels(labels: readonly string[]): CSSP
 
 /** Larghezza colonna `<col>`: contenuto pill + padding celle. */
 export function lavTablePillColStyleFromLabels(labels: readonly string[]): CSSProperties {
-  return { width: `${lavTablePillColWidthRem(labels)}rem` };
+  const w = lavTablePillColWidthRem(labels);
+  return { width: `${w}rem`, maxWidth: `${w}rem` };
 }
 
 export function lavTablePillColWidthRem(labels: readonly string[]): number {

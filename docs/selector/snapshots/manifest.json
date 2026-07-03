@@ -1,10 +1,12 @@
 {
-  "activeVersion": "v0",
-  "updatedAt": "2026-06-10T17:32:02.743Z",
+  "activeVersion": "snap-1",
+  "updatedAt": "2026-07-02T23:10:50.324Z",
   "versions": [
+    "snap-1",
     "v0"
   ],
   "lifecycle": {
-    "v0": "validated"
+    "v0": "validated",
+    "snap-1": "active"
   }
 }

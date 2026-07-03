@@ -78,10 +78,11 @@ import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { ddtService } from "@/src/services/ddt.service";
 import { usePreventiviBillingQuery } from "@/src/hooks/gestionale/use-preventivi-billing-query";
 import { useMagazzinoRicambiUIQuery, useMezziListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
-import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { GestionaleSectionGate } from "@/components/gestionale/gestionale-section-gate";
 import { LoadingCardSkeleton, LoadingTableSkeleton } from "@/components/design-system";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { buildEmptyManualPreventivo } from "@/lib/preventivi/build-empty-manual-preventivo";
 import {
@@ -325,6 +326,7 @@ export function PreventiviView() {
   );
   const { authorName: autore } = useAuth();
   const gestToast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const queryClient = useQueryClient();
   const { records: rows, refetch: refetchPreventivi, isLoading: preventiviQueryLoading } =
     usePreventiviRecordsQuery();
@@ -348,7 +350,7 @@ export function PreventiviView() {
   const mezziSnap = mezziListQ.data ?? [];
   const magazzinoQ = useMagazzinoRicambiUIQuery();
   const magSnap = magazzinoQ.data ?? [];
-  const lavorazioniListQ = useLavorazioniList({ includeMezzo: true });
+  const lavorazioniListQ = useLavorazioniReportSlice({ mezziRows: mezziListQ.data ?? [] });
   const lavReport = useMemo(
     () => splitLavorazioniListRowsForReport(lavorazioniListQ.data ?? []),
     [lavorazioniListQ.data],
@@ -606,7 +608,13 @@ export function PreventiviView() {
   const handleRegenerateDdt = useCallback(async () => {
     const preventivo = ddtDrawer.preventivo;
     if (!preventivo || !canWritePreventivi) return;
-    if (!window.confirm("Rigenerare il DDT? Il documento precedente verrà annullato.")) return;
+    const ok = await confirm({
+      title: "Rigenerare DDT",
+      message: "Rigenerare il DDT? Il documento precedente verrà annullato.",
+      confirmLabel: "Rigenera",
+      destructive: true,
+    });
+    if (!ok) return;
     setDdtBusyId(preventivo.id);
     try {
       const draft = buildDdtDraftFromPreventivoAuto({ preventivo, preventivoId: preventivo.id });
@@ -620,7 +628,7 @@ export function PreventiviView() {
     } finally {
       setDdtBusyId(null);
     }
-  }, [canWritePreventivi, ddtDrawer.preventivo, gestToast, openDdtDrawer, refetchDdtIndex]);
+  }, [canWritePreventivi, confirm, ddtDrawer.preventivo, gestToast, openDdtDrawer, refetchDdtIndex]);
 
   const refreshDdtDrawer = useCallback(async () => {
     const detail = ddtDrawer.detail;
@@ -1328,6 +1336,7 @@ export function PreventiviView() {
           ) : null}
         </div>
       </Drawer>
+      {confirmDialog}
     </>
     </div>
     </GestionaleSectionGate>

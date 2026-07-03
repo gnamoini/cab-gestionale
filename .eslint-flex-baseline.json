@@ -1,23 +1,7 @@
 {
-  "version": 9,
-  "frozenAt": "2026-06-08",
-  "entryCount": 10,
-  "checksum": "1ab670ec1d125efcff65482df66ef8c346ea37753094ab6defd4e88360625a0a",
-  "entries": [
-    {
-      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
-      "line": 133,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/gestionale/mezzi/mezzi-filters.tsx",
-      "line": 143,
-      "reason": "toolbar-without-containment"
-    },
-    {
-      "file": "components/gestionale/page-header.tsx",
-      "line": 36,
-      "reason": "toolbar-without-containment"
-    }
-  ]
+  "version": 10,
+  "frozenAt": "2026-07-03",
+  "entryCount": 0,
+  "checksum": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "entries": []
 }

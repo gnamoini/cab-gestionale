@@ -52,6 +52,7 @@ export type DipendentiPresenzeReminderNotification = {
   kind: "dipendenti_presenze_reminder";
   id: string;
   dateYmd: string;
+  count: number;
   createdAt: string;
 };
 

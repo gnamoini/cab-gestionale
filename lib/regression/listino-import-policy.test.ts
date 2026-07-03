@@ -63,6 +63,7 @@ assert.doesNotMatch(
   "xlsx parser must stay server-side only",
 );
 
-assert.match(spreadsheet, /require\("xlsx"\)/);
+assert.match(spreadsheet, /xlsx-server/);
+assert.match(spreadsheet, /readSpreadsheetWorkbook/);
 
 console.log("listino-import-policy.test.ts OK");

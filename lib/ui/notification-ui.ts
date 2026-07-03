@@ -22,16 +22,37 @@ export const dsNotificationOpenLink =
 
 export const dsNotificationBellIcon = "h-4 w-4 shrink-0 opacity-90";
 
+/** Campanella nella rail sidebar (shell 28px). */
+export const dsNotificationBellIconRail = "h-[0.9375rem] w-[0.9375rem] shrink-0";
+
 /** Ancoraggio badge sul bottone 40×40 (non sul wrapper icona). */
 export const dsNotificationBellBadgeAnchor =
   "pointer-events-none absolute right-0.5 top-0.5 z-[1]";
 
+/** Ancoraggio badge sulla shell icona sidebar (28px) — sporge in alto a destra. */
+export const dsNotificationBellBadgeAnchorRail =
+  "cab-sidebar-notification-badge pointer-events-none absolute -right-1 -top-1 z-[2]";
+
 export const dsNotificationBellBadgeBase =
   "flex items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--cab-danger)_92%,#000)] font-bold tabular-nums leading-none text-white ring-2 ring-[var(--cab-surface)]";
+
+export const dsNotificationBellBadgeBaseRail =
+  "flex items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--cab-danger)_94%,#000)] font-bold tabular-nums leading-none text-white shadow-[0_1px_2px_color-mix(in_srgb,#000_25%,transparent)] ring-2 ring-[var(--cab-card)]";
 
 export const dsNotificationBellBadgeCompact = "size-4 text-[9px]";
 
 export const dsNotificationBellBadgeWide = "h-4 min-w-[1.125rem] px-0.5 text-[8px]";
+
+export const dsNotificationBellBadgeRailCompact = "size-[1.125rem] min-w-[1.125rem] text-[10px]";
+
+export const dsNotificationBellBadgeRailWide = "h-[1.125rem] min-w-[1.3125rem] px-0.5 text-[9px]";
+
+/** Contatore in trailing (sidebar espansa) — pill piena, allineata alla colonna fissa. */
+export const dsNotificationSidebarTrailingCount =
+  "cab-sidebar-notification-trailing-count inline-flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[color:color-mix(in_srgb,var(--cab-danger)_94%,#000)] px-1 text-[11px] font-bold tabular-nums leading-none text-white shadow-[0_1px_2px_color-mix(in_srgb,#000_22%,transparent)] ring-2 ring-[var(--cab-card)]";
+
+export const dsNotificationSidebarTrailingCountWide =
+  "h-5 min-w-[1.375rem] px-1 text-[10px]";
 
 export const dsNotificationPanelShell =
   "flex min-w-0 flex-col overflow-hidden rounded-[var(--ds-radius-xl)] border border-[color:var(--cab-border)] bg-[var(--cab-card)] shadow-[var(--cab-shadow-lg)]";
@@ -69,6 +90,23 @@ export const dsNotificationWidgetDangerRow =
 
 export const dsNotificationWidgetDangerChip =
   "inline-flex shrink-0 rounded-md border border-[color:color-mix(in_srgb,var(--cab-danger)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_10%,var(--cab-surface))] px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))]";
+
+export const dsNotificationWidgetSuccessChip =
+  "inline-flex shrink-0 rounded-md border border-[color:color-mix(in_srgb,var(--cab-success)_35%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-success)_10%,var(--cab-surface))] px-1.5 py-0.5 text-[10px] font-semibold whitespace-nowrap text-[color:color-mix(in_srgb,var(--cab-success)_88%,var(--cab-text))]";
+
+const dsNotificationDesktopStatusBase =
+  "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium whitespace-nowrap transition-[background-color,border-color,box-shadow,transform] duration-150 active:scale-[0.98]";
+
+/** Badge stato notifiche desktop nel drawer notifiche (cliccabile = test). */
+export const dsNotificationDesktopStatusActive = `${dsNotificationDesktopStatusBase} border-[color:color-mix(in_srgb,var(--cab-success)_42%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-success)_14%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-success)_94%,var(--cab-text))] shadow-[0_1px_2px_color-mix(in_srgb,#000_14%,transparent)] hover:border-[color:color-mix(in_srgb,var(--cab-success)_50%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-success)_20%,var(--cab-surface))]`;
+
+export const dsNotificationDesktopStatusInactive = `${dsNotificationDesktopStatusBase} border-[color:color-mix(in_srgb,var(--cab-danger)_40%,var(--cab-border))] bg-[color:color-mix(in_srgb,var(--cab-danger)_12%,var(--cab-surface))] text-[color:color-mix(in_srgb,var(--cab-danger)_90%,var(--cab-text))] shadow-[0_1px_2px_color-mix(in_srgb,#000_14%,transparent)] hover:border-[color:color-mix(in_srgb,var(--cab-danger)_48%,var(--cab-border))] hover:bg-[color:color-mix(in_srgb,var(--cab-danger)_18%,var(--cab-surface))]`;
+
+export const dsNotificationDesktopStatusDotActive =
+  "h-1.5 w-1.5 shrink-0 rounded-full bg-[color:color-mix(in_srgb,var(--cab-success)_92%,var(--cab-text))] ring-2 ring-[color:color-mix(in_srgb,var(--cab-success)_28%,transparent)]";
+
+export const dsNotificationDesktopStatusDotInactive =
+  "h-1.5 w-1.5 shrink-0 rounded-full bg-[color:color-mix(in_srgb,var(--cab-danger)_88%,var(--cab-text))] ring-2 ring-[color:color-mix(in_srgb,var(--cab-danger)_24%,transparent)]";
 
 export function formatNotificationCountBadge(count: number): string {
   if (count > 99) return "99+";

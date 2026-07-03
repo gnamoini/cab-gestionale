@@ -65,6 +65,8 @@ export type DrawerProps = {
   closeOnEscape?: boolean;
   /** Ripristina focus su questo elemento alla chiusura. */
   restoreFocusRef?: RefObject<HTMLElement | null>;
+  /** Elemento inline accanto al titolo (es. badge stato). */
+  titleAddon?: ReactNode;
 };
 
 export function Drawer({
@@ -78,6 +80,7 @@ export function Drawer({
   lockScroll = true,
   closeOnEscape = true,
   restoreFocusRef,
+  titleAddon,
 }: DrawerProps) {
   const asideRef = useRef<HTMLElement>(null);
   const autoTitleId = useRef(`cab-drawer-title-${Math.random().toString(36).slice(2, 9)}`);
@@ -145,10 +148,11 @@ export function Drawer({
     <header className={dsModalHeader}>
       <div className={dsModalHeaderInner}>
         <div className={dsModalHeaderLead}>
-          <div className={dsModalTitleBlock}>
-            <h2 id={titleId} className={dsModalTitle}>
+          <div className={`${dsModalTitleBlock} flex min-w-0 items-center gap-2`}>
+            <h2 id={titleId} className={`${dsModalTitle} min-w-0 truncate`}>
               {title}
             </h2>
+            {titleAddon ? <div className="flex shrink-0 items-center">{titleAddon}</div> : null}
           </div>
         </div>
         <CloseButton onClick={requestClose} className={dsModalCloseBtn} />

@@ -8,7 +8,6 @@ import { GestionaleRefreshToolbarButton, gestionalePageToolbarActionsInnerClass 
 import { ClientContattaciButton } from "@/components/lavorazioni-clienti/client-contattaci-button";
 import { ClientContattaciDialog } from "@/components/lavorazioni-clienti/client-contattaci-dialog";
 import { ShellCard } from "@/components/gestionale/shell-card";
-import { CollapsibleAccordionProvider } from "@/lib/ui/collapsible-accordion";
 import { GestionaleSearchField } from "@/components/gestionale/gestionale-search-field";
 import { LavorazioniAdvancedFilterPanel } from "@/components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel";
 import { lavorazioniAdvancedFiltersActive } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
@@ -30,7 +29,6 @@ import {
   LavorazioneMobileControlsPanel,
   LavorazioneMobileMetaGrid,
   LavorazioneMobileMetaItem,
-  LavorazioneMobileNote,
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
 import { ClientLavorazioneIngressoDialog } from "@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog";
 import {
@@ -42,7 +40,6 @@ import { ClientLavorazionePhotoStrip } from "@/components/lavorazioni-clienti/cl
 import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/client-lavorazione-qr-dialog";
 import {
   buildClientPortalRowFields,
-  type ClientPortalRowFields,
 } from "@/lib/lavorazioni/client-portal-row-fields";
 import {
   buildClientPortalFilterCatalog,
@@ -90,7 +87,7 @@ import {
   lavTableColClienteClass,
   lavTableColIdentificazioneClass,
   lavTableColIngressoClass,
-  lavTableColNoteClass,
+  lavTableColStatoAddettoInset,
   lavTableTd,
   lavTableTdAzioni,
   lavTableTdPill,
@@ -154,12 +151,6 @@ function StatoReadOnlyPill({ stato, statiOpts }: { stato: string; statiOpts: { i
       shellStyle={statoPillShellStyle(statoDisplayColor(resolvedStato, statiOpts))}
     />
   );
-}
-
-/** Colonna Note — note intervento (scheda ingresso), come lavorazioni principali. */
-function lavorazioneNoteInterventoText(fields: ClientPortalRowFields): string {
-  const t = fields.noteIntervento.trim();
-  return t || "—";
 }
 
 function RowActions({
@@ -246,7 +237,6 @@ function DesktopTable({
         <col className={lavTableColCantiereClass} />
         <col className={lavTableColAttrezzaturaClass} />
         <col className={lavTableColIdentificazioneClass} />
-        <col className={lavTableColNoteClass} />
         <col style={colStyles.statoPillColStyle} />
         <col style={colStyles.addettoPillColStyle} />
         <col className={lavTableColAzioniClass} />
@@ -258,7 +248,6 @@ function DesktopTable({
         <col className={lavTableColCantiereClass} />
         <col className={lavTableColAttrezzaturaClass} />
         <col className={lavTableColIdentificazioneClass} />
-        <col className={lavTableColNoteClass} />
         <col style={colStyles.statoPillColStyle} />
         <col style={colStyles.addettoPillColStyle} />
         <col className={lavTableColAzioniClass} />
@@ -271,11 +260,10 @@ function DesktopTable({
         <GlobalTableSortTh label="Ingresso" columnKey="ingresso" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="Attrezzatura" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+        <GlobalTableSortTh label="Oggetto" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Identificazione" columnKey="mezzoIdent" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="Note" columnKey="note" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
-        <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
+        <GlobalTableSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
+        <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GestionaleListTableActionsHead />
       </>
     ) : (
@@ -283,11 +271,10 @@ function DesktopTable({
         <GlobalTableSortTh label="Ingresso" columnKey="ingresso" sortColumn={sortColumn} sortPhase={sortPhase} align="left" onSort={onSort} />
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="Attrezzatura" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
+        <GlobalTableSortTh label="Oggetto" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Identificazione" columnKey="mezzoIdent" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="Note" columnKey="note" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="Completamento" columnKey="completamento" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
-        <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" onSort={onSort} />
+        <GlobalTableSortTh label="Completamento" columnKey="completamento" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
+        <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GestionaleListTableActionsHead />
       </>
     );
@@ -300,7 +287,7 @@ function DesktopTable({
       headRow={headRow}
       empty={bundles.length === 0}
       emptyMessage={emptyMessage}
-      colSpan={9}
+      colSpan={8}
     >
       {bundles.map(({ row, fields }) => (
         <tr key={row.id} className={`${dsTableRow} h-14 bg-white dark:bg-zinc-900/40`}>
@@ -314,30 +301,29 @@ function DesktopTable({
             <span className="line-clamp-2 break-words">{fields.cantiere}</span>
           </td>
           <td className={`${lavTableTd} min-w-0`}>
-            <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{fields.attrezzatura}</div>
+            <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">
+              {fields.attrezzatura}
+            </div>
           </td>
           <td className={lavTableTd}>
             <LavorazioniMezzoIdentStack targa={fields.targa} matricola={fields.matricola} nScuderia={fields.nScuderia} />
           </td>
-          <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
-            <span className="line-clamp-2">{lavorazioneNoteInterventoText(fields)}</span>
-          </td>
           {variant === "active" ? (
             <>
-              <td className={lavTableTdPill}>
+              <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`} style={colStyles.statoPillColStyle}>
                 <div className={lavTableTdPillWrap}>
                   <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
                 </div>
               </td>
             </>
           ) : (
-            <td className={lavTableTdPill}>
+            <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`} style={colStyles.statoPillColStyle}>
               <div className={lavTableTdPillWrap}>
                 <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
               </div>
             </td>
           )}
-          <td className={lavTableTdPill}>
+          <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`} style={colStyles.addettoPillColStyle}>
             <div className={lavTableTdPillWrap}>
               <LavorazioneAddettoReadOnlyPill addetto={fields.addetto} addettoColors={addettoColors} />
             </div>
@@ -417,7 +403,6 @@ function MobileCards({
                 <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="col-span-2" />
               ) : null}
             </LavorazioneMobileMetaGrid>
-            <LavorazioneMobileNote text={lavorazioneNoteInterventoText(fields)} />
             <LavorazioneMobileControlsPanel
               ariaLabel={variant === "archive" ? "Addetto" : "Stato e addetto"}
             >
@@ -529,7 +514,7 @@ function LavorazioniSection({
 }
 
 function buildRowBundles(
-  rows: LavorazioneListRow[],
+  rows: readonly LavorazioneListRow[],
   schedeStore: LavorazioneSchedeStore,
   logsByLav: Map<string, LogModificaRow[]>,
   addettiGlobali: readonly string[],
@@ -769,12 +754,10 @@ export function ClientLavorazioniView() {
   } else {
     bodyContent = (
       <>
-        <CollapsibleAccordionProvider initialOpenId={showInCorso ? "in-corso" : showArchivio ? "archivio" : null}>
         {showInCorso ? (
           <ShellCard
             title={`Lavorazioni in corso (${sortedInCorsoBundles.length})`}
             collapsible
-            accordionId="in-corso"
             defaultCollapsed={false}
           >
             <LavorazioniSection
@@ -800,8 +783,7 @@ export function ClientLavorazioniView() {
           <ShellCard
             title={`Lavorazioni completate (${sortedArchivioBundles.length})`}
             collapsible
-            accordionId="archivio"
-            defaultCollapsed={true}
+            defaultCollapsed
           >
             <LavorazioniSection
               listLayout={listLayout}
@@ -822,7 +804,6 @@ export function ClientLavorazioniView() {
             />
           </ShellCard>
         ) : null}
-        </CollapsibleAccordionProvider>
       </>
     );
   }
@@ -834,9 +815,6 @@ export function ClientLavorazioniView() {
         title={PORTALE_CLIENTI_LABEL}
         actions={
           <div className={gestionalePageToolbarActionsInnerClass}>
-            <span className="hidden sm:inline-flex">
-              <ClientContattaciButton variant="toolbar" onClick={() => setContattaciOpen(true)} />
-            </span>
             <GestionaleRefreshToolbarButton busy={refreshBusy} onClick={() => void refreshClientData()} />
           </div>
         }
@@ -873,8 +851,7 @@ export function ClientLavorazioniView() {
                   filters={filters}
                   onChange={patchFilters}
                   catalog={filterCatalog}
-                  statiOpts={statiOpts}
-                  showSectionFilter
+                  variant="clientPortal"
                 />
               }
               onFilterReset={resetFiltri}

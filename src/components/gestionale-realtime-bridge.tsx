@@ -54,18 +54,30 @@ export function GestionaleRealtimeBridge() {
   const { user, status, refresh } = useAuth();
   const { push } = useToastContext();
   const pushRef = useRef(push);
-  pushRef.current = push;
+
+  useEffect(() => {
+    pushRef.current = push;
+  }, [push]);
   const pathname = usePathname();
   const { isOpen: settingsModalOpen } = useSettingsModalOpen();
   const { setGestionaleStatus, setSettingsStatus } = useRealtimeStatus();
   const authReady = isAuthSessionEstablished(status) && !!user?.id;
   const rtConnectedRef = useRef(false);
   const settingsModalOpenRef = useRef(settingsModalOpen);
-  settingsModalOpenRef.current = settingsModalOpen;
   const onSettingsPageRef = useRef(false);
-  onSettingsPageRef.current = pathname?.startsWith("/impostazioni") ?? false;
   const userIdRef = useRef(user?.id);
-  userIdRef.current = user?.id;
+
+  useEffect(() => {
+    settingsModalOpenRef.current = settingsModalOpen;
+  }, [settingsModalOpen]);
+
+  useEffect(() => {
+    onSettingsPageRef.current = pathname?.startsWith("/impostazioni") ?? false;
+  }, [pathname]);
+
+  useEffect(() => {
+    userIdRef.current = user?.id;
+  }, [user?.id]);
 
   useEffect(() => {
     if (!authReady || !isSupabasePublicEnvConfigured()) return;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useRef } from "react";
 import {
   registerOverlayBack,
   type OverlayCloseContext,
@@ -20,8 +20,15 @@ export function useOverlayBackHandler(
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (!active) return;
-    return registerOverlayBack((ctx) => onCloseRef.current(ctx), source, opts);
+    let cleanup: (() => void) | undefined;
+    const timer = window.setTimeout(() => {
+      cleanup = registerOverlayBack((ctx) => onCloseRef.current(ctx), source, opts);
+    }, 0);
+    return () => {
+      window.clearTimeout(timer);
+      cleanup?.();
+    };
   }, [active, source, opts?.layer]);
 }

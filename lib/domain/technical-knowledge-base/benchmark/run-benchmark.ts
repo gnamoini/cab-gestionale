@@ -1,28 +1,15 @@
-import "server-only";
-
 import benchmarkDataset from "./dataset.json";
-import { resetDescriptionEngineDevState, generatePreventivoDescription } from "@/lib/preventivi/description-engine/description-engine";
+import {
+  resetDescriptionEngineDevState,
+  generatePreventivoDescription,
+} from "@/lib/preventivi/description-engine/description-engine";
 import { trasformaDescrizioneLavorazioni } from "@/lib/preventivi/trasforma-descrizione";
 import type { DescrizionePreventivoContext } from "@/lib/preventivi/preventivi-descrizione-aggregator";
+import type { BenchmarkCase, BenchmarkReport, TkbDraftBundle } from "../types";
+import { publishTkbDraft, resetMemorySnapshots } from "../tkb-publish";
+import { buildPublishedSnapshot } from "../tkb-snapshot-builder";
 
-export type BenchmarkCase = {
-  id: string;
-  technicalBlob: string;
-  anomaliaText?: string;
-  approvedLines: string[];
-  approvedActivityIds?: string[];
-};
-
-export type BenchmarkReport = {
-  engine: "legacy" | "tde_v1";
-  cases: number;
-  kbCoverage: number;
-  oar: number;
-  zeroEditRate: number;
-  unwantedLineRate: number;
-  thr: number;
-  tierDistribution: Record<string, number>;
-};
+export type { BenchmarkCase, BenchmarkReport } from "../types";
 
 const emptyCtx: DescrizionePreventivoContext = {
   cliente: "",
@@ -125,8 +112,14 @@ export function runLegacyBenchmark(): BenchmarkReport {
   });
 }
 
-export function runTdeBenchmark(): BenchmarkReport {
+export function runTdeBenchmark(draftBundle?: TkbDraftBundle): BenchmarkReport {
   resetDescriptionEngineDevState();
+  if (draftBundle) {
+    resetMemorySnapshots();
+    const snap = buildPublishedSnapshot(draftBundle, 1, new Date().toISOString());
+    publishTkbDraft({ ...draftBundle, buildReport: undefined });
+    void snap;
+  }
   const cases = loadDataset();
   return computeMetrics("tde_v1", cases, (c) => {
     const composed = generatePreventivoDescription({
@@ -143,6 +136,10 @@ export function runTdeBenchmark(): BenchmarkReport {
       matched: composed.meta.matchedEntries.length > 0,
     };
   });
+}
+
+export function runTdeBenchmarkWithDraft(draftBundle?: TkbDraftBundle): BenchmarkReport {
+  return runTdeBenchmark(draftBundle);
 }
 
 export function runFullBenchmarkComparison(): { legacy: BenchmarkReport; tde: BenchmarkReport } {

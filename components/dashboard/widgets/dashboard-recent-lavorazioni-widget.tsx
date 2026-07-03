@@ -25,7 +25,7 @@ import { useViewQueryOpts } from "@/lib/view/view-query-opts";
 import { useLogListQuery } from "@/src/hooks/gestionale/use-entity-list-queries";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
-import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 
 const dashboardFeedScrollClass = layoutScrollYSafe;
@@ -40,15 +40,11 @@ export function DashboardRecentLavorazioniWidget() {
   const globalOpts = useGlobalOptions({ debugTag: "DashboardRecentLavorazioniWidget" });
   const statiLavorazione = globalOpts.lavorazioni.stati;
 
-  const lavListQ = useLavorazioniList(
-    {
-      includeMezzo: true,
-      archived: false,
-      fetchMode: "light",
-      includeProfiles: false,
-    },
-    { enabled: !staging, ...viewOpts },
-  );
+  const lavListQ = useLavorazioniReportSlice({
+    archived: false,
+    enabled: !staging,
+    staleTime: viewOpts.staleTime,
+  });
   const schedeLavorazioneIds = useMemo(
     () => pickDashboardPriorityLavorazioneIds(lavListQ.data ?? [], DASHBOARD_SCHEde_PREFETCH_LIMIT),
     [lavListQ.data],

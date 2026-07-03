@@ -34,7 +34,7 @@ export type BuildAssetLifecycleKpiInput = {
   anchor: Date;
   timelineRows: AssetTimelineProjectionRow[];
   complianceRules: AssetComplianceRuleRow[];
-  lavorazioni: LavorazioneListRow[];
+  lavorazioni: readonly LavorazioneListRow[];
 };
 
 function daysBetween(from: Date, to: Date): number {

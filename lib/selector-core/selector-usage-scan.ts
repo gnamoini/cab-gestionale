@@ -42,13 +42,6 @@ const LEGACY_COMPONENTS = [
 
 const OPERATIONAL_SELECT_ONLY_SITES = [
   {
-    id: "lavorazioni-filter-addetto",
-    file: "components/gestionale/lavorazioni/lavorazioni-advanced-filter-panel.tsx",
-    pattern: /selectOnly[\s\S]{0,120}Filtra addetto|Filtra addetto[\s\S]{0,200}selectOnly/,
-    domain: "lavorazioni",
-    criticality: "medium" as const,
-  },
-  {
     id: "timesheet-filter-dipendente",
     file: "components/gestionale/dipendenti/timesheet-header.tsx",
     pattern: /selectOnly[\s\S]{0,80}Seleziona dipendente/,

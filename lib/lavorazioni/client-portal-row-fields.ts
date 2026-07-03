@@ -1,9 +1,9 @@
 import type { LavorazioneSchedeStore } from "@/types/schede";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LogModificaRow } from "@/src/types/supabase-tables";
-import { formatClientPortalAttrezzatura } from "@/lib/lavorazioni/client-portal-attrezzatura-format";
 import { latestAddettoFromLogs } from "@/lib/lavorazioni/client-portal-ui";
 import { lavorazioneIngressoIso } from "@/lib/lavorazioni/lavorazione-ingresso-display";
+import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";
 
 function dash(v: string | null | undefined): string {
   const t = v?.trim();
@@ -32,6 +32,8 @@ export type ClientPortalRowFields = {
   marca: string;
   modello: string;
   attrezzatura: string;
+  /** Badge read-only: TELAIO / ATT. / COMPOSITO */
+  entityBadge: string;
   targa: string;
   matricola: string;
   nScuderia: string;
@@ -58,38 +60,14 @@ export function clientPortalCantiereLabel(row: LavorazioneListRow, schedeStore?:
 }
 
 export function clientPortalAttrezzaturaLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  const ing = schedeStore?.[row.id]?.ingresso?.campi;
-  if (ing) {
-    return formatClientPortalAttrezzatura({
-      marca: ing.marcaAttrezzatura,
-      modello: ing.modelloAttrezzatura,
-    });
-  }
-  const m = row.mezzo;
-  return formatClientPortalAttrezzatura({
-    marca: m?.marca,
-    modello: m?.modello,
-  });
+  return resolveLavorazioneContextWithAttrezzatura(row, schedeStore).oggettoLabel;
 }
 
 export function clientPortalMezzoIdent(
   row: LavorazioneListRow,
   schedeStore?: LavorazioneSchedeStore,
 ): { targa: string; matricola: string; nScuderia: string } {
-  const ing = schedeStore?.[row.id]?.ingresso?.campi;
-  if (ing) {
-    return {
-      targa: dash(ing.targa),
-      matricola: dash(ing.matricola),
-      nScuderia: dash(ing.nScuderia),
-    };
-  }
-  const m = row.mezzo;
-  return {
-    targa: dash(m?.targa),
-    matricola: dash(m?.matricola),
-    nScuderia: dash(m?.numero_scuderia),
-  };
+  return resolveLavorazioneContextWithAttrezzatura(row, schedeStore).ident;
 }
 
 function clientPortalIngressoIsoFromDb(row: LavorazioneListRow): string {
@@ -125,11 +103,12 @@ export function clientPortalMarcaModello(
       modello: dash(ing.modelloAttrezzatura),
     };
   }
-  const m = row.mezzo;
-  return {
-    marca: dash(m?.marca),
-    modello: dash(m?.modello),
-  };
+  const display = resolveLavorazioneContextWithAttrezzatura(row, schedeStore);
+  const line = display.targetType === "attrezzatura" ? display.attrezzaturaLine : display.telaioLine;
+  if (line === "—") return { marca: "—", modello: "—" };
+  const parts = line.split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return { marca: dash(parts[0]), modello: "—" };
+  return { marca: dash(parts[0]), modello: dash(parts.slice(1).join(" ")) };
 }
 
 export function clientPortalDescrizioneProblema(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
@@ -171,7 +150,7 @@ export function buildClientPortalRowFields(
   logs: readonly LogModificaRow[],
   addettiGlobali: readonly string[],
 ): ClientPortalRowFields {
-  const ident = clientPortalMezzoIdent(row, schedeStore);
+  const display = resolveLavorazioneContextWithAttrezzatura(row, schedeStore);
   const { marca, modello } = clientPortalMarcaModello(row, schedeStore);
   const dataIngressoAt = lavorazioneIngressoIso(
     row,
@@ -181,15 +160,16 @@ export function buildClientPortalRowFields(
     dataIngresso: clientPortalDataIngressoLabel(row, schedeStore),
     dataIngressoAt,
     dataIngressoIso: clientPortalIngressoIso(row, schedeStore),
-    cliente: clientPortalClienteLabel(row, schedeStore),
-    cantiere: clientPortalCantiereLabel(row, schedeStore),
+    cliente: display.cliente,
+    cantiere: display.cantiere,
     utilizzatore: clientPortalUtilizzatoreLabel(row, schedeStore),
     marca,
     modello,
-    attrezzatura: clientPortalAttrezzaturaLabel(row, schedeStore),
-    targa: ident.targa,
-    matricola: ident.matricola,
-    nScuderia: ident.nScuderia,
+    attrezzatura: display.oggettoLabel,
+    entityBadge: display.oggettoBadge,
+    targa: display.ident.targa,
+    matricola: display.ident.matricola,
+    nScuderia: display.ident.nScuderia,
     addetto: clientPortalAddettoLabel(row, schedeStore, logs, addettiGlobali),
     descrizioneProblema: clientPortalDescrizioneProblema(row, schedeStore),
     noteIntervento: clientPortalNoteIntervento(row, schedeStore),

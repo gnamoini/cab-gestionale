@@ -1,9 +1,32 @@
 import assert from "node:assert/strict";
-import { isNavTargetCurrent, scheduleRouteTransitionBegin } from "./route-transition";
+import { isNavTargetCurrent, isSidebarNavLinkCurrent, scheduleRouteTransitionBegin } from "./route-transition";
 
 assert.equal(isNavTargetCurrent("/impostazioni", "/impostazioni"), true);
 assert.equal(isNavTargetCurrent("/lavorazioni/abc", "/lavorazioni"), true);
 assert.equal(isNavTargetCurrent("/dashboard/foo", "/dashboard"), false);
+
+assert.equal(
+  isSidebarNavLinkCurrent(
+    {
+      closest: () => ({
+        getAttribute: (name: string) => (name === "href" ? "/lavorazioni-clienti" : null),
+      }),
+    } as unknown as Element,
+    "/lavorazioni-clienti",
+  ),
+  true,
+);
+assert.equal(
+  isSidebarNavLinkCurrent(
+    {
+      closest: () => ({
+        getAttribute: (name: string) => (name === "href" ? "/lavorazioni-clienti" : null),
+      }),
+    } as unknown as Element,
+    "/dashboard",
+  ),
+  false,
+);
 
 let beginCalls = 0;
 scheduleRouteTransitionBegin({ defaultPrevented: false }, () => {

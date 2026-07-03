@@ -5,6 +5,7 @@ import { LoadingButton } from "@/components/design-system";
 import { LavorazioniModalShell } from "@/components/gestionale/lavorazioni/lavorazioni-modals";
 import { GestionaleModalScrollBody } from "@/components/gestionale/mobile-modal-scroll-body";
 import { GlobalSelect } from "@/components/gestionale/global-input";
+import { GestionaleTextarea } from "@/components/gestionale/gestionale-textarea";
 import { FormField } from "@/components/gestionale/schede/gestionale-form-section";
 import { formatInvoiceMoney } from "@/components/fatturazione/fattura-status-badge";
 import type { InvoicePaymentInput } from "@/lib/fatturazione/types";
@@ -100,7 +101,7 @@ export function FatturaPaymentModal({
             <input className={dsInput} value={riferimento} onChange={(e) => setRiferimento(e.target.value)} />
           </FormField>
           <FormField label="Note">
-            <textarea className={dsInput} rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
+            <GestionaleTextarea rows={2} value={note} onChange={setNote} />
           </FormField>
         </div>
       </GestionaleModalScrollBody>

@@ -153,11 +153,20 @@ export function ShellCard({
             ) : null}
           </div>
         ) : (
-          <div className="flex min-h-12 min-w-0 max-w-full items-center border-b border-[color:var(--cab-border)] px-4 py-3 sm:min-h-[3.25rem] sm:px-5">
-            <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5">
+          <div className="flex min-h-12 min-w-0 max-w-full items-stretch border-b border-[color:var(--cab-border)]">
+            <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-4 py-3 sm:min-h-[3.25rem] sm:px-5">
               {title ? <h2 className={`${dsCardTitle} leading-snug`}>{title}</h2> : null}
               {subtitle ? <p className={dsTypoSmall}>{subtitle}</p> : null}
             </div>
+            {headerActions ? (
+              <div
+                className={`flex shrink-0 items-center gap-2 self-stretch px-2 sm:px-3 ${
+                  headerActionsDivider ? "border-l border-[color:var(--cab-border)]" : ""
+                }`}
+              >
+                {headerActions}
+              </div>
+            ) : null}
           </div>
         )
       ) : null}

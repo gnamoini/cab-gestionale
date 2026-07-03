@@ -2,7 +2,6 @@
 
 import { useCallback, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import type { UseQueryResult } from "@tanstack/react-query";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { GESTIONALE_TOAST } from "@/src/lib/ux/gestionale-toast-messages";
 import {
@@ -11,7 +10,12 @@ import {
   runLavorazioniToolbarRefresh,
 } from "@/src/lib/react-query/refetch-lavorazioni-operational-data";
 
-type Refetchable = Pick<UseQueryResult<unknown, Error>, "refetch" | "isFetching" | "isError" | "error">;
+type Refetchable = Readonly<{
+  refetch: () => Promise<unknown>;
+  isFetching: boolean;
+  isError: boolean;
+  error: Error | null;
+}>;
 
 export function useClientLavorazioniRefresh(...queries: (Refetchable | undefined)[]) {
   const qc = useQueryClient();

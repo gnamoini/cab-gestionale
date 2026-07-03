@@ -143,10 +143,14 @@ function detectIdentMismatch(
     nScuderia: mezzo.nScuderia,
   };
   const schedaHasIdent = Boolean(
-    fromScheda.targa.trim() || fromScheda.matricola.trim() || fromScheda.nScuderia.trim(),
+    (fromScheda.targa?.trim() ?? "") ||
+      (fromScheda.matricola?.trim() ?? "") ||
+      (fromScheda.nScuderia?.trim() ?? ""),
   );
   const mezzoHasIdent = Boolean(
-    fromMezzo.targa.trim() || fromMezzo.matricola.trim() || fromMezzo.nScuderia.trim(),
+    (fromMezzo.targa?.trim() ?? "") ||
+      (fromMezzo.matricola?.trim() ?? "") ||
+      (fromMezzo.nScuderia?.trim() ?? ""),
   );
   if (!schedaHasIdent || !mezzoHasIdent) return false;
   return !interventoIdentEquals(fromScheda, fromMezzo);

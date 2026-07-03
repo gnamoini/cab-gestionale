@@ -89,7 +89,7 @@ export type CalendarReportServiceInput = {
   mezzi: MezzoGestito[];
   magazzino: RicambioMagazzino[];
   magLog: MagazzinoChangeLogEntry[];
-  lavRows: LavorazioneListRow[];
+  lavRows: readonly LavorazioneListRow[];
   semanticIndex: ReportSemanticIndex;
   queryMeta: readonly ReportIntegrityQueryMeta[];
   lifecycleTimeline?: AssetTimelineProjectionRow[];

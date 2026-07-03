@@ -23,6 +23,7 @@ import {
   lavTableTdCenter,
   lavTableTdPill,
   lavTableTdPillWrap,
+  lavTableColStatoAddettoInset,
   LavorazioneOrePermanenzaCell,
 } from "@/components/gestionale/lavorazioni/lavorazioni-table-shared";
 import type { buildLavorazioniPillOptionsFromGlobal } from "@/lib/global-list/build-lavorazioni-pill-options";
@@ -30,7 +31,6 @@ import {
   lavorazioneAddettoLabel,
   lavorazioneCantiereLabel,
   lavorazioneMacchinaLabel,
-  lavorazioneOggettoBadge,
   lavorazioneOggettoLabel,
   lavorazioneMezzoIdentParts,
   formatLavorazioneSchedeBadge,
@@ -42,7 +42,6 @@ import {
 } from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import { lavorazioneNoteOperative } from "@/lib/lavorazioni/lavorazione-display-helpers";
-import { InterventoTargetBadge } from "@/components/gestionale/intervento/intervento-target-badge";
 import { gestionaleListTableIsLastRow, gestionaleListTableLastRowAttr, gestionaleListTableRowClass, gestionaleListTableRowTone } from "@/lib/ui/gestionale-list-table";
 import { dsTableActionGlyph } from "@/lib/ui/design-system";
 import { IconActionButton } from "@/components/design-system";
@@ -176,7 +175,6 @@ function LavorazioneAttivaTableRowInner({
 }: LavorazioneAttivaTableRowProps) {
   const schedeStore = lavorazioneSchedeStoreSlice(row.id, bundle);
   const macchina = lavorazioneOggettoLabel(row, schedeStore);
-  const oggettoBadge = lavorazioneOggettoBadge(row, schedeStore);
   const telaio = lavorazioneTelaioLabel(row, schedeStore);
   const addetto = lavorazioneAddettoLabel(row, schedeStore, defaultAddetto);
   const awaitingCompletata = row.stato !== "completata" && row.archived !== true;
@@ -201,17 +199,7 @@ function LavorazioneAttivaTableRowInner({
         <span className="line-clamp-2 break-words">{lavorazioneCantiereLabel(row, schedeStore)}</span>
       </td>
       <td className={`${lavTableTd} min-w-0`}>
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <div className="flex min-w-0 items-center gap-1.5">
-            {oggettoBadge ? (
-              <InterventoTargetBadge
-                targetType={oggettoBadge === "TELAIO" ? "telaio" : "attrezzatura"}
-                attrezzaturaMarca={macchina}
-              />
-            ) : null}
-            <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchina}</div>
-          </div>
-        </div>
+        <div className="truncate text-sm font-medium leading-snug text-zinc-900 dark:text-zinc-100">{macchina}</div>
       </td>
       <td className={lavTableTd}>
         <MezzoIdentStackCell row={row} bundle={bundle} />
@@ -219,7 +207,7 @@ function LavorazioneAttivaTableRowInner({
       <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
         <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
       </td>
-      <td className={lavTableTdPill}>
+      <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <InlineSelectField
             tablePill
@@ -255,7 +243,7 @@ function LavorazioneAttivaTableRowInner({
           </InlineSelectField>
         </div>
       </td>
-      <td className={lavTableTdPill}>
+      <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <AddettoSelectField
             variant="pill"
@@ -379,7 +367,7 @@ function LavorazioneArchivioTableRowInner({
       <td className={`${lavTableTd} min-w-0 text-sm text-zinc-600 dark:text-zinc-300`}>
         <span className="line-clamp-2">{lavorazioneNoteOperative(row, schedeStore) || "—"}</span>
       </td>
-      <td className={lavTableTdPill}>
+      <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
         </div>
@@ -387,7 +375,7 @@ function LavorazioneArchivioTableRowInner({
       <td className={lavTableTdCenter}>
         <LavorazioneOrePermanenzaCell row={row} schedeStore={schedeStore} />
       </td>
-      <td className={lavTableTdPill}>
+      <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`}>
         <div className={lavTableTdPillWrap}>
           <LavorazioneAddettoReadOnlyPill
             addetto={lavorazioneAddettoLabel(row, schedeStore, "", addettoLogs)}

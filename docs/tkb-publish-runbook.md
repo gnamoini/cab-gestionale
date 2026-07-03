@@ -2,19 +2,30 @@
 
 ## Flow
 
-1. Modifiche entità KB in stato `draft`
-2. Submit → `review`
-3. Validazione schema (`activityId` obbligatorio)
-4. RPC `publish_tkb` (transaction atomica):
-   - Calcola `draft_hash`
-   - Se uguale all'ultimo published → idempotente (no nuova kbVersion)
-   - Altrimenti incrementa `kbVersion`, insert `tkb_published_snapshots`
-5. Description Engine legge **solo** `snapshot_json`
+1. Adapter plugin estraggono dati operativi attivi (tier strutturato → testo)
+2. `MergeEngine` unisce fragment con policy di precedenza
+3. `Canonicalizer` + hash deterministico
+4. Quality gates (validazione, benchmark, soglie coverage/OAR/THR)
+5. Insert atomico `tkb_published_snapshots` (idempotente su `draft_hash`)
+6. Description Engine legge **solo** snapshot pubblicati (`/api/tkb/snapshot` o cache server)
+
+## Bozza vs pubblicato
+
+- `tkb_draft_store` — bozza aggiornata da sync eventi (debounce 30s)
+- Publish admin — **full build** obbligatorio
 
 ## Rollback
 
-Non si modifica uno snapshot published. Si pubblica una nuova versione con delta correttivo.
+Non modificare snapshot published. Pubblicare nuova `kb_version` correttiva.
 
-## Audit preventivo storico
+## Audit
 
-`preventivi.dettagli.descriptionEngineMeta.kbVersion` → query snapshot per ricostruzione KB esatta.
+Colonne `pipeline_version`, `build_stats`, `build_duration_ms`, `app_git_sha` su `tkb_published_snapshots`.
+
+## Test
+
+```bash
+npx tsx lib/domain/technical-knowledge-base/canonicalize.test.ts
+npx tsx lib/domain/technical-knowledge-base/merge/merge-engine.test.ts
+npx tsx lib/preventivi/description-engine/operative-history/operative-history.test.ts
+```

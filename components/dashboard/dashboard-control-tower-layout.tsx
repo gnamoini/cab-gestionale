@@ -14,7 +14,7 @@ import {
 import { dsStackPage } from "@/lib/ui/design-system";
 
 function DashboardControlTowerLayoutInner() {
-  const { visibleWidgets, slices, isLoading, canPreventivi, canFatturazione } = useControlTowerContext();
+  const { visibleWidgets, slices, isLoading, canFatturazione } = useControlTowerContext();
   const bySection = groupVisibleWidgetsBySection(visibleWidgets);
 
   if (isLoading && visibleWidgets.length === 0) {
@@ -26,7 +26,7 @@ function DashboardControlTowerLayoutInner() {
       return (slices?.alerts.items.length ?? 0) > 0;
     }
     if (section === "admin") {
-      return canPreventivi || canFatturazione;
+      return canFatturazione;
     }
     return (bySection.get(section)?.length ?? 0) > 0;
   }

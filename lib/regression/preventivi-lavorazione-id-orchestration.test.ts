@@ -7,7 +7,7 @@ const viewSrc = fs.readFileSync(path.join(ROOT, "components/preventivi/preventiv
 
 assert.match(
   viewSrc,
-  /void appendPreventivoSynced\(rec, mezziRows[\s\S]*?sp\.set\(Q_PREVENTIVI_OPEN, saved\.id\)[\s\S]*?router\.replace/,
+  /void appendPreventivoSynced\(rec, mezziSnap[\s\S]*?sp\.set\(Q_PREVENTIVI_OPEN, saved\.id\)[\s\S]*?router\.replace/,
 );
 assert.doesNotMatch(viewSrc, /sp\.set\(Q_PREVENTIVI_OPEN, rec\.id\)/);
 assert.match(viewSrc, /pendingHandledRef\.current = false/);

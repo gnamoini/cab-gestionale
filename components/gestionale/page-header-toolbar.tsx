@@ -145,6 +145,7 @@ export function GestionaleDirtySaveActions({
 export function GestionalePageToolbarActions({
   className,
   leading,
+  showUndo = true,
   canUndo,
   undoDisabled = false,
   undoPending = false,
@@ -157,6 +158,8 @@ export function GestionalePageToolbarActions({
 }: {
   className?: string;
   leading?: ReactNode;
+  /** false = nasconde il pulsante undo (es. Lavorazioni). */
+  showUndo?: boolean;
   canUndo: boolean;
   undoDisabled?: boolean;
   undoPending?: boolean;
@@ -190,19 +193,21 @@ export function GestionalePageToolbarActions({
     <>
       <div className={`${gestionalePageToolbarActionsInnerClass}${className ? ` ${className}` : ""}`}>
         {leading}
-        <Tooltip content={canUndo && !undoDisabled && !undoPending ? "Annulla" : "Non disponibile"}>
-          <button
-            type="button"
-            onClick={onUndo}
-            className={`${dsPageToolbarIconBtn} shrink-0`}
-            disabled={undoInactive}
-            aria-disabled={undoInactive}
-            aria-label="Annulla ultima azione"
-          >
-            <IconGestionaleUndo />
-            <span className="sr-only">Annulla ultima azione</span>
-          </button>
-        </Tooltip>
+        {showUndo ? (
+          <Tooltip content={canUndo && !undoDisabled && !undoPending ? "Annulla" : "Non disponibile"}>
+            <button
+              type="button"
+              onClick={onUndo}
+              className={`${dsPageToolbarIconBtn} shrink-0`}
+              disabled={undoInactive}
+              aria-disabled={undoInactive}
+              aria-label="Annulla ultima azione"
+            >
+              <IconGestionaleUndo />
+              <span className="sr-only">Annulla ultima azione</span>
+            </button>
+          </Tooltip>
+        ) : null}
         <Tooltip content="Log">
           <button
             type="button"

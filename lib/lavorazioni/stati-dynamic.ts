@@ -121,7 +121,7 @@ export function resolveDefaultLavorazioneStatoId(stati: StatoLavorazioneConfig[]
   return prefer?.id ?? DEFAULT_LAVORAZIONE_STATO_ID;
 }
 
-function findStatoInConfig(statoRaw: string, stati: StatoLavorazioneConfig[]): StatoLavorazioneConfig | undefined {
+function findStatoInConfig(statoRaw: string, stati: readonly StatoLavorazioneConfig[]): StatoLavorazioneConfig | undefined {
   const trimmed = statoRaw.trim();
   if (!trimmed) return undefined;
   const migrated = migrateStatoConfigId(trimmed);
@@ -147,7 +147,7 @@ function findStatoInConfig(statoRaw: string, stati: StatoLavorazioneConfig[]): S
   return stati.find((s) => s.label.trim().toLowerCase() === lower);
 }
 
-export function statoLavorazioneLabel(statoId: string, stati: StatoLavorazioneConfig[]): string {
+export function statoLavorazioneLabel(statoId: string, stati: readonly StatoLavorazioneConfig[]): string {
   const hit = findStatoInConfig(statoId, stati);
   if (hit?.label?.trim()) return hit.label.trim();
   const id = migrateStatoConfigId(statoId.trim());

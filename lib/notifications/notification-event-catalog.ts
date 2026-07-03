@@ -106,10 +106,10 @@ export const NOTIFICATION_EVENT_CATALOG: readonly NotificationEventDefinition[] 
   {
     type: "dipendenti_presenze_reminder",
     module: "dipendenti",
-    scopeType: "role",
-    scopeValue: "manager",
+    scopeType: "global",
+    scopeValue: null,
     priority: "medium",
-    recipients: { admin: true, ufficio: false, officina: false },
+    recipients: { admin: true, ufficio: true, officina: true },
     trigger: "scheduled",
     dedupKeyPattern: "dip-pres:{yyyy-mm-dd}",
     titleTemplate: "Presenze dipendenti",

@@ -1,10 +1,6 @@
 import { applyListinoColumnMap, detectListinoColumnMap } from "@/lib/magazzino/listino-import/parse-listino-column-map";
 import type { ListinoImportRawRow } from "@/lib/magazzino/listino-import/listino-import-types";
-
-function sheetToMatrix(sheet: import("xlsx").WorkSheet): unknown[][] {
-  const xlsx = require("xlsx") as typeof import("xlsx");
-  return xlsx.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" }) as unknown[][];
-}
+import { readSpreadsheetWorkbook, sheetToMatrix } from "@/lib/spreadsheet/xlsx-server";
 
 function parseCsvText(text: string): unknown[][] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
@@ -27,8 +23,7 @@ export function parseListinoSpreadsheetBuffer(
     const text = new TextDecoder("utf-8").decode(bytes);
     matrix = parseCsvText(text);
   } else {
-    const xlsx = require("xlsx") as typeof import("xlsx");
-    const wb = xlsx.read(Buffer.from(bytes), { type: "buffer", cellDates: false });
+    const wb = readSpreadsheetWorkbook(bytes, fileName);
     const sheetName = wb.SheetNames[0];
     if (!sheetName) return { rows: [], warnings: ["Foglio Excel vuoto."], needsAiColumnMap: false };
     matrix = sheetToMatrix(wb.Sheets[sheetName]!);
@@ -64,8 +59,7 @@ export function readSpreadsheetMatrix(bytes: Uint8Array, fileName: string): unkn
     const text = new TextDecoder("utf-8").decode(bytes);
     return parseCsvText(text);
   }
-  const xlsx = require("xlsx") as typeof import("xlsx");
-  const wb = xlsx.read(Buffer.from(bytes), { type: "buffer", cellDates: false });
+  const wb = readSpreadsheetWorkbook(bytes, fileName);
   const sheetName = wb.SheetNames[0];
   if (!sheetName) return [];
   return sheetToMatrix(wb.Sheets[sheetName]!);

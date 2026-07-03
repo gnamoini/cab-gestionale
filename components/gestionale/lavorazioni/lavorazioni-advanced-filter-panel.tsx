@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { GlobalSelect } from "@/components/gestionale/global-input/global-select";
 import { GlobalSettingsListSelect } from "@/components/gestionale/global-input/global-settings-list-select";
+import { AddettoSelectField } from "@/components/gestionale/lavorazioni/lavorazioni-inline-select";
 import { GlobalFilterDateField } from "@/components/gestionale/global-input/global-date-picker";
 import {
   LavorazioniFilterField,
@@ -13,24 +14,26 @@ import {
   FILTER_ALL,
   type LavorazioniAdvancedFilters,
   type LavorazioniFilterCatalog,
-  type LavorazioniSectionFilter,
 } from "@/lib/lavorazioni/lavorazioni-advanced-filters";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
+
+export type LavorazioniAdvancedFilterPanelVariant = "staff" | "clientPortal";
 
 export function LavorazioniAdvancedFilterPanel({
   filters,
   onChange,
   catalog,
-  statiOpts,
-  showSectionFilter = false,
+  statiOpts = [],
+  variant = "staff",
 }: {
   filters: LavorazioniAdvancedFilters;
   onChange: (patch: Partial<LavorazioniAdvancedFilters>) => void;
   catalog: LavorazioniFilterCatalog;
-  statiOpts: { id: string; label: string }[];
-  /** Portale clienti: filtra in corso / archivio / entrambi. */
-  showSectionFilter?: boolean;
+  statiOpts?: { id: string; label: string }[];
+  variant?: LavorazioniAdvancedFilterPanelVariant;
 }) {
+  const isStaff = variant === "staff";
+
   const modelloOptions = useMemo(() => {
     if (filters.marca === FILTER_ALL || !filters.marca.trim()) {
       const all = new Set<string>();
@@ -59,15 +62,6 @@ export function LavorazioniAdvancedFilterPanel({
       ...catalog.addetti.map((a) => ({ value: a, label: a })),
     ],
     [catalog.addetti],
-  );
-
-  const sectionItems = useMemo(
-    () => [
-      { value: "", label: "In corso e completate" },
-      { value: "in_corso", label: "Solo in corso" },
-      { value: "archivio", label: "Solo completate" },
-    ],
-    [],
   );
 
   return (
@@ -108,17 +102,19 @@ export function LavorazioniAdvancedFilterPanel({
       </LavorazioniFilterGroup>
 
       <LavorazioniFilterGroup title="Filtri entità">
-        <LavorazioniFilterField label="Cliente">
-          <GlobalSettingsListSelect
-            listKey="mezzi:clienti"
-            value={filters.cliente}
-            onChange={(v) => onChange({ cliente: v })}
-            placeholder="Cerca e seleziona…"
-            inputClassName={gestionaleFilterFieldInputClass}
-            variant="filter"
-            aria-label="Filtra cliente"
-          />
-        </LavorazioniFilterField>
+        {isStaff ? (
+          <LavorazioniFilterField label="Cliente">
+            <GlobalSettingsListSelect
+              listKey="mezzi:clienti"
+              value={filters.cliente}
+              onChange={(v) => onChange({ cliente: v })}
+              placeholder="Cerca e seleziona…"
+              inputClassName={gestionaleFilterFieldInputClass}
+              variant="filter"
+              aria-label="Filtra cliente"
+            />
+          </LavorazioniFilterField>
+        ) : null}
         <LavorazioniFilterField label="Cantiere">
           <GlobalSettingsListSelect
             listKey="mezzi:cantieri"
@@ -141,35 +137,19 @@ export function LavorazioniAdvancedFilterPanel({
             aria-label="Filtra utilizzatore"
           />
         </LavorazioniFilterField>
-        <LavorazioniFilterField label="Addetto">
-          <GlobalSelect
-            items={addettoItems}
-            value={filters.addetto}
-            onChange={(v) => onChange({ addetto: v })}
-            inputClassName={gestionaleFilterFieldInputClass}
-            strictFromList
-            variant="filter"
-            filterNeutralValues={[FILTER_ALL]}
-            selectorDomain="lavorazioni"
-            dynamicList
-            operationalFilter
-            recentsKey="selector:lavorazioni-addetto-filter"
-            aria-label="Filtra addetto"
-          />
-        </LavorazioniFilterField>
-        {showSectionFilter ? (
-          <LavorazioniFilterField label="Elenco">
-            <GlobalSelect
-              items={sectionItems}
-              value={filters.section}
-              onChange={(v) => onChange({ section: v as LavorazioniSectionFilter })}
-              inputClassName={gestionaleFilterFieldInputClass}
-              strictFromList
-              variant="filter"
-              aria-label="Filtra in corso o archivio"
+        {isStaff ? (
+          <LavorazioniFilterField label="Addetto">
+            <AddettoSelectField
+              variant="default"
+              value={filters.addetto}
+              onChange={(v) => onChange({ addetto: v })}
+              options={addettoItems}
+              ariaLabel="Seleziona addetto"
+              className={gestionaleFilterFieldInputClass}
             />
           </LavorazioniFilterField>
-        ) : (
+        ) : null}
+        {isStaff ? (
           <LavorazioniFilterField label="Stato">
             <GlobalSelect
               items={statoItems}
@@ -183,7 +163,7 @@ export function LavorazioniAdvancedFilterPanel({
               aria-label="Filtra stato"
             />
           </LavorazioniFilterField>
-        )}
+        ) : null}
       </LavorazioniFilterGroup>
 
       <LavorazioniFilterGroup title="Filtri tecnici">
@@ -215,21 +195,6 @@ export function LavorazioniAdvancedFilterPanel({
             aria-label="Filtra modello"
           />
         </LavorazioniFilterField>
-        {showSectionFilter ? (
-          <LavorazioniFilterField label="Stato">
-            <GlobalSelect
-              items={statoItems}
-              value={filters.stato}
-              onChange={(v) => onChange({ stato: v })}
-              inputClassName={gestionaleFilterFieldInputClass}
-              strictFromList
-              selectOnly
-              variant="filter"
-              filterNeutralValues={[FILTER_ALL]}
-              aria-label="Filtra stato"
-            />
-          </LavorazioniFilterField>
-        ) : null}
       </LavorazioniFilterGroup>
     </div>
   );

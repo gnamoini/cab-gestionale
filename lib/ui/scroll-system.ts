@@ -19,3 +19,6 @@ export const dsScrollX =
 
 /** Sentinel in fondo al contenuto main — spazio scrollabile extra (--cab-scroll-end-pad). */
 export const dsGestionaleScrollEndPad = "gestionale-scroll-end-pad";
+
+/** Variante con sfumatura fondo pagina (solo sentinel AppShell, non card annidate). */
+export const dsGestionaleScrollEndPadFade = "gestionale-scroll-end-pad gestionale-scroll-end-pad--fade";

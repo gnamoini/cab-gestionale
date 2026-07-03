@@ -77,6 +77,7 @@ import { openPdfArtifact } from "@/lib/pdf/request-pdf-artifact";
 import { usePreventivoDdtIndex } from "@/src/hooks/gestionale/use-ddt-query";
 import { usePermissions } from "@/src/hooks/use-permissions";
 import { ddtService } from "@/src/services/ddt.service";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 import { dateInputValueToIso, isoToDateInputValue } from "@/lib/lavorazioni/date-day-only";
 
@@ -201,6 +202,7 @@ export function PreventiviEditorModal({
   const [descRegenBusy, setDescRegenBusy] = useState(false);
   const prevPerms = usePermissions("preventivi");
   const toast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const preventivoId = record?.id ?? "";
   const { getDdtForPreventivo, refetch: refetchDdtIndex, isLoading: ddtIndexLoading } = usePreventivoDdtIndex(
     preventivoId ? [preventivoId] : [],
@@ -350,7 +352,13 @@ export function PreventiviEditorModal({
 
   const regenerateDdt = useCallback(async () => {
     if (!draft || !preventivoId || !prevPerms.canWrite) return;
-    if (!window.confirm("Rigenerare il DDT? Il documento precedente verrà annullato.")) return;
+    const ok = await confirm({
+      title: "Rigenerare DDT",
+      message: "Rigenerare il DDT? Il documento precedente verrà annullato.",
+      confirmLabel: "Rigenera",
+      destructive: true,
+    });
+    if (!ok) return;
     setDdtBusy(true);
     try {
       const payload = buildDdtDraftFromPreventivoAuto({ preventivo: draft, preventivoId });
@@ -364,7 +372,7 @@ export function PreventiviEditorModal({
     } finally {
       setDdtBusy(false);
     }
-  }, [draft, openDdtDrawer, preventivoId, prevPerms.canWrite, refetchDdtIndex, toast]);
+  }, [draft, confirm, openDdtDrawer, preventivoId, prevPerms.canWrite, refetchDdtIndex, toast]);
 
   const refreshDdtDrawer = useCallback(async () => {
     const detail = ddtDrawer.detail;
@@ -1103,6 +1111,7 @@ export function PreventiviEditorModal({
             onSalva();
           }}
         />
+        {confirmDialog}
       </div>
     </LavorazioniModalShell>
   );

@@ -1,6 +1,6 @@
 import type { SVGProps } from "react";
 
-/** Spark a 4 punte — silhouette ispirata a Gemini, `currentColor` per adattarsi al tema del tasto. */
+/** Spark Gemini — path Simple Icons / Google, `currentColor` sul tasto AI. */
 export function GeminiSparkIcon({ className, ...rest }: SVGProps<SVGSVGElement>) {
   return (
     <svg
@@ -12,18 +12,8 @@ export function GeminiSparkIcon({ className, ...rest }: SVGProps<SVGSVGElement>)
       {...rest}
     >
       <path
-        d="M12 2.25c.35 2.65 2.1 4.4 4.75 4.75-2.65.35-4.4 2.1-4.75 4.75-.35-2.65-2.1-4.4-4.75-4.75 2.65-.35 4.4-2.1 4.75-4.75Z"
+        d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"
         fill="currentColor"
-      />
-      <path
-        d="M18.5 12.75c.22 1.65 1.32 2.75 2.97 2.97-1.65.22-2.75 1.32-2.97 2.97-.22-1.65-1.32-2.75-2.97-2.97 1.65-.22 2.75-1.32 2.97-2.97Z"
-        fill="currentColor"
-        opacity="0.88"
-      />
-      <path
-        d="M5.5 14.5c.18 1.35 1.08 2.25 2.43 2.43-1.35.18-2.25 1.08-2.43 2.43-.18-1.35-1.08-2.25-2.43-2.43 1.35-.18 2.25-1.08 2.43-2.43Z"
-        fill="currentColor"
-        opacity="0.72"
       />
     </svg>
   );

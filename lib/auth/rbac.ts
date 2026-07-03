@@ -135,7 +135,8 @@ function sectionAccess(_user: RbacUser, section: RbacSection, ctx?: RbacEvaluati
   }
   if (section === "dashboard") {
     const read = capFromCtx(ctx, "can_read_operational");
-    return { read, write: false, delete: false };
+    const write = capFromCtx(ctx, "can_write_operational");
+    return { read, write, delete: write };
   }
   if (SECTION_TO_MODULE[section]) {
     return moduleSectionAccess(section, ctx);

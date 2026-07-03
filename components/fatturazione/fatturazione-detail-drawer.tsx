@@ -15,6 +15,7 @@ import { dsBtnNeutralForm } from "@/lib/ui/design-system";
 import type { InvoiceDetail } from "@/lib/fatturazione/types";
 import { invoiceDisplayNumber } from "@/lib/fatturazione/fatturazione-list-ui-filters";
 import { invoiceIsDeletable, invoicesService } from "@/src/services/invoices.service";
+import { useGestionaleConfirm } from "@/src/hooks/use-gestionale-confirm";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
 
 export function FatturazioneDetailDrawer({
@@ -38,6 +39,7 @@ export function FatturazioneDetailDrawer({
 }) {
   const isMobile = useMaxMdDown();
   const toast = useGestionaleToast();
+  const { confirm, confirmDialog } = useGestionaleConfirm();
   const [busy, setBusy] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const inv = detail?.invoice;
@@ -62,7 +64,14 @@ export function FatturazioneDetailDrawer({
 
   const cancel = useCallback(async () => {
     if (!inv || busy || !isAdmin) return;
-    const reason = window.prompt("Motivo annullamento (facoltativo):") ?? "";
+    const ok = await confirm({
+      title: "Annullare fattura",
+      message: "Confermi l'annullamento di questa fattura?",
+      confirmLabel: "Annulla fattura",
+      destructive: true,
+    });
+    if (!ok) return;
+    const reason = "";
     setBusy(true);
     try {
       const res = await invoicesService.cancel(inv.id, reason);
@@ -75,7 +84,7 @@ export function FatturazioneDetailDrawer({
     } finally {
       setBusy(false);
     }
-  }, [busy, isAdmin, inv, onChanged, onClose, toast]);
+  }, [busy, confirm, isAdmin, inv, onChanged, onClose, toast]);
 
   const removeDraft = useCallback(async () => {
     if (!inv || busy || !canWrite) return;
@@ -237,6 +246,7 @@ export function FatturazioneDetailDrawer({
         }}
         onConfirm={() => void removeDraft()}
       />
+      {confirmDialog}
     </>
   );
 }

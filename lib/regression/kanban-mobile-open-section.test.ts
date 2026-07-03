@@ -13,16 +13,18 @@ const board = fs.readFileSync(
 assert.match(board, /lastSyncedSectionIdsKeyRef/);
 assert.match(board, /if \(lastSyncedSectionIdsKeyRef\.current === sectionIdsKey\) return/);
 assert.match(board, /prev === id \? "" : id/);
-assert.doesNotMatch(board, /nested/);
+assert.match(board, /section\.nested/);
 
 const view = fs.readFileSync(
   path.join(process.cwd(), "components/gestionale/lavorazioni/lavorazioni-kanban-view.tsx"),
   "utf8",
 );
 
-assert.doesNotMatch(view, /isAttesaPreventivoStato/);
-assert.doesNotMatch(view, /attesaPreventivoByStato/);
-assert.doesNotMatch(view, /nested:/);
+assert.match(view, /partitionKanbanByColumn/);
+assert.match(view, /nested:/);
+assert.doesNotMatch(view, /useGestionaleListLayout/);
+assert.doesNotMatch(view, /layout \?\?/);
+assert.doesNotMatch(view, /layout \|\|/);
 
 const css = fs.readFileSync(
   path.join(process.cwd(), "components/gestionale/lavorazioni/lavorazioni-scroll.css"),

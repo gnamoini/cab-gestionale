@@ -85,7 +85,7 @@ assert.match(
   /dsGestionaleContentMax[\s\S]*layoutPageRoot[\s\S]*contentGutter/,
   "main scroll inner wrapper must carry content width + gutter",
 );
-assert.match(appShell, /dsGestionaleScrollEndPad/);
+assert.match(appShell, /dsGestionaleScrollEndPadFade/);
 assert.match(appShell, /suppressGlobalScrollEndPad/);
 assert.match(appShell, /useGestionaleScrollEnd/);
 assert.match(appShell, /SidebarSessionPanel/);

@@ -106,7 +106,10 @@ export function ClientLavorazioneTimelinePanel({
       <GestionaleInfoCard title="Riepilogo" subtitle={header.identificativo}>
         <GestionaleInfoRow label="Cliente" value={hubPanoramicaDisplayValue(header.cliente)} strong />
         <GestionaleInfoRow label="Cantiere" value={hubPanoramicaDisplayValue(header.cantiere)} />
-        <GestionaleInfoRow label="Attrezzatura" value={hubPanoramicaDisplayValue(header.attrezzatura)} />
+        <GestionaleInfoRow label="Oggetto" value={hubPanoramicaDisplayValue(header.attrezzatura)} strong />
+        {fields.entityBadge && fields.entityBadge !== "—" ? (
+          <GestionaleInfoRow label="Tipo" value={fields.entityBadge} />
+        ) : null}
       </GestionaleInfoCard>
 
       <GestionaleInfoCard title="Situazione">

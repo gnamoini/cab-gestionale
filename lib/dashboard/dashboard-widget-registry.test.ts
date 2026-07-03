@@ -19,7 +19,6 @@ const ALL_WIDGETS: DashboardWidgetId[] = [
   "admin-backlog",
   "magazzino-kpi",
   "recent-activity",
-  "operational-calendar",
   "local-notes",
 ];
 
@@ -27,7 +26,7 @@ const EXPECTED_WIDGETS: Record<string, DashboardWidgetId[]> = {
   admin: ALL_WIDGETS,
   manager: ALL_WIDGETS,
   operatore: ALL_WIDGETS,
-  addetto_amministrativo: ["operational-kpi-header", "alerts-anomalies", "admin-backlog", "recent-activity", "operational-calendar", "local-notes"],
+  addetto_amministrativo: ["operational-kpi-header", "alerts-anomalies", "admin-backlog", "recent-activity", "local-notes"],
   guest: ALL_WIDGETS,
 };
 
@@ -47,7 +46,7 @@ function assertWidgetSnapshot(role: string, staging: boolean, expected: Dashboar
 }
 
 function main(): void {
-  assert.equal(DASHBOARD_WIDGET_REGISTRY.length, 8);
+  assert.equal(DASHBOARD_WIDGET_REGISTRY.length, 7);
 
   const ids = DASHBOARD_WIDGET_REGISTRY.map((w) => w.id);
   assert.equal(new Set(ids).size, ids.length, "registry must not contain duplicate widget ids");
@@ -55,6 +54,7 @@ function main(): void {
     assert.equal(isKnownDashboardWidgetId(def.id), true, `registry id must be known: ${def.id}`);
   }
   assert.equal(isKnownDashboardWidgetId("recent-lavorazioni"), true, "legacy id compat");
+  assert.equal(isKnownDashboardWidgetId("operational-calendar"), true, "legacy id compat");
 
   assertWidgetSnapshot("admin", false, EXPECTED_WIDGETS.admin);
   assertWidgetSnapshot("manager", false, EXPECTED_WIDGETS.manager);
@@ -67,7 +67,6 @@ function main(): void {
     "alerts-anomalies",
     "lavorazioni-kpi",
     "admin-backlog",
-    "operational-calendar",
     "local-notes",
   ]);
 

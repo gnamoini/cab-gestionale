@@ -38,13 +38,28 @@ function collectRlsTables(): Set<string> {
   return tables;
 }
 
+function collectRlsViews(): Set<string> {
+  const views = new Set<string>();
+  const files = fs.readdirSync(MIGRATIONS_DIR).filter((f) => f.endsWith(".sql"));
+  for (const file of files) {
+    const content = fs.readFileSync(path.join(MIGRATIONS_DIR, file), "utf8");
+    const viewMatches = content.matchAll(
+      /create\s+(?:or\s+replace\s+)?view\s+(?:public\.)?([a-z_][a-z0-9_]*)/gi,
+    );
+    for (const m of viewMatches) views.add(m[1]!);
+  }
+  return views;
+}
+
 function main(): void {
   const serviceTables = collectServiceTables();
   const rlsTables = collectRlsTables();
+  const rlsViews = collectRlsViews();
 
   const missingRls: string[] = [];
   for (const t of [...serviceTables].sort()) {
-    if (!rlsTables.has(t)) missingRls.push(t);
+    if (rlsTables.has(t) || rlsViews.has(t)) continue;
+    missingRls.push(t);
   }
 
   console.log("=== RLS Service Audit ===\n");

@@ -11,6 +11,7 @@ import { dsBtnNeutral } from "@/lib/ui/design-system";
 import { GLOBAL_LOADING_MESSAGES } from "@/lib/ui/global-loading-messages";
 import { isBootInvestigationEnabled, logBoot, trackRedirect } from "@/lib/observability/boot-investigation";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
+import { deferredRouterReplace } from "@/lib/navigation/deferred-app-router";
 
 const AUTH_NOTICE_DELAY_MS = 300;
 const DEGRADED_REFRESH_MAX_ATTEMPTS = 3;
@@ -42,7 +43,7 @@ export function GestionaleAuthGate({ children }: { children: React.ReactNode }) 
     params.set("reason", "session_expired");
     const to = `/login?${params.toString()}`;
     trackRedirect(pathname, to, "session_expired", "auth_gate");
-    router.replace(to);
+    deferredRouterReplace(router, to);
   }, [status, configBlocked, router, pathname]);
 
   useEffect(() => {

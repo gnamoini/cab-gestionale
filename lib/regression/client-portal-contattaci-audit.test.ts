@@ -50,9 +50,10 @@ const scrollBody = scrollBodyMatch[0]!;
 assert.doesNotMatch(scrollBody, /<a\s+href=/, "scroll body must not contain action links");
 
 assert.match(listView, /primaryAction=\{[\s\S]*ClientContattaciButton/);
-assert.match(listView, /hidden sm:inline-flex[\s\S]*ClientContattaciButton variant="toolbar"/);
 
 assert.match(logUi, /gestionaleLogDrawerPanelClass/);
+assert.match(logUi, /gestionaleLogDrawerPanelStackClass/);
+assert.match(logUi, /gestionaleLogDrawerScrollInsetClass/);
 assert.match(logUi, /max-md:overflow-visible/);
 assert.match(logUi, /max-md:flex-none max-md:overflow-visible/);
 

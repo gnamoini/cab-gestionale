@@ -11,6 +11,7 @@ import {
   sortResolvedActivities,
   createTkbSeedDraft,
   resetMemorySnapshots,
+  getLatestMemorySnapshot,
 } from "@/lib/domain/technical-knowledge-base";
 import { pulisciDescrizioneLavorazioniSpecifiche } from "@/lib/preventivi/preventivi-struttura";
 import { trasformaDescrizioneLavorazioni } from "@/lib/preventivi/trasforma-descrizione";
@@ -28,6 +29,8 @@ import {
 } from "./generation-identity";
 import { resolveDetailLevel, DEFAULT_STYLE_PROFILE } from "./style-profile";
 import { applyAiPolishToLines, DEFAULT_AI_POLISH_CONSTRAINTS, polishDescriptionWithAi } from "./ai-polish";
+import { fuseWithOperativeHistory } from "./operative-history/fusion-ranker";
+import { rankOperativeHistoryFromContext } from "./operative-history/history-ranker";
 import type {
   ComposedDescription,
   ConfidenceFactors,
@@ -43,8 +46,11 @@ function isAiPolishEnabled(): boolean {
 
 export function ensureTkbSeedPublished(): number {
   if (!seedBootstrapped) {
-    resetMemorySnapshots();
-    publishTkbDraft(createTkbSeedDraft(), { changeSummary: "Seed iniziale TKB" });
+    const latest = getLatestMemorySnapshot();
+    if (!latest) {
+      resetMemorySnapshots();
+      publishTkbDraft(createTkbSeedDraft(), { changeSummary: "Seed iniziale TKB (dev)" });
+    }
     seedBootstrapped = true;
   }
   const snap = loadPublishedTkbSnapshot();
@@ -86,11 +92,22 @@ function activitiesToLines(
   }));
 }
 
-/** Genera descrizione preventivo via TKB + legacy controllato. */
+/** Genera descrizione preventivo via TKB + storico operativo + legacy controllato. */
 export function generatePreventivoDescription(input: DescriptionEngineInput): ComposedDescription {
-  const kbVersion = input.kbVersion ?? ensureTkbSeedPublished();
-  const snapshot = loadPublishedTkbSnapshot(kbVersion);
+  const snapshot =
+    input.publishedSnapshot ??
+    loadPublishedTkbSnapshot(input.kbVersion ?? ensureTkbSeedPublished());
+  const kbVersion = snapshot.kbVersion;
   const detailLevel = resolveDetailLevel(input.detailLevel);
+
+  const historyCandidates = rankOperativeHistoryFromContext({
+    technicalBlob: input.technicalBlob,
+    anomaliaText: input.anomaliaText,
+    mezzoId: input.mezzoId,
+    cliente: input.cliente ?? input.ctx.cliente,
+    marcaModello: input.marcaModello,
+    ctx: input.ctx,
+  });
 
   const matches = matchInterventi(snapshot, {
     lavorazioniText: input.technicalBlob,
@@ -180,6 +197,13 @@ export function generatePreventivoDescription(input: DescriptionEngineInput): Co
   confidence = computeAggregateConfidence(factorsFinal);
   tier = confidenceTierFromScore(confidence);
 
+  const fused = fuseWithOperativeHistory({
+    tkbLines: lines,
+    tkbScore: primary?.score ?? 0,
+    historyCandidates,
+  });
+  lines = fused.lines;
+
   validateNoAnonymousLines(lines);
 
   const matchedSlugs = matches.slice(0, 3).map((m) => m.interventoSlug);
@@ -237,6 +261,7 @@ export function generatePreventivoDescription(input: DescriptionEngineInput): Co
     aiRejectReason: aiPolishResult && !aiPolishResult.applied ? aiPolishResult.rejectReason : undefined,
     semanticFingerprintPre,
     semanticFingerprintPost: aiPolishResult?.applied ? aggregateSemanticFingerprint(lines) : undefined,
+    operativeHistory: fused.historyMeta,
   };
 
   return { lines, meta, clienteText };

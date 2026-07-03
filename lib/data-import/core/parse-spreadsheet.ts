@@ -1,4 +1,8 @@
 import type { ImportParseResult, ImportParseSheetInfo } from "@/lib/data-import/core/types";
+import {
+  readSpreadsheetWorkbook,
+  sheetToMatrix,
+} from "@/lib/spreadsheet/xlsx-server";
 
 function normalizeCell(cell: unknown): string {
   return String(cell ?? "")
@@ -12,11 +16,6 @@ function parseCsvText(text: string): unknown[][] {
     const sep = line.includes(";") && !line.includes(",") ? ";" : ",";
     return line.split(sep).map((c) => c.trim().replace(/^"|"$/g, ""));
   });
-}
-
-function sheetToMatrix(sheet: import("xlsx").WorkSheet): unknown[][] {
-  const xlsx = require("xlsx") as typeof import("xlsx");
-  return xlsx.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "" }) as unknown[][];
 }
 
 function analyzeMatrix(matrix: unknown[][]): { rowCount: number; columnCount: number } {
@@ -43,8 +42,7 @@ export function parseSpreadsheetBuffer(
     const { rowCount, columnCount } = analyzeMatrix(matrix);
     sheets = [{ index: 0, name: "CSV", rowCount, columnCount }];
   } else {
-    const xlsx = require("xlsx") as typeof import("xlsx");
-    const wb = xlsx.read(Buffer.from(bytes), { type: "buffer", cellDates: false });
+    const wb = readSpreadsheetWorkbook(bytes, fileName);
     sheets = wb.SheetNames.map((name, index) => {
       const m = sheetToMatrix(wb.Sheets[name]!);
       const { rowCount, columnCount } = analyzeMatrix(m);

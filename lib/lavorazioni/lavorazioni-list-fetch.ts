@@ -8,7 +8,9 @@ import {
 } from "@/lib/db/table-select-columns";
 import { mapLavorazioneLightToListRow } from "@/lib/db/dto-mappers";
 import { sanitizeClientLavorazioneRow } from "@/lib/lavorazioni/client-portal-stati";
+import { lazyEmbedMezziOnLavorazioniListRows } from "@/lib/lavorazioni/lavorazioni-lazy-mezzo-embed";
 import { applyLavorazioniNotDeletedFilter } from "@/lib/lavorazioni/lavorazioni-soft-delete";
+import { isLazyEmbedEnabled } from "@/lib/performance/list-pagination-rollout";
 import { resolveCabAppSettingsFallback } from "@/src/lib/app-settings/settings-fallback";
 import { getRuntimeCabAppSettings } from "@/src/lib/app-settings/runtime-settings-cache";
 import { resolveRole } from "@/lib/auth/rbac";
@@ -215,8 +217,11 @@ export async function fetchLavorazioniListRows(
 ): Promise<ServiceResult<LavorazioneListRow[]>> {
   const clienteRefScope = normalizeClienteRef(options?.clienteRefScope);
   const fetchMode = resolveFetchMode(filters);
+  const lazyEmbed = isLazyEmbedEnabled() && fetchMode !== "report";
   const includeMezzo =
-    fetchMode !== "report" && (filters?.includeMezzo === true || !!clienteRefScope);
+    fetchMode !== "report" &&
+    !lazyEmbed &&
+    (filters?.includeMezzo === true || !!clienteRefScope);
   const includeProfiles =
     filters?.includeProfiles === true || (fetchMode === "detail" && filters?.includeProfiles !== false);
   const mezziCols = mezziEmbedColumnsForMode(fetchMode);
@@ -250,7 +255,11 @@ export async function fetchLavorazioniListRows(
   if (error) return err(error.message);
   const raw = (data ?? []) as LavorazioneListRawRow[];
   let mapped = mapRawRows(raw, includeMezzo, options?.sanitizeStati);
-  if (includeMezzo && mapped.length > 0) {
+  const wantsMezzoEmbed =
+    fetchMode !== "report" && (filters?.includeMezzo === true || !!clienteRefScope);
+  if (lazyEmbed && wantsMezzoEmbed && mapped.length > 0) {
+    mapped = await lazyEmbedMezziOnLavorazioniListRows(sb, mapped);
+  } else if (includeMezzo && mapped.length > 0) {
     mapped = await enrichLavorazioniListRowsWithAttrezzature(sb, mapped);
   }
   return success(mapped);

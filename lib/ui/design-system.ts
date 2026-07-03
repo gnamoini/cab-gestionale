@@ -101,10 +101,10 @@ export const dsBtnCtaHero = `inline-flex items-center justify-center gap-2 round
 
 /** IA — Primario pill (gradiente arancione stile Gemini). */
 export const dsBtnAiPrimary =
-  "gestionale-ai-action-btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,#fff)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_2px_color-mix(in_srgb,var(--cab-primary)_22%,transparent),0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_18%,transparent),inset_0_1px_0_color-mix(in_srgb,#fff_28%,transparent)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:brightness-[1.05] hover:shadow-[0_4px_16px_color-mix(in_srgb,var(--cab-primary)_32%,transparent)] active:scale-[0.98] disabled:brightness-100 disabled:shadow-[var(--cab-shadow-sm)]";
+  "gestionale-ai-action-btn-primary inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_62%,#fff)] px-5 py-2.5 text-sm font-semibold text-white shadow-[0_1px_3px_color-mix(in_srgb,#000_24%,transparent),0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_32%,transparent),inset_0_1px_0_color-mix(in_srgb,#fff_20%,transparent)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:shadow-[0_4px_18px_color-mix(in_srgb,var(--cab-primary)_46%,transparent)] active:scale-[0.98] disabled:shadow-[var(--cab-shadow-sm)]";
 
 export const dsBtnAiPrimarySm =
-  "gestionale-ai-action-btn-primary inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_42%,#fff)] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_1px_2px_color-mix(in_srgb,var(--cab-primary)_22%,transparent),inset_0_1px_0_color-mix(in_srgb,#fff_24%,transparent)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:brightness-[1.05] active:scale-[0.98] disabled:brightness-100";
+  "gestionale-ai-action-btn-primary inline-flex min-h-9 items-center justify-center gap-1.5 rounded-full border border-[color:color-mix(in_srgb,var(--cab-primary)_62%,#fff)] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_1px_3px_color-mix(in_srgb,#000_22%,transparent),inset_0_1px_0_color-mix(in_srgb,#fff_18%,transparent)] transition-[transform,box-shadow,filter] duration-200 ease-out hover:shadow-[0_3px_14px_color-mix(in_srgb,var(--cab-primary)_40%,transparent)] active:scale-[0.98] disabled:brightness-100";
 
 /** IA — Secondario pill (chip soft arancione stile Gemini). */
 export const dsBtnAiSecondary =

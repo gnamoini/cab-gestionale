@@ -1,5 +1,10 @@
 import { capitaleImmobilizzato } from "@/lib/magazzino/calculations";
 import { lavorazioneAddettoLabel } from "@/lib/lavorazioni/lavorazione-display-helpers";
+import {
+  lavorazioneClienteLabel,
+  lavorazioneMacchinaLabel,
+  lavorazioneMezzoIdentParts,
+} from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { comparePrioritaLavorazione } from "@/lib/lavorazioni/priorita-order";
 import type { RicambioMagazzino } from "@/lib/magazzino/types";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -71,23 +76,26 @@ function isTodayLocal(iso: string): boolean {
   return isSameLocalCalendarDay(new Date(iso), new Date());
 }
 
-function macchinaLabelFromLavRow(row: LavorazioneListRow): string {
-  const m = row.mezzo;
-  return m ? `${m.marca} ${m.modello}`.trim() : "—";
+function macchinaLabelFromLavRow(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
+  return lavorazioneMacchinaLabel(row, schedeStore);
 }
 
-function mezzoIdentPartsFromLavRow(row: LavorazioneListRow): {
+function mezzoIdentPartsFromLavRow(
+  row: LavorazioneListRow,
+  schedeStore?: LavorazioneSchedeStore,
+): {
   cliente: string;
   matricola: string;
   nScuderia: string;
   targa: string;
 } {
-  const m = row.mezzo;
+  const parts = lavorazioneMezzoIdentParts(row, schedeStore);
+  const cliente = lavorazioneClienteLabel(row, schedeStore);
   return {
-    cliente: m?.cliente?.trim() ?? "",
-    matricola: m?.matricola?.trim() ?? "",
-    nScuderia: m?.numero_scuderia?.trim() ?? "",
-    targa: m?.targa?.trim() ?? "",
+    cliente: cliente !== "—" ? cliente : "",
+    matricola: parts.matricola,
+    nScuderia: parts.scuderia,
+    targa: parts.targa,
   };
 }
 
@@ -108,8 +116,8 @@ function toLavWidgetRow(
     id: row.id,
     stato: row.stato,
     priorita: row.priorita,
-    macchina: macchinaLabelFromLavRow(row),
-    mezzoIdent: formatDashboardLavWidgetMezzoIdent(mezzoIdentPartsFromLavRow(row)),
+    macchina: macchinaLabelFromLavRow(row, options?.schedeStore),
+    mezzoIdent: formatDashboardLavWidgetMezzoIdent(mezzoIdentPartsFromLavRow(row, options?.schedeStore)),
     addetto: addettoRaw || null,
     updatedAt: lavUpdatedAt(row),
     isUrgent: row.priorita === "urgente",

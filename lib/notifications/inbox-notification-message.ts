@@ -21,13 +21,13 @@ const TYPE_LABEL: Partial<Record<NotificationType, string>> = {
 
 const TYPE_TONE: Partial<Record<NotificationType, GestionaleLogViewModel["tone"]>> = {
   lavorazione_created: "create",
-  lavorazione_completata: "update",
-  lavorazioni_ritardo_digest: "neutral",
+  lavorazione_completata: "complete",
+  lavorazioni_ritardo_digest: "delete",
   preventivo_approvato: "create",
-  magazzino_sotto_scorta: "update",
-  fatture_scadute_digest: "neutral",
-  dipendenti_presenze_reminder: "neutral",
-  dashboard_promemoria_reminder: "neutral",
+  magazzino_sotto_scorta: "delete",
+  fatture_scadute_digest: "delete",
+  dipendenti_presenze_reminder: "reopen",
+  dashboard_promemoria_reminder: "reopen",
   admin_dashboard_test: "neutral",
 };
 

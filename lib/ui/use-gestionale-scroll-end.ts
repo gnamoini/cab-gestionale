@@ -22,7 +22,7 @@ function syncScrollEndState(el: HTMLElement): void {
 
 /**
  * Imposta `data-cab-scroll-at-end` sul main gestionale quando lo scroll raggiunge il fondo.
- * Abilita il gradiente di feedback in globals.css (sul sentinel `.gestionale-scroll-end-pad`).
+ * Abilita la sfumatura di feedback solo su `.gestionale-scroll-end-pad--fade` (sentinel AppShell).
  */
 export function useGestionaleScrollEnd(mainRef: RefObject<HTMLElement | null>): void {
   useEffect(() => {

@@ -570,7 +570,7 @@ html.dark select option {
   transition: opacity 280ms ease-out;
 }
 
-main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-pad {
+main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-pad--fade {
   background: linear-gradient(
     to top,
     var(--cab-bg-app) 0%,
@@ -716,14 +716,26 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   scrollbar-gutter: stable;
 }
 
-/* Sidebar collapse — label fade + icone che si centrano con la larghezza */
+/* Sidebar — SSOT layout: lib/ui/sidebar-layout.ts + components/gestionale/sidebar-nav-row.tsx */
 .cab-app-shell {
   --cab-sidebar-motion: 150ms;
+  --cab-sidebar-rail-width: 4.25rem;
+  --cab-sidebar-expanded-width: 12.75rem;
+  --cab-sidebar-row-height: 2.5rem;
+  --cab-sidebar-icon-size: 1.75rem;
+  --cab-sidebar-icon-label-gap: 0.375rem;
+  --cab-sidebar-trailing-width: 1.5rem;
+  --cab-sidebar-nav-inset: 0.5rem;
   --cab-sidebar-width-motion: 150ms;
   --cab-sidebar-label-in: 110ms;
   --cab-sidebar-label-out: 80ms;
   --cab-sidebar-ease-out: cubic-bezier(0.32, 0.72, 0, 1);
   --cab-sidebar-ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --cab-sidebar-icon-anchor: calc(
+    (var(--cab-sidebar-rail-width) - var(--cab-sidebar-nav-inset) * 2 - var(--cab-sidebar-icon-size)) / 2
+  );
+  --cab-sidebar-active-bar-width: 3px;
+  --cab-sidebar-active-bar-height: 1.125rem;
   --cab-gestionale-top-bar: 0px;
   --cab-settings-sidebar-inset: var(--ds-space-md);
   --cab-settings-sidebar-height: calc(
@@ -763,54 +775,167 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   }
 }
 
-.cab-sidebar .cab-sidebar-nav-link {
+/* —— SidebarNavRow: flex, geometria rail fissa, single anchor —— */
+.cab-sidebar .cab-sidebar-nav-row {
+  min-height: var(--cab-sidebar-row-height);
+  gap: var(--cab-sidebar-icon-label-gap);
+  padding-inline: 0;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
   transition:
     background-color 200ms ease-out,
-    color 200ms ease-out,
-    box-shadow 200ms ease-out;
+    color 200ms ease-out;
 }
 
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-link::before {
-  display: none;
+.cab-sidebar .cab-sidebar-nav-row__icon-track {
+  width: var(--cab-sidebar-icon-size);
+  height: var(--cab-sidebar-icon-size);
+  margin-inline-start: var(--cab-sidebar-icon-anchor);
 }
 
-/** Rail compatto: icona fissa colonna 1 — solo label/badge/chevron collassano. */
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-link {
+.cab-sidebar .cab-sidebar-nav-row__trailing,
+.cab-sidebar .cab-sidebar-nav-row-trailing {
+  flex: 0 0 var(--cab-sidebar-trailing-width);
+  width: var(--cab-sidebar-trailing-width);
+  min-width: var(--cab-sidebar-trailing-width);
+}
+
+.cab-sidebar .cab-sidebar-nav-row__label,
+.cab-sidebar .cab-sidebar-nav-row__trailing {
+  transition:
+    opacity var(--cab-sidebar-label-in) var(--cab-sidebar-ease-out),
+    clip-path var(--cab-sidebar-label-in) var(--cab-sidebar-ease-out);
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row__label,
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row__trailing {
+  opacity: 0;
+  clip-path: inset(0 100% 0 0);
+  pointer-events: none;
+  transition:
+    opacity var(--cab-sidebar-label-out) var(--cab-sidebar-ease-in),
+    clip-path var(--cab-sidebar-label-out) var(--cab-sidebar-ease-in);
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row:not(.cab-sidebar-nav-row--active):hover {
   background-color: transparent;
+}
+
+.cab-sidebar .cab-sidebar-nav > .gestionale-scrollbar,
+.cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav > .gestionale-scrollbar {
+  padding-inline: var(--cab-sidebar-nav-inset);
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav > .gestionale-scrollbar {
+  padding-inline: var(--cab-sidebar-nav-inset);
+}
+
+/* Active — barra accent sinistra + enfasi neutra (niente pill primary / doppio bordo) */
+.cab-sidebar-active-indicator {
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  width: var(--cab-sidebar-active-bar-width);
+  height: var(--cab-sidebar-active-bar-height);
+  border-radius: 0 2px 2px 0;
+  background: var(--cab-primary);
   box-shadow: none;
 }
 
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-label {
-  max-width: 0;
-  opacity: 0;
-  pointer-events: none;
+.cab-sidebar-active-indicator--rail,
+.cab-sidebar-active-indicator--row {
+  width: var(--cab-sidebar-active-bar-width);
+  height: var(--cab-sidebar-active-bar-height);
 }
 
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-badge,
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-account-chevron {
-  max-width: 0;
-  margin-inline: 0;
-  opacity: 0;
-  overflow: hidden;
-  pointer-events: none;
+.cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav-row--active {
+  background-color: rgb(244 244 245 / 0.75);
+}
+
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row--active,
+.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-row--active:hover {
+  background-color: transparent;
+}
+
+.cab-sidebar .cab-sidebar-nav-row--active {
+  color: rgb(39 39 42);
+  font-weight: 600;
+}
+
+.cab-sidebar .cab-sidebar-nav-row--active:hover {
+  color: rgb(39 39 42);
+}
+
+.cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav-row--active:hover {
+  background-color: rgb(244 244 245 / 0.9);
+}
+
+.cab-sidebar .cab-sidebar-nav-row--active .cab-sidebar-nav-icon {
+  background-color: rgb(255 255 255);
+  color: rgb(39 39 42);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+}
+
+.cab-sidebar .cab-sidebar-nav-row--active:hover .cab-sidebar-nav-icon {
+  background-color: rgb(255 255 255);
+  color: rgb(39 39 42);
+}
+
+.dark .cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav-row--active {
+  background-color: rgb(39 39 42 / 0.55);
+}
+
+.dark .cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-nav-row--active:hover {
+  background-color: rgb(39 39 42 / 0.7);
+}
+
+.dark .cab-sidebar .cab-sidebar-nav-row--active,
+.dark .cab-sidebar .cab-sidebar-nav-row--active:hover {
+  color: rgb(244 244 245);
+}
+
+.dark .cab-sidebar .cab-sidebar-nav-row--active .cab-sidebar-nav-icon,
+.dark .cab-sidebar .cab-sidebar-nav-row--active:hover .cab-sidebar-nav-icon {
+  background-color: rgb(63 63 70);
+  color: rgb(244 244 245);
+  box-shadow: none;
 }
 
 /** Allineamento verticale logo sidebar ↔ titolo PageHeader (stesso pt + row h-10). */
 .cab-sidebar-brand {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
+  align-items: center;
+  justify-content: center;
   gap: 0.25rem;
-  padding-inline: var(--ds-space-md);
+  padding-inline: var(--cab-sidebar-nav-inset);
   padding-top: var(--ds-space-md);
   padding-bottom: 0.5rem;
 }
 
+.cab-sidebar-brand > a {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
 .cab-sidebar-session--brand {
   min-width: 0;
-  padding-inline: var(--ds-space-md);
+  padding-inline: 0;
   padding-bottom: var(--ds-space-md);
   border-bottom: 1px solid color-mix(in srgb, var(--cab-border) 85%, transparent);
+}
+
+.cab-sidebar:not([data-sidebar-collapsed]) .cab-sidebar-session--brand {
+  padding-inline: var(--cab-sidebar-nav-inset);
+}
+
+.cab-sidebar[data-sidebar-collapsed]:not([data-sidebar-hover-expanded]) .cab-sidebar-session--brand {
+  padding-inline: var(--cab-sidebar-nav-inset);
 }
 
 .cab-nav-drawer-panel .cab-sidebar-session--brand {
@@ -818,6 +943,22 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   padding-top: 0.5rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid color-mix(in srgb, var(--cab-border) 85%, transparent);
+}
+
+.cab-nav-drawer-panel .cab-sidebar-nav-row {
+  gap: var(--cab-sidebar-icon-label-gap);
+  padding-inline: 0.625rem;
+}
+
+.cab-nav-drawer-panel .cab-sidebar-nav-row__icon-track {
+  margin-inline-start: 0;
+}
+
+.cab-nav-drawer-panel .cab-sidebar-nav-row__label,
+.cab-nav-drawer-panel .cab-sidebar-nav-row__trailing {
+  opacity: 1;
+  clip-path: none;
+  pointer-events: auto;
 }
 
 @media (min-width: 640px) {
@@ -831,15 +972,8 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   min-width: 0;
 }
 
-.cab-sidebar-session-user--open,
 .cab-sidebar-session-item--open {
   background: color-mix(in srgb, var(--cab-primary) 10%, var(--cab-surface));
-}
-
-.cab-sidebar-session-user .cab-sidebar-nav-label,
-.cab-sidebar-session-row .cab-sidebar-nav-label {
-  justify-self: start;
-  text-align: left;
 }
 
 .cab-sidebar .cab-sidebar-session-expand-chevron {
@@ -881,8 +1015,29 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   animation: cab-notification-bell-arrive 600ms ease-out;
 }
 
-.cab-notification-bell--arrive span.pointer-events-none.absolute {
+.cab-sidebar .cab-sidebar-notification-trailing-count {
+  justify-self: center;
+}
+
+.cab-sidebar .cab-sidebar-nav-row__trailing:has(.cab-sidebar-notification-trailing-count) {
+  justify-content: center;
+}
+
+.cab-notification-bell--arrive .cab-sidebar-notification-trailing-count {
   animation: cab-notification-badge-arrive 600ms ease-out;
+}
+
+/* Campanella sidebar — tint unread sulla shell icona */
+.cab-sidebar .cab-sidebar-notification-bell--unread .cab-sidebar-nav-icon {
+  background: color-mix(in srgb, var(--cab-danger) 12%, var(--cab-surface));
+  color: color-mix(in srgb, var(--cab-danger) 82%, var(--cab-text));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cab-danger) 24%, transparent);
+}
+
+.dark .cab-sidebar .cab-sidebar-notification-bell--unread .cab-sidebar-nav-icon {
+  background: color-mix(in srgb, var(--cab-danger) 18%, var(--cab-card));
+  color: color-mix(in srgb, var(--cab-danger) 78%, white);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--cab-danger) 32%, transparent);
 }
 
 /** @deprecated alias — use `.cab-sidebar-session` */
@@ -890,62 +1045,15 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   min-width: 0;
 }
 
-.cab-sidebar .cab-sidebar-nav-icon-slot {
-  grid-column: 1;
-  width: 1.75rem;
-  min-width: 1.75rem;
-  flex-shrink: 0;
+/** Padding verticale sul nav; rail icona = larghezza sidebar collassata. */
+.cab-sidebar > .cab-sidebar-nav {
+  padding-inline: 0;
 }
 
 .cab-sidebar .cab-sidebar-nav-icon {
   transition:
     background-color 200ms ease-out,
     color 200ms ease-out;
-}
-
-.cab-sidebar .cab-sidebar-nav-label {
-  grid-column: 2;
-  min-width: 0;
-  max-width: 11rem;
-  opacity: 1;
-  overflow: hidden;
-  white-space: nowrap;
-  transition:
-    max-width var(--cab-sidebar-width-motion) var(--cab-sidebar-ease-out),
-    opacity var(--cab-sidebar-label-in) ease-out;
-}
-
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-label {
-  transition:
-    max-width var(--cab-sidebar-label-out) var(--cab-sidebar-ease-in),
-    opacity var(--cab-sidebar-label-out) ease-in;
-}
-
-.cab-sidebar .cab-sidebar-nav-badge,
-.cab-sidebar .cab-sidebar-account-chevron {
-  grid-column: 3;
-}
-
-.cab-sidebar .cab-sidebar-nav-badge {
-  transition:
-    max-width var(--cab-sidebar-width-motion) ease-out,
-    opacity var(--cab-sidebar-label-in) ease-out,
-    margin-inline var(--cab-sidebar-width-motion) ease-out;
-}
-
-.cab-sidebar[data-sidebar-collapsed] .cab-sidebar-nav-badge {
-  transition:
-    max-width var(--cab-sidebar-label-out) ease-in,
-    opacity var(--cab-sidebar-label-out) ease-in,
-    margin-inline var(--cab-sidebar-label-out) ease-in;
-}
-
-.cab-sidebar .cab-sidebar-account-chevron {
-  overflow: hidden;
-  transition:
-    max-width var(--cab-sidebar-width-motion) ease-out,
-    opacity var(--cab-sidebar-label-in) ease-out,
-    margin-inline var(--cab-sidebar-width-motion) ease-out;
 }
 
 .cab-sidebar {
@@ -960,13 +1068,14 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
 
 @media (prefers-reduced-motion: reduce) {
   .cab-sidebar,
-  .cab-sidebar .cab-sidebar-nav-link,
-  .cab-sidebar .cab-sidebar-nav-icon-slot,
+  .cab-sidebar .cab-sidebar-nav-row,
+  .cab-sidebar .cab-sidebar-nav-row__label,
+  .cab-sidebar .cab-sidebar-nav-row__trailing,
   .cab-sidebar .cab-sidebar-nav-icon,
-  .cab-sidebar .cab-sidebar-nav-label,
-  .cab-sidebar .cab-sidebar-nav-badge,
-  .cab-sidebar .cab-sidebar-account-chevron,
+  .cab-sidebar-active-indicator,
   .cab-notification-bell-icon--arrive,
+  .cab-notification-bell--arrive .cab-sidebar-notification-badge,
+  .cab-notification-bell--arrive .cab-sidebar-notification-trailing-count,
   .cab-notification-bell--arrive span.pointer-events-none.absolute {
     transition-duration: 0.01ms !important;
     animation: none !important;
@@ -1067,22 +1176,40 @@ body:has(.cab-app-shell) .cab-app-shell {
   }
 }
 
-/* Tasti azioni IA — gradiente arancione stile Gemini */
+/* Tasti azioni IA — gradiente arancione ad alto contrasto */
 .gestionale-ai-action-btn-primary {
   background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--cab-primary) 72%, white) 0%,
-    var(--cab-primary) 46%,
-    color-mix(in srgb, var(--cab-primary) 90%, #c2410c) 100%
+    160deg,
+    color-mix(in srgb, var(--cab-primary) 92%, white) 0%,
+    var(--cab-primary) 48%,
+    var(--cab-primary-hover) 100%
   );
 }
 
 .gestionale-ai-action-btn-primary:hover:not(:disabled) {
   background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--cab-primary) 78%, white) 0%,
-    color-mix(in srgb, var(--cab-primary) 96%, #fff) 48%,
-    color-mix(in srgb, var(--cab-primary) 88%, #c2410c) 100%
+    160deg,
+    color-mix(in srgb, var(--cab-primary) 96%, white) 0%,
+    color-mix(in srgb, var(--cab-primary) 98%, #fff) 48%,
+    color-mix(in srgb, var(--cab-primary-hover) 92%, #000) 100%
+  );
+}
+
+.dark .gestionale-ai-action-btn-primary {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-primary) 88%, white) 0%,
+    var(--cab-primary) 44%,
+    color-mix(in srgb, var(--cab-primary-hover) 96%, #000) 100%
+  );
+}
+
+.dark .gestionale-ai-action-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--cab-primary) 94%, white) 0%,
+    var(--cab-primary) 50%,
+    color-mix(in srgb, var(--cab-primary-hover) 90%, #000) 100%
   );
 }
 
@@ -1104,4 +1231,12 @@ body:has(.cab-app-shell) .cab-app-shell {
 
 .gestionale-ai-action-btn-loading {
   cursor: wait;
+}
+
+.gestionale-inbox-log-entry {
+  background: var(--cab-card);
+}
+
+.dark .gestionale-inbox-log-entry {
+  background: color-mix(in srgb, var(--cab-surface-2) 28%, var(--cab-card));
 }

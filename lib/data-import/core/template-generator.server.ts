@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { ImportFieldDef } from "@/lib/data-import/core/types";
+import { writeSpreadsheetWorkbook } from "@/lib/spreadsheet/xlsx-server";
 
 export type TemplateGeneratorOptions = {
   sheetName?: string;
@@ -12,24 +13,25 @@ export function generateImportTemplateXlsx(
   fields: ImportFieldDef[],
   options: TemplateGeneratorOptions = {},
 ): Buffer {
-  const xlsx = require("xlsx") as typeof import("xlsx");
   const sheetName = options.sheetName ?? "Import";
   const headers = fields.map((f) => f.label);
   const examples = fields.map((f) => f.example ?? "");
 
-  const wsData = xlsx.utils.aoa_to_sheet([headers, examples]);
-  const wb = xlsx.utils.book_new();
-  xlsx.utils.book_append_sheet(wb, wsData, sheetName);
+  return writeSpreadsheetWorkbook((utils) => {
+    const wsData = utils.aoa_to_sheet([headers, examples]);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, wsData, sheetName);
 
-  if (options.includeLegend !== false) {
-    const wsLegend = xlsx.utils.aoa_to_sheet([
-      ["Campo", "Descrizione"],
-      ...fields.map((f) => [`${f.label}${f.required ? " *" : ""}`, f.description ?? ""]),
-    ]);
-    xlsx.utils.book_append_sheet(wb, wsLegend, options.legendSheetName ?? "Legenda");
-  }
+    if (options.includeLegend !== false) {
+      const wsLegend = utils.aoa_to_sheet([
+        ["Campo", "Descrizione"],
+        ...fields.map((f) => [`${f.label}${f.required ? " *" : ""}`, f.description ?? ""]),
+      ]);
+      utils.book_append_sheet(wb, wsLegend, options.legendSheetName ?? "Legenda");
+    }
 
-  return xlsx.write(wb, { type: "buffer", bookType: "xlsx" }) as Buffer;
+    return wb;
+  });
 }
 
 export function generateImportTemplateCsv(fields: ImportFieldDef[]): Buffer {

@@ -49,7 +49,7 @@ export function mapLavorazioneLightToListRow(
 
 /** Join `mezzo_id` → anagrafica per report (sostituisce embed PostgREST). */
 export function enrichLavorazioneListRowsWithMezzi(
-  rows: LavorazioneListRow[],
+  rows: readonly LavorazioneListRow[],
   mezziById: ReadonlyMap<string, MezzoRow>,
 ): LavorazioneListRow[] {
   return rows.map((row) => {

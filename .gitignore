@@ -55,3 +55,6 @@ next-env.d.ts
 /map/waves/**/map-wave-*.json
 /map/stability/classifier-snapshots/*.json
 /map/stability/tier-lock-registry.json
+
+# Supabase MCP apply artifacts (not official migrations)
+supabase/migrations/_*

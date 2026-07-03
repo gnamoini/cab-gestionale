@@ -55,6 +55,16 @@ assert.match(read("lib/observability/long-session-metrics-node.ts"), /collectLon
 
 const devHook = read("lib/observability/long-session-dev-hook.ts");
 assert.match(devHook, /__cabLongSessionMetrics/);
+assert.match(devHook, /__cabInfiniteListMeta/);
+
+const soakSpec = read("e2e/soak/long-session-soak.spec.ts");
+assert.match(soakSpec, /HEAP_DELTA_MB_LIMIT/);
+
+const rlsGate = read("scripts/ops/rls-rpc-id-gate.mjs");
+assert.match(rlsGate, /rls-parity-snapshot/);
+
+const lazyEmbed = read("lib/lavorazioni/lavorazioni-lazy-mezzo-embed.ts");
+assert.match(lazyEmbed, /lazyEmbedMezziOnLavorazioniListRows/);
 
 const forcePoll = read("lib/realtime/gestionale-force-poll.ts");
 assert.match(forcePoll, /NEXT_PUBLIC_GESTIONALE_FORCE_POLL/);
@@ -66,10 +76,15 @@ assert.doesNotMatch(securityDashPostFix, /postgres_changes/);
 assert.match(securityDashPostFix, /useCabSyncListener\("settings"/);
 assert.match(securityDashPostFix, /useCabSyncListener\("user_permissions"/);
 
-// Post-fix Caso 4 — F2: refreshOperational gated al flag pilot
+// Post-fix Caso 4 — F2: refreshOperational gated per reason in RBAC truth hub (non più nel bridge)
 const realtimeBridge = read("src/components/gestionale-realtime-bridge.tsx");
 assert.match(realtimeBridge, /isOperatorGlobalSettingsPilotPayload/);
-assert.match(realtimeBridge, /refreshOperational:\s*true/);
+assert.doesNotMatch(realtimeBridge, /refreshOperational:\s*true/);
+const invalidateRbacTruth = read("src/lib/rbac/invalidate-rbac-truth.ts");
+assert.match(invalidateRbacTruth, /refreshOperational:/);
+assert.match(invalidateRbacTruth, /opts\.reason === "roleOrPermissionsChanged"/);
+assert.match(invalidateRbacTruth, /opts\.reason === "appSettingsChanged"/);
+assert.match(invalidateRbacTruth, /opts\.reason === "pilotChanged"/);
 
 // Post-fix Caso 4 — F3: magazzino log feed senza listener cab-sync ridondanti
 const magLogFeed = read("lib/magazzino/use-magazzino-log-feed.ts");

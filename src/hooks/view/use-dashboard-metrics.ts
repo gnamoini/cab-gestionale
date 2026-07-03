@@ -23,16 +23,10 @@ import { useCabSyncListener } from "@/src/hooks/use-cab-sync-listener";
 import { invalidateOperationalTruth } from "@/src/lib/runtime/truth-layer/invalidate-runtime-truth";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
-import { useLavorazioniList } from "@/src/services/domain/lavorazioni-domain.queries";
+import { useLavorazioniReportSlice } from "@/lib/lavorazioni/use-lavorazioni-report-slice";
 import { useRealtimeStatus } from "@/src/context/realtime-status-context";
 import { MAGAZZINO_DASHBOARD_KPI_QUERY_KEY } from "@/lib/magazzino/dashboard-mag-query-keys";
 
-const LAV_FILTERS = {
-  includeMezzo: true as const,
-  archived: false as const,
-  fetchMode: "light" as const,
-  includeProfiles: false as const,
-};
 const DASHBOARD_REPORT_INVALIDATE_DEBOUNCE_MS = 400;
 
 /** Query + selector aggregati per widget Lavorazioni/Magazzino dashboard (VIEW layer, read-only). */
@@ -60,7 +54,11 @@ export function useDashboardMetrics() {
 
   const globalOpts = useGlobalOptions({ debugTag: "useDashboardMetrics" });
 
-  const lavQuery = useLavorazioniList(LAV_FILTERS, viewOpts);
+  const lavQuery = useLavorazioniReportSlice({
+    archived: false,
+    enabled: !staging,
+    staleTime: viewOpts.staleTime,
+  });
   const schedeLavorazioneIds = useMemo(
     () => pickDashboardPriorityLavorazioneIds(lavQuery.data ?? [], DASHBOARD_SCHEde_PREFETCH_LIMIT),
     [lavQuery.data],

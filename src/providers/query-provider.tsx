@@ -17,7 +17,10 @@ import { formatSupabaseError, isPermissionDeniedError } from "@/src/utils/supaba
 function QueryErrorToasts({ client }: { client: QueryClient }) {
   const { push } = useToastContext();
   const pushRef = useRef(push);
-  pushRef.current = push;
+
+  useEffect(() => {
+    pushRef.current = push;
+  }, [push]);
 
   useEffect(() => {
     const last = new Map<string, number>();
