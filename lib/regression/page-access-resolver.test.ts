@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { GESTIONALE_PAGES } from "@/src/lib/permissions/gestionale-pages";
 import { seedPageAccessForRole } from "@/lib/rbac-page-seed";
+import { resolveEffectivePermissions } from "@/src/lib/runtime/truth-layer/resolve-effective-permissions";
 import {
   canReadPage,
   canWritePage,
@@ -22,15 +23,27 @@ for (const page of GESTIONALE_PAGES) {
   assert.equal(isPageVisible(admin, page.key as never), true, `admin visible ${page.key}`);
 }
 
-// Guest — default none
-const guest = resolvePageAccess({
+// Guest — default none (senza righe DB)
+const guest = resolveEffectivePermissions({
   userId: USER,
   roleKey: "guest",
-  rolePageAccess: seedPageAccessForRole("guest"),
-  userPageOverrides: {},
+  rolePageAccess: {},
+  userPageOverrideRows: [],
+  pilotDbEnabled: false,
 });
-assert.equal(canReadPage(guest, "lavorazioni"), false);
-assert.equal(isPageVisible(guest, "sicurezza"), false);
+assert.equal(canReadPage(guest.resolved!, "lavorazioni"), false);
+
+// Cliente senza righe DB — seed concede portale clienti
+const clienteEmptyDb = resolveEffectivePermissions({
+  userId: USER,
+  roleKey: "cliente",
+  rolePageAccess: {},
+  userPageOverrideRows: [],
+  pilotDbEnabled: false,
+});
+assert.equal(canReadPage(clienteEmptyDb.resolved!, "lavorazioni_clienti"), true);
+assert.equal(isPageVisible(clienteEmptyDb.resolved!, "lavorazioni_clienti"), true);
+assert.equal(canReadPage(clienteEmptyDb.resolved!, "mezzi"), false);
 
 // Override utente batte ruolo
 const operatoreBase = seedPageAccessForRole("operatore");

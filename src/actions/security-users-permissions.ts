@@ -209,15 +209,7 @@ export async function listSecurityUsersPermissionsAction(): Promise<ListSecurity
   });
 
   const userIds = usersRes.users.map((u) => u.id);
-  let userPageOverrideRows: { user_id: string; page_key: string; access_level: PageAccessLevel }[] = [];
-  try {
-    userPageOverrideRows = await loadAllUserPageOverrideRows(serviceAdmin, userIds);
-  } catch (e) {
-    return {
-      ok: false,
-      message: e instanceof Error ? e.message : "Errore caricamento override pagine.",
-    };
-  }
+  const userPageOverrideRows = await loadAllUserPageOverrideRows(serviceAdmin, userIds);
 
   const assignableRoles = (await listAllRoles(serviceAdmin))
     .filter((r) => r.is_active)

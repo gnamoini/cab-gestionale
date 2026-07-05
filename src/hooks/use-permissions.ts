@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useQuery, type UseQueryResult } from "@tanstack/react-query";
 import { permissionsService } from "@/src/services/permissions.service";
+import { isRbacPageTableUnavailableError } from "@/src/lib/rbac/load-rbac-data";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import {
   GESTIONALE_PERMISSION_MODULES,
@@ -21,7 +22,10 @@ export function useRolePageAccessQuery(): UseQueryResult<Record<string, PageAcce
     queryKey: [...QK.userPermissions, "role-page-access", user?.id ?? "anon"] as const,
     queryFn: async () => {
       const r = await permissionsService.listMyRolePageAccess(user?.id);
-      if (!r.success) throw new Error(r.error ?? "Errore permessi ruolo");
+      if (!r.success) {
+        if (isRbacPageTableUnavailableError(r.error)) return {};
+        throw new Error(r.error ?? "Errore permessi ruolo");
+      }
       return r.data ?? {};
     },
     enabled: isAuthSessionEstablished(status) && !!user?.id,
@@ -43,7 +47,10 @@ export function useUserPageOverridesQuery(): UseQueryResult<
     queryKey: [...QK.userPermissions, user?.id ?? "anon"] as const,
     queryFn: async () => {
       const r = await permissionsService.listMyPageOverrides(user?.id);
-      if (!r.success) throw new Error(r.error ?? "Errore override pagina");
+      if (!r.success) {
+        if (isRbacPageTableUnavailableError(r.error)) return [];
+        throw new Error(r.error ?? "Errore override pagina");
+      }
       return r.data ?? [];
     },
     enabled: isAuthSessionEstablished(status) && !!user?.id,

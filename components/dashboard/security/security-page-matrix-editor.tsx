@@ -1,9 +1,20 @@
 "use client";
 
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
-import { pageAccessLabel } from "@/src/lib/permissions/gestionale-pages";
+import { pageMatrixColumnLabel } from "@/src/lib/permissions/gestionale-pages";
 import type { PageAccessMatrix } from "@/src/actions/security-roles-permissions";
-import { dsScrollbar, dsTable, dsTableRow, dsTableTd, dsTableWrap } from "@/lib/ui/design-system";
+import { PageAccessLevelCell } from "@/components/dashboard/security/page-access-level-cell";
+import { SecurityRoleBadge } from "@/components/dashboard/security/security-role-badge";
+import {
+  dsScrollbar,
+  dsTable,
+  dsTableHeadCell,
+  dsTableRow,
+  dsTableRowZebra,
+  dsTableTd,
+  dsTableTdCompact,
+  dsTableWrap,
+} from "@/lib/ui/design-system";
 
 type Props = {
   matrix: PageAccessMatrix;
@@ -25,42 +36,59 @@ export function SecurityPageMatrixEditor({ matrix, draft, onDraftChange, readOnl
   }
 
   return (
-    <div className={`${dsTableWrap} max-h-[min(32rem,70vh)] overflow-auto ${dsScrollbar}`}>
-      <table className={`${dsTable} min-w-max text-[11px]`}>
+    <div className={`${dsTableWrap} overflow-auto ${dsScrollbar}`}>
+      <table className={`${dsTable} min-w-max`}>
         <thead>
           <tr className={dsTableRow}>
-            <th className={`${dsTableTd} sticky left-0 z-10 bg-[var(--cab-card)] text-left font-semibold`}>Ruolo</th>
+            <th
+              className={`${dsTableHeadCell} sticky left-0 z-20 min-w-[9rem] bg-[var(--cab-surface-2)] shadow-[inset_-1px_0_0_var(--cab-border)]`}
+            >
+              Ruolo
+            </th>
             {matrix.pages.map((p) => (
-              <th key={p.key} className={`${dsTableTd} whitespace-nowrap px-2 text-center font-semibold`} title={p.label}>
-                {p.label}
+              <th
+                key={p.key}
+                className={`${dsTableHeadCell} w-10 min-w-[2.5rem] max-w-[3.25rem] px-1 text-center normal-case tracking-normal`}
+                title={p.label}
+              >
+                <span className="block text-[10px] font-semibold leading-tight">{pageMatrixColumnLabel(p.label)}</span>
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {matrix.rows.map((row) => (
-            <tr key={row.role.key} className={dsTableRow}>
-              <td className={`${dsTableTd} sticky left-0 z-10 bg-[var(--cab-card)] font-medium`}>
-                {row.role.name}
-                {row.locked ? (
-                  <span className="ml-1 text-[10px] text-[color:var(--cab-text-muted)]">(bloccato)</span>
-                ) : null}
+            <tr
+              key={row.role.key}
+              className={`${dsTableRow} ${dsTableRowZebra} ${!row.role.is_active ? "opacity-60" : ""}`}
+            >
+              <td
+                className={`${dsTableTd} sticky left-0 z-10 min-w-[9rem] bg-[var(--cab-card)] shadow-[inset_-1px_0_0_var(--cab-border)]`}
+              >
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate text-[13px] font-medium">{row.role.name}</span>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <SecurityRoleBadge role={row.role.key} />
+                    {row.locked ? (
+                      <span className="text-[10px] text-[color:var(--cab-text-muted)]">sistema</span>
+                    ) : null}
+                    {!row.role.is_active ? (
+                      <span className="text-[10px] text-amber-600">inattivo</span>
+                    ) : null}
+                  </div>
+                </div>
               </td>
               {row.cells.map((cell) => {
                 const level = draft.get(cellKey(row.role.key, cell.pageKey)) ?? cell.level;
                 return (
-                  <td key={cell.pageKey} className={`${dsTableTd} px-1 text-center`}>
-                    <select
-                      className="w-full max-w-[9rem] rounded border border-[color:var(--cab-border)] bg-[var(--cab-bg)] px-1 py-0.5 text-[10px]"
-                      disabled={readOnly || row.locked}
-                      value={row.locked ? "write" : level}
-                      onChange={(e) => setLevel(row.role.key, cell.pageKey, e.target.value as PageAccessLevel, row.locked)}
-                      aria-label={`${row.role.name} — ${cell.label}`}
-                    >
-                      <option value="write">{pageAccessLabel("write")}</option>
-                      <option value="read">{pageAccessLabel("read")}</option>
-                      <option value="none">{pageAccessLabel("none")}</option>
-                    </select>
+                  <td key={cell.pageKey} className={`${dsTableTdCompact} px-1 text-center`}>
+                    <PageAccessLevelCell
+                      level={level}
+                      locked={row.locked}
+                      readOnly={readOnly}
+                      ariaLabel={`${row.role.name}, ${cell.label}`}
+                      onChange={(next) => setLevel(row.role.key, cell.pageKey, next, row.locked)}
+                    />
                   </td>
                 );
               })}

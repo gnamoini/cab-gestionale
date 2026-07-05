@@ -1,36 +1,81 @@
 "use client";
 
-import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { createRoleAction } from "@/src/actions/security-roles-permissions";
 import { GestionaleModalShell } from "@/components/gestionale/gestionale-modal";
+import { PageAccessLegend, PageAccessLevelCell } from "@/components/dashboard/security/page-access-level-cell";
 import { useGestionaleToast } from "@/src/hooks/use-gestionale-toast";
-import { dsBtnGhost, dsBtnPrimary, dsInput, dsLabel } from "@/lib/ui/design-system";
+import { seedPageAccessForRole } from "@/lib/rbac-page-seed";
+import { GESTIONALE_PAGES, type PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
+import {
+  dsBtnGhost,
+  dsBtnPrimary,
+  dsInput,
+  dsLabel,
+  dsScrollbar,
+  dsTable,
+  dsTableHeadCell,
+  dsTableRow,
+  dsTableTd,
+  dsTableWrap,
+} from "@/lib/ui/design-system";
 import type { RoleRow } from "@/src/types/supabase-tables";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   roles: RoleRow[];
-  onCreated: (roleKey: string) => void;
+  onCreated: () => void;
 };
+
+function emptyPageAccess(): Record<string, PageAccessLevel> {
+  return Object.fromEntries(GESTIONALE_PAGES.map((p) => [p.key, "none" as const]));
+}
 
 export function SecurityRoleCreateModal({ open, onClose, roles, onCreated }: Props) {
   const gestToast = useGestionaleToast();
-  const queryClient = useQueryClient();
-  const [key, setKey] = useState("");
   const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
   const [cloneFrom, setCloneFrom] = useState("");
+  const [pageAccess, setPageAccess] = useState<Record<string, PageAccessLevel>>(emptyPageAccess);
   const [saving, setSaving] = useState(false);
+
+  const previewKey = useMemo(() => {
+    const slug = name
+      .normalize("NFD")
+      .replace(/\p{M}/gu, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 48);
+    return slug.length >= 2 ? slug : "";
+  }, [name]);
+
+  useEffect(() => {
+    if (!open) return;
+    setName("");
+    setCloneFrom("");
+    setPageAccess(emptyPageAccess());
+  }, [open]);
+
+  useEffect(() => {
+    if (!cloneFrom) {
+      setPageAccess(emptyPageAccess());
+      return;
+    }
+    setPageAccess({ ...emptyPageAccess(), ...seedPageAccessForRole(cloneFrom) });
+  }, [cloneFrom]);
+
+  function setLevel(pageKey: string, level: PageAccessLevel) {
+    setPageAccess((prev) => ({ ...prev, [pageKey]: level }));
+    setCloneFrom("");
+  }
 
   async function handleCreate() {
     setSaving(true);
     const res = await createRoleAction({
-      key: key.trim(),
       name: name.trim(),
-      description: description.trim() || null,
       cloneFromRoleKey: cloneFrom || null,
+      pageAccess,
     });
     setSaving(false);
     if (!res.ok) {
@@ -38,47 +83,98 @@ export function SecurityRoleCreateModal({ open, onClose, roles, onCreated }: Pro
       return;
     }
     gestToast.successDone();
-    setKey("");
-    setName("");
-    setDescription("");
-    setCloneFrom("");
-    void queryClient.invalidateQueries({ queryKey: ["security", "roles"] });
-    onCreated(res.role.key);
+    onCreated();
   }
 
+  if (!open) return null;
+
   return (
-    open ? (
-    <GestionaleModalShell onRequestClose={onClose} title="Nuovo ruolo" titleId="security-role-create-title" modalSize="formSmall">
-      <div className="space-y-3">
-        <div>
-          <label className={dsLabel} htmlFor="role-key">Key (univoca)</label>
-          <input id="role-key" className={dsInput} value={key} onChange={(e) => setKey(e.target.value)} placeholder="es. capo_officina" />
+    <GestionaleModalShell
+      onRequestClose={onClose}
+      title="Nuovo ruolo"
+      titleId="security-role-create-title"
+      modalSize="formMedium"
+    >
+      <div className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className={dsLabel} htmlFor="role-name">
+              Nome ruolo
+            </label>
+            <input
+              id="role-name"
+              className={dsInput}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="es. Capo officina"
+              autoFocus
+            />
+            {previewKey ? (
+              <p className="mt-1 text-[11px] text-[color:var(--cab-text-muted)]">
+                Identificativo: <code className="text-[10px]">{previewKey}</code>
+              </p>
+            ) : null}
+          </div>
+          <div className="sm:col-span-2">
+            <label className={dsLabel} htmlFor="role-clone">
+              Parti da ruolo esistente (opzionale)
+            </label>
+            <select id="role-clone" className={dsInput} value={cloneFrom} onChange={(e) => setCloneFrom(e.target.value)}>
+              <option value="">Nessuno — imposta manualmente</option>
+              {roles.map((r) => (
+                <option key={r.key} value={r.key}>
+                  {r.name}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
+
         <div>
-          <label className={dsLabel} htmlFor="role-name">Nome</label>
-          <input id="role-name" className={dsInput} value={name} onChange={(e) => setName(e.target.value)} />
+          <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+            <p className={dsLabel}>Permessi per pagina</p>
+            <PageAccessLegend />
+          </div>
+          <div className={`${dsTableWrap} max-h-[min(20rem,45vh)] overflow-auto ${dsScrollbar}`}>
+            <table className={dsTable}>
+              <thead>
+                <tr className={dsTableRow}>
+                  <th className={`${dsTableHeadCell} text-left`}>Pagina</th>
+                  <th className={`${dsTableHeadCell} w-16 text-center`}>Accesso</th>
+                </tr>
+              </thead>
+              <tbody>
+                {GESTIONALE_PAGES.map((page) => (
+                  <tr key={page.key} className={dsTableRow}>
+                    <td className={dsTableTd}>{page.label}</td>
+                    <td className={`${dsTableTd} text-center`}>
+                      <PageAccessLevelCell
+                        level={pageAccess[page.key] ?? "none"}
+                        ariaLabel={page.label}
+                        onChange={(level) => setLevel(page.key, level)}
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        <div>
-          <label className={dsLabel} htmlFor="role-desc">Descrizione</label>
-          <input id="role-desc" className={dsInput} value={description} onChange={(e) => setDescription(e.target.value)} />
-        </div>
-        <div>
-          <label className={dsLabel} htmlFor="role-clone">Clona permessi da</label>
-          <select id="role-clone" className={dsInput} value={cloneFrom} onChange={(e) => setCloneFrom(e.target.value)}>
-            <option value="">Nessuno</option>
-            {roles.map((r) => (
-              <option key={r.key} value={r.key}>{r.name}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <button type="button" className={dsBtnGhost} onClick={onClose}>Annulla</button>
-          <button type="button" className={dsBtnPrimary} disabled={saving || !key.trim() || !name.trim()} onClick={() => void handleCreate()}>
+
+        <div className="flex justify-end gap-2 border-t border-[color:var(--cab-border)] pt-3">
+          <button type="button" className={dsBtnGhost} onClick={onClose}>
+            Annulla
+          </button>
+          <button
+            type="button"
+            className={dsBtnPrimary}
+            disabled={saving || !name.trim()}
+            onClick={() => void handleCreate()}
+          >
             {saving ? "Creazione…" : "Crea ruolo"}
           </button>
         </div>
       </div>
     </GestionaleModalShell>
-    ) : null
   );
 }

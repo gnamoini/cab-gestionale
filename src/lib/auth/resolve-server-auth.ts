@@ -70,29 +70,31 @@ async function fetchServerAuthSnapshotWithClient(
   const expiresAt =
     sessionWrap.session?.expires_at != null ? Math.floor(sessionWrap.session.expires_at) : null;
 
-  const [{ data: prof, error: profErr }, { data: overrideRows, error: overrideErr }] = await Promise.all([
-    supabase.from("profiles").select("nome, cognome, username, role_key, cliente_ref, created_at").eq("id", authUser.id).maybeSingle(),
-    supabase.from("user_page_overrides").select("page_key, access_level").eq("user_id", authUser.id),
-  ]);
+  const { data: prof, error: profErr } = await supabase
+    .from("profiles")
+    .select("nome, cognome, username, role_key, cliente_ref, created_at")
+    .eq("id", authUser.id)
+    .maybeSingle();
 
   if (profErr) {
     console.warn("[auth] server snapshot profilo non leggibile:", profErr.message);
   }
-  if (overrideErr) {
-    console.warn("[auth] server snapshot override pagina non leggibili:", overrideErr.message);
-  }
 
   const roleKey = typeof prof?.role_key === "string" ? prof.role_key : "guest";
   let rolePageAccess: Record<string, PageAccessLevel> = {};
+  let userPageOverridesMap: Record<string, PageAccessLevel> = {};
   try {
-    rolePageAccess = await loadRolePageAccess(supabase, roleKey);
+    [rolePageAccess, userPageOverridesMap] = await Promise.all([
+      loadRolePageAccess(supabase, roleKey),
+      loadUserPageOverrides(supabase, authUser.id),
+    ]);
   } catch (e) {
-    console.warn("[auth] role page access load failed:", e);
+    console.warn("[auth] role page access / overrides load failed:", e);
   }
 
-  const userPageOverrides = (overrideRows ?? []).map((row) => ({
-    page_key: row.page_key as string,
-    access_level: row.access_level as PageAccessLevel,
+  const userPageOverrides = Object.entries(userPageOverridesMap).map(([page_key, access_level]) => ({
+    page_key,
+    access_level,
   }));
 
   let publicUser;

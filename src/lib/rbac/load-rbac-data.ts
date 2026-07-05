@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PageAccessLevel } from "@/src/lib/permissions/gestionale-pages";
 import type { RoleRow } from "@/src/types/supabase-tables";
+import { seedPageAccessForRole } from "@/lib/rbac-page-seed";
 
 export const ROLES_COLUMNS = "id, key, name, description, is_system, is_active, created_at, updated_at" as const;
 export const ROLE_PAGE_ACCESS_COLUMNS = "role_id, page_key, access_level, created_at, updated_at" as const;
@@ -11,6 +12,27 @@ export type PageAccessDbBundle = {
   rolePageAccess: Record<string, PageAccessLevel>;
   userPageOverrides: Record<string, PageAccessLevel>;
 };
+
+/** Migrazione `20260907120000_rbac_page_access_ssot` non ancora applicata. */
+export function isRbacPageTableUnavailableError(message: string | null | undefined): boolean {
+  if (!message) return false;
+  return (
+    /user_page_overrides|role_page_access|rbac_page_module_expansion/i.test(message) &&
+    /schema cache|does not exist|PGRST205|42P01/i.test(message)
+  );
+}
+
+function logRbacPageReadError(scope: string, error: { message?: string }): void {
+  if (isRbacPageTableUnavailableError(error.message)) return;
+  console.warn(`[rbac] ${scope}:`, error.message ?? "unknown");
+}
+
+export function mergeRolePageAccessWithSeed(
+  roleKey: string,
+  rolePageAccess: Record<string, PageAccessLevel>,
+): Record<string, PageAccessLevel> {
+  return { ...seedPageAccessForRole(roleKey), ...rolePageAccess };
+}
 
 export async function loadRolePageAccess(
   admin: SupabaseClient,
@@ -28,7 +50,10 @@ export async function loadRolePageAccess(
     .from("role_page_access")
     .select("page_key, access_level")
     .eq("role_id", role.id);
-  if (error) return {};
+  if (error) {
+    logRbacPageReadError("loadRolePageAccess", error);
+    return {};
+  }
 
   const out: Record<string, PageAccessLevel> = {};
   for (const row of rows ?? []) {
@@ -46,7 +71,10 @@ export async function loadAllRolePageAccess(admin: SupabaseClient): Promise<Map<
 
   const roleIdToKey = new Map(roles.map((r) => [r.id as string, r.key as string]));
   const { data: rows, error } = await admin.from("role_page_access").select("role_id, page_key, access_level");
-  if (error) return new Map();
+  if (error) {
+    logRbacPageReadError("loadAllRolePageAccess", error);
+    return new Map();
+  }
 
   const out = new Map<string, Record<string, PageAccessLevel>>();
   for (const row of rows ?? []) {
@@ -64,20 +92,31 @@ export async function loadUserPageOverrides(
   admin: SupabaseClient,
   userId: string,
 ): Promise<Record<string, PageAccessLevel>> {
-  const { data, error } = await admin
-    .from("user_page_overrides")
-    .select("page_key, access_level")
-    .eq("user_id", userId);
-  if (error) return {};
-
-  const out: Record<string, PageAccessLevel> = {};
-  for (const row of data ?? []) {
-    const level = row.access_level as PageAccessLevel;
-    if (level === "write" || level === "read" || level === "none") {
-      out[row.page_key] = level;
+  try {
+    const { data, error } = await admin
+      .from("user_page_overrides")
+      .select("page_key, access_level")
+      .eq("user_id", userId);
+    if (error) {
+      logRbacPageReadError("loadUserPageOverrides", error);
+      return {};
     }
+
+    const out: Record<string, PageAccessLevel> = {};
+    for (const row of data ?? []) {
+      const level = row.access_level as PageAccessLevel;
+      if (level === "write" || level === "read" || level === "none") {
+        out[row.page_key] = level;
+      }
+    }
+    return out;
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    if (!isRbacPageTableUnavailableError(message)) {
+      console.warn("[rbac] loadUserPageOverrides:", message);
+    }
+    return {};
   }
-  return out;
 }
 
 export async function loadPageAccessDbBundle(
@@ -138,10 +177,19 @@ export async function loadAllUserPageOverrideRows(
   userIds: string[],
 ): Promise<{ user_id: string; page_key: string; access_level: PageAccessLevel }[]> {
   if (userIds.length === 0) return [];
-  const { data, error } = await admin
-    .from("user_page_overrides")
-    .select("user_id, page_key, access_level")
-    .in("user_id", userIds);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as { user_id: string; page_key: string; access_level: PageAccessLevel }[];
+  try {
+    const { data, error } = await admin
+      .from("user_page_overrides")
+      .select("user_id, page_key, access_level")
+      .in("user_id", userIds);
+    if (error) {
+      if (isRbacPageTableUnavailableError(error.message)) return [];
+      throw new Error(error.message);
+    }
+    return (data ?? []) as { user_id: string; page_key: string; access_level: PageAccessLevel }[];
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    if (isRbacPageTableUnavailableError(message)) return [];
+    throw e;
+  }
 }

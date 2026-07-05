@@ -38,6 +38,33 @@ type Err = { ok: false; message: string };
 const VALID_LEVELS = new Set<PageAccessLevel>(["write", "read", "none"]);
 const VALID_PAGE_KEYS = new Set<string>(GESTIONALE_PAGES.map((p) => p.key));
 
+function slugRoleKeyFromName(name: string): string {
+  const slug = name
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 48);
+  return slug.length >= 2 ? slug : "ruolo_custom";
+}
+
+function resolveCreateRolePageAccess(input: {
+  pageAccess?: Record<string, PageAccessLevel> | null;
+  cloneFromRoleKey?: string | null;
+}): Record<string, PageAccessLevel> {
+  const out: Record<string, PageAccessLevel> = {};
+  for (const page of GESTIONALE_PAGES) {
+    const fromInput = input.pageAccess?.[page.key];
+    if (fromInput && VALID_LEVELS.has(fromInput)) {
+      out[page.key] = fromInput;
+      continue;
+    }
+    out[page.key] = "none";
+  }
+  return out;
+}
+
 async function adminClientOrErr() {
   const caller = await assertAdminCaller();
   if (!caller.ok) return { ok: false as const, message: caller.message };
@@ -110,15 +137,18 @@ export async function updatePageMatrixAction(input: {
 }
 
 export async function createRoleAction(input: {
-  key: string;
+  key?: string;
   name: string;
   description?: string | null;
   cloneFromRoleKey?: string | null;
+  pageAccess?: Record<string, PageAccessLevel> | null;
 }): Promise<Ok<{ role: RoleRow }> | Err> {
   try {
     const ctx = await adminClientOrErr();
     if (!ctx.ok) return ctx;
-    const key = input.key.trim().toLowerCase();
+    const name = input.name.trim();
+    if (!name) return { ok: false, message: "Nome ruolo obbligatorio" };
+    const key = (input.key?.trim() || slugRoleKeyFromName(name)).toLowerCase();
     if (!/^[a-z][a-z0-9_]{1,48}$/.test(key)) {
       return { ok: false, message: "Key ruolo non valida" };
     }
@@ -126,7 +156,7 @@ export async function createRoleAction(input: {
       .from("roles")
       .insert({
         key,
-        name: input.name.trim(),
+        name,
         description: input.description?.trim() || null,
         is_system: false,
         is_active: true,
@@ -135,12 +165,16 @@ export async function createRoleAction(input: {
       .single();
     if (error) return { ok: false, message: error.message };
 
-    const sourceAccess = input.cloneFromRoleKey
-      ? await loadRolePageAccess(ctx.admin, input.cloneFromRoleKey)
-      : seedPageAccessForRole("guest");
+    let sourceAccess = resolveCreateRolePageAccess(input);
+    if (!input.pageAccess && input.cloneFromRoleKey) {
+      const cloned = await loadRolePageAccess(ctx.admin, input.cloneFromRoleKey);
+      sourceAccess = { ...sourceAccess, ...seedPageAccessForRole(input.cloneFromRoleKey), ...cloned };
+    }
 
-    for (const [pageKey, level] of Object.entries(sourceAccess)) {
-      await upsertRolePageAccess(ctx.admin, role.id as string, pageKey, level);
+    for (const page of GESTIONALE_PAGES) {
+      const level = sourceAccess[page.key] ?? "none";
+      if (!VALID_LEVELS.has(level)) continue;
+      await upsertRolePageAccess(ctx.admin, role.id as string, page.key, level);
     }
 
     invalidateRbacTruthServer();

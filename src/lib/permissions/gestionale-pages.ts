@@ -250,6 +250,41 @@ export function pageAccessLabel(level: PageAccessLevel): string {
   }
 }
 
+/** Sigla compatta per matrice permessi (W/R/—). */
+export function pageAccessShortCode(level: PageAccessLevel): string {
+  switch (level) {
+    case "write":
+      return "W";
+    case "read":
+      return "R";
+    case "none":
+      return "—";
+  }
+}
+
+export function cyclePageAccessLevel(level: PageAccessLevel): PageAccessLevel {
+  if (level === "write") return "read";
+  if (level === "read") return "none";
+  return "write";
+}
+
+/** Etichetta colonna matrice (header compatto). */
+export function pageMatrixColumnLabel(label: string): string {
+  const short: Record<string, string> = {
+    Dashboard: "Dash",
+    "Portale Clienti": "Portale",
+    Configurazione: "Config",
+    Lavorazioni: "Lavoraz.",
+    Fatturazione: "Fattur.",
+    Dipendenti: "Dipend.",
+    Preventivi: "Prev.",
+    Documenti: "Doc.",
+    Magazzino: "Magaz.",
+    Sicurezza: "Sicur.",
+  };
+  return short[label] ?? label;
+}
+
 /** Moduli ERP coperti da una pagina (primario + espansioni). */
 export function modulesForPage(page: GestionalePage): GestionalePermissionModule[] {
   const mods: GestionalePermissionModule[] = [];
