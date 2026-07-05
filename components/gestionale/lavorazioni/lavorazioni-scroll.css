@@ -62,6 +62,16 @@
   padding-right: 1rem !important;
 }
 
+/* Stato portale — non assorbire spazio residuo table-fixed. */
+.gestionale-client-portal-dense-table col.gestionale-client-portal-col-stato,
+.gestionale-client-portal-dense-table th.gestionale-client-portal-col-stato,
+.gestionale-client-portal-dense-table td.gestionale-client-portal-col-stato {
+  width: 9.25rem;
+  max-width: 9.25rem;
+  min-width: 9.25rem;
+  box-sizing: border-box;
+}
+
 @media (max-width: 1400px) {
   .gestionale-lavorazioni-dense-table {
     min-width: 62rem;
@@ -87,13 +97,13 @@
 }
 
 @media (max-width: 1050px) {
-  .gestionale-lavorazioni-dense-table {
+  .gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) {
     min-width: 48rem;
   }
 
-  .gestionale-lavorazioni-dense-table col:nth-child(3),
-  .gestionale-lavorazioni-dense-table thead th:nth-child(3),
-  .gestionale-lavorazioni-dense-table tbody td:nth-child(3) {
+  .gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) col:nth-child(3),
+  .gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) thead th:nth-child(3),
+  .gestionale-lavorazioni-dense-table:not(.gestionale-client-portal-dense-table) tbody td:nth-child(3) {
     display: none;
   }
 }

@@ -31,6 +31,7 @@ import { layoutPageRoot, layoutResponsiveCoreScope } from "@/lib/ui/responsive-l
 import { gestionaleShellContentGutterClass } from "@/lib/ui/gestionale-shell-layout";
 import { useGestionaleShellLayoutSync } from "@/lib/ui/use-gestionale-shell-layout-sync";
 import { GestionaleShellLayoutProvider } from "@/context/gestionale-shell-layout-context";
+import { MobileNavShellProvider } from "@/context/mobile-nav-shell-context";
 import dynamic from "next/dynamic";
 
 const DevAuditMounts = dynamic(
@@ -60,8 +61,6 @@ import { recordHealthMetric } from "@/lib/observability/runtime-health";
 import { isBootInvestigationEnabled, logBoot, trackRedirect, trackStoreUpdate } from "@/lib/observability/boot-investigation";
 import { useBootInvestigationMount } from "@/lib/observability/use-boot-investigation-mount";
 import { resolveDrawerAsideClasses } from "@/lib/ui/modal-max-width-class";
-
-const mobileNavOpenBtnClass = `inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg border border-[color:var(--cab-border)] bg-[var(--cab-surface)] text-lg shadow-[var(--cab-shadow-sm)] hover:bg-[var(--cab-hover)] dark:border-[color:var(--cab-border-strong)] ${erpFocus}`;
 
 const shellTopBarClass =
   "flex h-14 shrink-0 items-center border-b border-[color:var(--cab-border)]";
@@ -152,70 +151,6 @@ function NavLink({
   return row;
 }
 
-function MobileNavRow({
-  item,
-  pathname,
-  onClose,
-  onNavigate,
-}: {
-  item: GestionaleNavResolvedItem;
-  pathname: string;
-  onClose: () => void;
-  onNavigate?: (href: string) => void;
-}) {
-  const active = isNavTargetCurrent(pathname, item.href);
-  const Icon = item.Icon;
-  if (item.disabled) {
-    return (
-      <div
-        className={`flex min-h-[3.25rem] items-center gap-3 rounded-xl px-3 text-base font-semibold text-zinc-400 dark:text-zinc-500 ${
-          active ? "bg-zinc-100/80 dark:bg-zinc-800/50" : ""
-        }`}
-        aria-disabled
-      >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400">
-          <Icon className="h-5 w-5" />
-        </span>
-        <span className="min-w-0 flex-1 truncate">{item.label}</span>
-        {item.badge ? (
-          <span className="shrink-0 rounded bg-zinc-200 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-zinc-600 dark:bg-zinc-700 dark:text-zinc-200">
-            {item.badge}
-          </span>
-        ) : null}
-      </div>
-    );
-  }
-  return (
-    <Link
-      href={item.href}
-      onClick={(e) => {
-        if (isNavTargetCurrent(pathname, item.href)) return;
-        scheduleRouteTransitionBegin(e, () => {
-          onNavigate?.(item.href);
-          onClose();
-        });
-      }}
-      className={`flex min-h-[3.25rem] items-center gap-3 rounded-xl px-3 text-base font-semibold ${
-        active
-          ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_16%,var(--cab-card))] text-[color:color-mix(in_srgb,var(--cab-primary)_8%,var(--cab-text))] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--cab-primary)_28%,transparent)] dark:text-white"
-          : "text-zinc-800 hover:bg-zinc-100 dark:text-zinc-100 dark:hover:bg-zinc-800"
-      } ${erpFocus}`}
-    >
-      <span
-        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
-          active
-            ? "bg-[color:color-mix(in_srgb,var(--cab-primary)_28%,var(--cab-card))] text-[color:var(--cab-primary)]"
-            : "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
-        }`}
-        aria-hidden
-      >
-        <Icon className="h-5 w-5" />
-      </span>
-      <span className="min-w-0 flex-1 truncate">{item.label}</span>
-    </Link>
-  );
-}
-
 const NAV_DRAWER_MS = 240;
 
 function navDrawerAnimMs(): number {
@@ -238,7 +173,6 @@ function MobileNavDrawer({
   isCompactShell: boolean;
   isNavLoading: boolean;
 }) {
-  const pathname = usePathname();
   const [mounted, setMounted] = useState(false);
   const [closing, setClosing] = useState(false);
   const panelState = closing ? "closing" : "open";
@@ -297,7 +231,7 @@ function MobileNavDrawer({
         onClick={onClose}
       />
       <div
-        className={`cab-nav-drawer-panel ${resolveDrawerAsideClasses("drawerNav")}`}
+        className={`cab-nav-drawer-panel cab-sidebar ${resolveDrawerAsideClasses("drawerNav")}`}
         data-state={panelState}
         role="dialog"
         aria-modal="true"
@@ -311,7 +245,7 @@ function MobileNavDrawer({
             <CloseButton onClick={onClose} />
           </div>
         </div>
-        <SidebarSessionPanel variant="drawer" placement="brand" onOpenInbox={onClose} />
+        <SidebarSessionPanel variant="drawer" placement="brand" />
         <nav
           className="cab-sidebar-nav gestionale-scrollbar flex min-h-0 min-w-0 flex-1 flex-col p-3 pb-0"
           aria-label="Sezioni principali"
@@ -321,7 +255,20 @@ function MobileNavDrawer({
               <SidebarNavSkeleton />
             ) : (
               navItems.map((item) => (
-                <MobileNavRow key={item.href} item={item} pathname={pathname} onClose={onClose} onNavigate={onNavigate} />
+                <NavLink
+                  key={item.href}
+                  href={item.href}
+                  label={item.label}
+                  Icon={item.Icon}
+                  collapsed={false}
+                  disabled={item.disabled}
+                  badge={item.badge}
+                  onActiveNavClick={onClose}
+                  onNavigate={(href) => {
+                    onNavigate?.(href);
+                    onClose();
+                  }}
+                />
               ))
             )}
           </div>
@@ -464,25 +411,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const sidebarTopOffset =
     "top-0 supports-[padding:max(0px)]:pt-[env(safe-area-inset-top)]";
 
+  const openMobileNav = useCallback(() => {
+    setMobileOpen(true);
+  }, []);
+
   return (
     <GestionaleShellLayoutProvider value={shellLayout}>
     <ProfileSheetProvider>
+    <MobileNavShellProvider openMobileNav={openMobileNav}>
     <div
       ref={shellRef}
+      data-mobile-nav-visible={showMobileNavOpen ? "" : undefined}
       className={`cab-app-shell flex min-h-0 flex-col ${cabAppViewportFillClass} max-w-full overflow-hidden bg-[var(--cab-bg-app)] text-[color:var(--cab-text)]`}
     >
-      {showMobileNavOpen ? (
-          <button
-            type="button"
-            data-testid="smoke-nav-drawer-open"
-            className={`cab-mobile-nav-open fixed left-3 top-[max(0.75rem,env(safe-area-inset-top))] z-30 ${mobileNavOpenBtnClass}`}
-            aria-label="Apri menu"
-            onClick={() => setMobileOpen(true)}
-          >
-            ☰
-          </button>
-      ) : null}
-
       <aside
         ref={sidebarAsideRef}
         data-sidebar-collapsed={collapsed ? "" : undefined}
@@ -590,6 +531,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </div>
     </div>
+    </MobileNavShellProvider>
     </ProfileSheetProvider>
     </GestionaleShellLayoutProvider>
   );

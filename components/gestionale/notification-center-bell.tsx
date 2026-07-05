@@ -43,6 +43,8 @@ import {
 import { SidebarNavRow, SidebarSessionExpandChevron } from "@/components/gestionale/sidebar-nav-row";
 import { useNotificationCenter } from "@/src/hooks/gestionale/use-notification-center";
 import { useNotificationsV2Mode } from "@/src/hooks/gestionale/use-notifications-v2-mode";
+import { useEffectivePermissions } from "@/src/lib/runtime/truth-layer/use-effective-permissions";
+import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 
 const notificationFooterBtnClass = `${dsBtnGhost} min-h-[2rem] shrink-0`;
 
@@ -108,16 +110,19 @@ function NotificationsPanelFooter({
   notificationCount,
   onDismissAll,
   isDismissingAll,
+  showDesktopControls = true,
 }: {
   permissionState: DesktopNotificationPermissionState;
   onPermissionChange: () => void;
   notificationCount: number;
   onDismissAll: () => void | Promise<void>;
   isDismissingAll: boolean;
+  showDesktopControls?: boolean;
 }) {
   const gestToast = useGestionaleToast();
-  const canEnable = permissionState === "default" || permissionState === "denied";
-  const showDeniedHint = permissionState === "denied";
+  const canEnable =
+    showDesktopControls && (permissionState === "default" || permissionState === "denied");
+  const showDeniedHint = showDesktopControls && permissionState === "denied";
   const showDismissAll = notificationCount > 0;
 
   if (!canEnable && !showDeniedHint && !showDismissAll) return null;
@@ -202,6 +207,8 @@ type NotificationCenterBellProps = {
   sidebarCollapsed?: boolean;
   onExpandIntent?: () => void;
   onOpenInbox?: () => void;
+  /** Sopra drawer nav mobile (come profilo). */
+  layerAboveNav?: boolean;
   /** Riga nel blocco sessione unificato (sidebar/drawer). */
   embedded?: boolean;
 };
@@ -210,10 +217,17 @@ export function NotificationCenterBell({
   sidebarCollapsed = false,
   onExpandIntent,
   onOpenInbox,
+  layerAboveNav = false,
   embedded = false,
 }: NotificationCenterBellProps) {
   const gestToast = useGestionaleToast();
   const router = useRouter();
+  const { user } = useAuth();
+  const { snapshot } = useEffectivePermissions();
+  const staffInbox = isStaffInboxEligible(
+    snapshot?.role ? { ruolo: snapshot.role } : user,
+    snapshot?.rbacContext,
+  );
   const [open, setOpen] = useState(false);
   const [desktopPermissionState, setDesktopPermissionState] = useState(() =>
     getDesktopNotificationPermissionState(),
@@ -347,11 +361,14 @@ export function NotificationCenterBell({
         open={open}
         onClose={close}
         title={drawerTitle}
+        layerClassName={layerAboveNav ? "z-[110]" : undefined}
         titleAddon={
-          <NotificationsDesktopStatusBadge
-            permissionState={desktopPermissionState}
-            onPermissionChange={refreshDesktopPermission}
-          />
+          staffInbox ? (
+            <NotificationsDesktopStatusBadge
+              permissionState={desktopPermissionState}
+              onPermissionChange={refreshDesktopPermission}
+            />
+          ) : undefined
         }
         ariaLabel="Centro notifiche"
         asideClassName={gestionaleLogPanelAsideClass}
@@ -387,6 +404,7 @@ export function NotificationCenterBell({
             ) : null}
           </div>
           <NotificationsPanelFooter
+            showDesktopControls={staffInbox}
             permissionState={desktopPermissionState}
             onPermissionChange={refreshDesktopPermission}
             notificationCount={notifications.length}

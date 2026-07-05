@@ -3,6 +3,7 @@ import {
   LAVORAZIONI_DETAIL_COLUMNS,
   LAVORAZIONI_LIST_LIGHT_COLUMNS,
   LAVORAZIONI_REPORT_LIGHT_COLUMNS,
+  MEZZI_EMBED_CLIENT_PORTAL_COLUMNS,
   MEZZI_EMBED_LIGHT_COLUMNS,
   MEZZI_LIST_EMBED_COLUMNS,
 } from "@/lib/db/table-select-columns";
@@ -65,9 +66,9 @@ function resolveStatiForSanitize(override?: StatoLavorazioneConfig[]) {
 }
 
 const LAVORAZIONI_CREATED_BY_PROFILE_SELECT =
-  "created_by_profile:profiles!lavorazioni_created_by_fkey(nome)";
+  "created_by_profile:profiles!lavorazioni_created_by_fkey(nome, cognome)";
 
-const LAVORAZIONI_PROFILE_SELECT = `updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), ${LAVORAZIONI_CREATED_BY_PROFILE_SELECT}`;
+const LAVORAZIONI_PROFILE_SELECT = `updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome, cognome), ${LAVORAZIONI_CREATED_BY_PROFILE_SELECT}`;
 
 function isUpdatedByProfileJoinError(message: string): boolean {
   const m = message.toLowerCase();
@@ -93,7 +94,8 @@ function lavorazioniColumnsForMode(mode: LavorazioniListFetchMode): string {
   }
 }
 
-function mezziEmbedColumnsForMode(mode: LavorazioniListFetchMode): string {
+function mezziEmbedColumnsForMode(mode: LavorazioniListFetchMode, clientPortal?: boolean): string {
+  if (clientPortal && mode !== "detail") return MEZZI_EMBED_CLIENT_PORTAL_COLUMNS;
   return mode === "detail" ? MEZZI_LIST_EMBED_COLUMNS : MEZZI_EMBED_LIGHT_COLUMNS;
 }
 
@@ -170,6 +172,8 @@ export type LavorazioniListFetchOptions = {
   clienteRefScope?: string | null;
   /** Server prefetch: stati da DB senza runtime client cache. */
   sanitizeStati?: StatoLavorazioneConfig[];
+  /** Lista portale clienti: embed mezzo con `meta` (cantiere). */
+  clientPortal?: boolean;
 };
 
 async function fetchLavorazioniListRowsQuery(
@@ -224,7 +228,7 @@ export async function fetchLavorazioniListRows(
     (filters?.includeMezzo === true || !!clienteRefScope);
   const includeProfiles =
     filters?.includeProfiles === true || (fetchMode === "detail" && filters?.includeProfiles !== false);
-  const mezziCols = mezziEmbedColumnsForMode(fetchMode);
+  const mezziCols = mezziEmbedColumnsForMode(fetchMode, options?.clientPortal);
   const mezziSelect = clienteRefScope ? `mezzi!inner(${mezziCols})` : `mezzi(${mezziCols})`;
   const baseOpts = { clienteRefScope, fetchMode, includeMezzo, mezziSelect, includeProfiles };
 
@@ -302,7 +306,10 @@ export async function fetchLavorazioniListAuthorized(
       archivedFilter: filters?.archived ?? null,
       clienteRefScope,
     });
-    return fetchLavorazioniListRows(sb, filters, { clienteRefScope });
+    return fetchLavorazioniListRows(sb, filters, {
+      clienteRefScope,
+      clientPortal: authOptions?.clientPortal === true,
+    });
   } catch (e) {
     return serviceFailFromError(e);
   }

@@ -451,6 +451,17 @@ html.dark select option {
     background-color: var(--cab-scrollbar-thumb-hover);
   }
 
+  .gestionale-scrollbar::-webkit-scrollbar-button {
+    display: none;
+    height: 0;
+    width: 0;
+  }
+
+  /** Profilo drawer — niente gutter riservato se il contenuto non overflowa. */
+  .cab-profile-sheet-scroll {
+    scrollbar-gutter: auto;
+  }
+
   /** Trigger GlobalSelect selectOnly / readonly — nasconde scrollbar nativa (Windows Chromium). */
   .gestionale-combobox-trigger {
     overflow: hidden;
@@ -553,10 +564,11 @@ html.dark select option {
   overflow-clip-margin: var(--cab-paint-clip-margin);
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
-  /* Default auto — stable solo su tier desktop shell (evita clip/gutter in preview compatto). */
-  scrollbar-gutter: auto;
+  /* ponytail: stable su tutti i tier — evita layout shift quando il main smette di overflow (collapse card). */
+  scrollbar-gutter: stable;
 }
 
+/* Legacy: tier desktop mantiene stable (identico al default sopra). */
 .cab-app-shell[data-gestionale-shell-tier="desktop"] .cab-ios-scroll-y,
 .cab-app-shell[data-gestionale-shell-tier="desktop"] .gestionale-scroll-y {
   scrollbar-gutter: stable;
@@ -635,6 +647,50 @@ main.gestionale-scroll-y[data-cab-scroll-at-end="true"] .gestionale-scroll-end-p
   min-width: 0;
   max-width: 100%;
   width: 100%;
+  --cab-mobile-nav-btn-gap: 0.5rem;
+}
+
+.cab-app-shell[data-gestionale-shell-tier="mobile"] {
+  --cab-shell-content-gutter: 0.75rem;
+}
+
+.cab-app-shell[data-gestionale-shell-tier="tablet"] {
+  --cab-shell-content-gutter: 1.25rem;
+}
+
+/** Hamburger / back nel PageHeader — sizing da `dsPageToolbarIconBtn`. */
+.cab-mobile-nav-open,
+.cab-mobile-nav-back {
+  flex-shrink: 0;
+}
+
+/** Titolo centrato tra hamburger e azioni header. */
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-top-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--cab-mobile-nav-btn-gap);
+}
+
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-top-row > .cab-page-header-title-cluster {
+  grid-column: 2;
+  grid-row: 1;
+  flex: none;
+  justify-content: center;
+  max-width: 100%;
+  padding-inline-start: 0;
+}
+
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-title-cluster .cab-page-title-box {
+  text-align: center;
+  width: 100%;
+  max-width: 100%;
+}
+
+.cab-app-shell[data-mobile-nav-visible] .cab-page-header-top-row > :last-child:not(.cab-page-header-title-cluster) {
+  grid-column: 3;
+  grid-row: 1;
+  margin-inline-start: 0;
 }
 
 /* ResponsiveLayoutCore — media e contenimento globale nel main gestionale */
@@ -957,27 +1013,10 @@ main.gestionale-scroll-y[data-cab-main-scroll-lock] {
   padding-inline: var(--cab-sidebar-nav-inset);
 }
 
-.cab-nav-drawer-panel .cab-sidebar-session--brand {
-  padding-inline: var(--ds-space-md);
+.cab-nav-drawer-panel.cab-sidebar .cab-sidebar-session--brand {
   padding-top: 0.5rem;
   padding-bottom: 0.75rem;
   border-bottom: 1px solid color-mix(in srgb, var(--cab-border) 85%, transparent);
-}
-
-.cab-nav-drawer-panel .cab-sidebar-nav-row {
-  gap: var(--cab-sidebar-icon-label-gap);
-  padding-inline: 0.625rem;
-}
-
-.cab-nav-drawer-panel .cab-sidebar-nav-row__icon-track {
-  margin-inline-start: 0;
-}
-
-.cab-nav-drawer-panel .cab-sidebar-nav-row__label,
-.cab-nav-drawer-panel .cab-sidebar-nav-row__trailing {
-  opacity: 1;
-  clip-path: none;
-  pointer-events: auto;
 }
 
 @media (min-width: 640px) {

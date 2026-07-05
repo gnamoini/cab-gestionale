@@ -16,22 +16,30 @@ function ProfileInfoRow({ label, value }: { label: string; value: string }) {
 }
 
 export function ProfileAccountSection({ user }: { user: PublicAuthUser }) {
+  const isCliente = user.ruolo === "cliente";
+  const nome = user.givenName?.trim() || "—";
+  const cognome = user.cognome?.trim() || "—";
+
   const rows: Array<{ label: string; value: string }> = [
-    { label: "Nome", value: user.givenName || "—" },
-    { label: "Cognome", value: user.cognome ?? "—" },
-    { label: "Nome visualizzato", value: user.nome || "—" },
+    { label: "Nome", value: nome },
+    { label: "Cognome", value: cognome },
     { label: "Email", value: user.email || "—" },
     { label: "Ruolo", value: roleLabel(user) },
   ];
+
+  if (!isCliente) {
+    rows.splice(2, 0, { label: "Nome visualizzato", value: user.nome || "—" });
+  }
 
   if (user.username) {
     rows.push({ label: "Nome utente", value: user.username });
   }
 
-  rows.push(
-    { label: "ID utente", value: user.id },
-    { label: "Account creato", value: formatSecurityNullableWhen(user.createdAt) },
-  );
+  if (!isCliente) {
+    rows.push({ label: "ID utente", value: user.id });
+  }
+
+  rows.push({ label: "Account creato", value: formatSecurityNullableWhen(user.createdAt) });
 
   return (
     <section aria-labelledby="profile-account-heading">

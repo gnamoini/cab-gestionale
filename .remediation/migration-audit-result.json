@@ -1,0 +1,342 @@
+{
+  "summary": {
+    "local_count": 144,
+    "remote_count": 155,
+    "applied_exact_match": 93,
+    "applied_by_name_mismatch_version": 50,
+    "pending_push": 1,
+    "remote_only_not_in_local": 9
+  },
+  "applied_exact": [
+    "20260211120000_officina_gestionale_core.sql",
+    "20260211140000_officina_gestionale_schema.sql",
+    "20260211160000_officina_rls_auth_profiles.sql",
+    "20260212120000_app_settings.sql",
+    "20260215120000_stabilize_profiles_app_settings_rls.sql",
+    "20260216120000_app_settings_select_requires_profile.sql",
+    "20260218120000_app_settings_audit.sql",
+    "20260219120000_user_permissions.sql",
+    "20260220120000_auth_logs.sql",
+    "20260511120000_auth_logs_realtime.sql",
+    "20260511130000_handle_new_user_profile_app_metadata.sql",
+    "20260517194000_rbac_enum_ospite_cliente.sql",
+    "20260517194100_rbac_official_roles.sql",
+    "20260517202600_lavorazioni_priorita_settings.sql",
+    "20260518120000_extend_stato_lavorazione_enum.sql",
+    "20260518120100_log_modifiche_update_operatore.sql",
+    "20260518140000_storage_buckets_images_documenti.sql",
+    "20260518150000_magazzino_ricambi_meta.sql",
+    "20260518160000_rbac_cliente_role.sql",
+    "20260518160200_mezzi_meta_optional_matricola.sql",
+    "20260518170000_segnalazioni.sql",
+    "20260518180000_rls_security_hardening.sql",
+    "20260519120000_rbac_enterprise_refactor.sql",
+    "20260519130000_storage_enterprise_refactor.sql",
+    "20260519140000_operatore_operational_crud.sql",
+    "20260519150000_ruolo_manager_guest_enum.sql",
+    "20260519150100_rbac_capabilities_refactor.sql",
+    "20260520120000_lavorazioni_stati_text_dynamic.sql",
+    "20260520140000_lavorazioni_client_portal_archive.sql",
+    "20260520180000_lavorazioni_soft_delete.sql",
+    "20260520190000_lavorazioni_deleted_at_ensure.sql",
+    "20260520200000_app_settings_bulk_upsert_audit.sql",
+    "20260520210000_support_notes.sql",
+    "20260520220000_lavorazione_documents.sql",
+    "20260520230000_lavorazioni_soft_delete_rls.sql",
+    "20260521120000_operatore_settings_and_bulk_upsert.sql",
+    "20260521140000_lavorazioni_soft_delete_rpc.sql",
+    "20260521180000_gestionale_realtime_publication.sql",
+    "20260522120000_schema_consolidation_safe.sql",
+    "20260523120000_global_entity_validation_keys.sql",
+    "20260523140000_report_manual_entries.sql",
+    "20260523150000_scheda_lavorazione_updated_at_fix.sql",
+    "20260523160000_mezzo_delete_dependencies_rpc.sql",
+    "20260523170000_mezzo_delete_purge_storico.sql",
+    "20260523180000_mezzo_delete_purge_schede_storico.sql",
+    "20260523190000_mezzo_lavorazioni_in_corso.sql",
+    "20260523200000_mezzo_delete_requires_lavorazione_delete.sql",
+    "20260524120000_lavorazioni_codice_umano.sql",
+    "20260524140000_preventivi_numero_lavorazione.sql",
+    "20260527120000_profiles_username_login.sql",
+    "20260527130000_user_prefs_theme.sql",
+    "20260527140000_profiles_username_hardening.sql",
+    "20260527150000_support_notes_moderation_rls.sql",
+    "20260528120000_reset_user_theme_prefs_dark.sql",
+    "20260529120000_app_settings_portal_security_only.sql",
+    "20260530120000_documenti_bucket_private.sql",
+    "20260531120000_rls_user_permissions_enforcement.sql",
+    "20260531140000_storage_images_path_rls.sql",
+    "20260601120000_pilot_operator_global_settings_override.sql",
+    "20260602120000_operator_global_settings_rbac_alias.sql",
+    "20260604120000_documenti_bucket_100mb.sql",
+    "20260605120000_operatore_can_manage_settings_default.sql",
+    "20260605180000_ricambio_compat_meta_documentation.sql",
+    "20260607120000_app_settings_branding.sql",
+    "20260610120000_client_portal_rbac_admin_cliente_only.sql",
+    "20260612120000_documenti_categoria_certificazione.sql",
+    "20260613120000_storage_magazzino_images_read_fix.sql",
+    "20260629120000_dipendenti_timesheet.sql",
+    "20260630120000_dipendenti_addetto_id_link.sql",
+    "20260701120000_dipendenti_timesheet_ore_assenza.sql",
+    "20260702120000_dipendenti_entry_employee_snapshot.sql",
+    "20260703120000_dashboard_promemoria.sql",
+    "20260703130000_dashboard_promemoria_event_time.sql",
+    "20260704120000_bunder_documents.sql",
+    "20260704130000_deprecate_supporto_tables.sql",
+    "20260705120000_gestionale_sync_realtime_gaps.sql",
+    "20260706120000_input_text_limits.sql",
+    "20260707130000_dashboard_promemoria_soft_delete_rls.sql",
+    "20260707140000_login_resolve_and_support_notes_rls.sql",
+    "20260708120000_dashboard_promemoria_recurrence.sql",
+    "20260709120000_realtime_prune_deprecated_supporto.sql",
+    "20260710120000_lavorazioni_updated_by.sql",
+    "20260711120000_db_performance_indexes.sql",
+    "20260715120000_magazzino_listino_import_meta_index.sql",
+    "20260716120000_clienti_anagrafiche.sql",
+    "20260716130000_fatturazione_module.sql",
+    "20260717130000_user_permissions_fatturazione_dipendenti.sql",
+    "20260717140000_invoices_origine_column.sql",
+    "20260717150000_invoices_update_draft_rpc.sql",
+    "20260718120000_data_import_infrastructure.sql",
+    "20260719120000_import_entity_registry_expand.sql",
+    "20260720120000_ddt_module.sql",
+    "20260720120100_user_permissions_ddt.sql"
+  ],
+  "pending_push": [
+    "20260704130000_clienti_anagrafiche_cliente_portal_read.sql"
+  ],
+  "version_mismatch": [
+    {
+      "local": "20260603120000_log_modifiche_retention_100.sql",
+      "remote": "20260702195447_log_modifiche_retention_100"
+    },
+    {
+      "local": "20260630200000_invoices_draft_delete_rls.sql",
+      "remote": "20260630035955_invoices_draft_delete_rls"
+    },
+    {
+      "local": "20260721120000_ddt_one_per_preventivo.sql",
+      "remote": "20260630040000_ddt_one_per_preventivo"
+    },
+    {
+      "local": "20260722120000_rbac_v31_role_module_defaults.sql",
+      "remote": "20260630002412_rbac_v31_role_module_defaults"
+    },
+    {
+      "local": "20260723120000_security_set_user_role_atomic.sql",
+      "remote": "20260630014636_security_set_user_role_atomic"
+    },
+    {
+      "local": "20260730120000_clienti_anagrafiche_operational_read.sql",
+      "remote": "20260630024350_clienti_anagrafiche_operational_read"
+    },
+    {
+      "local": "20260731120000_ordini_fornitori_module.sql",
+      "remote": "20260630040211_ordini_fornitori_module"
+    },
+    {
+      "local": "20260731120100_user_permissions_ordini_fornitori.sql",
+      "remote": "20260630040214_user_permissions_ordini_fornitori"
+    },
+    {
+      "local": "20260801120000_attrezzature_core.sql",
+      "remote": "20260701012320_attrezzature_core"
+    },
+    {
+      "local": "20260801120100_attrezzature_backfill.sql",
+      "remote": "20260701012333_attrezzature_backfill"
+    },
+    {
+      "local": "20260801120200_attrezzature_rls_realtime.sql",
+      "remote": "20260701012407_attrezzature_rls_realtime"
+    },
+    {
+      "local": "20260801120300_drop_legacy_sync_trigger.sql",
+      "remote": "20260701012405_drop_legacy_sync_trigger"
+    },
+    {
+      "local": "20260801120400_documenti_target.sql",
+      "remote": "20260701012404_documenti_target"
+    },
+    {
+      "local": "20260801120600_mezzi_legacy_write_guard.sql",
+      "remote": "20260701012413_mezzi_legacy_write_guard"
+    },
+    {
+      "local": "20260801120700_ddt_target_snapshot_rpc.sql",
+      "remote": "20260701012427_ddt_target_snapshot_rpc"
+    },
+    {
+      "local": "20260801130000_notifications_core.sql",
+      "remote": "20260701012509_notifications_core"
+    },
+    {
+      "local": "20260901120000_asset_lifecycle_enums.sql",
+      "remote": "20260701023927_asset_lifecycle_enums"
+    },
+    {
+      "local": "20260901120100_asset_compliance_rules.sql",
+      "remote": "20260701023932_asset_compliance_rules"
+    },
+    {
+      "local": "20260901120200_asset_compliance_records.sql",
+      "remote": "20260701023943_asset_compliance_records"
+    },
+    {
+      "local": "20260901120300_asset_assignment_history.sql",
+      "remote": "20260701023949_asset_assignment_history"
+    },
+    {
+      "local": "20260901120400_asset_mileage_readings.sql",
+      "remote": "20260701023950_asset_mileage_readings"
+    },
+    {
+      "local": "20260901120450_asset_lifecycle_rls.sql",
+      "remote": "20260701024056_asset_lifecycle_rls"
+    },
+    {
+      "local": "20260901120500_asset_lifecycle_backfill.sql",
+      "remote": "20260701024059_asset_lifecycle_backfill"
+    },
+    {
+      "local": "20260901120600_asset_timeline_projection.sql",
+      "remote": "20260701024141_asset_timeline_projection"
+    },
+    {
+      "local": "20260901120700_asset_lifecycle_feature_flag.sql",
+      "remote": "20260701024058_asset_lifecycle_feature_flag"
+    },
+    {
+      "local": "20260901140000_drop_bunder_module.sql",
+      "remote": "20260701030006_drop_bunder_module"
+    },
+    {
+      "local": "20260901150000_notification_events_v2.sql",
+      "remote": "20260702135855_notification_events_v2"
+    },
+    {
+      "local": "20260902120000_profiles_cognome.sql",
+      "remote": "20260702013317_profiles_cognome"
+    },
+    {
+      "local": "20260902130000_document_capture_core.sql",
+      "remote": "20260702141906_document_capture_core"
+    },
+    {
+      "local": "20260902130100_user_permissions_document_capture.sql",
+      "remote": "20260702140324_user_permissions_document_capture"
+    },
+    {
+      "local": "20260902130200_document_capture_grants_child_rls.sql",
+      "remote": "20260702142633_document_capture_grants_child_rls"
+    },
+    {
+      "local": "20260902130300_profiles_company_id_new_users.sql",
+      "remote": "20260702142640_profiles_company_id_new_users"
+    },
+    {
+      "local": "20260902130400_document_capture_security_hardening.sql",
+      "remote": "20260702142641_document_capture_security_hardening"
+    },
+    {
+      "local": "20260902130500_document_capture_status_transitions.sql",
+      "remote": "20260702142652_document_capture_status_transitions"
+    },
+    {
+      "local": "20260902130600_document_capture_phase2_rpc.sql",
+      "remote": "20260702142802_document_capture_phase2_rpc"
+    },
+    {
+      "local": "20260902130700_scheda_pdf_rls.sql",
+      "remote": "20260702142704_scheda_pdf_rls"
+    },
+    {
+      "local": "20260902130800_document_capture_apply_lock.sql",
+      "remote": "20260702142953_document_capture_apply_lock"
+    },
+    {
+      "local": "20260902130900_document_capture_rate_limit.sql",
+      "remote": "20260702142711_document_capture_rate_limit"
+    },
+    {
+      "local": "20260902131000_scheda_pdf_renderer_hash_fix.sql",
+      "remote": "20260702142714_scheda_pdf_renderer_hash_fix"
+    },
+    {
+      "local": "20260902131100_profiles_company_id_nullable_signup.sql",
+      "remote": "20260702142844_profiles_company_id_nullable_signup"
+    },
+    {
+      "local": "20260902131200_document_capture_rls_events_audit.sql",
+      "remote": "20260702143113_document_capture_rls_events_audit"
+    },
+    {
+      "local": "20260902150000_tkb_description_engine.sql",
+      "remote": "20260702143136_tkb_description_engine"
+    },
+    {
+      "local": "20260903120000_dipendenti_presenze_reminder_global.sql",
+      "remote": "20260703052012_dipendenti_presenze_reminder_global"
+    },
+    {
+      "local": "20260903120000_rbac_data_driven_core.sql",
+      "remote": "20260702155907_rbac_data_driven_core"
+    },
+    {
+      "local": "20260903140000_mezzi_legacy_attrezzatura_nullable_v2.sql",
+      "remote": "20260703044913_mezzi_legacy_attrezzatura_nullable_v2"
+    },
+    {
+      "local": "20260904120000_tkb_draft_operative_history.sql",
+      "remote": "20260703052021_tkb_draft_operative_history"
+    },
+    {
+      "local": "20260904180000_list_lavorazioni_paginated.sql",
+      "remote": "20260703052032_list_lavorazioni_paginated"
+    },
+    {
+      "local": "20260904180100_get_operational_data_version.sql",
+      "remote": "20260703052033_get_operational_data_version"
+    },
+    {
+      "local": "20260904180200_v_dashboard_lavorazioni_kpi.sql",
+      "remote": "20260703052035_v_dashboard_lavorazioni_kpi"
+    },
+    {
+      "local": "20260905120000_workshop_schedule_events.sql",
+      "remote": "20260703202319_workshop_schedule_events, 20260703202417_workshop_schedule_events, 20260703202630_workshop_schedule_events"
+    }
+  ],
+  "remote_only": [
+    "20260630002422_rbac_v31_handle_new_user",
+    "20260702160021_rbac_data_driven_core_seed",
+    "20260702160026_rbac_data_driven_core_cutover",
+    "20260702160032_rbac_data_driven_core_user_perms",
+    "20260702160044_rbac_data_driven_core_drop_ruolo_a",
+    "20260702160056_rbac_data_driven_core_drop_ruolo_b",
+    "20260702160122_rbac_data_driven_core_rls_a",
+    "20260702160134_rbac_data_driven_core_rls_b",
+    "20260702195602_log_modifiche_retention_100_fix"
+  ],
+  "duplicate_local_timestamps": {
+    "20260704130000": [
+      "20260704130000_clienti_anagrafiche_cliente_portal_read.sql",
+      "20260704130000_deprecate_supporto_tables.sql"
+    ],
+    "20260903120000": [
+      "20260903120000_dipendenti_presenze_reminder_global.sql",
+      "20260903120000_rbac_data_driven_core.sql"
+    ]
+  },
+  "duplicate_remote_names": {
+    "login_resolve_and_support_notes_rls": [
+      "20260603120000",
+      "20260707140000"
+    ],
+    "workshop_schedule_events": [
+      "20260703202319",
+      "20260703202417",
+      "20260703202630"
+    ]
+  }
+}

@@ -3,6 +3,8 @@
 export const NOTIFICATION_TYPES = [
   "lavorazione_created",
   "lavorazione_completata",
+  "client_portal_ingresso",
+  "client_portal_completata",
   "lavorazioni_ritardo_digest",
   "preventivo_approvato",
   "magazzino_sotto_scorta",

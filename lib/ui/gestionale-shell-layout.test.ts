@@ -14,6 +14,10 @@ assert.equal(resolveGestionaleShellTier(1399), "tablet");
 assert.equal(resolveGestionaleShellTier(1400), "desktop");
 assert.equal(resolveGestionaleShellTier(1440), "desktop");
 
+// Con sidebar desktop il main è ~68px più stretto del viewport: tier deve usare host, non content.
+assert.equal(resolveGestionaleShellTier(1332), "tablet");
+assert.equal(resolveGestionaleShellTier(1400), "desktop");
+
 // min tra shell, colonna, main, viewport
 assert.equal(
   resolveGestionaleShellContentWidth({

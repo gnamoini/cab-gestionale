@@ -228,4 +228,13 @@ function ingressoBundle(overrides: {
   assert.equal(map.get("b"), "Terzo");
 }
 
+{
+  const info = resolveLavorazioneUltimaModifica(
+    { updated_at: rowUpdatedAt, updated_by: sampleUserUuid },
+    null,
+    { omitUnresolvedAutore: true },
+  );
+  assert.equal(info.autore, "");
+}
+
 console.log("lavorazione-ultima-modifica.test.ts OK");

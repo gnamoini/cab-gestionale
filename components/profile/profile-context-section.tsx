@@ -5,7 +5,7 @@ import { CabLogo } from "@/components/gestionale/cab-logo";
 import { useBranding } from "@/context/branding-context";
 import { formatSedeLine } from "@/lib/clienti/format-sede-line";
 import { OFFICINA_LEGAL_NAME } from "@/lib/officina/officina-identity";
-import { useClienteAnagrafica } from "@/src/hooks/gestionale/use-cliente-anagrafica";
+import { useClientePortalAnagrafica } from "@/src/hooks/gestionale/use-cliente-anagrafica";
 import type { PublicAuthUser } from "@/src/types/auth-user";
 
 function ContextInfoRow({ label, value }: { label: string; value: string }) {
@@ -43,7 +43,7 @@ function OfficinaContextSection() {
 }
 
 function ClienteContextSection({ clienteRef }: { clienteRef: string }) {
-  const { data, isLoading, isError, error } = useClienteAnagrafica(clienteRef, true);
+  const { data, isLoading, isError, error } = useClientePortalAnagrafica(clienteRef, true);
 
   if (isLoading) {
     return (
@@ -72,9 +72,14 @@ function ClienteContextSection({ clienteRef }: { clienteRef: string }) {
   }
 
   const anag = data;
-  const nome = anag?.nomeDisplay?.trim() || clienteRef;
+  const aziendaNome =
+    anag?.ragioneSociale?.trim() || anag?.nomeDisplay?.trim() || clienteRef;
   const ragione =
-    anag?.ragioneSociale?.trim() && anag.ragioneSociale.trim() !== nome ? anag.ragioneSociale.trim() : "";
+    anag?.ragioneSociale?.trim() &&
+    anag.nomeDisplay?.trim() &&
+    anag.ragioneSociale.trim() !== anag.nomeDisplay.trim()
+      ? anag.ragioneSociale.trim()
+      : "";
   const codice = anag?.entityKey?.trim() ?? "";
   const sedeOperativa = anag ? formatSedeLine(anag.sedi.operativa) : "";
   const sedeLegale =
@@ -87,7 +92,7 @@ function ClienteContextSection({ clienteRef }: { clienteRef: string }) {
         La tua azienda
       </h3>
       <dl className="mt-2 space-y-2 rounded-xl border border-[color:var(--cab-border)] bg-[var(--cab-surface)] p-3">
-        <ContextInfoRow label="Nome" value={nome} />
+        <ContextInfoRow label="Azienda" value={aziendaNome} />
         <ContextInfoRow label="Ragione sociale" value={ragione} />
         <ContextInfoRow label="Codice" value={codice} />
         <ContextInfoRow label="Sede principale" value={sede} />

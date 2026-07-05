@@ -7,7 +7,7 @@ import { LoadingSpinner } from "@/components/design-system/loading/loading-spinn
 import { lavorazioneDocumentDeliveryUrl } from "@/lib/documents/document-delivery-url";
 import { CLIENT_PORTAL_DOCUMENT_SLOTS } from "@/lib/lavorazioni/client-portal-documents";
 import { lavorazioneDocumentByTipo } from "@/lib/lavorazioni/lavorazione-documents";
-import { dsBtnNeutral, dsGapMd, dsTableActionTextBtn } from "@/lib/ui/design-system";
+import { dsGapMd, dsTableActionTextBtn } from "@/lib/ui/design-system";
 import { useClientLavorazioneDocumentsQuery } from "@/src/hooks/gestionale/use-client-lavorazione-media-queries";
 import type { LavorazioneDocumentRow } from "@/src/types/supabase-tables";
 
@@ -171,11 +171,6 @@ export function ClientLavorazioneDocumentsDialog({
       title="Documenti lavorazione"
       subtitle={refLabel}
       titleId="client-lav-docs-title"
-      footer={
-        <button type="button" className={`${dsBtnNeutral} min-h-11 w-full sm:ml-auto sm:w-auto`} onClick={onClose}>
-          Chiudi
-        </button>
-      }
     >
       <GestionaleModalScrollBody>
         <ClientLavorazioneDocumentsPanel lavorazioneId={lavorazioneId} />

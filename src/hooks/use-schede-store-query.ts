@@ -21,6 +21,8 @@ const BUNDLE_OPTS = {
 export type SchedeBundlesQueryOptions = {
   /** VIEW layer (portale clienti): refetch stale al mount. Default CORE gestionale. */
   viewLayer?: boolean;
+  /** Portale clienti: gate `ensureClientLavorazioniAccess` invece di `lavorazioni.read`. */
+  clientPortal?: boolean;
   /** Lazy load: fetch solo bundle per questi id (no monolith getAll). */
   lavorazioneIds?: readonly string[];
 };
@@ -32,13 +34,17 @@ export function useSchedeBundlesQuery(enabled = true, options?: SchedeBundlesQue
   const viewOpts = useViewQueryOpts();
   const realtimeConnected = gestionale === "connected";
   const viewLayer = options?.viewLayer === true;
+  const clientPortal = options?.clientPortal === true;
   const lavorazioneIds = options?.lavorazioneIds ?? [];
-  const ensureKey = useMemo(() => schedeEnsureQueryKey(lavorazioneIds), [lavorazioneIds]);
+  const ensureKey = useMemo(
+    () => schedeEnsureQueryKey(lavorazioneIds, clientPortal),
+    [lavorazioneIds, clientPortal],
+  );
   const hasIds = lavorazioneIds.length > 0;
 
   const ensureQ = useQuery({
     queryKey: ensureKey,
-    queryFn: () => ensureSchedeBundlesInCache(qc, lavorazioneIds),
+    queryFn: () => ensureSchedeBundlesInCache(qc, lavorazioneIds, { clientPortal }),
     enabled: enabled && hasIds,
     staleTime: viewLayer ? viewOpts.staleTime : realtimeConnected ? 30_000 : 5_000,
     refetchInterval: false,

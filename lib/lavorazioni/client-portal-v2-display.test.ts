@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { composeMezzoGestitoFromRows } from "@/lib/domain/mezzo-attrezzatura/compose-mezzo-gestito";
-import { buildClientPortalRowFields } from "@/lib/lavorazioni/client-portal-row-fields";
-import { resolveClientPortalSchedaIngressoFields } from "@/lib/lavorazioni/client-portal-timeline";
+import {
+  buildClientPortalRowFields,
+  clientPortalCantiereLabel,
+} from "@/lib/lavorazioni/client-portal-row-fields";
+import {
+  buildClientTimelineHeader,
+  resolveClientPortalSchedaIngressoFields,
+} from "@/lib/lavorazioni/client-portal-timeline";
 import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";
 import { mezzoGestitoToEmbedRow } from "@/lib/mezzi/mezzi-attrezzature-batch";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
@@ -139,5 +145,24 @@ const telaioScheda = resolveClientPortalSchedaIngressoFields(
 );
 assert.equal(telaioScheda.marcaAttrezzatura, "");
 assert.equal(telaioScheda.modelloAttrezzatura, "");
+
+// Cantiere da mezzo senza scheda ingresso — lista e dettaglio allineati
+const mezzoConCantiere = mezzoGestitoToEmbedRow(
+  composeMezzoGestitoFromRows({ ...baseMezzo, meta: { cantiere: "Cantiere Nord" } }, att1),
+);
+const rowCantiere = lavRow("telaio", null, mezzoConCantiere);
+const cantiereFields = buildClientPortalRowFields(rowCantiere, {}, [], []);
+const cantiereHeader = buildClientTimelineHeader(rowCantiere, {});
+assert.equal(cantiereFields.cantiere, "Cantiere Nord");
+assert.equal(clientPortalCantiereLabel(rowCantiere, {}), "Cantiere Nord");
+assert.equal(cantiereHeader.cantiere, "Cantiere Nord");
+
+// Addetto senza assegnazione — nessun fallback globale
+const rowSenzaAddetto = lavRow("telaio", null, enrichedEmbed(att1));
+const addettoFields = buildClientPortalRowFields(rowSenzaAddetto, {}, ["Angelo"], [
+  { id: "a1", nome: "Angelo", cognome: "Morino" },
+]);
+assert.equal(addettoFields.addetto, "—");
+assert.equal(addettoFields.addettoNome, "—");
 
 console.log("client-portal-v2-display.test.ts OK");

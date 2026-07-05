@@ -1,9 +1,13 @@
 import { formatClientPortalAttrezzatura } from "@/lib/lavorazioni/client-portal-attrezzatura-format";
 import { lavorazioneDisplayCodice } from "@/lib/lavorazioni/lavorazione-codice";
+import {
+  buildLatestLogAutoreByEntitaId,
+  sanitizeClientPortalAutore,
+} from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import { parseMezzoMeta } from "@/lib/mezzi/mezzi-meta";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
-import type { LogModificaRow, LavorazioneRow } from "@/src/types/supabase-tables";
+import type { LogModificaRow, LogModificaWithProfileRow, LavorazioneRow } from "@/src/types/supabase-tables";
 import type { LavorazioneTimelineItem } from "@/src/services/domain/lavorazioni-domain.service";
 
 export type ClientIngressoSummary = {
@@ -59,6 +63,31 @@ export function groupLavorazioniLogsById(
     else map.set(id, [row]);
   }
   return map;
+}
+
+/** Autore ultima modifica da log (portale clienti — risolve profili lazy, no UUID in UI). */
+export function buildClientPortalLogAutoreByLavorazioneId(
+  logs: readonly LogModificaRow[],
+  opts: {
+    lazyProfileNames: ReadonlyMap<string, string>;
+    currentUserId?: string | null;
+    currentUserDisplayName?: string | null;
+  },
+): ReadonlyMap<string, string> {
+  const { lazyProfileNames, currentUserId, currentUserDisplayName } = opts;
+  return buildLatestLogAutoreByEntitaId(logs, (row) => {
+    const id = row.autore_id?.trim();
+    if (id) {
+      const lazy = lazyProfileNames.get(id);
+      if (lazy) return lazy;
+      if (currentUserId && id === currentUserId && currentUserDisplayName?.trim()) {
+        return currentUserDisplayName.trim();
+      }
+    }
+    const profileNome = (row as LogModificaWithProfileRow).profiles?.nome?.trim();
+    if (profileNome) return sanitizeClientPortalAutore(profileNome);
+    return "";
+  });
 }
 
 /** Addetto da log UPDATE/UNDO (payload addetto o addettoAccettazione), più recente per primo. */

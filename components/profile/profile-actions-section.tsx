@@ -4,6 +4,7 @@ import { useState } from "react";
 import { ThemeModeIcon, ThemeToggle } from "@/components/gestionale/theme-toggle";
 import { requestPasswordResetEmail } from "@/lib/auth/request-password-reset.client";
 import { erpFocus } from "@/lib/ui/erp-tokens";
+import { suppressSidebarBlurCollapse } from "@/lib/ui/use-sidebar-collapsed";
 import {
   accountMenuItemClass,
   accountMenuItemMutedIconClass,
@@ -73,6 +74,10 @@ export function ProfileActionsSection({
         <div className={`${accountMenuSessionMenuClass} p-1`} role="presentation">
           <div
             className={`${accountMenuItemClass} cursor-default text-[color:var(--cab-text-muted)] hover:bg-transparent`}
+            onPointerDown={(event) => {
+              event.stopPropagation();
+              suppressSidebarBlurCollapse();
+            }}
           >
             <SessionMenuIcon>
               <ThemeModeIcon className="h-4 w-4 text-[color:var(--cab-text-muted)]" />

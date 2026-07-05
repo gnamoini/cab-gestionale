@@ -6,12 +6,15 @@
 export const clientPortalColIngressoClass = "w-[7%]";
 export const clientPortalColClienteClass = "w-[10%]";
 export const clientPortalColCantiereClass = "w-[8%]";
-export const clientPortalColOggettoClass = "w-[10%]";
-/** Larghezza uniforme colonne ident — scuderia, targa, matricola. */
-export const clientPortalColIdentClass = "w-[6.5rem] gestionale-list-table-col-ident";
-export const clientPortalColScuderiaClass = clientPortalColIdentClass;
-export const clientPortalColTargaClass = clientPortalColIdentClass;
-export const clientPortalColMatricolaClass = clientPortalColIdentClass;
+export const clientPortalColOggettoClass = "w-[14%]";
+/** Larghezze ident portale — uniformi (scuderia, targa, matricola). */
+const clientPortalColIdentUniformClass = "w-[5.25rem] gestionale-list-table-col-ident";
+export const clientPortalColScuderiaClass = clientPortalColIdentUniformClass;
+export const clientPortalColTargaClass = clientPortalColIdentUniformClass;
+export const clientPortalColMatricolaClass = clientPortalColIdentUniformClass;
+
+/** Stato portale — larghezza fissa (evita espansione table-fixed). */
+export const clientPortalColStatoClass = "gestionale-client-portal-col-stato";
 
 /** 3 pulsanti icona — portale compatto. */
 export const clientPortalColAzioniClass = "w-[6rem]";

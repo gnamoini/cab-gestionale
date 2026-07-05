@@ -36,9 +36,12 @@ export type SchedaIngressoPanoramicaFieldLayout = "rows" | "tiles";
 
 const panoramicaStackedGridClass = "grid min-w-0 grid-cols-2 gap-x-4 gap-y-3";
 const panoramicaStackedGridDenseClass = "grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3";
+const panoramicaStackedGridPortalIngressoClass = "grid min-w-0 grid-cols-3 gap-x-2 gap-y-2";
 const panoramicaStackedFullSpanClass = "col-span-2";
+const panoramicaStackedFullSpan3Class = "col-span-3";
 
-function panoramicaStackedGridClassFor(dense: boolean): string {
+function panoramicaStackedGridClassFor(dense: boolean, portalIngressoLayout = false): string {
+  if (portalIngressoLayout) return panoramicaStackedGridPortalIngressoClass;
   return dense ? panoramicaStackedGridDenseClass : panoramicaStackedGridClass;
 }
 
@@ -102,6 +105,7 @@ function PanoramicaCustomField({
   spanFull,
   gridCellClassName,
   dense = false,
+  portalIngressoLayout = false,
 }: {
   label: string;
   children: ReactNode;
@@ -110,6 +114,7 @@ function PanoramicaCustomField({
   spanFull?: boolean;
   gridCellClassName?: string;
   dense?: boolean;
+  portalIngressoLayout?: boolean;
 }) {
   if (fieldLayout === "tiles") {
     return (
@@ -119,7 +124,13 @@ function PanoramicaCustomField({
     );
   }
   if (isPanoramicaStackedGrid(fieldLayout, rowLayout)) {
-    const fullSpanClass = spanFull ? (dense ? "col-span-2 sm:col-span-3" : panoramicaStackedFullSpanClass) : gridCellClassName;
+    const fullSpanClass = spanFull
+      ? portalIngressoLayout
+        ? panoramicaStackedFullSpan3Class
+        : dense
+          ? "col-span-2 sm:col-span-3"
+          : panoramicaStackedFullSpanClass
+      : gridCellClassName;
     return (
       <HubModalPanoramicaInlineCell label={label} className={fullSpanClass}>
         {children}
@@ -133,18 +144,20 @@ function PanoramicaFieldsShell({
   fieldLayout,
   rowLayout = "grid",
   dense = false,
+  portalIngressoLayout = false,
   children,
 }: {
   fieldLayout: SchedaIngressoPanoramicaFieldLayout;
   rowLayout?: GestionaleInfoRowLayout;
   dense?: boolean;
+  portalIngressoLayout?: boolean;
   children: ReactNode;
 }) {
   if (fieldLayout === "tiles") {
     return <HubModalPanoramicaInlineGrid>{children}</HubModalPanoramicaInlineGrid>;
   }
   if (isPanoramicaStackedGrid(fieldLayout, rowLayout)) {
-    return <div className={panoramicaStackedGridClassFor(dense)}>{children}</div>;
+    return <div className={panoramicaStackedGridClassFor(dense, portalIngressoLayout)}>{children}</div>;
   }
   return <>{children}</>;
 }
@@ -210,6 +223,7 @@ export function SchedaIngressoPanoramicaAnagraficaContent({
   fieldLayout = "rows",
   omitPanoramaDuplicates = false,
   densePanorama = false,
+  portalIngressoLayout = false,
 }: {
   fields: SchedaIngressoFields;
   rowLayout?: GestionaleInfoRowLayout;
@@ -218,10 +232,12 @@ export function SchedaIngressoPanoramicaAnagraficaContent({
   omitPanoramaDuplicates?: boolean;
   /** Portale dettaglio: griglia più compatta. */
   densePanorama?: boolean;
+  /** Modal ingresso portale clienti: griglia 3 colonne. */
+  portalIngressoLayout?: boolean;
 }) {
   const showUtilizzatore = hasPanoramicaFieldValue(fields.utilizzatore);
   const showTopAnagraficaRow = !omitPanoramaDuplicates || showUtilizzatore;
-  const stackedGridClass = panoramicaStackedGridClassFor(densePanorama);
+  const stackedGridClass = panoramicaStackedGridClassFor(densePanorama, portalIngressoLayout);
 
   if (fieldLayout === "tiles") {
     return (
@@ -380,6 +396,7 @@ export function SchedaIngressoPanoramicaView({
   portalMezzoSplit = false,
   rowLayout = "grid",
   fieldLayout = "rows",
+  portalIngressoLayout = false,
 }: {
   fields: SchedaIngressoFields;
   sections?: SchedaIngressoPanoramicaSections;
@@ -397,6 +414,8 @@ export function SchedaIngressoPanoramicaView({
   /** Solo con `fieldLayout="rows"`: `stacked` = label sopra valore, 2 campi per riga. */
   rowLayout?: GestionaleInfoRowLayout;
   fieldLayout?: SchedaIngressoPanoramicaFieldLayout;
+  /** Modal ingresso portale: anomalia in cima, griglia 3 colonne. */
+  portalIngressoLayout?: boolean;
 }) {
   const globalOpts = useGlobalOptions({ enabled: sections.ingresso === true && showAddettoAccettazione });
   const addettoPillStyle =
@@ -419,16 +438,26 @@ export function SchedaIngressoPanoramicaView({
       spanFull={spanFull}
       gridCellClassName={gridCellClassName}
       dense={densePanorama}
+      portalIngressoLayout={portalIngressoLayout}
     >
       {multilineValue(fields.descrizioneAnomalia)}
     </PanoramicaCustomField>
   );
 
+  const anomaliaInIngressoTop = portalIngressoLayout && !omitPanoramaDuplicates;
+  const anomaliaInIntervento = !anomaliaInIngressoTop && !omitPanoramaDuplicates;
+
   return (
     <Wrapper {...(fieldLayout === "tiles" ? { className: cardsWrapperClass } : {})}>
       {sections.ingresso ? (
         <GestionaleInfoCard title={omitPanoramaDuplicates ? "Accettazione" : "Ingresso"} compact={densePanorama}>
-          <PanoramicaFieldsShell fieldLayout={fieldLayout} rowLayout={rowLayout} dense={densePanorama}>
+          <PanoramicaFieldsShell
+            fieldLayout={fieldLayout}
+            rowLayout={rowLayout}
+            dense={densePanorama}
+            portalIngressoLayout={portalIngressoLayout}
+          >
+            {anomaliaInIngressoTop ? descrizioneAnomaliaField() : null}
             {!omitPanoramaDuplicates ? (
               <PanoramicaStringField
                 label="Data ingresso"
@@ -486,6 +515,7 @@ export function SchedaIngressoPanoramicaView({
               fieldLayout={fieldLayout}
               omitPanoramaDuplicates={omitPanoramaDuplicates}
               densePanorama={densePanorama}
+              portalIngressoLayout={portalIngressoLayout}
             />
           </GestionaleInfoCard>
         )
@@ -493,7 +523,12 @@ export function SchedaIngressoPanoramicaView({
 
       {sections.intervento ? (
         <GestionaleInfoCard title="Intervento" className={interventoCardClass} compact={densePanorama}>
-          <PanoramicaFieldsShell fieldLayout={fieldLayout} rowLayout={rowLayout} dense={densePanorama}>
+          <PanoramicaFieldsShell
+            fieldLayout={fieldLayout}
+            rowLayout={rowLayout}
+            dense={densePanorama}
+            portalIngressoLayout={portalIngressoLayout}
+          >
             <PanoramicaStringField label="Km" value={fields.km} mono fieldLayout={fieldLayout} rowLayout={rowLayout} />
             <PanoramicaStringField
               label="Ore lavoro"
@@ -508,7 +543,7 @@ export function SchedaIngressoPanoramicaView({
               fieldLayout={fieldLayout}
               rowLayout={rowLayout}
             />
-            {!omitPanoramaDuplicates ? descrizioneAnomaliaField() : null}
+            {!anomaliaInIntervento ? null : descrizioneAnomaliaField()}
             {showNoteIntervento ? (
               <PanoramicaCustomField
                 label="Note intervento"

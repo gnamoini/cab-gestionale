@@ -1,5 +1,6 @@
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneRow, MezzoRow } from "@/src/types/supabase-tables";
+import { profileDisplayName } from "@/lib/auth/profile-display-name";
 
 /** Normalizza embed mezzo PostgREST → `MezzoRow` parziale compatibile UI. */
 export function embedMezzoDto(raw: unknown): MezzoRow | null {
@@ -16,19 +17,20 @@ export function mapMezzoLightToRow(raw: MezzoRow): MezzoRow {
   };
 }
 
+type ProfileEmbed = { nome?: string | null; cognome?: string | null };
 type LavorazioneLightRaw = LavorazioneRow & {
   mezzi?: unknown;
-  updated_by_profile?: { nome?: string | null } | { nome?: string | null }[] | null;
-  created_by_profile?: { nome?: string | null } | { nome?: string | null }[] | null;
+  updated_by_profile?: ProfileEmbed | ProfileEmbed[] | null;
+  created_by_profile?: ProfileEmbed | ProfileEmbed[] | null;
 };
 
 function embedProfileNome(
-  raw: { nome?: string | null } | { nome?: string | null }[] | null | undefined,
+  raw: ProfileEmbed | ProfileEmbed[] | null | undefined,
 ): string | null {
   if (raw == null) return null;
   const p = Array.isArray(raw) ? raw[0] : raw;
-  const nome = p?.nome?.trim();
-  return nome || null;
+  const label = profileDisplayName({ nome: p?.nome ?? "", cognome: p?.cognome });
+  return label || null;
 }
 
 /** Mappa riga lista LIGHT/DETAIL → `LavorazioneListRow` (shape UI invariata). */

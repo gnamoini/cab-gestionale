@@ -6,6 +6,7 @@ import {
   GESTIONALE_SHELL_TIER_ATTR,
   resolveGestionaleShellContentWidth,
   resolveGestionaleShellTier,
+  resolveHostLayoutWidth,
   syncHostLayoutWidthCssVars,
   type GestionaleShellTier,
 } from "./gestionale-shell-layout";
@@ -37,8 +38,9 @@ const SSR_SAFE_SHELL_LAYOUT_STATE: GestionaleShellLayoutState = {
   isCompactShell: true,
 };
 
-function toShellLayoutState(contentWidth: number): GestionaleShellLayoutState {
-  const tier = resolveGestionaleShellTier(contentWidth);
+/** Tier da host viewport — contentWidth include padding sidebar e causerebbe flip hamburger/sidebar ~1400px. */
+function toShellLayoutState(contentWidth: number, hostWidth: number): GestionaleShellLayoutState {
+  const tier = resolveGestionaleShellTier(hostWidth);
   return {
     tier,
     contentWidth,
@@ -75,7 +77,8 @@ export function useGestionaleShellLayoutSync(
       shellColEl: refs.shellColRef.current,
       mainEl: refs.mainRef?.current,
     });
-    const next = toShellLayoutState(contentWidth);
+    const hostWidth = resolveHostLayoutWidth();
+    const next = toShellLayoutState(contentWidth, hostWidth);
 
     const shell = refs.shellRef.current;
     if (shell instanceof HTMLElement) {

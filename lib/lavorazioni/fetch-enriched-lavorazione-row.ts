@@ -7,7 +7,7 @@ import type { LavorazioneRow } from "@/src/types/supabase-tables";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const LAVORAZIONI_DETAIL_PROFILE_SELECT =
-  "updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome), created_by_profile:profiles!lavorazioni_created_by_fkey(nome)";
+  "updated_by_profile:profiles!lavorazioni_updated_by_fkey(nome, cognome), created_by_profile:profiles!lavorazioni_created_by_fkey(nome, cognome)";
 
 /** Fetch singola lavorazione + profili autore + embed mezzo telaio + batch attrezzature (SSOT read V2). */
 export async function fetchEnrichedLavorazioneListRow(

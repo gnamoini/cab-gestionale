@@ -1,10 +1,12 @@
 import { memo, type ReactNode } from "react";
-import { dsPageDesc, dsPageHeaderShell, dsPageHeaderTopRow, dsPageTitle, dsPageTitleToolbarAlign } from "@/lib/ui/design-system";
-import { gestionalePageToolbarActionsClass } from "@/components/gestionale/page-header-toolbar";
+import { PageHeaderTopRow, type PageHeaderMobileBackConfig } from "@/components/gestionale/page-header-top-row";
+import { dsPageDesc, dsPageHeaderShell } from "@/lib/ui/design-system";
 
 export const PageHeader = memo(function PageHeader({
   title,
+  titleMobile,
   leading,
+  mobileBack,
   titleAddon,
   description,
   belowTitle,
@@ -12,8 +14,12 @@ export const PageHeader = memo(function PageHeader({
   topRowClassName,
 }: {
   title: string;
-  /** Elemento a sinistra del titolo (es. pulsante indietro). */
+  /** Titolo su mobile/tablet (shell compatta); es. solo «Lavorazione 26-0193». */
+  titleMobile?: string;
+  /** Elemento a sinistra del titolo (es. pulsante indietro) — nascosto su compact se c'è back mobile. */
   leading?: ReactNode;
+  /** Back al posto dell'hamburger su mobile/tablet (default: risolto dal pathname). */
+  mobileBack?: PageHeaderMobileBackConfig;
   /** Elemento inline accanto al titolo (es. badge stato). */
   titleAddon?: ReactNode;
   description?: string;
@@ -26,16 +32,15 @@ export const PageHeader = memo(function PageHeader({
   return (
     <header className={dsPageHeaderShell}>
       <div className="flex min-w-0 flex-col gap-3">
-        <div className={`${dsPageHeaderTopRow} cab-page-header-top-row${topRowClassName ? ` ${topRowClassName}` : ""}`}>
-          <div className="flex min-w-0 max-w-full flex-1 items-center gap-2 ps-1 cab-shell-desktop:ps-0">
-            {leading ? <div className="flex shrink-0 items-center">{leading}</div> : null}
-            <h1 className={`${dsPageTitle} ${dsPageTitleToolbarAlign} min-w-0 break-words`}>{title}</h1>
-            {titleAddon ? <div className="flex shrink-0 items-center">{titleAddon}</div> : null}
-          </div>
-          {actions ? (
-            <div className={`${gestionalePageToolbarActionsClass} ms-auto min-w-0 max-w-full`}>{actions}</div>
-          ) : null}
-        </div>
+        <PageHeaderTopRow
+          title={title}
+          titleMobile={titleMobile}
+          leading={leading}
+          mobileBack={mobileBack}
+          titleAddon={titleAddon}
+          actions={actions}
+          topRowClassName={topRowClassName}
+        />
         {belowTitle ? <div className="min-w-0 w-full">{belowTitle}</div> : null}
         {description ? (
           <p className={`${dsPageDesc} mt-0 max-w-2xl`}>{description}</p>

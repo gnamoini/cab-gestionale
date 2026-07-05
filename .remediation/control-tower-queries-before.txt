@@ -1,0 +1,17 @@
+Control Tower static analysis (read-only)
+Date: 2026-07-03
+
+use-dashboard-metrics.ts:
+  - useLavorazioniList: unconditional when hook mounts
+  - useMagazzinoRicambiUIQuery: unconditional when hook mounts
+  - useLogListQuery (mag/mov): enabled when !staging
+
+use-control-tower-metrics.ts (before patch):
+  - useDashboardMetrics() called unconditionally at hook top level
+
+Provider after patch:
+  - visibleWidgets.length === 0 -> ControlTowerMetricsWithoutDash (NO useDashboardMetrics)
+  - visibleWidgets.length > 0 -> ControlTowerMetricsWithDash (useDashboardMetrics mounted)
+
+Grep post-patch:
+  useDashboardMetrics only in control-tower-metrics-provider.tsx ControlTowerMetricsWithDash

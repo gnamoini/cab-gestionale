@@ -1,7 +1,12 @@
 import type { LavorazioneSchedeStore } from "@/types/schede";
+import type { LogModificaRow } from "@/src/types/supabase-tables";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import { addettoDisplayNameFromNome, type AddettoRecord } from "@/lib/lavorazioni/addetto-model";
 import { lavorazioneIngressoIso } from "@/lib/lavorazioni/lavorazione-ingresso-display";
+import {
+  lavorazioneAddettoLabel,
+  lavorazioneCantiereLabel,
+} from "@/lib/lavorazioni/lavorazioni-list-row-labels";
 import { resolveLavorazioneContextWithAttrezzatura } from "@/lib/lavorazioni/resolve-lavorazione-context-with-attrezzatura";
 
 function dash(v: string | null | undefined): string {
@@ -57,7 +62,7 @@ export function clientPortalUtilizzatoreLabel(row: LavorazioneListRow, schedeSto
 }
 
 export function clientPortalCantiereLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
-  return dash(schedeStore?.[row.id]?.ingresso?.campi.cantiere?.trim());
+  return lavorazioneCantiereLabel(row, schedeStore);
 }
 
 export function clientPortalAttrezzaturaLabel(row: LavorazioneListRow, schedeStore?: LavorazioneSchedeStore): string {
@@ -127,29 +132,19 @@ export function clientPortalNoteIntervento(row: LavorazioneListRow, schedeStore?
 function clientPortalAddettoNomeKey(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore,
-  addettiGlobali: readonly string[],
+  logs?: readonly LogModificaRow[],
 ): string {
-  const fallback = addettiGlobali[0] ?? "";
-  const raw =
-    schedeStore[row.id]?.ingresso?.campi.addettoAccettazione?.trim() ||
-    schedeStore[row.id]?.lavorazioni?.campi.righe
-      .flatMap((r) => r.addettiAssegnati)
-      .find((a) => a.addetto.trim())
-      ?.addetto.trim() ||
-    fallback ||
-    "";
-  const trimmed = raw.trim();
-  if (!trimmed) return "—";
-  return trimmed;
+  return lavorazioneAddettoLabel(row, schedeStore, "", logs);
 }
 
 export function clientPortalAddettoLabel(
   row: LavorazioneListRow,
   schedeStore: LavorazioneSchedeStore,
-  addettiGlobali: readonly string[],
+  _addettiGlobali: readonly string[],
   addettiRecords: readonly AddettoRecord[] = [],
+  logs?: readonly LogModificaRow[],
 ): string {
-  const nome = clientPortalAddettoNomeKey(row, schedeStore, addettiGlobali);
+  const nome = clientPortalAddettoNomeKey(row, schedeStore, logs);
   if (nome === "—") return "—";
   return addettoDisplayNameFromNome(addettiRecords, nome);
 }
@@ -159,14 +154,16 @@ export function buildClientPortalRowFields(
   schedeStore: LavorazioneSchedeStore,
   addettiGlobali: readonly string[],
   addettiRecords: readonly AddettoRecord[] = [],
+  logsByRowId?: ReadonlyMap<string, readonly LogModificaRow[]>,
 ): ClientPortalRowFields {
+  const logs = logsByRowId?.get(row.id);
   const display = resolveLavorazioneContextWithAttrezzatura(row, schedeStore);
   const { marca, modello } = clientPortalMarcaModello(row, schedeStore);
   const dataIngressoAt = lavorazioneIngressoIso(
     row,
     schedeStore[row.id]?.ingresso?.campi.dataIngresso,
   );
-  const addettoNome = clientPortalAddettoNomeKey(row, schedeStore, addettiGlobali);
+  const addettoNome = clientPortalAddettoNomeKey(row, schedeStore, logs);
   const addetto =
     addettoNome === "—" ? "—" : addettoDisplayNameFromNome(addettiRecords, addettoNome);
   return {

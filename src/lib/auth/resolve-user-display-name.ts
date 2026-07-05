@@ -95,3 +95,47 @@ export function resolveFormattedUserDisplayName(input: {
 }): string {
   return formatUserDisplayName(resolveUserDisplayName(input));
 }
+
+/** Nome/cognome per sezione profilo quando il campo nome è derivato da email/username. */
+export function resolveProfileAccountNames(input: {
+  givenName: string;
+  cognome: string | null;
+  email: string;
+  displayName: string;
+}): { nome: string; cognome: string | null } {
+  const cognome = input.cognome?.trim() || null;
+  const givenName = input.givenName.trim();
+
+  if (cognome) {
+    const nome = givenName && !isEmailDerivedDisplayName(givenName, input.email)
+      ? formatUserDisplayName(givenName)
+      : formatUserDisplayName(input.displayName.split(/\s+/)[0] ?? givenName);
+    return { nome, cognome: formatUserDisplayName(cognome) };
+  }
+
+  if (givenName && !isEmailDerivedDisplayName(givenName, input.email)) {
+    const parts = givenName.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return {
+        nome: formatUserDisplayName(parts[0]!),
+        cognome: formatUserDisplayName(parts.slice(1).join(" ")),
+      };
+    }
+    return { nome: formatUserDisplayName(givenName), cognome: null };
+  }
+
+  const local = emailLocalPart(input.email);
+  if (local) {
+    const segments = local.split(/[._+-]/).filter((part) => part.length > 0);
+    if (segments.length >= 2) {
+      return {
+        nome: formatUserDisplayName(segments[0]!),
+        cognome: formatUserDisplayName(segments.slice(1).join(" ")),
+      };
+    }
+  }
+
+  if (givenName) return { nome: formatUserDisplayName(givenName), cognome: null };
+  if (input.displayName.trim()) return { nome: input.displayName.trim(), cognome: null };
+  return { nome: "—", cognome: null };
+}

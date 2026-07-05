@@ -203,7 +203,7 @@ export const GestionaleLogList = memo(function GestionaleLogList({ children }: {
 
 export const GestionaleLogEmpty = memo(function GestionaleLogEmpty({ message }: { message: string }) {
   return (
-    <p className="rounded-lg border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_65%,var(--cab-card))] px-3 py-4 text-sm text-[color:var(--cab-text-muted)]">
+    <p className="rounded-lg border border-dashed border-[color:var(--cab-border)] bg-[color:color-mix(in_srgb,var(--cab-surface-2)_65%,var(--cab-card))] px-3 py-4 text-center text-sm text-[color:var(--cab-text-muted)]">
       {message}
     </p>
   );

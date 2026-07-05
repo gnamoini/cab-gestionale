@@ -4,9 +4,11 @@ import { ProfileAccountSection } from "@/components/profile/profile-account-sect
 import { ProfileActionsSection } from "@/components/profile/profile-actions-section";
 import { ProfileContextSection } from "@/components/profile/profile-context-section";
 import { ProfileSheetHeader } from "@/components/profile/profile-sheet-header";
-import { ProfileVersionFooter } from "@/components/profile/profile-version-footer";
-import { gestionaleLogScrollEmbeddedClass } from "@/components/gestionale/gestionale-log-ui";
 import type { PublicAuthUser } from "@/src/types/auth-user";
+
+/** Scroll profilo: auto (no gutter fisso, no frecce track vuoto). */
+const profileSheetScrollClass =
+  "cab-profile-sheet-scroll gestionale-scrollbar min-h-0 min-w-0 flex-1 overflow-y-auto overscroll-contain flex flex-col gap-4 px-3 pb-4 pt-2";
 
 export function ProfileSheetContent({
   user,
@@ -16,12 +18,11 @@ export function ProfileSheetContent({
   onLogout: () => void;
 }) {
   return (
-    <div className={`${gestionaleLogScrollEmbeddedClass} flex min-h-0 min-w-0 flex-1 flex-col gap-4 px-3 pb-4 pt-2`}>
+    <div className={profileSheetScrollClass}>
       <ProfileSheetHeader user={user} />
       <ProfileAccountSection user={user} />
       <ProfileContextSection user={user} />
       <ProfileActionsSection user={user} onLogout={onLogout} />
-      <ProfileVersionFooter />
     </div>
   );
 }

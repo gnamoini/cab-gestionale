@@ -3,11 +3,12 @@
 import { useCallback, useState, type RefObject } from "react";
 import { Drawer } from "@/components/design-system";
 import {
-  gestionaleLogDrawerPanelStackClass,
+  gestionaleLogDrawerFooterClass,
   gestionaleLogPanelAsideClass,
 } from "@/components/gestionale/gestionale-log-ui";
 import { GestionaleConfirmDialogLazy } from "@/components/gestionale/gestionale-confirm-dialog-lazy";
 import { ProfileSheetContent } from "@/components/profile/profile-sheet-content";
+import { ProfileVersionFooter } from "@/components/profile/profile-version-footer";
 import { useProfileSheet } from "@/components/profile/profile-sheet-context";
 import { useAuth } from "@/context/auth-context";
 import { useShowGlobalLoading } from "@/context/global-loading-context";
@@ -44,13 +45,18 @@ export function ProfileSheet({ restoreFocusRef }: { restoreFocusRef?: RefObject<
         titleId={PROFILE_SHEET_TITLE_ID}
         ariaLabel="Profilo utente"
         asideClassName={gestionaleLogPanelAsideClass}
+        layerClassName="z-[110]"
+        contentFill
         restoreFocusRef={restoreFocusRef}
       >
         <div
           data-testid="profile-sheet"
-          className={`${gestionaleLogDrawerPanelStackClass} min-h-0 min-w-0`}
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
         >
           <ProfileSheetContent user={user} onLogout={requestLogout} />
+          <footer className={gestionaleLogDrawerFooterClass}>
+            <ProfileVersionFooter />
+          </footer>
         </div>
       </Drawer>
 

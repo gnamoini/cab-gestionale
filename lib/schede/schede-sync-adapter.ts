@@ -150,11 +150,12 @@ export async function fetchSchedeBundleForLavorazione(
 export async function fetchSchedeBundlesForLavorazioni(
   lavorazioneIds: readonly string[],
   qc?: QueryClient,
+  options?: { clientPortal?: boolean },
 ): Promise<LavorazioneSchedeStore> {
   const unique = [...new Set(lavorazioneIds.map((id) => id.trim()).filter(Boolean))];
   if (unique.length === 0) return {};
 
-  const rowsRes = await fetchSchedeRowsByLavorazioneIdsAuthorized(unique);
+  const rowsRes = await fetchSchedeRowsByLavorazioneIdsAuthorized(unique, options);
   if (!rowsRes.success) return {};
 
   const byLav = new Map<string, SchedaLavorazioneRow[]>();
@@ -173,16 +174,19 @@ export async function fetchSchedeBundlesForLavorazioni(
   return store;
 }
 
-function schedeEnsureQueryKey(lavorazioneIds: readonly string[]): readonly unknown[] {
+function schedeEnsureQueryKey(
+  lavorazioneIds: readonly string[],
+  clientPortal?: boolean,
+): readonly unknown[] {
   const sorted = [...new Set(lavorazioneIds.map((id) => id.trim()).filter(Boolean))].sort();
-  return [...SCHEde_BUNDLES_QUERY_KEY, "ensure", sorted.join(",")] as const;
+  return [...SCHEde_BUNDLES_QUERY_KEY, "ensure", clientPortal ? "portal" : "core", sorted.join(",")] as const;
 }
 
 /** Carica in cache RQ solo i bundle mancanti (o stale) per gli id richiesti. */
 export async function ensureSchedeBundlesInCache(
   qc: QueryClient,
   lavorazioneIds: readonly string[],
-  options?: EnsureSchedeBundlesOptions,
+  options?: EnsureSchedeBundlesOptions & { clientPortal?: boolean },
 ): Promise<LavorazioneSchedeStore> {
   const unique = [...new Set(lavorazioneIds.map((id) => id.trim()).filter(Boolean))];
   const prev = qc.getQueryData<LavorazioneSchedeStore>(SCHEde_BUNDLES_QUERY_KEY) ?? {};
@@ -193,7 +197,9 @@ export async function ensureSchedeBundlesInCache(
   const toFetch = unique.filter((id) => shouldRefetchBundleSlice(prev[id], mergedOptions));
   if (toFetch.length === 0) return prev;
 
-  const fetched = await fetchSchedeBundlesForLavorazioni(toFetch, qc);
+  const fetched = await fetchSchedeBundlesForLavorazioni(toFetch, qc, {
+    clientPortal: options?.clientPortal,
+  });
   const merged = { ...prev, ...fetched };
   qc.setQueryData(SCHEde_BUNDLES_QUERY_KEY, merged);
 

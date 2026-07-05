@@ -10,6 +10,8 @@ function toBulletModificaRiga(lines: string[]): string {
 const TYPE_LABEL: Partial<Record<NotificationType, string>> = {
   lavorazione_created: "NUOVA LAVORAZIONE",
   lavorazione_completata: "COMPLETATA",
+  client_portal_ingresso: "INGRESSO",
+  client_portal_completata: "COMPLETATA",
   lavorazioni_ritardo_digest: "IN RITARDO",
   preventivo_approvato: "PREVENTIVO",
   magazzino_sotto_scorta: "MAGAZZINO",
@@ -22,6 +24,8 @@ const TYPE_LABEL: Partial<Record<NotificationType, string>> = {
 const TYPE_TONE: Partial<Record<NotificationType, GestionaleLogViewModel["tone"]>> = {
   lavorazione_created: "create",
   lavorazione_completata: "complete",
+  client_portal_ingresso: "create",
+  client_portal_completata: "complete",
   lavorazioni_ritardo_digest: "delete",
   preventivo_approvato: "create",
   magazzino_sotto_scorta: "delete",
@@ -35,6 +39,8 @@ export function getInboxNotificationOpenLinkLabel(row: InboxNotificationRow): st
   switch (row.type) {
     case "lavorazione_created":
     case "lavorazione_completata":
+    case "client_portal_ingresso":
+    case "client_portal_completata":
       return "Apri lavorazione";
     case "lavorazioni_ritardo_digest":
       return "Apri lavorazioni";

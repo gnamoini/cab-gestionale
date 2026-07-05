@@ -1,9 +1,10 @@
 import { PROFILES_COLUMNS } from "@/lib/db/table-select-columns";
+import { profileDisplayName } from "@/lib/auth/profile-display-name";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 const PROFILE_NAME_COLUMNS = PROFILES_COLUMNS.split(", ")
-  .filter((c) => c === "id" || c === "nome")
+  .filter((c) => c === "id" || c === "nome" || c === "cognome")
   .join(", ");
 
 export async function fetchProfileNamesByIds(
@@ -17,10 +18,10 @@ export async function fetchProfileNamesByIds(
   const { data, error } = await sb.from("profiles").select(PROFILE_NAME_COLUMNS).in("id", unique);
   if (error) return out;
 
-  for (const row of (data ?? []) as { id?: string | null; nome?: string | null }[]) {
+  for (const row of (data ?? []) as { id?: string | null; nome?: string | null; cognome?: string | null }[]) {
     const id = typeof row.id === "string" ? row.id : "";
-    const nome = typeof row.nome === "string" ? row.nome.trim() : "";
-    if (id && nome) out.set(id, nome);
+    const label = profileDisplayName({ nome: row.nome ?? "", cognome: row.cognome });
+    if (id && label) out.set(id, label);
   }
   return out;
 }

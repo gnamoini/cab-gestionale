@@ -122,7 +122,9 @@ export function syncHostLayoutWidthCssVars(
     mainContentWidth = main.clientWidth;
     setPxVarIfChanged(root, CAB_MAIN_CONTENT_WIDTH_VAR, mainContentWidth);
     const measuredInset = Math.max(0, Math.round(main.offsetWidth - main.clientWidth));
-    const scrollbarInset = resolveFrozenMainScrollbarInset(main, measuredInset);
+    const prevInset = parseInt(root.style.getPropertyValue(CAB_MAIN_SCROLLBAR_INSET_VAR), 10);
+    const frozenPrev = Number.isFinite(prevInset) && prevInset > 0 ? prevInset : 0;
+    const scrollbarInset = resolveFrozenMainScrollbarInset(main, Math.max(measuredInset, frozenPrev));
     setPxVarIfChanged(root, CAB_MAIN_SCROLLBAR_INSET_VAR, scrollbarInset > 0 ? scrollbarInset : null);
   } else {
     if (root.style.getPropertyValue(CAB_MAIN_CONTENT_WIDTH_VAR)) {
@@ -201,10 +203,10 @@ export const GESTIONALE_SHELL_TABLET_MIN_WIDTH = 768;
 /** Soglia desktop shell — preview IDE spesso ~1362px: sotto 1400 = layout compatto. */
 export const GESTIONALE_SHELL_DESKTOP_MIN_WIDTH = 1400;
 
-/** Tier shell — desktop solo >= 1400px (preview Cursor ~1362 resta tablet/compatto). */
-export function resolveGestionaleShellTier(contentWidth: number): GestionaleShellTier {
-  if (contentWidth < GESTIONALE_SHELL_TABLET_MIN_WIDTH) return "mobile";
-  if (contentWidth < GESTIONALE_SHELL_DESKTOP_MIN_WIDTH) return "tablet";
+/** Tier shell — desktop solo >= 1400px host (non contentWidth: padding sidebar ~4.25rem). */
+export function resolveGestionaleShellTier(hostOrContentWidth: number): GestionaleShellTier {
+  if (hostOrContentWidth < GESTIONALE_SHELL_TABLET_MIN_WIDTH) return "mobile";
+  if (hostOrContentWidth < GESTIONALE_SHELL_DESKTOP_MIN_WIDTH) return "tablet";
   return "desktop";
 }
 

@@ -19,6 +19,19 @@ function isStoredUserId(value: string): boolean {
   return USER_ID_RE.test(value.trim());
 }
 
+/** Autore non risolto (UUID o fallback tecnico) — non mostrare in portale clienti. */
+export function isUnresolvedLavorazioneAutore(autore: string): boolean {
+  const t = autore.trim();
+  if (!t || t === "—") return true;
+  if (isStoredUserId(t)) return true;
+  return t.startsWith("Utente ");
+}
+
+/** Portale clienti: omette UUID e placeholder tecnici. */
+export function sanitizeClientPortalAutore(autore: string): string {
+  return isUnresolvedLavorazioneAutore(autore) ? "" : autore.trim();
+}
+
 /** Etichetta leggibile per `updatedBy` / `createdBy` (nome, UUID profilo o fallback log). */
 export function displayLavorazioneAutore(
   raw: string,
@@ -49,6 +62,8 @@ export type ResolveLavorazioneUltimaModificaOptions = {
   autoreLog?: string | null;
   /** Risolve UUID profilo (riga DB o schede). */
   resolveUserId?: (userId: string) => string | undefined;
+  /** Portale clienti: non esporre UUID o fallback tecnico. */
+  omitUnresolvedAutore?: boolean;
 };
 
 /** Resolver nomi profilo da join lista + sessione corrente. */
@@ -173,7 +188,10 @@ export function resolveLavorazioneUltimaModifica(
     rowAutoreRaw,
     autoreLog,
   );
-  const autore = displayLavorazioneAutore(rawAutore, autoreLog, resolveUserId);
+  let autore = displayLavorazioneAutore(rawAutore, autoreLog, resolveUserId);
+  if (options?.omitUnresolvedAutore) {
+    autore = sanitizeClientPortalAutore(autore);
+  }
   return { iso: best.iso, autore };
 }
 

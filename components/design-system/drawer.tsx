@@ -67,6 +67,10 @@ export type DrawerProps = {
   restoreFocusRef?: RefObject<HTMLElement | null>;
   /** Elemento inline accanto al titolo (es. badge stato). */
   titleAddon?: ReactNode;
+  /** Z-index layer (default drawer). Profilo sopra nav tablet: z-[110]. */
+  layerClassName?: string;
+  /** Body a tutta altezza: scroll solo nel contenuto, footer ancorato in basso (anche su mobile). */
+  contentFill?: boolean;
 };
 
 export function Drawer({
@@ -81,6 +85,8 @@ export function Drawer({
   closeOnEscape = true,
   restoreFocusRef,
   titleAddon,
+  layerClassName = dsZDrawer,
+  contentFill = false,
 }: DrawerProps) {
   const asideRef = useRef<HTMLElement>(null);
   const autoTitleId = useRef(`cab-drawer-title-${Math.random().toString(36).slice(2, 9)}`);
@@ -162,7 +168,7 @@ export function Drawer({
 
   return (
     <div
-      className={`cab-log-drawer-backdrop fixed inset-0 ${dsZDrawer} flex items-stretch justify-end ${cabIosOverlaySurface} bg-[var(--cab-overlay)] backdrop-blur-[1px]`}
+      className={`cab-log-drawer-backdrop fixed inset-0 ${layerClassName} flex items-stretch justify-end ${cabIosOverlaySurface} bg-[var(--cab-overlay)] backdrop-blur-[1px]`}
       data-state={panelState}
       role="presentation"
       onMouseDown={(e) => {
@@ -184,15 +190,21 @@ export function Drawer({
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div
-          {...(maxMdDown ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
+          {...(maxMdDown && !contentFill ? { [CAB_MODAL_SCROLL_ATTR]: "" } : {})}
           className={`flex min-h-0 min-w-0 flex-1 flex-col ${
-            maxMdDown
+            maxMdDown && !contentFill
               ? `${gestionaleModalScrollBodyMobileClass} ${cabModalScrollKeyboardPad} overflow-y-auto`
               : "overflow-hidden"
           }`.trim()}
         >
           {headerNode}
-          <div className="flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden">
+          <div
+            className={
+              contentFill
+                ? "flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden"
+                : "flex min-h-0 min-w-0 flex-col max-md:flex-none max-md:overflow-visible md:flex-1 md:overflow-hidden"
+            }
+          >
             {children}
           </div>
         </div>

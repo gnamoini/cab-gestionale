@@ -33,7 +33,7 @@ assert.match(globalsCss, /html:has\(\.cab-app-shell\)/);
 assert.match(globalsCss, /html:has\(\.cab-app-shell\)[\s\S]*width:\s*100%/);
 assert.doesNotMatch(globalsCss, /--cab-host-layout-width/);
 assert.match(globalsCss, /body:has\(\.cab-app-shell\)[\s\S]*overflow:\s*hidden/);
-assert.match(globalsCss, /\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*auto/);
+assert.match(globalsCss, /\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*stable/);
 assert.match(
   globalsCss,
   /data-gestionale-shell-tier="desktop"[\s\S]*\.gestionale-scroll-y[\s\S]*scrollbar-gutter:\s*stable/,

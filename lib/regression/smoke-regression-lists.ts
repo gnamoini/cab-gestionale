@@ -138,6 +138,8 @@ export const REGRESSION_CORE: readonly string[] = [
   "lib/auth/cliente-association-audit.test.ts",
   "lib/regression/client-portal-contattaci-audit.test.ts",
   "lib/regression/client-portal-modal-ux-audit.test.ts",
+  "lib/regression/client-portal-alerts-audit.test.ts",
+  "lib/regression/client-portal-cliente-display-audit.test.ts",
   "lib/regression/client-portal-mobile-cards-audit.test.ts",
   "lib/lavorazioni/client-portal-v2-display.test.ts",
   "lib/regression/rollout-state-machine.test.ts",

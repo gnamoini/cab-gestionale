@@ -4,20 +4,29 @@ export function userProfileInitial(nome?: string | null, email?: string | null):
 }
 
 const profileAvatarInitialClass =
-  "flex min-w-0 h-full w-full items-center justify-center font-bold text-white";
+  "flex min-w-0 h-full w-full items-center justify-center font-bold leading-none text-white";
 
-/** Stesso token del nome in welcome (`text-[color:var(--cab-primary)]`). */
+/** Iniziale piccola — stesso token su rail, header e sidebar. */
+const profileAvatarInitialSmClass = `${profileAvatarInitialClass} text-base`;
+
+/** Iniziale profilo (h-14) — proporzionale al cerchio grande. */
+const profileAvatarInitialLgClass = `${profileAvatarInitialClass} text-2xl`;
+
+/** SSOT shell + iniziale per ogni contesto profilo. */
 const variantShell = {
   header: "flex min-w-0 h-8 w-8 shrink-0 rounded-full bg-[color:var(--cab-primary)]",
   sidebar: "flex min-w-0 h-9 w-9 shrink-0 rounded-lg bg-[color:var(--cab-primary)]",
   /** Avatar rail sidebar — tondo, stesso arancione/bianco delle icone nav. */
   rail: "flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[color:var(--cab-primary)]",
+  /** Header scheda profilo (drawer). */
+  sheet: "flex min-w-0 h-14 w-14 shrink-0 rounded-full bg-[color:var(--cab-primary)]",
 } as const;
 
 const variantInitial = {
-  header: `${profileAvatarInitialClass} text-[11px]`,
-  sidebar: `${profileAvatarInitialClass} text-xs`,
-  rail: `${profileAvatarInitialClass} text-[11px] leading-none`,
+  header: profileAvatarInitialSmClass,
+  sidebar: profileAvatarInitialSmClass,
+  rail: profileAvatarInitialSmClass,
+  sheet: profileAvatarInitialLgClass,
 } as const;
 
 type UserProfileAvatarProps = {

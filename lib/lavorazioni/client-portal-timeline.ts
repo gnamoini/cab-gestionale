@@ -29,6 +29,8 @@ export type ClientTimelineHeader = {
   matricola: string;
   /** Titolo pagina / sottotitolo: Cliente · Lavorazione codice. */
   identificativo: string;
+  /** Titolo compatto mobile/tablet: solo Lavorazione + codice. */
+  identificativoCompact: string;
 };
 
 export type ClientTimelineIngressoField = {
@@ -351,11 +353,12 @@ export function buildClientTimelineHeader(
   const targa = display.ident.targa;
   const codice = lavorazioneDisplayCodice({ id: row.id, codice: row.codice });
   const clienteOk = cliente !== "—" ? cliente : null;
+  const identificativoCompact = codice ? `Lavorazione ${codice}` : "Lavorazione in corso";
   let identificativo: string;
   if (clienteOk && codice) {
     identificativo = `${clienteOk} · Lavorazione ${codice}`;
   } else if (codice) {
-    identificativo = `Lavorazione ${codice}`;
+    identificativo = identificativoCompact;
   } else if (clienteOk) {
     identificativo = clienteOk;
   } else {
@@ -368,6 +371,7 @@ export function buildClientTimelineHeader(
     targa,
     matricola: display.ident.matricola,
     identificativo,
+    identificativoCompact,
   };
 }
 

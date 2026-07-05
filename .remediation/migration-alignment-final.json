@@ -1,0 +1,20 @@
+{
+  "status": "READY FOR PUSH",
+  "project": "oxmnuovsgenqkuwfolqh",
+  "local_valid_migrations": 144,
+  "remote_history_after_repair": 143,
+  "legacy_artifacts": 62,
+  "pending_push": [
+    "20260704130100_clienti_anagrafiche_cliente_portal_read.sql"
+  ],
+  "push_command": "npx supabase db push --linked --include-all",
+  "dry_run_verified": true,
+  "metadata_renames_only": [
+    "20260704130000_clienti_anagrafiche_cliente_portal_read.sql -> 20260704130100_clienti_anagrafiche_cliente_portal_read.sql",
+    "20260903120000_rbac_data_driven_core.sql -> 20260903120100_rbac_data_driven_core.sql"
+  ],
+  "repair_summary": {
+    "reverted_mcp_ghosts": 62,
+    "applied_canonical_local": 50
+  }
+}

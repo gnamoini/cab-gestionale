@@ -90,6 +90,33 @@ assert.match(realtimeSrc, /Impostazioni aggiornate da un altro utente/);
 assert.match(magBridgeSrc, /publishNotification/);
 assert.match(lavBridgeSrc, /publishNotification/);
 assert.match(lavBridgeSrc, /isStaffInboxEligible/);
+assert.doesNotMatch(lavBridgeSrc, /fanoutClientPortalLavorazioneNotification/);
+
+const mountSrc = fs.readFileSync(
+  path.join(ROOT, "components/gestionale/notification-center-mount.tsx"),
+  "utf8",
+);
+assert.match(mountSrc, /isClientInboxEligible/);
+assert.match(mountSrc, /isStaffInboxEligible/);
+
+const triggersMigrationSrc = fs.readFileSync(
+  path.join(ROOT, "supabase/migrations/20260906130000_client_portal_notifications_db_triggers.sql"),
+  "utf8",
+);
+assert.match(triggersMigrationSrc, /cab_fanout_client_portal_lavorazione_notification_core/);
+assert.match(triggersMigrationSrc, /trg_lavorazioni_client_portal_ingresso/);
+assert.match(triggersMigrationSrc, /trg_lavorazioni_client_portal_completata/);
+assert.match(triggersMigrationSrc, /after insert on public\.lavorazioni/);
+assert.match(triggersMigrationSrc, /after update of stato on public\.lavorazioni/);
+assert.match(triggersMigrationSrc, /on conflict \(dedup_key\) do nothing/);
+
+const migrationSrc = fs.readFileSync(
+  path.join(ROOT, "supabase/migrations/20260906120000_client_portal_notifications.sql"),
+  "utf8",
+);
+assert.match(migrationSrc, /client_portal_ingresso/);
+assert.match(migrationSrc, /notification_cliente_inbox_eligible/);
+assert.match(migrationSrc, /jsonb_array_elements_text/);
 
 assert.match(centerBellSrc, /<Drawer[\s\S]*?gestionaleLogPanelAsideClass/);
 assert.match(centerBellSrc, /toInboxNotificationLogViewModel/);

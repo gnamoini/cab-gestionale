@@ -4,6 +4,7 @@ import "@/components/gestionale/lavorazioni/lavorazioni-scroll.css";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
+import { useAuth } from "@/context/auth-context";
 import { GestionaleRefreshToolbarButton, gestionalePageToolbarActionsInnerClass } from "@/components/gestionale/page-header-toolbar";
 import { ClientContattaciButton } from "@/components/lavorazioni-clienti/client-contattaci-button";
 import { ClientContattaciDialog } from "@/components/lavorazioni-clienti/client-contattaci-dialog";
@@ -20,15 +21,9 @@ import {
 } from "@/components/design-system";
 import { HubIconOpen } from "@/components/design-system/hub-table-action-icons";
 import {
-  formatLavorazioneMobileIdentLine,
   LavMobileInlineField,
   LavorazioneMobileCardFooter,
-  LavorazioneMobileCardHeader,
-  LavorazioneMobileUltimaModifica,
   LavorazioneMobileCardShell,
-  LavorazioneMobileControlsPanel,
-  LavorazioneMobileMetaGrid,
-  LavorazioneMobileMetaItem,
 } from "@/components/gestionale/lavorazioni/lavorazione-mobile-card";
 import { ClientLavorazioneIngressoDialog } from "@/components/lavorazioni-clienti/client-lavorazione-ingresso-dialog";
 import {
@@ -49,6 +44,7 @@ import {
   logClientPortalPipelineDebug,
   type ClientPortalRowBundle,
 } from "@/lib/lavorazioni/client-portal-list-filters";
+import { groupLavorazioniLogsById, buildClientPortalLogAutoreByLavorazioneId } from "@/lib/lavorazioni/client-portal-ui";
 import { clientLavorazioniDetailPath, PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 import {
   filterClientPortalStatiOptions,
@@ -96,7 +92,7 @@ import {
 import { lavorazioneDataCompletamentoIso } from "@/lib/lavorazioni/lavorazioni-list-table-display";
 import {
   buildLavorazioneRowProfileResolver,
-  resolveLavorazioneUltimaModifica,
+  mergeLazyProfileNamesIntoResolver,
 } from "@/lib/lavorazioni/lavorazione-ultima-modifica";
 import {
   clientPortalColCantiereClass,
@@ -106,6 +102,7 @@ import {
   clientPortalColAzioniClass,
   clientPortalColOggettoClass,
   clientPortalColScuderiaClass,
+  clientPortalColStatoClass,
   clientPortalColTargaClass,
   gestionaleClientPortalDenseTableClass,
 } from "@/lib/ui/client-portal-list-table";
@@ -126,12 +123,18 @@ import {
 } from "@/lib/ui/use-gestionale-list-layout";
 import { layoutPageRoot } from "@/lib/ui/responsive-layout-core";
 import { CLIENTE_HOME_PATH } from "@/lib/auth/rbac";
+import type { LogModificaRow } from "@/src/types/supabase-tables";
 import { useClientPortalPageOrchestrator } from "@/src/hooks/use-client-portal-page-orchestrator";
+import { useUndoableLog } from "@/src/hooks/gestionale/use-undoable-log";
+import { useLavorazioneProfileNamesQuery } from "@/src/hooks/use-lavorazione-profile-names-query";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
 import type { LavorazioneListRow } from "@/src/services/lavorazioni.service";
 import type { LavorazioneSchedeStore } from "@/types/schede";
 
 const SEARCH_DEBOUNCE_MS = 400;
+
+const clientPortalPageStack =
+  "cab-layout-page-stack min-w-0 max-w-full space-y-[length:var(--ds-space-lg)]";
 
 type RowBundle = ClientPortalRowBundle;
 
@@ -234,7 +237,7 @@ function DesktopTable({
         <col className={clientPortalColTargaClass} />
         <col className={clientPortalColMatricolaClass} />
         <col className={lavTableColPillSpacerClass} />
-        <col style={colStyles.statoPillColStyle} />
+        <col className={clientPortalColStatoClass} />
         <col style={colStyles.addettoPillColStyle} />
         <col className={clientPortalColAzioniClass} />
       </>
@@ -248,7 +251,7 @@ function DesktopTable({
         <col className={clientPortalColTargaClass} />
         <col className={clientPortalColMatricolaClass} />
         <col className={lavTableColPillSpacerClass} />
-        <col style={colStyles.statoPillColStyle} />
+        <col className={clientPortalColStatoClass} />
         <col style={colStyles.addettoPillColStyle} />
         <col className={clientPortalColAzioniClass} />
       </>
@@ -261,11 +264,11 @@ function DesktopTable({
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Oggetto" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="N. scuderia" columnKey="nScuderia" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
+        <GlobalTableSortTh label="Scuderia" columnKey="nScuderia" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <GlobalTableSortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <GlobalTableSortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
-        <GlobalTableSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
+        <GlobalTableSortTh label="Stato" columnKey="stato" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={`${lavTableColStatoAddettoInset} ${clientPortalColStatoClass}`} onSort={onSort} />
         <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GestionaleListTableActionsHead />
       </>
@@ -275,11 +278,11 @@ function DesktopTable({
         <GlobalTableSortTh label="Cliente" columnKey="cliente" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Cantiere" columnKey="cantiere" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
         <GlobalTableSortTh label="Oggetto" columnKey="attrezzatura" sortColumn={sortColumn} sortPhase={sortPhase} onSort={onSort} />
-        <GlobalTableSortTh label="N. scuderia" columnKey="nScuderia" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
+        <GlobalTableSortTh label="Scuderia" columnKey="nScuderia" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <GlobalTableSortTh label="Targa" columnKey="targa" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <GlobalTableSortTh label="Matricola" columnKey="matricola" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName="gestionale-list-table-col-ident" onSort={onSort} />
         <th className={lavTableThPillSpacerClass} scope="col" aria-hidden="true" />
-        <GlobalTableSortTh label="Completamento" columnKey="completamento" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
+        <GlobalTableSortTh label="Completamento" columnKey="completamento" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={`${lavTableColStatoAddettoInset} ${clientPortalColStatoClass}`} onSort={onSort} />
         <GlobalTableSortTh label="Addetto" columnKey="addetto" sortColumn={sortColumn} sortPhase={sortPhase} align="center" thClassName={lavTableColStatoAddettoInset} onSort={onSort} />
         <GestionaleListTableActionsHead />
       </>
@@ -315,14 +318,14 @@ function DesktopTable({
           <td className={lavTableTdPillSpacerClass} aria-hidden="true" />
           {variant === "active" ? (
             <>
-              <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`} style={colStyles.statoPillColStyle}>
+              <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset} ${clientPortalColStatoClass}`}>
                 <div className={lavTableTdPillWrap}>
                   <StatoReadOnlyPill stato={row.stato} statiOpts={statiOpts} />
                 </div>
               </td>
             </>
           ) : (
-            <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset}`} style={colStyles.statoPillColStyle}>
+            <td className={`${lavTableTdPill} ${lavTableColStatoAddettoInset} ${clientPortalColStatoClass}`}>
               <div className={lavTableTdPillWrap}>
                 <LavorazioneCompletamentoDatePill iso={lavorazioneDataCompletamentoIso(row)} />
               </div>
@@ -347,6 +350,129 @@ function DesktopTable({
         </tr>
       ))}
     </GestionaleListTable>
+  );
+}
+
+const clientPortalMobileMetaLabelClass =
+  "text-[10px] font-medium text-zinc-500 dark:text-zinc-400";
+const clientPortalMobileMetaValueClass =
+  "mt-0.5 text-xs font-medium leading-snug text-zinc-800 dark:text-zinc-200";
+
+function clientPortalFieldHasValue(value: string): boolean {
+  const t = value.trim();
+  return Boolean(t && t !== "—");
+}
+
+function ClientPortalMobileField({
+  label,
+  value,
+  tabular = false,
+  className = "",
+  alwaysShow = false,
+}: {
+  label: string;
+  value: string;
+  tabular?: boolean;
+  className?: string;
+  alwaysShow?: boolean;
+}) {
+  if (!alwaysShow && !clientPortalFieldHasValue(value)) return null;
+  const display = clientPortalFieldHasValue(value) ? value.trim() : "—";
+  return (
+    <div className={`min-w-0 ${className}`.trim()}>
+      <p className={clientPortalMobileMetaLabelClass}>{label}</p>
+      <p
+        className={`${clientPortalMobileMetaValueClass} break-words${tabular ? " tabular-nums" : ""}`}
+        title={display}
+      >
+        {display}
+      </p>
+    </div>
+  );
+}
+
+function ClientPortalMobileCardHeader({
+  oggetto,
+  ingresso,
+  secondaryDate,
+  cliente,
+  utilizzatore,
+  cantiere,
+  targa,
+  matricola,
+  scuderia,
+}: {
+  oggetto: string;
+  ingresso: ReactNode;
+  secondaryDate?: { label: string; value: ReactNode };
+  cliente: string;
+  utilizzatore: string;
+  cantiere: string;
+  targa: string;
+  matricola: string;
+  scuderia: string;
+}) {
+  const anagraficaFields = [
+    { label: "Cliente", value: cliente, tabular: false },
+    { label: "Utilizzatore", value: utilizzatore, tabular: false },
+    { label: "Cantiere", value: cantiere, tabular: false },
+  ].filter((f) => clientPortalFieldHasValue(f.value));
+
+  const identificazioneFields = [
+    { label: "Targa", value: targa, tabular: true },
+    { label: "Matricola", value: matricola, tabular: true },
+    { label: "Scuderia", value: scuderia, tabular: true },
+  ];
+
+  return (
+    <div className="pb-1">
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+        {clientPortalFieldHasValue(oggetto) ? (
+          <div className="min-w-0 flex-1 basis-[8rem]">
+            <p className={clientPortalMobileMetaLabelClass}>Oggetto</p>
+            <p
+              className="mt-0.5 break-words text-sm font-semibold leading-snug text-zinc-900 dark:text-zinc-50"
+              title={oggetto}
+            >
+              {oggetto}
+            </p>
+          </div>
+        ) : null}
+        <div className="shrink-0">
+          <p className={clientPortalMobileMetaLabelClass}>Ingresso</p>
+          <div className={`${clientPortalMobileMetaValueClass} tabular-nums`}>{ingresso}</div>
+        </div>
+        {secondaryDate ? (
+          <div className="shrink-0">
+            <p className={clientPortalMobileMetaLabelClass}>{secondaryDate.label}</p>
+            <div className={`${clientPortalMobileMetaValueClass} tabular-nums`}>{secondaryDate.value}</div>
+          </div>
+        ) : null}
+      </div>
+      {anagraficaFields.length > 0 ? (
+        <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2">
+          {anagraficaFields.map((f) => (
+            <ClientPortalMobileField
+              key={f.label}
+              label={f.label}
+              value={f.value}
+              tabular={f.tabular}
+            />
+          ))}
+        </dl>
+      ) : null}
+      <dl className="mt-2 grid grid-cols-3 gap-x-2 gap-y-2">
+        {identificazioneFields.map((f) => (
+          <ClientPortalMobileField
+            key={f.label}
+            label={f.label}
+            value={f.value}
+            tabular={f.tabular}
+            alwaysShow
+          />
+        ))}
+      </dl>
+    </div>
   );
 }
 
@@ -378,21 +504,18 @@ function MobileCards({
   }
 
   return (
-    <div className={`mt-4 space-y-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
+    <div className={`mt-2 grid grid-cols-1 gap-2 md:grid-cols-2 ${GESTIONALE_LIST_MOBILE_ONLY_CLASS}`}>
       {bundles.map(({ row, fields }) => {
-        const identLine = formatLavorazioneMobileIdentLine({
-          targa: fields.targa,
-          matricola: fields.matricola,
-          scuderia: fields.nScuderia,
-        });
-        const utilizzatore =
-          fields.utilizzatore.trim() && fields.utilizzatore !== "—" ? fields.utilizzatore : null;
-
         return (
-          <LavorazioneMobileCardShell key={row.id}>
-            <LavorazioneMobileCardHeader
-              macchina={fields.attrezzatura}
-              identLine={identLine}
+          <LavorazioneMobileCardShell key={row.id} className="min-w-0 h-full">
+            <ClientPortalMobileCardHeader
+              oggetto={fields.attrezzatura}
+              cliente={fields.cliente}
+              utilizzatore={fields.utilizzatore}
+              cantiere={fields.cantiere}
+              targa={fields.targa}
+              matricola={fields.matricola}
+              scuderia={fields.nScuderia}
               ingresso={<LavorazioneIngressoDateCellFromIso iso={fields.dataIngressoAt} />}
               secondaryDate={
                 variant === "archive"
@@ -405,15 +528,10 @@ function MobileCards({
                   : undefined
               }
             />
-            <LavorazioneMobileMetaGrid>
-              <LavorazioneMobileMetaItem label="Cliente" value={fields.cliente} />
-              <LavorazioneMobileMetaItem label="Cantiere" value={fields.cantiere} />
-              {utilizzatore ? (
-                <LavorazioneMobileMetaItem label="Utilizzatore" value={utilizzatore} className="col-span-2" />
-              ) : null}
-            </LavorazioneMobileMetaGrid>
-            <LavorazioneMobileControlsPanel
-              ariaLabel={variant === "archive" ? "Addetto" : "Stato e addetto"}
+            <div
+              className="mt-2 grid grid-cols-1 gap-x-3 gap-y-2 cab-shell-desktop:grid-cols-2"
+              role="group"
+              aria-label={variant === "archive" ? "Addetto" : "Stato e addetto"}
             >
               {variant === "active" ? (
                 <LavMobileInlineField label="Stato" layout="stack">
@@ -431,19 +549,11 @@ function MobileCards({
                 addettoColors={addettoColors}
               />
               </LavMobileInlineField>
-            </LavorazioneMobileControlsPanel>
+            </div>
             <div className="mt-2.5">
               <ClientLavorazionePhotoStrip lavorazioneId={row.id} max={3} lazy sizeClass="h-12 w-12" />
             </div>
-            <LavorazioneMobileCardFooter
-              meta={
-                <LavorazioneMobileUltimaModifica
-                  info={resolveLavorazioneUltimaModifica(row, schedeStore[row.id], {
-                    resolveUserId: buildLavorazioneRowProfileResolver(row),
-                  })}
-                />
-              }
-            >
+            <LavorazioneMobileCardFooter meta={null}>
               <RowActions
                 rowId={row.id}
                 onIngresso={() => onIngresso(row)}
@@ -531,15 +641,23 @@ function buildRowBundles(
   schedeStore: LavorazioneSchedeStore,
   addettiGlobali: readonly string[],
   addettiRecords: readonly AddettoRecord[],
+  logsByLavorazioneId: ReadonlyMap<string, readonly LogModificaRow[]>,
 ): RowBundle[] {
   return rows.map((row) => ({
     row,
-    fields: buildClientPortalRowFields(row, schedeStore, addettiGlobali, addettiRecords),
+    fields: buildClientPortalRowFields(
+      row,
+      schedeStore,
+      addettiGlobali,
+      addettiRecords,
+      logsByLavorazioneId,
+    ),
   }));
 }
 
 export function ClientLavorazioniView() {
   const o = useClientPortalPageOrchestrator();
+  const { user, authorName } = useAuth();
   const {
     containerRef: listLayoutRef,
     layout: listLayout,
@@ -565,6 +683,11 @@ export function ClientLavorazioniView() {
   const addettiRecords = l0?.addettiRecords ?? [];
   const colStyles = useLavorazioniListTableColStyles(statiOpts, [], addettiGlobali);
   const addettoColors = l0?.addettoColors ?? {};
+  const { logQuery: lavModificheLogQuery } = useUndoableLog("lavorazioni");
+  const logsByLavorazioneId = useMemo(
+    () => groupLavorazioniLogsById(lavModificheLogQuery.data ?? []),
+    [lavModificheLogQuery.data],
+  );
 
   useEffect(() => {
     const t = window.setTimeout(() => patchFilters({ search: searchInput.trim() }), SEARCH_DEBOUNCE_MS);
@@ -584,34 +707,66 @@ export function ClientLavorazioniView() {
   const filtersActive = clientPortalFiltersActive(filters);
 
   const allInCorsoBundles = useMemo(
-    () => buildRowBundles(l0?.inCorsoRows ?? [], schedeStore, addettiGlobali, addettiRecords),
-    [l0?.inCorsoRows, schedeStore, addettiGlobali, addettiRecords],
+    () => buildRowBundles(l0?.inCorsoRows ?? [], schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId),
+    [l0?.inCorsoRows, schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId],
   );
 
   const allArchivioBundles = useMemo(
-    () => buildRowBundles(l0?.archivioRows ?? [], schedeStore, addettiGlobali, addettiRecords),
-    [l0?.archivioRows, schedeStore, addettiGlobali, addettiRecords],
+    () => buildRowBundles(l0?.archivioRows ?? [], schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId),
+    [l0?.archivioRows, schedeStore, addettiGlobali, addettiRecords, logsByLavorazioneId],
   );
-
-  const defaultAddetto = addettiGlobali[0] ?? "";
 
   const filterCatalog = useMemo(() => {
     return buildClientPortalFilterCatalog(
       [...allInCorsoBundles, ...allArchivioBundles],
       schedeStore,
       addettiGlobali,
-      defaultAddetto,
+      "",
     );
-  }, [allInCorsoBundles, allArchivioBundles, schedeStore, addettiGlobali, defaultAddetto]);
+  }, [allInCorsoBundles, allArchivioBundles, schedeStore, addettiGlobali]);
 
   const inCorsoBundles = useMemo(
-    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, defaultAddetto, "in_corso"),
-    [allInCorsoBundles, filters, schedeStore, defaultAddetto],
+    () => filterClientPortalBundles(allInCorsoBundles, filters, schedeStore, "", "in_corso"),
+    [allInCorsoBundles, filters, schedeStore],
   );
 
   const archivioBundles = useMemo(
-    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, defaultAddetto, "archivio"),
-    [allArchivioBundles, filters, schedeStore, defaultAddetto],
+    () => filterClientPortalBundles(allArchivioBundles, filters, schedeStore, "", "archivio"),
+    [allArchivioBundles, filters, schedeStore],
+  );
+
+  const profileUserIds = useMemo(() => {
+    const ids = new Set<string>();
+    const uuidRe = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    for (const row of [...(l0?.inCorsoRows ?? []), ...(l0?.archivioRows ?? [])]) {
+      if (row.updated_by?.trim()) ids.add(row.updated_by.trim());
+      if (row.created_by?.trim()) ids.add(row.created_by.trim());
+      const schedaUpdatedBy = schedeStore[row.id]?.ingresso?.updatedBy?.trim();
+      if (schedaUpdatedBy && uuidRe.test(schedaUpdatedBy)) ids.add(schedaUpdatedBy);
+    }
+    for (const log of lavModificheLogQuery.data ?? []) {
+      const id = log.autore_id?.trim();
+      if (id) ids.add(id);
+    }
+    return [...ids];
+  }, [l0?.archivioRows, l0?.inCorsoRows, lavModificheLogQuery.data, schedeStore]);
+  const lazyProfileNames = useLavorazioneProfileNamesQuery(profileUserIds, canRender);
+  const logAutoreByLavorazioneId = useMemo(
+    () =>
+      buildClientPortalLogAutoreByLavorazioneId(lavModificheLogQuery.data ?? [], {
+        lazyProfileNames,
+        currentUserId: user?.id ?? null,
+        currentUserDisplayName: authorName,
+      }),
+    [authorName, lavModificheLogQuery.data, lazyProfileNames, user?.id],
+  );
+  const resolveClientPortalProfile = useCallback(
+    (row: LavorazioneListRow) =>
+      mergeLazyProfileNamesIntoResolver(
+        buildLavorazioneRowProfileResolver(row, user?.id ?? null, authorName),
+        lazyProfileNames,
+      ),
+    [authorName, lazyProfileNames, user?.id],
   );
 
   useEffect(() => {
@@ -772,16 +927,18 @@ export function ClientLavorazioniView() {
   return (
     <div ref={listLayoutRef} className={`lavorazioni-scroll-scope ${layoutPageRoot} ${listLayoutClassName}`.trim()}>
     <>
-      <PageHeader
-        title={PORTALE_CLIENTI_LABEL}
-        actions={
-          <div className={gestionalePageToolbarActionsInnerClass}>
-            <GestionaleRefreshToolbarButton busy={refreshBusy} onClick={() => void refreshClientData()} />
-          </div>
-        }
-      />
+      <div className="[&_header]:mb-2 sm:[&_header]:mb-3">
+        <PageHeader
+          title={PORTALE_CLIENTI_LABEL}
+          actions={
+            <div className={gestionalePageToolbarActionsInnerClass}>
+              <GestionaleRefreshToolbarButton busy={refreshBusy} onClick={() => void refreshClientData()} />
+            </div>
+          }
+        />
+      </div>
 
-      <div className={dsStackPage}>
+      <div className={clientPortalPageStack}>
         <ShellCard>
           <section aria-label="Azioni e filtri lavorazioni clienti">
             <PageToolbar
@@ -849,6 +1006,8 @@ export function ClientLavorazioniView() {
           schedeStore={schedeStore}
           addettiGlobali={addettiGlobali}
           addettiRecords={addettiRecords}
+          autoreLog={logAutoreByLavorazioneId.get(ingressoRow.id) ?? ""}
+          resolveUserId={resolveClientPortalProfile(ingressoRow)}
         />
       ) : null}
 

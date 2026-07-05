@@ -8,6 +8,10 @@ export function clienteAnagraficaQueryKey(nomeDisplay: string) {
   return ["clienti-anagrafica", nomeDisplay.trim()] as const;
 }
 
+export function clientePortalAnagraficaQueryKey(clienteRef: string) {
+  return ["clienti-anagrafica-portal", clienteRef.trim()] as const;
+}
+
 export function useClienteAnagrafica(nomeDisplay: string | null, enabled = true) {
   const trimmed = nomeDisplay?.trim() ?? "";
   return useQuery({
@@ -15,6 +19,20 @@ export function useClienteAnagrafica(nomeDisplay: string | null, enabled = true)
     queryFn: async () => {
       const res = await clientiAnagraficaService.getByNomeDisplay(trimmed);
       if (!res.success || !res.data) throw new Error(res.error ?? "Caricamento anagrafica non riuscito.");
+      return res.data;
+    },
+    enabled: enabled && trimmed.length > 0,
+    staleTime: 30_000,
+  });
+}
+
+export function useClientePortalAnagrafica(clienteRef: string | null, enabled = true) {
+  const trimmed = clienteRef?.trim() ?? "";
+  return useQuery({
+    queryKey: clientePortalAnagraficaQueryKey(trimmed),
+    queryFn: async () => {
+      const res = await clientiAnagraficaService.getOwnForClientePortal(trimmed);
+      if (!res.success) throw new Error(res.error ?? "Caricamento anagrafica non riuscito.");
       return res.data;
     },
     enabled: enabled && trimmed.length > 0,

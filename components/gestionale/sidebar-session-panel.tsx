@@ -46,13 +46,14 @@ export function SidebarSessionPanel({
           variant={variant}
           sidebarCollapsed={sidebarCollapsed}
           onExpandIntent={onSidebarExpandIntent}
-          onOpenProfile={onOpenInbox}
+          onOpenProfile={variant === "drawer" ? undefined : onOpenInbox}
         />
         <NotificationCenterMount
           embedded
+          layerAboveNav={variant === "drawer"}
           sidebarCollapsed={sidebarCollapsed}
           onExpandIntent={onSidebarExpandIntent}
-          onOpenInbox={onOpenInbox}
+          onOpenInbox={variant === "drawer" ? undefined : onOpenInbox}
         />
       </div>
     </section>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth, isAuthSessionEstablished } from "@/context/auth-context";
 import type { InboxCursor, InboxNotificationRow } from "@/lib/notifications/notification-types";
+import { isClientInboxEligible } from "@/lib/notifications/client-inbox-eligible";
 import { isStaffInboxEligible } from "@/lib/notifications/staff-inbox-eligible";
 import { RealtimeInboxCoordinator } from "@/lib/notifications/realtime-inbox-coordinator";
 import { notificationsV2ReadsDb } from "@/lib/notifications/notifications-v2-flag";
@@ -31,12 +32,13 @@ export function useNotificationCenter(drawerOpen = false) {
   const coordinatorRef = useRef<RealtimeInboxCoordinator | null>(null);
 
   const rbacCtx = snapshot?.rbacContext;
+  const eligibleUser = snapshot?.role ? { ruolo: snapshot.role } : user;
   const enabled =
     isAuthSessionEstablished(status) &&
     userId.length > 0 &&
     !permsLoading &&
     readsDb &&
-    isStaffInboxEligible(snapshot?.role ? { ruolo: snapshot.role } : user, rbacCtx);
+    (isStaffInboxEligible(eligibleUser, rbacCtx) || isClientInboxEligible(eligibleUser, rbacCtx));
 
   const inboxQuery = useInfiniteQuery({
     queryKey: [...QK.notificationsInbox, userId] as const,

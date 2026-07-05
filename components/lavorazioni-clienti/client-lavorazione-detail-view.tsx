@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type MouseEvent } from "react";
 import { PageHeader } from "@/components/gestionale/page-header";
-import { GestionaleRefreshToolbarButton, gestionalePageToolbarActionsInnerClass } from "@/components/gestionale/page-header-toolbar";
 import { ShellCard } from "@/components/gestionale/shell-card";
 import { IconBack, IconQrCode } from "@/components/lavorazioni-clienti/client-lavorazioni-icons";
 import { ClientLavorazioneInformazioniPanel } from "@/components/lavorazioni-clienti/client-lavorazione-informazioni-panel";
@@ -13,6 +12,7 @@ import { ClientLavorazioneQrDialog } from "@/components/lavorazioni-clienti/clie
 import {
   ClientLavorazioneTimelinePanel,
   clientTimelinePageTitle,
+  clientTimelinePageTitleCompact,
 } from "@/components/lavorazioni-clienti/client-lavorazione-timeline-panel";
 import { clientLavorazioniListPath, PORTALE_CLIENTI_LABEL } from "@/lib/lavorazioni/client-portal-access";
 import { buildClientTimelineHeader } from "@/lib/lavorazioni/client-portal-timeline";
@@ -25,7 +25,6 @@ import { HubModalPanoramicaPanel, IconActionButton, LoadingClientDetailSkeleton 
 import { dsBtnNeutral, dsGapMd, dsGapXl, dsStackPage } from "@/lib/ui/design-system";
 import { useClientLavorazioniAccess } from "@/src/hooks/use-client-lavorazioni-access";
 import { useClientLavorazioneDetailQuery } from "@/src/hooks/gestionale/use-client-lavorazioni-queries";
-import { useClientLavorazioniRefresh } from "@/src/hooks/use-client-lavorazioni-refresh";
 import { useSchedeBundlesQuery } from "@/src/hooks/use-schede-store-query";
 import { useGlobalOptions } from "@/src/hooks/use-global-options";
 import { statoLavorazioneLabel } from "@/src/shared/selectors";
@@ -72,16 +71,18 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
   const detail = detailQ.data;
   const row = detail?.row;
 
-  const { refresh: refreshClientData, busy: refreshBusy } = useClientLavorazioniRefresh(detailQ);
-
   const ref = lavorazioneRefLabel(lavorazioneId, row?.codice);
 
   const resolvedStato = row ? resolveClientPortalStatoId(row.stato, statiOpts) : null;
   const statoLabel = resolvedStato ? statoLavorazioneLabel(resolvedStato, statiOpts) || resolvedStato : "—";
 
-  const pageTitle = useMemo(() => {
-    if (!row) return PORTALE_CLIENTI_LABEL;
-    return clientTimelinePageTitle(buildClientTimelineHeader(row, schedeStore));
+  const { title: pageTitle, titleMobile: pageTitleMobile } = useMemo(() => {
+    if (!row) return { title: PORTALE_CLIENTI_LABEL, titleMobile: undefined as string | undefined };
+    const header = buildClientTimelineHeader(row, schedeStore);
+    return {
+      title: clientTimelinePageTitle(header),
+      titleMobile: clientTimelinePageTitleCompact(header),
+    };
   }, [row, schedeStore]);
 
   const backToListButton = (
@@ -143,21 +144,21 @@ export function ClientLavorazioneDetailView({ lavorazioneId }: { lavorazioneId: 
     <>
       <PageHeader
         title={pageTitle}
+        titleMobile={pageTitleMobile}
         leading={backToListButton}
+        mobileBack={{
+          href: listPath,
+          label: CLIENT_PORTAL_BACK_LABEL,
+          onClick: goToClientList,
+        }}
         actions={
-          <div className={gestionalePageToolbarActionsInnerClass}>
-            <GestionaleRefreshToolbarButton
-              busy={refreshBusy}
-              onClick={() => void refreshClientData()}
-            />
-            <IconActionButton
-              label="QR lavorazione"
-              toolbar
-              onClick={() => setQrOpen(true)}
-            >
-              <IconQrCode />
-            </IconActionButton>
-          </div>
+          <IconActionButton
+            label="QR lavorazione"
+            toolbar
+            onClick={() => setQrOpen(true)}
+          >
+            <IconQrCode />
+          </IconActionButton>
         }
       />
 

@@ -68,6 +68,7 @@ export function useClientPortalDataContract(enabled: boolean): ClientPortalDataC
 
   const { store: schedeStore, isLoading: schedeLoading } = useSchedeBundlesQuery(enabled && l0Settled, {
     viewLayer: true,
+    clientPortal: true,
     lavorazioneIds: ids,
   });
 

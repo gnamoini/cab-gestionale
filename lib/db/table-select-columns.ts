@@ -27,6 +27,10 @@ export const MEZZI_LIST_EMBED_COLUMNS =
 export const MEZZI_EMBED_LIGHT_COLUMNS =
   "cliente, utilizzatore, targa, numero_scuderia, marca_telaio, modello_telaio" as const;
 
+/** Portale clienti — light + meta (cantiere in `mezzi.meta`). */
+export const MEZZI_EMBED_CLIENT_PORTAL_COLUMNS =
+  `${MEZZI_EMBED_LIGHT_COLUMNS},meta` as const;
+
 /** Lista mezzi — telaio + ident (attrezzatura via tabella dedicata). */
 export const MEZZI_LIST_LIGHT_COLUMNS =
   "id, cliente, utilizzatore, targa, numero_scuderia, anno, meta, entity_key, created_at, updated_at, marca_telaio, modello_telaio, tipo_telaio, telaio_num, km, note" as const;

@@ -23,6 +23,20 @@ export const SIDEBAR_HOVER_INTENT = {
 
 export const GESTIONALE_OVERLAY_CLOSED_EVENT = "cab:gestionale-overlay-closed";
 
+let suppressSidebarBlurCollapseUntil = 0;
+
+/** Evita collapse sidebar su blur da controlli nel drawer profilo (es. toggle tema). */
+export function suppressSidebarBlurCollapse(
+  ms: number = SIDEBAR_HOVER_INTENT.blurCollapseMs + 120,
+): void {
+  if (typeof window === "undefined") return;
+  suppressSidebarBlurCollapseUntil = Date.now() + ms;
+}
+
+function isSidebarBlurCollapseSuppressed(): boolean {
+  return Date.now() < suppressSidebarBlurCollapseUntil;
+}
+
 export function dispatchGestionaleOverlayClosed(): void {
   if (typeof window === "undefined") return;
   window.dispatchEvent(new CustomEvent(GESTIONALE_OVERLAY_CLOSED_EVENT));
@@ -203,6 +217,7 @@ export function useSidebarHoverExpand(): {
   const reconcileSidebarPointer = useCallback(
     (aside: HTMLElement | null) => {
       if (!aside) return;
+      if (isSidebarBlurCollapseSuppressed()) return;
       if (
         isSidebarPointerActive(aside, lastPointerRef.current) ||
         isSidebarFocusActive(aside)
@@ -307,6 +322,7 @@ export function useSidebarHoverExpand(): {
 
   const onSidebarBlurCapture = useCallback(
     (event: FocusEvent<HTMLElement>) => {
+      if (isSidebarBlurCollapseSuppressed()) return;
       const aside = event.currentTarget;
       const timings = resolveSidebarHoverTimings();
       clearBlurTimer();

@@ -16,7 +16,13 @@ import type { ClienteAnagrafica } from "@/lib/clienti/clienti-anagrafica-types";
 import { validateClienteAnagrafica } from "@/lib/clienti/clienti-anagrafica-validation";
 import { syncSedeLegaleFromOperativa } from "@/lib/clienti/clienti-sede-sync";
 import { buildClienteEntityKey } from "@/lib/validation/entity-keys";
-import { ensurePermission } from "@/src/lib/auth/permission-guards";
+import {
+  ensureClientLavorazioniAccess,
+  ensurePermission,
+  loadCallerClienteRef,
+} from "@/src/lib/auth/permission-guards";
+import { normalizeClienteRef } from "@/src/lib/auth/cliente-portal-scope";
+import { RBAC_DENIED_MESSAGE } from "@/lib/rbac";
 import { getBrowserSupabase } from "@/src/lib/supabase/browser-client";
 import { err, success, type ServiceResult } from "@/src/services/service-result";
 import { serviceFailFromError } from "@/src/utils/supabaseErrorHandler";
@@ -56,6 +62,23 @@ async function loadByEntityKey(entityKey: string): Promise<ServiceResult<Cliente
 }
 
 export const clientiAnagraficaService = {
+  /** Anagrafica propria per utente Cliente (portale profilo). */
+  async getOwnForClientePortal(clienteRef: string): Promise<ServiceResult<ClienteAnagrafica | null>> {
+    try {
+      const access = await ensureClientLavorazioniAccess();
+      if (!access.success) return err(access.error ?? RBAC_DENIED_MESSAGE);
+      const trimmed = normalizeClienteRef(clienteRef);
+      if (!trimmed) return err("Cliente non associato.");
+      const callerRef = await loadCallerClienteRef();
+      if (!callerRef || callerRef !== trimmed) return err(RBAC_DENIED_MESSAGE);
+      const entityKey = buildClienteEntityKey(trimmed);
+      if (!entityKey) return err("Nome cliente non valido.");
+      return loadByEntityKey(entityKey);
+    } catch (e) {
+      return serviceFailFromError(e);
+    }
+  },
+
   async getByNomeDisplay(nomeDisplay: string): Promise<ServiceResult<ClienteAnagrafica>> {
     try {
       const allowed = await ensurePermission("manageSettings");

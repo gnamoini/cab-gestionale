@@ -45,14 +45,16 @@ assert.match(qr, /border-\[color:var\(--cab-border\)\]/);
 assert.doesNotMatch(qr, /border-zinc-200/);
 
 const ingresso = read("components/lavorazioni-clienti/client-lavorazione-ingresso-dialog.tsx");
-assert.match(ingresso, /footer=\{/);
 assert.match(ingresso, /GestionaleModalScrollBody/);
-assert.doesNotMatch(ingresso, /footer=\{null\}/);
+assert.doesNotMatch(ingresso, /footer=\{/);
+assert.doesNotMatch(ingresso, />\s*Chiudi\s*</);
 assert.doesNotMatch(ingresso, /border-zinc-200 bg-zinc-50/);
+assert.doesNotMatch(ingresso, /officina/i);
+assert.doesNotMatch(ingresso, /file_esterno/);
 
 const documents = read("components/lavorazioni-clienti/client-lavorazione-documents.tsx");
 assert.match(documents, /GestionaleModalScrollBody/);
-assert.match(documents, /footer=\{/);
+assert.doesNotMatch(documents, /ClientLavorazioneDocumentsDialog[\s\S]*footer=\{/);
 
 const photos = read("components/lavorazioni-clienti/client-lavorazione-photos.tsx");
 assert.match(photos, /GestionaleModalScrollBody/);

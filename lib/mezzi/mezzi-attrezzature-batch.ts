@@ -83,6 +83,7 @@ export async function fetchMezzoGestitoById(
 /** MezzoGestito → MezzoRow embed (report / join lavorazioni). */
 export function mezzoGestitoToEmbedRow(g: MezzoGestito): MezzoRow {
   const matricolaRaw = g.matricola?.trim();
+  const cantiere = g.cantiere?.trim();
   return {
     id: g.id,
     cliente: g.cliente,
@@ -94,7 +95,7 @@ export function mezzoGestitoToEmbedRow(g: MezzoGestito): MezzoRow {
     numero_scuderia: g.numeroScuderia ?? null,
     tipo_attrezzatura: g.tipoAttrezzatura,
     anno: g.anno,
-    meta: null,
+    meta: cantiere ? { cantiere } : null,
     entity_key: null,
     marca_telaio: g.marcaTelaio ?? null,
     modello_telaio: g.modelloTelaio ?? null,
